@@ -211,6 +211,8 @@ def _repl_assistant_banner_label(
     *,
     meta_data: Mapping[str, Any] | None = None,
 ) -> str:
+    if meta_data and meta_data.get("companion_scheduled_reminder") is True:
+        return "inner-tick scheduled-reminder"
     act_raw = None
     if meta_data:
         raw = meta_data.get("inner_tick_activity")

@@ -1625,7 +1625,10 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     """Regression: ``companion_ws_inner_tick`` task is cancelled in ``finally``; no further polls."""
-    ticks: dict[str, int] = {"proactive": 0, "maintenance": 0}
+    ticks: dict[str, int] = {"proactive": 0, "maintenance": 0, "scheduled": 0}
+
+    async def spy_scheduled(**_kwargs):
+        ticks["scheduled"] += 1
 
     async def spy_proactive(**_kwargs):
         ticks["proactive"] += 1
@@ -1657,6 +1660,11 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     )
     monkeypatch.setattr(
         chat_v1,
+        "_try_fire_companion_ws_scheduled_task_inner_tick",
+        spy_scheduled,
+    )
+    monkeypatch.setattr(
+        chat_v1,
         "_try_fire_companion_ws_proactive_heartbeat",
         spy_proactive,
     )
@@ -1678,11 +1686,91 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
             assert ack["type"] == "user_signed_on_ack"
             assert ack["ok"] is True
             time.sleep(0.2)
-            assert ticks["proactive"] + ticks["maintenance"] >= 1
+            assert (
+                ticks["proactive"] + ticks["maintenance"] + ticks["scheduled"] >= 1
+            )
 
-    n_at_close = ticks["proactive"] + ticks["maintenance"]
+    n_at_close = ticks["proactive"] + ticks["maintenance"] + ticks["scheduled"]
     time.sleep(0.35)
-    assert ticks["proactive"] + ticks["maintenance"] == n_at_close
+    assert ticks["proactive"] + ticks["maintenance"] + ticks["scheduled"] == n_at_close
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """Scheduled reminder path runs even when proactive and maintenance inner-tick are off."""
+    ticks = {"scheduled": 0}
+
+    async def spy_scheduled(**_kwargs):
+        ticks["scheduled"] += 1
+
+    async def spy_proactive(**_kwargs):
+        raise AssertionError("proactive should not run when disabled")
+
+    async def spy_maintenance(**_kwargs):
+        raise AssertionError("maintenance should not run when disabled")
+
+    async def fake_run_companion_chat_turn_for_api(**_kwargs):
+        return CompanionTurnResult(assistant_text="unused")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-inner-tick-sched",
+        chat_id="chat-inner-tick-sched-1",
+        latest_user_message_db_id=502,
+        ai_message_id=9502,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    monkeypatch.setattr(
+        chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05
+    )
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.app.features,
+        "companion_ws_proactive_heartbeat_poll_seconds",
+        0.05,
+    )
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.app.features,
+        "companion_ws_proactive_heartbeat_enabled",
+        False,
+    )
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.app.features,
+        "companion_ws_maintenance_inner_tick_enabled",
+        False,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "_try_fire_companion_ws_scheduled_task_inner_tick",
+        spy_scheduled,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "_try_fire_companion_ws_proactive_heartbeat",
+        spy_proactive,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "_try_fire_companion_ws_maintenance_inner_tick",
+        spy_maintenance,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-companion-inner-tick-sched",
+                }
+            )
+            ack = websocket.receive_json()
+            assert ack["type"] == "user_signed_on_ack"
+            assert ack["ok"] is True
+            time.sleep(0.2)
+            assert ticks["scheduled"] >= 1
 
     companion_chat_service.clear_companion_chat_service_caches()
 

@@ -11,7 +11,7 @@
 ## Scope by concern (files are grouped by intent, not enumerated)
 
 - **Companion chat (HTTP + shared fields):** message lists, completions, media generation helpers, time context — [`chat.py`](/app/schemas/chat.py).
-- **Chat WebSocket wire:** control/ack/ping frames, queued business envelopes, companion `meta_data` conventions (forward-compatible `extra="allow"` where defined) — [`chat_websocket.py`](/app/schemas/chat_websocket.py).
+- **Chat WebSocket wire:** control/ack/ping frames, queued business envelopes, companion `meta_data` conventions (forward-compatible `extra="allow"` where defined) — [`chat_websocket.py`](/app/schemas/chat_websocket.py). Assistant/user `meta_data` may include `companion_scheduled_reminder` and `scheduledTaskId` when a due `schedule_queue` task fires via inner-tick.
 - **Realtime voice / live session payloads:** language and session-oriented validation — [`live_chat.py`](/app/schemas/live_chat.py), [`phone_call.py`](/app/schemas/phone_call.py).
 - **Turn-adjacent telemetry (non user-authored text):** versioned implicit signal bundles — [`implicit_signals.py`](/app/schemas/implicit_signals.py).
 - **History compaction artifacts:** structured summaries of truncated/compacted windows — [`messages_compaction.py`](/app/schemas/messages_compaction.py).

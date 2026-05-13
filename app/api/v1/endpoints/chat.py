@@ -63,6 +63,12 @@ from app.core.companion_harness.companion.models import (
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
+from app.core.companion_harness.companion.schedule_queue import (
+    mark_task_fired,
+    mark_task_retry,
+    next_due_task_for_execution,
+    scheduled_task_synthetic_user_text,
+)
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.companion.websocket_coordinator import (
     CompanionWebSocketCoordinator,
@@ -397,8 +403,9 @@ async def _try_handle_ws_user_signed_on_frame(
     """
     Consume ``{"type":"user_signed_on","agent_id":...}``.
 
-    Product intent: arms proactive heartbeat coords and optionally runs the implicit sign-on greeting
-    companion turn when ``implicit_greeting: true`` (after ``user_signed_on_ack``).
+    Product intent: arms inner-tick WebSocket coordinates (proactive heartbeat, maintenance inner-tick,
+    and due ``schedule_queue`` reminders share this registration) and optionally runs the implicit
+    sign-on greeting companion turn when ``implicit_greeting: true`` (after ``user_signed_on_ack``).
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -409,18 +416,6 @@ async def _try_handle_ws_user_signed_on_frame(
             ChatWsUserSignedOnAckFrame(
                 ok=False,
                 reason="not_supported",
-            ).model_dump(exclude_none=True)
-        )
-        return True
-    feats = global_config_loaded_from_config_yaml.app.features
-    if (
-        not feats.companion_ws_proactive_heartbeat_enabled
-        and not feats.companion_ws_maintenance_inner_tick_enabled
-    ):
-        await websocket.send_json(
-            ChatWsUserSignedOnAckFrame(
-                ok=False,
-                reason="proactive_heartbeat_disabled",
             ).model_dump(exclude_none=True)
         )
         return True
@@ -1266,6 +1261,9 @@ async def _build_companion_tool_background_ws_payload(
 
 def _companion_ai_meta_from_turn_result(
     companion_turn: CompanionTurnResult,
+    *,
+    companion_scheduled_reminder: bool | None = None,
+    scheduled_task_id: str | None = None,
 ) -> dict[str, Any]:
     """Build assistant ``meta_data`` for chat_history / WS from one companion kernel turn."""
     _fg_script = (companion_turn.voice_message_script or "").strip()
@@ -1294,6 +1292,8 @@ def _companion_ai_meta_from_turn_result(
         ),
         context_mode=companion_turn.turn_start_context_mode or None,
         transcript_compaction=companion_turn.transcript_compaction,
+        companion_scheduled_reminder=companion_scheduled_reminder,
+        scheduled_task_id=scheduled_task_id,
     )
     return dump_chat_ws_companion_wire_meta(meta)
 
@@ -1327,6 +1327,316 @@ async def _persist_companion_user_message_for_bg(
         )
     return await chat_history_service.add_user_message_async(
         session_id, last_user_message
+    )
+
+
+async def _try_fire_companion_ws_scheduled_task_inner_tick(
+    *,
+    outbound_queue: asyncio.Queue,
+    ctx: dict[str, Any],
+    subscription_svc: SubscriptionService,
+    companion_ws: CompanionWebSocketCoordinator,
+    ws_conn_id: str,
+    tc_box: list[Optional[dict]],
+) -> None:
+    """When ``schedule_queue`` has a due pending task, run one inner-tick reminder turn."""
+    user_id = str(ctx.get("user_id") or "").strip()
+    agent_id = str(ctx.get("agent_id") or "").strip()
+    chat_id_raw = ctx.get("chat_id")
+    if not user_id or not agent_id or chat_id_raw is None:
+        return
+
+    async with AsyncSessionLocal() as pre_db:
+        r_user = await pre_db.execute(select(User).where(User.id == user_id))
+        current_user = r_user.scalar_one_or_none()
+        if current_user is None:
+            return
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=pre_db, user_id=user_id, agent_id=agent_id
+        )
+        if str(chat.id) != str(chat_id_raw):
+            logger.debug(
+                "companion_ws_scheduled_reminder chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
+                ws_conn_id,
+                chat_id_raw,
+                chat.id,
+            )
+            return
+
+        subscription = await subscription_svc.get_user_current_subscription(
+            pre_db, user_id
+        )
+        is_subscribed = bool(subscription)
+        model_override = select_chat_model(
+            user=current_user, is_subscribed=is_subscribed
+        )
+
+        mem_store = companion_chat_service.companion_memory_store_if_ready(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat.id,
+            resolved_chat_model_id=model_override,
+        )
+        if mem_store is None:
+            return
+
+        due_task = next_due_task_for_execution(mem_store)
+        if due_task is None:
+            return
+
+        is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
+            pre_db, current_user
+        )
+        if not is_allowed:
+            logger.info(
+                "companion_ws_scheduled_reminder skipped subscription ws_conn_id={} user={} used={} limit={}",
+                ws_conn_id,
+                user_id,
+                used_count,
+                daily_limit,
+            )
+            return
+
+        chat_row_id = chat.id
+        chat_row_agent_id = chat.agent_id
+        due_task_id = due_task.id
+        synthetic_user_text = scheduled_task_synthetic_user_text(
+            task_text=due_task.task_text,
+            exec_time_utc=due_task.exec_time_utc,
+        )
+
+    session_id = generate_session_id(str(chat_row_id))
+    preset_uid = str(uuid.uuid4())
+
+    ws_implicit = _implicit_signal_bundle_from_ws_tc_box(tc_box)
+    async with companion_ws.turn_lock:
+        if companion_ws.ws_inner_tick_maintenance_foreground_pending():
+            logger.debug(
+                "companion_ws_scheduled_reminder skipped prev_maintenance_pending "
+                "ws_conn_id={} user={} agent={}",
+                ws_conn_id,
+                user_id,
+                agent_id,
+            )
+            return
+        companion_ws.clear_ws_inner_tick_proactive_tool_bg_idle_if_idle()
+        if companion_ws.ws_inner_tick_proactive_tool_bg_still_running():
+            logger.debug(
+                "companion_ws_scheduled_reminder skipped prev_inner_tick_tool_bg ws_conn_id={} user={} agent={}",
+                ws_conn_id,
+                user_id,
+                agent_id,
+            )
+            return
+        try:
+            companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_id=chat_row_id,
+                user_text=synthetic_user_text,
+                resolved_chat_model_id=model_override,
+                defer_memory_update=True,
+                session_id=session_id,
+                background_output_sink=None,
+                preset_user_msg_uuid=preset_uid,
+                inner_tick_turn=True,
+                inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+                implicit_signal_bundle=ws_implicit,
+            )
+        except Exception as exc:
+            if not getattr(exc, "companion_tool_background_started", False):
+                mark_task_retry(mem_store, due_task_id, str(exc))
+                logger.warning(
+                    "companion_ws_scheduled_reminder run_turn failed ws_conn_id={} task_id={}: {}",
+                    ws_conn_id,
+                    due_task_id,
+                    exc,
+                )
+            raise
+
+        if companion_turn.tool_background_started:
+            companion_ws.bind_ws_inner_tick_proactive_tool_bg_idle(
+                companion_chat_service.companion_session_tool_bg_idle_event(
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    chat_id=chat_row_id,
+                    resolved_chat_model_id=model_override,
+                )
+            )
+        else:
+            companion_ws.bind_ws_inner_tick_proactive_tool_bg_idle(None)
+
+        companion_reply = companion_turn.assistant_text
+        reply_stripped = (
+            str(companion_reply).strip() if companion_reply is not None else ""
+        )
+        if not reply_stripped:
+            mark_task_retry(mem_store, due_task_id, "empty assistant reply")
+            logger.warning(
+                "companion_ws_scheduled_reminder empty reply ws_conn_id={} user={} agent={} task_id={}",
+                ws_conn_id,
+                user_id,
+                agent_id,
+                due_task_id,
+            )
+            return
+
+        user_meta = dump_chat_ws_companion_wire_meta(
+            ChatWsCompanionWireMetaData(
+                inner_tick=True,
+                companion_scheduled_reminder=True,
+                scheduled_task_id=due_task_id,
+            )
+        )
+        await chat_history_service.add_user_message_async(
+            session_id,
+            synthetic_user_text,
+            meta_data=user_meta,
+        )
+
+        companion_ai_meta = _companion_ai_meta_from_turn_result(
+            companion_turn,
+            companion_scheduled_reminder=True,
+            scheduled_task_id=due_task_id,
+        )
+
+        ai_message_id = await chat_history_service.add_ai_message_sync_async(
+            session_id,
+            companion_reply,
+            agent_id=chat_row_agent_id,
+            meta_data=companion_ai_meta,
+        )
+        mark_task_fired(mem_store, due_task_id)
+
+        async with AsyncSessionLocal() as post_db:
+            try:
+                await subscription_svc.record_usage(
+                    post_db,
+                    user_id,
+                    "chat",
+                    1,
+                    extra_data={
+                        "agent_id": agent_id,
+                        "message_length": 0,
+                        "companion_ws_scheduled_reminder": True,
+                    },
+                )
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_scheduled_reminder record_usage failed ws_conn_id={}: {}",
+                    ws_conn_id,
+                    str(e),
+                )
+
+            stub_utc = ws_implicit.client_time if ws_implicit else None
+            stub_request = ChatCompletionRequest(
+                messages=[
+                    ChatMessage(
+                        role="user",
+                        content=synthetic_user_text,
+                    )
+                ],
+                message_id=preset_uid,
+                user_time_context=stub_utc,
+            )
+            (
+                response_text_content,
+                response_content_parts,
+            ) = _normalize_chat_response_content(companion_reply)
+
+            chat_settings_hb = await chat_service.get_or_create_chat_settings(
+                post_db, chat_row_id, user_id, agent_id
+            )
+            agent_for_voice = await agent_service.get_agent_for_chat(
+                post_db, agent_id=agent_id
+            )
+            r_hb_voice_user = await post_db.execute(
+                select(User).where(User.id == user_id)
+            )
+            hb_voice_user = r_hb_voice_user.scalar_one_or_none()
+            proactive_audio_url: Optional[str] = None
+            if hb_voice_user is not None:
+                proactive_audio_url, _ = await synthesize_chat_assistant_audio(
+                    db=post_db,
+                    session_id=session_id,
+                    ai_message_id=ai_message_id,
+                    voice_enabled=chat_settings_hb.voice_enabled,
+                    chat_voice_id=chat_settings_hb.voice_id,
+                    agent_voice_id=(agent_for_voice or {}).get("voice_id"),
+                    agent_gender=(agent_for_voice or {}).get("gender"),
+                    agent_settings=(agent_for_voice or {}).get("settings"),
+                    language=stub_request.language,
+                    current_user=hb_voice_user,
+                    voice_svc=default_voice_service,
+                    response_text_content=response_text_content,
+                    use_companion=True,
+                    companion_reply_modality=companion_turn.reply_modality,
+                    companion_voice_script=companion_turn.voice_message_script or "",
+                )
+
+            latest_message_info = None
+            try:
+                if ai_message_id is not None:
+                    latest_message_info = (
+                        await chat_history_service.get_ai_message_info_by_id(
+                            post_db, ai_message_id
+                        )
+                    )
+                if latest_message_info is None:
+                    latest_message_info = (
+                        await chat_history_service.get_latest_ai_message_info(
+                            post_db, session_id
+                        )
+                    )
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_scheduled_reminder latest_message_info failed ws_conn_id={}: {}",
+                    ws_conn_id,
+                    e,
+                )
+
+            user_message_id = None
+            try:
+                user_message_id = await chat_history_service.get_latest_user_message_id(
+                    post_db, session_id
+                )
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_scheduled_reminder get_latest_user_message_id failed ws_conn_id={}: {}",
+                    ws_conn_id,
+                    e,
+                )
+
+            subscription_actions = [
+                BizAction(action_type=ActionType.NONE, message=""),
+            ]
+            data = _build_chat_response(
+                response_text_content,
+                response_content_parts,
+                synthetic_user_text,
+                latest_message_info,
+                proactive_audio_url,
+                stub_request,
+                source_imate_id=None,
+                user_message_id=user_message_id,
+                subscription_actions=subscription_actions,
+                client_local_id=None,
+            )
+            payload = APIResponse.success(data=data)
+            out = payload.model_dump(exclude_none=True)
+            out["agent_id"] = agent_id
+            out["status_line"] = await _agent_status_line_for_chat_header(
+                post_db, agent_id
+            )
+            await outbound_queue.put(out)
+    logger.info(
+        "companion_ws_scheduled_reminder pushed assistant ws_conn_id={} user={} agent={} chat_id={} task_id={}",
+        ws_conn_id,
+        user_id,
+        agent_id,
+        chat_row_id,
+        due_task_id,
     )
 
 
@@ -2717,11 +3027,6 @@ async def chat_completions_websocket(
                 break
             except asyncio.TimeoutError:
                 pass
-            if (
-                not feats.companion_ws_proactive_heartbeat_enabled
-                and not feats.companion_ws_maintenance_inner_tick_enabled
-            ):
-                continue
             hb_snapshot: dict[str, Any] | None = None
             async with companion_ws.turn_lock:
                 hb_snapshot = companion_ws.snapshot_heartbeat_coords()
@@ -2742,6 +3047,14 @@ async def chat_completions_websocket(
             )
             hb_user_for_log = hb_snapshot["user_id"]
             try:
+                await _try_fire_companion_ws_scheduled_task_inner_tick(
+                    outbound_queue=outbound_queue,
+                    ctx=hb_snapshot,
+                    subscription_svc=subscription_svc,
+                    companion_ws=companion_ws,
+                    ws_conn_id=ws_conn_id,
+                    tc_box=tc_box,
+                )
                 if feats.companion_ws_proactive_heartbeat_enabled:
                     await _try_fire_companion_ws_proactive_heartbeat(
                         outbound_queue=outbound_queue,

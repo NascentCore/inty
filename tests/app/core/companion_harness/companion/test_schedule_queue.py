@@ -11,6 +11,7 @@ from app.core.companion_harness.companion.schedule_queue import (
     add_schedule_task,
     get_due_tasks,
     mark_task_fired,
+    next_due_task_for_execution,
 )
 
 
@@ -28,16 +29,26 @@ def test_add_and_get_due_tasks(tmp_path: Path) -> None:
     assert due[0]["task_text"] == "remind me"
 
 
-def test_mark_task_fired(tmp_path: Path) -> None:
-    store = _store(Path(str(tmp_path) + "-fired"))
-    past = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
-    tid = add_schedule_task(store, exec_time_utc=past, task_text="x")
-    assert len(get_due_tasks(store)) == 1
-    mark_task_fired(store, tid)
-    assert get_due_tasks(store) == []
+def test_next_due_task_for_execution_picks_earliest_ready(tmp_path: Path) -> None:
+    store = _store(Path(str(tmp_path) + "-ndue"))
+    t_later = add_schedule_task(
+        store,
+        exec_time_utc="2020-01-01T01:00:00+00:00",
+        task_text="later",
+    )
+    t_earlier = add_schedule_task(
+        store,
+        exec_time_utc="2020-01-01T00:00:00+00:00",
+        task_text="earlier",
+    )
 
-
-def test_legacy_top_level_array_rewritten_as_tasks_object(tmp_path: Path) -> None:
+    first = next_due_task_for_execution(store)
+    assert first is not None
+    assert first.id == t_earlier
+    mark_task_fired(store, t_earlier)
+    second = next_due_task_for_execution(store)
+    assert second is not None
+    assert second.id == t_later
     store = _store(Path(str(tmp_path) + "-legacy"))
     rel = _schedule_document_rel()
     legacy_id = "11111111-1111-1111-1111-111111111111"
