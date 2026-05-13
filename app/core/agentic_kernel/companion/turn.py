@@ -748,6 +748,8 @@ async def run_turn(
             assistant_text=last_text,
             complete_fn=_complete_fn,
             config=mem_cfg,
+            trace_id=trace_id,
+            user_msg_uuid=user_msg_uuid,
         )
     else:
         _mem_sync_tok = companion_llm_runtime_event_bind_ctx.set(
@@ -798,4 +800,5 @@ async def run_turn(
         assistant_source="inner_tick" if inner_tick_turn else "chat",
         inner_tick_activity=route_inner_mode.value if inner_tick_turn else "",
         turn_start_context_mode=context.context_mode,
+        transcript_compaction=prompt_plan.transcript_compaction,
     )

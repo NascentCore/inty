@@ -10,6 +10,9 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
+from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
+    memory_pipeline_langsmith_extra,
+)
 from app.core.agentic_kernel.llm.ports import ChatCompletionsSyncPort
 from app.core.agentic_kernel.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
@@ -225,6 +228,7 @@ class CompanionLLMClient:
             model=m,
             messages_payload=messages,
             tools=[],
+            langsmith_extra=memory_pipeline_langsmith_extra(model_role=model_role),
         )
         api_ms = (time.perf_counter() - t_api) * 1000.0
         logger.info(

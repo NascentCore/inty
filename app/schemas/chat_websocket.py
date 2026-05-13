@@ -204,6 +204,7 @@ class ChatWsCompanionWireMetaData(BaseModel):
     tool_bg_generation_deliver: Optional[bool] = None
     generated_image: Optional[dict[str, Any]] = None
     tool_bg_local_image_paths: Optional[list[str]] = None
+    transcript_compaction: Optional[dict[str, Any]] = None
 
     message_type: Optional[str] = Field(
         default=None,

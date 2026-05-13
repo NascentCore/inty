@@ -112,6 +112,14 @@ class CompanionTurnResult(BaseModel):
             "(before tool mutations); mirrored to WS/HTTP assistant meta_data.context_mode."
         ),
     )
+    transcript_compaction: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "When transcript window compaction ran for this turn (non-inner-tick, feature on), "
+            "summary dict: did_compact, reason, char counts, max_context_chars, compaction_count; "
+            "mirrored to WS meta_data.transcript_compaction."
+        ),
+    )
 
 
 class ChatMessage(BaseModel):

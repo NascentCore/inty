@@ -301,6 +301,23 @@ def _print_generated_image_meta_banner(meta: Mapping[str, Any]) -> None:
     print(f"image-url: {s}")
 
 
+def _print_transcript_compaction_banner(meta: Mapping[str, Any]) -> None:
+    """Emit one line when server applied transcript window compaction for this turn."""
+    raw = meta.get("transcript_compaction")
+    if not isinstance(raw, dict):
+        return
+    if not raw.get("did_compact"):
+        return
+    reason = raw.get("reason", "")
+    before = raw.get("approx_chars_before", "")
+    after = raw.get("approx_chars_after", "")
+    cc = raw.get("compaction_count", "")
+    print(
+        f"transcript-compaction: reason={reason!r} chars_before={before} "
+        f"chars_after={after} compaction_count={cc}"
+    )
+
+
 def _emit_downlink_item(
     item: Mapping[str, Any],
     outbound_t0: dict[str, float],
@@ -315,6 +332,7 @@ def _emit_downlink_item(
         )
         _print_tool_bg_local_image_paths_banner(meta)
         _print_generated_image_meta_banner(meta)
+        _print_transcript_compaction_banner(meta)
     else:
         print(
             format_ws_error_banner(

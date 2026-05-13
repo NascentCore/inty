@@ -509,6 +509,8 @@ _memory_queue: (
             str,
             Callable[[list[dict[str, Any]], str], str],
             MemoryPipelineConfig,
+            str,
+            str,
         ]
     ]
     | None
@@ -520,7 +522,15 @@ def _memory_worker_loop() -> None:
     if _memory_queue is None:
         raise RuntimeError("memory worker started before queue initialization")
     while True:
-        store, user_text, assistant_text, complete_fn, config = _memory_queue.get()
+        (
+            store,
+            user_text,
+            assistant_text,
+            complete_fn,
+            config,
+            trace_id,
+            user_msg_uuid,
+        ) = _memory_queue.get()
         t_job = time.perf_counter()
         logger.debug(
             "memory_pipeline worker_job_start scope={} user_chars={} assistant_chars={}",
@@ -531,8 +541,8 @@ def _memory_worker_loop() -> None:
         mem_bind_tok = companion_llm_runtime_event_bind_ctx.set(
             LlmRuntimeEventBind(
                 memory_store=store,
-                trace_id="",
-                user_msg_uuid="",
+                trace_id=trace_id,
+                user_msg_uuid=user_msg_uuid,
                 phase="memory_pipeline",
                 scene=None,
             )
@@ -564,6 +574,9 @@ def schedule_memory_update_after_turn(
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
     config: MemoryPipelineConfig,
+    *,
+    trace_id: str = "",
+    user_msg_uuid: str = "",
 ) -> None:
     global _memory_queue
     with _worker_lock:
@@ -575,7 +588,15 @@ def schedule_memory_update_after_turn(
                 daemon=True,
             ).start()
     _memory_queue.put(
-        (store, user_text, assistant_text, complete_fn, config),
+        (
+            store,
+            user_text,
+            assistant_text,
+            complete_fn,
+            config,
+            trace_id,
+            user_msg_uuid,
+        ),
     )
     logger.info(
         "memory_pipeline enqueued scope={} pending_jobs={}",

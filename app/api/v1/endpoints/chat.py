@@ -1286,6 +1286,7 @@ def _companion_ai_meta_from_turn_result(
             True if companion_turn.tool_background_started else None
         ),
         context_mode=companion_turn.turn_start_context_mode or None,
+        transcript_compaction=companion_turn.transcript_compaction,
     )
     return dump_chat_ws_companion_wire_meta(meta)
 
