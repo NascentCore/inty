@@ -38,6 +38,28 @@ _MODE_MODIFY_RE = re.compile(
     r"(modify old image|edit existing image|image to image)",
     re.IGNORECASE,
 )
+_PENDING_REGENERATE_CHOICE_RE = re.compile(
+    r"^\s*(?:选(?:择)?|选项|方案|按)?\s*[aAＡａ]\s*"
+    r"(?:[。．.!！,，、:：;；)\]】）]*\s*)?"
+    r"(?:$|按新设定|新设定|重生图|重新|从零|从头|new|regenerate|scratch)",
+    re.IGNORECASE,
+)
+_PENDING_MODIFY_CHOICE_RE = re.compile(
+    r"^\s*(?:选(?:择)?|选项|方案|按)?\s*[bBＢｂ]\s*"
+    r"(?:[。．.!！,，、:：;；)\]】）]*\s*)?"
+    r"(?:$|基于旧图|旧图|原图|改图|修改|modify|edit|existing)",
+    re.IGNORECASE,
+)
+_PENDING_REGENERATE_PHRASE_RE = re.compile(
+    r"(重新来画|重新画|从头画|从零画|按新设定画|照新设定画|按现在设定画|"
+    r"按新版设定画|按新设定重画|use new profile|new profile)",
+    re.IGNORECASE,
+)
+_PENDING_MODIFY_PHRASE_RE = re.compile(
+    r"(基于旧图改|基于原图改|在旧图基础上改|在原图基础上改|照旧图改|"
+    r"继续改旧图|用旧图改|modify existing|edit existing)",
+    re.IGNORECASE,
+)
 
 
 def _image_gate_rel() -> str:
@@ -98,6 +120,18 @@ def compute_persona_revision_id(store: MemoryStore) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
+def _pending_choice_mode_from_text(txt: str) -> str | None:
+    if _PENDING_REGENERATE_CHOICE_RE.search(txt):
+        return "regenerate"
+    if _PENDING_MODIFY_CHOICE_RE.search(txt):
+        return "modify"
+    if _PENDING_REGENERATE_PHRASE_RE.search(txt):
+        return "regenerate"
+    if _PENDING_MODIFY_PHRASE_RE.search(txt):
+        return "modify"
+    return None
+
+
 def prepare_image_gate_for_turn(store: MemoryStore, user_text: str) -> None:
     state = _load_state(store)
     state["persona_revision_id"] = compute_persona_revision_id(store)
@@ -110,10 +144,13 @@ def prepare_image_gate_for_turn(store: MemoryStore, user_text: str) -> None:
         mode = "modify"
 
     pending = state.get("pending_confirmation")
-    if isinstance(pending, dict) and mode is not None:
-        pending["selected_mode"] = mode
-        pending["confirmed_at"] = utc_iso_ts()
-        state["pending_confirmation"] = pending
+    if isinstance(pending, dict):
+        if mode is None:
+            mode = _pending_choice_mode_from_text(txt)
+        if mode is not None:
+            pending["selected_mode"] = mode
+            pending["confirmed_at"] = utc_iso_ts()
+            state["pending_confirmation"] = pending
 
     requires_persist = bool(
         _PROFILE_CHANGE_HINT_RE.search(txt) and _IMAGE_REQUEST_HINT_RE.search(txt)

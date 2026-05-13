@@ -109,6 +109,7 @@ from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
+from .image_gate import prepare_image_gate_for_turn
 from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
 CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
@@ -277,6 +278,8 @@ async def run_turn(
         idle_wait_timeout_sec=idle_wait_timeout_sec,
         scope_registry_key=store.scope.registry_key(),
     )
+    if not inner_tick_turn:
+        prepare_image_gate_for_turn(store, user_text)
 
     loaded_state = load_companion_turn_state(
         store=store,
