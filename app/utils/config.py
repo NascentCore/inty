@@ -98,8 +98,9 @@ class SecurityConfig(BaseModel):
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
 
 
-@dataclass
-class DatabaseSettings:
+class DatabaseSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     host: str = "localhost"
     port: int = 5432
     user: str = "postgres"
@@ -713,7 +714,7 @@ def load_config(path: str) -> Config:
     return Config(
         app=AppConfig(**app_data),
         security=SecurityConfig.model_validate(data.get("security") or {}),
-        database=DatabaseSettings(**data.get("database", {})),
+        database=DatabaseSettings.model_validate(data.get("database") or {}),
         google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
         verification=VerificationConfig(**data.get("verification", {})),
         logging=LoggingConfig.model_validate(data.get("logging") or {}),
