@@ -67,4 +67,3 @@
 ## 相关路径
 
 - `/app/core/companion_harness/`
-- `/docs/imate/DEV_PLAN.md`（其它条目如打电话、发短信可与此并行，本文档不替代该文件）
