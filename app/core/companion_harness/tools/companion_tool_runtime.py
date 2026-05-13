@@ -814,7 +814,7 @@ def build_openai_repl_tools(
     *, interactive_bootstrap_active: bool = False
 ) -> list[dict[str, Any]]:
     """
-    REPL 对话轮：用户档案追加 + 工作区文档读写（写入仅限 REPL_WRITABLE_RELATIVE_PATHS）。
+    REPL 对话轮：用户档案追加、LivingSphere/TechnoCore 事件落库、工作区文档读写（写入仅限 REPL_WRITABLE_RELATIVE_PATHS）。
     """
     disable_status = os.getenv(
         "INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL", ""
