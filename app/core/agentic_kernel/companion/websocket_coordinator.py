@@ -2,13 +2,15 @@
 
 The FastAPI endpoint owns transport, auth, persistence, and payload shaping. This module owns
 the small set of per-connection companion invariants that must stay together: turn
-serialization, background tool event delivery, foreground/background correlation, and
-inner-tick coordinates.
+serialization, background tool event delivery, foreground/background correlation,
+inner-tick coordinates, and overlap guards when a prior inner-tick pass still has async
+tool_background work in flight.
 """
 
 from __future__ import annotations
 
 import asyncio
+import threading
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -53,6 +55,9 @@ class CompanionWebSocketCoordinator:
     )
     foreground_pending: dict[str, dict[str, Any]] = field(default_factory=dict)
     heartbeat_context: dict[str, Any] = field(default_factory=dict)
+    _ws_inner_tick_proactive_tool_bg_idle: threading.Event | None = field(
+        default=None, repr=False
+    )
 
     @classmethod
     def for_current_loop(cls) -> "CompanionWebSocketCoordinator":
@@ -110,4 +115,25 @@ class CompanionWebSocketCoordinator:
     def mark_maintenance_inner_tick_fired(self, monotonic_time: float) -> None:
         self.heartbeat_context["_last_maintenance_inner_tick_monotonic"] = (
             monotonic_time
+        )
+
+    def bind_ws_inner_tick_proactive_tool_bg_idle(
+        self, ev: threading.Event | None
+    ) -> None:
+        """Track ``CompanionSession.tool_bg_idle`` after proactive inner-tick starts async tool_bg."""
+        self._ws_inner_tick_proactive_tool_bg_idle = ev
+
+    def clear_ws_inner_tick_proactive_tool_bg_idle_if_idle(self) -> None:
+        idle_ev = self._ws_inner_tick_proactive_tool_bg_idle
+        if idle_ev is not None and idle_ev.is_set():
+            self._ws_inner_tick_proactive_tool_bg_idle = None
+
+    def ws_inner_tick_proactive_tool_bg_still_running(self) -> bool:
+        idle_ev = self._ws_inner_tick_proactive_tool_bg_idle
+        return idle_ev is not None and (not idle_ev.is_set())
+
+    def ws_inner_tick_maintenance_foreground_pending(self) -> bool:
+        return any(
+            bool(ctx.get("ws_inner_tick_maintenance"))
+            for ctx in self.foreground_pending.values()
         )
