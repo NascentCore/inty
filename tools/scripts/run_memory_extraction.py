@@ -4,8 +4,8 @@
 
 用法（在仓库根目录）:
     export PYTHONPATH=.
-    python scripts/run_memory_extraction.py --user-id <USER_UUID>
-    python scripts/run_memory_extraction.py --user-id <USER_UUID> --dry-run
+    python tools/scripts/run_memory_extraction.py --user-id <USER_UUID>
+    python tools/scripts/run_memory_extraction.py --user-id <USER_UUID> --dry-run
 
 --dry-run: 只拉取该用户消息并打印条数，不调 LLM、不写 memory。
 """

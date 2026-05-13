@@ -5,9 +5,9 @@
 在仓库根目录执行，并设置 PYTHONPATH:
 
 export PYTHONPATH=.
-python scripts/generate_long_term_token.py --user-id user_123 --days 365
-python scripts/generate_long_term_token.py --phone 13800138000 --days 365
-python scripts/generate_long_term_token.py --email test@example.com --days 365
+python tools/scripts/generate_long_term_token.py --user-id user_123 --days 365
+python tools/scripts/generate_long_term_token.py --phone 13800138000 --days 365
+python tools/scripts/generate_long_term_token.py --email test@example.com --days 365
 """
 
 import asyncio

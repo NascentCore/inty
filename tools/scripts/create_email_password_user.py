@@ -246,19 +246,19 @@ async def main(
     Examples
     --------
     # 创建超级用户（会要求确认）
-    python scripts/create_email_password_superuser.py --email test@gmail.com --password a_password
+    python tools/scripts/create_email_password_superuser.py --email test@gmail.com --password a_password
 
     # 试运行模式（不实际写入数据库，不要求确认）
-    python scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --dry-run
+    python tools/scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --dry-run
 
     # 删除现有用户后创建新用户（会要求确认）
-    python scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --delete-existing
+    python tools/scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --delete-existing
 
     # 创建用户并指定昵称（会要求确认）
-    python scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --nickname "Test User"
+    python tools/scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --nickname "Test User"
 
     # 非交互创建普通用户（不需要手动输入 yes/no）
-    python scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --is-superuser=false --yes
+    python tools/scripts/create_email_password_superuser.py --email test@gmail.com --password a_password --is-superuser=false --yes
     """
     # 验证邮箱格式
     email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"

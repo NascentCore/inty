@@ -106,7 +106,7 @@ jobs:
           PYTHONPATH: .
         run: |
           set -euo pipefail
-          CMD="python scripts/run_user_analytics_report.py --type ${{ steps.resolve.outputs.report_type }} --date ${{ steps.resolve.outputs.report_date }}"
+          CMD="python tools/scripts/run_user_analytics_report.py --type ${{ steps.resolve.outputs.report_type }} --date ${{ steps.resolve.outputs.report_date }}"
           if [ "${{ steps.resolve.outputs.force }}" = "true" ]; then
             CMD="$CMD --force"
           fi

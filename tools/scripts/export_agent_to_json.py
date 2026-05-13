@@ -3,8 +3,8 @@
 Export a single agent by ID to a JSON file (complete row for fixture/restore).
 
 Usage (from repo root with config.yaml or devops/config.yaml.local):
-    PYTHONPATH=. python scripts/export_agent_to_json.py --agent-id <uuid> [--output path]
-    PYTHONPATH=. python scripts/export_agent_to_json.py --agent-id 1d2814b4-76dc-49de-83ac-d183baca1a87 --output tests/Isabelle_Martin_imate_info.json
+    PYTHONPATH=. python tools/scripts/export_agent_to_json.py --agent-id <uuid> [--output path]
+    PYTHONPATH=. python tools/scripts/export_agent_to_json.py --agent-id 1d2814b4-76dc-49de-83ac-d183baca1a87 --output tests/Isabelle_Martin_imate_info.json
 """
 
 import asyncio

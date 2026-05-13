@@ -7,8 +7,8 @@
 
 用法（仓库根目录）:
   export PYTHONPATH=.
-  python scripts/run_extract_memory_from_dump.py --prompt-file output/user_messages_W8BD8PX00QCX_prompt.txt
-  python scripts/run_extract_memory_from_dump.py --json-file output/user_messages_W8BD8PX00QCX.json --output output/part1.txt
+  python tools/scripts/run_extract_memory_from_dump.py --prompt-file output/user_messages_W8BD8PX00QCX_prompt.txt
+  python tools/scripts/run_extract_memory_from_dump.py --json-file output/user_messages_W8BD8PX00QCX.json --output output/part1.txt
 """
 
 import asyncio

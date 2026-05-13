@@ -97,14 +97,14 @@ if [ "$LOCAL" = true ]; then
 
   OPS_BEARER_TOKEN_FILE="${INTY_OPS_BEARER_TOKEN_FILE:-$REPO_ROOT/.inty_ops_bearer_token}"
   echo "创建测试用管理员账户用于在 ops 平台登陆访问"
-  python scripts/init_admin_user.py --user-id user-testing --is-superuser=true --token-file "$OPS_BEARER_TOKEN_FILE"
+  python tools/scripts/init_admin_user.py --user-id user-testing --is-superuser=true --token-file "$OPS_BEARER_TOKEN_FILE"
   if ! chmod 600 "$OPS_BEARER_TOKEN_FILE" 2>/dev/null; then
     echo "warning: could not chmod 600 $OPS_BEARER_TOKEN_FILE" >&2
   fi
   echo "本地测试 JWT 已写入: $OPS_BEARER_TOKEN_FILE（可与 INTY_BEARER_TOKEN / INTY_ACCESS_TOKEN 互换使用）"
 
   echo "Seeding report test data..."
-  python scripts/seed_report_test_data.py
+  python tools/scripts/seed_report_test_data.py
 
   echo "在另外一个 terminal 窗口运行下面的命令来启动评测平台 UI"
   echo "cd evaluation && npm run dev"

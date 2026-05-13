@@ -9,8 +9,8 @@ brew install ktfmt
 pip install black
 npm install --save-dev --save-exact prettier
 # 使用标准脚本格式化所有代码
-./scripts/fmt.sh
-# 说明：scripts/fmt.sh 会自动调用 prettier 处理 JSON/Markdown/JS/TS/HTML/CSS 等文本文件，并且已经支持 YAML（.yaml/.yml）文件的格式化。
+./tools/scripts/fmt.sh
+# 说明：tools/scripts/fmt.sh 会自动调用 prettier 处理 JSON/Markdown/JS/TS/HTML/CSS 等文本文件，并且已经支持 YAML（.yaml/.yml）文件的格式化。
 ```
 
 ## 启动本地后端服务
@@ -50,7 +50,7 @@ All table definitions must be added to `app/models` directory for consistency.
 | **Agent engine**  | [`app/core/agent`](../../app/core/agent)         | LangChain/LangGraph-based agent system with custom state, memory tools, and model configuration utilities      |
 | **Documentation** | [`docs/`](../docs)                            | Design notes for character cards, AI voice, prompt templates, Google Play subscriptions, etc.                  |
 | **Migrations**    | [`alembic/`](../../alembic)                      | Database schema migrations                                                                                     |
-| **Utilities**     | [`scripts/`](../../scripts)                      | Setup helpers and maintenance scripts                                                                          |
+| **Utilities**     | [`tools/scripts/`](../../tools/scripts)                      | Setup helpers and maintenance scripts                                                                          |
 | **Testing**       | [`testing/`](testing)                      | Sample data and test utilities                                                                                 |
 
 ## Configuring Cursor

@@ -2,7 +2,7 @@
 
 ## 目标
 
-验证 `scripts/openclaw_windows/setup_openclaw_windows.ps1` 能在 Windows + WSL2 场景下完成 OpenClaw 部署与基础验收。
+验证 `tools/scripts/openclaw_windows/setup_openclaw_windows.ps1` 能在 Windows + WSL2 场景下完成 OpenClaw 部署与基础验收。
 
 ## 前置条件
 
@@ -15,7 +15,7 @@
 在 Windows PowerShell 中执行：
 
 ```powershell
-.\scripts\openclaw_windows\setup_openclaw_windows.ps1 -DryRun -Yes
+.\tools\scripts\openclaw_windows\setup_openclaw_windows.ps1 -DryRun -Yes
 ```
 
 预期：
@@ -29,7 +29,7 @@
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\scripts\openclaw_windows\setup_openclaw_windows.ps1 -Yes
+.\tools\scripts\openclaw_windows\setup_openclaw_windows.ps1 -Yes
 ```
 
 若提示首次安装 WSL 需重启，重启后重复执行同一命令。
@@ -45,7 +45,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 在 Windows PowerShell 中执行：
 
 ```powershell
-.\scripts\openclaw_windows\setup_openclaw_windows.ps1 `
+.\tools\scripts\openclaw_windows\setup_openclaw_windows.ps1 `
   -AnthropicApiKey "sk-ant-xxx" `
   -Yes
 ```
@@ -63,7 +63,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 在管理员 PowerShell 中执行：
 
 ```powershell
-.\scripts\openclaw_windows\setup_openclaw_windows.ps1 `
+.\tools\scripts\openclaw_windows\setup_openclaw_windows.ps1 `
   -EnablePortProxy `
   -PortProxyListenAddress "0.0.0.0" `
   -PortProxyListenPort 18789 `

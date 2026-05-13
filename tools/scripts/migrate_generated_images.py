@@ -10,16 +10,16 @@ CREATED_BY_AGENT
 
 使用方法：
     # 预览模式（不做任何修改）
-    python scripts/migrate_generated_images.py --dry-run
+    python tools/scripts/migrate_generated_images.py --dry-run
 
     # 执行迁移
-    python scripts/migrate_generated_images.py
+    python tools/scripts/migrate_generated_images.py
 
     # 跳过 GCS 复制（仅更新数据库）
-    python scripts/migrate_generated_images.py --skip-gcs-copy
+    python tools/scripts/migrate_generated_images.py --skip-gcs-copy
 
     # 指定批次大小
-    python scripts/migrate_generated_images.py --batch-size 50
+    python tools/scripts/migrate_generated_images.py --batch-size 50
 """
 
 import asyncio
@@ -511,16 +511,16 @@ async def main(
     Examples
     --------
     # 预览模式
-    python scripts/migrate_generated_images.py --dry-run
+    python tools/scripts/migrate_generated_images.py --dry-run
 
     # 执行迁移
-    python scripts/migrate_generated_images.py
+    python tools/scripts/migrate_generated_images.py
 
     # 跳过 GCS 复制
-    python scripts/migrate_generated_images.py --skip-gcs-copy
+    python tools/scripts/migrate_generated_images.py --skip-gcs-copy
 
     # 指定批次大小
-    python scripts/migrate_generated_images.py --batch-size 50
+    python tools/scripts/migrate_generated_images.py --batch-size 50
     """
     logger.info("=" * 60)
     logger.info("生成图片数据迁移脚本")

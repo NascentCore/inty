@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r scripts/sync_agents_dev_to_prod/requirements.txt
+          python -m pip install -r tools/scripts/sync_agents_dev_to_prod/requirements.txt
           python -m pip install -r requirements.txt
 
       - name: Sync AI characters from dev to prod
@@ -39,14 +39,14 @@ jobs:
 
           echo "Writing sync logs to: $LOG_FILE"
 
-          python scripts/sync_agents_dev_to_prod/sync_agents.py --config config.yaml.example 2>&1 | tee -a "$LOG_FILE"
+          python tools/scripts/sync_agents_dev_to_prod/sync_agents.py --config config.yaml.example 2>&1 | tee -a "$LOG_FILE"
           status_agents="${PIPESTATUS[0]}"
           if [ "$status_agents" -ne 0 ]; then
             echo "sync_agents.py failed with exit code: $status_agents" | tee -a "$LOG_FILE"
             exit "$status_agents"
           fi
 
-          python scripts/sync_character_themes_dev_to_prod/sync_character_themes.py --config config.yaml.example 2>&1 | tee -a "$LOG_FILE"
+          python tools/scripts/sync_character_themes_dev_to_prod/sync_character_themes.py --config config.yaml.example 2>&1 | tee -a "$LOG_FILE"
           status_themes="${PIPESTATUS[0]}"
           if [ "$status_themes" -ne 0 ]; then
             echo "sync_character_themes.py failed with exit code: $status_themes" | tee -a "$LOG_FILE"

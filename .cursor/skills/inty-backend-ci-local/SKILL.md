@@ -47,7 +47,7 @@ python -m pip install -r tests/requirements.txt
 ## 2) 架构层依赖检查
 
 ```bash
-python scripts/check_layer_dependencies.py
+python tools/scripts/check_layer_dependencies.py
 ```
 
 ## 3) 单一 Alembic head

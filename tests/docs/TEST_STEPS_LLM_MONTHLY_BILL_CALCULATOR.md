@@ -2,7 +2,7 @@
 
 ## 目标
 
-验证 `scripts/calculate_llm_monthly_bill.py` 可以：
+验证 `tools/scripts/calculate_llm_monthly_bill.py` 可以：
 
 1. 手动录入模型定价（每个模型有唯一标识）
 2. 在计算阶段按“先输入用量，再选择模型”的流程执行
@@ -20,7 +20,7 @@ export PYTHONPATH=.
 ## 用例 1：全参数模式（便于自动化验证）
 
 ```bash
-python scripts/calculate_llm_monthly_bill.py \
+python tools/scripts/calculate_llm_monthly_bill.py \
   --model-pricing "gpt-4o-mini,0.15,0.60,0.075,0.30" \
   --model-pricing "gemini-2.5-flash,0.10,0.40,0.05,0.20" \
   --usage-input-tokens 2000000 \
@@ -41,7 +41,7 @@ python scripts/calculate_llm_monthly_bill.py \
 
 ```bash
 printf "gpt-4o-mini,0.15,0.60,0.075,0.30\ngemini-2.5-flash,0.10,0.40,0.05,0.20\n\n2000000\n1000000\n500000\n200000\ngpt-4o-mini,gemini-2.5-flash\n" | \
-python scripts/calculate_llm_monthly_bill.py
+python tools/scripts/calculate_llm_monthly_bill.py
 ```
 
 预期：

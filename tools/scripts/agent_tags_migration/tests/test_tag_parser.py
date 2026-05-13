@@ -5,8 +5,8 @@
 
 import unittest
 
-from scripts.agent_tags_migration.tag_parser import TagParser
-from scripts.agent_tags_migration.tests.sample_data import (
+from tools.scripts.agent_tags_migration.tag_parser import TagParser
+from tools.scripts.agent_tags_migration.tests.sample_data import (
     EXPECTED_RESULTS,
     SAMPLE_PERSONALITIES,
 )

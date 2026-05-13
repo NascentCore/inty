@@ -52,7 +52,7 @@ class TransactionType(str, enum.Enum):
 # DEPRECATED: 这个表的数据来自 Google Play，以及对应的文案信息，不会在数据库中存储
 class SubscriptionPlan(Base):
     """
-    直接用 scripts/init_subscription_plans_simple.py 内的静态数据即可。
+    直接用 tools/scripts/init_subscription_plans_simple.py 内的静态数据即可。
     """
 
     __tablename__ = "subscription_plans"

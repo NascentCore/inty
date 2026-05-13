@@ -12,7 +12,7 @@ if [ "$FORMAT_ALL" = true ]; then
     # Format all Kotlin files
     ktfmt --kotlinlang-style android_app/
     # Format all Python files
-    black app/ scripts/ experimental/
+    black app/ tools/scripts/ experimental/
     # Format all other files
     npx prettier --write evaluation/ web_app/
     echo "Formatting complete!"

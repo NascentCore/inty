@@ -15,7 +15,7 @@ Run in **PowerShell (Administrator recommended)**:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\scripts\openclaw_windows\setup_openclaw_windows.ps1 -Yes
+.\tools\scripts\openclaw_windows\setup_openclaw_windows.ps1 -Yes
 ```
 
 If this is your first WSL install and Windows asks for reboot, reboot and rerun the same command.
@@ -25,7 +25,7 @@ If this is your first WSL install and Windows asks for reboot, reboot and rerun 
 If you want the script to finish onboarding automatically, pass an Anthropic API key:
 
 ```powershell
-.\scripts\openclaw_windows\setup_openclaw_windows.ps1 `
+.\tools\scripts\openclaw_windows\setup_openclaw_windows.ps1 `
   -AnthropicApiKey "sk-ant-xxx" `
   -Yes
 ```
@@ -33,7 +33,7 @@ If you want the script to finish onboarding automatically, pass an Anthropic API
 ## Skip onboarding for later
 
 ```powershell
-.\scripts\openclaw_windows\setup_openclaw_windows.ps1 -SkipOnboarding -Yes
+.\tools\scripts\openclaw_windows\setup_openclaw_windows.ps1 -SkipOnboarding -Yes
 ```
 
 Then in WSL:
@@ -45,7 +45,7 @@ openclaw onboard --install-daemon
 ## Enable LAN access via Windows portproxy
 
 ```powershell
-.\scripts\openclaw_windows\setup_openclaw_windows.ps1 `
+.\tools\scripts\openclaw_windows\setup_openclaw_windows.ps1 `
   -EnablePortProxy `
   -PortProxyListenAddress "0.0.0.0" `
   -PortProxyListenPort 18789 `
@@ -58,7 +58,7 @@ openclaw onboard --install-daemon
 ## Dry-run
 
 ```powershell
-.\scripts\openclaw_windows\setup_openclaw_windows.ps1 -DryRun -Yes
+.\tools\scripts\openclaw_windows\setup_openclaw_windows.ps1 -DryRun -Yes
 ```
 
 This prints planned actions without executing system changes.

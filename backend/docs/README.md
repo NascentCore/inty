@@ -117,12 +117,12 @@
 
 ## P3 支撑团队与流程文档
 
-- [ ] `scripts/README.md`
-- [ ] `scripts/AGENTS.md`
-- [ ] `scripts/agent_migration/README.md`
-- [ ] `scripts/agents_management/README.md`
-- [ ] `scripts/agent_tags_migration/README.md`
-- [ ] `scripts/TEST_MULTI_SYSTEM_MESSAGES.md`
+- [ ] `tools/scripts/README.md`
+- [ ] `tools/scripts/AGENTS.md`
+- [ ] `tools/scripts/agent_migration/README.md`
+- [ ] `tools/scripts/agents_management/README.md`
+- [ ] `tools/scripts/agent_tags_migration/README.md`
+- [ ] `tools/scripts/TEST_MULTI_SYSTEM_MESSAGES.md`
 - [ ] `tests/README.md`
 - [ ] `tests/AGENTS.md`
 - [ ] `tests/AVATAR_DESCRIPTIONS.md`

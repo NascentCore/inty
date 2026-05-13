@@ -9,7 +9,7 @@
 - OpenRouter：OPENROUTER_API_KEY 或 OPENAI_API_KEY
 - DIFY_API_KEY: Dify API 密钥
 
-数据库配置文件默认使用 scripts/sync_agents_dev_to_prod/config.yaml.example
+数据库配置文件默认使用 tools/scripts/sync_agents_dev_to_prod/config.yaml.example
 """
 
 import asyncio
@@ -329,7 +329,7 @@ async def main(
     """主函数：查询数据库、生成角色并批量创建
 
     Args:
-        config: 配置文件路径，相对于 scripts/ 目录（默认: sync_agents_dev_to_prod/config.yaml.example）
+        config: 配置文件路径，相对于 tools/scripts/ 目录（默认: sync_agents_dev_to_prod/config.yaml.example）
         target_count: 目标创建角色数量（默认: 3，最大: 10）
         model: OpenRouter 模型名（默认: mistralai/devstral-2512）
     """

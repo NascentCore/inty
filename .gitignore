@@ -52,7 +52,7 @@ cover/
 .env
 .venv
 venv
-# Ops local dev: JWT from backend/ops/start.sh --local (scripts/init_admin_user.py --token-file)
+# Ops local dev: JWT from backend/ops/start.sh --local (tools/scripts/init_admin_user.py --token-file)
 .inty_ops_bearer_token
 
 # 前端相关
@@ -89,6 +89,7 @@ htmlcov/
 .pytest_cache/
 config.yaml*
 !devops/config.yaml.*
+!tools/scripts/**/config.yaml.example
 
 # google key
 inty-backend-key.json

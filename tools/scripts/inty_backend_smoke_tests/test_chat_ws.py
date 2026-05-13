@@ -5,11 +5,11 @@ Smoke 测试 /api/v1/chat/ws（与 HTTP chat completions 同一条处理链）�
 再在本脚本里用 --api-base http://127.0.0.1:8001；token 可省略，脚本会读 .inty_ops_bearer_token。
 
 在仓库根目录、已安装依赖的虚拟环境下运行，例如:
-  python3 scripts/inty_backend_smoke_tests/test_chat_ws.py \\
+  python3 tools/scripts/inty_backend_smoke_tests/test_chat_ws.py \\
     --api-base http://127.0.0.1:8001 --agent-id <AGENT_ID>
 
 创建新 agent 再测（无需事先填写 agent_id）:
-  python3 scripts/inty_backend_smoke_tests/test_chat_ws.py --api-base http://127.0.0.1:8001 --create-agent
+  python3 tools/scripts/inty_backend_smoke_tests/test_chat_ws.py --api-base http://127.0.0.1:8001 --create-agent
 """
 
 from __future__ import annotations
@@ -437,7 +437,7 @@ def main() -> None:
     p.add_argument(
         "--config",
         "-c",
-        help="YAML config (see scripts/inty_backend_smoke_tests/config.example.yaml)",
+        help="YAML config (see tools/scripts/inty_backend_smoke_tests/config.example.yaml)",
     )
     p.add_argument(
         "--api-base",

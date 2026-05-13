@@ -3,7 +3,7 @@
 # Token 优先级：命令行 --token > 环境变量 INTY_BEARER_TOKEN > 本文件中的 bearer_token
 # 说明：Cursor 聊天里无法像终端那样「持久设置」环境变量；要跑通脚本可以：
 #   1) 在 Cursor / VS Code 的「集成终端」里先 export INTY_BEARER_TOKEN=... 再执行 python；或
-#   2) 在本机复制的配置里填 bearer_token（见下方），推荐用 config.local.yaml，已被 scripts/inty_backend_smoke_tests/.gitignore 忽略
+#   2) 在本机复制的配置里填 bearer_token（见下方），推荐用 config.local.yaml，已被 tools/scripts/inty_backend_smoke_tests/.gitignore 忽略
 
 # 可选。若填写，与 INTY_BEARER_TOKEN 二选一即可
 # bearer_token: ""

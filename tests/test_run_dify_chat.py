@@ -1,4 +1,4 @@
-from scripts.run_dify_chat import build_dify_payload, prepare_characters_for_dify
+from tools.scripts.run_dify_chat import build_dify_payload, prepare_characters_for_dify
 
 
 def test_prepare_characters_for_dify_filters_existing_and_duplicates():

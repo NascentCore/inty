@@ -16,16 +16,16 @@ metadata 为 FestivalMemoryMetadata（festival_name, festival_date, llm_config�
 --llm <openrouter-model-id>：覆盖用于摘要的模型（如 openrouter/...）；不传则用配置/默认模型。
 
 用法: export PYTHONPATH=.
-  python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt "..." --output out.json
-  python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --timezone Asia/Shanghai --min-rounds 10
-  python scripts/run_festival_memory_extraction_to_json.py --festival-name "2026 Valentine's Day" --festival-date 2026-02-14 --prompt-file festival_memory_prompt_1.txt
+  python tools/scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt "..." --output out.json
+  python tools/scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --timezone Asia/Shanghai --min-rounds 10
+  python tools/scripts/run_festival_memory_extraction_to_json.py --festival-name "2026 Valentine's Day" --festival-date 2026-02-14 --prompt-file festival_memory_prompt_1.txt
   # 上例不传 --output 时写入当前目录，如 2026_valentines_day_2026-02-14_festival_memory_prompt_1.json
-  python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --limit 1
-  python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --messages-output msgs.json
-  python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out2.json --messages-input msgs.json
-  python scripts/run_festival_memory_extraction_to_json.py --festival-name "测试节日20260201" --festival-date 2026-02-01 --prompt-file festival_memory_prompt.txt --output tmp/backend_out.json --timezone America/Los_Angeles --min-rounds 50 --query
-  python scripts/run_festival_memory_extraction_to_json.py ... --parallel-workers 4
-  python scripts/run_festival_memory_extraction_to_json.py ... --llm openrouter/anthropic/claude-3.5-sonnet
+  python tools/scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --limit 1
+  python tools/scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --messages-output msgs.json
+  python tools/scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out2.json --messages-input msgs.json
+  python tools/scripts/run_festival_memory_extraction_to_json.py --festival-name "测试节日20260201" --festival-date 2026-02-01 --prompt-file festival_memory_prompt.txt --output tmp/backend_out.json --timezone America/Los_Angeles --min-rounds 50 --query
+  python tools/scripts/run_festival_memory_extraction_to_json.py ... --parallel-workers 4
+  python tools/scripts/run_festival_memory_extraction_to_json.py ... --llm openrouter/anthropic/claude-3.5-sonnet
 """
 
 from __future__ import annotations

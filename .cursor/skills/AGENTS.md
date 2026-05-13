@@ -1,3 +1,3 @@
 # Skills
 
-- Create script under [scripts](/scripts/) and reference them in SKILL.md
+- Create script under [tools/scripts](/tools/scripts/) and reference them in SKILL.md

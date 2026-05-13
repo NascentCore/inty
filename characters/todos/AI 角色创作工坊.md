@@ -43,4 +43,4 @@
 
 - `build_dify_payload` 目前只传 name、description；若增加 intro / first_encounter / opening，需 Dify 工作流先支持对应 inputs，再在脚本里扩展 payload。
 - Agent 表已有 intro、opening、meta_data；若模版部分落库，优先用 `meta_data` 或现有 JSON 列，避免一上来改表。
-- 脚本约定（scripts/AGENTS.md）：幂等、参数化、dry-run/确认；若 OpenRouter 调用次数增加，建议加 `--dry-run` 与可选 `--skip-dify`，只生成不提交便于调试。
+- 脚本约定（tools/scripts/AGENTS.md）：幂等、参数化、dry-run/确认；若 OpenRouter 调用次数增加，建议加 `--dry-run` 与可选 `--skip-dify`，只生成不提交便于调试。

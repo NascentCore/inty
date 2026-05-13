@@ -57,7 +57,7 @@
 - 建议：严格改用 `json.loads` 或专用解析器。
 
 ## 8. TODO/FIXME/HACK 长期遗留
-- 代表位置：`app/services/agent_service.py`、`app/api/*`、`app/models/*`、`app/core/*`、`scripts/*` 等多处
+- 代表位置：`app/services/agent_service.py`、`app/api/*`、`app/models/*`、`app/core/*`、`tools/scripts/*` 等多处
 - 风险：低优先级债务堆积。
 - 建议：
   - 标注负责人与截止日期；
