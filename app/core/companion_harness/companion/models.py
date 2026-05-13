@@ -56,7 +56,8 @@ class CompanionTurnResult(BaseModel):
         default="text",
         description=(
             "Structured envelope intent from dual-LLM chat: normal text bubble vs voice-note "
-            "delivery (see significance_perception.DUAL_LLM_CHAT_RESPONSE_FORMAT)."
+            "delivery (see significance_perception.DUAL_LLM_CHAT_RESPONSE_FORMAT / "
+            "DualLlmChatBranchEnvelope wire schema)."
         ),
     )
     voice_message_script: str = Field(

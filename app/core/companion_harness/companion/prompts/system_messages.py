@@ -86,7 +86,12 @@ def _output_contract_text_inner_tick() -> str:
 
 
 def _dual_llm_chat_structured_output_contract_text() -> str:
-    """Prompt text paired with ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` / envelope parsing in ``significance_perception``."""
+    """Prompt text paired with dual-envelope ``response_format`` from ``significance_perception``.
+
+    The API ``response_format`` is ``DUAL_LLM_CHAT_RESPONSE_FORMAT``, produced by
+    ``_build_dual_llm_chat_response_format()`` from the ``DualLlmChatBranchEnvelope`` Pydantic model;
+    parsing uses the same model in ``significance_perception``.
+    """
     return (
         "## Dual-LLM chat branch: structured reply envelope\n\n"
         "Your **entire** assistant `message.content` must be **valid JSON only** "

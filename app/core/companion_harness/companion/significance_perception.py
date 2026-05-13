@@ -3,7 +3,8 @@
 **Where the three importance integers flow (read this when changing the contract):**
 
 - **Produced**: Foreground ``chat.completions`` may set ``response_format`` to
-  ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` (``turn.run_turn``) so the model returns JSON with
+  ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` (derived from ``DualLlmChatBranchEnvelope`` via
+  ``_build_dual_llm_chat_response_format()``; ``turn.run_turn``) so the model returns JSON with
   ``user_facing_reply``, ``output_to_user``, plus ``importance_round`` /
   ``importance_user_message`` / ``importance_assistant_message``. The same envelope is used
   for async ``tool_background`` finish (see ``tool_bg_routing``). Operator guidance for scoring lives in
@@ -15,7 +16,8 @@
   ``message.reasoning_details``. ``split_dual_llm_chat_branch_content`` handles raw string callers.
   Both return ``DualLlmChatBranchSplit`` (visible text, optional significance metadata dict whose keys
   match the three importance JSON field names, optional ``output_to_user``, ``reply_modality``,
-  ``voice_message_script``). ``output_to_user`` is present only when JSON validated, else ``None``.
+  ``voice_message_script``). Validated payloads deserialize as ``DualLlmChatBranchEnvelope``.
+  ``output_to_user`` is present only when JSON validated, else ``None``.
 - **Kernel return**: ``CompanionTurnResult.significance_perception`` (``models.py``) carries
   the dict for one turn; may be ``None`` if the model returned non-JSON or parse failed
   (visible text may still be the raw string).
@@ -49,7 +51,7 @@ from typing import Any, Final, Literal
 from unittest.mock import Base as _UnittestMockBase
 
 from loguru import logger
-from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 from pydantic_core import PydanticSerializationError
 
 _MARKDOWN_JSON_FENCE_RE = re.compile(
@@ -59,96 +61,69 @@ _MARKDOWN_JSON_FENCE_RE = re.compile(
 
 SIGNIFICANCE_PERCEPTION_REL: Final[str] = "SIGNIFICANCE_PERCEPTION.md"
 
-DUAL_LLM_CHAT_RESPONSE_FORMAT: Final[dict[str, Any]] = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "companion_dual_llm_chat_envelope",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "user_facing_reply": {
-                    "type": "string",
-                    "description": (
-                        "Natural-language reply to the user for this turn. "
-                        "May be empty when the parallel tool branch will carry visible text."
-                    ),
-                },
-                "importance_round": {
-                    "type": "integer",
-                    "description": (
-                        "Importance of the overall chat turn (context + user + pending reply), 1-10."
-                    ),
-                    "minimum": 1,
-                    "maximum": 10,
-                },
-                "importance_user_message": {
-                    "type": "integer",
-                    "description": "Importance of the latest user message alone, 1-10.",
-                    "minimum": 1,
-                    "maximum": 10,
-                },
-                "importance_assistant_message": {
-                    "type": "integer",
-                    "description": (
-                        "Predicted importance of your own assistant reply (user_facing_reply), 1-10."
-                    ),
-                    "minimum": 1,
-                    "maximum": 10,
-                },
-                "output_to_user": {
-                    "type": "boolean",
-                    "description": (
-                        "Foreground dual-LLM chat branch: always true. "
-                        "Tool-background finish: false when only silent persistence ran and no "
-                        "user-visible recap is needed."
-                    ),
-                },
-                "reply_modality": {
-                    "type": "string",
-                    "description": (
-                        "How this turn is primarily delivered. "
-                        "`text`: normal chat bubble (optional spoken playback may mirror "
-                        "`user_facing_reply`). "
-                        "`voice_message`: you are sending a short voice note as a person would; "
-                        "then fill `voice_message_script` with natural spoken words for synthesis "
-                        "(not stage directions). "
-                        "`user_facing_reply` may carry an optional caption or transcript preview."
-                    ),
-                    "enum": ["text", "voice_message"],
-                },
-                "voice_message_script": {
-                    "type": "string",
-                    "description": (
-                        "When `reply_modality` is `voice_message`, the exact wording to speak "
-                        "for the voice clip (first-person, conversational). "
-                        "Use empty string when `reply_modality` is `text`."
-                    ),
-                },
-            },
-            "required": [
-                "user_facing_reply",
-                "importance_round",
-                "importance_user_message",
-                "importance_assistant_message",
-                "output_to_user",
-                "reply_modality",
-                "voice_message_script",
-            ],
-            "additionalProperties": False,
-        },
-    },
-}
-
 
 class DualLlmChatBranchEnvelope(BaseModel):
-    user_facing_reply: str = ""
-    importance_round: int = Field(ge=1, le=10)
-    importance_user_message: int = Field(ge=1, le=10)
-    importance_assistant_message: int = Field(ge=1, le=10)
-    output_to_user: bool = True
-    reply_modality: Literal["text", "voice_message"] = "text"
-    voice_message_script: str = ""
+    """Assistant JSON envelope for dual-LLM chat branch (foreground or tool-background finish)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    user_facing_reply: str = Field(
+        default="",
+        description=(
+            "Natural-language reply to the user for this turn. "
+            "May be empty when the parallel tool branch will carry visible text."
+        ),
+    )
+    importance_round: int = Field(
+        ...,
+        ge=1,
+        le=10,
+        description=(
+            "Importance of the overall chat turn (context + user + pending reply), 1-10."
+        ),
+    )
+    importance_user_message: int = Field(
+        ...,
+        ge=1,
+        le=10,
+        description="Importance of the latest user message alone, 1-10.",
+    )
+    importance_assistant_message: int = Field(
+        ...,
+        ge=1,
+        le=10,
+        description=(
+            "Predicted importance of your own assistant reply (user_facing_reply), 1-10."
+        ),
+    )
+    output_to_user: bool = Field(
+        default=True,
+        description=(
+            "Foreground dual-LLM chat branch: always true. "
+            "Tool-background finish: false when only silent persistence ran and no "
+            "user-visible recap is needed."
+        ),
+    )
+    reply_modality: Literal["text", "voice_message"] = Field(
+        default="text",
+        description=(
+            "How this turn is primarily delivered. "
+            "`text`: normal chat bubble (optional spoken playback may mirror "
+            "`user_facing_reply`). "
+            "`voice_message`: you are sending a short voice note as a person would; "
+            "then fill `voice_message_script` with natural spoken words for synthesis "
+            "(not stage directions). "
+            "`user_facing_reply` may carry an optional caption or transcript preview."
+        ),
+    )
+    voice_message_script: str = Field(
+        default="",
+        description=(
+            "When `reply_modality` is `voice_message`, the exact wording to speak "
+            "for the voice clip (first-person, conversational). "
+            "Use empty string when `reply_modality` is `text`."
+        ),
+    )
 
     @field_validator("reply_modality", mode="before")
     @classmethod
@@ -216,6 +191,30 @@ class DualLlmChatBranchEnvelope(BaseModel):
         if self.reply_modality == "text":
             self.voice_message_script = ""
         return self
+
+
+def _build_dual_llm_chat_response_format() -> dict[str, Any]:
+    """OpenAI ``response_format`` wrapper from ``DualLlmChatBranchEnvelope`` JSON Schema."""
+    inner = DualLlmChatBranchEnvelope.model_json_schema()
+    inner.pop("title", None)
+    defs = inner.get("$defs")
+    if isinstance(defs, dict) and not defs:
+        inner.pop("$defs", None)
+    inner["required"] = list(DualLlmChatBranchEnvelope.model_fields.keys())
+    inner["additionalProperties"] = False
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "companion_dual_llm_chat_envelope",
+            "strict": True,
+            "schema": inner,
+        },
+    }
+
+
+DUAL_LLM_CHAT_RESPONSE_FORMAT: Final[dict[str, Any]] = (
+    _build_dual_llm_chat_response_format()
+)
 
 
 def default_significance_perception_markdown() -> str:
