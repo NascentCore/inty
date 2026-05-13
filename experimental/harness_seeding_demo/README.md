@@ -12,7 +12,7 @@
 
 | 概念 | 代码位置（勿改） | 试验中的用途 |
 |------|------------------|--------------|
-| 单轮执行 | `app/core/companion_harness/companion/turn.py` → `run_turn` | 试验主循环每次调用的本体 |
+| 单轮执行 | `app/core/companion_harness/runtime/turn.py` → `run_turn` | 试验主循环每次调用的本体 |
 | 会话与 LLM | `companion/manager.py` → `CompanionManager`, `CompanionSession`, `CompanionLLMClient` | 创建 session、共享模型配置 |
 | 提示与上下文 | `companion/prompts.py`, `companion/models.py` → `PromptBundle`, `load_prompt_bundle` | 理解「种子」对应哪些 workspace 文件 |
 | 可选 REPL 驱动 | `tools/inty_v2_repl/` | 人工演示时可不接新脚本，仍建议批跑用本目录脚本 |
@@ -82,7 +82,7 @@ pytest tests/experimental/test_harness_seeding_demo_scorer.py \
   tests/experimental/test_harness_seeding_demo_rubrics.py \
   tests/experimental/test_harness_seeding_demo_workspace_setup.py \
   tests/experimental/test_harness_seeding_demo_config_yaml_env.py \
-  tests/app/core/companion_harness/companion/test_build_openai_repl_tools_status_flag.py \
+  tests/app/core/companion_harness/test_build_openai_repl_tools_status_flag.py \
   -v
 ```
 

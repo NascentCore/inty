@@ -6,7 +6,7 @@ SessionBinding / SessionCorpus 等命名范式见 [`/docs/companion_harness/todo
 
 ## 期望设计方向（不绑定具体排期，仅架构目标）
 
-以下面向「长期关系型 Companion Harness」常见的四类记忆需求：**情景事件、语义摘要、结构化事实、可追溯治理**。与当前 Postgres 版本表实现的关系性说明见 [app/core/companion_harness/companion/AGENTS.md](/app/core/companion_harness/companion/AGENTS.md)「持久化与数据表」及 [memory_store_document_mapping.py](/app/core/companion_harness/companion/memory_store_document_mapping.py)。
+以下面向「长期关系型 Companion Harness」常见的四类记忆需求：**情景事件、语义摘要、结构化事实、可追溯治理**。与当前 Postgres 版本表实现的关系性说明见 [app/core/companion_harness/AGENTS.md](/app/core/companion_harness/AGENTS.md)「持久化与数据表」及 [memory_store_document_mapping.py](/app/core/companion_harness/memory/memory_store_document_mapping.py)。
 
 1. **分层存储模型（逻辑上拆分，不必一次改完表）**  
    - **事件流（append-only delta）**：transcript、runtime events、工具轨迹等用 **行级事件** 或 **对象存储 + 游标**，避免每行 JSONL 都整文件快照。  
@@ -69,12 +69,12 @@ flowchart LR
 
 | 主题 | 路径 |
 |------|------|
-| context 读取 | `app/core/companion_harness/companion/models.py` (`load_context_meta`) |
-| transcript / 压实 | `app/core/companion_harness/companion/turn.py`, `transcript_compaction.py`, `models.py` |
-| ai_private 注入 | `app/core/companion_harness/companion/ai_private_prompt.py`, `prompts/system_messages.py` |
-| 路径 kind | `app/core/companion_harness/companion/memory_store_document_mapping.py` |
-| scope 路径辅助 | `app/core/companion_harness/companion/memory_store_scope.py` (`MemoryStoreScopePaths`) |
-| 生图索引 | `app/core/companion_harness/companion/image_gate.py` |
+| context 读取 | `app/core/companion_harness/contracts/models.py` (`load_context_meta`) |
+| transcript / 压实 | `app/core/companion_harness/runtime/turn.py`, `transcript_compaction.py`, `models.py` |
+| ai_private 注入 | `app/core/companion_harness/system_hierarchy/ai_private_prompt.py`, `prompts/system_messages.py` |
+| 路径 kind | `app/core/companion_harness/memory/memory_store_document_mapping.py` |
+| scope 路径辅助 | `app/core/companion_harness/memory/memory_store_scope.py` (`MemoryStoreScopePaths`) |
+| 生图索引 | `app/core/companion_harness/tools/image_gate.py` |
 
 ## FR_COMPANION_HARNESS_MEMORY_STORE（向量长期记忆）
 
@@ -141,7 +141,7 @@ flowchart LR
 
 #### Companion Harness 工作区存储（正交）
 
-- 代码：`app/core/companion_harness/companion/memory_store.py`、`memory_registry.py`、`turn_engine.py`。
+- 代码：`app/core/companion_harness/memory/memory_store.py`、`memory_registry.py`、`turn_engine.py`。
 - 现状：工作区级状态（如 compaction），**不是** Harness LTM。职责拆分：**工作区 store** 与 **`CompanionHarnessLtmStore`**（示例名，以代码为准）及新表。
 
 **集成**：在 **Harness 回合组装** 路径上引入专用 **读穿/写穿** `CompanionHarnessLtmRuntime`（示例名）。DSN 可与业务共用同一 PG 集群，但 **LTM 迁移与代码归 Harness 侧拥有**；进程重启后从 PG 重建内存侧索引。
@@ -311,12 +311,12 @@ flowchart LR
 
 - `backend/alembic/versions/20260127_120000_add_memory_tables.py`：legacy `memory`（仅对照，本 FR 不扩展）
 - `backend/alembic/AGENTS.md`：迁移流程
-- `app/core/companion_harness/companion/manager.py`：`CompanionManager` / `CompanionSession`，会话 scope 来源
-- `app/core/companion_harness/companion/memory_registry.py`：`get_memory_store` 注册表模式（LTM 运行时应对齐）
-- `app/core/companion_harness/companion/memory_store.py`：工作区 store（与 LTM 正交）
-- `app/core/companion_harness/companion/memory_pipeline.py`：工作区 markdown 记忆策展（与向量 LTM 并行，勿混）
-- `app/core/companion_harness/companion/turn_engine.py`：回合与 transcript 持久化挂点
-- `app/core/companion_harness/companion/prompts.py`：companion `build_system_messages` 等（LTM 切片首选注入链）
+- `app/core/companion_harness/runtime/manager.py`：`CompanionManager` / `CompanionSession`，会话 scope 来源
+- `app/core/companion_harness/memory/memory_registry.py`：`get_memory_store` 注册表模式（LTM 运行时应对齐）
+- `app/core/companion_harness/memory/memory_store.py`：工作区 store（与 LTM 正交）
+- `app/core/companion_harness/memory/memory_pipeline.py`：工作区 markdown 记忆策展（与向量 LTM 并行，勿混）
+- `app/core/companion_harness/runtime/turn_engine.py`：回合与 transcript 持久化挂点
+- `app/core/companion_harness/system_hierarchy/prompts.py`：companion `build_system_messages` 等（LTM 切片首选注入链）
 - `app/core/companion_harness/prompting/assembler.py`：主站 Agent 提示拼装（与 companion 路径区分）
 - `app/core/companion_harness/runtime/turn_orchestrator.py`：单轮编排抽象（多 agent 编排不在此 FR）
 - `app/services/companion_chat_service.py`：可选 DSN 注入边界

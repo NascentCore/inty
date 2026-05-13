@@ -18,3 +18,14 @@
   - bootstrap: first-encountering, companion taking the lead to guide the user to define the companionship
   - intimate: engaging in intimacy
   - companion: general emotional companionship
+
+## Layer map
+
+- `runtime/`: turn orchestration, sessions, WebSocket coordination, runtime events, inspection
+- `memory/`: MemoryStore, scoped registries, document mapping, template seeds, memory pipeline
+- `system_hierarchy/`: fixed system prompt assets, prompt slices, significance perception
+- `tools/`: tool schemas, dispatch, background tool loop, image/web/search helpers
+- `environment/`: heartbeat, inner-tick scheduling, implicit companion signals
+- `llm/`: companion LLM client config, chat runtime, LangSmith parent policy, inference events
+- `experience/`: user-interactive bootstrap and experience-profile transitions
+- `contracts/`: shared Pydantic contracts crossing runtime, memory, tools, and API adapters

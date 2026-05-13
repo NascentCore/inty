@@ -18,7 +18,7 @@
 
 ## 2. 共同设置（所有 Run）
 
-- **智能体本体**：`app/core/companion_harness/companion/`，试验代码不 fork 推理核；工作区种子通过 `workspace_setup.py` 在 session 创建前写入 `MemoryStore`。
+- **智能体本体**：`app/core/companion_harness/`，试验代码不 fork 推理核；工作区种子通过 `workspace_setup.py` 在 session 创建前写入 `MemoryStore`。
 - **Harness**：`scripts/run_trial.py` 逐句用户台本、`scripts/run_matrix.py` 多种子 x 多重复。
 - **自演化管线**：试验中 largely 关闭重量级 USER/SOUL 记忆策展，避免与「种子初值」混淆；详见 [RUN.md](../RUN.md)。
 - **无 Postgres 时的工具噪声**：默认 `INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL=1`，避免 `tool_update_agent_status_line` 在无 DB 时干扰回复体与评分（内核侧为可选环境变量开关）。

@@ -9,7 +9,7 @@ from typing import Optional
 from loguru import logger
 from sqlalchemy import select
 
-from app.core.companion_harness.companion.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.services import agent_service

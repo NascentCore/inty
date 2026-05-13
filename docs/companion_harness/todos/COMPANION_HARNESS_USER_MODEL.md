@@ -36,8 +36,8 @@
 
 ### LLM + 工具调用 + 记忆
 
-- **已有**：分层记忆（情景 / 摘要 / 语义）、`transcript.jsonl`、异步工具线程、双模型路由、重要性打分（significance perception）等（详见 `/app/core/companion_harness/companion/AGENTS.md`）。
-- **仍缺或偏薄**：工具后台路径对部分供应商 **仅把结构化 envelope 放在 `reasoning` / `reasoning_details`**、而 `content` 为空时的统一读取（`/app/core/companion_harness/companion/tool_background.py` 内 TODO）；**偶发 LLM 无输出** 尚未闭环（复现、降级、观测）。
+- **已有**：分层记忆（情景 / 摘要 / 语义）、`transcript.jsonl`、异步工具线程、双模型路由、重要性打分（significance perception）等（详见 `/app/core/companion_harness/AGENTS.md`）。
+- **仍缺或偏薄**：工具后台路径对部分供应商 **仅把结构化 envelope 放在 `reasoning` / `reasoning_details`**、而 `content` 为空时的统一读取（`/app/core/companion_harness/tools/tool_background.py` 内 TODO）；**偶发 LLM 无输出** 尚未闭环（复现、降级、观测）。
 
 ### 独立虚拟环境与「世界」事件（智能体自主性与新鲜感）
 
@@ -50,16 +50,16 @@
 
 ## 谈话结论（事实摘记）
 
-- 审阅范围：`/app/core/companion_harness/` 源码与 `/app/core/companion_harness/AGENTS.md`、`/app/core/companion_harness/companion/AGENTS.md`。
+- 审阅范围：`/app/core/companion_harness/` 源码与 `/app/core/companion_harness/AGENTS.md`、`/app/core/companion_harness/AGENTS.md`。
 - 上文「术语」「相对设计目标仍缺或明显偏薄」已覆盖主要结论；细节以代码与 AGENTS 为准。
 
 ## 下一步任务目标
 
-- 在 `/app/core/companion_harness/companion/AGENTS.md` 或上层与 iMate 相关的架构文档中，写入上述术语约定并固定中英文对照。
+- 在 `/app/core/companion_harness/AGENTS.md` 或上层与 iMate 相关的架构文档中，写入上述术语约定并固定中英文对照。
 - 定义 **伴侣用户模型** 的数据边界：字段集合、更新来源（用户显式 / 隐式信号如 `/app/schemas/implicit_signals.py`、记忆抽取等）、与 `USER.md`、transcript、记忆流水线的读写关系。
-- 若新增持久化或 Pydantic schema：与 `companion_memory_document_versions`、`ContextMeta`（`/app/core/companion_harness/companion/models.py`）等现有真源对齐，命名与注释中统一使用「伴侣用户模型」以防与 ORM User 混淆。
+- 若新增持久化或 Pydantic schema：与 `companion_memory_document_versions`、`ContextMeta`（`/app/core/companion_harness/contracts/models.py`）等现有真源对齐，命名与注释中统一使用「伴侣用户模型」以防与 ORM User 混淆。
 - 按产品优先级推进 Companion Harness 缺口：多媒介通道抽象；用户侧多模态输入契约；独立于用户每轮输入的「世界/环境」状态与事件（若仍纳入本里程碑）。
-- 实现或跟进 **companion-dual-envelope-reasoning-channel**：工具后台完成轮次从 `reasoning` / `reasoning_details` 与 `content` 统一解析双通道 envelope，与 `/app/core/companion_harness/companion/tool_bg_routing.py` 行为一致。
+- 实现或跟进 **companion-dual-envelope-reasoning-channel**：工具后台完成轮次从 `reasoning` / `reasoning_details` 与 `content` 统一解析双通道 envelope，与 `/app/core/companion_harness/tools/tool_bg_routing.py` 行为一致。
 - 为「无输出 LLM 调用」补充复现与降级策略（含观测字段与用户可见行为），关闭或降级为可监控的已知限制。
 - 为 `/app/core/companion_harness/__init__.py` 补充包级 docstring，说明本包在系统中的角色（仅 docstring，不放功能性代码）。
 - 评估是否将本计划中的「伴侣用户模型」拆成独立 FR 文档（`docs/FR_*.md`）并挂链接至本文档。

@@ -69,7 +69,7 @@ class ChatWsUserSignedOnFrame(BaseModel):
 
     When ``implicit_greeting`` is true, the server runs an internal implicit sign-on companion
     turn after a successful ``user_signed_on_ack`` (same semantics as the former IMPLICIT chat
-    frame); see ``/app/core/companion_harness/companion/implicit_signal_messages.py``.
+    frame); see ``/app/core/companion_harness/environment/implicit_signal_messages.py``.
     """
 
     type: Literal["user_signed_on"] = "user_signed_on"

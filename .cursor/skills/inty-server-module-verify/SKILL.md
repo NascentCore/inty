@@ -52,7 +52,7 @@ description: >-
 
 ### 行为说明
 
-- WebSocket URL 可为 `.../api/v1/chat/ws?agent_id=...`（与交互 REPL 一致）。服务端不在连接建立后主动推送开场；若需首轮问候，先发 `user_signed_on` 控制帧并设 `implicit_greeting: true` 与 RFC4122 `message_id`（见 `/app/core/companion_harness/companion/implicit_signal_messages.py`）。脚本若仍「先收再发」，仅适用于排空 ping 或异步 tool 补帧等场景。
+- WebSocket URL 可为 `.../api/v1/chat/ws?agent_id=...`（与交互 REPL 一致）。服务端不在连接建立后主动推送开场；若需首轮问候，先发 `user_signed_on` 控制帧并设 `implicit_greeting: true` 与 RFC4122 `message_id`（见 `/app/core/companion_harness/environment/implicit_signal_messages.py`）。脚本若仍「先收再发」，仅适用于排空 ping 或异步 tool 补帧等场景。
 
 ### 运行示例
 

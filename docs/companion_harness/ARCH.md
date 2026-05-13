@@ -116,7 +116,7 @@ flowchart TD
 | --- | --- |
 | iMate Android | 连接 `/api/v1/chat/ws`，发送聊天帧和 `user_signed_on` 控制帧，本地 repository 消费下行业务帧。 |
 | IntelliMate Android | release 发送聊天仍以 HTTP completions 为主，debug 可走 WebSocket。 |
-| 生产 companion 后端 | 只有 WebSocket chat route 会把一轮聊天交给 `/app/core/companion_harness/companion/`。 |
+| 生产 companion 后端 | 只有 WebSocket chat route 会把一轮聊天交给 `/app/core/companion_harness/`。 |
 | `/api/v1/chat/ws/verify` | 复用 WebSocket framing 和队列形态，但不经过 `CompanionManager` / `run_turn`，不写 chat_history。 |
 | REPL | 通过后端 WebSocket 桥接当前生产路径；自身只做传输、日志和终端交互。 |
 | Gemini Live audio | 不属于本文描述的 `/api/v1/chat/ws` companion 文本链路。 |
@@ -165,19 +165,19 @@ flowchart TD
 
 | 主题 | 路径 |
 | --- | --- |
-| 生产 companion 内核 | `/app/core/companion_harness/companion/` |
+| 生产 companion 内核 | `/app/core/companion_harness/` |
 | WebSocket API shell | `/app/api/v1/endpoints/chat.py` |
 | WebSocket session pump | `/app/services/chat_websocket_session.py` |
 | API 到 companion 的服务边界 | `/app/services/companion_chat_service.py` |
-| WebSocket 协调状态 | `/app/core/companion_harness/companion/websocket_coordinator.py` |
-| session 与 MemoryStore 绑定 | `/app/core/companion_harness/companion/manager.py` |
-| 生产 turn 执行 | `/app/core/companion_harness/companion/turn.py` |
-| route mode | `/app/core/companion_harness/companion/turn_routes.py` |
-| prompt stack | `/app/core/companion_harness/companion/prompt_stack.py` |
-| MemoryStore | `/app/core/companion_harness/companion/memory_store.py` |
-| 记忆管线 | `/app/core/companion_harness/companion/memory_pipeline.py` |
-| async tool background | `/app/core/companion_harness/companion/tool_background.py` |
-| dual-LLM envelope | `/app/core/companion_harness/companion/significance_perception.py` |
+| WebSocket 协调状态 | `/app/core/companion_harness/runtime/websocket_coordinator.py` |
+| session 与 MemoryStore 绑定 | `/app/core/companion_harness/runtime/manager.py` |
+| 生产 turn 执行 | `/app/core/companion_harness/runtime/turn.py` |
+| route mode | `/app/core/companion_harness/runtime/turn_routes.py` |
+| prompt stack | `/app/core/companion_harness/system_hierarchy/prompt_stack.py` |
+| MemoryStore | `/app/core/companion_harness/memory/memory_store.py` |
+| 记忆管线 | `/app/core/companion_harness/memory/memory_pipeline.py` |
+| async tool background | `/app/core/companion_harness/tools/tool_background.py` |
+| dual-LLM envelope | `/app/core/companion_harness/system_hierarchy/significance_perception.py` |
 | 通用 turn 合同 | `/app/core/companion_harness/contracts/turn.py` |
 | 实验编排器 | `/app/core/companion_harness/runtime/turn_orchestrator.py` |
 | WebSocket schema | `/app/schemas/chat_websocket.py` |

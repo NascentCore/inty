@@ -22,7 +22,7 @@
 |------|--------|------|
 | 会话分区键 | `SessionBinding` | 稳定三元组 `(user_id, companion_id, chat_id)`；标识长期会话分区。**不等于**单次 HTTP / 单轮 tool。与现有 `CompanionScope` 同构，可并存为别名。 |
 | 版本化正文集合 | `SessionCorpus` | 某 binding 下按 `corpus_rel_key` 存储、读 head 的正文与快照（IDENTITY / SOUL / USER / MEMORY、transcript、context_json、memory 树等）。对应实现面主要是 `MemoryStore` + `companion_workspace_document_versions`。 |
-| 逻辑寻址 | `corpus_rel_key` | 如 `IDENTITY.md`、`memory/daily/YYYY-MM-DD.md`；映射到 ORM 见 `/app/core/companion_harness/companion/memory_store_document_mapping.py`。 |
+| 逻辑寻址 | `corpus_rel_key` | 如 `IDENTITY.md`、`memory/daily/YYYY-MM-DD.md`；映射到 ORM 见 `/app/core/companion_harness/memory/memory_store_document_mapping.py`。 |
 | 耐久协同态 | `DurableSidecar` | 一般不拼进默认 system，但 **重启后仍应有意义**；存放处与回放规则须在契约中写明。 |
 | 进程私有态 | `ProcessPrivate` | 仅进程内便利；**可随进程结束丢弃或可重建**。 |
 
@@ -40,7 +40,7 @@ SessionBinding
 ## 5. 与 Companion Harness 的关系
 
 - **Companion Harness**：编排、工具循环、prompt 顺序；消费当前 binding 下的 **corpus head** 与（只读）必要的 sidecar 视图。
-- **包内固定文案**（如 `/app/core/companion_harness/companion/prompts/AXIOM.md`）：**不属于** `SessionCorpus`，与语料并列，避免「凡是 md 都是语料」。
+- **包内固定文案**（如 `/app/core/companion_harness/system_hierarchy/prompts/AXIOM.md`）：**不属于** `SessionCorpus`，与语料并列，避免「凡是 md 都是语料」。
 
 ## 6. 工具与迁移话术
 

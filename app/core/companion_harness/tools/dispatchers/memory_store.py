@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from app.core.companion_harness.companion.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 
 
 def dispatch_memory_store_tool(

@@ -37,4 +37,4 @@ Interactive **`repl`** sends each line with **`post_turn`** (upload immediately)
 | [proto_log.py](proto_log.py) | loguru file/stderr setup |
 | [repl_dotenv.py](repl_dotenv.py) | Dotenv loading |
 
-Companion Harness code lives under **`app/core/companion_harness/companion/`**, not in this package.
+Companion Harness code lives under **`app/core/companion_harness/`**, not in this package.
