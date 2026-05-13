@@ -1,12 +1,12 @@
 # Companion Memory Store
 
-本文汇总 agentic companion 与工作区 **MemoryStore** 相关的两类说明：(1) **已实现** 的运行时与控制面 artifact（context、transcript、状态 JSON、生图索引等）；(2) **规划中** 的命名向量长期记忆（FR：`FR_AGENTIC_MEMORY_STORE`，PostgreSQL + pgvector）。Markdown 分层记忆管线（episodic / gist / semantic 策展）见 [`/docs/imate/MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)。
+本文汇总 Companion Harness 与工作区 **MemoryStore** 相关的两类说明：(1) **已实现** 的运行时与控制面 artifact（context、transcript、状态 JSON、生图索引等）；(2) **规划中** 的命名向量长期记忆（FR：`FR_COMPANION_HARNESS_MEMORY_STORE`，PostgreSQL + pgvector）。Markdown 分层记忆管线（episodic / gist / semantic 策展）见 [`/docs/companion_harness/MEMORY_PIPELINE.md`](/docs/companion_harness/MEMORY_PIPELINE.md)。
 
-ARCH 命名范式（SessionBinding / SessionCorpus 等）与本文件「期望设计方向」合并后的目标架构全文见 [`/docs/imate/MEMORY_STORE_TARGET_DESIGN.md`](/docs/imate/MEMORY_STORE_TARGET_DESIGN.md)。
+SessionBinding / SessionCorpus 等命名范式见 [`/docs/companion_harness/todos/COMPANION_HARNESS_ARCH_ENHANCEMENT.md`](/docs/companion_harness/todos/COMPANION_HARNESS_ARCH_ENHANCEMENT.md)；整体职责边界见 [`/docs/companion_harness/ARCH.md`](/docs/companion_harness/ARCH.md)。
 
 ## 期望设计方向（不绑定具体排期，仅架构目标）
 
-以下面向「长期关系型 agentic companion」常见的四类记忆需求：**情景事件、语义摘要、结构化事实、可追溯治理**。与当前 Postgres 版本表实现的关系性说明见 [app/core/agentic_kernel/companion/AGENTS.md](/app/core/agentic_kernel/companion/AGENTS.md)「持久化与数据表」及 [memory_store_document_mapping.py](/app/core/agentic_kernel/companion/memory_store_document_mapping.py)。
+以下面向「长期关系型 Companion Harness」常见的四类记忆需求：**情景事件、语义摘要、结构化事实、可追溯治理**。与当前 Postgres 版本表实现的关系性说明见 [app/core/companion_harness/companion/AGENTS.md](/app/core/companion_harness/companion/AGENTS.md)「持久化与数据表」及 [memory_store_document_mapping.py](/app/core/companion_harness/companion/memory_store_document_mapping.py)。
 
 1. **分层存储模型（逻辑上拆分，不必一次改完表）**  
    - **事件流（append-only delta）**：transcript、runtime events、工具轨迹等用 **行级事件** 或 **对象存储 + 游标**，避免每行 JSONL 都整文件快照。  
@@ -52,7 +52,7 @@ flowchart LR
 
 ## 工作区 MemoryStore（运行时与控制面）
 
-本文与分层记忆稿（[`/docs/imate/MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)）正交：记录 **context / transcript / ai_private / 状态 JSON / 生图索引** 在 MemoryStore 中的角色。人设根稿（`IDENTITY.md` / `SOUL.md` / `USER.md`）随交互由工具与记忆管线策展更新。规划中的向量 LTM 见下文「FR_AGENTIC_MEMORY_STORE（向量长期记忆）」。
+本文与分层记忆稿（[`/docs/companion_harness/MEMORY_PIPELINE.md`](/docs/companion_harness/MEMORY_PIPELINE.md)）正交：记录 **context / transcript / ai_private / 状态 JSON / 生图索引** 在 MemoryStore 中的角色。人设根稿（`IDENTITY.md` / `SOUL.md` / `USER.md`）随交互由工具与记忆管线策展更新。规划中的向量 LTM 见下文「FR_COMPANION_HARNESS_MEMORY_STORE（向量长期记忆）」。
 
 ### 存储、更新与效果
 
@@ -69,29 +69,29 @@ flowchart LR
 
 | 主题 | 路径 |
 |------|------|
-| context 读取 | `app/core/agentic_kernel/companion/models.py` (`load_context_meta`) |
-| transcript / 压实 | `app/core/agentic_kernel/companion/turn.py`, `transcript_compaction.py`, `models.py` |
-| ai_private 注入 | `app/core/agentic_kernel/companion/ai_private_prompt.py`, `prompts/system_messages.py` |
-| 路径 kind | `app/core/agentic_kernel/companion/memory_store_document_mapping.py` |
-| scope 路径辅助 | `app/core/agentic_kernel/companion/memory_store_scope.py` (`MemoryStoreScopePaths`) |
-| 生图索引 | `app/core/agentic_kernel/companion/image_gate.py` |
+| context 读取 | `app/core/companion_harness/companion/models.py` (`load_context_meta`) |
+| transcript / 压实 | `app/core/companion_harness/companion/turn.py`, `transcript_compaction.py`, `models.py` |
+| ai_private 注入 | `app/core/companion_harness/companion/ai_private_prompt.py`, `prompts/system_messages.py` |
+| 路径 kind | `app/core/companion_harness/companion/memory_store_document_mapping.py` |
+| scope 路径辅助 | `app/core/companion_harness/companion/memory_store_scope.py` (`MemoryStoreScopePaths`) |
+| 生图索引 | `app/core/companion_harness/companion/image_gate.py` |
 
-## FR_AGENTIC_MEMORY_STORE（向量长期记忆）
+## FR_COMPANION_HARNESS_MEMORY_STORE（向量长期记忆）
 
 ### 中文执行计划
 
-本 FR 目标：为 **AGENTIC kernel**（`app/core/agentic_kernel/` 下的 companion 运行时）提供**专用**长期记忆：可持久化的命名记忆、可审计来源、层次结构、PostgreSQL + pgvector 与全文混合检索、进程内运行时缓存，以及与其它提示词切片统一的 LLM 上下文组装能力。
+本 FR 目标：为 **Companion Harness**（`app/core/companion_harness/` 下的 companion 运行时）提供**专用**长期记忆：可持久化的命名记忆、可审计来源、层次结构、PostgreSQL + pgvector 与全文混合检索、进程内运行时缓存，以及与其它提示词切片统一的 LLM 上下文组装能力。
 
 **与 legacy 记忆系统的关系（强制边界）**
 
 - **Legacy** 指：既有 PostgreSQL `memory` 表、节日/日常记忆抽取与推送、`memory_extraction_log` 等主 App 管线；**本 FR 不沿用、不扩展、不在读写路径上耦合**该表或该管线。
-- **Agentic kernel 记忆** 使用**独立表名与独立 Repository/服务**（例如 `agentic_kernel_ltm` + `agentic_kernel_ltm_provenance`，名称以最终实现为准），仅由 kernel 编排层与可选的后台任务访问。
-- 主 App 的 legacy 记忆可继续服务旧客户端；agentic 路径是否**并行展示**由产品另定，但**存储与代码边界保持分离**。
+- **Companion Harness 记忆** 使用**独立表名与独立 Repository/服务**（例如 `companion_harness_ltm` + `companion_harness_ltm_provenance`，名称以最终实现为准），仅由 Harness 编排层与可选的后台任务访问。
+- 主 App 的 legacy 记忆可继续服务旧客户端；Companion Harness 路径是否**并行展示**由产品另定，但**存储与代码边界保持分离**。
 
 #### 前置决策（阶段 0）
 
-- 固化 **新表前缀与模块布局**（全部落在 agentic kernel 或明确标注的 `backend` 子模块，禁止混入 legacy `memory` 的 ORM 模型）。
-- 固化 **作用域键**：`user_id` 必选；`agent_id` / `chat_id` / `workspace` 或 kernel 会话键是否参与过滤与唯一约束写清。
+- 固化 **新表前缀与模块布局**（全部落在 Companion Harness 或明确标注的 `backend` 子模块，禁止混入 legacy `memory` 的 ORM 模型）。
+- 固化 **作用域键**：`user_id` 必选；`agent_id` / `chat_id` / `workspace` 或 Harness 会话键是否参与过滤与唯一约束写清。
 - 固化 **嵌入合同**：模型 id、向量维度、是否归一化、距离算子（与 HNSW opclass 一致）、`embedding_version` 升级与全量重算策略。
 
 #### 分阶段交付
@@ -106,7 +106,7 @@ flowchart LR
 | 5 | 检索服务 | 过滤后向量 Top-K + 全文 Top-K -> RRF/加权融合 -> 可选重排；层次打包进 token 预算 |
 | 6 | 提示词组装 | 在 **companion 唯一出口** 注入 LTM 块；与工作区 `memory_pipeline` 文档块顺序可配置；与 `prompting/assembler.py` 路径去重 |
 | 7 | 对外 API（若需要） | HTTP 契约；同步 `app/schemas` 与 Kotlin `api/model` |
-| 8 | 质量与观测 | 集成测试；**断言** agentic 读写从不触及 legacy `memory` 表；延迟与嵌入失败率指标 |
+| 8 | 质量与观测 | 集成测试；**断言** Companion Harness 读写从不触及 legacy `memory` 表；延迟与嵌入失败率指标 |
 | 9 | 上线 | 功能开关、重嵌入与索引重建运维说明 |
 
 #### 关键依赖与风险
@@ -120,15 +120,15 @@ flowchart LR
 
 ### 目标与非目标
 
-**目标**（仅 `app/core/agentic_kernel/` 使用）：
+**目标**（仅 `app/core/companion_harness/` 使用）：
 
 1. 每条记忆有稳定 **命名**（作用域内 slug）与 **来源**（provenance：哪些对话片段与元数据支撑提炼）。
-2. **层次化**：`parent_id` 树，可选 `agentic_kernel_ltm_edge` 表达 DAG（关联、替代、派生）。
+2. **层次化**：`parent_id` 树，可选 `companion_harness_ltm_edge` 表达 DAG（关联、替代、派生）。
 3. **持久化**：PostgreSQL + **pgvector** 语义检索，配合 **全文**（`tsvector` + GIN）做混合排序。
 4. **进程内运行时**：工作集、热点缓存、写合并；**PostgreSQL 为权威数据源**。
 5. **提示词组装**：独立「记忆切片」，与静态系统切片、工具策略切片、近期对话等拼装为发给 LLM 的上下文。
 
-**非目标**：复用、迁移或扩展 legacy `memory` 表及其抽取管线；向 legacy 表双写 kernel LTM。
+**非目标**：复用、迁移或扩展 legacy `memory` 表及其抽取管线；向 legacy 表双写 Harness LTM。
 
 表名与列名为提案，**禁止**与 legacy `memory` 同名冲突。
 
@@ -139,26 +139,26 @@ flowchart LR
 - 历史主 App 能力：`memory` 表（见 `alembic/versions/20260127_120000_add_memory_tables.py`）、节日/日常抽取与推送等。
 - **本 FR 不读不写** legacy `memory`：不共享 ORM、不共享 Repository、LTM 行不 `FOREIGN KEY` 指向 `memory.id`。
 
-#### Agentic kernel 工作区存储（正交）
+#### Companion Harness 工作区存储（正交）
 
-- 代码：`app/core/agentic_kernel/companion/memory_store.py`、`memory_registry.py`、`turn_engine.py`。
-- 现状：工作区级状态（如 compaction），**不是** kernel LTM。职责拆分：**工作区 store** 与 **`AgenticKernelLtmStore`**（示例名，以代码为准）及新表。
+- 代码：`app/core/companion_harness/companion/memory_store.py`、`memory_registry.py`、`turn_engine.py`。
+- 现状：工作区级状态（如 compaction），**不是** Harness LTM。职责拆分：**工作区 store** 与 **`CompanionHarnessLtmStore`**（示例名，以代码为准）及新表。
 
-**集成**：在 **kernel 回合组装** 路径上引入专用 **读穿/写穿** `AgenticKernelLtmRuntime`（示例名）。DSN 可与业务共用同一 PG 集群，但 **LTM 迁移与代码归 kernel 侧拥有**；进程重启后从 PG 重建内存侧索引。
+**集成**：在 **Harness 回合组装** 路径上引入专用 **读穿/写穿** `CompanionHarnessLtmRuntime`（示例名）。DSN 可与业务共用同一 PG 集群，但 **LTM 迁移与代码归 Harness 侧拥有**；进程重启后从 PG 重建内存侧索引。
 
 #### 编排边界
 
-- `companion_chat_service.py` 仅可传入 **DSN 或 session 工厂**；不得把 kernel LTM 路由到 legacy 记忆服务。嵌入可异步/延迟，**不得**调用 legacy 抽取任务。
+- `companion_chat_service.py` 仅可传入 **DSN 或 session 工厂**；不得把 Harness LTM 路由到 legacy 记忆服务。嵌入可异步/延迟，**不得**调用 legacy 抽取任务。
 
 #### 提示词组装
 
 - 对齐 `docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md`（类型化切片边界）。
 - 记忆块须由 **单一入口** 生成（ companion 侧专用小模块或扩展现有 `build_system_messages` 链路），避免多处字符串拼接。
-- **`app/core/agentic_kernel/prompting/assembler.py`** 偏向主站 Agent 的 LangChain 拼装；**本 FR 的向量 LTM 切片默认挂在 companion 回合路径**（如 `companion/prompts.py` / `build_system_messages` / `turn_engine.py` 的最终 message list），与 assembler 并行存在时须 **明确只选一条主路径** 注入，避免重复塞入两套「记忆」。
+- **`app/core/companion_harness/prompting/assembler.py`** 偏向主站 Agent 的 LangChain 拼装；**本 FR 的向量 LTM 切片默认挂在 companion 回合路径**（如 `companion/prompts.py` / `build_system_messages` / `turn_engine.py` 的最终 message list），与 assembler 并行存在时须 **明确只选一条主路径** 注入，避免重复塞入两套「记忆」。
 
 ### 架构审查结论（纳入本 FR）
 
-本节吸收对当前 `agentic_kernel/` 代码的对照结论，作为实现约束。
+本节吸收对当前 `companion_harness/` 代码的对照结论，作为实现约束。
 
 #### 与现有 companion 运行时的兼容度（高）
 
@@ -178,7 +178,7 @@ flowchart LR
 |------|----------|------|
 | **代码与无状态服务** | 共享 | 全进程一份 LTM Repository 类、查询与融合逻辑、（可选）全局限流后的嵌入客户端。 |
 | **数据库连接池** | 共享 | 与现有后端共用同一 PG 连接池或 DSN 工厂即可；表前缀独立。 |
-| **有状态运行时句柄** | **按作用域一份** | 仿 `get_memory_store`：按 `(user_id, companion_id, chat_id)`（或与 FR 一致的 scope key）注册 **`AgenticKernelLtmRuntime`（示例名）**，内含该 scope 的工作集缓存、写合并队列；**禁止** 无 scope 的全局单例承载租户状态。 |
+| **有状态运行时句柄** | **按作用域一份** | 仿 `get_memory_store`：按 `(user_id, companion_id, chat_id)`（或与 FR 一致的 scope key）注册 **`CompanionHarnessLtmRuntime`（示例名）**，内含该 scope 的工作集缓存、写合并队列；**禁止** 无 scope 的全局单例承载租户状态。 |
 | **OS 进程** | 默认共享 | **不**为每个 companion 默认独占一整套 OS 进程级「记忆模块」（不符合 WebSocket 多连接与弹性伸缩）；仅当合规明确要求 **硬进程隔离** 时再单独评估。 |
 
 **持久化隔离**：一切 SQL 必须带 **`user_id`（及既定 `agent_id`/`chat_id`）谓词**；禁止仅靠向量相似度、不带租户过滤的扫描。
@@ -193,7 +193,7 @@ flowchart LR
 **缺口（本 FR 不假装已解决，后续可单列 FR）**
 
 - **跨 companion 共享知识**：若同一用户下多个 agent 需共享一条「用户级」LTM，须在 schema 中显式 **`memory_scope` 或 `agent_id` 可空语义** 与检索策略（仅用户级 / 角色级 / 会话级）；不能默认仅 `chat_id`。
-- **多智能体编排**：`TurnOrchestrator` 是 **单次 turn** 抽象，**不包含** 多 agent 路由、handoff、共享黑板或跨 agent 消息总线；若产品要做「多智能体协作」，需要 **kernel 之上的编排层**，本 FR 的 LTM 仅提供 **可被多调用方共享读写的存储与检索**，不替代编排引擎。
+- **多智能体编排**：`TurnOrchestrator` 是 **单次 turn** 抽象，**不包含** 多 agent 路由、handoff、共享黑板或跨 agent 消息总线；若产品要做「多智能体协作」，需要 **Harness 之上的编排层**，本 FR 的 LTM 仅提供 **可被多调用方共享读写的存储与检索**，不替代编排引擎。
 
 #### 阶段 6 补充（提示词）
 
@@ -206,7 +206,7 @@ flowchart LR
 
 ### 逻辑数据模型
 
-#### 表 `agentic_kernel_ltm`（示例名，非 legacy `memory`）
+#### 表 `companion_harness_ltm`（示例名，非 legacy `memory`）
 
 | 列名 | 说明 |
 |------|------|
@@ -231,18 +231,18 @@ flowchart LR
 - `embedding` 上 HNSW，**opclass 与查询距离一致**。
 - `content_tsv` 上 GIN。
 
-#### 表 `agentic_kernel_ltm_provenance`
+#### 表 `companion_harness_ltm_provenance`
 
 | 列名 | 说明 |
 |------|------|
 | `id` | 主键 |
-| `memory_id` | 外键指向 `agentic_kernel_ltm` |
+| `memory_id` | 外键指向 `companion_harness_ltm` |
 | `source_type` | 如 `chat_message`、`chat_window`、`tool`、`document` |
 | `source_id` | 外部 id |
 | `excerpt` | 可选截断原文 |
 | `meta` | JSONB：提炼器版本、prompt 哈希、偏移等 |
 
-#### 可选表 `agentic_kernel_ltm_edge`
+#### 可选表 `companion_harness_ltm_edge`
 
 - 非树关系：`related_to`、`supersedes`、`derived_from`，行 `(from_id, to_id, kind)`。
 
@@ -265,10 +265,10 @@ flowchart LR
 1. **提炼**：LLM 或规则任务输出结构化字段（`name`、`content`、`parent_id`、多行 provenance）。
 2. **归一化**：裁剪 `name`、唯一性策略、同名则合并或升版本。
 3. **嵌入**：调用嵌入服务；失败则写 `embedding_status`（迁移中增加列）并入队重试。
-4. **持久化**：单事务写 `agentic_kernel_ltm`、插入 provenance、若非生成列则更新 `content_tsv`。
+4. **持久化**：单事务写 `companion_harness_ltm`、插入 provenance、若非生成列则更新 `content_tsv`。
 5. **通知运行时**：失效或补丁式更新缓存。
 
-异步：长耗时嵌入不阻塞用户可见回合完成；由 kernel 或调用方延迟，**不**走 legacy 抽取。
+异步：长耗时嵌入不阻塞用户可见回合完成；由 Harness 或调用方延迟，**不**走 legacy 抽取。
 
 ### 读取与检索流水线
 
@@ -304,21 +304,21 @@ flowchart LR
 
 1. 迁移：空库 `alembic upgrade head`，确认已安装 `vector` 扩展。
 2. Repository 集成：插入、混合检索、唯一性、父链、替代。
-3. **隔离**：静态分析或集成测试断言 kernel LTM 模块不 import legacy `memory` 模型或服务。
+3. **隔离**：静态分析或集成测试断言 Harness LTM 模块不 import legacy `memory` 模型或服务。
 4. 负载烟测：固定行数，在 CI 体量 DB 上记录 p95 基线。
 
 ### 仓库路径索引
 
 - `alembic/versions/20260127_120000_add_memory_tables.py`：legacy `memory`（仅对照，本 FR 不扩展）
 - `alembic/AGENTS.md`：迁移流程
-- `app/core/agentic_kernel/companion/manager.py`：`CompanionManager` / `CompanionSession`，会话 scope 来源
-- `app/core/agentic_kernel/companion/memory_registry.py`：`get_memory_store` 注册表模式（LTM 运行时应对齐）
-- `app/core/agentic_kernel/companion/memory_store.py`：工作区 store（与 LTM 正交）
-- `app/core/agentic_kernel/companion/memory_pipeline.py`：工作区 markdown 记忆策展（与向量 LTM 并行，勿混）
-- `app/core/agentic_kernel/companion/turn_engine.py`：回合与 transcript 持久化挂点
-- `app/core/agentic_kernel/companion/prompts.py`：companion `build_system_messages` 等（LTM 切片首选注入链）
-- `app/core/agentic_kernel/prompting/assembler.py`：主站 Agent 提示拼装（与 companion 路径区分）
-- `app/core/agentic_kernel/runtime/turn_orchestrator.py`：单轮编排抽象（多 agent 编排不在此 FR）
+- `app/core/companion_harness/companion/manager.py`：`CompanionManager` / `CompanionSession`，会话 scope 来源
+- `app/core/companion_harness/companion/memory_registry.py`：`get_memory_store` 注册表模式（LTM 运行时应对齐）
+- `app/core/companion_harness/companion/memory_store.py`：工作区 store（与 LTM 正交）
+- `app/core/companion_harness/companion/memory_pipeline.py`：工作区 markdown 记忆策展（与向量 LTM 并行，勿混）
+- `app/core/companion_harness/companion/turn_engine.py`：回合与 transcript 持久化挂点
+- `app/core/companion_harness/companion/prompts.py`：companion `build_system_messages` 等（LTM 切片首选注入链）
+- `app/core/companion_harness/prompting/assembler.py`：主站 Agent 提示拼装（与 companion 路径区分）
+- `app/core/companion_harness/runtime/turn_orchestrator.py`：单轮编排抽象（多 agent 编排不在此 FR）
 - `app/services/companion_chat_service.py`：可选 DSN 注入边界
 - `docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md`：提示词组装方向
 - `backend/ARCH.md`、`backend/AGENTS.md`：pgvector 与 compose 说明

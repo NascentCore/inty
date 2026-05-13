@@ -142,8 +142,8 @@ python3 tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py \
 - [`inty-local-backend-repl`](../inty-local-backend-repl/SKILL.md)
 - [`langsmith-download-run`](../langsmith-download-run/SKILL.md)
 - [`inty-server-module-verify`](../inty-server-module-verify/SKILL.md)
-- [`docs/agentic_kernel/ARCH.md`](../../../docs/agentic_kernel/ARCH.md)
-- [`app/core/agentic_kernel/companion/llm_chat_runtime.py`](../../../app/core/agentic_kernel/companion/llm_chat_runtime.py)
+- [`docs/companion_harness/ARCH.md`](../../../docs/companion_harness/ARCH.md)
+- [`app/core/companion_harness/companion/llm_chat_runtime.py`](../../../app/core/companion_harness/companion/llm_chat_runtime.py)
 
 ## 实现边界
 

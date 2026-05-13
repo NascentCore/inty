@@ -1,4 +1,4 @@
-"""Tool-call runtime helpers shared by agentic kernel chat flows."""
+"""Tool-call runtime helpers shared by Companion Harness chat flows."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Companion tool runtime: schemas, dispatch, and ``execute_tool_call`` for the REPL/agentic kernel.
+"""Companion tool runtime: schemas, dispatch, and ``execute_tool_call`` for the REPL/Companion Harness.
 
 Persisted companion documents and transcript go through MemoryStore; tool paths align with
 ``memory_store_document_mapping``.

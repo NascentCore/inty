@@ -1,4 +1,4 @@
-# Companion kernel 说明
+# Companion Harness companion 子包说明
 
 ## 分层记忆（路径与心理学术语）
 
@@ -24,7 +24,7 @@
 
 ## 持久化与数据表
 
-- **目标架构（范式）**：MemoryStore 与 ARCH 命名对齐后的合并说明（SessionBinding / SessionCorpus、现状与目标态、kernel LTM 边界）见 [/docs/imate/MEMORY_STORE_TARGET_DESIGN.md](/docs/imate/MEMORY_STORE_TARGET_DESIGN.md)。
+- **目标架构（范式）**：MemoryStore 与 ARCH 命名对齐后的合并说明（SessionBinding / SessionCorpus、现状与目标态、Harness LTM 边界）见 [/docs/companion_harness/MEMORY_STORE.md](/docs/companion_harness/MEMORY_STORE.md)。
 - **权威存储**：工作区正文（含 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` / `CHAT_LOGS.md`（WebSocket `user_signed_out` 等运维追加流水，`document_kind=chat_logs_md`，默认不参与 LLM prompt；后续是否接入产品/分析管线另行设计）/ `transcript.jsonl` / `.companion_runtime_events.jsonl`（运行时异常事件 JSONL，`runtime_events.py` 仅经 MemoryStore 读写）/ `context.json` 等逻辑路径）在启用 PostgreSQL DSN 时写入表 **`companion_memory_document_versions`**（ORM：`app.models.companion_memory_documents.CompanionMemoryDocumentVersion`）。
 - **进程内 registry**：带 repository 的 `MemoryStore` 在 [`memory_registry.py`](/app/core/companion_harness/companion/memory_registry.py) 中仅以 **`CompanionScope.registry_key()`**（`user_id:companion_id:chat_id`）注册与复用；`get_memory_store(scope, dsn=...)` 为唯一入口，工具与 `run_turn` 边界通过 **`MemoryStore` 实例**（及线程局部的 runtime inspect overlay）对齐同一 ORM 写入面。
 - **作用域**：`(user_id, companion_id, chat_id, document_kind[, calendar_date])`；同一键下 **append-only**，当前正文取 **`sequence_id` 最大** 的一行。`document_kind` 与相对路径的对应关系见 **`memory_store_document_mapping.py`**（例如 `IDENTITY.md` -> `identity`，`context.json` -> `context_json`）。

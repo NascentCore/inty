@@ -6,12 +6,12 @@
 
 Inty 代表 Intelligent Entity；本仓库是以该理念组织的智能体系统与消费者产品 Monorepo：Python 云端服务、Android 客户端、Ops 运营工具等。
 
-- 智能体内核：[`/app/core/agentic_kernel/`](/app/core/agentic_kernel/)
+- 智能体内核：[`/app/core/companion_harness/`](/app/core/companion_harness/)
 - 工程师主要使用 [Cursor](https://cursor.com/)；产品经理侧可参考 Claude Code、OpenAI Codex 文档
 
 [IntelliMate Android App](/android_app/)：传统角色扮演类 17+ 产品，基于后端 [chat completions](/app/core/chat.py)。
 
-[iMate Android App](/imate_android_app/)：面向 35+ 男性用户，基于 [agentic companion](/app/core/agentic_kernel/)。
+[iMate Android App](/imate_android_app/)：面向 35+ 男性用户，基于 [Companion Harness](/app/core/companion_harness/)。
 
 ## General background
 
