@@ -14,7 +14,7 @@ from loguru import logger
 from google.genai.errors import ClientError
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.agentic_kernel.tools.runtime import process_single_tool_call
+from app.core.companion_harness.tools.runtime import process_single_tool_call
 
 _THIS_DIR = Path(__file__).resolve().parent
 DATA_DIR = _THIS_DIR / "tmp"
