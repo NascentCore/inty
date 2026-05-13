@@ -1,7 +1,7 @@
 import sqlalchemy
 from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
 
-from app.models import Base
+from app.models.base import Base
 
 
 class VoiceCache(Base):

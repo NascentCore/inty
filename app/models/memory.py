@@ -26,7 +26,7 @@ from sqlalchemy import (
 from sqlalchemy.sql import func
 
 from app.api.types.llm_config import LLMConfig
-from app.models import Base
+from app.models.base import Base
 
 
 def _strip_optional_str(v: Any) -> Optional[str]:

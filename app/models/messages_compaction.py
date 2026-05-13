@@ -2,7 +2,7 @@ import sqlalchemy as sa
 from sqlalchemy import Column, DateTime, Index, String
 from sqlalchemy.dialects.postgresql import JSONB
 
-from app.models import Base
+from app.models.base import Base
 
 
 class MessagesCompaction(Base):

@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.models import Base
+from app.models.base import Base
 from app.models.resource import Resource
 from app.models.user import AuthType, User
 from app.schemas.response import APIResponse

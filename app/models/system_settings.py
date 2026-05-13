@@ -3,7 +3,7 @@ import enum
 import sqlalchemy as sa
 from sqlalchemy import Column, DateTime, Enum, Index, String, Text
 
-from app.models import Base
+from app.models.base import Base
 
 
 class SettingType(str, enum.Enum):

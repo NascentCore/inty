@@ -4,7 +4,7 @@ import sqlalchemy as sa
 from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 from app.models.user import Gender
 
 

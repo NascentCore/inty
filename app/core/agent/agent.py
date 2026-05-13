@@ -45,7 +45,7 @@ from app.core.config import (
     Environment,
     global_config_loaded_from_config_yaml as global_config,
 )
-from app.models import chat_history
+import app.models.chat_history as chat_history
 from app.schemas.user import MBTI_TYPES, UserMetadata
 from app.services import chat_history_service
 from app.services.cache_service import cache_service

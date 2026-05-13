@@ -2,7 +2,7 @@ import sqlalchemy as sa
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 
 
 class Settings(Base):
