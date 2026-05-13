@@ -1,13 +1,13 @@
 # Inty (Intelligent Entity) monorepo: AI agentic harness and systems for long-term emotional companionship
 
+**IMPORTANT: agentic companion and iMate (android, iOS) are under active development;
+all others are in maitenance mode and should not be changed.**
+
 - Inty is an agentic AI system to simulate human-like emotions.
   - Why? Because emotional intelligence is the most sophisticated form of Human intelligence,
     and cannot be built directly into LLMs. Because emotions requires years of interactions,
     it's the essence of human experience distilled by time itself.
 - Emotional intimacy is the most valuable and satisfactory of human experiences.
-
-**IMPORTANT: agentic companion and iMate (android, iOS) are under active development;
-all others are in maitenance mode and should not be changed.**
 
 ## Your soul
 
@@ -130,6 +130,7 @@ When asked to update docs:
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
 - **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
   document the intention and effect of the code, do not explain how the code works.
+- Markdown docs: do not reference code files when writing markdown files.
 
 ### Tips & pitfalls
 
