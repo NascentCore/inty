@@ -14,7 +14,7 @@ from pathlib import Path
 
 import httpx
 
-from tests.support.companion_ws_bootstrap.constants import (
+from tests.companion_ws_bootstrap.constants import (
     DEFAULT_PG_HOST,
     DEFAULT_PG_PORT,
     ENV_E2E_RELAX_SUBSCRIPTION,
@@ -34,8 +34,8 @@ class IntySubprocessContext:
 
 
 def repo_root_from_here() -> Path:
-    """Repository root: .../tests/support/companion_ws_bootstrap/server.py -> parents[3]."""
-    return Path(__file__).resolve().parents[3]
+    """Repository root: .../tests/companion_ws_bootstrap/server.py -> parents[2]."""
+    return Path(__file__).resolve().parents[2]
 
 
 def default_test_config_path(repo_root: Path) -> Path:
