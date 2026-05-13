@@ -82,6 +82,12 @@ class ChatWsUserSignedOnFrame(BaseModel):
         default=False,
         description="When true, run implicit sign-on greeting companion turn after coords arm.",
     )
+    implicit_greeting_note: Optional[str] = Field(
+        default=None,
+        max_length=160,
+        description="Optional client hint when implicit_greeting is false (e.g. reconnect); "
+        "server may include it in logs only.",
+    )
 
 
 class ChatWsUserSignedOutFrame(BaseModel):
