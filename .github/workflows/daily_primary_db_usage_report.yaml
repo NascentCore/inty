@@ -1,0 +1,79 @@
+# CREATED_BY_AGENT
+# Daily user analytics / usage rollup on production primary DB (same path as push_worker
+# _run_user_analytics_daily_report: T-1 UTC, AsyncSessionLocal → primary when replica_host absent).
+name: Daily primary DB usage report
+
+on:
+  schedule:
+    # Align with push_worker default user_analytics_report.daily_cron_hour (UTC 6).
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      report_date:
+        description: "Report date YYYY-MM-DD (empty = T-1 UTC, same as push worker)"
+        required: false
+        default: ""
+      force:
+        description: "Force overwrite existing report row"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-primary-db-usage-report
+  cancel-in-progress: false
+
+jobs:
+  daily_usage:
+    runs-on: inty-prod-server-gcp
+    if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Use prod IntelliMate DB config (primary when replica omitted)
+        run: cp devops/config.yaml.prod config.yaml
+
+      - name: Resolve report date (T-1 UTC if unset)
+        id: resolve
+        env:
+          INPUT_REPORT_DATE: ${{ inputs.report_date }}
+        run: |
+          set -euo pipefail
+          export TZ=UTC
+          if [ -n "${INPUT_REPORT_DATE:-}" ]; then
+            REPORT_DATE="$INPUT_REPORT_DATE"
+          else
+            REPORT_DATE="$(python -c "from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat())")"
+          fi
+          echo "report_date=$REPORT_DATE" >> "$GITHUB_OUTPUT"
+
+      - name: Run daily usage report (same entrypoint as push worker analytics job)
+        env:
+          PYTHONPATH: .
+        run: |
+          set -euo pipefail
+          CMD="python tools/scripts/run_user_analytics_report.py --type daily --date ${{ steps.resolve.outputs.report_date }}"
+          if [ "${{ inputs.force }}" = "true" ]; then
+            CMD="$CMD --force"
+          fi
+          echo "Running: $CMD"
+          eval "$CMD"
+
+      - name: Write summary
+        run: |
+          echo "## Daily primary DB usage report" >> "$GITHUB_STEP_SUMMARY"
+          echo "report_date=${{ steps.resolve.outputs.report_date }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "force=${{ inputs.force }}" >> "$GITHUB_STEP_SUMMARY"
