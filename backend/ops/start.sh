@@ -45,8 +45,8 @@ while [[ $# -gt 0 ]]; do
       echo ""
       echo "  Flags (any mode):"
       echo "  --debug         Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL)"
-      echo "  --log-file PATH Append UTF-8 logs to PATH (INTY_LOG_FILE). With --debug: console INFO"
-      echo "                  (INTY_CONSOLE_LOGGING_LEVEL), file DEBUG."
+      echo "  --log-file PATH UTF-8 file log at PATH (INTY_LOG_FILE); removed if it already exists at startup."
+      echo "                  With --debug: console INFO (INTY_CONSOLE_LOGGING_LEVEL), file DEBUG."
       echo ""
       echo "  Flags (--local|--dev only):"
       echo "  --build-frontend     Run evaluation/build.sh before uvicorn (default: on)"
@@ -73,6 +73,9 @@ if [ "$DEBUG" = true ]; then
 fi
 
 if [ -n "$LOG_FILE" ]; then
+  if [[ -e "$LOG_FILE" || -L "$LOG_FILE" ]]; then
+    rm -f "$LOG_FILE"
+  fi
   export INTY_LOG_FILE="$LOG_FILE"
   if [ "$DEBUG" = true ]; then
     export INTY_CONSOLE_LOGGING_LEVEL=INFO
