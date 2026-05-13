@@ -1,5 +1,5 @@
 ---
-name: grid-diagram-matplotlib
+name: draw-grid-diagram
 description: >-
   General-purpose labeled grid / matrix diagram from YAML via matplotlib to PNG:
   row-column headers, bilingual or dense cell text, taxonomies, capability maps,
@@ -20,7 +20,7 @@ description: >-
 From repo root (once per environment):
 
 ```bash
-pip install -r .cursor/skills/conversation-grid-matplotlib/requirements.txt
+pip install -r .cursor/skills/draw-grid-diagram/requirements.txt
 ```
 
 Requires `matplotlib` and `PyYAML`. Uses `Agg` backend (no display).
