@@ -21,17 +21,17 @@ import os
 
 import pytest
 
-from tests.support.companion_ws_bootstrap.constants import (
+from tests.companion_ws_bootstrap.constants import (
     DEFAULT_RECV_TIMEOUT_SEC,
     companion_ws_implicit_e2e_gated,
 )
-from tests.support.companion_ws_bootstrap.server import (
+from tests.companion_ws_bootstrap.server import (
     postgres_tcp_reachable,
     run_inty_backend_subprocess,
 )
 from app.core.agentic_kernel.experience_profile import EXPERIENCE_PROFILE_ID_BOOTSTRAP
 
-from tests.support.companion_ws_bootstrap.ws_client import (
+from tests.companion_ws_bootstrap.ws_client import (
     connect_send_implicit_sign_on_and_expect_assistant,
 )
 from tests.app.api.test_client import TestClient

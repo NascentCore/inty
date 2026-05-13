@@ -899,7 +899,7 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许聊天, 已用次数, 限制次数)
         """
         try:
-            # Opt-in for isolated test subprocesses only (see tests/support/companion_ws_bootstrap/server.py).
+            # Opt-in for isolated test subprocesses only (see tests/companion_ws_bootstrap/server.py).
             if os.environ.get("INTY_E2E_RELAX_SUBSCRIPTION") == "1":
                 return True, 0, TEST_ENVIRONMENT_LIMIT
             if (
