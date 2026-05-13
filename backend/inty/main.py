@@ -218,12 +218,10 @@ async def _preload_database_tables(db: AsyncSession):
         # 预热聊天表查询，确保表结构已加载
         from sqlalchemy import select
 
-        from app import models
-
         # 执行一个简单的查询来预热表结构
-        await db.execute(select(models.Chat).limit(1))
-        await db.execute(select(models.Agent).limit(1))
-        await db.execute(select(models.User).limit(1))
+        await db.execute(select(Chat).limit(1))
+        await db.execute(select(Agent).limit(1))
+        await db.execute(select(User).limit(1))
 
         # 预热chat_history表（PostgreSQL）
         from sqlalchemy import text

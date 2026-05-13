@@ -31,7 +31,8 @@ from sqlalchemy import text, update
 from sqlalchemy.exc import SQLAlchemyError
 from typing_extensions import deprecated
 
-from app import models
+from app.models.chat_settings import ChatSettings
+from app.models.user import User
 from app.core.agent import prompt_template, prompts
 from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop,
@@ -554,7 +555,7 @@ class Agent:
         self,
         *,
         user_profile: str,
-        chat_settings: Optional[models.chat_settings.ChatSettings],
+        chat_settings: Optional[ChatSettings],
         user_time_context: Optional[UserTimeContext],
         include_output_format_prompt: bool,
     ):
@@ -588,7 +589,7 @@ class Agent:
     def build_system_messages(
         self,
         user_profile: str,
-        chat_settings: models.chat_settings.ChatSettings,
+        chat_settings: ChatSettings,
         user_time_context: Optional[UserTimeContext] = None,
         include_output_format_prompt: bool = True,
     ) -> List[SystemMessage]:
@@ -608,7 +609,7 @@ class Agent:
     def build_system_messages_for_intellimate_official_assistant(
         self,
         user_profile: str,
-        chat_settings: models.chat_settings.ChatSettings,
+        chat_settings: ChatSettings,
         user_time_context: Optional[UserTimeContext] = None,
     ) -> List[SystemMessage]:
         """构建官方 IntelliMate 助手的系统消息列表；与 build_system_messages 在官方角色时的组装顺序一致，不含 main/mode prompt。"""
@@ -629,7 +630,7 @@ class Agent:
     def _build_system_messages_for_chat(
         self,
         user_profile: str,
-        chat_settings: models.chat_settings.ChatSettings,
+        chat_settings: ChatSettings,
         user_time_context: Optional[UserTimeContext],
         include_output_format_prompt: bool = True,
     ) -> List[SystemMessage]:
@@ -1111,8 +1112,8 @@ class Agent:
                 )
             user_metadata.mbti_type = mbti_type
             conn.execute(
-                update(models.User)
-                .where(models.User.id == user_id)
+                update(User)
+                .where(User.id == user_id)
                 .values(
                     meta_data=user_metadata.model_dump(exclude_none=True),
                     updated_at=text("now()"),
@@ -1440,7 +1441,7 @@ class Agent:
         session_id: str,
         messages: List[HumanMessage],
         user_profile: str = None,
-        chat_settings: models.chat_settings.ChatSettings = None,
+        chat_settings: ChatSettings = None,
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
         is_subscribed: bool = False,
@@ -1811,7 +1812,7 @@ class Agent:
         session_id: str,
         messages: List[HumanMessage],
         user_profile: str = None,
-        chat_settings: models.chat_settings.ChatSettings = None,
+        chat_settings: ChatSettings = None,
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
         is_subscribed: bool = False,
@@ -1985,7 +1986,7 @@ class Agent:
         session_id: str,
         messages: List[HumanMessage],
         user_profile: str = None,
-        chat_settings: models.chat_settings.ChatSettings = None,
+        chat_settings: ChatSettings = None,
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
         is_subscribed: bool = False,
@@ -2037,7 +2038,7 @@ class Agent:
         user_id: str,
         session_id: str,
         messages: List[HumanMessage],
-        chat_settings: models.chat_settings.ChatSettings = None,
+        chat_settings: ChatSettings = None,
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
         is_subscribed: bool = False,

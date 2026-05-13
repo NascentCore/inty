@@ -9,7 +9,7 @@ from typing import Optional
 from loguru import logger
 from sqlalchemy import select
 
-from app import models
+from app.models.agent import Agent
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.db.session import AsyncSessionLocal
 from app.services import agent_service
@@ -42,9 +42,9 @@ async def _persist_agent_status_line_body(
 ) -> None:
     async with AsyncSessionLocal() as db:
         result = await db.execute(
-            select(models.Agent).where(
-                models.Agent.id == agent_id,
-                models.Agent.deleted_at.is_(None),
+            select(Agent).where(
+                Agent.id == agent_id,
+                Agent.deleted_at.is_(None),
             )
         )
         agent = result.scalar_one_or_none()

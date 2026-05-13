@@ -15,7 +15,9 @@ from loguru import logger
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import models
+from app.models.agent import Agent
+from app.models.memory import FestivalMemoryConfig
+from app.models.user import User
 from app.db.session import AsyncSessionLocal
 from app.models.memory import Memory
 from app.services import chat_history_service, chat_service
@@ -33,11 +35,11 @@ MOCK_AI_CONTENT = "（mock）我也是，期待下次再聊。"
 async def _ensure_user_and_agent_exist(
     db: AsyncSession, user_id: str, agent_id: str
 ) -> None:
-    u = await db.execute(select(models.User).where(models.User.id == user_id))
+    u = await db.execute(select(User).where(User.id == user_id))
     if u.scalar_one_or_none() is None:
         logger.error(f"用户不存在: user_id={user_id}")
         sys.exit(1)
-    a = await db.execute(select(models.Agent).where(models.Agent.id == agent_id))
+    a = await db.execute(select(Agent).where(Agent.id == agent_id))
     if a.scalar_one_or_none() is None:
         logger.error(f"角色不存在: agent_id={agent_id}")
         sys.exit(1)
@@ -64,8 +66,8 @@ async def _get_festival_name_date(
         raise ValueError("memory_type must be festival")
     if festival_config_id is not None:
         r = await db.execute(
-            select(models.FestivalMemoryConfig).where(
-                models.FestivalMemoryConfig.id == festival_config_id
+            select(FestivalMemoryConfig).where(
+                FestivalMemoryConfig.id == festival_config_id
             )
         )
         config = r.scalar_one_or_none()

@@ -6,7 +6,8 @@ from datetime import datetime, timezone
 import pytest
 from sqlalchemy import delete, select
 
-from app import models
+from app.models.resource import Resource
+from app.models.user import AuthType, Gender, User
 from app.api.v1.endpoints import agents as agents_endpoint
 from app.api.v1.endpoints.agents import generate_background
 from app.core.config import global_config_loaded_from_config_yaml
@@ -47,11 +48,11 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
 
     try:
         async with AsyncSessionLocal() as session:
-            user = models.User(
+            user = User(
                 id=user_id,
                 readable_id=readable_id,
-                auth_type=models.AuthType.GOOGLE,
-                gender=models.Gender.FEMALE,
+                auth_type=AuthType.GOOGLE,
+                gender=Gender.FEMALE,
                 is_superuser=False,
                 system_language="en",
                 created_at=datetime.now(timezone.utc),
@@ -92,8 +93,8 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
         current_user = UserSchema(
             id=user_id,
             readable_id=readable_id,
-            auth_type=models.AuthType.GOOGLE.value,
-            gender=models.Gender.FEMALE,
+            auth_type=AuthType.GOOGLE.value,
+            gender=Gender.FEMALE,
             is_active=True,
             is_superuser=False,
             created_at=datetime.now(timezone.utc),
@@ -110,7 +111,7 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
 
         async with AsyncSessionLocal() as session:
             result = await session.execute(
-                select(models.Resource).where(models.Resource.url.in_(urls))
+                select(Resource).where(Resource.url.in_(urls))
             )
             resources = result.scalars().all()
 
@@ -137,8 +138,8 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
     finally:
         async with AsyncSessionLocal() as session:
             if urls:
-                await session.execute(delete(models.Resource).where(models.Resource.url.in_(urls)))
-            await session.execute(delete(models.User).where(models.User.id == user_id))
+                await session.execute(delete(Resource).where(Resource.url.in_(urls)))
+            await session.execute(delete(User).where(User.id == user_id))
             await session.commit()
 
 
@@ -304,8 +305,8 @@ async def test_text_to_image_uses_requested_model_for_generation(
     current_user = UserSchema(
         id=f"user-text-image-model-{uuid.uuid4().hex}",
         readable_id=uuid.uuid4().hex[:8],
-        auth_type=models.AuthType.GOOGLE.value,
-        gender=models.Gender.FEMALE,
+        auth_type=AuthType.GOOGLE.value,
+        gender=Gender.FEMALE,
         is_active=True,
         is_superuser=False,
         created_at=datetime.now(timezone.utc),
@@ -437,8 +438,8 @@ async def test_text_to_image_accepts_all_supported_models(
     current_user = UserSchema(
         id=f"user-text-image-model-all-{uuid.uuid4().hex}",
         readable_id=uuid.uuid4().hex[:8],
-        auth_type=models.AuthType.GOOGLE.value,
-        gender=models.Gender.FEMALE,
+        auth_type=AuthType.GOOGLE.value,
+        gender=Gender.FEMALE,
         is_active=True,
         is_superuser=False,
         created_at=datetime.now(timezone.utc),

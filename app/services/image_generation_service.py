@@ -42,7 +42,6 @@ from app.external_services.gcs import (
     GCS_PUBLIC_HTTPS_PREFIX,
     upload_to_gcs,
 )
-from app import models as app_models
 from app.models.resource import ResourceType
 from app.models.user import User
 from app.services import agent_service, chat_history_service
@@ -561,29 +560,29 @@ class ImageGenerationService:
             # TODO：如何确保 Cache 可以稳定的在数据库更新后获得更新从而拿到最新数据？
             # 构建查询条件
             conditions = [
-                app_models.Resource.agent_id == agent_id,
-                app_models.Resource.type == ResourceType.IMAGE,
-                app_models.Resource.resource_metadata.isnot(None),
+                app_Resource.agent_id == agent_id,
+                app_Resource.type == ResourceType.IMAGE,
+                app_Resource.resource_metadata.isnot(None),
             ]
 
             if exclude_user_id:
-                conditions.append(app_models.Resource.user_id != exclude_user_id)
+                conditions.append(app_Resource.user_id != exclude_user_id)
 
             if only_user_id:
-                conditions.append(app_models.Resource.user_id == only_user_id)
+                conditions.append(app_Resource.user_id == only_user_id)
 
             if only_include_ai_character is True:
                 conditions.append(
-                    app_models.Resource.resource_metadata.op("->>")(
+                    app_Resource.resource_metadata.op("->>")(
                         "only_include_ai_character"
                     )
                     == "true"
                 )
 
             query = (
-                select(app_models.Resource)
+                select(app_Resource)
                 .where(*conditions)
-                .order_by(app_models.Resource.created_at.desc())
+                .order_by(app_Resource.created_at.desc())
             )
 
             result = await db.execute(query)
