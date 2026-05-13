@@ -1,13 +1,8 @@
 # Inty: AI 长期情感陪伴
 
-![](https://api.checklyhq.com/v1/badges/checks/6c7437a4-e239-473b-b08d-8285fc16ce4e?style=flat&theme=default&responseTime=true)
-![](https://api.checklyhq.com/v1/badges/checks/1e149f71-dcad-49cc-a7bb-e0aecc429e6c?style=flat&theme=default&responseTime=true)
-![](https://api.checklyhq.com/v1/badges/checks/f2988f0a-f58a-4e75-87bc-e5700869ba68?style=flat&theme=default&responseTime=true)
-
 [![Android App Tests](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml)
 [![CI - Backend](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml)
 [![Validate configs](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml)
-
 [![Release - IntelliMate GPlay 内测轨道](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml)
 [![Release - 构建部署 Inty Backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
 
