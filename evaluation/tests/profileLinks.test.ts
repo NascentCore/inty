@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildAgentProfilePageHash,
   buildAgentProfilePageUrl,
   buildReportUserConversationsPageUrl,
   buildUserProfilePageUrl,
@@ -16,7 +17,10 @@ describe("profileLinks utils", () => {
     const baseUrl = "https://ops.inty.cc/evaluation/";
 
     expect(buildAgentProfilePageUrl(baseUrl, "agent-1")).toBe(
-      "https://ops.inty.cc/evaluation/#agents?agentId=agent-1",
+      "https://ops.inty.cc/evaluation/#agents?agent_id=agent-1",
+    );
+    expect(buildAgentProfilePageHash("agent id/1")).toBe(
+      "#agents?agent_id=agent%20id%2F1",
     );
     expect(buildUserProfilePageUrl(baseUrl, "user-1")).toBe(
       "https://ops.inty.cc/evaluation/#user-daily-messages?userId=user-1",
@@ -49,8 +53,11 @@ describe("profileLinks utils", () => {
   });
 
   it("extracts deep linked ids only from matching pages", () => {
-    expect(getDeepLinkedAgentIdFromHash("#agents?agentId=agent-100")).toBe(
+    expect(getDeepLinkedAgentIdFromHash("#agents?agent_id=agent-100")).toBe(
       "agent-100",
+    );
+    expect(getDeepLinkedAgentIdFromHash("#agents?agentId=agent-legacy")).toBe(
+      "agent-legacy",
     );
     expect(
       getDeepLinkedUserIdFromHash("#user-daily-messages?userId=user-100"),

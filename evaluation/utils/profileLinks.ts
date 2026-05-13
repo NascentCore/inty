@@ -9,7 +9,11 @@ export function buildAgentProfilePageUrl(
   baseUrl: string,
   agentId: string,
 ): string {
-  return `${baseUrl}#agents?agentId=${encodeURIComponent(agentId)}`;
+  return `${baseUrl}${buildAgentProfilePageHash(agentId)}`;
+}
+
+export function buildAgentProfilePageHash(agentId: string): string {
+  return `#agents?agent_id=${encodeURIComponent(agentId)}`;
 }
 
 export function buildUserProfilePageUrl(
@@ -83,7 +87,15 @@ function getHashParamForPage(
 }
 
 export function getDeepLinkedAgentIdFromHash(hash: string): string {
-  return getHashParamForPage(hash, "agents", "agentId");
+  const parsed = parseEvaluationHashRoute(hash);
+  if (parsed.pageKey !== "agents") {
+    return "";
+  }
+  return (
+    parsed.params.get("agent_id")?.trim() ||
+    parsed.params.get("agentId")?.trim() ||
+    ""
+  );
 }
 
 export function getDeepLinkedUserIdFromHash(hash: string): string {
