@@ -1417,9 +1417,6 @@ async def update_agent(
         previous_visibility = db_agent.visibility
         # 检查是否需要重新生成开场白语音
         update_data = agent_in.model_dump(exclude_unset=True)
-        reload_log_reason = "update_agent fields=" + ",".join(
-            sorted(update_data.keys())
-        )
         energy_points_delta = update_data.pop("energy_points", None)
         if energy_points_delta is not None and energy_points_delta <= 0:
             raise HTTPException(
@@ -1428,6 +1425,10 @@ async def update_agent(
         should_regenerate_voice = "opening" in update_data or "voice_id" in update_data
 
         update_data = process_agent_image_urls(update_data)
+        # 与写入 DB 的 update_data 对齐：不含 energy_points；图片 URL 已规范化/校验
+        reload_log_reason = "update_agent fields=" + ",".join(
+            sorted(update_data.keys())
+        )
 
         _update_agent_in_db(update_data, db_agent)
 
