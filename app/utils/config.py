@@ -65,7 +65,7 @@ class Environment(str, Enum):
 
 LOGGING_TIME_FORMAT = "{time:YYYY-MM-DD HH:mm:ss.SSS ZZ}"
 LOGGING_LEVEL_FORMAT = "{level: <8}"
-LOGGING_FILE_FORMAT = "{file.path}:{line} {function}"
+LOGGING_FILE_FORMAT = "{extra[inty_rel_file]}:{line} {function}"
 LOGGING_MESSAGE_FORMAT = "{message}"
 
 
@@ -73,7 +73,7 @@ class LoggingConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     level: str = "INFO"
-    # 默认格式，不使用颜色；{file.path} 为完整路径，便于终端/IDE 点击跳转
+    # 默认格式，不使用颜色；路径为仓库根相对路径（由 init_logger 的 patcher 写入 extra[inty_rel_file]）
     format: str = (
         f"{LOGGING_TIME_FORMAT} | {LOGGING_LEVEL_FORMAT} | {LOGGING_FILE_FORMAT} - {LOGGING_MESSAGE_FORMAT}"
     )
