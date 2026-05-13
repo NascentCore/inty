@@ -2,6 +2,8 @@
 
 Downlink assistant frames also print ``tool_bg`` banners: ``local-path:`` lines and
 ``image-url:`` when ``meta_data.generated_image`` carries ``image_url``.
+When LangSmith env matches tracing (API key + project), a ``langsmith:`` line with the
+trace/run URL may follow the assistant latency banner (resolved locally from wire ids).
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Annotated, Any, Mapping
 
 from cyclopts import App, Parameter
@@ -44,6 +47,29 @@ load_prototype_dotenv()
 
 def _default_workspace() -> Path:
     return Path(__file__).resolve().parent / "workspace"
+
+
+def _repl_langsmith_open_url(*, trace_id: str, run_id: str) -> str:
+    """Resolve a LangSmith UI URL from wire ids (same env as tracing: API key + project name).
+
+    Uses ``langsmith.Client.get_run_url``; returns empty string if ``langsmith`` is unavailable
+    or resolution fails (missing/invalid key, wrong project, etc.).
+    """
+    tid = (trace_id or "").strip()
+    rid = (run_id or "").strip()
+    run_uuid = tid or rid
+    if not run_uuid:
+        return ""
+    try:
+        from langsmith import Client
+    except ImportError:
+        return ""
+    try:
+        return Client(auto_batch_tracing=False).get_run_url(
+            run=SimpleNamespace(id=run_uuid)
+        )
+    except Exception:
+        return ""
 
 
 def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
@@ -168,6 +194,12 @@ def _print_assistant_reply(
         transcript_ids, meta_data=meta_data
     )
     print(f"[{repl_wall_ts_str()}] {label} {ms:.0f}ms{suffix}")
+    ls_url = _repl_langsmith_open_url(
+        trace_id=merged.get("langsmith_trace_id", ""),
+        run_id=merged.get("langsmith_run_id", ""),
+    )
+    if ls_url:
+        print(f"langsmith: {ls_url}")
     print(out)
 
 
