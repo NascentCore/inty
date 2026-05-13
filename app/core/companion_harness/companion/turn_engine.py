@@ -8,7 +8,7 @@ from typing import Any
 
 from .ai_private_prompt import get_ai_private_jsonl_text_for_prompt
 from .heartbeat import (
-    HEARTBEAT_SYNTHETIC_USER_TEXT,
+    HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -63,7 +63,7 @@ def build_repl_turn_base_messages(
         messages.append(row)
     user_msg_uuid = str(uuid.uuid4())
     if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
-        messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_USER_TEXT})
+        messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE})
         messages.append(
             {
                 "role": "user",

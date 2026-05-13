@@ -15,7 +15,7 @@ from app.core.companion_harness.companion.llm_client import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.heartbeat import (
-    HEARTBEAT_SYNTHETIC_USER_TEXT,
+    HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
 )
 from app.core.companion_harness.companion.models import (
@@ -196,7 +196,7 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     assert llm_msgs[-1]["role"] == "user"
     assert llm_msgs[-1]["content"] == PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
     assert llm_msgs[-2]["role"] == "system"
-    assert llm_msgs[-2]["content"] == HEARTBEAT_SYNTHETIC_USER_TEXT
+    assert llm_msgs[-2]["content"] == HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
     assert not any(
         m.get("role") == "user"
         and (m.get("content") or "").strip() == INNER_TICK_SYNTHETIC_USER_TEXT.strip()

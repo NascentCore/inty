@@ -17,14 +17,20 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import ChatMessage, load_transcript_from_store
 
 # 主动心跳回合里追加为 **system**：约束模型在用户未发新消息时如何接话（延续场景、禁工具、禁元话语）。
-HEARTBEAT_SYNTHETIC_USER_TEXT = (
-    "（陪伴心跳：用户尚未输入新内容。请读本窗口里**正在进行的场景、话题与语气**，用一两句自然接话，"
-    "延续当下氛围与节奏，像同一场对话的下一拍；不要突然换风格、换口吻或像新开一局；"
-    "不要提系统、心跳、等待或「我以为你走了」；不要调用工具。）"
+HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE = (
+    "## Proactive Messaging (Heartbeat)\n"
+    "- The user has not sent a new message for some time.\n"
+    "- Based on the conversation context, your character's personality, and the time elapsed, decide whether to proactively send a message.\n"
+    "- If you have something meaningful, natural, or emotionally fitting to say, respond in character as you normally would.\n"
+    "- If there is nothing appropriate to say right now, respond with exactly: [SILENT]\n"
+    "- Do NOT acknowledge, mention, or reference the heartbeat system itself.\n"
+    "- Do NOT say things like \"I noticed some time has passed\" or \"the system told me to check in\".\n"
+    "- Proactive messages should feel natural: a passing thought, a playful question, sharing something you \"just saw\", or a warm check-in.\n"
+    "- Vary your approach — don't always use the same pattern for proactive messages.\n"
 )
 
 # 主动心跳回合里作为 **user** 的可见正文：满足「末轮须为 user」的 API 形态；transcript 与调度用 `heartbeat` 标记区分，非真人输入。
-PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER = "（陪伴心跳）"
+PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER = "[SYSTEM HEARTBEAT] The user has not sent a new message for some time."
 
 _NEVER = 86400.0 * 365.0
 _RHYTHM_CLAMP_SEC = (90.0, 900.0)
