@@ -366,6 +366,34 @@ def test_chat_messages_window_limit_defaults():
     assert limits.sub_user_chat_messages_limit == 1000
 
 
+def test_database_settings_model_validate_preserves_database_urls():
+    settings = DatabaseSettings.model_validate(
+        {
+            "host": "primary.internal",
+            "port": 15432,
+            "user": "inty_user",
+            "password": "secret",
+            "db": "inty_prod",
+            "replica_host": "replica.internal",
+            "replica_port": 25432,
+            "ignored_yaml_key": "ignored",
+        }
+    )
+
+    assert (
+        settings.url
+        == "postgresql://inty_user:secret@primary.internal:15432/inty_prod"
+    )
+    assert (
+        settings.async_url
+        == "postgresql+asyncpg://inty_user:secret@primary.internal:15432/inty_prod"
+    )
+    assert (
+        settings.async_replica_url
+        == "postgresql+asyncpg://inty_user:secret@replica.internal:25432/inty_prod"
+    )
+
+
 def test_agent_config_langsmith_always_trace_user_emails_defaults_to_empty_list():
     agent_config = AgentConfig(api_key="test", langchain_api_key="test")
 
@@ -441,4 +469,33 @@ def test_load_config_explicit_companion_memory_bootstrap_type():
         cfg = load_config(str(path))
     assert cfg.app.features.companion_memory_bootstrap_type == (
         CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    )
+
+
+def test_load_config_database_settings_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "database:\n  host: localhost\n",
+        "\n".join(
+            [
+                "database:",
+                "  host: primary.internal",
+                "  port: 15432",
+                "  user: inty_user",
+                "  password: secret",
+                "  db: inty_prod",
+                "  unknown_key: ignored",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert (
+        cfg.database.url
+        == "postgresql://inty_user:secret@primary.internal:15432/inty_prod"
     )

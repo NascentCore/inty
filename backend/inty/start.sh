@@ -51,11 +51,11 @@ export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/alembic/alembic.ini}"
 # 只能手动运行下面的命令，因为其与后面的 alembic upgrade head 命令冲突。
 # 即：init_admin_user.py 需要 users 表存在。所以要先运行 alembic upgrade head。
 # 但 alembic upgrade head 需要 init_admin_user.py 运行完成生成的默认管理员 id。
-# python scripts/init_admin_user.py
+# python tools/scripts/init_admin_user.py
 python -m alembic -c "$ALEMBIC_CONFIG" upgrade head
 
 # 初始化订阅计划，写入信息会提供给 app 作为向 google play 查询订阅计划详情到依据。
-python scripts/init_subscription_plans_simple.py
+python tools/scripts/init_subscription_plans_simple.py
 
 UVICORN_LOG_ARGS=()
 if [ -n "${UVICORN_LOG_LEVEL:-}" ]; then
@@ -69,9 +69,9 @@ if [ "$DEV" = true ]; then
     echo "Starting in dev mode..."
   fi
   # 生成测试用管理员账号，ops 平台与 inty 后端分离后，这个应该就不需要了，先注释掉保留来做记录。
-  # python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
+  # python tools/scripts/init_admin_user.py --user-id user-testing --is-superuser=true
   # 生成测试用户用于本地 app 登陆
-  python scripts/create_email_password_user.py --email test@sxwl.ai --password test --yes
+  python tools/scripts/create_email_password_user.py --email test@sxwl.ai --password test --yes
   python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload "${UVICORN_LOG_ARGS[@]}"
 else
   echo "Starting in normal mode without reloading..."

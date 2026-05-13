@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
 import time
 import uuid
 from functools import lru_cache
@@ -56,6 +57,22 @@ def companion_memory_store_if_ready(
     if not session.is_initialized:
         return None
     return session.store
+
+
+def companion_session_tool_bg_idle_event(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model_id: str,
+) -> threading.Event:
+    """Return ``CompanionSession.tool_bg_idle`` for WebSocket inner-tick overlap checks."""
+    manager = _companion_manager_for_resolved_model(
+        resolved_chat_model_id,
+        _companion_runtime_config_fingerprint(),
+    )
+    session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
+    return session.tool_bg_idle
 
 
 def append_companion_chat_logs_line_for_ws_control(

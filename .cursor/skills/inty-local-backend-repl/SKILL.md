@@ -49,7 +49,7 @@ Bearer 默认读 **`${INTY_OPS_BEARER_TOKEN_FILE:-.inty_ops_bearer_token}`**（`
 Run the command below to get the agent ID for launching the repl:
 
 ```bash
-AGENT_ID=$(python3 scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR==1 {print $1}')
+AGENT_ID=$(python3 tools/scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR==1 {print $1}')
 ```
 
 ## Final reply to user（默认）

@@ -17,6 +17,7 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.soul == "SOUL.md"
     assert p.user_md == "USER.md"
     assert p.memory_md == "MEMORY.md"
+    assert p.techno_core_md == "TECHNO_CORE.md"
     assert p.living_sphere_md == "LIVING_SPHERE.md"
     assert p.tools_md == "TOOLS.md"
     assert p.transcript == "transcript.jsonl"

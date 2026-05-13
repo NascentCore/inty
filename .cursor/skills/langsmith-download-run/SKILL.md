@@ -28,7 +28,7 @@ Inty YAML does **not** define LangSmith API host; for EU / self-hosted, set **`L
 
 ## Preferred: repo helper script
 
-Helper: [`scripts/download_run.py`](../../../scripts/download_run.py). Run from **repo root** so default `--config config.yaml` resolves.
+Helper: [`tools/scripts/download_run.py`](../../../tools/scripts/download_run.py). Run from **repo root** so default `--config config.yaml` resolves.
 
 ### Full trace (default for「下载 / download LangSmith trace」)
 
@@ -37,7 +37,7 @@ Trace mode lists **all runs** with the same `trace_id` (every nested span is one
 ```bash
 source .venv/bin/activate
 
-python scripts/download_run.py \
+python tools/scripts/download_run.py \
   --trace-id "<TRACE_UUID>" \
   -o tmp/langsmith_traces/<TRACE_UUID>.json
 ```
@@ -45,7 +45,7 @@ python scripts/download_run.py \
 If the user only has **some run id** from the UI (any span in the trace):
 
 ```bash
-python scripts/download_run.py \
+python tools/scripts/download_run.py \
   "<ANY_RUN_UUID_IN_TRACE>" \
   --entire-trace \
   -o tmp/langsmith_traces/from_run_<ANY_RUN_UUID_IN_TRACE>.json
@@ -62,16 +62,16 @@ Output JSON shape:
 ### Single run (one UUID)
 
 ```bash
-python scripts/download_run.py <RUN_ID> \
+python tools/scripts/download_run.py <RUN_ID> \
   -o tmp/langsmith_runs/<RUN_ID>.json
 
-python scripts/download_run.py <RUN_ID> --verbose \
+python tools/scripts/download_run.py <RUN_ID> --verbose \
   -o tmp/langsmith_runs/<RUN_ID>.json
 
-python scripts/download_run.py <RUN_ID> \
+python tools/scripts/download_run.py <RUN_ID> \
   --config /path/to/config.yaml -o tmp/langsmith_runs/<RUN_ID>.json
 
-python scripts/download_run.py <RUN_ID> \
+python tools/scripts/download_run.py <RUN_ID> \
   --load-child-runs -o tmp/langsmith_runs/<RUN_ID>.json
 ```
 
@@ -102,7 +102,7 @@ run = client.read_run(run_id, load_child_runs=False)
 print(json.dumps(run.model_dump(mode="json"), indent=2, ensure_ascii=False))
 ```
 
-For trace-wide listing in custom code, mirror this script: `Client.list_runs(trace_id=..., limit=..., project_name=...)` with the same fallback as [`scripts/replay_chat_to_image_trace.py`](../../../scripts/replay_chat_to_image_trace.py) when `trace_id` is unsupported.
+For trace-wide listing in custom code, mirror this script: `Client.list_runs(trace_id=..., limit=..., project_name=...)` with the same fallback as [`tools/scripts/replay_chat_to_image_trace.py`](../../../tools/scripts/replay_chat_to_image_trace.py) when `trace_id` is unsupported.
 
 ## Troubleshooting
 

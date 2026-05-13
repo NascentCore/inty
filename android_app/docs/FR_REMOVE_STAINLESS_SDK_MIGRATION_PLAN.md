@@ -203,7 +203,7 @@
    - 移除 `.gitmodules` 中 `android_app/library/inty_sdk` 条目；
    - 清理 `.prettierignore` 中 `android_app/library/inty_sdk`；
    - 清理 `.github/workflows/ci_android_app.yaml` 中 `android_app/library/inty_sdk` 影响范围映射；
-   - 删除已废弃的 `scripts/update_inty_sdk_submodule.sh`（原 submodule 更新入口）；
+   - 删除已废弃的 `tools/scripts/update_inty_sdk_submodule.sh`（原 submodule 更新入口）；
    - 更新 `android_app/README.md` 中 `git submodule update --init --recursive` 的 Android `inty_sdk` 指引。
 
 ### 验收
@@ -318,7 +318,7 @@
 - `.gitmodules` 中 `android_app/library/inty_sdk` 条目已移除（文件已删除）；
 - `.prettierignore` 中 `android_app/library/inty_sdk` 与 `evaluation/inty_sdk` 已移除；
 - `.github/workflows/ci_android_app.yaml` 中 `android_app/library/inty_sdk` 变更触发映射已移除；
-- `scripts/update_inty_sdk_submodule.sh` 已删除（此前为废弃 no-op，避免误操作主仓库）；
+- `tools/scripts/update_inty_sdk_submodule.sh` 已删除（此前为废弃 no-op，避免误操作主仓库）；
 - `android_app/README.md` 已移除 Android submodule 初始化指引。
 
 ## 附录 B - Phase 0 迁移映射表（调用点 -> Retrofit / 本地模型）

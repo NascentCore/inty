@@ -87,10 +87,10 @@ database:
 
 ```bash
 export PYTHONPATH=.
-python scripts/run_user_analytics_report.py --type daily --date 2026-02-01
-python scripts/run_user_analytics_report.py --type weekly --date 2026-01-27
+python tools/scripts/run_user_analytics_report.py --type daily --date 2026-02-01
+python tools/scripts/run_user_analytics_report.py --type weekly --date 2026-01-27
 # 强制覆盖已存在的报告（用于重新生成含图表数据的报告）
-python scripts/run_user_analytics_report.py --type daily --date 2026-02-01 --force
+python tools/scripts/run_user_analytics_report.py --type daily --date 2026-02-01 --force
 ```
 
 ### 批量补算
@@ -107,7 +107,7 @@ for i in range(1, 31):
   print(d)
 " | while read d; do
   echo "补算日报 $d"
-  python scripts/run_user_analytics_report.py --type daily --date "$d"
+  python tools/scripts/run_user_analytics_report.py --type daily --date "$d"
 done
 ```
 
@@ -118,7 +118,7 @@ export PYTHONPATH=.
 for i in $(seq 1 30); do
   d=$(date -v-${i}d +%Y-%m-%d)
   echo "补算日报 $d"
-  python scripts/run_user_analytics_report.py --type daily --date "$d"
+  python tools/scripts/run_user_analytics_report.py --type daily --date "$d"
 done
 ```
 
@@ -129,7 +129,7 @@ export PYTHONPATH=.
 for i in $(seq 1 30); do
   d=$(date -d "$i days ago" +%Y-%m-%d)
   echo "补算日报 $d"
-  python scripts/run_user_analytics_report.py --type daily --date "$d"
+  python tools/scripts/run_user_analytics_report.py --type daily --date "$d"
 done
 ```
 
@@ -145,7 +145,7 @@ for d in 2026-01-06 2026-01-13 2026-01-20 2026-01-27 \
         2026-05-04 2026-05-11 2026-05-18 2026-05-25 \
         2026-06-01 2026-06-08 2026-06-15 2026-06-22 2026-06-29; do
   echo "补算周报 $d"
-  python scripts/run_user_analytics_report.py --type weekly --date "$d"
+  python tools/scripts/run_user_analytics_report.py --type weekly --date "$d"
 done
 ```
 
@@ -166,7 +166,7 @@ while d.month <= 6:
   d += timedelta(days=7)
 " | while read d; do
   echo "补算周报 $d"
-  python scripts/run_user_analytics_report.py --type weekly --date "$d"
+  python tools/scripts/run_user_analytics_report.py --type weekly --date "$d"
 done
 ```
 

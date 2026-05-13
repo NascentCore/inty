@@ -62,10 +62,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Run scripts/fmt.sh (format entire repo)
+      - name: Run tools/scripts/fmt.sh (format entire repo)
         env:
           FMT_NO_COMMIT: "true"
-        run: ./scripts/fmt.sh --all
+        run: ./tools/scripts/fmt.sh --all
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
@@ -74,7 +74,7 @@ jobs:
           commit-message: "chore: format code (automated)"
           title: "chore: format code (automated)"
           body: |
-            This PR applies automated formatting via scripts/fmt.sh.
+            This PR applies automated formatting via tools/scripts/fmt.sh.
 
             - Python: black
             - Kotlin: ktfmt

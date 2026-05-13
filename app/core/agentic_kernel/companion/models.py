@@ -166,6 +166,10 @@ class PromptBundle(BaseModel):
         ...,
         description="semantic memory: MEMORY.md body for system injection when private memory is on.",
     )
+    techno_core_md: str = Field(
+        default="",
+        description="TechnoCore virtual residency constitution for autonomy boundaries.",
+    )
     living_sphere_md: str = Field(
         default="",
         description="Stable virtual home anchor seeded by living_sphere for TechnoCore presence.",
@@ -256,6 +260,7 @@ def load_prompt_bundle(
         soul=_read_memory_document_required(store, "SOUL.md"),
         user_md=_read_memory_document_required(store, "USER.md"),
         memory_md=memory_long,
+        techno_core_md=_read_memory_document_optional(store, "TECHNO_CORE.md"),
         living_sphere_md=_read_memory_document_optional(store, "LIVING_SPHERE.md"),
         tools_md=_template_doc_truncated("TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS),
         significance_perception_md=_template_doc_truncated(

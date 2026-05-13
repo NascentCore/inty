@@ -14,13 +14,13 @@ Dry Run 模式会验证消息格式和配置，但不会实际发送消息到设
 
 ```bash
 # 测试单个 token（dry run 模式，默认）
-python scripts/fcm/test_fcm_push.py --token YOUR_FCM_TOKEN --dry-run
+python tools/scripts/fcm/test_fcm_push.py --token YOUR_FCM_TOKEN --dry-run
 
 # 测试用户 ID（从数据库获取 token）
-python scripts/fcm/test_fcm_push.py --user-id USER_ID --dry-run
+python tools/scripts/fcm/test_fcm_push.py --user-id USER_ID --dry-run
 
 # 测试推送服务
-python scripts/fcm/test_fcm_push.py --test-push-service --user-id USER_ID --dry-run
+python tools/scripts/fcm/test_fcm_push.py --test-push-service --user-id USER_ID --dry-run
 ```
 
 #### 在代码中使用
@@ -49,42 +49,42 @@ success = await notification_service.send_fcm_multicast(
 
 ### 方法 2: 使用测试脚本
 
-测试脚本 `scripts/fcm/test_fcm_push.py` 提供了多种测试方式：
+测试脚本 `tools/scripts/fcm/test_fcm_push.py` 提供了多种测试方式：
 
 #### 基本用法
 
 ```bash
 # 1. 测试单个 token（dry run）
-python scripts/fcm/test_fcm_push.py --token YOUR_FCM_TOKEN
+python tools/scripts/fcm/test_fcm_push.py --token YOUR_FCM_TOKEN
 
 # 2. 测试单个 token（真实发送）
-python scripts/fcm/test_fcm_push.py --token YOUR_FCM_TOKEN --real
+python tools/scripts/fcm/test_fcm_push.py --token YOUR_FCM_TOKEN --real
 
 # 3. 测试用户 ID
-python scripts/fcm/test_fcm_push.py --user-id USER_ID
+python tools/scripts/fcm/test_fcm_push.py --user-id USER_ID
 
 # 4. 测试推送服务
-python scripts/fcm/test_fcm_push.py --test-push-service --user-id USER_ID
+python tools/scripts/fcm/test_fcm_push.py --test-push-service --user-id USER_ID
 ```
 
 #### 高级用法
 
 ```bash
 # 自定义标题和内容
-python scripts/fcm/test_fcm_push.py \
+python tools/scripts/fcm/test_fcm_push.py \
     --token YOUR_FCM_TOKEN \
     --title "自定义标题" \
     --body "自定义内容" \
     --dry-run
 
 # 添加图片
-python scripts/fcm/test_fcm_push.py \
+python tools/scripts/fcm/test_fcm_push.py \
     --token YOUR_FCM_TOKEN \
     --image-url "https://example.com/image.jpg" \
     --dry-run
 
 # 添加数据字段
-python scripts/fcm/test_fcm_push.py \
+python tools/scripts/fcm/test_fcm_push.py \
     --token YOUR_FCM_TOKEN \
     --data '{"chat_id":"123","type":"test"}' \
     --dry-run
@@ -112,16 +112,16 @@ python scripts/fcm/test_fcm_push.py \
    - 或使用 adb logcat 查看
 
 4. **使用注册脚本手动注册**：
-   当 app 开发未就绪时，可以使用 `scripts/fcm/register_fcm_token.py` 脚本手动注册 token 到数据库。
+   当 app 开发未就绪时，可以使用 `tools/scripts/fcm/register_fcm_token.py` 脚本手动注册 token 到数据库。
 
    ```bash
    # 基本用法：为指定用户注册 token
-   python scripts/fcm/register_fcm_token.py \
+   python tools/scripts/fcm/register_fcm_token.py \
      --token "YOUR_FCM_TOKEN" \
      --user-id "USER_ID"
 
    # 验证 token 格式后注册（推荐）
-   python scripts/fcm/register_fcm_token.py \
+   python tools/scripts/fcm/register_fcm_token.py \
      --token "YOUR_FCM_TOKEN" \
      --user-id "USER_ID" \
      --validate-token
@@ -343,7 +343,7 @@ tail -f logs/structured.log
 
 ```bash
 # 使用 dry run 模式验证配置
-python scripts/fcm/test_fcm_push.py --token TEST_TOKEN --dry-run
+python tools/scripts/fcm/test_fcm_push.py --token TEST_TOKEN --dry-run
 ```
 
 ### 第二步：检查日志
@@ -358,7 +358,7 @@ python scripts/fcm/test_fcm_push.py --token TEST_TOKEN --dry-run
 
 ```bash
 # 仅在确认配置正确后使用真实发送
-python scripts/fcm/test_fcm_push.py --token TEST_TOKEN --real
+python tools/scripts/fcm/test_fcm_push.py --token TEST_TOKEN --real
 ```
 
 ### 第四步：集成测试
@@ -366,14 +366,14 @@ python scripts/fcm/test_fcm_push.py --token TEST_TOKEN --real
 测试完整的推送服务流程：
 
 ```bash
-python scripts/fcm/test_fcm_push.py --test-push-service --user-id USER_ID --dry-run
+python tools/scripts/fcm/test_fcm_push.py --test-push-service --user-id USER_ID --dry-run
 ```
 
 ## 相关文件
 
 - `app/services/notification_service.py` - FCM 推送服务
-- `scripts/fcm/test_fcm_push.py` - FCM 测试脚本
-- `scripts/fcm/register_fcm_token.py` - FCM Token 注册脚本
+- `tools/scripts/fcm/test_fcm_push.py` - FCM 测试脚本
+- `tools/scripts/fcm/register_fcm_token.py` - FCM Token 注册脚本
 - `app/external_services/firebase.py` - Firebase 初始化
 - `docs/PUSH_NOTIFICATION_SYSTEM.md` - 推送系统文档
 

@@ -1,7 +1,14 @@
 import React from "react";
-import { Button, Modal, Spin } from "antd";
+import { Button, Modal, Spin, Typography } from "antd";
+import { LinkOutlined } from "@ant-design/icons";
 import type { Agent } from "../../types";
 import AgentInfoDisplay from "./AgentInfoDisplay";
+import {
+  buildAgentProfilePageUrl,
+  getEvaluationBaseUrl,
+} from "../../utils/profileLinks";
+
+const { Text } = Typography;
 
 type AgentDetailModalActionKey = "close" | "edit";
 
@@ -40,6 +47,9 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
   width = 800,
 }) => {
   const actionKeys = getAgentDetailModalActionKeys(agent, Boolean(onEdit));
+  const permalink = agent
+    ? buildAgentProfilePageUrl(getEvaluationBaseUrl(), agent.id)
+    : "";
 
   const footer = actionKeys.map((actionKey) => {
     if (actionKey === "edit") {
@@ -79,10 +89,29 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
         </div>
       ) : (
         agent && (
-          <AgentInfoDisplay
-            agent={agent}
-            onDeleteBackgroundImage={onDeleteBackgroundImage}
-          />
+          <>
+            <div
+              style={{
+                marginBottom: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              <Text strong>永久链接:</Text>
+              <a href={permalink} target="_blank" rel="noopener noreferrer">
+                <LinkOutlined /> 智能体管理详情
+              </a>
+              <Text copyable={{ text: permalink }} type="secondary">
+                {permalink}
+              </Text>
+            </div>
+            <AgentInfoDisplay
+              agent={agent}
+              onDeleteBackgroundImage={onDeleteBackgroundImage}
+            />
+          </>
         )
       )}
     </Modal>

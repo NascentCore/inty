@@ -33,7 +33,7 @@
 
    ```bash
    export PYTHONPATH=.
-   python scripts/create_email_password_superuser.py \
+   python tools/scripts/create_email_password_superuser.py \
      --email partner-dev@example.com \
      --password '<strong-password>' \
      --is-superuser=false \
@@ -41,8 +41,8 @@
      --yes
    ```
 
-   - 本仓库中的脚本名为 **`scripts/create_email_password_superuser.py`**。若你方流程文档写的是 `scripts/create_email_password_user.py`，请与此脚本对齐（或在本仓库增加同名薄封装后再引用）。
-   - 更细的字段说明见 `scripts/CREATE_EMAIL_PASSWORD_USER.md`。
+   - 本仓库中的脚本名为 **`tools/scripts/create_email_password_superuser.py`**。若你方流程文档写的是 `tools/scripts/create_email_password_user.py`，请与此脚本对齐（或在本仓库增加同名薄封装后再引用）。
+   - 更细的字段说明见 `tools/scripts/CREATE_EMAIL_PASSWORD_USER.md`。
    - 对 **外部集成专用账号** 建议使用 `--is-superuser=false`，避免误用超级用户权限（例如 WebSocket 上的 `assume_user_id` 仅对 superuser 生效）。
 3. **换取 JWT**：对 **同一 dev 环境的 HTTP 基地址** 调用：
 
@@ -68,7 +68,7 @@
 
 ```bash
 export PYTHONPATH=.
-python scripts/generate_long_term_token.py --email partner-dev@example.com --days 365
+python tools/scripts/generate_long_term_token.py --email partner-dev@example.com --days 365
 ```
 
 - **必须且只能**指定 `--user-id`、`--phone`、`--email`、`--readable-id` 其中之一。
