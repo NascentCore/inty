@@ -8,10 +8,8 @@
 [![CI - Backend](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml)
 [![Validate configs](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml)
 
-[![dev-prod 同步 AI 角色](https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml)
 [![Release - IntelliMate GPlay 内测轨道](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml)
 [![Release - 构建部署 Inty Backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
-[![Release - 构建部署 Inty Push Worker](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_push_worker.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_push_worker.yml)
 
 ## 工具
 
