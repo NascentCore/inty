@@ -19,7 +19,10 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token
 from app.db.base import SessionLocal
+from app.models.registry import load_model_modules
 from app.models.user import AuthType, Gender, User
+
+load_model_modules()
 
 DEFAULT_ADMIN_USER_ID = "user-01JWZ34Y4D1C92GD86A5R6EWYJ"
 

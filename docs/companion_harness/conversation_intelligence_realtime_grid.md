@@ -1,6 +1,6 @@
 # Conversation grid: intelligence vs realtime
 
-Axes: x = 弱智能 / 适中 / 强智能 (columns); y = 慢实时 / 适中实时 / 快实时 (rows). Top row labels the x-axis; left column labels the y-axis.
+Axes: x = Low / Moderate / High intelligence (columns); y = Slow / Moderate / Fast realtime (rows). Top row labels the x-axis; left column labels the y-axis.
 
 **Figure (matplotlib + YAML):** regenerate with
 
@@ -13,8 +13,3 @@ python3 tools/scripts/draw_labeled_grid.py \
 Source data: [conversation_intelligence_realtime_grid.yaml](/docs/companion_harness/conversation_intelligence_realtime_grid.yaml). Skill: [.cursor/skills/conversation-grid-matplotlib/SKILL.md](/.cursor/skills/conversation-grid-matplotlib/SKILL.md).
 
 ![conversation intelligence realtime grid](conversation_intelligence_realtime_grid.png)
-
-## See also
-
-- [IDEAS.md](IDEAS.md)：记忆管线、实验目录收口等条目与网格轴上的能力选型相关。
-- [ARCH.md](ARCH.md)：伴侣 `/api/v1/chat/ws`、`MemoryStore`、`run_turn` 等当前实现边界。

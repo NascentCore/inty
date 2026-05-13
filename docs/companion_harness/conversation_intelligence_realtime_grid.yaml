@@ -1,5 +1,5 @@
-# Example: intelligence (columns) x realtime (rows) conversation grid
-title: "对话类型在「智能强度 x 实时性 y」上的分布示意（含适中）"
+# Intelligence (columns) × realtime (rows) conversation-type grid (English)
+title: "Conversation types on intelligence (x) × realtime (y), including a moderate band"
 layout:
   fig_width_in: 14
   fig_height_in: 10
@@ -14,21 +14,21 @@ style:
   font_size_title: 13
   font_size_header: 11
   font_size_cell: 9
-  font_family: "Noto Sans CJK JP"
+  font_family: "DejaVu Sans"
 rows:
-  - - "实时性\n↓\n慢→快"
-    - "弱智能"
-    - "适中"
-    - "强智能"
-  - - "慢实时"
-    - "模板寒暄堆砌\n空洞拖延慢回\n低信息量长回合"
-    - "日常话题慢热展开\n轻度追问深挖\n回忆叙事拉片"
-    - "深度思辨\n长链推理\n研究综述"
-  - - "适中实时"
-    - "FAQ轮播占位\n转接排队话术\n免责长说明"
-    - "目标对齐协作\n轻度讲解带练\n有来有往闲聊"
-    - "多步技术排障\nAB方案权衡\n结构化访谈追问"
-  - - "快实时"
-    - "问候礼貌回合\n收到确认短回\n简单指令应答"
-    - "一句话进度同步\n轻量建议点拨\n破冰不尬场"
-    - "强情绪当下承接\n危机安抚稳态\n冲突现场修复"
+  - - "Realtime · Intelligence"
+    - "Low"
+    - "Moderate"
+    - "High"
+  - - "Slow"
+    - "Templated small-talk\nHollow pacing\nFiller beats"
+    - "Everyday warm-up\nLight rapport\nGentle follow-ups"
+    - "Dialectic depth\nLong-chain reasoning\nResearch synthesis"
+  - - "Moderate"
+    - "FAQ placeholders\nQueue/hand-off scripts\nLong disclaimers"
+    - "Goal co-work\nExplain-and-practice\nBalanced chat"
+    - "Multi-step troubleshooting\nOption tradeoffs\nStructured probing"
+  - - "Fast"
+    - "Polite greetings\nTerse acknowledgments\nCommand/response"
+    - "One-line progress\nLight tips/nudges\nLow-cringe icebreakers"
+    - "Strong affect now\nCrisis calming\nLive repair"

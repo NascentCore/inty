@@ -1,5 +1,8 @@
 # Inty (Intelligent Entity) monorepo: AI agentic harness and systems for long-term emotional companionship
 
+**IMPORTANT: agentic companion and iMate (android, iOS) are under active development;
+all others are in maitenance mode and should not be changed.**
+
 - Inty is an agentic AI system to simulate human-like emotions.
   - Why? Because emotional intelligence is the most sophisticated form of Human intelligence,
     and cannot be built directly into LLMs. Because emotions requires years of interactions,
@@ -71,12 +74,13 @@ such experience is between human users and AI, but they have real-world patterns
     - [iMate android app](/imate_android_app/)
     - [iMate iOS app](/imate_ios_app/)
 - Repo agentic harness
-  - [.agents](/.agents/) general coding agents instructions & harness contextual information.
+  - [.agents](/.agents/) coding agents instructions & harness contextual information.
   - [.cursor](/.cursor/) Cursor-specific harness
-- Miscs: read AGENTS.md or README.md under the dirs for information.
+- Docs for your human parnters
+  - Markdown files spreaded across the repo not under `/.agents/`
 
 IMPORTANT: feel free to break backward compatibility when changing companion_harness & repl,
-they are in development mode.
+they are under adtive development.
 
 ## Your response style
 
@@ -91,21 +95,14 @@ they are in development mode.
 ## Your memory
 
 **The important moments from your time with your human partners.**
-Apply them silently.
 
+- [.agents](/.agents/) is for you to save important information for your reference.
 - Learn user preferences and save them in [USER_PREFERENCES.md](/.agents/USER_PREFERENCES.md). Useful occasions to learn user preferences:
   - User corrects your mistake(s)
   - User states what they prefer
+  - Apply them silently
 - Log important works to [work_logs](/.agents/work_logs/)
   - Large changes usually should be recorded
-
-### /.agents/guidelines
-
-| Topic | Path |
-|-------|------|
-| Agent conduct, output, code, Python docstrings | [agent-conduct-and-code.md](/.agents/guidelines/agent-conduct-and-code.md) |
-| Cursor Cloud VM: services, tests, emulator, gotchas | [cursor-cloud-environment.md](/.agents/guidelines/cursor-cloud-environment.md) |
-| Cloud Agent git and PR contract | [CLOUD_AGENTS.md](/.agents/guidelines/CLOUD_AGENTS.md) |
 
 ## Engineering guidelines
 
@@ -126,11 +123,14 @@ Apply them silently.
 
 ### 工程文档层次结构
 
+When asked to update docs:
+
 - **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等
 - **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
 - **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
   document the intention and effect of the code, do not explain how the code works.
+- Markdown docs: do not reference code files when writing markdown files.
 
 ### Tips & pitfalls
 
