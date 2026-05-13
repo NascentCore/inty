@@ -21,6 +21,7 @@
 
 ## Contract boundaries (must stay aligned)
 
+- **Cross-language syncing:** These schemas need to be in sync with clients written in non-Python languages
 - **Mobile / product clients:** chat-related field names, enums, and `meta_data` keys must stay consistent with Kotlin DTOs (e.g. [`android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model`](/android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model), [`imate_android_app/app/src/main/java/com/inty/imate/chat/data/bean/ChatApiModels.kt`](/imate_android_app/app/src/main/java/com/inty/imate/chat/data/bean/ChatApiModels.kt)); product copy for implicit companion signals is owned in [`app/core/agentic_kernel/companion/implicit_signal_messages.py`](/app/core/agentic_kernel/companion/implicit_signal_messages.py). Concrete WebSocket frame types, companion `meta_data` models, and control/ack `type` strings live in [`chat_websocket.py`](/app/schemas/chat_websocket.py) — read that module when changing wire behavior, not this overview.
 - **Persistence:** when a payload mirrors stored entities, keep it coherent with [`app/models/`](/app/models/).
 - **Transport vs turn correlation:** `ws_conn_id` is a **WebSocket handshake query parameter** used for logging and session-scoped behavior — it is **not** a Pydantic body field and does **not** replace **`user_msg_uuid`**, **`inty_trace_id`**, or LangSmith identifiers for correlating a single turn.
