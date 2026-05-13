@@ -8,7 +8,6 @@
   - `logging.py`: 日志配置与封装。
   - `voice/`: 语音合成/播放相关核心模型。
   - `agent/`: 智能体/角色核心提示与封装。
-  - `repl_input/`: REPL 类 CLI 的跨线程 stdin 行队列与定时等待切片（与长耗时 turn 解耦）。
   - `prompting/`: 角色、个性与表达等提示词素材库。
   - 其他: `chat.py` 等面向聊天的核心逻辑。
 
