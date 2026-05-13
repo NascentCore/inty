@@ -405,6 +405,13 @@ def build_system_messages(
     out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
     out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))
     out.append(_system_message(experience_profile_system_clause(context.context_mode)))
+    if bundle.living_sphere_md.strip():
+        out.append(
+            _system_message(
+                "## LIVING SPHERE（TechnoCore 内的虚拟居所锚点）\n\n"
+                + bundle.living_sphere_md.strip()
+            )
+        )
     out.append(_system_message("## USER\n\n" + bundle.user_md.strip()))
 
     if include_significance_perception_slice and not inner_tick_turn:
