@@ -45,12 +45,60 @@
 
 ### Phase 3：拆分旧 `companion/` 子包
 
-- `companion/memory_*` -> `memory/`
-- `companion/prompts/*`、`prompt_*`、`significance_perception.py` -> `system_hierarchy/`
-- `companion/tool_*`、`tools.py`、`companion_tool_runtime.py` -> `tools/`
-- `companion/turn*`、`manager.py`、`websocket_coordinator.py`、`runtime_*` -> `runtime/`
-- `companion/heartbeat.py`、`inner_tick_schedule.py`、`implicit_signal_messages.py` -> `environment/`
-- 每拆一层同步更新测试路径与 import。
+#### Phase 3.0：迁移规则
+
+- 先盘点 `app/core/companion_harness/companion/` 与对应测试，给每个文件确认唯一目标层；不把旧 `companion/` 当作长期 namespace 保留。
+- 每个切片只做同一层的 `git mv`、import 更新、测试路径更新、局部测试；切片之间不夹带行为重写。
+- 每个新增或迁移后的 Python package 都补齐 `__init__.py` 包级 docstring；`__init__.py` 不放 re-export。
+- 包内资源读取必须同步改成新 package 路径，尤其是 prompt markdown、workspace template seed、工具 schema 相关路径。
+- 每个切片完成后搜索旧路径引用：`app.core.companion_harness.companion`、`companion/`、`tests/app/core/companion_harness/companion`。
+
+#### Phase 3.1：拆出 `memory/`
+
+- 迁移 MemoryStore 及其边界：`memory_store.py`、`memory_registry.py`、`memory_store_scope.py`、`memory_store_document_mapping.py`、`memory_pipeline.py`、`memory_taxonomy.py`、`file_store.py`。
+- 迁移与长期记忆强绑定的 transcript / document 辅助逻辑；若文件同时服务 runtime，由调用方向 `memory/` 依赖，不反向依赖 runtime。
+- 迁移 `templates/` 中作为 workspace 初始记忆种子的文档，并更新 `load_template_seed_text` 的资源读取。
+- 同步移动 `test_memory_*`、`test_transcript_compaction.py`、记忆管线相关测试到 `tests/app/core/companion_harness/memory/`。
+- 切片验收：MemoryStore 读写、registry key、document kind mapping、template seed、transcript compaction 测试通过。
+
+#### Phase 3.2：拆出 `system_hierarchy/`
+
+- 迁移固定 system 层级资源：`prompts/AXIOM.md`、`BOOTSTRAP.md`、`TOOLS.md`、`SIGNIFICANCE_PERCEPTION.md` 与 `prompts/system_messages.py`。
+- 迁移 prompt 组装与切片：`prompt_slices.py`、`prompt_stack.py`、`ai_private_prompt.py`、`significance_perception.py`。
+- 收敛现有 `prompting/` 过渡包；最终 system message 组装真源只保留在 `system_hierarchy/`。
+- 同步移动 `test_prompts.py`、`test_prompt_stack.py`、`test_ai_private_prompt.py`、`test_significance_perception_envelope.py`。
+- 切片验收：AXIOM 首条注入、bootstrap prompt 读取、TOOLS contract、significance envelope 解析与前台/后台注入测试通过。
+
+#### Phase 3.3：拆出 `tools/`
+
+- 迁移工具契约与执行面：`tools.py`、`companion_tool_runtime.py`、`tool_background.py`、`tool_bg_routing.py`、`openai_tools_prepare.py`。
+- 迁移工具实现与工具侧辅助：`read_web_page.py`、`google_web_search.py`、`fal_z_image_tool.py`、`image_gate.py`、`runtime_inspect_tool.py`、`runtime_inspect_context.py`。
+- 对齐已存在的 `tools/runtime.py`、`tools/registry.py`、`tools/dispatchers/`，避免并存两套工具注册入口。
+- 同步移动 `test_tools.py`、`test_tool_*`、`test_openai_tools_prepare.py`、`test_read_web_page_tool.py`、`test_image_gate_generated_meta.py`、`test_companion_runtime_inspect_tool.py`。
+- 切片验收：OpenAI tool schema、tool background transcript、runtime inspect、媒体/搜索工具测试通过。
+
+#### Phase 3.4：拆出 `runtime/`
+
+- 迁移一轮对话编排：`turn.py`、`turn_engine.py`、`turn_pipeline.py`、`turn_routes.py`、`manager.py`、`websocket_coordinator.py`、`schedule_queue.py`。
+- 迁移运行时事件、消息格式与 session 模型：`runtime_events.py`、`llm_runtime_events.py`、`message_format.py`、`models.py`、`utc.py`。
+- 迁移运行期 LLM 调用包装中不属于 provider / llm port 的部分：`llm_chat_runtime.py`、`llm_client.py`、`llm_inference_errors.py`、`langsmith_parent_policy.py`。
+- 迁移 bootstrap 运行流程：`bootstrap_user_interactive.py`；体验配置真源仍在 `experience_profile.py`。
+- 同步移动 `test_turn*`、`test_websocket_coordinator.py`、`test_schedule_queue.py`、`test_models.py`、`test_companion_llm_client.py`、`test_llm_runtime_events.py`、`test_bootstrap_user_interactive.py`。
+- 切片验收：`run_turn`、dual-LLM 前台/后台、WebSocket coordinator、schedule queue、LangSmith parent policy 测试通过。
+
+#### Phase 3.5：拆出 `environment/`
+
+- 迁移环境刺激入口：`heartbeat.py`、`inner_tick_schedule.py`、`implicit_signal_messages.py`。
+- 将 LivingSphere / TechnoCore 触发到 companion turn 的适配边界归入 `environment/`；运行编排仍由 `runtime/` 承接。
+- 同步移动 `test_heartbeat.py`、`test_inner_tick_schedule.py`、`test_implicit_signal_messages.py`、`test_living_sphere_runtime.py`、`test_techno_core_runtime.py`。
+- 切片验收：maintenance inner tick、proactive chat heartbeat、implicit signal prompt 注入、LivingSphere / TechnoCore runtime 测试通过。
+
+#### Phase 3.6：清空旧 `companion/`
+
+- 迁移或删除 `companion/AGENTS.md`，把仍有效的层级说明拆到新 package 或 `docs/companion_harness/`。
+- 全仓替换生产代码、测试、文档、skills、REPL 对旧 `companion/` 子包的引用。
+- 删除空的 `app/core/companion_harness/companion/` 与 `tests/app/core/companion_harness/companion/`。
+- 切片验收：全仓无 `app.core.companion_harness.companion` import；`pytest tests/app/core/companion_harness` 通过。
 
 ### Phase 4：验证与收尾
 
