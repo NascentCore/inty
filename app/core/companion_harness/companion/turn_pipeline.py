@@ -27,6 +27,7 @@ from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConf
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from .models import (
+    DREAM_INNER_TICK_SYNTHETIC_USER_TEXT,
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
@@ -105,11 +106,12 @@ def resolve_turn_runtime_flags(
     )
     effective_user_text = user_text
     if inner_tick_turn:
-        effective_user_text = (
-            PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
-            if tick_proactive
-            else INNER_TICK_SYNTHETIC_USER_TEXT
-        )
+        if tick_proactive:
+            effective_user_text = PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
+        elif inner_tick_mode == InnerTickMode.DREAM:
+            effective_user_text = DREAM_INNER_TICK_SYNTHETIC_USER_TEXT
+        else:
+            effective_user_text = INNER_TICK_SYNTHETIC_USER_TEXT
     return CompanionTurnRuntimeFlags(
         effective_user_text=effective_user_text,
         tick_proactive=tick_proactive,

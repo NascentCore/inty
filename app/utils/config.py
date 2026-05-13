@@ -199,6 +199,10 @@ class FeaturesConfig:
     companion_ws_maintenance_inner_tick_enabled: bool = True
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
+    # User local wall-clock night window: suppress proactive heartbeat when client_time parses and falls in night.
+    companion_ws_agent_circadian_enabled: bool = True
+    # When due (see companion.dream_state), maintenance worker may run InnerTickMode.DREAM instead of MAINTENANCE.
+    companion_ws_dream_inner_tick_enabled: bool = True
 
     def __post_init__(self) -> None:
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()

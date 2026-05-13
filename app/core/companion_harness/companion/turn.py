@@ -65,6 +65,7 @@ from app.core.companion_harness.memory.memory_pipeline import (
     schedule_memory_update_after_turn,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from .dream_state import record_companion_dream_cycle_completed
 from .heartbeat import build_proactive_heartbeat_transcript_user_marker
 from .models import (
     CompanionTurnResult,
@@ -87,8 +88,8 @@ from .turn_pipeline import (
 from app.core.companion_harness.tools.companion_tool_runtime import (
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
+    inner_tick_tool_write_allowlist,
 )
-from app.core.companion_harness.tools.companion_tools import WRITABLE_RELATIVE_PATHS
 from app.core.companion_harness.tools.runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     build_turn_runtime_config_dict,
@@ -553,7 +554,9 @@ async def run_turn(
                         execute_tool_call_fn=repl_execute_tool_call,
                         client=llm_client.sync_client_for_route("tool"),
                         chat_completions_sync=llm_client.chat_completions_sync,
-                        write_allowlist=WRITABLE_RELATIVE_PATHS,
+                        write_allowlist=inner_tick_tool_write_allowlist(
+                            inner_tick_turn, route_inner_mode, store
+                        ),
                         repository_only_store_text=repository_only_store_text,
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
@@ -757,6 +760,13 @@ async def run_turn(
         if voice_message_script:
             assistant_row["voice_message_script"] = voice_message_script
     store.append_jsonl_record(rel_tr, assistant_row)
+
+    if (
+        inner_tick_turn
+        and route_inner_mode == InnerTickMode.DREAM
+        and not tool_background_started
+    ):
+        record_companion_dream_cycle_completed(store)
 
     # 记忆管线
     if inner_tick_turn:

@@ -88,6 +88,36 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
 )
 
 
+def inner_tick_tool_write_allowlist(
+    inner_tick_turn: bool,
+    inner_tick_mode: "InnerTickMode",
+    store: MemoryStore,
+) -> frozenset[str]:
+    """Dream inner tick may rewrite episodic/gist paths under ``memory/`` in addition to root slices."""
+    from app.core.companion_harness.companion.models import InnerTickMode as _InnerTickMode
+    from app.core.companion_harness.companion.utc import local_date_str
+
+    if not inner_tick_turn or inner_tick_mode != _InnerTickMode.DREAM:
+        return REPL_WRITABLE_RELATIVE_PATHS
+    extra: set[str] = set()
+    day = local_date_str()
+    extra.add(f"memory/daily/{day}.md")
+    extra.add(f"memory/{day}.md")
+    for p in store.iter_stored_relative_paths():
+        norm = p.strip().replace("\\", "/")
+        if norm.startswith("memory/daily/") and norm.endswith(".md"):
+            extra.add(norm)
+            continue
+        if (
+            norm.startswith("memory/")
+            and norm.endswith(".md")
+            and norm.count("/") == 1
+            and not norm.startswith("memory/daily/")
+        ):
+            extra.add(norm)
+    return frozenset(set(REPL_WRITABLE_RELATIVE_PATHS) | extra)
+
+
 def _latest_generated_image_http_url_from_index(store: MemoryStore) -> str | None:
     for row in reversed(list_image_asset_records(store)):
         u = str(row.get("gcs_http_url") or "").strip()

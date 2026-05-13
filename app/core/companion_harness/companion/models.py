@@ -26,10 +26,11 @@ CompanionReplyModality = Literal["text", "voice_message"]
 
 
 class InnerTickMode(StrEnum):
-    """Synthetic user-idle turns: maintenance uses restricted tools; proactive_chat is no-tools."""
+    """Synthetic user-idle turns: maintenance uses restricted tools; proactive_chat is no-tools; dream consolidates memory."""
 
     MAINTENANCE = "maintenance"
     PROACTIVE_CHAT = "proactive_chat"
+    DREAM = "dream"
 
 
 PresenceSignal = Literal["repl_online", "repl_offline"]
@@ -44,6 +45,16 @@ INNER_TICK_SYNTHETIC_USER_TEXT = (
 )
 
 MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER = "（内在节拍）"
+
+DREAM_INNER_TICK_CHAT_HISTORY_USER_MARKER = "（记忆梦境：巩固中）"
+
+DREAM_INNER_TICK_SYNTHETIC_USER_TEXT = (
+    "（记忆梦境：这是一次离线巩固节拍，用户此刻没有在键入。请把 transcript 与三层记忆当作待整理的素材："
+    "合并重复、消解矛盾、把「昨天/刚才」等相对时间改写为可核对的表述；"
+    "删掉已被事实推翻或过时的条目；把仍重要的情节沉淀进 MEMORY.md / USER.md，必要时整理 "
+    "memory/<日期>.md 与 memory/daily/<日期>.md。不要向用户解释本机制；不要写元叙述；"
+    "面向用户的可见正文保持空或极短。仅使用当前 inner-tick 工具集与允许的写路径。）"
+)
 
 AI_PRIVATE_INJECT_MAX_CHARS = 12_000
 
@@ -102,7 +113,7 @@ class CompanionTurnResult(BaseModel):
         default=None,
         description=(
             "When this turn is an inner-tick synthetic round, ``InnerTickMode`` value "
-            "(``proactive_chat`` / ``maintenance``); mirrored to API/WS "
+            "(``proactive_chat`` / ``maintenance`` / ``dream``); mirrored to API/WS "
             "``meta_data.inner_tick_activity``. ``None`` for normal user-driven chat turns."
         ),
     )

@@ -302,6 +302,25 @@ def _inner_tick_turn_section() -> str:
     )
 
 
+def _dream_consolidation_section() -> str:
+    return (
+        "## 本轮（记忆梦境 / 巩固）\n\n"
+        "这是一次**离线式**的记忆整理节拍（类睡眠期巩固），不是对用户接话，也不是推进剧情。\n\n"
+        "**目标**：降低语义层噪声、对齐长期事实、让 MEMORY.md / USER.md 与 episodic（``memory/daily/``）"
+        "及 gist（``memory/<日期>.md``）之间少矛盾、少重复。\n\n"
+        "**做法（与 Auto Dream 同类）**：\n"
+        "- **盘点**：先读 MEMORY.md、USER.md、近期 ``memory/`` 与主 transcript 尾部，建立当前心智地图。\n"
+        "- **收信号**：从 transcript 中抓「用户纠正」「明确要记住」「反复出现主题」「关系/边界变化」等高密度片段，"
+        "不要逐行复读整份 transcript。\n"
+        "- **合并**：把相对日期改成可核对表述；合并重复 bullet；删除已被新事实推翻的旧条目；"
+        "删掉指向已不存在上下文的调试式碎片。\n"
+        "- **收尾**：保持 MEMORY.md 信息密度可读；不要为「写满」而堆砌；"
+        "不要改 IDENTITY/SOUL 除非与本轮读到的矛盾强相关且确属长期事实（默认不动）。\n\n"
+        "**可见回复**：对用户正文留空或一句以内的轻声旁白即可。\n\n"
+        "**工具**：仅用 inner-tick 允许的工具；写回路径须落在服务端允许的 MemoryStore 相对路径上。"
+    )
+
+
 def _tool_side_compact_directive() -> str:
     return (
         "## 工具侧（后台 / 系统 2）\n\n"
@@ -392,7 +411,10 @@ def build_system_messages(
 
     if inner_tick_turn and not tick_proactive:
         out.append(_system_message(_inner_tick_ai_private_section(ai_private_text)))
-        out.append(_system_message(_inner_tick_turn_section()))
+        if inner_tick_mode == InnerTickMode.DREAM:
+            out.append(_system_message(_dream_consolidation_section()))
+        else:
+            out.append(_system_message(_inner_tick_turn_section()))
 
     if repl_online_ack_turn:
         out.append(_system_message(_repl_online_ack_clause()))

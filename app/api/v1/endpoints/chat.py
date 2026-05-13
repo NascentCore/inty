@@ -47,10 +47,10 @@ from app.core.companion_harness.companion.heartbeat import (
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
     next_heartbeat_wait_seconds,
 )
-from app.core.companion_harness.companion.inner_tick_schedule import (
-    InnerTickScheduleOverrides,
-    next_inner_tick_wait_seconds,
+from app.core.companion_harness.companion.agent_circadian import (
+    suppress_proactive_heartbeat_for_circadian,
 )
+from app.core.companion_harness.companion.dream_state import dream_inner_tick_due
 from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
@@ -59,6 +59,7 @@ from app.core.companion_harness.tools.image_gate import (
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
+    DREAM_INNER_TICK_CHAT_HISTORY_USER_MARKER,
     InnerTickMode,
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
@@ -1691,6 +1692,22 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         if mem_store is None:
             return
 
+        feats_pre = global_config_loaded_from_config_yaml.app.features
+        if feats_pre.companion_ws_agent_circadian_enabled:
+            ws_implicit_circ = _implicit_signal_bundle_from_ws_tc_box(tc_box)
+            uctx = (
+                ws_implicit_circ.client_time.model_dump(exclude_none=True)
+                if ws_implicit_circ and ws_implicit_circ.client_time
+                else None
+            )
+            if suppress_proactive_heartbeat_for_circadian(uctx):
+                logger.debug(
+                    "companion_ws_proactive_hb skipped circadian ws_conn_id={} user={}",
+                    ws_conn_id,
+                    user_id,
+                )
+                return
+
         remain = next_heartbeat_wait_seconds(
             mem_store,
             HeartbeatConfig(enabled=True),
@@ -1928,8 +1945,11 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
     ws_conn_id: str,
     tc_box: list[Optional[dict]],
 ) -> None:
-    """If companion transcript says maintenance inner-tick is due, run one MAINTENANCE turn and queue WS."""
+    """If companion transcript says maintenance inner-tick is due, run one inner tick (MAINTENANCE or DREAM) and queue WS."""
     feats = global_config_loaded_from_config_yaml.app.features
+    inner_tick_pack: list[tuple[InnerTickMode, str]] = [
+        (InnerTickMode.MAINTENANCE, MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER)
+    ]
     user_id = str(ctx.get("user_id") or "").strip()
     agent_id = str(ctx.get("agent_id") or "").strip()
     chat_id_raw = ctx.get("chat_id")
@@ -1971,6 +1991,12 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         if mem_store is None:
             return
 
+        if feats.companion_ws_dream_inner_tick_enabled and dream_inner_tick_due(mem_store):
+            inner_tick_pack[0] = (
+                InnerTickMode.DREAM,
+                DREAM_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+            )
+
         remain = next_inner_tick_wait_seconds(
             mem_store,
             last_inner_fire_monotonic=(
@@ -2007,11 +2033,12 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
     ws_implicit = _implicit_signal_bundle_from_ws_tc_box(tc_box)
     stub_utc = ws_implicit.client_time if ws_implicit else None
     preset_uid = str(uuid.uuid4())
+    _inner_mode, _inner_marker = inner_tick_pack[0]
     stub_request = ChatCompletionRequest(
         messages=[
             ChatMessage(
                 role="user",
-                content=MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+                content=_inner_marker,
             )
         ],
         message_id=preset_uid,
@@ -2051,7 +2078,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     background_output_sink=companion_ws.background_sink,
                     preset_user_msg_uuid=preset_uid,
                     inner_tick_turn=True,
-                    inner_tick_mode=InnerTickMode.MAINTENANCE,
+                    inner_tick_mode=_inner_mode,
                     implicit_signal_bundle=ws_implicit,
                 )
             )
@@ -2082,11 +2109,12 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             ChatWsCompanionWireMetaData(
                 inner_tick=True,
                 companion_maintenance_inner_tick=True,
+                inner_tick_activity=_inner_mode.value,
             )
         )
         user_row_id = await chat_history_service.add_user_message_async(
             session_id,
-            MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+            _inner_marker,
             meta_data=user_meta,
         )
 

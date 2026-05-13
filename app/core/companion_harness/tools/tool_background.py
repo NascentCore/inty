@@ -53,6 +53,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     companion_llm_runtime_event_bind_ctx,
     exc_chain_includes_llm_inference_failure_root_causes,
 )
+from app.core.companion_harness.companion.dream_state import record_companion_dream_cycle_completed
 from app.core.companion_harness.companion.models import InnerTickMode, transcript_relative_path_for_turn_persistence
 from app.core.companion_harness.companion.prompt_stack import refresh_companion_turn_prompt_stack
 from app.core.companion_harness.companion.runtime_events import append_runtime_event
@@ -877,6 +878,8 @@ async def _run_background_tool_loop(
                     generated_image_uris=image_paths,
                     trace_id=trace_id,
                 )
+                if inner_tick_turn and inner_tick_mode == InnerTickMode.DREAM:
+                    record_companion_dream_cycle_completed(memory_store)
                 logger.debug(
                     "repl.turn.bg transcript_only trace_id={} user_msg_uuid={} "
                     "assistant_msg_uuid={} reason=should_push_false",
@@ -923,6 +926,8 @@ async def _run_background_tool_loop(
             generated_image_uris=image_paths,
             trace_id=trace_id,
         )
+        if inner_tick_turn and inner_tick_mode == InnerTickMode.DREAM:
+            record_companion_dream_cycle_completed(memory_store)
         logger.debug(
             "repl.turn.bg deliver trace_id={} user_msg_uuid={} assistant_msg_uuid={} "
             "generation_deliver={} output_to_user={} nl_chars={} transcript_chars={} image_paths_n={}",
