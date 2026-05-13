@@ -149,6 +149,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "memory_store_write_document",
         "memory_store_mkdir",
         "user_profile_record",
+        "techno_core_record_event",
         "schedule_task",
         "google_web_search",
         "read_web_page",
@@ -340,6 +341,80 @@ def tool_memory_store_mkdir(store: MemoryStore, relative_path: str) -> str:
     return "OK mkdir (logical prefix only; companion MemoryStore has no host filesystem dirs)"
 
 
+def tool_techno_core_record_event(store: MemoryStore, arguments: dict[str, Any]) -> str:
+    """Append one ``TechnoCoreEvent`` line to ``techno_core_events.jsonl`` (LivingSphere / TechnoCore autonomy)."""
+    from techno_core.models import (
+        TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
+        Sphere,
+        TechnoCoreEvent,
+        Visibility,
+    )
+
+    raw_sphere = arguments.get("sphere")
+    raw_summary = arguments.get("summary")
+    if not isinstance(raw_sphere, str):
+        return "ERROR: sphere must be a string"
+    if not isinstance(raw_summary, str):
+        return "ERROR: summary must be a string"
+    try:
+        sphere = Sphere(raw_sphere.strip())
+    except ValueError:
+        return f"ERROR: invalid sphere {raw_sphere!r}"
+
+    raw_vis = arguments.get("visibility")
+    visibility: Visibility = Visibility.PRIVATE
+    if raw_vis is not None:
+        if not isinstance(raw_vis, str):
+            return "ERROR: visibility must be a string or omitted"
+        try:
+            visibility = Visibility(raw_vis.strip())
+        except ValueError:
+            return f"ERROR: invalid visibility {raw_vis!r}"
+
+    uid = store.scope.user_id.strip()
+    cid = store.scope.companion_id.strip()
+    if not cid:
+        return "ERROR: missing companion scope for techno_core_record_event"
+
+    ev_kwargs: dict[str, Any] = {
+        "sphere": sphere,
+        "actor_companion_id": cid,
+        "summary": raw_summary,
+        "visibility": visibility,
+        "source": "inner_tick",
+        "related_user_id": uid or None,
+    }
+
+    raw_ev = arguments.get("emotional_valence")
+    if raw_ev is not None:
+        if not isinstance(raw_ev, str):
+            return "ERROR: emotional_valence must be a string or omitted"
+        ev_kwargs["emotional_valence"] = raw_ev
+
+    raw_sal = arguments.get("salience")
+    if raw_sal is not None:
+        if type(raw_sal) is not int or isinstance(raw_sal, bool):
+            return "ERROR: salience must be an integer 1..10 or omitted"
+        ev_kwargs["salience"] = raw_sal
+
+    raw_ls = arguments.get("related_living_sphere")
+    if raw_ls is not None:
+        if not isinstance(raw_ls, str):
+            return "ERROR: related_living_sphere must be a string or omitted"
+        ev_kwargs["related_living_sphere"] = raw_ls
+
+    try:
+        event = TechnoCoreEvent.model_validate(ev_kwargs)
+    except ValidationError as exc:
+        return f"ERROR: {exc}"
+
+    store.append_jsonl_record(
+        TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
+        event.model_dump(mode="json"),
+    )
+    return f"OK recorded techno_core event_id={event.event_id}"
+
+
 def tool_schedule_task(store: MemoryStore, exec_time_utc: str, task_text: str) -> str:
     task_id = add_schedule_task(
         store,
@@ -527,6 +602,69 @@ def build_openai_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "techno_core_record_event",
+                "description": (
+                    "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
+                    "to MemoryStore ``techno_core_events.jsonl`` (append-only). "
+                    "Use on **maintenance inner-tick** when the user thread is idle: small in-world "
+                    "actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``, not as a substitute "
+                    "for chatting. ``sphere=living_sphere`` for anchors at home; ``techno_core`` for "
+                    "channels / edges of the residency layer. Keep ``summary`` one tight sentence; "
+                    "default ``visibility`` is ``private`` (``shareable`` only when it could later "
+                    "justify a gentle user-facing hint without pressure)."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sphere": {
+                            "type": "string",
+                            "enum": [
+                                "living_sphere",
+                                "techno_core",
+                                "shared_space",
+                                "human_channel",
+                                "external_web",
+                            ],
+                            "description": (
+                                "Activity surface: prefer ``living_sphere`` or ``techno_core`` "
+                                "for idle inner-tick autonomy."
+                            ),
+                        },
+                        "summary": {
+                            "type": "string",
+                            "description": (
+                                "One concise sentence: what happened in-world (no meta, no tool names)."
+                            ),
+                        },
+                        "visibility": {
+                            "type": "string",
+                            "enum": ["private", "shareable", "user_visible"],
+                            "description": "Boundary for later user surfacing; omit for ``private``.",
+                        },
+                        "emotional_valence": {
+                            "type": "string",
+                            "description": "Short affect label (e.g. tender, restless); omit for neutral.",
+                        },
+                        "salience": {
+                            "type": "integer",
+                            "description": "1..10 relationship relevance; omit for default.",
+                        },
+                        "related_living_sphere": {
+                            "type": "string",
+                            "description": (
+                                "When ``sphere`` is ``living_sphere``, optional anchor name "
+                                "matching ``LIVING_SPHERE.md`` (e.g. 玻璃海岸小屋)."
+                            ),
+                        },
+                    },
+                    "required": ["sphere", "summary"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "schedule_task",
                 "description": (
                     "Persist a timed reminder task into the local schedule queue. "
@@ -691,6 +829,7 @@ def build_openai_repl_tools(
     if interactive_bootstrap_active:
         names = (
             "user_profile_record",
+            "techno_core_record_event",
             "schedule_task",
             "tool_update_agent_status_line",
             "memory_store_list_paths",
@@ -699,6 +838,7 @@ def build_openai_repl_tools(
     else:
         names = (
             "user_profile_record",
+            "techno_core_record_event",
             "schedule_task",
             "tool_update_agent_status_line",
             "memory_store_list_paths",
@@ -1050,6 +1190,7 @@ def build_openai_repl_tools(
 
 _INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
     "user_profile_record",
+    "techno_core_record_event",
     "tool_update_agent_status_line",
     "memory_store_list_paths",
     "memory_store_read_document",
@@ -1059,7 +1200,7 @@ _INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
 
 def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     """
-    内在节拍：仅 USER 档案与工作区读写，不含定时、联网、生图/改图。
+    内在节拍：USER 档案、LivingSphere/TechnoCore 事件日志、工作区读写；不含定时、联网、生图/改图。
     """
     full = build_openai_repl_tools()
     want = set(_INNER_TICK_REPL_TOOL_NAMES)
@@ -1121,6 +1262,8 @@ async def _dispatch(
     )
     if memory_store_dispatch_result is not None:
         return memory_store_dispatch_result
+    if name == "techno_core_record_event":
+        return tool_techno_core_record_event(store, arguments)
     if name == "tool_update_agent_status_line":
         raw_sl = arguments.get("status_line")
         if not isinstance(raw_sl, str):

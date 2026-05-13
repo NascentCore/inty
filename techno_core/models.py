@@ -83,3 +83,7 @@ class TechnoCoreEvent(BaseModel):
             return None
         out = value.strip()
         return out or None
+
+
+# MemoryStore scope-relative append-only log (see ``memory_store_document_mapping``).
+TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH = "techno_core_events.jsonl"
