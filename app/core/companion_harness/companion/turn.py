@@ -19,6 +19,13 @@ where ``output_to_user`` may be false (silent recap). On **foreground** chat com
 true. If the model returns false anyway (schema allows any boolean; prompts say true here), we log
 ``run_turn ... output_to_user=false (expected true for chat branch)`` so traces can flag
 prompt/model confusion, not a parser bug.
+
+**User-visible reply timing (tools on)**: For ``TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` and a
+normal user round, the foreground chat completion (no ``tools`` param) finishes first; the string
+returned on ``CompanionTurnResult`` / persisted as the main chat-track assistant turn comes from that
+foreground parse. ``start_tool_background_job`` then runs the tool-model loop in a background thread;
+``run_turn`` does **not** await that loop. Maintenance inner ticks skip the foreground envelope; see
+``companion/AGENTS.md`` (Async tool_background) for the product-facing summary.
 """
 
 from __future__ import annotations
@@ -237,6 +244,8 @@ async def run_turn(
     - 调度记忆管线
 
     返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
+    有工具且走上述异步路由时：普通用户轮的 ``assistant_text`` 仅反映**已结束的前台** envelope，**不等待**
+    ``tool_background`` 内 tool 模型多轮跑完；维护性 inner tick 跳过前台时 ``assistant_text`` 可为空。
     """
     t0 = time.perf_counter()
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
@@ -466,6 +475,7 @@ async def run_turn(
                                     langsmith_extra=invocation_extra(
                                         source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
                                     ),
+                                    high_reasoning=tick_proactive,
                                 )
 
                             resp = await asyncio.wait_for(
@@ -600,6 +610,7 @@ async def run_turn(
                             else None
                         ),
                         scene=llm_scene,
+                        high_reasoning=tick_proactive,
                     )
                     langsmith_trace_acc = (
                         langsmith_trace_id_from_completion(resp) or langsmith_trace_acc

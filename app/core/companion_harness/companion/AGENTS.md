@@ -1,4 +1,15 @@
-# Companion Harness companion 子包说明
+# Companion Harness · `companion` 子包
+
+## 总览
+
+- **是什么**：单轮对话编排层——把 **MemoryStore 工作区文档**、**多段 system 提示词**、**前台 chat 与异步 tool_background**、**结构化 envelope（significance）** 与 **transcript / 运行时事件** 串成一次对用户可见的回合；人设与长期状态以版本表中的正文为准，不读 `Agent` ORM 的人设列。
+- **和谁相关**：改一轮里「谁先 LLM、谁带 tools、system 顺序、inner tick 分支」时读本包 **`turn.py`** / **`turn_routes.py`** / **`prompt_stack.py`**；改 OpenRouter 调用与可注入同步完成面时读 **`llm_client.py`** 与 harness **`llm/ports.py`**、**`llm/chat_completions.py`**；改工具后台线程契约时读 **`tools/tool_background.py`**（由 `turn` 启动）。
+- **边界**：持久化范式、表结构与 registry 细节仍以 [/docs/companion_harness/MEMORY_STORE.md](/docs/companion_harness/MEMORY_STORE.md) 与下文「持久化与数据表」为准；本文件不重复 `memory/` 包内实现细节。
+
+## 关键入口与 LLM 同步端口
+
+- **路由**：`turn_routes.resolve_turn_route_mode` 根据 `inner_tick_turn` / `InnerTickMode` / `tools_enabled` 等决定前台是否 envelope、是否走异步工具轨；与 `turn.run_turn` 内分支一致，改路由时两处语义需对齐。
+- **同步 chat 完成面**：`llm.ports.ChatCompletionsSyncPort` 描述「单轮 OpenAI-compatible `chat.completions` + harness 约定 kwargs」的可注入形状；规范实现为 `llm.chat_completions.create_chat_completion_sync`。`CompanionLLMClient.chat_completions_sync` 默认绑定该实现；`start_tool_background_job` 可注入同一端口，使前台与后台工具环共享管线（LangSmith enrich、失败记入 `llm_inference_failure` 等）。**新增 companion 侧同步 completion 调用应走此端口或等价绑定**，否则与 `companion_llm_runtime_event_bind_ctx`（`llm_runtime_events.py`）及运行时可观测性脱节。
 
 ## 分层记忆（路径与心理学术语）
 
@@ -10,16 +21,12 @@
 
 注入 LLM 的 section 标题常量：`memory_taxonomy.py`（与 `prompts.build_system_messages` 一致）。
 
-系统层级约束，是以System Role注入到大模型调用的不同层级的提示词。
-每个文件代表了该约束的语义。越底层的约束要出现在最前面的System Message，根据LLM对越先出现的指令响应越准确。
-这些约束是大模型用来理解“用户与智能体”这一交互对中，对双方交互模式的整体性理解，并不能完全作为智能体本身的描述。
-这也是为何，这些提示词被称为system-hierarchy（而非智能体描述之类的说法）。
+系统层级约束以 System Role 注入到各层提示词；每个文件承载该层约束的语义。越底层、越全局的约束应出现在越靠前的 system 段（模型对靠前指令通常更服从）。这些段落刻画的是「用户–智能体」交互对与模式的整体理解，不等同于智能体静态人设全文——因此称为 system-hierarchy，而非「角色设定单」之类命名。
 
 1. **AXIOM.md**：[prompts/AXIOM.md](/app/core/companion_harness/companion/prompts/AXIOM.md)（非 Workspace 根目录稿）
-2. 下列为 [templates](/app/core/companion_harness/memory/templates/) 下 Workspace 初始模板，会随着用户与智能体交互更新。
-   越靠前的部分更新越慢：
+2. 下列为 [templates](/app/core/companion_harness/memory/templates/) 下 Workspace 初始模板，随交互更新；越靠前更新越慢：
    1. SOUL.md
-   2. IDENTITY.md/USER.md
+   2. IDENTITY.md / USER.md
    3. MEMORY.md
 
 ## 持久化与数据表
@@ -70,16 +77,18 @@
 
 ## Importance scoring（significance perception）
 
-- **含义**：前台 chat 与异步 tool 收尾共用同一 envelope：``user_facing_reply``、三条 ``importance_*``（1-10）、``output_to_user``（前台须为 true；工具收尾可为 false 表示静默）。解析与 schema 真源：[`significance_perception.py`](/app/core/companion_harness/companion/significance_perception.py)（模块顶部 docstring 汇总全链路消费点）。
-- **提示词**：包内 [`prompts/SIGNIFICANCE_PERCEPTION.md`](/app/core/companion_harness/companion/prompts/SIGNIFICANCE_PERCEPTION.md) 经 ``PromptBundle.significance_perception_md`` 注入；与 JSON 输出契约一同由 ``prompts/system_messages.py`` 在 ``include_significance_perception_slice`` 为真时挂上。
-- **路由**：``prompt_stack.py`` 决定何时注入 significance slice（与 ``turn.run_turn`` 中何时使用结构化 envelope 对齐）；详见该文件内注释。
-- **落库**：``turn.run_turn`` 将解析后的 dict 写入 transcript assistant 行；API 层 ``chat.py`` 可将同一 dict 写入 ``chat_history`` AI 消息的 ``meta_data.significance_perception``。
-- **下游**：``memory_extraction.use_significance_perception_in_extraction`` 为真时，[`memory_extraction_service.py`](/app/services/memory_extraction_service.py) 按 ``importance_round`` 排序并在抽取 prompt 中标注分数（默认关闭）。
+- **含义**：前台 chat 与异步 tool 收尾共用同一 envelope：`user_facing_reply`、三条 `importance_*`（1-10）、`output_to_user`（前台须为 true；工具收尾可为 false 表示静默）。解析与 schema 真源：[`significance_perception.py`](/app/core/companion_harness/companion/significance_perception.py)（模块顶部 docstring 汇总全链路消费点）。
+- **提示词**：包内 [`prompts/SIGNIFICANCE_PERCEPTION.md`](/app/core/companion_harness/companion/prompts/SIGNIFICANCE_PERCEPTION.md) 经 `PromptBundle.significance_perception_md` 注入；与 JSON 输出契约一同由 `prompts/system_messages.py` 在 `include_significance_perception_slice` 为真时挂上。
+- **路由**：`prompt_stack.py` 决定何时注入 significance slice（与 `turn.run_turn` 中何时使用结构化 envelope 对齐）；详见该文件内注释。
+- **落库**：`turn.run_turn` 将解析后的 dict 写入 transcript assistant 行；API 层 `chat.py` 可将同一 dict 写入 `chat_history` AI 消息的 `meta_data.significance_perception`。
+- **下游**：`memory_extraction.use_significance_perception_in_extraction` 为真时，[`memory_extraction_service.py`](/app/services/memory_extraction_service.py) 按 `importance_round` 排序并在抽取 prompt 中标注分数（默认关闭）。
 
 ## Async tool_background 与 transcript
 
+- **用户轮返回正文 vs 工具 LLM**：`tools_enabled` 时路由恒为 `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`。对**普通用户轮**（非「维护性 inner tick」），`run_turn` **先** `await` 前台 `chat_completion`（`tools=None`、双 LLM envelope），`CompanionTurnResult.assistant_text` 仅来自该前台解析的可见文案；**随后** `start_tool_background_job` 在**独立线程**里跑 tool 模型多轮（tool call → execute → 再 chat…），**`run_turn` 返回不等待**该后台链路结束。因此：**有 tool 时，对用户定稿的主回复不依赖「工具路径上那次 LLM」跑完**；工具侧产出经 `ToolOutputEvent` / transcript 的 `tool_bg` 行进入后续轮次与观测。
+- **维护性 inner tick 例外**：`inner_tick_turn` 且非 proactive 时内核**跳过**前台 envelope（`assistant_text` 置空），工具路径 `force_tools_first_round=True`，可见 NL 若存在由 `tool_background` 收尾 envelope 等机制产生，语义上不同于「用户轮先聊后工具」的快路径。
 - **双 LLM**：前台 envelope 返回后，工具链在后台线程跑完；落盘 `transcript.jsonl` 的 `assistant` 行带 `source=tool_bg`，`content` 为对用户可见 NL（若有）并在其后追加固定 **`--- Tool results ---`** 段，内含本轮工具返回文本摘要（供下一轮 **chat** 与 **tool** 共用同一 transcript 窗口）。
 - **顺序**：`CompanionSession.tool_bg_idle`（`threading.Event`）在 `run_turn` 加载 transcript **之前** wait，确保上一轮后台线程已 `set()`（超时则告警并降级继续，环境变量 **`INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC`** 可覆盖秒数，默认与前台 HTTP 超时一致）。
-- **快轨 / 慢轨（提示词）**：前台 chat completion **不带 tools**（低延迟「系统 1」）；可核验事实（含运行时自省）由并行 **tool_background**（「系统 2」）自愿调用工具完成。内核**不用代码**改写 `tool_choice` 来强逼首轮工具；契约见 ``prompts/system_messages.py``（mirrored chat 合约 + 工具侧紧凑指令 + 工具路首轮说明）。
-- **前台 system 组装**：当路由为 ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` 且构建非 compact 的前台 stack 时，``prompt_stack.companion_turn_tools_and_system_messages`` 设 ``include_repl_image_generation_contract=False``，使前台走「快思考路径与并行工具路径须一致」块并挂上 dual-LLM envelope 说明，而**不**注入含「（6）须先调用 companion_runtime_inspect」的完整工具输出条款（该条款对无工具的 API 会造成矛盾）。
-- **自省调试**：``run_turn`` 写入 ``runtime_inspect_set_correlation``（``trace_id``、``user_msg_uuid``）；``tool_background`` 线程 overlay 同步写入同一 ``correlation``。工具 ``companion_runtime_inspect`` 在 JSON 顶层输出 ``correlation``（若可得），与 ``runtime_events``（含 ``llm_inference_failure``、``tool_background_failure`` 等）一并便于对齐日志与 LangSmith。新加的 companion LLM 调用应走 ``create_chat_completion_sync``，或在调用前绑定 ``companion_llm_runtime_event_bind_ctx``（见 ``llm_runtime_events.py``），否则失败不会记入 ``llm_inference_failure``。队列记忆管线在 worker 内绑定；``defer_memory_update=False`` 时在 ``run_turn`` 调用同步 ``memory_update_after_turn`` 前会临时重新绑定同一 correlation。
+- **快轨 / 慢轨（提示词）**：前台 chat completion **不带 tools**（低延迟「系统 1」）；可核验事实（含运行时自省）由并行 **tool_background**（「系统 2」）自愿调用工具完成。内核**不用代码**改写 `tool_choice` 来强逼首轮工具；契约见 `prompts/system_messages.py`（mirrored chat 合约 + 工具侧紧凑指令 + 工具路首轮说明）。
+- **前台 system 组装**：当路由为 `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL` 且构建非 compact 的前台 stack 时，`prompt_stack.companion_turn_tools_and_system_messages` 设 `include_repl_image_generation_contract=False`，使前台走「快思考路径与并行工具路径须一致」块并挂上 dual-LLM envelope 说明，而**不**注入含「（6）须先调用 companion_runtime_inspect」的完整工具输出条款（该条款对无工具的 API 会造成矛盾）。
+- **自省调试**：`run_turn` 写入 `runtime_inspect_set_correlation`（`trace_id`、`user_msg_uuid`）；`tool_background` 线程 overlay 同步写入同一 `correlation`。工具 `companion_runtime_inspect` 在 JSON 顶层输出 `correlation`（若可得），与 `runtime_events`（含 `llm_inference_failure`、`tool_background_failure` 等）一并便于对齐日志与 LangSmith；同步 completion 须经上文 **LLM 同步端口** 或调用前绑定 `companion_llm_runtime_event_bind_ctx`。队列记忆管线在 worker 内绑定；`defer_memory_update=False` 时在 `run_turn` 调用同步 `memory_update_after_turn` 前会临时重新绑定同一 correlation。

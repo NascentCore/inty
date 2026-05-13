@@ -1,4 +1,4 @@
-"""Synchronous OpenAI-compatible chat.completions: tool-path kwargs, JSON retry, LangSmith enrich.
+"""Synchronous OpenAI-compatible chat.completions: optional high-reasoning kwargs, JSON retry, LangSmith enrich.
 
 Maps OpenAI SDK failures from ``chat.completions.create`` to companion kernel inference errors.
 Also rejects responses with missing or empty ``choices`` (including OpenRouter HTTP 200 bodies
@@ -48,6 +48,7 @@ def create_chat_completion_sync(
     tool_choice: str | None = None,
     response_format: dict[str, Any] | None = None,
     langsmith_extra: dict[str, Any] | None = None,
+    high_reasoning: bool = False,
 ) -> Any:
     _ensure_langsmith_handle_container_end_patch()
     create_kw: dict[str, Any] = {
@@ -61,8 +62,9 @@ def create_chat_completion_sync(
     # Some gateways place structured ``response_format`` JSON under ``reasoning`` /
     # ``reasoning_details`` while leaving ``message.content`` empty. Companion parsing validates
     # those side channels before using them; raw non-JSON reasoning is never surfaced.
-    if tools:
+    if high_reasoning:
         create_kw.update(tool_path_chat_completion_kwargs(model))
+    if tools:
         create_kw["tools"] = tools
         create_kw["parallel_tool_calls"] = True
         if tool_choice is not None:

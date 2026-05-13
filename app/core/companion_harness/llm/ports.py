@@ -6,7 +6,8 @@ concrete wrapper type.
 
 ``ChatCompletionsSyncPort`` is the sync entry used when code needs one OpenAI-compatible
 ``chat.completions.create`` round-trip with the harness's agreed kwargs surface (tools,
-optional JSON ``response_format``, LangSmith metadata). The canonical implementation is
+optional ``high_reasoning`` OpenRouter extras, optional JSON ``response_format``, LangSmith
+metadata). The canonical implementation is
 ``create_chat_completion_sync`` in ``llm.chat_completions``; it is exposed from
 ``CompanionLLMClient.chat_completions_sync`` and injected into background tool paths
 (``tools.tool_background``) so foreground and tool loops can share the same pipeline."""
@@ -35,4 +36,5 @@ class ChatCompletionsSyncPort(Protocol):
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
         langsmith_extra: dict[str, Any] | None = None,
+        high_reasoning: bool = False,
     ) -> Any: ...
