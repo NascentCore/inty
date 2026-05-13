@@ -9,7 +9,7 @@ from typing import Any
 from .ai_private_prompt import get_ai_private_jsonl_text_for_prompt
 from .heartbeat import (
     HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
-    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+    build_proactive_heartbeat_transcript_user_marker,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .message_format import TRANSCRIPT_MSG_UUID_KEY
@@ -67,7 +67,7 @@ def build_repl_turn_base_messages(
         messages.append(
             {
                 "role": "user",
-                "content": PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                "content": build_proactive_heartbeat_transcript_user_marker(transcript),
                 TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
             }
         )

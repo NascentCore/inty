@@ -1741,6 +1741,10 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
             implicit_signal_bundle=ws_implicit,
         )
+        hb_user_text = (
+            companion_turn.transcript_user_content
+            or PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
+        )
         if companion_turn.tool_background_started:
             companion_ws.bind_ws_inner_tick_proactive_tool_bg_idle(
                 companion_chat_service.companion_session_tool_bg_idle_event(
@@ -1772,7 +1776,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         )
         await chat_history_service.add_user_message_async(
             session_id,
-            PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+            hb_user_text,
             meta_data=user_meta,
         )
 
@@ -1810,7 +1814,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 messages=[
                     ChatMessage(
                         role="user",
-                        content=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                        content=hb_user_text,
                     )
                 ],
                 message_id=preset_uid,
@@ -1890,7 +1894,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             data = _build_chat_response(
                 response_text_content,
                 response_content_parts,
-                PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                hb_user_text,
                 latest_message_info,
                 proactive_audio_url,
                 stub_request,

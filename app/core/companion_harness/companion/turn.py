@@ -58,6 +58,7 @@ from app.core.companion_harness.memory.memory_pipeline import (
     schedule_memory_update_after_turn,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from .heartbeat import build_proactive_heartbeat_transcript_user_marker
 from .models import (
     CompanionTurnResult,
     ContextMeta,
@@ -290,6 +291,10 @@ async def run_turn(
         route_inner_mode=route_inner_mode,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
     )
+    if tick_proactive:
+        user_text = build_proactive_heartbeat_transcript_user_marker(
+            loaded_state.loaded_transcript
+        )
     context = loaded_state.context
     bundle = loaded_state.bundle
     prompt_plan = build_companion_turn_prompt_plan(
@@ -797,6 +802,11 @@ async def run_turn(
         langsmith_trace_acc or "",
         langsmith_llm_run_acc or "",
     )
+    transcript_user_content = (
+        USER_SIGNED_ON_TRIGGER_USER_TEXT
+        if implicit_sign_on_turn
+        else user_text
+    )
     return CompanionTurnResult(
         assistant_text=last_text,
         reply_modality=reply_modality,  # type: ignore[arg-type]
@@ -812,4 +822,5 @@ async def run_turn(
         inner_tick_activity=route_inner_mode.value if inner_tick_turn else None,
         turn_start_context_mode=context.context_mode,
         transcript_compaction=prompt_plan.transcript_compaction,
+        transcript_user_content=transcript_user_content,
     )
