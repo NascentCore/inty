@@ -54,7 +54,7 @@ python tools/scripts/check_layer_dependencies.py
 
 ```bash
 export PYTHONPATH=.
-export ALEMBIC_CONFIG=alembic/alembic.ini
+export ALEMBIC_CONFIG=backend/alembic/alembic.ini
 heads_count=$(python -m alembic heads | wc -l)
 if [ "$heads_count" -ne 1 ]; then
   echo "Expected exactly one alembic head, got $heads_count"

@@ -7,7 +7,7 @@ on:
       - main
     paths:
       # 数据库版本变动
-      - "alembic/**/*.py"
+      - "backend/alembic/**/*.py"
       # 后端代码
       - "app/**/*.py"
       - "backend/push_worker/*.py"

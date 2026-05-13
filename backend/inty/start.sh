@@ -3,14 +3,13 @@
 DEV=false
 TEST=false
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# 当脚本位于 backend/inty 时从仓库根目录运行，以便 alembic/scripts 路径正确；Docker 中 COPY 到 / 时 SCRIPT_DIR=/ 仍 cd /
-if [[ -f "$SCRIPT_DIR/../../alembic/alembic.ini" ]]; then
+# 当脚本位于 backend/inty 时从仓库根目录运行；Docker 中 COPY 到 / 时 SCRIPT_DIR=/ 仍 cd /
+if [[ -f "$SCRIPT_DIR/../../backend/alembic/alembic.ini" ]]; then
   REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-  cd "$REPO_ROOT"
 else
   REPO_ROOT="$SCRIPT_DIR"
-  cd "$REPO_ROOT"
 fi
+cd "$REPO_ROOT"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -45,7 +44,7 @@ done
 # Run database migrations
 echo "Starting database migrations..."
 export PYTHONPATH=.
-export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/alembic/alembic.ini}"
+export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/backend/alembic/alembic.ini}"
 # 初始化管理员用户 user-01JWZ34Y4D1C92GD86A5R6EWYJ，这个算是预置的用户。
 # 所有预置角色均由这个用户创建。也支持管理系统的登录。
 # 只能手动运行下面的命令，因为其与后面的 alembic upgrade head 命令冲突。

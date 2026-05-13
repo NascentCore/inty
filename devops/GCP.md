@@ -46,9 +46,9 @@ CREATE DATABASE "imate";
 
 ```bash
 export PYTHONPATH=.
-alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate_dev upgrade head
+alembic -c backend/alembic/alembic.ini -x config=devops/config.yaml.imate_dev upgrade head
 # prod
-alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate_prod upgrade head
+alembic -c backend/alembic/alembic.ini -x config=devops/config.yaml.imate_prod upgrade head
 ```
 
 **GCS**：在 GCP 控制台创建与配置中一致的 bucket（`imate-static-dev`、`imate-static-prod`），为 iMate 后端服务账号配置对象读写权限；勿与 IntelliMate `inty-static` 混用。

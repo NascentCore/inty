@@ -99,7 +99,7 @@ flowchart TB
 
 根任务 **CFG-PYD-24** 额外：
 
-6. [ ] `app/core/config.py`、`alembic/env.py` 等仅导入 `Config`/`load_config` 的模块无需改签名即可工作（或仅更新类型存根）。
+6. [ ] `app/core/config.py`、`backend/alembic/env.py` 等仅导入 `Config`/`load_config` 的模块无需改签名即可工作（或仅更新类型存根）。
 7. [ ] 全量 `pytest -m "not noci"` 或团队约定子集通过。
 
 ---
