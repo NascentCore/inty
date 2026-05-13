@@ -145,3 +145,4 @@ When asked to update docs:
 - Maintain Python package/module-level documentation in the package's `__init__.py` docstring.
   - The docstring must explain what that package is designed for and its role or behavior in the broader system.
   - `__init__.py` cannot have actual code
+- **`*.py` module docstring** (other than package `__init__.py`): audience is human partners—state role and intent, not a line-by-line reading of the implementation; put CLI-visible usage in Cyclopts `App(help=...)` / subcommand docs where appropriate.

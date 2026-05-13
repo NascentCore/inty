@@ -1,11 +1,11 @@
-"""Cyclopts entry: Inty backend WebSocket REPL only (no local workspace turn loop).
+"""Terminal companion for partners who ship the product: hold a real conversation against a
+running Inty backend on the same WebSocket chat path as production clients—latency, reconnects,
+implicit greeting, and follow-up frames all originate in the server harness, not a second brain
+simulated inside this process.
 
-Each assistant downlink prints a **metadata section** (one stdout line before body text):
-wall clock, source label, elapsed ms, correlation ``key=value`` tokens, optional
-``langsmith_trace_url=`` / ``langsmith_run_url=`` (SDK ``get_run_url`` when tracing env
-is available, else stitched from ``LANGCHAIN_WORKSPACE_ID``/``LANGSMITH_WORKSPACE_ID`` plus
-``LANGSMITH_PROJECT_ID``/``LANGCHAIN_PROJECT_ID``), and optional ``tool_background_started=true``.
-Lines after the body may print ``local-path:`` / ``image-url:`` for tool_bg / generated images.
+Use it when you want the subjective feel of the companion under load or flaky networks; when you
+need exact wire semantics or field meanings, read the package README and ``AGENTS.md`` instead of
+treating this TTY as a specification surface.
 """
 
 from __future__ import annotations
