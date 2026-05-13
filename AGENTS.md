@@ -103,11 +103,8 @@ Apply them silently.
 
 | Topic | Path |
 |-------|------|
-| Repository context, deployment, Android tips, API sync | [repository-context.md](/.agents/guidelines/repository-context.md) |
 | Agent conduct, output, code, Python docstrings | [agent-conduct-and-code.md](/.agents/guidelines/agent-conduct-and-code.md) |
-| Documentation layers and markdown conventions | [documentation-standards.md](/.agents/guidelines/documentation-standards.md) |
 | Cursor Cloud VM: services, tests, emulator, gotchas | [cursor-cloud-environment.md](/.agents/guidelines/cursor-cloud-environment.md) |
-| Local clone, quickstart, badges, external links | [local-developer-setup.md](/.agents/guidelines/local-developer-setup.md) |
 | Cloud Agent git and PR contract | [CLOUD_AGENTS.md](/.agents/guidelines/CLOUD_AGENTS.md) |
 
 ## Engineering guidelines
