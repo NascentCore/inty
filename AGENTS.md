@@ -122,6 +122,7 @@ Apply them silently.
 - Never ever over-engineer.
 - Never ever speculate potential use cases.
 - Always test your changes
+- Idempotence is required for code paths with side-effects
 
 ### 工程文档层次结构
 
@@ -137,7 +138,10 @@ Apply them silently.
 - **Requested tunables**: when the user asked for configurable behavior, wire it through `config.yaml` with [`app/utils/config.py`](/app/utils/config.py) and [`app/core/config.py`](/app/core/config.py).
 - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”; only add configurability the user explicitly requested.
 
-### Python package doc blocks (required)
+### Python
 
+- Data structures all use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models
+- CLIs all use [Cyclopts](https://github.com/BrianPugh/cyclopts)
 - Maintain Python package/module-level documentation in the package's `__init__.py` docstring.
-- The docstring must explain what that package is designed for and its role or behavior in the broader system.
+  - The docstring must explain what that package is designed for and its role or behavior in the broader system.
+  - `__init__.py` cannot have actual code
