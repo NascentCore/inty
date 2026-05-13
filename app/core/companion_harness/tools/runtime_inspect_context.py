@@ -12,9 +12,9 @@ from app.core.companion_harness.experience_profile import (
     experience_profile_injects_private_memory,
 )
 
-from .llm_chat_runtime import tool_path_chat_completion_kwargs
-from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
-from .models import (
+from app.core.companion_harness.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
+from app.core.companion_harness.companion.llm_client import CompanionLLMClient
+from app.core.companion_harness.companion.models import (
     AI_PRIVATE_INJECT_MAX_CHARS,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ContextMeta,
@@ -23,7 +23,7 @@ from .models import (
     _MEMORY_RAW_INJECT_MAX_CHARS,
     _OPTIONAL_DOC_MAX_CHARS,
 )
-from .llm_client import CompanionLLMClient
+from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.transcript_compaction import CompactionConfig as TranscriptCompactionConfig
 

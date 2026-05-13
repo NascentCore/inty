@@ -76,17 +76,12 @@ from .turn_pipeline import (
     load_companion_turn_state,
     resolve_turn_runtime_flags,
 )
-from .tool_background import (
-    ToolOutputEvent,
-    push_output_event,
-    start_tool_background_job,
-)
-from .turn_routes import BackgroundToolEventSink, TurnRouteMode
-from .companion_tool_runtime import (
+from app.core.companion_harness.tools.companion_tool_runtime import (
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
 )
-from .runtime_inspect_context import (
+from app.core.companion_harness.tools.companion_tools import WRITABLE_RELATIVE_PATHS
+from app.core.companion_harness.tools.runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     build_turn_runtime_config_dict,
     runtime_inspect_begin_turn,
@@ -96,7 +91,12 @@ from .runtime_inspect_context import (
     runtime_inspect_set_runtime_config,
     runtime_inspect_set_scoped_memory_store,
 )
-from .tools import WRITABLE_RELATIVE_PATHS
+from app.core.companion_harness.tools.tool_background import (
+    ToolOutputEvent,
+    push_output_event,
+    start_tool_background_job,
+)
+from .turn_routes import BackgroundToolEventSink, TurnRouteMode
 from .utc import utc_iso_ts
 from .implicit_signal_messages import (
     MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,

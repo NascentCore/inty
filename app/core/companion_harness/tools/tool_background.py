@@ -40,32 +40,26 @@ from app.core.companion_harness.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
 
-from .llm_chat_runtime import (
+from app.core.companion_harness.companion.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     end_companion_turn_root_run_safe,
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
     tool_path_chat_completion_kwargs,
 )
-from .image_gate import list_image_asset_records
-from .llm_client import LLM_SCENE_TOOL_CALL
-from .llm_runtime_events import (
+from app.core.companion_harness.companion.llm_client import LLM_SCENE_TOOL_CALL
+from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
     exc_chain_includes_llm_inference_failure_root_causes,
 )
+from app.core.companion_harness.companion.models import InnerTickMode, transcript_relative_path_for_turn_persistence
+from app.core.companion_harness.companion.prompt_stack import refresh_companion_turn_prompt_stack
+from app.core.companion_harness.companion.runtime_events import append_runtime_event
+from app.core.companion_harness.companion.significance_perception import envelope_to_assistant_metadata_dict
+from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .models import InnerTickMode, transcript_relative_path_for_turn_persistence
-from .prompt_stack import refresh_companion_turn_prompt_stack
-from .significance_perception import envelope_to_assistant_metadata_dict
-from .runtime_events import append_runtime_event
-from .runtime_inspect_context import (
-    build_last_chat_completion_request_payload,
-    runtime_inspect_set_last_chat_completion_request,
-    runtime_inspect_thread_overlay_begin,
-    runtime_inspect_thread_overlay_end,
-    tools_summary_from_openai_tools,
-)
+
 from .companion_tool_runtime import (
     REPL_WRITABLE_RELATIVE_PATHS,
     execute_tool_call,
@@ -73,8 +67,15 @@ from .companion_tool_runtime import (
     round_includes_generation_tool,
     tool_requires_client_delivery_on_success,
 )
+from .image_gate import list_image_asset_records
+from .runtime_inspect_context import (
+    build_last_chat_completion_request_payload,
+    runtime_inspect_set_last_chat_completion_request,
+    runtime_inspect_thread_overlay_begin,
+    runtime_inspect_thread_overlay_end,
+    tools_summary_from_openai_tools,
+)
 from .tool_bg_routing import resolve_tool_bg_routing_sync
-from .utc import utc_iso_ts
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
 _OUTPUT_QUEUE_LOCK = threading.Lock()

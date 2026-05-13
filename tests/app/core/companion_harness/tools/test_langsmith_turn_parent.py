@@ -21,7 +21,7 @@ from app.core.companion_harness.companion.models import InnerTickMode
 from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.tool_background import start_tool_background_job
+from app.core.companion_harness.tools.tool_background import start_tool_background_job
 from app.core.companion_harness.companion.turn import run_turn
 
 
@@ -219,12 +219,12 @@ def test_end_companion_turn_root_run_safe_noop_for_none() -> None:
     end_companion_turn_root_run_safe(None)
 
 
-@patch("app.core.companion_harness.companion.tool_background.threading.Thread")
-@patch("app.core.companion_harness.companion.tool_background.set_tool_background_db_loop")
-@patch("app.core.companion_harness.companion.tool_background.clear_tool_background_db_loop")
+@patch("app.core.companion_harness.tools.tool_background.threading.Thread")
+@patch("app.core.companion_harness.tools.tool_background.set_tool_background_db_loop")
+@patch("app.core.companion_harness.tools.tool_background.clear_tool_background_db_loop")
 @patch("asyncio.run")
 @patch(
-    "app.core.companion_harness.companion.tool_background.end_companion_turn_root_run_safe"
+    "app.core.companion_harness.tools.tool_background.end_companion_turn_root_run_safe"
 )
 def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
     mock_end: MagicMock,
@@ -276,12 +276,12 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
     )
 
 
-@patch("app.core.companion_harness.companion.tool_background.threading.Thread")
-@patch("app.core.companion_harness.companion.tool_background.set_tool_background_db_loop")
-@patch("app.core.companion_harness.companion.tool_background.clear_tool_background_db_loop")
+@patch("app.core.companion_harness.tools.tool_background.threading.Thread")
+@patch("app.core.companion_harness.tools.tool_background.set_tool_background_db_loop")
+@patch("app.core.companion_harness.tools.tool_background.clear_tool_background_db_loop")
 @patch("asyncio.run")
 @patch(
-    "app.core.companion_harness.companion.tool_background.end_companion_turn_root_run_safe"
+    "app.core.companion_harness.tools.tool_background.end_companion_turn_root_run_safe"
 )
 def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
     mock_end: MagicMock,

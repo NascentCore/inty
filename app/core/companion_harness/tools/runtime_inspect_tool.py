@@ -12,13 +12,14 @@ from typing import Any
 from langsmith import traceable
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .runtime_events import read_runtime_events
+from app.core.companion_harness.companion.runtime_events import read_runtime_events
+from app.core.companion_harness.companion.utc import local_date_str
+
 from .runtime_inspect_context import (
     runtime_inspect_get_bundle,
     runtime_inspect_get_correlation_snapshot,
     runtime_inspect_get_scoped_memory_store,
 )
-from .utc import local_date_str
 
 _LANGSMITH_OUTPUT_PREVIEW_CHARS = 6000
 

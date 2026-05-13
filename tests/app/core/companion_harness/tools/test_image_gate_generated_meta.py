@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import app.core.config as config_mod
 import pytest
 
-from app.core.companion_harness.companion.image_gate import (
+from app.core.companion_harness.tools.image_gate import (
     append_image_asset_record,
     generated_image_meta_from_asset_record,
     generated_image_meta_from_index_slice,

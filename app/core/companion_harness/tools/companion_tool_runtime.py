@@ -25,33 +25,34 @@ from app.core.companion_harness.tools.dispatchers.memory_store import (
     dispatch_memory_store_tool,
 )
 
-from .fal_z_image_tool import (
-    MAX_NUM_IMAGES_PER_CALL,
-    reset_fal_async_client_after_short_lived_loop,
-    run_generate_image_z_image_turbo,
-    run_modify_image_z_image_turbo,
-)
-from .image_gate import (
-    current_persona_revision_id,
-    find_latest_asset_by_local_relative_path,
-    list_image_asset_records,
-)
-from .bootstrap_user_interactive import (
+from app.core.companion_harness.companion.bootstrap_user_interactive import (
     PROMPT_SLICE_TO_REL,
     soul_prompt_is_locked_after_interactive_bootstrap,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
 )
-from .message_format import openai_assistant_message_dict
-from app.core.companion_harness.memory.memory_store_document_mapping import parse_memory_store_relative_path
+from app.core.companion_harness.companion.message_format import openai_assistant_message_dict
+from app.core.companion_harness.companion.models import ChatMessage, load_context_meta
+from app.core.companion_harness.companion.schedule_queue import add_schedule_task
 from app.core.companion_harness.memory.memory_store import MemoryStore, normalize_memory_store_relative_path
-from .models import ChatMessage, load_context_meta
+from app.core.companion_harness.memory.memory_store_document_mapping import parse_memory_store_relative_path
+
+from .fal_z_image_tool import (
+    MAX_NUM_IMAGES_PER_CALL,
+    reset_fal_async_client_after_short_lived_loop,
+    run_generate_image_z_image_turbo,
+    run_modify_image_z_image_turbo,
+)
 from .google_web_search import run_google_web_search
+from .image_gate import (
+    current_persona_revision_id,
+    find_latest_asset_by_local_relative_path,
+    list_image_asset_records,
+)
+from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
 from .runtime_inspect_tool import tool_companion_runtime_inspect
-from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
-from .schedule_queue import add_schedule_task
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.global_services import subscription_service

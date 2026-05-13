@@ -37,7 +37,7 @@
 ### LLM + 工具调用 + 记忆
 
 - **已有**：分层记忆（情景 / 摘要 / 语义）、`transcript.jsonl`、异步工具线程、双模型路由、重要性打分（significance perception）等（详见 `/app/core/companion_harness/companion/AGENTS.md`）。
-- **仍缺或偏薄**：工具后台路径对部分供应商 **仅把结构化 envelope 放在 `reasoning` / `reasoning_details`**、而 `content` 为空时的统一读取（`/app/core/companion_harness/companion/tool_background.py` 内 TODO）；**偶发 LLM 无输出** 尚未闭环（复现、降级、观测）。
+- **仍缺或偏薄**：工具后台路径对部分供应商 **仅把结构化 envelope 放在 `reasoning` / `reasoning_details`**、而 `content` 为空时的统一读取（`/app/core/companion_harness/tools/tool_background.py` 内 TODO）；**偶发 LLM 无输出** 尚未闭环（复现、降级、观测）。
 
 ### 独立虚拟环境与「世界」事件（智能体自主性与新鲜感）
 

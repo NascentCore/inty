@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.read_web_page import run_read_web_page_sync
+from app.core.companion_harness.tools.read_web_page import run_read_web_page_sync
 
 _HTML = """<!DOCTYPE html>
 <html><head><title>Example Article</title></head>
@@ -28,7 +28,7 @@ def test_run_read_web_page_writes_memory_and_returns_markdown(tmp_path: Path) ->
     mock_resp.raise_for_status = MagicMock()
 
     with patch(
-        "app.core.companion_harness.companion.read_web_page.requests.get",
+        "app.core.companion_harness.tools.read_web_page.requests.get",
         return_value=mock_resp,
     ):
         out = run_read_web_page_sync(

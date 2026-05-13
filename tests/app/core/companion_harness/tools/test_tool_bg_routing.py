@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
-from app.core.companion_harness.companion.tool_bg_routing import (
+from app.core.companion_harness.tools.tool_bg_routing import (
     resolve_tool_bg_routing_sync,
 )
 

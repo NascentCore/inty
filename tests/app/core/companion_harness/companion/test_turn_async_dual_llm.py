@@ -16,7 +16,7 @@ from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.models import InnerTickMode
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.tools import build_openai_repl_tools_inner_tick
+from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
 from app.core.companion_harness.companion.turn import (
     CHAT_TRACK_RESPONSE_MESSAGE_TITLE,
     run_turn,

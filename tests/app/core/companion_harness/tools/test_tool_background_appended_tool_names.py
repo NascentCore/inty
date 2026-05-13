@@ -1,6 +1,6 @@
 """Regression: tool_bg extracts names from appended slice only; NL filler aggregates tool text."""
 
-from app.core.companion_harness.companion.tool_background import (
+from app.core.companion_harness.tools.tool_background import (
     _extract_tool_call_names,
     _tool_bg_nl_filler_from_appended_turn,
 )

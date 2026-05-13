@@ -14,7 +14,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any
 
-from .tool_background import ToolOutputEvent
+from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
 
 def apply_companion_ws_heartbeat_coords(
