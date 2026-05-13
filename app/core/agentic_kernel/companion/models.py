@@ -97,12 +97,12 @@ class CompanionTurnResult(BaseModel):
         ),
     )
     assistant_source: AssistantTurnSource = "chat"
-    inner_tick_activity: str = Field(
-        default="",
+    inner_tick_activity: str | None = Field(
+        default=None,
         description=(
             "When this turn is an inner-tick synthetic round, ``InnerTickMode`` value "
-            "(``proactive_chat`` / ``maintenance``); mirrored to API/WS ``meta_data.inner_tick_activity``. "
-            "Empty for normal user-driven chat turns."
+            "(``proactive_chat`` / ``maintenance``); mirrored to API/WS "
+            "``meta_data.inner_tick_activity``. ``None`` for normal user-driven chat turns."
         ),
     )
     turn_start_context_mode: str = Field(
