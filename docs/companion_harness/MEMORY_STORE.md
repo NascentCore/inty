@@ -135,26 +135,3 @@ flowchart LR
 ### 风险与依赖
 
 带 pgvector 的 Postgres 实例与嵌入服务配额是硬依赖；DSN 可与现网 PG 同实例不同表，但**连接与配置须独立**于 legacy 记忆服务。主要风险：大表 HNSW 构建窗口、过窄过滤下的召回调参、provenance 含 PII（与聊天记录同等留存与权限）、记忆投毒（用 Top-K 多样性、置信度标记、高影响写入可选审核队列缓解）。
-
----
-
-## 代码索引
-
-| 主题 | 路径 |
-|------|------|
-| context 读取 | [`companion/models.py`](/app/core/companion_harness/companion/models.py) (`load_context_meta`) |
-| transcript 写入与压实 | [`companion/turn.py`](/app/core/companion_harness/companion/turn.py)、[`transcript_compaction.py`](/app/core/companion_harness/companion/transcript_compaction.py) |
-| ai_private 注入 | [`companion/ai_private_prompt.py`](/app/core/companion_harness/companion/ai_private_prompt.py)、[`prompts/system_messages.py`](/app/core/companion_harness/companion/prompts/system_messages.py) |
-| 路径 → document_kind | [`memory_store_document_mapping.py`](/app/core/companion_harness/companion/memory_store_document_mapping.py) |
-| scope 路径辅助 | [`memory_store_scope.py`](/app/core/companion_harness/companion/memory_store_scope.py) (`MemoryStoreScopePaths`) |
-| 生图索引 | [`image_gate.py`](/app/core/companion_harness/companion/image_gate.py) |
-| 工作区 store / registry | [`memory_store.py`](/app/core/companion_harness/companion/memory_store.py)、[`memory_registry.py`](/app/core/companion_harness/companion/memory_registry.py) |
-| Markdown 记忆策展 | [`memory_pipeline.py`](/app/core/companion_harness/companion/memory_pipeline.py)（详见 [`MEMORY_PIPELINE.md`](/docs/companion_harness/MEMORY_PIPELINE.md)） |
-| 单轮编排抽象 | [`runtime/turn_orchestrator.py`](/app/core/companion_harness/runtime/turn_orchestrator.py) |
-| companion 提示词链路 | [`companion/prompts/system_messages.py`](/app/core/companion_harness/companion/prompts/system_messages.py)（`build_system_messages`，LTM 切片首选注入点） |
-| 主站 Agent 提示拼装 | [`prompting/assembler.py`](/app/core/companion_harness/prompting/assembler.py)（与 companion 路径互斥选一） |
-| 服务边界 / DSN 注入 | [`app/services/companion_chat_service.py`](/app/services/companion_chat_service.py) |
-| Legacy `memory` 表（仅对照） | [`backend/alembic/versions/20260127_120000_add_memory_tables.py`](/backend/alembic/versions/20260127_120000_add_memory_tables.py) |
-| Alembic 迁移流程 | [`backend/alembic/AGENTS.md`](/backend/alembic/AGENTS.md) |
-| pgvector / compose | [`backend/ARCH.md`](/backend/ARCH.md)、[`backend/AGENTS.md`](/backend/AGENTS.md) |
-| 提示词清洁化方向 | [`docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md`](/docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md) |
