@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient as FastAPITestClient
 
 from app.api import deps
 from app.models.user import AuthType
-from app.schemas import User
+from app.schemas.user import User
 from tests.app.api.test_client import TestClient
 
 

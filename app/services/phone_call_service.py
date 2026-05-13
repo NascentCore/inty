@@ -26,7 +26,6 @@ from app.external_services.twilio_phone_call import (
     TwilioPhoneCallService,
 )
 from app.models.phone_call import PhoneCallCallerBinding
-from app.schemas import User
 from app.schemas.live_chat import LiveChatConfig
 from app.schemas.phone_call import (
     PhoneCallInboundWebhookRequest,
@@ -36,6 +35,7 @@ from app.schemas.phone_call import (
     is_e164_phone_number,
 )
 from app.schemas.response import BusinessErrorCode, create_business_error_response
+from app.schemas.user import User
 from app.services.subscription_service import SubscriptionService
 
 _PHONE_DIGITS_RE = re.compile(r"\d+")

@@ -23,8 +23,9 @@ from app.external_services.gcs import (
 )
 from app.models.agent import AgentVisibility
 from app.schemas.agent import AgentSortOption, AgentUpdate, ModelConfig
+from app.schemas.agent import AgentCreate
+from app.schemas.user import User as UserSchema
 from app.schemas.user import UserCreate
-from app import schemas
 from app.services import agent_service
 from app.services.agent_service import (
     _crop_avatar_from_background,
@@ -586,7 +587,7 @@ async def test_get_user_agents_returns_created_agents_ordered_by_created_at(db_s
     await db_session.refresh(agent_a)
     await db_session.refresh(agent_b)
 
-    current_user = schemas.User.model_validate(db_user)
+    current_user = UserSchema.model_validate(db_user)
 
     agents = await get_user_agents(db_session, current_user, skip=0, limit=100)
     assert len(agents) == 2
@@ -599,7 +600,7 @@ async def test_get_user_agents_returns_created_agents_ordered_by_created_at(db_s
 
     # 无 nickname 时应为 "you"
     db_user.nickname = None
-    current_user_no_nick = schemas.User.model_validate(db_user)
+    current_user_no_nick = UserSchema.model_validate(db_user)
     agents2 = await get_user_agents(db_session, current_user_no_nick, skip=0, limit=100)
     for agent in agents2:
         assert agent.user == "you"
@@ -623,7 +624,7 @@ async def test_get_user_agents_empty_when_no_agents(db_session):
     db_session.add(db_user)
     await db_session.commit()
     await db_session.refresh(db_user)
-    current_user = schemas.User.model_validate(db_user)
+    current_user = UserSchema.model_validate(db_user)
 
     agents = await get_user_agents(db_session, current_user)
     assert agents == []
@@ -633,7 +634,7 @@ async def test_get_user_agents_empty_when_no_agents(db_session):
 async def test_get_user_agents_validation_skip_negative():
     """skip < 0 时抛出 HTTPException 400。"""
     mock_db = MagicMock()
-    mock_user = schemas.User(
+    mock_user = UserSchema(
         id="u",
         readable_id="r",
         auth_type="PHONE",
@@ -652,7 +653,7 @@ async def test_get_user_agents_validation_skip_negative():
 async def test_get_user_agents_validation_limit_invalid():
     """limit <= 0 或 > 1000 时抛出 HTTPException 400。"""
     mock_db = MagicMock()
-    mock_user = schemas.User(
+    mock_user = UserSchema(
         id="u",
         readable_id="r",
         auth_type="PHONE",
@@ -773,7 +774,7 @@ async def test_create_agent_enqueues_opening_voice_generation(db_session, monkey
     )
     monkeypatch.setattr(agent_service, "generate_agent_opening_voice", generate_mock)
 
-    agent_in = schemas.AgentCreate(
+    agent_in = AgentCreate(
         name="Create Async Voice Agent",
         gender="FEMALE",
         opening="Hello there.",

@@ -10,7 +10,6 @@ from sqlalchemy import Integer, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app import schemas
 from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.core.user_privilege.superuser_check import (
     SUPERUSER_LIMIT_CHECK_RESULT,
@@ -42,6 +41,7 @@ from app.schemas.subscription import (
 )
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
 from app.services.system_settings_service import system_settings_service
+from app.schemas.user import User as UserSchema
 
 TEST_ENVIRONMENT_LIMIT = 1_000_000
 
@@ -890,7 +890,7 @@ class SubscriptionService:
             raise
 
     async def check_chat_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: UserSchema
     ) -> Tuple[bool, int, int]:
         """
         检查用户聊天次数限制
@@ -997,7 +997,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_voice_generation_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: UserSchema
     ) -> Tuple[bool, int, int]:
         """
         检查用户语音生成次数限制
@@ -1062,7 +1062,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_agent_creation_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: UserSchema
     ) -> Tuple[bool, int, int]:
         """
         检查用户Agent创建数量限制（24小时滚动窗口）
@@ -1129,7 +1129,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_image_gen_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: UserSchema
     ) -> Tuple[bool, int, int]:
         """
         检查用户图片生成次数限制（24小时滚动窗口）
@@ -1203,7 +1203,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_music_gen_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: UserSchema
     ) -> Tuple[bool, int, int]:
         """
         检查用户音乐生成次数限制（24小时滚动窗口）
@@ -1261,7 +1261,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_live_chat_limit(
-        self, db: AsyncSession, user: schemas.User, agent_id: str
+        self, db: AsyncSession, user: UserSchema, agent_id: str
     ) -> Tuple[bool, str, Dict[str, Any]]:
         """
         检查用户 Live Chat 用量限制

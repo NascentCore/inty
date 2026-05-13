@@ -9,7 +9,6 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG
 from app.api.types.llm_config import LLMConfig
@@ -23,6 +22,8 @@ from backend.ops.schemas.festival_memory import (
     FestivalMemoryExtractionRunResponse,
 )
 from app.services import festival_memory_service
+from app.schemas.response import APIResponse
+from app.schemas.user import User as UserSchema
 
 router = APIRouter(
     prefix="/evaluation/admin", route_class=LoggerRoute, tags=[INTY_EVAL_TAG]
@@ -31,14 +32,14 @@ router = APIRouter(
 
 @router.get(
     "/festival-memory-configs",
-    response_model=schemas.APIResponse[List[FestivalMemoryConfigInDB]],
+    response_model=APIResponse[List[FestivalMemoryConfigInDB]],
     summary="节日记忆配置列表",
 )
 async def list_festival_memory_configs(
     db: AsyncSession = Depends(deps.get_async_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     result = await db.execute(
         select(FestivalMemoryConfig)
@@ -47,20 +48,20 @@ async def list_festival_memory_configs(
         .limit(limit)
     )
     configs = result.scalars().all()
-    return schemas.APIResponse.success(
+    return APIResponse.success(
         data=[FestivalMemoryConfigInDB.model_validate(c) for c in configs]
     )
 
 
 @router.post(
     "/festival-memory-configs",
-    response_model=schemas.APIResponse[FestivalMemoryConfigInDB],
+    response_model=APIResponse[FestivalMemoryConfigInDB],
     summary="创建节日记忆配置",
 )
 async def create_festival_memory_config(
     body: FestivalMemoryConfigCreate,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     config = FestivalMemoryConfig(
         festival_name=body.festival_name,
@@ -78,20 +79,20 @@ async def create_festival_memory_config(
     db.add(config)
     await db.commit()
     await db.refresh(config)
-    return schemas.APIResponse.success(
+    return APIResponse.success(
         data=FestivalMemoryConfigInDB.model_validate(config)
     )
 
 
 @router.delete(
     "/festival-memory-configs/{config_id}",
-    response_model=schemas.APIResponse[None],
+    response_model=APIResponse[None],
     summary="删除节日记忆配置",
 )
 async def delete_festival_memory_config(
     config_id: int,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     result = await db.execute(
         select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id)
@@ -101,19 +102,19 @@ async def delete_festival_memory_config(
         raise HTTPException(status_code=404, detail="Configuration not found")
     await db.delete(config)
     await db.commit()
-    return schemas.APIResponse.success(data=None)
+    return APIResponse.success(data=None)
 
 
 @router.put(
     "/festival-memory-configs/{config_id}",
-    response_model=schemas.APIResponse[FestivalMemoryConfigInDB],
+    response_model=APIResponse[FestivalMemoryConfigInDB],
     summary="更新节日记忆配置",
 )
 async def update_festival_memory_config(
     config_id: int,
     body: FestivalMemoryConfigUpdate,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     result = await db.execute(
         select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id)
@@ -152,20 +153,20 @@ async def update_festival_memory_config(
         )
     await db.commit()
     await db.refresh(config)
-    return schemas.APIResponse.success(
+    return APIResponse.success(
         data=FestivalMemoryConfigInDB.model_validate(config)
     )
 
 
 @router.post(
     "/festival-memory-extraction/run",
-    response_model=schemas.APIResponse[FestivalMemoryExtractionRunResponse],
+    response_model=APIResponse[FestivalMemoryExtractionRunResponse],
     summary="立即执行节日记忆抽取",
 )
 async def run_festival_memory_extraction(
     body: FestivalMemoryExtractionRunRequest,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     if body.config_id is not None:
         result = await db.execute(
@@ -240,7 +241,7 @@ async def run_festival_memory_extraction(
     logger.info(
         f"节日记忆抽取完成 festival={festival_name} total={total} success={success} failed={failed}"
     )
-    return schemas.APIResponse.success(
+    return APIResponse.success(
         data=FestivalMemoryExtractionRunResponse(
             total_pairs=total,
             success_count=success,

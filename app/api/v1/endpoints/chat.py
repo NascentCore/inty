@@ -26,7 +26,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import models, schemas
+from app import models
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
 from app.schemas.biz_action import (
@@ -125,6 +125,12 @@ from app.services.voice_service import (
 )
 from app.utils.openai_client import get_chat_openai_client
 from app.utils.timing import Timer, log_time
+from app.schemas.chat import ChatImageGenerationRequest
+from app.schemas.chat import ChatImageGenerationResponse
+from app.schemas.chat import ChatMusicGenerationRequest
+from app.schemas.chat import ChatMusicGenerationResponse
+from app.schemas.response import APIResponse
+from app.schemas.user import User as UserSchema
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
@@ -291,7 +297,7 @@ async def _enqueue_companion_implicit_greeting_ws_turn_after_signed_on(
     db: AsyncSession,
     agent_id: str,
     preset_message_id: str,
-    current_user: schemas.User,
+    current_user: UserSchema,
     app_version_code: Optional[int],
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService,
@@ -378,7 +384,7 @@ async def _try_handle_ws_user_signed_on_frame(
     data: Any,
     *,
     db: AsyncSession,
-    current_user: schemas.User,
+    current_user: UserSchema,
     companion_ws: CompanionWebSocketCoordinator | None,
     ws_conn_id: str,
     outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
@@ -541,7 +547,7 @@ async def _try_handle_ws_user_signed_out_frame(
     data: Any,
     *,
     db: AsyncSession,
-    current_user: schemas.User,
+    current_user: UserSchema,
     companion_ws: CompanionWebSocketCoordinator | None,
     subscription_svc: SubscriptionService,
     ws_conn_id: str,
@@ -638,7 +644,7 @@ async def _try_handle_ws_ws_conn_dropped_frame(
     data: Any,
     *,
     db: AsyncSession,
-    current_user: schemas.User,
+    current_user: UserSchema,
     companion_ws: CompanionWebSocketCoordinator | None,
     subscription_svc: SubscriptionService,
     ws_conn_id: str,
@@ -773,12 +779,12 @@ async def _resolve_assumed_chat_websocket_user(
     operator: User,
     assume_user_id: Optional[str],
     db: AsyncSession,
-) -> schemas.User:
+) -> UserSchema:
     """
     Evaluation: superuser may pass assume_user_id query (same semantics as live_chat WS).
     Matches HTTP X-Assume-User-Id for chat so eval WebSocket hits the same code path as production /ws.
     """
-    operator_schema = schemas.User.model_validate(operator, from_attributes=True)
+    operator_schema = UserSchema.model_validate(operator, from_attributes=True)
     if not assume_user_id or not str(assume_user_id).strip():
         return operator_schema
     if not operator.is_superuser:
@@ -796,7 +802,7 @@ async def _resolve_assumed_chat_websocket_user(
             operator.id,
             assumed.id,
         )
-        return schemas.User.model_validate(assumed, from_attributes=True)
+        return UserSchema.model_validate(assumed, from_attributes=True)
     logger.warning(
         "chat WebSocket assume_user_id not found or deleted: {}", assume_user_id
     )
@@ -806,11 +812,11 @@ async def _resolve_assumed_chat_websocket_user(
 async def _handle_subscription_limit_error(
     session_id: str,
     last_user_message: str | List[dict[str, Any]],
-    current_user: schemas.User,
+    current_user: UserSchema,
     used_count: int,
     daily_limit: int,
     client_local_id: Optional[str] = None,
-) -> schemas.APIResponse:
+) -> APIResponse:
     """处理订阅限制错误"""
     try:
         meta = (
@@ -1087,7 +1093,7 @@ def _build_premium_subscription_action(next_chat_count: int) -> BizAction:
 async def _try_generate_premium_preview_choice(
     *,
     agent,
-    current_user: schemas.User,
+    current_user: UserSchema,
     session_id: str,
     last_user_text: str,
     chat_settings: models.ChatSettings,
@@ -1250,7 +1256,7 @@ async def _build_companion_tool_background_ws_payload(
         subscription_actions=subscription_actions,
         client_local_id=effective_local_id,
     )
-    payload = schemas.APIResponse.success(data=data)
+    payload = APIResponse.success(data=data)
     out = payload.model_dump(exclude_none=True)
     out["agent_id"] = agent_id
     out["status_line"] = await _agent_status_line_for_chat_header(db, agent_id)
@@ -1582,7 +1588,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 subscription_actions=subscription_actions,
                 client_local_id=None,
             )
-            payload = schemas.APIResponse.success(data=data)
+            payload = APIResponse.success(data=data)
             out = payload.model_dump(exclude_none=True)
             out["agent_id"] = agent_id
             out["status_line"] = await _agent_status_line_for_chat_header(
@@ -1865,7 +1871,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     subscription_actions=subscription_actions,
                     client_local_id=None,
                 )
-                payload = schemas.APIResponse.success(data=data)
+                payload = APIResponse.success(data=data)
                 out = payload.model_dump(exclude_none=True)
                 out["agent_id"] = agent_id
                 out["status_line"] = await _agent_status_line_for_chat_header(
@@ -1912,7 +1918,7 @@ async def _agent_chat_completions_impl(
     db: AsyncSession,
     agent_id: str,
     request: ChatCompletionRequest,
-    current_user: schemas.User,
+    current_user: UserSchema,
     app_version_code: Optional[int],
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService,
@@ -1920,7 +1926,7 @@ async def _agent_chat_completions_impl(
     companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
     companion_ws_heartbeat_ctx: dict[str, Any] | None = None,
-) -> Union[schemas.APIResponse[dict], dict]:
+) -> Union[APIResponse[dict], dict]:
     try:
         request_handling_timer = Timer("请求处理")
         logger.debug(
@@ -2580,7 +2586,7 @@ async def _agent_chat_completions_impl(
         timing_message = request_handling_timer.stop()
         logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")
 
-        payload = schemas.APIResponse.success(data=data)
+        payload = APIResponse.success(data=data)
         if chat_route == "websocket":
             sl = await _agent_status_line_for_chat_header(db, agent_id)
             out = payload.model_dump(exclude_none=True)
@@ -2612,7 +2618,7 @@ async def _agent_chat_completions_impl(
 
 @router.post(
     "/completions/{agent_id}",
-    response_model=schemas.APIResponse[dict],
+    response_model=APIResponse[dict],
     summary="返回与指定 Agent 聊天的下一条消息",
     description="可以处理包括图片在内的各种消息类型，媒体类型应该先上传，然后将 URL 作为索引发送到此 API",
     tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
@@ -2622,7 +2628,7 @@ async def agent_chat_completions(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     request: ChatCompletionRequest,
-    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
+    current_user: UserSchema = Depends(deps.get_effective_user_for_eval),
     app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
     subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
@@ -3143,7 +3149,7 @@ async def chat_completions_websocket_verify(
                 subscription_actions=[],
                 client_local_id=effective_local_id,
             )
-            response = schemas.APIResponse.success(data=data)
+            response = APIResponse.success(data=data)
             response_data = response.model_dump(exclude_none=True)
             response_data["agent_id"] = agent_id
             response_data["status_line"] = await _agent_status_line_for_chat_header(
@@ -3166,18 +3172,18 @@ class ChatImageBizErrorData(BizError):
     suggestion: Optional[str] = None
 
 
-ChatImageGenerationAPIResponse: TypeAlias = schemas.APIResponse[
+ChatImageGenerationAPIResponse: TypeAlias = APIResponse[
     Union[
-        schemas.ChatImageGenerationResponse,
+        ChatImageGenerationResponse,
         UsageLimitExceeded,
         ChatImageBizErrorData,
     ]
 ]
 
 
-ChatMusicGenerationAPIResponse: TypeAlias = schemas.APIResponse[
+ChatMusicGenerationAPIResponse: TypeAlias = APIResponse[
     Union[
-        schemas.ChatMusicGenerationResponse,
+        ChatMusicGenerationResponse,
         UsageLimitExceeded,
     ]
 ]
@@ -3197,8 +3203,8 @@ async def generate_chat_image(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    request: schemas.ChatImageGenerationRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    request: ChatImageGenerationRequest,
+    current_user: UserSchema = Depends(deps.get_current_active_user),
     subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
 ) -> ChatImageGenerationAPIResponse:
     """
@@ -3234,7 +3240,7 @@ async def generate_chat_image(
         )
 
         if isinstance(result, UsageLimitExceeded):
-            return schemas.APIResponse.error(
+            return APIResponse.error(
                 message=result.message, code=result.code, data=result
             )
 
@@ -3253,7 +3259,7 @@ async def generate_chat_image(
                 },
             )
 
-        return schemas.APIResponse.success(data=result)
+        return APIResponse.success(data=result)
 
     except HTTPException as e:
         raise
@@ -3277,8 +3283,8 @@ async def generate_chat_music(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    request: schemas.ChatMusicGenerationRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    request: ChatMusicGenerationRequest,
+    current_user: UserSchema = Depends(deps.get_current_active_user),
     subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
 ) -> ChatMusicGenerationAPIResponse:
     """基于聊天上下文生成音乐。"""
@@ -3294,11 +3300,11 @@ async def generate_chat_music(
         )
 
         if isinstance(result, UsageLimitExceeded):
-            return schemas.APIResponse.error(
+            return APIResponse.error(
                 message=result.message, code=result.code, data=result
             )
 
-        return schemas.APIResponse.success(data=result)
+        return APIResponse.success(data=result)
     except HTTPException:
         raise
     except Exception as e:
