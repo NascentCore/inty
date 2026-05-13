@@ -256,7 +256,13 @@ def companion_turn_langsmith_parent_trace_id_str(root_run: Any) -> str:
         if tid is None:
             return ""
         return str(tid).strip()
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "companion_turn_langsmith_parent trace id extraction failed "
+            "root_run_type={} err={}",
+            type(root_run).__name__,
+            exc,
+        )
         return ""
 
 
@@ -268,7 +274,13 @@ def companion_turn_langsmith_parent_run_id_str(root_run: Any) -> str:
         if rid is None:
             return ""
         return str(rid).strip()
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "companion_turn_langsmith_parent run id extraction failed "
+            "root_run_type={} err={}",
+            type(root_run).__name__,
+            exc,
+        )
         return ""
 
 
