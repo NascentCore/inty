@@ -52,13 +52,7 @@ class HeartbeatConfig(BaseModel):
             "二者同时满足里**更晚**的那一刻才放行。"
         ),
     )
-    min_user_quiet_sec: float = Field(
-        default=20.0,
-        description=(
-            "用户最后一条**正常**消息发出后，至少安静多久才允许再主动开口；"
-            "用来减少打断用户正在输入或酝酿回复的感觉。"
-        ),
-    )
+    # TODO(session): min_transcript_lines counts the full transcript; replace with session-scoped gating when modeled.
     min_transcript_lines: int = Field(
         default=0,
         description=(
@@ -118,13 +112,6 @@ def _last_heartbeat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     return None
 
 
-def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
-    for m in reversed(msgs):
-        if m.role == "user" and m.heartbeat is not True:
-            return _parse_ts(m.ts)
-    return None
-
-
 def _has_real_user_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
     hb_idx: int | None = None
     for i in range(len(msgs) - 1, -1, -1):
@@ -170,14 +157,6 @@ def next_heartbeat_wait_seconds(
     t = now if now is not None else datetime.now(timezone.utc)
     rhythm = _rhythm_idle_seconds(msgs, config.base_idle_sec)
     earliest = last_asst + timedelta(seconds=rhythm)
-
-    last_real_user = _last_real_user_ts(msgs)
-    if last_real_user is not None:
-        user_quiet_earliest = last_real_user + timedelta(
-            seconds=config.min_user_quiet_sec
-        )
-        if user_quiet_earliest > earliest:
-            earliest = user_quiet_earliest
 
     last_hb = _last_heartbeat_user_ts(msgs)
     if last_hb is not None:
