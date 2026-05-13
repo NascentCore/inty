@@ -25,6 +25,7 @@ YAML). Use e.g. ``INTY_LOGGING_LEVEL=DEBUG`` + ``INTY_CONSOLE_LOGGING_LEVEL=INFO
 import logging
 import os
 import sys
+from pathlib import Path
 
 from loguru import logger
 
@@ -35,6 +36,18 @@ from app.utils.config import (
     LOGGING_MESSAGE_FORMAT,
     LOGGING_TIME_FORMAT,
 )
+
+_INTY_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def _patch_log_record_repo_relative_file(record: dict) -> None:
+    """将源码位置写成相对仓库根目录的路径，便于本地日志阅读与分享。"""
+    raw_path = record["file"].path
+    try:
+        rel = Path(raw_path).resolve().relative_to(_INTY_REPO_ROOT)
+        record["extra"]["inty_rel_file"] = rel.as_posix()
+    except (OSError, ValueError):
+        record["extra"]["inty_rel_file"] = raw_path
 
 
 class InterceptHandler(logging.Handler):
@@ -59,8 +72,12 @@ def init_logger():
     # 移除默认的处理器
     logger.remove()
 
-    # 配置默认的 request_id，避免在非请求上下文中出错
-    logger.configure(extra={"request_id": "-"})
+    # 配置默认的 request_id，避免在非请求上下文中出错；
+    # inty_rel_file 由 patcher 填充（与 LOGGING_FILE_FORMAT 中 {extra[inty_rel_file]} 对应）
+    logger.configure(
+        extra={"request_id": "-", "inty_rel_file": ""},
+        patcher=_patch_log_record_repo_relative_file,
+    )
 
     log_level = os.environ.get("INTY_LOGGING_LEVEL", "").strip()
     if not log_level:

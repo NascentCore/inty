@@ -40,3 +40,50 @@ def test_companion_llm_clients_use_distinct_langsmith_chat_names(
         "agentic_companion_inner_tick",
     ]
     assert len(set(chat_names)) == len(chat_names)
+
+
+def test_complete_text_passes_memory_pipeline_langsmith_extra(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def _fake_sync(
+        client: Any,
+        *,
+        model: str,
+        messages_payload: list,
+        tools: list,
+        tool_choice: str | None = None,
+        response_format: dict | None = None,
+        langsmith_extra: dict[str, Any] | None = None,
+    ) -> Any:
+        captured["langsmith_extra"] = langsmith_extra
+
+        class _Msg:
+            content = "curated"
+
+        class _Choice:
+            message = _Msg()
+
+        class _Resp:
+            choices = [_Choice()]
+
+        return _Resp()
+
+    monkeypatch.setattr(llm_client_module, "create_chat_completion_sync", _fake_sync)
+    monkeypatch.setattr(
+        llm_client_module,
+        "get_openai_compatible_sync_client",
+        lambda *_a, **_k: object(),
+    )
+
+    client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
+    out = client.complete_text(
+        [{"role": "user", "content": "hello"}],
+        model_role="day_summary",
+    )
+    assert out == "curated"
+    extra = captured.get("langsmith_extra") or {}
+    assert extra.get("name") == "agentic_companion_memory_pipeline-day_summary"
+    meta = extra.get("metadata") or {}
+    assert meta.get("inty_llm_source") == "memory_pipeline_day_summary"

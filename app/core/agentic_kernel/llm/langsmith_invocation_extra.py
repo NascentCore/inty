@@ -6,6 +6,10 @@ Background
 tool paths use ``tool_call_langsmith_extra``: run **name**
 ``agentic_companion_tool_call-<phase>`` plus optional auxiliary metadata (no
 ``inty_llm_source`` on those spans).
+
+Memory pipeline curator completions use ``memory_pipeline_langsmith_extra``:
+run name ``agentic_companion_memory_pipeline-<model_role>`` and
+``inty_llm_source=memory_pipeline_<model_role>``.
 """
 
 from __future__ import annotations
@@ -26,6 +30,7 @@ TOOL_CHOICE_ATTEMPT_REQUIRED = "required"
 TOOL_CHOICE_ATTEMPT_AUTO = "auto"
 
 LANGSMITH_RUN_NAME_TOOL_CALL_BASE = "agentic_companion_tool_call"
+LANGSMITH_RUN_NAME_MEMORY_PIPELINE_BASE = "agentic_companion_memory_pipeline"
 
 
 def invocation_extra(
@@ -62,3 +67,13 @@ def tool_choice_attempt_metadata(tool_choice: str | None) -> dict[str, Any]:
     if tool_choice == "required":
         return {INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY: TOOL_CHOICE_ATTEMPT_REQUIRED}
     return {INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY: TOOL_CHOICE_ATTEMPT_AUTO}
+
+
+def memory_pipeline_langsmith_extra(*, model_role: str) -> dict[str, Any]:
+    """LangSmith extra for post-turn memory curator ``complete_text`` calls."""
+    role = (model_role or "memory").strip() or "memory"
+    source = f"memory_pipeline_{role}"
+    return invocation_extra(
+        source=source,
+        run_name=f"{LANGSMITH_RUN_NAME_MEMORY_PIPELINE_BASE}-{role}",
+    )

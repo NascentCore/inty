@@ -1425,6 +1425,10 @@ async def update_agent(
         should_regenerate_voice = "opening" in update_data or "voice_id" in update_data
 
         update_data = process_agent_image_urls(update_data)
+        # 与写入 DB 的 update_data 对齐：不含 energy_points；图片 URL 已规范化/校验
+        reload_log_reason = "update_agent fields=" + ",".join(
+            sorted(update_data.keys())
+        )
 
         _update_agent_in_db(update_data, db_agent)
 
@@ -1533,7 +1537,7 @@ async def update_agent(
             }
 
             reload_success = await agent_manager.reload_agent(
-                updated_agent.id, agent_data
+                updated_agent.id, agent_data, reason=reload_log_reason
             )
             if reload_success:
                 logger.debug(f"Agent {updated_agent.id} 缓存重载成功")

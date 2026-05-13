@@ -79,6 +79,7 @@ from app.schemas.chat_websocket import (
     ChatWebSocketQueuedPlainError,
     ChatWebSocketRequest,
     ChatWsClientContextAckFrame,
+    ChatWsCompanionWireMetaData,
     ChatWsPongFrame,
     ChatWsUserSignedOnAckFrame,
     ChatWsUserSignedOnFrame,
@@ -86,6 +87,7 @@ from app.schemas.chat_websocket import (
     ChatWsUserSignedOutFrame,
     ChatWsWsConnDroppedFrame,
     chat_ws_queued_error_dict,
+    dump_chat_ws_companion_wire_meta,
     normalize_websocket_companion_message_id_uuid,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -811,7 +813,13 @@ async def _handle_subscription_limit_error(
 ) -> schemas.APIResponse:
     """处理订阅限制错误"""
     try:
-        meta = {"localId": client_local_id} if client_local_id else None
+        meta = (
+            dump_chat_ws_companion_wire_meta(
+                ChatWsCompanionWireMetaData(local_id=client_local_id)
+            )
+            if client_local_id
+            else None
+        )
         await chat_history_service.add_user_message_async(
             session_id, last_user_message, meta_data=meta
         )
@@ -1059,10 +1067,12 @@ def _build_premium_preview_choice(preview_content: str) -> dict:
             f"{preview_content}\n\n"
             "Subscribe to Premium to unlock this quality in every chat."
         ),
-        "meta_data": {
-            "premium_only": True,
-            "source": "free_user_premium_preview",
-        },
+        "meta_data": dump_chat_ws_companion_wire_meta(
+            ChatWsCompanionWireMetaData(
+                premium_only=True,
+                source="free_user_premium_preview",
+            )
+        ),
     }
 
 
@@ -1141,30 +1151,36 @@ async def _build_companion_tool_background_ws_payload(
     foreground_voice_ctx: dict[str, Any] | None = None,
     voice_svc: VoiceService | None = None,
 ) -> WsOutboundPayload:
-    meta_data = {
-        "source": "tool_bg",
-        "trace_id": ev.trace_id,
-        "reply_to_user_msg_uuid": ev.user_msg_uuid,
-        "tool_bg_output_to_user": ev.output_to_user,
-        "tool_bg_generation_deliver": ev.generation_deliver,
-        "reply_modality": ev.reply_modality,
-    }
     _tb_script = (ev.voice_message_script or "").strip()
+    is_voice_tb: bool | None = None
+    voice_script_tb: str | None = None
     if str(ev.reply_modality or "") == "voice_message":
-        meta_data["is_voice"] = True
+        is_voice_tb = True
         if _tb_script:
-            meta_data["voice_message_script"] = _tb_script
-    if ev.langsmith_trace_id:
-        meta_data["langsmith_trace_id"] = ev.langsmith_trace_id
-    if ev.langsmith_run_id:
-        meta_data["langsmith_run_id"] = ev.langsmith_run_id
+            voice_script_tb = _tb_script
     gi = generated_image_meta_from_index_slice(ev.memory_store, ev.image_asset_baseline)
-    if gi:
-        meta_data["generated_image"] = gi
-    if ev.local_image_paths:
-        meta_data["tool_bg_local_image_paths"] = list(ev.local_image_paths)
-    if ev.significance_perception:
-        meta_data["significance_perception"] = ev.significance_perception
+    tb_paths: list[str] | None = (
+        list(ev.local_image_paths) if ev.local_image_paths else None
+    )
+    sig = ev.significance_perception if ev.significance_perception else None
+    meta_data = dump_chat_ws_companion_wire_meta(
+        ChatWsCompanionWireMetaData(
+            source="tool_bg",
+            trace_id=ev.trace_id or None,
+            reply_to_user_msg_uuid=ev.user_msg_uuid or None,
+            tool_bg_output_to_user=ev.output_to_user,
+            tool_bg_generation_deliver=ev.generation_deliver,
+            reply_modality=ev.reply_modality or None,
+            is_voice=is_voice_tb,
+            voice_message_script=voice_script_tb,
+            langsmith_trace_id=ev.langsmith_trace_id or None,
+            langsmith_run_id=ev.langsmith_run_id or None,
+            generated_image=gi or None,
+            tool_bg_local_image_paths=tb_paths,
+            significance_perception=sig,
+            inner_tick_activity=ev.inner_tick_activity,
+        )
+    )
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
         session_id,
         ev.text,
@@ -1245,37 +1261,34 @@ def _companion_ai_meta_from_turn_result(
     companion_turn: CompanionTurnResult,
 ) -> dict[str, Any]:
     """Build assistant ``meta_data`` for chat_history / WS from one companion kernel turn."""
-    companion_ai_meta: dict[str, Any] = {
-        "source": companion_turn.assistant_source,
-        "reply_modality": companion_turn.reply_modality,
-    }
     _fg_script = (companion_turn.voice_message_script or "").strip()
+    is_voice = None
+    voice_message_script = None
     if str(companion_turn.reply_modality or "") == "voice_message":
-        companion_ai_meta["is_voice"] = True
+        is_voice = True
         if _fg_script:
-            companion_ai_meta["voice_message_script"] = _fg_script
-    if companion_turn.trace_id:
-        companion_ai_meta["trace_id"] = companion_turn.trace_id
-    if companion_turn.user_msg_uuid:
-        companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
-    if companion_turn.assistant_msg_uuid:
-        companion_ai_meta["assistant_msg_uuid"] = companion_turn.assistant_msg_uuid
-    if companion_turn.langsmith_trace_id:
-        companion_ai_meta["langsmith_trace_id"] = companion_turn.langsmith_trace_id
-    if companion_turn.langsmith_run_id:
-        companion_ai_meta["langsmith_run_id"] = companion_turn.langsmith_run_id
-    # Optional 1-10 importance triple from companion JSON envelope; kernel may omit on parse miss.
-    # Downstream: memory extraction can sort/annotate prompts when
-    # memory_extraction.use_significance_perception_in_extraction is true; see
-    # app/services/memory_extraction_service.py and companion significance_perception module docstring.
+            voice_message_script = _fg_script
     sp = companion_turn.significance_perception
-    if isinstance(sp, dict) and sp:
-        companion_ai_meta["significance_perception"] = sp
-    if companion_turn.tool_background_started:
-        companion_ai_meta["tool_background_started"] = True
-    if companion_turn.turn_start_context_mode:
-        companion_ai_meta["context_mode"] = companion_turn.turn_start_context_mode
-    return companion_ai_meta
+    significance = sp if isinstance(sp, dict) and sp else None
+    meta = ChatWsCompanionWireMetaData(
+        source=companion_turn.assistant_source,
+        reply_modality=companion_turn.reply_modality,
+        inner_tick_activity=companion_turn.inner_tick_activity or None,
+        is_voice=is_voice,
+        voice_message_script=voice_message_script,
+        trace_id=companion_turn.trace_id or None,
+        user_msg_uuid=companion_turn.user_msg_uuid or None,
+        assistant_msg_uuid=companion_turn.assistant_msg_uuid or None,
+        langsmith_trace_id=companion_turn.langsmith_trace_id or None,
+        langsmith_run_id=companion_turn.langsmith_run_id or None,
+        significance_perception=significance,
+        tool_background_started=(
+            True if companion_turn.tool_background_started else None
+        ),
+        context_mode=companion_turn.turn_start_context_mode or None,
+        transcript_compaction=companion_turn.transcript_compaction,
+    )
+    return dump_chat_ws_companion_wire_meta(meta)
 
 
 async def _persist_companion_user_message_for_bg(
@@ -1301,7 +1314,9 @@ async def _persist_companion_user_message_for_bg(
         return await chat_history_service.add_user_message_async(
             session_id,
             last_user_message,
-            meta_data={"localId": effective_local_id},
+            meta_data=dump_chat_ws_companion_wire_meta(
+                ChatWsCompanionWireMetaData(local_id=effective_local_id)
+            ),
         )
     return await chat_history_service.add_user_message_async(
         session_id, last_user_message
@@ -1431,11 +1446,13 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             )
             return
 
-        user_meta = {
-            "companion_proactive_heartbeat": True,
-            "inner_tick": True,
-            "heartbeat": True,
-        }
+        user_meta = dump_chat_ws_companion_wire_meta(
+            ChatWsCompanionWireMetaData(
+                companion_proactive_heartbeat=True,
+                inner_tick=True,
+                heartbeat=True,
+            )
+        )
         await chat_history_service.add_user_message_async(
             session_id,
             PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
@@ -1740,10 +1757,12 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         if not companion_turn.tool_background_started:
             companion_ws.remove_foreground_pending(preset_uid)
 
-        user_meta = {
-            "inner_tick": True,
-            "companion_maintenance_inner_tick": True,
-        }
+        user_meta = dump_chat_ws_companion_wire_meta(
+            ChatWsCompanionWireMetaData(
+                inner_tick=True,
+                companion_maintenance_inner_tick=True,
+            )
+        )
         user_row_id = await chat_history_service.add_user_message_async(
             session_id,
             MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
@@ -2111,7 +2130,9 @@ async def _agent_chat_completions_impl(
                         session_id,
                         response_text_content,
                         agent_id=chat.agent_id,
-                        meta_data=phone_meta,
+                        meta_data=dump_chat_ws_companion_wire_meta(
+                            ChatWsCompanionWireMetaData.model_validate(phone_meta)
+                        ),
                     )
                     if (
                         companion_ws_heartbeat_ctx is not None

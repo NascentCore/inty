@@ -88,6 +88,7 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
     # Maintenance inner tick on tool-backed route skips foreground envelope; LLM runs in tool_bg only.
     assert out.assistant_text == ""
     assert out.tool_background_started is True
+    assert out.inner_tick_activity == "maintenance"
     assert not client.calls
 
     rows = [
@@ -145,6 +146,7 @@ def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
         )
     )
     assert out.assistant_text == ""
+    assert out.inner_tick_activity == "maintenance"
     assert len(bg_jobs) == 1
     llm_msgs = bg_jobs[0]["request_messages"]
     assert llm_msgs[-1]["role"] == "user"
@@ -176,6 +178,7 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     )
 
     assert out.assistant_text == "inner reply"
+    assert out.inner_tick_activity == "proactive_chat"
     assert client.calls[0]["scene"] == LLM_SCENE_CHAT
     assert not client.calls[0].get("tools")
     llm_msgs = client.calls[0]["messages"]

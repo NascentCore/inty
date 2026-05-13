@@ -55,7 +55,7 @@ def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
         return ""
     parts: list[str] = []
     if u:
-        parts.append(f"user={u}")
+        parts.append(f"user_msg_uuid={u}")
     if a:
         parts.append(f"asst={a}")
     if ls:
@@ -110,11 +110,26 @@ def _repl_banner_suffix_ids(
     return out
 
 
+def _repl_inner_tick_activity_display(activity: str) -> str:
+    """WS ``meta_data.inner_tick_activity`` uses enum values; REPL shows proactive-chat hyphenated."""
+    s = (activity or "").strip()
+    if s == "proactive_chat":
+        return "proactive-chat"
+    return s
+
+
 def _repl_assistant_banner_label(
     ids: Mapping[str, str] | None,
     *,
     meta_data: Mapping[str, Any] | None = None,
 ) -> str:
+    act_raw = None
+    if meta_data:
+        raw = meta_data.get("inner_tick_activity")
+        if raw:
+            act_raw = str(raw).strip()
+    if act_raw:
+        return f"inner-tick {_repl_inner_tick_activity_display(act_raw)}"
     src = None
     if meta_data:
         src = meta_data.get("source")
@@ -286,6 +301,23 @@ def _print_generated_image_meta_banner(meta: Mapping[str, Any]) -> None:
     print(f"image-url: {s}")
 
 
+def _print_transcript_compaction_banner(meta: Mapping[str, Any]) -> None:
+    """Emit one line when server applied transcript window compaction for this turn."""
+    raw = meta.get("transcript_compaction")
+    if not isinstance(raw, dict):
+        return
+    if not raw.get("did_compact"):
+        return
+    reason = raw.get("reason", "")
+    before = raw.get("approx_chars_before", "")
+    after = raw.get("approx_chars_after", "")
+    cc = raw.get("compaction_count", "")
+    print(
+        f"transcript-compaction: reason={reason!r} chars_before={before} "
+        f"chars_after={after} compaction_count={cc}"
+    )
+
+
 def _emit_downlink_item(
     item: Mapping[str, Any],
     outbound_t0: dict[str, float],
@@ -300,6 +332,7 @@ def _emit_downlink_item(
         )
         _print_tool_bg_local_image_paths_banner(meta)
         _print_generated_image_meta_banner(meta)
+        _print_transcript_compaction_banner(meta)
     else:
         print(
             format_ws_error_banner(

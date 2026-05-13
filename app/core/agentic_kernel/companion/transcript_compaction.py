@@ -96,6 +96,22 @@ class CompactionOutcome(BaseModel):
     approx_chars_after: int = Field(ge=0)
 
 
+def transcript_compaction_meta_from_outcome(
+    outcome: CompactionOutcome,
+    *,
+    max_context_chars: int,
+) -> dict[str, Any]:
+    """Stable JSON-serializable summary for logs, WS ``meta_data``, and REPL banners."""
+    return {
+        "did_compact": outcome.did_compact,
+        "reason": outcome.reason,
+        "approx_chars_before": outcome.approx_chars_before,
+        "approx_chars_after": outcome.approx_chars_after,
+        "max_context_chars": max_context_chars,
+        "compaction_count": outcome.state.compaction_count,
+    }
+
+
 class ConversationCompactor:
     def __init__(
         self, config: CompactionConfig, *, initial_state: CompactionState | None = None

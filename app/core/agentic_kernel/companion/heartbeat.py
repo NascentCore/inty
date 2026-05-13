@@ -16,12 +16,14 @@ from pydantic import BaseModel, Field
 from .memory_store import MemoryStore
 from .models import ChatMessage, load_transcript_from_store
 
+# 主动心跳回合里追加为 **system**：约束模型在用户未发新消息时如何接话（延续场景、禁工具、禁元话语）。
 HEARTBEAT_SYNTHETIC_USER_TEXT = (
     "（陪伴心跳：用户尚未输入新内容。请读本窗口里**正在进行的场景、话题与语气**，用一两句自然接话，"
     "延续当下氛围与节奏，像同一场对话的下一拍；不要突然换风格、换口吻或像新开一局；"
     "不要提系统、心跳、等待或「我以为你走了」；不要调用工具。）"
 )
 
+# 主动心跳回合里作为 **user** 的可见正文：满足「末轮须为 user」的 API 形态；transcript 与调度用 `heartbeat` 标记区分，非真人输入。
 PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER = "（陪伴心跳）"
 
 _NEVER = 86400.0 * 365.0
