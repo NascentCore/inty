@@ -3,10 +3,8 @@
 # _run_user_analytics_daily_report: T-1 UTC, AsyncSessionLocal → primary when replica_host absent).
 name: Daily primary DB usage report
 
+# 手动：仓库 Actions → 本 workflow →「Run workflow」（可选填日期、是否 force）。
 on:
-  schedule:
-    # Align with push_worker default user_analytics_report.daily_cron_hour (UTC 6).
-    - cron: "0 6 * * *"
   workflow_dispatch:
     inputs:
       report_date:
@@ -18,6 +16,9 @@ on:
         required: false
         default: false
         type: boolean
+  schedule:
+    # Align with push_worker default user_analytics_report.daily_cron_hour (UTC 6).
+    - cron: "0 6 * * *"
 
 permissions:
   contents: read
@@ -29,7 +30,8 @@ concurrency:
 jobs:
   daily_usage:
     runs-on: inty-prod-server-gcp
-    if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
+    # 手动触发任意分支均可跑；定时仅在 default 分支（main）执行。
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.ref == 'refs/heads/main')
 
     steps:
       - uses: actions/checkout@v4
@@ -49,11 +51,12 @@ jobs:
       - name: Resolve report date (T-1 UTC if unset)
         id: resolve
         env:
-          INPUT_REPORT_DATE: ${{ inputs.report_date }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_REPORT_DATE: ${{ github.event.inputs.report_date }}
         run: |
           set -euo pipefail
           export TZ=UTC
-          if [ -n "${INPUT_REPORT_DATE:-}" ]; then
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "${INPUT_REPORT_DATE:-}" ]; then
             REPORT_DATE="$INPUT_REPORT_DATE"
           else
             REPORT_DATE="$(python -c "from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat())")"
@@ -63,17 +66,23 @@ jobs:
       - name: Run daily usage report (same entrypoint as push worker analytics job)
         env:
           PYTHONPATH: .
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_FORCE: ${{ github.event.inputs.force }}
         run: |
           set -euo pipefail
           CMD="python tools/scripts/run_user_analytics_report.py --type daily --date ${{ steps.resolve.outputs.report_date }}"
-          if [ "${{ inputs.force }}" = "true" ]; then
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "${INPUT_FORCE:-}" = "true" ]; then
             CMD="$CMD --force"
           fi
           echo "Running: $CMD"
           eval "$CMD"
 
       - name: Write summary
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_FORCE: ${{ github.event.inputs.force }}
         run: |
           echo "## Daily primary DB usage report" >> "$GITHUB_STEP_SUMMARY"
+          echo "event_name=$EVENT_NAME" >> "$GITHUB_STEP_SUMMARY"
           echo "report_date=${{ steps.resolve.outputs.report_date }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "force=${{ inputs.force }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "force=${INPUT_FORCE:-}" >> "$GITHUB_STEP_SUMMARY"
