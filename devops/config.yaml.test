@@ -75,6 +75,17 @@ gemini_live:
   free_user_max_session_duration: 60
   sub_user_max_session_duration: 120
 
+phone_call:
+  enabled: true
+  default_country_code: "+1"
+  twilio_from_number: ""
+  twilio_media_stream_base_url: ""
+  twilio_account_sid: ""
+  twilio_auth_token: ""
+  inbound_number_agent_map: {}
+  default_inbound_agent_id: ""
+  media_stream_token_ttl_seconds: 300
+
 # Surprise Snap E2E：第 1 条用户消息即触发
 surprise_snap:
   enabled_since: "2020-01-01T00:00:00"

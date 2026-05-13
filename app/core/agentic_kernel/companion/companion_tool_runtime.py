@@ -49,13 +49,22 @@ from .bootstrap_user_interactive import (
 from .message_format import openai_assistant_message_dict
 from .memory_store_document_mapping import parse_memory_store_relative_path
 from .memory_store import MemoryStore, normalize_memory_store_relative_path
-from .models import ChatMessage
+from .models import ChatMessage, load_context_meta
 from .google_web_search import run_google_web_search
 from .read_web_page import run_read_web_page
 from .runtime_inspect_tool import tool_companion_runtime_inspect
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .schedule_queue import add_schedule_task
+from app.db.session import AsyncSessionLocal
+from app.models.user import User
+from app.services.global_services import subscription_service
 from app.services.agent_status_line import tool_update_agent_status_line
+from app.services.phone_call_service import (
+    PhoneCallConfigError,
+    PhoneCallLimitError,
+    phone_call_service,
+)
+from sqlalchemy import select
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
@@ -145,6 +154,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "schedule_task",
         "google_web_search",
         "read_web_page",
+        "phone_call_user",
         "generate_image",
         "modify_image",
         "companion_runtime_inspect",
@@ -353,6 +363,37 @@ def tool_schedule_task(store: MemoryStore, exec_time_utc: str, task_text: str) -
     )
 
 
+async def tool_phone_call_user(root: Path, phone_number: str, reason: str) -> str:
+    store = get_memory_store(root)
+    context = load_context_meta(root / "context.json", store=store)
+    user_id = context.user_id.strip()
+    agent_id = context.companion_id.strip()
+    if not user_id or not agent_id:
+        return "ERROR: phone call requires active user and companion context"
+    async with AsyncSessionLocal() as db:
+        row = await db.execute(select(User).where(User.id == user_id))
+        user = row.scalar_one_or_none()
+        if user is None or user.deleted_at:
+            return "ERROR: phone call user context no longer exists"
+        try:
+            result = await phone_call_service.start_outbound_call(
+                db=db,
+                current_user=user,
+                agent_id=agent_id,
+                phone_number=phone_number,
+                subscription_svc=subscription_service,
+                reason=reason,
+            )
+        except PhoneCallLimitError as exc:
+            return f"ERROR: {exc}"
+        except (PhoneCallConfigError, ValueError) as exc:
+            return f"ERROR: {exc}"
+    return (
+        "OK phone call queued "
+        f"to={result.to_number_masked} status={result.status} call_sid={result.call_sid}"
+    )
+
+
 def build_openai_tools() -> list[dict[str, Any]]:
     """OpenAI Chat Completions `tools` 列表。"""
     return [
@@ -552,6 +593,34 @@ def build_openai_tools() -> list[dict[str, Any]]:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "phone_call_user",
+                "description": (
+                    "Place an outbound phone call to the user through the configured PSTN provider. "
+                    "Use only when the current user message explicitly asks you to call now and provides "
+                    "the phone number in that same message (for example, 'Call me at 1234560123'). "
+                    "Never call a number inferred from memory, old messages, or guesses. "
+                    "Do not use from proactive/implicit greeting contexts."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "phone_number": {
+                            "type": "string",
+                            "description": "User-provided phone number from the current message.",
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Short reason for audit logs, based on the user's explicit request.",
+                        },
+                    },
+                    "required": ["phone_number", "reason"],
+                    "additionalProperties": False,
+                },
+            },
+        },
     ]
 
 
@@ -646,6 +715,7 @@ def build_openai_repl_tools(
             "memory_store_list_paths",
             "memory_store_read_document",
             "memory_store_write_document",
+            "phone_call_user",
         )
     if disable_status:
         names = tuple(n for n in names if n != "tool_update_agent_status_line")
@@ -1082,6 +1152,14 @@ async def _dispatch(
             )
         except ValueError as exc:
             return f"ERROR: {exc}"
+    if name == "phone_call_user":
+        raw_phone = arguments.get("phone_number")
+        raw_reason = arguments.get("reason")
+        if not isinstance(raw_phone, str):
+            return "ERROR: phone_number must be a string"
+        if not isinstance(raw_reason, str):
+            return "ERROR: reason must be a string"
+        return await tool_phone_call_user(root, raw_phone, raw_reason)
     if name == "companion_runtime_inspect":
         return tool_companion_runtime_inspect(store, dict(arguments or {}))
     if name == "companion_set_experience_profile":

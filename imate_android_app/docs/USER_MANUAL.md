@@ -32,13 +32,15 @@ _TODO: Screenshots and copy for each primary surface (navigation, chat, profile,
 
 | Task | App path | Notes |
 | --- | --- | --- |
-| _TODO_ | _TODO_ | _TODO_ |
+| Start a realtime voice call | Chat → phone button in the top bar | Grant microphone permission when prompted. The call uses the same iMate and chat context as the text conversation. |
 
 <!-- TODO(follow-up): Fill the table from real UX; link to FR or design doc if helpful. -->
 
 ## Troubleshooting
 
-_TODO: Billing, login, network, and escalation paths specific to iMate._
+- **Voice call cannot hear you**: grant Microphone permission in Android system Settings → Apps → iMate → Permissions.
+- **Voice call fails to connect**: check network connectivity and sign in again if your session has expired.
+- **No reply audio**: end the call and start again; realtime voice depends on the backend Live Chat service being available.
 
 ## Contact and escalation
 

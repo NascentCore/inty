@@ -37,6 +37,7 @@ from app.models.memory import MemoryExtractionLog as MemoryExtractionLog
 from app.models.messages_compaction import MessagesCompaction as MessagesCompaction
 from app.models.notification import NotificationTemplate as NotificationTemplate
 from app.models.notification import UserNotification as UserNotification
+from app.models.phone_call import PhoneCallCallerBinding as PhoneCallCallerBinding
 from app.models.push_notification import (
     PushNotificationHistory as PushNotificationHistory,
 )

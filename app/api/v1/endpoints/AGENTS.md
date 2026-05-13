@@ -220,6 +220,18 @@ Inty 不提供 `/health`；Ops 根路径 `/` 在关闭 API-only 时为评测页�
 > **Live Chat WS 可选 query**：`speech_language_code`（BCP-47）、`response_language_name`（英文可读语言名，用于 system instruction）。非法参数关闭码 `4000`。
 > **Live Chat status**：响应 `data` 含 `default_speech_language_code`、`default_response_language_name`（服务端 `gemini_live` 默认，未传 query 时使用）。
 
+### 电话通话 (Phone Calls)
+
+| 路径 | 方法 | 实现文件 |
+|------|------|----------|
+| `/api/v1/phone-calls/status` | GET | `app/api/v1/endpoints/phone_call.py` |
+| `/api/v1/phone-calls/{agent_id}` | POST | `app/api/v1/endpoints/phone_call.py` |
+| `/api/v1/phone-calls/twilio/inbound` | POST | `app/api/v1/endpoints/phone_call.py` |
+| `/api/v1/phone-calls/twilio-media` | WS | `app/api/v1/endpoints/phone_call.py` |
+
+> **Phone Calls**：`POST /api/v1/phone-calls/{agent_id}` 由已登录用户显式传入手机号触发 Twilio 外呼；`POST /api/v1/phone-calls/twilio/inbound` 是 Twilio Voice webhook，用来把已绑定来电号码接入指定 agent；`WS /api/v1/phone-calls/twilio-media` 是 Twilio Media Streams 桥，使用短期签名 token，不接受用户 JWT。功能开关默认开启，但 `GET /status` 的 `available` 只有在 Gemini Live、Twilio 凭据、Twilio from number 与公网 WSS bridge 都配置完成时才为 true。手机号不写入 `users.phone`；来电识别仅保存 HMAC 与脱敏展示。
+> **Chat message trigger**：生产 companion WebSocket 聊天中，用户当前轮明确发送 `Call me at <number>` 会走确定性触发；工具路径也暴露 `phone_call_user`，但仅允许当前用户显式要求立刻拨打且当前消息含号码时使用，禁止 proactive/implicit greeting 自动打电话。
+
 ## 仅 Ops：`/api/v1/evaluation` 与节日记忆管理
 
 以下路由由 `backend/ops/api/v1/router.py` 额外挂载，**不在** `backend/inty/main.py` 中。

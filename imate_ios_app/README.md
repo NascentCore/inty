@@ -18,7 +18,14 @@ imate_ios_app/ ├── imate.xcodeproj/ # Xcode 工程 └── imate/ ├─
 1. 启动：`imateApp` → `Entrance`  
 2. `Entrance` 使用 `NavigationStack(path:)` 绑定 `Router.path`，根视图为 `LoginView`  
 3. `AppRoute` 提供 `.login`、`.home`；`Router` 提供 `push` / `pop` / `popToRoot`  
-4. 登录页按钮尚未调用 `router.push(.home)`，首页仍为模板  
+4. 登录页按钮尚未调用 `router.push(.home)`，首页仍为模板；首页已提供开发期 Live Chat 语音通话表单，用于填入后端地址、Bearer token 与 agent id 后手动验证实时语音通话。
+
+## 实时语音通话雏形
+
+- `voicecall/VoiceCallWebSocketClient.swift` 使用 `URLSessionWebSocketTask` 连接 `/api/v1/live-chat/{agent_id}`，通过 Bearer token 鉴权。
+- `voicecall/VoiceCallAudioEngine.swift` 使用 `AVAudioEngine` 采集麦克风音频并播放后端返回的 PCM 音频。
+- `voicecall/VoiceCallView.swift` 提供最小 Start / End UI。
+- 工程使用自动生成 Info.plist，并在 build setting 中写入 `NSMicrophoneUsageDescription`。
 
 ## 工程信息
 
