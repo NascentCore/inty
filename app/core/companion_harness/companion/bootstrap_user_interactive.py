@@ -13,7 +13,10 @@ from app.core.companion_harness.experience_profile import (
     normalize_experience_profile_id,
 )
 
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import (
+    MemoryStore,
+    normalize_memory_store_relative_path,
+)
 from .models import ContextMeta
 from .prompt_slices import (
     PROMPT_SLICE_TO_REL,
@@ -22,8 +25,7 @@ from .prompt_slices import (
     parse_persistable_prompt_slice_id,
     persistable_slice_names_csv,
 )
-from .memory_store_scope import load_template_seed_text
-from .memory_store import MemoryStore, normalize_memory_store_relative_path
+from app.core.companion_harness.memory.memory_store_scope import load_template_seed_text
 
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
@@ -132,7 +134,9 @@ def tool_companion_update_prompt_slice(
     slice_name: str,
     content: str,
 ) -> str:
-    from .memory_store_document_mapping import parse_memory_store_relative_path
+    from app.core.companion_harness.memory.memory_store_document_mapping import (
+        parse_memory_store_relative_path,
+    )
 
     sid = parse_persistable_prompt_slice_id(slice_name)
     if sid is None:

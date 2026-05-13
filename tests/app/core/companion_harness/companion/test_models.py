@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from app.core.companion_harness.companion.memory_store import MemoryStore
-from app.core.companion_harness.companion.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,

@@ -13,7 +13,7 @@ from typing import Any
 
 from loguru import logger
 
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import AI_PRIVATE_INJECT_MAX_CHARS
 
 _AI_PRIVATE_MD_REL = "ai_private.md"

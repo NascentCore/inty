@@ -28,7 +28,7 @@ description: >-
 - **表名**：`companion_memory_document_versions`
 - **ORM**：`/app/models/companion_memory_documents.py` · `CompanionMemoryDocumentVersion`
 - **自然键最新正文**：同一 `(user_id, companion_id, chat_id, document_kind[, calendar_date])` 下 **`sequence_id` 最大** 的一行。根目录稿（`IDENTITY.md`、`transcript.jsonl` 等）的 **`calendar_date` 为 NULL**；**`memory/daily/YYYY-MM-DD.md` / `memory/YYYY-MM-DD.md`** 对应 kind 为 **`memory_daily_raw` / `memory_day_summary`**，查最新版本时 **`WHERE calendar_date = DATE 'YYYY-MM-DD'`**（或与 ORM 一致的非空 `calendar_date`）。
-- **`document_kind` ↔ 逻辑路径**：`/app/core/companion_harness/companion/memory_store_document_mapping.py`（例：`IDENTITY.md` → **`identity`**，`context_json` ↔ `context.json`，`transcript` ↔ `transcript.jsonl`）。
+- **`document_kind` ↔ 逻辑路径**：`/app/core/companion_harness/memory/memory_store_document_mapping.py`（例：`IDENTITY.md` → **`identity`**，`context_json` ↔ `context.json`，`transcript` ↔ `transcript.jsonl`）。
 
 ## 作用域三元组怎么对齐
 
@@ -85,7 +85,7 @@ ORDER BY sequence_id DESC LIMIT 1;
 
 ## 进程内 MemoryStore 与 DB 的关系（排错）
 
-- 生产路径下，带 repository 的 `MemoryStore` 由 **`/app/core/companion_harness/companion/memory_registry.py`** 注册：键为 **`CompanionScope.registry_key()`**（`user_id:companion_id:chat_id`）；`get_memory_store(scope, dsn=...)` 返回的实例与 `CompanionManager` 会话内 `session.store` 为同一 ORM 面，工具线程通过 `MemoryStore` 引用或 runtime inspect overlay 对齐写入。
+- 生产路径下，带 repository 的 `MemoryStore` 由 **`/app/core/companion_harness/memory/memory_registry.py`** 注册：键为 **`CompanionScope.registry_key()`**（`user_id:companion_id:chat_id`）；`get_memory_store(scope, dsn=...)` 返回的实例与 `CompanionManager` 会话内 `session.store` 为同一 ORM 面，工具线程通过 `MemoryStore` 引用或 runtime inspect overlay 对齐写入。
 - 若 DB 无新行但工具返回 OK：先确认 **后端已加载含该改动的代码** 且 **会话已用 DSN 创建 store**；再用上文 SQL 核对。
 
 ## 可选交叉验证

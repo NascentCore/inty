@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
-from app.core.companion_harness.companion.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.inner_tick_schedule import (
     InnerTickScheduleOverrides,

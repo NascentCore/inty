@@ -54,7 +54,7 @@ from .llm_runtime_events import (
     companion_llm_runtime_event_bind_ctx,
     exc_chain_includes_llm_inference_failure_root_causes,
 )
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import InnerTickMode, transcript_relative_path_for_turn_persistence
 from .prompt_stack import refresh_companion_turn_prompt_stack
 from .significance_perception import envelope_to_assistant_metadata_dict

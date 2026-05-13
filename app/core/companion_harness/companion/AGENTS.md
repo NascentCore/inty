@@ -16,7 +16,7 @@
 这也是为何，这些提示词被称为system-hierarchy（而非智能体描述之类的说法）。
 
 1. **AXIOM.md**：[prompts/AXIOM.md](/app/core/companion_harness/companion/prompts/AXIOM.md)（非 Workspace 根目录稿）
-2. 下列为 [templates](/app/core/companion_harness/companion/templates/) 下 Workspace 初始模板，会随着用户与智能体交互更新。
+2. 下列为 [templates](/app/core/companion_harness/memory/templates/) 下 Workspace 初始模板，会随着用户与智能体交互更新。
    越靠前的部分更新越慢：
    1. SOUL.md
    2. IDENTITY.md/USER.md
@@ -26,7 +26,7 @@
 
 - **目标架构（范式）**：MemoryStore 与 ARCH 命名对齐后的合并说明（SessionBinding / SessionCorpus、现状与目标态、Harness LTM 边界）见 [/docs/companion_harness/MEMORY_STORE.md](/docs/companion_harness/MEMORY_STORE.md)。
 - **权威存储**：工作区正文（含 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` / `CHAT_LOGS.md`（WebSocket `user_signed_out` 等运维追加流水，`document_kind=chat_logs_md`，默认不参与 LLM prompt；后续是否接入产品/分析管线另行设计）/ `transcript.jsonl` / `.companion_runtime_events.jsonl`（运行时异常事件 JSONL，`runtime_events.py` 仅经 MemoryStore 读写）/ `context.json` 等逻辑路径）在启用 PostgreSQL DSN 时写入表 **`companion_memory_document_versions`**（ORM：`app.models.companion_memory_documents.CompanionMemoryDocumentVersion`）。
-- **进程内 registry**：带 repository 的 `MemoryStore` 在 [`memory_registry.py`](/app/core/companion_harness/companion/memory_registry.py) 中仅以 **`CompanionScope.registry_key()`**（`user_id:companion_id:chat_id`）注册与复用；`get_memory_store(scope, dsn=...)` 为唯一入口，工具与 `run_turn` 边界通过 **`MemoryStore` 实例**（及线程局部的 runtime inspect overlay）对齐同一 ORM 写入面。
+- **进程内 registry**：带 repository 的 `MemoryStore` 在 [`memory_registry.py`](/app/core/companion_harness/memory/memory_registry.py) 中仅以 **`CompanionScope.registry_key()`**（`user_id:companion_id:chat_id`）注册与复用；`get_memory_store(scope, dsn=...)` 为唯一入口，工具与 `run_turn` 边界通过 **`MemoryStore` 实例**（及线程局部的 runtime inspect overlay）对齐同一 ORM 写入面。
 - **作用域**：`(user_id, companion_id, chat_id, document_kind[, calendar_date])`；同一键下 **append-only**，当前正文取 **`sequence_id` 最大** 的一行。`document_kind` 与相对路径的对应关系见 **`memory_store_document_mapping.py`**（例如 `IDENTITY.md` -> `identity`，`context.json` -> `context_json`）。
 - **`companion_id` 与 API**：`app.services.companion_chat_service.run_companion_chat_turn_for_api` 把 HTTP/API 里的 **`agent_id` 原样作为 `companion_id`** 传入 `CompanionManager.get_or_create_session`，因此查库时用 **`companion_id = <agent 的 id>`** 即可对齐一次 companion 会话。
 - **与旧聊天路径的区别**：旧路径主要消费 **`agents`** 表里的 `main_prompt` / `mode_prompt` / `personality` 等字段做 system 拼装；**companion harness 代码路径（`app/core/companion_harness`）不读 `Agent` ORM**。人设与对话状态以 **版本表里的 `content`**（及模板种子）为准，而不是 `agents` 上的人设列。

@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.core.companion_harness.companion.memory_store import MemoryStore
-from app.core.companion_harness.companion.memory_store_scope import (
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
     MemoryStoreScopePaths,
     ensure_minimal_documents_in_store,
     is_scope_initialized_in_store,
     is_scope_initialized_on_disk,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
+
 
 def test_memory_store_scope_paths_properties() -> None:
     p = MemoryStoreScopePaths()

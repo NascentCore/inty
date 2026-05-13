@@ -16,10 +16,10 @@ from app.core.companion_harness.experience_profile import (
 )
 
 from .utc import local_date_str
-from .memory_store_scope import load_template_seed_text
+from app.core.companion_harness.memory.memory_store_scope import load_template_seed_text
 
 if TYPE_CHECKING:
-    from .memory_store import MemoryStore
+    from app.core.companion_harness.memory.memory_store import MemoryStore
 
 AssistantTurnSource = Literal["chat", "inner_tick"]
 CompanionReplyModality = Literal["text", "voice_message"]

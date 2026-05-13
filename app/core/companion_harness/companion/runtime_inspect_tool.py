@@ -11,7 +11,7 @@ from typing import Any
 
 from langsmith import traceable
 
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from .runtime_events import read_runtime_events
 from .runtime_inspect_context import (
     runtime_inspect_get_bundle,

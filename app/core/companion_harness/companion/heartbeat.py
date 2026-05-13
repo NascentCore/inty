@@ -13,7 +13,7 @@ import statistics
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import ChatMessage, load_transcript_from_store
 
 # 主动心跳回合里追加为 **system**：约束模型在用户未发新消息时如何接话（延续场景、禁工具、禁元话语）。

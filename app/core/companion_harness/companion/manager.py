@@ -25,15 +25,15 @@ from .langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
-from .memory_pipeline import MemoryPipelineConfig
-from .transcript_compaction import CompactionConfig
-from .memory_registry import get_memory_store, shutdown_memory_store
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
+from app.core.companion_harness.memory.transcript_compaction import CompactionConfig
+from app.core.companion_harness.memory.memory_registry import get_memory_store, shutdown_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult, InnerTickMode
 from .scope import CompanionScope
 from .turn import run_turn
 from .turn_routes import BackgroundToolEventSink
-from .memory_store_scope import (
+from app.core.companion_harness.memory.memory_store_scope import (
     ensure_minimal_documents_in_store,
     is_scope_initialized_in_store,
     needs_startup_profile_inquiry,

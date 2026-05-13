@@ -11,7 +11,7 @@ from .heartbeat import (
     HEARTBEAT_SYNTHETIC_USER_TEXT,
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
 )
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from .message_format import TRANSCRIPT_MSG_UUID_KEY
 from .models import (
     ChatMessage,

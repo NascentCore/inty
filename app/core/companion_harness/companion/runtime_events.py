@@ -7,7 +7,7 @@ loop thread in ``tool_background`` when the error is not already logged as an LL
 and ad-hoc operator/test entries such as ``tool_timeout``.
 
 Events are stored as JSON lines at workspace-relative path ``.companion_runtime_events.jsonl``
-through :class:`~app.core.companion_harness.companion.memory_store.MemoryStore` only (never raw
+through :class:`~app.core.companion_harness.memory.memory_store.MemoryStore` only (never raw
 ``Path.write_text``). With a repository-backed store this persists like ``transcript.jsonl``;
 without a repository the store keeps an in-memory snapshot per process.
 
@@ -22,7 +22,7 @@ from typing import Any
 
 from loguru import logger
 
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 
 RUNTIME_EVENTS_REL_PATH = ".companion_runtime_events.jsonl"
 

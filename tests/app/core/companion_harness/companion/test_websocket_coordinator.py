@@ -4,7 +4,7 @@ import threading
 
 import pytest
 
-from app.core.companion_harness.companion.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.tool_background import ToolOutputEvent
 from app.core.companion_harness.companion.websocket_coordinator import (

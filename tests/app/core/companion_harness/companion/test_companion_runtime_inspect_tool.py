@@ -13,8 +13,8 @@ from langsmith import tracing_context
 from app.core.companion_harness.companion import runtime_inspect_context as ric
 from app.core.companion_harness.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
-from app.core.companion_harness.companion.memory_pipeline import MemoryPipelineConfig
-from app.core.companion_harness.companion.memory_registry import (
+from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
+from app.core.companion_harness.memory.memory_registry import (
     get_memory_store,
     shutdown_memory_store,
 )

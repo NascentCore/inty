@@ -9,7 +9,7 @@ from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.companion.bootstrap_user_interactive import (
     tool_companion_bootstrap_user_interactive_complete,
 )
-from app.core.companion_harness.companion.memory_registry import (
+from app.core.companion_harness.memory.memory_registry import (
     get_memory_store,
     shutdown_memory_store,
 )

@@ -11,7 +11,7 @@ from app.core.companion_harness.companion.bootstrap_user_interactive import (
     tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
 )
-from app.core.companion_harness.companion.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.models import ContextMeta
 from app.core.companion_harness.companion.companion_tool_runtime import (
     execute_tool_call,

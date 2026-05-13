@@ -21,7 +21,7 @@ from .image_gate import (
     find_latest_asset_by_local_relative_path,
     relative_path_under_workspace,
 )
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from .utc import utc_iso_ts
 
 _DEFAULT_IMAGE_SIZE = "portrait_4_3"

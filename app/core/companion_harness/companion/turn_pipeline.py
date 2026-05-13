@@ -24,9 +24,9 @@ from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )
-from .memory_pipeline import MemoryPipelineConfig
-from .memory_store import MemoryStore
-from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
+from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -40,7 +40,7 @@ from .models import (
     transcript_for_llm_turn,
 )
 from .prompt_stack import companion_turn_tools_and_system_messages
-from .transcript_compaction import (
+from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
     ConversationCompactor,
     load_compaction_state_from_store,

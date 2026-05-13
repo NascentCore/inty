@@ -4,7 +4,7 @@ import datetime
 
 import pytest
 
-from app.core.companion_harness.companion.memory_store_document_mapping import (
+from app.core.companion_harness.memory.memory_store_document_mapping import (
     CompanionMemoryDocumentKind,
     parse_memory_store_relative_path,
     relative_path_for_kind,

@@ -7,7 +7,7 @@ from app.core.companion_harness.companion.ai_private_prompt import (
     get_ai_private_merged_text_for_prompt,
     get_ai_private_text_for_prompt,
 )
-from app.core.companion_harness.companion.memory_registry import (
+from app.core.companion_harness.memory.memory_registry import (
     get_memory_store,
     shutdown_memory_store,
 )

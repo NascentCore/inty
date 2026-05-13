@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import threading
 
+from app.core.companion_harness.companion.scope import CompanionScope
+
 from .memory_store import MemoryStore, SqlAlchemyMemoryRepository
-from .scope import CompanionScope
 
 _REGISTRY_LOCK = threading.Lock()
 _MEMORY_STORES: dict[str, MemoryStore] = {}

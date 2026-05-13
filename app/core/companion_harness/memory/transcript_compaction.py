@@ -14,8 +14,9 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.companion_harness.companion.models import ChatMessage
+
 from .memory_store import MemoryStore
-from .models import ChatMessage
 
 COMPACTION_SYSTEM_TAG = "[MEMORY_COMPACTION_SNAPSHOT]"
 _MAX_TEXT_PREVIEW = 220
