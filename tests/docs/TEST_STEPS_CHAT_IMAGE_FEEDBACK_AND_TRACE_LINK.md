@@ -3,7 +3,7 @@
 1. Start Postgres:  
    `docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
 2. Apply migrations:  
-   `source .venv/bin/activate && PYTHONPATH=. alembic -c alembic/alembic.ini upgrade head`
+   `source .venv/bin/activate && PYTHONPATH=. alembic -c backend/alembic/alembic.ini upgrade head`
 3. Start backend:  
    `source .venv/bin/activate && ./backend/inty/start.sh --test`
 4. Build/sync evaluation static assets:  

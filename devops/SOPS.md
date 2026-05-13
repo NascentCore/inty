@@ -27,7 +27,7 @@ python tools/scripts/create_email_password_superuser.py \
 - 找到对应环境的 docker image
 - `docker run -it <docker-image> bash`
 - `export PYTHONPATH=.`
-- 使用 `alembic -c alembic/alembic.ini ...` 命令行来操作
+- 使用 `alembic -c backend/alembic/alembic.ini ...` 命令行来操作
 
 ## 重启后端服务器
 

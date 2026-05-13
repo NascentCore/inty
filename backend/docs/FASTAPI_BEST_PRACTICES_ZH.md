@@ -42,7 +42,7 @@
 
 ```bash
 fastapi-project
-├── alembic/
+├── backend/alembic/
 ├── src
 │   ├── auth
 │   │   ├── router.py
@@ -89,7 +89,7 @@ fastapi-project
 ├── .env
 ├── .gitignore
 ├── logging.ini
-└── alembic/
+└── backend/alembic/
     └── alembic.ini
 ```
 

@@ -147,8 +147,8 @@
 
 ## P4 历史与实验内容
 
-- [ ] `alembic/README.md`
-- [ ] `alembic/AGENTS.md`
+- [ ] `backend/alembic/README.md`
+- [ ] `backend/alembic/AGENTS.md`
 - [ ] `experimental/README.md`
 - [ ] `experimental/AGENTS.md`
 - [ ] `experimental/aigc/README.md`

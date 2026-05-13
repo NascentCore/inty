@@ -49,7 +49,7 @@ All table definitions must be added to `app/models` directory for consistency.
 | **Services**      | [`app/services`](../../app/services)             | Business logic; for example, `chat_service.py` manages chat sessions and caching logic                         |
 | **Agent engine**  | [`app/core/agent`](../../app/core/agent)         | LangChain/LangGraph-based agent system with custom state, memory tools, and model configuration utilities      |
 | **Documentation** | [`docs/`](../docs)                            | Design notes for character cards, AI voice, prompt templates, Google Play subscriptions, etc.                  |
-| **Migrations**    | [`alembic/`](../../alembic)                      | Database schema migrations                                                                                     |
+| **Migrations**    | [`backend/alembic/`](../alembic)                      | Database schema migrations shared by Inty and Ops                                                               |
 | **Utilities**     | [`tools/scripts/`](../../tools/scripts)                      | Setup helpers and maintenance scripts                                                                          |
 | **Testing**       | [`testing/`](testing)                      | Sample data and test utilities                                                                                 |
 

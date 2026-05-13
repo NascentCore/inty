@@ -150,7 +150,7 @@ python -m backend.push_worker.main
 alembic upgrade head
 ```
 
-迁移文件：`alembic/versions/20251111_140711_create_push_notification_history.py`
+迁移文件：`backend/alembic/versions/20251111_140711_create_push_notification_history.py`
 
 ## 监控与日志
 
@@ -229,7 +229,7 @@ alembic upgrade head
 - `app/services/push_scheduler_service.py` - 定时任务调度
 - `backend/push_worker/main.py` - 独立服务入口
 - `app/core/prompting/push_message_prompt.py` - 提示词模板
-- `alembic/versions/20251111_140711_create_push_notification_history.py` - 数据库迁移
+- `backend/alembic/versions/20251111_140711_create_push_notification_history.py` - 数据库迁移
 
 ## 参考文档
 

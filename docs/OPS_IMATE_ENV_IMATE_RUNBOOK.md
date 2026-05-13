@@ -38,7 +38,7 @@ gcloud sql databases list --instance="${CLOUDSQL_INSTANCE}" --project="${GCP_PRO
 
 ```bash
 export PYTHONPATH=.
-alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate upgrade head
+alembic -c backend/alembic/alembic.ini -x config=devops/config.yaml.imate upgrade head
 ```
 
 ## 3. VM：密钥目录

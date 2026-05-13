@@ -47,7 +47,6 @@ fi
 # 复制应用代码
 COPY app/ app/
 COPY backend/ backend/
-COPY alembic/ alembic/
 # Used for manipulate backend system with bundled configurations.
 COPY tools/scripts/ tools/scripts/
 # 方便操作后端数据库

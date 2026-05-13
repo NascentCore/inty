@@ -11,4 +11,4 @@ Tables are critical for alembic to work correctly.
 - 关键文件:
   - `session.py`: 创建数据库会话与依赖注入入口。
   - `base.py`: ORM 基类导入聚合，供 Alembic 发现与迁移使用。
-- 关联: `app/models` 定义表结构；`alembic/` 管理迁移；业务服务通过依赖获得 `Session` 进行 CRUD。
+- 关联: `app/models` 定义表结构；`backend/alembic/` 管理迁移；业务服务通过依赖获得 `Session` 进行 CRUD。

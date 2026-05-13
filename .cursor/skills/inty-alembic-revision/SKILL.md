@@ -1,10 +1,10 @@
 ---
 name: inty-alembic-revision
 description: >-
-  Create new Alembic revision files at repo root with `alembic/alembic.ini`:
+  Create new Alembic revision files at repo root with `backend/alembic/alembic.ini`:
   `revision --autogenerate` (schema diff) or empty `revision` (manual SQL).
   Covers PYTHONPATH, config.yaml, Postgres baseline, and repo rules in
-  `/alembic/AGENTS.md`. Use when adding DB migrations, autogenerate from models,
+  `/backend/alembic/AGENTS.md`. Use when adding DB migrations, autogenerate from models,
   or empty revision stubs.
 ---
 
@@ -12,14 +12,14 @@ description: >-
 
 ## When to use
 
-- 需要新增 `alembic/versions/` 下的迁移脚本
+- 需要新增 `backend/alembic/versions/` 下的迁移脚本
 - 用户提到 `alembic revision`、`--autogenerate`、数据库 schema 变更
 
 ## 约定（本仓库）
 
-- 配置文件：`/alembic/alembic.ini`；迁移目录：`/alembic/versions/`
+- 配置文件：`/backend/alembic/alembic.ini`；迁移目录：`/backend/alembic/versions/`
 - 从**仓库根目录**执行；必须让 Alembic 读到该 ini（见下文环境变量）
-- 完整规则见 `/alembic/AGENTS.md`（禁止改历史迁移、禁止纯数据迁移 version、变更须走迁移）
+- 完整规则见 `/backend/alembic/AGENTS.md`（禁止改历史迁移、禁止纯数据迁移 version、变更须走迁移）
 
 ## 环境（每次开终端都要）
 
@@ -27,16 +27,16 @@ description: >-
 cd /path/to/repo-root
 source .venv/bin/activate
 export PYTHONPATH=.
-export ALEMBIC_CONFIG=alembic/alembic.ini
+export ALEMBIC_CONFIG=backend/alembic/alembic.ini
 ```
 
 可选等价写法（不显式 export ini）：
 
 ```bash
-python -m alembic -c alembic/alembic.ini <subcommand> ...
+python -m alembic -c backend/alembic/alembic.ini <subcommand> ...
 ```
 
-默认：`config.yaml` 在仓库根，`alembic/env.py` 通过 `app.core.config` 读库 URL。生成迁移前通常：
+默认：`config.yaml` 在仓库根，`backend/alembic/env.py` 通过 `app.core.config` 读库 URL。生成迁移前通常：
 
 ```bash
 cp devops/config.yaml.test config.yaml
@@ -44,24 +44,24 @@ cp devops/config.yaml.test config.yaml
 
 按需改 `database.host` 等为可连的 Postgres（本地多为 `localhost`）。
 
-不换文件名时可用自定义路径（见 `alembic/env.py`）：
+不换文件名时可用自定义路径（见 `backend/alembic/env.py`）：
 
 ```bash
-python -m alembic -c alembic/alembic.ini -x config=/abs/path/to.yaml revision --autogenerate -m "<msg>"
+python -m alembic -c backend/alembic/alembic.ini -x config=/abs/path/to.yaml revision --autogenerate -m "<msg>"
 ```
 
 ## 方式 A：根据模型生成（常用）
 
 前提：Postgres 已起，库结构处于「当前 head 对应状态」，且你已改好 SQLAlchemy models。
 
-推荐流程与 `/alembic/AGENTS.md` 一致：干净库 `upgrade head` 后再 autogenerate，避免 diff 噪声。
+推荐流程与 `/backend/alembic/AGENTS.md` 一致：干净库 `upgrade head` 后再 autogenerate，避免 diff 噪声。
 
 ```bash
 alembic upgrade head
 alembic revision --autogenerate -m "<short description>"
 ```
 
-生成后**人工检查**新生成的 `alembic/versions/*.py`：删多余 op、补索引/约束说明，勿盲提交。
+生成后**人工检查**新生成的 `backend/alembic/versions/*.py`：删多余 op、补索引/约束说明，勿盲提交。
 
 ## 方式 B：空 revision（手写 upgrade/downgrade）
 

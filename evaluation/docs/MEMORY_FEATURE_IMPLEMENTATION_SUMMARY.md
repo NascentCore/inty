@@ -13,7 +13,7 @@ CREATED_BY_AGENT
 - **ORM**：`app/models/memory.py`
   - **Memory**：`user_id`, `memory_type`（如 `user_common`）, `agent_id`（`user_common` 为 `NULL`）, `content`, `extracted_at`；按每次抽取整批替换，仅保留最新。
   - **MemoryExtractionLog**：`user_id`, `memory_type`, `extracted_at`, `messages_processed_count`, `memory_items_count`, `status`（`success` | `partial` | `failed`），`duration_seconds`（当次抽取总耗时秒）、`prompt_tokens`（LLM 输入 token 数）、`completion_tokens`（LLM 输出 token 数）；用于触发判断与可观测、监控与成本分析。
-- **迁移**：`alembic/versions/20260127_120000_add_memory_tables.py`（revision `a7b8c9d0e1f2`）；`alembic/versions/20260127_140000_add_memory_extraction_log_metrics.py`（revision `b8c9d0e1f2a3`，为 `memory_extraction_log` 增加上述三列）。
+- **迁移**：`backend/alembic/versions/20260127_120000_add_memory_tables.py`（revision `a7b8c9d0e1f2`）；`backend/alembic/versions/20260127_140000_add_memory_extraction_log_metrics.py`（revision `b8c9d0e1f2a3`，为 `memory_extraction_log` 增加上述三列）。
 
 ### 2. 配置
 
@@ -82,7 +82,7 @@ app/
     ├── push_scheduler_service.py    # 记忆抽取 Cron 任务 _run_memory_extraction
     └── user_service.py              # build_user_info_prompt_block 中注入 ##User Memory
 
-alembic/versions/
+backend/alembic/versions/
 ├── 20260127_120000_add_memory_tables.py   # revision a7b8c9d0e1f2
 └── 20260127_140000_add_memory_extraction_log_metrics.py   # revision b8c9d0e1f2a3，duration_seconds/prompt_tokens/completion_tokens
 
