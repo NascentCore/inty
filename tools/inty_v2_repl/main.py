@@ -55,7 +55,7 @@ def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
         return ""
     parts: list[str] = []
     if u:
-        parts.append(f"user={u}")
+        parts.append(f"user_msg_uuid={u}")
     if a:
         parts.append(f"asst={a}")
     if ls:
