@@ -78,13 +78,13 @@ maintenance agents can fix the highest-impact item first.
 ### Newly discovered open violations
 
 - [x] Google 2.4 "Exceptions":
-  `/app/core/agentic_kernel/companion/significance_perception.py` catches broad
+  `/app/core/companion_harness/companion/significance_perception.py` catches broad
   `Exception` while parsing and extracting dual-LLM envelope candidates, then
   silently returns `None` or `[]`. Narrow to JSON/Pydantic/model-dump failures
   or log unexpected parser failures so malformed companion envelopes do not
   hide implementation bugs. Fixed in `cursor/agent-maintenance-task-e5ce`.
 - [x] Google 2.4 "Exceptions":
-  `/app/core/agentic_kernel/companion/llm_chat_runtime.py` catches broad
+  `/app/core/companion_harness/companion/llm_chat_runtime.py` catches broad
   `Exception` while reading LangSmith trace/run identifiers and silently
   returns empty strings. Log unexpected metadata extraction failures or narrow
   the expected attribute/key errors so trace-parent linkage is debuggable.
@@ -98,10 +98,10 @@ maintenance agents can fix the highest-impact item first.
 
 ### Fixed in `cursor/worst-python-style-violation-b827`
 
-- [x] Google 2.4 "Exceptions": `/app/core/agentic_kernel/companion/tool_background.py`
+- [x] Google 2.4 "Exceptions": `/app/core/companion_harness/companion/tool_background.py`
   caught `BaseException` at the background thread boundary and swallowed failures.
   This was the worst open violation because it could hide process-level control
-  exceptions from the agentic companion async tool path while still marking the
+  exceptions from the Companion Harness async tool path while still marking the
   background job idle.
 
 ### Newly discovered open violations
@@ -129,7 +129,7 @@ maintenance agents can fix the highest-impact item first.
 
 ### Open violations
 
-- [ ] Google 2.4 "Exceptions": `/app/core/agentic_kernel/llm/langsmith_completion_enrich.py`
+- [ ] Google 2.4 "Exceptions": `/app/core/companion_harness/llm/langsmith_completion_enrich.py`
   uses multiple `except Exception: pass` blocks around LangSmith enrichment
   monkey-patch code. Log suppressed failures and move import-time patching to
   an explicit initialization path if possible.
@@ -137,7 +137,7 @@ maintenance agents can fix the highest-impact item first.
   `except Exception` blocks that silently return `None` or the original value
   while transforming URLs and metadata. Add structured logging and narrow the
   expected exception types.
-- [ ] Google 2.4 "Exceptions": `/app/core/agentic_kernel/companion/turn.py`
+- [ ] Google 2.4 "Exceptions": `/app/core/companion_harness/companion/turn.py`
   catches `BaseException`, mutates the exception object, then suppresses
   metadata tagging errors. Avoid dynamic mutation of arbitrary exceptions and
   log secondary failures.

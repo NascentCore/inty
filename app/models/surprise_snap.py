@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
 
-from app.models import Base
+from app.models.base import Base
 
 
 class SurpriseSnapProgress(Base):

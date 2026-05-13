@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 
 
 class CharacterThemeVisibility(StrEnum):

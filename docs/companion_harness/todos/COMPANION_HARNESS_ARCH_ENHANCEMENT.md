@@ -1,4 +1,4 @@
-# Agentic companion session state: concept design and naming
+# Companion Harness session state: concept design and naming
 
 持久会话状态（代码里大量称 `workspace`）在概念上拆成 **绑定键**、**版本化语料** 与 **按耐久契约划分的协同态**；**不把可选磁盘挂载当作范式必备项**（生产权威在 repository / DB；本地 REPL 不再作为 companion 运行面时尤其如此）。
 
@@ -22,7 +22,7 @@
 |------|--------|------|
 | 会话分区键 | `SessionBinding` | 稳定三元组 `(user_id, companion_id, chat_id)`；标识长期会话分区。**不等于**单次 HTTP / 单轮 tool。与现有 `CompanionScope` 同构，可并存为别名。 |
 | 版本化正文集合 | `SessionCorpus` | 某 binding 下按 `corpus_rel_key` 存储、读 head 的正文与快照（IDENTITY / SOUL / USER / MEMORY、transcript、context_json、memory 树等）。对应实现面主要是 `MemoryStore` + `companion_workspace_document_versions`。 |
-| 逻辑寻址 | `corpus_rel_key` | 如 `IDENTITY.md`、`memory/daily/YYYY-MM-DD.md`；映射到 ORM 见 `/app/core/agentic_kernel/companion/workspace_doc_mapping.py`。 |
+| 逻辑寻址 | `corpus_rel_key` | 如 `IDENTITY.md`、`memory/daily/YYYY-MM-DD.md`；映射到 ORM 见 `/app/core/companion_harness/companion/memory_store_document_mapping.py`。 |
 | 耐久协同态 | `DurableSidecar` | 一般不拼进默认 system，但 **重启后仍应有意义**；存放处与回放规则须在契约中写明。 |
 | 进程私有态 | `ProcessPrivate` | 仅进程内便利；**可随进程结束丢弃或可重建**。 |
 
@@ -37,10 +37,10 @@ SessionBinding
 
 灰区条目：先回答「重启后用户是否应看到接续的世界？」「恢复以谁为准？」再归入上三类。
 
-## 5. 与 agentic-kernel 的关系
+## 5. 与 Companion Harness 的关系
 
-- **Kernel**：编排、工具循环、prompt 顺序；消费当前 binding 下的 **corpus head** 与（只读）必要的 sidecar 视图。
-- **包内固定文案**（如 `/app/core/agentic_kernel/companion/prompts/AXIOM.md`）：**不属于** `SessionCorpus`，与语料并列，避免「凡是 md 都是语料」。
+- **Companion Harness**：编排、工具循环、prompt 顺序；消费当前 binding 下的 **corpus head** 与（只读）必要的 sidecar 视图。
+- **包内固定文案**（如 `/app/core/companion_harness/companion/prompts/AXIOM.md`）：**不属于** `SessionCorpus`，与语料并列，避免「凡是 md 都是语料」。
 
 ## 6. 工具与迁移话术
 
@@ -51,7 +51,7 @@ SessionBinding
 
 - **不作为概念支柱**：权威在 DB 时 **不存在**「语料必须在 disk 上的根」。
 - **遗留实现**：若仍有 `Path` 用于 registry、校验或测试临时目录，视为 **adapter / harness**，不写入对外架构词汇表。
-- **`tools/inty_v2_repl`**：不再作为 agentic companion 运行面时，**更少理由**在范式层保留「挂载目录」一词；剩余磁盘用途仅限可选 spill 或过渡代码路径。
+- **`tools/inty_v2_repl`**：不再作为 Companion Harness 运行面时，**更少理由**在范式层保留「挂载目录」一词；剩余磁盘用途仅限可选 spill 或过渡代码路径。
 
 ## 8. 与现存代码语的对照（便于检索）
 

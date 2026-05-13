@@ -9,7 +9,7 @@ from langchain_core.messages import HumanMessage
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import models
+from app.models.chat_settings import ChatSettings
 from app.api import deps
 from app.api.tags import (
     ANDROID_APP_TAG,

@@ -17,7 +17,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.security import create_access_token, verify_password
 from app.core.uuid import get_new_user_id
 from app.db.session import get_async_db
-from app.models import User
+from app.models.user import User
 from app.models.user import AuthType
 from app.schemas.auth import GuestResponse, LoginResponse, LoginUserResponse
 from app.schemas.response import APIResponse

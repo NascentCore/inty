@@ -30,11 +30,11 @@ description: >-
   - `inner-tick maintenance` → `InnerTickMode.MAINTENANCE`（运维内 tick）
   - **裸** `inner-tick`（无尾随活动名）→ 旧服务端，未带 `inner_tick_activity`；此时按下条用 LangSmith 定案
   - **枚举真源**
-    - [`app/core/agentic_kernel/companion/models.py`](../../../app/core/agentic_kernel/companion/models.py) `InnerTickMode`
+    - [`app/core/companion_harness/companion/models.py`](../../../app/core/companion_harness/companion/models.py) `InnerTickMode`
   - **服务端注入点**
     - 前台帧：[`app/api/v1/endpoints/chat.py`](../../../app/api/v1/endpoints/chat.py) `meta_data.inner_tick_activity = companion_turn.inner_tick_activity`
     - `tool_bg` 帧：同文件，`ChatWsCompanionWireMetaData(... inner_tick_activity=ev.inner_tick_activity ...)`
-    - 内核：[`turn.py`](../../../app/core/agentic_kernel/companion/turn.py) `inner_tick_activity = route_inner_mode.value if inner_tick_turn else None`
+    - 内核：[`turn.py`](../../../app/core/companion_harness/companion/turn.py) `inner_tick_activity = route_inner_mode.value if inner_tick_turn else None`
 
 - **LangSmith 兜底（仅旧帧或交叉验证）**
   - 从横幅取 `langsmith_run_id=…`

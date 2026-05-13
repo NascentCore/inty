@@ -5,7 +5,7 @@ from typing import Optional
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app import models
+from app.models.settings import Settings
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 
 from loguru import logger
@@ -13,13 +13,13 @@ from app.schemas.settings import SettingsCreate
 from app.schemas.settings import SettingsUpdate
 
 
-def get_settings(db: Session, user_id: str) -> Optional[models.Settings]:
+def get_settings(db: Session, user_id: str) -> Optional[Settings]:
     """
     获取用户设置
     """
     try:
         return (
-            db.query(models.Settings).filter(models.Settings.user_id == user_id).first()
+            db.query(Settings).filter(Settings.user_id == user_id).first()
         )
     except SQLAlchemyError as e:
         logger.error(f"获取用户设置失败: {str(e)}")
@@ -28,14 +28,14 @@ def get_settings(db: Session, user_id: str) -> Optional[models.Settings]:
 
 def create_settings(
     db: Session, settings_in: SettingsCreate, user_id: str
-) -> models.Settings:
+) -> Settings:
     """
     创建新的用户设置
     """
     try:
         # 排除数据库模型中不存在的字段
         settings_data = settings_in.model_dump(exclude=EXCLUDE_FIELDS)
-        db_settings = models.Settings(
+        db_settings = Settings(
             id=str(uuid.uuid4()), **settings_data, user_id=user_id
         )
         db.add(db_settings)
@@ -49,8 +49,8 @@ def create_settings(
 
 
 def update_settings(
-    db: Session, *, db_settings: models.Settings, settings_in: SettingsUpdate
-) -> models.Settings:
+    db: Session, *, db_settings: Settings, settings_in: SettingsUpdate
+) -> Settings:
     """
     更新用户设置
     """

@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import BigInteger, Column, Date, DateTime, Index, String, Text
 from sqlalchemy.sql import func
 
-from app.models import Base
+from app.models.base import Base
 
 
 class CompanionMemoryDocumentVersion(Base):

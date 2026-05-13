@@ -1,16 +1,16 @@
-# iMate / Agentic Companion: 架构说明
+# iMate / Companion Harness: 架构说明
 
 ## 一句话
 
-Agentic Companion 是关系型智能体的后端内核：以会话上下文、长期记忆、模型回合、工具副作用和多媒介传输为五个独立层次组织当前生产路径，并把现有 WebSocket 文本聊天实现视为一个传输适配器，而不是内核本身。
+Companion Harness 是关系型智能体的后端框架：以会话上下文、长期记忆、模型回合、工具副作用和多媒介传输为五个独立层次组织当前生产路径，并把现有 WebSocket 文本聊天实现视为一个传输适配器，而不是内核本身。
 
 ## 读者定位
 
-本文用于判断 agentic companion 当前架构的职责边界、已确认约束、关键取舍和演进方向；它不是逐函数代码索引，也不是目标态已经完成的声明。代码真相仍以 `/app/core/agentic_kernel/`、`/app/services/companion_chat_service.py`、`/app/api/v1/endpoints/chat.py` 和 schema 为准；本文只记录跨文件后仍成立的设计事实。
+本文用于判断 Companion Harness 当前架构的职责边界、已确认约束、关键取舍和演进方向；它不是逐函数代码索引，也不是目标态已经完成的声明。代码真相仍以 `/app/core/companion_harness/`、`/app/services/companion_chat_service.py`、`/app/api/v1/endpoints/chat.py` 和 schema 为准；本文只记录跨文件后仍成立的设计事实。
 
 ## 目标态
 
-Agentic Companion 的目标是为用户提供长期关系中的“虚拟活人”体验。后端内核必须把以下能力视为一套连续系统，而不是聊天接口的附属功能：
+Companion Harness 的目标是为用户提供长期关系中的“虚拟活人”体验。后端内核必须把以下能力视为一套连续系统，而不是聊天接口的附属功能：
 
 - **关系连续性**：用户、companion、会话和跨会话记忆应有清晰层级；短期 transcript 不应替代长期关系记忆。
 - **媒介无关回合**：文本、语音、图片、主动心跳、内在节拍和未来 phone / video / SMS 都应进入同一个 companion turn 语义，而不是各自绕开内核。
@@ -20,7 +20,7 @@ Agentic Companion 的目标是为用户提供长期关系中的“虚拟活人�
 
 ## 非目标
 
-- 本文不定义新的数据库 schema；MemoryStore 与向量 LTM 的目标设计见 `/docs/agentic_kernel/MEMORY_STORE.md`。
+- 本文不定义新的数据库 schema；MemoryStore 与向量 LTM 的目标设计见 `/docs/companion_harness/MEMORY_STORE.md`。
 - 本文不复制 WebSocket payload 字段全集；协议真源见 `/app/schemas/chat_websocket.py` 与 `/app/api/v1/endpoints/chat.py`。
 - 本文不把当前 `run_turn` 分支解释为最终编排抽象；通用 turn 合同与生产 companion 主链路仍未收敛。
 - 本文不覆盖 Gemini Live audio 路径；它不是 `/api/v1/chat/ws` companion 文本通道。
@@ -116,7 +116,7 @@ flowchart TD
 | --- | --- |
 | iMate Android | 连接 `/api/v1/chat/ws`，发送聊天帧和 `user_signed_on` 控制帧，本地 repository 消费下行业务帧。 |
 | IntelliMate Android | release 发送聊天仍以 HTTP completions 为主，debug 可走 WebSocket。 |
-| 生产 companion 后端 | 只有 WebSocket chat route 会把一轮聊天交给 `/app/core/agentic_kernel/companion/`。 |
+| 生产 companion 后端 | 只有 WebSocket chat route 会把一轮聊天交给 `/app/core/companion_harness/companion/`。 |
 | `/api/v1/chat/ws/verify` | 复用 WebSocket framing 和队列形态，但不经过 `CompanionManager` / `run_turn`，不写 chat_history。 |
 | REPL | 通过后端 WebSocket 桥接当前生产路径；自身只做传输、日志和终端交互。 |
 | Gemini Live audio | 不属于本文描述的 `/api/v1/chat/ws` companion 文本链路。 |
@@ -139,7 +139,7 @@ flowchart TD
 
 ## 记忆模型
 
-当前 companion 的“世界”主要由 MemoryStore 中的一组版本化文档、transcript 和工具副作用构成，还不是独立 world engine。文档记忆分三层：episodic、gist、semantic；详见 `/docs/agentic_kernel/MEMORY_PIPELINE.md`。
+当前 companion 的“世界”主要由 MemoryStore 中的一组版本化文档、transcript 和工具副作用构成，还不是独立 world engine。文档记忆分三层：episodic、gist、semantic；详见 `/docs/companion_harness/MEMORY_PIPELINE.md`。
 
 | 记忆/状态 | 当前作用 | 长期判断 |
 | --- | --- | --- |
@@ -148,9 +148,9 @@ flowchart TD
 | `memory/daily/{date}.md` / `memory/{date}.md` | 当日情景流水和 gist 摘要。 | 是关系事件的压缩视图，不应替代事件流。 |
 | `transcript.jsonl` | 用户可见对话轨迹和下一轮上下文来源。 | 应从整文档 append-only 演进为事件级存储或 projection。 |
 | `context.json` | session 元数据、experience profile、bootstrap 标志。 | 应继续作为当前 session binding 的显式状态。 |
-| runtime/state JSON | 管线节拍、压实状态、image gate、异常事件等控制面状态。 | 应与用户关系文档分层，避免混用同一文档语义。 |
+| runtime/state JSON | 管线节拍、压实状态、异常事件等控制面状态。 | 应与用户关系文档分层，避免混用同一文档语义。 |
 
-目标 MemoryStore 方向是保留模型友好的路径式接口，同时把底层拆成 document snapshot、event append log 和 search projection。完整目标说明见 `/docs/agentic_kernel/MEMORY_STORE.md`。
+目标 MemoryStore 方向是保留模型友好的路径式接口，同时把底层拆成 document snapshot、event append log 和 search projection。完整目标说明见 `/docs/companion_harness/MEMORY_STORE.md`。
 
 ## 传输合同
 
@@ -165,24 +165,24 @@ flowchart TD
 
 | 主题 | 路径 |
 | --- | --- |
-| 生产 companion 内核 | `/app/core/agentic_kernel/companion/` |
+| 生产 companion 内核 | `/app/core/companion_harness/companion/` |
 | WebSocket API shell | `/app/api/v1/endpoints/chat.py` |
 | WebSocket session pump | `/app/services/chat_websocket_session.py` |
 | API 到 companion 的服务边界 | `/app/services/companion_chat_service.py` |
-| WebSocket 协调状态 | `/app/core/agentic_kernel/companion/websocket_coordinator.py` |
-| session 与 MemoryStore 绑定 | `/app/core/agentic_kernel/companion/manager.py` |
-| 生产 turn 执行 | `/app/core/agentic_kernel/companion/turn.py` |
-| route mode | `/app/core/agentic_kernel/companion/turn_routes.py` |
-| prompt stack | `/app/core/agentic_kernel/companion/prompt_stack.py` |
-| MemoryStore | `/app/core/agentic_kernel/companion/memory_store.py` |
-| 记忆管线 | `/app/core/agentic_kernel/companion/memory_pipeline.py` |
-| async tool background | `/app/core/agentic_kernel/companion/tool_background.py` |
-| dual-LLM envelope | `/app/core/agentic_kernel/companion/significance_perception.py` |
-| 通用 turn 合同 | `/app/core/agentic_kernel/contracts/turn.py` |
-| 实验编排器 | `/app/core/agentic_kernel/runtime/turn_orchestrator.py` |
+| WebSocket 协调状态 | `/app/core/companion_harness/companion/websocket_coordinator.py` |
+| session 与 MemoryStore 绑定 | `/app/core/companion_harness/companion/manager.py` |
+| 生产 turn 执行 | `/app/core/companion_harness/companion/turn.py` |
+| route mode | `/app/core/companion_harness/companion/turn_routes.py` |
+| prompt stack | `/app/core/companion_harness/companion/prompt_stack.py` |
+| MemoryStore | `/app/core/companion_harness/companion/memory_store.py` |
+| 记忆管线 | `/app/core/companion_harness/companion/memory_pipeline.py` |
+| async tool background | `/app/core/companion_harness/companion/tool_background.py` |
+| dual-LLM envelope | `/app/core/companion_harness/companion/significance_perception.py` |
+| 通用 turn 合同 | `/app/core/companion_harness/contracts/turn.py` |
+| 实验编排器 | `/app/core/companion_harness/runtime/turn_orchestrator.py` |
 | WebSocket schema | `/app/schemas/chat_websocket.py` |
-| MemoryStore 目标说明 | `/docs/agentic_kernel/MEMORY_STORE.md` |
-| 记忆管线说明 | `/docs/agentic_kernel/MEMORY_PIPELINE.md` |
+| MemoryStore 目标说明 | `/docs/companion_harness/MEMORY_STORE.md` |
+| 记忆管线说明 | `/docs/companion_harness/MEMORY_PIPELINE.md` |
 
 ## 维护规则
 

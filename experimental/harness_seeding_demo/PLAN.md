@@ -1,12 +1,12 @@
 # harness_seeding_demo implementation plan
 
-**Hard rule**: no edits under `app/core/agentic_kernel/`. All code lives under `experimental/harness_seeding_demo/`.
+**Hard rule**: no edits under `app/core/companion_harness/`. All code lives under `experimental/harness_seeding_demo/`.
 
 ---
 
 ## Phase 0 - Freeze the contract
 
-- Lock the **kernel entrypoint**: `CompanionManager.get_or_create_session` + `run_turn` from `app/core/agentic_kernel/companion/turn.py` (same as production companion path).
+- Lock the **kernel entrypoint**: `CompanionManager.get_or_create_session` + `run_turn` from `app/core/companion_harness/companion/turn.py` (same as production companion path).
 - Lock **workspace shape**: required files per `tools/inty_v2_repl/AGENTS.md` (`IDENTITY.md`, `SOUL.md`, `USER.md`, `MEMORY.md`, `transcript.jsonl`; optional `context.json`, `TOOLS.md`, etc.).
 - Define one **fixed scenario** (user script) and one **quality target** (score threshold) so all seeds are comparable.
 
@@ -89,7 +89,7 @@
 
 ## Checklist before merge
 
-- [x] No diff in `app/core/agentic_kernel/`
+- [x] No diff in `app/core/companion_harness/`
 - [x] `seeds/*` runnable with one documented command
 - [x] `scorer` + `scripts` produce comparable `summary.json`
 - [x] `README.md` updated with run instructions (link this PLAN)

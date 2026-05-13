@@ -1,7 +1,7 @@
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.sql import func
 
-from app.models import Base
+from app.models.base import Base
 
 
 class VerificationCode(Base):

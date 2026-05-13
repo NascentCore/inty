@@ -28,7 +28,7 @@ sys.path.append(str(project_root))
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import upload_to_gcs
-from app.models import Agent
+from app.models.agent import Agent
 
 
 def download_image(url: str) -> Optional[bytes]:

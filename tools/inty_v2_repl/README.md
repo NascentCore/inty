@@ -2,7 +2,7 @@
 
 Terminal client for Inty **`/api/v1/chat/ws`**. Conversation and companion bootstrap run on the server; this process only holds a WebSocket, prints assistant text, and writes local logs.
 
-**Dependencies**: This package may import **types/models** from **`app/schemas/chat`** (WebSocket payload contract). Do **not** import `app/core/agentic_kernel` or other companion implementation modules here. **`app/schemas`** holds types only; parsing of downlink JSON frames lives in [`backend_chat_ws.py`](backend_chat_ws.py).
+**Dependencies**: This package may import **types/models** from **`app/schemas/chat`** (WebSocket payload contract). Do **not** import `app/core/companion_harness` or other companion implementation modules here. **`app/schemas`** holds types only; parsing of downlink JSON frames lives in [`backend_chat_ws.py`](backend_chat_ws.py).
 
 ## Setup
 
@@ -37,4 +37,4 @@ Interactive **`repl`** sends each line with **`post_turn`** (upload immediately)
 | [proto_log.py](proto_log.py) | loguru file/stderr setup |
 | [repl_dotenv.py](repl_dotenv.py) | Dotenv loading |
 
-Companion kernel code lives under **`app/core/agentic_kernel/companion/`**, not in this package.
+Companion Harness code lives under **`app/core/companion_harness/companion/`**, not in this package.
