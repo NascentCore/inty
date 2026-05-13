@@ -1,4 +1,4 @@
-"""Core turn-level runtime contracts for agentic kernel."""
+"""Core turn-level runtime contracts for Companion Harness."""
 
 from __future__ import annotations
 

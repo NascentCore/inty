@@ -14,7 +14,7 @@ style:
   font_size_title: 13
   font_size_header: 11
   font_size_cell: 9
-  font_family: null
+  font_family: "Noto Sans CJK JP"
 rows:
   - - "实时性\n↓\n慢→快"
     - "弱智能"

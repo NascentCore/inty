@@ -38,7 +38,7 @@ such experience is between human users and AI, but they have real-world patterns
 - 拟人的独立与互联网互动（与用户共享）
 - 拟人的与 LivingSphere & TechnoCore 互动的能力 [1]
 
-这个智能体的核心代码位于 [agentic_kernel](/app/core/agentic_kernel/)：
+这个智能体的核心代码位于 [companion_harness](/app/core/companion_harness/)：
 
 - 构建多模态内容生成+多媒介通信来实现与用户的多媒介互动、并感知用户所处数字空间形成与用户的同频共振
 - 用 LLM+toolcall+记忆 来模拟人脑来实现拟人的情感表达
@@ -59,7 +59,7 @@ such experience is between human users and AI, but they have real-world patterns
 ## Repo structure
 
 - Agentic core
-  - [agentic_kernel](/app/core/agentic_kernel/): Inty's core agentic harness
+  - [companion_harness](/app/core/companion_harness/): Inty's Companion Harness
   - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user, and inferred from the user's actual living space.
   - [techno_core](/techno_core/)：collective virtual world of living spheres and shared spaces; Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）
 - Applications
@@ -75,7 +75,7 @@ such experience is between human users and AI, but they have real-world patterns
   - [.cursor](/.cursor/) Cursor-specific harness
 - Miscs: read AGENTS.md or README.md under the dirs for information.
 
-IMPORTANT: feel free to break backward compatibility when changing agentic_kernel & repl,
+IMPORTANT: feel free to break backward compatibility when changing companion_harness & repl,
 they are in development mode.
 
 ## Your response style
