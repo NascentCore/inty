@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from app.core.agentic_kernel.companion.memory_registry import get_memory_store
-from app.core.agentic_kernel.companion.scope import CompanionScope
+from app.core.companion_harness.companion.memory_registry import get_memory_store
+from app.core.companion_harness.companion.scope import CompanionScope
 
 from experimental.harness_seeding_demo.workspace_setup import seed_memory_store_from_directory
 

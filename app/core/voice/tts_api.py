@@ -28,7 +28,7 @@ from google.genai import types
 from langsmith import traceable
 from loguru import logger
 
-from app.core.agentic_kernel.providers.gemini import (
+from app.core.companion_harness.providers.gemini import (
     GeminiClientOptions,
     get_gemini_client as get_kernel_gemini_client,
 )

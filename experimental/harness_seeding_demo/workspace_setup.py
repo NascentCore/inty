@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.core.agentic_kernel.companion.memory_registry import get_memory_store
-from app.core.agentic_kernel.companion.memory_store_scope import (
+from app.core.companion_harness.companion.memory_registry import get_memory_store
+from app.core.companion_harness.companion.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
-from app.core.agentic_kernel.companion.scope import CompanionScope
+from app.core.companion_harness.companion.scope import CompanionScope
 
 TEXT_SUFFIXES = frozenset({".md", ".json", ".jsonl"})
 

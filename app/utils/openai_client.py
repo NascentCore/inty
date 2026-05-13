@@ -29,7 +29,7 @@ from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 
 from app.api.types.llm_config import LLMConfig
-from app.core.agentic_kernel.providers.openai_compatible_clients import (
+from app.core.companion_harness.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_async_client,
     get_openai_compatible_sync_client,

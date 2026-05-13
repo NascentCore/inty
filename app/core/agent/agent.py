@@ -33,7 +33,7 @@ from typing_extensions import deprecated
 
 from app import models
 from app.core.agent import prompt_template, prompts
-from app.core.agentic_kernel.tools.runtime import (
+from app.core.companion_harness.tools.runtime import (
     resolve_official_assistant_tool_loop,
 )
 from app.core.agent.agent_prompt_configs import (
