@@ -558,10 +558,10 @@ def main(
 ) -> None:
     """
     Examples:
-      PYTHONPATH=. python scripts/replay_chat_to_image_trace.py \\
+      PYTHONPATH=. python tools/scripts/replay_chat_to_image_trace.py \\
         --run-id <langsmith-run-id>
 
-      PYTHONPATH=. python scripts/replay_chat_to_image_trace.py \\
+      PYTHONPATH=. python tools/scripts/replay_chat_to_image_trace.py \\
         --trace-record-path tmp/langsmith_traces/<trace_id>.json \\
         --dry-run
     """

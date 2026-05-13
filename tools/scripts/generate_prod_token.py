@@ -6,7 +6,7 @@
     pip install python-jose[cryptography] pyyaml
 
 用法:
-    python scripts/generate_prod_token.py [--env ENV] [user_id] [expire_days]
+    python tools/scripts/generate_prod_token.py [--env ENV] [user_id] [expire_days]
 
 环境参数:
     --env ENV    指定环境配置: local, dev, prod (默认: prod)
@@ -16,16 +16,16 @@
 
 示例:
     # 使用默认环境(prod)、默认用户ID和7天过期时间
-    python scripts/generate_prod_token.py
+    python tools/scripts/generate_prod_token.py
 
     # 指定环境为 dev
-    python scripts/generate_prod_token.py --env dev
+    python tools/scripts/generate_prod_token.py --env dev
 
     # 指定环境、用户ID和过期天数
-    python scripts/generate_prod_token.py --env prod user-01JWZ34Y4D1C92GD86A5R6EWYJ 30
+    python tools/scripts/generate_prod_token.py --env prod user-01JWZ34Y4D1C92GD86A5R6EWYJ 30
 
     # 使用 local 环境
-    python scripts/generate_prod_token.py --env local user-01JWZ34Y4D1C92GD86A5R6EWYJ 7
+    python tools/scripts/generate_prod_token.py --env local user-01JWZ34Y4D1C92GD86A5R6EWYJ 7
 """
 
 import sys

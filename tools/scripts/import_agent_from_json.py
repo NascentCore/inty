@@ -5,8 +5,8 @@ Import a single agent from a JSON file (as produced by export_agent_to_json.py) 
 Preserves agent id for fixture/restore. Use when the same id does not already exist.
 
 Usage (from repo root with config.yaml):
-    PYTHONPATH=. python scripts/import_agent_from_json.py --input tests/Isabelle_Martin_imate_info.json
-    PYTHONPATH=. python scripts/import_agent_from_json.py --input path/to/agent.json --no-dry-run --yes
+    PYTHONPATH=. python tools/scripts/import_agent_from_json.py --input tests/Isabelle_Martin_imate_info.json
+    PYTHONPATH=. python tools/scripts/import_agent_from_json.py --input path/to/agent.json --no-dry-run --yes
 """
 
 import asyncio

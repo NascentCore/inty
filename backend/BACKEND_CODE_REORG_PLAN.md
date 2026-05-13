@@ -8,11 +8,11 @@ CREATED_BY_AGENT
 
 ## 里程碑
 1. **目录搭建**
-   - 创建 `backend/`，逐步迁入后端服务目录（`app/`、`alembic/`、`scripts/`、`devops/` 等）。
+   - 创建 `backend/`，逐步迁入后端服务目录（`app/`、`alembic/`、`tools/scripts/`、`devops/` 等）。
    - 迁移同时保留原路径的引用映射记录，便于后续批量替换。
    - 进展：2025-11-16 已将根目录的 `README.md`、`AGENTS.md`、`TODOS.md` 与 `docs/` 迁入 `backend/`。
 2. **脚本与配置同步**
-   - 更新根层脚本（`Dockerfile*`、`docker-compose.yaml`、`start*.sh`、`scripts/fmt.sh`、`evaluation/build.sh`）。
+   - 更新根层脚本（`Dockerfile*`、`docker-compose.yaml`、`start*.sh`、`tools/scripts/fmt.sh`、`evaluation/build.sh`）。
    - 校正 Python 配置（`pyproject.toml`、`pytest.ini`、`requirements*.txt`）与服务入口（`README.md`、`docs/DEV.md`）。
 3. **引用修复**
    - 全仓库搜索硬编码路径，替换为 `backend/...`。

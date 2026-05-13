@@ -5,12 +5,12 @@ FCM Token 注册脚本
 
 使用方法:
     # 为指定用户注册 token
-    python scripts/fcm/register_fcm_token.py \
+    python tools/scripts/fcm/register_fcm_token.py \
       --token "FCM_TOKEN_HERE" \
       --user-id "USER_ID_HERE"
 
     # 验证 token 格式后注册
-    python scripts/fcm/register_fcm_token.py \
+    python tools/scripts/fcm/register_fcm_token.py \
       --token "FCM_TOKEN_HERE" \
       --user-id "USER_ID_HERE" \
       --validate-token

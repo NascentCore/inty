@@ -4,8 +4,8 @@
 
 用法（在仓库根目录）:
     export PYTHONPATH=.
-    python scripts/run_user_analytics_report.py --type daily --date 2026-02-01
-    python scripts/run_user_analytics_report.py --type weekly --date 2026-01-27
+    python tools/scripts/run_user_analytics_report.py --type daily --date 2026-02-01
+    python tools/scripts/run_user_analytics_report.py --type weekly --date 2026-01-27
 
 --type: daily | weekly
 --date: YYYY-MM-DD。日报：统计该日；周报：该周周一日期

@@ -2,8 +2,8 @@
 """
 对节日记忆 JSON（run_festival_memory_extraction_to_json 或 --query 输出）按 (user_name, agent_name) 排序 memories 并写回。
 
-用法: python scripts/sort_festival_memory_json.py tmp/out.json
-      python scripts/sort_festival_memory_json.py --input tmp/out.json
+用法: python tools/scripts/sort_festival_memory_json.py tmp/out.json
+      python tools/scripts/sort_festival_memory_json.py --input tmp/out.json
 """
 
 from __future__ import annotations

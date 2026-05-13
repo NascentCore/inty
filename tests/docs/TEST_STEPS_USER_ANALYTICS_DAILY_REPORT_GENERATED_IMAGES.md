@@ -15,7 +15,7 @@
 ## 测试步骤
 
 1. 对指定日期强制重算日报：
-   - `python scripts/run_user_analytics_report.py --type daily --date 2026-02-01 --force`
+   - `python tools/scripts/run_user_analytics_report.py --type daily --date 2026-02-01 --force`
 2. 打开页面：`用户日报周报`。
 3. 选择 `报告类型 = 日报`。
 4. 展开 `2026-02-01` 这一项日报。

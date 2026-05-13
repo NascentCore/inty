@@ -24,7 +24,7 @@ COPY requirements.txt .
 # https://stackoverflow.com/a/58021389/31283770
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
-COPY scripts/requirements.txt scripts_requirements.txt
+COPY tools/scripts/requirements.txt scripts_requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r scripts_requirements.txt
 
 FROM base
@@ -49,7 +49,7 @@ COPY app/ app/
 COPY backend/ backend/
 COPY alembic/ alembic/
 # Used for manipulate backend system with bundled configurations.
-COPY scripts/ scripts/
+COPY tools/scripts/ tools/scripts/
 # 方便操作后端数据库
 COPY devops/ devops/
 # IntelliMate 使用手册，用来给 IntelliMate 官方助手角色提供回答问题的提示词

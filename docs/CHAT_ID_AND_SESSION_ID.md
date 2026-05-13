@@ -60,7 +60,7 @@ def generate_session_id(chat_id: str) -> str:
 
 创建聊天时（`create_chat`）：先有 `chat_id` 并写入 `chats`，再用 `session_id = generate_session_id(chat_id)` 给该会话在 `chat_history` 里写入开场白等消息。
 
-需要从「仅有 session_id」反推 chat 时，代码通过「从 chats 表取 chat_id → 对每个生成 session_id → 匹配」或维护 `session_id -> chat_id` 映射实现（例如 `scripts/migrate_generated_images.py`、`app/services/user_analytics_service.py` 中的 `chat_to_session` / `session_to_chat`）。
+需要从「仅有 session_id」反推 chat 时，代码通过「从 chats 表取 chat_id → 对每个生成 session_id → 匹配」或维护 `session_id -> chat_id` 映射实现（例如 `tools/scripts/migrate_generated_images.py`、`app/services/user_analytics_service.py` 中的 `chat_to_session` / `session_to_chat`）。
 
 ---
 

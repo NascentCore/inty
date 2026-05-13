@@ -73,11 +73,11 @@ description: >-
 
 - 配置与 **`config.yaml` + 环境变量** 一致（见 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)）。
 - **`list_runs` `limit` ≤ 100**；大窗需分段或收窄 `start_time`（UTC）。
-- 对 `user_msg_uuid` **勿只依赖 metadata filter**（可能 0 命中）；可 **时间窗 + 子串匹配** 序列化 run，或用 [`scripts/langsmith_find_companion_run_by_user_msg_uuid.py`](../../../scripts/langsmith_find_companion_run_by_user_msg_uuid.py)。
+- 对 `user_msg_uuid` **勿只依赖 metadata filter**（可能 0 命中）；可 **时间窗 + 子串匹配** 序列化 run，或用 [`tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py`](../../../tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py)。
 - **下载全 trace**（仓库根、venv）：
 
 ```bash
-python scripts/download_run.py \
+python tools/scripts/download_run.py \
   --trace-id "<TRACE_UUID>" \
   -o tmp/langsmith_traces/<TRACE_UUID>.json
 ```
@@ -102,7 +102,7 @@ LIMIT 30;
 ### E. 客户端传输与复测
 
 - `INTY_V2_BACKEND_WS_POST_TURN_TIMEOUT_SEC` 等见 [`backend_chat_ws.py`](../../../tools/inty_v2_repl/backend_chat_ws.py)。
-- Smoke：[`inty-server-module-verify`](../inty-server-module-verify/SKILL.md)、[`scripts/inty_backend_smoke_tests/test_chat_ws.py`](../../../scripts/inty_backend_smoke_tests/test_chat_ws.py)。
+- Smoke：[`inty-server-module-verify`](../inty-server-module-verify/SKILL.md)、[`tools/scripts/inty_backend_smoke_tests/test_chat_ws.py`](../../../tools/scripts/inty_backend_smoke_tests/test_chat_ws.py)。
 
 ## 专项调查目标示例：消息「时间戳」
 
@@ -120,7 +120,7 @@ LIMIT 30;
 ```bash
 cd /path/to/inty/repo/root
 source .venv/bin/activate
-python3 scripts/langsmith_find_companion_run_by_user_msg_uuid.py \
+python3 tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py \
   --user-msg-uuid 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' \
   --window-start-utc '2026-05-11T10:30:00+00:00'
 ```
@@ -147,5 +147,5 @@ python3 scripts/langsmith_find_companion_run_by_user_msg_uuid.py \
 
 ## 实现边界
 
-- 技能 **不**改产品代码；LangSmith 辅助脚本见 [`scripts/langsmith_find_companion_run_by_user_msg_uuid.py`](../../../scripts/langsmith_find_companion_run_by_user_msg_uuid.py)。
+- 技能 **不**改产品代码；LangSmith 辅助脚本见 [`tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py`](../../../tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py)。
 - **不要**在 Markdown 或 git 中粘贴 `config.yaml` 里的密码或 API key。

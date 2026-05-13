@@ -25,7 +25,7 @@
   backend/inty/start.sh
   
   # Create a admin bearer token, and write the token to a .txt file
-  python scripts/init_admin_user.py --token-file ./admin_token.txt
+  python tools/scripts/init_admin_user.py --token-file ./admin_token.txt
 
   # 运行测试
   pytest -m "not noci" -v -s tests/
@@ -33,7 +33,7 @@
 
 - Chat WebSocket against **real LLM** (optional): set `INTY_CHAT_WS_REAL_TEST=1`, set `INTY_DEV_CONFIG_PATH` to the server YAML (e.g. `devops/config.yaml.local` or `devops/config.yaml.dev`; `app.environment` must be `dev` or `local`). See [tests/docs/TEST_STEPS_CHAT_WEBSOCKET_DEV_E2E.md](docs/TEST_STEPS_CHAT_WEBSOCKET_DEV_E2E.md).
 
-- **Manual smoke scripts** (run against a live backend from repo root, not pytest): [scripts/inty_backend_smoke_tests/](../scripts/inty_backend_smoke_tests/) — usage and env vars are documented in [.cursor/skills/inty-server-module-verify/SKILL.md](../.cursor/skills/inty-server-module-verify/SKILL.md).
+- **Manual smoke scripts** (run against a live backend from repo root, not pytest): [tools/scripts/inty_backend_smoke_tests/](../tools/scripts/inty_backend_smoke_tests/) — usage and env vars are documented in [.cursor/skills/inty-server-module-verify/SKILL.md](../.cursor/skills/inty-server-module-verify/SKILL.md).
 
 - Agentic kernel companion `run_turn` with **real LLM** on OpenRouter (optional): set `INTY_AGENTIC_KERNEL_REAL_LLM_TEST=1` and `OPENROUTER_API_KEY`; run `pytest tests/real_agents/test_agentic_kernel_run_turn_tool_call.py -m noci`. Model: `nvidia/nemotron-3-super-120b-a12b:free`. Optional `OPENROUTER_API_BASE` (default `https://openrouter.ai/api/v1`).
 

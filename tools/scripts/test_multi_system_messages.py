@@ -438,7 +438,7 @@ Don't you know me ?
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"multi_system_test_results_{timestamp}.json"
 
-        filepath = project_root / "scripts" / filename
+        filepath = project_root / "tools/scripts" / filename
 
         try:
             with open(filepath, "w", encoding="utf-8") as f:

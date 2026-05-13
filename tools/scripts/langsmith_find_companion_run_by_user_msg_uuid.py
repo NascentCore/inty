@@ -4,7 +4,7 @@
 Used when debugging ``/api/v1/chat/ws`` + ``tools.inty_v2_repl`` (see
 ``.cursor/skills/inty-backend-inspect/SKILL.md``). Project name and API key
 resolution mirror ``app/core/config.py`` LangSmith env behavior and
-``scripts/download_run.py``.
+``tools/scripts/download_run.py``.
 """
 
 from __future__ import annotations

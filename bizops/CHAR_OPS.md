@@ -15,7 +15,7 @@ https://github.com/NascentCore/inty/settings/actions/runners
 
 ## Dev→Prod 同步脚本行为
 
-- 手动脚本：`scripts/sync_agents_dev_to_prod/sync_agents.py` 会比对指定运营账号在 dev、prod 中的未删除角色。
+- 手动脚本：`tools/scripts/sync_agents_dev_to_prod/sync_agents.py` 会比对指定运营账号在 dev、prod 中的未删除角色。
 - `FIELDS_TO_SYNC` 覆盖 `intro`、`opening`、`prompt`、`character_card_*`、`photos`、`voice_id` 等角色核心字段。只要 dev 中的这些字段被修改（包括简介 `intro` 之类），脚本就会把差异复制到 prod。
 - 同步顺序为“先更新已存在的角色，再创建缺失的角色”，并在执行前校验 dev / prod 的 Alembic 版本一致性。需要实际落地更新时去掉 `--dry-run` 参数。
 - 因此想让 dev 的改动（例如简介文案）进入 prod，必须运行该脚本或等待相应的自动化工作流触发，它会自动检测出差异并写入 prod。

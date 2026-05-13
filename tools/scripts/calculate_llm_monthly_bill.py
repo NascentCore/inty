@@ -9,17 +9,17 @@
 
 示例（全交互）：
     export PYTHONPATH=.
-    python scripts/calculate_llm_monthly_bill.py
+    python tools/scripts/calculate_llm_monthly_bill.py
 
 示例（半交互，先通过参数传定价）：
     export PYTHONPATH=.
-    python scripts/calculate_llm_monthly_bill.py \
+    python tools/scripts/calculate_llm_monthly_bill.py \
       --model-pricing "gpt-4o-mini,0.15,0.60,0.075,0.30" \
       --model-pricing "gemini-2.5-flash,0.10,0.40,0.05,0.20"
 
 示例（全参数）：
     export PYTHONPATH=.
-    python scripts/calculate_llm_monthly_bill.py \
+    python tools/scripts/calculate_llm_monthly_bill.py \
       --model-pricing "gpt-4o-mini,0.15,0.60,0.075,0.30" \
       --model-pricing "gemini-2.5-flash,0.10,0.40,0.05,0.20" \
       --usage-input-tokens 2000000 \

@@ -5,16 +5,16 @@ FCM 推送测试脚本
 
 使用方法:
     # Dry run 模式（推荐，不会实际发送）
-    python scripts/fcm/test_fcm_push.py --dry-run --token YOUR_FCM_TOKEN
+    python tools/scripts/fcm/test_fcm_push.py --dry-run --token YOUR_FCM_TOKEN
 
     # 真实发送模式
-    python scripts/fcm/test_fcm_push.py --token YOUR_FCM_TOKEN
+    python tools/scripts/fcm/test_fcm_push.py --token YOUR_FCM_TOKEN
 
     # 测试用户 ID（从数据库获取 token）
-    python scripts/fcm/test_fcm_push.py --user-id USER_ID --dry-run
+    python tools/scripts/fcm/test_fcm_push.py --user-id USER_ID --dry-run
 
     # 测试推送通知服务
-    python scripts/fcm/test_fcm_push.py --test-push-service --user-id USER_ID --dry-run
+    python tools/scripts/fcm/test_fcm_push.py --test-push-service --user-id USER_ID --dry-run
 """
 
 import asyncio

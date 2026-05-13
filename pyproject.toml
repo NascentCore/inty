@@ -10,7 +10,7 @@ requires-python = ">=3.12"
 exclude = [
     "experimental",
     "evaluation",
-    "scripts",
+    "tools/scripts",
     "tests",
     "**/migrations",
 ]

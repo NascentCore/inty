@@ -26,14 +26,14 @@
   ```bash
   ssh <gcp-vm>
   docker exec -it inty-backend-dev bash
-  python scripts/<...>.py <flags>
+  python tools/scripts/<...>.py <flags>
   ```
 
 ### dev 环境测试用户
 
 ** 需要时可以随时添加**
 
-dev 环境预制了 3 个测试用户（使用`python scripts/create_email_password_superuser.py --email test@local.ai --password test`）：
+dev 环境预制了 3 个测试用户（使用`python tools/scripts/create_email_password_superuser.py --email test@local.ai --password test`）：
 - test1@sxwl.ai sxwl666!
 - test2@sxwl.ai sxwl666!
 - test3@sxwl.ai sxwl666!

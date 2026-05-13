@@ -52,11 +52,11 @@ CREATED_BY_AGENT
 - **对话**：`app/core/agent/agent.py` 的 `_get_user_profile_sync` 在 `##User Information` 后追加 `\n\n##User Memory\n` + `get_user_memory_for_prompt_sync(user_id)`。基础用户信息块可缓存，记忆不缓存。
 - **生图**：`app/services/user_service.py` 的 `build_user_info_prompt_block` 在 `##User Information` 后追加 `\n\n##User Memory\n` + `get_user_memory_for_prompt_async(db, user_id)`；同上，记忆不缓存。
 
-### 7. 手动测试脚本（`scripts/run_memory_extraction.py`）
+### 7. 手动测试脚本（`tools/scripts/run_memory_extraction.py`）
 
 - **用法**（仓库根目录，`PYTHONPATH=.`）：
-  - `python scripts/run_memory_extraction.py --user-id <USER_UUID>`：对指定用户执行抽取并写入 DB。
-  - `python scripts/run_memory_extraction.py --user-id <USER_UUID> --dry-run`：仅拉取该用户消息并打印条数与示例，不调 LLM、不写 memory。
+  - `python tools/scripts/run_memory_extraction.py --user-id <USER_UUID>`：对指定用户执行抽取并写入 DB。
+  - `python tools/scripts/run_memory_extraction.py --user-id <USER_UUID> --dry-run`：仅拉取该用户消息并打印条数与示例，不调 LLM、不写 memory。
 
 ## 提示词与 Part 1 解析
 
@@ -95,7 +95,7 @@ scripts/
 1. **配置**：在 `config.yaml` 的 `memory_extraction` 下设置 `enabled`、`cron_hour`、`trigger_new_user_messages`、`trigger_incremental_messages`，可选 `model`。
 2. **迁移**：执行 `alembic upgrade head` 以创建 `memory`、`memory_extraction_log` 表。
 3. **定时任务**：启动 push worker（含 scheduler）后，在 `memory_extraction.enabled=true` 时**启动后立即执行一次**记忆抽取，之后每日 UTC `cron_hour:00` 自动执行。
-4. **手动抽取**：`PYTHONPATH=. python scripts/run_memory_extraction.py --user-id <UUID>`；`--dry-run` 可用于验证消息拉取与条数。
+4. **手动抽取**：`PYTHONPATH=. python tools/scripts/run_memory_extraction.py --user-id <UUID>`；`--dry-run` 可用于验证消息拉取与条数。
 5. **监控与成本**：`memory_extraction_log` 的 `duration_seconds`、`prompt_tokens`、`completion_tokens` 可用于监控单用户抽取耗时与 LLM token 消耗、成本分析。
 
 ## 节日记忆提取（Festival Memory）
