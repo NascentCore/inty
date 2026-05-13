@@ -19,12 +19,8 @@ HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE = (
     "## Proactive Messaging (Heartbeat)\n"
     "- The user has not sent a new message for some time.\n"
     "- Based on the conversation context, your character's personality, and the time elapsed, decide whether to proactively send a message.\n"
-    "- If you have something meaningful, natural, or emotionally fitting to say, respond in character as you normally would.\n"
+    "- If you have something meaningful, respond appropriately.\n"
     "- If there is nothing appropriate to say right now, respond with exactly: [SILENT]\n"
-    "- Do NOT acknowledge, mention, or reference the heartbeat system itself.\n"
-    "- Do NOT say things like \"I noticed some time has passed\" or \"the system told me to check in\".\n"
-    "- Proactive messages should feel natural: a passing thought, a playful question, sharing something you \"just saw\", or a warm check-in.\n"
-    "- Vary your approach — don't always use the same pattern for proactive messages.\n"
 )
 
 # 主动心跳回退文案：当调用方拿不到 ``CompanionTurnResult.transcript_user_content`` 等内核结果时使用；主路径用 ``build_proactive_heartbeat_transcript_user_marker``。
