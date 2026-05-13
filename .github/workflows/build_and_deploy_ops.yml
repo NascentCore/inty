@@ -1,29 +1,29 @@
 name: Release - Inty Ops 平台
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      # 不含 devops/config.yaml.imate_*：push 默认只部署 dev/prod，避免仅改 iMate 配置却重部署 IntelliMate inty-ops-dev
-      - "app/**/*.py"
-      # 数据库改动以后端部署为出发点，ops 平台不做部署
-      # - "alembic/**/*.py"
-      - "backend/ops/**"
-      - "devops/config.yaml.dev"
-      - "devops/config.yaml.prod"
-      - "evaluation/**/*.tsx"
-      - "evaluation/**/*.ts"
-      - "evaluation/tsconfig.json"
-      - "evaluation/tsconfig.node.json"
-      - "evaluation/package.json"
-      - "evaluation/package-lock.json"
-      - "evaluation/vite.config.ts"
-      - "evaluation/vitest.config.ts"
-      - "evaluation/index.html"
-      - "evaluation/build.sh"
-      - "devops/docker/Dockerfile.ops"
-      - ".github/workflows/build_and_deploy_ops.yml"
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     # 不含 devops/config.yaml.imate_*：push 默认只部署 dev/prod，避免仅改 iMate 配置却重部署 IntelliMate inty-ops-dev
+  #     - "app/**/*.py"
+  #     # 数据库改动以后端部署为出发点，ops 平台不做部署
+  #     # - "alembic/**/*.py"
+  #     - "backend/ops/**"
+  #     - "devops/config.yaml.dev"
+  #     - "devops/config.yaml.prod"
+  #     - "evaluation/**/*.tsx"
+  #     - "evaluation/**/*.ts"
+  #     - "evaluation/tsconfig.json"
+  #     - "evaluation/tsconfig.node.json"
+  #     - "evaluation/package.json"
+  #     - "evaluation/package-lock.json"
+  #     - "evaluation/vite.config.ts"
+  #     - "evaluation/vitest.config.ts"
+  #     - "evaluation/index.html"
+  #     - "evaluation/build.sh"
+  #     - "devops/docker/Dockerfile.ops"
+  #     - ".github/workflows/build_and_deploy_ops.yml"
 
   workflow_dispatch:
     inputs:
@@ -33,8 +33,8 @@ on:
         required: true
         default: dev
 
-  schedule:
-    - cron: "0 11 * * *"
+  # schedule:
+  #   - cron: "0 11 * * *"
 
 concurrency:
   group: inty-deploy-ops-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
