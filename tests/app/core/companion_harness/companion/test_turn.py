@@ -24,6 +24,9 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import run_turn
+from app.core.companion_harness.companion.user_time_context_llm_slice import (
+    build_companion_user_time_context_system_content,
+)
 from app.schemas.chat import UserTimeContext
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
@@ -152,13 +155,16 @@ def test_run_turn_inner_tick_maintenance_injects_user_time_system_before_tail_us
     assert llm_msgs[-1]["role"] == "user"
     tail = llm_msgs[-1]["content"] or ""
     assert tail == INNER_TICK_SYNTHETIC_USER_TEXT
-    assert "user-time:" not in tail
+    assert "User's time:" not in tail
+    assert "## user-time-context" not in tail
     assert llm_msgs[-2]["role"] == "system"
     sys_body = llm_msgs[-2]["content"] or ""
-    assert sys_body.startswith("## user-time-context\n")
-    assert "user-time: 2026-05-01T08:00:00+08:00" in sys_body
-    assert "user-time-zone: Asia/Shanghai" in sys_body
-    assert "user-time-utc-offset: UTC+08:00" in sys_body
+    expected_sys = build_companion_user_time_context_system_content(
+        bundle.client_time.model_dump(exclude_none=True),
+        enabled=True,
+    )
+    assert expected_sys is not None
+    assert sys_body == expected_sys
     assert "##User Time Context" not in "\n".join(
         (m.get("content") or "") for m in llm_msgs if m.get("role") == "system"
     )

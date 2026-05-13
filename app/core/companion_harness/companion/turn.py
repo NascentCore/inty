@@ -122,7 +122,8 @@ def _replace_leading_system_messages_multi(
 ) -> list[dict[str, Any]]:
     """Replace the first ``stack_depth`` system messages (MemoryStore stack) with ``system_messages``.
 
-    Deeper ``role: system`` slices after dialogue (e.g. ``## user-time-context``) must remain
+    Deeper ``role: system`` slices after dialogue (e.g. ``## user-time-context`` with
+    ``User's time`` / ``Time zone``) must remain
     in ``messages[stack_depth:]`` and are not stripped; callers pass ``stack_depth`` equal to
     ``len(prompt_plan.system_messages)`` from the same turn's :func:`build_companion_turn_prompt_plan`.
     """

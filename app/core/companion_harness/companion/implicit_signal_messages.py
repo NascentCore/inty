@@ -10,9 +10,9 @@ WebSocket connect-time interactive kickoff placeholder so USER_INTERACTIVE sessi
 still open naturally when the client triggers implicit greeting via ``user_signed_on`` (+ ``implicit_greeting``).
 
 Client wall-clock context (``ImplicitSignalBundle.client_time``) is not injected here;
-``turn_pipeline`` emits a dedicated ``## user-time-context`` **system** message (factual
-``user-time:`` lines) immediately before the tail **user** message when the feature flag
-is enabled.
+``turn_pipeline`` emits a dedicated ``## user-time-context`` **system** message
+(``User's time`` / ``Time zone`` lines) immediately before the tail **user** message when
+the feature flag is enabled.
 """
 
 from __future__ import annotations
