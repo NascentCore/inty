@@ -133,7 +133,7 @@ jobs:
         run: |
           cp devops/config.yaml.test config.yaml
           # alembic upgrade head: no need to run, as backend/inty/start.sh already includes it
-          ./backend/inty/start.sh --test &
+          ./backend/inty/start.sh --test 2>&1 | tee inty_backend.log &
 
           # Wait for the server to be ready with better retry logic
           echo "Waiting for server to start..."
@@ -151,7 +151,16 @@ jobs:
 
           # noci marker is defined in pytest.ini
           # applied on test functions with noci marker will be skipped on CI
+          set +e
           python -m pytest -m "not noci" -v -s tests/ --capture=fd --show-capture=no
+          pytest_exit=$?
+          python scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
+          log_scan_exit=$?
+          set -e
+          if [ "$pytest_exit" -ne 0 ]; then
+            exit "$pytest_exit"
+          fi
+          exit "$log_scan_exit"
         env:
           INTY_LOGGING_LEVEL: INFO
           INTY_CONSOLE_LOGGING_LEVEL: INFO

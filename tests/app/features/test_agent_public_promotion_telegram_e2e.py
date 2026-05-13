@@ -1,6 +1,30 @@
 from tests.app.api.test_client import TestClient
 
 
+def _assert_telegram_metadata(agent_payload: dict, agent_id: str) -> dict:
+    telegram = (agent_payload.get("extensions") or {}).get("telegram")
+    assert isinstance(
+        telegram, dict
+    ), (
+        f"expected telegram extension metadata for promoted agent {agent_id}: "
+        f"{agent_payload}"
+    )
+    expected = {
+        "status": "provisioned",
+        "start_parameter": f"agent_{agent_id}",
+        "bot_username": "inty_test_bot",
+        "deep_link": f"https://t.me/inty_test_bot?start=agent_{agent_id}",
+    }
+    for key, expected_value in expected.items():
+        assert (
+            telegram.get(key) == expected_value
+        ), (
+            f"unexpected telegram {key} for promoted agent {agent_id}: "
+            f"{telegram}"
+        )
+    return telegram
+
+
 def test_promote_private_agent_to_public_provisions_telegram_metadata(
     integration_client: TestClient,
 ):
@@ -17,14 +41,7 @@ def test_promote_private_agent_to_public_provisions_telegram_metadata(
         assert promote_response.status_code == 200, promote_response.text
         promoted_agent = promote_response.json()
 
-        telegram = (promoted_agent.get("extensions") or {}).get("telegram")
-        assert isinstance(telegram, dict), promoted_agent
-        assert telegram.get("status") == "provisioned", promoted_agent
-        assert telegram.get("start_parameter") == f"agent_{agent_id}", promoted_agent
-        assert telegram.get("bot_username") == "inty_test_bot", promoted_agent
-        assert telegram.get("deep_link") == (
-            f"https://t.me/inty_test_bot?start=agent_{agent_id}"
-        ), promoted_agent
+        telegram = _assert_telegram_metadata(promoted_agent, agent_id)
 
         second_update_response = integration_client.client.put(
             f"{integration_client.base_url}/api/v1/ai/agents/{agent_id}",
