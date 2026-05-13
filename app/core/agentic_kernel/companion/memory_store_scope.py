@@ -65,6 +65,10 @@ class MemoryStoreScopePaths:
         return "MEMORY.md"
 
     @property
+    def living_sphere_md(self) -> str:
+        return "LIVING_SPHERE.md"
+
+    @property
     def tools_md(self) -> str:
         return "TOOLS.md"
 

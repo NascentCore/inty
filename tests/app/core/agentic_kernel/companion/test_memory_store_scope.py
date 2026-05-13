@@ -11,13 +11,13 @@ from app.core.agentic_kernel.companion.memory_store_scope import (
 )
 from app.core.agentic_kernel.companion.scope import CompanionScope
 
-
 def test_memory_store_scope_paths_properties() -> None:
     p = MemoryStoreScopePaths()
     assert p.identity == "IDENTITY.md"
     assert p.soul == "SOUL.md"
     assert p.user_md == "USER.md"
     assert p.memory_md == "MEMORY.md"
+    assert p.living_sphere_md == "LIVING_SPHERE.md"
     assert p.tools_md == "TOOLS.md"
     assert p.transcript == "transcript.jsonl"
     assert p.context_json == "context.json"

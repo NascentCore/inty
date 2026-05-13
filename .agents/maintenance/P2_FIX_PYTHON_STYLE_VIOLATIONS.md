@@ -83,7 +83,7 @@ maintenance agents can fix the highest-impact item first.
   silently returns `None` or `[]`. Narrow to JSON/Pydantic/model-dump failures
   or log unexpected parser failures so malformed companion envelopes do not
   hide implementation bugs. Fixed in `cursor/agent-maintenance-task-e5ce`.
-- [ ] Google 2.4 "Exceptions":
+- [x] Google 2.4 "Exceptions":
   `/app/core/agentic_kernel/companion/llm_chat_runtime.py` catches broad
   `Exception` while reading LangSmith trace/run identifiers and silently
   returns empty strings. Log unexpected metadata extraction failures or narrow

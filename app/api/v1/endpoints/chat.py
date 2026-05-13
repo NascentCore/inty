@@ -463,15 +463,24 @@ async def _try_handle_ws_user_signed_on_frame(
             ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
         )
         recv_msg_uuid = (frame.message_id or "").strip()
+        if frame.implicit_greeting:
+            ig_log = "implicit_greeting=True (enqueue_after_ack)"
+        else:
+            raw_note = (frame.implicit_greeting_note or "").strip()
+            ig_log = (
+                f"implicit_greeting=False ({raw_note})"
+                if raw_note
+                else "implicit_greeting=False (not_requested)"
+            )
         logger.info(
             "chat_ws user_signed_on armed inner_tick coords ws_conn_id={} user={} agent={} "
-            "chat_id={} received_message_uuid={} implicit_greeting={}",
+            "chat_id={} received_message_uuid={} {}",
             ws_conn_id,
             current_user.id,
             agent_id,
             chat.id,
             recv_msg_uuid or "-",
-            frame.implicit_greeting,
+            ig_log,
         )
         if frame.implicit_greeting and preset_mid is not None:
             if (
@@ -1244,6 +1253,8 @@ def _companion_ai_meta_from_turn_result(
         companion_ai_meta["trace_id"] = companion_turn.trace_id
     if companion_turn.user_msg_uuid:
         companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
+    if companion_turn.assistant_msg_uuid:
+        companion_ai_meta["assistant_msg_uuid"] = companion_turn.assistant_msg_uuid
     if companion_turn.langsmith_trace_id:
         companion_ai_meta["langsmith_trace_id"] = companion_turn.langsmith_trace_id
     if companion_turn.langsmith_run_id:

@@ -67,6 +67,7 @@ def _ws_user_signed_on_json(
     *,
     message_id: str,
     implicit_greeting: bool = False,
+    implicit_greeting_note: str | None = None,
 ) -> str:
     payload: dict[str, Any] = {
         "type": "user_signed_on",
@@ -75,6 +76,10 @@ def _ws_user_signed_on_json(
     }
     if implicit_greeting:
         payload["implicit_greeting"] = True
+    else:
+        note = (implicit_greeting_note or "").strip()
+        if note:
+            payload["implicit_greeting_note"] = note
     return json.dumps(payload)
 
 
@@ -543,15 +548,25 @@ class BackendChatWsBridge:
                     aid,
                     message_id=frame_mid,
                     implicit_greeting=use_implicit,
+                    implicit_greeting_note=(
+                        None
+                        if use_implicit
+                        else "repl already resumed"
+                    ),
                 )
             )
             if use_implicit:
                 self._implicit_greeting_sent = True
             logger.info(
-                "chat ws user_signed_on sent (repl) agent_id={} message_id={} implicit_greeting={}",
+                "chat ws user_signed_on sent (repl) agent_id={} message_id={} implicit_greeting={}{}",
                 aid,
                 frame_mid,
                 use_implicit,
+                (
+                    ""
+                    if use_implicit
+                    else " (repl already resumed)"
+                ),
             )
             if self._on_user_signed_on_sent is not None:
                 try:

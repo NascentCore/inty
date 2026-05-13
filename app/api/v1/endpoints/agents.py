@@ -339,7 +339,7 @@ async def update_agent(
         raise HTTPException(status_code=404, detail="Agent not found")
 
     agent = await agent_service.update_agent(db, db_agent=agent, agent_in=agent_in)
-    return agent
+    return schemas.Agent.model_validate(agent)
 
 
 @router.delete(
@@ -365,7 +365,9 @@ async def delete_agent(
         raise HTTPException(status_code=403, detail="Permission denied")
 
     deleted_agent = await agent_service.delete_agent(db, db_agent=agent)
-    return schemas.APIResponse.success(data=deleted_agent)
+    return schemas.APIResponse.success(
+        data=schemas.Agent.model_validate(deleted_agent)
+    )
 
 
 @router.post(

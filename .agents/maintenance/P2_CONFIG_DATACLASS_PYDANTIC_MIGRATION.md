@@ -56,32 +56,32 @@ flowchart TB
 
 以下 `task_id` 建议作为自动化流水线的稳定标识符；`depends_on` 为空表示仅依赖模块已有符号/标准库。
 
-| task_id | class | depends_on | load_config 触达 YAML 键 | 备注 |
-|--------|-------|------------|---------------------------|------|
-| CFG-PYD-01 | `LoggingConfig` | — | `logging` | `__post_init__` 按 `colorize` 改 `format` → `model_validator(after)` |
-| CFG-PYD-02 | `SecurityConfig` | — | `security` | 纯字段 |
-| CFG-PYD-03 | `DatabaseSettings` | — | `database` | 保留 `@property`：`url` / `async_url` / `async_replica_url` |
-| CFG-PYD-04 | `GoogleOAuthConfig` | — | `google_oauth` | 纯字段 |
-| CFG-PYD-05 | `VerificationConfig` | — | `verification` | 纯字段 |
-| CFG-PYD-06 | `APIEndpointsConfig` | — | `app.api_endpoints`（预处理 dict） | 被 `AppConfig` 引用；先迁移便于 `AppConfig` 一次到位 |
-| CFG-PYD-07 | `EmbeddingConfig` | — | `embedding` | 纯字段 |
-| CFG-PYD-08 | `GCSConfig` | — | `gcs` | 纯字段 |
-| CFG-PYD-09 | `FirebaseConfig` | — | `firebase` | 纯字段 |
-| CFG-PYD-10 | `GooglePlayConfig` | — | `google_play` | 修正 `fallback_tracks: list[str] = None` 等为 `Optional[...]` |
-| CFG-PYD-11 | `CloudflareConfig` | — | `cloudflare` | 纯字段 |
-| CFG-PYD-12 | `ElevenLabsConfig` | — | `elevenlabs` | 必填 `api_key`：保留无默认或 `Field(...)` |
-| CFG-PYD-13 | `FalConfig` | — | `fal` | 纯字段 |
-| CFG-PYD-14 | `SurpriseSnapConfig` | — | `_parse_surprise_snap_config` 返回值 | 与解析函数联动；解析函数可改为返回已 validate 的模型 |
-| CFG-PYD-15 | `UserAnalyticsReportConfig` | — | `user_analytics_report` | 纯字段 |
-| CFG-PYD-16 | `GeminiLiveConfig` | — | `gemini_live` | 纯字段 |
-| CFG-PYD-17 | `TTSConfig` | — | `tts` | 纯字段 |
-| CFG-PYD-18 | `MemoryExtractionConfig` | — | `memory_extraction` | 内含 `WorkflowMode`；`__post_init__` 字符串→枚举 |
-| CFG-PYD-19 | `PushNotificationConfig` | — | `push_notification` | `stages` 默认 dict；`__post_init__` → `model_validator(after)` |
-| CFG-PYD-20 | `FeaturesConfig` | — | `app.features`（预处理 dict） | `companion_transcript_compaction` 等；`__post_init__` 校验 bootstrap / context_mode |
-| CFG-PYD-21 | `AgentConfig` | — | `agent` | 体量大；无其它 *Config* dataclass 交叉引用 |
-| CFG-PYD-22 | `AppConfig.LimitsConfig` | CFG-PYD-01..21 中与 app 树无冲突者 | `app.limits`（预处理 dict） | **仅嵌套类**：先改为 `BaseModel`，父 `AppConfig` 仍为 dataclass 亦可 |
-| CFG-PYD-23 | `AppConfig` | CFG-PYD-06, CFG-PYD-20, CFG-PYD-22 | `app` | 含 `backend_cors_origins` 等；修正 `List[AnyHttpUrl] = None` 为 `Optional[...]`；`LimitsConfig` / `features` / `api_endpoints` 默认值用 `Field(default_factory=...)`；`__post_init__` 合并进 validator |
-| CFG-PYD-24 | `Config` | CFG-PYD-01..23 | 根对象：`Config(...)` 整段 | 最后一跳；`load_config` 返回类型为 Pydantic `Config`；各子键一律 `model_validate` |
+| task_id | status | class | depends_on | load_config 触达 YAML 键 | 备注 |
+|--------|--------|-------|------------|---------------------------|------|
+| CFG-PYD-01 | done | `LoggingConfig` | — | `logging` | 已迁移为 `BaseModel`；`colorize` 格式覆盖由 `model_validator(after)` 保持 |
+| CFG-PYD-02 | done | `SecurityConfig` | — | `security` | 已迁移为 `BaseModel`；纯字段 |
+| CFG-PYD-03 | todo | `DatabaseSettings` | — | `database` | 保留 `@property`：`url` / `async_url` / `async_replica_url` |
+| CFG-PYD-04 | todo | `GoogleOAuthConfig` | — | `google_oauth` | 纯字段 |
+| CFG-PYD-05 | todo | `VerificationConfig` | — | `verification` | 纯字段 |
+| CFG-PYD-06 | todo | `APIEndpointsConfig` | — | `app.api_endpoints`（预处理 dict） | 被 `AppConfig` 引用；先迁移便于 `AppConfig` 一次到位 |
+| CFG-PYD-07 | todo | `EmbeddingConfig` | — | `embedding` | 纯字段 |
+| CFG-PYD-08 | todo | `GCSConfig` | — | `gcs` | 纯字段 |
+| CFG-PYD-09 | todo | `FirebaseConfig` | — | `firebase` | 纯字段 |
+| CFG-PYD-10 | todo | `GooglePlayConfig` | — | `google_play` | 修正 `fallback_tracks: list[str] = None` 等为 `Optional[...]` |
+| CFG-PYD-11 | todo | `CloudflareConfig` | — | `cloudflare` | 纯字段 |
+| CFG-PYD-12 | todo | `ElevenLabsConfig` | — | `elevenlabs` | 必填 `api_key`：保留无默认或 `Field(...)` |
+| CFG-PYD-13 | todo | `FalConfig` | — | `fal` | 纯字段 |
+| CFG-PYD-14 | todo | `SurpriseSnapConfig` | — | `_parse_surprise_snap_config` 返回值 | 与解析函数联动；解析函数可改为返回已 validate 的模型 |
+| CFG-PYD-15 | todo | `UserAnalyticsReportConfig` | — | `user_analytics_report` | 纯字段 |
+| CFG-PYD-16 | todo | `GeminiLiveConfig` | — | `gemini_live` | 纯字段 |
+| CFG-PYD-17 | todo | `TTSConfig` | — | `tts` | 纯字段 |
+| CFG-PYD-18 | todo | `MemoryExtractionConfig` | — | `memory_extraction` | 内含 `WorkflowMode`；`__post_init__` 字符串→枚举 |
+| CFG-PYD-19 | todo | `PushNotificationConfig` | — | `push_notification` | `stages` 默认 dict；`__post_init__` → `model_validator(after)` |
+| CFG-PYD-20 | todo | `FeaturesConfig` | — | `app.features`（预处理 dict） | `companion_transcript_compaction` 等；`__post_init__` 校验 bootstrap / context_mode |
+| CFG-PYD-21 | todo | `AgentConfig` | — | `agent` | 体量大；无其它 *Config* dataclass 交叉引用 |
+| CFG-PYD-22 | todo | `AppConfig.LimitsConfig` | CFG-PYD-01..21 中与 app 树无冲突者 | `app.limits`（预处理 dict） | **仅嵌套类**：先改为 `BaseModel`，父 `AppConfig` 仍为 dataclass 亦可 |
+| CFG-PYD-23 | todo | `AppConfig` | CFG-PYD-06, CFG-PYD-20, CFG-PYD-22 | `app` | 含 `backend_cors_origins` 等；修正 `List[AnyHttpUrl] = None` 为 `Optional[...]`；`LimitsConfig` / `features` / `api_endpoints` 默认值用 `Field(default_factory=...)`；`__post_init__` 合并进 validator |
+| CFG-PYD-24 | todo | `Config` | CFG-PYD-01..23 | 根对象：`Config(...)` 整段 | 最后一跳；`load_config` 返回类型为 Pydantic `Config`；各子键一律 `model_validate` |
 
 **并行建议**：`CFG-PYD-01`～`CFG-PYD-19` 中凡 `depends_on` 仅为「无」且互不修改同一代码块的，可由自动化并行尝试；冲突时以文件级锁串行。
 

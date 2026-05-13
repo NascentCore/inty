@@ -29,11 +29,37 @@ _RHYTHM_CLAMP_SEC = (90.0, 900.0)
 
 
 class HeartbeatConfig(BaseModel):
-    enabled: bool = False
-    base_idle_sec: float = 300.0
-    min_gap_sec: float = 1800.0
-    min_user_quiet_sec: float = 240.0
-    min_transcript_lines: int = 2
+    """陪伴心跳调参：各字段 ``description`` 描述对用户侧体验的含义，不涉及调度实现。"""
+
+    enabled: bool = Field(
+        default=True,
+        description=(
+            "总开关。关则 companion 不会通过「心跳」这条路径在用户未发新消息时主动开口。"
+        ),
+    )
+    base_idle_sec: float = Field(
+        default=30.0,
+        description=(
+            "以助手上一轮**非心跳**回复说完为参照的「安静多久再开口」基准，刻画正常对话节拍下 "
+            "companion 接话的松紧（对话还薄时更有感）；**不**针对「上一次是否已是心跳」单独计时。"
+        ),
+    )
+    min_gap_sec: float = Field(
+        default=60.0,
+        description=(
+            "以**上一次心跳式主动开口**为参照的最短间隔，专治用户仍不回时 companion **连着**自言自语；"
+            "与 ``base_idle_sec`` **计时起点不同**（后者锚助手尾句，前者锚上一次心跳），"
+            "二者同时满足里**更晚**的那一刻才放行。"
+        ),
+    )
+    # TODO(session): min_transcript_lines counts the full transcript; replace with session-scoped gating when modeled.
+    min_transcript_lines: int = Field(
+        default=0,
+        description=(
+            "对话记录至少要有多少行（包含 AI 和用户的消息），才考虑允许心跳开口；越大越倾向「先有几轮真实互动再主动」，"
+            "越小（含 0）越不以此为门槛。"
+        ),
+    )
 
 
 def _parse_ts(ts: str) -> datetime:
@@ -86,13 +112,6 @@ def _last_heartbeat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     return None
 
 
-def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
-    for m in reversed(msgs):
-        if m.role == "user" and m.heartbeat is not True:
-            return _parse_ts(m.ts)
-    return None
-
-
 def _has_real_user_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
     hb_idx: int | None = None
     for i in range(len(msgs) - 1, -1, -1):
@@ -138,14 +157,6 @@ def next_heartbeat_wait_seconds(
     t = now if now is not None else datetime.now(timezone.utc)
     rhythm = _rhythm_idle_seconds(msgs, config.base_idle_sec)
     earliest = last_asst + timedelta(seconds=rhythm)
-
-    last_real_user = _last_real_user_ts(msgs)
-    if last_real_user is not None:
-        user_quiet_earliest = last_real_user + timedelta(
-            seconds=config.min_user_quiet_sec
-        )
-        if user_quiet_earliest > earliest:
-            earliest = user_quiet_earliest
 
     last_hb = _last_heartbeat_user_ts(msgs)
     if last_hb is not None:

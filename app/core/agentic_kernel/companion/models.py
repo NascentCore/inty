@@ -76,6 +76,13 @@ class CompanionTurnResult(BaseModel):
         ),
     )
     user_msg_uuid: str = ""
+    assistant_msg_uuid: str = Field(
+        default="",
+        description=(
+            "Stable id for this assistant reply; matches transcript.jsonl assistant row "
+            "`uuid` and API/WS `meta_data.assistant_msg_uuid`."
+        ),
+    )
     trace_id: str = ""
     langsmith_trace_id: str = ""
     langsmith_run_id: str = ""
@@ -150,6 +157,10 @@ class PromptBundle(BaseModel):
     memory_md: str = Field(
         ...,
         description="semantic memory: MEMORY.md body for system injection when private memory is on.",
+    )
+    living_sphere_md: str = Field(
+        default="",
+        description="Stable virtual home anchor seeded by living_sphere for TechnoCore presence.",
     )
     significance_perception_md: str = Field(
         default="",
@@ -237,6 +248,7 @@ def load_prompt_bundle(
         soul=_read_memory_document_required(store, "SOUL.md"),
         user_md=_read_memory_document_required(store, "USER.md"),
         memory_md=memory_long,
+        living_sphere_md=_read_memory_document_optional(store, "LIVING_SPHERE.md"),
         tools_md=_template_doc_truncated("TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS

@@ -1,4 +1,11 @@
-# AGENTS.md · experimental/（原型与实验）
+# Experimental - 原型与实验
+
+Experimental code for demo and other purposes.
+
+All sub folders should be self-contained:
+
+1. Do not use code outside their own folder.
+2. Document completely.
 
 - 非生产代码；
 - 最小化依赖、隔离环境；如需脚本/服务，请在本目录自备 `requirements.txt` 或说明。

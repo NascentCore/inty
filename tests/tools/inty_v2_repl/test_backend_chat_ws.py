@@ -9,7 +9,6 @@ import pytest
 from tools.inty_v2_repl.backend_chat_ws import (
     BackendChatWsError,
     build_ws_user_time_context_now,
-    default_ws_conn_dropped_ack_timeout_sec,
     http_base_to_ws_chat_url,
     parse_chat_completion_ws_payload,
     _ws_chat_turn_send_payload,
@@ -90,7 +89,3 @@ def test_ws_chat_turn_send_payload_includes_time_context() -> None:
     tc = outer["request"]["time_context"]
     assert isinstance(tc["local_time"], str) and tc["local_time"]
     assert isinstance(tc["utc_offset_minutes"], int)
-
-
-def test_default_ws_conn_dropped_ack_timeout_is_package_constant() -> None:
-    assert default_ws_conn_dropped_ack_timeout_sec() == 5.0
