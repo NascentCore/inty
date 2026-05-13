@@ -1,13 +1,10 @@
-import importlib
-import pkgutil
-
 from loguru import logger
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
-import app.models
 from app.models.base import Base
+from app.models.registry import load_model_modules
 from app.utils.config import Config, load_config
 
 
@@ -27,18 +24,8 @@ def _load_runtime_config() -> Config:
     return global_config_loaded_from_config_yaml
 
 
-def _load_model_modules() -> None:
-    """Load table modules so Alembic sees every model in Base.metadata."""
-    for module_info in pkgutil.iter_modules(
-        app.models.__path__, f"{app.models.__name__}."
-    ):
-        if module_info.name == "app.models.base":
-            continue
-        importlib.import_module(module_info.name)
-
-
 runtime_config = _load_runtime_config()
-_load_model_modules()
+load_model_modules()
 target_metadata = Base.metadata
 db_url = runtime_config.database.url
 # this is the Alembic Config object, which provides
