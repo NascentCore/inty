@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import statistics
 from datetime import datetime, timedelta, timezone
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .memory_store import MemoryStore
 from .models import ChatMessage, load_transcript_from_store
@@ -29,20 +29,43 @@ _RHYTHM_CLAMP_SEC = (90.0, 900.0)
 
 
 class HeartbeatConfig(BaseModel):
-    """陪伴心跳调参：只描述对用户侧体验的含义，不涉及调度实现。
+    """陪伴心跳调参：各字段 ``description`` 描述对用户侧体验的含义，不涉及调度实现。"""
 
-    - ``enabled``：总开关。关则 companion 不会通过「心跳」这条路径在用户未发新消息时主动开口。
-    - ``base_idle_sec``：以**助手上一轮非心跳回复说完**为参照的「安静多久再开口」基准，刻画正常对话节拍下 companion 接话的松紧（对话还薄时更有感）；**不**针对「上一次是否已是心跳」单独计时。
-    - ``min_gap_sec``：以**上一次心跳式主动开口**为参照的最短间隔，专治用户仍不回时 companion **连着**自言自语；与 ``base_idle_sec`` **计时起点不同**（后者锚助手尾句，前者锚上一次心跳），二者同时满足里**更晚**的那一刻才放行。
-    - ``min_user_quiet_sec``：用户最后一条**正常**消息发出后，至少安静多久才允许再主动开口；用来减少打断用户正在输入或酝酿回复的感觉。
-    - ``min_transcript_lines``：对话记录至少要有多少行，才考虑允许心跳开口；越大越倾向「先有几轮真实互动再主动」，越小（含 0）越不以此为门槛。
-    """
-
-    enabled: bool = True
-    base_idle_sec: float = 30.0
-    min_gap_sec: float = 60.0
-    min_user_quiet_sec: float = 30.0
-    min_transcript_lines: int = 0
+    enabled: bool = Field(
+        default=True,
+        description=(
+            "总开关。关则 companion 不会通过「心跳」这条路径在用户未发新消息时主动开口。"
+        ),
+    )
+    base_idle_sec: float = Field(
+        default=30.0,
+        description=(
+            "以助手上一轮**非心跳**回复说完为参照的「安静多久再开口」基准，刻画正常对话节拍下 "
+            "companion 接话的松紧（对话还薄时更有感）；**不**针对「上一次是否已是心跳」单独计时。"
+        ),
+    )
+    min_gap_sec: float = Field(
+        default=60.0,
+        description=(
+            "以**上一次心跳式主动开口**为参照的最短间隔，专治用户仍不回时 companion **连着**自言自语；"
+            "与 ``base_idle_sec`` **计时起点不同**（后者锚助手尾句，前者锚上一次心跳），"
+            "二者同时满足里**更晚**的那一刻才放行。"
+        ),
+    )
+    min_user_quiet_sec: float = Field(
+        default=20.0,
+        description=(
+            "用户最后一条**正常**消息发出后，至少安静多久才允许再主动开口；"
+            "用来减少打断用户正在输入或酝酿回复的感觉。"
+        ),
+    )
+    min_transcript_lines: int = Field(
+        default=0,
+        description=(
+            "对话记录至少要有多少行（包含 AI 和用户的消息），才考虑允许心跳开口；越大越倾向「先有几轮真实互动再主动」，"
+            "越小（含 0）越不以此为门槛。"
+        ),
+    )
 
 
 def _parse_ts(ts: str) -> datetime:
