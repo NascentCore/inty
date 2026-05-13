@@ -40,12 +40,10 @@ class CompanionMemoryDocumentKind(str, Enum):
     COMPANION_MEMORY_PIPELINE_JSON = "companion_memory_pipeline_json"
     COMPANION_CONTEXT_COMPACTION_STATE_JSON = "companion_context_compaction_state_json"
     COMPANION_SCHEDULE_TASKS_JSON = "companion_schedule_tasks_json"
-    COMPANION_IMAGE_GATE_JSON = "companion_image_gate_json"
     COMPANION_RUNTIME_EVENTS_JSONL = "companion_runtime_events_jsonl"
     INTY_V2_MEMORY_PIPELINE_JSON = "inty_v2_memory_pipeline_json"
     INTY_V2_CONTEXT_COMPACTION_STATE_JSON = "inty_v2_context_compaction_state_json"
     INTY_V2_SCHEDULE_TASKS_JSON = "inty_v2_schedule_tasks_json"
-    INTY_V2_IMAGE_GATE_JSON = "inty_v2_image_gate_json"
     CHAT_LOGS_MD = "chat_logs_md"
 
 
@@ -88,10 +86,6 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         CompanionMemoryDocumentKind.COMPANION_SCHEDULE_TASKS_JSON,
         None,
     ),
-    ".companion_image_gate.json": (
-        CompanionMemoryDocumentKind.COMPANION_IMAGE_GATE_JSON,
-        None,
-    ),
     ".companion_runtime_events.jsonl": (
         CompanionMemoryDocumentKind.COMPANION_RUNTIME_EVENTS_JSONL,
         None,
@@ -106,10 +100,6 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     ),
     ".inty_v2_schedule_tasks.json": (
         CompanionMemoryDocumentKind.INTY_V2_SCHEDULE_TASKS_JSON,
-        None,
-    ),
-    ".inty_v2_image_gate.json": (
-        CompanionMemoryDocumentKind.INTY_V2_IMAGE_GATE_JSON,
         None,
     ),
 }

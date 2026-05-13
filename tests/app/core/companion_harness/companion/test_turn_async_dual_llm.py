@@ -12,11 +12,6 @@ from unittest.mock import patch
 import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
-from app.core.companion_harness.companion.image_gate import (
-    check_image_tool_allowed,
-    prepare_image_gate_for_turn,
-    register_profile_write,
-)
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.memory_registry import get_memory_store
 from app.core.companion_harness.companion.models import InnerTickMode
@@ -291,54 +286,3 @@ async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_injec
     bg_msgs = bg_jobs[0]["request_messages"]
     assert bg_jobs[0]["force_tools_first_round"] is True
     assert bg_msgs[-1].get("role") != "assistant"
-
-
-@pytest.mark.asyncio
-async def test_user_reply_continues_pending_image_gate_choice(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    store = _store(tmp_path)
-    store.write_document("context.json", '{"context_mode": "intimate"}\n')
-    store.write_document("IDENTITY.md", "old identity\n")
-    store.write_document("SOUL.md", "s\n")
-    store.write_document("USER.md", "u\n")
-    store.write_document("MEMORY.md", "m\n")
-    store.write_document("transcript.jsonl", "")
-
-    prepare_image_gate_for_turn(store, "把你的外貌设定改一下，然后画一张图")
-    new_identity = "new identity\n"
-    store.write_document("IDENTITY.md", new_identity)
-    register_profile_write(
-        store,
-        "IDENTITY.md",
-        changed=True,
-        new_content=new_identity,
-    )
-    assert "Ask user to choose image mode first" in (
-        check_image_tool_allowed(store, tool_name="generate_image") or ""
-    )
-
-    bg_jobs: list[dict[str, Any]] = []
-
-    def _capture_bg(**kwargs: Any) -> None:
-        bg_jobs.append(kwargs)
-
-    monkeypatch.setattr(
-        "app.core.companion_harness.companion.turn.start_tool_background_job",
-        _capture_bg,
-    )
-
-    client = _FakeAsyncDualLLMClient()
-    await run_turn(
-        "A",
-        store=store,
-        llm_client=client,  # type: ignore[arg-type]
-        defer_memory_update=True,
-        memory_config=None,
-    )
-
-    assert len(bg_jobs) == 1
-    assert check_image_tool_allowed(store, tool_name="generate_image") is None
-    assert "use generate_image" in (
-        check_image_tool_allowed(store, tool_name="modify_image") or ""
-    )

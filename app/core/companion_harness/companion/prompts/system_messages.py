@@ -143,9 +143,6 @@ def _repl_tool_contract_image_generation_clause() -> str:
         "生肖/主题/节日元素仅作**服饰、道具、场景、氛围或装饰性**叠加，不得与上述蓝本冲突。"
         "改图（modify_image）时若涉及主题化或换风格，同样须保持与 IDENTITY 外貌小节一致的关键特征，不得仅用提示词「换脸」或推翻既有约定。"
         "若外貌小节缺失或过于笼统，应先 memory_store_read_document IDENTITY.md 再组织 prompt，避免凭对话臆造长相。"
-        "若 generate_image / modify_image 返回 ERROR 要求用户选择 A/B 图像模式，本轮不要反复重试工具；"
-        "只用自然语言请用户选 A（按新设定重生图）或 B（基于旧图改图），等待下一轮用户答复。"
-        "下一轮用户若已给出 A/B 或等价口语选择，应承接上文原始生图意图并调用对应工具继续完成生成。"
     )
 
 

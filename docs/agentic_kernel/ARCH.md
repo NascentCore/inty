@@ -148,7 +148,7 @@ flowchart TD
 | `memory/daily/{date}.md` / `memory/{date}.md` | 当日情景流水和 gist 摘要。 | 是关系事件的压缩视图，不应替代事件流。 |
 | `transcript.jsonl` | 用户可见对话轨迹和下一轮上下文来源。 | 应从整文档 append-only 演进为事件级存储或 projection。 |
 | `context.json` | session 元数据、experience profile、bootstrap 标志。 | 应继续作为当前 session binding 的显式状态。 |
-| runtime/state JSON | 管线节拍、压实状态、image gate、异常事件等控制面状态。 | 应与用户关系文档分层，避免混用同一文档语义。 |
+| runtime/state JSON | 管线节拍、压实状态、异常事件等控制面状态。 | 应与用户关系文档分层，避免混用同一文档语义。 |
 
 目标 MemoryStore 方向是保留模型友好的路径式接口，同时把底层拆成 document snapshot、event append log 和 search projection。完整目标说明见 `/docs/agentic_kernel/MEMORY_STORE.md`。
 
