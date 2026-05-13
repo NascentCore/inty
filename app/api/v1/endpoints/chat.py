@@ -1400,6 +1400,17 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
             implicit_signal_bundle=ws_implicit,
         )
+        if companion_turn.tool_background_started:
+            companion_ws.bind_ws_inner_tick_proactive_tool_bg_idle(
+                companion_chat_service.companion_session_tool_bg_idle_event(
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    chat_id=chat_row_id,
+                    resolved_chat_model_id=model_override,
+                )
+            )
+        else:
+            companion_ws.bind_ws_inner_tick_proactive_tool_bg_idle(None)
 
         companion_reply = companion_turn.assistant_text
         if companion_reply is None or not str(companion_reply).strip():
@@ -1668,6 +1679,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                 "agent_id": agent_id,
                 "request": stub_request,
                 "effective_local_id": None,
+                "ws_inner_tick_maintenance": True,
             },
         )
         try:
@@ -2665,12 +2677,29 @@ async def chat_completions_websocket(
             ):
                 continue
             hb_snapshot: dict[str, Any] | None = None
+            inner_tick_async_busy = False
             async with companion_ws.turn_lock:
                 hb_snapshot = companion_ws.snapshot_heartbeat_coords()
+                if hb_snapshot is not None:
+                    companion_ws.clear_ws_inner_tick_proactive_tool_bg_idle_if_idle()
+                    inner_tick_async_busy = (
+                        companion_ws.ws_inner_tick_proactive_tool_bg_still_running()
+                        or companion_ws.ws_inner_tick_maintenance_foreground_pending()
+                    )
             if hb_snapshot is None:
                 logger.debug(
                     "companion_ws_inner_tick_poll no_heartbeat_coords ws_conn_id={}",
                     ws_conn_id,
+                )
+                continue
+            if inner_tick_async_busy:
+                logger.debug(
+                    "companion_ws_inner_tick_poll skip_prev_inner_tick_async "
+                    "ws_conn_id={} user={} agent={} chat_id={}",
+                    ws_conn_id,
+                    hb_snapshot.get("user_id"),
+                    hb_snapshot.get("agent_id"),
+                    hb_snapshot.get("chat_id"),
                 )
                 continue
             logger.debug(

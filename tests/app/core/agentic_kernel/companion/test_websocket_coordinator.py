@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+
 import pytest
 
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
@@ -69,3 +71,26 @@ async def test_companion_websocket_coordinator_heartbeat_refresh_preserves_same_
         "chat_id": 10,
     }
     assert coordinator.last_maintenance_inner_tick_monotonic() is None
+
+
+@pytest.mark.asyncio
+async def test_companion_websocket_coordinator_inner_tick_async_overlap_flags() -> None:
+    coordinator = CompanionWebSocketCoordinator.for_current_loop()
+
+    assert not coordinator.ws_inner_tick_maintenance_foreground_pending()
+    assert not coordinator.ws_inner_tick_proactive_tool_bg_still_running()
+
+    ev = threading.Event()
+    coordinator.bind_ws_inner_tick_proactive_tool_bg_idle(ev)
+    assert coordinator.ws_inner_tick_proactive_tool_bg_still_running()
+
+    ev.set()
+    coordinator.clear_ws_inner_tick_proactive_tool_bg_idle_if_idle()
+    assert not coordinator.ws_inner_tick_proactive_tool_bg_still_running()
+
+    coordinator.set_foreground_pending(
+        "u1", {"ws_inner_tick_maintenance": True, "session_id": "s"}
+    )
+    assert coordinator.ws_inner_tick_maintenance_foreground_pending()
+    coordinator.pop_foreground_pending("u1")
+    assert not coordinator.ws_inner_tick_maintenance_foreground_pending()
