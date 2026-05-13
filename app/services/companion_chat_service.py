@@ -11,16 +11,16 @@ from functools import lru_cache
 
 from loguru import logger
 
-from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
-from app.core.agentic_kernel.companion.turn_routes import BackgroundToolEventSink
-from app.core.agentic_kernel.companion.manager import (
+from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.companion_harness.companion.turn_routes import BackgroundToolEventSink
+from app.core.companion_harness.companion.manager import (
     CompanionConfig,
     CompanionManager,
     CompanionSession,
 )
-from app.core.agentic_kernel.companion.memory_store import MemoryStore
-from app.core.agentic_kernel.companion.models import CompanionTurnResult, InnerTickMode
-from app.core.agentic_kernel.companion.transcript_compaction import (
+from app.core.companion_harness.companion.memory_store import MemoryStore
+from app.core.companion_harness.companion.models import CompanionTurnResult, InnerTickMode
+from app.core.companion_harness.companion.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
 from app.core.config import global_config_loaded_from_config_yaml
@@ -173,9 +173,9 @@ async def _maybe_append_companion_ws_session_system(
         != CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     ):
         return
-    from app.core.agentic_kernel.companion.models import load_context_meta
-    from app.core.agentic_kernel.companion.utc import utc_iso_ts
-    from app.core.agentic_kernel.companion.memory_store_scope import (
+    from app.core.companion_harness.companion.models import load_context_meta
+    from app.core.companion_harness.companion.utc import utc_iso_ts
+    from app.core.companion_harness.companion.memory_store_scope import (
         DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     )
     from app.services import chat_history_service

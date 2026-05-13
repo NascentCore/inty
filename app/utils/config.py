@@ -15,7 +15,7 @@ from pydantic import AnyHttpUrl, BaseModel, ConfigDict, model_validator
 from loguru import logger
 
 from app.utils import models_catalog
-from app.core.agentic_kernel.experience_profile import (
+from app.core.companion_harness.experience_profile import (
     ExperienceContextMode,
     normalize_experience_profile_id,
 )
@@ -486,7 +486,7 @@ class MemoryExtractionConfig:
     # When companion kernel fills CompanionTurnResult.significance_perception, chat.py mirrors it
     # into chat_history AI meta_data. Enabling this sorts extraction input by
     # meta_data.significance_perception.importance_round and adds bracket hints for the extractor LLM.
-    # Pipeline overview: app/core/agentic_kernel/companion/significance_perception.py module docstring.
+    # Pipeline overview: app/core/companion_harness/companion/significance_perception.py module docstring.
     use_significance_perception_in_extraction: bool = False
 
     def __post_init__(self):
@@ -835,7 +835,7 @@ def _validate_config(config: Config):
         if pc.default_country_code and not pc.default_country_code.startswith("+"):
             raise ValueError("phone_call.default_country_code must start with '+'")
 
-    from app.core.agentic_kernel.companion.transcript_compaction import (
+    from app.core.companion_harness.companion.transcript_compaction import (
         CompactionConfig as CompanionTranscriptCompactionConfig,
     )
 

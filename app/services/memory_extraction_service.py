@@ -6,7 +6,7 @@
 为真时，从 PostgreSQL ``chat_history.meta_data.significance_perception`` 读取内核写入的重要性三元组
 （``importance_round`` / ``importance_user_message`` / ``importance_assistant_message``），按
 ``importance_round`` 对消息排序并在拼装给抽取模型的文本中附加简短标注（见 ``_prepare_messages_for_memory_extraction``、
-``_format_chat_for_prompt``）。数据来源与契约说明见 ``app/core/agentic_kernel/companion/significance_perception.py`` 模块 docstring。
+``_format_chat_for_prompt``）。数据来源与契约说明见 ``app/core/companion_harness/companion/significance_perception.py`` 模块 docstring。
 """
 
 import asyncio

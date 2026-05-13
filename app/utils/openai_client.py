@@ -1,5 +1,5 @@
 """
-OpenAI API client helpers backed by the agentic kernel provider cache.
+OpenAI API client helpers backed by the companion harness provider cache.
 
 Chat LLM (e.g. google/gemini-2.5-flash-lite) is invoked via this client against the
 OpenRouter endpoint (agent.base_url, agent.api_key). Do not use Vertex/genai client
@@ -29,7 +29,7 @@ from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 
 from app.api.types.llm_config import LLMConfig
-from app.core.agentic_kernel.providers.openai_compatible_clients import (
+from app.core.companion_harness.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_async_client,
     get_openai_compatible_sync_client,
@@ -99,7 +99,7 @@ def get_base_openai_client() -> OpenAI:
     """
     获取基础OpenAI客户端（不含LangSmith包装）。
 
-    实例复用由 agentic kernel provider 的 option-key cache 负责。
+    实例复用由 companion harness provider 的 option-key cache 负责。
     """
     return _create_openai_client()
 

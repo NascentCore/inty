@@ -41,29 +41,29 @@ from app.api.utils.feature_gating import (
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.agentic_kernel.companion.heartbeat import (
+from app.core.companion_harness.companion.heartbeat import (
     HeartbeatConfig,
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
     next_heartbeat_wait_seconds,
 )
-from app.core.agentic_kernel.companion.inner_tick_schedule import (
+from app.core.companion_harness.companion.inner_tick_schedule import (
     InnerTickScheduleOverrides,
     next_inner_tick_wait_seconds,
 )
-from app.core.agentic_kernel.companion.llm_inference_errors import (
+from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
-from app.core.agentic_kernel.companion.image_gate import (
+from app.core.companion_harness.companion.image_gate import (
     generated_image_meta_from_index_slice,
 )
-from app.core.agentic_kernel.companion.models import (
+from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
     InnerTickMode,
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
-from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
-from app.core.agentic_kernel.companion.utc import utc_iso_ts
-from app.core.agentic_kernel.companion.websocket_coordinator import (
+from app.core.companion_harness.companion.tool_background import ToolOutputEvent
+from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.companion.websocket_coordinator import (
     CompanionWebSocketCoordinator,
     apply_companion_ws_heartbeat_coords,
 )

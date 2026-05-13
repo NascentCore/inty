@@ -29,7 +29,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.agentic_kernel.providers.gemini import (
+from app.core.companion_harness.providers.gemini import (
     GeminiClientOptions,
     get_gemini_client as get_kernel_gemini_client,
 )

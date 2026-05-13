@@ -29,7 +29,7 @@ from tests.support.companion_ws_bootstrap.server import (
     postgres_tcp_reachable,
     run_inty_backend_subprocess,
 )
-from app.core.agentic_kernel.experience_profile import EXPERIENCE_PROFILE_ID_BOOTSTRAP
+from app.core.companion_harness.experience_profile import EXPERIENCE_PROFILE_ID_BOOTSTRAP
 
 from tests.support.companion_ws_bootstrap.ws_client import (
     connect_send_implicit_sign_on_and_expect_assistant,
