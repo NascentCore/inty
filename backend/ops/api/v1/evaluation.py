@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from backend.ops.schemas.evaluation import BatchEvaluationRequest, EvaluationComparison, EvaluationExportRequest, EvaluationResultResponse, EvaluationSessionCreate, EvaluationSessionDetail, EvaluationSessionResponse, EvaluationStats, EvaluationTemplateCreate, EvaluationTemplateResponse, QuestionFileUpload, ScoringModelInfo
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG, NOT_USED_TAG
@@ -45,6 +44,10 @@ from app.services.question_parser_service import QuestionParserService
 from app.services.scoring_service import ScoringService
 
 from loguru import logger
+from app.schemas.agent import Agent as AgentSchema
+from app.schemas.agent import AgentCreate
+from app.schemas.response import APIResponse
+from app.schemas.user import User as UserSchema
 
 router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 
@@ -57,7 +60,7 @@ router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 async def get_evaluation_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     skip: int = Query(0, ge=0, description="跳过的记录数"),
     limit: int = Query(100, ge=1, le=1000, description="返回的记录数"),
     status: Optional[str] = Query(None, description="按状态过滤"),
@@ -92,7 +95,7 @@ async def create_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_in: EvaluationSessionCreate,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建评测会话
@@ -133,7 +136,7 @@ async def start_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     启动评测会话
@@ -177,7 +180,7 @@ async def get_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取评测会话详情
@@ -213,7 +216,7 @@ async def get_evaluation_results(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取评测结果
@@ -252,7 +255,7 @@ async def cancel_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     取消评测会话
@@ -293,7 +296,7 @@ async def cancel_evaluation_session(
 async def parse_questions_file(
     *,
     file: UploadFile = File(...),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     解析问题文件
@@ -347,7 +350,7 @@ async def parse_questions_file(
 )
 async def get_scoring_models(
     *,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取可用模型列表
@@ -369,7 +372,7 @@ async def get_scoring_models(
 async def validate_scoring_criteria(
     *,
     criteria: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     验证评分标准
@@ -396,7 +399,7 @@ async def validate_scoring_criteria(
 async def get_evaluation_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     days: int = Query(30, ge=1, le=365, description="统计天数"),
 ) -> Any:
     """
@@ -429,7 +432,7 @@ async def monitor_evaluation_session(
     websocket,
     session_id: str,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ):
     """
     实时监控评测会话进度
@@ -484,13 +487,13 @@ async def monitor_evaluation_session(
 
 @router.get(
     "/agents",
-    response_model=List[schemas.Agent],
+    response_model=List[AgentSchema],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_agents(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     type: str = Query("public", pattern="^(public|private)$", description="智能体类型"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
@@ -524,14 +527,14 @@ async def get_evaluation_agents(
 
 @router.post(
     "/agents",
-    response_model=schemas.Agent,
+    response_model=AgentSchema,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    agent_in: schemas.AgentCreate,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    agent_in: AgentCreate,
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建用于评测的智能体
@@ -555,15 +558,15 @@ async def create_evaluation_agent(
 
 @router.put(
     "/agents/{agent_id}",
-    response_model=schemas.Agent,
+    response_model=AgentSchema,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def update_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    agent_in: schemas.AgentUpdate,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    agent_in: AgentUpdate,
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     更新评测智能体
@@ -605,7 +608,7 @@ async def delete_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     删除评测智能体
@@ -645,7 +648,7 @@ async def check_background_aspect_ratio(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     检查背景图是否为 9:16 比例
@@ -729,7 +732,7 @@ async def check_background_aspect_ratio(
 
 @router.post(
     "/agents/{agent_id}/upload-cropped-background",
-    response_model=schemas.APIResponse[schemas.Agent],
+    response_model=APIResponse[AgentSchema],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def upload_cropped_background(
@@ -737,7 +740,7 @@ async def upload_cropped_background(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     file: UploadFile = File(...),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     上传裁剪后的背景图
@@ -780,7 +783,7 @@ async def upload_cropped_background(
         logger.info(
             f"用户 {current_user.id} 为智能体 {agent_id} 上传裁剪后的背景图: {result.data.url}"
         )
-        return schemas.APIResponse.success(data=updated_agent)
+        return APIResponse.success(data=updated_agent)
 
     except HTTPException:
         raise
@@ -800,7 +803,7 @@ async def deploy_agent_to_production(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     admin_password: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     将智能体部署到生产环境
@@ -838,7 +841,7 @@ async def create_evaluation_template(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     template_in: EvaluationTemplateCreate,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建评测模板
@@ -887,7 +890,7 @@ async def create_evaluation_template(
 async def get_evaluation_templates(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     include_public: bool = Query(True, description="是否包含公开模板"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -937,7 +940,7 @@ async def create_batch_evaluation(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     batch_request: BatchEvaluationRequest,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     批量创建评测会话
@@ -979,7 +982,7 @@ async def export_evaluation_results(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     export_request: EvaluationExportRequest,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     导出评测结果
@@ -1015,7 +1018,7 @@ async def compare_evaluation_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_ids: List[str],
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     对比评测会话结果
@@ -1150,7 +1153,7 @@ async def _find_user_info_by_identifier(
 async def get_new_users(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1193,7 +1196,7 @@ async def get_new_users(
 async def get_user_activity(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1236,7 +1239,7 @@ async def get_user_activity(
 async def get_conversation_rounds(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1292,7 +1295,7 @@ async def get_conversation_rounds(
 async def get_user_rounds_distribution(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1348,7 +1351,7 @@ async def get_user_rounds_distribution(
 async def get_popular_agents(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1401,7 +1404,7 @@ async def get_popular_agents(
 async def get_users_hitting_limit(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -1456,7 +1459,7 @@ async def get_users_hitting_limit(
 async def get_agent_analytics(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1508,7 +1511,7 @@ async def get_agent_analytics(
 async def get_user_sessions_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1564,7 +1567,7 @@ async def get_user_sessions_detail(
 async def get_conversations_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1664,7 +1667,7 @@ async def get_conversations_detail(
 async def get_user_agent_conversations_detail_paginated(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1729,7 +1732,7 @@ async def get_user_agent_conversations_detail_paginated(
 async def get_user_analytics_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1781,7 +1784,7 @@ async def get_user_analytics_stats(
 async def get_user_analytics_reports(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     report_type: Optional[str] = Query(
         None, description="daily | weekly，不传则返回全部"
     ),
@@ -1933,7 +1936,7 @@ async def get_user_analytics_reports(
 async def get_daily_voice_audios(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     report_date: str = Query(..., description="日报日期 (YYYY-MM-DD)"),
 ) -> Any:
     """获取指定日期的语音播报与语音通话录音，按用户-角色分组"""
@@ -1988,7 +1991,7 @@ async def get_daily_voice_audios(
 async def get_llm_latency_trend(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -2044,7 +2047,7 @@ async def get_llm_latency_trend(
 async def get_image_generation_latency_trend(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -2103,7 +2106,7 @@ async def get_image_generation_latency_trend(
 async def get_image_generation_failure_analytics(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -2163,7 +2166,7 @@ async def get_image_generation_failure_analytics(
 async def get_live_chat_latency_trend(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -2220,7 +2223,7 @@ async def get_live_chat_latency_trend(
 async def get_live_chat_basic_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -2277,7 +2280,7 @@ async def get_live_chat_basic_stats(
 async def get_user_daily_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
     start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
@@ -2373,7 +2376,7 @@ async def get_user_daily_messages(
 async def get_user_today_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
 ) -> Any:
@@ -2409,7 +2412,7 @@ async def get_user_today_stats(
 async def get_user_generated_images(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
     skip: int = Query(0, ge=0, description="跳过的记录数"),
@@ -2531,7 +2534,7 @@ async def get_user_generated_images(
 async def get_user_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
 ) -> Any:
@@ -2565,7 +2568,7 @@ async def get_user_sessions(
 async def get_session_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     chat_id: str = Query(..., description="会话ID (chat_id)"),
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(50, ge=1, le=200, description="每页数量"),
@@ -2597,7 +2600,7 @@ async def get_session_messages(
 async def get_all_agents_image_counts(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取所有角色的生成图片数量
@@ -2643,7 +2646,7 @@ async def get_all_agents_image_counts(
 async def get_agent_generated_images(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     agent_id: str,
     skip: int = Query(0, ge=0, description="跳过的记录数"),
     limit: int = Query(50, ge=1, le=200, description="返回的记录数"),

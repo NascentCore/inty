@@ -9,7 +9,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, NOT_USED_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
@@ -34,6 +33,8 @@ from app.services.global_services import subscription_service
 
 router = APIRouter(prefix="/subscription", route_class=LoggerRoute)
 from loguru import logger
+from app.schemas import subscription as subscription_schemas
+from app.schemas.user import User as UserSchema
 
 
 @router.get(
@@ -46,7 +47,7 @@ from loguru import logger
 async def get_subscription_plans(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     try:
         # 获取所有激活的订阅计划
@@ -101,7 +102,7 @@ async def get_subscription_plans(
 async def get_subscription_status(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     获取用户订阅状态
@@ -127,7 +128,7 @@ async def get_subscription_status(
 async def get_usage_statistics(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     获取用户使用统计
@@ -156,7 +157,7 @@ async def verify_purchase(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     purchase_request: PurchaseVerificationRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     验证 Google Play 购买并创建订阅
@@ -341,8 +342,8 @@ def _verify_webhook_signature(body: bytes, signature: str) -> bool:
 async def create_subscription_plan(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    plan_data: schemas.subscription.SubscriptionPlanCreate,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    plan_data: subscription_schemas.SubscriptionPlanCreate,
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建订阅计划（管理员接口）
@@ -369,7 +370,7 @@ async def create_subscription_plan(
 async def get_all_subscription_plans(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     include_inactive: bool = False,
 ) -> Any:
     """
@@ -393,7 +394,7 @@ async def get_user_subscription_status_admin(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     user_id: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取指定用户的订阅状态（管理员接口）
@@ -416,7 +417,7 @@ async def get_user_usage_statistics_admin(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     user_id: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取指定用户的使用统计（管理员接口）
@@ -440,7 +441,7 @@ async def process_manual_refund(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     refund_request: RefundRequest,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     手动处理退款（管理员接口）

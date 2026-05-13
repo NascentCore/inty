@@ -4,11 +4,12 @@ from loguru import logger
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import Session
 
-from app import models, schemas
+from app import models
 from app.models.resource import ImageResourceMetadata, ResourceType
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.resource import ResourceCreate
 from app.utils.image import ImageFormat, ImageSize
+from app.schemas.resource import ResourceUpdate
 
 
 def get_resource(db: Session, resource_id: str) -> Optional[models.Resource]:
@@ -29,7 +30,7 @@ def get_resources(
 
 def create_resource(
     db: Session,
-    resource_in: schemas.ResourceCreate,
+    resource_in: ResourceCreate,
     user_id: str,
 ) -> models.Resource:
     """
@@ -47,7 +48,7 @@ def create_resource(
 
 
 def update_resource(
-    db: Session, *, db_resource: models.Resource, resource_in: schemas.ResourceUpdate
+    db: Session, *, db_resource: models.Resource, resource_in: ResourceUpdate
 ) -> models.Resource:
     """
     Update resource
@@ -129,7 +130,7 @@ def create_image_resource(
 
 async def async_create_resource(
     async_db: AsyncSession,
-    resource_in: schemas.ResourceCreate,
+    resource_in: ResourceCreate,
     user_id: str,
 ) -> models.Resource:
     # 排除数据库模型中不存在的字段

@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
@@ -13,6 +12,7 @@ from app.external_services.globals import google_play_service
 from app.schemas.response import APIResponse
 from app.schemas.version import VersionCheckResponse, VersionReminderAction
 from app.services import user_service
+from app.schemas.user import User as UserSchema
 
 router = APIRouter(prefix="/version", route_class=LoggerRoute)
 
@@ -30,7 +30,7 @@ async def check_version(
     app_version_name: Optional[str] = Header(
         None, alias="appVersionName", description="应用版本名称（向后兼容，忽略）"
     ),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> Any:
     """

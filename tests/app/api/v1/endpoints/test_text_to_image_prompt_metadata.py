@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import pytest
 from sqlalchemy import delete, select
 
-from app import models, schemas
+from app import models
 from app.api.v1.endpoints import agents as agents_endpoint
 from app.api.v1.endpoints.agents import generate_background
 from app.core.config import global_config_loaded_from_config_yaml
@@ -17,6 +17,8 @@ from app.services.global_services import subscription_service
 from app.utils import gemini as gemini_utils
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, Z_IMAGE_TURBO
+from app.schemas.agent import TextToImageRequest
+from app.schemas.user import User as UserSchema
 
 
 # Derived from endpoint-supported config defaults + catalog IDs:
@@ -80,14 +82,14 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
 
         request_prompt = "A friendly companion smiling at the camera"
         request_model = "google/imagen-4.0-fast-generate-001"
-        request = schemas.TextToImageRequest(
+        request = TextToImageRequest(
             prompt=request_prompt,
             count=2,
             enhance_prompt=False,
             model=request_model,
         )
         expected_request_payload = request.model_dump()
-        current_user = schemas.User(
+        current_user = UserSchema(
             id=user_id,
             readable_id=readable_id,
             auth_type=models.AuthType.GOOGLE.value,
@@ -293,13 +295,13 @@ async def test_text_to_image_uses_requested_model_for_generation(
         lambda gcs_url: gcs_url,
     )
 
-    request = schemas.TextToImageRequest(
+    request = TextToImageRequest(
         prompt="A cinematic portrait, soft studio light",
         count=1,
         enhance_prompt=False,
         model=requested_model,
     )
-    current_user = schemas.User(
+    current_user = UserSchema(
         id=f"user-text-image-model-{uuid.uuid4().hex}",
         readable_id=uuid.uuid4().hex[:8],
         auth_type=models.AuthType.GOOGLE.value,
@@ -426,13 +428,13 @@ async def test_text_to_image_accepts_all_supported_models(
         lambda gcs_url: gcs_url,
     )
 
-    request = schemas.TextToImageRequest(
+    request = TextToImageRequest(
         prompt="Model support acceptance smoke test",
         count=1,
         enhance_prompt=False,
         model=model_id,
     )
-    current_user = schemas.User(
+    current_user = UserSchema(
         id=f"user-text-image-model-all-{uuid.uuid4().hex}",
         readable_id=uuid.uuid4().hex[:8],
         auth_type=models.AuthType.GOOGLE.value,

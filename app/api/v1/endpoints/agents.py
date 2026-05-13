@@ -11,7 +11,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from app.api import deps
 from app.api.tags import (
     ANDROID_APP_TAG,
@@ -41,12 +40,21 @@ from app.external_services.text_to_image import (
     TextToImageGenerationRequest,
     generate_text_to_image,
 )
+from app.schemas.agent import Agent as AgentSchema
+from app.schemas.agent import AgentCreate
+from app.schemas.agent import AgentFeatures
+from app.schemas.agent import AgentSortOption
 from app.schemas.agent import AgentUpdate
+from app.schemas.agent import FestivalMemoryItem
+from app.schemas.agent import GenerateBackgroundAnimatedRequest
+from app.schemas.agent import TextToImageRequest
 from app.schemas.response import (
     APIResponse,
     BusinessErrorCode,
+    PaginationData,
     create_business_error_response,
 )
+from app.schemas.user import User as UserSchema
 from app.services import agent_service
 from app.services.global_services import subscription_service
 from app.services import memory_service
@@ -69,7 +77,7 @@ router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
 @router.get(
     "/me",
-    response_model=schemas.APIResponse[List[schemas.Agent]],
+    response_model=APIResponse[List[AgentSchema]],
     summary="Get list of user's created AI characters",
     description="This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
     tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
@@ -78,7 +86,7 @@ async def list_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     skip: int = 0,
     limit: int = 100,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Get current user's created AI agents list
@@ -89,12 +97,12 @@ async def list_agents(
         skip=skip,
         limit=limit,
     )
-    return schemas.APIResponse.success(data=agents)
+    return APIResponse.success(data=agents)
 
 
 @router.get(
     "/admin/list",
-    response_model=schemas.APIResponse[List[schemas.Agent]],
+    response_model=APIResponse[List[AgentSchema]],
     summary="Admin list all AI characters (for evaluation console)",
     description="Superuser-only endpoint to list all AI characters, including those created by non-superusers.",
     tags=[INTY_EVAL_TAG],
@@ -103,15 +111,15 @@ async def admin_list_all_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(1000, ge=1, le=1000),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     agents = await agent_service.get_all_agents_for_admin(db, skip=skip, limit=limit)
-    return schemas.APIResponse.success(data=agents)
+    return APIResponse.success(data=agents)
 
 
 @router.get(
     "/search",
-    response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
+    response_model=APIResponse[PaginationData[AgentSchema]],
     summary="Used by inty-eval to list all public AI characters",
     tags=[INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG],
 )
@@ -120,7 +128,7 @@ async def search_agents(
     page: int = Query(1, ge=1, description="Page number, starting from 1"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Search public AI agents
@@ -129,12 +137,12 @@ async def search_agents(
     pagination_data = await agent_service.search_agents(
         db, keyword=q, page=page, page_size=page_size, current_user=current_user
     )
-    return schemas.APIResponse.success(data=pagination_data)
+    return APIResponse.success(data=pagination_data)
 
 
 @router.get(
     "/recommend",
-    response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
+    response_model=APIResponse[PaginationData[AgentSchema]],
     summary="Get recommended AI agents list",
     description=(
         "Get recommended AI agents list (public and approved agents), "
@@ -147,8 +155,8 @@ async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     page: int = Query(1, ge=1, description="Page number, starting from 1"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
-    sort: schemas.AgentSortOption = Query(
-        schemas.AgentSortOption.CREATED_DESC,
+    sort: AgentSortOption = Query(
+        AgentSortOption.CREATED_DESC,
         description=(
             "Sort order: created_asc, created_desc, created_desc_with_gender, random, "
             "score_based_random, energy_points, text_match_image_description"
@@ -173,7 +181,7 @@ async def recommend_agents(
             "to rank (N); response pages slice this ranked list"
         ),
     ),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Get recommended AI agents list (public and approved agents)
@@ -205,7 +213,7 @@ async def recommend_agents(
         match_description=match_description,
         match_top_n=match_top_n,
     )
-    return schemas.APIResponse.success(data=pagination_data)
+    return APIResponse.success(data=pagination_data)
 
 
 ########################################################
@@ -227,7 +235,7 @@ async def recommend_agents(
 ########################################################
 @router.post(
     "",
-    response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
+    response_model=APIResponse[Union[AgentSchema, Dict[str, Any]]],
     tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
     summary="Create new AI agent",
     description="Create new AI agent, used by app and inty-eval",
@@ -235,8 +243,8 @@ async def recommend_agents(
 async def create_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    agent_in: schemas.AgentCreate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    agent_in: AgentCreate,
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Create new AI agent
@@ -267,12 +275,12 @@ async def create_agent(
     agent = await agent_service.create_agent(
         db, agent_in=agent_in, user_id=current_user.id
     )
-    return schemas.APIResponse.success(data=agent)
+    return APIResponse.success(data=agent)
 
 
 @router.get(
     "/{agent_id}",
-    response_model=schemas.Agent,
+    response_model=AgentSchema,
     operation_id="get_public_agent_by_id",
     summary="Get public agent by ID",
     description="Get public agent by ID, include pre-generated agents and user-created public agents",
@@ -282,7 +290,7 @@ async def get_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
     app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ) -> Any:
     """
@@ -293,7 +301,7 @@ async def get_agent(
     )
     if not agent_orm:
         raise HTTPException(status_code=404, detail="Agent not found")
-    agent_schema = schemas.Agent.model_validate(agent_orm)
+    agent_schema = AgentSchema.model_validate(agent_orm)
     festival_list: list[dict] = []
     daily_list: list[dict] = []
     if is_festival_memory_enabled(app_version_code):
@@ -305,9 +313,9 @@ async def get_agent(
             db, current_user.id, agent_id
         )
     if festival_list or daily_list:
-        agent_schema.features = schemas.AgentFeatures(
+        agent_schema.features = AgentFeatures(
             festival_memories=[
-                schemas.FestivalMemoryItem(**item) for item in festival_list
+                FestivalMemoryItem(**item) for item in festival_list
             ],
             daily_memories=daily_list,
         )
@@ -316,7 +324,7 @@ async def get_agent(
 
 @router.put(
     "/{agent_id}",
-    response_model=schemas.Agent,
+    response_model=AgentSchema,
     summary="更新智能体（AI 角色）",
     description=(
         "更新任何图片，都会将图片全部记录在 background_images 字段中，用于保存历史记录"
@@ -328,8 +336,8 @@ async def update_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    agent_in: schemas.AgentUpdate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    agent_in: AgentUpdate,
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Update AI agent
@@ -339,19 +347,19 @@ async def update_agent(
         raise HTTPException(status_code=404, detail="Agent not found")
 
     agent = await agent_service.update_agent(db, db_agent=agent, agent_in=agent_in)
-    return schemas.Agent.model_validate(agent)
+    return AgentSchema.model_validate(agent)
 
 
 @router.delete(
     "/{agent_id}",
-    response_model=schemas.APIResponse[schemas.Agent],
+    response_model=APIResponse[AgentSchema],
     tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
 async def delete_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Delete AI agent
@@ -365,14 +373,14 @@ async def delete_agent(
         raise HTTPException(status_code=403, detail="Permission denied")
 
     deleted_agent = await agent_service.delete_agent(db, db_agent=agent)
-    return schemas.APIResponse.success(
-        data=schemas.Agent.model_validate(deleted_agent)
+    return APIResponse.success(
+        data=AgentSchema.model_validate(deleted_agent)
     )
 
 
 @router.post(
     "/{agent_id}/generate-background-animated",
-    response_model=schemas.APIResponse[schemas.Agent],
+    response_model=APIResponse[AgentSchema],
     summary="生成背景动图（需要 9:16 比例背景图）",
     description="通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储。背景图必须是 9:16 比例，否则会返回错误提示。",
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
@@ -381,8 +389,8 @@ async def generate_background_animated(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    request: schemas.GenerateBackgroundAnimatedRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    request: GenerateBackgroundAnimatedRequest,
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     生成背景动图并更新到 Agent
@@ -482,7 +490,7 @@ async def generate_background_animated(
         )
 
         logger.info(f"背景动图生成成功，webp URL: {webp_url}")
-        return schemas.APIResponse.success(data=updated_agent)
+        return APIResponse.success(data=updated_agent)
 
     except HTTPException:
         raise
@@ -761,9 +769,9 @@ async def _generate_with_fal_z_image_turbo(
     tags=[INTY_EVAL_TAG],
 )
 async def generate_background(
-    request: schemas.TextToImageRequest,
+    request: TextToImageRequest,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ):
     """
     Generate background images based on prompt, save directly to GCS, return image URLs
@@ -954,14 +962,14 @@ async def generate_background(
 
 @router.get(
     "/models/openrouter",
-    response_model=schemas.APIResponse[List[dict]],
+    response_model=APIResponse[List[dict]],
     include_in_schema=False,
     summary="Get OpenRouter models list",
     description="Get OpenRouter models, used by inty-eval to list all available models, so users can select models for evaluation",
     tags=[INTY_EVAL_TAG],
 )
 async def get_openrouter_models(
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ):
     """
     获取OpenRouter模型列表
@@ -1005,24 +1013,24 @@ async def get_openrouter_models(
                 },
             ]
 
-        return schemas.APIResponse.success(data=models)
+        return APIResponse.success(data=models)
 
     except Exception as e:
         logger.error(f"获取OpenRouter模型失败: {str(e)}")
-        return schemas.APIResponse.error(
+        return APIResponse.error(
             message=f"Failed to fetch OpenRouter models: {str(e)}"
         )
 
 
 @router.get(
     "/image-generation/config",
-    response_model=schemas.APIResponse[Dict[str, Any]],
+    response_model=APIResponse[Dict[str, Any]],
     summary="获取图片生成配置",
     description="获取当前图片生成的提示词模板和默认参数配置",
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_image_generation_config(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """获取图片生成配置"""
     try:
@@ -1034,25 +1042,25 @@ async def get_image_generation_config(
         }
 
         logger.debug(f"用户 {current_user.id} 获取图片生成配置")
-        return schemas.APIResponse.success(data=config)
+        return APIResponse.success(data=config)
 
     except Exception as e:
         logger.error(f"获取图片生成配置失败: {str(e)}")
-        return schemas.APIResponse.error(
+        return APIResponse.error(
             message=f"Failed to fetch image generation config: {str(e)}"
         )
 
 
 @router.get(
     "/prompts/available",
-    response_model=schemas.APIResponse[Dict[str, Any]],
+    response_model=APIResponse[Dict[str, Any]],
     summary="获取可用的 prompt 列表",
     description="获取可用的主提示词和模式提示词列表，以及 force_default_prompts 配置状态",
     tags=[INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG],
 )
 async def get_available_prompts(
     include_content: bool = Query(False, description="是否包含完整的 prompt 内容"),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """获取可用的 prompt 列表"""
     try:
@@ -1085,25 +1093,25 @@ async def get_available_prompts(
         }
 
         logger.debug(f"用户 {current_user.id} 获取可用 prompt 列表")
-        return schemas.APIResponse.success(data=config)
+        return APIResponse.success(data=config)
 
     except Exception as e:
         logger.error(f"获取可用 prompt 列表失败: {str(e)}")
-        return schemas.APIResponse.error(
+        return APIResponse.error(
             message=f"Failed to fetch available prompt list: {str(e)}"
         )
 
 
 @router.put(
     "/image-generation/config",
-    response_model=schemas.APIResponse[Dict[str, Any]],
+    response_model=APIResponse[Dict[str, Any]],
     summary="更新图片生成配置",
     description="更新图片生成的提示词模板和默认参数配置（仅超级用户）",
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def update_image_generation_config(
     config: Dict[str, Any],
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     更新图片生成配置（仅超级用户）
@@ -1141,10 +1149,10 @@ async def update_image_generation_config(
             "sub_user_chat_image_model": global_config_loaded_from_config_yaml.agent.sub_user_chat_image_model,
         }
 
-        return schemas.APIResponse.success(data=updated_config)
+        return APIResponse.success(data=updated_config)
 
     except Exception as e:
         logger.error(f"更新图片生成配置失败: {str(e)}")
-        return schemas.APIResponse.error(
+        return APIResponse.error(
             message=f"Failed to update image generation config: {str(e)}"
         )
