@@ -49,21 +49,21 @@ Push Worker：若 iMate 首期不需要离线定时任务，可不部署 `inty-p
    - `/opt/inty-imate-dev/inty-backend-key.json`
    - `/opt/inty-imate-dev/inty-firebase-key.json`
    - prod 同理使用 `imate-prod` 目录。
-3. **Alembic**：对 iMate 库执行 migration 时**必须**使用 iMate 专用配置文件中的数据库 URL（见下节）；**禁止**在未显式指定 iMate 配置时执行命令，以免误连 IntelliMate 库。版本文件仍来自仓库 `alembic/versions/`（与 IntelliMate 共用同一套 revision 链），变更通过同一仓库 PR 管理。
+3. **Alembic**：对 iMate 库执行 migration 时**必须**使用 iMate 专用配置文件中的数据库 URL（见下节）；**禁止**在未显式指定 iMate 配置时执行命令，以免误连 IntelliMate 库。版本文件仍来自仓库 `backend/alembic/versions/`（与 IntelliMate 共用同一套 revision 链），变更通过同一仓库 PR 管理。
 4. **可观测性**：`LANGCHAIN_PROJECT` 或日志 label 使用独立值（例如 `inty-backend-imate-dev`），便于与 IntelliMate 日志区分。
 
-## 6. Alembic 与 `alembic/versions`（绑定 iMate `config.yaml`）
+## 6. Alembic 与 `backend/alembic/versions`（绑定 iMate `config.yaml`）
 
-- **事实来源**：`alembic/env.py` 通过 `runtime_config.database.url` 连接数据库；若使用 `-x config=<path>`，则从该路径加载配置（见 [alembic/env.py](/alembic/env.py) 中 `_load_runtime_config`）。因此**指向哪套库完全由所选配置文件决定**，与 `alembic/versions` 目录下的 revision 文件无独立「iMate 专用版本目录」；**同一代码库、同一 `versions/` 树**分别对 IntelliMate 库与 iMate 库执行 `upgrade` 时，各自写入对应库中的 `alembic_version` 表。
+- **事实来源**：`backend/alembic/env.py` 通过 `runtime_config.database.url` 连接数据库；若使用 `-x config=<path>`，则从该路径加载配置（见 [backend/alembic/env.py](/backend/alembic/env.py) 中 `_load_runtime_config`）。因此**指向哪套库完全由所选配置文件决定**，与 `backend/alembic/versions` 目录下的 revision 文件无独立「iMate 专用版本目录」；**同一代码库、同一 `versions/` 树**分别对 IntelliMate 库与 iMate 库执行 `upgrade` 时，各自写入对应库中的 `alembic_version` 表。
 - **iMate 库操作（推荐命令形态）**：在仓库根目录执行，**显式**传入 iMate 的 `devops/config.yaml.imate_dev`（或 prod 等价文件），**不得**依赖默认 `config.yaml`（避免与本地或 IntelliMate 配置混淆）：
 
 ```bash
 export PYTHONPATH=.
-export ALEMBIC_CONFIG=alembic/alembic.ini
-alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate_dev upgrade head
+export ALEMBIC_CONFIG=backend/alembic/alembic.ini
+alembic -c backend/alembic/alembic.ini -x config=devops/config.yaml.imate_dev upgrade head
 ```
 
-- **生成新 revision**：若需 `revision --autogenerate`，同样**必须**加 `-x config=...` 指向 iMate 配置，且仅在已确认 URL 指向 iMate 库后执行；生成出的文件仍落在 `alembic/versions/`，合并后 IntelliMate 与 iMate 部署在各自发布流程中对**各自**库执行 `upgrade head`（先 dev 验证，再 prod）。详见 [alembic/AGENTS.md](/alembic/AGENTS.md)。
+- **生成新 revision**：若需 `revision --autogenerate`，同样**必须**加 `-x config=...` 指向 iMate 配置，且仅在已确认 URL 指向 iMate 库后执行；生成出的文件仍落在 `backend/alembic/versions/`，合并后 IntelliMate 与 iMate 部署在各自发布流程中对**各自**库执行 `upgrade head`（先 dev 验证，再 prod）。详见 [backend/alembic/AGENTS.md](/backend/alembic/AGENTS.md)。
 - **隔离门禁**：对 IntelliMate 库执行 Alembic 时使用 IntelliMate 的 `config.yaml.dev` / `config.yaml.prod`（或团队约定路径）；**禁止**用 IntelliMate 配置对 iMate 库升级或反向操作，除非刻意做同一库（与本计划矛盾）。
 
 ## 7. 镜像构建与容器运行
@@ -127,4 +127,4 @@ sudo docker run --detach --log-driver=gcplogs \
 - [FR_IMATE_DEVELOPMENT_PLAN.md](/docs/FR_IMATE_DEVELOPMENT_PLAN.md)
 - [devops/README.md](/devops/README.md)
 - [devops/RELEASE.md](/devops/RELEASE.md)
-- [alembic/AGENTS.md](/alembic/AGENTS.md)
+- [backend/alembic/AGENTS.md](/backend/alembic/AGENTS.md)

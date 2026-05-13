@@ -12,12 +12,12 @@ import asyncio
 from aioconsole import ainput
 from langsmith.run_helpers import trace
 
-from app.core.agentic_kernel.bridges.experimental_bridge import (
+from app.core.companion_harness.bridges.experimental_bridge import (
     ExperimentalTurnBridgeInput,
     message_snapshots_to_dicts,
     run_experimental_turn,
 )
-from app.core.agentic_kernel.contracts.turn import TurnInput, TurnOutput
+from app.core.companion_harness.contracts.turn import TurnInput, TurnOutput
 
 from .heartbeat import (
     HeartbeatConfig,

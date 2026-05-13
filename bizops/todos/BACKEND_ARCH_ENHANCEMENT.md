@@ -13,7 +13,7 @@ CREATED_BY_AGENT: gpt-5.2-codex-high
 - 为后续拆分后台任务与性能治理奠定基础。
 
 ### 范围
-- 仅覆盖 `app/` 后端服务；数据库迁移仍在 `alembic/` 管理。
+- 仅覆盖 `app/` 后端服务；数据库迁移仍在 `backend/alembic/` 管理。
 - 不涉及 OpenAPI/SDK 的生成流程修改。
 - 不引入破坏性接口变更，除非明确标注与同步升级客户端。
 

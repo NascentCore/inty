@@ -7,7 +7,7 @@ on:
     paths:
       # 后端代码（与 IntelliMate 共用 monorepo 源码）
       - "app/**/*.py"
-      - "alembic/**/*.py"
+      - "backend/alembic/**/*.py"
       - "backend/inty/*.py"
       - "backend/inty/start.sh"
       # iMate 开发环境配置（push main 默认部署到 GitHub Environment imate-dev）

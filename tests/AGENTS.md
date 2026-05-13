@@ -35,7 +35,7 @@
 
 - **Manual smoke scripts** (run against a live backend from repo root, not pytest): [tools/scripts/inty_backend_smoke_tests/](../tools/scripts/inty_backend_smoke_tests/) — usage and env vars are documented in [.cursor/skills/inty-server-module-verify/SKILL.md](../.cursor/skills/inty-server-module-verify/SKILL.md).
 
-- Agentic kernel companion `run_turn` with **real LLM** on OpenRouter (optional): set `INTY_AGENTIC_KERNEL_REAL_LLM_TEST=1` and `OPENROUTER_API_KEY`; run `pytest tests/real_agents/test_agentic_kernel_run_turn_tool_call.py -m noci`. Model: `nvidia/nemotron-3-super-120b-a12b:free`. Optional `OPENROUTER_API_BASE` (default `https://openrouter.ai/api/v1`).
+- Companion Harness `run_turn` with **real LLM** on OpenRouter (optional): set `INTY_COMPANION_HARNESS_REAL_LLM_TEST=1` and `OPENROUTER_API_KEY`; run `pytest tests/real_agents/test_companion_harness_run_turn_tool_call.py -m noci`. Model: `nvidia/nemotron-3-super-120b-a12b:free`. Optional `OPENROUTER_API_BASE` (default `https://openrouter.ai/api/v1`).
 
 - Companion WebSocket implicit sign-on E2E (optional): `INTY_COMPANION_WS_BOOTSTRAP_E2E=1` or `INTY_COMPANION_WS_IMPLICIT_SIGNON_E2E=1` then `pytest tests/app/features/test_companion_ws_bootstrap_e2e.py`; subprocess uses `INTY_CONFIG_YAML=devops/config.yaml.test` and PostgreSQL on `127.0.0.1:5432`. Hits OpenRouter via YAML `agent.api_key`.
 
