@@ -59,7 +59,7 @@ flowchart TB
 | task_id | status | class | depends_on | load_config 触达 YAML 键 | 备注 |
 |--------|--------|-------|------------|---------------------------|------|
 | CFG-PYD-01 | done | `LoggingConfig` | — | `logging` | 已迁移为 `BaseModel`；`colorize` 格式覆盖由 `model_validator(after)` 保持 |
-| CFG-PYD-02 | todo | `SecurityConfig` | — | `security` | 纯字段 |
+| CFG-PYD-02 | done | `SecurityConfig` | — | `security` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-03 | todo | `DatabaseSettings` | — | `database` | 保留 `@property`：`url` / `async_url` / `async_replica_url` |
 | CFG-PYD-04 | todo | `GoogleOAuthConfig` | — | `google_oauth` | 纯字段 |
 | CFG-PYD-05 | todo | `VerificationConfig` | — | `verification` | 纯字段 |
