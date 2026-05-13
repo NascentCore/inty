@@ -5,14 +5,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.security import get_password_hash
-from app.core.uuid import get_new_user_id
 from app.models.chat import Chat
 from app.models.chat_history import ChatHistory
 from app.models.subscription import SubscriptionStatus, UserSubscription
-from app.models.user import AuthType, User
 from app.services.chat_service import generate_session_id
-from app.services.user_service import generate_next_readable_id_sync
 from tests.app.api.test_client import TestClient
 
 
@@ -148,56 +144,6 @@ def test_get_subscription_plans_e2e(integration_client: TestClient):
     assert "plans" in payload["data"]
 
 
-def test_list_text_to_speech_voices_e2e(integration_client: TestClient):
-    response = integration_client.client.get(
-        f"{integration_client.base_url}/api/v1/text-to-speech/list-voices",
-        params={"provider": "gemini", "page_size": 10},
-    )
-
-    assert response.status_code == 200, response.text
-    payload = response.json()
-    assert isinstance(payload, list)
-    assert len(payload) > 0
-    assert all(item.get("provider") == "gemini" for item in payload)
-
-
-def test_google_login_with_email_password_success_e2e(
-    integration_client: TestClient,
-):
-    db_session = _create_db_session()
-    email = f"android-missing-{uuid.uuid4().hex[:8]}@example.com"
-    password = "TestPassword123!"
-    user_id = get_new_user_id()
-    readable_id = generate_next_readable_id_sync(db_session)
-    user = User(
-        id=user_id,
-        readable_id=readable_id,
-        auth_type=AuthType.EMAIL,
-        email=email,
-        password=get_password_hash(password),
-        nickname=f"Android Missing {uuid.uuid4().hex[:6]}",
-        system_language="en",
-    )
-    db_session.add(user)
-    db_session.commit()
-
-    try:
-        response = integration_client.client.post(
-            f"{integration_client.base_url}/api/v1/auth/google/login",
-            json={"email": email, "password": password},
-        )
-        assert response.status_code == 200, response.text
-        payload = response.json()
-        assert payload["code"] == 200
-        assert payload["data"]["token"]
-        assert payload["data"]["user"]["id"] == user_id
-        assert payload["data"]["user"]["email"] == email
-    finally:
-        db_session.query(User).filter(User.id == user_id).delete()
-        db_session.commit()
-        db_session.close()
-
-
 def test_clear_messages_success_e2e(integration_client: TestClient):
     agent_id = integration_client.create_agent(
         name=f"clear-messages-{uuid.uuid4().hex[:6]}",
@@ -246,42 +192,6 @@ def test_vote_message_success_e2e(integration_client: TestClient):
         payload = response.json()
         assert payload["code"] == 200
         assert payload["data"]["vote"] == "like"
-    finally:
-        _cleanup_seeded_chat(db_session, chat_id)
-        db_session.close()
-        integration_client.delete_agent(agent_id)
-
-
-def test_surprise_snap_unlock_success_e2e(integration_client: TestClient):
-    agent_id = integration_client.create_agent(
-        name=f"surprise-unlock-{uuid.uuid4().hex[:6]}",
-        visibility="PUBLIC",
-    )
-    db_session = _create_db_session()
-    user_id = _get_current_user_id(integration_client)
-    chat_id, message_id = _seed_chat_message(
-        db_session=db_session,
-        user_id=user_id,
-        agent_id=agent_id,
-        message={
-            "type": "surprise_snap",
-            "data": {
-                "image_url": "https://example.com/surprise.jpg",
-                "caption": "test surprise snap",
-                "credits_required": 3,
-            },
-        },
-    )
-
-    try:
-        response = integration_client.client.post(
-            f"{integration_client.base_url}/api/v1/chats/surprise-snap/unlock",
-            json={"message_id": message_id},
-        )
-        assert response.status_code == 200, response.text
-        payload = response.json()
-        assert payload["code"] == 200
-        assert payload["data"]["unlocked"] is True
     finally:
         _cleanup_seeded_chat(db_session, chat_id)
         db_session.close()

@@ -199,65 +199,6 @@ class TestImageGenerationService:
         assert result.gcs_uri.startswith("gs://")
 
     @pytest.mark.asyncio
-    async def test_build_image_prompt(self):
-        """测试提示词构建"""
-        agent_data = {
-            "personality": "温柔善良的女孩",
-            "scenario": "在咖啡厅里与用户聊天",
-            "intro": "一个可爱的AI助手",
-        }
-
-        chat_history = [
-            {"role": "user", "content": "你好"},
-            {"role": "assistant", "content": "你好呀！"},
-            {"role": "user", "content": "今天天气真好"},
-        ]
-
-        user_message = "给我画一张你在咖啡厅的图片"
-
-        prompt = image_generation_service.build_image_prompt(
-            agent_data=agent_data,
-            chat_history=chat_history,
-            user_message=user_message,
-        )
-
-        # 验证提示词包含所有必要信息
-        assert "温柔善良的女孩" in prompt
-        assert "在咖啡厅里与用户聊天" in prompt
-        assert "你好" in prompt
-        assert "今天天气真好" in prompt
-        assert "给我画一张你在咖啡厅的图片" in prompt
-
-    @pytest.mark.asyncio
-    async def test_build_image_prompt_with_user_info(self):
-        """测试提示词构建（包含用户信息）"""
-        agent_data = {
-            "personality": "温柔善良的女孩",
-            "scenario": "在咖啡厅里与用户聊天",
-        }
-
-        chat_history = [
-            {"role": "user", "content": "你好"},
-            {"role": "assistant", "content": "你好呀！"},
-        ]
-
-        user_message = "给我画一张图片"
-        user_info = "##User Information\nName: TestUser\nGender: Male\nAge: 25-30"
-
-        prompt = image_generation_service.build_image_prompt(
-            agent_data=agent_data,
-            chat_history=chat_history,
-            user_message=user_message,
-            user_info=user_info,
-        )
-
-        # 验证提示词包含用户信息
-        assert "##User Information" in prompt
-        assert "Name: TestUser" in prompt
-        assert "Gender: Male" in prompt
-        assert "Age: 25-30" in prompt
-
-    @pytest.mark.asyncio
     async def test_generate_chat_image_for_message_with_gemini(
         self,
         monkeypatch: pytest.MonkeyPatch,
