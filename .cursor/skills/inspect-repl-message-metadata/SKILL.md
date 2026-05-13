@@ -1,8 +1,8 @@
 ---
 name: inspect-repl-message-metadata
 description: >-
-  Decode inty_v2_repl assistant banner lines (chat / inner-tick / toolcall, ms,
-  user_msg_uuid, langsmith ids, tool_background_started). Modern server emits
+  Decode inty_v2_repl assistant **metadata section** lines (chat / inner-tick / toolcall, ms,
+  user_msg_uuid, langsmith ids, optional langsmith_*_url=, tool_background_started). Modern server emits
   meta_data.inner_tick_activity, so the REPL distinguishes proactive_chat vs
   maintenance directly in the label; LangSmith fallback is for legacy frames
   only. Triggers: REPL pasted line, "is this proactive heartbeat",
@@ -12,17 +12,17 @@ description: >-
 # Inspect REPL message metadata
 
 - **何时用**
-  - 用户贴了 `[墙钟] <label> <ms>ms …` 助手行，或问：来源、`inner-tick` 是否陪伴心跳、`proactive_chat` vs `maintenance`
+  - 用户贴了助手 **metadata section** 行（`[墙钟] <label> <ms>ms …`），或问：来源、`inner-tick` 是否陪伴心跳、`proactive_chat` vs `maintenance`
 
-- **横幅长什么样**
-  - `[墙钟] <label> <ms>ms` + 可选 `user_msg_uuid=` / `asst=` / `langsmith_trace_id=` / `langsmith_run_id=` + 可选 `tool_background_started=true`
+- **Metadata section 长什么样**
+  - `[墙钟] <label> <ms>ms` + 可选 `user_msg_uuid=` / `asst=` / `langsmith_trace_id=` / `langsmith_run_id=` + 可选 `langsmith_trace_url=` / `langsmith_run_url=` + 可选 `tool_background_started=true`
   - **label 取值与判定顺序**（实现：[`tools/inty_v2_repl/main.py`](../../../tools/inty_v2_repl/main.py) `_repl_assistant_banner_label`）
     - `meta_data.inner_tick_activity` 非空 → `inner-tick {activity}`，其中 `proactive_chat` 显示为 `proactive-chat`，`maintenance` 原样
       - **优先级最高**：即便同帧 `source=tool_bg`，只要 `inner_tick_activity` 在，label 仍是 `inner-tick …`
     - 否则按 `meta_data.source`：`tool_bg` → `toolcall`；`inner_tick` → `inner-tick`；`chat` → `chat`
     - 兜底用 transcript `assistant_source`（`inner_tick` / `chat`），最终默认 `chat`
   - **`tool_background_started=true`**
-    - 实现：同文件 `_repl_meta_banner_fragment`
+    - 实现：同文件 `_repl_metadata_section_flags_fragment`（metadata section 尾部 flags）
     - 语义：多帧下行里前台已返回且后台 tool 路径已起；见 [`tools/inty_v2_repl/AGENTS.md`](../../../tools/inty_v2_repl/AGENTS.md)
 
 - **从 label 直接判定 inner-tick 模式（首选）**
@@ -37,7 +37,7 @@ description: >-
     - 内核：[`turn.py`](../../../app/core/companion_harness/companion/turn.py) `inner_tick_activity = route_inner_mode.value if inner_tick_turn else None`
 
 - **LangSmith 兜底（仅旧帧或交叉验证）**
-  - 从横幅取 `langsmith_run_id=…`
+  - 从 metadata section 取 `langsmith_run_id=…`
   - 仓库根执行：
     - `python tools/scripts/download_run.py <RUN_ID> -o tmp/langsmith_runs/<RUN_ID>.json`
   - 打开 JSON，看 **`extra.metadata`**
