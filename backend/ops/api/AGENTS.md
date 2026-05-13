@@ -1,6 +1,20 @@
 # Ops specific APIs
 
-### 评测（`backend/ops/api/v1/evaluation.py`）
+以下路由由 `backend/ops/api/v1/router.py` 额外挂载，**不在** `backend/inty/main.py` 中。
+
+## 节日记忆（超级用户，`backend/ops/api/v1/festival_memory.py`）
+
+Router 前缀：`/evaluation/admin`（完整路径以 `/api/v1` 开头）。
+
+| 路径 | 方法 | 实现文件 |
+|------|------|----------|
+| `/api/v1/evaluation/admin/festival-memory-configs` | GET | `backend/ops/api/v1/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs` | POST | `backend/ops/api/v1/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | DELETE | `backend/ops/api/v1/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | PUT | `backend/ops/api/v1/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-extraction/run` | POST | `backend/ops/api/v1/festival_memory.py` |
+
+## 评测（`backend/ops/api/v1/evaluation.py`）
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
