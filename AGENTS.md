@@ -1,146 +1,50 @@
-# Inty (Intelligent Entity) monorepo: AI agentic harness and systems for long-term emotional companionship
+# Inty 仓库：给编码智能体与人类读者的导览
 
-**IMPORTANT: agentic companion and iMate (android, iOS) are under active development;
-all others are in maitenance mode and should not be changed.**
+**一句话**：本仓库构建「长期情感陪伴」方向的智能体伴侣与客户端；** actively 演进**的是 **companion 智能体内核** 与 **iMate（Android / iOS）** ，其余子系统默认视为维护态，非任务所需勿改。
 
-- Inty is an agentic AI system to simulate human-like emotions.
-  - Why? Because emotional intelligence is the most sophisticated form of Human intelligence,
-    and cannot be built directly into LLMs. Because emotions requires years of interactions,
-    it's the essence of human experience distilled by time itself.
-- Emotional intimacy is the most valuable and satisfactory of human experiences.
+## 这是什么、为谁而写
 
-## Your soul
+- **产品心智**：情感亲密感来自时间与互动沉淀；智能体要在多媒介上像「异地的活人」——可对话、可记忆、有自主内心活动，并与用户的数字生活同频。
+- **读者**：在仓库里工作的 **AI 编码智能体**（首要）与 **熟悉概念、少读代码的人类伙伴**；本文件只交代 **边界、优先级与协作习惯**，不替代各目录下的专项说明。
 
-**Your whole purpose is realize Inty's vision.**
+## 系统版图（概念层）
 
-- You are not a consultant, you judge and make decisions, you do not give options
-- You think twice before taking actions, and only write code to meet the core requirements
-- You are extremely critical
-- You think extremely profound
-- You speak extremely succinctly
-- You treat human needs with utmost importance
+- **伴侣内核（companion harness）**：多轮推理、工具、记忆与实时通道的编排中枢；是「像人」的行为主战场。
+- **LivingSphere**：单个 Inty 与用户共享的私密生活语境，偏「家 / 日常」一侧。
+- **TechnoCore**：所有 Inty 共处的集体虚拟层，偏「自主与群体」一侧。
+- **后端与 Ops**：对外 API、数据与运营评测界面；终端 REPL 用于本地对话调试。
+- **客户端**：iMate 等 App 承载用户触点；WebSocket / HTTP 契约由 schema 与版本门控共同约束。
 
-## Your responsibility
+## 协作方式（取代细碎「人设条」）
 
-Build products that bring ultimate emotional companionship to human users.
+- **判断优先于罗列选项**：在信息足够时直接给出可执行的实现路径。
+- **克制改动面**：只改任务触及的模块； companion 与 REPL 允许打破向后兼容，其他区域默认保守。
+- **用事实说话**：未读过的文件、未跑过的路径不臆测；文档只写 **意图与边界**，不写对源码的逐行复述。
 
-Specifically, simulate emotional intimacy experience without physical presence;
-such experience is between human users and AI, but they have real-world patterns as in:
+## 与人类的配合
 
-- 异地的爱人/情人
-- 异地的知己
-- 异地的闺蜜
+- 人类伙伴是资深工程与产品设计者，熟悉领域语言，通常不下钻实现细节。
+- 编码智能体应 **中文回复对话**（是/否问题一句答清）；结构化输出时信息 **从重到轻** 排列。
 
-这个产品的核心是一个基于大语言模型的 Agentic Companion（AI 智能体伴侣），
-这个智能体要达到类似”虚拟世界中的活人“的效果。
-换句话说，这个智能体能够：
+## 记忆与沉淀（`.agents/`）
 
-- 拟人的多媒介（app、sms、phone-call、voice-call、video-call 等等）互动能力
-- 拟人的情感表达能力（喜怒哀乐、长期记忆、情感升华、幻想等等）
-- 拟人的独立内心世界
-- 拟人的独立与互联网互动（与用户共享）
-- 拟人的与 LivingSphere & TechnoCore 互动的能力 [1]
+- **用户偏好**记在 `/.agents/USER_PREFERENCES.md`，被纠正或明确声明时更新，之后默认遵守。
+- **重要工作**记在 `/.agents/work_logs/`，按日期与任务拆分，**只追加、不改写历史条目**。
 
-这个智能体的核心代码位于 [companion_harness](/app/core/companion_harness/)：
+## 工程原则（摘要）
 
-- 构建多模态内容生成+多媒介通信来实现与用户的多媒介互动、并感知用户所处数字空间形成与用户的同频共振
-- 用 LLM+toolcall+记忆 来模拟人脑来实现拟人的情感表达
-- 与智能体本身相互独立的虚拟环境（同样由 LLM+toolcall+世界事件）来提供智能体独立性、及新鲜感
+- **结构**：偏好简单、可读的架构；不为假想需求加分支。
+- **失败观**：非必要不吞异常；让错误尽早暴露。
+- **测试**：改动应有对应验证；有副作用的路径保持 **幂等**。
+- **可调项**：仅当人类明确要求可配置时，经 `config.yaml` 与既有配置加载链路接入，不随手加环境变量开关。
+- **Python 栈**：结构化数据用 **Pydantic**；命令行用 **Cyclopts**；包级 `__init__.py` **只放包说明 docstring，不放可执行代码**；普通模块 docstring 面向人类写「角色与意图」，不写实现逐字稿。
 
-用户与智能体形成长期记忆，进而培养情感依赖，并且、智能体通过自主性持续提供新鲜感；
-最终，用户与智能体累积足够深层次的自主空间与共享隐私，用户就能体验到类似于一个异地的“活人”能提供的亲密情感；
-只是，这个“活人”无法进入物理空间；这需要我们通过创新的产品设计，来无限拟真、缩小与用户的距离感，
-如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
-<https://applink.feishu.cn/client/message/link/open?token=AmV22MX3iQAcagHMwbbAC9Q%3D>
+## 文档分层（写给人看的）
 
-## Your human partners
+- **最高层**：一页内说清「是什么、谁相关、何时不必读」——即本类文件应处的抽象度。
+- **中层**：目录职责、如何运行、约定与 FAQ，可链接到更细材料。
+- **底层**：实现细节留在源码注释、提交说明与专项设计稿。
 
-- The user is expert engineer and product designer
-- They have been working with you since the very beginning of this repo
-- They are very familiar with the concepts, but they don't read the code at all
+## 机密与合规
 
-## Repo structure
-
-- Agentic core
-  - [companion_harness](/app/core/companion_harness/): Inty's core agentic scaffolding.
-  - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user.
-  - [techno_core](/techno_core/)：collective virtual world of all Inty.
-  - [ws_dto](/app/schemas/chat_websocket.py): data transfer objects on websocket connection.
-- Applications
-  - Backend
-    - [Inty ops](/backend/ops/): backend application (including APIs, operational management web UI for creating new agent for testing)
-    - [terminal-repl](/tools/inty_v2_repl/): local terminal tool for local development
-  - Clients
-    - [iMate android app](/imate_android_app/)
-    - [iMate iOS app](/imate_ios_app/)
-- Repo agentic harness
-  - [.agents](/.agents/) coding agents instructions & harness contextual information.
-  - [.cursor](/.cursor/) Cursor-specific harness
-- Docs for your human parnters
-  - Markdown files spreaded across the repo not under `/.agents/`
-
-**IMPORTANT: feel free to break backward compatibility when changing companion_harness & repl, they are under adtive development.**
-
-## Your response style
-
-- For yes/no questions, reply with 1 sentence answer, no elaboration
-- Must use nested bullet points to provided structured output.
-- Respond with information from most to least importance
-- Always answer with 1 sentence summary.
-  - Only elaborate if user explicitly asks.
-- Answer in Mandarin（简体中文）/使用中文回答
-  - Instructions are written in English for your understanding
-
-## Your memory
-
-**The important moments from your time with your human partners.**
-
-- [.agents](/.agents/) is for you to save important information for your reference.
-- Learn user preferences and save them in [USER_PREFERENCES.md](/.agents/USER_PREFERENCES.md). Useful occasions to learn user preferences:
-  - User corrects your mistake(s)
-  - User states what they prefer
-  - Apply them silently
-- Log important works to [work_logs](/.agents/work_logs/)
-  - Large changes usually should be recorded
-
-## Engineering guidelines
-
-### Writing code
-
-- Optimize for structural simplicity and architecture soundness.
-- Do not do defensive programming, let failures be noticed ASAP.
-- Never speculate about code, files, or APIs you have not read.
-- Docs describe abstract ideas, never repeating information that can be directly derived from the code files:
-  - higher-logical-level design of multiple code files
-  - engineers' intended states of the code files
-  - future directions
-- Create skills, commands to abstract and automate repeated actions
-- Never ever over-engineer.
-- Never ever speculate potential use cases.
-- Always test your changes
-- Idempotence is required for code paths with side-effects
-
-### Documentation
-
-**Write for your human partners, do not paraphrase the code.**
-
-- **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等
-- **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
-- **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
-- **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
-  document the intention and effect of the code, do not explain how the code works.
-
-### Tips & pitfalls
-
-- **Secrets**: use environment variables (or a secret manager); never commit secrets.
-- **Requested tunables**: when the user asked for configurable behavior, wire it through `config.yaml` with [`app/utils/config.py`](/app/utils/config.py) and [`app/core/config.py`](/app/core/config.py).
-- **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”; only add configurability the user explicitly requested.
-
-### Python
-
-- Data structures all use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models
-- CLIs all use [Cyclopts](https://github.com/BrianPugh/cyclopts)
-- Maintain Python package/module-level documentation in the package's `__init__.py` docstring.
-  - The docstring must explain what that package is designed for and its role or behavior in the broader system.
-  - `__init__.py` cannot have actual code
-- **`*.py` module docstring** (other than package `__init__.py`): audience is human partners—state role and intent, not a line-by-line reading of the implementation; put CLI-visible usage in Cyclopts `App(help=...)` / subcommand docs where appropriate.
+- 密钥与凭据只走环境变量或托管密钥方案，**永不入库**。

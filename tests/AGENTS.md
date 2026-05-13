@@ -1,60 +1,24 @@
-# AGENTS.md · tests/（测试）
+# `tests/`：后端与契约的验证策略
 
-- Do not write unit tests
-- Only add tests for behavior that affects core product functionality, unless the user explicitly asks for narrower regression tests.
-- Write feature tests: call backend service running locally to test a feature end-to-end
-- WebSocket chat handler tests in `tests/app/api/v1/endpoints/test_chat.py` may monkeypatch auth and `agent_chat_completions` for isolation; prefer real server plus token for new contract-critical paths when feasible (aligns with `app/AGENTS.md` "Avoid using monkepatch" as a documented narrow exception).
-- Fixture `integration_client` (`tests/app/api/v1/endpoints/conftest.py`) skips when `INTY_API_BASE_URL` (default `http://localhost:8000`) is unreachable, so local `pytest tests/` without a running backend does not ERROR on HTTP E2E tests.
-- Access real database, and do not patch sqlalchemy
-- Use [fake external services](/app/external_services/fakes) when writing tests.
+**一句话**：这里偏 **「黑盒式功能测试」**——在真实或接近真实的栈上走通关键路径；**不写细碎单元测试**，除非人类明确要求补窄回归。
 
-## Running tests require starting local server
+## 读者
 
-- Use the API Endpoints from the local backend server and postgres,
-  started with:
+- 为 API、伴侣链路或跨服务契约加 **端到端保障** 的工程师。
 
-  ```bash:launch-backend-for-testing
-  # Start database
-  docker run --rm --name pg-inty -p 5432:5432 \
-    -e POSTGRES_PASSWORD=sxwl666! \
-    -e POSTGRES_DB=inty \
-    -d postgres:16
+## 核心哲学
 
-  # Launch server
-  cp devops/config.yaml.test config.yaml
-  backend/inty/start.sh
-  
-  # Create a admin bearer token, and write the token to a .txt file
-  python tools/scripts/init_admin_user.py --token-file ./admin_token.txt
+- **真栈优先**：倾向 **真实数据库 + 本地起服务**；外部世界用仓库提供的 **fake 服务** 替身，而不是到处 mock SQLAlchemy。
+- **monkeypatch 例外**：极少数历史 WebSocket 测试允许隔离鉴权与模型调用；**新契约关键路径** 优先 **真服务 + token**（与 `app/AGENTS.md` 精神一致）。
+- **够不着就跳过**：当默认 `localhost:8000` 不可达时，HTTP 集成夹具会 **跳过** 而非让整个 `pytest` 红一片——鼓励本地开发「不启服也能跑大部分」。
 
-  # 运行测试
-  pytest -m "not noci" -v -s tests/
-  ```
+## 怎么跑（指向操作而非背脚本）
 
-- Chat WebSocket against **real LLM** (optional): set `INTY_CHAT_WS_REAL_TEST=1`, set `INTY_DEV_CONFIG_PATH` to the server YAML (e.g. `devops/config.yaml.local` or `devops/config.yaml.dev`; `app.environment` must be `dev` or `local`). See [tests/docs/TEST_STEPS_CHAT_WEBSOCKET_DEV_E2E.md](docs/TEST_STEPS_CHAT_WEBSOCKET_DEV_E2E.md).
+- **常规**：准备 Postgres + 测试配置 + 启动 inty 后端，再跑带 `not noci` 标记的 pytest 子集；具体命令以 `tests/docs` 与 CI 配置为真源。
+- **真 LLM / 真 WS 的选做实验**：通过环境变量闸门开启；详见 `tests/docs` 下对应步骤文档与 **仓库技能** `inty-backend-ci-local` / `inty-server-module-verify` 指引。
 
-- **Manual smoke scripts** (run against a live backend from repo root, not pytest): [tools/scripts/inty_backend_smoke_tests/](../tools/scripts/inty_backend_smoke_tests/) — usage and env vars are documented in [.cursor/skills/inty-server-module-verify/SKILL.md](../.cursor/skills/inty-server-module-verify/SKILL.md).
+## 与客户端协同时的防遗漏
 
-- Companion Harness `run_turn` with **real LLM** on OpenRouter (optional): set `INTY_COMPANION_HARNESS_REAL_LLM_TEST=1` and `OPENROUTER_API_KEY`; run `pytest tests/real_agents/test_companion_harness_run_turn_tool_call.py -m noci`. Model: `nvidia/nemotron-3-super-120b-a12b:free`. Optional `OPENROUTER_API_BASE` (default `https://openrouter.ai/api/v1`).
-
-- Companion WebSocket implicit sign-on E2E (optional): `INTY_COMPANION_WS_BOOTSTRAP_E2E=1` or `INTY_COMPANION_WS_IMPLICIT_SIGNON_E2E=1` then `pytest tests/app/features/test_companion_ws_bootstrap_e2e.py`; subprocess uses `INTY_CONFIG_YAML=devops/config.yaml.test` and PostgreSQL on `127.0.0.1:5432`. Hits OpenRouter via YAML `agent.api_key`.
-
-## 新功能 / API+客户端联调时的防遗漏
-
-以下适用于「后端 API 与客户端（如 Android）共同参与」的新功能，用于减少契约不一致、漏测、静默失败等问题。
-
-- **契约单一来源**  
-  枚举、查询参数取值（如 sort）、错误码等若在后端有定义（如 [app/schemas](/app/schemas)），客户端必须使用与后端完全一致的字面值或类型。  
-  新增或改名时：同时改后端定义与客户端调用处，并在 [app/schemas/AGENTS.md](/app/schemas/AGENTS.md) 等文档中注明对应关系；有 OpenAPI 时优先用生成客户端避免手写字符串。
-
-- **覆盖新路径的测试**  
-  新增或修改 API 入参（如新 sort、新 query 参数）时，在 [tests/](/tests/) 中增加或更新功能测试：用真实请求调用该 API，断言返回 200 及预期结构（至少无 422）。  
-  若该 API 对应某一具体 UI 区块（如某列表、某分区），测试应体现「该请求参数组合」被覆盖，便于日后重构或改枚举时回归。
-
-- **本地与 PR 验证**  
-  改动 API 契约或客户端调用后，在 PR 中注明已用本地后端 + 客户端验证过相关流程（如对应界面是否正常展示或明确报错）。  
-  可选：为关键 API 提供小型 smoke 脚本（请求固定参数、断言 200），在 CI 或推送前运行。
-
-- **避免静默失败**  
-  客户端请求失败（如 422）时，不要仅用「空数据」表现：应设错误状态或日志，便于区分「接口报错」与「接口成功但无数据」。
-  新增/修改 API 的测试中，可顺带断言「非法参数返回 4xx」以便契约变更时能暴露问题。
+- **契约单一真源**：枚举、排序参数、错误码以后端 schema 为准；改名改值要 **多端同 PR 或明确版本门**。
+- **测「路径存在」**：新 query 组合、新 sort 等要在测试中 **至少命中一次 200**，避免 silently 422。
+- **别让失败看起来像空数据**：客户端与测试都应能区分 **错误态与真空态**。

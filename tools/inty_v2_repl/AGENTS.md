@@ -1,27 +1,25 @@
-# tools/inty_v2_repl
+# `inty_v2_repl`：终端里的 WebSocket 客户端
 
-**Role:** Terminal WebSocket client for Inty `/api/v1/chat/ws` — run with `python -m tools.inty_v2_repl.main repl`. Companion behavior (turns, implicit greeting, inner-tick, tool background) runs **on the server** under [`app/core/companion_harness/companion/`](../../app/core/companion_harness/companion/). For wire semantics and field meaning, treat this file plus [README.md](README.md) as the spec surface, not ad hoc TTY output.
+**一句话**：这是一个 **只负责传输与交互** 的 REPL——把你在终端输入的每一行变成 **合法的聊天 WebSocket 上行**，并把下行业务帧打印出来；**伴侣如何想、如何做** 完全在服务端 companion 内核中发生。
 
-## Import boundaries
+## 读者
 
-- **Allowed:** `app/schemas/chat` (completion body), `app/schemas/chat_websocket` (WebSocket request envelope) — **types/models only**; downlink JSON parsing stays in [`backend_chat_ws.py`](backend_chat_ws.py).
-- **Forbidden:** `app/core/companion_harness` and other server companion implementation; **`app.core.config`** and repo-root **`config.yaml`** (server process config). Transport-only tunables live in `backend_chat_ws.py` (e.g. `default_ws_conn_dropped_ack_timeout_sec()` — currently **5s** constant).
+- 本地调试聊天、inner-tick、断线重连、implicit greeting 等 **链路与时间线** 的工程师与编码智能体。
 
-Human-facing setup and CLI flags: [README.md](README.md).
+## 边界（为什么禁止 import 某些库）
 
-## Transport vs REPL behavior
+- **允许**：共享的 **类型与 DTO**（聊天完成体、WebSocket 信封）——用于构造/解析 JSON。
+- **禁止**：把 **服务端 companion 实现**、**服务端进程配置（`app.core.config` / 根 `config.yaml`）** 拉进 REPL 进程；REPL 只应像普通 App 一样通过 **URL 与鉴权** 连后端。传输层可调参数留在本工具自己的模块常量 / 环境变量中。
 
-- **`ws_conn_id`:** RFC4122 UUID in the WebSocket URL query `ws_conn_id=...` (see `http_base_to_ws_chat_url` in `backend_chat_ws.py`; `repl` generates one per bridge and logs `ws_conn_id=` next to `ws_url=`). Server **loguru** uses the same id for that transport; correlate turns with **`user_msg_uuid`** / LangSmith, not `ws_conn_id` alone.
-- **`user_signed_on`:** On every successful connect when the URL includes `agent_id`, arms proactive heartbeat coords. **First** connect in a bridge lifetime sends `implicit_greeting: true` plus `message_id` (RFC4122); **reconnects** use `implicit_greeting: false` so coords refresh without a second implicit greeting. Server-side copy of implicit payloads: [`implicit_signal_messages.py`](../../app/core/companion_harness/companion/implicit_signal_messages.py). Interactive `repl` logs send/ack to **stderr**; bridge callbacks enqueue lines and [`main._readline_backend_ws_with_sideband`](main.py) drains them on the input thread so TTY stdout (`> `) and stderr do not splice on one row.
-- **Transport meta (TTY stderr):** On drop (not `stop()`), prints `websocket connection lost` with close code/reason; on each successful reconnect **before** `client_context` / optional `ws_conn_dropped` / `user_signed_on`, prints `websocket connected` (first) or `websocket connection restored` (after a recorded drop).
-- **Uplink:** Each non-empty user line via [`BackendChatWsBridge.post_turn`](backend_chat_ws.py) (**`ws.send` only**). The next line may be sent **without waiting** for the assistant frame; frames queue while the server still processes **one chat message at a time** per connection. Optional wait budget: **`INTY_V2_BACKEND_WS_POST_TURN_TIMEOUT_SEC`** (see README).
-- **`time_context`:** Every chat JSON includes `request.time_context` (`local_time`, `utc_offset_minutes`, optional IANA `timezone` from `TZ`, `ZoneInfo`, or `/etc/localtime` when available). On each successful connect (with `agent_id`), the bridge sends **`client_context`** with a fresh `time_context` before other control frames.
-- **Startup implicit sign-on:** Folded into the first `user_signed_on` + `implicit_greeting` only (no separate IMPLICIT chat frame). URLs without `agent_id` do not auto-send.
-- **`ws_conn_dropped`:** After an observed connection drop (not user `stop()`), the next successful connect sends **`client_context`**, then **`ws_conn_dropped`** (`dropped_at_utc`, optional close code/reason), then **`user_signed_on`**; server appends one line to companion `CHAT_LOGS.md`. Ack wait uses the package default above; ack timeout or `ok: false` still proceeds to `user_signed_on`.
-- **Downlink:** Assistant and error JSON → `_response_q` → [`pop_downlink_item`](repl_message_io.py) (POSIX TTY: during input polling and after each `post_turn`; non-TTY: best-effort after each `input()` line).
-- **Multi-frame replies:** `tool_bg`, proactive heartbeat, etc. each produce separate JSON payloads on the same queue.
-- **Post-body banners:** If `meta_data.tool_bg_local_image_paths` is set, [`main._print_tool_bg_local_image_paths_banner`](main.py) prints `local-path: /abs/...` per path **after** the assistant body. If `meta_data.generated_image.image_url` is set (`gs://` or `https://`), [`main._print_generated_image_meta_banner`](main.py) prints `image-url: ...`. Production Android ignores `tool_bg_local_image_paths` by default.
-- **Foreground-fail + background-survives:** Foreground LLM failure (e.g. provider 5xx, or 200 with `choices: null` and `error.code=...`) while the background tool loop has started → a `code` 502 `error_kind=llm_inference_backend` error frame may be followed by an independent `tool_bg` assistant frame (`meta_data.generated_image`, optional `tool_bg_local_image_paths`).
-- **Assistant metadata line** (first stdout line per assistant downlink: `[墙钟] <label> <ms>ms` tail): Wall elapsed prefers `meta_data.user_msg_uuid` or `reply_to_user_msg_uuid` matched to the corresponding `post_turn` timestamp; else `0ms`. Tail may include `user_msg_uuid=` / `asst=` / `langsmith_trace_id=` / `langsmith_run_id=` and, when LangSmith resolution succeeds (`langsmith.Client.get_run_url` with tracing env, or stitched URL from `LANGCHAIN_WORKSPACE_ID`/`LANGSMITH_WORKSPACE_ID` plus `LANGSMITH_PROJECT_ID`/`LANGCHAIN_PROJECT_ID`), `langsmith_trace_url=` / `langsmith_run_url=`. Flags: `tool_background_started=true` when `meta_data.tool_background_started` is true. Labels: when `meta_data.inner_tick_activity` is `proactive_chat` or `maintenance`, display `inner-tick proactive-chat` or `inner-tick maintenance`; when absent but `meta_data.source` is `inner_tick`, label stays `inner-tick` (legacy). Implementation: [`main._print_assistant_reply`](main.py) and helpers `_repl_assistant_metadata_section_suffix`, `_repl_metadata_correlation_tokens`, `_repl_metadata_section_flags_fragment`.
+## 行为直觉（不谈具体函数名）
 
-**Logging:** [`proto_log.py`](proto_log.py) configures **loguru → stderr only** for the REPL process; timestamp format aligns (by convention) with server log format in `app.utils.config`.
+- **连接身份**：每次会话有稳定的传输层 id 便于和服务器日志对齐；**单轮业务关联** 请优先用 **用户消息 UUID、trace id、LangSmith** 等，而不是只看传输 id。
+- **登录与隐式问候**：首次连上带 `agent_id` 的 URL 时，会按产品规则发送 **签到与隐式问候**；断线重连会 **刷新坐标但不重复「第一次见面」式问候**。
+- **时间与上下文**：周期性上报 **本地时间 / 时区** 等业务上下文，让服务端做「像人一样知道现在是几点」的决策。
+- **断线**：检测到非用户主动退出的断线后，重连路径会按契约发送 **掉线声明** 再恢复签到，让服务器在记忆里记一笔。
+- **多帧下行**：一次用户输入可能对应 **多条 JSON**（主回复、后台工具、心跳等），REPL 把它们视作 **队列** 顺序展示。
+- **元数据行**：首行展示墙钟耗时、可选追踪链接、inner-tick 是 **主动搭话** 还是 **维护** 等——用于人类扫一眼判断这一轮「是什么性质的工作」。
+
+## 人类可读的操作说明
+
+- 安装、CLI 参数、环境变量：见同目录 [`README.md`](README.md)。

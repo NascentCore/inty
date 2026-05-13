@@ -1,6 +1,7 @@
-# Voice APIs
+# `app/core/voice/`：语音相关核心
 
-## ElevenLabs
+**一句话**：承载 **TTS / 语音管线** 等与「声音」相关的核心实现与供应商对接入口；产品级 HTTP 包装仍在 `app/api`。
 
-- <https://elevenlabs.io/docs/eleven-api/guides/cookbooks/text-to-dialogue>
-- <https://elevenlabs.io/docs/eleven-api/guides/cookbooks/text-to-speech/quickstart>
+## 外部文档
+
+- ElevenLabs 官方 cookbook 等链接仅作 **人类参考**，实现以仓库代码与配置为准。

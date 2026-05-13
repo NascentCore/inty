@@ -1,23 +1,18 @@
-# AGENTS.md · devops/（运维与部署）
+# `devops/`：部署、配置与运维叙事
 
-## 链接
+**一句话**：描述 **如何把 Inty 家族服务安全地放到云上**——配置形态、发布入口、以及 **新实例如何接到现有数据面**。
 
-- GCP 数据库只读副本：https://docs.cloud.google.com/sql/docs/postgres/replication
+## 读者
 
-## 配置与安全
-- 配置文件统一使用 `.yaml` 后缀；敏感信息不入库，使用环境变量或密钥管理服务。
+- 发布工程师、SRE、需要改 nginx/CI/配置模板的编码智能体。
 
-## 部署
-- 以 `nginx.conf` 与发布文档为单一事实来源；任何变更需附影响评估与回滚方案。
+## 原则
 
-## 部署新的Inty后端服务实例
+- **配置**：结构化文件用 **YAML**；密钥 **只** 来自环境或密钥管理器，不进 git。
+- **发布真相**：以 **nginx 配置 + 已约定的发布文档/README** 为权威；改动需想清 **影响面与回滚**。
+- **新后端实例**：典型顺序是 **建库 → 为该环境写独立 config 变体 → 接入 CI/CD**——细节随基础设施演进，以同目录 README 为准。
+- **新 App 发布轨道**：通过既定 **GitHub Actions** 工作流上传内测包等；截图式操作指南若过时，以 Actions 与 Play Console 当前 UI 为准。
 
-- 在数据库服务器上创建库
-- 创建devops/config.yaml.<实例名称>配置文件实例
-- 创建CI部署后端服务器
+## 外部参考
 
-## 发布新的App实例
-
-- 创建自动发布GitHub Workflow
-  - <img width="3018" height="1700" alt="img_v3_0210t_48e461e3-113d-49b9-99cf-b527a1837a2g" src="https://github.com/user-attachments/assets/adf83b64-3629-489c-b516-6a7afc3c8d34" />
-
+- 云数据库只读副本等 GCP 概念，见官方文档；此处不复制步骤清单。

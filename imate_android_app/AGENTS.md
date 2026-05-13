@@ -1,19 +1,18 @@
 ---
-description: 
+description:
 alwaysApply: true
 ---
 
----
-description: 
-alwaysApply: true
----
+# iMate（Android）：主力客户端之一
 
-# Agentic AI companion App on Android
+**一句话**：这是 **面向终端用户的 Android 伴侣 App**；与仓库 CI、产品文档、变更说明联动，**Material 3 优先** 做 UI 决策。
 
-- PR / `main` 推送变更 `imate_android_app/` 时，由 [.github/workflows/ci_imate_android_app.yaml](/.github/workflows/ci_imate_android_app.yaml) 运行 `:app:assembleDebug` 做编译门禁。
-- [开发计划](/docs/FR_IMATE_DEVELOPMENT_PLAN.md)
-- 用户可见变更与用户向说明：[docs/CHANGE_LOGS.md](docs/CHANGE_LOGS.md)、[docs/USER_MANUAL.md](docs/USER_MANUAL.md)（维护方式对齐 `android_app/docs/CHANGE_LOGS.md` 与根目录 `docs/INTELLIMATE.md`）
+## 读者
 
-# UI实现原则
-- 尽量避免自定义颜色、字体和形状，而是通过标准Material3获取
-- 如果设计稿使用了项目不存在的颜色，可以在core/com/ai/core/ui/theme/Color新增定义，但需要明确告知该项操作
+- 修改 iMate Android 功能、CI 门禁或用户可见文案的工程师与编码智能体。
+
+## 协作要点
+
+- **合并门禁**：变更本目录会触发专用 CI 工作流做 **Debug 构建**；合入前确保能通过。
+- **计划与对外说明**：路线图、用户向变更记录与用户手册见仓库 `docs/` 与本应用 `docs/` 下既有文档；保持 **与 legacy `android_app` 文档体系** 的对齐方式（若仍有交叉引用）。
+- **视觉体系**：尽量使用 **Material 3 主题 token**（颜色、字体、形状），避免散落魔法数；若设计稿引入新色，集中在主题模块扩展并 **在评审中显式说明**。

@@ -1,3 +1,3 @@
-# Images
+# `app/core/images/`：图像理解与生成核心
 
-- Use Google multi-modal models to do image understanding, generation
+**一句话**：围绕 **多模态模型** 的图像理解、生成与供应商编排；**不要**在 API 层重复实现同一套模型路由逻辑。

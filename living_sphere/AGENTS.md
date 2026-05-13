@@ -1,5 +1,9 @@
-# Inty Living Sphere
+# LivingSphere：与用户同处的私密数字生活面
 
-- The private environment where an Inty lives and roam along side with the user, sort of like human home.
-- Inty's actions must be within the boundary of user's understanding.
-- This sphere should be derived from the user's actual environment, feeling like a digital twin of the user's current living space. Agentic runtime needs to infer the user's living space quickly.
+**一句话**：这是 **单个 Inty 与用户共享的生活语境**——像「一起生活的空间」，而不是公开互联网上的随机舞台。
+
+## 设计直觉
+
+- **可理解性**：智能体在这里的行动，应落在用户 **能解释、能预期** 的范围内，避免「背后做了一堆与用户世界无关的神秘事」。
+- **数字孪生感**：空间细节应尽量从用户真实环境与习惯 **推断与对齐**，让用户感到「Ta 真的住在我这边」，而不是纯虚构舞台。
+- **与伴侣内核的关系**：LivingSphere 提供 **素材与约束**；具体推理与记忆仍由 companion harness 消费。

@@ -1,4 +1,7 @@
-# Contexts and instructions for coding agents
+# `.agents/`：编码智能体的长期记忆区
 
-- [user preferences](/.agents/USER_PREFERENCES.md) records important & general user preferences, like certain mistakes user corrected you.
-  These are used to correct your behaviors.
+**一句话**：不是产品代码——存放 **用户偏好、工作日志、维护任务队列** 等，让智能体在多会话间 **延续上下文**。
+
+## 必读入口
+
+- **[用户偏好](USER_PREFERENCES.md)**：记录人类纠正过你什么、明确喜欢什么；之后默认照做。

@@ -1,69 +1,37 @@
-# IntelliMate Android app
+# IntelliMate（`android_app/`）：维护态 Android 客户端
 
-- Do not try to test using Android emulator (the environment does not have KVM)
-- Update [change logs](/android_app/docs/CHANGE_LOGS.md) and [user manual](/docs/INTELLIMATE.md) when add or modify user-facing features and/or beahaviors
-- 新功能要添加 firebase 埋点来收集用户使用数据。
-- 使用 [DataStore](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore)，
-  [MMKV](https://github.com/Tencent/MMKV) 已计划废弃
-- 试用 [Room Database](https://developer.android.com/training/data-storage/room?hl=zh-cn) 在本地完成持久化数据存储
-- 从后端拿到的数据结构中忽略不理解的数据类型，而不是报错，比如聊天消息类型出现了 AI User 以外的类型，直接忽略，这样在后端发布新功能时更加具有容错性。
-- 为用户可见的 UI 元素取中英文对照名字，方便开发人员指代功能
+**一句话**：这是 **较早一代 IntelliMate Android 代码树**，整体处于 **维护模式**；新功能优先落在 **iMate**（`imate_android_app/`），除非任务明确要求改此处。
 
-## Design
+## 读者
 
-- 主题主要分文颜色、字体、形状三大类，定义在 `android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Theme.kt`
-- 颜色：使用MaterialTheme.colorScheme获取颜色，如MaterialTheme.colorScheme.primary获取主题色
-- 字体：使用MaterialTheme.typography获取字体style，如Text(style = MaterialTheme.typography.titleMedium)
-- 形状：使用MaterialTheme.shapes获取组件形状，如Surface(shape = MaterialTheme.shapes.medium)
+- 仍需修 bug、做兼容或读历史实现的工程师；**不要**把这里当作默认新功能落点。
 
-## 一般指示
+## 产品与环境直觉
 
-- 禁止在代码中使用EventBus
-- When referring to concepts in Kotlin code, use the language conventions, and remind the user about that, so the user can understand what it refers to
-- 颜色从MaterialTheme.colorScheme中根据具体作用取值，不应该直接使用具体颜色数值
-- 界面元素尺寸、大小写入 `android_app/app/src/main/res/values/dimens.xml`，不要直接使用数字值、如 `10.sp` `10.dp` 之类的
-- 用户可见的字符写入 `android_app/app/src/main/res/values/strings.xml`
-  并以资源 ID 的形式在代码中使用
-- 无需使用 linter 检查修改代码
-- 对我提出的指示、完成基础要求，不要处理未提及的复杂场景，不要使用 defensive programming
-- 优先使用 material 3 icons 和其他来自 material 3 的素材 https://fonts.google.com/icons?icon.query=generate&icon.size=24&icon.color=%231f1f1f&icon.platform=android
-- 新增 UI Composeable 组件要有详细的注释说明其使用范围场景和预期视觉效果，及可配置项；关键配置项要编写为输入参数
+- **本环境不用模拟器做自动化测试**（无 KVM）；以真机或静态分析为主。
+- **用户可见变更**需同步更新既有 **变更日志** 与 **用户手册** 入口文档（路径以任务或 README 指引为准）。
+- **观测**：新能力应带 **Firebase 埋点** 以便留存使用数据。
+- **本地数据**：偏好 **DataStore / Room** 等官方或团队选定栈；避免引入与主线并行的第二套存储方案。
+- **向前兼容**：解析后端 JSON 时，对 **未知字段或未来消息类型** 采用 **忽略而非崩溃** 的策略，以便后端先上线。
+- **协作沟通**：用户可见 UI 元素在内部讨论中应有 **中英对照称呼**，减少歧义。
 
-## 适用范围与平台约束
+## 体验与 UI 原则
 
-- 仅支持竖屏（portrait）；无需考虑 landscape 兼容。
-- Compose/Recycler 需避免无意义重组；图片与音频加载注意内存与缓存策略。
-- 当前统一网络栈：Retrofit/Moshi；避免新增新的并行网络栈；复用统一鉴权/环境/日志配置，避免重复创建 `OkHttpClient`。
+- **竖屏优先**：不投入横屏适配成本。
+- **主题三要素**：颜色、字体、形状走 **MaterialTheme**（或项目 design 模块的等价 token），避免硬编码色值与散落 dp/sp。
+- **资源与文案**：尺寸进 dimens、可见字符串进 strings；Compose 组件对外暴露关键参数，注释写清 **使用场景与视觉预期**。
+- **性能**：避免无意义重组；图片/音频注意缓存与内存峰值。
 
-## Stainless 迁移冻结规则（FR_REMOVE_STAINLESS_SDK_MIGRATION_PLAN / Phase 0）
+## 网络与迁移（冻结期）
 
-- 迁移期间禁止新增 `IntyNetworkManager`、`core/data/http/services/*`、`com.inty.api.*` 的运行时代码引用（`app` 与 `core` 模块均适用）。
-- 新增或修改网络调用时，必须优先接入 `NetServiceMgr` + `I*Api` + `core/data/api/model` 本地 DTO。
-- Code review 发现上述新增引用时，按阻断项处理，除非在同一变更中明确完成对应 Phase 的“迁移后删除”闭环。
+- **单一网络栈**：Retrofit + Moshi 等与主线一致；**不要**并行再造一套 HTTP 客户端森林。
+- **迁移期约束**（若仍有「去 Stainless / 旧 SDK」类计划）：**禁止**在业务代码中新增旧网络入口的运行时依赖；新增调用走统一的 **Service Manager + API 接口 + 本地 DTO** 模式——具体禁止项以当前迁移文档为准。
 
-## Explore 页面交互
+## 合规与 AI 透明
 
-- Explore 顶部栏支持双击手势，用于回到推荐列表第一页：需要同时滚动 `LazyVerticalGrid` 到索引 0 并触发 Paging 刷新，以确保展示第一屏数据。
+- **AI 生成内容**在 UI 上需 **显著标识**；遵守团队选定的 **地区法规与平台准则**（如标识义务、数据最小化、可删除可修改）。
+- **涉及 AI 画廊等场景**：明确标注来源，避免与 UGC 混淆。
 
-## AI 使用规范（2025.10）
+## 深入阅读
 
-- 在 UI 中明确标识 AI 生成内容，符合 GB45438-2025。
-- 禁止使用未经审核的模型；遵循欧盟 AI 法案与 OpenAI 指南，落实可解释性与内容审核。
-- 处理用户数据时遵循 GDPR/CCPA，执行数据最小化、加密存储/传输，并提供删除、修改能力。
-- 角色主页（`AgentInfoScreen`）已接入聊天记录中的 `generatedImage` 数据，必须展示 “AI-Generated Images” 画廊，并使用明确的 AI 标签提示用户内容来源；画廊数据通过 `ChatRepository.getMessagesFlow(agentId)` 提供的历史消息实时更新。
-
-## Character Room 组件
-
-- 本地角色元数据与能量值统一持久化在 `core/data/src/main/kotlin/ai/sxwl/android/data/character`。
-- `CharacterDatabase` 为单库入口，`CharacterRepository` 负责暴露 `Flow` 订阅与同步方法，app 层通过 `DataModule.getCharacterRepository()` 获取实例。
-- 聊天页通过 Room 统计 AI 回复次数并实时刷新顶部能量，禁止绕过仓库直接访问数据库。
-
-## Kotlin / Compose UI 规范
-
-- 禁止使用魔法值（如 `10.dp`）——将 UI 常量定义在 `core/design` token 或 `MaterialTheme` 中，通过入参传递并提供合理默认值。
-- 容器组件应转发 padding/shape/间距；默认配色/字重基于 `MaterialTheme.colorScheme/typography` 或自定义 `CompositionLocal`。
-- Activity/组件需要提供清晰的 `launch`/`onNavigate` 入参，避免在组件内部持有上下文。
-
-## Android Studio
-
-- 图片转换为 webp 格式：https://developer.android.com/studio/write/convert-webp?hl=zh-cn
+- 设计 token 与主题入口见 `core/design` 包内主题文件；细节以代码为准。
