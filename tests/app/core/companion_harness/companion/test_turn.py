@@ -13,7 +13,7 @@ from app.core.companion_harness.companion.llm_client import (
     LLM_SCENE_CHAT,
     CompanionLLMConfig,
 )
-from app.core.companion_harness.companion.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.heartbeat import (
     HEARTBEAT_SYNTHETIC_USER_TEXT,
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,

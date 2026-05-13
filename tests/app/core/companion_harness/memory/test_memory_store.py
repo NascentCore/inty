@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.companion_harness.companion.memory_store import (
+from app.core.companion_harness.memory.memory_store import (
     MemoryCache,
     MemoryRecord,
     MemoryStore,

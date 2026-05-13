@@ -44,8 +44,8 @@ from .bootstrap_user_interactive import (
     tool_companion_update_prompt_slice,
 )
 from .message_format import openai_assistant_message_dict
-from .memory_store_document_mapping import parse_memory_store_relative_path
-from .memory_store import MemoryStore, normalize_memory_store_relative_path
+from app.core.companion_harness.memory.memory_store_document_mapping import parse_memory_store_relative_path
+from app.core.companion_harness.memory.memory_store import MemoryStore, normalize_memory_store_relative_path
 from .models import ChatMessage, load_context_meta
 from .google_web_search import run_google_web_search
 from .read_web_page import run_read_web_page

@@ -5,7 +5,7 @@ from app.core.companion_harness.companion.models import (
     InnerTickMode,
     PromptBundle,
 )
-from app.core.companion_harness.companion.memory_taxonomy import (
+from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
     MEMORY_SYSTEM_HEADING_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,

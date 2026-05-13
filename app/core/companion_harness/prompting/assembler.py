@@ -7,7 +7,7 @@ from typing import Any, Callable, Optional
 from langchain_core.messages import SystemMessage
 
 from app.core.agent import prompts
-from app.core.companion_harness.companion.memory_store_scope import (
+from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
 )
 

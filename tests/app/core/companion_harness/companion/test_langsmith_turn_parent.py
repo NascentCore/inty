@@ -18,8 +18,8 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
 )
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.models import InnerTickMode
-from app.core.companion_harness.companion.memory_registry import get_memory_store
-from app.core.companion_harness.companion.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.tool_background import start_tool_background_job
 from app.core.companion_harness.companion.turn import run_turn

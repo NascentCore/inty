@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.core.companion_harness.companion.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn_engine import persist_repl_turn_transcript_rows
 

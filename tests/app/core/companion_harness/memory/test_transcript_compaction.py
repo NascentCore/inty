@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.core.companion_harness.companion.memory_store import MemoryStore
-from app.core.companion_harness.companion.transcript_compaction import (
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.transcript_compaction import (
     COMPACTION_SYSTEM_TAG,
     CompactionConfig,
     CompactionState,

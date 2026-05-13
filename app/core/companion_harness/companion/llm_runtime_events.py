@@ -21,7 +21,7 @@ from loguru import logger
 from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
-from app.core.companion_harness.companion.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.runtime_events import append_runtime_event
 from app.core.companion_harness.companion.utc import utc_iso_ts
 

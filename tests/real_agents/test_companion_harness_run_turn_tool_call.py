@@ -14,8 +14,8 @@ from typing import Any
 import pytest
 
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
-from app.core.companion_harness.companion.memory_pipeline import MemoryPipelineConfig
-from app.core.companion_harness.companion.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import run_turn
 

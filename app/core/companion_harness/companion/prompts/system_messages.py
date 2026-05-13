@@ -2,7 +2,7 @@
 
 Builds the ordered list of `{"role":"system","content":...}` slices injected before each
 companion LLM round (chat / tool-side / inner-tick / dual-LLM chat-only branch). Reads MD seed
-files via `..memory_store_scope.get_imate_axiom_system_text` and prompt slice constants from
+files via `app.core.companion_harness.memory.memory_store_scope.get_imate_axiom_system_text` and prompt slice constants from
 `..prompt_slices`; consumed by `..turn`, `..turn_engine`, `..prompt_stack`.
 
 When ``include_significance_perception_slice`` is true, injects ``SIGNIFICANCE_PERCEPTION.md``
@@ -27,14 +27,14 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from ..bootstrap_user_interactive import (
     build_interactive_bootstrap_system_message_parts,
 )
-from ..memory_taxonomy import (
+from app.core.companion_harness.memory.memory_store_scope import get_imate_axiom_system_text
+from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
     MEMORY_SYSTEM_HEADING_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
 from ..models import ContextMeta, InnerTickMode, PromptBundle
 from ..prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
-from ..memory_store_scope import get_imate_axiom_system_text
 
 SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
 

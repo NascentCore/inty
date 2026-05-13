@@ -836,7 +836,7 @@ def _validate_config(config: Config):
         if pc.default_country_code and not pc.default_country_code.startswith("+"):
             raise ValueError("phone_call.default_country_code must start with '+'")
 
-    from app.core.companion_harness.companion.transcript_compaction import (
+    from app.core.companion_harness.memory.transcript_compaction import (
         CompactionConfig as CompanionTranscriptCompactionConfig,
     )
 

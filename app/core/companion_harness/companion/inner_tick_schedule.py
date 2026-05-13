@@ -6,7 +6,7 @@ import os
 import time
 from dataclasses import dataclass
 
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import (
     load_transcript_from_store,
     transcript_without_trailing_presence_signals,

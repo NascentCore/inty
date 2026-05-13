@@ -13,7 +13,7 @@ import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.models import InnerTickMode
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.tools import build_openai_repl_tools_inner_tick

@@ -15,15 +15,16 @@ from loguru import logger
 from openai import APIConnectionError, APIError, APITimeoutError, RateLimitError
 from pydantic import BaseModel, Field
 
-from .bootstrap_user_interactive import (
+from app.core.companion_harness.companion.bootstrap_user_interactive import (
     soul_prompt_is_locked_after_interactive_bootstrap,
 )
-from .llm_runtime_events import (
+from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
 )
+from app.core.companion_harness.companion.utc import local_date_str, local_iso_ts
+
 from .memory_store import MemoryStore
-from .utc import local_date_str, local_iso_ts
 from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
 _DIARY_USER_MAX = 240

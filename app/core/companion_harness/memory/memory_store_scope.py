@@ -12,8 +12,9 @@ from loguru import logger
 from .file_store import read_text
 from .memory_store import MemoryStore, normalize_memory_store_relative_path
 
-_TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
-_PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
+_MEMORY_PKG_DIR = Path(__file__).resolve().parent
+_TEMPLATES_DIR = _MEMORY_PKG_DIR / "templates"
+_PROMPTS_DIR = _MEMORY_PKG_DIR.parent / "companion" / "prompts"
 _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
     {
         "AXIOM.md",
@@ -28,7 +29,7 @@ def load_template_seed_text(filename: str) -> str:
     base = _PROMPTS_DIR if filename in _PACKAGE_PROMPT_SEED_FILES else _TEMPLATES_DIR
     path = base / filename
     if not path.is_file():
-        raise FileNotFoundError(f"missing companion template seed file: {path}")
+        raise FileNotFoundError(f"missing memory template seed file: {path}")
     return read_text(path).rstrip() + "\n"
 
 

@@ -22,7 +22,7 @@ Companion 在 MemoryStore 里维护三层 Markdown：**情景**（当日流水�
 
 ## 一段话
 
-每轮 **用户可见** 对话结束后，管线向当日 **情景** 文件追加一行带时间戳、经长度裁剪的 user/assistant 摘要。当累计轮次满足「每 N 轮」且未禁用日摘要时，用当日情景全文、上一版当日纪要文件与 **最新一轮** 对话调用 LLM，重写 **gist** 单日结构化纪要。在同一管线内，语义层 `MEMORY.md` 按另一组「每 N 轮」触发 **memory curator**，综合当日 gist（若取用）、当前 `MEMORY.md` 与最新一轮，输出更新后的跨日正文。USER、SOUL 亦可在各自间隔下由独立策展提示词重写；SOUL 默认还要求本轮文本命中「根本性互动」信号，且交互式 bootstrap 结束后可能被锁定不再自动策展。组装下一轮的 prompt 时：`load_prompt_bundle` 依据 **context_mode** 判断是否读取 `memory/daily/<今日>.md`、`memory/<今日>.md` 以及是否保留 `MEMORY.md` 注入正文；`build_system_messages` 再用固定区块标题把各层挂进多段 system（标题真源见 `memory_taxonomy.py`，与 `companion/AGENTS.md` 表格一致）。
+每轮 **用户可见** 对话结束后，管线向当日 **情景** 文件追加一行带时间戳、经长度裁剪的 user/assistant 摘要。当累计轮次满足「每 N 轮」且未禁用日摘要时，用当日情景全文、上一版当日纪要文件与 **最新一轮** 对话调用 LLM，重写 **gist** 单日结构化纪要。在同一管线内，语义层 `MEMORY.md` 按另一组「每 N 轮」触发 **memory curator**，综合当日 gist（若取用）、当前 `MEMORY.md` 与最新一轮，输出更新后的跨日正文。USER、SOUL 亦可在各自间隔下由独立策展提示词重写；SOUL 默认还要求本轮文本命中「根本性互动」信号，且交互式 bootstrap 结束后可能被锁定不再自动策展。组装下一轮的 prompt 时：`load_prompt_bundle` 依据 **context_mode** 判断是否读取 `memory/daily/<今日>.md`、`memory/<今日>.md` 以及是否保留 `MEMORY.md` 注入正文；`build_system_messages` 再用固定区块标题把各层挂进多段 system（标题真源见 [`app/core/companion_harness/memory/memory_taxonomy.py`](/app/core/companion_harness/memory/memory_taxonomy.py)，与 `companion/AGENTS.md` 表格一致）。
 
 ---
 
@@ -111,12 +111,12 @@ N 与禁用开关由 **`MemoryPipelineConfig`**（及 `CompanionManager` 注入�
 
 | 主题 | 路径 | 主要职责 |
 |------|------|----------|
-| 管线实现 | [`app/core/companion_harness/companion/memory_pipeline.py`](/app/core/companion_harness/companion/memory_pipeline.py) | 回合后追加情景、按间隔 LLM 重写 gist / `MEMORY.md` / `USER.md` / `SOUL.md`；提供同步与队列调度入口。 |
-| Scope 路径与管线状态文件 | [`app/core/companion_harness/companion/memory_store_scope.py`](/app/core/companion_harness/companion/memory_store_scope.py) `DEFAULT_MEMORY_STORE_SCOPE_PATHS` | `memory_pipeline_state_json` 等逻辑相对路径真源；轮次计数 JSON 与此对齐。 |
+| 管线实现 | [`app/core/companion_harness/memory/memory_pipeline.py`](/app/core/companion_harness/memory/memory_pipeline.py) | 回合后追加情景、按间隔 LLM 重写 gist / `MEMORY.md` / `USER.md` / `SOUL.md`；提供同步与队列调度入口。 |
+| Scope 路径与管线状态文件 | [`app/core/companion_harness/memory/memory_store_scope.py`](/app/core/companion_harness/memory/memory_store_scope.py) `DEFAULT_MEMORY_STORE_SCOPE_PATHS` | `memory_pipeline_state_json` 等逻辑相对路径真源；轮次计数 JSON 与此对齐。 |
 | 读出与 bundle | [`app/core/companion_harness/companion/models.py`](/app/core/companion_harness/companion/models.py) `load_prompt_bundle` | 从 MemoryStore 读取各稿；按 `experience_profile_injects_private_memory` 决定是否装载日程层与 `MEMORY.md` 正文。 |
 | 私人记忆门控 | [`app/core/companion_harness/experience_profile.py`](/app/core/companion_harness/experience_profile.py) | `experience_profile_injects_private_memory` 与各模式 system 条款文案。 |
-| System 注入标题 | [`app/core/companion_harness/companion/memory_taxonomy.py`](/app/core/companion_harness/companion/memory_taxonomy.py) | 各记忆层在 prompt 中的固定标题与中英术语。 |
+| System 注入标题 | [`app/core/companion_harness/memory/memory_taxonomy.py`](/app/core/companion_harness/memory/memory_taxonomy.py) | 各记忆层在 prompt 中的固定标题与中英术语。 |
 | System 组装 | [`app/core/companion_harness/companion/prompts/system_messages.py`](/app/core/companion_harness/companion/prompts/system_messages.py) `build_system_messages` | 将 `PromptBundle` 与包内模版拼成多段 system。 |
-| 路径与 document kind | [`app/core/companion_harness/companion/memory_store_document_mapping.py`](/app/core/companion_harness/companion/memory_store_document_mapping.py) | 逻辑路径与持久化 `document_kind` 对应。 |
+| 路径与 document kind | [`app/core/companion_harness/memory/memory_store_document_mapping.py`](/app/core/companion_harness/memory/memory_store_document_mapping.py) | 逻辑路径与持久化 `document_kind` 对应。 |
 | 回合编排入口 | [`app/core/companion_harness/companion/turn.py`](/app/core/companion_harness/companion/turn.py) | `memory_update_after_turn` / `schedule_memory_update_after_turn` 调用点（与 `defer_memory_update` 等配合）。 |
 | 子包概述 | [`app/core/companion_harness/companion/AGENTS.md`](/app/core/companion_harness/companion/AGENTS.md) | 分层术语表、持久化与 system 层级说明。 |

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.core.companion_harness.companion.memory_registry import (
+from app.core.companion_harness.memory.memory_registry import (
     get_memory_store,
     shutdown_all_memory_stores,
     shutdown_memory_store,

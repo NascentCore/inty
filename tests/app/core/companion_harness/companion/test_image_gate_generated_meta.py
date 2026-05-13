@@ -14,7 +14,7 @@ from app.core.companion_harness.companion.image_gate import (
     generated_image_meta_from_index_slice,
     list_image_asset_records,
 )
-from app.core.companion_harness.companion.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 
 

@@ -174,8 +174,8 @@ flowchart TD
 | 生产 turn 执行 | `/app/core/companion_harness/companion/turn.py` |
 | route mode | `/app/core/companion_harness/companion/turn_routes.py` |
 | prompt stack | `/app/core/companion_harness/companion/prompt_stack.py` |
-| MemoryStore | `/app/core/companion_harness/companion/memory_store.py` |
-| 记忆管线 | `/app/core/companion_harness/companion/memory_pipeline.py` |
+| MemoryStore | `/app/core/companion_harness/memory/memory_store.py` |
+| 记忆管线 | `/app/core/companion_harness/memory/memory_pipeline.py` |
 | async tool background | `/app/core/companion_harness/companion/tool_background.py` |
 | dual-LLM envelope | `/app/core/companion_harness/companion/significance_perception.py` |
 | 通用 turn 合同 | `/app/core/companion_harness/contracts/turn.py` |

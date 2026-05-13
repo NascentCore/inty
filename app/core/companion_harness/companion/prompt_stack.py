@@ -9,7 +9,7 @@ from app.utils.config import CompanionMemoryBootstrapType
 
 from .ai_private_prompt import get_ai_private_jsonl_text_for_prompt
 from .bootstrap_user_interactive import interactive_bootstrap_active
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import (
     ContextMeta,
     InnerTickMode,

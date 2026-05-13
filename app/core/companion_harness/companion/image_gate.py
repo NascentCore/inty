@@ -7,7 +7,7 @@ import json
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store import MemoryStore
 
 _IMAGE_ASSET_INDEX_REL = "generated_images/index.jsonl"
 
