@@ -10,7 +10,10 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app import models
+from app.models.agent import Agent
+from app.models.chat import Chat
+from app.models.chat_settings import ChatSettings
+from app.models.user import User
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.user import AuthType
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
@@ -35,17 +38,17 @@ def generate_session_id(chat_id: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
 
 
-async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
+async def get_chat(db: AsyncSession, chat_id: str) -> Optional[Chat]:
     """
     Get chat by ID
     """
     try:
         result = await db.execute(
-            select(models.Chat)
+            select(Chat)
             .options(
-                selectinload(models.Chat.settings), selectinload(models.Chat.agent)
+                selectinload(Chat.settings), selectinload(Chat.agent)
             )
-            .where(models.Chat.id == chat_id)
+            .where(Chat.id == chat_id)
         )
         chat = result.scalar_one_or_none()
         if chat:
@@ -95,7 +98,7 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
 
 async def get_chats(
     db: AsyncSession, user_id: str, skip: int = 0, limit: int = 100
-) -> List[models.Chat]:
+) -> List[Chat]:
     """
     Get user's chat list, sorted by recent message time in descending order
     """
@@ -111,11 +114,11 @@ async def get_chats(
             )
 
         result = await db.execute(
-            select(models.Chat)
+            select(Chat)
             .options(
-                selectinload(models.Chat.settings), selectinload(models.Chat.agent)
+                selectinload(Chat.settings), selectinload(Chat.agent)
             )
-            .where(models.Chat.user_id == user_id)
+            .where(Chat.user_id == user_id)
         )
         all_chats = result.scalars().all()
 
@@ -193,7 +196,7 @@ async def get_chats(
 
 async def create_chat(
     db: AsyncSession, chat_in: ChatCreate, user_id: str
-) -> models.Chat:
+) -> Chat:
     """
     Create new chat
     """
@@ -203,7 +206,7 @@ async def create_chat(
 
         # First get Agent's opening message
         agent_result = await db.execute(
-            select(models.Agent).where(models.Agent.id == chat_in.agent_id)
+            select(Agent).where(Agent.id == chat_in.agent_id)
         )
         agent = agent_result.scalar_one_or_none()
         if not agent:
@@ -211,7 +214,7 @@ async def create_chat(
 
         # 排除数据库模型中不存在的字段
         chat_data = chat_in.model_dump(exclude=EXCLUDE_FIELDS)
-        db_chat = models.Chat(id=chat_id, **chat_data, user_id=user_id)
+        db_chat = Chat(id=chat_id, **chat_data, user_id=user_id)
 
         db.add(db_chat)
         await db.commit()
@@ -230,7 +233,7 @@ async def create_chat(
                 if existing_messages.get("total", 0) == 0:
                     # 获取用户信息用于变量替换
                     user_result = await db.execute(
-                        select(models.User.nickname).where(models.User.id == user_id)
+                        select(User.nickname).where(User.id == user_id)
                     )
                     user_nickname = user_result.scalar_one_or_none() or "you"
 
@@ -254,11 +257,11 @@ async def create_chat(
 
         # Re-query to load relational data
         result = await db.execute(
-            select(models.Chat)
+            select(Chat)
             .options(
-                selectinload(models.Chat.settings), selectinload(models.Chat.agent)
+                selectinload(Chat.settings), selectinload(Chat.agent)
             )
-            .where(models.Chat.id == db_chat.id)
+            .where(Chat.id == db_chat.id)
         )
         chat = result.scalar_one()
 
@@ -314,8 +317,8 @@ async def create_chat(
 
 
 async def update_chat(
-    db: AsyncSession, *, db_chat: models.Chat, chat_in: ChatUpdate
-) -> models.Chat:
+    db: AsyncSession, *, db_chat: Chat, chat_in: ChatUpdate
+) -> Chat:
     """
     更新聊天
     """
@@ -358,7 +361,7 @@ async def update_chat(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def delete_chat(db: AsyncSession, *, db_chat: models.Chat) -> models.Chat:
+async def delete_chat(db: AsyncSession, *, db_chat: Chat) -> Chat:
     """
     删除聊天
     """
@@ -396,7 +399,7 @@ async def delete_chat(db: AsyncSession, *, db_chat: models.Chat) -> models.Chat:
 
 async def get_or_create_chat_by_agent(
     db: AsyncSession, user_id: str, agent_id: str
-) -> models.Chat:
+) -> Chat:
     """
     根据用户ID和Agent ID获取或创建唯一的聊天会话（高性能优化版）
     每个用户和每个Agent只能有一个会话
@@ -410,7 +413,7 @@ async def get_or_create_chat_by_agent(
         if cached_session:
             logger.debug(f"从缓存获取聊天会话: {cached_session['chat_id']}")
             # 从缓存构建Chat对象
-            chat = models.Chat(
+            chat = Chat(
                 id=cached_session["chat_id"],
                 user_id=user_id,
                 agent_id=agent_id,
@@ -431,10 +434,10 @@ async def get_or_create_chat_by_agent(
 
         # 2. 数据库查询（使用简单查询，减少预加载）
         result = await db.execute(
-            select(models.Chat).where(
-                models.Chat.user_id == user_id,
-                models.Chat.agent_id == agent_id,
-                models.Chat.is_active == True,
+            select(Chat).where(
+                Chat.user_id == user_id,
+                Chat.agent_id == agent_id,
+                Chat.is_active == True,
             )
         )
         existing_chat = result.scalar_one_or_none()
@@ -476,8 +479,8 @@ async def get_or_create_chat_by_agent(
                     # For cached agents, we need to check the actual database for deletion status
                     # since the cache might not include deleted_at info
                     agent_result = await db.execute(
-                        select(models.Agent.deleted_at).where(
-                            models.Agent.id == agent_id
+                        select(Agent.deleted_at).where(
+                            Agent.id == agent_id
                         )
                     )
                     agent_info = agent_result.first()
@@ -488,14 +491,14 @@ async def get_or_create_chat_by_agent(
                     # 数据库查询Agent信息
                     agent_result = await db.execute(
                         select(
-                            models.Agent.name,
-                            models.Agent.avatar,
-                            models.Agent.background_animated,
-                            models.Agent.intro,
-                            models.Agent.opening,
-                            models.Agent.opening_audio_url,
-                            models.Agent.deleted_at,
-                        ).where(models.Agent.id == agent_id)
+                            Agent.name,
+                            Agent.avatar,
+                            Agent.background_animated,
+                            Agent.intro,
+                            Agent.opening,
+                            Agent.opening_audio_url,
+                            Agent.deleted_at,
+                        ).where(Agent.id == agent_id)
                     )
                     agent_info = agent_result.first()
                     if agent_info:
@@ -543,7 +546,7 @@ async def get_or_create_chat_by_agent(
                     )
                 # 检查deleted_at状态，因为它可能已更新
                 agent_result = await db.execute(
-                    select(models.Agent.deleted_at).where(models.Agent.id == agent_id)
+                    select(Agent.deleted_at).where(Agent.id == agent_id)
                 )
                 agent_info = agent_result.first()
                 existing_chat.agent_is_deleted = (
@@ -569,8 +572,8 @@ async def get_or_create_chat_by_agent(
                         # 如果缓存中没有开场白，从数据库查询
                         agent_result = await db.execute(
                             select(
-                                models.Agent.opening, models.Agent.opening_audio_url
-                            ).where(models.Agent.id == agent_id)
+                                Agent.opening, Agent.opening_audio_url
+                            ).where(Agent.id == agent_id)
                         )
                         agent_info = agent_result.first()
                         if agent_info:
@@ -581,14 +584,14 @@ async def get_or_create_chat_by_agent(
                     if agent_opening:
                         # 获取用户和 Agent 信息用于变量替换
                         user_result = await db.execute(
-                            select(models.User.nickname).where(
-                                models.User.id == user_id
+                            select(User.nickname).where(
+                                User.id == user_id
                             )
                         )
                         user_nickname = user_result.scalar_one_or_none() or "you"
 
                         agent_result = await db.execute(
-                            select(models.Agent.name).where(models.Agent.id == agent_id)
+                            select(Agent.name).where(Agent.id == agent_id)
                         )
                         agent_name = agent_result.scalar_one_or_none() or "IntelliMate"
 
@@ -658,14 +661,14 @@ async def get_or_create_chat_by_agent(
             # 数据库查询Agent信息
             agent_result = await db.execute(
                 select(
-                    models.Agent.name,
-                    models.Agent.avatar,
-                    models.Agent.background_animated,
-                    models.Agent.intro,
-                    models.Agent.opening,
-                    models.Agent.opening_audio_url,
-                    models.Agent.deleted_at,
-                ).where(models.Agent.id == agent_id)
+                    Agent.name,
+                    Agent.avatar,
+                    Agent.background_animated,
+                    Agent.intro,
+                    Agent.opening,
+                    Agent.opening_audio_url,
+                    Agent.deleted_at,
+                ).where(Agent.id == agent_id)
             )
             agent_info = agent_result.first()
             if not agent_info:
@@ -697,7 +700,7 @@ async def get_or_create_chat_by_agent(
 
         # 8. 创建新的聊天会话
         chat_id = str(uuid.uuid4())
-        db_chat = models.Chat(id=chat_id, user_id=user_id, agent_id=agent_id)
+        db_chat = Chat(id=chat_id, user_id=user_id, agent_id=agent_id)
 
         logger.debug(
             f"创建新聊天会话 - Chat ID: {chat_id}, User ID: {user_id}, Agent ID: {agent_id}"
@@ -730,7 +733,7 @@ async def get_or_create_chat_by_agent(
                 if existing_messages.get("total", 0) == 0:
                     # 获取用户信息用于变量替换
                     user_result = await db.execute(
-                        select(models.User.nickname).where(models.User.id == user_id)
+                        select(User.nickname).where(User.id == user_id)
                     )
                     user_nickname = user_result.scalar_one_or_none() or "you"
 
@@ -772,7 +775,7 @@ async def get_or_create_chat_by_agent(
         if cached_agent:
             # For cached agents, we need to check the database for deletion status
             agent_result = await db.execute(
-                select(models.Agent.deleted_at).where(models.Agent.id == agent_id)
+                select(Agent.deleted_at).where(Agent.id == agent_id)
             )
             agent_info = agent_result.first()
             db_chat.agent_is_deleted = agent_info[0] is not None if agent_info else None
@@ -824,14 +827,14 @@ async def get_or_create_chat_by_agent(
         # 可能是并发创建导致的重复，尝试再次查询
         try:
             result = await db.execute(
-                select(models.Chat)
+                select(Chat)
                 .options(
-                    selectinload(models.Chat.settings), selectinload(models.Chat.agent)
+                    selectinload(Chat.settings), selectinload(Chat.agent)
                 )
                 .where(
-                    models.Chat.user_id == user_id,
-                    models.Chat.agent_id == agent_id,
-                    models.Chat.is_active == True,
+                    Chat.user_id == user_id,
+                    Chat.agent_id == agent_id,
+                    Chat.is_active == True,
                 )
             )
             existing_chat = result.scalar_one_or_none()
@@ -856,16 +859,16 @@ async def get_or_create_chat_by_agent(
 
 async def get_or_create_chat_settings(
     db: AsyncSession, chat_id: str, user_id: str, agent_id: str
-) -> models.ChatSettings:
+) -> ChatSettings:
     """
     获取或创建聊天设置（处理并发创建和外键约束）
     """
     try:
         # 先查找是否已存在设置，预加载agent关系
         result = await db.execute(
-            select(models.ChatSettings)
-            .options(selectinload(models.ChatSettings.agent))
-            .where(models.ChatSettings.chat_id == chat_id)
+            select(ChatSettings)
+            .options(selectinload(ChatSettings.agent))
+            .where(ChatSettings.chat_id == chat_id)
         )
         settings = result.scalar_one_or_none()
 
@@ -874,7 +877,7 @@ async def get_or_create_chat_settings(
 
         # 确保chat记录存在（防止外键约束违反）
         chat_result = await db.execute(
-            select(models.Chat).where(models.Chat.id == chat_id)
+            select(Chat).where(Chat.id == chat_id)
         )
         chat = chat_result.scalar_one_or_none()
 
@@ -884,7 +887,7 @@ async def get_or_create_chat_settings(
 
         # 如果不存在，创建新的设置
         settings_id = str(uuid.uuid4())
-        db_settings = models.ChatSettings(
+        db_settings = ChatSettings(
             id=settings_id,
             user_id=user_id,
             agent_id=agent_id,
@@ -901,9 +904,9 @@ async def get_or_create_chat_settings(
 
             # 重新查询以加载关系数据
             result = await db.execute(
-                select(models.ChatSettings)
-                .options(selectinload(models.ChatSettings.agent))
-                .where(models.ChatSettings.id == db_settings.id)
+                select(ChatSettings)
+                .options(selectinload(ChatSettings.agent))
+                .where(ChatSettings.id == db_settings.id)
             )
             settings_with_agent = result.scalar_one()
 
@@ -916,9 +919,9 @@ async def get_or_create_chat_settings(
 
             # 查询已存在的设置
             result = await db.execute(
-                select(models.ChatSettings)
-                .options(selectinload(models.ChatSettings.agent))
-                .where(models.ChatSettings.chat_id == chat_id)
+                select(ChatSettings)
+                .options(selectinload(ChatSettings.agent))
+                .where(ChatSettings.chat_id == chat_id)
             )
             existing_settings = result.scalar_one()
             return existing_settings
@@ -935,16 +938,16 @@ async def get_or_create_chat_settings(
 
 async def update_chat_settings(
     db: AsyncSession, chat_id: str, settings_update: ChatSettingsUpdate
-) -> models.ChatSettings:
+) -> ChatSettings:
     """
     根据chat_id更新聊天设置
     """
     try:
         # 查找现有设置，预加载agent关系
         result = await db.execute(
-            select(models.ChatSettings)
-            .options(selectinload(models.ChatSettings.agent))
-            .where(models.ChatSettings.chat_id == chat_id)
+            select(ChatSettings)
+            .options(selectinload(ChatSettings.agent))
+            .where(ChatSettings.chat_id == chat_id)
         )
         settings = result.scalar_one_or_none()
 
@@ -964,9 +967,9 @@ async def update_chat_settings(
 
         # 重新查询以确保关系数据已加载
         result = await db.execute(
-            select(models.ChatSettings)
-            .options(selectinload(models.ChatSettings.agent))
-            .where(models.ChatSettings.id == settings.id)
+            select(ChatSettings)
+            .options(selectinload(ChatSettings.agent))
+            .where(ChatSettings.id == settings.id)
         )
         updated_settings = result.scalar_one()
 
@@ -986,20 +989,20 @@ async def update_chat_settings(
 
 async def get_chat_by_agent_and_user(
     db: AsyncSession, agent_id: str, user_id: str
-) -> Optional[models.Chat]:
+) -> Optional[Chat]:
     """
     根据agent_id和user_id获取唯一的聊天会话
     """
     try:
         result = await db.execute(
-            select(models.Chat)
+            select(Chat)
             .options(
-                selectinload(models.Chat.settings), selectinload(models.Chat.agent)
+                selectinload(Chat.settings), selectinload(Chat.agent)
             )
             .where(
-                models.Chat.agent_id == agent_id,
-                models.Chat.user_id == user_id,
-                models.Chat.is_active == True,
+                Chat.agent_id == agent_id,
+                Chat.user_id == user_id,
+                Chat.is_active == True,
             )
         )
         return result.scalar_one_or_none()
@@ -1018,7 +1021,7 @@ async def get_chat_by_agent_and_user(
 
 async def get_chat_by_user_and_agent(
     db: AsyncSession, user_id: str, agent_id: str
-) -> Optional[models.Chat]:
+) -> Optional[Chat]:
     """
     根据user_id和agent_id获取唯一的聊天会话
     """
@@ -1044,8 +1047,8 @@ async def delete_chats_by_agent_id(
 
         # 查找所有匹配的聊天记录
         result = await db.execute(
-            select(models.Chat).where(
-                models.Chat.agent_id == agent_id, models.Chat.user_id == user_id
+            select(Chat).where(
+                Chat.agent_id == agent_id, Chat.user_id == user_id
             )
         )
         chats = result.scalars().all()
@@ -1153,7 +1156,7 @@ async def save_debug_messages(
 
         # 查找对应的 chat 记录
         # 这里需要通过遍历来找到对应的 chat（因为 session_id 是基于 chat_id 生成的）
-        result = await db.execute(select(models.Chat))
+        result = await db.execute(select(Chat))
         chats = result.scalars().all()
 
         target_chat = None
@@ -1352,7 +1355,7 @@ async def _try_match_existing_image(
 
         # 读取该 chat 已展示的兜底图 id，避免重复展示
         chat_result = await db.execute(
-            select(models.Chat).where(models.Chat.id == chat_id)
+            select(Chat).where(Chat.id == chat_id)
         )
         chat = chat_result.scalar_one_or_none()
         sent_fallback_images = list(chat.sent_fallback_images or []) if chat else []
@@ -1522,7 +1525,7 @@ async def generate_chat_image(
 
     # 验证Agent是否存在
     result = await db.execute(
-        select(models.Agent.id, models.Agent.name).where(models.Agent.id == agent_id)
+        select(Agent.id, Agent.name).where(Agent.id == agent_id)
     )
     agent_basic = result.first()
     if not agent_basic:
@@ -1543,7 +1546,7 @@ async def generate_chat_image(
     session_id = generate_session_id(chat.id)
 
     # 获取用户对象用于限额检查
-    user_result = await db.execute(select(models.User).where(models.User.id == user_id))
+    user_result = await db.execute(select(User).where(User.id == user_id))
     user = user_result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -2017,7 +2020,7 @@ async def generate_chat_music(
 
     # 验证 Agent 是否存在
     result = await db.execute(
-        select(models.Agent.id, models.Agent.name).where(models.Agent.id == agent_id)
+        select(Agent.id, Agent.name).where(Agent.id == agent_id)
     )
     agent_basic = result.first()
     if not agent_basic:
@@ -2034,7 +2037,7 @@ async def generate_chat_music(
 
     session_id = generate_session_id(chat.id)
 
-    user_result = await db.execute(select(models.User).where(models.User.id == user_id))
+    user_result = await db.execute(select(User).where(User.id == user_id))
     user = user_result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

@@ -5,15 +5,15 @@
 # Docker：Dockerfile 将本脚本 COPY 到镜像根目录，CMD 执行 /start.sh，故 SCRIPT_DIR=/。
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 从 SCRIPT_DIR 向上查找包含 alembic/alembic.ini 的目录作为仓库根 ROOT。
-# 本地：backend/push_worker 下无 alembic/，循环上一级到仓库根即找到。
-# Docker：脚本在 /，镜像中已有 /alembic/alembic.ini（COPY alembic/ alembic/），不进入循环，ROOT 保持为 /。
+# 从 SCRIPT_DIR 向上查找包含 backend/alembic/alembic.ini 的目录作为仓库根 ROOT。
+# 本地：backend/push_worker 下无 backend/alembic/，循环上一级到仓库根即找到。
+# Docker：脚本在 /，镜像中已有 /backend/alembic/alembic.ini，ROOT 保持为 /。
 ROOT="$SCRIPT_DIR"
-while [ ! -f "$ROOT/alembic/alembic.ini" ] && [ "$ROOT" != "/" ]; do
+while [ ! -f "$ROOT/backend/alembic/alembic.ini" ] && [ "$ROOT" != "/" ]; do
   ROOT="$(cd "$ROOT/.." && pwd)"
 done
-if [ ! -f "$ROOT/alembic/alembic.ini" ]; then
-  echo "ERROR: alembic/alembic.ini not found (searched from $SCRIPT_DIR)"
+if [ ! -f "$ROOT/backend/alembic/alembic.ini" ]; then
+  echo "ERROR: backend/alembic/alembic.ini not found (searched from $SCRIPT_DIR)"
   exit 1
 fi
 cd "$ROOT"
@@ -39,7 +39,7 @@ done
 # Run database migrations
 echo "Starting database migrations..."
 export PYTHONPATH=.
-export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-$ROOT/alembic/alembic.ini}"
+export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-$ROOT/backend/alembic/alembic.ini}"
 python -m alembic -c "$ALEMBIC_CONFIG" upgrade head
 
 

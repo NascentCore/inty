@@ -8,7 +8,7 @@ on:
   #     # 不含 devops/config.yaml.imate_*：push 默认只部署 dev/prod，避免仅改 iMate 配置却重部署 IntelliMate inty-ops-dev
   #     - "app/**/*.py"
   #     # 数据库改动以后端部署为出发点，ops 平台不做部署
-  #     # - "alembic/**/*.py"
+  #     # - "backend/alembic/**/*.py"
   #     - "backend/ops/**"
   #     - "devops/config.yaml.dev"
   #     - "devops/config.yaml.prod"

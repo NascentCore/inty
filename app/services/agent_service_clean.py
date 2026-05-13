@@ -11,7 +11,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import models
+from app.models.agent import Agent
 from app.core.agent.clean_prompt_system import AgentPromptContext, AgentRuntimeSettings
 from app.core.config import (
     global_config_loaded_from_config_yaml as global_config,
@@ -63,30 +63,30 @@ async def get_agent_for_chat_structured(
 
     try:
         query = select(
-            models.Agent.id,
-            models.Agent.name,
-            models.Agent.gender,
-            models.Agent.settings,
-            models.Agent.main_prompt,
-            models.Agent.mode_prompt,
-            models.Agent.personality,
-            models.Agent.scenario,
-            models.Agent.message_example,
-            models.Agent.creator_notes,
-            models.Agent.tags,
-            models.Agent.character_version,
-            models.Agent.extensions,
-            models.Agent.intro,
-            models.Agent.avatar,
-            models.Agent.background,
-            models.Agent.background_animated,
-            models.Agent.opening,
-            models.Agent.voice_id,
-            models.Agent.opening_audio_url,
-            models.Agent.created_at,
-            models.Agent.updated_at,
-            models.Agent.version,
-        ).where(and_(models.Agent.id == agent_id, models.Agent.deleted_at.is_(None)))
+            Agent.id,
+            Agent.name,
+            Agent.gender,
+            Agent.settings,
+            Agent.main_prompt,
+            Agent.mode_prompt,
+            Agent.personality,
+            Agent.scenario,
+            Agent.message_example,
+            Agent.creator_notes,
+            Agent.tags,
+            Agent.character_version,
+            Agent.extensions,
+            Agent.intro,
+            Agent.avatar,
+            Agent.background,
+            Agent.background_animated,
+            Agent.opening,
+            Agent.voice_id,
+            Agent.opening_audio_url,
+            Agent.created_at,
+            Agent.updated_at,
+            Agent.version,
+        ).where(and_(Agent.id == agent_id, Agent.deleted_at.is_(None)))
 
         result = await db.execute(query)
         row = result.first()

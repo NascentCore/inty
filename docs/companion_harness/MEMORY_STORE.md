@@ -136,7 +136,7 @@ flowchart LR
 
 #### Legacy `memory`（本设计不触碰）
 
-- 历史主 App 能力：`memory` 表（见 `alembic/versions/20260127_120000_add_memory_tables.py`）、节日/日常抽取与推送等。
+- 历史主 App 能力：`memory` 表（见 `backend/alembic/versions/20260127_120000_add_memory_tables.py`）、节日/日常抽取与推送等。
 - **本 FR 不读不写** legacy `memory`：不共享 ORM、不共享 Repository、LTM 行不 `FOREIGN KEY` 指向 `memory.id`。
 
 #### Companion Harness 工作区存储（正交）
@@ -309,8 +309,8 @@ flowchart LR
 
 ### 仓库路径索引
 
-- `alembic/versions/20260127_120000_add_memory_tables.py`：legacy `memory`（仅对照，本 FR 不扩展）
-- `alembic/AGENTS.md`：迁移流程
+- `backend/alembic/versions/20260127_120000_add_memory_tables.py`：legacy `memory`（仅对照，本 FR 不扩展）
+- `backend/alembic/AGENTS.md`：迁移流程
 - `app/core/companion_harness/companion/manager.py`：`CompanionManager` / `CompanionSession`，会话 scope 来源
 - `app/core/companion_harness/companion/memory_registry.py`：`get_memory_store` 注册表模式（LTM 运行时应对齐）
 - `app/core/companion_harness/companion/memory_store.py`：工作区 store（与 LTM 正交）

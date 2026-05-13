@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.db.session import AsyncSessionLocal
 from app.external_services.gcs import download_from_gcs, is_valid_gcs_url
-from app.models import Agent, Resource
+from app.models.agent import Agent
+from app.models.resource import Resource
 from app.services.resource_service import async_create_image_resource
 from app.utils.image import ImageFormat, ImageSize
 

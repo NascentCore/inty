@@ -136,11 +136,10 @@ async def _preload_database_connections():
 async def _preload_database_tables(db: AsyncSession):
     try:
         from sqlalchemy import select, text
-        from app import models
 
-        await db.execute(select(models.Chat).limit(1))
-        await db.execute(select(models.Agent).limit(1))
-        await db.execute(select(models.User).limit(1))
+        await db.execute(select(Chat).limit(1))
+        await db.execute(select(Agent).limit(1))
+        await db.execute(select(User).limit(1))
         await db.execute(text("SELECT 1 FROM chat_history LIMIT 1"))
     except Exception as e:
         logger.warning(f"数据库表预初始化失败（可忽略）: {str(e)}")

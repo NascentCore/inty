@@ -51,7 +51,6 @@ fi
 
 COPY app/ app/
 COPY backend/ backend/
-COPY alembic/ alembic/
 # 获取各个环节对应的配置文件，方便操作
 COPY devops/ devops/
 COPY tools/scripts/ tools/scripts/

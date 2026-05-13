@@ -5,13 +5,12 @@ DEBUG=false
 BUILD_FRONTEND=true
 LOG_FILE=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "$SCRIPT_DIR/../../alembic/alembic.ini" ]]; then
+if [[ -f "$SCRIPT_DIR/../../backend/alembic/alembic.ini" ]]; then
   REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-  cd "$REPO_ROOT"
 else
   REPO_ROOT="$SCRIPT_DIR"
-  cd "$REPO_ROOT"
 fi
+cd "$REPO_ROOT"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -40,7 +39,7 @@ while [[ $# -gt 0 ]]; do
     --help|-h)
       echo "Usage: $0 [--local|--dev] [--debug] [--log-file PATH] [--build-frontend|--no-build-frontend]"
       echo ""
-      echo "  Always (before uvicorn): alembic upgrade head (see ALEMBIC_CONFIG / repo alembic/alembic.ini)."
+      echo "  Always (before uvicorn): alembic upgrade head (see ALEMBIC_CONFIG / repo backend/alembic/alembic.ini)."
       echo "  Listen port: \${PORT:-8001}."
       echo ""
       echo "  Flags (any mode):"
@@ -63,7 +62,7 @@ done
 
 echo "Starting database migrations..."
 export PYTHONPATH=.
-export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/alembic/alembic.ini}"
+export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/backend/alembic/alembic.ini}"
 alembic -c "$ALEMBIC_CONFIG" upgrade head
 
 OPS_PORT="${PORT:-8001}"

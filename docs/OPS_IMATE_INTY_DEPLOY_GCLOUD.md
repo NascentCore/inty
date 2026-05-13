@@ -103,8 +103,8 @@ cloud-sql-proxy "${CONNECTION_NAME}" --port=15432
 ```bash
 cd /path/to/inty   # 仓库根目录
 export PYTHONPATH=.
-alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate_dev upgrade head
-alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate_prod upgrade head
+alembic -c backend/alembic/alembic.ini -x config=devops/config.yaml.imate_dev upgrade head
+alembic -c backend/alembic/alembic.ini -x config=devops/config.yaml.imate_prod upgrade head
 ```
 
 **禁止**用 IntelliMate 的 `config.yaml.dev` / `config.yaml.prod` 对上述库执行 upgrade，以免误连错误库。
@@ -206,8 +206,8 @@ sudo chown root:root /opt/inty-imate-*/*.json
 cd ~/inty && git pull
 export PYTHONPATH=.
 # 使用仓库内 iMate 配置，确保 database.db 已是 inty-imate-dev / inty-imate
-alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate_dev upgrade head
-alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate_prod upgrade head
+alembic -c backend/alembic/alembic.ini -x config=devops/config.yaml.imate_dev upgrade head
+alembic -c backend/alembic/alembic.ini -x config=devops/config.yaml.imate_prod upgrade head
 ```
 
 构建并运行容器（示例；生产推荐走 GitHub Actions）：

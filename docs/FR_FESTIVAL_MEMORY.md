@@ -121,7 +121,7 @@ CREATED_BY_AGENT
 |模块|文件|
 |----|----|
 |模型|`app/models/memory.py`（Memory 扩展、FestivalMemoryConfig）|
-|迁移|`alembic/versions/20260204_120000_add_festival_memory_fields_and_config.py`、`alembic/versions/20260213_120000_add_delivery_at_to_memory.py`、`alembic/versions/20260215_232500_9e4b5a6c7d8e_add_metadata_to_memory.py`|
+|迁移|`backend/alembic/versions/20260204_120000_add_festival_memory_fields_and_config.py`、`backend/alembic/versions/20260213_120000_add_delivery_at_to_memory.py`、`backend/alembic/versions/20260215_232500_9e4b5a6c7d8e_add_metadata_to_memory.py`|
 |抽取/筛选|`app/services/festival_memory_service.py`（assemble_args、summarize_memory_from_messages_between_user_and_agent、extract_festival_and_save、extract_festival_to_dict、query_festival_memories_from_db；抽取成功后仅写 memory，不写 chat_history）|
 |投递服务|`app/services/memory_service.py`（get_undelivered_festival_memories、deliver_festival_memories_for_user_agent）|
 |聊天历史|`app/services/chat_history_service.py`（add_festival_memory_prompt_message_sync、get_festival_memory_prompt_content_for_agent_sync、get_messages_paginated）|

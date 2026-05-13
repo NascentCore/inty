@@ -8,7 +8,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 
 # 举报原因 ID 到代码的映射（硬编码，不再使用数据库表）
 # 对应关系与 Android 端老版本保持一致（参考 ReportViewModel.kt）：

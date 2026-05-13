@@ -10,7 +10,7 @@ from typing import Any
 
 import websockets
 
-from tests.support.companion_ws_bootstrap.constants import (
+from tests.companion_ws_bootstrap.constants import (
     IMPLICIT_USER_SIGNED_ON_MESSAGE_TYPE,
     WS_KEEPALIVE_PING_INTERVAL_SEC,
 )

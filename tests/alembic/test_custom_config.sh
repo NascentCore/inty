@@ -147,7 +147,7 @@ main() {
         default_config_created=true
     fi
 
-    if ! python -m alembic -c "${REPO_ROOT}/alembic/alembic.ini" -x "config=$config_path" upgrade head; then
+    if ! python -m alembic -c "${REPO_ROOT}/backend/alembic/alembic.ini" -x "config=$config_path" upgrade head; then
         log_error "Alembic upgrade 失败"
         return 1
     fi
