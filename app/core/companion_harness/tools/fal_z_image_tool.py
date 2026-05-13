@@ -1,8 +1,10 @@
 """Fal z-image-turbo text-to-image and image-to-image via app.core.images.fal.
 
-Tool return strings: failures start with ``ERROR:``; successful runs start with
-``SUCCESS:`` (then the existing ``OK`` line and image fields) so the model can
-distinguish success from failure without misreading dev URLs (e.g. ``file://``).
+Tool return strings on success are a short human- and model-readable summary
+(``Image prompt:`` / ``Edit prompt:``, a compact ``SUCCESS:`` anti-retry line,
+and image count). Full metadata (URLs, dimensions, asset ids, persona revision)
+is persisted only in ``generated_images/index.jsonl`` via
+``append_image_asset_record``. Failures start with ``ERROR:``.
 """
 
 from __future__ import annotations
@@ -27,12 +29,20 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 
 _DEFAULT_IMAGE_SIZE = "portrait_4_3"
 MAX_NUM_IMAGES_PER_CALL = 4
+_TOOL_PROMPT_DISPLAY_MAX_CHARS = 4000
 
 
-def _success_tool_banner(tool_name: str) -> str:
-    """One-line lead-in for successful tool output (symmetric with ``ERROR:`` failures)."""
+def _prompt_for_tool_display(prompt: str) -> str:
+    s = (prompt or "").strip()
+    if len(s) <= _TOOL_PROMPT_DISPLAY_MAX_CHARS:
+        return s
+    return s[: _TOOL_PROMPT_DISPLAY_MAX_CHARS] + "..."
+
+
+def _success_tool_banner_compact(tool_name: str) -> str:
+    """Short anti-retry line for successful tool output (symmetric with ``ERROR:`` failures)."""
     return (
-        f"SUCCESS: {tool_name} completed successfully; this is not an ERROR. "
+        f"SUCCESS: {tool_name} finished. "
         f"Do not call {tool_name} again for the same user request unless the user "
         f"wants a new or different image."
     )
@@ -143,13 +153,10 @@ def _build_image_to_image_input(kwargs: dict[str, Any]) -> Any:
     return ZImageTurboImageToImageInput(**kwargs)
 
 
-def _append_one_image_summary(
-    parts: list[str],
+def _record_image_asset(
     store: MemoryStore,
     item: Any,
     *,
-    index: int,
-    total: int,
     tool_name: str,
     persona_revision_id: str,
     source_asset_id: str | None = None,
@@ -157,20 +164,13 @@ def _append_one_image_summary(
     source_image_relative_path: str | None = None,
     source_image_url: str | None = None,
 ) -> None:
-    if total > 1:
-        parts.append(f"#{index}:")
     url = getattr(item, "gcs_http_url", "") or ""
     gcs_uri = str(getattr(item, "gcs_uri", "") or "").strip()
-    parts.append(f"gcs_http_url={url}" if url else "gcs_http_url=(none)")
     w = getattr(getattr(item, "size", None), "width", None)
     h = getattr(getattr(item, "size", None), "height", None)
-    if w is not None and h is not None:
-        parts.append(f"size={w}x{h}")
     local_rel: str | None = None
 
     asset_id = str(uuid.uuid4())
-    parts.append(f"asset_id={asset_id}")
-    parts.append(f"persona_revision_id={persona_revision_id}")
     append_image_asset_record(
         store,
         {
@@ -191,10 +191,6 @@ def _append_one_image_summary(
             "created_at": utc_iso_ts(),
         },
     )
-    if source_asset_id:
-        parts.append(f"source_asset_id={source_asset_id}")
-    if source_persona_revision_id:
-        parts.append(f"source_persona_revision_id={source_persona_revision_id}")
 
 
 async def run_generate_image_z_image_turbo(
@@ -226,25 +222,20 @@ async def run_generate_image_z_image_turbo(
         return "ERROR: Fal z-image-turbo returned no images."
 
     n = len(results)
-    parts: list[str] = [
-        _success_tool_banner("generate_image"),
-        "generate_image: OK (fal z-image-turbo).",
-        f"requested={num_images if num_images is not None else 1}",
-        f"returned={n}",
-        f"persona_revision_id={persona_revision_id}",
-    ]
-    for i, item in enumerate(results):
-        _append_one_image_summary(
-            parts,
+    for item in results:
+        _record_image_asset(
             store,
             item,
-            index=i + 1,
-            total=n,
             tool_name="generate_image",
             persona_revision_id=persona_revision_id,
         )
 
-    return " ".join(parts)
+    blocks = [
+        f"Image prompt:\n{_prompt_for_tool_display(prompt)}",
+        _success_tool_banner_compact("generate_image"),
+        f"Generated {n} image(s).",
+    ]
+    return "\n\n".join(blocks)
 
 
 async def run_modify_image_z_image_turbo(
@@ -321,18 +312,9 @@ async def run_modify_image_z_image_turbo(
     else:
         result = maybe_result
 
-    parts: list[str] = [
-        _success_tool_banner("modify_image"),
-        "modify_image: OK (fal z-image-turbo image-to-image).",
-        "returned=1",
-        f"persona_revision_id={persona_revision_id}",
-    ]
-    _append_one_image_summary(
-        parts,
+    _record_image_asset(
         store,
         result,
-        index=1,
-        total=1,
         tool_name="modify_image",
         persona_revision_id=persona_revision_id,
         source_asset_id=source_asset_id,
@@ -340,4 +322,9 @@ async def run_modify_image_z_image_turbo(
         source_image_relative_path=source_rel_for_index,
         source_image_url=source_image_url,
     )
-    return " ".join(parts)
+    blocks = [
+        f"Edit prompt:\n{_prompt_for_tool_display(prompt)}",
+        _success_tool_banner_compact("modify_image"),
+        "Generated 1 image(s).",
+    ]
+    return "\n\n".join(blocks)

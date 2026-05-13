@@ -19,6 +19,13 @@ where ``output_to_user`` may be false (silent recap). On **foreground** chat com
 true. If the model returns false anyway (schema allows any boolean; prompts say true here), we log
 ``run_turn ... output_to_user=false (expected true for chat branch)`` so traces can flag
 prompt/model confusion, not a parser bug.
+
+**User-visible reply timing (tools on)**: For ``TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` and a
+normal user round, the foreground chat completion (no ``tools`` param) finishes first; the string
+returned on ``CompanionTurnResult`` / persisted as the main chat-track assistant turn comes from that
+foreground parse. ``start_tool_background_job`` then runs the tool-model loop in a background thread;
+``run_turn`` does **not** await that loop. Maintenance inner ticks skip the foreground envelope; see
+``companion/AGENTS.md`` (Async tool_background) for the product-facing summary.
 """
 
 from __future__ import annotations
@@ -58,6 +65,7 @@ from app.core.companion_harness.memory.memory_pipeline import (
     schedule_memory_update_after_turn,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from .heartbeat import build_proactive_heartbeat_transcript_user_marker
 from .models import (
     CompanionTurnResult,
     ContextMeta,
@@ -115,13 +123,19 @@ CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 
 
 def _replace_leading_system_messages_multi(
-    messages: list[dict[str, Any]], system_messages: list[dict[str, Any]]
+    messages: list[dict[str, Any]],
+    system_messages: list[dict[str, Any]],
+    *,
+    stack_depth: int,
 ) -> list[dict[str, Any]]:
-    """Strip initial system role block(s) and prepend structured system messages."""
-    i = 0
-    while i < len(messages) and messages[i].get("role") == "system":
-        i += 1
-    return [*system_messages, *messages[i:]]
+    """Replace the first ``stack_depth`` system messages (MemoryStore stack) with ``system_messages``.
+
+    Deeper ``role: system`` slices after dialogue (e.g. ``## user-time-context`` with
+    ``User's time`` / ``Time zone``) must remain
+    in ``messages[stack_depth:]`` and are not stripped; callers pass ``stack_depth`` equal to
+    ``len(prompt_plan.system_messages)`` from the same turn's :func:`build_companion_turn_prompt_plan`.
+    """
+    return [*system_messages, *messages[stack_depth:]]
 
 
 def _async_dual_llm_system_message_variants(
@@ -230,6 +244,8 @@ async def run_turn(
     - 调度记忆管线
 
     返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
+    有工具且走上述异步路由时：普通用户轮的 ``assistant_text`` 仅反映**已结束的前台** envelope，**不等待**
+    ``tool_background`` 内 tool 模型多轮跑完；维护性 inner tick 跳过前台时 ``assistant_text`` 可为空。
     """
     t0 = time.perf_counter()
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
@@ -284,6 +300,10 @@ async def run_turn(
         route_inner_mode=route_inner_mode,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
     )
+    if tick_proactive:
+        user_text = build_proactive_heartbeat_transcript_user_marker(
+            loaded_state.loaded_transcript
+        )
     context = loaded_state.context
     bundle = loaded_state.bundle
     prompt_plan = build_companion_turn_prompt_plan(
@@ -395,11 +415,16 @@ async def run_turn(
                             implicit_signal_bundle=implicit_signal_bundle,
                         )
                     )
+                    _stack_depth = len(prompt_plan.system_messages)
                     chat_msgs = _replace_leading_system_messages_multi(
-                        messages, chat_system_msgs
+                        messages,
+                        chat_system_msgs,
+                        stack_depth=_stack_depth,
                     )
                     tool_msgs = _replace_leading_system_messages_multi(
-                        messages, tool_system_msgs
+                        messages,
+                        tool_system_msgs,
+                        stack_depth=_stack_depth,
                     )
                     chat_model = llm_client.resolve_model("chat")
                     tool_model = llm_client.resolve_model("tool")
@@ -450,6 +475,7 @@ async def run_turn(
                                     langsmith_extra=invocation_extra(
                                         source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
                                     ),
+                                    high_reasoning=tick_proactive,
                                 )
 
                             resp = await asyncio.wait_for(
@@ -584,6 +610,7 @@ async def run_turn(
                             else None
                         ),
                         scene=llm_scene,
+                        high_reasoning=tick_proactive,
                     )
                     langsmith_trace_acc = (
                         langsmith_trace_id_from_completion(resp) or langsmith_trace_acc
@@ -786,6 +813,11 @@ async def run_turn(
         langsmith_trace_acc or "",
         langsmith_llm_run_acc or "",
     )
+    transcript_user_content = (
+        USER_SIGNED_ON_TRIGGER_USER_TEXT
+        if implicit_sign_on_turn
+        else user_text
+    )
     return CompanionTurnResult(
         assistant_text=last_text,
         reply_modality=reply_modality,  # type: ignore[arg-type]
@@ -801,4 +833,5 @@ async def run_turn(
         inner_tick_activity=route_inner_mode.value if inner_tick_turn else None,
         turn_start_context_mode=context.context_mode,
         transcript_compaction=prompt_plan.transcript_compaction,
+        transcript_user_content=transcript_user_content,
     )

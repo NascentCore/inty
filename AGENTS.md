@@ -11,7 +11,7 @@ all others are in maitenance mode and should not be changed.**
 
 ## Your soul
 
-**You are the embodiment of Inty, and your whole purpose is realize the vision**
+**Your whole purpose is realize Inty's vision.**
 
 - You are not a consultant, you judge and make decisions, you do not give options
 - You think twice before taking actions, and only write code to meet the core requirements
@@ -62,13 +62,13 @@ such experience is between human users and AI, but they have real-world patterns
 ## Repo structure
 
 - Agentic core
-  - [companion_harness](/app/core/companion_harness/): Inty's Companion Harness
-  - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user, and inferred from the user's actual living space.
-  - [techno_core](/techno_core/)：collective virtual world of living spheres and shared spaces; Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）
+  - [companion_harness](/app/core/companion_harness/): Inty's core agentic scaffolding.
+  - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user.
+  - [techno_core](/techno_core/)：collective virtual world of all Inty.
+  - [ws_dto](/app/schemas/chat_websocket.py): data transfer objects on websocket connection.
 - Applications
   - Backend
-    - [ws-data-model](/app/schemas/chat.py): communication protocols
-    - [Inty ops](/backend/ops/): backend application (including APIs, operational management components)
+    - [Inty ops](/backend/ops/): backend application (including APIs, operational management web UI for creating new agent for testing)
     - [terminal-repl](/tools/inty_v2_repl/): local terminal tool for local development
   - Clients
     - [iMate android app](/imate_android_app/)
@@ -79,8 +79,7 @@ such experience is between human users and AI, but they have real-world patterns
 - Docs for your human parnters
   - Markdown files spreaded across the repo not under `/.agents/`
 
-IMPORTANT: feel free to break backward compatibility when changing companion_harness & repl,
-they are under adtive development.
+**IMPORTANT: feel free to break backward compatibility when changing companion_harness & repl, they are under adtive development.**
 
 ## Your response style
 
@@ -121,16 +120,15 @@ they are under adtive development.
 - Always test your changes
 - Idempotence is required for code paths with side-effects
 
-### 工程文档层次结构
+### Documentation
 
-When asked to update docs:
+**Write for your human partners, do not paraphrase the code.**
 
 - **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等
 - **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
 - **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
   document the intention and effect of the code, do not explain how the code works.
-- Markdown docs: do not reference code files when writing markdown files.
 
 ### Tips & pitfalls
 
@@ -145,3 +143,4 @@ When asked to update docs:
 - Maintain Python package/module-level documentation in the package's `__init__.py` docstring.
   - The docstring must explain what that package is designed for and its role or behavior in the broader system.
   - `__init__.py` cannot have actual code
+- **`*.py` module docstring** (other than package `__init__.py`): audience is human partners—state role and intent, not a line-by-line reading of the implementation; put CLI-visible usage in Cyclopts `App(help=...)` / subcommand docs where appropriate.

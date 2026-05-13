@@ -121,6 +121,13 @@ class CompanionTurnResult(BaseModel):
             "mirrored to WS meta_data.transcript_compaction."
         ),
     )
+    transcript_user_content: str = Field(
+        default="",
+        description=(
+            "Exact ``content`` written to the user transcript row for this turn (API/chat_history "
+            "should mirror this for proactive heartbeat parity)."
+        ),
+    )
 
 
 class ChatMessage(BaseModel):

@@ -15,8 +15,7 @@ from app.core.companion_harness.companion.llm_client import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.heartbeat import (
-    HEARTBEAT_SYNTHETIC_USER_TEXT,
-    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+    HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
 )
 from app.core.companion_harness.companion.models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
@@ -24,6 +23,9 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import run_turn
+from app.core.companion_harness.companion.user_time_context_llm_slice import (
+    build_companion_user_time_context_system_content,
+)
 from app.schemas.chat import UserTimeContext
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
@@ -104,10 +106,10 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
     assert rows[1]["source"] == "inner_tick"
 
 
-def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
+def test_run_turn_inner_tick_maintenance_injects_user_time_system_before_tail_user(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``ImplicitSignalBundle.client_time`` is reflected on the tail user line for inner-tick LLM."""
+    """``ImplicitSignalBundle.client_time`` becomes a ``## user-time-context`` system slice before tail user."""
     from app.core.companion_harness.companion import turn_pipeline as turn_pipeline_mod
 
     monkeypatch.setattr(
@@ -150,10 +152,18 @@ def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
     assert len(bg_jobs) == 1
     llm_msgs = bg_jobs[0]["request_messages"]
     assert llm_msgs[-1]["role"] == "user"
-    content = llm_msgs[-1]["content"] or ""
-    assert "user-time: 2026-05-01T08:00:00+08:00" in content
-    assert "user-time-zone: Asia/Shanghai" in content
-    assert "user-time-utc-offset: UTC+08:00" in content
+    tail = llm_msgs[-1]["content"] or ""
+    assert tail == INNER_TICK_SYNTHETIC_USER_TEXT
+    assert "User's time:" not in tail
+    assert "## user-time-context" not in tail
+    assert llm_msgs[-2]["role"] == "system"
+    sys_body = llm_msgs[-2]["content"] or ""
+    expected_sys = build_companion_user_time_context_system_content(
+        bundle.client_time.model_dump(exclude_none=True),
+        enabled=True,
+    )
+    assert expected_sys is not None
+    assert sys_body == expected_sys
     assert "##User Time Context" not in "\n".join(
         (m.get("content") or "") for m in llm_msgs if m.get("role") == "system"
     )
@@ -183,9 +193,13 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     assert not client.calls[0].get("tools")
     llm_msgs = client.calls[0]["messages"]
     assert llm_msgs[-1]["role"] == "user"
-    assert llm_msgs[-1]["content"] == PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
+    user_tail = llm_msgs[-1]["content"] or ""
+    assert user_tail.startswith("[SYSTEM HEARTBEAT]")
+    assert "Time since the user's last message:" in user_tail
+    assert "Time since the assistant's last message:" in user_tail
+    assert out.transcript_user_content == user_tail
     assert llm_msgs[-2]["role"] == "system"
-    assert llm_msgs[-2]["content"] == HEARTBEAT_SYNTHETIC_USER_TEXT
+    assert llm_msgs[-2]["content"] == HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
     assert not any(
         m.get("role") == "user"
         and (m.get("content") or "").strip() == INNER_TICK_SYNTHETIC_USER_TEXT.strip()
@@ -197,6 +211,10 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
         for line in store.read_document("transcript.jsonl").strip().splitlines()
     ]
     assert rows[0]["role"] == "user"
-    assert rows[0]["content"] == PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
+    row0 = rows[0]["content"] or ""
+    assert row0.startswith("[SYSTEM HEARTBEAT]")
+    assert "Time since the user's last message:" in row0
+    assert "Time since the assistant's last message:" in row0
+    assert row0 == out.transcript_user_content
     assert rows[0]["inner_tick"] is True
     assert rows[0]["heartbeat"] is True

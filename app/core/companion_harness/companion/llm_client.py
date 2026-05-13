@@ -170,6 +170,7 @@ class CompanionLLMClient:
         response_format: dict[str, Any] | None = None,
         scene: LLMScene | None = None,
         langsmith_extra: dict[str, Any] | None = None,
+        high_reasoning: bool = False,
     ) -> Any:
         tool_list = list(tools or [])
         resolved_scene: LLMScene = (
@@ -194,6 +195,7 @@ class CompanionLLMClient:
             tool_choice=tool_choice,
             response_format=response_format,
             langsmith_extra=langsmith_extra,
+            high_reasoning=high_reasoning,
         )
 
     def chat_completion_unified(
@@ -203,6 +205,7 @@ class CompanionLLMClient:
         model: str | None = None,
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
+        high_reasoning: bool = False,
     ) -> Any:
         """Single client path (no dual routing), for bootstrap or tests."""
         m = model or self.resolve_model("tool" if tools else "chat")
@@ -212,6 +215,7 @@ class CompanionLLMClient:
             messages_payload=messages,
             tools=list(tools or []),
             tool_choice=tool_choice,
+            high_reasoning=high_reasoning,
         )
 
     def complete_text(

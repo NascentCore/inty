@@ -75,6 +75,7 @@ class _DualLlmForegroundStubCompanionLLMClient(CompanionLLMClient):
         response_format: dict[str, Any] | None = None,
         scene: Any | None = None,
         langsmith_extra: dict[str, Any] | None = None,
+        high_reasoning: bool = False,
     ) -> Any:
         message = SimpleNamespace(
             content=self._envelope_json,

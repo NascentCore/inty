@@ -10,6 +10,6 @@ python3 tools/scripts/draw_labeled_grid.py \
   -o docs/companion_harness/conversation_intelligence_realtime_grid.png
 ```
 
-Source data: [conversation_intelligence_realtime_grid.yaml](/docs/companion_harness/conversation_intelligence_realtime_grid.yaml). Skill: [.cursor/skills/conversation-grid-matplotlib/SKILL.md](/.cursor/skills/conversation-grid-matplotlib/SKILL.md).
+Source data: [conversation_intelligence_realtime_grid.yaml](/docs/companion_harness/conversation_intelligence_realtime_grid.yaml). Skill: [.cursor/skills/draw-grid-diagram/SKILL.md](/.cursor/skills/draw-grid-diagram/SKILL.md).
 
 ![conversation intelligence realtime grid](conversation_intelligence_realtime_grid.png)

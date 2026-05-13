@@ -1,4 +1,9 @@
-"""Turn routing for companion kernel: sync dialogue vs async foreground chat + background tools."""
+"""Turn routing for companion kernel: sync dialogue vs async foreground chat + background tools.
+
+When tools are enabled, ``run_turn`` resolves the user-visible assistant string from the **foreground**
+envelope chat before spawning ``tool_background``; the latter's tool-model rounds are not awaited for
+that return value (maintenance inner tick skips foreground—see ``turn`` module docstring / companion AGENTS).
+"""
 
 from __future__ import annotations
 

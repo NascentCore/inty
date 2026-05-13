@@ -1,7 +1,12 @@
-"""Cyclopts entry: Inty backend WebSocket REPL only (no local workspace turn loop).
+"""Terminal companion for partners who ship the product: hold a real conversation against a
+running Inty backend on the same WebSocket chat path as production clients; latency, reconnects,
+implicit greeting, and follow-up frames all originate in the server harness, not a second brain
+simulated inside this process.
 
-Downlink assistant frames also print ``tool_bg`` banners: ``local-path:`` lines and
-``image-url:`` when ``meta_data.generated_image`` carries ``image_url``.
+Use it when you want the subjective feel of the companion under load or flaky networks; when you
+need exact wire semantics or field meanings, read the package README and ``AGENTS.md`` instead of
+treating this TTY as a specification surface. Cyclopts ``--help`` summarizes the assistant
+**metadata section** and post-body banner lines; LangSmith URL resolution is documented there.
 """
 
 from __future__ import annotations
@@ -13,6 +18,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Annotated, Any, Mapping
 
 from cyclopts import App, Parameter
@@ -31,22 +37,75 @@ from .backend_chat_ws import (
     default_api_base_url,
     http_base_to_ws_chat_url,
 )
-from .proto_log import (
-    configure_proto_log,
-    repl_wall_ts_str,
-    resolve_proto_log_file,
-)
+from .proto_log import configure_proto_log, repl_wall_ts_str
 from .repl_dotenv import load_prototype_dotenv
 from .repl_message_io import format_ws_error_banner, pop_downlink_item
 
 load_prototype_dotenv()
 
+_repl_langsmith_client: Any | None = None
+_repl_langsmith_client_import_failed = False
 
-def _default_workspace() -> Path:
-    return Path(__file__).resolve().parent / "workspace"
+
+def _repl_langsmith_url_stitched(run_uuid: str) -> str:
+    """Build LangSmith UI URL from run/trace UUID when org + project (session) UUIDs are in env.
+
+    Uses ``LANGCHAIN_WORKSPACE_ID`` / ``LANGSMITH_WORKSPACE_ID`` and
+    ``LANGSMITH_PROJECT_ID`` / ``LANGCHAIN_PROJECT_ID`` (Tracer session id, not project name).
+    """
+    ru = (run_uuid or "").strip()
+    if not ru:
+        return ""
+    ws = (
+        os.environ.get("LANGCHAIN_WORKSPACE_ID", "").strip()
+        or os.environ.get("LANGSMITH_WORKSPACE_ID", "").strip()
+    )
+    proj = (
+        os.environ.get("LANGSMITH_PROJECT_ID", "").strip()
+        or os.environ.get("LANGCHAIN_PROJECT_ID", "").strip()
+    )
+    if not ws or not proj:
+        return ""
+    try:
+        from langsmith.utils import get_api_url, get_host_url
+
+        web = get_host_url(None, get_api_url(None)).rstrip("/")
+    except Exception:
+        web = "https://smith.langchain.com"
+    return f"{web}/o/{ws}/projects/p/{proj}/r/{ru}"
 
 
-def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
+def _repl_langsmith_client_lazy() -> Any | None:
+    """Single process-wide ``langsmith.Client`` for metadata-section URL resolution, or None."""
+    global _repl_langsmith_client, _repl_langsmith_client_import_failed
+    if _repl_langsmith_client_import_failed:
+        return None
+    if _repl_langsmith_client is None:
+        try:
+            from langsmith import Client
+
+            _repl_langsmith_client = Client(auto_batch_tracing=False)
+        except ImportError:
+            _repl_langsmith_client_import_failed = True
+            return None
+    return _repl_langsmith_client
+
+
+def _repl_langsmith_resolve_open_url(run_uuid: str) -> str:
+    """LangSmith run/trace page URL for ``run_uuid`` (SDK first, then stitched env fallback)."""
+    ru = (run_uuid or "").strip()
+    if not ru:
+        return ""
+    c = _repl_langsmith_client_lazy()
+    if c is not None:
+        try:
+            return c.get_run_url(run=SimpleNamespace(id=ru))
+        except Exception:
+            pass
+    return _repl_langsmith_url_stitched(ru)
+
+
+def _repl_metadata_correlation_tokens(ids: Mapping[str, str]) -> str:
     u = ids.get("user_msg_uuid", "")
     a = ids.get("assistant_msg_uuid", "")
     ls = ids.get("langsmith_trace_id", "")
@@ -65,8 +124,28 @@ def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
     return " " + " ".join(parts)
 
 
-def _repl_meta_banner_fragment(meta_data: Mapping[str, Any] | None) -> str:
-    """Trailing banner tokens derived from assistant ``meta_data`` (API snake_case keys)."""
+def _repl_assistant_metadata_section_suffix(
+    merged: Mapping[str, str],
+    meta_data: Mapping[str, Any] | None,
+) -> str:
+    """Space-prefixed tail of the assistant **metadata section** (correlation ids, URLs, flags)."""
+    out = _repl_metadata_correlation_tokens(merged)
+    tid = merged.get("langsmith_trace_id", "").strip()
+    rid = merged.get("langsmith_run_id", "").strip()
+    trace_url = ""
+    if tid:
+        trace_url = _repl_langsmith_resolve_open_url(tid)
+        if trace_url:
+            out += f" langsmith_trace_url={trace_url}"
+    if rid and rid != tid:
+        run_url = _repl_langsmith_resolve_open_url(rid)
+        if run_url and run_url != trace_url:
+            out += f" langsmith_run_url={run_url}"
+    return out + _repl_metadata_section_flags_fragment(meta_data)
+
+
+def _repl_metadata_section_flags_fragment(meta_data: Mapping[str, Any] | None) -> str:
+    """Trailing metadata-section tokens from assistant ``meta_data`` flags (API snake_case)."""
     if not meta_data:
         return ""
     if meta_data.get("tool_background_started") is True:
@@ -78,6 +157,7 @@ def _repl_banner_suffix_ids(
     transcript_ids: Mapping[str, str] | None,
     meta_data: Mapping[str, Any] | None,
 ) -> dict[str, str]:
+    """Merge transcript and ``meta_data`` correlation keys for the metadata section."""
     out: dict[str, str] = {}
     if transcript_ids:
         for k in (
@@ -123,6 +203,8 @@ def _repl_assistant_banner_label(
     *,
     meta_data: Mapping[str, Any] | None = None,
 ) -> str:
+    if meta_data and meta_data.get("companion_scheduled_reminder") is True:
+        return "inner-tick scheduled-reminder"
     act_raw = None
     if meta_data:
         raw = meta_data.get("inner_tick_activity")
@@ -161,9 +243,10 @@ def _print_assistant_reply(
     repl_source_label: str | None = None,
     meta_data: Mapping[str, Any] | None = None,
 ) -> None:
+    """Print assistant body text, preceded by one **metadata section** line (see module docstring)."""
     ms = elapsed_s * 1000
     merged = _repl_banner_suffix_ids(transcript_ids, meta_data)
-    suffix = _repl_transcript_id_suffix(merged) + _repl_meta_banner_fragment(meta_data)
+    suffix = _repl_assistant_metadata_section_suffix(merged, meta_data)
     label = repl_source_label or _repl_assistant_banner_label(
         transcript_ids, meta_data=meta_data
     )
@@ -171,19 +254,9 @@ def _print_assistant_reply(
     print(out)
 
 
-def _init_proto_logging(
-    workspace: Path,
-    log_file: Path | None,
-    no_log_file: bool,
-) -> None:
-    resolved = resolve_proto_log_file(
-        workspace, explicit=log_file, no_log_file=no_log_file
-    )
-    configure_proto_log(resolved)
-    logger.info(
-        "inty_v2 proto logging file={}",
-        str(resolved) if resolved is not None else "(stderr only)",
-    )
+def _init_proto_logging() -> None:
+    configure_proto_log()
+    logger.info("inty_v2 proto logging (stderr)")
 
 
 def _format_cli_exc(exc: BaseException) -> str:
@@ -531,12 +604,9 @@ def _repl_interactive_backend_ws_loop(
 
 
 def _repl_run_backend_ws_branch(
-    ws: Path,
     *,
     agent_id: str | None,
     api_base_url: str | None,
-    log_file: Path | None,
-    no_log_file: bool,
 ) -> None:
     agent_resolved = _resolve_chat_agent_id_cli(agent_id)
     base = (api_base_url or default_api_base_url()).strip()
@@ -552,7 +622,7 @@ def _repl_run_backend_ws_branch(
         agent_resolved,
         repl_ws_conn_id,
     )
-    _init_proto_logging(ws, log_file, no_log_file)
+    _init_proto_logging()
     repl_notice_q: queue.Queue[str] = queue.Queue()
 
     def _user_signed_on_notice(aid: str, message_id: str) -> None:
@@ -600,32 +670,22 @@ def _repl_run_backend_ws_branch(
         bridge.stop()
 
 
+_REPL_APP_HELP = (
+    "Inty /api/v1/chat/ws terminal client.\n\n"
+    "Each assistant downlink prints a metadata section (one line): wall clock, source label, "
+    "elapsed ms, correlation key=value tokens from meta_data, optional LangSmith UI URLs, "
+    "and optional tool_background_started=true. Additional lines after the assistant body "
+    "may include local-path: (tool_bg) or image-url: (generated image) metadata."
+)
+
 app = App(
     name="inty-chat-ws-repl",
-    help="Inty /api/v1/chat/ws terminal client; --workspace is for local logs only.",
+    help=_REPL_APP_HELP,
 )
 
 
 @app.command
 def repl(
-    workspace: Annotated[
-        Path | None,
-        Parameter(
-            name="--workspace",
-            help="日志等本地输出目录；默认包内 workspace/",
-        ),
-    ] = None,
-    log_file: Annotated[
-        Path | None,
-        Parameter(
-            name="--log-file",
-            help="loguru 文件日志；默认 <workspace>/inty_v2.log",
-        ),
-    ] = None,
-    no_log_file: Annotated[
-        bool,
-        Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
-    ] = False,
     agent_id: Annotated[
         str | None,
         Parameter(
@@ -642,13 +702,9 @@ def repl(
     ] = None,
 ) -> None:
     """连接 Inty /api/v1/chat/ws，交互输入；对话与 bootstrap 由服务端处理。"""
-    ws = workspace or _default_workspace()
     _repl_run_backend_ws_branch(
-        ws,
         agent_id=agent_id,
         api_base_url=api_base_url,
-        log_file=log_file,
-        no_log_file=no_log_file,
     )
 
 

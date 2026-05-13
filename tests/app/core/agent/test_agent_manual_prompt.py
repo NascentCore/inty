@@ -2,6 +2,7 @@
 from app.core.agent import agent as agent_module
 from app.core.agent import prompts
 from app.core.agent.agent import Agent, INTELLIMATE_AGENT_ID, INTELLIMATE_AGENT_NAME
+from app.core.user_time_context_prompt import suffix_user_text_with_time_context_lines
 from langchain_core.messages import SystemMessage
 
 
@@ -244,6 +245,12 @@ def test_openai_tail_user_message_includes_time_suffix(monkeypatch):
     )
     from langchain_core.messages import HumanMessage
 
+    ctx = {
+        "local_time": "2026-02-05T18:30:00",
+        "timezone": "Asia/Shanghai",
+        "utc_offset_minutes": 480,
+    }
+    expected = suffix_user_text_with_time_context_lines("hello", ctx, enabled=True)
     msgs = [
         SystemMessage(content="sys"),
         HumanMessage(content="hello"),
@@ -252,19 +259,13 @@ def test_openai_tail_user_message_includes_time_suffix(monkeypatch):
         msgs,
         user_name="U",
         agent_name="A",
-        user_time_context={
-            "local_time": "2026-02-05T18:30:00",
-            "timezone": "Asia/Shanghai",
-            "utc_offset_minutes": 480,
-        },
+        user_time_context=ctx,
     )
     assert out[-1]["role"] == "user"
     body = out[-1]["content"]
     assert isinstance(body, str)
-    assert body.startswith("hello\n\n")
-    assert "user-time: 2026-02-05T18:30:00" in body
-    assert "user-time-zone: Asia/Shanghai" in body
-    assert "user-time-utc-offset: UTC+08:00" in body
+    assert body == expected
+    assert "user-time-utc-offset" not in body
 
 
 def test_build_system_messages_can_omit_output_format_prompt():

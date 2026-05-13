@@ -105,9 +105,10 @@ class ChatWsUserSignedOutFrame(BaseModel):
 class ChatWsUserSignedOnAckFrame(BaseModel):
     """**Server → client (immediate)** result of ``user_signed_on`` handling.
 
-    Known ``reason`` values include ``not_supported``, ``proactive_heartbeat_disabled``,
-    ``invalid_payload``, ``missing_message_id``, ``invalid_message_id``, ``agent_mismatch``,
-    ``server_error``; the wire may carry other strings for forward compatibility.
+    Known ``reason`` values include ``not_supported``, ``invalid_payload``, ``missing_message_id``,
+    ``invalid_message_id``, ``agent_mismatch``, ``server_error``; the wire may carry other strings
+    for forward compatibility. ``proactive_heartbeat_disabled`` is legacy (coords are armed for
+    scheduled companion reminders even when proactive and maintenance inner-tick are disabled).
     """
 
     type: Literal["user_signed_on_ack"] = "user_signed_on_ack"
@@ -185,6 +186,13 @@ class ChatWsCompanionWireMetaData(BaseModel):
     heartbeat: Optional[bool] = None
     companion_proactive_heartbeat: Optional[bool] = None
     companion_maintenance_inner_tick: Optional[bool] = None
+    companion_scheduled_reminder: Optional[bool] = None
+    scheduled_task_id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("scheduledTaskId", "scheduled_task_id"),
+        serialization_alias="scheduledTaskId",
+        description="Companion schedule_queue task id when this turn fires a due reminder.",
+    )
 
     source: Optional[str] = None
     inner_tick_activity: Optional[str] = None

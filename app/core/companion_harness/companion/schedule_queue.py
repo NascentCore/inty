@@ -220,6 +220,18 @@ def _pick_next_due_task(
     ][0]
 
 
+def next_due_task_for_execution(store: MemoryStore) -> ScheduleTask | None:
+    """Return the next pending task that is due now (UTC), or ``None``.
+
+    Ordering matches :func:`_pick_next_due_task` with no in-flight ids: earliest
+    ready time, then ``created_at_utc``, then ``id``. Used by WebSocket inner-tick
+    to pull one reminder per poll without starting the unused scheduler thread.
+    """
+    now = datetime.now(timezone.utc)
+    tasks = _load_tasks(store)
+    return _pick_next_due_task(store, tasks, now=now, in_flight_ids=set())
+
+
 def _seconds_until_next_pending_task(
     store: MemoryStore,
     tasks: list[ScheduleTask],

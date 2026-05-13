@@ -5,10 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.agent.agent import UserTimeContext
-from app.core.user_time_context_prompt import (
-    format_utc_offset_minutes,
-    suffix_user_text_with_time_context_lines,
-)
+from app.core.user_time_context_prompt import suffix_user_text_with_time_context_lines
 
 
 def test_suffix_disabled_returns_unchanged() -> None:
@@ -32,7 +29,7 @@ def test_suffix_omits_blank_fields() -> None:
     assert suffix_user_text_with_time_context_lines("x", ctx, enabled=True) == "x"
 
 
-def test_suffix_all_three_lines() -> None:
+def test_suffix_user_time_and_time_zone_lines() -> None:
     ctx: UserTimeContext = {
         "local_time": "2026-05-01T10:00:00",
         "timezone": "Europe/Berlin",
@@ -40,13 +37,9 @@ def test_suffix_all_three_lines() -> None:
     }
     out = suffix_user_text_with_time_context_lines("body", ctx, enabled=True)
     assert out.startswith("body\n\n")
-    assert "user-time: 2026-05-01T10:00:00" in out
-    assert "user-time-zone: Europe/Berlin" in out
-    assert "user-time-utc-offset: UTC+02:00" in out
-
-
-def test_format_utc_offset_minutes_negative() -> None:
-    assert format_utc_offset_minutes(-330) == "UTC-05:30"
+    assert "User's time: 2026/05/01 10:00" in out
+    assert "Time zone: Europe/Berlin" in out
+    assert "user-time-utc-offset" not in out
 
 
 @pytest.mark.parametrize(
@@ -60,6 +53,6 @@ def test_suffix_partial_fields(enabled: bool, expect_suffix: bool) -> None:
     ctx: UserTimeContext = {"timezone": "UTC"}
     out = suffix_user_text_with_time_context_lines("m", ctx, enabled=enabled)
     if expect_suffix:
-        assert out == "m\n\nuser-time-zone: UTC"
+        assert out == "m\n\nTime zone: UTC"
     else:
         assert out == "m"

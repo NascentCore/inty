@@ -1,31 +1,42 @@
 # `app/schemas` — cross-boundary data shapes
 
-**Summary:** This package holds Pydantic models for **HTTP bodies, WebSocket JSON frames, and other serialized payloads** that cross the API boundary; it is the typed contract between FastAPI handlers, clients, and (where applicable) persistence shapes in `app/models/`.
+**Summary:** This package holds Pydantic models for **HTTP bodies, WebSocket JSON frames, and other serialized payloads** that cross the API boundary. It is the typed contract between FastAPI handlers, non-Python clients, and (where applicable) persistence-oriented shapes defined alongside the ORM layer.
+
+## Who should read this
+
+- **Backend engineers** changing request/response or WebSocket wire formats.
+- **Client engineers** aligning Kotlin/Swift (or other) DTOs with the same JSON field names and enums.
+- **Anyone debugging turns** who needs to know which identifiers are on the wire versus only in logs or tracing.
+
+If you are not touching serialization boundaries, you usually do not need to edit here.
 
 ## Role in the system
 
 - **What belongs here:** request/response DTOs and wire enums — **not** orchestration, LLM prompts, or domain services.
-- **`app/schemas/__init__.py`:** legacy re-exports only; **do not add new imports** there (see file header).
-- **Ops-only analytics DTOs** (e.g. user analytics reports) live under [`backend/ops/schemas/`](/backend/ops/schemas/), not under `app/schemas/`.
+- **Package root exports:** the package initializer only carries legacy re-exports; **do not grow** that surface for new types — introduce named modules and import from them directly at call sites.
+- **Ops-only analytics DTOs** (e.g. operational user analytics reports) belong with the ops application schema area, **not** under this tree.
 
-## Scope by concern (files are grouped by intent, not enumerated)
+## Scope by concern (grouped by intent)
 
-- **Companion chat (HTTP + shared fields):** message lists, completions, media generation helpers, time context — [`chat.py`](/app/schemas/chat.py).
-- **Chat WebSocket wire:** control/ack/ping frames, queued business envelopes, companion `meta_data` conventions (forward-compatible `extra="allow"` where defined) — [`chat_websocket.py`](/app/schemas/chat_websocket.py).
-- **Realtime voice / live session payloads:** language and session-oriented validation — [`live_chat.py`](/app/schemas/live_chat.py), [`phone_call.py`](/app/schemas/phone_call.py).
-- **Turn-adjacent telemetry (non user-authored text):** versioned implicit signal bundles — [`implicit_signals.py`](/app/schemas/implicit_signals.py).
-- **History compaction artifacts:** structured summaries of truncated/compacted windows — [`messages_compaction.py`](/app/schemas/messages_compaction.py).
-- **Identity & account:** registration/login/guest, tokens, verification codes, user CRUD, deletion flows — [`auth.py`](/app/schemas/auth.py), [`token.py`](/app/schemas/token.py), [`verification_code.py`](/app/schemas/verification_code.py), [`user.py`](/app/schemas/user.py), [`user_deletion.py`](/app/schemas/user_deletion.py).
-- **Product surface:** agents, themes, resources, subscriptions, settings, notifications, biz actions, reports — [`agent.py`](/app/schemas/agent.py), [`character_theme.py`](/app/schemas/character_theme.py), [`resource.py`](/app/schemas/resource.py), [`subscription.py`](/app/schemas/subscription.py), [`settings.py`](/app/schemas/settings.py), [`notification.py`](/app/schemas/notification.py), [`biz_action.py`](/app/schemas/biz_action.py), [`report.py`](/app/schemas/report.py).
-- **Shared API plumbing:** generic API wrappers and pagination — [`response.py`](/app/schemas/response.py); field-omission helpers — [`exclude_fields.py`](/app/schemas/exclude_fields.py); health/version probes — [`health.py`](/app/schemas/health.py), [`version.py`](/app/schemas/version.py).
+Descriptions below name **topics**, not implementation files; use your editor’s symbol search or tests that assert wire JSON when you need the exact model.
+
+- **Companion chat (HTTP + fields shared with realtime):** message lists, completions, media-generation-related payloads, user time context for the companion.
+- **Chat WebSocket wire:** control, acknowledgment, and ping frames; queued business envelopes; companion `meta_data` conventions. Where models are intentionally forward-tolerant, extra keys may be preserved rather than rejected. Assistant or user `meta_data` may carry scheduled-reminder bookkeeping when a due schedule-queue task is delivered through the inner-tick path.
+- **Realtime voice / live session payloads:** language and session-oriented validation for live chat and phone-call style flows.
+- **Turn-adjacent telemetry (not user-authored chat text):** versioned implicit-signal bundles the product may surface without treating them as normal user messages.
+- **History compaction artifacts:** structured representations of truncated or compacted windows for long-context handling.
+- **Identity and account:** registration, login, guest flows, tokens, verification codes, user CRUD, and deletion-related payloads.
+- **Product surface:** agents, character themes, downloadable resources, subscriptions, settings, notifications, business actions, and reporting DTOs the app exposes over HTTP.
+- **Shared API plumbing:** generic success/error wrappers, pagination helpers, field-omission utilities for selective serialization, and small health/version probe payloads.
 
 ## Contract boundaries (must stay aligned)
 
-- **Cross-language syncing:** These schemas need to be in sync with clients written in non-Python languages.
-- **Mobile / product clients:** chat-related field names, enums, and `meta_data` keys must stay consistent with Kotlin DTOs (e.g. [`android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model`](/android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model), [`imate_android_app/app/src/main/java/com/inty/imate/chat/data/bean/ChatApiModels.kt`](/imate_android_app/app/src/main/java/com/inty/imate/chat/data/bean/ChatApiModels.kt)); product copy for implicit companion signals is owned in [`app/core/companion_harness/companion/implicit_signal_messages.py`](/app/core/companion_harness/companion/implicit_signal_messages.py). Concrete WebSocket frame types, companion `meta_data` models, and control/ack `type` strings live in [`chat_websocket.py`](/app/schemas/chat_websocket.py) — read that module when changing wire behavior, not this overview.
-- **Persistence:** when a payload mirrors stored entities, keep it coherent with [`app/models/`](/app/models/).
-- **Transport vs turn correlation:** `ws_conn_id` is a **WebSocket handshake query parameter** used for logging and session-scoped behavior — it is **not** a Pydantic body field and does **not** replace **`user_msg_uuid`**, **`inty_trace_id`**, or LangSmith identifiers for correlating a single turn.
+- **Cross-language syncing:** Any change here is a **public wire contract** until deprecated with a deliberate migration; treat field renames and enum value changes as client-facing releases, not refactors.
+- **Mobile and desktop clients:** chat-related names, enums, and `meta_data` keys must remain consistent with the **Kotlin (and any parallel Swift) DTOs** maintained in the Android and iMate client codebases. When companion behavior introduces new `meta_data` keys (for example background tool loops, voice-as-message delivery, or implicit sign-on semantics), clients and this package must advance together or behind explicit version gates.
+- **Product copy for implicit companion signals:** user-visible strings for synthetic or implicit turns are owned next to the companion harness, not duplicated inside schema modules — schemas carry structure; copy lives with companion presentation rules.
+- **Persistence coherence:** when a payload intentionally mirrors something stored, keep the **shape and invariants** aligned with the ORM models and migrations so serializers do not drift from what the database can represent.
+- **Transport versus turn correlation:** `ws_conn_id` is negotiated as a **WebSocket handshake query parameter** for logging and session-scoped server behavior. It is **not** a JSON body field on chat completions and it **does not replace** per-turn identifiers such as **`user_msg_uuid`**, **`inty_trace_id`**, or LangSmith run/trace identifiers when correlating a single assistant turn end-to-end.
 
 ## Housekeeping
 
-- Do not use **`model_config` as a field name** on a Pydantic model (clashes with Pydantic v2 configuration — see [model_config](https://docs.pydantic.dev/2.0/usage/model_config/)).
+- Do not use **`model_config` as a field name** on a Pydantic model (it clashes with Pydantic v2 configuration — see the upstream [model_config](https://docs.pydantic.dev/2.0/usage/model_config/) documentation).

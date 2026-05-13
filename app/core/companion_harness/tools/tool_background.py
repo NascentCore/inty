@@ -429,6 +429,7 @@ def _initial_tool_bg_completion_with_fallbacks(
                     phase_suffix=SOURCE_TOOL_BACKGROUND_INITIAL,
                     extra_metadata=tool_choice_attempt_metadata(tc),
                 ),
+                high_reasoning=True,
             )
             meta = _InitialToolBgCompletionMeta(tool_choice=tc)
             return resp, meta
@@ -732,6 +733,7 @@ async def _run_background_tool_loop(
                         INTY_TOOL_BG_ROUND_METADATA_KEY: active_round,
                     },
                 ),
+                high_reasoning=True,
             )
             _log_bg_llm_round_result(
                 round_idx=active_round,

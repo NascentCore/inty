@@ -1,10 +1,8 @@
-"""陪伴心跳调度：按 transcript 时间间隔估算聊天节奏，决定何时可触发主动开口。
+"""陪伴侧「安静多久可以主动开口」的调度与文案素材。
 
-触发模型回合时，请使用 ``run_turn(..., inner_tick_turn=True,
-inner_tick_mode=InnerTickMode.PROACTIVE_CHAT)``（与原 ``heartbeat_turn`` 等价语义：
-向 API 注入 ``HEARTBEAT_SYNTHETIC_USER_TEXT`` 为 **system** 消息，并追加一条 **user**
-占位（``PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER``）以满足 chat completion 对 user 轮的要求；无工具；
-transcript 仍写对应 ``role=user`` 行并标 ``heartbeat`` 供调度；本模块保留时间与文案常量。
+- **调度**：依据 transcript 里用户消息间隔估计对话节奏，再结合配置（基准安静时长、两次心跳最短间隔、最少 transcript 行数等）计算 ``next_heartbeat_wait_seconds``；不满足前置条件时等价于「暂不开口」。
+- **文案常量**：为主动心跳回合提供 system 侧约束与 user 占位（满足多轮 chat 形态）；占位正文的主路径在 turn 管线里按时间与 transcript 生成，本模块内的字面常量仅作回退。
+- **与回合执行的关系**：真正触发 LLM 时使用内层 tick、``InnerTickMode.PROACTIVE_CHAT``；transcript 对用户占位行打 ``heartbeat`` 标记，供 ``min_gap_sec``（锚上一次心跳 user）与占位文案（如 ``build_proactive_heartbeat_transcript_user_marker``）区分合成 user 与真人 user。具体注入顺序见 companion turn 管线实现。
 """
 
 from __future__ import annotations
@@ -17,14 +15,16 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import ChatMessage, load_transcript_from_store
 
 # 主动心跳回合里追加为 **system**：约束模型在用户未发新消息时如何接话（延续场景、禁工具、禁元话语）。
-HEARTBEAT_SYNTHETIC_USER_TEXT = (
-    "（陪伴心跳：用户尚未输入新内容。请读本窗口里**正在进行的场景、话题与语气**，用一两句自然接话，"
-    "延续当下氛围与节奏，像同一场对话的下一拍；不要突然换风格、换口吻或像新开一局；"
-    "不要提系统、心跳、等待或「我以为你走了」；不要调用工具。）"
+HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE = (
+    "## Proactive Messaging (Heartbeat)\n"
+    "- The user has not sent a new message for some time.\n"
+    "- Based on the conversation context, your character's personality, and the time elapsed, decide whether to proactively send a message.\n"
+    "- If you have something meaningful, respond appropriately.\n"
+    "- If there is nothing appropriate to say right now, respond with exactly: [SILENT]\n"
 )
 
-# 主动心跳回合里作为 **user** 的可见正文：满足「末轮须为 user」的 API 形态；transcript 与调度用 `heartbeat` 标记区分，非真人输入。
-PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER = "（陪伴心跳）"
+# 主动心跳回退文案：当调用方拿不到 ``CompanionTurnResult.transcript_user_content`` 等内核结果时使用；主路径用 ``build_proactive_heartbeat_transcript_user_marker``。
+PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER = "[SYSTEM HEARTBEAT] The user has not sent a new message for some time."
 
 _NEVER = 86400.0 * 365.0
 _RHYTHM_CLAMP_SEC = (90.0, 900.0)
@@ -107,26 +107,50 @@ def _last_assistant_ts(msgs: list[ChatMessage]) -> datetime | None:
     return None
 
 
+def _format_elapsed_since(seconds: float) -> str:
+    s = max(0, int(round(seconds)))
+    if s < 60:
+        return f"{s}s"
+    if s < 3600:
+        m, sec = divmod(s, 60)
+        return f"{m}m {sec}s" if sec else f"{m}m"
+    h, rem = divmod(s, 3600)
+    m = rem // 60
+    return f"{h}h {m}m" if m else f"{h}h"
+
+
+def _last_non_heartbeat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
+    for m in reversed(msgs):
+        if m.role == "user" and m.heartbeat is not True:
+            return _parse_ts(m.ts)
+    return None
+
+
+def build_proactive_heartbeat_transcript_user_marker(
+    msgs: list[ChatMessage],
+    *,
+    now: datetime | None = None,
+) -> str:
+    """英文一行：前缀 + 距上次真人用户消息 + 距上次助手消息（供 proactive 末轮 user 占位与 transcript）。"""
+    t = now if now is not None else datetime.now(timezone.utc)
+    last_u = _last_non_heartbeat_user_ts(msgs)
+    last_a = _last_assistant_ts(msgs)
+    if last_u is None:
+        u_seg = "Time since the user's last message: no prior non-heartbeat user message in transcript."
+    else:
+        u_seg = f"Time since the user's last message: {_format_elapsed_since((t - last_u).total_seconds())}."
+    if last_a is None:
+        a_seg = "Time since the assistant's last message: no prior assistant message in transcript."
+    else:
+        a_seg = f"Time since the assistant's last message: {_format_elapsed_since((t - last_a).total_seconds())}."
+    return f"[SYSTEM HEARTBEAT] {u_seg} {a_seg}"
+
+
 def _last_heartbeat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     for m in reversed(msgs):
         if m.role == "user" and m.heartbeat is True:
             return _parse_ts(m.ts)
     return None
-
-
-def _has_real_user_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
-    hb_idx: int | None = None
-    for i in range(len(msgs) - 1, -1, -1):
-        m = msgs[i]
-        if m.role == "user" and m.heartbeat is True:
-            hb_idx = i
-            break
-    if hb_idx is None:
-        return True
-    for m in msgs[hb_idx + 1 :]:
-        if m.role == "user" and m.heartbeat is not True:
-            return True
-    return False
 
 
 def next_heartbeat_wait_seconds(
@@ -151,9 +175,6 @@ def next_heartbeat_wait_seconds(
 
     last_asst = _last_assistant_ts(msgs)
     if last_asst is None:
-        return _NEVER
-
-    if not _has_real_user_after_last_heartbeat(msgs):
         return _NEVER
 
     t = now if now is not None else datetime.now(timezone.utc)
