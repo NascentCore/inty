@@ -9,6 +9,7 @@
 - **分工（避免双写）**  
   - **工作区里还有哪些 artifact、未来向量 LTM 往哪走**：[MEMORY_STORE.md](/docs/companion_harness/MEMORY_STORE.md)（含 `FR_COMPANION_HARNESS_MEMORY_STORE`）。  
   - **路径命名、持久化版本表、scope 键**：[`app/core/companion_harness/companion/AGENTS.md`](/app/core/companion_harness/companion/AGENTS.md)「分层记忆」「持久化与数据表」。  
+  - **Harness 演进与 memory 子包拆分**（背景规划，非本节操作步骤）：[`REFACTOR_PLAN.md`](/docs/companion_harness/REFACTOR_PLAN.md)。  
   - **本文范围**：**已实现** 的 Markdown 分层管线写入与读出链；**不涉及** legacy 主站 `memory` 表；与向量 LTM **正交**。
 
 ---
@@ -86,7 +87,7 @@ flowchart LR
 | USER 策展 | `USER.md` | 长期 | **每 N 轮**可选 LLM 重写（可禁用） | 非记忆管线门控；随 system 组装照常注入正文（与 episodic/gist 是否加载无关）。 |
 | SOUL 策展 | `SOUL.md` | 长期 | **每 N 轮**且（默认可选）**根本性信号**通过；bootstrap 后可能锁定 | 同上。 |
 
-N 与禁用开关由 **`MemoryPipelineConfig`**（及 `CompanionManager` 注入的配置）统一约束：日摘要 `day_summary_every_n_turns` / `day_summary_disabled`，语义 `memory_update_every_n_turns`，USER `user_update_every_n_turns` / `user_update_disabled`，SOUL `soul_update_every_n_turns` / `soul_update_disabled` / `soul_require_fundamental_signal`。轮次计数持久化在工作区状态 JSON（见实现索引）。
+N 与禁用开关由 **`MemoryPipelineConfig`**（及 `CompanionManager` 注入的配置）统一约束：日摘要 `day_summary_every_n_turns` / `day_summary_disabled`，语义 `memory_update_every_n_turns`，USER `user_update_every_n_turns` / `user_update_disabled`，SOUL `soul_update_every_n_turns` / `soul_update_disabled` / `soul_require_fundamental_signal`。轮次计数持久化在 scope 内的 **`memory_pipeline_state_json`** 路径（见实现索引）。
 
 ---
 
@@ -111,6 +112,7 @@ N 与禁用开关由 **`MemoryPipelineConfig`**（及 `CompanionManager` 注入�
 | 主题 | 路径 | 主要职责 |
 |------|------|----------|
 | 管线实现 | [`app/core/companion_harness/companion/memory_pipeline.py`](/app/core/companion_harness/companion/memory_pipeline.py) | 回合后追加情景、按间隔 LLM 重写 gist / `MEMORY.md` / `USER.md` / `SOUL.md`；提供同步与队列调度入口。 |
+| Scope 路径与管线状态文件 | [`app/core/companion_harness/companion/memory_store_scope.py`](/app/core/companion_harness/companion/memory_store_scope.py) `DEFAULT_MEMORY_STORE_SCOPE_PATHS` | `memory_pipeline_state_json` 等逻辑相对路径真源；轮次计数 JSON 与此对齐。 |
 | 读出与 bundle | [`app/core/companion_harness/companion/models.py`](/app/core/companion_harness/companion/models.py) `load_prompt_bundle` | 从 MemoryStore 读取各稿；按 `experience_profile_injects_private_memory` 决定是否装载日程层与 `MEMORY.md` 正文。 |
 | 私人记忆门控 | [`app/core/companion_harness/experience_profile.py`](/app/core/companion_harness/experience_profile.py) | `experience_profile_injects_private_memory` 与各模式 system 条款文案。 |
 | System 注入标题 | [`app/core/companion_harness/companion/memory_taxonomy.py`](/app/core/companion_harness/companion/memory_taxonomy.py) | 各记忆层在 prompt 中的固定标题与中英术语。 |
