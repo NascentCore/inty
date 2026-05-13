@@ -1,11 +1,12 @@
 """Terminal companion for partners who ship the product: hold a real conversation against a
-running Inty backend on the same WebSocket chat path as production clients—latency, reconnects,
+running Inty backend on the same WebSocket chat path as production clients; latency, reconnects,
 implicit greeting, and follow-up frames all originate in the server harness, not a second brain
 simulated inside this process.
 
 Use it when you want the subjective feel of the companion under load or flaky networks; when you
 need exact wire semantics or field meanings, read the package README and ``AGENTS.md`` instead of
-treating this TTY as a specification surface.
+treating this TTY as a specification surface. Cyclopts ``--help`` summarizes the assistant
+**metadata section** and post-body banner lines; LangSmith URL resolution is documented there.
 """
 
 from __future__ import annotations
