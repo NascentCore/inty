@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.core.companion_harness.companion.tool_background import (
+from app.core.companion_harness.tools.tool_background import (
     TOOL_RESULTS_TRANSCRIPT_MARKER,
     build_tool_background_transcript_body,
 )

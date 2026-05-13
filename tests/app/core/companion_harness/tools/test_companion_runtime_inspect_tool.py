@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from langsmith import tracing_context
 
-from app.core.companion_harness.companion import runtime_inspect_context as ric
+from app.core.companion_harness.tools import runtime_inspect_context as ric
 from app.core.companion_harness.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
@@ -19,7 +19,7 @@ from app.core.companion_harness.memory.memory_registry import (
     shutdown_memory_store,
 )
 from app.core.companion_harness.companion.models import ContextMeta, InnerTickMode
-from app.core.companion_harness.companion.runtime_inspect_context import (
+from app.core.companion_harness.tools.runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     build_turn_runtime_config_dict,
     runtime_inspect_begin_turn,
@@ -30,11 +30,11 @@ from app.core.companion_harness.companion.runtime_inspect_context import (
     runtime_inspect_set_scoped_memory_store,
 )
 from app.core.companion_harness.companion.runtime_events import append_runtime_event
-from app.core.companion_harness.companion.companion_tool_runtime import (
+from app.core.companion_harness.tools.companion_tool_runtime import (
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     execute_tool_call,
 )
-from app.core.companion_harness.companion.runtime_inspect_tool import tool_companion_runtime_inspect
+from app.core.companion_harness.tools.runtime_inspect_tool import tool_companion_runtime_inspect
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_prompt,
 )

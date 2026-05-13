@@ -13,12 +13,12 @@ from app.core.companion_harness.companion.bootstrap_user_interactive import (
 )
 from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.models import ContextMeta
-from app.core.companion_harness.companion.companion_tool_runtime import (
+from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
     tool_memory_store_write_document,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.tools import build_companion_tools
+from app.core.companion_harness.tools.companion_tools import build_companion_tools
 
 
 def _store(root: Path):

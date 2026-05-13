@@ -54,7 +54,7 @@ from app.core.companion_harness.companion.inner_tick_schedule import (
 from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
-from app.core.companion_harness.companion.image_gate import (
+from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
 from app.core.companion_harness.companion.models import (
@@ -62,7 +62,7 @@ from app.core.companion_harness.companion.models import (
     InnerTickMode,
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
-from app.core.companion_harness.companion.tool_background import ToolOutputEvent
+from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.companion.websocket_coordinator import (
     CompanionWebSocketCoordinator,

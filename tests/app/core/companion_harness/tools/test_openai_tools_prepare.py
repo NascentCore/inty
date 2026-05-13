@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.companion_harness.companion.companion_tool_runtime import (
+from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_repl_tools,
 )
-from app.core.companion_harness.companion.openai_tools_prepare import (
+from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_tools_strict_default_from_env,
     prepare_openai_tools_for_chat_completions,
 )

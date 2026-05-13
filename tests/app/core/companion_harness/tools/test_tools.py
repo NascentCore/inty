@@ -6,8 +6,8 @@ from pathlib import Path
 
 from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.companion_tool_runtime import execute_tool_call
-from app.core.companion_harness.companion.tools import WRITABLE_RELATIVE_PATHS
+from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
+from app.core.companion_harness.tools.companion_tools import WRITABLE_RELATIVE_PATHS
 
 
 def _run_tool(

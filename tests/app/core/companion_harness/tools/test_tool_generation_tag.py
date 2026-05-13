@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.companion_harness.companion.companion_tool_runtime import (
+from app.core.companion_harness.tools.companion_tool_runtime import (
     TOOL_TAG_GENERATION,
     round_includes_generation_tool,
     tool_requires_client_delivery_on_success,

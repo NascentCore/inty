@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Callable
 from .models import InnerTickMode
 
 if TYPE_CHECKING:
-    from .tool_background import ToolOutputEvent
+    from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
 BackgroundToolEventSink = Callable[["ToolOutputEvent"], None]
 

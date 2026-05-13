@@ -1,6 +1,6 @@
 """Normalize OpenAI Chat Completions ``tools`` payloads before HTTP (strict mode, shallow copies).
 
-Companion builds tool dicts by hand in ``companion_tool_runtime``; this module applies a single
+Companion builds tool dicts by hand in ``tools.companion_tool_runtime``; this module applies a single
 ``prepare_openai_tools_for_chat_completions`` pass so new tools cannot omit ``strict`` and gateways
 that reject strict JSON-schema tools can be bypassed via ``INTY_OPENAI_TOOLS_STRICT``.
 """

@@ -98,7 +98,7 @@ maintenance agents can fix the highest-impact item first.
 
 ### Fixed in `cursor/worst-python-style-violation-b827`
 
-- [x] Google 2.4 "Exceptions": `/app/core/companion_harness/companion/tool_background.py`
+- [x] Google 2.4 "Exceptions": `/app/core/companion_harness/tools/tool_background.py`
   caught `BaseException` at the background thread boundary and swallowed failures.
   This was the worst open violation because it could hide process-level control
   exceptions from the Companion Harness async tool path while still marking the

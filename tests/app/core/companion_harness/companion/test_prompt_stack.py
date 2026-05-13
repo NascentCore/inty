@@ -27,7 +27,7 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.tools import build_openai_repl_tools_inner_tick
+from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
 from app.core.companion_harness.companion.turn_routes import TurnRouteMode
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
