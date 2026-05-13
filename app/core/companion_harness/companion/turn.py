@@ -115,13 +115,18 @@ CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 
 
 def _replace_leading_system_messages_multi(
-    messages: list[dict[str, Any]], system_messages: list[dict[str, Any]]
+    messages: list[dict[str, Any]],
+    system_messages: list[dict[str, Any]],
+    *,
+    stack_depth: int,
 ) -> list[dict[str, Any]]:
-    """Strip initial system role block(s) and prepend structured system messages."""
-    i = 0
-    while i < len(messages) and messages[i].get("role") == "system":
-        i += 1
-    return [*system_messages, *messages[i:]]
+    """Replace the first ``stack_depth`` system messages (MemoryStore stack) with ``system_messages``.
+
+    Deeper ``role: system`` slices after dialogue (e.g. ``## user-time-context``) must remain
+    in ``messages[stack_depth:]`` and are not stripped; callers pass ``stack_depth`` equal to
+    ``len(prompt_plan.system_messages)`` from the same turn's :func:`build_companion_turn_prompt_plan`.
+    """
+    return [*system_messages, *messages[stack_depth:]]
 
 
 def _async_dual_llm_system_message_variants(
@@ -395,11 +400,16 @@ async def run_turn(
                             implicit_signal_bundle=implicit_signal_bundle,
                         )
                     )
+                    _stack_depth = len(prompt_plan.system_messages)
                     chat_msgs = _replace_leading_system_messages_multi(
-                        messages, chat_system_msgs
+                        messages,
+                        chat_system_msgs,
+                        stack_depth=_stack_depth,
                     )
                     tool_msgs = _replace_leading_system_messages_multi(
-                        messages, tool_system_msgs
+                        messages,
+                        tool_system_msgs,
+                        stack_depth=_stack_depth,
                     )
                     chat_model = llm_client.resolve_model("chat")
                     tool_model = llm_client.resolve_model("tool")

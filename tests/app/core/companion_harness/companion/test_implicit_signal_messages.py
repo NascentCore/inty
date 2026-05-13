@@ -1,4 +1,4 @@
-"""Implicit signal companion behavior (no user-time system slice)."""
+"""Implicit signal companion behavior (user-time lives in ``turn_pipeline`` system slice)."""
 
 from __future__ import annotations
 
@@ -51,9 +51,21 @@ def test_build_system_messages_does_not_inject_user_time_context_system_slice() 
     )
     joined = "\n".join(m.get("content") or "" for m in msgs if m.get("role") == "system")
     assert "##User Time Context" not in joined
+    assert "## user-time-context" not in joined
 
 
-def test_companion_tail_user_body_appends_time_lines(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_companion_tail_user_body_has_no_time_suffix() -> None:
+    out = _companion_tail_user_body_for_llm(
+        user_text="hello",
+        implicit_sign_on_turn=False,
+    )
+    assert out == "hello"
+    assert "user-time:" not in out
+
+
+def test_companion_user_time_context_system_for_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from app.core.companion_harness.companion import turn_pipeline as turn_pipeline_mod
 
     monkeypatch.setattr(
@@ -68,12 +80,11 @@ def test_companion_tail_user_body_appends_time_lines(monkeypatch: pytest.MonkeyP
             utc_offset_minutes=480,
         ),
     )
-    out = _companion_tail_user_body_for_llm(
-        user_text="hello",
-        implicit_sign_on_turn=False,
+    out = turn_pipeline_mod._companion_user_time_context_system_for_llm(
         implicit_signal_bundle=bundle,
     )
-    assert out.startswith("hello\n\n")
+    assert out is not None
+    assert out.startswith("## user-time-context\n")
     assert "user-time: 2026-05-01T08:00:00+08:00" in out
     assert "user-time-zone: Asia/Shanghai" in out
     assert "user-time-utc-offset: UTC+08:00" in out

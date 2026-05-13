@@ -13,7 +13,6 @@ from typing import Any
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml as _global_config
-from app.core.user_time_context_prompt import suffix_user_text_with_time_context_lines
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 from .heartbeat import (
@@ -49,6 +48,9 @@ from app.core.companion_harness.memory.transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from .turn_routes import TurnRouteMode
+from .user_time_context_llm_slice import (
+    build_companion_user_time_context_system_content,
+)
 
 
 @dataclass(frozen=True)
@@ -120,17 +122,23 @@ def _companion_tail_user_body_for_llm(
     *,
     user_text: str,
     implicit_sign_on_turn: bool,
-    implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> str:
-    """Tail user text for the LLM, with optional ``user-time:`` facts from ``client_time``."""
-    base = USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
+    """Tail **user** message body only (no wall-clock lines; those go in a separate system slice)."""
+    return USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
+
+
+def _companion_user_time_context_system_for_llm(
+    *,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+) -> str | None:
+    """Optional ``## user-time-context`` system body from ``client_time``, or ``None``."""
     enabled = bool(
         _global_config.app.features.experimental_enable_chat_with_user_time_context
     )
     ctx = None
     if implicit_signal_bundle and implicit_signal_bundle.client_time:
         ctx = implicit_signal_bundle.client_time.model_dump(exclude_none=True)
-    return suffix_user_text_with_time_context_lines(base, ctx, enabled=enabled)
+    return build_companion_user_time_context_system_content(ctx, enabled=enabled)
 
 
 def load_companion_turn_state(
@@ -255,10 +263,14 @@ def build_companion_turn_prompt_plan(
 
     if tick_proactive:
         messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_USER_TEXT})
+    time_ctx_system = _companion_user_time_context_system_for_llm(
+        implicit_signal_bundle=implicit_signal_bundle,
+    )
+    if time_ctx_system is not None:
+        messages.append({"role": "system", "content": time_ctx_system})
     tail_user = _companion_tail_user_body_for_llm(
         user_text=user_text,
         implicit_sign_on_turn=implicit_sign_on_turn,
-        implicit_signal_bundle=implicit_signal_bundle,
     )
     messages.append({"role": "user", "content": tail_user})
 

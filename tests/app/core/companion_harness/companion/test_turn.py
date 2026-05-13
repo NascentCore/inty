@@ -104,10 +104,10 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
     assert rows[1]["source"] == "inner_tick"
 
 
-def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
+def test_run_turn_inner_tick_maintenance_injects_user_time_system_before_tail_user(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``ImplicitSignalBundle.client_time`` is reflected on the tail user line for inner-tick LLM."""
+    """``ImplicitSignalBundle.client_time`` becomes a ``## user-time-context`` system slice before tail user."""
     from app.core.companion_harness.companion import turn_pipeline as turn_pipeline_mod
 
     monkeypatch.setattr(
@@ -150,10 +150,15 @@ def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
     assert len(bg_jobs) == 1
     llm_msgs = bg_jobs[0]["request_messages"]
     assert llm_msgs[-1]["role"] == "user"
-    content = llm_msgs[-1]["content"] or ""
-    assert "user-time: 2026-05-01T08:00:00+08:00" in content
-    assert "user-time-zone: Asia/Shanghai" in content
-    assert "user-time-utc-offset: UTC+08:00" in content
+    tail = llm_msgs[-1]["content"] or ""
+    assert tail == INNER_TICK_SYNTHETIC_USER_TEXT
+    assert "user-time:" not in tail
+    assert llm_msgs[-2]["role"] == "system"
+    sys_body = llm_msgs[-2]["content"] or ""
+    assert sys_body.startswith("## user-time-context\n")
+    assert "user-time: 2026-05-01T08:00:00+08:00" in sys_body
+    assert "user-time-zone: Asia/Shanghai" in sys_body
+    assert "user-time-utc-offset: UTC+08:00" in sys_body
     assert "##User Time Context" not in "\n".join(
         (m.get("content") or "") for m in llm_msgs if m.get("role") == "system"
     )
