@@ -57,7 +57,10 @@ import { hasAgentChanged } from "../utils/agentComparison";
 import ImageCropModal from "../components/common/ImageCropModal";
 import BackgroundCropModal from "../components/common/BackgroundCropModal";
 import AvatarDisplay from "../components/common/AvatarDisplay";
-import { getDeepLinkedAgentIdFromHash } from "../utils/profileLinks";
+import {
+  buildAgentProfilePageHash,
+  getDeepLinkedAgentIdFromHash,
+} from "../utils/profileLinks";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -106,12 +109,12 @@ export const AgentManagePage: React.FC = () => {
     useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [creatorFilter, setCreatorFilter] = useState<string>("admin");
-  const deepLinkedAgentId = useMemo(() => {
+  const [deepLinkedAgentId, setDeepLinkedAgentId] = useState(() => {
     if (typeof window === "undefined") {
       return "";
     }
     return getDeepLinkedAgentIdFromHash(window.location.hash);
-  }, []);
+  });
   const hasAppliedAgentDeepLinkRef = useRef(false);
 
   // 分页
@@ -458,6 +461,18 @@ export const AgentManagePage: React.FC = () => {
     loadModels(); // 加载模型列表
     loadAvailablePrompts(); // 加载 prompt 列表
   }, [agents.length, loadAgents, loadModels, loadAvailablePrompts]);
+
+  useEffect(() => {
+    const syncDeepLinkedAgentId = () => {
+      setDeepLinkedAgentId(getDeepLinkedAgentIdFromHash(window.location.hash));
+    };
+    window.addEventListener("hashchange", syncDeepLinkedAgentId);
+    return () => window.removeEventListener("hashchange", syncDeepLinkedAgentId);
+  }, []);
+
+  useEffect(() => {
+    hasAppliedAgentDeepLinkRef.current = false;
+  }, [deepLinkedAgentId]);
 
   useEffect(() => {
     if (!deepLinkedAgentId) {
@@ -1249,6 +1264,28 @@ export const AgentManagePage: React.FC = () => {
   const showDetailModal = (agent: Agent) => {
     setCurrentAgent(agent);
     setDetailModalVisible(true);
+    const nextHash = buildAgentProfilePageHash(agent.id);
+    window.history.pushState(
+      null,
+      "",
+      `${window.location.origin}${window.location.pathname}${nextHash}`,
+    );
+    setDeepLinkedAgentId(agent.id);
+  };
+
+  const clearAgentDetailsHash = () => {
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.origin}${window.location.pathname}#agents`,
+    );
+    setDeepLinkedAgentId("");
+  };
+
+  const closeDetailModal = () => {
+    setDetailModalVisible(false);
+    setCurrentAgent(null);
+    clearAgentDetailsHash();
   };
 
   // 获取当前页面的智能体
@@ -2358,12 +2395,10 @@ export const AgentManagePage: React.FC = () => {
       <AgentDetailModal
         open={detailModalVisible}
         agent={currentAgent}
-        onClose={() => {
-          setDetailModalVisible(false);
-          setCurrentAgent(null);
-        }}
+        onClose={closeDetailModal}
         onEdit={(agent) => {
           setDetailModalVisible(false);
+          clearAgentDetailsHash();
           showEditModal(agent);
         }}
         onDeleteBackgroundImage={handleDeleteBackgroundImage}
