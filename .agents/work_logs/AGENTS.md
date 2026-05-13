@@ -1,6 +1,6 @@
 # Work Logs
 
-<!-- Reference this file in your AGENTS.md to instruct agent to log their work -->
+**Never update previous work logs, those are for history records.**
 
 Write important work logs to `/.agents/work_logs/{date}/{task_name}.md`,
 in order to note siagnificant changes in the code base,
