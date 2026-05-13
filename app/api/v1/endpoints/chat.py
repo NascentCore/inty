@@ -1253,6 +1253,8 @@ def _companion_ai_meta_from_turn_result(
         companion_ai_meta["trace_id"] = companion_turn.trace_id
     if companion_turn.user_msg_uuid:
         companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
+    if companion_turn.assistant_msg_uuid:
+        companion_ai_meta["assistant_msg_uuid"] = companion_turn.assistant_msg_uuid
     if companion_turn.langsmith_trace_id:
         companion_ai_meta["langsmith_trace_id"] = companion_turn.langsmith_trace_id
     if companion_turn.langsmith_run_id:

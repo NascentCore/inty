@@ -1164,8 +1164,12 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     async def fake_run_companion_chat_turn_for_api(**kwargs):
         captured["companion_calls"] += 1
         captured["preset_user_msg_uuids"].append(kwargs.get("preset_user_msg_uuid"))
+        n = captured["companion_calls"]
+        uid = str(kwargs.get("preset_user_msg_uuid") or "")
         return CompanionTurnResult(
             assistant_text="companion-ws-reply",
+            user_msg_uuid=uid,
+            assistant_msg_uuid=f"33333333-3333-4333-8333-{n:012d}",
             significance_perception={
                 "importance_round": 9,
                 "importance_user_message": 8,
@@ -1366,6 +1370,8 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured["ai_save"][3] == {
         "source": "chat",
         "reply_modality": "text",
+        "user_msg_uuid": second_turn_uuid,
+        "assistant_msg_uuid": "33333333-3333-4333-8333-000000000002",
         "significance_perception": {
             "importance_round": 9,
             "importance_user_message": 8,

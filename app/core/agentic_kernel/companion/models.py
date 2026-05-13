@@ -76,6 +76,13 @@ class CompanionTurnResult(BaseModel):
         ),
     )
     user_msg_uuid: str = ""
+    assistant_msg_uuid: str = Field(
+        default="",
+        description=(
+            "Stable id for this assistant reply; matches transcript.jsonl assistant row "
+            "`uuid` and API/WS `meta_data.assistant_msg_uuid`."
+        ),
+    )
     trace_id: str = ""
     langsmith_trace_id: str = ""
     langsmith_run_id: str = ""
