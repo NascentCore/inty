@@ -249,26 +249,35 @@ def create_companion_turn_root_run(
 
 
 def companion_turn_langsmith_parent_trace_id_str(root_run: Any) -> str:
-    if root_run is None:
-        return ""
-    try:
-        tid = getattr(root_run, "trace_id", None)
-        if tid is None:
-            return ""
-        return str(tid).strip()
-    except Exception:
-        return ""
+    return _companion_turn_langsmith_parent_id_str(
+        root_run, attr_name="trace_id", id_label="trace_id"
+    )
 
 
 def companion_turn_langsmith_parent_run_id_str(root_run: Any) -> str:
+    return _companion_turn_langsmith_parent_id_str(
+        root_run, attr_name="id", id_label="run_id"
+    )
+
+
+def _companion_turn_langsmith_parent_id_str(
+    root_run: Any, *, attr_name: str, id_label: str
+) -> str:
     if root_run is None:
         return ""
     try:
-        rid = getattr(root_run, "id", None)
-        if rid is None:
+        raw_id = getattr(root_run, attr_name, None)
+        if raw_id is None:
             return ""
-        return str(rid).strip()
-    except Exception:
+        return str(raw_id).strip()
+    except Exception as exc:
+        logger.warning(
+            "companion_turn_langsmith_parent {} extraction failed "
+            "root_run_type={} err={}",
+            id_label,
+            type(root_run).__name__,
+            exc,
+        )
         return ""
 
 
