@@ -11,7 +11,7 @@ from sqlalchemy import Column, Date, DateTime, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 
-from app.models import Base
+from app.models.base import Base
 
 
 class UserAnalyticsReport(Base):

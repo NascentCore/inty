@@ -14,7 +14,10 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app import models
+from app.models.agent import Agent
+from app.models.chat import Chat
+from app.models.chat_history import ChatHistory
+from app.models.user import User
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
@@ -75,7 +78,7 @@ class TestChatService:
         history_count = 10
 
         # 创建测试用户
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.PHONE,
@@ -88,7 +91,7 @@ class TestChatService:
         await db_session.refresh(test_user)
 
         # 创建测试 Agent
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name="Test Agent",
@@ -118,7 +121,7 @@ class TestChatService:
 
         # 创建聊天消息历史
         # 先创建一条用户消息
-        user_message = models.ChatHistory(
+        user_message = ChatHistory(
             session_id=session_id,
             message={"type": "human", "data": {"content": "你好"}},
             meta_data={},
@@ -128,7 +131,7 @@ class TestChatService:
 
         # 创建一条 AI 回复消息（这是要生成图片的消息）
         ai_message_content = "给我画一张你在咖啡厅的图片"
-        ai_message = models.ChatHistory(
+        ai_message = ChatHistory(
             session_id=session_id,
             message={"type": "ai", "data": {"content": ai_message_content}},
             meta_data={},
@@ -228,7 +231,7 @@ class TestChatService:
         user_id = f"test_user_{uuid.uuid4().hex[:8]}"
         agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
 
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.PHONE,
@@ -240,7 +243,7 @@ class TestChatService:
         await db_session.commit()
         await db_session.refresh(test_user)
 
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name="Test Agent",
@@ -265,7 +268,7 @@ class TestChatService:
         await db_session.refresh(chat)
         session_id = chat_service.generate_session_id(chat.id)
 
-        ai_message = models.ChatHistory(
+        ai_message = ChatHistory(
             session_id=session_id,
             message={"type": "ai", "data": {"content": "给我画一张图片"}},
             meta_data={},
@@ -318,7 +321,7 @@ class TestChatService:
         user_id = f"test_user_{uuid.uuid4().hex[:8]}"
         agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
 
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.PHONE,
@@ -330,7 +333,7 @@ class TestChatService:
         await db_session.commit()
         await db_session.refresh(test_user)
 
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name="Test Agent",
@@ -355,7 +358,7 @@ class TestChatService:
         await db_session.refresh(chat)
         session_id = chat_service.generate_session_id(chat.id)
 
-        ai_message = models.ChatHistory(
+        ai_message = ChatHistory(
             session_id=session_id,
             message={"type": "ai", "data": {"content": "给我画一张图片"}},
             meta_data={},
@@ -412,7 +415,7 @@ class TestChatService:
         agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
 
         # 创建测试用户（Guest 类型）
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.GUEST,
@@ -425,7 +428,7 @@ class TestChatService:
         await db_session.refresh(test_user)
 
         # 创建测试 Agent
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name="Test Agent",
@@ -496,7 +499,7 @@ class TestChatService:
         agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
 
         # 创建测试用户（非 Guest 类型）
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.PHONE,
@@ -509,7 +512,7 @@ class TestChatService:
         await db_session.refresh(test_user)
 
         # 创建测试 Agent
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name="Test Agent",
@@ -586,7 +589,7 @@ class TestChatService:
         agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
         history_count = 8
 
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.PHONE,
@@ -598,7 +601,7 @@ class TestChatService:
         await db_session.commit()
         await db_session.refresh(test_user)
 
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name="Test Agent",
@@ -623,7 +626,7 @@ class TestChatService:
         await db_session.refresh(chat)
         session_id = chat_service.generate_session_id(chat.id)
 
-        user_message = models.ChatHistory(
+        user_message = ChatHistory(
             session_id=session_id,
             message={"type": "human", "data": {"content": "你好"}},
             meta_data={},
@@ -632,7 +635,7 @@ class TestChatService:
         await db_session.flush()
 
         ai_message_content = "给我一段放松的背景音乐"
-        ai_message = models.ChatHistory(
+        ai_message = ChatHistory(
             session_id=session_id,
             message={"type": "ai", "data": {"content": ai_message_content}},
             meta_data={},
@@ -713,7 +716,7 @@ class TestChatService:
         user_id = f"test_user_{uuid.uuid4().hex[:8]}"
         agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
 
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.GUEST,
@@ -725,7 +728,7 @@ class TestChatService:
         await db_session.commit()
         await db_session.refresh(test_user)
 
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name="Test Agent",
@@ -787,7 +790,7 @@ class TestChatService:
         user_id = f"test_user_{uuid.uuid4().hex[:8]}"
         agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
 
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.PHONE,
@@ -799,7 +802,7 @@ class TestChatService:
         await db_session.commit()
         await db_session.refresh(test_user)
 
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name="Test Agent",
@@ -871,7 +874,7 @@ class TestChatService:
         user_id = f"test_user_{uuid.uuid4().hex[:8]}"
         agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
 
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.PHONE,
@@ -883,7 +886,7 @@ class TestChatService:
         await db_session.commit()
         await db_session.refresh(test_user)
 
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name="Test Agent",
@@ -908,7 +911,7 @@ class TestChatService:
         await db_session.refresh(chat)
         session_id = chat_service.generate_session_id(chat.id)
 
-        user_message = models.ChatHistory(
+        user_message = ChatHistory(
             session_id=session_id,
             message={"type": "human", "data": {"content": "你好"}},
             meta_data={},
@@ -917,7 +920,7 @@ class TestChatService:
         await db_session.flush()
 
         ai_message_content = "画一张图"
-        ai_message = models.ChatHistory(
+        ai_message = ChatHistory(
             session_id=session_id,
             message={"type": "ai", "data": {"content": ai_message_content}},
             meta_data={},
@@ -985,7 +988,7 @@ class TestChatService:
         agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
         history_count = 10
 
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.PHONE,
@@ -997,7 +1000,7 @@ class TestChatService:
         await db_session.commit()
         await db_session.refresh(test_user)
 
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name="Test Agent",
@@ -1022,7 +1025,7 @@ class TestChatService:
         await db_session.refresh(chat)
         session_id = chat_service.generate_session_id(chat.id)
 
-        user_message = models.ChatHistory(
+        user_message = ChatHistory(
             session_id=session_id,
             message={"type": "human", "data": {"content": "你好"}},
             meta_data={},
@@ -1030,7 +1033,7 @@ class TestChatService:
         db_session.add(user_message)
         await db_session.flush()
         ai_message_content = "画一张图"
-        ai_message = models.ChatHistory(
+        ai_message = ChatHistory(
             session_id=session_id,
             message={"type": "ai", "data": {"content": ai_message_content}},
             meta_data={},
@@ -1140,10 +1143,10 @@ class TestGetOrCreateChatByAgent:
 
     async def _create_test_user(
         self, db: AsyncSession, nickname: str = "Test User"
-    ) -> models.User:
+    ) -> User:
         """创建测试用户"""
         user_id = str(uuid.uuid4())
-        test_user = models.User(
+        test_user = User(
             id=user_id,
             readable_id=str(uuid.uuid4().int)[:8],
             auth_type=AuthType.PHONE,
@@ -1164,10 +1167,10 @@ class TestGetOrCreateChatByAgent:
         opening: str = "Hello!",
         opening_audio_url: str = None,
         deleted_at: datetime = None,
-    ) -> models.Agent:
+    ) -> Agent:
         """创建测试Agent"""
         agent_id = str(uuid.uuid4())
-        test_agent = models.Agent(
+        test_agent = Agent(
             id=agent_id,
             readable_id=str(uuid.uuid4().int)[:8],
             name=name,
@@ -1193,9 +1196,9 @@ class TestGetOrCreateChatByAgent:
     async def _cleanup_test_data(
         self,
         db: AsyncSession,
-        user: models.User = None,
-        agent: models.Agent = None,
-        chat: models.Chat = None,
+        user: User = None,
+        agent: Agent = None,
+        chat: Chat = None,
     ):
         """清理测试数据"""
         from uuid import UUID as UUIDType
@@ -1207,8 +1210,8 @@ class TestGetOrCreateChatByAgent:
             session_id = chat_service.generate_session_id(chat.id)
             session_uuid = UUIDType(session_id)
             result = await db.execute(
-                select(models.ChatHistory).where(
-                    models.ChatHistory.session_id == session_uuid
+                select(ChatHistory).where(
+                    ChatHistory.session_id == session_uuid
                 )
             )
             messages = result.scalars().all()
@@ -1389,7 +1392,7 @@ class TestGetOrCreateChatByAgent:
 
         # 手动创建聊天会话（不通过get_or_create_chat_by_agent）
         chat_id = str(uuid.uuid4())
-        chat = models.Chat(id=chat_id, user_id=user.id, agent_id=agent.id)
+        chat = Chat(id=chat_id, user_id=user.id, agent_id=agent.id)
         db_session.add(chat)
         await db_session.commit()
         await db_session.refresh(chat)
@@ -1467,8 +1470,8 @@ class TestGetOrCreateChatByAgent:
 
         # 删除聊天会话
         result = await db_session.execute(
-            select(models.Chat).where(
-                models.Chat.user_id == user.id, models.Chat.agent_id == agent.id
+            select(Chat).where(
+                Chat.user_id == user.id, Chat.agent_id == agent.id
             )
         )
         existing_chat = result.scalar_one_or_none()
@@ -1629,7 +1632,7 @@ class TestGetOrCreateChatByAgent:
 
         # 创建非活跃的聊天会话
         inactive_chat_id = str(uuid.uuid4())
-        inactive_chat = models.Chat(
+        inactive_chat = Chat(
             id=inactive_chat_id, user_id=user.id, agent_id=agent.id, is_active=False
         )
         db_session.add(inactive_chat)
@@ -1732,7 +1735,7 @@ class TestGetOrCreateChatByAgent:
 
         # 创建一个聊天会话
         chat_id = str(uuid.uuid4())
-        chat = models.Chat(id=chat_id, user_id=user.id, agent_id=agent1.id)
+        chat = Chat(id=chat_id, user_id=user.id, agent_id=agent1.id)
         db_session.add(chat)
         await db_session.commit()
         await db_session.refresh(chat)
@@ -2156,7 +2159,7 @@ class TestGetOrCreateChatByAgent:
 
         # 手动创建一个chat，模拟并发创建的情况
         chat_id = str(uuid.uuid4())
-        existing_chat = models.Chat(
+        existing_chat = Chat(
             id=chat_id, user_id=user.id, agent_id=agent.id, is_active=True
         )
         db_session.add(existing_chat)

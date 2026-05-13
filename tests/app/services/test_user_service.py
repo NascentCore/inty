@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
-from app.models import Base
+from app.models.base import Base
 from app.models.user import AuthType, User
 from app.services.subscription_service import SubscriptionService
 from app.services.user_service import delete_user_account, generate_next_readable_id

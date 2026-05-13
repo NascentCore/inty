@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 from app.utils.image import ImageSize
 
 

@@ -4,7 +4,7 @@ import sqlalchemy as sa
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 
 
 class PhoneCallCallerBinding(Base):

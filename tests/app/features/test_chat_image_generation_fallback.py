@@ -16,7 +16,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app import models
+from app.models.agent import Agent
+from app.models.chat_history import ChatHistory
+from app.models.resource import Resource
+from app.models.user import User
 from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.core.config import global_config_loaded_from_config_yaml
@@ -108,7 +111,7 @@ async def test_chat_image_generation_fallback_returns_matched_image(
     user_id = f"user-{uuid.uuid4().hex[:8]}"
     agent_id = f"agent-{uuid.uuid4().hex[:8]}"
 
-    user = models.User(
+    user = User(
         id=user_id,
         readable_id=uuid.uuid4().hex[:8],
         auth_type=AuthType.PHONE,
@@ -118,7 +121,7 @@ async def test_chat_image_generation_fallback_returns_matched_image(
     )
     db_session.add(user)
 
-    agent = models.Agent(
+    agent = Agent(
         id=agent_id,
         readable_id=uuid.uuid4().hex[:8],
         name="Fallback Agent",
@@ -143,7 +146,7 @@ async def test_chat_image_generation_fallback_returns_matched_image(
     await db_session.refresh(chat)
 
     session_id = chat_service.generate_session_id(chat.id)
-    user_msg = models.ChatHistory(
+    user_msg = ChatHistory(
         session_id=session_id,
         message={"type": "human", "data": {"content": "你好"}},
         meta_data=None,
@@ -152,7 +155,7 @@ async def test_chat_image_generation_fallback_returns_matched_image(
     await db_session.flush()
 
     ai_message_content = "给我画一张图片"
-    ai_msg = models.ChatHistory(
+    ai_msg = ChatHistory(
         session_id=session_id,
         message={"type": "ai", "data": {"content": ai_message_content}},
         meta_data=None,
@@ -169,7 +172,7 @@ async def test_chat_image_generation_fallback_returns_matched_image(
         "Create an image character emotional 可爱的女孩 在公园散步 "
         "User request: 给我画一张图片"
     )
-    resource = models.Resource(
+    resource = Resource(
         url=fallback_gcs,
         type=ResourceType.IMAGE,
         user_id=user_id,
@@ -220,7 +223,7 @@ async def test_chat_image_generation_fallback_returns_matched_image(
 
     # 8) 兜底生图消息 metadata 应包含兜底标记与原始请求文本
     result = await db_session.execute(
-        select(models.ChatHistory).where(models.ChatHistory.id == message_id)
+        select(ChatHistory).where(ChatHistory.id == message_id)
     )
     updated_msg = result.scalar_one()
     generated_image_meta = (updated_msg.meta_data or {}).get("generated_image", {})

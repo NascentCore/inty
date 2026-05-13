@@ -26,7 +26,8 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import models
+from app.models.agent import Agent
+from app.models.chat_settings import ChatSettings
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
 from app.schemas.biz_action import (
@@ -1096,7 +1097,7 @@ async def _try_generate_premium_preview_choice(
     current_user: UserSchema,
     session_id: str,
     last_user_text: str,
-    chat_settings: models.ChatSettings,
+    chat_settings: ChatSettings,
     user_time_context: Optional[dict],
 ) -> Optional[dict]:
     premium_settings = SimpleNamespace(
@@ -1903,9 +1904,9 @@ async def _agent_status_line_for_chat_header(
     db: AsyncSession, agent_id: str
 ) -> Optional[str]:
     r = await db.execute(
-        select(models.Agent.status_line).where(
-            models.Agent.id == agent_id,
-            models.Agent.deleted_at.is_(None),
+        select(Agent.status_line).where(
+            Agent.id == agent_id,
+            Agent.deleted_at.is_(None),
         )
     )
     raw = r.scalar_one_or_none()

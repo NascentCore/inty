@@ -3,6 +3,8 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
+from app.models.base import Base
+from app.models.registry import load_model_modules
 from app.utils.config import Config, load_config
 
 
@@ -23,10 +25,7 @@ def _load_runtime_config() -> Config:
 
 
 runtime_config = _load_runtime_config()
-
-# 导入所有模型，app/models/__init__.py 会将所有表定义连同 base 一起导入
-from app.models import Base
-
+load_model_modules()
 target_metadata = Base.metadata
 db_url = runtime_config.database.url
 # this is the Alembic Config object, which provides

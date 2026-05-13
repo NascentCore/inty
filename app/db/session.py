@@ -4,6 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.models.registry import load_model_modules
+
+load_model_modules()
 
 _db = global_config_loaded_from_config_yaml.database
 
