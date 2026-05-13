@@ -26,6 +26,7 @@ from app.core.agentic_kernel.companion.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
 from app.models.user import AuthType
+from app.schemas.chat import ChatMusicGenerationResponse
 from app.schemas.response import (
     APIResponse,
     BizError,
@@ -570,7 +571,7 @@ def _stub_generate_chat_music(monkeypatch: pytest.MonkeyPatch):
 
 def _stub_generate_chat_music_success(monkeypatch: pytest.MonkeyPatch):
     async def fake_generate_chat_music(*args, **kwargs):
-        return chat_v1.schemas.ChatMusicGenerationResponse(
+        return ChatMusicGenerationResponse(
             audio_url="https://cdn.example.com/music.mp3",
             audio_metadata={"format": "mp3", "duration_sec": 12.3, "provider": "fal"},
             prompt="music prompt",
