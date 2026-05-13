@@ -9,12 +9,18 @@ and ad-hoc operator/test entries such as ``tool_timeout``.
 Events are stored as JSON lines at workspace-relative path ``.companion_runtime_events.jsonl``
 through :class:`~app.core.agentic_kernel.companion.memory_store.MemoryStore` only (never raw
 ``Path.write_text``). With a repository-backed store this persists like ``transcript.jsonl``;
-without a repository the store keeps an in-memory snapshot per process."""
+without a repository the store keeps an in-memory snapshot per process.
+
+Each successful append emits a short **loguru** line: ``INFO`` for ``llm_inference_failure`` and
+``tool_background_failure`` kinds, ``DEBUG`` for other kinds (see ``append_runtime_event``).
+"""
 
 from __future__ import annotations
 
 import json
 from typing import Any
+
+from loguru import logger
 
 from .memory_store import MemoryStore
 
@@ -24,6 +30,16 @@ RUNTIME_EVENTS_REL_PATH = ".companion_runtime_events.jsonl"
 def append_runtime_event(store: MemoryStore, record: dict[str, Any]) -> None:
     """Append one JSON object as a single line (JSONL) via MemoryStore."""
     store.append_jsonl_record(RUNTIME_EVENTS_REL_PATH, record)
+    kind = str(record.get("kind") or "")
+    tid = str(record.get("trace_id") or "").strip()
+    uid = str(record.get("user_msg_uuid") or "").strip()
+    tail = f" trace_id={tid}" if tid else ""
+    tail += f" user_msg_uuid={uid}" if uid else ""
+    msg = f"companion_runtime_event kind={kind!r}{tail}"
+    if kind in ("llm_inference_failure", "tool_background_failure"):
+        logger.info(msg)
+    else:
+        logger.debug(msg)
 
 
 def read_runtime_events(

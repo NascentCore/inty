@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from typing_extensions import deprecated
 
-from app import models, schemas
+from app import models
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.agent.agent import agent_manager
 from app.core.agent.prompt_template import (
@@ -49,6 +49,12 @@ from app.services.voice_service import (
 )
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import ImageFormat, ImageSize, get_jpg_bytes_from_pil_image
+from app.schemas.agent import Agent as AgentSchema
+from app.schemas.agent import AgentCreate
+from app.schemas.agent import AgentUpdate
+from app.schemas.agent import CreatorAgentStats
+from app.schemas.response import PaginationData
+from app.schemas.user import User as UserSchema
 
 
 async def _populate_agent_image_sizes(db: AsyncSession, agent: models.Agent) -> None:
@@ -403,7 +409,7 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
 
 async def get_user_agents(
     db: AsyncSession,
-    current_user: schemas.User,
+    current_user: UserSchema,
     skip: int = 0,
     limit: int = 100,
 ) -> List[models.Agent]:
@@ -942,14 +948,14 @@ async def get_balanced_score_based_agents(
 
 async def get_recommended_agents_paginated(
     db: AsyncSession,
-    current_user: schemas.User,
+    current_user: UserSchema,
     page: int = 1,
     page_size: int = 10,
     sort_by: Optional[AgentSortOption] = None,
     sort_seed: str = "",
     match_description: Optional[str] = None,
     match_top_n: int = 50,
-) -> schemas.PaginationData[schemas.Agent]:
+) -> PaginationData[AgentSchema]:
     """
     获取推荐的AI角色列表（分页版本）
 
@@ -991,7 +997,7 @@ async def get_recommended_agents_paginated(
                 agent.follower_count = 0
                 agent.is_followed = False
                 agent.user = current_user.nickname if current_user.nickname else "you"
-            return schemas.PaginationData[schemas.Agent](
+            return PaginationData[AgentSchema](
                 list=agents_list,
                 total=total,
                 page=page,
@@ -1114,7 +1120,7 @@ async def get_recommended_agents_paginated(
         # 计算总页数
         total_pages = math.ceil(total / page_size) if total > 0 else 1
 
-        return schemas.PaginationData[schemas.Agent](
+        return PaginationData[AgentSchema](
             list=agents,
             total=total,
             page=page,
@@ -1133,7 +1139,7 @@ async def get_recommended_agents_paginated(
 
 
 async def create_agent(
-    db: AsyncSession, agent_in: schemas.AgentCreate, user_id: str
+    db: AsyncSession, agent_in: AgentCreate, user_id: str
 ) -> models.Agent:
     """
     创建新的AI角色
@@ -1405,7 +1411,7 @@ def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
 
 
 async def update_agent(
-    db: AsyncSession, db_agent: models.Agent, agent_in: schemas.AgentUpdate
+    db: AsyncSession, db_agent: models.Agent, agent_in: AgentUpdate
 ) -> models.Agent:
     """
     更新AI角色
@@ -1425,6 +1431,10 @@ async def update_agent(
         should_regenerate_voice = "opening" in update_data or "voice_id" in update_data
 
         update_data = process_agent_image_urls(update_data)
+        # 与写入 DB 的 update_data 对齐：不含 energy_points；图片 URL 已规范化/校验
+        reload_log_reason = "update_agent fields=" + ",".join(
+            sorted(update_data.keys())
+        )
 
         _update_agent_in_db(update_data, db_agent)
 
@@ -1533,7 +1543,7 @@ async def update_agent(
             }
 
             reload_success = await agent_manager.reload_agent(
-                updated_agent.id, agent_data
+                updated_agent.id, agent_data, reason=reload_log_reason
             )
             if reload_success:
                 logger.debug(f"Agent {updated_agent.id} 缓存重载成功")
@@ -1767,7 +1777,7 @@ async def unfollow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
 
 async def get_user_followed_agents(
     db: AsyncSession, user_id: str, page: int = 1, page_size: int = 10
-) -> schemas.PaginationData[schemas.Agent]:
+) -> PaginationData[AgentSchema]:
     """
     获取用户关注的AI角色列表（分页）
     """
@@ -1780,11 +1790,11 @@ async def get_user_followed_agents(
 
 async def search_agents(
     db: AsyncSession,
-    current_user: schemas.User,
+    current_user: UserSchema,
     keyword: str,
     page: int = 1,
     page_size: int = 10,
-) -> schemas.PaginationData[schemas.Agent]:
+) -> PaginationData[AgentSchema]:
     """
     搜索公开的AI角色（分页版本）
     支持按名称、介绍、分类进行模糊查询
@@ -1860,7 +1870,7 @@ async def search_agents(
         # 计算总页数
         total_pages = math.ceil(total / page_size) if total > 0 else 1
 
-        return schemas.PaginationData[schemas.Agent](
+        return PaginationData[AgentSchema](
             list=agents,
             total=total,
             page=page,
@@ -1880,7 +1890,7 @@ async def search_agents(
 
 async def get_creator_agent_stats(
     db: AsyncSession, creator_id: str
-) -> schemas.CreatorAgentStats:
+) -> CreatorAgentStats:
     """
     获取创建者的公共角色统计信息
     """
@@ -1900,7 +1910,7 @@ async def get_creator_agent_stats(
         # follower 功能已下线，保留字段兼容，固定返回 0
         total_follows = 0
 
-        return schemas.CreatorAgentStats(
+        return CreatorAgentStats(
             creator_id=creator_id,
             public_agents_count=public_agents_count,
             total_public_agents_follows=total_follows,

@@ -18,7 +18,7 @@ from app.api.v1.endpoints import version
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import get_new_user_id
 from app.models.user import AuthType, User
-from app.schemas import User as UserSchema
+from app.schemas.user import User as UserSchema
 from app.schemas.version import VersionReminderAction
 
 

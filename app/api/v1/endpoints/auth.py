@@ -10,7 +10,6 @@ from pydantic import ValidationError
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from app.api.constants import API_V1_PREFIX
 from app.api.tags import ANDROID_APP_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
@@ -24,6 +23,8 @@ from app.schemas.auth import GuestResponse, LoginResponse, LoginUserResponse
 from app.schemas.response import APIResponse
 from app.services.global_services import subscription_service
 from app.services.user_service import create_guest_user, generate_next_readable_id
+from app.schemas.auth import GoogleAuthRequest
+from app.schemas.auth import GuestRequest
 
 router = APIRouter(prefix="/auth", route_class=LoggerRoute)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_V1_PREFIX}/auth/login")
@@ -33,7 +34,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_V1_PREFIX}/auth/login")
 async def create_guest(
     *,
     db: AsyncSession = Depends(get_async_db),
-    guest_in: schemas.GuestRequest,
+    guest_in: GuestRequest,
 ) -> Any:
     """
     创建游客账号
@@ -63,7 +64,7 @@ async def create_guest(
 async def google_login(
     *,
     db: AsyncSession = Depends(get_async_db),
-    login_in: schemas.GoogleAuthRequest,
+    login_in: GoogleAuthRequest,
 ) -> Any:
     """
     两种登录二选一（请求体在 `GoogleAuthRequest` 中互斥校验）：

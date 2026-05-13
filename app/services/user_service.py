@@ -17,7 +17,7 @@ from app.models import User
 from app.models.chat import Chat
 from app.models.subscription import SubscriptionStatus, UserSubscription
 from app.models.user import AuthType, DeviceToken
-from app.schemas import UserUpdate
+from app.schemas.user import UserUpdate
 from app.services.cache_service import cache_service
 from app.services.subscription_service import SubscriptionService
 

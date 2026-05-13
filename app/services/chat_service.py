@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app import models, schemas
+from app import models
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.user import AuthType
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
@@ -20,6 +20,11 @@ from app.services.cache_service import cache_service
 from app.services.subscription_service import SubscriptionService
 from app.services.user_service import build_user_info_prompt_block
 from app.utils.models_catalog import NANO_BANANA_PRO, NEWAPI_NANO_BANANA_2
+from app.schemas.chat import ChatCreate
+from app.schemas.chat import ChatImageGenerationResponse
+from app.schemas.chat import ChatMusicGenerationResponse
+from app.schemas.chat import ChatSettingsUpdate
+from app.schemas.chat import ChatUpdate
 
 
 def generate_session_id(chat_id: str) -> str:
@@ -187,7 +192,7 @@ async def get_chats(
 
 
 async def create_chat(
-    db: AsyncSession, chat_in: schemas.ChatCreate, user_id: str
+    db: AsyncSession, chat_in: ChatCreate, user_id: str
 ) -> models.Chat:
     """
     Create new chat
@@ -309,7 +314,7 @@ async def create_chat(
 
 
 async def update_chat(
-    db: AsyncSession, *, db_chat: models.Chat, chat_in: schemas.ChatUpdate
+    db: AsyncSession, *, db_chat: models.Chat, chat_in: ChatUpdate
 ) -> models.Chat:
     """
     更新聊天
@@ -929,7 +934,7 @@ async def get_or_create_chat_settings(
 
 
 async def update_chat_settings(
-    db: AsyncSession, chat_id: str, settings_update: schemas.ChatSettingsUpdate
+    db: AsyncSession, chat_id: str, settings_update: ChatSettingsUpdate
 ) -> models.ChatSettings:
     """
     根据chat_id更新聊天设置
@@ -1331,7 +1336,7 @@ async def _try_match_existing_image(
     message_content: str,
     subscription_service: SubscriptionService,
     is_network_error: bool = False,
-) -> Optional[schemas.ChatImageGenerationResponse]:
+) -> Optional[ChatImageGenerationResponse]:
     """
     尝试匹配已生成的图片（仅从带 only_include_ai_character 的图中选，并排除已展示过的兜底图）。
     顺序：1) 查询 fallback 候选 2) 去除 sent_fallback_images 3) 剩余图片中相似度匹配。
@@ -1434,7 +1439,7 @@ async def _try_match_existing_image(
             except Exception as e:
                 logger.warning(f"记录匹配图片用量失败: {str(e)}")
 
-            return schemas.ChatImageGenerationResponse(
+            return ChatImageGenerationResponse(
                 message_id=message_id,
                 image_url=cdn_url,
                 image_metadata={
@@ -1461,7 +1466,7 @@ async def _try_match_existing_image(
 def _log_matched_fallback_result(
     agent_id: str,
     request_message_id: int,
-    fallback_result: schemas.ChatImageGenerationResponse,
+    fallback_result: ChatImageGenerationResponse,
 ) -> None:
     image_metadata = fallback_result.image_metadata or {}
     logger.info(
@@ -1484,7 +1489,7 @@ async def generate_chat_image(
     model: Optional[
         str
     ] = None,  # TODO: 移除未使用的 model 参数，与 schema/API 一并清理
-) -> Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]:
+) -> Union[ChatImageGenerationResponse, UsageLimitExceeded, BizError]:
     """
     基于聊天上下文生成图片（公共函数）
 
@@ -1977,7 +1982,7 @@ async def generate_chat_image(
     except Exception as e:
         logger.warning(f"更新消息 meta_data 失败: {str(e)}")
 
-    response = schemas.ChatImageGenerationResponse(**image_generation_result)
+    response = ChatImageGenerationResponse(**image_generation_result)
 
     logger.info(
         f"聊天图片生成成功 - Agent ID: {agent_id}, Message ID: {response.message_id}"
@@ -1994,7 +1999,7 @@ async def generate_chat_music(
     subscription_service: SubscriptionService,
     history_count: Optional[int] = None,
     model: Optional[str] = None,
-) -> Union[schemas.ChatMusicGenerationResponse, UsageLimitExceeded]:
+) -> Union[ChatMusicGenerationResponse, UsageLimitExceeded]:
     """
     基于聊天上下文生成音乐（MVP）
 
@@ -2164,7 +2169,7 @@ async def generate_chat_music(
     except Exception as e:
         logger.warning(f"记录音乐生成用量失败: {str(e)}")
 
-    response = schemas.ChatMusicGenerationResponse(**music_generation_result)
+    response = ChatMusicGenerationResponse(**music_generation_result)
     logger.info(
         f"聊天音乐生成成功 - Agent ID: {agent_id}, Message ID: {response.message_id}"
     )

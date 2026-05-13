@@ -15,7 +15,6 @@ from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG
 from app.schemas.live_chat import (
@@ -32,13 +31,15 @@ from app.schemas.live_chat import (
 from app.schemas.response import BusinessErrorCode
 from app.services.global_services import subscription_service
 from app.services.live_chat_service import live_chat_service
+from app.schemas.response import APIResponse
+from app.schemas.user import User as UserSchema
 
 router = APIRouter(prefix="/live-chat")
 
 
 @router.get("/status", tags=[INTY_EVAL_TAG])
 async def get_live_chat_status(
-    current_user: schemas.User = Depends(deps.get_current_user),
+    current_user: UserSchema = Depends(deps.get_current_user),
 ):
     """
     获取实时语音通话服务状态
@@ -46,7 +47,7 @@ async def get_live_chat_status(
     返回 Live Chat 服务的启用状态和配置信息。
     """
     config = live_chat_service._config
-    return schemas.APIResponse.success(
+    return APIResponse.success(
         data={
             "enabled": config.enabled,
             "model": config.model,
@@ -62,7 +63,7 @@ async def get_live_chat_status(
 async def get_current_user_ws(
     websocket: WebSocket,
     db: AsyncSession,
-) -> Optional[schemas.User]:
+) -> Optional[UserSchema]:
     """
     从 WebSocket 连接中获取当前用户
 

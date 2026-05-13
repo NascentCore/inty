@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.api import deps
 from app.models.user import AuthType
-from app.schemas import User as UserSchema
+from app.schemas.user import User as UserSchema
 from backend.ops.api.v1 import evaluation
 
 

@@ -304,6 +304,8 @@ class ToolOutputEvent:
     local_image_paths: tuple[str, ...] = ()
     # Parsed from unified finish envelope; mirrors foreground significance_perception shape.
     significance_perception: dict[str, Any] | None = None
+    # InnerTickMode.value when this background round is an inner-tick turn; else None.
+    inner_tick_activity: str | None = None
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -949,6 +951,9 @@ async def _run_background_tool_loop(
                 image_asset_baseline=image_asset_baseline,
                 local_image_paths=tuple(image_paths),
                 significance_perception=significance_meta,
+                inner_tick_activity=(
+                    inner_tick_mode.value if inner_tick_turn else None
+                ),
             )
         )
     finally:

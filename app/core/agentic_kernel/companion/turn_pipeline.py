@@ -45,6 +45,7 @@ from .transcript_compaction import (
     ConversationCompactor,
     load_compaction_state_from_store,
     save_compaction_state_to_store,
+    transcript_compaction_meta_from_outcome,
     transcript_rows_to_openai_dialogue,
 )
 from .turn_routes import TurnRouteMode
@@ -83,6 +84,7 @@ class CompanionTurnPromptPlan:
     route_mode: TurnRouteMode
     messages: list[dict[str, Any]]
     use_dual_structured_chat: bool
+    transcript_compaction: dict[str, Any] | None = None
 
 
 def resolve_turn_runtime_flags(
@@ -205,6 +207,7 @@ def build_companion_turn_prompt_plan(
         and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     )
 
+    transcript_compaction_meta: dict[str, Any] | None = None
     if transcript_compaction is not None and not inner_tick_turn:
         rel_compact = paths.context_compaction_state_json
         prior_state = load_compaction_state_from_store(store, rel_compact)
@@ -221,13 +224,29 @@ def build_companion_turn_prompt_plan(
             turn=loaded_state.compaction_turn_idx,
         )
         messages = list(outcome.messages)
+        max_cc = transcript_compaction.max_context_chars
+        transcript_compaction_meta = transcript_compaction_meta_from_outcome(
+            outcome, max_context_chars=max_cc
+        )
+        logger.debug(
+            "run_turn transcript_compaction_eval did_compact={} reason={} before={} "
+            "after={} max_context_chars={} compaction_count={}",
+            outcome.did_compact,
+            outcome.reason,
+            outcome.approx_chars_before,
+            outcome.approx_chars_after,
+            max_cc,
+            outcome.state.compaction_count,
+        )
         if outcome.did_compact:
             save_compaction_state_to_store(store, rel_compact, outcome.state)
             logger.info(
-                "run_turn transcript_compaction did_compact=true reason={} before={} after={}",
+                "run_turn transcript_compaction did_compact=true reason={} before={} after={} "
+                "compaction_count={}",
                 outcome.reason,
                 outcome.approx_chars_before,
                 outcome.approx_chars_after,
+                outcome.state.compaction_count,
             )
     else:
         messages = list(system_messages)
@@ -249,4 +268,5 @@ def build_companion_turn_prompt_plan(
         route_mode=route_mode,
         messages=messages,
         use_dual_structured_chat=use_dual_structured_chat,
+        transcript_compaction=transcript_compaction_meta,
     )

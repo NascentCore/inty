@@ -12,13 +12,14 @@ from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from app.api import deps
 from app.schemas.live_chat import LiveChatConfig, LiveChatStatus
 from app.schemas.phone_call import (
     PhoneCallInboundWebhookRequest,
     PhoneCallStartRequest,
 )
+from app.schemas.response import APIResponse
+from app.schemas.user import User as UserSchema
 from app.services.global_services import subscription_service
 from app.services.live_chat_service import live_chat_service
 from app.services.phone_call_service import (
@@ -33,10 +34,10 @@ router = APIRouter(prefix="/phone-calls")
 
 @router.get("/status")
 async def get_phone_call_status(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ):
     _ = current_user
-    return schemas.APIResponse.success(data=phone_call_service.status().model_dump())
+    return APIResponse.success(data=phone_call_service.status().model_dump())
 
 
 @router.post("/{agent_id}")
@@ -45,7 +46,7 @@ async def start_phone_call(
     agent_id: str,
     request: PhoneCallStartRequest,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ):
     try:
         result = await phone_call_service.start_outbound_call(
@@ -64,7 +65,7 @@ async def start_phone_call(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return schemas.APIResponse.success(data=result.model_dump())
+    return APIResponse.success(data=result.model_dump())
 
 
 @router.post("/twilio/inbound")

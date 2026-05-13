@@ -5,10 +5,12 @@ from typing import Optional
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app import models, schemas
+from app import models
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 
 from loguru import logger
+from app.schemas.settings import SettingsCreate
+from app.schemas.settings import SettingsUpdate
 
 
 def get_settings(db: Session, user_id: str) -> Optional[models.Settings]:
@@ -25,7 +27,7 @@ def get_settings(db: Session, user_id: str) -> Optional[models.Settings]:
 
 
 def create_settings(
-    db: Session, settings_in: schemas.SettingsCreate, user_id: str
+    db: Session, settings_in: SettingsCreate, user_id: str
 ) -> models.Settings:
     """
     创建新的用户设置
@@ -47,7 +49,7 @@ def create_settings(
 
 
 def update_settings(
-    db: Session, *, db_settings: models.Settings, settings_in: schemas.SettingsUpdate
+    db: Session, *, db_settings: models.Settings, settings_in: SettingsUpdate
 ) -> models.Settings:
     """
     更新用户设置

@@ -9,10 +9,11 @@ from typing import Optional
 from loguru import logger
 from sqlalchemy import select
 
-from app import models, schemas
+from app import models
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.db.session import AsyncSessionLocal
 from app.services import agent_service
+from app.schemas.agent import AgentUpdate
 
 _tls = threading.local()
 _PERSIST_BRIDGE_TIMEOUT_SEC = 30.0
@@ -56,7 +57,7 @@ async def _persist_agent_status_line_body(
         await agent_service.update_agent(
             db,
             agent,
-            schemas.AgentUpdate(status_line=payload),
+            AgentUpdate(status_line=payload),
         )
 
 
