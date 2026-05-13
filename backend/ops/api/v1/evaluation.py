@@ -46,6 +46,7 @@ from app.services.scoring_service import ScoringService
 from loguru import logger
 from app.schemas.agent import Agent as AgentSchema
 from app.schemas.agent import AgentCreate
+from app.schemas.agent import AgentUpdate
 from app.schemas.response import APIResponse
 from app.schemas.user import User as UserSchema
 
