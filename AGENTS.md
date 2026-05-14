@@ -114,10 +114,21 @@ such experience is between human users and AI, but they have real-world patterns
 
 ## Engineering guidelines
 
+- Constantly create functions/classes/code-files/components/packages
+  that are effective, and with a narrow interface.
 - Document your code as you go, not after.
 - Make a plan before diving into the coding.
 - Derive solution from the essence of the problem.
 - Test everything, often, as you write it.
+
+### Smells
+
+- If a simple changes requires scattered changes, that means
+  code that changes together are not grouped together
+- If writing tests are complicated, that means interface is incoherent,
+  behaviors are not well abstracted
+- If code is difficult to described in much shorter documentation,
+  that means the code lacks hierarchy.
 
 ### Writing code
 
