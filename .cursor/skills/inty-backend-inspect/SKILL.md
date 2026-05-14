@@ -78,9 +78,10 @@ description: >-
 
 ```bash
 python tools/scripts/download_run.py --trace-id "<TRACE_UUID>"
+# 若 0 条：trace 可能不在 config 推出的 LANGSMITH_PROJECT，加 --project-name "<实际项目名>"
 ```
 
-（默认落盘路径见同目录 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)：运行 **`python tools/scripts/download_run.py --help`**。）
+（参数与默认输出路径见同目录 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)、**`python tools/scripts/download_run.py --help`**。）
 
 ### D. Postgres（`config.yaml` → `database`）
 

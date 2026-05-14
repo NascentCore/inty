@@ -29,9 +29,9 @@ Inty YAML does **not** define LangSmith API host; for EU / self-hosted, set **`L
 
 ## Preferred: repo helper script
 
-Helper: [`tools/scripts/download_run.py`](../../../tools/scripts/download_run.py). Run from **repo root** so default `--config config.yaml` resolves.
+Helper: [`tools/scripts/download_run.py`](../../../tools/scripts/download_run.py)（**Cyclopts** CLI）。在**仓库根**执行，以便默认 **`--config config.yaml`** 能解析。
 
-**智能体查路径与默认值**：不必在技能里背具体 `-o` 路径；先执行 **`python tools/scripts/download_run.py --help`**（epilog 中写明省略 `-o`/`--output` 时写入 **`./.inty/`** 下的默认文件名；**`-o -`** 仍为 stdout）。目录由脚本 `mkdir`；**`.inty/`** 已在 `.gitignore`，避免误提交导出。
+**智能体查路径与默认值**：先执行 **`python tools/scripts/download_run.py --help`**（说明省略 **`-o`/`--output`** 时写入 **`./.inty/`**；**`-o -`** 为 stdout）。**`RUN_ID`** 可位置参数传入，也可用显式参数（见 `--help`）。
 
 常用调用（不传 `-o` 即落盘到默认路径）：
 
@@ -39,13 +39,13 @@ Helper: [`tools/scripts/download_run.py`](../../../tools/scripts/download_run.py
 source .venv/bin/activate
 
 python tools/scripts/download_run.py --trace-id "<TRACE_UUID>"
-python tools/scripts/download_run.py "<ANY_RUN_UUID_IN_TRACE>" --entire-trace
+python tools/scripts/download_run.py --run-id "<ANY_RUN_UUID_IN_TRACE>" --entire-trace
 python tools/scripts/download_run.py "<RUN_ID>"
 ```
 
 **`--load-child-runs`**：仅单 run 的 `read_run`；勿与 `--trace-id` / `--entire-trace` 同用。
 
-**Trace 模式**（`--trace-id` 或 `--entire-trace`）：可选 **`--project-name`** 覆盖 `LANGSMITH_PROJECT`；**`--max-runs N`** 默认 **100**。LangSmith **`/runs/query`** 拒绝 `limit` > **100**；脚本会钳制并 stderr 提示。超过 **100** span 的 trace 尚未分页，此时可能截断。
+**Trace 模式**（`--trace-id` 或 `--entire-trace`）：可选 **`--project-name`** 覆盖 `LANGSMITH_PROJECT`（**若 trace 实际落在别的 project**——例如元数据里的 `inty-backend-local-<user>`——而 `config.yaml` 推出的是 `inty-backend-test` 等，则必须指定，否则 `list_runs` 可能 0 条）。省略 **`--max-runs`** 时由 LangSmith SDK **cursor 分页拉全 trace**；仅调试或限流时传 **`--max-runs N`** 做总条数上限。
 
 Trace 模式输出 JSON 形状：
 
@@ -83,5 +83,5 @@ For trace-wide listing in custom code, mirror this script: `Client.list_runs(tra
 - **`read_run` / trace fetch exits 1**: script prints the LangSmith error to stderr (no Python traceback).
 - **401 / unauthorized**: wrong or empty `agent.langchain_api_key` in `config.yaml`, or env fallback key does not match the LangSmith workspace for this run.
 - **404**: wrong run id, different workspace/project than the key, or run expired per org retention.
-- **Incomplete trace**: LangSmith caps **`limit`** at **100** per query; this script does not page yet. If **`run_count`** equals **`max-runs`** and you expect more spans, the trace was truncated.
+- **Incomplete trace / 0 runs**：若传了 **`--max-runs`** 且 **`run_count`** 仍小于预期，是人为上限；若未传 **`--max-runs`** 仍偏少，核对 **`--project-name`** 是否与该 trace 所在 LangSmith 项目一致。
 - **管道 / 只要 stdout**：显式 **`-o -`**（省略 `-o` 时会写入 `.inty/` 下默认文件）。
