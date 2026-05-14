@@ -146,6 +146,7 @@ such experience is between human users and AI, but they have real-world patterns
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
 - **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
   document the intention and effect of the code, do not explain how the code works.
+  - Write TODOs close to the code place should be changed.
 - Do not repeat information that can be easily derived from code.
 - Things do write:
   - higher-logical-level design of components and systems
