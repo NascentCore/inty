@@ -54,6 +54,8 @@ cover/
 venv
 # Ops local dev: JWT from backend/ops/start.sh --local (tools/scripts/init_admin_user.py --token-file)
 .inty_ops_bearer_token
+# Ops / start.sh default workspace (Loguru file log .inty/inty.log)
+.inty/
 
 # 前端相关
 node_modules/

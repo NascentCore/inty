@@ -3,7 +3,7 @@
 LOCAL=false
 DEBUG=false
 BUILD_FRONTEND=true
-LOG_FILE=""
+WORKSPACE=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/../../backend/alembic/alembic.ini" ]]; then
   REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -30,21 +30,22 @@ while [[ $# -gt 0 ]]; do
       BUILD_FRONTEND=false
       shift
       ;;
-    --log-file)
+    --workspace)
       shift
-      if [[ $# -eq 0 ]]; then echo "error: --log-file requires a path"; exit 1; fi
-      LOG_FILE="$1"
+      if [[ $# -eq 0 ]]; then echo "error: --workspace requires a directory path"; exit 1; fi
+      WORKSPACE="$1"
       shift
       ;;
     --help|-h)
-      echo "Usage: $0 [--local|--dev] [--debug] [--log-file PATH] [--build-frontend|--no-build-frontend]"
+      echo "Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-build-frontend]"
       echo ""
       echo "  Always (before uvicorn): alembic upgrade head (see ALEMBIC_CONFIG / repo backend/alembic/alembic.ini)."
       echo "  Listen port: \${PORT:-8001}."
       echo ""
       echo "  Flags (any mode):"
       echo "  --debug         Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL)"
-      echo "  --log-file PATH UTF-8 file log at PATH (INTY_LOG_FILE); removed if it already exists at startup."
+      echo "  --workspace DIR Local working directory for file log DIR/inty.log (INTY_LOG_FILE); default DIR is .inty (repo root)."
+      echo "                  Log file is removed if it already exists at startup."
       echo "                  With --debug: console INFO (INTY_CONSOLE_LOGGING_LEVEL), file DEBUG."
       echo ""
       echo "  Flags (--local|--dev only):"
@@ -60,6 +61,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+WORKSPACE="${WORKSPACE:-.inty}"
+mkdir -p "$WORKSPACE"
+LOG_FILE="$WORKSPACE/inty.log"
+
 echo "Starting database migrations..."
 export PYTHONPATH=.
 export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/backend/alembic/alembic.ini}"
@@ -71,14 +76,12 @@ if [ "$DEBUG" = true ]; then
   export INTY_LOGGING_LEVEL=DEBUG
 fi
 
-if [ -n "$LOG_FILE" ]; then
-  if [[ -e "$LOG_FILE" || -L "$LOG_FILE" ]]; then
-    rm -f "$LOG_FILE"
-  fi
-  export INTY_LOG_FILE="$LOG_FILE"
-  if [ "$DEBUG" = true ]; then
-    export INTY_CONSOLE_LOGGING_LEVEL=INFO
-  fi
+if [[ -e "$LOG_FILE" || -L "$LOG_FILE" ]]; then
+  rm -f "$LOG_FILE"
+fi
+export INTY_LOG_FILE="$LOG_FILE"
+if [ "$DEBUG" = true ]; then
+  export INTY_CONSOLE_LOGGING_LEVEL=INFO
 fi
 
 UVICORN_LOG_LEVEL=()
