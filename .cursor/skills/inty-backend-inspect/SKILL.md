@@ -131,7 +131,7 @@ python3 tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py \
 
 | 日志覆盖事发 | LangSmith | REPL | 下一步 |
 |--------------|-----------|------|--------|
-| 否 | （任意） | 无 error | 换真实日志或确认 `--log-file`；勿从旧文件推断。 |
+| 否 | （任意） | 无 error | 换真实日志或确认 `.inty/inty.log`（或 `--workspace` 对应路径）；勿从旧文件推断。 |
 | 是 | 对应 UUID + chat **pending** | 无下行 | 查 reload/crash/OOM、上游 LLM 超时。 |
 | 是 | **无** run | 无 error | 核对 project/API key、tracing 开关、消息是否到达。 |
 | 是 | success | 无下行 | 查客户端解析/sideband（少见）。 |

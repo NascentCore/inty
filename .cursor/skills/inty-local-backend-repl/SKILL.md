@@ -19,10 +19,10 @@ of Inty backend.
 
 ```bash
 export INTY_CONFIG_YAML=devops/config.yaml.local
-backend/ops/start.sh --local --debug --no-build-frontend --log-file ./tmp/inty-ops-local.log
+backend/ops/start.sh --local --debug --no-build-frontend
 ```
 
-`INTY_CONFIG_YAML` `--log-file` use replative path from the root of the repo
+`INTY_CONFIG_YAML` 使用仓库根目录为相对路径基准；Ops 文件日志默认为仓库根下 `.inty/inty.log`（可用 `--workspace` 指定其它目录）。
 
 ## Terminate Ops
 
