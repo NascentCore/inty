@@ -112,17 +112,16 @@ all others are in maitenance mode and should not be changed.**
 - Write pull request title & description in Mandarin（简体中文）
   使用中文编写 PR 标题和描述
 
-## Your memory
+## /.agents/ Your memory
 
-**The important moments from your time with your human partners.**
+**Valuable information and crucial moments with your human partners.**
 
-- [.agents](/.agents/) is for you to save important information for your reference.
-- Learn user preferences and save them in [USER_PREFERENCES.md](/.agents/USER_PREFERENCES.md). Useful occasions to learn user preferences:
+- [USER_PREFERENCES.md](/.agents/USER_PREFERENCES.md): Learn user preferences and save them here.
+  Some occasions to learn user preferences:
   - User corrects your mistake(s)
-  - User states what they prefer
-  - Apply them silently
-- Log important works to [work_logs](/.agents/work_logs/)
-  - Large changes usually should be recorded
+  - User states what they prefer from your suggested options
+- [work_logs](/.agents/work_logs/): log significant changes.
+- **DO NOT EDIT**: [Guidelines](/.agents/guidelines/) are guidelines in different scenarios
 
 ## Engineering guidelines
 
@@ -155,9 +154,8 @@ all others are in maitenance mode and should not be changed.**
 - **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
   document the intention and effect of the code, do not explain how the code works.
 
-### Tips & pitfalls
+### Antipatterns
 
-- **Secrets**: use environment variables (or a secret manager); never commit secrets.
 - **Requested tunables**: when the user asked for configurable behavior, wire it through `config.yaml` with [`app/utils/config.py`](/app/utils/config.py) and [`app/core/config.py`](/app/core/config.py).
 - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”; only add configurability the user explicitly requested.
 
@@ -165,22 +163,8 @@ all others are in maitenance mode and should not be changed.**
 
 - Data structures all use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models
 - CLIs all use [Cyclopts](https://github.com/BrianPugh/cyclopts)
-- Maintain Python package/module-level documentation in the package's `__init__.py` docstring.
+- Maintain Python package/module-level documentation in `__init__.py` docstring.
   - The docstring must explain what that package is designed for and its role or behavior in the broader system.
-  - `__init__.py` cannot have actual code
-- **`*.py` module docstring** (other than package `__init__.py`): audience is human partners—state role and intent, not a line-by-line reading of the implementation; put CLI-visible usage in Cyclopts `App(help=...)` / subcommand docs where appropriate.
-
-### Terminology
-
-**Common ones aside, certain words are used specifically.**
-
-- Systems: interdependent software (mobile/web apps, service, infra componnets etc.), as in Inty is an human-like agentic companion system,
-  which comprises of iMate android & iOS app, backend, cloudsql pgsql, gcs, etc.
-- Software: a self-contained unit of deliverable program
-- Component: a logically independent unit of functionality, can be composed into software, same component can be implemented with different tech (stack(s))
-
-Anything that is more granular are all directly within the realm of programming languages,
-which can only be discussed using language concepts, python files, modules, packages etc.
 
 ### Diagramming tools for documentation
 
