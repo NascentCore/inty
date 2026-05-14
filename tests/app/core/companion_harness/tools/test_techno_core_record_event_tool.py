@@ -7,7 +7,10 @@ import pytest
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
 from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
-from techno_core.models import TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH
+from techno_core.models import (
+    TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
+    TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
+)
 
 
 @pytest.mark.asyncio
@@ -23,7 +26,7 @@ async def test_techno_core_record_event_appends_valid_jsonl() -> None:
     }
     out = await execute_tool_call(
         store,
-        "techno_core_record_event",
+        TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
         json.dumps(payload, ensure_ascii=False),
     )
     assert out.startswith("OK recorded techno_core event_id=")
@@ -46,7 +49,7 @@ async def test_techno_core_record_event_rejects_bad_sphere() -> None:
     store = session.store
     out = await execute_tool_call(
         store,
-        "techno_core_record_event",
+        TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
         '{"sphere":"not_a_sphere","summary":"x"}',
     )
     assert out.startswith("ERROR:")

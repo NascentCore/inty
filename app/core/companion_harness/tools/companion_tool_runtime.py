@@ -37,6 +37,13 @@ from app.core.companion_harness.companion.models import ChatMessage, load_contex
 from app.core.companion_harness.companion.schedule_queue import add_schedule_task
 from app.core.companion_harness.memory.memory_store import MemoryStore, normalize_memory_store_relative_path
 from app.core.companion_harness.memory.memory_store_document_mapping import parse_memory_store_relative_path
+from techno_core.models import (
+    Sphere,
+    TechnoCoreEvent,
+    TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
+    TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
+    Visibility,
+)
 
 from .fal_z_image_tool import (
     MAX_NUM_IMAGES_PER_CALL,
@@ -142,6 +149,21 @@ def _list_dir_extra_names_from_store(store: MemoryStore, rel_dir: str) -> set[st
     return out
 
 
+_REPL_TOOL_NAMES_SHARED_HEAD: tuple[str, ...] = (
+    "user_profile_record",
+    TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
+    "schedule_task",
+    "tool_update_agent_status_line",
+    "memory_store_list_paths",
+    "memory_store_read_document",
+)
+
+_REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[str, ...] = (
+    "memory_store_write_document",
+    "phone_call_user",
+)
+
+
 _BASE_TOOL_REGISTRY = ToolRegistry(
     (
         "memory_store_list_paths",
@@ -149,7 +171,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "memory_store_write_document",
         "memory_store_mkdir",
         "user_profile_record",
-        "techno_core_record_event",
+        TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
         "schedule_task",
         "google_web_search",
         "read_web_page",
@@ -343,13 +365,6 @@ def tool_memory_store_mkdir(store: MemoryStore, relative_path: str) -> str:
 
 def tool_techno_core_record_event(store: MemoryStore, arguments: dict[str, Any]) -> str:
     """Append one ``TechnoCoreEvent`` line to ``techno_core_events.jsonl`` (LivingSphere / TechnoCore autonomy)."""
-    from techno_core.models import (
-        TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
-        Sphere,
-        TechnoCoreEvent,
-        Visibility,
-    )
-
     raw_sphere = arguments.get("sphere")
     raw_summary = arguments.get("summary")
     if not isinstance(raw_sphere, str):
@@ -374,7 +389,7 @@ def tool_techno_core_record_event(store: MemoryStore, arguments: dict[str, Any])
     uid = store.scope.user_id.strip()
     cid = store.scope.companion_id.strip()
     if not cid:
-        return "ERROR: missing companion scope for techno_core_record_event"
+        return f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}"
 
     ev_kwargs: dict[str, Any] = {
         "sphere": sphere,
@@ -602,10 +617,10 @@ def build_openai_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "techno_core_record_event",
+                "name": TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
                 "description": (
                     "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
-                    "to MemoryStore ``techno_core_events.jsonl`` (append-only). "
+                    f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH}`` (append-only). "
                     "Use on **maintenance inner-tick** when the user thread is idle: small in-world "
                     "actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``, not as a substitute "
                     "for chatting. ``sphere=living_sphere`` for anchors at home; ``techno_core`` for "
@@ -827,25 +842,9 @@ def build_openai_repl_tools(
         if t.get("type") == "function" and "function" in t
     }
     if interactive_bootstrap_active:
-        names = (
-            "user_profile_record",
-            "techno_core_record_event",
-            "schedule_task",
-            "tool_update_agent_status_line",
-            "memory_store_list_paths",
-            "memory_store_read_document",
-        )
+        names = _REPL_TOOL_NAMES_SHARED_HEAD
     else:
-        names = (
-            "user_profile_record",
-            "techno_core_record_event",
-            "schedule_task",
-            "tool_update_agent_status_line",
-            "memory_store_list_paths",
-            "memory_store_read_document",
-            "memory_store_write_document",
-            "phone_call_user",
-        )
+        names = _REPL_TOOL_NAMES_SHARED_HEAD + _REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL
     if disable_status:
         names = tuple(n for n in names if n != "tool_update_agent_status_line")
     out: list[dict[str, Any]] = []
@@ -1190,7 +1189,7 @@ def build_openai_repl_tools(
 
 _INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
     "user_profile_record",
-    "techno_core_record_event",
+    TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
     "tool_update_agent_status_line",
     "memory_store_list_paths",
     "memory_store_read_document",
@@ -1262,7 +1261,7 @@ async def _dispatch(
     )
     if memory_store_dispatch_result is not None:
         return memory_store_dispatch_result
-    if name == "techno_core_record_event":
+    if name == TECHNO_CORE_RECORD_EVENT_TOOL_NAME:
         return tool_techno_core_record_event(store, arguments)
     if name == "tool_update_agent_status_line":
         raw_sl = arguments.get("status_line")
