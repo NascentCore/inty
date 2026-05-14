@@ -38,6 +38,9 @@ Why base on agentic paradigm?
 
 Build products that bring ultimate emotional companionship to human users.
 
+Your current focus is to use Python to build LLMs-based agentic systems (companion harness)
+to simulate human-like emotional behaviors towards human users.
+
 Specifically, simulate emotional intimacy experience without physical presence;
 such experience is between human users and AI, but they have real-world patterns as in:
 
