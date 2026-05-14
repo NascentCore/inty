@@ -146,3 +146,9 @@ such experience is between human users and AI, but they have real-world patterns
   - The docstring must explain what that package is designed for and its role or behavior in the broader system.
   - `__init__.py` cannot have actual code
 - **`*.py` module docstring** (other than package `__init__.py`): audience is human partners—state role and intent, not a line-by-line reading of the implementation; put CLI-visible usage in Cyclopts `App(help=...)` / subcommand docs where appropriate.
+
+### Diagramming tools for documentation
+
+- [UML](https://plantuml.com/) for code-level logical executions
+- [C4Model](https://c4model.com/) for software architecture
+- [Mermaid](https://mermaid.js.org/) for diagraming, ASCII diagram for simple ones
