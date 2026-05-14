@@ -4,6 +4,7 @@ LOCAL=false
 DEBUG=false
 BUILD_FRONTEND=true
 LOG_FILE=""
+WORKSPACE=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/../../backend/alembic/alembic.ini" ]]; then
   REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -36,14 +37,21 @@ while [[ $# -gt 0 ]]; do
       LOG_FILE="$1"
       shift
       ;;
+    --workspace)
+      shift
+      if [[ $# -eq 0 ]]; then echo "error: --workspace requires a directory path"; exit 1; fi
+      WORKSPACE="$1"
+      shift
+      ;;
     --help|-h)
-      echo "Usage: $0 [--local|--dev] [--debug] [--log-file PATH] [--build-frontend|--no-build-frontend]"
+      echo "Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--log-file PATH] [--build-frontend|--no-build-frontend]"
       echo ""
       echo "  Always (before uvicorn): alembic upgrade head (see ALEMBIC_CONFIG / repo backend/alembic/alembic.ini)."
       echo "  Listen port: \${PORT:-8001}."
       echo ""
       echo "  Flags (any mode):"
       echo "  --debug         Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL)"
+      echo "  --workspace DIR Local working directory; file log is DIR/inty.log (INTY_LOG_FILE) unless --log-file is set."
       echo "  --log-file PATH UTF-8 file log at PATH (INTY_LOG_FILE); removed if it already exists at startup."
       echo "                  With --debug: console INFO (INTY_CONSOLE_LOGGING_LEVEL), file DEBUG."
       echo ""
@@ -59,6 +67,13 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -n "$WORKSPACE" ]]; then
+  mkdir -p "$WORKSPACE"
+fi
+if [[ -n "$WORKSPACE" && -z "$LOG_FILE" ]]; then
+  LOG_FILE="$WORKSPACE/inty.log"
+fi
 
 echo "Starting database migrations..."
 export PYTHONPATH=.
