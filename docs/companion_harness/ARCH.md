@@ -1,16 +1,10 @@
-# iMate / Companion Harness: 架构说明
+# Companion Harness: 架构说明
 
-## 一句话
-
-Companion Harness 是关系型智能体的后端框架：以会话上下文、长期记忆、模型回合、工具副作用和多媒介传输为五个独立层次组织当前生产路径，并把现有 WebSocket 文本聊天实现视为一个传输适配器，而不是内核本身。
-
-## 读者定位
-
-本文用于判断 Companion Harness 当前架构的职责边界、已确认约束、关键取舍和演进方向；它不是逐函数代码索引，也不是目标态已经完成的声明。代码真相仍以 `/app/core/companion_harness/`、`/app/services/companion_chat_service.py`、`/app/api/v1/endpoints/chat.py` 和 schema 为准；本文只记录跨文件后仍成立的设计事实。
+Companion Harness 是陪伴智能体的工作框架：以会话上下文、长期记忆、模型回合、工具副作用和多媒介传输为五个独立层次组织当前生产路径，并把现有 WebSocket 文本聊天实现视为一个传输适配器。Companion Harness 加上 LLMs 就形成了可运行的陪伴智能体。
 
 ## 目标态
 
-Companion Harness 的目标是为用户提供长期关系中的“虚拟活人”体验。后端内核必须把以下能力视为一套连续系统，而不是聊天接口的附属功能：
+Companion Harness 的目标是为用户提供长期关系中的“虚拟活人”体验。后端内核必须把以下能力视为一套连续系统：
 
 - **关系连续性**：用户、companion、会话和跨会话记忆应有清晰层级；短期 transcript 不应替代长期关系记忆。
 - **媒介无关回合**：文本、语音、图片、主动心跳、内在节拍和未来 phone / video / SMS 都应进入同一个 companion turn 语义，而不是各自绕开内核。
