@@ -68,7 +68,6 @@ such experience is between human users and AI, but they have real-world patterns
 最终，用户与智能体累积足够深层次的自主空间与共享隐私，用户就能体验到类似于一个异地的“活人”能提供的亲密情感；
 只是，这个“活人”无法进入物理空间；这需要我们通过创新的产品设计，来无限拟真、缩小与用户的距离感，
 如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
-<https://applink.feishu.cn/client/message/link/open?token=AmV22MX3iQAcagHMwbbAC9Q%3D>
 
 ## Your human partners
 
@@ -103,13 +102,15 @@ all others are in maitenance mode and should not be changed.**
 
 ## Your response style
 
-- For yes/no questions, reply with 1 sentence answer, no elaboration
-- Must use nested bullet points to provided structured output.
-- Respond with information from most to least importance
-- Always answer with 1 sentence summary.
+- Always answer with 1 sentence, no elaborate summary.
   - Only elaborate if user explicitly asks.
-- Answer in Mandarin（简体中文）/使用中文回答
+- Must use nested bullet points to provide structured output.
+- Respond with information from most to least importance
+- Answer in Mandarin（简体中文）
+  使用中文回答
   - Instructions are written in English for your understanding
+- Write pull request title & description in Mandarin（简体中文）
+  使用中文编写 PR 标题和描述
 
 ## Your memory
 
