@@ -226,10 +226,10 @@ def _output_contract_text_interactive_bootstrap_tools(
     base = (
         "输出与工具（交互式关系建立阶段）："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        + "（0）本阶段核心是**初始化 SOUL 切片**（并同时把 IDENTITY / USER / MEMORY 落到可用初稿）；"
-        "须用 **companion_update_prompt_slice** 写入上述四份根目录约定稿；**禁止**使用 memory_store_write_document 写入它们。"
+        + "（0）本阶段核心是**初始化 SOUL 切片**（并同时把 IDENTITY / STYLE / USER / MEMORY 落到可用初稿）；"
+        "须用 **companion_update_prompt_slice** 写入上述五份根目录约定稿；**禁止**使用 memory_store_write_document 写入它们。"
         "调用 **companion_bootstrap_user_interactive_complete** 后，**SOUL 即锁定**（不可再改）；"
-        "IDENTITY / USER / MEMORY 在后续日常轮次仍可用 companion_update_prompt_slice 或 memory_store_write_document 按需更新。"
+        "IDENTITY / STYLE / USER / MEMORY 在后续日常轮次仍可用 companion_update_prompt_slice 或 memory_store_write_document 按需更新。"
         "（TOOLS 操作说明与 significance 评分引导为包内固定模版，不由本工具写入。）"
         "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须**调用 "
         "**companion_bootstrap_user_interactive_complete**（可选短 note）；未调用该工具前不要声称阶段已结束。"
@@ -411,8 +411,9 @@ def build_system_messages(
                 _system_message(_tool_background_first_round_skip_contract_text())
             )
 
-    out.append(_system_message(bundle.identity.strip()))
-    out.append(_system_message(bundle.soul.strip()))
+    out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
+    out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))
+    out.append(_system_message("## STYLE\n\n" + bundle.style_md.strip()))
     out.append(_system_message(experience_profile_system_clause(context.context_mode)))
     if bundle.techno_core_md.strip():
         out.append(_system_message(bundle.techno_core_md.strip()))

@@ -35,6 +35,7 @@ class CompanionLLMConfig(BaseModel):
     memory_model: str = ""
     day_summary_model: str = ""
     user_model: str = ""
+    style_model: str = ""
     soul_model: str = ""
     api_base: str = "https://openrouter.ai/api/v1"
     api_key: str = ""
@@ -71,6 +72,7 @@ class CompanionLLMConfig(BaseModel):
                 os.getenv("INTY_V2_PROTO_DAY_SUMMARY_MODEL") or ""
             ).strip(),
             user_model=(os.getenv("INTY_V2_PROTO_USER_MODEL") or "").strip(),
+            style_model=(os.getenv("INTY_V2_PROTO_STYLE_MODEL") or "").strip(),
             soul_model=(os.getenv("INTY_V2_PROTO_SOUL_MODEL") or "").strip(),
             async_chat_front_timeout_sec=timeout_sec,
         )

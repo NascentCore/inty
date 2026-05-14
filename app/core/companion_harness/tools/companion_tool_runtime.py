@@ -97,6 +97,7 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
         "IDENTITY.md",
         "MEMORY.md",
         "SOUL.md",
+        "STYLE.md",
         "USER.md",
     }
 )
@@ -357,7 +358,7 @@ def tool_memory_store_write_document(
     if rel == "SOUL.md" and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
         return (
             "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
-            "you may still update IDENTITY.md, USER.md, MEMORY.md, and other allowed paths."
+            "you may still update IDENTITY.md, STYLE.md, USER.md, MEMORY.md, and other allowed paths."
         )
     if rel in ("transcript.jsonl", "transcript_inner_tick.jsonl"):
         v_err = _transcript_jsonl_validate_for_tool_write(content)
@@ -788,7 +789,7 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                     "Use during interactive relationship bootstrap instead of memory_store_write_document. "
                     "Pass the full updated markdown as content. "
                     "After companion_bootstrap_user_interactive_complete, SOUL is locked; "
-                    "IDENTITY / USER / MEMORY may still be updated. "
+                    "IDENTITY / STYLE / USER / MEMORY may still be updated. "
                     "TOOLS / significance-perception operator text are fixed package templates, not slices."
                 ),
                 "parameters": {
@@ -817,7 +818,7 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                     "Mark interactive workspace bootstrap as finished in context.json. "
                     "Bootstrap here means the SOUL slice has been initialized for this relationship; "
                     "after this call SOUL.md must not change (tools and background updates). "
-                    "Call when that phase is done; IDENTITY / USER / MEMORY slices may still be edited later."
+                    "Call when that phase is done; IDENTITY / STYLE / USER / MEMORY slices may still be edited later."
                 ),
                 "parameters": {
                     "type": "object",
@@ -896,7 +897,7 @@ def build_openai_repl_tools(
                 "In REPL, only these root files are writable: "
                 + ", ".join(sorted(REPL_WRITABLE_RELATIVE_PATHS))
                 + ". When the user explicitly asks to change how you relate, boundaries, or "
-                "persistent preferences, read the current file first (e.g. SOUL.md, USER.md), "
+                "persistent preferences, read the current file first (e.g. SOUL.md, STYLE.md, USER.md), "
                 "then write the full updated content. Do not use for transcript.jsonl or context.json."
             )
             w["function"] = wfn
@@ -923,7 +924,7 @@ def build_openai_repl_tools(
                     "Return a JSON snapshot of the current companion runtime: in-process LLM config, "
                     "last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), "
                     "runtime events, and optionally workspace documents from MemoryStore "
-                    "(SOUL, USER, MEMORY.md, episodic/gist day paths). "
+                    "(SOUL, STYLE, USER, MEMORY.md, episodic/gist day paths). "
                     "Use when the user asks for verifiable facts about the active model, parameters, or injected "
                     "prompt stack. For self-check only: answer the user in natural language without reading "
                     "this JSON aloud verbatim."

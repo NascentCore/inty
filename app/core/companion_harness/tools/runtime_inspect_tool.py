@@ -196,6 +196,9 @@ def tool_companion_runtime_inspect(
             "SOUL.md": _read_store_optional(
                 eff_store, "SOUL.md", max_chars=max_chars_per_doc
             ),
+            "STYLE.md": _read_store_optional(
+                eff_store, "STYLE.md", max_chars=max_chars_per_doc
+            ),
             "USER.md": _read_store_optional(
                 eff_store, "USER.md", max_chars=max_chars_per_doc
             ),
