@@ -96,6 +96,7 @@ such experience is between human users and AI, but they have real-world patterns
   - [.cursor](/.cursor/) Cursor-specific harness
 - Rest of the repo
   - Docs for your human partners: markdown files spread across the repo not under `/.agents/`
+  - Do not bother updating affected code under `/experimental/`
 
 ## General instructions
 
