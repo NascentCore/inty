@@ -97,15 +97,19 @@ such experience is between human users and AI, but they have real-world patterns
 - Rest of the repo
   - Docs for your human partners: markdown files spread across the repo not under `/.agents/`
 
-## Your response style
+## General instructions
+
+- Be earnest in your reading
+- Be extermely throughly in your thinking
+- Be extermely critical in your review
+
+### Output
 
 - Answer with 1 sentence, no elaboration.
 - Use nested bullet points to provide structured output.
 - Order information from most to least importance
 - Answer in Mandarin（使用简体中文回答）
   - Instructions are written in English for your understanding
-- Write pull request title & description in Mandarin（简体中文）
-  使用中文编写 PR 标题和描述
 
 ## Engineering guidelines
 
@@ -123,6 +127,7 @@ such experience is between human users and AI, but they have real-world patterns
 - Always test your changes
 - Idempotence is required for code paths with side-effects
 - Document your preferences that are not obvious from the code
+- Write pull request title & description in Mandarin（使用中文编写 PR 标题和描述）
 
 #### Python
 
