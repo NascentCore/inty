@@ -86,7 +86,7 @@ such experience is between human users and AI, but they have real-world patterns
     - [iMate iOS app](/imate_ios_app/)
 - Repo agentic harness
   - [.agents](/.agents/) contextual information for your reference
-    - [USER_PREFERENCES.md](/.agents/USER_PREFERENCES.md): Learn user preferences and save them here.
+    - [USERS.md](/.agents/USERS.md): Learn user preferences and save them here.
       Some occasions to learn user preferences:
       - User corrects your mistake(s)
       - User states what they prefer from your suggested options

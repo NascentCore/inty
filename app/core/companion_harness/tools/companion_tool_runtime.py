@@ -102,6 +102,8 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
 )
 
 
+# TODO(product): ai_private.jsonl is ORM-mapped but not in REPL_WRITABLE_RELATIVE_PATHS; model
+# cannot memory_store_write_document it until allowlist or a dedicated append tool exists.
 def _latest_generated_image_http_url_from_index(store: MemoryStore) -> str | None:
     for row in reversed(list_image_asset_records(store)):
         u = str(row.get("gcs_http_url") or "").strip()

@@ -821,6 +821,9 @@ async def _run_background_tool_loop(
             trace_id=trace_id,
         )
         output_to_user_flag = routing.output_to_user
+        # TODO(product): If InnerTickMode.MAINTENANCE must never deliver client-visible NL, gate
+        # should_push here (and/or output_to_user interpretation) before emitting ToolOutputEvent;
+        # document decision in docs/companion_harness/ARCH.md. Current: same should_push as chat.
         should_push = generation_deliver or output_to_user_flag
         base_nl = (routing.user_facing_reply or "").strip()
         significance_meta = envelope_to_assistant_metadata_dict(routing)
