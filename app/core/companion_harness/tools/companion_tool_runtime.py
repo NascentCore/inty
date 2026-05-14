@@ -451,9 +451,8 @@ def tool_schedule_task(store: MemoryStore, exec_time_utc: str, task_text: str) -
     )
 
 
-async def tool_phone_call_user(root: Path, phone_number: str, reason: str) -> str:
-    store = get_memory_store(root)
-    context = load_context_meta(root / "context.json", store=store)
+async def tool_phone_call_user(store: MemoryStore, phone_number: str, reason: str) -> str:
+    context = load_context_meta(store=store)
     user_id = context.user_id.strip()
     agent_id = context.companion_id.strip()
     if not user_id or not agent_id:
@@ -1299,7 +1298,7 @@ async def _dispatch(
             return "ERROR: phone_number must be a string"
         if not isinstance(raw_reason, str):
             return "ERROR: reason must be a string"
-        return await tool_phone_call_user(root, raw_phone, raw_reason)
+        return await tool_phone_call_user(store, raw_phone, raw_reason)
     if name == "companion_runtime_inspect":
         return tool_companion_runtime_inspect(store, dict(arguments or {}))
     if name == "companion_set_experience_profile":

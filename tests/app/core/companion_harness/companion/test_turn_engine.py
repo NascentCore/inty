@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn_engine import persist_repl_turn_transcript_rows
 
@@ -14,7 +14,7 @@ def _scope(tmp: Path) -> CompanionScope:
 
 def test_persist_repl_turn_transcript_rows_writes_jsonl(tmp_path: Path) -> None:
     sc = _scope(tmp_path)
-    store = get_memory_store(sc, dsn="")
+    store = MemoryStore(scope=sc, repository=None)
     aid = persist_repl_turn_transcript_rows(
         store,
         user_text="hello",
@@ -36,7 +36,7 @@ def test_persist_repl_turn_transcript_rows_writes_jsonl(tmp_path: Path) -> None:
 
 def test_persist_repl_turn_transcript_rows_assistant_extra(tmp_path: Path) -> None:
     sc = _scope(Path(str(tmp_path) + "-extra"))
-    store = get_memory_store(sc, dsn="")
+    store = MemoryStore(scope=sc, repository=None)
     persist_repl_turn_transcript_rows(
         store,
         user_text="hello",
@@ -54,7 +54,7 @@ def test_persist_repl_turn_transcript_rows_assistant_extra(tmp_path: Path) -> No
 
 def test_persist_repl_maintenance_inner_tick_writes_inner_transcript(tmp_path: Path) -> None:
     sc = _scope(Path(str(tmp_path) + "-inner"))
-    store = get_memory_store(sc, dsn="")
+    store = MemoryStore(scope=sc, repository=None)
     persist_repl_turn_transcript_rows(
         store,
         user_text="（内在节拍）",

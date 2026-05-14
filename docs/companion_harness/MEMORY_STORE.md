@@ -4,6 +4,7 @@
 
 MemoryStore 是 Companion Harness 的「工作区状态层」：人设、对话与控制面文档；持久化到 Postgres `companion_memory_document_versions`；MemoryStore 不复用 legacy `memory` 表。
 
+- **进程内注册表**：`memory_registry.get_memory_store(scope, dsn=...)` 始终挂上 `SqlAlchemyMemoryRepository`，**必须**传入非空 `dsn`（与 `CompanionConfig.memory_pg_dsn`、仓库根 `config.yaml` 的 `database.url` 同源）；不存在「注册表里仅内存、不写库」的路径。纯逻辑测试应直接构造 `MemoryStore(scope, repository=None)` 并绕过注册表；需要走注册表 + ORM 的测试与 `experimental/harness_seeding_demo` 的播种脚本假定 **`database.url` 已配置且库可达**（与 `tests/app/core/companion_harness/companion_memory_registry_dsn.py` 的约定一致）。
 - 不在范围：分层 Markdown 记忆（episodic / gist / semantic）的策展机制 —— 见 [`MEMORY_PIPELINE.md`](/docs/companion_harness/MEMORY_PIPELINE.md)。
 - 不在范围：跨 transport / turn / tool 的整体职责切分 —— 见 [`ARCH.md`](/docs/companion_harness/ARCH.md)。
 - 不在范围：legacy 主站 `memory` 表与节日 / 日常抽取管线（避免混淆）。

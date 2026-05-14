@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -157,9 +156,9 @@ def test_transcript_without_trailing_presence_signals_strips_trailing_presence_u
 
 
 def test_load_transcript_valid_jsonl(tmp_path: Path) -> None:
-    store = get_memory_store(
-        CompanionScope("models", "a", f"{tmp_path.name}-vj"),
-        dsn="",
+    store = MemoryStore(
+        scope=CompanionScope("models", "a", f"{tmp_path.name}-vj"),
+        repository=None,
     )
     rows = [
         {"role": "user", "content": "a", "ts": "2026-01-01T00:00:00Z"},

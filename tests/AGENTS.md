@@ -9,6 +9,7 @@
 ## 核心哲学
 
 - **真栈优先**：倾向 **真实数据库 + 本地起服务**；外部世界用仓库提供的 **fake 服务** 替身，而不是到处 mock SQLAlchemy。
+- **Companion MemoryStore 注册表**：凡调用 `get_memory_store(..., dsn=...)` 且依赖 ORM 持久化的用例，假定仓库根 `config.yaml` 的 `database.url` 非空且 Postgres 可用（与 `companion_memory_registry_dsn` 辅助一致）；仅需内存行为时用 `MemoryStore(..., repository=None)`，勿传空 `dsn` 走注册表。
 - **monkeypatch 例外**：极少数历史 WebSocket 测试允许隔离鉴权与模型调用；**新契约关键路径** 优先 **真服务 + token**（与 `app/AGENTS.md` 精神一致）。
 - **够不着就跳过**：当默认 `localhost:8000` 不可达时，HTTP 集成夹具会 **跳过** 而非让整个 `pytest` 红一片——鼓励本地开发「不启服也能跑大部分」。
 
