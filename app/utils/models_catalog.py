@@ -945,73 +945,11 @@ Z_IMAGE_TURBO_IMAGE_TO_IMAGE = GenAIModel(
     playground_url="https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/playground",
 )
 
-
-def _unique_catalog_models(models: tuple[GenAIModel, ...]) -> tuple[GenAIModel, ...]:
-    """Stable de-dupe for catalog tuples that may overlap (by object identity)."""
-    seen: set[int] = set()
-    out: list[GenAIModel] = []
-    for m in models:
-        mid = id(m)
-        if mid not in seen:
-            seen.add(mid)
-            out.append(m)
-    return tuple(out)
-
-
-# Full catalog for lookup (DeepSeek + every ALL_GEMINI_MODELS entry + non-Gemini multimodal SKUs).
-ALL_GENAI_CATALOG_MODELS: tuple[GenAIModel, ...] = _unique_catalog_models(
-    (
-        DEEPSEEK_V3_2,
-        DEEPSEEK_V4_PRO,
-        DEEPSEEK_V4_FLASH,
-        *ALL_GEMINI_MODELS,
-        NEWAPI_NANO_BANANA_2,
-        IMAGEN_4_FAST,
-        IMAGEN_4,
-        VEO_3_1_FAST,
-        VEO_3_1,
-        SEEDREAM_V4_5_EDIT,
-        GPT_IMAGE_1_5,
-        Z_IMAGE_TURBO,
-        Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
-    )
-)
-
-
-def resolve_catalog_genai_model(value: str) -> GenAIModel | None:
-    """
-    Resolve a catalog GenAIModel by exact nickname or id_on_provider (fal ids normalized via normalize_model_name).
-    Unknown custom OpenRouter ids return None.
-    """
-    normalized = value.strip() if value else ""
-    if not normalized:
-        return None
-    for m in ALL_GENAI_CATALOG_MODELS:
-        if m.nickname == normalized:
-            return m
-    nid = normalize_model_name(normalized)
-    for m in ALL_GENAI_CATALOG_MODELS:
-        if normalize_model_name(m.id_on_provider) == nid:
-            return m
-        if m.id_on_provider == normalized:
-            return m
-    return None
-
-
-def prompt_tokens_context_utilization(
-    *, model: str, prompt_tokens: int | None
-) -> float | None:
-    """
-    Return prompt_tokens / catalog.context_window_tokens when defined and window > 0.
-    No clamping to 1.0. Returns None when catalog missing, tokens missing/negative, or window is 0.
-    """
-    if prompt_tokens is None or prompt_tokens < 0:
-        return None
-    catalog = resolve_catalog_genai_model(model)
-    if catalog is None or catalog.context_window_tokens <= 0:
-        return None
-    return float(prompt_tokens) / float(catalog.context_window_tokens)
-
+# Anchor TODOs for wiring ``GenAIModel.context_window_tokens`` + usage into runtime (see grep in repo):
+# - app/core/companion_harness/llm/chat_completions.py
+# - app/core/companion_harness/tools/runtime_inspect_context.py
+# - app/core/agent/agent.py
+# - tests/app/utils/test_models_catalog.py
 
 # Chat image (message-to-image): only these models are allowed; config uses nickname.
 CHAT_IMAGE_GEN_MODELS = [
