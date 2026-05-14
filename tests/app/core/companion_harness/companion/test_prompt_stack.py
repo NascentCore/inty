@@ -34,7 +34,7 @@ def _scope(tmp_path_name: str, suffix: str = "") -> CompanionScope:
     return CompanionScope("prompt-stack", "agent", chat_id)
 
 
-def _seed_workspace_bootstrap_incomplete(scope: CompanionScope) -> None:
+def _seed_workspace_bootstrap_incomplete(scope: CompanionScope) -> MemoryStore:
     st = MemoryStore(scope=scope, repository=None)
     for rel, body in (
         ("IDENTITY.md", "id\n"),
@@ -57,6 +57,7 @@ def _seed_workspace_bootstrap_incomplete(scope: CompanionScope) -> None:
         )
         + "\n",
     )
+    return st
 
 
 def _joined_leading_system_contents(system_messages: list[dict]) -> str:
@@ -148,7 +149,7 @@ def test_inner_tick_compact_tool_side_forwards_ai_private(tmp_path) -> None:
     )
     assert "jl seed line compact" in joined
 
-def _seed_minimal_companion_workspace(scope: CompanionScope) -> None:
+def _seed_minimal_companion_workspace(scope: CompanionScope) -> MemoryStore:
     st = MemoryStore(scope=scope, repository=None)
     for rel, body in (
         ("IDENTITY.md", "id\n"),
@@ -170,12 +171,12 @@ def _seed_minimal_companion_workspace(scope: CompanionScope) -> None:
         )
         + "\n",
     )
+    return st
 
 
 def test_refresh_inner_tick_compact_keeps_inner_tick_tools(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-refresh-it")
-    _seed_minimal_companion_workspace(scope)
-    st = MemoryStore(scope=scope, repository=None)
+    st = _seed_minimal_companion_workspace(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     tools_before, systems, _ = companion_turn_tools_and_system_messages(
@@ -205,8 +206,7 @@ def test_refresh_inner_tick_compact_keeps_inner_tick_tools(tmp_path) -> None:
 def test_async_foreground_chat_system_stack_mirrors_tools_contract(tmp_path) -> None:
     """Non-compact stack on ASYNC route skips full tool-output (6) clause; injects dual envelope."""
     scope = _scope(tmp_path.name, "-async-fg")
-    _seed_minimal_companion_workspace(scope)
-    st = MemoryStore(scope=scope, repository=None)
+    st = _seed_minimal_companion_workspace(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     _, systems, route = companion_turn_tools_and_system_messages(
@@ -230,8 +230,7 @@ def test_implicit_user_signed_on_chat_turn_forces_chat_only_route_and_no_tools(
     tmp_path,
 ) -> None:
     scope = _scope(tmp_path.name, "-implicit-sign")
-    _seed_minimal_companion_workspace(scope)
-    st = MemoryStore(scope=scope, repository=None)
+    st = _seed_minimal_companion_workspace(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     bundle_sig = ImplicitSignalBundle(user_signed_on=True)
@@ -267,8 +266,7 @@ def test_implicit_user_signed_on_turn_does_not_strip_tools_for_inner_tick(
     tmp_path,
 ) -> None:
     scope = _scope(tmp_path.name, "-it-implicit")
-    _seed_minimal_companion_workspace(scope)
-    st = MemoryStore(scope=scope, repository=None)
+    st = _seed_minimal_companion_workspace(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     tools, _, route = companion_turn_tools_and_system_messages(
@@ -286,8 +284,7 @@ def test_implicit_user_signed_on_turn_does_not_strip_tools_for_inner_tick(
 
 def test_refresh_implicit_user_signed_on_returns_empty_tools(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-refresh-implicit")
-    _seed_minimal_companion_workspace(scope)
-    st = MemoryStore(scope=scope, repository=None)
+    st = _seed_minimal_companion_workspace(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     systems = build_system_messages(
@@ -329,8 +326,7 @@ def test_replace_leading_system_messages_inplace_keeps_tail() -> None:
 
 def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-drop-boot")
-    _seed_workspace_bootstrap_incomplete(scope)
-    st = MemoryStore(scope=scope, repository=None)
+    st = _seed_workspace_bootstrap_incomplete(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     systems = build_system_messages(
@@ -372,8 +368,7 @@ def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
 
 def test_refresh_tool_side_compact_drops_bootstrap_after_complete(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-compact-boot")
-    _seed_workspace_bootstrap_incomplete(scope)
-    st = MemoryStore(scope=scope, repository=None)
+    st = _seed_workspace_bootstrap_incomplete(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     systems = build_system_messages(
