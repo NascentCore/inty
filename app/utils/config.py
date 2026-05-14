@@ -203,6 +203,16 @@ class FeaturesConfig:
     companion_ws_agent_circadian_enabled: bool = True
     # When due (see companion.dream_state), maintenance worker may run InnerTickMode.DREAM instead of MAINTENANCE.
     companion_ws_dream_inner_tick_enabled: bool = True
+    # After a successful DREAM consolidation (see companion.sleep_state), block maintenance inner-tick LLM for this many hours.
+    companion_ws_inner_tick_quiet_hours_after_dream: float = 3.0
+    # At local night, multiply maintenance inner-tick min_gap by this factor (must be >= 1.0).
+    companion_ws_night_maintenance_inner_tick_gap_multiplier: float = 3.0
+    # When True at local night, skip MAINTENANCE inner-tick unless DREAM is due (noop still advances schedule).
+    companion_ws_night_maintenance_inner_tick_only_when_dream_due: bool = False
+    # After successful DREAM, with this probability run one short ``complete_text`` and append a private fragment JSONL line.
+    companion_creative_dream_probability: float = 0.0
+    companion_creative_dream_max_fragment_chars: int = 800
+    companion_creative_dream_max_fragments_per_local_day: int = 1
 
     def __post_init__(self) -> None:
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()
@@ -219,6 +229,15 @@ class FeaturesConfig:
         if self.companion_default_context_mode == ExperienceContextMode.BOOTSTRAP:
             raise ValueError(
                 "app.features.companion_default_context_mode cannot be 'bootstrap'"
+            )
+        if float(self.companion_ws_night_maintenance_inner_tick_gap_multiplier) < 1.0:
+            raise ValueError(
+                "app.features.companion_ws_night_maintenance_inner_tick_gap_multiplier must be >= 1.0"
+            )
+        p = float(self.companion_creative_dream_probability)
+        if p < 0.0 or p > 1.0:
+            raise ValueError(
+                "app.features.companion_creative_dream_probability must be in [0, 1]"
             )
 
 

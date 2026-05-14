@@ -50,7 +50,18 @@ from app.core.companion_harness.companion.heartbeat import (
 from app.core.companion_harness.companion.agent_circadian import (
     suppress_proactive_heartbeat_for_circadian,
 )
+from app.core.companion_harness.companion.creative_dream_fragment import (
+    maybe_append_creative_dream_fragment_after_consolidation,
+)
 from app.core.companion_harness.companion.dream_state import dream_inner_tick_due
+from app.core.companion_harness.companion.inner_tick_schedule import (
+    InnerTickScheduleOverrides,
+    next_inner_tick_wait_seconds,
+)
+from app.core.companion_harness.companion.sleep_state import (
+    clear_inner_tick_quiet_if_circadian_day,
+    inner_tick_quiet_remain_seconds,
+)
 from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
@@ -1954,6 +1965,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
     inner_tick_pack: list[tuple[InnerTickMode, str]] = [
         (InnerTickMode.MAINTENANCE, MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER)
     ]
+    ws_implicit_for_turn = _implicit_signal_bundle_from_ws_tc_box(tc_box)
     user_id = str(ctx.get("user_id") or "").strip()
     agent_id = str(ctx.get("agent_id") or "").strip()
     chat_id_raw = ctx.get("chat_id")
@@ -1995,26 +2007,51 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         if mem_store is None:
             return
 
+        uctx_sched = (
+            ws_implicit_for_turn.client_time.model_dump(exclude_none=True)
+            if ws_implicit_for_turn and ws_implicit_for_turn.client_time
+            else None
+        )
+        is_night = bool(
+            feats.companion_ws_agent_circadian_enabled
+            and suppress_proactive_heartbeat_for_circadian(uctx_sched)
+        )
+        clear_inner_tick_quiet_if_circadian_day(mem_store, is_night=is_night)
+
         if feats.companion_ws_dream_inner_tick_enabled and dream_inner_tick_due(mem_store):
             inner_tick_pack[0] = (
                 InnerTickMode.DREAM,
                 DREAM_INNER_TICK_CHAT_HISTORY_USER_MARKER,
             )
 
-        remain = next_inner_tick_wait_seconds(
+        pack_mode = inner_tick_pack[0][0]
+        base_gap = float(feats.companion_ws_maintenance_inner_tick_min_gap_seconds)
+        if is_night:
+            base_gap *= float(
+                feats.companion_ws_night_maintenance_inner_tick_gap_multiplier
+            )
+        schedule_remain = next_inner_tick_wait_seconds(
             mem_store,
             last_inner_fire_monotonic=(
                 companion_ws.last_maintenance_inner_tick_monotonic()
             ),
             overrides=InnerTickScheduleOverrides(
                 enabled=True,
-                min_gap_seconds=float(
-                    feats.companion_ws_maintenance_inner_tick_min_gap_seconds
-                ),
+                min_gap_seconds=base_gap,
                 poll_seconds=float(feats.companion_ws_proactive_heartbeat_poll_seconds),
             ),
         )
+        quiet_remain = inner_tick_quiet_remain_seconds(mem_store)
+        remain = max(schedule_remain, quiet_remain)
         if remain > 0:
+            return
+
+        if (
+            is_night
+            and feats.companion_ws_night_maintenance_inner_tick_only_when_dream_due
+            and pack_mode == InnerTickMode.MAINTENANCE
+        ):
+            companion_ws.mark_maintenance_inner_tick_fired(time.monotonic())
             return
 
         is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
@@ -2034,7 +2071,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         chat_row_agent_id = chat.agent_id
         session_id = generate_session_id(str(chat_row_id))
 
-    ws_implicit = _implicit_signal_bundle_from_ws_tc_box(tc_box)
+    ws_implicit = ws_implicit_for_turn
     stub_utc = ws_implicit.client_time if ws_implicit else None
     preset_uid = str(uuid.uuid4())
     _inner_mode, _inner_marker = inner_tick_pack[0]
@@ -2108,6 +2145,26 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
 
         if not companion_turn.tool_background_started:
             companion_ws.remove_foreground_pending(preset_uid)
+
+        if (
+            feats.companion_creative_dream_probability > 0.0
+            and _inner_mode == InnerTickMode.DREAM
+            and not companion_turn.tool_background_started
+        ):
+            aux_sess = companion_chat_service.companion_session_for_initialized_chat(
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_id=chat_row_id,
+                resolved_chat_model_id=model_override,
+            )
+            if aux_sess is not None:
+                await asyncio.to_thread(
+                    maybe_append_creative_dream_fragment_after_consolidation,
+                    store=aux_sess.store,
+                    llm_client=aux_sess.llm_client,
+                    feats=feats,
+                    implicit=ws_implicit,
+                )
 
         user_meta = dump_chat_ws_companion_wire_meta(
             ChatWsCompanionWireMetaData(

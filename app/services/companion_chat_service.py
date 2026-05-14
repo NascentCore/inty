@@ -59,6 +59,31 @@ def companion_memory_store_if_ready(
     return session.store
 
 
+def companion_session_for_initialized_chat(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model_id: str,
+) -> CompanionSession | None:
+    """Return an initialized kernel session for WebSocket/aux paths that already gated on store readiness."""
+    if (
+        companion_memory_store_if_ready(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            resolved_chat_model_id=resolved_chat_model_id,
+        )
+        is None
+    ):
+        return None
+    manager = _companion_manager_for_resolved_model(
+        resolved_chat_model_id,
+        _companion_runtime_config_fingerprint(),
+    )
+    return manager.get_or_create_session(user_id, agent_id, str(chat_id))
+
+
 def companion_session_tool_bg_idle_event(
     *,
     user_id: str,

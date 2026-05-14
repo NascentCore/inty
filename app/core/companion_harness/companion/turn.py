@@ -59,6 +59,7 @@ from .llm_runtime_events import (
     companion_llm_runtime_event_bind_ctx,
     record_llm_inference_failure,
 )
+from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.memory.memory_pipeline import (
     MemoryPipelineConfig,
     memory_update_after_turn,
@@ -566,6 +567,12 @@ async def run_turn(
                         implicit_signal_bundle=implicit_signal_bundle,
                         tool_bg_idle_event=tool_bg_idle_event,
                         force_tools_first_round=force_tools_first_round,
+                        companion_llm_client_for_aux=(
+                            llm_client
+                            if inner_tick_turn
+                            and route_inner_mode == InnerTickMode.DREAM
+                            else None
+                        ),
                     )
                     tool_background_started = True
                     logger.info(
@@ -766,7 +773,12 @@ async def run_turn(
         and route_inner_mode == InnerTickMode.DREAM
         and not tool_background_started
     ):
-        record_companion_dream_cycle_completed(store)
+        feats = global_config_loaded_from_config_yaml.app.features
+        qh = float(feats.companion_ws_inner_tick_quiet_hours_after_dream)
+        record_companion_dream_cycle_completed(
+            store,
+            inner_tick_quiet_hours=qh if qh > 0 else None,
+        )
 
     # 记忆管线
     if inner_tick_turn:

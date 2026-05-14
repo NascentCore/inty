@@ -47,11 +47,17 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
     langsmith_trace_id_from_completion,
     tool_path_chat_completion_kwargs,
 )
-from app.core.companion_harness.companion.llm_client import LLM_SCENE_TOOL_CALL
+from app.core.companion_harness.companion.llm_client import (
+    LLM_SCENE_TOOL_CALL,
+    CompanionLLMClient,
+)
 from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
     exc_chain_includes_llm_inference_failure_root_causes,
+)
+from app.core.companion_harness.companion.creative_dream_fragment import (
+    maybe_append_creative_dream_fragment_after_consolidation,
 )
 from app.core.companion_harness.companion.dream_state import record_companion_dream_cycle_completed
 from app.core.companion_harness.companion.models import InnerTickMode, transcript_relative_path_for_turn_persistence
@@ -59,6 +65,7 @@ from app.core.companion_harness.companion.prompt_stack import refresh_companion_
 from app.core.companion_harness.companion.runtime_events import append_runtime_event
 from app.core.companion_harness.companion.significance_perception import envelope_to_assistant_metadata_dict
 from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
 from .companion_tool_runtime import (
@@ -534,6 +541,30 @@ def _append_background_log(
     )
 
 
+def _finalize_dream_inner_tick_success(
+    memory_store: MemoryStore,
+    *,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+    companion_llm_client_for_aux: CompanionLLMClient | None,
+) -> None:
+    feats = global_config_loaded_from_config_yaml.app.features
+    qh = float(feats.companion_ws_inner_tick_quiet_hours_after_dream)
+    record_companion_dream_cycle_completed(
+        memory_store,
+        inner_tick_quiet_hours=qh if qh > 0 else None,
+    )
+    if companion_llm_client_for_aux is None:
+        return
+    if feats.companion_creative_dream_probability <= 0.0:
+        return
+    maybe_append_creative_dream_fragment_after_consolidation(
+        store=memory_store,
+        llm_client=companion_llm_client_for_aux,
+        feats=feats,
+        implicit=implicit_signal_bundle,
+    )
+
+
 async def _run_background_tool_loop(
     *,
     memory_store: MemoryStore,
@@ -554,6 +585,7 @@ async def _run_background_tool_loop(
     inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     force_tools_first_round: bool = True,
+    companion_llm_client_for_aux: CompanionLLMClient | None = None,
 ) -> None:
     scope_registry_key = memory_store.scope.registry_key()
     image_asset_baseline = len(list_image_asset_records(memory_store))
@@ -879,7 +911,11 @@ async def _run_background_tool_loop(
                     trace_id=trace_id,
                 )
                 if inner_tick_turn and inner_tick_mode == InnerTickMode.DREAM:
-                    record_companion_dream_cycle_completed(memory_store)
+                    _finalize_dream_inner_tick_success(
+                        memory_store,
+                        implicit_signal_bundle=implicit_signal_bundle,
+                        companion_llm_client_for_aux=companion_llm_client_for_aux,
+                    )
                 logger.debug(
                     "repl.turn.bg transcript_only trace_id={} user_msg_uuid={} "
                     "assistant_msg_uuid={} reason=should_push_false",
@@ -927,7 +963,11 @@ async def _run_background_tool_loop(
             trace_id=trace_id,
         )
         if inner_tick_turn and inner_tick_mode == InnerTickMode.DREAM:
-            record_companion_dream_cycle_completed(memory_store)
+            _finalize_dream_inner_tick_success(
+                memory_store,
+                implicit_signal_bundle=implicit_signal_bundle,
+                companion_llm_client_for_aux=companion_llm_client_for_aux,
+            )
         logger.debug(
             "repl.turn.bg deliver trace_id={} user_msg_uuid={} assistant_msg_uuid={} "
             "generation_deliver={} output_to_user={} nl_chars={} transcript_chars={} image_paths_n={}",
@@ -992,6 +1032,7 @@ def start_tool_background_job(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     tool_bg_idle_event: threading.Event | None = None,
     force_tools_first_round: bool = True,
+    companion_llm_client_for_aux: CompanionLLMClient | None = None,
 ) -> None:
     sync_port = chat_completions_sync or create_chat_completion_sync
 
@@ -1038,6 +1079,7 @@ def start_tool_background_job(
                     inner_tick_mode=inner_tick_mode,
                     implicit_signal_bundle=implicit_signal_bundle,
                     force_tools_first_round=force_tools_first_round,
+                    companion_llm_client_for_aux=companion_llm_client_for_aux,
                 )
             )
 

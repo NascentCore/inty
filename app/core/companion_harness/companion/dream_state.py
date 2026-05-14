@@ -13,6 +13,7 @@ from pydantic import AwareDatetime, BaseModel, Field
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import load_transcript_from_store
+from .sleep_state import record_inner_tick_quiet_hours_from_now
 
 DREAM_STATE_RELATIVE_PATH = ".companion_dream_state.json"
 
@@ -53,8 +54,12 @@ def load_dream_state(store: MemoryStore) -> CompanionDreamState:
     return CompanionDreamState.model_validate(data)
 
 
-def record_companion_dream_cycle_completed(store: MemoryStore) -> None:
-    """巩固回合成功结束后调用：刷新冷却锚与 transcript 计数。"""
+def record_companion_dream_cycle_completed(
+    store: MemoryStore,
+    *,
+    inner_tick_quiet_hours: float | None = None,
+) -> None:
+    """巩固回合成功结束后调用：刷新冷却锚与 transcript 计数；可选写入静息窗。"""
     st = CompanionDreamState(
         last_completed_at_utc=datetime.now(timezone.utc).replace(microsecond=0),
         main_transcript_user_rows_at_last=count_main_transcript_user_rows(store),
@@ -63,6 +68,8 @@ def record_companion_dream_cycle_completed(store: MemoryStore) -> None:
         DREAM_STATE_RELATIVE_PATH,
         json.dumps(st.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
     )
+    if inner_tick_quiet_hours is not None:
+        record_inner_tick_quiet_hours_from_now(store, inner_tick_quiet_hours)
 
 
 def dream_inner_tick_due(
