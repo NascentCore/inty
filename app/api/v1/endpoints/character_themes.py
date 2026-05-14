@@ -41,9 +41,7 @@ async def create_theme(
         return APIResponse.success(data=theme_schema)
     except Exception as e:
         logger.error(f"创建角色主题专区失败: {str(e)}")
-        return APIResponse.error(
-            message=f"Failed to create theme section: {str(e)}"
-        )
+        return APIResponse.error(message=f"Failed to create theme section: {str(e)}")
 
 
 @router.get(
@@ -95,9 +93,7 @@ async def list_themes(
         return APIResponse.success(data=theme_schemas)
     except Exception as e:
         logger.error(f"获取角色主题专区列表失败: {str(e)}")
-        return APIResponse.error(
-            message=f"Failed to fetch theme sections: {str(e)}"
-        )
+        return APIResponse.error(message=f"Failed to fetch theme sections: {str(e)}")
 
 
 @router.get(
@@ -131,9 +127,7 @@ async def get_theme(
     try:
         theme = await character_theme_service.get_theme(db, theme_id)
         if not theme:
-            return APIResponse.error(
-                message="Theme section not found", code=404
-            )
+            return APIResponse.error(message="Theme section not found", code=404)
         theme_schema = character_theme_schemas.CharacterTheme.model_validate(theme)
         return APIResponse.success(data=theme_schema)
     except Exception as e:
@@ -162,16 +156,12 @@ async def update_theme(
     try:
         theme = await character_theme_service.update_theme(db, theme_id, theme_in)
         if not theme:
-            return APIResponse.error(
-                message="Theme section not found", code=404
-            )
+            return APIResponse.error(message="Theme section not found", code=404)
         theme_schema = character_theme_schemas.CharacterTheme.model_validate(theme)
         return APIResponse.success(data=theme_schema)
     except Exception as e:
         logger.error(f"更新角色主题专区失败: {str(e)}")
-        return APIResponse.error(
-            message=f"Failed to update theme section: {str(e)}"
-        )
+        return APIResponse.error(message=f"Failed to update theme section: {str(e)}")
 
 
 @router.delete(
@@ -192,15 +182,11 @@ async def delete_theme(
     try:
         success = await character_theme_service.delete_theme(db, theme_id)
         if not success:
-            return APIResponse.error(
-                message="Theme section not found", code=404
-            )
+            return APIResponse.error(message="Theme section not found", code=404)
         return APIResponse.success(data={"message": "专区删除成功"})
     except Exception as e:
         logger.error(f"删除角色主题专区失败: {str(e)}")
-        return APIResponse.error(
-            message=f"Failed to delete theme section: {str(e)}"
-        )
+        return APIResponse.error(message=f"Failed to delete theme section: {str(e)}")
 
 
 @router.post(

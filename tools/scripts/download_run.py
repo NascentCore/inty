@@ -276,7 +276,9 @@ def _main_impl(
             try:
                 seed_run_obj = client.read_run(run_id)
             except Exception as exc:
-                sys.stderr.write(f"LangSmith read_run failed for seed {run_id!r}: {exc}\n")
+                sys.stderr.write(
+                    f"LangSmith read_run failed for seed {run_id!r}: {exc}\n"
+                )
                 return 1
             tid = getattr(seed_run_obj, "trace_id", None)
             if tid is None:

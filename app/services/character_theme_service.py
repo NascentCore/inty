@@ -32,9 +32,7 @@ async def _ensure_visibility_uniqueness(
     if visibility == CharacterThemeVisibility.HIDDEN:
         return
 
-    stmt = select(CharacterTheme).where(
-        CharacterTheme.visibility == visibility
-    )
+    stmt = select(CharacterTheme).where(CharacterTheme.visibility == visibility)
     if exclude_theme_id:
         stmt = stmt.where(CharacterTheme.id != exclude_theme_id)
 
@@ -255,11 +253,7 @@ async def add_agent_to_theme(
             CharacterThemeAgent.theme_id == theme_id,
             CharacterThemeAgent.agent_id == agent_id,
         )
-        .options(
-            selectinload(CharacterThemeAgent.agent).selectinload(
-                Agent.creator
-            )
-        )
+        .options(selectinload(CharacterThemeAgent.agent).selectinload(Agent.creator))
     )
     result = await db.execute(stmt)
     theme_agent = result.scalar_one()
@@ -295,9 +289,7 @@ async def reorder_agents(db: AsyncSession, theme_id: str, agent_ids: List[str]) 
         raise HTTPException(status_code=404, detail="Theme section not found")
 
     # 获取专区中所有角色关联记录
-    stmt = select(CharacterThemeAgent).where(
-        CharacterThemeAgent.theme_id == theme_id
-    )
+    stmt = select(CharacterThemeAgent).where(CharacterThemeAgent.theme_id == theme_id)
     result = await db.execute(stmt)
     theme_agents = result.scalars().all()
 
