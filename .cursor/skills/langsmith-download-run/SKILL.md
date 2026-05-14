@@ -1,10 +1,11 @@
 ---
 name: langsmith-download-run
 description: >-
-  Download LangSmith data to JSON: one run by UUID, or an entire trace (every
-  run sharing trace_id; nested structure via parent_run_id). Triggers when the
-  user asks to 下载 langsmith trace、download langsmith trace、export/archive a
-  LangSmith trace/run, or debug companion spans via langsmith_trace_id /
+  Download LangSmith data to JSON under repo-root `.inty/` (traces/runs
+  subdirs): one run by UUID, or an entire trace (every run sharing trace_id;
+  nested structure via parent_run_id). Triggers when the user asks to 下载
+  langsmith trace、download langsmith trace、export/archive a LangSmith
+  trace/run, or debug companion spans via langsmith_trace_id /
   langsmith_run_id.
 ---
 
@@ -30,6 +31,8 @@ Inty YAML does **not** define LangSmith API host; for EU / self-hosted, set **`L
 
 Helper: [`tools/scripts/download_run.py`](../../../tools/scripts/download_run.py). Run from **repo root** so default `--config config.yaml` resolves.
 
+**输出目录**：将 `-o` 指向仓库根下的 **`.inty/`**（例如 `.inty/langsmith_traces/`、`.inty/langsmith_runs/`）。这是与 Inty 后端本地运行、排障共用的**统一工作区**（LangSmith 的 trace/run 即由该后端产生）；`download_run.py` 会按需 `mkdir` 父目录。目录已列入 `.gitignore`，避免把导出 JSON 误提交。
+
 ### Full trace (default for「下载 / download LangSmith trace」)
 
 Trace mode lists **all runs** with the same `trace_id` (every nested span is one row; hierarchy is `parent_run_id` on each row). This is the default interpretation when the user asks to download a **trace**, not a single run.
@@ -39,7 +42,7 @@ source .venv/bin/activate
 
 python tools/scripts/download_run.py \
   --trace-id "<TRACE_UUID>" \
-  -o tmp/langsmith_traces/<TRACE_UUID>.json
+  -o .inty/langsmith_traces/<TRACE_UUID>.json
 ```
 
 If the user only has **some run id** from the UI (any span in the trace):
@@ -48,7 +51,7 @@ If the user only has **some run id** from the UI (any span in the trace):
 python tools/scripts/download_run.py \
   "<ANY_RUN_UUID_IN_TRACE>" \
   --entire-trace \
-  -o tmp/langsmith_traces/from_run_<ANY_RUN_UUID_IN_TRACE>.json
+  -o .inty/langsmith_traces/from_run_<ANY_RUN_UUID_IN_TRACE>.json
 ```
 
 Optional: **`--project-name`** overrides `LANGSMITH_PROJECT` for `list_runs`. **`--max-runs N`** sets the requested batch size (default **100**). LangSmith **`/runs/query`** rejects `limit` above **100**; the script clamps larger values and prints a note to stderr. Traces with more than **100** spans require pagination (not implemented in this script yet); until then you only get the first batch.
@@ -63,16 +66,16 @@ Output JSON shape:
 
 ```bash
 python tools/scripts/download_run.py <RUN_ID> \
-  -o tmp/langsmith_runs/<RUN_ID>.json
+  -o .inty/langsmith_runs/<RUN_ID>.json
 
 python tools/scripts/download_run.py <RUN_ID> --verbose \
-  -o tmp/langsmith_runs/<RUN_ID>.json
+  -o .inty/langsmith_runs/<RUN_ID>.json
 
 python tools/scripts/download_run.py <RUN_ID> \
-  --config /path/to/config.yaml -o tmp/langsmith_runs/<RUN_ID>.json
+  --config /path/to/config.yaml -o .inty/langsmith_runs/<RUN_ID>.json
 
 python tools/scripts/download_run.py <RUN_ID> \
-  --load-child-runs -o tmp/langsmith_runs/<RUN_ID>.json
+  --load-child-runs -o .inty/langsmith_runs/<RUN_ID>.json
 ```
 
 **`--load-child-runs`** applies **only** to single-run `read_run`: API returns that run with nested child runs embedded. Do **not** combine with `--trace-id` / `--entire-trace`.

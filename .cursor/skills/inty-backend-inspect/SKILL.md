@@ -79,7 +79,7 @@ description: >-
 ```bash
 python tools/scripts/download_run.py \
   --trace-id "<TRACE_UUID>" \
-  -o tmp/langsmith_traces/<TRACE_UUID>.json
+  -o .inty/langsmith_traces/<TRACE_UUID>.json
 ```
 
 ### D. Postgres（`config.yaml` → `database`）

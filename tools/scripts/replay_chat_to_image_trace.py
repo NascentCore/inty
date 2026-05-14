@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 
 app = cyclopts.App(help="Fetch/save/replay LangSmith chat-to-image traces")
 
-_DEFAULT_TRACE_DIR = Path("tmp/langsmith_traces")
+_DEFAULT_TRACE_DIR = Path(".inty/langsmith_traces")
 
 _RUN_NAME_Z_IMAGE = "z_image_turbo_image_to_image"
 _RUN_NAME_SEEDREAM = "seedream_v4_5_edit"
@@ -562,7 +562,7 @@ def main(
         --run-id <langsmith-run-id>
 
       PYTHONPATH=. python tools/scripts/replay_chat_to_image_trace.py \\
-        --trace-record-path tmp/langsmith_traces/<trace_id>.json \\
+        --trace-record-path .inty/langsmith_traces/<trace_id>.json \\
         --dry-run
     """
     if max_runs <= 0:
