@@ -10,7 +10,7 @@
 
 ## 本地怎么跑（意图级）
 
-- **数据库**：需要带向量能力的 Postgres（常见做法是用仓库提供的 compose 服务名拉起）。
+- **数据库**：`docker run -d --rm -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16`
 - **主后端 + 推送 worker**：各用对应目录下的启动脚本；本地 HTTPS 或 HTTP 端口以脚本与配置为准。
 - **Ops**：单独脚本启动，**默认另一端口**；首次本地评测前阅读 `backend/README.md` 获取当前推荐流程。
 
