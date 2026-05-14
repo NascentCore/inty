@@ -75,6 +75,13 @@ def create_chat_completion_sync(
             raw = client.chat.completions.create(**create_kw)
             enriched = completion_with_langsmith_trace_id(raw)
             raise_if_chat_completion_missing_choices(enriched, model=model)
+            from app.core.companion_harness.tools.runtime_inspect_context import (
+                runtime_inspect_merge_last_chat_completion_usage,
+            )
+
+            runtime_inspect_merge_last_chat_completion_usage(
+                create_kw["model"], enriched
+            )
             return enriched
         except json.JSONDecodeError as exc:
             retryable = attempt < _OPENROUTER_JSON_MAX_ATTEMPTS

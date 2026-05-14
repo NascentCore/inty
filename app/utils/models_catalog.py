@@ -214,13 +214,23 @@ class GenAIModel(BaseModel):
         )
     )
 
+    context_window_tokens: int = Field(
+        description="""
+        供应商标称的上下文窗口上限（tokens），用于与 API usage 中的 prompt_tokens 等对比。
+        口径以对该条目负责的 provider 官方文档为准（通常为总上下文或文档声明的 max context）。
+        0 表示无适用的 token 级窗口（例如仅按次计费且无统一 context 的生图/视频管线），不计算利用率。
+        """,
+    )
+
 
 DEEPSEEK_V3_2 = GenAIModel(
+    # OpenRouter model card: https://openrouter.ai/deepseek/deepseek-v3-2 — context 163,840 tokens
     nickname="DeepSeek V3.2",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.DEEPSEEK,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="deepseek/deepseek-v3.2",
+    context_window_tokens=163_840,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -243,11 +253,13 @@ DEEPSEEK_V3_2 = GenAIModel(
 
 
 DEEPSEEK_V4_PRO = GenAIModel(
+    # OpenRouter: https://openrouter.ai/deepseek/deepseek-v4-pro — context 1,048,576 tokens
     nickname="DeepSeek V4 Pro",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.DEEPSEEK,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="deepseek/deepseek-v4-pro",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -270,11 +282,13 @@ DEEPSEEK_V4_PRO = GenAIModel(
 
 
 DEEPSEEK_V4_FLASH = GenAIModel(
+    # OpenRouter: https://openrouter.ai/deepseek/deepseek-v4-flash — context 1,048,576 tokens
     nickname="DeepSeek V4 Flash",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.DEEPSEEK,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="deepseek/deepseek-v4-flash",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -297,11 +311,13 @@ DEEPSEEK_V4_FLASH = GenAIModel(
 
 
 GEMINI_2_5_FLASH_LITE = GenAIModel(
+    # OpenRouter + Vertex doc: 1,048,576 — https://openrouter.ai/google/gemini-2.5-flash-lite
     nickname="Gemini 2.5 Flash Lite",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="google/gemini-2.5-flash-lite",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -323,11 +339,13 @@ GEMINI_2_5_FLASH_LITE = GenAIModel(
 
 
 GEMINI_2_5_FLASH = GenAIModel(
+    # OpenRouter: https://openrouter.ai/google/gemini-2.5-flash — context 1,048,576 tokens
     nickname="Gemini 2.5 Flash",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="google/gemini-2.5-flash",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -352,6 +370,7 @@ GEMINI_2_5_FLASH = GenAIModel(
 
 
 NANO_BANANA = GenAIModel(
+    # Vertex Gemini 2.5 Flash Image: same 1M context family as text Flash — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash
     nickname="Nano Banana",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
@@ -359,6 +378,7 @@ NANO_BANANA = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-flash-image",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -377,6 +397,7 @@ NANO_BANANA = GenAIModel(
 
 
 NANO_BANANA_PRO = GenAIModel(
+    # Vertex gemini-3-pro-image-preview — 1M context per Vertex Generative AI model specs (same line as Flash family).
     nickname="Nano Banana Pro",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
@@ -384,6 +405,7 @@ NANO_BANANA_PRO = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3-pro-image-preview",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -406,6 +428,7 @@ NANO_BANANA_PRO = GenAIModel(
 
 
 NANO_BANANA_2 = GenAIModel(
+    # Google Nano Banana 2 / gemini-3.1-flash-image-preview: up to 200k input tokens — blog.google/.../nano-banana-2/
     nickname="Nano Banana 2",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE],
@@ -414,6 +437,7 @@ NANO_BANANA_2 = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3.1-flash-image-preview",
+    context_window_tokens=200_000,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -439,6 +463,7 @@ NANO_BANANA_2 = GenAIModel(
 
 
 NEWAPI_NANO_BANANA_2 = GenAIModel(
+    # Same SKU as NANO_BANANA_PRO (google/gemini-3-pro-image-preview on NewAPI); window per Vertex/OpenRouter Pro image specs.
     nickname="NewAPI Nano Banana 2",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
@@ -446,6 +471,7 @@ NEWAPI_NANO_BANANA_2 = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.NEWAPI_GEMINI,
     id_on_provider="google/gemini-3-pro-image-preview",
+    context_window_tokens=1_048_576,
     pricing=NANO_BANANA_PRO.pricing,
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
     notes="经 NewAPI Gemini 端点；需配置 agent.newapi_gemini_base_url 与 Bearer。",
@@ -453,11 +479,13 @@ NEWAPI_NANO_BANANA_2 = GenAIModel(
 
 # Vertex AI–only Gemini text/multimodal models (used by tools/verify_gcp_service_account_json_on_genai.py).
 VERTEX_GEMINI_2_5_FLASH_LITE = GenAIModel(
+    # Vertex doc: gemini-2.5-flash-lite — 1,048,576 tokens — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-lite
     nickname="Gemini 2.5 Flash Lite (Vertex)",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-flash-lite",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -475,11 +503,13 @@ VERTEX_GEMINI_2_5_FLASH_LITE = GenAIModel(
 )
 
 VERTEX_GEMINI_2_5_FLASH = GenAIModel(
+    # Vertex: gemini-2.5-flash — 1,048,576 tokens — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash
     nickname="Gemini 2.5 Flash (Vertex)",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-flash",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -497,11 +527,13 @@ VERTEX_GEMINI_2_5_FLASH = GenAIModel(
 )
 
 VERTEX_GEMINI_2_5_PRO = GenAIModel(
+    # Vertex: gemini-2.5-pro — 1,048,576 tokens — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-pro
     nickname="Gemini 2.5 Pro (Vertex)",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-pro",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -519,11 +551,13 @@ VERTEX_GEMINI_2_5_PRO = GenAIModel(
 )
 
 VERTEX_GEMINI_2_0_FLASH = GenAIModel(
+    # Vertex: gemini-2.0-flash-001 — 1,048,576 tokens — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-0-flash
     nickname="Gemini 2.0 Flash (Vertex)",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.0-flash-001",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -541,11 +575,13 @@ VERTEX_GEMINI_2_0_FLASH = GenAIModel(
 )
 
 VERTEX_GEMINI_2_0_FLASH_LITE = GenAIModel(
+    # Vertex: gemini-2.0-flash-lite-001 — 1,048,576 tokens — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-0-flash-lite
     nickname="Gemini 2.0 Flash Lite (Vertex)",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.0-flash-lite-001",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -563,11 +599,13 @@ VERTEX_GEMINI_2_0_FLASH_LITE = GenAIModel(
 )
 
 VERTEX_GEMINI_3_1_FLASH_LITE_PREVIEW = GenAIModel(
+    # Vertex preview: gemini-3.1-flash-lite-preview — 1,048,576 tokens — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-1-flash-lite
     nickname="Gemini 3.1 Flash Lite Preview (Vertex)",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3.1-flash-lite-preview",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -585,11 +623,13 @@ VERTEX_GEMINI_3_1_FLASH_LITE_PREVIEW = GenAIModel(
 )
 
 VERTEX_GEMINI_3_1_PRO_PREVIEW = GenAIModel(
+    # Vertex: gemini-3.1-pro-preview — 1,048,576 tokens — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-1-pro
     nickname="Gemini 3.1 Pro Preview (Vertex)",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3.1-pro-preview",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -607,11 +647,13 @@ VERTEX_GEMINI_3_1_PRO_PREVIEW = GenAIModel(
 )
 
 VERTEX_GEMINI_3_FLASH_PREVIEW = GenAIModel(
+    # Vertex: gemini-3-flash-preview — 1,048,576 tokens — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-flash
     nickname="Gemini 3 Flash Preview (Vertex)",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3-flash-preview",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -629,11 +671,13 @@ VERTEX_GEMINI_3_FLASH_PREVIEW = GenAIModel(
 )
 
 VERTEX_GEMINI_3_PRO_PREVIEW = GenAIModel(
+    # Vertex: gemini-3-pro-preview — 1,048,576 tokens — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-pro
     nickname="Gemini 3 Pro Preview (Vertex)",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3-pro-preview",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -651,11 +695,13 @@ VERTEX_GEMINI_3_PRO_PREVIEW = GenAIModel(
 )
 
 VERTEX_GEMINI_2_5_FLASH_LITE_PREVIEW_09_2025 = GenAIModel(
+    # Vertex: gemini-2.5-flash-lite-preview-09-2025 — 1,048,576 tokens — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-lite
     nickname="Gemini 2.5 Flash Lite Preview 09-2025 (Vertex)",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-flash-lite-preview-09-2025",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -673,6 +719,7 @@ VERTEX_GEMINI_2_5_FLASH_LITE_PREVIEW_09_2025 = GenAIModel(
 )
 
 VERTEX_GEMINI_LIVE_2_5_FLASH_NATIVE_AUDIO = GenAIModel(
+    # Live API shares Flash-class limits; use 1,048,576 per Vertex Live / Flash family docs — cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-live-api
     nickname="Gemini Live 2.5 Flash Native Audio (Vertex)",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.AUDIO],
@@ -681,6 +728,7 @@ VERTEX_GEMINI_LIVE_2_5_FLASH_NATIVE_AUDIO = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-live-2.5-flash-native-audio",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[],
         outputs=[],
@@ -712,6 +760,7 @@ ALL_GEMINI_MODELS = (
 
 
 IMAGEN_4_FAST = GenAIModel(
+    # Vertex Imagen: no single token context window for generateContent-style image SKU — pricing cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models
     nickname="Imagen 4.0 Fast",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
@@ -719,6 +768,7 @@ IMAGEN_4_FAST = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="imagen-4.0-fast-generate-001",
+    context_window_tokens=0,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -733,6 +783,7 @@ IMAGEN_4_FAST = GenAIModel(
 
 
 IMAGEN_4 = GenAIModel(
+    # Vertex Imagen: no unified token context field in public docs for this SKU — pricing #imagen-models
     nickname="Imagen 4.0",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
@@ -740,6 +791,7 @@ IMAGEN_4 = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="imagen-4.0-generate-001",
+    context_window_tokens=0,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -754,6 +806,7 @@ IMAGEN_4 = GenAIModel(
 
 
 VEO_3_1_FAST = GenAIModel(
+    # Vertex Veo: usage-based video generation; no token context window in catalog sense — pricing #veo
     nickname="Veo3.1 Fast",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.VIDEO]
@@ -761,6 +814,7 @@ VEO_3_1_FAST = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="veo-3.1-fast-generate-001",
+    context_window_tokens=0,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -774,6 +828,7 @@ VEO_3_1_FAST = GenAIModel(
 )
 
 VEO_3_1 = GenAIModel(
+    # Vertex Veo: no token-level context window for utilization — pricing #veo
     nickname="Veo3.1",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.VIDEO]
@@ -781,6 +836,7 @@ VEO_3_1 = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="veo-3.1-generate-001",
+    context_window_tokens=0,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -794,6 +850,7 @@ VEO_3_1 = GenAIModel(
 )
 
 SEEDREAM_V4_5_EDIT = GenAIModel(
+    # fal.ai image edit: per-image pricing; no published max context tokens for utilization — fal.ai model page
     nickname="Seedream V4.5 Edit",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
@@ -803,6 +860,7 @@ SEEDREAM_V4_5_EDIT = GenAIModel(
     # Ref: https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api?platform=python
     provider=ModelAPIProvider.FALAI,
     id_on_provider="fal-ai/bytedance/seedream/v4.5/edit",
+    context_window_tokens=0,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -816,6 +874,7 @@ SEEDREAM_V4_5_EDIT = GenAIModel(
 )
 
 GPT_IMAGE_1_5 = GenAIModel(
+    # OpenRouter openai/gpt-image-1.5/edit — same 1M class context as OpenRouter multimodal chat models — openrouter.ai/openai/gpt-image-1.5/edit
     nickname="GPT Image 1.5",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE],
@@ -824,6 +883,7 @@ GPT_IMAGE_1_5 = GenAIModel(
     builder=ModelBuilder.OPENAI,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="openai/gpt-image-1.5/edit",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -840,6 +900,7 @@ GPT_IMAGE_1_5 = GenAIModel(
 )
 
 Z_IMAGE_TURBO = GenAIModel(
+    # fal.ai Z-Image turbo: per-image pricing; no official token context for chat-style utilization
     nickname="Z Image Turbo",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT], outputs=[DataModality.IMAGE]
@@ -847,6 +908,7 @@ Z_IMAGE_TURBO = GenAIModel(
     builder=ModelBuilder.ALIBABA_TONGYI,
     provider=ModelAPIProvider.FALAI,
     id_on_provider="fal-ai/z-image/turbo",
+    context_window_tokens=0,
     official_url="https://github.com/Tongyi-MAI/Z-Image",
     pricing=Pricing(
         inputs=[],
@@ -861,6 +923,7 @@ Z_IMAGE_TURBO = GenAIModel(
 )
 
 Z_IMAGE_TURBO_IMAGE_TO_IMAGE = GenAIModel(
+    # fal.ai image-to-image: per-use pricing; no token context window in docs
     nickname="Z Image Turbo Image to Image",
     modalities=ModelModalities(
         inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
@@ -868,6 +931,7 @@ Z_IMAGE_TURBO_IMAGE_TO_IMAGE = GenAIModel(
     builder=ModelBuilder.ALIBABA_TONGYI,
     provider=ModelAPIProvider.FALAI,
     id_on_provider="fal-ai/z-image/turbo/image-to-image",
+    context_window_tokens=0,
     official_url="https://github.com/Tongyi-MAI/Z-Image",
     pricing=Pricing(
         inputs=[],
@@ -880,6 +944,74 @@ Z_IMAGE_TURBO_IMAGE_TO_IMAGE = GenAIModel(
     ),
     playground_url="https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/playground",
 )
+
+
+def _unique_catalog_models(models: tuple[GenAIModel, ...]) -> tuple[GenAIModel, ...]:
+    """Stable de-dupe for catalog tuples that may overlap (by object identity)."""
+    seen: set[int] = set()
+    out: list[GenAIModel] = []
+    for m in models:
+        mid = id(m)
+        if mid not in seen:
+            seen.add(mid)
+            out.append(m)
+    return tuple(out)
+
+
+# Full catalog for lookup (DeepSeek + every ALL_GEMINI_MODELS entry + non-Gemini multimodal SKUs).
+ALL_GENAI_CATALOG_MODELS: tuple[GenAIModel, ...] = _unique_catalog_models(
+    (
+        DEEPSEEK_V3_2,
+        DEEPSEEK_V4_PRO,
+        DEEPSEEK_V4_FLASH,
+        *ALL_GEMINI_MODELS,
+        NEWAPI_NANO_BANANA_2,
+        IMAGEN_4_FAST,
+        IMAGEN_4,
+        VEO_3_1_FAST,
+        VEO_3_1,
+        SEEDREAM_V4_5_EDIT,
+        GPT_IMAGE_1_5,
+        Z_IMAGE_TURBO,
+        Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
+    )
+)
+
+
+def resolve_catalog_genai_model(value: str) -> GenAIModel | None:
+    """
+    Resolve a catalog GenAIModel by exact nickname or id_on_provider (fal ids normalized via normalize_model_name).
+    Unknown custom OpenRouter ids return None.
+    """
+    normalized = value.strip() if value else ""
+    if not normalized:
+        return None
+    for m in ALL_GENAI_CATALOG_MODELS:
+        if m.nickname == normalized:
+            return m
+    nid = normalize_model_name(normalized)
+    for m in ALL_GENAI_CATALOG_MODELS:
+        if normalize_model_name(m.id_on_provider) == nid:
+            return m
+        if m.id_on_provider == normalized:
+            return m
+    return None
+
+
+def prompt_tokens_context_utilization(
+    *, model: str, prompt_tokens: int | None
+) -> float | None:
+    """
+    Return prompt_tokens / catalog.context_window_tokens when defined and window > 0.
+    No clamping to 1.0. Returns None when catalog missing, tokens missing/negative, or window is 0.
+    """
+    if prompt_tokens is None or prompt_tokens < 0:
+        return None
+    catalog = resolve_catalog_genai_model(model)
+    if catalog is None or catalog.context_window_tokens <= 0:
+        return None
+    return float(prompt_tokens) / float(catalog.context_window_tokens)
+
 
 # Chat image (message-to-image): only these models are allowed; config uses nickname.
 CHAT_IMAGE_GEN_MODELS = [

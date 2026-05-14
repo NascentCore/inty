@@ -272,3 +272,45 @@ def build_last_chat_completion_request_payload(
             "Some messages were normalized for JSON (see per_message_warnings)."
         )
     return payload
+
+
+def _merge_last_chat_completion_usage_into_bundle(
+    model: str, response: Any, bundle: dict[str, Any] | None
+) -> None:
+    """Attach response.usage + catalog window + utilization ratio to last_chat_completion_request."""
+    if not bundle:
+        return
+    payload = bundle.get("last_chat_completion_request")
+    if not isinstance(payload, dict):
+        return
+    from app.utils.models_catalog import (
+        prompt_tokens_context_utilization,
+        resolve_catalog_genai_model,
+    )
+
+    usage = getattr(response, "usage", None)
+    pt = getattr(usage, "prompt_tokens", None) if usage is not None else None
+    ct = getattr(usage, "completion_tokens", None) if usage is not None else None
+    tt = getattr(usage, "total_tokens", None) if usage is not None else None
+
+    payload["response_usage"] = {
+        "prompt_tokens": pt,
+        "completion_tokens": ct,
+        "total_tokens": tt,
+    }
+    catalog = resolve_catalog_genai_model(model)
+    payload["catalog_context_window_tokens"] = (
+        catalog.context_window_tokens if catalog is not None else None
+    )
+    ratio = prompt_tokens_context_utilization(model=model, prompt_tokens=pt)
+    if ratio is not None:
+        payload["prompt_to_context_window_ratio"] = ratio
+
+
+def runtime_inspect_merge_last_chat_completion_usage(model: str, response: Any) -> None:
+    """Merge token usage and prompt/context utilization into runtime inspect snapshot (if any)."""
+    d = _inspect_var.get(None)
+    _merge_last_chat_completion_usage_into_bundle(model, response, d)
+    td = getattr(_thread_overlay, "bundle", None)
+    if td is not None:
+        _merge_last_chat_completion_usage_into_bundle(model, response, td)
