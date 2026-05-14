@@ -8,4 +8,4 @@
 
 ## 技术现实（高层）
 
-- 栈为 **Umi + React + TypeScript**；详细编码规范以目录内 `.cursor/rules` 与既有代码为准，不在此重复。
+- 栈为 **Umi + React + TypeScript**
