@@ -45,9 +45,7 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[Chat]:
     try:
         result = await db.execute(
             select(Chat)
-            .options(
-                selectinload(Chat.settings), selectinload(Chat.agent)
-            )
+            .options(selectinload(Chat.settings), selectinload(Chat.agent))
             .where(Chat.id == chat_id)
         )
         chat = result.scalar_one_or_none()
@@ -115,9 +113,7 @@ async def get_chats(
 
         result = await db.execute(
             select(Chat)
-            .options(
-                selectinload(Chat.settings), selectinload(Chat.agent)
-            )
+            .options(selectinload(Chat.settings), selectinload(Chat.agent))
             .where(Chat.user_id == user_id)
         )
         all_chats = result.scalars().all()
@@ -194,9 +190,7 @@ async def get_chats(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def create_chat(
-    db: AsyncSession, chat_in: ChatCreate, user_id: str
-) -> Chat:
+async def create_chat(db: AsyncSession, chat_in: ChatCreate, user_id: str) -> Chat:
     """
     Create new chat
     """
@@ -258,9 +252,7 @@ async def create_chat(
         # Re-query to load relational data
         result = await db.execute(
             select(Chat)
-            .options(
-                selectinload(Chat.settings), selectinload(Chat.agent)
-            )
+            .options(selectinload(Chat.settings), selectinload(Chat.agent))
             .where(Chat.id == db_chat.id)
         )
         chat = result.scalar_one()
@@ -316,9 +308,7 @@ async def create_chat(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def update_chat(
-    db: AsyncSession, *, db_chat: Chat, chat_in: ChatUpdate
-) -> Chat:
+async def update_chat(db: AsyncSession, *, db_chat: Chat, chat_in: ChatUpdate) -> Chat:
     """
     更新聊天
     """
@@ -479,9 +469,7 @@ async def get_or_create_chat_by_agent(
                     # For cached agents, we need to check the actual database for deletion status
                     # since the cache might not include deleted_at info
                     agent_result = await db.execute(
-                        select(Agent.deleted_at).where(
-                            Agent.id == agent_id
-                        )
+                        select(Agent.deleted_at).where(Agent.id == agent_id)
                     )
                     agent_info = agent_result.first()
                     existing_chat.agent_is_deleted = (
@@ -571,9 +559,9 @@ async def get_or_create_chat_by_agent(
                     else:
                         # 如果缓存中没有开场白，从数据库查询
                         agent_result = await db.execute(
-                            select(
-                                Agent.opening, Agent.opening_audio_url
-                            ).where(Agent.id == agent_id)
+                            select(Agent.opening, Agent.opening_audio_url).where(
+                                Agent.id == agent_id
+                            )
                         )
                         agent_info = agent_result.first()
                         if agent_info:
@@ -584,9 +572,7 @@ async def get_or_create_chat_by_agent(
                     if agent_opening:
                         # 获取用户和 Agent 信息用于变量替换
                         user_result = await db.execute(
-                            select(User.nickname).where(
-                                User.id == user_id
-                            )
+                            select(User.nickname).where(User.id == user_id)
                         )
                         user_nickname = user_result.scalar_one_or_none() or "you"
 
@@ -828,9 +814,7 @@ async def get_or_create_chat_by_agent(
         try:
             result = await db.execute(
                 select(Chat)
-                .options(
-                    selectinload(Chat.settings), selectinload(Chat.agent)
-                )
+                .options(selectinload(Chat.settings), selectinload(Chat.agent))
                 .where(
                     Chat.user_id == user_id,
                     Chat.agent_id == agent_id,
@@ -876,9 +860,7 @@ async def get_or_create_chat_settings(
             return settings
 
         # 确保chat记录存在（防止外键约束违反）
-        chat_result = await db.execute(
-            select(Chat).where(Chat.id == chat_id)
-        )
+        chat_result = await db.execute(select(Chat).where(Chat.id == chat_id))
         chat = chat_result.scalar_one_or_none()
 
         if not chat:
@@ -996,9 +978,7 @@ async def get_chat_by_agent_and_user(
     try:
         result = await db.execute(
             select(Chat)
-            .options(
-                selectinload(Chat.settings), selectinload(Chat.agent)
-            )
+            .options(selectinload(Chat.settings), selectinload(Chat.agent))
             .where(
                 Chat.agent_id == agent_id,
                 Chat.user_id == user_id,
@@ -1047,9 +1027,7 @@ async def delete_chats_by_agent_id(
 
         # 查找所有匹配的聊天记录
         result = await db.execute(
-            select(Chat).where(
-                Chat.agent_id == agent_id, Chat.user_id == user_id
-            )
+            select(Chat).where(Chat.agent_id == agent_id, Chat.user_id == user_id)
         )
         chats = result.scalars().all()
 
@@ -1354,9 +1332,7 @@ async def _try_match_existing_image(
         )
 
         # 读取该 chat 已展示的兜底图 id，避免重复展示
-        chat_result = await db.execute(
-            select(Chat).where(Chat.id == chat_id)
-        )
+        chat_result = await db.execute(select(Chat).where(Chat.id == chat_id))
         chat = chat_result.scalar_one_or_none()
         sent_fallback_images = list(chat.sent_fallback_images or []) if chat else []
 
@@ -1524,9 +1500,7 @@ async def generate_chat_image(
     logger.info(f"开始生成聊天图片 - Agent ID: {agent_id}, User ID: {user_id}")
 
     # 验证Agent是否存在
-    result = await db.execute(
-        select(Agent.id, Agent.name).where(Agent.id == agent_id)
-    )
+    result = await db.execute(select(Agent.id, Agent.name).where(Agent.id == agent_id))
     agent_basic = result.first()
     if not agent_basic:
         logger.error(f"Agent未找到: {agent_id}")
@@ -2019,9 +1993,7 @@ async def generate_chat_music(
     logger.info(f"开始生成聊天音乐 - Agent ID: {agent_id}, User ID: {user_id}")
 
     # 验证 Agent 是否存在
-    result = await db.execute(
-        select(Agent.id, Agent.name).where(Agent.id == agent_id)
-    )
+    result = await db.execute(select(Agent.id, Agent.name).where(Agent.id == agent_id))
     agent_basic = result.first()
     if not agent_basic:
         logger.error(f"Agent未找到: {agent_id}")

@@ -27,7 +27,10 @@ from .langsmith_parent_policy import (
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
 from app.core.companion_harness.memory.transcript_compaction import CompactionConfig
-from app.core.companion_harness.memory.memory_registry import get_memory_store, shutdown_memory_store
+from app.core.companion_harness.memory.memory_registry import (
+    get_memory_store,
+    shutdown_memory_store,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult, InnerTickMode
 from .scope import CompanionScope

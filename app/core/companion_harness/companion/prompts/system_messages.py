@@ -27,7 +27,9 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from ..bootstrap_user_interactive import (
     build_interactive_bootstrap_system_message_parts,
 )
-from app.core.companion_harness.memory.memory_store_scope import get_imate_axiom_system_text
+from app.core.companion_harness.memory.memory_store_scope import (
+    get_imate_axiom_system_text,
+)
 from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
     MEMORY_SYSTEM_HEADING_GIST,
@@ -35,7 +37,10 @@ from app.core.companion_harness.memory.memory_taxonomy import (
 )
 from ..models import ContextMeta, InnerTickMode, PromptBundle
 from ..prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
-from .inner_tick_ls_tc import INNER_TICK_LS_TC_AUTONOMY_SECTION, INNER_TICK_LS_TC_TOOL_BULLET
+from .inner_tick_ls_tc import (
+    INNER_TICK_LS_TC_AUTONOMY_SECTION,
+    INNER_TICK_LS_TC_TOOL_BULLET,
+)
 
 SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
 

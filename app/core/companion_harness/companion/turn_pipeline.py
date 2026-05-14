@@ -25,7 +25,9 @@ from .implicit_signal_messages import (
 )
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -262,7 +264,9 @@ def build_companion_turn_prompt_plan(
             messages.append({"role": m.role, "content": m.content})
 
     if tick_proactive:
-        messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE})
+        messages.append(
+            {"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE}
+        )
     time_ctx_system = _companion_user_time_context_system_for_llm(
         implicit_signal_bundle=implicit_signal_bundle,
     )
