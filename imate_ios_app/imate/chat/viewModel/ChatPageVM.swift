@@ -22,15 +22,13 @@ class ChatPageVM: ObservableObject {
     private let repository = ChatRepository()
     
     init() {
-        repository.service.onReceiveMessage = { message in
-//            self?.messages.append(message)
-            print("on receive message s i----->\(message)")
+        agentId = UserManager.shared.agentId ?? ""
+        repository.service.onReceiveMessage = { [weak self] message in
+            let msg = ChatMessage(text: message.choices[0].message.content, isUser: false)
+            self?.messages.append(msg)
         }
-        repository.service.onConnectionChanged = { connected in
-            print("on connected change si -------->\(connected)")
-//            Task { @MainActor
-//                self?.isConnected = connected
-//            }
+        repository.service.onConnectionChanged = { [weak self] connected in
+            self?.isConnected = connected
         }
     }
     
@@ -42,10 +40,9 @@ class ChatPageVM: ObservableObject {
         appendMessage(content: inputText, isSelf: true)
         send(text: inputText)
         inputText = ""
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            // 进入下一步
-            self.appendMessage(content: ChatConstants.InitChatMsg.step1_1, isSelf: false)
-        }
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+//            self.appendMessage(content: ChatConstants.InitChatMsg.step1_1, isSelf: false)
+//        }
     }
     
     
@@ -63,11 +60,8 @@ class ChatPageVM: ObservableObject {
     }
 
     func send(text: String) {
-        agentId = "agentId"
         guard !agentId.isEmpty else {
-//            DispatchQueue.main.async {
-//                ToastManager.shared.show("ChatPageVM: agentId is empty!")
-//            }
+            ToastManager.shared.show("ChatPageVM: agentId is empty!")
             return;
         }
         

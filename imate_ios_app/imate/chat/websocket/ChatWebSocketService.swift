@@ -12,7 +12,7 @@ final class ChatWebSocketService {
     private var webSocketTask: URLSessionWebSocketTask?
     private var pingTimer: Timer?
 
-    var onReceiveMessage: ((SendMsgResponse) -> Void)?
+    var onReceiveMessage: ((ChatCompletionData) -> Void)?
     var onConnectionChanged: ((Bool) -> Void)?
 
     // MARK: - Connect
@@ -21,23 +21,25 @@ final class ChatWebSocketService {
             return
         }
         
-        // 测试代码
-        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Nzg3NTUzMjAsInN1YiI6InVzZXItMDFLUEFITU5XUDYzNUpSWUFXWUdEUzNQUlMifQ.ptxNPNK_Oc7Hs3kUV6ptOmrOnVVgnt7P65colSTvgCc"
         var request = URLRequest(url: url)
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.addValue("Bearer \(UserManager.shared.token ?? "")", forHTTPHeaderField: "Authorization")
         
         webSocketTask = URLSession.shared.webSocketTask(with: request)
         webSocketTask?.resume()
-        onConnectionChanged?(true)
         startPing()
         receiveMessage()
+        DispatchQueue.main.async {
+            self.onConnectionChanged?(true)
+        }
     }
 
     // MARK: - Disconnect
     func disconnect() {
         pingTimer?.invalidate()
         webSocketTask?.cancel(with: .goingAway, reason: nil)
-        onConnectionChanged?(false)
+        DispatchQueue.main.async {
+            self.onConnectionChanged?(false)
+        }
     }
 
     // MARK: - Send
@@ -85,14 +87,12 @@ final class ChatWebSocketService {
         guard let data = text.data(using: .utf8) else {
             return
         }
-        print("on response data val si ------->\(text)")
+//        print("on response data val si ------->\(text)")
         
         
         do {
-//            let decoder = JSONDecoder()
-//            let apiResponse = try decoder.decode(APIResponse<WebSocketMsg>.self, from: data)
             let response = try JSONDecoder().decode(WSResponse.self, from: data)
-            print("on response si --------->\(response.code)----->\(response.message)")
+//            print("on response si --------->\(response.code)----->\(response.data.choices[0].message.content)")
             
             if response.code != 200 {
                 DispatchQueue.main.async {
@@ -100,29 +100,9 @@ final class ChatWebSocketService {
                 }
             }
             
-            // 业务状态判断
-//            if apiResponse.code != 200 {
-//                ToastManager.shared.show(apiResponse.message)
-//                throw SLNetworkError.serverError(apiResponse.message)
-//            }
-//            
-//            // 取 data
-//            guard let result = apiResponse.data else {
-//                throw SLNetworkError.emptyData
-//            }
-            
             DispatchQueue.main.async {
-//                self.onReceiveMessage?(result)
+                self.onReceiveMessage?(response.data)
             }
-//            return result
-            
-//            let response = try JSONDecoder().decode(
-//                SendMsgResponse.self,
-//                from: data
-//            )
-//            DispatchQueue.main.async {
-//                self.onReceiveMessage?(response)
-//            }
 
         } catch {
             print("Decode Error:", error)

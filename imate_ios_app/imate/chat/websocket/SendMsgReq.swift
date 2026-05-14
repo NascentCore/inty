@@ -20,6 +20,7 @@ struct SendMsgReq: Codable {
     let stream: Bool
     let time_context: UserTimeContext?
     let target_imate_id: String?
+    var message_id = UUID().uuidString
 
     enum CodingKeys: String, CodingKey {
         case messages
@@ -27,6 +28,7 @@ struct SendMsgReq: Codable {
         case stream
         case time_context
         case target_imate_id
+        case message_id
     }
 }
 
