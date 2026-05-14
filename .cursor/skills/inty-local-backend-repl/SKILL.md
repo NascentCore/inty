@@ -56,7 +56,7 @@ AGENT_ID=$(python3 tools/scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR=
 
 After ops instance is ready, respond to user with：
 
-1. Log file path
+1. Log file path（默认：仓库根下 **`.inty/inty.log`**；若启动时传了 **`--workspace DIR`** 则为 **`DIR/inty.log`**）
 2. Repl launch command, use the AGENT_ID obtained before:
 
    ```bash
