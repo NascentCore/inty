@@ -44,6 +44,15 @@ python -m pip install -r requirements.txt
 python -m pip install -r tests/requirements.txt
 ```
 
+与 GitHub `ci_backend` 中 **Black / Ruff / ty** 门禁一致时，再安装 **`requirements-dev.txt`**，并在仓库根执行：
+
+```bash
+python -m pip install -r requirements-dev.txt
+black --check app/ backend/ tools/scripts/ experimental/
+ruff check app/ backend/ tools/scripts/ experimental/
+ty check --ignore all --error unresolved-import
+```
+
 ## 2) 架构层依赖检查
 
 ```bash
