@@ -1,10 +1,11 @@
 ---
 name: langsmith-download-run
 description: >-
-  Download LangSmith data to JSON: one run by UUID, or an entire trace (every
-  run sharing trace_id; nested structure via parent_run_id). Triggers when the
-  user asks to 下载 langsmith trace、download langsmith trace、export/archive a
-  LangSmith trace/run, or debug companion spans via langsmith_trace_id /
+  Download LangSmith data to JSON under repo-root `.inty/` (traces/runs
+  subdirs): one run by UUID, or an entire trace (every run sharing trace_id;
+  nested structure via parent_run_id). Triggers when the user asks to 下载
+  langsmith trace、download langsmith trace、export/archive a LangSmith
+  trace/run, or debug companion spans via langsmith_trace_id /
   langsmith_run_id.
 ---
 
@@ -28,58 +29,31 @@ Inty YAML does **not** define LangSmith API host; for EU / self-hosted, set **`L
 
 ## Preferred: repo helper script
 
-Helper: [`tools/scripts/download_run.py`](../../../tools/scripts/download_run.py). Run from **repo root** so default `--config config.yaml` resolves.
+Helper: [`tools/scripts/download_run.py`](../../../tools/scripts/download_run.py)（**Cyclopts** CLI）。在**仓库根**执行，以便默认 **`--config config.yaml`** 能解析。
 
-### Full trace (default for「下载 / download LangSmith trace」)
+**智能体查路径与默认值**：先执行 **`python tools/scripts/download_run.py --help`**（说明省略 **`-o`/`--output`** 时写入 **`./.inty/`**；**`-o -`** 为 stdout）。**`RUN_ID`** 可位置参数传入，也可用显式参数（见 `--help`）。
 
-Trace mode lists **all runs** with the same `trace_id` (every nested span is one row; hierarchy is `parent_run_id` on each row). This is the default interpretation when the user asks to download a **trace**, not a single run.
+常用调用（不传 `-o` 即落盘到默认路径）：
 
 ```bash
 source .venv/bin/activate
 
-python tools/scripts/download_run.py \
-  --trace-id "<TRACE_UUID>" \
-  -o tmp/langsmith_traces/<TRACE_UUID>.json
+python tools/scripts/download_run.py --trace-id "<TRACE_UUID>"
+python tools/scripts/download_run.py --run-id "<ANY_RUN_UUID_IN_TRACE>" --entire-trace
+python tools/scripts/download_run.py "<RUN_ID>"
 ```
 
-If the user only has **some run id** from the UI (any span in the trace):
+**`--load-child-runs`**：仅单 run 的 `read_run`；勿与 `--trace-id` / `--entire-trace` 同用。
 
-```bash
-python tools/scripts/download_run.py \
-  "<ANY_RUN_UUID_IN_TRACE>" \
-  --entire-trace \
-  -o tmp/langsmith_traces/from_run_<ANY_RUN_UUID_IN_TRACE>.json
-```
+**Trace 模式**（`--trace-id` 或 `--entire-trace`）：可选 **`--project-name`** 覆盖 `LANGSMITH_PROJECT`（**若 trace 实际落在别的 project**——例如元数据里的 `inty-backend-local-<user>`——而 `config.yaml` 推出的是 `inty-backend-test` 等，则必须指定，否则 `list_runs` 可能 0 条）。省略 **`--max-runs`** 时由 LangSmith SDK **cursor 分页拉全 trace**；仅调试或限流时传 **`--max-runs N`** 做总条数上限。
 
-Optional: **`--project-name`** overrides `LANGSMITH_PROJECT` for `list_runs`. **`--max-runs N`** sets the requested batch size (default **100**). LangSmith **`/runs/query`** rejects `limit` above **100**; the script clamps larger values and prints a note to stderr. Traces with more than **100** spans require pagination (not implemented in this script yet); until then you only get the first batch.
-
-Output JSON shape:
+Trace 模式输出 JSON 形状：
 
 - **`download_kind`**: `"langsmith_trace"`
 - **`trace_id`**, **`project_name`**, **`fetched_at`**, **`run_count`**
 - **`runs`**: array of run objects (`model_dump` from LangSmith), same trace
 
-### Single run (one UUID)
-
-```bash
-python tools/scripts/download_run.py <RUN_ID> \
-  -o tmp/langsmith_runs/<RUN_ID>.json
-
-python tools/scripts/download_run.py <RUN_ID> --verbose \
-  -o tmp/langsmith_runs/<RUN_ID>.json
-
-python tools/scripts/download_run.py <RUN_ID> \
-  --config /path/to/config.yaml -o tmp/langsmith_runs/<RUN_ID>.json
-
-python tools/scripts/download_run.py <RUN_ID> \
-  --load-child-runs -o tmp/langsmith_runs/<RUN_ID>.json
-```
-
-**`--load-child-runs`** applies **only** to single-run `read_run`: API returns that run with nested child runs embedded. Do **not** combine with `--trace-id` / `--entire-trace`.
-
-`-o -` prints JSON to stdout. **`--verbose`** logs resolved `LANGSMITH_PROJECT` and `LANGSMITH_TRACING_V2` to stderr (never the API key).
-
-If `--config` file is missing or not a mapping YAML, only the API key is taken from the environment; project / tracing vars are left unchanged.
+若 **`--config`** 缺失或非 mapping YAML，仅从环境取 API key；`LANGSMITH_PROJECT` / tracing 变量不改。
 
 ## Inline Python (single run)
 
@@ -109,4 +83,5 @@ For trace-wide listing in custom code, mirror this script: `Client.list_runs(tra
 - **`read_run` / trace fetch exits 1**: script prints the LangSmith error to stderr (no Python traceback).
 - **401 / unauthorized**: wrong or empty `agent.langchain_api_key` in `config.yaml`, or env fallback key does not match the LangSmith workspace for this run.
 - **404**: wrong run id, different workspace/project than the key, or run expired per org retention.
-- **Incomplete trace**: LangSmith caps **`limit`** at **100** per query; this script does not page yet. If **`run_count`** equals **`max-runs`** and you expect more spans, the trace was truncated.
+- **Incomplete trace / 0 runs**：若传了 **`--max-runs`** 且 **`run_count`** 仍小于预期，是人为上限；若未传 **`--max-runs`** 仍偏少，核对 **`--project-name`** 是否与该 trace 所在 LangSmith 项目一致。
+- **管道 / 只要 stdout**：显式 **`-o -`**（省略 `-o` 时会写入 `.inty/` 下默认文件）。
