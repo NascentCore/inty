@@ -7,7 +7,9 @@ from app.core.companion_harness.memory.memory_store import (
     MemoryRecord,
     MemoryStore,
     normalize_memory_store_relative_path,
+    normalize_store_document_body_for_write,
 )
+from app.core.companion_harness.memory.memory_taxonomy import MEMORY_SYSTEM_HEADING_SEMANTIC
 from app.core.companion_harness.companion.scope import CompanionScope
 
 
@@ -98,6 +100,41 @@ def test_memory_store_iter_stored_relative_paths_in_memory(tmp_path) -> None:
     paths = store.iter_stored_relative_paths()
     assert "A.md" in paths
     assert "b/B.md" in paths
+
+
+def test_memory_store_write_strips_echoed_identity_heading(tmp_path) -> None:
+    store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
+    inner = "# 身份定义\n\nhello\n"
+    store.write_document("IDENTITY.md", f"## IDENTITY\n\n{inner}")
+    assert store.read_document("IDENTITY.md") == inner
+
+
+def test_memory_store_write_strips_echoed_soul_and_user_headings(tmp_path) -> None:
+    store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
+    store.write_document("SOUL.md", "## SOUL\n\n# soul\n")
+    assert store.read_document("SOUL.md") == "# soul\n"
+    store.write_document("USER.md", "  ##  USER  \n\n# user\n")
+    assert store.read_document("USER.md") == "# user\n"
+
+
+def test_memory_store_write_strips_echoed_semantic_memory_heading(tmp_path) -> None:
+    store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
+    inner = "# 记忆库\n\nok\n"
+    prefix = MEMORY_SYSTEM_HEADING_SEMANTIC.splitlines()[0] + "\n\n"
+    store.write_document("MEMORY.md", prefix + inner)
+    assert store.read_document("MEMORY.md") == inner
+
+
+def test_memory_store_write_does_not_strip_heading_from_other_paths(tmp_path) -> None:
+    store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
+    body = "## IDENTITY\n\nnotes\n"
+    store.write_document("notes/x.md", body)
+    assert store.read_document("notes/x.md") == body
+
+
+def test_normalize_store_document_body_for_write_idempotent() -> None:
+    inner = "# 身份定义\n"
+    assert normalize_store_document_body_for_write("IDENTITY.md", inner) == inner
 
 
 def test_memory_cache_put_get() -> None:

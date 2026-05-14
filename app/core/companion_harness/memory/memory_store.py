@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 import uuid as uuid_mod
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ from .memory_store_document_mapping import (
     parse_memory_store_relative_path,
     relative_path_for_kind,
 )
+from .memory_taxonomy import MEMORY_SYSTEM_HEADING_SEMANTIC
 
 
 def normalize_memory_store_relative_path(relative_path: str) -> str:
@@ -42,6 +44,27 @@ def normalize_memory_store_relative_path(relative_path: str) -> str:
     if not parts:
         raise ValueError("relative_path must be non-empty")
     return "/".join(parts)
+
+
+def normalize_store_document_body_for_write(relative_path: str, content: str) -> str:
+    """Drop a single leading system-prompt slice heading echo before persisting.
+
+    ``build_companion_system_messages`` wraps store-backed bodies in ``## IDENTITY`` /
+    ``## SOUL`` / ``## USER`` and uses ``MEMORY_SYSTEM_HEADING_SEMANTIC`` for ``MEMORY.md``;
+    tool payloads sometimes copy those headings into the file body. They are not part of the
+    markdown documents on disk and must be stripped at the write boundary.
+    """
+    rel = relative_path
+    s = content
+    if rel in ("IDENTITY.md", "SOUL.md", "USER.md"):
+        stem = rel[:-3]
+        pat = rf"^\s*##\s+{re.escape(stem)}\s*\n+"
+        return re.sub(pat, "", s, count=1)
+    if rel == "MEMORY.md":
+        line0 = MEMORY_SYSTEM_HEADING_SEMANTIC.splitlines()[0]
+        pat = r"^\s*" + re.escape(line0) + r"\s*\n+"
+        return re.sub(pat, "", s, count=1)
+    return s
 
 
 @dataclass(frozen=True)
@@ -274,6 +297,7 @@ class MemoryStore:
 
     def write_document(self, relative_path: str, content: str) -> None:
         rel = self._normalize_relative_path(relative_path)
+        content = normalize_store_document_body_for_write(rel, content)
         new_record_uuid = str(uuid_mod.uuid4())
         if self._repository is not None:
             committed = self._repository.append_document(
