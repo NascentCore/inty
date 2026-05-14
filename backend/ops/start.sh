@@ -61,9 +61,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$WORKSPACE" ]]; then
-  WORKSPACE=".inty"
-fi
+WORKSPACE="${WORKSPACE:-.inty}"
 mkdir -p "$WORKSPACE"
 LOG_FILE="$WORKSPACE/inty.log"
 
