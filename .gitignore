@@ -71,7 +71,9 @@ yarn.lock
 
 # IDE相关
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 *.swp
 *.swo
 .DS_Store
