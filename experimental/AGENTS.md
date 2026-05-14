@@ -16,3 +16,9 @@
 
 - **Telegram + perpetual_agent 联调**：见 `perpetual_agent/README.md` 与仓库 `tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md`。
 - **Telegram + OpenAI 兼容通道**：同上 README 的「Telegram + OpenAI」章节。
+
+## Inspirations
+
+- Paint by Language Model
+  - [Gallery](https://www.liamlaverty.com/paint-by-language-model/)
+  - [Programmer API](https://www.liamlaverty.com/paint-by-language-model/draw/api)
