@@ -605,7 +605,7 @@ async def _try_handle_ws_user_signed_out_frame(
             user_id=current_user.id,
             agent_id=agent_id,
             chat_id=chat.id,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
             line=log_line,
         )
         await websocket.send_json(
@@ -711,7 +711,7 @@ async def _try_handle_ws_ws_conn_dropped_frame(
             user_id=current_user.id,
             agent_id=agent_id,
             chat_id=chat.id,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
             line=log_line,
         )
         await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
@@ -1113,7 +1113,7 @@ async def _try_generate_premium_preview_choice(
         messages=[HumanMessage(content=premium_preview_prompt)],
         chat_settings=premium_settings,
         user_time_context=user_time_context,
-        model_override=premium_model_override,
+        model_override=premium_model_override.id_on_provider,
         is_subscribed=True,
     )
     if not gen_result:
@@ -1376,7 +1376,7 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat.id,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
         )
         if mem_store is None:
             return
@@ -1435,7 +1435,7 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
                 agent_id=agent_id,
                 chat_id=chat_row_id,
                 user_text=synthetic_user_text,
-                resolved_chat_model_id=model_override,
+                resolved_chat_model=model_override,
                 defer_memory_update=True,
                 session_id=session_id,
                 background_output_sink=None,
@@ -1461,7 +1461,7 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_row_id,
-                    resolved_chat_model_id=model_override,
+                    resolved_chat_model=model_override,
                 )
             )
         else:
@@ -1686,7 +1686,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat.id,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
         )
         if mem_store is None:
             return
@@ -1732,7 +1732,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             agent_id=agent_id,
             chat_id=chat_row_id,
             user_text=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
             defer_memory_update=True,
             session_id=session_id,
             background_output_sink=None,
@@ -1751,7 +1751,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_row_id,
-                    resolved_chat_model_id=model_override,
+                    resolved_chat_model=model_override,
                 )
             )
         else:
@@ -1966,7 +1966,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat.id,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
         )
         if mem_store is None:
             return
@@ -2045,7 +2045,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     agent_id=agent_id,
                     chat_id=chat_row_id,
                     user_text="",
-                    resolved_chat_model_id=model_override,
+                    resolved_chat_model=model_override,
                     defer_memory_update=True,
                     session_id=session_id,
                     background_output_sink=companion_ws.background_sink,
@@ -2501,7 +2501,7 @@ async def _agent_chat_completions_impl(
                             agent_id=agent_id,
                             chat_id=chat.id,
                             user_text=last_user_text,
-                            resolved_chat_model_id=model_override,
+                            resolved_chat_model=model_override,
                             defer_memory_update=True,
                             session_id=session_id,
                             background_output_sink=companion_background_sink,
@@ -2622,7 +2622,7 @@ async def _agent_chat_completions_impl(
                         messages=messages,
                         chat_settings=chat_settings,
                         user_time_context=user_time_context,
-                        model_override=model_override,
+                        model_override=model_override.id_on_provider,
                         is_subscribed=is_subscribed,
                         client_local_message_id=effective_local_id,
                     )
@@ -3438,7 +3438,7 @@ async def chat_completions_websocket_verify(
                 response_text = await _verify_ws_simple_llm_reply(
                     agent_row=agent_row,
                     user_text=last_user_text or "",
-                    model_name=model_override,
+                    model_name=model_override.id_on_provider,
                 )
             except Exception as e:
                 logger.exception("ws/verify simple chat.completions failed")
