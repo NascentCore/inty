@@ -46,7 +46,11 @@ def persist_sleep_state(store: MemoryStore, state: CompanionSleepState) -> None:
 
 
 def clear_inner_tick_quiet_if_circadian_day(store: MemoryStore, *, is_night: bool) -> None:
-    """白昼时丢弃静_until；夜间不动。"""
+    """白昼时丢弃静息截止时刻；夜间不动。
+
+    调用方须仅在「昼夜节律功能开启」时调用；若总以白昼调用而功能已关闭，
+    会在每次维护 inner tick 轮询时误清空 ``inner_tick_quiet_until_utc``。
+    """
     if is_night:
         return
     st = load_sleep_state(store)

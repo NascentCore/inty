@@ -2016,7 +2016,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             feats.companion_ws_agent_circadian_enabled
             and suppress_proactive_heartbeat_for_circadian(uctx_sched)
         )
-        clear_inner_tick_quiet_if_circadian_day(mem_store, is_night=is_night)
+        if feats.companion_ws_agent_circadian_enabled:
+            clear_inner_tick_quiet_if_circadian_day(mem_store, is_night=is_night)
 
         if feats.companion_ws_dream_inner_tick_enabled and dream_inner_tick_due(mem_store):
             inner_tick_pack[0] = (

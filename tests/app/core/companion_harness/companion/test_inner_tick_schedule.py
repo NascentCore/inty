@@ -130,3 +130,15 @@ def test_maintenance_wait_matches_max_of_schedule_and_quiet(tmp_path: Path) -> N
     combined = max(sched, quiet)
     assert combined == quiet
     assert combined > 60.0
+
+
+def test_inner_tick_quiet_cleared_only_after_explicit_day_clear_call(
+    tmp_path: Path,
+) -> None:
+    sc = CompanionScope("it", "a", f"dayclear-{tmp_path.name}")
+    store = get_memory_store(sc, dsn="")
+    record_inner_tick_quiet_hours_from_now(store, hours=1.0)
+    clear_inner_tick_quiet_if_circadian_day(store, is_night=True)
+    assert load_sleep_state(store).inner_tick_quiet_until_utc is not None
+    clear_inner_tick_quiet_if_circadian_day(store, is_night=False)
+    assert load_sleep_state(store).inner_tick_quiet_until_utc is None

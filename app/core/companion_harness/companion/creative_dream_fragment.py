@@ -107,7 +107,12 @@ def maybe_append_creative_dream_fragment_after_consolidation(
         "local_date": local_key,
         "source": "after_dream_consolidation",
     }
-    store.append_jsonl_record(_CREATIVE_DREAM_FRAGMENTS_REL, row)
+    try:
+        store.append_jsonl_record(_CREATIVE_DREAM_FRAGMENTS_REL, row)
+    except Exception as exc:
+        record_creative_fragment_written_failed_rollback(store, local_date=local_key)
+        logger.warning("creative_dream append_jsonl_record failed: {}", exc)
+        return
     logger.info(
         "creative_dream fragment stored chars={} local_date={}",
         len(frag),
