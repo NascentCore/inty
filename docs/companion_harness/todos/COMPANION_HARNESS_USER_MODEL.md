@@ -46,6 +46,7 @@
 
 ### 工程与边界
 
+- **仍缺或偏薄**：`/app/core/companion_harness/__init__.py` 缺少包级 docstring（与仓库 Python 包约定不一致）。
 
 ## 谈话结论（事实摘记）
 
