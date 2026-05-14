@@ -5,11 +5,19 @@
 **IMPORTANT: agentic companion and iMate (android, iOS) are under active development;
 all others are in maitenance mode and should not be changed.**
 
-- Inty is an agentic AI system to simulate human-like emotions.
-  - Why? Because emotional intelligence is the most sophisticated form of Human intelligence,
-    and cannot be built directly into LLMs. Because emotions requires years of interactions,
-    it's the essence of human experience distilled by time itself.
+- Inty is an agentic AI system to simulate human-like being, with emotional behaviors being its utmost focus.
+
+
+Why focus on emotions?
+- Because emotion is the most sophisticated form of Human intelligence.
+  Emotions require years of human interactions, it's the essence of human experience distilled by time itself.
 - Emotional intimacy is the most valuable and satisfactory of human experiences.
+
+Why base on agentic paradigm?
+- LLMs cannot be trained to have emotions, because time cannot be compressed, and bonding requires time.
+- Agentic systems can simulate human psychology and environments through multiple agentic loops and orchestration.
+- Timing wise, openclaw and the general advancement in LLMs and general-purpose agents tech stack
+  advanced exponentially since 2025-10, given us an emerging opportunity.
 
 ## Your soul
 
