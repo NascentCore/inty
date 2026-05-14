@@ -31,7 +31,7 @@ description: >-
 
 - **表名**：`companion_memory_document_versions`
 - **ORM**：`/app/models/companion_memory_documents.py` · `CompanionMemoryDocumentVersion`
-- **自然键最新正文**：同一 `(user_id, companion_id, chat_id, document_kind[, calendar_date])` 下 **`sequence_id` 最大** 的一行。根目录稿（`IDENTITY.md`、`transcript.jsonl` 等）的 **`calendar_date` 为 NULL**；**`memory/daily/YYYY-MM-DD.md` / `memory/YYYY-MM-DD.md`** 对应 kind 为 **`memory_daily_raw` / `memory_day_summary`**，查最新版本时 **`WHERE calendar_date = DATE 'YYYY-MM-DD'`**（或与 ORM 一致的非空 `calendar_date`）。
+- **逻辑正文（折叠）**：同一 `(user_id, companion_id, chat_id, document_kind[, calendar_date])` 下，按 **`sequence_id` 升序** 扫描所有行：`content_mode = snapshot` 时 **`content` 替换**当前累积正文；`content_mode = suffix` 时 **`content` 拼接到**正文末尾（`append_line` / `append_jsonl_record` 的真追加）。**只看 `sequence_id` 最大的一行**在存在 `suffix` 时**不等于**全文。根目录稿的 **`calendar_date` 为 NULL**；**`memory/daily/YYYY-MM-DD.md` / `memory/YYYY-MM-DD.md`** 对应 **`memory_daily_raw` / `memory_day_summary`**，查某日时 **`WHERE calendar_date = DATE 'YYYY-MM-DD'`**。
 - **`document_kind` ↔ 逻辑路径**：`/app/core/companion_harness/memory/memory_store_document_mapping.py`（例：`IDENTITY.md` → **`identity`**，`context_json` ↔ `context.json`，`transcript` ↔ `transcript.jsonl`）。
 
 ## 作用域三元组怎么对齐
@@ -56,7 +56,7 @@ ORDER BY chat_id;
 **最新一条 identity（推荐先做）**
 
 ```sql
-SELECT sequence_id, created_at,
+SELECT sequence_id, created_at, content_mode,
        LENGTH(content) AS content_chars,
        content LIKE '%YOUR_SNIPPET%' AS has_snippet
 FROM companion_memory_document_versions
@@ -68,6 +68,8 @@ ORDER BY sequence_id DESC
 LIMIT 5;
 ```
 
+（`identity` 等整篇覆盖稿多为 **snapshot**；`transcript` 等可出现 **suffix**，勿用「最后一行」当全文。）
+
 **某 scope 下近期所有文档种类**
 
 ```sql
@@ -78,10 +80,10 @@ GROUP BY document_kind
 ORDER BY document_kind;
 ```
 
-**拉最新 identity 正文片段（勿对大字段无脑全表打印）**
+**拉 identity 最近一次写入的正文片段（建议同时看 `content_mode`）**
 
 ```sql
-SELECT LEFT(content, 1500) FROM companion_memory_document_versions
+SELECT content_mode, LEFT(content, 1500) FROM companion_memory_document_versions
 WHERE user_id = '<user_id>' AND companion_id = '<companion_id>' AND chat_id = '<chat_id>'
   AND document_kind = 'identity'
 ORDER BY sequence_id DESC LIMIT 1;

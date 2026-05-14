@@ -6,6 +6,7 @@ from app.core.companion_harness.memory.memory_store import (
     MemoryCache,
     MemoryRecord,
     MemoryStore,
+    _fold_versioned_contents,
     normalize_memory_store_relative_path,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -54,6 +55,75 @@ def test_memory_store_read_nonexistent(tmp_path) -> None:
 def test_memory_store_read_if_exists_none(tmp_path) -> None:
     store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
     assert store.read_document_if_exists("nope.md") is None
+
+
+def test_fold_versioned_contents_snapshot_then_suffix() -> None:
+    body = _fold_versioned_contents(
+        [
+            ("snapshot", "base\n"),
+            ("suffix", "a\n"),
+            ("suffix", "b\n"),
+        ]
+    )
+    assert body == "base\na\nb\n"
+
+
+def test_fold_versioned_contents_only_snapshots() -> None:
+    assert _fold_versioned_contents([("snapshot", "A"), ("snapshot", "B")]) == "B"
+
+
+def test_memory_store_append_jsonl_suffix_repository(tmp_path) -> None:
+    """Suffix inserts store only the new fragment; read folds to full jsonl."""
+
+    class _Repo:
+        def __init__(self) -> None:
+            self.appends: list[tuple[str, str, str]] = []
+
+        def read_document(self, *, relative_path: str):
+            rows = [(m, c) for p, m, c in self.appends if p == relative_path]
+            if not rows:
+                return None
+            folded = _fold_versioned_contents(rows)
+            return MemoryRecord(
+                record_uuid="last",
+                sequence_id=len(rows),
+                relative_path=relative_path,
+                content=folded,
+                created_at="t",
+            )
+
+        def append_document(
+            self,
+            *,
+            relative_path: str,
+            content: str,
+            record_uuid: str,
+            content_mode: str = "snapshot",
+        ):
+            self.appends.append((relative_path, content_mode, content))
+            return MemoryRecord(
+                record_uuid=record_uuid,
+                sequence_id=len(self.appends),
+                relative_path=relative_path,
+                content=content,
+                created_at="t",
+            )
+
+        def list_all_relative_paths(self) -> list[str]:
+            return []
+
+    repo = _Repo()
+    store = MemoryStore(scope=_scope(tmp_path.name), repository=repo)
+    store.append_jsonl_record("transcript.jsonl", {"role": "user", "content": "a"})
+    store.append_jsonl_record("transcript.jsonl", {"role": "assistant", "content": "b"})
+    assert len(repo.appends) == 2
+    assert all(m == "suffix" for _, m, _ in repo.appends)
+    assert '{"role": "user"' in repo.appends[0][2]
+    assert '{"role": "assistant"' in repo.appends[1][2]
+    assert repo.appends[0][2] not in repo.appends[1][2]
+    body = store.read_document("transcript.jsonl")
+    lines = [ln for ln in body.splitlines() if ln.strip()]
+    assert len(lines) == 2
 
 
 def test_memory_store_append_jsonl_record(tmp_path) -> None:

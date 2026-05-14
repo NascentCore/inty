@@ -76,5 +76,6 @@ ORDER BY user_id, chat_id, sequence_id DESC;
 
 ## 注意
 
+- **`context.json`** 的更新路径为整篇 **`snapshot`**，`ORDER BY sequence_id DESC LIMIT 1` 解析 JSON 仍成立；**`transcript` 等**若含 **`suffix`** 行，不能以「最后一行 `content`」当全文（见父技能「逻辑正文（折叠）」）。
 - **`agents`** 表不负责存 **`context_mode`**；以 **`context_json`** 版本为准。
 - 若 **`trim(content)::json`** 报错，先 **`SELECT sequence_id, left(content, 500)`** 看正文是否被截断或非 JSON。

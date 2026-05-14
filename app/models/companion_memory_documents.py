@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from sqlalchemy import BigInteger, Column, Date, DateTime, Index, String, Text
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, text
 
 from app.models.base import Base
 
@@ -12,8 +12,8 @@ class CompanionMemoryDocumentVersion(Base):
     """
     One row per append of a logical document for (user, companion, chat).
 
-    Natural key for the latest body: (user_id, companion_id, chat_id, document_kind,
-    calendar_date) with max(sequence_id).
+    Logical body is folded from all rows for the scope key in ``sequence_id`` order:
+    ``snapshot`` replaces the accumulated body; ``suffix`` concatenates to it.
     """
 
     __tablename__ = "companion_memory_document_versions"
@@ -25,6 +25,7 @@ class CompanionMemoryDocumentVersion(Base):
     chat_id = Column(String, nullable=False)
     document_kind = Column(String(64), nullable=False)
     calendar_date = Column(Date, nullable=True)
+    content_mode = Column(String(16), nullable=False, server_default=text("'snapshot'"))
     content = Column(Text, nullable=False)
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

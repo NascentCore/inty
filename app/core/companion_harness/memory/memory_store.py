@@ -1,4 +1,4 @@
-"""Memory store: DB-authoritative append-only versions; in-memory only when no repository."""
+"""Memory store: DB append-only rows; snapshot replaces body, suffix concatenates (line/jsonl)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import threading
 import uuid as uuid_mod
 from dataclasses import dataclass
 from pathlib import PurePosixPath
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.utc import utc_iso_ts
@@ -44,6 +44,21 @@ def normalize_memory_store_relative_path(relative_path: str) -> str:
     return "/".join(parts)
 
 
+_CONTENT_MODE_SNAPSHOT: Literal["snapshot"] = "snapshot"
+_CONTENT_MODE_SUFFIX: Literal["suffix"] = "suffix"
+
+
+def _fold_versioned_contents(rows: list[tuple[str, str]]) -> str:
+    """Build one logical document body from DB rows in ``sequence_id`` order."""
+    body = ""
+    for mode, chunk in rows:
+        if mode == _CONTENT_MODE_SUFFIX:
+            body += chunk
+        else:
+            body = chunk
+    return body
+
+
 @dataclass(frozen=True)
 class MemoryRecord:
     record_uuid: str
@@ -62,6 +77,7 @@ class MemoryRepository(Protocol):
         relative_path: str,
         content: str,
         record_uuid: str,
+        content_mode: Literal["snapshot", "suffix"] = "snapshot",
     ) -> MemoryRecord: ...
 
     def list_all_relative_paths(self) -> list[str]: ...
@@ -108,19 +124,26 @@ class SqlAlchemyMemoryRepository:
         stmt = (
             sql_select(CompanionMemoryDocumentVersion)
             .where(sql_and(*filters))
-            .order_by(CompanionMemoryDocumentVersion.sequence_id.desc())
-            .limit(1)
+            .order_by(CompanionMemoryDocumentVersion.sequence_id.asc())
         )
         with SessionLocal() as session:
-            row = session.scalars(stmt).first()
-        if row is None:
+            orm_rows = list(session.scalars(stmt).all())
+        if not orm_rows:
             return None
-        created_at = row.created_at.isoformat() if row.created_at else ""
+        last = orm_rows[-1]
+        pairs: list[tuple[str, str]] = []
+        for r in orm_rows:
+            mode = getattr(r, "content_mode", None) or _CONTENT_MODE_SNAPSHOT
+            if mode not in (_CONTENT_MODE_SNAPSHOT, _CONTENT_MODE_SUFFIX):
+                mode = _CONTENT_MODE_SNAPSHOT
+            pairs.append((mode, str(r.content)))
+        folded = _fold_versioned_contents(pairs)
+        created_at = last.created_at.isoformat() if last.created_at else ""
         return MemoryRecord(
-            record_uuid=str(row.record_uuid),
-            sequence_id=int(row.sequence_id),
+            record_uuid=str(last.record_uuid),
+            sequence_id=int(last.sequence_id),
             relative_path=relative_path,
-            content=str(row.content),
+            content=folded,
             created_at=created_at,
         )
 
@@ -160,8 +183,11 @@ class SqlAlchemyMemoryRepository:
         relative_path: str,
         content: str,
         record_uuid: str,
+        content_mode: Literal["snapshot", "suffix"] = "snapshot",
     ) -> MemoryRecord:
         _, _, SessionLocal, CompanionMemoryDocumentVersion = self._orm()
+        if content_mode not in (_CONTENT_MODE_SNAPSHOT, _CONTENT_MODE_SUFFIX):
+            raise ValueError(f"invalid content_mode: {content_mode!r}")
         kind, cal = parse_memory_store_relative_path(relative_path)
         row = CompanionMemoryDocumentVersion(
             record_uuid=record_uuid,
@@ -170,6 +196,7 @@ class SqlAlchemyMemoryRepository:
             chat_id=self._chat_id,
             document_kind=kind.value,
             calendar_date=cal,
+            content_mode=content_mode,
             content=content,
         )
         with SessionLocal() as session:
@@ -280,6 +307,7 @@ class MemoryStore:
                 relative_path=rel,
                 content=content,
                 record_uuid=new_record_uuid,
+                content_mode=_CONTENT_MODE_SNAPSHOT,
             )
         else:
             committed = MemoryRecord(
@@ -302,7 +330,26 @@ class MemoryStore:
         merged += line
         if not line.endswith("\n"):
             merged += "\n"
-        self.write_document(rel, merged)
+        if self._repository is not None:
+            fragment = merged[len(cur) :]
+            new_record_uuid = str(uuid_mod.uuid4())
+            committed = self._repository.append_document(
+                relative_path=rel,
+                content=fragment,
+                record_uuid=new_record_uuid,
+                content_mode=_CONTENT_MODE_SUFFIX,
+            )
+            self._cache.put_committed(
+                MemoryRecord(
+                    record_uuid=committed.record_uuid,
+                    sequence_id=committed.sequence_id,
+                    relative_path=rel,
+                    content=merged,
+                    created_at=committed.created_at,
+                )
+            )
+        else:
+            self.write_document(rel, merged)
 
     def append_jsonl_record(self, relative_path: str, record: dict[str, Any]) -> None:
         rel = self._normalize_relative_path(relative_path)
@@ -314,7 +361,26 @@ class MemoryStore:
         if merged and not merged.endswith("\n"):
             merged += "\n"
         merged += line + "\n"
-        self.write_document(rel, merged)
+        if self._repository is not None:
+            fragment = merged[len(cur) :]
+            new_record_uuid = str(uuid_mod.uuid4())
+            committed = self._repository.append_document(
+                relative_path=rel,
+                content=fragment,
+                record_uuid=new_record_uuid,
+                content_mode=_CONTENT_MODE_SUFFIX,
+            )
+            self._cache.put_committed(
+                MemoryRecord(
+                    record_uuid=committed.record_uuid,
+                    sequence_id=committed.sequence_id,
+                    relative_path=rel,
+                    content=merged,
+                    created_at=committed.created_at,
+                )
+            )
+        else:
+            self.write_document(rel, merged)
 
     def flush_now(self, *, timeout_s: float = 5.0) -> None:
         return
