@@ -122,6 +122,10 @@ all others are in maitenance mode and should not be changed.**
 
 ## Engineering guidelines
 
+- Document your code as you go, not after.
+- Make a plan before diving into the coding.
+- Test everything, often, as you write it.
+
 ### Writing code
 
 - Optimize for structural simplicity and architecture soundness.
