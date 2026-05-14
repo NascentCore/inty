@@ -39,11 +39,10 @@ def test_companion_session_seeds_techno_core_and_injects_prompt() -> None:
         for m in build_system_messages(bundle, context)
         if m.get("role") == "system"
     )
-    assert "## TECHNO CORE" in system_text
     assert "TechnoCore 是 Inty 的 AI-only 虚拟居留层" in system_text
-    assert "## LIVING SPHERE" in system_text
-    assert system_text.index("## TECHNO CORE") < system_text.index(
-        "## LIVING SPHERE"
+    assert "世界：TechnoCore" in system_text
+    assert system_text.index("TechnoCore 是 Inty 的 AI-only 虚拟居留层") < system_text.index(
+        "当前默认位置："
     )
 
     manager.shutdown_all()

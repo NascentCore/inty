@@ -1,9 +1,12 @@
 """Canonical companion system-message stack assembly.
 
 Builds the ordered list of `{"role":"system","content":...}` slices injected before each
-companion LLM round (chat / tool-side / inner-tick / dual-LLM chat-only branch). Reads MD seed
-files via `app.core.companion_harness.memory.memory_store_scope.get_imate_axiom_system_text` and prompt slice constants from
-`..prompt_slices`; consumed by `..turn`, `..turn_engine`, `..prompt_stack`.
+companion LLM round (chat / tool-side / inner-tick / dual-LLM chat-only branch). Memory-backed
+bodies (IDENTITY / SOUL / USER / TechnoCore / LivingSphere / significance) are each one system
+message whose content is the stored Markdown as-is—no extra synthetic ``## SLICE`` line is
+prepended, so documents may use their own headings without duplicate hierarchy. Reads axiom text
+via ``get_imate_axiom_system_text`` and slice constants from ``..prompt_slices``; consumed by
+``..turn``, ``..turn_engine``, ``..prompt_stack``.
 
 When ``include_significance_perception_slice`` is true, injects ``SIGNIFICANCE_PERCEPTION.md``
 (body from ``PromptBundle.significance_perception_md``) plus the dual-envelope JSON output contract
@@ -412,32 +415,17 @@ def build_system_messages(
                 _system_message(_tool_background_first_round_skip_contract_text())
             )
 
-    out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
-    out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))
+    out.append(_system_message(bundle.identity.strip()))
+    out.append(_system_message(bundle.soul.strip()))
     out.append(_system_message(experience_profile_system_clause(context.context_mode)))
     if bundle.techno_core_md.strip():
-        out.append(
-            _system_message(
-                "## TECHNO CORE（Inty 的虚拟居留层）\n\n"
-                + bundle.techno_core_md.strip()
-            )
-        )
+        out.append(_system_message(bundle.techno_core_md.strip()))
     if bundle.living_sphere_md.strip():
-        out.append(
-            _system_message(
-                "## LIVING SPHERE（TechnoCore 内的虚拟居所锚点）\n\n"
-                + bundle.living_sphere_md.strip()
-            )
-        )
-    out.append(_system_message("## USER\n\n" + bundle.user_md.strip()))
+        out.append(_system_message(bundle.living_sphere_md.strip()))
+    out.append(_system_message(bundle.user_md.strip()))
 
     if include_significance_perception_slice and not inner_tick_turn:
-        out.append(
-            _system_message(
-                "## SIGNIFICANCE PERCEPTION\n\n"
-                + bundle.significance_perception_md.strip()
-            )
-        )
+        out.append(_system_message(bundle.significance_perception_md.strip()))
 
     skip_memory_blocks = tool_side_compact and not inner_tick_turn
     if experience_profile_injects_private_memory(context.context_mode):

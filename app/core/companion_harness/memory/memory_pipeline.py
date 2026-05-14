@@ -90,7 +90,7 @@ Rules:
 - Write in the same language as the conversation (usually Chinese for Chinese user content).
 """
 
-_USER_CURATOR_SYSTEM = """You are a USER.md curator. USER.md records the assistant's durable understanding of the user (how to address them, preferences, collaboration habits). It is injected into the system prompt as ## USER on every turn.
+_USER_CURATOR_SYSTEM = """You are a USER.md curator. USER.md records the assistant's durable understanding of the user (how to address them, preferences, collaboration habits). It is injected into the system prompt as its own system message (raw USER.md body) on every turn.
 
 Given the current USER.md, the latest MEMORY.md (already updated this turn for consistency), and the latest user/assistant turn, output ONLY the full updated USER.md body (markdown).
 
