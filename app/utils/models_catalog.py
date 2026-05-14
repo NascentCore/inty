@@ -945,11 +945,10 @@ Z_IMAGE_TURBO_IMAGE_TO_IMAGE = GenAIModel(
     playground_url="https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/playground",
 )
 
-# Anchor TODOs for wiring ``GenAIModel.context_window_tokens`` + usage into runtime (see grep in repo):
-# - app/core/companion_harness/llm/chat_completions.py
-# - app/core/companion_harness/tools/runtime_inspect_context.py
-# - app/core/agent/agent.py
-# - tests/app/utils/test_models_catalog.py
+# Follow-up (context utilization): ``GenAIModel.context_window_tokens`` is not wired here.
+# Intentionally leave ``chat_completions.py`` / ``runtime_inspect_context.py`` unchanged in this PR
+# (see PR review); future work: merge ``response.usage`` + catalog window in those harness paths.
+# Other anchors: ``app/core/agent/agent.py`` (LangSmith usage), ``tests/app/utils/test_models_catalog.py``.
 
 # Chat image (message-to-image): only these models are allowed; config uses nickname.
 CHAT_IMAGE_GEN_MODELS = [

@@ -63,9 +63,6 @@ def runtime_inspect_set_scoped_memory_store(store: MemoryStore | None) -> None:
 
 
 def runtime_inspect_set_last_chat_completion_request(payload: dict[str, Any]) -> None:
-    """Store the last chat completion *request* snapshot for companion_runtime_inspect."""
-    # TODO(context-utilization): After the completion returns, merge ``response.usage`` and catalog
-    # ``GenAIModel.context_window_tokens`` / utilization into this payload (or an adjacent bundle key).
     d = _inspect_var.get()
     if d is not None:
         d["last_chat_completion_request"] = payload
@@ -274,7 +271,4 @@ def build_last_chat_completion_request_payload(
         payload["messages_serialization_note"] = (
             "Some messages were normalized for JSON (see per_message_warnings)."
         )
-    # TODO(context-utilization): After chat.completions returns, merge ``response.usage`` and catalog
-    # ``GenAIModel.context_window_tokens`` (from ``app.utils.models_catalog``) into the inspect bundle
-    # alongside this request snapshot.
     return payload

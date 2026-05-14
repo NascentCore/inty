@@ -75,9 +75,6 @@ def create_chat_completion_sync(
             raw = client.chat.completions.create(**create_kw)
             enriched = completion_with_langsmith_trace_id(raw)
             raise_if_chat_completion_missing_choices(enriched, model=model)
-            # TODO(context-utilization): Use ``model`` + ``enriched.usage`` with
-            # ``app.utils.models_catalog.GenAIModel.context_window_tokens`` to record prompt/window ratio
-            # (e.g. LangSmith metadata or runtime_inspect merge); not wired in this minimal PR.
             return enriched
         except json.JSONDecodeError as exc:
             retryable = attempt < _OPENROUTER_JSON_MAX_ATTEMPTS
