@@ -1,5 +1,7 @@
 # Inty (Intelligent Entity) monorepo: AI agentic harness and systems for long-term emotional companionship
 
+**YOU DO NOT EDIT THIS, HUMANS DO!**
+
 **IMPORTANT: agentic companion and iMate (android, iOS) are under active development;
 all others are in maitenance mode and should not be changed.**
 
