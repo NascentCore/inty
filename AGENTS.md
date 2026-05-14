@@ -151,4 +151,4 @@ such experience is between human users and AI, but they have real-world patterns
 
 - [UML](https://plantuml.com/) for code-level logical executions
 - [C4Model](https://c4model.com/) for software architecture
-- [Mermaid](https://mermaid.js.org/) for diagraming, ASCII diagram for simple ones
+- [Mermaid](https://mermaid.js.org/) for complex, and [ASCII](https://asciidiagrams.github.io/) for simple diagrams
