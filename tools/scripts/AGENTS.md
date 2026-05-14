@@ -1,11 +1,11 @@
-# AGENTS.md · tools/scripts/（脚本）
+# `tools/scripts/`：一次性与小工具脚本
 
-- 最简设计来完成用户需求
-- 使用 [cyclopts](https://github.com/BrianPugh/cyclopts) 来实现命令行界面
-- 脚本需可重复执行（幂等），参数化（使用 `argparse`/配置），日志使用 `logger.debug()`。
-- 依赖在本目录 `requirements.txt` 中声明；禁止隐式外部依赖。
-- 修改数据的脚本需具备 Dry-Run 与明确确认机制。
-- 在代码库顶层目录 `export PYTHONPATH=.` 不要在 python 代码中添加设置引用路径的代码
-- `app/models/agent.py` 中的 Agent 表中的 readable_id 字段已被废弃，不要再使用
-- `tools/scripts/requirements.txt` 中的依赖不要添加版本约束
-- Agent 单条导出/导入：`export_agent_to_json.py` 按 id 导出完整 agent 行为 JSON；`import_agent_from_json.py` 读取该 JSON 插入 DB，默认 dry-run，需 `--no-dry-run` 与 `--yes` 或交互确认后执行
+**一句话**：给运维、数据修复、导入导出用的 **短生命周期命令行**；默认 **幂等、可审计、少依赖魔法**。
+
+## 原则
+
+- **CLI**：使用 **Cyclopts**（与仓库 Python 约定一致）；参数与行为写清，避免交互式「猜意图」。
+- **副作用**：改数据的脚本必须 **默认 dry-run**，显式 `--yes` / `--no-dry-run` 才落库；日志默认偏 **debug 粒度** 便于排障。
+- **依赖**：声明在本目录 `requirements.txt`；**不要 pin 版本**（按仓库约定交给环境解析）；**不要**依赖未声明的外部命令。
+- **运行方式**：在仓库根用 `PYTHONPATH=.` 调用；**不要**在脚本里偷偷 `sys.path.insert` 改装载路径。
+- **历史包袱**：若脚本涉及 Agent 导出，忽略已废弃字段（如早期 `readable_id` 依赖）；导入导出类工具的行为以各脚本 `--help` 为准。

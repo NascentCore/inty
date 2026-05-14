@@ -1,68 +1,17 @@
-# Ops specific APIs
+# `backend/ops/api/`：仅挂在 Ops 进程上的 API 面
 
-以下路由由 `backend/ops/api/v1/router.py` 额外挂载，**不在** `backend/inty/main.py` 中。
+**一句话**：这里实现 **主 Inty 进程不挂载** 的那部分 `/api/v1` 能力——面向 **评测会话、运营分析、节日记忆配置** 等；与 `app/api/v1/endpoints` 下的共享端点 **拼成完整 Ops API 图**。
 
-## 节日记忆（超级用户，`backend/ops/api/v1/festival_memory.py`）
+## 读者
 
-Router 前缀：`/evaluation/admin`（完整路径以 `/api/v1` 开头）。
+- 修改评测 REST/WebSocket、用户 analytics 报表、或节日记忆后台的工程师。
 
-| 路径 | 方法 | 实现文件 |
-|------|------|----------|
-| `/api/v1/evaluation/admin/festival-memory-configs` | GET | `backend/ops/api/v1/festival_memory.py` |
-| `/api/v1/evaluation/admin/festival-memory-configs` | POST | `backend/ops/api/v1/festival_memory.py` |
-| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | DELETE | `backend/ops/api/v1/festival_memory.py` |
-| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | PUT | `backend/ops/api/v1/festival_memory.py` |
-| `/api/v1/evaluation/admin/festival-memory-extraction/run` | POST | `backend/ops/api/v1/festival_memory.py` |
+## 能力分组（代替逐路由表）
 
-## 评测（`backend/ops/api/v1/evaluation.py`）
+- **节日记忆（超级用户）**：配置 CRUD、抽取任务触发等——路径挂在评测管理前缀下。
+- **评测域**：评测会话生命周期、题目解析、模型与评分准则辅助接口、批量与导出、角色资源运维、生成图统计等。
+- **用户 analytics**：新用户、活跃、对话轮次、热门角色、触顶用户、会话与消息明细、实时语音/LLM 延迟等 **运营只读分析**。
 
-| 路径 | 方法 | 实现文件 |
-|------|------|----------|
-| `/api/v1/evaluation/sessions` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/sessions` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/start` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/results` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/cancel` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/monitor` | WS | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/questions/parse` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/models` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/scoring-criteria/validate` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/stats` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/agents` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/agents` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}` | PUT | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}` | DELETE | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}/check-background-aspect-ratio` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}/upload-cropped-background` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}/deploy` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}/generated-images` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/agents/generated-images/counts` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/templates` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/templates` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/sessions/batch` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/results/export` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/sessions/compare` | POST | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/new-users` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-activity` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/conversation-rounds` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-rounds-distribution` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/popular-agents` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/users-hitting-limit` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/agent-analytics` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-sessions-detail` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/conversations-detail` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/conversations-detail/user-agent-paginated` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/stats` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/reports` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/image-generation-failures` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/image-generation-latency` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-daily-messages` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-today-stats` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-sessions` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/session-messages` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/daily-voice-audios` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/live-chat-stats` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/live-chat-latency` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/llm-latency` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-generated-images` | GET | `backend/ops/api/v1/evaluation.py` |
+## 维护注意
+
+- **新增路由时**：同步更新 **OpenAPI 可见性、权限模型、evaluation 前端调用处**；大表格式路径清单易腐，**以路由注册代码与类型定义为真源**，本文件保持 **域级地图** 即可。

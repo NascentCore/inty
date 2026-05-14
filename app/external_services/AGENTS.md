@@ -1,11 +1,9 @@
-# external_services - 外部服务
+# `app/external_services/`：云与第三方 SDK 适配层
 
-## Cursor Summary
+**一句话**：把 **Firebase / GCS / Play 结算 / Twilio 等外部世界** 收敛成 **可被 `app/services` 调用的薄适配**，避免业务文件里散落供应商 SDK 细节。
 
-- 目录用途: 与外部服务（云与第三方）的直接适配层。
-- 关键文件:
-  - Google Cloud: `gcs.py`（存储）、`android_publisher.py`（Google Play Android Publisher）、`google_play_service.py`（Play 订阅/收据相关）。
-  - Firebase: `firebase.py`（消息/通知等）。
-  - Twilio: `twilio_phone_call.py`（PSTN 外呼最小适配；业务编排在 `app/services/phone_call_service.py`）。
-  - `globals.py`: 统一外部资源/客户端的全局初始化或单例。
-- 关联: 被 `app/services` 调用，为业务逻辑提供外部能力入口。
+## 心智
+
+- **职责**：连接参数、重试策略、供应商特有错误码的 **最小翻译**；复杂业务流程留在 service 层。
+- **典型域**：对象存储、移动应用内购收据、推送、电话 PSTN 最小封装等——具体模块以目录内代码为准。
+- **全局入口**：若存在统一初始化/单例模块，只负责 **装配客户端**，不承载业务决策。

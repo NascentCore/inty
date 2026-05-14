@@ -1,23 +1,18 @@
-# Experimental - 原型与实验
+# `experimental/`：原型与实验沙箱
 
-Experimental code for demo and other purposes.
+**一句话**：演示、评测脚本、概念验证——**默认不进生产发布**；每个子目录应尽量 **自包含**，自带依赖说明。
 
-All sub folders should be self-contained:
+## 硬边界
 
-1. Do not use code outside their own folder.
-2. Document completely.
+- **不要引用沙箱外的业务代码**（避免实验目录把主产品线拖成耦合图）。
+- **文档齐全**：至少 README 说明目的、如何跑、需要什么密钥；复杂实验再拆 AGENTS。
 
-- 非生产代码；
-- 最小化依赖、隔离环境；如需脚本/服务，请在本目录自备 `requirements.txt` 或说明。
-- requirements.txt 不指定版本，默认最新版本，使用以下步骤强制安装最新版本
-  ```bash
-  uv pip uninstall -r requirements.txt
-  uv pip install -r requirements.txt
-  ```
-- 使用 https://pypi.org/project/python-dotenv/ 来读取环境变量来获得 API Key
-  ```python
-  from dotenv import load_dotenv
-  load_dotenv()
-  ```
-- Telegram + `perpetual_agent` 本地联调、token 校验与 `TELEGRAM_CHAT_ID` 排错：见 [perpetual_agent/README.md](perpetual_agent/README.md) 与仓库根目录 [tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md](../tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md)。
-- OpenAI 兼容 API + Telegram 入站通道（`TelegramInbox` / `--telegram-llm`）：见 [perpetual_agent/README.md](perpetual_agent/README.md)「Telegram + OpenAI」节与 [perpetual_agent/channel_inbox.py](perpetual_agent/channel_inbox.py)。
+## Python 习惯
+
+- **依赖**：各实验自备 `requirements.txt`；版本号 **不 pin**，由环境解析；需要「强制刷新到最新」时用你习惯的包管理器卸载再装（见子目录 README）。
+- **密钥**：用 `python-dotenv` 从 `.env` 读取 API key，**不要**把真实 `.env` 提交进 git。
+
+## 特殊子项目指针
+
+- **Telegram + perpetual_agent 联调**：见 `perpetual_agent/README.md` 与仓库 `tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md`。
+- **Telegram + OpenAI 兼容通道**：同上 README 的「Telegram + OpenAI」章节。

@@ -1,42 +1,25 @@
-# `app/schemas` — cross-boundary data shapes
+# `app/schemas/`：跨边界的数据形状（Wire & DTO）
 
-**Summary:** This package holds Pydantic models for **HTTP bodies, WebSocket JSON frames, and other serialized payloads** that cross the API boundary. It is the typed contract between FastAPI handlers, non-Python clients, and (where applicable) persistence-oriented shapes defined alongside the ORM layer.
+**一句话**：放 **会离开 Python 进程边界的 Pydantic 模型**——HTTP JSON、WebSocket 帧、以及其它 **序列化契约**；是后端、移动端与排障工具 **对齐字段名的罗塞塔石碑**。
 
-## Who should read this
+## 读者
 
-- **Backend engineers** changing request/response or WebSocket wire formats.
-- **Client engineers** aligning Kotlin/Swift (or other) DTOs with the same JSON field names and enums.
-- **Anyone debugging turns** who needs to know which identifiers are on the wire versus only in logs or tracing.
+- 改 API 或 WS 载荷、需要理解 `meta_data` 键、或在多语言客户端间对齐枚举的人。
 
-If you are not touching serialization boundaries, you usually do not need to edit here.
+## 归属规则
 
-## Role in the system
+- **放这里**：请求/响应体、WS 信封、与 wire 强相关的枚举与小工具类型。
+- **不放这里**：业务流程编排、prompt 拼装、纯内部领域服务；**Ops 专用分析报告 DTO** 应跟 Ops 应用侧 schema，而不是塞进通用 `app/schemas`。
+- **包根 re-export**：历史兼容入口；**新类型**请放命名模块并由调用方 **显式 import**，避免继续堆宽公共表面。
 
-- **What belongs here:** request/response DTOs and wire enums — **not** orchestration, LLM prompts, or domain services.
-- **Package root exports:** the package initializer only carries legacy re-exports; **do not grow** that surface for new types — introduce named modules and import from them directly at call sites.
-- **Ops-only analytics DTOs** (e.g. operational user analytics reports) belong with the ops application schema area, **not** under this tree.
+## 契约纪律
 
-## Scope by concern (grouped by intent)
+- **跨语言**：字段改名/枚举改值 = **对外发布行为**；要么版本门，要么多端同迁。
+- **客户端对齐**：聊天相关 `meta_data`、隐式信号、语音消息等 **新增键**，需要 **Kotlin/Swift 与后端同步** 或明确忽略策略。
+- **文案**：用户可见字符串的 **产品措辞** 归属 companion / 前端呈现层；schema 只承载 **结构与枚举**。
+- **与持久化对齐**：若载荷刻意镜像 DB，字段约束应与 **ORM + 迁移** 一致，避免「能序列化但不能落库」。
+- **相关 ID**：`ws_conn_id` 属于 **传输层握手参数**，服务日志相关；**不要**把它与 `user_msg_uuid`、trace id 等 **单轮业务关联键**混为一谈。
 
-Descriptions below name **topics**, not implementation files; use your editor’s symbol search or tests that assert wire JSON when you need the exact model.
+## 小坑
 
-- **Companion chat (HTTP + fields shared with realtime):** message lists, completions, media-generation-related payloads, user time context for the companion.
-- **Chat WebSocket wire:** control, acknowledgment, and ping frames; queued business envelopes; companion `meta_data` conventions. Where models are intentionally forward-tolerant, extra keys may be preserved rather than rejected. Assistant or user `meta_data` may carry scheduled-reminder bookkeeping when a due schedule-queue task is delivered through the inner-tick path.
-- **Realtime voice / live session payloads:** language and session-oriented validation for live chat and phone-call style flows.
-- **Turn-adjacent telemetry (not user-authored chat text):** versioned implicit-signal bundles the product may surface without treating them as normal user messages.
-- **History compaction artifacts:** structured representations of truncated or compacted windows for long-context handling.
-- **Identity and account:** registration, login, guest flows, tokens, verification codes, user CRUD, and deletion-related payloads.
-- **Product surface:** agents, character themes, downloadable resources, subscriptions, settings, notifications, business actions, and reporting DTOs the app exposes over HTTP.
-- **Shared API plumbing:** generic success/error wrappers, pagination helpers, field-omission utilities for selective serialization, and small health/version probe payloads.
-
-## Contract boundaries (must stay aligned)
-
-- **Cross-language syncing:** Any change here is a **public wire contract** until deprecated with a deliberate migration; treat field renames and enum value changes as client-facing releases, not refactors.
-- **Mobile and desktop clients:** chat-related names, enums, and `meta_data` keys must remain consistent with the **Kotlin (and any parallel Swift) DTOs** maintained in the Android and iMate client codebases. When companion behavior introduces new `meta_data` keys (for example background tool loops, voice-as-message delivery, or implicit sign-on semantics), clients and this package must advance together or behind explicit version gates.
-- **Product copy for implicit companion signals:** user-visible strings for synthetic or implicit turns are owned next to the companion harness, not duplicated inside schema modules — schemas carry structure; copy lives with companion presentation rules.
-- **Persistence coherence:** when a payload intentionally mirrors something stored, keep the **shape and invariants** aligned with the ORM models and migrations so serializers do not drift from what the database can represent.
-- **Transport versus turn correlation:** `ws_conn_id` is negotiated as a **WebSocket handshake query parameter** for logging and session-scoped server behavior. It is **not** a JSON body field on chat completions and it **does not replace** per-turn identifiers such as **`user_msg_uuid`**, **`inty_trace_id`**, or LangSmith run/trace identifiers when correlating a single assistant turn end-to-end.
-
-## Housekeeping
-
-- Do not use **`model_config` as a field name** on a Pydantic model (it clashes with Pydantic v2 configuration — see the upstream [model_config](https://docs.pydantic.dev/2.0/usage/model_config/) documentation).
+- Pydantic v2 下 **不要用 `model_config` 作字段名**——会与框架配置入口冲突。

@@ -1,36 +1,18 @@
-# AGENTS.md · app/（后端服务）
+# `app/`：Inty 后端应用层
 
-- `__init__.py` 仅可包含模块 docstring，不得包含任何功能性代码（imports/re-exports/常量/函数等都属于功能性代码，应放入兄弟模块）
-- 使用 `app/core/google_genai/wrapped_client.py` 调用 Google 生图模型
-- 使用 `app/core/images/fal.py` 来调用 Fal
-- 禁止直接使用 httpx 等 http 调用任何第三方 API
-- API endpoints 返回给调用方的信息必须用英文，因为用户都是美国用户
-- 新增或修改 API endpoints 必须添加端到端测试，假设测试用后端可在 localhost:8000 访问
-- Avoid using monkepatch in tests
+**一句话**：这里是面向用户的 **HTTP / WebSocket 业务与编排**；智能体的「大脑细节」在 `app/core/companion_harness`，本层负责 **契约、网关行为与跨模块组装**。
 
-## AI 生成内容元数据
+## 适用读者
 
-在设计 AI 内容生成功能时、AI 生成内容的元数据需要保留在数据库中；包括：
+- 修改 API、聊天链路、订阅、推送门控或与客户端对齐契约的后端工程师。
+- 需要判断「改 API 会不会破客户端」的编码智能体。
 
-- 模型配置：app/api/types/llm_config.py
-- 提示词：生成该内容的提示词、与上面的模型配置一起，就可以复现生成内容
+## 核心约定（原则，非文件索引）
 
-## Android App 版本功能门控
-
-- Users 数据表中每个用户会注册自己的 `last_android_app_version_code` 用于进行版本门控
-- 版本门控代码示例：
-  - 添加配置项到 app/utils/config.py 中的配置对应功能的最小 app version code；后端在 app/api/utils/feature_gating.py 添加与之对应的判断函数
-    例子： app/utils/config.py 中的 min_app_version_code_for_festival_memory，
-    及 app/api/utils/feature_gating.py 中的 is_festival_memory_enabled
-  - app version 不会回退，否则情况过于复杂
-
-## 跨环境数据交换
-
-- 任何跨环境数据交换，如从数据库读出、写入数据类型，从客户端获取、返回数据，等等，都需要定义 Pydantic model 来描述该数据；
-- Pydantic model 定义的数据可以经过转换变成 JSON 字符串或者其他结构；
-- 在代码中要严格使用 Pydantic model 数据来进行处理；
-
-## `app/docs/` 专题文档
-
-- 实现复杂功能且有效功能代码明显超过约 500 行（不计 imports、注释等）时，可在 `app/docs/` 增加以功能命名的 `.md`，写清目的、架构与关键设计取舍；细节仍以源码为准。
-- 统一文生图封装（未接入主业务链路）见 `app/external_services/text_to_image.py` 模块说明；Fal 调用见 `app/core/images/fal.py`。
+- **对外契约**：凡跨越网络边界（请求体、响应体、WS 帧、DB 与 ORM 之间可序列化载荷）的结构，用 **Pydantic** 显式建模，并在业务代码中 **贯穿使用**这些模型，而不是松散字典。
+- **第三方能力**：图像等生成能力须走仓库内 **已封装的提供商适配层**（如 Google 生图、Fal），**不要**在业务里直接用通用 HTTP 客户端调用外部模型供应商。
+- **用户可见文案**：API 返回给用户的消息语言遵循产品约定（当前为 **英文** 面向美国用户场景）。
+- **回归验证**：新增或改变对外端点时，应有 **端到端级** 的验证（默认假设本地后端可拉起在 `localhost:8000`）；测试里 **避免** 滥用 monkeypatch，除非既有套件已说明的窄例外。
+- **AI 生成物可追溯**：凡落库的生成内容，应能还原「用了哪套模型配置 + 哪条提示」，以便审计与复现；具体字段以 ORM 与迁移为准。
+- **客户端版本门控**：与 App 能力开关相关的，用 **配置中的最小编码 + 统一门控逻辑** 表达；约定 **版本号单调前进**，不处理「用户降级旧包」的复杂分支。
+- **大功能长文**：单功能有效代码量很大时，在 `app/docs/` 用 **一篇** 专题写清目的、架构与取舍；**不要**在 AGENTS 里复制实现细节。

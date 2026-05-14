@@ -1,46 +1,19 @@
-# Companion Harness · `companion` 子包
+# `companion` 子包：单轮编排与记忆真源
 
-单轮编排：MemoryStore 文档、多段 system、前台 chat、异步 `tool_background`、significance envelope、transcript / 运行时事件；**人设与状态以 `companion_memory_document_versions` 正文为准**，harness **不读** `Agent` ORM。范式与表细节见 [/docs/companion_harness/MEMORY_STORE.md](/docs/companion_harness/MEMORY_STORE.md)。
+**一句话**：这里把 **一轮对话** 从「读记忆 → 拼系统消息 → 调模型 → 异步工具 → 写回记忆/流水」串成 **可预测的管道**；**角色与伴侣状态以记忆文档与版本表为准**，而不是去读传统「角色卡 ORM」当推理真源。
 
-## 该改哪些文件
+## 读者
 
-- **回合与路由**：`turn.py`、`turn_routes.resolve_turn_route_mode`、`prompt_stack.py`
-- **LLM**：`llm_client.py`；同步单轮契约与注入：`llm/ports.ChatCompletionsSyncPort` → `llm/chat_completions.create_chat_completion_sync`（`CompanionLLMClient.chat_completions_sync`；`start_tool_background_job` 可注入）。**新增同步 completion 须走此端口或** `companion_llm_runtime_event_bind_ctx`（`llm_runtime_events.py`）
-- **工具后台**：`tools/tool_background.py`
+- 需要改 **回合路由、提示词栈、同步 LLM 端口、后台工具、显著性（significance）** 或 **transcript 语义** 的维护者。
 
-## 记忆路径（注入标题见 `memory_taxonomy.py`）
+## 概念要点
 
-| 逻辑路径 | 称呼 |
-|----------|------|
-| `memory/daily/{date}.md` | 情景 / episodic |
-| `memory/{date}.md` | 单日摘要 / gist |
-| `MEMORY.md` | 语义 / semantic |
+- **编排主轴**：单轮内顺序大致为——加载 MemoryStore 文档 → 组装多段 system → 前台对话 → 视配置启动异步工具 → 处理显著性信封 → 更新 transcript / 运行时事件。
+- **记忆真源**：持久化正文与版本在 Postgres 的伴侣记忆版本表中；推理只信任这条链路上的文档；网关仍可用传统 agent 表做 **存在性** 等检查，但 **不把 ORM 当 prompt 真源**。
+- **记忆种类（直觉）**：从「当天情景片段」「一日摘要」到「长期语义记忆」分桶；全局约束在 system 中越靠前越强；模板与固定教义分流在 `templates/` 与 `prompts/` 两类来源。
+- **体验状态 `context.json`**：记录当前体验档位、引导是否完成等；**应由工具与会话流程改写**，而不是随手当普通 Markdown 文档写入。
+- **异步工具与双轨回复**：用户轮可能先返回「不含工具的薄回复」，再在后台跑工具并追加结果；维护性 inner tick 可走更短路径；前后台工具策略以 **契约与提示词栈** 为准，细节见 `docs/companion_harness/MEMORY_STORE.md` 与源码。
 
-**System 顺序**：越全局的约束越靠前（首条常为包内 [AXIOM.md](/app/core/companion_harness/companion/prompts/AXIOM.md)）。Workspace 模板见 [templates](/app/core/companion_harness/memory/templates/)，更新频率大致：SOUL → IDENTITY/USER → MEMORY。
+## 深入阅读
 
-## 持久化（提要）
-
-- DSN 启用时正文入 **`companion_memory_document_versions`**；registry 键 **`CompanionScope.registry_key()`**（`user_id:companion_id:chat_id`），入口 **`get_memory_store`**；append-only，取 **`sequence_id` 最大**。路径 ↔ `document_kind`：**`memory_store_document_mapping.py`**
-- API 里 **`agent_id` = `companion_id`**。网关仍可 `get_agent_for_chat` 查 **`agents`** 做存在性等；**推理用文档只来自版本表**（按 `user_id` + `companion_id` + `chat_id` 排查）
-- `CHAT_LOGS.md` 默认不进 LLM；`transcript.jsonl`、`.companion_runtime_events.jsonl`、`context.json` 等同表持久化逻辑见 MEMORY_STORE 文档
-
-## `context.json`（`ContextMeta`，`models.py`）
-
-- **`context_mode`**：Experience Profile id（小写），真源 **`experience_profile.py`**
-- **USER_INTERACTIVE**：`bootstrap` / `post_bootstrap_context_mode` 语义与 **`companion_bootstrap_user_interactive_complete`**、**`companion_set_experience_profile`**（须 `user_confirmed`）见代码与 `CompanionManager.get_or_create_session`
-- 缺文件时 `load_context_meta` 回退默认；**勿**用 `memory_store_write_document` 写 `context.json`（模型改体验用工具；Ops 可直接写 `context_json` 版本行）
-
-## 种子与 system
-
-- **`templates/`**：工作区缺省种子；**`prompts/`**：`AXIOM.md` / `BOOTSTRAP.md` / `TOOLS.md` / `SIGNIFICANCE_PERCEPTION.md` 固定文案（`memory_store_scope.load_template_seed_text` 仅对上述四文件名走 `prompts/`，其余走 `templates/`）
-- **`prompts.build_system_messages`** 多段 system；心跳句 `_heartbeat_clause()`；可写切片仅限 IDENTITY/SOUL/USER/MEMORY 根稿（`companion_update_prompt_slice`）
-
-## Significance
-
-envelope 与解析：**`significance_perception.py`**；注入时机：**`prompt_stack`**；落库 transcript / 可选 **`meta_data.significance_perception`**；抽取侧默认关。
-
-## Async tool 与 transcript
-
-- `tools_enabled` → **`ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`**：用户轮 **先** 前台 envelope（无 tools），**再** 线程里 `start_tool_background_job`，**返回不等**后台；**维护性 inner tick** 跳过前台 envelope、工具首轮可强制
-- 下一轮前 **`tool_bg_idle`** wait（**`INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC`**）；`tool_bg` assistant 行 + **`--- Tool results ---`**
-- 双轨契约、前台为何关部分 repl 条款：**`prompts/system_messages.py`** + **`prompt_stack.companion_turn_tools_and_system_messages`**
+- 表结构、registry 键、路径与 `document_kind` 映射等 **机械细节**：[`/docs/companion_harness/MEMORY_STORE.md`](/docs/companion_harness/MEMORY_STORE.md)。

@@ -1,4 +1,3 @@
-# Previews
+# `.agents/previews/`：给产品经理的预览节拍
 
-List the preview version delivered to @Zhuoyu (our PM).
-Each preview list the changes made since last preview version, so that @Zhuoyu knows what to test.
+**一句话**：列出 **交付给 @Zhuoyu（PM）试玩** 的预览版本；每条记录 **相对上一预览新增了什么**，方便对方聚焦测试范围。
