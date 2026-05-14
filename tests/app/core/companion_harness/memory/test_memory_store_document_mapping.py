@@ -32,6 +32,7 @@ def test_roundtrip_static_paths() -> None:
         ".companion_memory_pipeline.json",
         ".companion_runtime_events.jsonl",
         "generated_images/index.jsonl",
+        "techno_core_events.jsonl",
     ):
         kind, cal = parse_memory_store_relative_path(rel)
         assert relative_path_for_kind(kind, cal) == rel

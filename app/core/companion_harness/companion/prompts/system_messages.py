@@ -35,6 +35,7 @@ from app.core.companion_harness.memory.memory_taxonomy import (
 )
 from ..models import ContextMeta, InnerTickMode, PromptBundle
 from ..prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
+from .inner_tick_ls_tc import INNER_TICK_LS_TC_AUTONOMY_SECTION, INNER_TICK_LS_TC_TOOL_BULLET
 
 SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
 
@@ -282,17 +283,21 @@ def _inner_tick_turn_section() -> str:
         "可做一次**软转场**（时间略过、换地点/换活动、换话题锚点），进入下一情境；"
         "转场须与上文有因果或情绪上的黏连，禁止像新开存档、禁止元叙述解释「换场景了」。\n"
         "- 若本轮以外显正文推进或转场，仍优先**一句为度**；更长只在「收束+转场」一体且仍保持克制时使用。\n\n"
-        "**可见回复（对用户）**：\n"
-        "- 默认 **不向用户发起可见闲聊**：若没有强烈的、此刻非说不可的一点点外显念头，"
-        "请让**面向用户的正文为空或极短**（例如空字符串，或一句不引入新剧情负担的轻声旁白）。\n"
-        "- 若确有外显（含为「下一拍」或软转场所需）：只输出**一句**自然语言为主，"
-        "须与当前场景与语气连续，不要换风格、不要像新开一局；"
-        "不要元叙述（不要提「我在想」「系统让我」等）。\n\n"
-        "**工具（允许且鼓励在需要时使用）**：\n"
-        "- 为维护**记忆与档案一致性**：例如将此刻值得长期保留的事实写入 USER 档案（`user_profile_record`）、"
-        "在确有必要时读写持久化约定稿与 `memory/` 下文档（`memory_store_read_document` / `memory_store_write_document` 等，"
-        "以包内 TOOLS 模版与路径工具规则为准；路径指向 MemoryStore）。\n"
-        "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
+        + INNER_TICK_LS_TC_AUTONOMY_SECTION
+        + (
+            "**可见回复（对用户）**：\n"
+            "- 默认 **不向用户发起可见闲聊**：若没有强烈的、此刻非说不可的一点点外显念头，"
+            "请让**面向用户的正文为空或极短**（例如空字符串，或一句不引入新剧情负担的轻声旁白）。\n"
+            "- 若确有外显（含为「下一拍」或软转场所需）：只输出**一句**自然语言为主，"
+            "须与当前场景与语气连续，不要换风格、不要像新开一局；"
+            "不要元叙述（不要提「我在想」「系统让我」等）。\n\n"
+            "**工具（允许且鼓励在需要时使用）**：\n"
+            "- 为维护**记忆与档案一致性**：例如将此刻值得长期保留的事实写入 USER 档案（`user_profile_record`）、"
+            "在确有必要时读写持久化约定稿与 `memory/` 下文档（`memory_store_read_document` / `memory_store_write_document` 等，"
+            "以包内 TOOLS 模版与路径工具规则为准；路径指向 MemoryStore）。\n"
+        )
+        + INNER_TICK_LS_TC_TOOL_BULLET
+        + "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
         "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"
         "**不要**假设存在未在工具列表中出现的 API）。\n"
         "- **不要做**与「内在整理」无关的炫技：除非与已悬而未决且对话中已明确需要的任务强相关，"
