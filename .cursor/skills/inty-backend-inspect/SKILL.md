@@ -77,10 +77,10 @@ description: >-
 - **下载全 trace**（仓库根、venv）：
 
 ```bash
-python tools/scripts/download_run.py \
-  --trace-id "<TRACE_UUID>" \
-  -o .inty/langsmith_traces/<TRACE_UUID>.json
+python tools/scripts/download_run.py --trace-id "<TRACE_UUID>"
 ```
+
+（默认落盘路径见同目录 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)：运行 **`python tools/scripts/download_run.py --help`**。）
 
 ### D. Postgres（`config.yaml` → `database`）
 

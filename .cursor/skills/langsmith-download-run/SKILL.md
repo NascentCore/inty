@@ -31,58 +31,29 @@ Inty YAML does **not** define LangSmith API host; for EU / self-hosted, set **`L
 
 Helper: [`tools/scripts/download_run.py`](../../../tools/scripts/download_run.py). Run from **repo root** so default `--config config.yaml` resolves.
 
-**输出目录**：将 `-o` 指向仓库根下的 **`.inty/`**（例如 `.inty/langsmith_traces/`、`.inty/langsmith_runs/`）。这是与 Inty 后端本地运行、排障共用的**统一工作区**（LangSmith 的 trace/run 即由该后端产生）；`download_run.py` 会按需 `mkdir` 父目录。目录已列入 `.gitignore`，避免把导出 JSON 误提交。
+**智能体查路径与默认值**：不必在技能里背具体 `-o` 路径；先执行 **`python tools/scripts/download_run.py --help`**（epilog 中写明省略 `-o`/`--output` 时写入 **`./.inty/`** 下的默认文件名；**`-o -`** 仍为 stdout）。目录由脚本 `mkdir`；**`.inty/`** 已在 `.gitignore`，避免误提交导出。
 
-### Full trace (default for「下载 / download LangSmith trace」)
-
-Trace mode lists **all runs** with the same `trace_id` (every nested span is one row; hierarchy is `parent_run_id` on each row). This is the default interpretation when the user asks to download a **trace**, not a single run.
+常用调用（不传 `-o` 即落盘到默认路径）：
 
 ```bash
 source .venv/bin/activate
 
-python tools/scripts/download_run.py \
-  --trace-id "<TRACE_UUID>" \
-  -o .inty/langsmith_traces/<TRACE_UUID>.json
+python tools/scripts/download_run.py --trace-id "<TRACE_UUID>"
+python tools/scripts/download_run.py "<ANY_RUN_UUID_IN_TRACE>" --entire-trace
+python tools/scripts/download_run.py "<RUN_ID>"
 ```
 
-If the user only has **some run id** from the UI (any span in the trace):
+**`--load-child-runs`**：仅单 run 的 `read_run`；勿与 `--trace-id` / `--entire-trace` 同用。
 
-```bash
-python tools/scripts/download_run.py \
-  "<ANY_RUN_UUID_IN_TRACE>" \
-  --entire-trace \
-  -o .inty/langsmith_traces/from_run_<ANY_RUN_UUID_IN_TRACE>.json
-```
+**Trace 模式**（`--trace-id` 或 `--entire-trace`）：可选 **`--project-name`** 覆盖 `LANGSMITH_PROJECT`；**`--max-runs N`** 默认 **100**。LangSmith **`/runs/query`** 拒绝 `limit` > **100**；脚本会钳制并 stderr 提示。超过 **100** span 的 trace 尚未分页，此时可能截断。
 
-Optional: **`--project-name`** overrides `LANGSMITH_PROJECT` for `list_runs`. **`--max-runs N`** sets the requested batch size (default **100**). LangSmith **`/runs/query`** rejects `limit` above **100**; the script clamps larger values and prints a note to stderr. Traces with more than **100** spans require pagination (not implemented in this script yet); until then you only get the first batch.
-
-Output JSON shape:
+Trace 模式输出 JSON 形状：
 
 - **`download_kind`**: `"langsmith_trace"`
 - **`trace_id`**, **`project_name`**, **`fetched_at`**, **`run_count`**
 - **`runs`**: array of run objects (`model_dump` from LangSmith), same trace
 
-### Single run (one UUID)
-
-```bash
-python tools/scripts/download_run.py <RUN_ID> \
-  -o .inty/langsmith_runs/<RUN_ID>.json
-
-python tools/scripts/download_run.py <RUN_ID> --verbose \
-  -o .inty/langsmith_runs/<RUN_ID>.json
-
-python tools/scripts/download_run.py <RUN_ID> \
-  --config /path/to/config.yaml -o .inty/langsmith_runs/<RUN_ID>.json
-
-python tools/scripts/download_run.py <RUN_ID> \
-  --load-child-runs -o .inty/langsmith_runs/<RUN_ID>.json
-```
-
-**`--load-child-runs`** applies **only** to single-run `read_run`: API returns that run with nested child runs embedded. Do **not** combine with `--trace-id` / `--entire-trace`.
-
-`-o -` prints JSON to stdout. **`--verbose`** logs resolved `LANGSMITH_PROJECT` and `LANGSMITH_TRACING_V2` to stderr (never the API key).
-
-If `--config` file is missing or not a mapping YAML, only the API key is taken from the environment; project / tracing vars are left unchanged.
+若 **`--config`** 缺失或非 mapping YAML，仅从环境取 API key；`LANGSMITH_PROJECT` / tracing 变量不改。
 
 ## Inline Python (single run)
 
@@ -113,3 +84,4 @@ For trace-wide listing in custom code, mirror this script: `Client.list_runs(tra
 - **401 / unauthorized**: wrong or empty `agent.langchain_api_key` in `config.yaml`, or env fallback key does not match the LangSmith workspace for this run.
 - **404**: wrong run id, different workspace/project than the key, or run expired per org retention.
 - **Incomplete trace**: LangSmith caps **`limit`** at **100** per query; this script does not page yet. If **`run_count`** equals **`max-runs`** and you expect more spans, the trace was truncated.
+- **管道 / 只要 stdout**：显式 **`-o -`**（省略 `-o` 时会写入 `.inty/` 下默认文件）。

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Download one LangSmith run or an entire trace (all runs sharing trace_id) to JSON."""
+"""Download one LangSmith run or an entire trace (all runs sharing trace_id) to JSON.
+
+When ``-o``/``--output`` is omitted, writes under repo-root ``.inty/langsmith_runs/`` or
+``.inty/langsmith_traces/`` (cwd-relative; run from repo root). Use ``-o -`` for stdout.
+"""
 
 from __future__ import annotations
 
@@ -176,6 +180,15 @@ def main() -> int:
             "Download one LangSmith run, or every run in a trace (same trace_id), "
             "to JSON."
         ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "If -o/--output is omitted, the file path is chosen under ./.inty/ "
+            "(relative to the current working directory; run from repo root):\n"
+            "  single run:     .inty/langsmith_runs/<run_id>.json\n"
+            "  --trace-id:     .inty/langsmith_traces/<trace_id>.json\n"
+            "  --entire-trace: .inty/langsmith_traces/<resolved_trace_id>.json\n"
+            "Use -o - to write JSON to stdout instead."
+        ),
     )
     parser.add_argument(
         "run_id",
@@ -249,9 +262,12 @@ def main() -> int:
     parser.add_argument(
         "-o",
         "--output",
-        default="-",
+        default=None,
         metavar="PATH",
-        help='Output path (default "-" for stdout).',
+        help=(
+            "Output path. Omit for a default under .inty/ (see epilog below). "
+            'Use "-" for stdout.'
+        ),
     )
     args = parser.parse_args()
 
@@ -319,6 +335,8 @@ def main() -> int:
     client = Client()
     project_for_trace = _project_name_explicit_or_env(args.project_name)
 
+    trace_resolved_for_default_path: str | None = None
+
     if trace_id_arg or args.entire_trace:
         if args.load_child_runs:
             sys.stderr.write(
@@ -359,6 +377,7 @@ def main() -> int:
             return 1
 
         runs_payload = [r.model_dump(mode="json") for r in run_objects]
+        trace_resolved_for_default_path = trace_id_out
         payload: dict[str, Any] = {
             "download_kind": "langsmith_trace",
             "trace_id": trace_id_out,
@@ -375,12 +394,24 @@ def main() -> int:
             return 1
         payload = run.model_dump(mode="json")
 
+    if args.output is not None:
+        out_target = args.output
+    elif trace_id_arg:
+        out_target = str(Path(".inty/langsmith_traces") / f"{trace_id_arg}.json")
+    elif args.entire_trace:
+        assert trace_resolved_for_default_path is not None
+        out_target = str(
+            Path(".inty/langsmith_traces") / f"{trace_resolved_for_default_path}.json"
+        )
+    else:
+        out_target = str(Path(".inty/langsmith_runs") / f"{args.run_id}.json")
+
     text = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
 
-    if args.output == "-":
+    if out_target == "-":
         sys.stdout.write(text)
     else:
-        out = Path(args.output)
+        out = Path(out_target)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf-8")
     return 0
