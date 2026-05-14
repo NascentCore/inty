@@ -143,3 +143,6 @@ output/
 # 忽略所有 xcuserdata 文件夹
 xcuserdata/
 *.userdata
+
+# Inty backend's default working directory
+.inty/
