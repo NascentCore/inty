@@ -12,3 +12,7 @@
 
 - 虚拟环境：使用 `requirements.txt` `uv`
 - 使用：`python-dotenv` `Cyclopts`
+
+## Additional instructions
+
+- Record interesting ideas and general inspirations to [THINGS_TO_EXPLORE.md](/experimental/THINGS_TO_EXPLORE.md)
