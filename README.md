@@ -6,16 +6,9 @@
 [![Release - IntelliMate GPlay 内测轨道](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml)
 [![Release - 构建部署 Inty Backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
 
-## 工具
-
-使用智能体开发：
-
-- [Cursor](https://cursor.com/)
-- [OpenAI Codex](https://openai.com/codex/)
-
 ## 快速开始
 
-[添加 SSH key 到你的 GitHub 账户](https://docs.github.com/zh/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+使用 [Cursor](https://cursor.com/)
 
 ```bash
 git clone git@github.com:NascentCore/inty.git
