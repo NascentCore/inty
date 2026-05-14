@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
-from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import load_transcript_from_store
@@ -24,28 +23,12 @@ _DEFAULT_MIN_NEW_MAIN_USER_ROWS = 3
 class CompanionDreamState(BaseModel):
     """JSON 真源：``DREAM_STATE_RELATIVE_PATH``。"""
 
-    last_completed_at_utc: str | None = None
+    last_completed_at_utc: AwareDatetime | None = None
     main_transcript_user_rows_at_last: int = Field(
         default=0,
         ge=0,
         description="完成巩固后 snapshot：主 transcript 中非心跳 user 行计数。",
     )
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-
-
-def _parse_utc_iso(s: str | None) -> datetime | None:
-    if not s or not str(s).strip():
-        return None
-    raw = str(s).strip()
-    if raw.endswith("Z"):
-        raw = raw[:-1] + "+00:00"
-    try:
-        return datetime.fromisoformat(raw).astimezone(timezone.utc)
-    except ValueError:
-        return None
 
 
 def count_main_transcript_user_rows(store: MemoryStore) -> int:
@@ -73,12 +56,12 @@ def load_dream_state(store: MemoryStore) -> CompanionDreamState:
 def record_companion_dream_cycle_completed(store: MemoryStore) -> None:
     """巩固回合成功结束后调用：刷新冷却锚与 transcript 计数。"""
     st = CompanionDreamState(
-        last_completed_at_utc=_utc_now_iso(),
+        last_completed_at_utc=datetime.now(timezone.utc).replace(microsecond=0),
         main_transcript_user_rows_at_last=count_main_transcript_user_rows(store),
     )
     store.write_document(
         DREAM_STATE_RELATIVE_PATH,
-        json.dumps(st.model_dump(), ensure_ascii=False, indent=2) + "\n",
+        json.dumps(st.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
     )
 
 
@@ -91,7 +74,7 @@ def dream_inner_tick_due(
     """与 Claude Auto Dream 类似的双门闩：时间冷却 + 主轨用户互动量。"""
     st = load_dream_state(store)
     now = datetime.now(timezone.utc)
-    last = _parse_utc_iso(st.last_completed_at_utc)
+    last = st.last_completed_at_utc
     if last is not None:
         if now - last < timedelta(hours=min_hours_between):
             return False

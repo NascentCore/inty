@@ -106,12 +106,13 @@ def resolve_turn_runtime_flags(
     )
     effective_user_text = user_text
     if inner_tick_turn:
-        if tick_proactive:
-            effective_user_text = PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
-        elif inner_tick_mode == InnerTickMode.DREAM:
-            effective_user_text = DREAM_INNER_TICK_SYNTHETIC_USER_TEXT
-        else:
-            effective_user_text = INNER_TICK_SYNTHETIC_USER_TEXT
+        match (tick_proactive, inner_tick_mode):
+            case (True, _):
+                effective_user_text = PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
+            case (False, InnerTickMode.DREAM):
+                effective_user_text = DREAM_INNER_TICK_SYNTHETIC_USER_TEXT
+            case _:
+                effective_user_text = INNER_TICK_SYNTHETIC_USER_TEXT
     return CompanionTurnRuntimeFlags(
         effective_user_text=effective_user_text,
         tick_proactive=tick_proactive,

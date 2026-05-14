@@ -1279,7 +1279,11 @@ def _companion_ai_meta_from_turn_result(
     meta = ChatWsCompanionWireMetaData(
         source=companion_turn.assistant_source,
         reply_modality=companion_turn.reply_modality,
-        inner_tick_activity=companion_turn.inner_tick_activity,
+        inner_tick_activity=(
+            companion_turn.inner_tick_activity.value
+            if companion_turn.inner_tick_activity is not None
+            else None
+        ),
         is_voice=is_voice,
         voice_message_script=voice_message_script,
         trace_id=companion_turn.trace_id or None,
