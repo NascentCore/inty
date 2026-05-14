@@ -1,15 +1,9 @@
-"""LangSmith ``langsmith_extra`` builders for Inty OpenAI-wrapped chat completions.
+"""Trace shaping for LangSmith: attach consistent names and metadata to companion LLM calls
+so production traces stay readable and easy to slice in the LangSmith UI.
 
-Foreground dual-LLM **chat envelope** (JSON with ``user_facing_reply`` + importance scores) uses
-``invocation_extra`` with ``SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE`` (``inty_llm_source`` in metadata).
-Background
-tool paths use ``tool_call_langsmith_extra``: run **name**
-``agentic_companion_tool_call-<phase>`` plus optional auxiliary metadata (no
-``inty_llm_source`` on those spans).
-
-Memory pipeline curator completions use ``memory_pipeline_langsmith_extra``:
-run name ``agentic_companion_memory_pipeline-<model_role>`` and
-``inty_llm_source=memory_pipeline_<model_role>``.
+The module separates three observability concerns—foreground user-facing envelope completions,
+background tool-model phases, and post-turn memory curation—each with naming and tagging
+appropriate to how operators and engineers look for them, without mixing semantics across flows.
 """
 
 from __future__ import annotations
@@ -29,7 +23,6 @@ SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK = "tool_background_routing_fallback"
 TOOL_CHOICE_ATTEMPT_REQUIRED = "required"
 TOOL_CHOICE_ATTEMPT_AUTO = "auto"
 
-LANGSMITH_RUN_NAME_TOOL_CALL_BASE = "agentic_companion_tool_call"
 LANGSMITH_RUN_NAME_MEMORY_PIPELINE_BASE = "agentic_companion_memory_pipeline"
 
 
@@ -54,10 +47,10 @@ def tool_call_langsmith_extra(
     phase_suffix: str,
     extra_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """LangSmith extra for tool-model client: suffixed run name, optional metadata only."""
+    """LangSmith extra for tool-model client: phase as run name, optional metadata only."""
     merged: dict[str, Any] = dict(extra_metadata) if extra_metadata else {}
     return {
-        "name": f"{LANGSMITH_RUN_NAME_TOOL_CALL_BASE}-{phase_suffix}",
+        "name": phase_suffix,
         "metadata": merged,
     }
 
