@@ -13,3 +13,7 @@
 - **内心节拍（inner tick）**：即使用户不说话，也会周期性唤醒一轮「维护/主动」式推理，支撑自主性与新鲜感。
 - **工作记忆（MemoryStore）**：伴侣当下知道的上下文以结构化文档形式维护，并 **实时落库**，慢思考与 inner tick 的写入对后续轮次 **立即可见**。
 - **关系阶段（context mode）**：从初识引导、到日常陪伴、再到更亲密模式，产品用阶段切换 **约束话术与行为空间**。
+
+## Tips
+
+- Cleaning data (prompts, tool descriptions, orchestration) to make agents reliable & predictable
