@@ -1,4 +1,4 @@
-"""Used only in /experimental/agentic_ai_companion"""
+"""实验用 turn 桥接：与 `async_repl` 同包，不进入 `app/core/companion_harness` 生产树。"""
 
 from __future__ import annotations
 
@@ -13,10 +13,8 @@ from app.core.companion_harness.contracts.turn import (
     TurnOutput,
 )
 from app.core.companion_harness.runtime.persistence import CallableTurnPersistence
-from app.core.companion_harness.runtime.turn_orchestrator import (
-    TurnOrchestrator,
-    TurnOrchestratorResult,
-)
+
+from .turn_orchestrator import TurnOrchestrator, TurnOrchestratorResult
 
 
 @dataclass(frozen=True)

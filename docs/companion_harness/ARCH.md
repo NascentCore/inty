@@ -96,7 +96,6 @@ flowchart TD
 | async tool background | `/app/core/companion_harness/tools/tool_background.py` |
 | dual-LLM envelope | `/app/core/companion_harness/companion/significance_perception.py` |
 | 通用 turn 合同 | `/app/core/companion_harness/contracts/turn.py` |
-| 实验编排器 | `/app/core/companion_harness/runtime/turn_orchestrator.py` |
 | WebSocket schema | `/app/schemas/chat_websocket.py` |
 | MemoryStore 目标说明 | `/docs/companion_harness/MEMORY_STORE.md` |
 | 记忆管线说明 | `/docs/companion_harness/MEMORY_PIPELINE.md` |

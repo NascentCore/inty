@@ -46,7 +46,6 @@
 
 ### 工程与边界
 
-- **仍缺或偏薄**：生产主链路集中在 `companion/turn.py` 等，与 `runtime/TurnOrchestrator`、`bridges/experimental_bridge.py` 的通用编排 **叙事未收敛**；`/app/core/companion_harness/__init__.py` 缺少包级 docstring（与仓库 Python 包约定不一致）。
 
 ## 谈话结论（事实摘记）
 

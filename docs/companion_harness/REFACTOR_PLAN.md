@@ -23,7 +23,6 @@
 - `app/core/companion_harness/experience/`：experience profile、bootstrap、context mode。
 - `app/core/companion_harness/environment/`：LivingSphere、TechnoCore、heartbeat、inner tick、implicit signals。
 - `app/core/companion_harness/contracts/`：turn contracts 与跨层 Pydantic contract。
-- `app/core/companion_harness/bridges/`：实验 bridge 与外部 harness/demo 适配。
 
 ## 分阶段迁移
 
