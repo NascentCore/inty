@@ -63,7 +63,10 @@ The update script pre-installs `node_modules`, so these commands work out-of-the
 
 ## Lint / formatting
 
-- `black --check app/ backend/` — Python formatting (daily auto-PR via CI, so local failures are expected/acceptable)
+- `pip install -r requirements-dev.txt` 后：`black --check app/ backend/ tools/scripts/ experimental/`（与 `tools/scripts/fmt.sh --all` 的 Python 根一致；PR 上由 `ci_backend` 门禁）。
+- 同上环境：`ruff check app/ backend/ tools/scripts/ experimental/`（规则见根目录 `pyproject.toml`）。
+- `ty check --ignore all --error unresolved-import`：CI 中作为无法解析 import 的硬门禁。
+- 可选本地：`pre-commit install`（Black + Ruff；ty 在业务 venv 下手动跑，与 CI 相同命令）。
 - No strict linter is enforced in CI for the backend currently
 
 ## Android SDK
@@ -122,7 +125,7 @@ echo "Emulator booted"
 - Docker in Cloud Agent VMs requires `fuse-overlayfs` storage driver and `iptables-legacy`. The dockerd must be started manually: `sudo dockerd &>/tmp/dockerd.log &`
 - `psycopg2` (non-binary) build requires `python3.12-dev` and `libpq-dev` system packages.
 - Creating the venv requires `python3.12-venv` system package (not pre-installed in Cloud Agent VMs).
-- `black` is not in `requirements.txt`; install separately: `pip install black`.
+- 开发用 Black/Ruff/ty/pre-commit 版本见 **`requirements-dev.txt`**：`pip install -r requirements-dev.txt`。
 - The venv **must** be activated before running `start.sh` — the script does not activate it.
 - Auth tokens for testing: `python3 -c "from app.core.security import create_access_token; print(create_access_token('user-testing'))"` (requires `PYTHONPATH=.` and `config.yaml` present).
 - **Android emulator without KVM**: always pass `-no-accel -gpu swiftshader_indirect`; omitting `-no-accel` will crash with `KVM is not found`. See "Android emulator (no-KVM)" section above for full instructions.

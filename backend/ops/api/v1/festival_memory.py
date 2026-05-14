@@ -79,9 +79,7 @@ async def create_festival_memory_config(
     db.add(config)
     await db.commit()
     await db.refresh(config)
-    return APIResponse.success(
-        data=FestivalMemoryConfigInDB.model_validate(config)
-    )
+    return APIResponse.success(data=FestivalMemoryConfigInDB.model_validate(config))
 
 
 @router.delete(
@@ -153,9 +151,7 @@ async def update_festival_memory_config(
         )
     await db.commit()
     await db.refresh(config)
-    return APIResponse.success(
-        data=FestivalMemoryConfigInDB.model_validate(config)
-    )
+    return APIResponse.success(data=FestivalMemoryConfigInDB.model_validate(config))
 
 
 @router.post(

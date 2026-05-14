@@ -1,0 +1,16 @@
+# 与 CI 对齐：Black 格式化、Ruff 静态检查。
+# ty 需在已安装 requirements.txt + requirements-dev.txt 的 venv 中运行（见 CI），pre-commit 隔离环境不含项目依赖故不挂 ty hook。
+repos:
+  - repo: https://github.com/psf/black
+    rev: 26.3.1
+    hooks:
+      - id: black
+        language_version: python3.12
+        files: ^(app|backend|tools/scripts|experimental)/.*\.py$
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.13
+    hooks:
+      - id: ruff-check
+        args: [--config, pyproject.toml]
+        files: ^(app|backend|tools/scripts|experimental)/

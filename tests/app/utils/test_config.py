@@ -381,8 +381,7 @@ def test_database_settings_model_validate_preserves_database_urls():
     )
 
     assert (
-        settings.url
-        == "postgresql://inty_user:secret@primary.internal:15432/inty_prod"
+        settings.url == "postgresql://inty_user:secret@primary.internal:15432/inty_prod"
     )
     assert (
         settings.async_url

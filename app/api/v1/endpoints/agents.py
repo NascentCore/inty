@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.api.tags import (
     ANDROID_APP_TAG,
-    INTERNAL_API_TAG,
     INTY_EVAL_TAG,
     NOT_USED_TAG,
     WEB_APP_TAG,
@@ -314,9 +313,7 @@ async def get_agent(
         )
     if festival_list or daily_list:
         agent_schema.features = AgentFeatures(
-            festival_memories=[
-                FestivalMemoryItem(**item) for item in festival_list
-            ],
+            festival_memories=[FestivalMemoryItem(**item) for item in festival_list],
             daily_memories=daily_list,
         )
     return agent_schema
@@ -373,9 +370,7 @@ async def delete_agent(
         raise HTTPException(status_code=403, detail="Permission denied")
 
     deleted_agent = await agent_service.delete_agent(db, db_agent=agent)
-    return APIResponse.success(
-        data=AgentSchema.model_validate(deleted_agent)
-    )
+    return APIResponse.success(data=AgentSchema.model_validate(deleted_agent))
 
 
 @router.post(
@@ -1017,9 +1012,7 @@ async def get_openrouter_models(
 
     except Exception as e:
         logger.error(f"获取OpenRouter模型失败: {str(e)}")
-        return APIResponse.error(
-            message=f"Failed to fetch OpenRouter models: {str(e)}"
-        )
+        return APIResponse.error(message=f"Failed to fetch OpenRouter models: {str(e)}")
 
 
 @router.get(

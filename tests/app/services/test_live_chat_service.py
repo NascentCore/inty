@@ -177,7 +177,10 @@ def test_build_prefill_turns_from_history_messages():
         HumanMessage(
             content=[
                 {"type": "text", "text": "Tell me more."},
-                {"type": "image_url", "image_url": {"url": "https://example.com/a.jpg"}},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/a.jpg"},
+                },
             ]
         ),
     ]
@@ -247,9 +250,7 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
     monkeypatch.setattr(
         live_chat_module.agent_service, "get_agent_for_chat", fake_get_agent_for_chat
     )
-    monkeypatch.setattr(
-        live_chat_module.agent_manager, "get_agent", fake_get_agent
-    )
+    monkeypatch.setattr(live_chat_module.agent_manager, "get_agent", fake_get_agent)
     monkeypatch.setattr(
         live_chat_module,
         "get_or_create_chat_settings",
@@ -296,7 +297,9 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
         def __init__(self, fake_session):
             self.aio = SimpleNamespace(live=_FakeLiveAPI(fake_session))
 
-    monkeypatch.setattr(service, "_get_client", lambda: _FakeClient(_FakeGeminiSession()))
+    monkeypatch.setattr(
+        service, "_get_client", lambda: _FakeClient(_FakeGeminiSession())
+    )
 
     session = live_chat_module.LiveSession(
         session_id="session-1",

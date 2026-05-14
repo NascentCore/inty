@@ -50,7 +50,9 @@ async def test_companion_websocket_coordinator_foreground_pending_lifecycle() ->
 
 
 @pytest.mark.asyncio
-async def test_companion_websocket_coordinator_heartbeat_refresh_preserves_same_coords_throttle() -> None:
+async def test_companion_websocket_coordinator_heartbeat_refresh_preserves_same_coords_throttle() -> (
+    None
+):
     coordinator = CompanionWebSocketCoordinator.for_current_loop()
 
     coordinator.store_heartbeat_coords(user_id="u1", agent_id="a1", chat_id=10)

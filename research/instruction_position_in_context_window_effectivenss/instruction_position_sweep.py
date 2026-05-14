@@ -28,7 +28,6 @@ import tiktoken
 from dotenv import load_dotenv
 from openai import APIError, APIStatusError, AsyncOpenAI, RateLimitError
 
-
 DEFAULT_MODEL = "deepseek/deepseek-v3.2"
 DEFAULT_PLACEHOLDER_TOKENS = 200_000
 DEFAULT_TRIALS_PER_POSITION = 30
@@ -164,7 +163,9 @@ def exponential_positions(max_tokens: int) -> list[tuple[str, int]]:
     return deduped
 
 
-def make_placeholder_token_ids(encoding: tiktoken.Encoding, token_count: int) -> list[int]:
+def make_placeholder_token_ids(
+    encoding: tiktoken.Encoding, token_count: int
+) -> list[int]:
     # Repeated deterministic chunk to hit exact placeholder token length.
     chunk = "placeholder_token_0001 placeholder_token_0002 placeholder_token_0003 "
     chunk_ids = encoding.encode(chunk)
@@ -338,7 +339,9 @@ def save_summary_markdown(path: Path, payload: dict[str, Any]) -> None:
             f"- Placeholder tokens: `{payload['config']['placeholder_tokens']}` "
             "(excluding inserted instruction)\n"
         )
-        f.write(f"- Trials per position: `{payload['config']['trials_per_position']}`\n")
+        f.write(
+            f"- Trials per position: `{payload['config']['trials_per_position']}`\n"
+        )
         f.write(f"- Generated at (UTC): `{payload['generated_at_utc']}`\n\n")
         f.write(
             "| position | token_index | strict_rate | strict_95pct_ci | "
@@ -424,7 +427,9 @@ async def main() -> None:
                     0.1, 1.0 - (position_token_index / 250_000)
                 )
                 response_text = (
-                    expected_token if synthetic_follow else "synthetic_non_compliant_output"
+                    expected_token
+                    if synthetic_follow
+                    else "synthetic_non_compliant_output"
                 )
                 elapsed_ms = (time.perf_counter() - started) * 1000
                 trial_result = TrialResult(
@@ -511,7 +516,9 @@ async def main() -> None:
             "use_context_compression": args.use_context_compression,
             "encoding": ENCODING_NAME,
         },
-        "positions": [{"label": label, "token_index": index} for label, index in positions],
+        "positions": [
+            {"label": label, "token_index": index} for label, index in positions
+        ],
         "position_summaries": [asdict(summary) for summary in position_summaries],
         "trial_count_total": len(all_trials),
     }

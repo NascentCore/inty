@@ -3,7 +3,6 @@
 Google Vertex AI 实现 - 支持 Gemini 2.5 Flash Image 和 Nano Banana Pro
 """
 
-import io
 import json
 import os
 import time

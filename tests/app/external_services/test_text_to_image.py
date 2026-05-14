@@ -51,7 +51,9 @@ class _FakeGoogleClient:
 
 
 class _FakeFalClient:
-    def subscribe(self, model: str, arguments: dict[str, object], with_logs: bool = False):  # noqa: ARG002
+    def subscribe(
+        self, model: str, arguments: dict[str, object], with_logs: bool = False
+    ):  # noqa: ARG002
         assert model == "fal-ai/z-image/turbo"
         assert arguments["prompt"] == "A friendly companion smiling at the camera"
         assert arguments["num_images"] == 2

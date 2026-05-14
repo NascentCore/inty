@@ -4,7 +4,6 @@ import json
 import time
 import urllib.parse
 
-from experimental.perpetual_agent.living_companion import ChannelType
 from experimental.perpetual_agent.telegram_channel import (
     TelegramBotApi,
     format_epoch_for_local_log,

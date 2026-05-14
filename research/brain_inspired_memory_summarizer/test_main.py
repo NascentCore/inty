@@ -150,9 +150,7 @@ class MemoryExperimentTests(unittest.TestCase):
             ],
             ensure_ascii=False,
         )
-        candidates = llm_extract_memory_slots(
-            "请不要叫我宝贝。", 1, lambda _: payload
-        )
+        candidates = llm_extract_memory_slots("请不要叫我宝贝。", 1, lambda _: payload)
         keys = {c.key for c in candidates}
         self.assertIn("boundary", keys)
         preferred_values = [c.value for c in candidates if c.key == "preferred_name"]
@@ -277,7 +275,9 @@ class MemoryExperimentTests(unittest.TestCase):
             for line in ep.user_turns:
                 self.assertIn(line, table, f"missing stub for dataset line: {line!r}")
 
-    def test_episodic_consolidation_promotes_semantic_after_repeated_traces(self) -> None:
+    def test_episodic_consolidation_promotes_semantic_after_repeated_traces(
+        self,
+    ) -> None:
         from main import benchmark_route_json_by_line, benchmark_slot_json_by_line
 
         slot_map = dict(benchmark_slot_json_by_line())

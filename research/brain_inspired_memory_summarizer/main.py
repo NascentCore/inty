@@ -32,6 +32,7 @@ def configure_logging(*, verbose: bool) -> None:
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("openai").setLevel(logging.WARNING)
 
+
 from .extractor import (
     EpisodicEvent,
     MemoryCategory,
@@ -100,12 +101,20 @@ def build_dataset() -> list[Episode]:
                 "这会儿有点困，准备休息了。",
             ],
             qa=[
-                QAItem(question="你该怎么称呼我？", key="preferred_name", expected="阿辰"),
+                QAItem(
+                    question="你该怎么称呼我？", key="preferred_name", expected="阿辰"
+                ),
                 QAItem(question="我现在住在哪？", key="city", expected="上海"),
                 QAItem(question="我养了什么宠物？", key="pet", expected="边牧"),
                 QAItem(question="我哪天休息？", key="rest_day", expected="周三"),
-                QAItem(question="我喝不喝咖啡？", key="coffee_preference", expected="不喝咖啡"),
-                QAItem(question="称呼边界是什么？", key="boundary", expected="不要叫我宝贝"),
+                QAItem(
+                    question="我喝不喝咖啡？",
+                    key="coffee_preference",
+                    expected="不喝咖啡",
+                ),
+                QAItem(
+                    question="称呼边界是什么？", key="boundary", expected="不要叫我宝贝"
+                ),
             ],
         )
     ]
@@ -131,13 +140,21 @@ def benchmark_slot_json_by_line() -> dict[str, str]:
         }
 
     return {
-        "以后请叫我阿辰。": json.dumps([_c("preferred_name", "阿辰", 0.93, "以后请叫我阿辰")], ensure_ascii=False),
+        "以后请叫我阿辰。": json.dumps(
+            [_c("preferred_name", "阿辰", 0.93, "以后请叫我阿辰")], ensure_ascii=False
+        ),
         "今天会议很多，先记个待办。": "[]",
-        "我现在住在杭州。": json.dumps([_c("city", "杭州", 0.89, "现在住在杭州")], ensure_ascii=False),
+        "我现在住在杭州。": json.dumps(
+            [_c("city", "杭州", 0.89, "现在住在杭州")], ensure_ascii=False
+        ),
         "最近工作挺忙，回消息可能慢一点。": "[]",
-        "我养了一只边牧。": json.dumps([_c("pet", "边牧", 0.88, "养了一只边牧")], ensure_ascii=False),
+        "我养了一只边牧。": json.dumps(
+            [_c("pet", "边牧", 0.88, "养了一只边牧")], ensure_ascii=False
+        ),
         "今天的午饭一般般。": "[]",
-        "我是周三休息。": json.dumps([_c("rest_day", "周三", 0.91, "周三休息")], ensure_ascii=False),
+        "我是周三休息。": json.dumps(
+            [_c("rest_day", "周三", 0.91, "周三休息")], ensure_ascii=False
+        ),
         "晚上可能去散步。": "[]",
         "我不喝咖啡。": json.dumps(
             [_c("coffee_preference", "不喝咖啡", 0.94, "不喝咖啡", neg=True)],
@@ -159,22 +176,48 @@ def benchmark_slot_json_by_line() -> dict[str, str]:
 
 def benchmark_route_json_by_line() -> dict[str, str]:
     return {
-        "以后请叫我阿辰。": json.dumps({"active_subsystems": ["semantic"]}, ensure_ascii=False),
-        "今天会议很多，先记个待办。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
-        "我现在住在杭州。": json.dumps({"active_subsystems": ["semantic"]}, ensure_ascii=False),
-        "最近工作挺忙，回消息可能慢一点。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
-        "我养了一只边牧。": json.dumps({"active_subsystems": ["semantic"]}, ensure_ascii=False),
-        "今天的午饭一般般。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
-        "我是周三休息。": json.dumps({"active_subsystems": ["semantic"]}, ensure_ascii=False),
-        "晚上可能去散步。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
-        "我不喝咖啡。": json.dumps({"active_subsystems": ["semantic"]}, ensure_ascii=False),
-        "请不要叫我宝贝。": json.dumps({"active_subsystems": ["self_schema"]}, ensure_ascii=False),
+        "以后请叫我阿辰。": json.dumps(
+            {"active_subsystems": ["semantic"]}, ensure_ascii=False
+        ),
+        "今天会议很多，先记个待办。": json.dumps(
+            {"active_subsystems": ["episodic"]}, ensure_ascii=False
+        ),
+        "我现在住在杭州。": json.dumps(
+            {"active_subsystems": ["semantic"]}, ensure_ascii=False
+        ),
+        "最近工作挺忙，回消息可能慢一点。": json.dumps(
+            {"active_subsystems": ["episodic"]}, ensure_ascii=False
+        ),
+        "我养了一只边牧。": json.dumps(
+            {"active_subsystems": ["semantic"]}, ensure_ascii=False
+        ),
+        "今天的午饭一般般。": json.dumps(
+            {"active_subsystems": ["episodic"]}, ensure_ascii=False
+        ),
+        "我是周三休息。": json.dumps(
+            {"active_subsystems": ["semantic"]}, ensure_ascii=False
+        ),
+        "晚上可能去散步。": json.dumps(
+            {"active_subsystems": ["episodic"]}, ensure_ascii=False
+        ),
+        "我不喝咖啡。": json.dumps(
+            {"active_subsystems": ["semantic"]}, ensure_ascii=False
+        ),
+        "请不要叫我宝贝。": json.dumps(
+            {"active_subsystems": ["self_schema"]}, ensure_ascii=False
+        ),
         "我搬家了，我现在住在上海。": json.dumps(
             {"active_subsystems": ["semantic", "episodic"]}, ensure_ascii=False
         ),
-        "顺便说下，今天我只是想闲聊。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
-        "刚刚在看电影，剧情还不错。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
-        "这会儿有点困，准备休息了。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
+        "顺便说下，今天我只是想闲聊。": json.dumps(
+            {"active_subsystems": ["episodic"]}, ensure_ascii=False
+        ),
+        "刚刚在看电影，剧情还不错。": json.dumps(
+            {"active_subsystems": ["episodic"]}, ensure_ascii=False
+        ),
+        "这会儿有点困，准备休息了。": json.dumps(
+            {"active_subsystems": ["episodic"]}, ensure_ascii=False
+        ),
     }
 
 
@@ -212,7 +255,11 @@ def benchmark_episodic_json_by_line() -> dict[str, str]:
             ensure_ascii=False,
         ),
         "这会儿有点困，准备休息了。": json.dumps(
-            {"events": [_ev("tired, going to rest", 0.55, "这会儿有点困，准备休息了。")]},
+            {
+                "events": [
+                    _ev("tired, going to rest", 0.55, "这会儿有点困，准备休息了。")
+                ]
+            },
             ensure_ascii=False,
         ),
     }
@@ -341,7 +388,9 @@ class LayeredMemoryAgent:
         if self._legacy_extractor is not None:
             candidates = self._legacy_extractor(text, self._turn_counter)
         else:
-            categories = route_memory_categories_llm(text, route_llm_call=self._route_llm_call)
+            categories = route_memory_categories_llm(
+                text, route_llm_call=self._route_llm_call
+            )
             candidates = self._extract_routed(text, self._turn_counter, categories)
             if MemoryCategory.EPISODIC in categories:
                 new_episodic = extract_episodic_events_llm(
@@ -395,7 +444,9 @@ class LayeredMemoryAgent:
             out.extend(ss)  # type: ignore[arg-type]
         return merge_slot_candidates(out)
 
-    def _consolidate_semantic_from_episodic(self, new_events: list[EpisodicEvent]) -> None:
+    def _consolidate_semantic_from_episodic(
+        self, new_events: list[EpisodicEvent]
+    ) -> None:
         """
         Hippocampus→neocortex style: scan salient episodic traces for latent semantic slots;
         promote to LTM after repeated traces (independent consolidation passes).
@@ -742,7 +793,11 @@ def build_full_experiment_artifact(
         extraction_label = "llm_only_benchmark_stubs"
     traces: dict[str, list[dict[str, Any]]] = {}
     for ep in episodes:
-        _LOG.info("build_extraction_trace episode=%s turns=%d", ep.episode_id, len(ep.user_turns))
+        _LOG.info(
+            "build_extraction_trace episode=%s turns=%d",
+            ep.episode_id,
+            len(ep.user_turns),
+        )
         traces[ep.episode_id] = build_extraction_trace(
             ep,
             window_size=window_size,
@@ -825,7 +880,9 @@ def main() -> int:
     out_path = args.out
     if live and args.out == Path(__file__).resolve().parent / "experiment_results.json":
         out_path = Path(__file__).resolve().parent / "experiment_results_live.json"
-    out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    out_path.write_text(
+        json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     _LOG.info("wrote metrics -> %s", out_path)
     full_out = args.full_out
     if full_out is None:

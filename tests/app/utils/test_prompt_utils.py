@@ -29,6 +29,7 @@ Specials:
         "  ",
     ]
 
+
 def test_render_template_with_indent_single_line():
     """单行替换不改变缩进。"""
     template = "Hello {{ name }}!"
@@ -137,7 +138,9 @@ def test_render_template_with_indent_multiline_placeholder_stripped():
         - etc."""
     template_stripped = strip_multiline_str(template)
     places_stripped = strip_multiline_str(places)
-    out = render_template_with_indent(template_stripped, char=char, places=places_stripped)
+    out = render_template_with_indent(
+        template_stripped, char=char, places=places_stripped
+    )
     assert out.splitlines() == [
         "I am Yaxiong, I have been many places:",
         "  - Beijing",
@@ -155,12 +158,14 @@ def test_render_template_with_indent_roleplay_text_output_format_expanded():
     - must be enclosed in parentheses ().
     - should be short and concise.
     - should be vivid and detailed."""
-    out = render_template_with_indent(template, ROLEPLAY_TEXT_OUTPUT_FORMAT=value.strip())
+    out = render_template_with_indent(
+        template, ROLEPLAY_TEXT_OUTPUT_FORMAT=value.strip()
+    )
     # 续行缩进对齐到占位符起始列（此处为 10 格），value 内行自带 "  "，故首条续行为 12 格
     expected_lines = [
         "- Output Format",
         "        - Roleplay Text Output Format:",
-        "            - All dialogues must be enclosed in double quotation marks \"\".",
+        '            - All dialogues must be enclosed in double quotation marks "".',
         "            - All non-dialogue descriptions, like actions, thoughts, feelings, descriptions of surrounding environment, etc.:",
         "              - must be enclosed in parentheses ().",
         "              - should be short and concise.",

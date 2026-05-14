@@ -86,7 +86,7 @@ async def google_login(
         #        path = request.url.path
         #        print(path)  # 输出当前请求的完整 path
         logger.info(f"### 使用虚假的 Google 登录接口 {router.prefix}/google/login ###")
-        logger.info(f"### 修改下方定义直接改变返回值 ###")
+        logger.info("### 修改下方定义直接改变返回值 ###")
         return APIResponse.success(
             data=LoginResponse(
                 token="dummy_token",

@@ -94,9 +94,9 @@ def test_daily_memory_delivered_via_chat_history_api(
         )
 
         db_session.refresh(memory)
-        assert memory.delivery_at is not None, (
-            "memory.delivery_at should be set after daily memory delivery"
-        )
+        assert (
+            memory.delivery_at is not None
+        ), "memory.delivery_at should be set after daily memory delivery"
         assert getattr(memory.delivery_at, "tzinfo", None) is not None
     finally:
         db_session.delete(memory)
@@ -160,9 +160,9 @@ def test_daily_memory_chat_completions_appends_daily_prompt_choice(
         assert isinstance(message.get("id"), int)
 
         db_session.refresh(memory)
-        assert memory.delivery_at is not None, (
-            "memory.delivery_at should be set after chat completions delivery"
-        )
+        assert (
+            memory.delivery_at is not None
+        ), "memory.delivery_at should be set after chat completions delivery"
     finally:
         db_session.delete(memory)
         db_session.commit()
@@ -206,9 +206,9 @@ def test_daily_memory_agent_detail_includes_daily_memories(
         features = data.get("features") or {}
         daily_list = features.get("daily_memories") or []
         matched = [item for item in daily_list if item.get("memory_id") == memory_id]
-        assert len(matched) == 1, (
-            f"Expected daily memory in agent features, got daily_memories={daily_list}"
-        )
+        assert (
+            len(matched) == 1
+        ), f"Expected daily memory in agent features, got daily_memories={daily_list}"
     finally:
         db_session.delete(memory)
         db_session.commit()

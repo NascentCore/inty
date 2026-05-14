@@ -13,8 +13,12 @@ def test_transcript_rows_for_public_chat_llm_drops_maintenance_inner_tick() -> N
     uid_m = "maint-user-1"
     uid_real = "real-user-1"
     rows = [
-        ChatMessage(role="user", content="hello", ts="2026-05-01T00:00:01Z", uuid=uid_real),
-        ChatMessage(role="assistant", content="hi", ts="2026-05-01T00:00:02Z", reply_to=uid_real),
+        ChatMessage(
+            role="user", content="hello", ts="2026-05-01T00:00:01Z", uuid=uid_real
+        ),
+        ChatMessage(
+            role="assistant", content="hi", ts="2026-05-01T00:00:02Z", reply_to=uid_real
+        ),
         ChatMessage(
             role="user",
             content="（内在节拍）",
@@ -36,7 +40,9 @@ def test_transcript_rows_for_public_chat_llm_drops_maintenance_inner_tick() -> N
     assert pub[1].reply_to == uid_real
 
 
-def test_transcript_rows_for_public_chat_llm_keeps_proactive_heartbeat_inner_tick() -> None:
+def test_transcript_rows_for_public_chat_llm_keeps_proactive_heartbeat_inner_tick() -> (
+    None
+):
     uid_h = "hb-user-1"
     rows = [
         ChatMessage(

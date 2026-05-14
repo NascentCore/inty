@@ -29,7 +29,7 @@ def bluesky_example():
 
     # Get your profile
     profile = client.get_profile(client.me.did)  # Pass the DID string directly
-    print(f"\nYour profile:")
+    print("\nYour profile:")
     print(f"Handle: {profile.handle}")
     print(f"Display Name: {profile.display_name}")
     print(f"Description: {profile.description}")

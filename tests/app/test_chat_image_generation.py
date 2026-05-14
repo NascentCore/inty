@@ -43,7 +43,9 @@ async def db_session():
         max_overflow=0,
         pool_pre_ping=True,
     )
-    async_session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    async_session = sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
     async with async_session() as session:
         yield session
     await engine.dispose()
@@ -139,12 +141,15 @@ class TestImageGenerationService:
             )
             return [result]
 
-        with patch(
-            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_images",
-            new=fake_async_generate_images,
-        ), patch(
-            "app.services.image_generation_service.get_genai_client",
-            return_value=FakeGeminiClient(),
+        with (
+            patch(
+                "app.core.google_genai.wrapped_client.WrappedClient.async_generate_images",
+                new=fake_async_generate_images,
+            ),
+            patch(
+                "app.services.image_generation_service.get_genai_client",
+                return_value=FakeGeminiClient(),
+            ),
         ):
             result = await image_generation_service.generate_chat_image_by_model(
                 chat_input=ChatImageGenModelInput(
@@ -168,7 +173,9 @@ class TestImageGenerationService:
         assert result.gcs_uri.startswith("gs://")
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_by_model_seedream_auto_fill_second_reference(self):
+    async def test_generate_chat_image_by_model_seedream_auto_fill_second_reference(
+        self,
+    ):
         """Seedream 在无自拍参考图时应自动补齐第二张参考图。"""
         captured = {}
 
@@ -352,14 +359,15 @@ class TestImageGenerationService:
         await session.refresh(agent)
         assert len(agent.background_images) >= 1
         assert any(
-            u.startswith("gs://") and "chat_images/" in u for u in agent.background_images
+            u.startswith("gs://") and "chat_images/" in u
+            for u in agent.background_images
         )
 
-        res_stmt = select(Resource).where(
-            Resource.url == gen["image_url"]
-        )
+        res_stmt = select(Resource).where(Resource.url == gen["image_url"])
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
-        assert resource is not None, "Chat-generated image should be saved to resources table"
+        assert (
+            resource is not None
+        ), "Chat-generated image should be saved to resources table"
         assert resource.agent_id == agent_id
         assert resource.user_id == user_id
         stored_prompt = resource.resource_metadata.get("generation_prompt") or ""
@@ -374,7 +382,9 @@ class TestImageGenerationService:
         await session.delete(user)
         await session.commit()
 
-    def _make_fake_fal_result(self, gcs_uri_base: str, suffix: str) -> GeneratedImageProcessResult:
+    def _make_fake_fal_result(
+        self, gcs_uri_base: str, suffix: str
+    ) -> GeneratedImageProcessResult:
         """Build a deterministic GeneratedImageProcessResult for Fal path tests (no real Fal/GCS)."""
         bucket = global_config_loaded_from_config_yaml.gcs.bucket
         gcs_uri = f"gs://{bucket}/{gcs_uri_base}/fal_test_{suffix}.jpg"
@@ -494,7 +504,9 @@ class TestImageGenerationService:
 
         res_stmt = select(Resource).where(Resource.url == gen["image_url"])
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
-        assert resource is not None, "Fal z_image_turbo chat image should be saved to resources table"
+        assert (
+            resource is not None
+        ), "Fal z_image_turbo chat image should be saved to resources table"
         assert resource.agent_id == agent_id
         assert resource.user_id == user_id
         stored_prompt = resource.resource_metadata.get("generation_prompt") or ""
@@ -612,7 +624,9 @@ class TestImageGenerationService:
 
         res_stmt = select(Resource).where(Resource.url == gen["image_url"])
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
-        assert resource is not None, "Fal seedream chat image should be saved to resources table"
+        assert (
+            resource is not None
+        ), "Fal seedream chat image should be saved to resources table"
         assert resource.agent_id == agent_id
         assert resource.user_id == user_id
         stored_prompt = resource.resource_metadata.get("generation_prompt") or ""
@@ -795,9 +809,7 @@ class TestChatHistoryService:
         assert row.meta_data is not None
         assert row.meta_data.get("generated_image") is not None
 
-        res_stmt = select(Resource).where(
-            Resource.agent_id == agent_id
-        )
+        res_stmt = select(Resource).where(Resource.agent_id == agent_id)
         res_result = await session.execute(res_stmt)
         resources = res_result.scalars().all()
         for res in resources:
@@ -942,7 +954,9 @@ class TestChatHistoryService:
         await session.refresh(agent)
         assert len(agent.background_images) == 2
         assert agent.background_images[0] == "gs://test-bucket/original.jpg"
-        assert gcs_uri in agent.background_images or agent.background_images[1] == gcs_uri
+        assert (
+            gcs_uri in agent.background_images or agent.background_images[1] == gcs_uri
+        )
 
         # 3) Resource 表应有对应记录（user_id 传入时）
         res_stmt = select(Resource).where(Resource.url == gcs_uri)

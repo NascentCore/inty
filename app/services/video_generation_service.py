@@ -10,7 +10,6 @@ from google.genai import types
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.external_services.gcs import upload_to_gcs
 from app.utils.gemini import get_genai_client
 
 

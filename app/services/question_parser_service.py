@@ -1,12 +1,9 @@
 """问题文件解析服务"""
 
 import json
-import logging
 from typing import Any, Dict, List
 
 from fastapi import UploadFile
-
-from loguru import logger
 
 
 class QuestionParserService:

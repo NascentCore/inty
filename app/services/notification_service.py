@@ -259,7 +259,7 @@ async def send_fcm_multicast(
     """
     try:
         if dry_run:
-            logger.info(f"[DRY RUN] FCM 测试模式：验证消息格式，不会实际发送")
+            logger.info("[DRY RUN] FCM 测试模式：验证消息格式，不会实际发送")
 
         # 1. Get all device tokens for multiple users
         tokens = await user_service.get_users_device_tokens(db, user_ids)
@@ -421,7 +421,7 @@ async def send_fcm_data_only(
     """
     try:
         if dry_run:
-            logger.info(f"[DRY RUN] FCM 数据消息测试模式：验证消息格式，不会实际发送")
+            logger.info("[DRY RUN] FCM 数据消息测试模式：验证消息格式，不会实际发送")
 
         # 1. 获取所有设备 token
         tokens = await user_service.get_users_device_tokens(db, user_ids)

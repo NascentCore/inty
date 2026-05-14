@@ -8,17 +8,11 @@ output_gcs_uri 由 SDK 直接写 GCS。
 """
 
 import asyncio
-import base64
-import io
 import os
 import re
-import tempfile
 import traceback
-import uuid
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
-import PIL.Image
 from pydantic import BaseModel, Field
 from app.core.google_genai.wrapped_client import get_wrapped_client
 from langsmith.run_helpers import traceable
@@ -40,7 +34,6 @@ from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.gcs import (
     GCS_GS_PREFIX,
     GCS_PUBLIC_HTTPS_PREFIX,
-    upload_to_gcs,
 )
 from app.models.resource import Resource, ResourceType
 from app.models.user import User
@@ -51,8 +44,6 @@ from app.services.user_service import (
     build_user_info_prompt_block,
     get_user_display_name_for_prompt,
 )
-from app.utils.gemini import get_genai_client
-from app.utils.image import ImageFormat, ImageSize
 from app.utils.langsmith import get_current_trace_info
 from app.utils.models_catalog import (
     CHAT_IMAGE_FAL_IDS,
@@ -573,16 +564,12 @@ class ImageGenerationService:
 
             if only_include_ai_character is True:
                 conditions.append(
-                    Resource.resource_metadata.op("->>")(
-                        "only_include_ai_character"
-                    )
+                    Resource.resource_metadata.op("->>")("only_include_ai_character")
                     == "true"
                 )
 
             query = (
-                select(Resource)
-                .where(*conditions)
-                .order_by(Resource.created_at.desc())
+                select(Resource).where(*conditions).order_by(Resource.created_at.desc())
             )
 
             result = await db.execute(query)

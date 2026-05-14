@@ -51,7 +51,10 @@ def test_is_model_belongs_to_provider():
 
 def test_chat_tts_allowlist_is_gemini_only():
     assert len(CHAT_TTS_GEMINI_MODEL_ALLOWLIST) >= 2
-    assert all(model.provider == TTS_PROVIDER_GEMINI for model in CHAT_TTS_GEMINI_MODEL_ALLOWLIST)
+    assert all(
+        model.provider == TTS_PROVIDER_GEMINI
+        for model in CHAT_TTS_GEMINI_MODEL_ALLOWLIST
+    )
 
 
 def test_elevenlabs_default_allowlist_is_elevenlabs_only():

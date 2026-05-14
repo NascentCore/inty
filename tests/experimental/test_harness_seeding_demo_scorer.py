@@ -39,9 +39,7 @@ def test_fails_numbered_fix_first_line_when_distress():
 
 def test_empty_reply_never_passes():
     user = "我最近工作上特别累。"
-    r = score_emotional_understanding_reply(
-        "", threshold=0.85, user_message_text=user
-    )
+    r = score_emotional_understanding_reply("", threshold=0.85, user_message_text=user)
     assert not r.checks["non_empty_visible_reply"]
     assert not r.passed
 

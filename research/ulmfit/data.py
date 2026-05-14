@@ -99,7 +99,9 @@ def generate_toy_classification_dataset(
         for idx in range(size):
             label = idx % 2
             template = (
-                rng.choice(positive_templates) if label == 1 else rng.choice(negative_templates)
+                rng.choice(positive_templates)
+                if label == 1
+                else rng.choice(negative_templates)
             )
             rows.append((f"{template} Instance {idx}.", label))
         rng.shuffle(rows)
@@ -175,7 +177,9 @@ def lm_iter_batches(
     return batches
 
 
-class TextClassificationDataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]):
+class TextClassificationDataset(
+    Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
+):
     def __init__(
         self,
         rows: list[tuple[str, int]],
@@ -189,7 +193,9 @@ class TextClassificationDataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.
     def __len__(self) -> int:
         return len(self.rows)
 
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(
+        self, index: int
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         text, label = self.rows[index]
         tokens = simple_tokenize(text)[: self.max_seq_len - 1]
         token_ids = self.vocab.encode(tokens) + [self.vocab.eos_idx]
@@ -233,7 +239,9 @@ def _flatten_for_lm(
     return all_ids
 
 
-def _load_task_splits(cfg: ExperimentConfig) -> tuple[list[tuple[str, int]], list[tuple[str, int]], list[tuple[str, int]]]:
+def _load_task_splits(
+    cfg: ExperimentConfig,
+) -> tuple[list[tuple[str, int]], list[tuple[str, int]], list[tuple[str, int]]]:
     if cfg.dataset.provider == "toy":
         return generate_toy_classification_dataset(
             train_size=cfg.dataset.toy_train_size,

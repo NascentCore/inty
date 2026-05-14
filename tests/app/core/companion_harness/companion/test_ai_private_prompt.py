@@ -50,7 +50,7 @@ def test_get_ai_private_merged_without_jsonl_equals_md(tmp_path: Path) -> None:
     sc = CompanionScope("ap", "a", f"eq-{tmp_path.name}")
     store = get_memory_store(sc, dsn="")
     store.write_document("ai_private.md", "only md\n")
-    assert get_ai_private_merged_text_for_prompt(store) == get_ai_private_text_for_prompt(
+    assert get_ai_private_merged_text_for_prompt(
         store
-    )
+    ) == get_ai_private_text_for_prompt(store)
     shutdown_memory_store(sc)

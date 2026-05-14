@@ -9,7 +9,6 @@ import time
 import langsmith
 from langsmith import Client as LangSmithClient
 
-
 # 轮询 LangSmith 时的尝试次数与每页 run 数量（用于写入延迟）
 _LANGSMITH_POLL_ATTEMPTS = 3
 _LANGSMITH_RUNS_PAGE_SIZE = 10

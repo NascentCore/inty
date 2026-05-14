@@ -28,12 +28,16 @@ from app.utils.models_catalog import IMAGEN_4_FAST, NANO_BANANA
 _GCS_URI_BASE = "test-gcs-uri-base"
 
 
-def _mock_upload_to_gcs_https_return(file_data, content_type, bucket_name, path):  # noqa: ARG001
+def _mock_upload_to_gcs_https_return(
+    file_data, content_type, bucket_name, path
+):  # noqa: ARG001
     """Patched ``upload_to_gcs`` must return a string URL (production shape in mocked tests)."""
     return f"https://storage.googleapis.com/{bucket_name}/{path}"
 
 
-def _make_gemini_response_payload_with_inline_data(image_bytes: bytes, mime_type: str) -> dict:
+def _make_gemini_response_payload_with_inline_data(
+    image_bytes: bytes, mime_type: str
+) -> dict:
     return {
         "candidates": [
             {
@@ -137,8 +141,12 @@ def _make_gemini_image_response_two_candidates():
     response.prompt_feedback = None
     response.model_dump.return_value = {
         "candidates": [
-            _make_gemini_response_payload_with_inline_data(jpeg1, "image/jpeg")["candidates"][0],
-            _make_gemini_response_payload_with_inline_data(jpeg2, "image/jpeg")["candidates"][0],
+            _make_gemini_response_payload_with_inline_data(jpeg1, "image/jpeg")[
+                "candidates"
+            ][0],
+            _make_gemini_response_payload_with_inline_data(jpeg2, "image/jpeg")[
+                "candidates"
+            ][0],
         ],
         "prompt_feedback": None,
     }
@@ -180,9 +188,14 @@ def test_extract_image_part_treats_image_prohibited_content_as_safety_block():
 
 
 @pytest.mark.asyncio
-@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch(
+    "app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml",
+    Mock(gcs=Mock(bucket="test-bucket")),
+)
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
-async def test_generate_image_text_only_calls_generate_content_with_text_parts(mock_upload):
+async def test_generate_image_text_only_calls_generate_content_with_text_parts(
+    mock_upload,
+):
     mock_upload.side_effect = _mock_upload_to_gcs_https_return
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
@@ -214,9 +227,14 @@ async def test_generate_image_text_only_calls_generate_content_with_text_parts(m
 
 
 @pytest.mark.asyncio
-@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch(
+    "app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml",
+    Mock(gcs=Mock(bucket="test-bucket")),
+)
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
-async def test_generate_images_count_two_passes_config_and_returns_two_results(mock_upload):
+async def test_generate_images_count_two_passes_config_and_returns_two_results(
+    mock_upload,
+):
     """count=2 时传入 config.candidate_count=2，且 mock 返回两候选时得到两条 GeneratedImageProcessResult。"""
     mock_upload.side_effect = _mock_upload_to_gcs_https_return
     mock_models = Mock()
@@ -243,11 +261,17 @@ async def test_generate_images_count_two_passes_config_and_returns_two_results(m
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("url", [
-    "https://example.com/photo.jpeg",
-    "https://cdn.example.org/image.jpg",
-])
-@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com/photo.jpeg",
+        "https://cdn.example.org/image.jpg",
+    ],
+)
+@patch(
+    "app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml",
+    Mock(gcs=Mock(bucket="test-bucket")),
+)
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_jpeg_or_jpg_url_becomes_part_from_uri(mock_upload, url):
     mock_upload.side_effect = _mock_upload_to_gcs_https_return
@@ -274,7 +298,10 @@ async def test_generate_image_jpeg_or_jpg_url_becomes_part_from_uri(mock_upload,
 
 
 @pytest.mark.asyncio
-@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch(
+    "app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml",
+    Mock(gcs=Mock(bucket="test-bucket")),
+)
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_plain_text_not_treated_as_uri(mock_upload):
     mock_upload.side_effect = _mock_upload_to_gcs_https_return
@@ -298,7 +325,10 @@ async def test_generate_image_plain_text_not_treated_as_uri(mock_upload):
 
 
 @pytest.mark.asyncio
-@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch(
+    "app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml",
+    Mock(gcs=Mock(bucket="test-bucket")),
+)
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_mixed_text_and_image_url(mock_upload):
     mock_upload.side_effect = _mock_upload_to_gcs_https_return
@@ -326,7 +356,10 @@ async def test_generate_image_mixed_text_and_image_url(mock_upload):
 
 
 @pytest.mark.asyncio
-@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch(
+    "app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml",
+    Mock(gcs=Mock(bucket="test-bucket")),
+)
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_with_system_instruction_uses_config_copy(mock_upload):
     """传入 system_instruction 时使用 config 的副本，不污染全局 GEN_CONTENT_CONFIG_IMAGE_9_16_1K。"""
@@ -354,7 +387,10 @@ async def test_generate_image_with_system_instruction_uses_config_copy(mock_uplo
 
 
 @pytest.mark.asyncio
-@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch(
+    "app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml",
+    Mock(gcs=Mock(bucket="test-bucket")),
+)
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 @patch("app.core.google_genai.wrapped_client.attach_provider_response_to_langsmith_run")
 async def test_generate_image_attaches_sanitized_provider_response_after_gcs_upload(
@@ -377,13 +413,18 @@ async def test_generate_image_attaches_sanitized_provider_response_after_gcs_upl
 
     mock_attach_provider_response_to_langsmith_run.assert_called_once()
     attached_response = mock_attach_provider_response_to_langsmith_run.call_args.args[0]
-    inline_data = attached_response["candidates"][0]["content"]["parts"][0]["inline_data"]
+    inline_data = attached_response["candidates"][0]["content"]["parts"][0][
+        "inline_data"
+    ]
     assert "omitted raw image data after GCS upload" in inline_data["data"]
     assert inline_data["mime_type"] == "image/jpeg"
 
 
 @pytest.mark.asyncio
-@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch(
+    "app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml",
+    Mock(gcs=Mock(bucket="test-bucket")),
+)
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_returns_generated_image_process_result(mock_upload):
     """Gemini 路径返回 GeneratedImageProcessResult（含 size, format, raw_data, gcs_uri, generated_at）。"""
@@ -493,7 +534,6 @@ def test_process_outputs_generate_image_truncates_raw_data_to_100_bytes():
     assert decoded == raw_500[:100]
 
 
-
 def test_process_outputs_generate_image_handles_short_raw_data():
     """raw_data 不足 100 字节时，trace 中为全部字节。"""
     raw_50 = b"y" * 50
@@ -528,10 +568,15 @@ def test_process_outputs_generate_image_redacts_inline_data_from_raw_response():
     )
     traced = _langsmith_process_outputs_generate_image(output)
     assert traced is not None
-    trace_inline_data = traced.raw_response_from_provider["candidates"][0]["content"]["parts"][0]["inline_data"]["data"]
+    trace_inline_data = traced.raw_response_from_provider["candidates"][0]["content"][
+        "parts"
+    ][0]["inline_data"]["data"]
     assert "omitted raw image data after GCS upload" in trace_inline_data
     # 确保原始返回值中的 provider response 不被就地修改。
-    assert provider_response["candidates"][0]["content"]["parts"][0]["inline_data"]["data"] == b"z" * 120
+    assert (
+        provider_response["candidates"][0]["content"]["parts"][0]["inline_data"]["data"]
+        == b"z" * 120
+    )
 
 
 def test_process_outputs_generate_images_maps_list():
@@ -598,5 +643,10 @@ async def test_generate_image_trace_nano_banana_with_real_langsmith():
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
     client = create_google_genai_client()
     wrapper = WrappedClient(client=client)
-    results = await wrapper.async_generate_images(model=NANO_BANANA.id_on_provider, gcs_uri_base="test-gcs-uri-base", system_instructions=["you are a movie director"], contents=["a cat on the beach"])
+    results = await wrapper.async_generate_images(
+        model=NANO_BANANA.id_on_provider,
+        gcs_uri_base="test-gcs-uri-base",
+        system_instructions=["you are a movie director"],
+        contents=["a cat on the beach"],
+    )
     assert results and results[0] is not None

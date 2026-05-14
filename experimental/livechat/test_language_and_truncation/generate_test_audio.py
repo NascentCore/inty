@@ -11,8 +11,6 @@ Usage:
 
 import argparse
 import asyncio
-import io
-import struct
 import subprocess
 import sys
 import wave
@@ -231,7 +229,7 @@ async def generate_all():
             if add_silence:
                 pcm_with_silence = _insert_silence(wav_path, silence_ms=600)
                 _write_pcm_wav(wav_path, pcm_with_silence)
-                print(f"  -> 已插入 600ms 静音段")
+                print("  -> 已插入 600ms 静音段")
 
             # 清理临时 mp3
             mp3_tmp.unlink(missing_ok=True)

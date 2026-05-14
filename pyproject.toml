@@ -5,12 +5,22 @@ description = "Inty backend server"
 readme = "README.md"
 requires-python = ">=3.12"
 
-# 用于运行 uv ty check 命令，排除不需要类型检查的目录。
+# Black 默认 88 列；与 Google pyguide 常讨论的 80 列不同，避免对既有代码做大范围重排。
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.ruff]
+target-version = "py312"
+src = ["app", "backend", "tools/scripts", "experimental"]
+
+[tool.ruff.lint]
+# 首版门禁：未定义名、重复定义、未使用导入、语法错误（与 pyguide「尽早暴露静态错误」一致）。
+select = ["F401", "F811", "F821"]
+
+# ty 仅检查主产品与后端入口树；实验/脚本/测试由 exclude 与 include 共同约束。
 [tool.ty.src]
+include = ["app", "backend"]
 exclude = [
-    "experimental",
-    "evaluation",
-    "tools/scripts",
-    "tests",
     "**/migrations",
 ]

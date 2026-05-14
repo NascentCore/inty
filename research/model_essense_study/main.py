@@ -16,8 +16,14 @@ from loguru import logger
 
 from app.db.session import AsyncSessionLocal
 from research.model_essense_study.analysis import run_analysis_scaffold
-from research.model_essense_study.config import ModelEssenseStudyConfig, load_study_config
-from research.model_essense_study.db import load_persona_raw_agents, load_stimulus_candidates
+from research.model_essense_study.config import (
+    ModelEssenseStudyConfig,
+    load_study_config,
+)
+from research.model_essense_study.db import (
+    load_persona_raw_agents,
+    load_stimulus_candidates,
+)
 from research.model_essense_study.figures import generate_figure_placeholders
 from research.model_essense_study.manifest_builder import build_manifest, save_manifest
 from research.model_essense_study.model_client import (
@@ -107,6 +113,7 @@ def extract_personas(
             for i in range(1, 25)
         ]
     else:
+
         async def _load_from_db() -> list[AgentPersonaRaw]:
             async with AsyncSessionLocal() as db:
                 return await load_persona_raw_agents(
@@ -156,6 +163,7 @@ def build_stimuli_dataset(
     if use_mock_data:
         candidates = build_mock_stimulus_candidates()
     else:
+
         async def _load_from_db() -> list:
             async with AsyncSessionLocal() as db:
                 return await load_stimulus_candidates(
@@ -211,7 +219,9 @@ def build_manifest_file(
     manifest_path = cfg.data_dir / "manifests" / "manifest_v1.json"
 
     personas_payload = json.loads(personas_path.read_text(encoding="utf-8"))
-    personas = [PersonaRecord.model_validate(item) for item in personas_payload["personas"]]
+    personas = [
+        PersonaRecord.model_validate(item) for item in personas_payload["personas"]
+    ]
     stimuli = [
         StimulusRecord.model_validate_json(line)
         for line in stimuli_path.read_text(encoding="utf-8").splitlines()
@@ -234,7 +244,9 @@ def build_manifest_file(
         generation=cfg.generation,
     )
     save_manifest(manifest_path, manifest)
-    logger.info("Manifest written to {} (cells={})", manifest_path, manifest.total_cells)
+    logger.info(
+        "Manifest written to {} (cells={})", manifest_path, manifest.total_cells
+    )
 
 
 @app.command()
@@ -312,7 +324,11 @@ def analyze(
     Run analysis from response JSONL.
     """
     cfg = _load_cfg(config)
-    raw_path = cfg.responses_real_path if cfg.responses_real_path.exists() else cfg.responses_path
+    raw_path = (
+        cfg.responses_real_path
+        if cfg.responses_real_path.exists()
+        else cfg.responses_path
+    )
     analysis_path = cfg.analysis_path
     analysis_payload = run_analysis_scaffold(raw_path=raw_path)
     _write_json(analysis_path, analysis_payload)
@@ -462,4 +478,3 @@ def default_help() -> None:
 
 if __name__ == "__main__":
     app()
-

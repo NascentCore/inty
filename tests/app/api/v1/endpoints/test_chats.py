@@ -14,7 +14,9 @@ from app.core.voice.tts_api import VoiceMessageNarrationMode
 from app.models.user import AuthType
 from app.schemas.response import BusinessErrorCode
 from app.services import agent_service, chat_history_service, chat_service
-from app.services.global_services import subscription_service as global_subscription_service
+from app.services.global_services import (
+    subscription_service as global_subscription_service,
+)
 from app.services.voice_service import VoiceGenerationResult
 from app.services.voice_service import voice_service as global_voice_service
 from tests.app.api.v1.endpoints.conftest import (
@@ -506,7 +508,10 @@ def test_get_agent_chat_messages_recovers_when_festival_delivery_hits_missing_gr
         return set()
 
     def fake_get_messages_paginated(*args, **kwargs):
-        return {"messages": [{"id": 1, "role": "assistant", "content": "ok"}], "total": 1}
+        return {
+            "messages": [{"id": 1, "role": "assistant", "content": "ok"}],
+            "total": 1,
+        }
 
     monkeypatch.setattr(
         chats_v1.chat_service,
@@ -574,7 +579,10 @@ def test_get_agent_chat_messages_uses_cached_user_id_after_chat_creation_rollbac
 
     def fake_get_messages_paginated(*args, **kwargs):
         assert kwargs["user_id"] == "user-expire-1"
-        return {"messages": [{"id": 1, "role": "assistant", "content": "ok"}], "total": 1}
+        return {
+            "messages": [{"id": 1, "role": "assistant", "content": "ok"}],
+            "total": 1,
+        }
 
     monkeypatch.setattr(
         chats_v1.chat_service,
@@ -732,6 +740,7 @@ def test_get_agent_chat_settings_returns_null_chat_mode_when_agent_default_not_i
     monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
 ):
     """When agent mode_prompt is not in USER_FACING_CHAT_MODE_IDS, GET settings returns chat_mode=null, available_chat_modes=null."""
+
     async def fake_get_agent(db, agent_id):
         return SimpleNamespace(id=agent_id, mode_prompt="purity_mode_0725")
 
@@ -834,6 +843,7 @@ def test_update_chat_settings_rejects_invalid_chat_mode(
     monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
 ):
     """PUT settings with chat_mode not in USER_FACING_CHAT_MODE_IDS returns 400."""
+
     async def fake_get_agent(db, agent_id):
         return SimpleNamespace(id=agent_id)
 

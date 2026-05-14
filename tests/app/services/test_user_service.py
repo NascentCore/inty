@@ -25,7 +25,9 @@ class TestUserDeletion:
         """Test the real delete_user_account function with async database"""
 
         # Create async database engine
-        engine = create_async_engine(global_config_loaded_from_config_yaml.database.async_url)
+        engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
 
         # Create all tables
         async with engine.begin() as conn:

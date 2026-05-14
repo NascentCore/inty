@@ -490,7 +490,9 @@ class BackendChatWsBridge:
         try:
             await ws.send(_ws_client_context_json())
         except ConnectionClosed:
-            logger.debug("chat ws client_context skipped (connection closed) agent_id={}", aid)
+            logger.debug(
+                "chat ws client_context skipped (connection closed) agent_id={}", aid
+            )
             return
         except Exception:
             logger.exception("chat ws client_context send failed agent_id={}", aid)
@@ -549,9 +551,7 @@ class BackendChatWsBridge:
                     message_id=frame_mid,
                     implicit_greeting=use_implicit,
                     implicit_greeting_note=(
-                        None
-                        if use_implicit
-                        else "repl already resumed"
+                        None if use_implicit else "repl already resumed"
                     ),
                 )
             )
@@ -562,11 +562,7 @@ class BackendChatWsBridge:
                 aid,
                 frame_mid,
                 use_implicit,
-                (
-                    ""
-                    if use_implicit
-                    else " (repl already resumed)"
-                ),
+                ("" if use_implicit else " (repl already resumed)"),
             )
             if self._on_user_signed_on_sent is not None:
                 try:

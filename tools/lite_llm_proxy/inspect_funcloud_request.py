@@ -13,6 +13,7 @@ Findings (from litellm code):
 - Working curl: POST https://api.funcloud.ai/v1/official/v1/messages
   with Content-Type, anthropic-version: 2023-06-01, Authorization: Bearer $FUNCLOUD_API_KEY
 """
+
 from __future__ import annotations
 
 import os
@@ -22,7 +23,10 @@ import sys
 def main() -> None:
     api_key = os.environ.get("FUNCLOUD_API_KEY")
     if not api_key:
-        print("Set FUNCLOUD_API_KEY to inspect (key will be redacted in output).", file=sys.stderr)
+        print(
+            "Set FUNCLOUD_API_KEY to inspect (key will be redacted in output).",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # Same values as tools/lite_llm_proxy/config.yaml
@@ -36,7 +40,9 @@ def main() -> None:
         auth_header = f"Authorization: Bearer {api_key[:20]}..."
     else:
         auth_header = None
-    x_api_key = None if is_oauth else (api_key[:20] + "..." if len(api_key) > 20 else api_key)
+    x_api_key = (
+        None if is_oauth else (api_key[:20] + "..." if len(api_key) > 20 else api_key)
+    )
 
     print("URL (api_base) sent to Funcloud:")
     print(f"  {api_base}")
@@ -51,7 +57,9 @@ def main() -> None:
         print(f"  x-api-key: {x_api_key}")
     print()
     print("Working curl uses Authorization: Bearer (not x-api-key).")
-    print("So config must set extra_headers: { Authorization: os.environ/FUNCLOUD_AUTH_HEADER }")
+    print(
+        "So config must set extra_headers: { Authorization: os.environ/FUNCLOUD_AUTH_HEADER }"
+    )
     print("with start.sh exporting FUNCLOUD_AUTH_HEADER='Bearer $FUNCLOUD_API_KEY'.")
 
 

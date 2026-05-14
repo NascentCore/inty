@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseModel, Field, model_validator, validator
+from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
 
 from app.models.user import AuthType, Gender

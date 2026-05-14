@@ -162,4 +162,3 @@ def test_upscale_image_with_vertex_requires_auth() -> None:
     )
     with pytest.raises(UpscaleError):
         upscale_image_with_vertex(request_data)
-

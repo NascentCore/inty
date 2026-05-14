@@ -32,7 +32,6 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.core.config import global_config_loaded_from_config_yaml
 from app.core.logging import init_logger
 from app.db.session import AsyncSessionLocal
 from app.external_services.firebase import init_firebase

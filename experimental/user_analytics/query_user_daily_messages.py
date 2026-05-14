@@ -169,7 +169,7 @@ def format_table_output(df: pd.DataFrame, user_info: Dict[str, Any]) -> str:
 
     lines = []
     lines.append("=" * 60)
-    lines.append(f"用户信息")
+    lines.append("用户信息")
     lines.append("=" * 60)
     lines.append(f"用户ID: {user_info['id']}")
     lines.append(f"邮箱: {user_info['email']}")
@@ -178,7 +178,7 @@ def format_table_output(df: pd.DataFrame, user_info: Dict[str, Any]) -> str:
     lines.append(f"注册时间: {user_info['created_at']}")
     lines.append("")
     lines.append("=" * 60)
-    lines.append(f"每日消息统计")
+    lines.append("每日消息统计")
     lines.append("=" * 60)
     lines.append("")
 

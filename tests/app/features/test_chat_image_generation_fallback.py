@@ -89,8 +89,8 @@ async def test_chat_image_generation_fallback_returns_matched_image(
     # 2) 预置 subscription 限额与用量
     mock_sub = AsyncMock()
     mock_sub.check_image_gen_limit.return_value = (True, 0, 10)
-    mock_sub.get_user_subscription_status.return_value = (
-        SubscriptionStatusResponse(is_subscribed=False, subscription_status="free")
+    mock_sub.get_user_subscription_status.return_value = SubscriptionStatusResponse(
+        is_subscribed=False, subscription_status="free"
     )
     mock_sub.record_usage.return_value = None
     subscription_stub = _StubSubscriptionService()

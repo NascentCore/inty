@@ -59,6 +59,7 @@ def test_get_current_user_profile_happy_path(
     users_app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):
     """Ensure GET /api/v1/users/me returns the current user info."""
+
     async def fake_get_user_connector_count(db, user_id):
         assert db is None
         assert user_id == users_app.state.test_user.id

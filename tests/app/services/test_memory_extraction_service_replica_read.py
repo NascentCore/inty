@@ -43,7 +43,9 @@ def _load_memory_extraction_service_module():
     async def _dummy_chat_completion_for_extraction(*args, **kwargs):
         return ("dummy", None, None)
 
-    fake_openai_client_module.chat_completion_for_extraction = _dummy_chat_completion_for_extraction
+    fake_openai_client_module.chat_completion_for_extraction = (
+        _dummy_chat_completion_for_extraction
+    )
 
     sys.modules.pop("app.services.memory_extraction_service", None)
     with patch.dict(
@@ -222,7 +224,9 @@ async def test_get_users_to_extract_passes_replica_read_url_to_sync_computation(
             "_resolve_sync_read_db_url",
             return_value="postgresql://replica-host:5432/inty",
         ),
-        patch.object(service.asyncio, "to_thread", AsyncMock(return_value=["user-1"])) as mock_to_thread,
+        patch.object(
+            service.asyncio, "to_thread", AsyncMock(return_value=["user-1"])
+        ) as mock_to_thread,
     ):
         user_ids = await service.get_users_to_extract(db, prefer_replica_read=True)
 
@@ -243,7 +247,9 @@ async def test_get_users_with_messages_in_utc_day_passes_replica_read_url():
             "_resolve_sync_read_db_url",
             return_value="postgresql://replica-host:5432/inty",
         ),
-        patch.object(service.asyncio, "to_thread", AsyncMock(return_value=["user-1"])) as mock_to_thread,
+        patch.object(
+            service.asyncio, "to_thread", AsyncMock(return_value=["user-1"])
+        ) as mock_to_thread,
     ):
         user_ids = await service.get_users_with_messages_in_utc_day(
             db, target_day, prefer_replica_read=True

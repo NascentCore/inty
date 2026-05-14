@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.base import SessionLocal
-from app.db.session import get_async_db, get_async_replica_db
+from app.db.session import get_async_db
 from app.models.user import User
 from app.services.cache_service import cache_service
 from app.services.global_services import subscription_service

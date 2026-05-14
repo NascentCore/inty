@@ -50,8 +50,8 @@ def _load_operator_config_assert_real_backend() -> dict:
 
 
 def _http_to_ws_base(http_base: str) -> str:
-    return http_base.replace("http://", "ws://").replace("https://", "wss://").rstrip(
-        "/"
+    return (
+        http_base.replace("http://", "ws://").replace("https://", "wss://").rstrip("/")
     )
 
 
@@ -139,7 +139,7 @@ async def test_chat_websocket_dev_real_llm_roundtrip(integration_client: TestCli
     inner = data.get("data") or {}
     choices = inner.get("choices") or []
     assert len(choices) >= 1
-    msg = (choices[0].get("message") or {})
+    msg = choices[0].get("message") or {}
     content = msg.get("content")
     assert isinstance(content, str)
     assert len(content.strip()) > 0

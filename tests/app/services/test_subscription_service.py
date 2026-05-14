@@ -314,7 +314,9 @@ class TestSubscriptionService:
         isolated_db = AsyncMock(spec=AsyncSession)
         usage_record = SimpleNamespace(id="usage-record-1")
 
-        async def fake_record_usage_impl(db, user_id, usage_type, usage_count, extra_data):
+        async def fake_record_usage_impl(
+            db, user_id, usage_type, usage_count, extra_data
+        ):
             if db is broken_db:
                 return None
             if db is isolated_db:

@@ -853,7 +853,7 @@ def _build_surprise_snap_choice_message(
 ) -> dict:
     """构建单条 Surprise Snap choice 的 message 字典，与消息列表中 surprise_snap 项结构一致。is_locked 仅根据是否在 unlock 表中。"""
     message_id = info.get("id")
-    is_locked = not (message_id in unlocked_message_ids)
+    is_locked = message_id not in unlocked_message_ids
     return {
         "role": None,
         "content": "",
@@ -1430,19 +1430,21 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
             )
             return
         try:
-            companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
-                user_id=user_id,
-                agent_id=agent_id,
-                chat_id=chat_row_id,
-                user_text=synthetic_user_text,
-                resolved_chat_model_id=model_override,
-                defer_memory_update=True,
-                session_id=session_id,
-                background_output_sink=None,
-                preset_user_msg_uuid=preset_uid,
-                inner_tick_turn=True,
-                inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
-                implicit_signal_bundle=ws_implicit,
+            companion_turn = (
+                await companion_chat_service.run_companion_chat_turn_for_api(
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    chat_id=chat_row_id,
+                    user_text=synthetic_user_text,
+                    resolved_chat_model_id=model_override,
+                    defer_memory_update=True,
+                    session_id=session_id,
+                    background_output_sink=None,
+                    preset_user_msg_uuid=preset_uid,
+                    inner_tick_turn=True,
+                    inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+                    implicit_signal_bundle=ws_implicit,
+                )
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):
@@ -2447,13 +2449,15 @@ async def _agent_chat_completions_impl(
                             implicit_signed_on_ws=implicit_signed_on_ws,
                         )
                     )
-                    ai_message_id = await chat_history_service.add_ai_message_sync_async(
-                        session_id,
-                        response_text_content,
-                        agent_id=chat.agent_id,
-                        meta_data=dump_chat_ws_companion_wire_meta(
-                            ChatWsCompanionWireMetaData.model_validate(phone_meta)
-                        ),
+                    ai_message_id = (
+                        await chat_history_service.add_ai_message_sync_async(
+                            session_id,
+                            response_text_content,
+                            agent_id=chat.agent_id,
+                            meta_data=dump_chat_ws_companion_wire_meta(
+                                ChatWsCompanionWireMetaData.model_validate(phone_meta)
+                            ),
+                        )
                     )
                     if (
                         companion_ws_heartbeat_ctx is not None
@@ -3579,7 +3583,7 @@ async def generate_chat_image(
 
         return APIResponse.success(data=result)
 
-    except HTTPException as e:
+    except HTTPException:
         raise
     except Exception as e:
         logger.error(f"生成聊天图片失败 - Agent ID: {agent_id}, Error: {str(e)}")

@@ -107,9 +107,7 @@ class TestClient:
         if not agent_id:
             return
 
-        response = self.client.delete(
-            f"{self.base_url}/api/v1/ai/agents/{agent_id}"
-        )
+        response = self.client.delete(f"{self.base_url}/api/v1/ai/agents/{agent_id}")
 
         if response.status_code != 200:
             logger.warning(
@@ -147,13 +145,13 @@ class TestClient:
         message_id: Optional[str] = None,
     ) -> dict:
         if not self.token:
-            raise RuntimeError(
-                "call create_user() before requesting chat completions"
-            )
+            raise RuntimeError("call create_user() before requesting chat completions")
 
-        payload_messages = list(messages) if messages is not None else [
-            {"role": "user", "content": "Hello, how are you?"}
-        ]
+        payload_messages = (
+            list(messages)
+            if messages is not None
+            else [{"role": "user", "content": "Hello, how are you?"}]
+        )
 
         payload = {
             "messages": payload_messages,
@@ -198,9 +196,7 @@ class TestClient:
     ) -> dict:
         """GET /api/v1/chats/agents/{agent_id}/messages. Returns response JSON (asserts 200)."""
         if not self.token:
-            raise RuntimeError(
-                "call create_user() before getting agent chat messages"
-            )
+            raise RuntimeError("call create_user() before getting agent chat messages")
         params = {"limit": limit, "offset": offset, "order": order}
         if headers is not None:
             request_headers = {**self.client.headers, **headers}

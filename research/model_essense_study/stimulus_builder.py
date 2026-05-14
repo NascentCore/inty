@@ -61,11 +61,26 @@ def _topic_bucket(text: str) -> str:
     lowered = text.lower()
     if any(k in lowered for k in ("stress", "anxious", "anxiety", "sad", "depressed")):
         return "emotional_support"
-    if any(k in lowered for k in ("love", "relationship", "boyfriend", "girlfriend", "date", "kiss", "sex")):
+    if any(
+        k in lowered
+        for k in (
+            "love",
+            "relationship",
+            "boyfriend",
+            "girlfriend",
+            "date",
+            "kiss",
+            "sex",
+        )
+    ):
         return "relationship"
-    if any(k in lowered for k in ("should i", "what should", "advice", "help me decide")):
+    if any(
+        k in lowered for k in ("should i", "what should", "advice", "help me decide")
+    ):
         return "advice"
-    if any(k in lowered for k in ("hello", "hi ", "hey ", "nice to meet", "how are you")):
+    if any(
+        k in lowered for k in ("hello", "hi ", "hey ", "nice to meet", "how are you")
+    ):
         return "greeting"
     return "general"
 
@@ -255,7 +270,9 @@ def build_mock_stimulus_candidates() -> list[StimulusCandidateRecord]:
     out: list[StimulusCandidateRecord] = []
     idx = 1
     for text in samples:
-        source_hash = hashlib.sha256(f"mock-chat:{idx}".encode("utf-8")).hexdigest()[:16]
+        source_hash = hashlib.sha256(f"mock-chat:{idx}".encode("utf-8")).hexdigest()[
+            :16
+        ]
         out.append(
             StimulusCandidateRecord(
                 candidate_id=f"mock-{idx}",
@@ -267,4 +284,3 @@ def build_mock_stimulus_candidates() -> list[StimulusCandidateRecord]:
         )
         idx += 1
     return out
-

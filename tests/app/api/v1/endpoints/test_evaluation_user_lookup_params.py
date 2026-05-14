@@ -43,9 +43,7 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
         override_current_active_user
     )
     app.dependency_overrides[deps.get_async_db] = override_get_async_db
-    app.dependency_overrides[deps.get_async_replica_db] = (
-        override_get_async_replica_db
-    )
+    app.dependency_overrides[deps.get_async_replica_db] = override_get_async_replica_db
 
     calls: list[tuple[str, str]] = []
 
@@ -73,7 +71,9 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
                 "created_at": None,
             }
 
-        async def get_user_daily_messages(self, user_id: str, start_date=None, end_date=None):
+        async def get_user_daily_messages(
+            self, user_id: str, start_date=None, end_date=None
+        ):
             return []
 
         async def get_daily_messages_for_all_users(self, start_date, end_date):
@@ -96,8 +96,16 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
                 }
             ]
 
-        async def get_session_messages(self, chat_id: str, page: int = 1, size: int = 50):
-            return {"messages": [], "total": 0, "page": page, "size": size, "has_more": False}
+        async def get_session_messages(
+            self, chat_id: str, page: int = 1, size: int = 50
+        ):
+            return {
+                "messages": [],
+                "total": 0,
+                "page": page,
+                "size": size,
+                "has_more": False,
+            }
 
         async def get_paginated_user_agent_conversations_detail(
             self,

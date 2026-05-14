@@ -1,0 +1,5 @@
+# 本地与 CI 的代码质量工具（不进入生产 requirements.txt）。
+black==26.3.1
+ruff==0.15.13
+ty==0.0.35
+pre-commit==4.2.0

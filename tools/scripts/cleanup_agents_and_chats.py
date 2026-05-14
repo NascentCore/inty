@@ -172,12 +172,12 @@ class AgentChatCleanup:
 
                 # 获取当前数据统计
                 current_counts = await self.get_data_counts()
-                print(f"\n当前数据统计：")
+                print("\n当前数据统计：")
                 for table, count in current_counts.items():
                     print(f"  {table}: {count} 条记录")
 
                 # 确认操作
-                print(f"\n")
+                print("\n")
                 confirmation = input(
                     "请输入 'DELETE' 来确认删除操作（其他任何输入都会取消）: "
                 )
@@ -187,7 +187,7 @@ class AgentChatCleanup:
                     return
 
                 # 二次确认
-                print(f"\n")
+                print("\n")
                 final_confirmation = input(
                     "最后确认：此操作不可逆！请再次输入 'DELETE' 确认: "
                 )

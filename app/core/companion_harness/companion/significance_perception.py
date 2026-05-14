@@ -51,7 +51,14 @@ from typing import Any, Final, Literal
 from unittest.mock import Base as _UnittestMockBase
 
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticSerializationError
 
 _MARKDOWN_JSON_FENCE_RE = re.compile(

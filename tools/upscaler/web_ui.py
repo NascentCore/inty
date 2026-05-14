@@ -410,7 +410,9 @@ def _convert_web_payload(payload: dict[str, Any]) -> VertexUpscaleRequest:
     if not ENV_PROJECT_ID:
         raise ValueError("请在 tools/upscaler/.env 中配置 GOOGLE_CLOUD_PROJECT_ID")
     if not ENV_API_KEY:
-        raise ValueError("请在 tools/upscaler/.env 中配置 GOOGLE_CLOUD_VERTEX_AI_API_KEY")
+        raise ValueError(
+            "请在 tools/upscaler/.env 中配置 GOOGLE_CLOUD_VERTEX_AI_API_KEY"
+        )
     image_base64 = _get_required_text(payload, "imageBase64")
     try:
         image_bytes = base64.b64decode(image_base64, validate=True)
@@ -464,4 +466,3 @@ def run_web_ui(config: WebServerConfig) -> None:
         print(f"Web UI 已启动: http://{config.host}:{config.port}")
         print(f"默认文档: {DEFAULT_VERTEX_IMAGEN_UPSCALE_DOC_URL}")
         server.serve_forever()
-

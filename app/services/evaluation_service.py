@@ -1,7 +1,6 @@
 """评测会话管理服务"""
 
 import asyncio
-import logging
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional

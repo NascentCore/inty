@@ -60,7 +60,9 @@ def _slot_candidate_schema_properties(allowed: frozenset[str]) -> dict[str, obje
     }
 
 
-def _json_schema_memory_candidates(name: str, allowed: frozenset[str]) -> dict[str, object]:
+def _json_schema_memory_candidates(
+    name: str, allowed: frozenset[str]
+) -> dict[str, object]:
     return {
         "name": name,
         "strict": True,
@@ -398,7 +400,9 @@ def _parse_slot_candidates_json(
     elif isinstance(data, dict):
         raw_items = data.get("candidates", [])
         if not isinstance(raw_items, list):
-            raise ValueError("LLM extractor response must include list field candidates")
+            raise ValueError(
+                "LLM extractor response must include list field candidates"
+            )
     else:
         raise ValueError(
             "LLM extractor response must be either list or object with candidates"
@@ -435,7 +439,9 @@ def _parse_slot_candidates_json(
     return out
 
 
-def extract_semantic_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandidate]:
+def extract_semantic_candidates_llm_default(
+    text: str, turn_idx: int
+) -> list[SlotCandidate]:
     client, model = _get_llm_client_and_model()
     content = _llm_json_completion(
         client,
@@ -448,7 +454,9 @@ def extract_semantic_candidates_llm_default(text: str, turn_idx: int) -> list[Sl
     return _parse_slot_candidates_json(content, turn_idx, SEMANTIC_ALLOWED_KEYS)
 
 
-def extract_self_schema_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandidate]:
+def extract_self_schema_candidates_llm_default(
+    text: str, turn_idx: int
+) -> list[SlotCandidate]:
     client, model = _get_llm_client_and_model()
     content = _llm_json_completion(
         client,
@@ -461,7 +469,9 @@ def extract_self_schema_candidates_llm_default(text: str, turn_idx: int) -> list
     return _parse_slot_candidates_json(content, turn_idx, SELF_SCHEMA_ALLOWED_KEYS)
 
 
-def extract_episodic_events_llm_default(text: str, turn_idx: int) -> list[EpisodicEvent]:
+def extract_episodic_events_llm_default(
+    text: str, turn_idx: int
+) -> list[EpisodicEvent]:
     client, model = _get_llm_client_and_model()
     content = _llm_json_completion(
         client,
@@ -561,7 +571,9 @@ def llm_extract_memory_slots(
     elif isinstance(data, dict):
         items = data.get("candidates", [])
         if not isinstance(items, list):
-            raise ValueError("LLM extractor response must include list field candidates")
+            raise ValueError(
+                "LLM extractor response must include list field candidates"
+            )
         raw_items = items
     else:
         raise ValueError("LLM extractor response must be object or list JSON")
@@ -673,7 +685,9 @@ def extract_by_memory_category(
 _BOUNDARY_VALUE_RE = re.compile(r"不要叫我(.+)$")
 
 
-def _resolve_same_turn_conflicts(candidates: list[SlotCandidate]) -> list[SlotCandidate]:
+def _resolve_same_turn_conflicts(
+    candidates: list[SlotCandidate],
+) -> list[SlotCandidate]:
     blocked_names: set[str] = set()
     for c in candidates:
         if c.key != "boundary":
@@ -715,7 +729,7 @@ def build_live_slot_extract_fn() -> LLMExtractFn:
         client, model = _get_llm_client_and_model()
         sem_user = (
             f"Utterance:\n{text}\n\n"
-            "Return JSON only. Either {\"candidates\":[...]} or a JSON array. "
+            'Return JSON only. Either {"candidates":[...]} or a JSON array. '
             "Each item: key, value, confidence, evidence, is_negative. "
             f"Allowed keys: {', '.join(sorted(SEMANTIC_ALLOWED_KEYS))}. "
             "Use empty candidates or [] if nothing applies."
@@ -730,7 +744,7 @@ def build_live_slot_extract_fn() -> LLMExtractFn:
         semantic = _parse_slot_candidates_json(sem_raw, turn_idx, SEMANTIC_ALLOWED_KEYS)
         ss_user = (
             f"Utterance:\n{text}\n\n"
-            "Return JSON only. Either {\"candidates\":[...]} or a JSON array. "
+            'Return JSON only. Either {"candidates":[...]} or a JSON array. '
             "Each item: key, value, confidence, evidence, is_negative. "
             f"Allowed keys: {', '.join(sorted(SELF_SCHEMA_ALLOWED_KEYS))}. "
             "Use empty candidates or [] if nothing applies."
@@ -775,7 +789,7 @@ def build_live_episodic_llm_call() -> EpisodicLLMCallFn:
         user = (
             f"Utterance:\n{text}\n\n"
             'Return JSON only: {"events":[{"gist","salience_hint","evidence"}, ...]}. '
-            "Use {\"events\":[]} if no episodic content."
+            'Use {"events":[]} if no episodic content.'
         )
         return _llm_json_object_completion(
             client,

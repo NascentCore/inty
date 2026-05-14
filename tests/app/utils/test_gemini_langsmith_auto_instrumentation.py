@@ -61,17 +61,21 @@ def _make_traced_gemini_call(wrapped_client, *, use_plain_text: bool):
 @pytest.mark.noci
 def test_gemini_text_contents_langsmith_integration():
     wrapped_client = get_wrapped_genai_client()
-    start_time, random_str = _make_traced_gemini_call(wrapped_client, use_plain_text=True)
-    assert find_run_contains_random_string(start_time, random_str) is not None, (
-        f"No run found with the random string: {random_str}"
+    start_time, random_str = _make_traced_gemini_call(
+        wrapped_client, use_plain_text=True
     )
+    assert (
+        find_run_contains_random_string(start_time, random_str) is not None
+    ), f"No run found with the random string: {random_str}"
 
 
 @pytest.mark.noci
 def test_gemini_text_part_contents_langsmith_integration():
     """当前 wrap_gemini 不会把 types.Part 形式的 contents 序列化到 LangSmith run 的 inputs 中，故预期查不到 run。"""
     wrapped_client = get_wrapped_genai_client()
-    start_time, random_str = _make_traced_gemini_call(wrapped_client, use_plain_text=False)
-    assert find_run_contains_random_string(start_time, random_str) is None, (
-        "追踪无法抓取 types.part 结构体的输入"
+    start_time, random_str = _make_traced_gemini_call(
+        wrapped_client, use_plain_text=False
     )
+    assert (
+        find_run_contains_random_string(start_time, random_str) is None
+    ), "追踪无法抓取 types.part 结构体的输入"

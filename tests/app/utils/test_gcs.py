@@ -53,7 +53,9 @@ def test_append_filename_suffix():
     assert append_filename_suffix("b", "-suffix") == "b-suffix"
 
 
-def test_get_bucket_from_file_uri_under_fake_base(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+def test_get_bucket_from_file_uri_under_fake_base(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
     base = tmp_path / "fgcs"
     base.mkdir()
     local_file = base / "mybucket" / "p" / "x.bin"
@@ -64,13 +66,17 @@ def test_get_bucket_from_file_uri_under_fake_base(monkeypatch: pytest.MonkeyPatc
         gcs_mod,
         "global_config_loaded_from_config_yaml",
         SimpleNamespace(
-            gcs=SimpleNamespace(use_fake_gcs=True, fake_gcs_base_dir=str(base.resolve()))
+            gcs=SimpleNamespace(
+                use_fake_gcs=True, fake_gcs_base_dir=str(base.resolve())
+            )
         ),
     )
     assert get_bucket_and_path_from_gcs_url(uri) == ("mybucket", "p/x.bin")
 
 
-def test_is_valid_gcs_url_accepts_fake_file_uri(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+def test_is_valid_gcs_url_accepts_fake_file_uri(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
     base = tmp_path / "fgcs2"
     base.mkdir()
     local_file = base / "bkt" / "obj.txt"
@@ -81,7 +87,9 @@ def test_is_valid_gcs_url_accepts_fake_file_uri(monkeypatch: pytest.MonkeyPatch,
         gcs_mod,
         "global_config_loaded_from_config_yaml",
         SimpleNamespace(
-            gcs=SimpleNamespace(use_fake_gcs=True, fake_gcs_base_dir=str(base.resolve()))
+            gcs=SimpleNamespace(
+                use_fake_gcs=True, fake_gcs_base_dir=str(base.resolve())
+            )
         ),
     )
     assert is_valid_gcs_url(uri) is True

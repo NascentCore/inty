@@ -55,11 +55,15 @@ class SlantedTriangularScheduler:
         self.step_count += 1
         p = max(0.0, self._compute_p())
         lr_scale = (1 + p * (self.ratio - 1)) / self.ratio
-        for group, max_lr in zip(self.optimizer.param_groups, self.max_lrs, strict=True):
+        for group, max_lr in zip(
+            self.optimizer.param_groups, self.max_lrs, strict=True
+        ):
             group["lr"] = max_lr * lr_scale
 
 
-def _lm_loss_and_tokens(logits: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, int]:
+def _lm_loss_and_tokens(
+    logits: torch.Tensor, target: torch.Tensor
+) -> tuple[torch.Tensor, int]:
     vocab_size = logits.size(-1)
     loss = nn.functional.cross_entropy(
         logits.reshape(-1, vocab_size),
@@ -166,14 +170,21 @@ def _build_discriminative_lrs(
     groups: list[dict] = []
     max_lrs: list[float] = []
     lr = cfg.lr_max
-    groups.append({"params": list(classifier.classifier.parameters()), "lr": lr / cfg.stlr_ratio})
+    groups.append(
+        {"params": list(classifier.classifier.parameters()), "lr": lr / cfg.stlr_ratio}
+    )
     max_lrs.append(lr)
     for rnn in reversed(classifier.encoder.rnns):
         lr = lr / cfg.layer_lr_decay
         groups.append({"params": list(rnn.parameters()), "lr": lr / cfg.stlr_ratio})
         max_lrs.append(lr)
     lr = lr / cfg.layer_lr_decay
-    groups.append({"params": list(classifier.encoder.embedding.parameters()), "lr": lr / cfg.stlr_ratio})
+    groups.append(
+        {
+            "params": list(classifier.encoder.embedding.parameters()),
+            "lr": lr / cfg.stlr_ratio,
+        }
+    )
     max_lrs.append(lr)
     return groups, max_lrs
 
@@ -192,7 +203,10 @@ def _evaluate_classifier(
             token_ids = token_ids.to(device)
             lengths = lengths.to(device)
             labels = labels.to(device)
-            attention_mask = (torch.arange(token_ids.size(1), device=device)[None, :] < lengths[:, None]).long()
+            attention_mask = (
+                torch.arange(token_ids.size(1), device=device)[None, :]
+                < lengths[:, None]
+            ).long()
             logits = classifier(token_ids, attention_mask)
             loss = nn.functional.cross_entropy(logits, labels)
             total_loss += float(loss.item()) * int(labels.size(0))
@@ -211,9 +225,15 @@ def train_classifier_with_ulmfit(
 ) -> dict[str, float]:
     cls_cfg = cfg.classifier_train
     classifier = ConcatPoolingClassifier(lm_model.encoder, cls_cfg).to(device)
-    train_set = TextClassificationDataset(data.classifier_train, data.vocab, cls_cfg.max_seq_len)
-    valid_set = TextClassificationDataset(data.classifier_valid, data.vocab, cls_cfg.max_seq_len)
-    test_set = TextClassificationDataset(data.classifier_test, data.vocab, cls_cfg.max_seq_len)
+    train_set = TextClassificationDataset(
+        data.classifier_train, data.vocab, cls_cfg.max_seq_len
+    )
+    valid_set = TextClassificationDataset(
+        data.classifier_valid, data.vocab, cls_cfg.max_seq_len
+    )
+    test_set = TextClassificationDataset(
+        data.classifier_test, data.vocab, cls_cfg.max_seq_len
+    )
     train_loader = DataLoader(train_set, batch_size=cls_cfg.batch_size, shuffle=True)
     valid_loader = DataLoader(valid_set, batch_size=cls_cfg.batch_size, shuffle=False)
     test_loader = DataLoader(test_set, batch_size=cls_cfg.batch_size, shuffle=False)
@@ -236,20 +256,29 @@ def train_classifier_with_ulmfit(
         )
         for epoch in range(epochs):
             classifier.train()
-            progress = tqdm(train_loader, desc=f"cls-stage-{stage_index}-epoch-{epoch + 1}", leave=False)
+            progress = tqdm(
+                train_loader,
+                desc=f"cls-stage-{stage_index}-epoch-{epoch + 1}",
+                leave=False,
+            )
             for token_ids, lengths, labels in progress:
                 token_ids = token_ids.to(device)
                 lengths = lengths.to(device)
                 labels = labels.to(device)
                 attention_mask = (
-                    torch.arange(token_ids.size(1), device=device)[None, :] < lengths[:, None]
+                    torch.arange(token_ids.size(1), device=device)[None, :]
+                    < lengths[:, None]
                 ).long()
                 optimizer.zero_grad(set_to_none=True)
                 logits = classifier(token_ids, attention_mask)
                 loss = nn.functional.cross_entropy(logits, labels)
                 loss.backward()
-                trainable_parameters = [p for p in classifier.parameters() if p.requires_grad]
-                torch.nn.utils.clip_grad_norm_(trainable_parameters, cls_cfg.gradient_clip)
+                trainable_parameters = [
+                    p for p in classifier.parameters() if p.requires_grad
+                ]
+                torch.nn.utils.clip_grad_norm_(
+                    trainable_parameters, cls_cfg.gradient_clip
+                )
                 optimizer.step()
                 scheduler.step()
                 progress.set_postfix(loss=f"{loss.item():.4f}")
@@ -279,12 +308,16 @@ def train_classifier_with_ulmfit(
 
 def save_metrics(metrics: dict, output_dir: Path) -> Path:
     output_path = output_dir / "metrics_summary.json"
-    output_path.write_text(json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_path.write_text(
+        json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     logger.info("Saved metrics to {}", output_path)
     return output_path
 
 
-def run_ulmfit_pipeline(cfg: ExperimentConfig, device: torch.device) -> dict[str, float | dict]:
+def run_ulmfit_pipeline(
+    cfg: ExperimentConfig, device: torch.device
+) -> dict[str, float | dict]:
     data = prepare_data(cfg, device)
     save_vocab(data.vocab, cfg.output_dir)
 

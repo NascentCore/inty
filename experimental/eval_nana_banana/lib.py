@@ -14,7 +14,7 @@ from google.cloud import storage
 
 
 from app.core.google_genai.predefined_configs import IMAGE_CONFIG_9_16_1K
-from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
+from app.utils.models_catalog import NANO_BANANA_PRO
 
 
 from loguru import logger

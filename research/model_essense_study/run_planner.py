@@ -70,10 +70,9 @@ def build_run_plan(
         request_count = requests_per_model
         input_tokens = request_count * avg_input
         output_tokens = request_count * avg_output
-        cost = (
-            (input_tokens / 1_000_000.0) * input_price
-            + (output_tokens / 1_000_000.0) * output_price
-        )
+        cost = (input_tokens / 1_000_000.0) * input_price + (
+            output_tokens / 1_000_000.0
+        ) * output_price
         model_plans.append(
             ModelRunPlan(
                 model_id=model_id,

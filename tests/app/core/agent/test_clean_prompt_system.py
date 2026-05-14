@@ -214,7 +214,9 @@ def test_clean_tool_loop_matches_legacy_manual_tool_message_flow(
         "_call_openai_api_with_retry",
         fake_old_call_openai_api_with_retry,
     )
-    monkeypatch.setattr(legacy_agent_module, "_load_intellimate_user_manual", lambda: "MANUAL_X")
+    monkeypatch.setattr(
+        legacy_agent_module, "_load_intellimate_user_manual", lambda: "MANUAL_X"
+    )
 
     old_response, _, _ = old_agent._resolve_official_assistant_tool_calls(
         response=old_initial_response,
@@ -343,12 +345,18 @@ def test_agent_prompt_context_from_legacy_uses_llm_config_and_alias():
         agent_data={
             "name": "A",
             "settings": {
-                "llm_config": {"model": "anthropic/claude-3.5-sonnet", "temperature": 0.4}
+                "llm_config": {
+                    "model": "anthropic/claude-3.5-sonnet",
+                    "temperature": 0.4,
+                }
             },
         },
     )
     assert context_with_llm_config.resolved_llm_config() is not None
-    assert context_with_llm_config.resolved_llm_config().model == "anthropic/claude-3.5-sonnet"
+    assert (
+        context_with_llm_config.resolved_llm_config().model
+        == "anthropic/claude-3.5-sonnet"
+    )
 
     context_with_legacy_alias = AgentPromptContext.from_legacy_agent_data(
         agent_id="agent-llm-2",
@@ -429,7 +437,9 @@ def test_clean_prompt_builder_uses_chat_mode_branch_and_output_format():
 
     messages = build_system_messages(context=context, request=request, deps=deps)
     contents = _contents(messages)
-    selected_mode = render(prompts.get_mode_prompt_by_id("rp_mode_1225"), "Nova", "Alex")
+    selected_mode = render(
+        prompts.get_mode_prompt_by_id("rp_mode_1225"), "Nova", "Alex"
+    )
     selected_output = render(
         prompts.get_mode_output_format_prompt_by_id("rp_mode_1225"), "Nova", "Alex"
     )
@@ -488,7 +498,9 @@ def test_clean_prompt_builder_excludes_time_context_when_disabled():
         ),
     )
     messages = build_system_messages(context=context, request=request, deps=deps)
-    assert not any("##User Time Context" in (content or "") for content in _contents(messages))
+    assert not any(
+        "##User Time Context" in (content or "") for content in _contents(messages)
+    )
 
 
 def test_clean_prompt_builder_includes_christmas_prompts_when_enabled():
@@ -507,8 +519,14 @@ def test_clean_prompt_builder_includes_christmas_prompts_when_enabled():
     request = PromptBuildInput(user_profile="Name: Pat")
     messages = build_system_messages(context=context, request=request, deps=deps)
     contents = _contents(messages)
-    assert any(content.startswith("##Seasonal Behavior (Christmas Week") for content in contents)
-    assert any(content.startswith("##Temporal Context – Christmas Week") for content in contents)
+    assert any(
+        content.startswith("##Seasonal Behavior (Christmas Week")
+        for content in contents
+    )
+    assert any(
+        content.startswith("##Temporal Context – Christmas Week")
+        for content in contents
+    )
 
 
 def test_clean_official_builder_always_appends_introduction_message():
@@ -527,7 +545,10 @@ def test_clean_official_builder_always_appends_introduction_message():
         request=PromptBuildInput(user_profile="Name: OfficialUser"),
         deps=deps,
     )
-    assert any(content.startswith("##Introduction The following Introduction") for content in _contents(messages))
+    assert any(
+        content.startswith("##Introduction The following Introduction")
+        for content in _contents(messages)
+    )
 
 
 def test_clean_tool_loop_round_limit_exceeded_raises():
@@ -558,7 +579,9 @@ def test_clean_tool_loop_round_limit_exceeded_raises():
         resolve_official_assistant_tool_calls(
             request=OfficialAssistantToolLoopInput(
                 response=initial_response,
-                openai_messages=[OpenAIChatMessageSnapshot(role="user", content="loop")],
+                openai_messages=[
+                    OpenAIChatMessageSnapshot(role="user", content="loop")
+                ],
                 user_id="user-1",
             ),
             continue_chat=continue_chat,
@@ -588,7 +611,9 @@ def test_clean_tool_loop_unsupported_tool_returns_tool_message():
     final_response = ChatCompletionSnapshot(
         choices=[
             ChatCompletionChoiceSnapshot(
-                message=AssistantMessageSnapshot(content="Fallback answer.", tool_calls=[]),
+                message=AssistantMessageSnapshot(
+                    content="Fallback answer.", tool_calls=[]
+                ),
                 finish_reason="stop",
             )
         ]
@@ -611,7 +636,8 @@ def test_clean_tool_loop_unsupported_tool_returns_tool_message():
     assert output.response == final_response
     assert output.side_effects == []
     assert any(
-        message["role"] == "tool" and message["content"] == "Unsupported tool: unknown_tool"
+        message["role"] == "tool"
+        and message["content"] == "Unsupported tool: unknown_tool"
         for message in captured["messages"]
     )
 
@@ -697,9 +723,13 @@ def test_execute_official_assistant_tool_call_rejects_invalid_mbti_payloads():
 
 
 def test_chat_completion_snapshot_from_openai_response_maps_tool_calls():
-    raw_function = SimpleNamespace(name=OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME, arguments="{}")
+    raw_function = SimpleNamespace(
+        name=OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME, arguments="{}"
+    )
     raw_tool_call = SimpleNamespace(id="tc-1", type="function", function=raw_function)
-    raw_message = SimpleNamespace(content="I will call a tool.", tool_calls=[raw_tool_call])
+    raw_message = SimpleNamespace(
+        content="I will call a tool.", tool_calls=[raw_tool_call]
+    )
     raw_choice = SimpleNamespace(message=raw_message, finish_reason="tool_calls")
     raw_response = SimpleNamespace(choices=[raw_choice])
 
@@ -716,8 +746,12 @@ def test_chat_completion_snapshot_from_openai_response_maps_tool_calls():
 
 def test_openai_dicts_from_messages_keeps_tool_fields():
     messages = [
-        OpenAIChatMessageSnapshot(role="assistant", content="Tool calling...", tool_calls=[]),
-        OpenAIChatMessageSnapshot(role="tool", tool_call_id="tc-1", content="Tool result"),
+        OpenAIChatMessageSnapshot(
+            role="assistant", content="Tool calling...", tool_calls=[]
+        ),
+        OpenAIChatMessageSnapshot(
+            role="tool", tool_call_id="tc-1", content="Tool result"
+        ),
     ]
     payload = openai_dicts_from_messages(messages)
     assert payload[0] == {"role": "assistant", "content": "Tool calling..."}

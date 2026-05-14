@@ -22,9 +22,7 @@ CREATED_BY_AGENT
     python tools/scripts/migrate_generated_images.py --batch-size 50
 """
 
-import asyncio
 import json
-import re
 import uuid
 from dataclasses import dataclass
 from typing import Optional
@@ -44,8 +42,7 @@ from app.external_services.gcs import (
 )
 from app.models.chat_history import ChatHistory
 from app.models.resource import ImageResourceMetadata, Resource, ResourceType
-from app.schemas.resource import ResourceCreate
-from app.utils.image import ImageFormat, ImageSize
+from app.utils.image import ImageSize
 
 
 @dataclass

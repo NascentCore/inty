@@ -203,7 +203,7 @@ def crop_avatar(img_data: bytes) -> CropAvatarResult:
     img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    logger.debug(f"Detecting faces with py animeface ...")
+    logger.debug("Detecting faces with py animeface ...")
     pil_img = Image.fromarray(img)
     avatar_cropping_config = ANIME_FACE
     faces = animeface.detect(pil_img)

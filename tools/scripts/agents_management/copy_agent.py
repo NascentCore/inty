@@ -111,7 +111,7 @@ async def main():
             bind=dest_engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        logger.info(f"Connected to databases")
+        logger.info("Connected to databases")
     except Exception as e:
         logger.error(f"Failed to create database engines: {e}")
         sys.exit(1)

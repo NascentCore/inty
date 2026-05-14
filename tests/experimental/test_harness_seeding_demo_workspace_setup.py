@@ -9,7 +9,9 @@ import pytest
 from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.scope import CompanionScope
 
-from experimental.harness_seeding_demo.workspace_setup import seed_memory_store_from_directory
+from experimental.harness_seeding_demo.workspace_setup import (
+    seed_memory_store_from_directory,
+)
 
 
 def test_seed_memory_store_rejects_missing_seed_dir(tmp_path: Path) -> None:

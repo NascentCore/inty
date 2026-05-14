@@ -39,7 +39,9 @@ def _get_reporter_id(integration_client):
     user_response = integration_client.client.get(
         f"{integration_client.base_url}/api/v1/users/me"
     )
-    assert user_response.status_code == 200, f"Failed to get user info: {user_response.text}"
+    assert (
+        user_response.status_code == 200
+    ), f"Failed to get user info: {user_response.text}"
     user_data = user_response.json()
     assert user_data.get("code") == 200, f"Get user info returned error: {user_data}"
     return user_data["data"]["id"]
@@ -184,7 +186,9 @@ def test_create_report_as_non_superuser(integration_client, db_session):
 
     assert response.status_code == 200, f"Report creation failed: {response.text}"
     response_data = response.json()
-    assert response_data.get("code") == 200, f"Report creation returned error: {response_data}"
+    assert (
+        response_data.get("code") == 200
+    ), f"Report creation returned error: {response_data}"
 
     reporter_id = _get_reporter_id(integration_client)
     report = _find_report(db_session, agent_id, reporter_id)
@@ -193,7 +197,9 @@ def test_create_report_as_non_superuser(integration_client, db_session):
     assert report.description == "Report from non-admin user"
 
 
-def test_create_report_with_reason_codes(integration_client, db_session, report_superuser):
+def test_create_report_with_reason_codes(
+    integration_client, db_session, report_superuser
+):
     """测试使用 reason_codes 创建举报（新 API）"""
     # 创建一个 agent 作为被举报的目标
     agent_id = integration_client.create_agent(
@@ -220,9 +226,12 @@ def test_create_report_with_reason_codes(integration_client, db_session, report_
     assert response.status_code == 200, f"Report creation failed: {response.text}"
 
     response_data = response.json()
-    assert response_data.get("code") == 200, f"Report creation returned error: {response_data}"
-    assert response_data.get("message") == "success", \
-        f"Unexpected response structure: {response_data}"
+    assert (
+        response_data.get("code") == 200
+    ), f"Report creation returned error: {response_data}"
+    assert (
+        response_data.get("message") == "success"
+    ), f"Unexpected response structure: {response_data}"
 
     # 获取当前用户 ID
     reporter_id = _get_reporter_id(integration_client)
@@ -233,11 +242,17 @@ def test_create_report_with_reason_codes(integration_client, db_session, report_
     assert report is not None, "Report not found in database"
     assert report.target_id == agent_id, "Report target ID mismatch"
     assert report.target_type == "AGENT", "Report target type mismatch"
-    assert report.reason_codes == ["SENSITIVE_CONTENT", "MISINFORMATION"], \
-        "Report reason codes mismatch"
+    assert report.reason_codes == [
+        "SENSITIVE_CONTENT",
+        "MISINFORMATION",
+    ], "Report reason codes mismatch"
     # 只使用 reason_codes 时，reason_ids 应该为空列表
-    assert report.reason_ids == [], "Report reason IDs should be empty when only reason_codes provided"
-    assert report.description == "Test report with reason_codes", "Report description mismatch"
+    assert (
+        report.reason_ids == []
+    ), "Report reason IDs should be empty when only reason_codes provided"
+    assert (
+        report.description == "Test report with reason_codes"
+    ), "Report description mismatch"
     assert report.image_urls == [], "Report image URLs mismatch"
     # 验证 report_type 为 None 或 REPORT（向后兼容）
     assert (
@@ -245,7 +260,9 @@ def test_create_report_with_reason_codes(integration_client, db_session, report_
     ), f"Report type should be None or REPORT, got {report.report_type}"
 
 
-def test_create_report_with_reason_ids(integration_client, db_session, report_superuser):
+def test_create_report_with_reason_ids(
+    integration_client, db_session, report_superuser
+):
     """测试使用 reason_ids 创建举报（向后兼容，旧 API）"""
     # 创建一个 agent 作为被举报的目标
     agent_id = integration_client.create_agent(
@@ -274,9 +291,12 @@ def test_create_report_with_reason_ids(integration_client, db_session, report_su
     assert response.status_code == 200, f"Report creation failed: {response.text}"
 
     response_data = response.json()
-    assert response_data.get("code") == 200, f"Report creation returned error: {response_data}"
-    assert response_data.get("message") == "success", \
-        f"Unexpected response structure: {response_data}"
+    assert (
+        response_data.get("code") == 200
+    ), f"Report creation returned error: {response_data}"
+    assert (
+        response_data.get("message") == "success"
+    ), f"Unexpected response structure: {response_data}"
 
     # 获取当前用户 ID
     reporter_id = _get_reporter_id(integration_client)
@@ -290,10 +310,12 @@ def test_create_report_with_reason_ids(integration_client, db_session, report_su
     # reason_ids 应该被保存（向后兼容）
     assert report.reason_ids == [1], "Report reason IDs mismatch"
     # reason_codes 应该从 reason_ids 转换而来
-    assert report.reason_codes == ["SENSITIVE_CONTENT"], \
-        "Report reason codes mismatch (should be converted from reason_ids)"
-    assert report.description == "Test report with reason_ids (backward compatibility)", \
-        "Report description mismatch"
+    assert report.reason_codes == [
+        "SENSITIVE_CONTENT"
+    ], "Report reason codes mismatch (should be converted from reason_ids)"
+    assert (
+        report.description == "Test report with reason_ids (backward compatibility)"
+    ), "Report description mismatch"
     assert report.image_urls == [], "Report image URLs mismatch"
     # 验证 report_type 为 None 或 REPORT（向后兼容）
     assert (
@@ -301,7 +323,9 @@ def test_create_report_with_reason_ids(integration_client, db_session, report_su
     ), "Report type should be None or REPORT for legacy reports"
 
 
-def test_create_feedback_with_reason_codes(integration_client, db_session, report_superuser):
+def test_create_feedback_with_reason_codes(
+    integration_client, db_session, report_superuser
+):
     """测试使用 reason_codes 创建反馈（新 API）"""
     # 准备反馈数据，使用新的 reason_codes API
     # 注意：feedback 模式下，target_id 和 target_type 可以为空字符串（Android 端的实现）
@@ -383,7 +407,9 @@ def test_create_image_feedback_with_new_reason_codes(
         f"{integration_client.base_url}/api/v1/report/",
         json=feedback_payload,
     )
-    assert response.status_code == 200, f"Image feedback creation failed: {response.text}"
+    assert (
+        response.status_code == 200
+    ), f"Image feedback creation failed: {response.text}"
     response_data = response.json()
     assert response_data.get("code") == 200, f"Unexpected response: {response_data}"
 
@@ -400,7 +426,9 @@ def test_create_image_feedback_with_new_reason_codes(
     assert feedback.report_type == ReportType.FEEDBACK
 
 
-def test_create_feedback_with_reason_ids(integration_client, db_session, report_superuser):
+def test_create_feedback_with_reason_ids(
+    integration_client, db_session, report_superuser
+):
     """测试使用 reason_ids 创建反馈（向后兼容，旧 API）
 
     验证 feedback 使用 reason_ids 时，会被正确转换为 feedback 的 reason_codes。
@@ -467,7 +495,9 @@ def test_create_feedback_with_reason_ids(integration_client, db_session, report_
     ), f"Feedback status should be PENDING, got {feedback.status}"
 
 
-def test_create_feedback_with_reason_id_zero(integration_client, db_session, report_superuser):
+def test_create_feedback_with_reason_id_zero(
+    integration_client, db_session, report_superuser
+):
     """测试使用 reason_id 0 (OTHER) 创建反馈
 
     验证 feedback 使用 reason_id 0 时，会被正确转换为 "OTHER"。
@@ -534,7 +564,9 @@ def test_delete_report_by_reporter(integration_client, db_session, report_superu
     )
     assert response.status_code == 200, f"Report creation failed: {response.text}"
     response_data = response.json()
-    assert response_data.get("code") == 200, f"Report creation returned error: {response_data}"
+    assert (
+        response_data.get("code") == 200
+    ), f"Report creation returned error: {response_data}"
 
     reporter_id = _get_reporter_id(integration_client)
     report = _find_report(db_session, agent_id, reporter_id)
@@ -545,7 +577,9 @@ def test_delete_report_by_reporter(integration_client, db_session, report_superu
     )
     assert delete_resp.status_code == 200, f"Report deletion failed: {delete_resp.text}"
     delete_data = delete_resp.json()
-    assert delete_data.get("code") == 200, f"Report deletion returned error: {delete_data}"
+    assert (
+        delete_data.get("code") == 200
+    ), f"Report deletion returned error: {delete_data}"
 
     deleted = db_session.query(Report).filter(Report.id == report.id).first()
     assert deleted is None, "Report should be deleted from database"
@@ -776,7 +810,9 @@ def test_update_report_github_issue_invalid_url(
     assert unchanged_report.github_issue is None
 
 
-def test_get_report_conversation_groups(integration_client, db_session, report_superuser):
+def test_get_report_conversation_groups(
+    integration_client, db_session, report_superuser
+):
     """验证举报详情可返回举报人的 user_id:agent_id 聊天分组列表。"""
     reporter_id = _get_reporter_id(integration_client)
     target_agent_id = integration_client.create_agent(

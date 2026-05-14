@@ -200,9 +200,7 @@ class UserAnalyticsStatsResponse(BaseModel):
         description="发起聊天的人数（排除仅浏览开场白的用户）"
     )
     total_user_messages: int = Field(description="总发送消息数（排除AI回复和开场白）")
-    total_ai_messages: int = Field(
-        default=0, description="AI 回复消息数（排除开场白）"
-    )
+    total_ai_messages: int = Field(default=0, description="AI 回复消息数（排除开场白）")
     total_active_sessions: int = Field(
         description="包含用户消息的会话数（排除仅浏览开场白的会话）"
     )

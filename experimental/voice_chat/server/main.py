@@ -1,5 +1,4 @@
 import asyncio
-import json
 from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -12,7 +11,6 @@ from aiortc import (
     RTCConfiguration,
     RTCIceServer,
 )
-from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder
 from starlette.responses import JSONResponse
 
 from google.genai import types
@@ -192,7 +190,6 @@ async def gemini_bridge(session: SessionState):
                     if response.data:
                         # PCM bytes at 24kHz from Gemini
                         # We create a new aiortc AudioFrame from bytes
-                        import av
                         from av.audio.frame import AudioFrame
 
                         # Create frame: s16, mono, 24000

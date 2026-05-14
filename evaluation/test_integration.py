@@ -45,7 +45,12 @@ class APITester:
             if response.status in [200, 201]:
                 result = await response.json()
                 # 仅对聊天接口处理 APIResponse 格式
-                if "chat/completions" in endpoint and isinstance(result, dict) and "data" in result and result.get("code") == 200:
+                if (
+                    "chat/completions" in endpoint
+                    and isinstance(result, dict)
+                    and "data" in result
+                    and result.get("code") == 200
+                ):
                     return result["data"]
                 return result
             else:

@@ -25,7 +25,9 @@ class AWDLikeLSTMEncoder(nn.Module):
         input_size = cfg.embedding_dim
         for layer_index in range(cfg.num_layers):
             layer_hidden_size = (
-                cfg.embedding_dim if layer_index == cfg.num_layers - 1 else cfg.hidden_dim
+                cfg.embedding_dim
+                if layer_index == cfg.num_layers - 1
+                else cfg.hidden_dim
             )
             self.rnns.append(
                 nn.LSTM(

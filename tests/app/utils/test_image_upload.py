@@ -35,9 +35,7 @@ def _assert_served_image_url(url: str) -> None:
         assert url.startswith("file:"), url
         assert gcs_cfg.bucket in url.replace("\\", "/"), url
     else:
-        assert (
-            "cdn.example.com" in url or "storage.googleapis.com" in url
-        ), url
+        assert "cdn.example.com" in url or "storage.googleapis.com" in url, url
 
 
 def _assert_fallback_public_url_after_cdn_failure(url: str) -> None:
@@ -56,13 +54,13 @@ def create_test_user(db: Session, user_id: str) -> User:
     existing_user = db.query(User).filter(User.id == user_id).one_or_none()
     if existing_user:
         return existing_user
-    
+
     # 生成唯一的readable_id
     readable_id = str(random.randint(10000000, 99999999))
     # 确保readable_id唯一
     while db.query(User).filter(User.readable_id == readable_id).one_or_none():
         readable_id = str(random.randint(10000000, 99999999))
-    
+
     # 创建新的测试用户
     test_user = User(
         id=user_id,
@@ -74,7 +72,6 @@ def create_test_user(db: Session, user_id: str) -> User:
     db.commit()
     db.refresh(test_user)
     return test_user
-
 
 
 def register_user(db: Session, user_in) -> User:
@@ -962,19 +959,30 @@ class TestImageUploadResourceRecords:
         assert len(resources) >= 2  # 至少有两个资源记录（原始PNG和压缩JPEG）
 
         # 检查压缩资源记录
-        compressed_resources = [r for r in resources if r.resource_metadata.get("content_type") == "image/jpeg"]
+        compressed_resources = [
+            r
+            for r in resources
+            if r.resource_metadata.get("content_type") == "image/jpeg"
+        ]
         assert len(compressed_resources) >= 1
 
         # 检查原始资源记录
-        original_resources = [r for r in resources if r.resource_metadata.get("content_type") == "image/png"]
+        original_resources = [
+            r
+            for r in resources
+            if r.resource_metadata.get("content_type") == "image/png"
+        ]
         assert len(original_resources) >= 1
 
         # 验证压缩效果
         compressed_resource = compressed_resources[0]
         original_resource = original_resources[0]
-        
+
         # 压缩后的文件应该更小
-        assert compressed_resource.resource_metadata["byte_size"] < original_resource.resource_metadata["byte_size"]
+        assert (
+            compressed_resource.resource_metadata["byte_size"]
+            < original_resource.resource_metadata["byte_size"]
+        )
 
         # 验证URL格式
         for resource in resources:

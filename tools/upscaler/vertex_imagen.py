@@ -9,9 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 from urllib import error, parse, request
 
-DEFAULT_VERTEX_IMAGEN_UPSCALE_DOC_URL = (
-    "https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/imagen/4-0-upscale?hl=en"
-)
+DEFAULT_VERTEX_IMAGEN_UPSCALE_DOC_URL = "https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/imagen/4-0-upscale?hl=en"
 DEFAULT_MODEL_ID = "imagen-4.0-upscale-preview"
 DEFAULT_REGION = "us-central1"
 DEFAULT_PROMPT = "Upscale the image"
@@ -49,7 +47,9 @@ class VertexUpscaleResult:
     raw_response: dict[str, Any]
 
 
-def build_vertex_predict_endpoint(*, project_id: str, region: str, model_id: str) -> str:
+def build_vertex_predict_endpoint(
+    *, project_id: str, region: str, model_id: str
+) -> str:
     encoded_project = parse.quote(project_id.strip(), safe="-_:.")
     encoded_region = parse.quote(region.strip(), safe="-_:.")
     encoded_model = parse.quote(model_id.strip(), safe="-_.")
@@ -137,7 +137,9 @@ def parse_upscale_response(response_json: dict[str, Any]) -> tuple[bytes, str]:
 
     mime_type = prediction.get("mimeType")
     resolved_mime_type = (
-        mime_type if isinstance(mime_type, str) and mime_type else DEFAULT_OUTPUT_MIME_TYPE
+        mime_type
+        if isinstance(mime_type, str) and mime_type
+        else DEFAULT_OUTPUT_MIME_TYPE
     )
 
     try:
@@ -164,7 +166,9 @@ def _validate_request(request_data: VertexUpscaleRequest) -> None:
         raise UpscaleError("请提供 API Key 或 Access Token")
 
 
-def upscale_image_with_vertex(request_data: VertexUpscaleRequest) -> VertexUpscaleResult:
+def upscale_image_with_vertex(
+    request_data: VertexUpscaleRequest,
+) -> VertexUpscaleResult:
     _validate_request(request_data)
     normalized_upscale_factor = normalize_upscale_factor(request_data.upscale_factor)
     endpoint = build_vertex_predict_endpoint(
@@ -185,10 +189,14 @@ def upscale_image_with_vertex(request_data: VertexUpscaleRequest) -> VertexUpsca
         api_key=request_data.api_key,
         access_token=request_data.access_token,
     )
-    http_request = request.Request(request_url, data=body, headers=headers, method="POST")
+    http_request = request.Request(
+        request_url, data=body, headers=headers, method="POST"
+    )
 
     try:
-        with request.urlopen(http_request, timeout=request_data.timeout_seconds) as response:
+        with request.urlopen(
+            http_request, timeout=request_data.timeout_seconds
+        ) as response:
             response_body = response.read()
     except error.HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace")
@@ -209,4 +217,3 @@ def upscale_image_with_vertex(request_data: VertexUpscaleRequest) -> VertexUpsca
         request_url=request_url,
         raw_response=response_json,
     )
-

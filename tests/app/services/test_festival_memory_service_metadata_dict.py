@@ -68,11 +68,13 @@ def _load_festival_memory_service_module():
     fake_llm_config_module.LLMConfig = _LLMConfig
 
     fake_core_config_module = types.ModuleType("app.core.config")
-    fake_core_config_module.global_config_loaded_from_config_yaml = types.SimpleNamespace(
-        database=types.SimpleNamespace(
-            url="postgresql://primary-host:5432/inty", async_replica_url=None
-        ),
-        memory_extraction=types.SimpleNamespace(model=None),
+    fake_core_config_module.global_config_loaded_from_config_yaml = (
+        types.SimpleNamespace(
+            database=types.SimpleNamespace(
+                url="postgresql://primary-host:5432/inty", async_replica_url=None
+            ),
+            memory_extraction=types.SimpleNamespace(model=None),
+        )
     )
 
     fake_prompt_cfg_module = types.ModuleType("app.core.agent.agent_prompt_configs")
@@ -140,9 +142,13 @@ def _load_festival_memory_service_module():
         mp.setitem(sys.modules, "app.models.agent", fake_agent_model_module)
         mp.setitem(sys.modules, "app.models.memory", fake_memory_model_module)
         mp.setitem(sys.modules, "app.models.user", fake_user_model_module)
-        mp.setitem(sys.modules, "app.services.chat_history_service", fake_chat_history_module)
+        mp.setitem(
+            sys.modules, "app.services.chat_history_service", fake_chat_history_module
+        )
         mp.setitem(sys.modules, "app.services.chat_service", fake_chat_service_module)
-        mp.setitem(sys.modules, "app.services.memory_service", fake_memory_service_module)
+        mp.setitem(
+            sys.modules, "app.services.memory_service", fake_memory_service_module
+        )
         mp.setitem(sys.modules, "app.utils.openai_client", fake_openai_client_module)
         mp.setitem(sys.modules, "app.utils.openrouter_memory", fake_openrouter_module)
         module = importlib.import_module("app.services.festival_memory_service")

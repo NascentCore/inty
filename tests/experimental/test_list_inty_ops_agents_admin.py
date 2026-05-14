@@ -116,9 +116,7 @@ def test_run_list_http_error(list_mod, token_file):
     )
 
     out, err = StringIO(), StringIO()
-    with patch.object(
-        list_mod.urllib.request, "urlopen", side_effect=err_http
-    ):
+    with patch.object(list_mod.urllib.request, "urlopen", side_effect=err_http):
         rc = list_mod.run_list(
             api_base="http://127.0.0.1:8001",
             token_path=token_file,

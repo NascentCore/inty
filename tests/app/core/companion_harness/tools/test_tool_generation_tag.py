@@ -28,9 +28,10 @@ def test_tool_requires_client_delivery_on_success(name: str, expected: bool) -> 
 
 
 def test_round_includes_generation_tool() -> None:
-    assert round_includes_generation_tool(
-        ["memory_store_read_document", "generate_image"]
-    ) is True
+    assert (
+        round_includes_generation_tool(["memory_store_read_document", "generate_image"])
+        is True
+    )
     assert round_includes_generation_tool(["user_profile_record"]) is False
 
 

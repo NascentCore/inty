@@ -27,7 +27,9 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
+from app.core.companion_harness.tools.companion_tools import (
+    build_openai_repl_tools_inner_tick,
+)
 from app.core.companion_harness.companion.turn_routes import TurnRouteMode
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
@@ -194,7 +196,9 @@ def test_refresh_inner_tick_compact_keeps_inner_tick_tools(tmp_path) -> None:
         inner_tick_mode=InnerTickMode.MAINTENANCE,
         tool_side_compact_system_prompt=True,
     )
-    expected_names = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
+    expected_names = {
+        t["function"]["name"] for t in build_openai_repl_tools_inner_tick()
+    }
     assert {t["function"]["name"] for t in tools_before} == expected_names
 
     messages = [dict(m) for m in systems]
@@ -365,9 +369,12 @@ def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
 
     out = tool_companion_bootstrap_user_interactive_complete(st, note=None)
     assert out.startswith("OK ")
-    assert json.loads(st.read_document("context.json"))[
-        "workspace_bootstrap_user_interactive_completed"
-    ] is True
+    assert (
+        json.loads(st.read_document("context.json"))[
+            "workspace_bootstrap_user_interactive_completed"
+        ]
+        is True
+    )
 
     new_tools = refresh_companion_turn_prompt_stack(
         store=st,

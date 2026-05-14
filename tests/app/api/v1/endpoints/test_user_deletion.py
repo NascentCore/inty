@@ -132,9 +132,8 @@ async def test_delete_account_with_active_subscription(
     assert delete_response.status_code == 200
     delete_data = delete_response.json()
     assert delete_data["code"] != 200 or delete_data["data"]["success"] is False
-    error_message = (
-        delete_data.get("message")
-        or delete_data.get("data", {}).get("message", "")
+    error_message = delete_data.get("message") or delete_data.get("data", {}).get(
+        "message", ""
     )
     assert "订阅" in error_message or "subscription" in error_message.lower()
 
@@ -179,9 +178,8 @@ async def test_delete_account_already_deleted(
     assert delete_response.status_code == 200
     delete_data = delete_response.json()
     assert delete_data["code"] != 200 or delete_data["data"]["success"] is False
-    error_message = (
-        delete_data.get("message")
-        or delete_data.get("data", {}).get("message", "")
+    error_message = delete_data.get("message") or delete_data.get("data", {}).get(
+        "message", ""
     )
     assert "删除" in error_message or "deleted" in error_message.lower()
 

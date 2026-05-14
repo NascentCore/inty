@@ -233,7 +233,7 @@ def needs_startup_profile_inquiry(store: MemoryStore) -> bool:
     When initialized and transcript has no user/assistant rows yet: if IDENTITY or USER still
     looks like placeholders, the assistant should open the conversation with profile questions.
     """
-    from .models import load_transcript_from_store
+    from app.core.companion_harness.companion.models import load_transcript_from_store
 
     if not is_scope_initialized_in_store(store):
         return False

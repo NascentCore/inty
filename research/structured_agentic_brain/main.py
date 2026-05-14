@@ -292,7 +292,9 @@ def retrieve_memory(case: ScenarioCase, user_message: str) -> MemoryEvidence:
     )
 
 
-def pfca_plan(case: ScenarioCase, threat: ThreatAssessment, state: UserStateEstimate) -> Plan:
+def pfca_plan(
+    case: ScenarioCase, threat: ThreatAssessment, state: UserStateEstimate
+) -> Plan:
     if threat.level == "high":
         options = [
             PlanningOption(
@@ -392,14 +394,18 @@ def acca_conflict(threat: ThreatAssessment, plan: Plan) -> ConflictReport:
     )
 
 
-def ofa_value_assess(plan: Plan, threat: ThreatAssessment, conflict: ConflictReport) -> ValueAssessment:
+def ofa_value_assess(
+    plan: Plan, threat: ThreatAssessment, conflict: ConflictReport
+) -> ValueAssessment:
     threat_penalty = {"low": 0.05, "medium": 0.2, "high": 0.45}[threat.level]
     conflict_penalty = {"low": 0.03, "medium": 0.08, "high": 0.15}[conflict.severity]
     scores: list[OptionScore] = []
     for option in plan.options:
         risk_penalty = option.expected_risk + threat_penalty + conflict_penalty
         utility = option.expected_gain - risk_penalty
-        scores.append(OptionScore(name=option.name, utility=utility, risk_penalty=risk_penalty))
+        scores.append(
+            OptionScore(name=option.name, utility=utility, risk_penalty=risk_penalty)
+        )
     return ValueAssessment(scores=scores)
 
 
@@ -464,7 +470,9 @@ def lca_generate_response(
     return FinalResponse(
         message=message,
         tone=tone,
-        suggested_followups=followups[:3] if followups else ["What feels most urgent right now?"],
+        suggested_followups=(
+            followups[:3] if followups else ["What feels most urgent right now?"]
+        ),
     )
 
 
@@ -482,10 +490,16 @@ class StructuredAgenticBrain:
     def run_case(self, case: ScenarioCase) -> BrainTrace:
         route = self.thalamus_pedantic.validate(thalamus_route(case.user_message))
         insula_state = self.insula_pedantic.validate(insula_estimate(case.user_message))
-        amygdala_threat = self.amygdala_pedantic.validate(amygdala_assess(case.user_message))
+        amygdala_threat = self.amygdala_pedantic.validate(
+            amygdala_assess(case.user_message)
+        )
         memory_evidence = retrieve_memory(case, case.user_message)
-        plan = self.pfca_pedantic.validate(pfca_plan(case, amygdala_threat, insula_state))
-        conflict_report = self.acca_pedantic.validate(acca_conflict(amygdala_threat, plan))
+        plan = self.pfca_pedantic.validate(
+            pfca_plan(case, amygdala_threat, insula_state)
+        )
+        conflict_report = self.acca_pedantic.validate(
+            acca_conflict(amygdala_threat, plan)
+        )
         value_assessment = ofa_value_assess(plan, amygdala_threat, conflict_report)
         action_decision = bga_select_action(value_assessment)
         final_response = self.lca_pedantic.validate(

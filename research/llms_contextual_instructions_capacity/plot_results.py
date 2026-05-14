@@ -45,7 +45,9 @@ def plot_metric_vs_u(
     metric_label: str,
     out_path: Path,
 ) -> None:
-    selected = [r for r in rows if int_field(r, "instruction_count") == instruction_count]
+    selected = [
+        r for r in rows if int_field(r, "instruction_count") == instruction_count
+    ]
     profiles = sorted({r["placement_profile"] for r in selected})
 
     plt.figure(figsize=(8, 5))
@@ -59,7 +61,9 @@ def plot_metric_vs_u(
     plt.title(f"{metric_label} 随 U 变化 (N={instruction_count})")
     plt.xlabel("上下文利用率 U")
     plt.ylabel(metric_label)
-    plt.ylim(0.0, 1.05 if metric_key != "median_latency_ms" else max(ys) * 1.1 if ys else 1)
+    plt.ylim(
+        0.0, 1.05 if metric_key != "median_latency_ms" else max(ys) * 1.1 if ys else 1
+    )
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
@@ -91,7 +95,9 @@ def plot_latency_vs_u(
     instruction_count: int,
     out_path: Path,
 ) -> None:
-    selected = [r for r in rows if int_field(r, "instruction_count") == instruction_count]
+    selected = [
+        r for r in rows if int_field(r, "instruction_count") == instruction_count
+    ]
     profiles = sorted({r["placement_profile"] for r in selected})
 
     plt.figure(figsize=(8, 5))
@@ -116,7 +122,9 @@ def plot_latency_vs_u(
     plt.close()
 
 
-def plot_u_hard_overview(rows: list[dict[str, str]], run_dir: Path, out_path: Path) -> None:
+def plot_u_hard_overview(
+    rows: list[dict[str, str]], run_dir: Path, out_path: Path
+) -> None:
     with (run_dir / "summary.json").open("r", encoding="utf-8") as f:
         payload = json.load(f)
     limits: dict[str, dict[str, float | None]] = payload.get(
@@ -247,7 +255,9 @@ def main() -> None:
                 out_path=out_dir / f"semantic_format_error_vs_u_n{n}.png",
             )
 
-    plot_u_hard_overview(rows=rows, run_dir=run_dir, out_path=out_dir / "u_hard_by_n.png")
+    plot_u_hard_overview(
+        rows=rows, run_dir=run_dir, out_path=out_dir / "u_hard_by_n.png"
+    )
 
     print(f"图表已保存到: {out_dir}")
 

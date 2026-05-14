@@ -10,7 +10,6 @@ from typing import Any, Dict, Optional, Tuple
 from loguru import logger
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import func
 
 from app.models.voice_cache import VoiceCache
 from app.services.gcs_service import GCSService

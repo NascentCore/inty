@@ -11,8 +11,8 @@ if [ "$FORMAT_ALL" = true ]; then
     echo "Formatting all files..."
     # Format all Kotlin files
     ktfmt --kotlinlang-style android_app/
-    # Format all Python files
-    black app/ tools/scripts/ experimental/
+    # Format all Python files (paths must stay aligned with CI black --check)
+    black app/ backend/ tools/scripts/ experimental/
     # Format all other files
     npx prettier --write evaluation/ web_app/
     echo "Formatting complete!"

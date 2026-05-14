@@ -96,9 +96,7 @@ async def test_user_satisfies_festival_memory_version_gate_with_real_config():
             return_value=_make_result_mock(MIN_VERSION_FOR_TESTS - 1)
         )
         out_below = await _user_satisfies_festival_memory_version_gate(db, "user-1")
-        db.execute = AsyncMock(
-            return_value=_make_result_mock(MIN_VERSION_FOR_TESTS)
-        )
+        db.execute = AsyncMock(return_value=_make_result_mock(MIN_VERSION_FOR_TESTS))
         out_at = await _user_satisfies_festival_memory_version_gate(db, "user-1")
     assert out_below is False
     assert out_at is True
@@ -110,22 +108,27 @@ async def test_process_festival_memory_push_batch_skips_when_version_gate_fails(
     db = AsyncMock()
     pairs = [{"user_id": "u1", "agent_id": "a1", "festival_memory_id": 1}]
 
-    with patch(
-        "app.services.push_notification_service.get_pairs_with_undelivered_festival_memories",
-        new_callable=AsyncMock,
-        return_value=pairs,
-    ), patch(
-        "app.services.push_notification_service._check_user_has_device_token",
-        new_callable=AsyncMock,
-        return_value=True,
-    ), patch(
-        "app.services.push_notification_service._user_satisfies_festival_memory_version_gate",
-        new_callable=AsyncMock,
-        return_value=False,
-    ), patch(
-        "app.services.push_notification_service.send_festival_memory_push",
-        new_callable=AsyncMock,
-    ) as mock_send:
+    with (
+        patch(
+            "app.services.push_notification_service.get_pairs_with_undelivered_festival_memories",
+            new_callable=AsyncMock,
+            return_value=pairs,
+        ),
+        patch(
+            "app.services.push_notification_service._check_user_has_device_token",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "app.services.push_notification_service._user_satisfies_festival_memory_version_gate",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+        patch(
+            "app.services.push_notification_service.send_festival_memory_push",
+            new_callable=AsyncMock,
+        ) as mock_send,
+    ):
         success_count, fail_count = await process_festival_memory_push_batch(
             db, batch_size=50
         )
@@ -141,38 +144,48 @@ async def test_process_festival_memory_push_batch_proceeds_when_version_gate_pas
     pairs = [{"user_id": "u1", "agent_id": "a1", "festival_memory_id": 1}]
     agent_data = {"name": "Agent", "avatar_url": "https://example.com/avatar.png"}
 
-    with patch(
-        "app.services.push_notification_service.get_pairs_with_undelivered_festival_memories",
-        new_callable=AsyncMock,
-        return_value=pairs,
-    ), patch(
-        "app.services.push_notification_service._check_user_has_device_token",
-        new_callable=AsyncMock,
-        return_value=True,
-    ), patch(
-        "app.services.push_notification_service._user_satisfies_festival_memory_version_gate",
-        new_callable=AsyncMock,
-        return_value=True,
-    ), patch(
-        "app.services.push_notification_service.has_sent_festival_push_for_user_agent",
-        new_callable=AsyncMock,
-        return_value=False,
-    ), patch(
-        "app.services.push_notification_service.agent_service",
-    ) as mock_agent_svc, patch(
-        "app.services.push_notification_service._extract_agent_info",
-        new_callable=AsyncMock,
-        return_value=("Agent", "https://example.com/avatar.png"),
-    ), patch(
-        "app.services.push_notification_service.send_festival_memory_push",
-        new_callable=AsyncMock,
-        return_value=True,
-    ) as mock_send, patch(
-        "app.services.push_notification_service.record_push_history",
-        new_callable=AsyncMock,
-    ), patch(
-        "app.services.push_notification_service.mark_system_notification_sent_for_user_agent",
-        new_callable=AsyncMock,
+    with (
+        patch(
+            "app.services.push_notification_service.get_pairs_with_undelivered_festival_memories",
+            new_callable=AsyncMock,
+            return_value=pairs,
+        ),
+        patch(
+            "app.services.push_notification_service._check_user_has_device_token",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "app.services.push_notification_service._user_satisfies_festival_memory_version_gate",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "app.services.push_notification_service.has_sent_festival_push_for_user_agent",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+        patch(
+            "app.services.push_notification_service.agent_service",
+        ) as mock_agent_svc,
+        patch(
+            "app.services.push_notification_service._extract_agent_info",
+            new_callable=AsyncMock,
+            return_value=("Agent", "https://example.com/avatar.png"),
+        ),
+        patch(
+            "app.services.push_notification_service.send_festival_memory_push",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_send,
+        patch(
+            "app.services.push_notification_service.record_push_history",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "app.services.push_notification_service.mark_system_notification_sent_for_user_agent",
+            new_callable=AsyncMock,
+        ),
     ):
         mock_agent_svc.get_agent_for_chat = AsyncMock(return_value=agent_data)
         success_count, fail_count = await process_festival_memory_push_batch(

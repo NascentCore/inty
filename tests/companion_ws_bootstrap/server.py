@@ -129,9 +129,7 @@ def run_inty_backend_subprocess(
             raise TimeoutError(
                 f"{exc}; set {ENV_SERVER_STDERR_INHERIT}=1 to inherit uvicorn stderr for diagnosis."
             ) from exc
-        yield IntySubprocessContext(
-            base_url=base_url, process=proc, config_path=cfg
-        )
+        yield IntySubprocessContext(base_url=base_url, process=proc, config_path=cfg)
     finally:
         proc.terminate()
         try:

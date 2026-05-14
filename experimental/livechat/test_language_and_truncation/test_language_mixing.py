@@ -85,7 +85,7 @@ async def run_scenario(
                     f"  [WARNING] 语言不匹配! 期望 {scenario['expected_language']}, 实际 {detected}"
                 )
         else:
-            print(f"  [WARNING] 未收到 AI 回复")
+            print("  [WARNING] 未收到 AI 回复")
 
         if i < len(scenario["audio"]) - 1:
             print(f"  等待 {wait_between_turns}s 后进入下一轮...")
@@ -145,7 +145,7 @@ async def main():
     # 分析结果
     result = check_language_mixing(client.log.transcripts)
     print(f"\n{'='*60}")
-    print(f"语言混用检测结果:")
+    print("语言混用检测结果:")
     print(f"  {result['summary']}")
     for turn in result["mixed_turns"]:
         print(f"  - [{turn['role']}] {turn['text'][:100]}...")

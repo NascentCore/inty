@@ -42,7 +42,7 @@ from app.schemas.agent import AgentSortOption
 from app.schemas.response import MatchedAgentImageItem
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.services.cache_service import cache_service
-from app.services.global_services import telegram_bot_service
+from app.external_services.globals import telegram_bot_service
 from app.services.image_transform_service import image_transform_service
 from app.services.resource_service import async_create_image_resource
 from app.services.voice_service import (
@@ -101,9 +101,7 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: Agent) -> None:
         )
 
 
-async def generate_agent_opening_voice(
-    agent: Agent, db: AsyncSession
-) -> Optional[str]:
+async def generate_agent_opening_voice(agent: Agent, db: AsyncSession) -> Optional[str]:
     """
     为Agent生成开场白语音并返回音频URL
     """
@@ -911,10 +909,7 @@ async def get_balanced_score_based_agents(
     offset = (page - 1) * page_size
 
     base_score = (
-        func.coalesce(
-            Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0
-        )
-        * 2
+        func.coalesce(Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0) * 2
         + func.abs(func.hashtext(func.concat(Agent.id, sort_seed))) % 100
     )
     order_by_clauses = []
@@ -1141,9 +1136,7 @@ async def get_recommended_agents_paginated(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def create_agent(
-    db: AsyncSession, agent_in: AgentCreate, user_id: str
-) -> Agent:
+async def create_agent(db: AsyncSession, agent_in: AgentCreate, user_id: str) -> Agent:
     """
     创建新的AI角色
     如果 agent_in 没有 avatar，则自动为用户扣一个 avatar，crop_avatar()
@@ -1159,7 +1152,7 @@ async def create_agent(
             and agent_in.prompt.strip()
             and not (agent_in.personality and agent_in.personality.strip())
         ):
-            logger.debug(f"将prompt转换为personality以保持向后兼容")
+            logger.debug("将prompt转换为personality以保持向后兼容")
             agent_in.personality = agent_in.prompt
 
         # 生成唯一ID
@@ -1354,14 +1347,14 @@ def _update_agent_in_db(update_data: dict, db_agent: Agent):
         if "personality" not in update_data or not (
             update_data.get("personality") and update_data["personality"].strip()
         ):
-            logger.debug(f"将prompt转换为personality以保持向后兼容")
+            logger.debug("将prompt转换为personality以保持向后兼容")
             update_data["personality"] = update_data["prompt"]
 
     # 处理 llm_config 字段 - 将其移动到 settings 中
     if "llm_config" in update_data:
         llm_config = update_data.pop("llm_config")
         if llm_config is not None:
-            logger.debug(f"llm_config不为空，更新settings中的llm_config")
+            logger.debug("llm_config不为空，更新settings中的llm_config")
             # 确保 settings 字段存在
             if db_agent.settings is None:
                 db_agent.settings = {}
@@ -1378,7 +1371,7 @@ def _update_agent_in_db(update_data: dict, db_agent: Agent):
     if "meta_data" in update_data:
         meta_data = update_data.pop("meta_data")
         if meta_data is not None:
-            logger.debug(f"meta_data不为空，更新meta_data字段")
+            logger.debug("meta_data不为空，更新meta_data字段")
             # 如果meta_data是AgentMetaData对象，转换为dict
             if hasattr(meta_data, "model_dump"):
                 meta_data = meta_data.model_dump()

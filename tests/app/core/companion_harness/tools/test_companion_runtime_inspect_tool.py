@@ -11,8 +11,13 @@ import pytest
 from langsmith import tracing_context
 
 from app.core.companion_harness.tools import runtime_inspect_context as ric
-from app.core.companion_harness.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
-from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
+from app.core.companion_harness.companion.llm_chat_runtime import (
+    tool_path_chat_completion_kwargs,
+)
+from app.core.companion_harness.companion.llm_client import (
+    CompanionLLMClient,
+    CompanionLLMConfig,
+)
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
 from app.core.companion_harness.memory.memory_registry import (
     get_memory_store,
@@ -34,12 +39,13 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     execute_tool_call,
 )
-from app.core.companion_harness.tools.runtime_inspect_tool import tool_companion_runtime_inspect
+from app.core.companion_harness.tools.runtime_inspect_tool import (
+    tool_companion_runtime_inspect,
+)
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_prompt,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-
 
 _LANGSMITH_TEST_PROJECT = "inty-backend-test-runtime-inspect"
 
@@ -154,10 +160,9 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         msgs = data["last_chat_completion_request"]["messages"]
         assert msgs[0]["role"] == "system"
         assert msgs[1]["content"] == "hello"
-        assert (
-            data["last_chat_completion_request"]["openrouter_extra_body"]
-            == tool_path_chat_completion_kwargs("test/model-a")
-        )
+        assert data["last_chat_completion_request"][
+            "openrouter_extra_body"
+        ] == tool_path_chat_completion_kwargs("test/model-a")
         assert "SOUL.md" in data["store_documents"]
         assert "soul-content-here" in data["store_documents"]["SOUL.md"]["text"]
         assert data["runtime_events"] == [
@@ -181,7 +186,10 @@ def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
     scoped = get_memory_store(scope, dsn="")
     ric.runtime_inspect_thread_overlay_begin(
         {
-            "runtime_config": {"source": "tool_background", "tool_model_name": "bg/model"},
+            "runtime_config": {
+                "source": "tool_background",
+                "tool_model_name": "bg/model",
+            },
             "last_chat_completion_request": None,
             "scoped_memory_store": scoped,
             "correlation": {
@@ -201,7 +209,9 @@ def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
         out = tool_companion_runtime_inspect(scoped, {"include_store_documents": False})
         data = json.loads(out)
         assert data["runtime_config"]["source"] == "tool_background"
-        assert data["last_chat_completion_request"]["messages"][-1]["content"] == "bg-user"
+        assert (
+            data["last_chat_completion_request"]["messages"][-1]["content"] == "bg-user"
+        )
         assert data["correlation"] == {
             "trace_id": "bg-trace",
             "user_msg_uuid": "bg-user-uuid",

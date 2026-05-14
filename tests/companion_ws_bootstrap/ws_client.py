@@ -37,7 +37,12 @@ async def recv_first_chat_completion_frame(
         except json.JSONDecodeError as exc:
             raise ValueError(f"non-json ws frame (prefix): {raw[:400]!r}") from exc
         msg_type = data.get("type")
-        if msg_type in ("pong", "client_context_ack", "user_signed_on_ack", "user_signed_out_ack"):
+        if msg_type in (
+            "pong",
+            "client_context_ack",
+            "user_signed_on_ack",
+            "user_signed_out_ack",
+        ):
             continue
         if "code" in data:
             return data

@@ -36,7 +36,9 @@ def build_system_prompt(persona: PersonaRecord) -> str:
     )
 
 
-def build_messages(*, persona: PersonaRecord, stimulus_text: str) -> list[dict[str, str]]:
+def build_messages(
+    *, persona: PersonaRecord, stimulus_text: str
+) -> list[dict[str, str]]:
     return [
         {"role": "system", "content": build_system_prompt(persona)},
         {"role": "user", "content": stimulus_text},

@@ -14,9 +14,7 @@ def test_suffix_disabled_returns_unchanged() -> None:
         "timezone": "Europe/Berlin",
         "utc_offset_minutes": 120,
     }
-    assert (
-        suffix_user_text_with_time_context_lines("hi", ctx, enabled=False) == "hi"
-    )
+    assert suffix_user_text_with_time_context_lines("hi", ctx, enabled=False) == "hi"
 
 
 def test_suffix_enabled_empty_context_returns_unchanged() -> None:

@@ -7,7 +7,10 @@ from pathlib import Path
 from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.heartbeat import HeartbeatConfig, next_heartbeat_wait_seconds
+from app.core.companion_harness.companion.heartbeat import (
+    HeartbeatConfig,
+    next_heartbeat_wait_seconds,
+)
 
 
 def test_heartbeat_disabled(tmp_path: Path) -> None:

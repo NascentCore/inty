@@ -283,9 +283,7 @@ def _resolve_chat_agent_id_cli(agent_id: str | None) -> str:
     env = os.environ.get("INTY_V2_CHAT_AGENT_ID", "").strip()
     if env:
         return env
-    raise SystemExit(
-        "repl requires --agent-id or environment INTY_V2_CHAT_AGENT_ID"
-    )
+    raise SystemExit("repl requires --agent-id or environment INTY_V2_CHAT_AGENT_ID")
 
 
 def _resolve_bearer_token_cli() -> str:
@@ -503,9 +501,7 @@ def _readline_backend_ws_with_sideband(
 
         while True:
             try:
-                r, _, _ = sel.select(
-                    [sys.stdin], [], [], _BACKEND_WS_SIDEBAND_POLL_SEC
-                )
+                r, _, _ = sel.select([sys.stdin], [], [], _BACKEND_WS_SIDEBAND_POLL_SEC)
             except (ValueError, OSError):
                 _drain_repl_notice_queue_before_blocking_input(notice_q)
                 line = input(prompt)

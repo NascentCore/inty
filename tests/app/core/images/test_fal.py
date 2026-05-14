@@ -33,9 +33,7 @@ from tests.langsmith import find_run_inputs_contain_string
 load_dotenv()
 
 # Example prompt and image_urls from app/core/images/fal.py docstring (public fal example).
-_SEEDREAM_EXAMPLE_PROMPT = (
-    "Replace the product in Figure 1 with that in Figure 2. For the title copy the text in Figure 3 to the top of the screen, the title should have a clear contrast with the background but not be overly eye-catching."
-)
+_SEEDREAM_EXAMPLE_PROMPT = "Replace the product in Figure 1 with that in Figure 2. For the title copy the text in Figure 3 to the top of the screen, the title should have a clear contrast with the background but not be overly eye-catching."
 _SEEDREAM_EXAMPLE_IMAGE_URLS = [
     "https://storage.googleapis.com/falserverless/example_inputs/seedreamv45/seedream_v45_edit_input_1.png",
     "https://storage.googleapis.com/falserverless/example_inputs/seedreamv45/seedream_v45_edit_input_2.png",
@@ -48,7 +46,9 @@ _SEEDREAM_EXAMPLE_IMAGE_URLS = [
 async def test_seedream_v4_5_edit_trace_with_real_fal():
     """使用实际的 FAL_KEY 测试 seedream_v4_5_edit 的 tracing；通过 LangSmith list_runs 查询确认 trace 含本次随机字符串。"""
     random_suffix = str(uuid.uuid4())
-    random_prompt = _SEEDREAM_EXAMPLE_PROMPT + "output jpeg format" + f" {random_suffix}"
+    random_prompt = (
+        _SEEDREAM_EXAMPLE_PROMPT + "output jpeg format" + f" {random_suffix}"
+    )
     start_time = datetime.datetime.now(datetime.timezone.utc)
     args = FalSeedreamV4_5EditInput(
         prompt=random_prompt,
@@ -60,12 +60,18 @@ async def test_seedream_v4_5_edit_trace_with_real_fal():
     assert result.gcs_uri.startswith("gs://")
     assert result.size is not None
     for attempt in range(3):
-        logger.info("Checking LangSmith trace for this run (attempt %s): %s", attempt + 1, random_suffix)
+        logger.info(
+            "Checking LangSmith trace for this run (attempt %s): %s",
+            attempt + 1,
+            random_suffix,
+        )
         run = find_run_inputs_contain_string(start_time, random_suffix)
         if run is not None:
             break
         time.sleep(2)
-    assert run is not None, f"LangSmith trace for this run should contain the random string: {random_suffix}"
+    assert (
+        run is not None
+    ), f"LangSmith trace for this run should contain the random string: {random_suffix}"
 
 
 @pytest.mark.noci
@@ -86,12 +92,18 @@ async def test_z_image_turbo_trace_with_real_fal():
     assert first_result.size is not None
 
     for attempt in range(3):
-        logger.info("Checking LangSmith trace for this run (attempt %s): %s", attempt + 1, random_suffix)
+        logger.info(
+            "Checking LangSmith trace for this run (attempt %s): %s",
+            attempt + 1,
+            random_suffix,
+        )
         run = find_run_inputs_contain_string(start_time, random_suffix)
         if run is not None:
             break
         time.sleep(2)
-    assert run is not None, f"LangSmith trace for this run should contain the random string: {random_suffix}"
+    assert (
+        run is not None
+    ), f"LangSmith trace for this run should contain the random string: {random_suffix}"
 
 
 @pytest.mark.noci
@@ -99,7 +111,9 @@ async def test_z_image_turbo_trace_with_real_fal():
 async def test_z_image_turbo_image_to_image_trace_with_real_fal():
     """使用实际的 FAL_KEY 测试 z_image_turbo_image_to_image 的 tracing；通过 LangSmith list_runs 查询确认 trace 含本次随机字符串。"""
     random_suffix = str(uuid.uuid4())
-    random_prompt = f"Keep the same style, remove the girl's top and make her naked {random_suffix}"
+    random_prompt = (
+        f"Keep the same style, remove the girl's top and make her naked {random_suffix}"
+    )
     start_time = datetime.datetime.now(datetime.timezone.utc)
     args = ZImageTurboImageToImageInput(
         prompt=random_prompt,
@@ -114,12 +128,16 @@ async def test_z_image_turbo_image_to_image_trace_with_real_fal():
     assert result.size.height >= 1
 
     for attempt in range(3):
-        logger.info(f"Checking LangSmith trace for this run (attempt {attempt + 1}): {random_suffix}")
+        logger.info(
+            f"Checking LangSmith trace for this run (attempt {attempt + 1}): {random_suffix}"
+        )
         run = find_run_inputs_contain_string(start_time, random_suffix)
         if run is not None:
             break
         time.sleep(2)
-    assert run is not None, f"LangSmith trace for this run should contain the random string: {random_suffix}"
+    assert (
+        run is not None
+    ), f"LangSmith trace for this run should contain the random string: {random_suffix}"
 
 
 def _make_minimal_jpeg_data_uri() -> str:
@@ -210,7 +228,7 @@ async def test_z_image_turbo_uploads_to_fake_gcs_and_content_matches(
                 "file_size": 124,
                 "width": 1,
                 "height": 1,
-            }
+            },
         ],
         "timings": {},
         "seed": 42,
@@ -263,9 +281,10 @@ async def test_z_image_turbo_skip_gcs_upload_skips_upload_to_gcs():
     mock_fal = Mock()
     mock_fal.submit = AsyncMock(return_value=mock_handler)
 
-    with patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal), patch(
-        "app.core.images.fal.upload_to_gcs"
-    ) as mock_upload:
+    with (
+        patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal),
+        patch("app.core.images.fal.upload_to_gcs") as mock_upload,
+    ):
         args = ZImageTurboInput(prompt="test prompt")
         results = await z_image_turbo(
             args, gcs_uri_base="fal_test", skip_gcs_upload=True
@@ -304,9 +323,10 @@ async def test_z_image_turbo_image_to_image_skip_gcs_upload_skips_upload_to_gcs(
     mock_fal = Mock()
     mock_fal.submit = AsyncMock(return_value=mock_handler)
 
-    with patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal), patch(
-        "app.core.images.fal.upload_to_gcs"
-    ) as mock_upload:
+    with (
+        patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal),
+        patch("app.core.images.fal.upload_to_gcs") as mock_upload,
+    ):
         args = ZImageTurboImageToImageInput(
             prompt="test prompt",
             image_url="https://example.com/in.jpg",
@@ -412,7 +432,9 @@ async def test_z_image_turbo_attaches_redacted_trace_payload_after_successful_gc
     mock_fal.submit = AsyncMock(return_value=mock_handler)
     with (
         patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal),
-        patch("app.core.images.fal.attach_provider_response_to_langsmith_run") as mock_attach,
+        patch(
+            "app.core.images.fal.attach_provider_response_to_langsmith_run"
+        ) as mock_attach,
     ):
         args = ZImageTurboInput(prompt="test prompt")
         _ = await z_image_turbo(args, gcs_uri_base="fal_test")

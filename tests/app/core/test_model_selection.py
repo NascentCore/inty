@@ -44,7 +44,9 @@ def test_select_chat_model_resolves_nickname_to_id():
         sub_user_chat_model=GEMINI_2_5_FLASH,
     )
     mock_config = SimpleNamespace(agent=mock_agent)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml", mock_config
+    ):
         model_free = select_chat_model(user=user, is_subscribed=False)
         assert model_free == DEEPSEEK_V3_2.id_on_provider
         model_sub = select_chat_model(user=user, is_subscribed=True)
@@ -64,7 +66,9 @@ def test_select_chat_tts_model_subscribed_user_uses_sub_model():
         sub_user_chat_tts_model="gemini-2.5-pro-tts",
     )
     mock_config = SimpleNamespace(agent=mock_agent)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml", mock_config
+    ):
         model = select_chat_tts_model(user=user, is_subscribed=True)
         assert model == "gemini-2.5-pro-tts"
 
@@ -91,7 +95,9 @@ def test_select_text_to_image_model_falls_back_to_vertex_image_model_when_sub_us
         free_user_text_to_image_model="free-image-model",
     )
     mock_config = SimpleNamespace(agent=mock_agent_config)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml", mock_config
+    ):
         model = select_text_to_image_model(user=user, is_subscribed=True)
         assert model == "fallback-vertex-model"
 
@@ -106,7 +112,9 @@ def test_select_text_to_image_model_falls_back_to_vertex_image_model_when_free_u
         free_user_text_to_image_model=None,
     )
     mock_config = SimpleNamespace(agent=mock_agent_config)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml", mock_config
+    ):
         model = select_text_to_image_model(user=user, is_subscribed=False)
         assert model == "fallback-vertex-model"
 
@@ -119,7 +127,9 @@ def test_select_chat_image_model_returns_gen_ai_model():
         sub_user_chat_image_model=NANO_BANANA_PRO.nickname,
     )
     mock_config = SimpleNamespace(agent=mock_agent)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml", mock_config
+    ):
         model_free = select_chat_image_model(user=user, is_subscribed=False)
         assert model_free is NANO_BANANA
         model_sub = select_chat_image_model(user=user, is_subscribed=True)
@@ -134,7 +144,9 @@ def test_select_chat_image_model_uses_fal_nickname():
         sub_user_chat_image_model=SEEDREAM_V4_5_EDIT.nickname,
     )
     mock_config = SimpleNamespace(agent=mock_agent)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml", mock_config
+    ):
         model_free = select_chat_image_model(user=user, is_subscribed=False)
         assert model_free is Z_IMAGE_TURBO_IMAGE_TO_IMAGE
         model_sub = select_chat_image_model(user=user, is_subscribed=True)

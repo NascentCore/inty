@@ -91,7 +91,7 @@ async def check_version(
             update_required=False,
             force_update=False,
             minimum_version="0",
-            download_url=f"https://play.google.com/store/apps/details?id=com.ai.inty",
+            download_url="https://play.google.com/store/apps/details?id=com.ai.inty",
             message="Version check failed",
             error=str(e),
             reminder_action=VersionReminderAction.SETTINGS_REMINDER,

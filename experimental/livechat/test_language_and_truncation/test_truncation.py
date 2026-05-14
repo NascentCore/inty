@@ -18,7 +18,6 @@ from pathlib import Path
 
 from test_utils import (
     IntyLiveChatClient,
-    detect_language,
     save_test_report,
     wav_info,
 )
@@ -133,7 +132,7 @@ async def run_scenario(
     ai_text = await client.wait_for_turn_complete(timeout=30.0)
 
     if not ai_text:
-        print(f"  [WARNING] 未收到 AI 回复")
+        print("  [WARNING] 未收到 AI 回复")
         return {"error": "no_response"}
 
     result = check_truncation(ai_text)
@@ -145,9 +144,9 @@ async def run_scenario(
     )
 
     if scenario["expect_truncation"] and not result["is_truncated"]:
-        print(f"  [INFO] 期望截断但未检测到(可能静音段不够长)")
+        print("  [INFO] 期望截断但未检测到(可能静音段不够长)")
     elif not scenario["expect_truncation"] and result["is_truncated"]:
-        print(f"  [FAIL] 不期望截断但检测到截断!")
+        print("  [FAIL] 不期望截断但检测到截断!")
 
     return result
 
@@ -206,7 +205,7 @@ async def main():
 
     # 汇总
     print(f"\n{'='*60}")
-    print(f"截断测试汇总:")
+    print("截断测试汇总:")
     print(f"{'='*60}")
 
     false_positives = []

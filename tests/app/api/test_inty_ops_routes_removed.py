@@ -4,11 +4,7 @@ from backend.inty.main import app
 
 
 def _route_paths() -> list[str]:
-    return [
-        route.path
-        for route in app.routes
-        if isinstance(route, APIRoute)
-    ]
+    return [route.path for route in app.routes if isinstance(route, APIRoute)]
 
 
 def test_inty_does_not_mount_evaluation_web_routes():

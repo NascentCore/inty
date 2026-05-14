@@ -175,7 +175,7 @@ Examples:
         character = response.character
         logger.info(f"Character generated successfully: {character.name}")
 
-        print(f"✅ Character generated successfully!")
+        print("✅ Character generated successfully!")
         print(f"📊 Generation time: {response.generation_time:.2f} seconds")
         print("-" * 50)
 

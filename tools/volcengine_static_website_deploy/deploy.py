@@ -162,7 +162,9 @@ def main() -> None:
     print()
     print("Next (see https://www.volcengine.com/docs/6349/114714?lang=zh ):")
     print("- Ensure bucket or objects allow anonymous read for your visitors.")
-    print("- Bind a custom domain on the bucket if default domain downloads HTML instead of rendering.")
+    print(
+        "- Bind a custom domain on the bucket if default domain downloads HTML instead of rendering."
+    )
 
 
 if __name__ == "__main__":

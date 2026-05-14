@@ -74,11 +74,17 @@ def _extract_content_anthropic(response) -> str | None:
     return "".join(chunks) if chunks else None
 
 
-def _single_call_openai(client: OpenAI, model_id: str, message: str) -> tuple[str | None, dict]:
+def _single_call_openai(
+    client: OpenAI, model_id: str, message: str
+) -> tuple[str | None, dict]:
     """OpenAI 单次调用；返回 (content, stats)。"""
     start = time.perf_counter()
     start_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    request_payload = {"model": model_id, "messages": [{"role": "user", "content": message}], "max_tokens": 32}
+    request_payload = {
+        "model": model_id,
+        "messages": [{"role": "user", "content": message}],
+        "max_tokens": 32,
+    }
     stats = {
         "start_iso": start_iso,
         "latency_ms": None,
@@ -108,8 +114,14 @@ def _single_call_openai(client: OpenAI, model_id: str, message: str) -> tuple[st
         stats["response"] = _to_jsonable(response)
         if content is not None:
             stats["output_content_length"] = len(content)
-            stats["output_content_preview"] = content[:200] if len(content) > 200 else content
-            log.info("openai response success latency_ms=%.2f content_len=%d", latency_ms, len(content))
+            stats["output_content_preview"] = (
+                content[:200] if len(content) > 200 else content
+            )
+            log.info(
+                "openai response success latency_ms=%.2f content_len=%d",
+                latency_ms,
+                len(content),
+            )
         else:
             raw = _to_jsonable(response)
             log.warning(
@@ -119,7 +131,10 @@ def _single_call_openai(client: OpenAI, model_id: str, message: str) -> tuple[st
             )
             if isinstance(raw, dict) and "choices" in raw:
                 c0 = raw["choices"][0] if raw["choices"] else None
-                log.warning("openai choices[0]=%s", json.dumps(c0, ensure_ascii=False)[:500] if c0 else None)
+                log.warning(
+                    "openai choices[0]=%s",
+                    json.dumps(c0, ensure_ascii=False)[:500] if c0 else None,
+                )
         usage = getattr(response, "usage", None)
         if usage is not None:
             stats["usage_prompt_tokens"] = getattr(usage, "prompt_tokens", None)
@@ -134,11 +149,17 @@ def _single_call_openai(client: OpenAI, model_id: str, message: str) -> tuple[st
         return None, stats
 
 
-def _single_call_anthropic(client: Anthropic, model_id: str, message: str) -> tuple[str | None, dict]:
+def _single_call_anthropic(
+    client: Anthropic, model_id: str, message: str
+) -> tuple[str | None, dict]:
     """Anthropic 单次调用；返回 (content, stats)。"""
     start = time.perf_counter()
     start_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    request_payload = {"model": model_id, "messages": [{"role": "user", "content": message}], "max_tokens": 32}
+    request_payload = {
+        "model": model_id,
+        "messages": [{"role": "user", "content": message}],
+        "max_tokens": 32,
+    }
     stats = {
         "start_iso": start_iso,
         "latency_ms": None,
@@ -168,8 +189,14 @@ def _single_call_anthropic(client: Anthropic, model_id: str, message: str) -> tu
         stats["response"] = _to_jsonable(response)
         if content is not None:
             stats["output_content_length"] = len(content)
-            stats["output_content_preview"] = content[:200] if len(content) > 200 else content
-            log.info("anthropic response success latency_ms=%.2f content_len=%d", latency_ms, len(content))
+            stats["output_content_preview"] = (
+                content[:200] if len(content) > 200 else content
+            )
+            log.info(
+                "anthropic response success latency_ms=%.2f content_len=%d",
+                latency_ms,
+                len(content),
+            )
         else:
             raw = _to_jsonable(response)
             log.warning(
@@ -183,7 +210,9 @@ def _single_call_anthropic(client: Anthropic, model_id: str, message: str) -> tu
             out = getattr(usage, "output_tokens", None)
             stats["usage_prompt_tokens"] = inp
             stats["usage_completion_tokens"] = out
-            stats["usage_total_tokens"] = (inp + out) if (inp is not None and out is not None) else None
+            stats["usage_total_tokens"] = (
+                (inp + out) if (inp is not None and out is not None) else None
+            )
         return content, stats
     except Exception as e:
         stats["latency_ms"] = round((time.perf_counter() - start) * 1000, 2)
@@ -207,12 +236,16 @@ def _write_stats_file(out_path: Path, all_stats: list) -> None:
         "total_invocations": len(all_stats),
         "success_count": sum(1 for s in all_stats if s["success"]),
         "failure_count": sum(1 for s in all_stats if not s["success"]),
-        "avg_latency_ms": round(sum(latencies) / len(latencies), 2) if latencies else None,
+        "avg_latency_ms": (
+            round(sum(latencies) / len(latencies), 2) if latencies else None
+        ),
         "min_latency_ms": min(latencies) if latencies else None,
         "max_latency_ms": max(latencies) if latencies else None,
     }
     out_path.write_text(
-        json.dumps({"invocations": all_stats, "summary": summary}, indent=2, ensure_ascii=False),
+        json.dumps(
+            {"invocations": all_stats, "summary": summary}, indent=2, ensure_ascii=False
+        ),
         encoding="utf-8",
     )
 
@@ -234,23 +267,39 @@ def llm_call(
     输出文件在每次调用后立即更新，便于监控进度。
     """
     provider, model_id = _provider_and_model(model)
-    log.info("provider=%s model_id=%r model_for_request will be set below", provider, model_id)
+    log.info(
+        "provider=%s model_id=%r model_for_request will be set below",
+        provider,
+        model_id,
+    )
     if provider == "openai":
         client = OpenAI(api_key=api_key, base_url=api_endpoint)
         single_call = lambda c, mid, msg: _single_call_openai(c, mid, msg)
         model_for_request = model_id
-        log.info("using OpenAI client base_url=%s model_for_request=%r", api_endpoint, model_for_request)
+        log.info(
+            "using OpenAI client base_url=%s model_for_request=%r",
+            api_endpoint,
+            model_for_request,
+        )
     else:
         base = (api_endpoint or "").strip() or None
         client = Anthropic(api_key=api_key, base_url=base)
         single_call = lambda c, mid, msg: _single_call_anthropic(c, mid, msg)
         # 代理（如 LiteLLM）的 model_name 常带前缀（如 anthropic/claude-opus-4），需传完整 model 才能匹配
         model_for_request = model if base else model_id
-        log.info("using Anthropic client base_url=%s model_for_request=%r", base, model_for_request)
+        log.info(
+            "using Anthropic client base_url=%s model_for_request=%r",
+            base,
+            model_for_request,
+        )
 
     all_stats = []
     last_content = None
-    out_path = Path(output_dir) / _stats_filename(model, count, cycle, random_seed) if output_dir else None
+    out_path = (
+        Path(output_dir) / _stats_filename(model, count, cycle, random_seed)
+        if output_dir
+        else None
+    )
     if out_path is not None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
 

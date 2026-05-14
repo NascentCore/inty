@@ -2592,7 +2592,7 @@ def generate_conversation_report(
             ].sort_values("created_at")
 
             if not session_messages.empty:
-                report_lines.append(f"  对话内容:")
+                report_lines.append("  对话内容:")
                 for msg_idx, (_, msg) in enumerate(session_messages.iterrows(), 1):
                     msg_type = msg["message_type"]
                     content = msg["content"]
@@ -2607,7 +2607,7 @@ def generate_conversation_report(
                     report_lines.append(f"        {content}")
                     report_lines.append("")
             else:
-                report_lines.append(f"  (无对话记录)")
+                report_lines.append("  (无对话记录)")
 
             report_lines.append("")
 

@@ -41,7 +41,10 @@ def _maybe_load_config_yaml(path: Path | None) -> dict[str, str]:
     return apply_llm_env_from_config_yaml(p)
 
 
-from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
+from app.core.companion_harness.companion.manager import (
+    CompanionConfig,
+    CompanionManager,
+)
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
 from app.core.companion_harness.memory.memory_registry import shutdown_memory_store
@@ -233,7 +236,7 @@ async def _run(args: argparse.Namespace) -> dict:
         "threshold": args.threshold,
         "total_script_lines": len(script_lines),
         "turns_executed": len(turns_out),
-        "workspace_path": str(ws_path.resolve()),
+        "workspace_path": str(args.seed_dir.resolve()),
         "llm": {
             "api_base": llm_cfg.api_base,
             "default_model": llm_cfg.default_model,

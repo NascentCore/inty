@@ -259,7 +259,10 @@ async def test_email_password_login_missing_fields():
         )
 
         # 验证响应（应该被 Pydantic 验证拒绝）
-        assert response.status_code in (200, 422), f"Unexpected status: {response.status_code}"
+        assert response.status_code in (
+            200,
+            422,
+        ), f"Unexpected status: {response.status_code}"
         if response.status_code == 200:
             data = response.json()
             assert data.get("code") != 200, "Login should have failed without password"
@@ -273,7 +276,10 @@ async def test_email_password_login_missing_fields():
         )
 
         # 验证响应
-        assert response.status_code in (200, 422), f"Unexpected status: {response.status_code}"
+        assert response.status_code in (
+            200,
+            422,
+        ), f"Unexpected status: {response.status_code}"
         if response.status_code == 200:
             data = response.json()
             assert data.get("code") != 200, "Login should have failed without email"
@@ -322,7 +328,9 @@ async def test_email_password_login_user_without_password(
         # 验证响应
         assert response.status_code == 200, f"Login request failed: {response.text}"
         data = response.json()
-        assert data.get("code") != 200, "Login should have failed for user without password"
+        assert (
+            data.get("code") != 200
+        ), "Login should have failed for user without password"
         assert "Invalid Email password combination" in data.get("message", "")
 
     finally:

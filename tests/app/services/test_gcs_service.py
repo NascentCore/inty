@@ -64,8 +64,10 @@ async def test_upload_live_chat_audio_success(fake_gcs: FakeGCSClient):
     )
 
     expected_url = (
-        fake_gcs.base_dir / "test-bucket" / "live_chat/user1/agent1/sess1_voice1.wav"
-    ).resolve().as_uri()
+        (fake_gcs.base_dir / "test-bucket" / "live_chat/user1/agent1/sess1_voice1.wav")
+        .resolve()
+        .as_uri()
+    )
     assert url == expected_url
 
     blob = fake_gcs.bucket("test-bucket").blob(
@@ -80,7 +82,9 @@ async def test_upload_live_chat_audio_returns_none_on_upload_failure(stub_config
     """失败路径：upload_to_gcs 抛异常时返回 None，不影响调用方。"""
     from unittest.mock import patch
 
-    with patch("app.services.gcs_service.upload_to_gcs", side_effect=Exception("fake error")):
+    with patch(
+        "app.services.gcs_service.upload_to_gcs", side_effect=Exception("fake error")
+    ):
         service = GCSService()
         url = await service.upload_live_chat_audio(
             "user1", "agent1", "sess1", "voice1", b"wav"

@@ -41,11 +41,7 @@ def _set_agent_exclusive_photos(db_session, agent_id: str, photos: list):
 
 def _choices_with_surprise_snap(choices: list):
     """返回 choices 中 message.type == surprise_snap 的项。"""
-    return [
-        c
-        for c in choices
-        if c.get("message", {}).get("type") == "surprise_snap"
-    ]
+    return [c for c in choices if c.get("message", {}).get("type") == "surprise_snap"]
 
 
 def _messages_with_surprise_snap(messages: list):
@@ -80,10 +76,14 @@ def test_chat_completions_returns_surprise_snap_choice_when_triggered(
     assert response.get("code") == 200, response
     data = response.get("data", {})
     choices = data.get("choices", [])
-    assert len(choices) >= 2, f"Expected at least 2 choices (AI + surprise_snap), got {len(choices)}"
+    assert (
+        len(choices) >= 2
+    ), f"Expected at least 2 choices (AI + surprise_snap), got {len(choices)}"
 
     snap_choices = _choices_with_surprise_snap(choices)
-    assert len(snap_choices) >= 1, f"Expected at least one surprise_snap choice, got choices={choices}"
+    assert (
+        len(snap_choices) >= 1
+    ), f"Expected at least one surprise_snap choice, got choices={choices}"
     msg = snap_choices[0]["message"]
     assert msg.get("type") == "surprise_snap"
     assert "id" in msg
@@ -121,7 +121,9 @@ def test_get_agent_messages_includes_surprise_snap_with_is_locked(
     data = integration_client.get_agent_chat_messages(agent_id)
     messages = data.get("messages", [])
     snap_msgs = _messages_with_surprise_snap(messages)
-    assert len(snap_msgs) >= 1, f"Expected at least one surprise_snap in messages, got {messages}"
+    assert (
+        len(snap_msgs) >= 1
+    ), f"Expected at least one surprise_snap in messages, got {messages}"
     m = snap_msgs[0]
     assert "media_url" in m
     assert "caption" in m
@@ -129,9 +131,7 @@ def test_get_agent_messages_includes_surprise_snap_with_is_locked(
     assert m.get("is_locked") is True
 
 
-def test_surprise_snap_unlock_success(
-    integration_client: TestClient, db_session
-):
+def test_surprise_snap_unlock_success(integration_client: TestClient, db_session):
     """POST unlock 返回 200；再次 GET messages 该条 is_locked 为 False。"""
     if not _surprise_snap_enabled():
         pytest.skip("surprise_snap not enabled")
@@ -168,9 +168,7 @@ def test_surprise_snap_unlock_success(
     assert snap_msgs[0].get("is_locked") is False
 
 
-def test_surprise_snap_unlock_idempotent(
-    integration_client: TestClient, db_session
-):
+def test_surprise_snap_unlock_idempotent(integration_client: TestClient, db_session):
     """对同一 message_id 调用两次 unlock，两次均返回 200。"""
     if not _surprise_snap_enabled():
         pytest.skip("surprise_snap not enabled")

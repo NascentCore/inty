@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
-from app.core.companion_harness.companion.models import load_context_meta, load_prompt_bundle
+from app.core.companion_harness.companion.manager import (
+    CompanionConfig,
+    CompanionManager,
+)
+from app.core.companion_harness.companion.models import (
+    load_context_meta,
+    load_prompt_bundle,
+)
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
@@ -42,9 +48,7 @@ def test_companion_session_seeds_techno_core_and_injects_prompt() -> None:
     assert "## TECHNO CORE" in system_text
     assert "TechnoCore 是 Inty 的 AI-only 虚拟居留层" in system_text
     assert "## LIVING SPHERE" in system_text
-    assert system_text.index("## TECHNO CORE") < system_text.index(
-        "## LIVING SPHERE"
-    )
+    assert system_text.index("## TECHNO CORE") < system_text.index("## LIVING SPHERE")
 
     manager.shutdown_all()
 

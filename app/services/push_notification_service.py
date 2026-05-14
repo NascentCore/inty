@@ -28,11 +28,9 @@ from app.db.session import AsyncSessionLocal
 from app.models.chat import Chat
 from app.models.push_notification import PushNotificationHistory
 from app.models.agent import Agent, AgentVisibility
-from app.models.chat_history import ChatHistory
 from app.models.user import DeviceToken, User
 from app.services import (
     agent_service,
-    chat_history_service,
     chat_service,
     notification_service,
 )

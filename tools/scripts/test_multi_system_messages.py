@@ -60,7 +60,7 @@ class MultiSystemMessageTester:
 
         self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model = model
-        print(f"✅ OpenAI客户端初始化成功")
+        print("✅ OpenAI客户端初始化成功")
         print(f"   模型: {model}")
         print(f"   基础URL: {base_url}")
 
@@ -231,7 +231,7 @@ Don't you know me ?
 
             # 检查响应是否为空或只包含空白字符
             if not response_content or not response_content.strip():
-                print(f"⚠️  警告: 响应内容为空或只包含空白字符")
+                print("⚠️  警告: 响应内容为空或只包含空白字符")
                 print(f"   响应repr: {repr(response_content)}")
             else:
                 print(f"   响应前50字符: {repr(response_content[:50])}")
@@ -338,13 +338,13 @@ Don't you know me ?
         print(f"失败: {len(failed_tests)} ❌")
 
         if failed_tests:
-            print(f"\n❌ 失败的测试:")
+            print("\n❌ 失败的测试:")
             for test in failed_tests:
                 print(f"   - {test['test_name']}: {test['error']}")
 
         # 显示响应概览
         if successful_tests:
-            print(f"\n📋 响应概览:")
+            print("\n📋 响应概览:")
             for test in successful_tests:
                 print(f"\n🔸 {test['test_name']}:")
                 response = test.get("response", "")
@@ -374,21 +374,21 @@ Don't you know me ?
 
                     # 分析响应内容（检查是否提到了用户名字）
                     if "dx" in response.lower():
-                        print(f"   ✅ 响应中提到了用户名字 'dx'")
+                        print("   ✅ 响应中提到了用户名字 'dx'")
                     else:
-                        print(f"   ❌ 响应中未提到用户名字")
+                        print("   ❌ 响应中未提到用户名字")
 
                     # 检查是否符合角色设定
                     if any(
                         keyword in response for keyword in ["daisies", "nature", "Lily"]
                     ):
-                        print(f"   ✅ 响应符合Lily角色设定")
+                        print("   ✅ 响应符合Lily角色设定")
                     else:
-                        print(f"   ❓ 响应可能偏离角色设定")
+                        print("   ❓ 响应可能偏离角色设定")
 
-                    print(f"   ✅ 有效响应")
+                    print("   ✅ 有效响应")
                 else:
-                    print(f"   ❌ 空响应或无效响应")
+                    print("   ❌ 空响应或无效响应")
                     if "response_raw" in test and test["response_raw"]:
                         print(f"   原始内容: {test['response_raw'][:50]}")
                     if "usage" in test and test["usage"]:
@@ -398,7 +398,7 @@ Don't you know me ?
                         )
 
         # 分析各种测试模式的效果
-        print(f"\n📈 测试模式分析:")
+        print("\n📈 测试模式分析:")
         test_categories = {
             "单一System": ["single_system"],
             "多个System": [
@@ -452,7 +452,7 @@ Don't you know me ?
         self._analyze_results()
         self._save_detailed_results()
 
-        print(f"\n" + "=" * 60)
+        print("\n" + "=" * 60)
         print("🎯 测试完成")
         print("=" * 60)
 
@@ -471,14 +471,14 @@ Don't you know me ?
         print(f"空响应: {len(empty_responses)} 个")
 
         if empty_responses:
-            print(f"\n⚠️  空响应的测试:")
+            print("\n⚠️  空响应的测试:")
             for test in empty_responses:
                 print(f"   - {test['test_name']}")
 
         if len(valid_responses) >= 2:
-            print(f"\n✅ 多个测试返回有效响应，可以比较效果")
+            print("\n✅ 多个测试返回有效响应，可以比较效果")
         else:
-            print(f"\n❌ 有效响应太少，请检查API配置")
+            print("\n❌ 有效响应太少，请检查API配置")
 
 
 async def main():

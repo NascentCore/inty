@@ -13,7 +13,6 @@ import cyclopts
 import yaml
 from openai import OpenAI
 
-
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 app = cyclopts.App(
@@ -79,7 +78,9 @@ def _load_openrouter_api_key(config_yaml_path: Path) -> str:
 def _extract_json_object(raw_text: str) -> dict:
     text = raw_text.strip()
     if text.startswith("```"):
-        lines = [line for line in text.splitlines() if not line.strip().startswith("```")]
+        lines = [
+            line for line in text.splitlines() if not line.strip().startswith("```")
+        ]
         text = "\n".join(lines).strip()
     start = text.find("{")
     end = text.rfind("}")
@@ -161,7 +162,10 @@ def _task_decomposer(
     if task.required_subgoal_sequence:
         seq_idx = 0
         for goal in subgoals:
-            if seq_idx < len(task.required_subgoal_sequence) and goal == task.required_subgoal_sequence[seq_idx]:
+            if (
+                seq_idx < len(task.required_subgoal_sequence)
+                and goal == task.required_subgoal_sequence[seq_idx]
+            ):
                 seq_idx += 1
         if seq_idx != len(task.required_subgoal_sequence):
             raise ValueError(
@@ -218,7 +222,9 @@ def _actor_propose_actions(
     # - monitor/evaluator should still receive valid alternatives
     if not action_list[0] or action_list[0] in allowed_actions:
         invalid_seed = f"invalid_shortcut_from_{state}"
-        action_list[0] = invalid_seed if invalid_seed not in allowed_actions else "invalid_shortcut"
+        action_list[0] = (
+            invalid_seed if invalid_seed not in allowed_actions else "invalid_shortcut"
+        )
     if action_list[1] not in allowed_actions:
         action_list[1] = allowed_actions[0]
     if action_list[2] not in allowed_actions:
@@ -360,14 +366,18 @@ def _run_episode(
                 )
                 invalid_action_count += 1
                 break
-            predicted_states = {a: task.transition(state, a) or "INVALID" for a in valid_after_monitor}
+            predicted_states = {
+                a: task.transition(state, a) or "INVALID" for a in valid_after_monitor
+            }
             chosen_action = _evaluator_choose_action(
                 client=client,
                 model_id=model_id,
                 state=state,
                 subgoal=active_subgoal,
                 candidates=valid_after_monitor,
-                predicted_next_states={k: v for k, v in predicted_states.items() if v != "INVALID"},
+                predicted_next_states={
+                    k: v for k, v in predicted_states.items() if v != "INVALID"
+                },
             )
         else:
             valid_after_monitor = [proposals[0]]
@@ -454,17 +464,32 @@ def _build_complex_task() -> ToyTask:
         state_actions={
             "Dock": {"collect_badge": "BadgeRoom", "unsafe_shortcut": "IncidentLoop"},
             "BadgeRoom": {"get_keycard": "ControlHub", "wander": "Dock"},
-            "ControlHub": {"request_manifest": "ManifestDesk", "wrong_lift": "IncidentLoop"},
-            "ManifestDesk": {"verify_manifest": "SecureGate", "return_hub": "ControlHub"},
+            "ControlHub": {
+                "request_manifest": "ManifestDesk",
+                "wrong_lift": "IncidentLoop",
+            },
+            "ManifestDesk": {
+                "verify_manifest": "SecureGate",
+                "return_hub": "ControlHub",
+            },
             "SecureGate": {"authorize_transfer": "TransferBay", "panic_reset": "Dock"},
             "TransferBay": {"handoff": "AuditDesk", "misroute": "IncidentLoop"},
-            "AuditDesk": {"finalize_delivery": "Completed", "missing_form": "ManifestDesk"},
+            "AuditDesk": {
+                "finalize_delivery": "Completed",
+                "missing_form": "ManifestDesk",
+            },
             "IncidentLoop": {"recover_protocol": "Dock", "loop": "IncidentLoop"},
             "Completed": {},
         },
         start_state="Dock",
         goal_state="Completed",
-        required_subgoal_sequence=["BadgeRoom", "SecureGate", "TransferBay", "AuditDesk", "Completed"],
+        required_subgoal_sequence=[
+            "BadgeRoom",
+            "SecureGate",
+            "TransferBay",
+            "AuditDesk",
+            "Completed",
+        ],
     )
 
 
@@ -569,7 +594,13 @@ def _write_markdown_report(path: Path, result_payload: dict) -> None:
             f"- **{ep['name']}**: success={ep['success']}, reached_goal={ep['reached_goal']}, "
             f"invalid_actions={ep['invalid_action_count']}, steps={ep['steps_executed']}"
         )
-    lines.extend(["", "## Key Behavior", "- Baseline uses first actor proposal directly (no monitor)."])
+    lines.extend(
+        [
+            "",
+            "## Key Behavior",
+            "- Baseline uses first actor proposal directly (no monitor).",
+        ]
+    )
     lines.append("- PIANO run filters actions with monitor then selects via evaluator.")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

@@ -63,26 +63,6 @@ When the user asks "call me at <number>":
 3) do not ask for extra confirmation if a number is already present
 """.strip()
 
-PULSE_TOOL_DEFINITION = {
-    "type": "function",
-    "function": {
-        "name": "pulse",
-        "description": "Sleep for the provided seconds and resume loop.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "seconds": {
-                    "type": "integer",
-                    "description": "How many seconds to sleep.",
-                }
-            },
-            "required": ["seconds"],
-            "additionalProperties": False,
-        },
-    },
-}
-
-
 CALL_USER_TOOL_DEFINITION = {
     "type": "function",
     "function": {

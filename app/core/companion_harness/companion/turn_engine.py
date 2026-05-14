@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from pathlib import Path
 from typing import Any
 
 from .ai_private_prompt import get_ai_private_jsonl_text_for_prompt
@@ -63,7 +62,9 @@ def build_repl_turn_base_messages(
         messages.append(row)
     user_msg_uuid = str(uuid.uuid4())
     if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
-        messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE})
+        messages.append(
+            {"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE}
+        )
         messages.append(
             {
                 "role": "user",

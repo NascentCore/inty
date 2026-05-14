@@ -9,7 +9,12 @@ on:
       - "pytest.ini"
       - "backend/inty/start.sh"
       - "app/**/*.py"
+      - "backend/**/*.py"
+      - "experimental/**/*.py"
       - "requirements.txt"
+      - "requirements-dev.txt"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
       - "tools/scripts/"
       - "tests/**/*.py"
       - "tests/alembic/test_custom_config.sh"
@@ -29,7 +34,12 @@ on:
       - "pytest.ini"
       - "backend/inty/start.sh"
       - "app/**/*.py"
+      - "backend/**/*.py"
+      - "experimental/**/*.py"
       - "requirements.txt"
+      - "requirements-dev.txt"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
       - "tools/scripts/"
       - "tests/**/*.py"
       - "tests/alembic/test_custom_config.sh"
@@ -79,7 +89,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'tests/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'tests/requirements.txt', 'requirements-dev.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -89,7 +99,7 @@ jobs:
         with:
           path: .venv
           # Unique key for the cache
-          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'tests/requirements.txt') }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'tests/requirements.txt', 'requirements-dev.txt') }}
           restore-keys: |
             ${{ runner.os }}-venv-
 
@@ -105,9 +115,25 @@ jobs:
           # Install dependencies (pip will use cached packages if available)
           python -m pip install -r requirements.txt
           python -m pip install -r tests/requirements.txt
+          python -m pip install -r requirements-dev.txt
           # https://stackoverflow.com/a/74669486
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+
+      - name: Black format check
+        run: |
+          source .venv/bin/activate
+          black --check app/ backend/ tools/scripts/ experimental/
+
+      - name: Ruff lint
+        run: |
+          source .venv/bin/activate
+          ruff check app/ backend/ tools/scripts/ experimental/
+
+      - name: ty (unresolved imports)
+        run: |
+          source .venv/bin/activate
+          ty check --ignore all --error unresolved-import
 
       - name: Check architecture layer boundaries
         run: |

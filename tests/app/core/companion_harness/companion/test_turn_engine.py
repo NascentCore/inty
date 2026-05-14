@@ -5,7 +5,9 @@ from pathlib import Path
 
 from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.turn_engine import persist_repl_turn_transcript_rows
+from app.core.companion_harness.companion.turn_engine import (
+    persist_repl_turn_transcript_rows,
+)
 
 
 def _scope(tmp: Path) -> CompanionScope:
@@ -52,7 +54,9 @@ def test_persist_repl_turn_transcript_rows_assistant_extra(tmp_path: Path) -> No
     assert a.get("significance_perception") == {"importance_round": 7}
 
 
-def test_persist_repl_maintenance_inner_tick_writes_inner_transcript(tmp_path: Path) -> None:
+def test_persist_repl_maintenance_inner_tick_writes_inner_transcript(
+    tmp_path: Path,
+) -> None:
     sc = _scope(Path(str(tmp_path) + "-inner"))
     store = get_memory_store(sc, dsn="")
     persist_repl_turn_transcript_rows(

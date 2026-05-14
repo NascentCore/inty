@@ -37,8 +37,6 @@ def _handle_api_response(
         print(f"{char_name}> {display}\n")
         return True, messages, None
 
-    from .tools import ToolType
-
     tool_name = msg.tool_calls[0].function.name
 
     logger.info(

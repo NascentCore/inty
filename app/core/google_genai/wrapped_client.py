@@ -63,7 +63,6 @@ from pydantic import BaseModel
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.google_genai.utils import (
     get_jpeg_url_and_text_mixed_parts,
-    get_text_part,
     get_text_parts,
 )
 from google.genai import types as gemini_types

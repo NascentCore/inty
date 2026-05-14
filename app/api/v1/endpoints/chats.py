@@ -1,15 +1,11 @@
 import asyncio
 import json
-import uuid
 from typing import Any, Dict, List, Optional, Union
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from fastapi.responses import StreamingResponse
-from langchain_core.messages import HumanMessage
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.chat_settings import ChatSettings
 from app.api import deps
 from app.api.tags import (
     ANDROID_APP_TAG,
@@ -28,16 +24,13 @@ from app.core.agent.prompts import (
     USER_FACING_CHAT_MODE_IDS,
     get_user_facing_chat_mode_options,
 )
-from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.voice.tts_api import is_gemini_voice
-from app.schemas.chat import ChatCompletionRequest, MessageVoteRequest
+from app.schemas.chat import MessageVoteRequest
 from backend.ops.schemas.evaluation import SurpriseSnapUnlockRequest
 from app.schemas.response import (
     APIResponse,
-    BizError,
     BusinessErrorCode,
-    UsageLimitExceeded,
     create_business_error_response,
 )
 from app.services import agent_service, chat_history_service, chat_service
@@ -630,7 +623,7 @@ async def update_agent_chat_settings(
         # Verify if the agent_id in returned chat matches the input
         if chat.agent_id != agent_id:
             logger.error(f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
-            raise HTTPException(status_code=500, detail=f"Agent ID mismatch")
+            raise HTTPException(status_code=500, detail="Agent ID mismatch")
 
         # Get or create chat settings, then update
         # First ensure settings exist

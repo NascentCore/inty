@@ -8,7 +8,11 @@ def _minimal_agent(**kwargs) -> Agent:
         agent_id=kwargs.get("agent_id", "test-agent"),
         name=kwargs.get("name", "Test"),
         model_config=kwargs.get("model_config", {}),
-        **{k: v for k, v in kwargs.items() if k not in ("agent_id", "name", "model_config")},
+        **{
+            k: v
+            for k, v in kwargs.items()
+            if k not in ("agent_id", "name", "model_config")
+        },
     )
 
 
@@ -22,9 +26,11 @@ def test_get_agent_model_config_empty_when_no_config():
 
 def test_get_agent_model_config_legacy_model_config():
     """向后兼容：仅有旧字段 model_config 时取其值（dict），非 dict 则回退为空。"""
-    assert get_agent_model_config({
-        "settings": {"model_config": {"model": "gpt-4"}},
-    }) == {"model": "gpt-4"}
+    assert get_agent_model_config(
+        {
+            "settings": {"model_config": {"model": "gpt-4"}},
+        }
+    ) == {"model": "gpt-4"}
     assert get_agent_model_config({"settings": {"model_config": None}}) == {}
     assert get_agent_model_config({"settings": {"model_config": "invalid"}}) == {}
 
@@ -69,4 +75,7 @@ def test_chat_extra_body_deepseek_model():
 def test_chat_extra_body_different_user_id():
     """_chat_extra_body 的 user 字段与传入的 user_id 一致。"""
     agent = _minimal_agent()
-    assert agent._chat_extra_body("another_user", "google/gemini-2.5-flash")["user"] == "another_user"
+    assert (
+        agent._chat_extra_body("another_user", "google/gemini-2.5-flash")["user"]
+        == "another_user"
+    )

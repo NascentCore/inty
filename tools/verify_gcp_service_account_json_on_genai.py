@@ -1,4 +1,5 @@
 """Minimal script to verify a GCP service account JSON can call Vertex AI Gemini for text chat."""
+
 from __future__ import annotations
 
 import json
@@ -25,7 +26,10 @@ def main(
     ],
     count: Annotated[
         int,
-        cyclopts.Parameter(name="--count", help="Number of generate_content calls per model (repeat to incur more charges)."),
+        cyclopts.Parameter(
+            name="--count",
+            help="Number of generate_content calls per model (repeat to incur more charges).",
+        ),
     ] = 1,
 ) -> None:
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials
@@ -33,7 +37,9 @@ def main(
     with open(credentials) as f:
         project_id = json.load(f)["project_id"]
 
-    vertex_gemini = [m for m in ALL_GEMINI_MODELS if m.provider == ModelAPIProvider.GOOGLE_VERTEX_AI]
+    vertex_gemini = [
+        m for m in ALL_GEMINI_MODELS if m.provider == ModelAPIProvider.GOOGLE_VERTEX_AI
+    ]
     if not vertex_gemini:
         print("No Vertex AI Gemini models in catalog.", file=sys.stderr)
         sys.exit(1)

@@ -80,7 +80,9 @@ class ExperimentConfig(BaseModel):
     dataset: DatasetConfig = Field(default_factory=DatasetConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
     lm_train: LmTrainConfig = Field(default_factory=LmTrainConfig)
-    classifier_train: ClassifierTrainConfig = Field(default_factory=ClassifierTrainConfig)
+    classifier_train: ClassifierTrainConfig = Field(
+        default_factory=ClassifierTrainConfig
+    )
 
 
 def load_experiment_config(config_path: Path) -> ExperimentConfig:

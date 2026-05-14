@@ -85,4 +85,6 @@ def test_exc_chain_detects_inference_errors() -> None:
     oj = OpenRouterInvalidJsonError("bad json body")
     assert exc_chain_includes_llm_inference_failure_root_causes(oj) is True
 
-    assert exc_chain_includes_llm_inference_failure_root_causes(RuntimeError("x")) is False
+    assert (
+        exc_chain_includes_llm_inference_failure_root_causes(RuntimeError("x")) is False
+    )

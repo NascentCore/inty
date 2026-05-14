@@ -1650,9 +1650,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
 
     # ``poll = max(floor, features.companion_ws_proactive_heartbeat_poll_seconds)``:
     # lowering only the floor is not enough when YAML sets a large poll interval.
-    monkeypatch.setattr(
-        chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05
-    )
+    monkeypatch.setattr(chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05)
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
         "companion_ws_proactive_heartbeat_poll_seconds",
@@ -1686,9 +1684,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
             assert ack["type"] == "user_signed_on_ack"
             assert ack["ok"] is True
             time.sleep(0.2)
-            assert (
-                ticks["proactive"] + ticks["maintenance"] + ticks["scheduled"] >= 1
-            )
+            assert ticks["proactive"] + ticks["maintenance"] + ticks["scheduled"] >= 1
 
     n_at_close = ticks["proactive"] + ticks["maintenance"] + ticks["scheduled"]
     time.sleep(0.35)
@@ -1724,9 +1720,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
         run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
     )
 
-    monkeypatch.setattr(
-        chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05
-    )
+    monkeypatch.setattr(chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05)
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
         "companion_ws_proactive_heartbeat_poll_seconds",
@@ -2424,7 +2418,9 @@ def test_chat_websocket_recv_not_connected_runtime_after_ping_exits_cleanly(
         raise RuntimeError(chat_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws?ws_conn_id=aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws?ws_conn_id=aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
+        ) as websocket:
             websocket.send_json({"type": "ping"})
             assert websocket.receive_json() == {"type": "pong"}
             monkeypatch.setattr(WebSocket, "receive_text", boom_receive_text)
@@ -2498,7 +2494,9 @@ def test_chat_websocket_invalid_ws_conn_id_query_logs_fallback(
     assert invalid_msgs
     assert any("not-a-valid-uuid" in m for m in invalid_msgs), invalid_msgs
     assert session_open_msgs
-    assert not any("not-a-valid-uuid" in m for m in session_open_msgs), session_open_msgs
+    assert not any(
+        "not-a-valid-uuid" in m for m in session_open_msgs
+    ), session_open_msgs
 
 
 def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(

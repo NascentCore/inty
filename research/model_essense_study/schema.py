@@ -129,4 +129,3 @@ class AnalysisResult(BaseModel):
     by_model: dict[str, dict[str, int]] = Field(default_factory=dict)
     metrics: list[AnalysisMetric] = Field(default_factory=list)
     generated_at: datetime
-

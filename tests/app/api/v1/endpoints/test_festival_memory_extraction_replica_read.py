@@ -19,7 +19,9 @@ async def test_manual_festival_memory_extraction_uses_replica_read_path():
     )
     db = AsyncMock()
     current_user = SimpleNamespace(is_superuser=True)
-    mock_to_thread = AsyncMock(return_value=[("user-1", "agent-1"), ("user-2", "agent-2")])
+    mock_to_thread = AsyncMock(
+        return_value=[("user-1", "agent-1"), ("user-2", "agent-2")]
+    )
     mock_extract = AsyncMock(side_effect=[True, False])
 
     with (

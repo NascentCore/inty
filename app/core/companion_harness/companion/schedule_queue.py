@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import queue
 import threading
-import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -15,7 +14,9 @@ from loguru import logger
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .utc import utc_iso_ts
-from app.core.companion_harness.memory.memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 
 ScheduleTaskStatus = Literal["pending", "fired"]
 

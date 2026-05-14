@@ -44,6 +44,8 @@ def test_build_system_messages_does_not_inject_user_time_context_system_slice() 
         enable_tools=False,
         implicit_signal_bundle=implicit,
     )
-    joined = "\n".join(m.get("content") or "" for m in msgs if m.get("role") == "system")
+    joined = "\n".join(
+        m.get("content") or "" for m in msgs if m.get("role") == "system"
+    )
     assert "##User Time Context" not in joined
     assert "## user-time-context" not in joined

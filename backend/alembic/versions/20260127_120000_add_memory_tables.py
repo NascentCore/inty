@@ -6,6 +6,7 @@ Create Date: 2026-01-27 12:00:00.000000+00:00
 
 CREATED_BY_AGENT
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -56,7 +57,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["agent_id"], ["agents.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_memory_user_type", "memory", ["user_id", "memory_type"], unique=False)
+    op.create_index(
+        "ix_memory_user_type", "memory", ["user_id", "memory_type"], unique=False
+    )
     op.create_index(
         "ix_memory_user_type_agent",
         "memory",
@@ -96,7 +99,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_memory_extraction_log_user_type", table_name="memory_extraction_log")
+    op.drop_index(
+        "ix_memory_extraction_log_user_type", table_name="memory_extraction_log"
+    )
     op.drop_table("memory_extraction_log")
     op.drop_index("ix_memory_user_type_agent", table_name="memory")
     op.drop_index("ix_memory_user_type", table_name="memory")

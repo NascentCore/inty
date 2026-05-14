@@ -137,6 +137,10 @@ async def _preload_database_tables(db: AsyncSession):
     try:
         from sqlalchemy import select, text
 
+        from app.models.agent import Agent
+        from app.models.chat import Chat
+        from app.models.user import User
+
         await db.execute(select(Chat).limit(1))
         await db.execute(select(Agent).limit(1))
         await db.execute(select(User).limit(1))
@@ -209,6 +213,8 @@ if global_config_loaded_from_config_yaml.app.debug:
     app.openapi = custom_openapi
 
 
-@app.get("/health", response_model=APIResponse[HealthCheckData], include_in_schema=False)
+@app.get(
+    "/health", response_model=APIResponse[HealthCheckData], include_in_schema=False
+)
 async def health():
     return APIResponse.success(data=build_health_check_data(ops=True))

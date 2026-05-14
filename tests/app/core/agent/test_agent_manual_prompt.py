@@ -45,7 +45,7 @@ CHANGE_LOGS_PROMPT_CONTENT = "\n".join(
         "> CREATED_BY_AGENT",
         "",
         "> This content is injected into the Inty official assistant system message.",
-        "> Lines starting with \">\" will be removed during injection.",
+        '> Lines starting with ">" will be removed during injection.',
         "",
         "CHANGE_LOG_LINE_1",
         "CHANGE_LOG_LINE_2",
@@ -59,9 +59,7 @@ OFFICIAL_RENAME_MESSAGE_LINE = (
 )
 
 
-def _patch_manual_and_change_logs(
-    monkeypatch, manual_path, change_logs_path
-) -> None:
+def _patch_manual_and_change_logs(monkeypatch, manual_path, change_logs_path) -> None:
     monkeypatch.setattr(agent_module, "INTELLIMATE_USER_MANUAL_PATH", manual_path)
     monkeypatch.setattr(agent_module, "INTELLIMATE_CHANGE_LOGS_PATH", change_logs_path)
     agent_module._load_intellimate_user_manual.cache_clear()
@@ -91,7 +89,9 @@ def test_intellimate_official_does_not_inject_change_logs_by_default(
     rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
 
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
-    assert not any(content.startswith("##IntelliMate Change Logs\n") for content in contents)
+    assert not any(
+        content.startswith("##IntelliMate Change Logs\n") for content in contents
+    )
 
 
 def test_intellimate_official_adds_manual_tool_usage_guidance(tmp_path, monkeypatch):
@@ -108,7 +108,9 @@ def test_intellimate_official_adds_manual_tool_usage_guidance(tmp_path, monkeypa
     )
     contents = _get_contents(agent.build_system_messages("", None))
 
-    tool_usage_message = _find_message_by_prefix(contents, "##Official Assistant Tool Usage\n")
+    tool_usage_message = _find_message_by_prefix(
+        contents, "##Official Assistant Tool Usage\n"
+    )
     rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
     assert tool_usage_message.startswith("##Official Assistant Tool Usage\n")
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
@@ -131,12 +133,16 @@ def test_intellimate_official_does_not_inject_change_logs_prompt(tmp_path, monke
     )
     contents = _get_contents(agent.build_system_messages("", None))
 
-    tool_usage_message = _find_message_by_prefix(contents, "##Official Assistant Tool Usage\n")
+    tool_usage_message = _find_message_by_prefix(
+        contents, "##Official Assistant Tool Usage\n"
+    )
     rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
     assert tool_usage_message.startswith("##Official Assistant Tool Usage\n")
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
     assert "read_change_logs" in tool_usage_message
-    assert not any(content.startswith("##IntelliMate Change Logs\n") for content in contents)
+    assert not any(
+        content.startswith("##IntelliMate Change Logs\n") for content in contents
+    )
 
 
 def test_build_system_messages_for_intellimate_official_assistant_happy_case(
@@ -158,12 +164,16 @@ def test_build_system_messages_for_intellimate_official_assistant_happy_case(
         agent.build_system_messages_for_intellimate_official_assistant("", None)
     )
 
-    tool_usage_message = _find_message_by_prefix(contents, "##Official Assistant Tool Usage\n")
+    tool_usage_message = _find_message_by_prefix(
+        contents, "##Official Assistant Tool Usage\n"
+    )
     rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
     assert tool_usage_message.startswith("##Official Assistant Tool Usage\n")
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
     assert "read_change_logs" in tool_usage_message
-    assert not any(content.startswith("##IntelliMate Change Logs\n") for content in contents)
+    assert not any(
+        content.startswith("##IntelliMate Change Logs\n") for content in contents
+    )
 
     assert any("Warm personality." in c for c in contents)
 
@@ -181,9 +191,7 @@ def test_non_intellimate_official_does_not_inject_manual_prompt(monkeypatch):
 
     assert not any("##IntelliMate User Manual\n" in content for content in contents)
     assert not any("##IntelliMate Change Logs\n" in content for content in contents)
-    assert not any(
-        OFFICIAL_RENAME_MESSAGE_PREFIX in content for content in contents
-    )
+    assert not any(OFFICIAL_RENAME_MESSAGE_PREFIX in content for content in contents)
 
 
 def test_intellimate_official_has_empty_main_and_mode_prompts(tmp_path, monkeypatch):
@@ -283,9 +291,7 @@ def test_build_system_messages_can_omit_output_format_prompt():
         agent.build_system_messages("", None, include_output_format_prompt=False)
     )
 
-    output_format_marker = (
-        "All actions, expressions, psychology or scene descriptions must be enclosed in brackets ()."
-    )
+    output_format_marker = "All actions, expressions, psychology or scene descriptions must be enclosed in brackets ()."
     assert any(output_format_marker in content for content in with_output_format)
     assert not any(output_format_marker in content for content in without_output_format)
     assert any("## Purity Mode" in content for content in without_output_format)
@@ -306,7 +312,9 @@ def test_build_system_messages_for_chat_uses_official_builder(monkeypatch):
     )
 
     def _unexpected_default_builder(*args, **kwargs):
-        raise AssertionError("default builder should not be used for official assistant")
+        raise AssertionError(
+            "default builder should not be used for official assistant"
+        )
 
     monkeypatch.setattr(agent, "build_system_messages", _unexpected_default_builder)
 
@@ -357,8 +365,13 @@ def test_build_system_messages_for_chat_uses_default_builder_for_non_official(
 
 
 def test_official_tool_usage_prompt_guides_feature_question_answers():
-    assert "step-by-step" in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
-    assert "prerequisites" in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
+    assert (
+        "step-by-step" in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
+    )
+    assert (
+        "prerequisites"
+        in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
+    )
     assert (
         "ask one concise clarifying question"
         in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE

@@ -184,7 +184,10 @@ async def test_call_tts_api_uses_fake_tts_when_test_config_enables_it():
 
 
 @pytest.mark.asyncio
-@patch("app.services.voice_service.GeminiTTSAPI.synthesize_with_roleplay_prompt", new_callable=AsyncMock)
+@patch(
+    "app.services.voice_service.GeminiTTSAPI.synthesize_with_roleplay_prompt",
+    new_callable=AsyncMock,
+)
 async def test_call_tts_api_passes_voice_message_narration_mode_to_gemini(
     mock_gemini_prompted: AsyncMock,
     voice_service: VoiceService,

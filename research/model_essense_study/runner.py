@@ -114,13 +114,15 @@ def run_inference(
     openrouter_api_key: str | None,
 ) -> dict:
     items = list(manifest.items)
-    selected = items[: max_items] if max_items is not None else items
+    selected = items[:max_items] if max_items is not None else items
     responses_path.parent.mkdir(parents=True, exist_ok=True)
     existing_task_ids = (
         _read_existing_task_ids(responses_path) if resume_from_existing else set()
     )
     selected_before_skip = list(selected)
-    selected = [item for item in selected_before_skip if item.task_id not in existing_task_ids]
+    selected = [
+        item for item in selected_before_skip if item.task_id not in existing_task_ids
+    ]
     skipped_existing_count = len(selected_before_skip) - len(selected)
     rpm = requests_per_minute or config.planning.requests_per_minute
     spacing_seconds = 60.0 / max(rpm, 1)

@@ -11,7 +11,6 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 
 # 系统级别行为配置通过环境变量配置，比如日志级别、LangSmith追踪等。
 load_dotenv()

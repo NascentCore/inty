@@ -25,7 +25,6 @@ from models.vertexai import GeminiFlashImageModel, NanoBananaProModel
 from rich.console import Console
 from rich.table import Table
 from scenarios import (
-    ALL_SCENARIOS,
     Scenario,
     ScenarioType,
     ScenarioVariant,

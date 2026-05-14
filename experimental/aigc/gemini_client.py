@@ -57,7 +57,7 @@ class GeminiClient:
                 logger.info("Using Gemini API (Google AI Studio) with API key")
                 self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
 
-            logger.info(f"Gemini client initialized successfully")
+            logger.info("Gemini client initialized successfully")
             logger.debug(f"Character model: {Config.CHARACTER_GENERATION_MODEL}")
             logger.debug(f"Image model: {Config.IMAGE_GENERATION_MODEL}")
         except Exception as e:
@@ -337,7 +337,7 @@ class GeminiClient:
                 f"Character enhanced: added {new_quirks_count - original_quirks_count} new quirks"
             )
             logger.debug(
-                f"Enhanced fields: speech_patterns, body_language, emotional_triggers, growth_arc"
+                "Enhanced fields: speech_patterns, body_language, emotional_triggers, growth_arc"
             )
 
             return character

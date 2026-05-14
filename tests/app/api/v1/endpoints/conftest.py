@@ -14,7 +14,6 @@ from app.models.user import AuthType
 from app.schemas.user import User
 from tests.app.api.test_client import TestClient
 
-
 API_BASE_URL = os.getenv("INTY_API_BASE_URL", "http://localhost:8000")
 
 

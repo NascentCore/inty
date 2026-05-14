@@ -30,9 +30,7 @@ def test_chat_completions_endpoint(integration_client: TestClient):
 
     response = integration_client.chat_completions(
         agent_id,
-        messages=[
-            {"role": "user", "content": "Tell me a fun fact about penguins."}
-        ],
+        messages=[{"role": "user", "content": "Tell me a fun fact about penguins."}],
         language="en",
     )
 
@@ -679,9 +677,7 @@ def test_recommend_agents_never_returns_private_even_for_superuser(
             integration_client.delete_agent(public_agent_id)
 
 
-def test_update_agent_adds_energy_points(
-    integration_client: TestClient, db_session
-):
+def test_update_agent_adds_energy_points(integration_client: TestClient, db_session):
     """验证用户可以通过更新接口为任意角色累计能量点数"""
     agent_id = integration_client.create_agent(
         name="Energy Points Test Agent", visibility="PUBLIC", opening=""

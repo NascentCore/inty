@@ -13,7 +13,10 @@ from typing import Any
 
 import pytest
 
-from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
+from app.core.companion_harness.companion.llm_client import (
+    CompanionLLMClient,
+    CompanionLLMConfig,
+)
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -28,7 +31,9 @@ def _require_real_companion_harness_llm_test() -> None:
             "Set INTY_COMPANION_HARNESS_REAL_LLM_TEST=1 to run Companion Harness real LLM tests"
         )
     if not (os.getenv("OPENROUTER_API_KEY") or "").strip():
-        pytest.skip("OPENROUTER_API_KEY is required for Companion Harness real LLM tests")
+        pytest.skip(
+            "OPENROUTER_API_KEY is required for Companion Harness real LLM tests"
+        )
 
 
 class _InstrumentedCompanionLLMClient(CompanionLLMClient):
@@ -95,7 +100,7 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
         soul_update_disabled=True,
     )
     user_prompt = (
-        "You MUST call the memory_store_list_paths tool first with relative_path \"\" (empty string) "
+        'You MUST call the memory_store_list_paths tool first with relative_path "" (empty string) '
         "to list the MemoryStore scope root. Do not guess. After you receive the tool output, reply in one "
         "short English sentence. That sentence MUST contain the exact substring hello.txt."
     )
@@ -108,7 +113,9 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
     )
 
     assert client.saw_assistant_tool_calls, "model never returned tool_calls"
-    assert client.chat_rounds >= 2, "expected at least one tool round and one final reply"
+    assert (
+        client.chat_rounds >= 2
+    ), "expected at least one tool round and one final reply"
     assert "hello.txt" in out.assistant_text.lower()
     tr = store.read_document("transcript.jsonl")
     assert "hello.txt" in tr.lower()

@@ -39,7 +39,6 @@ from app.core.companion_harness.tools.runtime import (
 )
 from app.core.agent.agent_prompt_configs import (
     INTELLIMATE_AGENT_ID,
-    INTELLIMATE_AGENT_NAME,
     get_agent_prompt_override,
 )
 from app.core.config import (

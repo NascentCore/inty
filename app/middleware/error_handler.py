@@ -73,7 +73,7 @@ def _build_error_response(
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle request validation errors"""
-    logger.error(f"=== 请求验证失败 (422错误) ===")
+    logger.error("=== 请求验证失败 (422错误) ===")
     logger.error(f"请求方法: {request.method}")
     logger.error(f"请求URL: {request.url}")
     logger.error(f"请求路径: {request.url.path}")
@@ -97,7 +97,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         logger.error(f"  消息: {error['msg']}")
         logger.error(f"  输入: {error.get('input', 'N/A')}")
 
-    logger.error(f"=== 验证错误详情结束 ===")
+    logger.error("=== 验证错误详情结束 ===")
 
     return _build_error_response(
         request=request,
@@ -115,12 +115,12 @@ async def jwt_exception_handler(request: Request, exc: JWTError):
             f"JWT已过期 (401): {request.method} {request.url.path} - {type(exc).__name__}: {exc}"
         )
     else:
-        logger.error(f"=== JWT认证错误 (401错误) ===")
+        logger.error("=== JWT认证错误 (401错误) ===")
         logger.error(f"请求方法: {request.method}")
         logger.error(f"请求URL: {request.url}")
         logger.error(f"JWT错误: {str(exc)}")
         logger.error(f"JWT错误类型: {type(exc).__name__}")
-        logger.error(f"=== JWT错误详情结束 ===")
+        logger.error("=== JWT错误详情结束 ===")
 
     return _build_error_response(
         request=request,
@@ -133,12 +133,12 @@ async def jwt_exception_handler(request: Request, exc: JWTError):
 
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     """Handle database errors"""
-    logger.error(f"=== 数据库错误 (500错误) ===")
+    logger.error("=== 数据库错误 (500错误) ===")
     logger.error(f"请求方法: {request.method}")
     logger.error(f"请求URL: {request.url}")
     logger.error(f"SQLAlchemy错误: {str(exc)}")
     logger.error(f"SQLAlchemy错误类型: {type(exc).__name__}")
-    logger.error(f"=== 数据库错误详情结束 ===")
+    logger.error("=== 数据库错误详情结束 ===")
 
     return _build_error_response(
         request=request,
@@ -151,7 +151,7 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
 
 async def validation_error_handler(request: Request, exc: ValidationError):
     """Handle Pydantic validation errors"""
-    logger.error(f"=== Pydantic验证错误 (422错误) ===")
+    logger.error("=== Pydantic验证错误 (422错误) ===")
     logger.error(f"请求方法: {request.method}")
     logger.error(f"请求URL: {request.url}")
     logger.error(f"Pydantic错误: {str(exc)}")
@@ -167,7 +167,7 @@ async def validation_error_handler(request: Request, exc: ValidationError):
             logger.error(f"  消息: {error['msg']}")
             logger.error(f"  输入: {error.get('input', 'N/A')}")
 
-    logger.error(f"=== Pydantic验证错误详情结束 ===")
+    logger.error("=== Pydantic验证错误详情结束 ===")
 
     return _build_error_response(
         request=request,

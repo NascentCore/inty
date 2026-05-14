@@ -74,7 +74,4 @@ class TestSelectDefaultGeminiVoiceForImateGender:
         assert select_default_gemini_voice_for_imate_gender("FEMALE") == "Zephyr"
 
     def test_unknown_gender_falls_back_to_default(self):
-        assert (
-            select_default_gemini_voice_for_imate_gender("UNKNOWN")
-            == "Zephyr"
-        )
+        assert select_default_gemini_voice_for_imate_gender("UNKNOWN") == "Zephyr"

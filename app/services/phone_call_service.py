@@ -11,7 +11,7 @@ import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlencode
 from xml.sax.saxutils import escape as xml_escape
 
@@ -26,7 +26,6 @@ from app.external_services.twilio_phone_call import (
     TwilioPhoneCallService,
 )
 from app.models.phone_call import PhoneCallCallerBinding
-from app.schemas.live_chat import LiveChatConfig
 from app.schemas.phone_call import (
     PhoneCallInboundWebhookRequest,
     PhoneCallMediaTokenPayload,
@@ -53,7 +52,9 @@ class PhoneCallLimitError(RuntimeError):
     """Raised when existing live-chat quota blocks a phone call."""
 
     def __init__(self, error_response: dict[str, Any]) -> None:
-        super().__init__(str(error_response.get("message") or "Phone call limit reached"))
+        super().__init__(
+            str(error_response.get("message") or "Phone call limit reached")
+        )
         self.error_response = error_response
 
 
@@ -108,17 +109,13 @@ class PhoneCallService:
     @property
     def account_sid(self) -> str:
         return (
-            os.environ.get("TWILIO_ACCOUNT_SID")
-            or self.config.twilio_account_sid
-            or ""
+            os.environ.get("TWILIO_ACCOUNT_SID") or self.config.twilio_account_sid or ""
         ).strip()
 
     @property
     def auth_token(self) -> str:
         return (
-            os.environ.get("TWILIO_AUTH_TOKEN")
-            or self.config.twilio_auth_token
-            or ""
+            os.environ.get("TWILIO_AUTH_TOKEN") or self.config.twilio_auth_token or ""
         ).strip()
 
     @property
@@ -318,11 +315,13 @@ class PhoneCallService:
     ) -> PhoneCallStartResponse:
         self.ensure_available()
         normalized = self.normalize_phone_number(phone_number)
-        is_allowed, reject_reason, limit_info = await subscription_svc.check_live_chat_limit(
-            db, current_user, agent_id
+        is_allowed, reject_reason, limit_info = (
+            await subscription_svc.check_live_chat_limit(db, current_user, agent_id)
         )
         if not is_allowed:
-            error_info = limit_info.get("error_info") or BusinessErrorCode.SUBSCRIPTION_REQUIRED
+            error_info = (
+                limit_info.get("error_info") or BusinessErrorCode.SUBSCRIPTION_REQUIRED
+            )
             raise PhoneCallLimitError(
                 create_business_error_response(error_info).model_dump()
             )
@@ -388,14 +387,14 @@ class PhoneCallService:
             return self.build_reject_twiml("Phone calls are not fully configured.")
         agent_id = self.agent_id_for_inbound_number(inbound.to_number)
         if not agent_id:
-            return self.build_reject_twiml("This Inty phone number is not assigned yet.")
+            return self.build_reject_twiml(
+                "This Inty phone number is not assigned yet."
+            )
         try:
             caller = self.normalize_phone_number(inbound.from_number)
         except ValueError:
             return self.build_reject_twiml("We could not recognize your caller number.")
-        user_id = await self.lookup_caller_user_id(
-            db, normalized_phone_number=caller
-        )
+        user_id = await self.lookup_caller_user_id(db, normalized_phone_number=caller)
         if not user_id:
             return self.build_reject_twiml(
                 "Please open the app and ask your Inty to call you once before calling this number."

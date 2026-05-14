@@ -33,7 +33,6 @@ from openai import (
 )
 from dotenv import load_dotenv
 
-
 MemoryVariant = Literal["flat", "layered"]
 
 

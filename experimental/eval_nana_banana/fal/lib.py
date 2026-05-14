@@ -14,7 +14,6 @@ from typing import Any
 
 from experimental.fal_ai.fal import (
     DEFAULT_GPT_IMAGE_1_5_EDIT_CONFIG,
-    DEFAULT_SEEDREAM_V4_5_EDIT_CONFIG,
     IMAGE_SIZE_PORTRAIT_16_9,
     FalAIClient,
     FalTextToImageResult,

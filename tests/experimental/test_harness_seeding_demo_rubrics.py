@@ -46,6 +46,9 @@ def test_score_all_rubrics_returns_four_keys():
     user = "我最近工作上特别累，上司催得很紧。"
     assistant = "听起来你真的不容易，上司催得紧的时候最难扛。"
     out = score_all_rubrics(assistant, user_message_text=user)
-    assert {"default", "strict_emotional", "premature_solution", "boundary_tone"} <= set(
-        out.keys()
-    )
+    assert {
+        "default",
+        "strict_emotional",
+        "premature_solution",
+        "boundary_tone",
+    } <= set(out.keys())

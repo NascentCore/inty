@@ -6,7 +6,6 @@ Helps diagnose and troubleshoot issues
 
 import os
 import sys
-import logging
 from pathlib import Path
 from config import Config
 from logging_config import setup_verbose_logging

@@ -62,7 +62,7 @@ def test_agent_extensions_field():
         visibility=AgentVisibility.PUBLIC,
         status=AgentStatus.APPROVED,
         extensions=initial_extensions,
-        creator_id=test_user.id  # Use the created user's ID
+        creator_id=test_user.id,  # Use the created user's ID
     )
 
     # 保存到数据库

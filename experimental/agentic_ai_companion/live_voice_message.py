@@ -10,14 +10,11 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 from typing import Any
 
 from google import genai
 from google.genai import types
-
-from loguru import logger
 
 # 与 speech_gen.DEFAULT_VOICE_NAME 保持相同，保证两工具音色一致
 DEFAULT_VOICE_NAME = "Kore"

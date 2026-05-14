@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
-from app.core.companion_harness.companion.models import load_context_meta, load_prompt_bundle
+from app.core.companion_harness.companion.manager import (
+    CompanionConfig,
+    CompanionManager,
+)
+from app.core.companion_harness.companion.models import (
+    load_context_meta,
+    load_prompt_bundle,
+)
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
@@ -12,8 +18,7 @@ from living_sphere.seeding import (
 )
 
 
-def test_companion_session_seeds_living_sphere_and_injects_prompt(
-) -> None:
+def test_companion_session_seeds_living_sphere_and_injects_prompt() -> None:
     manager = CompanionManager(
         CompanionConfig(
             llm=CompanionLLMConfig(api_key="test-key"),

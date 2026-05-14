@@ -1,12 +1,24 @@
 """评测系统API端点 - 专门用于评测聊天系统效果"""
 
-import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.ops.schemas.evaluation import BatchEvaluationRequest, EvaluationComparison, EvaluationExportRequest, EvaluationResultResponse, EvaluationSessionCreate, EvaluationSessionDetail, EvaluationSessionResponse, EvaluationStats, EvaluationTemplateCreate, EvaluationTemplateResponse, QuestionFileUpload, ScoringModelInfo
+from backend.ops.schemas.evaluation import (
+    BatchEvaluationRequest,
+    EvaluationComparison,
+    EvaluationExportRequest,
+    EvaluationResultResponse,
+    EvaluationSessionCreate,
+    EvaluationSessionDetail,
+    EvaluationSessionResponse,
+    EvaluationStats,
+    EvaluationTemplateCreate,
+    EvaluationTemplateResponse,
+    QuestionFileUpload,
+    ScoringModelInfo,
+)
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
@@ -2724,13 +2736,17 @@ async def get_agent_generated_images(
                     "model_fallback_due_to_429"
                 )
                 if reference_image_url is None:
-                    reference_image_url = generated_image_meta.get("reference_image_url")
+                    reference_image_url = generated_image_meta.get(
+                        "reference_image_url"
+                    )
                 if user_reference_image_url is None:
                     user_reference_image_url = generated_image_meta.get(
                         "user_reference_image_url"
                     )
                 if reference_image_urls is None:
-                    reference_image_urls = generated_image_meta.get("reference_image_urls")
+                    reference_image_urls = generated_image_meta.get(
+                        "reference_image_urls"
+                    )
             if model is None:
                 model = metadata.get("model")
 

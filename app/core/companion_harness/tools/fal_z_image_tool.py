@@ -36,7 +36,7 @@ def _prompt_for_tool_display(prompt: str) -> str:
     s = (prompt or "").strip()
     if len(s) <= _TOOL_PROMPT_DISPLAY_MAX_CHARS:
         return s
-    return s[: _TOOL_PROMPT_DISPLAY_MAX_CHARS] + "..."
+    return s[:_TOOL_PROMPT_DISPLAY_MAX_CHARS] + "..."
 
 
 def _success_tool_banner_compact(tool_name: str) -> str:

@@ -164,14 +164,14 @@ async def create_subscription_record(
     )
 
     if dry_run:
-        logger.info(f"[DRY RUN] 将创建订阅记录:")
+        logger.info("[DRY RUN] 将创建订阅记录:")
         logger.info(f"  - 订阅ID: {subscription_id}")
         logger.info(f"  - 用户ID: {user.id}")
         logger.info(f"  - 计划ID: {plan.id}")
         logger.info(f"  - 状态: {SubscriptionStatus.ACTIVE}")
         logger.info(f"  - 开始时间: {start_date}")
         logger.info(f"  - 结束时间: {end_date}")
-        logger.info(f"  - 自动续费: True")
+        logger.info("  - 自动续费: True")
     else:
         db.add(subscription)
         await db.flush()  # 获取 subscription.id
@@ -215,13 +215,13 @@ async def create_transaction_record(
     )
 
     if dry_run:
-        logger.info(f"[DRY RUN] 将创建交易记录:")
+        logger.info("[DRY RUN] 将创建交易记录:")
         logger.info(f"  - 交易ID: {transaction_id}")
         logger.info(f"  - 订阅ID: {subscription.id}")
         logger.info(f"  - 用户ID: {user.id}")
         logger.info(f"  - 类型: {TransactionType.PURCHASE}")
         logger.info(f"  - 金额: {amount} {currency}")
-        logger.info(f"  - 状态: COMPLETED")
+        logger.info("  - 状态: COMPLETED")
     else:
         db.add(transaction)
         logger.info(f"创建交易记录: {transaction.id}")

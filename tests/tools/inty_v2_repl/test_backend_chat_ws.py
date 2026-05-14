@@ -30,7 +30,9 @@ def test_http_base_to_ws_chat_url() -> None:
         == f"ws://127.0.0.1:8000/api/v1/chat/ws?ws_conn_id={cid}"
     )
     assert (
-        http_base_to_ws_chat_url("http://127.0.0.1:8000/", agent_id="a1", ws_conn_id=cid)
+        http_base_to_ws_chat_url(
+            "http://127.0.0.1:8000/", agent_id="a1", ws_conn_id=cid
+        )
         == "ws://127.0.0.1:8000/api/v1/chat/ws?agent_id=a1&ws_conn_id=aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
     )
 

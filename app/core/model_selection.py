@@ -7,7 +7,6 @@ from app.utils.models_catalog import (
     GenAIModel,
     must_resolve_nickname,
     resolve_chat_model_to_id,
-    resolve_nickname,
 )
 
 

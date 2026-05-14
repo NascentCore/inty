@@ -9,7 +9,9 @@ from app.core.companion_harness.companion.llm_client import (
     CompanionLLMClient,
     CompanionLLMConfig,
 )
-from app.core.companion_harness.providers.openai_compatible_clients import OpenAICompatibleClientOptions
+from app.core.companion_harness.providers.openai_compatible_clients import (
+    OpenAICompatibleClientOptions,
+)
 
 
 def test_companion_llm_clients_use_distinct_langsmith_chat_names(

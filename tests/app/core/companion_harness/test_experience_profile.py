@@ -32,7 +32,9 @@ def test_experience_profile_system_clause_emotional_companion() -> None:
     assert "情感陪伴（emotional_companion）" in out
 
 
-def test_experience_profile_system_clause_unspecific_uses_emotional_companion_body() -> None:
+def test_experience_profile_system_clause_unspecific_uses_emotional_companion_body() -> (
+    None
+):
     out = experience_profile_system_clause("unspecific")
     _assert_clause_heading(out)
     assert "情感陪伴（emotional_companion）" in out

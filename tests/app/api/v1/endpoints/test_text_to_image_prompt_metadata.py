@@ -21,7 +21,6 @@ from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, Z_IMAGE_TURBO
 from app.schemas.agent import TextToImageRequest
 from app.schemas.user import User as UserSchema
 
-
 # Derived from endpoint-supported config defaults + catalog IDs:
 # - Google Imagen IDs (bare id and google/ prefixed id)
 # - fal z-image turbo (canonical + fal/ alias)
@@ -41,7 +40,9 @@ _SUPPORTED_TEXT_TO_IMAGE_MODELS = sorted(
 
 
 @pytest.mark.asyncio
-async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pytest.MonkeyPatch):
+async def test_text_to_image_resources_store_generation_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+):
     user_id = f"user-text-image-{uuid.uuid4().hex}"
     readable_id = uuid.uuid4().hex[:8]
     urls: list[str] = []
@@ -62,7 +63,9 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
 
         fake_client = FakeGeminiClient()
         monkeypatch.setattr(gemini_utils, "get_genai_client", lambda: fake_client)
-        monkeypatch.setattr(gemini_utils, "download_from_gcs", fake_client.download_image)
+        monkeypatch.setattr(
+            gemini_utils, "download_from_gcs", fake_client.download_image
+        )
 
         async def fake_check_image_gen_limit(db, current_user):
             return True, 0, 10
@@ -101,7 +104,9 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
         )
 
         async with AsyncSessionLocal() as session:
-            response = await generate_background(request, db=session, current_user=current_user)
+            response = await generate_background(
+                request, db=session, current_user=current_user
+            )
 
         assert response.code == 200
         assert response.data is not None
@@ -120,7 +125,8 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
         assert stored_urls == sorted(urls)
 
         stored_prompts = {
-            resource.resource_metadata.get("generation_prompt") for resource in resources
+            resource.resource_metadata.get("generation_prompt")
+            for resource in resources
         }
         assert stored_prompts == {request_prompt}
 
@@ -130,7 +136,11 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
         assert stored_models == {request_model}
 
         stored_requests = {
-            tuple(sorted(resource.resource_metadata.get("text_to_image_request", {}).items()))
+            tuple(
+                sorted(
+                    resource.resource_metadata.get("text_to_image_request", {}).items()
+                )
+            )
             for resource in resources
         }
         assert stored_requests == {tuple(sorted(expected_request_payload.items()))}
@@ -167,7 +177,9 @@ async def test_generate_with_fal_ai_accepts_z_image_turbo_model(
                 gcs_uri=f"gs://inty-test/{gcs_uri_base}/fake_1.png",
                 gcs_http_url=f"https://storage.googleapis.com/inty-test/{gcs_uri_base}/fake_1.png",
                 generated_at=datetime.now(timezone.utc),
-                raw_response_from_provider={"images": [{"url": "data:image/png;base64,fake1"}]},
+                raw_response_from_provider={
+                    "images": [{"url": "data:image/png;base64,fake1"}]
+                },
             ),
             GeneratedImageProcessResult(
                 size=ImageSize(width=1024, height=1365),
@@ -177,9 +189,12 @@ async def test_generate_with_fal_ai_accepts_z_image_turbo_model(
                 gcs_uri=f"gs://inty-test/{gcs_uri_base}/fake_2.png",
                 gcs_http_url=f"https://storage.googleapis.com/inty-test/{gcs_uri_base}/fake_2.png",
                 generated_at=datetime.now(timezone.utc),
-                raw_response_from_provider={"images": [{"url": "data:image/png;base64,fake2"}]},
+                raw_response_from_provider={
+                    "images": [{"url": "data:image/png;base64,fake2"}]
+                },
             ),
         ]
+
     def fail_generate_text_to_image(_):
         raise AssertionError("z-image/turbo should use app/core/images/fal.py API")
 
@@ -312,7 +327,9 @@ async def test_text_to_image_uses_requested_model_for_generation(
         created_at=datetime.now(timezone.utc),
     )
 
-    response = await generate_background(request, db=object(), current_user=current_user)
+    response = await generate_background(
+        request, db=object(), current_user=current_user
+    )
 
     assert response.code == 200
     assert response.data is not None
@@ -445,7 +462,9 @@ async def test_text_to_image_accepts_all_supported_models(
         created_at=datetime.now(timezone.utc),
     )
 
-    response = await generate_background(request, db=object(), current_user=current_user)
+    response = await generate_background(
+        request, db=object(), current_user=current_user
+    )
 
     assert response.code == 200
     assert response.data is not None

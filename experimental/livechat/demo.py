@@ -35,7 +35,7 @@ MODEL = "gemini-live-2.5-flash-native-audio"
 #     resumable_session_example()
 
 
-def build_live_config() -> types.LiveConnectConfig:
+def build_live_config(*, session_handle: str | None = None) -> types.LiveConnectConfig:
     return types.LiveConnectConfig(
         response_modalities=["AUDIO"],
         speech_config=types.SpeechConfig(

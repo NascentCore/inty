@@ -1,7 +1,5 @@
-import asyncio
 import re
 import sys
-import traceback
 from datetime import UTC, datetime
 
 import cyclopts
@@ -182,7 +180,7 @@ async def create_email_password_superuser(
         await db.commit()
         await db.refresh(user)
 
-        logger.info(f"Created user successfully:")
+        logger.info("Created user successfully:")
         logger.info(f"  User ID: {user.id}")
         logger.info(f"  Readable ID: {user.readable_id}")
         logger.info(f"  Email: {user.email}")

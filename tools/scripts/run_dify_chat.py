@@ -12,7 +12,6 @@
 数据库配置文件默认使用 tools/scripts/sync_agents_dev_to_prod/config.yaml.example
 """
 
-import asyncio
 import json
 import logging
 import os

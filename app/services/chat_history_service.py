@@ -1510,7 +1510,7 @@ def get_messages_paginated(
                         message_obj["caption"] = data.get("caption") or ""
                         message_obj["price"] = data.get("credits_required", 0)
                         unlocked_ids = unlocked_surprise_snap_message_ids or set()
-                        message_obj["is_locked"] = not (message_id in unlocked_ids)
+                        message_obj["is_locked"] = message_id not in unlocked_ids
                     else:
                         message_obj["type"] = "text"
 

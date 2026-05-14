@@ -15,8 +15,6 @@ CREATED_BY_AGENT
 """
 
 import argparse
-import sys
-from pathlib import Path
 
 from client import ZImageTurboClient
 from config import ACCELERATION_LEVELS, IMAGE_SIZES, OUTPUT_FORMATS
@@ -96,7 +94,7 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"正在生成图像...")
+    print("正在生成图像...")
     print(f"提示词: {args.prompt}")
     print(f"图像尺寸: {args.size}")
     print(f"推理步数: {args.steps}")
@@ -118,7 +116,7 @@ def main():
     )
 
     print("-" * 50)
-    print(f"生成完成！")
+    print("生成完成！")
     print(f"使用的种子: {result.seed}")
     print(f"实际提示词: {result.prompt}")
     print()

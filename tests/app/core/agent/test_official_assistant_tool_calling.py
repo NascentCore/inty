@@ -131,7 +131,9 @@ def test_resolve_official_tool_calls_executes_tool_and_returns_final_response(
 
 def test_read_user_manual_tool_returns_system_message(monkeypatch: pytest.MonkeyPatch):
     agent = _build_official_agent()
-    monkeypatch.setattr(agent_module, "_load_intellimate_user_manual", lambda: "MANUAL_ABC")
+    monkeypatch.setattr(
+        agent_module, "_load_intellimate_user_manual", lambda: "MANUAL_ABC"
+    )
 
     tool_result, injected_system_message = agent._execute_official_assistant_tool_call(
         tool_name=OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME,
@@ -177,7 +179,9 @@ def test_resolve_official_tool_calls_injects_manual_as_system_message(
     final_response = _build_openai_response_without_tool_call(
         content="Here is how to use IntelliMate...",
     )
-    monkeypatch.setattr(agent_module, "_load_intellimate_user_manual", lambda: "MANUAL_XYZ")
+    monkeypatch.setattr(
+        agent_module, "_load_intellimate_user_manual", lambda: "MANUAL_XYZ"
+    )
 
     def fake_call_openai_api_with_retry(**kwargs):
         openai_messages = kwargs["openai_messages"]
@@ -189,7 +193,9 @@ def test_resolve_official_tool_calls_injects_manual_as_system_message(
         )
         return (final_response, None)
 
-    monkeypatch.setattr(agent, "_call_openai_api_with_retry", fake_call_openai_api_with_retry)
+    monkeypatch.setattr(
+        agent, "_call_openai_api_with_retry", fake_call_openai_api_with_retry
+    )
 
     response, _, _ = agent._resolve_official_assistant_tool_calls(
         response=initial_response,
@@ -234,7 +240,9 @@ def test_resolve_official_tool_calls_injects_change_logs_as_system_message(
         )
         return (final_response, None)
 
-    monkeypatch.setattr(agent, "_call_openai_api_with_retry", fake_call_openai_api_with_retry)
+    monkeypatch.setattr(
+        agent, "_call_openai_api_with_retry", fake_call_openai_api_with_retry
+    )
 
     response, _, _ = agent._resolve_official_assistant_tool_calls(
         response=initial_response,

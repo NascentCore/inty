@@ -17,7 +17,9 @@ import matplotlib.pyplot as plt
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="绘制 Gemini 指令遵循成功率-上下文占用率曲线。")
+    parser = argparse.ArgumentParser(
+        description="绘制 Gemini 指令遵循成功率-上下文占用率曲线。"
+    )
     parser.add_argument(
         "--run-dir",
         required=True,
@@ -61,7 +63,9 @@ def main() -> None:
 
     plt.figure(figsize=(8, 5))
     plt.plot(xs, ys, marker="o", linewidth=2)
-    title_mode = "strict JSON" if args.mode == "strict" else "semantic (code-fence stripped)"
+    title_mode = (
+        "strict JSON" if args.mode == "strict" else "semantic (code-fence stripped)"
+    )
     plt.title(f"Gemini success rate vs context utilization [{title_mode}]")
     plt.xlabel("Context utilization U")
     plt.ylabel("Success rate (completed instructions / total)")

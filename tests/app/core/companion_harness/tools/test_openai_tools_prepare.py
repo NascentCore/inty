@@ -14,7 +14,11 @@ from app.core.companion_harness.tools.openai_tools_prepare import (
 
 
 def _function_tools(tools: list) -> list[dict]:
-    return [t for t in tools if t.get("type") == "function" and isinstance(t.get("function"), dict)]
+    return [
+        t
+        for t in tools
+        if t.get("type") == "function" and isinstance(t.get("function"), dict)
+    ]
 
 
 def test_prepare_sets_strict_without_mutating_original_function_dict():

@@ -10,30 +10,8 @@ from loguru import logger
 
 from app.utils.config import (
     # TODO: 删除这些间接倒入，在调用处替换为直接倒入 app.utils.*
-    APIEndpointsConfig,
-    AgentConfig,
-    AppConfig,
-    CloudflareConfig,
     Config,
-    DatabaseSettings,
-    ElevenLabsConfig,
-    EmbeddingConfig,
     Environment,
-    FeaturesConfig,
-    FirebaseConfig,
-    GCSConfig,
-    GEMINI_2_5_FLASH,
-    GEMINI_2_5_FLASH_LITE,
-    GeminiLiveConfig,
-    GoogleOAuthConfig,
-    GooglePlayConfig,
-    LoggingConfig,
-    MemoryExtractionConfig,
-    PushNotificationConfig,
-    SecurityConfig,
-    UserAnalyticsReportConfig,
-    VerificationConfig,
-    # End of 间接倒入
     _validate_config,
     load_config,
 )

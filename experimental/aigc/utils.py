@@ -69,7 +69,7 @@ def safe_json_loads(json_string: str, logger: logging.Logger = None) -> Dict[str
     except json.JSONDecodeError as e:
         if logger:
             logger.warning(f"Initial JSON parsing failed: {e}")
-            logger.debug(f"Attempting to clean JSON string...")
+            logger.debug("Attempting to clean JSON string...")
 
         # Try cleaning the response
         cleaned_json = clean_json_response(json_string, logger)

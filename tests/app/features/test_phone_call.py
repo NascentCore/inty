@@ -107,7 +107,10 @@ async def test_start_outbound_call_normalizes_masks_and_binds(configured_phone_c
     assert result.status == "queued"
     assert result.to_number_masked == "+1***0123"
     assert fake_twilio.calls[0]["to_number"] == "+11234560123"
-    assert '<Stream url="wss://voice.example/api/v1/phone-calls/twilio-media?' in fake_twilio.calls[0]["twiml"]
+    assert (
+        '<Stream url="wss://voice.example/api/v1/phone-calls/twilio-media?'
+        in fake_twilio.calls[0]["twiml"]
+    )
     assert db.added[0].phone_number_hmac != "+11234560123"
     assert db.added[0].phone_number_masked == "+1***0123"
     assert db.committed is True

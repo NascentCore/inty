@@ -98,9 +98,7 @@ def reports_app():
         override_current_active_user
     )
     app.dependency_overrides[deps.get_async_db] = override_get_async_db
-    app.dependency_overrides[deps.get_async_replica_db] = (
-        override_get_async_replica_db
-    )
+    app.dependency_overrides[deps.get_async_replica_db] = override_get_async_replica_db
 
     try:
         yield app

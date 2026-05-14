@@ -115,10 +115,14 @@ async def test_crop_avatar_from_background():
     gcs_cfg = global_config_loaded_from_config_yaml.gcs
     if gcs_cfg.use_fake_gcs:
         expected_file_uri = (
-            Path(gcs_cfg.fake_gcs_base_dir).resolve()
-            / "yx-test"
-            / f"{random_filename}-cropped-avatar.png"
-        ).resolve().as_uri()
+            (
+                Path(gcs_cfg.fake_gcs_base_dir).resolve()
+                / "yx-test"
+                / f"{random_filename}-cropped-avatar.png"
+            )
+            .resolve()
+            .as_uri()
+        )
         assert cropped_avatar_url == expected_file_uri
     else:
         assert cropped_avatar_url == expected_avatar_url
@@ -270,6 +274,7 @@ async def test_update_agent_increments_version(db_session, monkeypatch):
     assert updated_agent.version == 2
     assert dummy_cache.invalidated == [agent.id]
 
+
 # TODO: See how to test the ordering of the agents returned from get_balanced_score_based_agents.
 # The ordering is deterministic but determined by random seed.
 # Also the database can have values from other tests.
@@ -347,7 +352,9 @@ async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session)
 
 
 @pytest.mark.asyncio
-async def test_get_balanced_score_based_agents_female_user_opposite_gender_first(db_session):
+async def test_get_balanced_score_based_agents_female_user_opposite_gender_first(
+    db_session,
+):
     """
     女性用户时，所有男性角色排在任意女性/OTHER 之前（确定性）。
     """
@@ -382,9 +389,7 @@ async def test_get_balanced_score_based_agents_female_user_opposite_gender_first
         db_session, 1, 20, "gender-seed", None, Gender.FEMALE
     )
     male_indices = [i for i, a in enumerate(agents) if a.gender == Gender.MALE]
-    female_other_indices = [
-        i for i, a in enumerate(agents) if a.gender != Gender.MALE
-    ]
+    female_other_indices = [i for i, a in enumerate(agents) if a.gender != Gender.MALE]
     if male_indices and female_other_indices:
         assert max(male_indices) < min(
             female_other_indices
@@ -596,7 +601,12 @@ async def test_get_user_agents_returns_created_agents_ordered_by_created_at(db_s
     ids = [a.id for a in agents]
     assert agent_a.id in ids and agent_b.id in ids
     # 按 created_at 降序，后创建的在前（agent_b 后 add，通常后 commit 故 created_at 可能更晚）
-    assert ids[0] == agent_b.id and ids[1] == agent_a.id or ids[0] == agent_a.id and ids[1] == agent_b.id
+    assert (
+        ids[0] == agent_b.id
+        and ids[1] == agent_a.id
+        or ids[0] == agent_a.id
+        and ids[1] == agent_b.id
+    )
     for agent in agents:
         assert agent.user == "TestCreator"
 

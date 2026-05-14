@@ -16,7 +16,10 @@ def test_returns_random_for_unspecified_request():
     assert res1.model == "gpt-test"
     assert res1.object == "chat.completion"
     assert res1.choices[0].message.role == "assistant"
-    assert res1.usage.total_tokens == res1.usage.prompt_tokens + res1.usage.completion_tokens
+    assert (
+        res1.usage.total_tokens
+        == res1.usage.prompt_tokens + res1.usage.completion_tokens
+    )
 
 
 def test_returns_registered_response_for_specific_request():
@@ -70,7 +73,9 @@ def test_stream_not_supported():
     client = FakeOpenAI()
 
     try:
-        client.chat.completions.create(messages=[{"role": "user", "content": "x"}], stream=True)
+        client.chat.completions.create(
+            messages=[{"role": "user", "content": "x"}], stream=True
+        )
         assert False, "Expected NotImplementedError"
     except NotImplementedError:
         pass

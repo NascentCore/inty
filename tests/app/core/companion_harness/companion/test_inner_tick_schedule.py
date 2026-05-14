@@ -14,7 +14,9 @@ from app.core.companion_harness.companion.inner_tick_schedule import (
 )
 
 
-def _write_transcript_store(scope: CompanionScope, rows: list[dict[str, object]]) -> None:
+def _write_transcript_store(
+    scope: CompanionScope, rows: list[dict[str, object]]
+) -> None:
     body = "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n"
     get_memory_store(scope, dsn="").write_document("transcript.jsonl", body)
 

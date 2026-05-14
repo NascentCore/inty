@@ -19,9 +19,7 @@ def get_resource(db: Session, resource_id: str) -> Optional[Resource]:
     return db.query(Resource).filter(Resource.id == resource_id).first()
 
 
-def get_resources(
-    db: Session, skip: int = 0, limit: int = 100
-) -> List[Resource]:
+def get_resources(db: Session, skip: int = 0, limit: int = 100) -> List[Resource]:
     """
     Get resources list
     """

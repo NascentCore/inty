@@ -94,7 +94,9 @@ def parse_args() -> argparse.Namespace:
         description="Benchmark instruction-following capacity vs context usage."
     )
     parser.add_argument("--model", default=DEFAULT_MODEL)
-    parser.add_argument("--max-context-tokens", type=int, default=DEFAULT_MAX_CONTEXT_TOKENS)
+    parser.add_argument(
+        "--max-context-tokens", type=int, default=DEFAULT_MAX_CONTEXT_TOKENS
+    )
     parser.add_argument(
         "--utilizations",
         nargs="+",
@@ -158,7 +160,9 @@ def wilson_interval(successes: int, total: int, z: float = 1.96) -> tuple[float,
     return max(0.0, center - margin), min(1.0, center + margin)
 
 
-def bootstrap_ci(values: list[float], rounds: int = 1000, alpha: float = 0.05) -> tuple[float, float]:
+def bootstrap_ci(
+    values: list[float], rounds: int = 1000, alpha: float = 0.05
+) -> tuple[float, float]:
     if not values:
         return 0.0, 0.0
     if len(values) == 1:
@@ -185,14 +189,15 @@ def make_filler(encoding: tiktoken.Encoding, token_count: int) -> str:
 def build_instruction(task_idx: int, payload: str) -> tuple[str, str]:
     key = f"task_{task_idx:03d}"
     expected = payload[::-1]
-    text = (
-        f'INSTRUCTION_{task_idx:03d}: For key "{key}", output value "{expected}" exactly.'
-    )
+    text = f'INSTRUCTION_{task_idx:03d}: For key "{key}", output value "{expected}" exactly.'
     return text, expected
 
 
 def distribute_instructions(
-    profile: str, instruction_texts: list[str], filler_tokens: int, encoding: tiktoken.Encoding
+    profile: str,
+    instruction_texts: list[str],
+    filler_tokens: int,
+    encoding: tiktoken.Encoding,
 ) -> str:
     filler = make_filler(encoding=encoding, token_count=filler_tokens)
     pieces: list[str] = []
@@ -262,16 +267,22 @@ def strip_markdown_code_fence(response_text: str) -> tuple[str, bool]:
     return stripped, False
 
 
-def _score_json_response(parsed: dict[str, Any], expected_map: dict[str, str]) -> tuple[float, bool, bool, float]:
+def _score_json_response(
+    parsed: dict[str, Any], expected_map: dict[str, str]
+) -> tuple[float, bool, bool, float]:
     required_keys = set(expected_map.keys())
     present_keys = set(parsed.keys())
-    completeness = len(required_keys & present_keys) / len(required_keys) if required_keys else 1.0
+    completeness = (
+        len(required_keys & present_keys) / len(required_keys) if required_keys else 1.0
+    )
     correct = 0
     for key, expected_value in expected_map.items():
         if parsed.get(key) == expected_value:
             correct += 1
     ia = correct / len(required_keys) if required_keys else 1.0
-    response_success = (correct == len(required_keys)) and (present_keys == required_keys)
+    response_success = (correct == len(required_keys)) and (
+        present_keys == required_keys
+    )
     return ia, response_success, True, completeness
 
 
@@ -301,7 +312,12 @@ def evaluate_response(
     try:
         strict_parsed = json.loads(strict_text)
         if isinstance(strict_parsed, dict):
-            strict_ia, strict_response_success, strict_schema_valid, strict_completeness = _score_json_response(
+            (
+                strict_ia,
+                strict_response_success,
+                strict_schema_valid,
+                strict_completeness,
+            ) = _score_json_response(
                 strict_parsed,
                 expected_map,
             )
@@ -317,7 +333,12 @@ def evaluate_response(
     try:
         semantic_parsed = json.loads(stripped_text)
         if isinstance(semantic_parsed, dict):
-            semantic_ia, semantic_response_success, semantic_schema_valid, semantic_completeness = _score_json_response(
+            (
+                semantic_ia,
+                semantic_response_success,
+                semantic_schema_valid,
+                semantic_completeness,
+            ) = _score_json_response(
                 semantic_parsed,
                 expected_map,
             )
@@ -340,13 +361,22 @@ def evaluate_response(
     )
 
 
-def synthetic_response(expected_map: dict[str, str], utilization_ratio: float, instruction_count: int, profile: str) -> str:
+def synthetic_response(
+    expected_map: dict[str, str],
+    utilization_ratio: float,
+    instruction_count: int,
+    profile: str,
+) -> str:
     base = 0.995
     util_penalty = max(0.0, (utilization_ratio - 0.70) * 0.9)
     n_penalty = max(0.0, (instruction_count - 16) / 120)
-    profile_penalty = 0.02 if profile == "uniform" else (0.03 if profile == "edges" else 0.01)
+    profile_penalty = (
+        0.02 if profile == "uniform" else (0.03 if profile == "edges" else 0.01)
+    )
     p_correct = max(0.05, min(0.995, base - util_penalty - n_penalty - profile_penalty))
-    p_format_error = max(0.0, (utilization_ratio - 0.9) * 0.2 + (instruction_count / 500))
+    p_format_error = max(
+        0.0, (utilization_ratio - 0.9) * 0.2 + (instruction_count / 500)
+    )
     if random.random() < p_format_error:
         return "not a json response"
     out: dict[str, str] = {}
@@ -407,13 +437,21 @@ def summarize_cell(rows: list[TrialRow]) -> CellSummary:
     rsr_ci_low, rsr_ci_high = wilson_interval(rs_successes, trials)
     eff_mean = statistics.mean(effectiveness_values) if effectiveness_values else 0.0
     eff_low, eff_high = bootstrap_ci(effectiveness_values)
-    semantic_ia_mean = statistics.mean(semantic_ia_values) if semantic_ia_values else 0.0
+    semantic_ia_mean = (
+        statistics.mean(semantic_ia_values) if semantic_ia_values else 0.0
+    )
     semantic_ia_successes = sum(1 for r in rows if math.isclose(r.semantic_ia, 1.0))
-    semantic_ia_ci_low, semantic_ia_ci_high = wilson_interval(semantic_ia_successes, trials)
+    semantic_ia_ci_low, semantic_ia_ci_high = wilson_interval(
+        semantic_ia_successes, trials
+    )
     semantic_rsr = semantic_rs_successes / trials if trials else 0.0
-    semantic_rsr_ci_low, semantic_rsr_ci_high = wilson_interval(semantic_rs_successes, trials)
+    semantic_rsr_ci_low, semantic_rsr_ci_high = wilson_interval(
+        semantic_rs_successes, trials
+    )
     semantic_eff_mean = (
-        statistics.mean(semantic_effectiveness_values) if semantic_effectiveness_values else 0.0
+        statistics.mean(semantic_effectiveness_values)
+        if semantic_effectiveness_values
+        else 0.0
     )
     semantic_eff_low, semantic_eff_high = bootstrap_ci(semantic_effectiveness_values)
     latency_values = [r.elapsed_ms for r in rows]
@@ -475,15 +513,25 @@ def bucket_for_instruction_count(n: int) -> str:
     return "<=64"
 
 
-def compute_limits(summaries: list[CellSummary], args: argparse.Namespace) -> dict[str, Any]:
-    by_bucket: dict[str, list[CellSummary]] = {"<=8": [], "<=16": [], "<=32": [], "<=64": []}
+def compute_limits(
+    summaries: list[CellSummary], args: argparse.Namespace
+) -> dict[str, Any]:
+    by_bucket: dict[str, list[CellSummary]] = {
+        "<=8": [],
+        "<=16": [],
+        "<=32": [],
+        "<=64": [],
+    }
     for row in summaries:
         by_bucket[bucket_for_instruction_count(row.instruction_count)].append(row)
 
     result: dict[str, Any] = {}
     for bucket, rows in by_bucket.items():
         if not rows:
-            result[bucket] = {"recommended_utilization": None, "hard_limit_utilization": None}
+            result[bucket] = {
+                "recommended_utilization": None,
+                "hard_limit_utilization": None,
+            }
             continue
         rows = sorted(rows, key=lambda x: x.utilization_ratio)
         grouped: dict[float, dict[str, CellSummary]] = {}
@@ -515,15 +563,25 @@ def compute_limits(summaries: list[CellSummary], args: argparse.Namespace) -> di
     return result
 
 
-def compute_limits_semantic(summaries: list[CellSummary], args: argparse.Namespace) -> dict[str, Any]:
-    by_bucket: dict[str, list[CellSummary]] = {"<=8": [], "<=16": [], "<=32": [], "<=64": []}
+def compute_limits_semantic(
+    summaries: list[CellSummary], args: argparse.Namespace
+) -> dict[str, Any]:
+    by_bucket: dict[str, list[CellSummary]] = {
+        "<=8": [],
+        "<=16": [],
+        "<=32": [],
+        "<=64": [],
+    }
     for row in summaries:
         by_bucket[bucket_for_instruction_count(row.instruction_count)].append(row)
 
     result: dict[str, Any] = {}
     for bucket, rows in by_bucket.items():
         if not rows:
-            result[bucket] = {"recommended_utilization": None, "hard_limit_utilization": None}
+            result[bucket] = {
+                "recommended_utilization": None,
+                "hard_limit_utilization": None,
+            }
             continue
         rows = sorted(rows, key=lambda x: x.utilization_ratio)
         grouped: dict[float, dict[str, CellSummary]] = {}
@@ -540,7 +598,9 @@ def compute_limits_semantic(summaries: list[CellSummary], args: argparse.Namespa
             edges = profile_rows.get("edges")
             if not uniform or not edges:
                 continue
-            ok = passes_thresholds_semantic(uniform, args) and passes_thresholds_semantic(edges, args)
+            ok = passes_thresholds_semantic(
+                uniform, args
+            ) and passes_thresholds_semantic(edges, args)
             if ok:
                 u_rec = u
                 consecutive_fail = 0
@@ -688,7 +748,9 @@ def main() -> None:
     cell_summaries: list[CellSummary] = []
 
     cell_idx = 0
-    total_cells = len(args.utilizations) * len(args.instruction_counts) * len(args.profiles)
+    total_cells = (
+        len(args.utilizations) * len(args.instruction_counts) * len(args.profiles)
+    )
     for utilization_ratio in args.utilizations:
         for instruction_count in args.instruction_counts:
             for profile in args.profiles:
@@ -723,7 +785,12 @@ def main() -> None:
                                 temperature=args.temperature,
                                 max_output_tokens=args.max_output_tokens,
                             )
-                    except (RateLimitError, APIError, APIStatusError, TimeoutError) as exc:
+                    except (
+                        RateLimitError,
+                        APIError,
+                        APIStatusError,
+                        TimeoutError,
+                    ) as exc:
                         response_text = ""
                         error = str(exc)
                     elapsed_ms = (time.perf_counter() - started) * 1000
@@ -811,7 +878,9 @@ def main() -> None:
     write_failure_taxonomy(run_dir / "failure_taxonomy.md", trial_rows)
     with (run_dir / "limit_recommendation.json").open("w", encoding="utf-8") as f:
         json.dump(strict_limits, f, ensure_ascii=True, indent=2)
-    with (run_dir / "semantic_limit_recommendation.json").open("w", encoding="utf-8") as f:
+    with (run_dir / "semantic_limit_recommendation.json").open(
+        "w", encoding="utf-8"
+    ) as f:
         json.dump(semantic_limits, f, ensure_ascii=True, indent=2)
     with (run_dir / "summary.json").open("w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=True, indent=2)
@@ -832,7 +901,9 @@ def main() -> None:
     print(f"- {run_dir / 'summary.md'}")
     print(f"- {latest} -> {run_dir.name}")
     if dry_run:
-        print("提示：本次为 dry-run（合成响应）。如需真实模型执行，请设置 OPENROUTER_API_KEY。")
+        print(
+            "提示：本次为 dry-run（合成响应）。如需真实模型执行，请设置 OPENROUTER_API_KEY。"
+        )
 
 
 if __name__ == "__main__":

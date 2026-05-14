@@ -15,10 +15,7 @@ def test_should_trace_forces_trace_when_user_email_in_allowlist(monkeypatch):
     )
     monkeypatch.setattr(agent_module.random, "random", lambda: 0.9999)
 
-    assert (
-        agent_module._should_trace(user_email=" Internal-Dev@Example.com ")
-        is True
-    )
+    assert agent_module._should_trace(user_email=" Internal-Dev@Example.com ") is True
 
 
 def test_should_trace_falls_back_to_sample_rate_when_email_not_in_allowlist(

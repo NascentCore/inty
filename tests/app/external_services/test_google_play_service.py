@@ -217,7 +217,9 @@ class TestVerifySubscriptionPurchase:
 
         # 设置 400 错误
         error = FakeAndroidPublisher.create_http_error(400, "Invalid product ID")
-        fake_service.set_subscription_error(package_name, product_id, purchase_token, error)
+        fake_service.set_subscription_error(
+            package_name, product_id, purchase_token, error
+        )
 
         is_valid, purchase_info = google_play_service.verify_subscription_purchase(
             product_id, purchase_token
@@ -236,7 +238,9 @@ class TestVerifySubscriptionPurchase:
 
         # 设置 500 错误
         error = FakeAndroidPublisher.create_http_error(500, "Internal server error")
-        fake_service.set_subscription_error(package_name, product_id, purchase_token, error)
+        fake_service.set_subscription_error(
+            package_name, product_id, purchase_token, error
+        )
 
         is_valid, purchase_info = google_play_service.verify_subscription_purchase(
             product_id, purchase_token
@@ -601,7 +605,9 @@ class TestGetAppVersionInfo:
             release_track="production",
             fallback_tracks=["production", "internal"],
         )
-        service = GooglePlayService(android_publisher_service=fake_service, config=config)
+        service = GooglePlayService(
+            android_publisher_service=fake_service, config=config
+        )
 
         version_info = service.get_app_version_info()
 

@@ -59,10 +59,13 @@ def test_tool_bg_nl_filler_from_appended_turn_status_line() -> None:
                 }
             ],
         },
-        {"role": "tool", "tool_call_id": "c1", "content": 'status line updated to "hi"'},
+        {
+            "role": "tool",
+            "tool_call_id": "c1",
+            "content": 'status line updated to "hi"',
+        },
         {"role": "assistant", "content": ""},
     ]
     assert (
-        _tool_bg_nl_filler_from_appended_turn(appended)
-        == 'status line updated to "hi"'
+        _tool_bg_nl_filler_from_appended_turn(appended) == 'status line updated to "hi"'
     )

@@ -9,7 +9,9 @@ import pytest
 
 def _load_push_scheduler_service_module():
     fake_config = types.SimpleNamespace(
-        push_notification=types.SimpleNamespace(enabled=True, festival_memory_enabled=False),
+        push_notification=types.SimpleNamespace(
+            enabled=True, festival_memory_enabled=False
+        ),
         memory_extraction=types.SimpleNamespace(
             enabled=True,
             cron_hour=3,
@@ -25,9 +27,13 @@ def _load_push_scheduler_service_module():
     fake_db_session_module.AsyncSessionLocalReplica = None
 
     fake_models_memory_module = types.ModuleType("app.models.memory")
-    fake_models_memory_module.FestivalMemoryConfig = type("FestivalMemoryConfig", (), {})
+    fake_models_memory_module.FestivalMemoryConfig = type(
+        "FestivalMemoryConfig", (), {}
+    )
 
-    fake_festival_memory_module = types.ModuleType("app.services.festival_memory_service")
+    fake_festival_memory_module = types.ModuleType(
+        "app.services.festival_memory_service"
+    )
     fake_festival_memory_module.DEFAULT_MIN_ROUNDS_IN_WINDOW = 3
 
     def _dummy_get_pairs(*args, **kwargs):
@@ -39,7 +45,9 @@ def _load_push_scheduler_service_module():
     def _dummy_resolve_sync_read_db_url(*args, **kwargs):
         return "postgresql://primary-host:5432/inty"
 
-    fake_festival_memory_module.get_pairs_with_min_rounds_in_window_sync = _dummy_get_pairs
+    fake_festival_memory_module.get_pairs_with_min_rounds_in_window_sync = (
+        _dummy_get_pairs
+    )
     fake_festival_memory_module.extract_festival_and_save = _dummy_extract_festival
     fake_festival_memory_module.resolve_sync_read_db_url = (
         _dummy_resolve_sync_read_db_url
@@ -223,7 +231,9 @@ async def test_run_memory_extraction_uses_replica_for_read_and_primary_for_write
             "AsyncSessionLocal",
             _SessionFactory([write_db]),
         ),
-        patch.object(push_scheduler_module, "memory_get_users_to_extract", mock_get_users),
+        patch.object(
+            push_scheduler_module, "memory_get_users_to_extract", mock_get_users
+        ),
         patch.object(push_scheduler_module, "memory_extract_and_save", mock_extract),
     ):
         scheduler = PushSchedulerService()
