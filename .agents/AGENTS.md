@@ -5,3 +5,4 @@
 ## 必读入口
 
 - **[用户偏好](USER_PREFERENCES.md)**：记录人类纠正过你什么、明确喜欢什么；之后默认照做。
+- **[guidelines/](guidelines/)**：协作与工程共识短文（例如 [两步结构化桥接](guidelines/two-step-structured-bridge-for-llms.md)）；按需阅读，非每次会话必读。
