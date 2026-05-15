@@ -120,7 +120,15 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
         "otherwise `text`.\n"
         "- `voice_message_script` (string): exact spoken wording for TTS when `reply_modality` is "
         '`voice_message`; use `""` when modality is `text`. '
-        "`user_facing_reply` may still hold a short caption or transcript line when helpful.\n\n"
+        "First-person conversational words only—**no** parenthetical stage directions "
+        "(no \"（…）\" action lines).\n"
+        "  When `reply_modality` is `voice_message`: **all** words you want the user to hear belong "
+        "in `voice_message_script`. Do **not** put meta narration in `user_facing_reply` "
+        "(e.g. do not describe \"recalling a voice message\" or \"below is the text\"); "
+        "`user_facing_reply` may be empty or a **very short** optional caption only.\n"
+        "  When `reply_modality` is `text`, keep `voice_message_script` empty.\n"
+        "`user_facing_reply` may still hold a short caption or transcript line when modality is `text` "
+        "or when modality is `voice_message` and the caption is genuinely optional.\n\n"
         "This branch still must not call tools (`tool_choice=none`).\n"
     )
 

@@ -79,6 +79,28 @@ class _FakeAsyncDualLLMClient:
         return ""
 
 
+class _FakeAsyncDualLLMClientVoiceMetaInverted(_FakeAsyncDualLLMClient):
+    """Foreground returns voice_message with script carrying real prose and meta in user_facing_reply."""
+
+    def chat_completion(self, **kwargs: Any) -> Any:
+        self.chat_calls.append(kwargs)
+        spoken = "VOICE_SCRIPT_BODY_LINE_ONE\nLINE_TWO"
+        env = {
+            "user_facing_reply": "（meta narration only）",
+            "importance_round": 5,
+            "importance_user_message": 5,
+            "importance_assistant_message": 5,
+            "output_to_user": True,
+            "reply_modality": "voice_message",
+            "voice_message_script": spoken,
+        }
+        msg = SimpleNamespace(
+            content=json.dumps(env, ensure_ascii=False),
+            tool_calls=[],
+        )
+        return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
+
+
 @pytest.mark.asyncio
 async def test_async_dual_calls_foreground_chat_without_tools_and_starts_background(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -132,6 +154,48 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert bg_msgs[-1] == {
         "role": "assistant",
         "content": f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\nforeground ok",
+    }
+
+
+@pytest.mark.asyncio
+async def test_async_dual_tool_track_injects_voice_script_not_meta_ufr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = _store(tmp_path)
+    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document("IDENTITY.md", "id\n")
+    store.write_document("SOUL.md", "s\n")
+    store.write_document("USER.md", "u\n")
+    store.write_document("MEMORY.md", "m\n")
+    store.write_document("transcript.jsonl", "")
+
+    bg_jobs: list[dict[str, Any]] = []
+
+    def _capture_bg(**kwargs: Any) -> None:
+        bg_jobs.append(kwargs)
+
+    monkeypatch.setattr(
+        "app.core.companion_harness.companion.turn.start_tool_background_job",
+        _capture_bg,
+    )
+
+    client = _FakeAsyncDualLLMClientVoiceMetaInverted()
+    out = await run_turn(
+        "user says hi",
+        store=store,
+        llm_client=client,  # type: ignore[arg-type]
+        defer_memory_update=True,
+        memory_config=None,
+    )
+
+    spoken = "VOICE_SCRIPT_BODY_LINE_ONE\nLINE_TWO"
+    assert out.assistant_text == spoken
+    assert out.reply_modality == "voice_message"
+    assert out.voice_message_script == spoken
+    bg_msgs = bg_jobs[0]["request_messages"]
+    assert bg_msgs[-1] == {
+        "role": "assistant",
+        "content": f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\n{spoken}",
     }
 
 

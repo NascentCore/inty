@@ -11,6 +11,7 @@ import pytest
 from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     _build_dual_llm_chat_response_format,
+    canonical_dual_llm_assistant_prose,
     parse_dual_llm_chat_envelope_json,
     split_dual_llm_chat_branch_message,
 )
@@ -135,3 +136,38 @@ def test_split_dual_llm_chat_branch_message_reasoning_details_variants(
     split = split_dual_llm_chat_branch_message(msg)
     assert split.visible_text == "visible"
     assert split.significance_meta is not None
+
+
+def test_canonical_dual_llm_assistant_prose_prefers_script_when_voice_message() -> None:
+    meta = "（meta only）"
+    script = "那一刻，口播正文在这里。"
+    assert (
+        canonical_dual_llm_assistant_prose(
+            reply_modality="voice_message",
+            user_facing_reply=meta,
+            voice_message_script=script,
+        )
+        == script
+    )
+
+
+def test_canonical_dual_llm_assistant_prose_text_modality_uses_user_facing_reply() -> None:
+    assert (
+        canonical_dual_llm_assistant_prose(
+            reply_modality="text",
+            user_facing_reply="  hello  ",
+            voice_message_script="ignored when text",
+        )
+        == "hello"
+    )
+
+
+def test_canonical_dual_llm_assistant_prose_voice_empty_script_falls_back_to_ufr() -> None:
+    assert (
+        canonical_dual_llm_assistant_prose(
+            reply_modality="voice_message",
+            user_facing_reply="fallback caption",
+            voice_message_script="   ",
+        )
+        == "fallback caption"
+    )

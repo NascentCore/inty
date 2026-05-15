@@ -19,6 +19,11 @@ companion turn pipeline.
   return ``DualLlmChatBranchSplit`` (visible text, optional significance metadata dict,
   ``output_to_user``, ``reply_modality``, ``voice_message_script``). Validated payloads deserialize
   as ``DualLlmChatBranchEnvelope``.
+- **Canonical prose for one turn**: ``canonical_dual_llm_assistant_prose`` maps envelope fields to the
+  single assistant string persisted on transcript rows, fed to memory, returned as
+  ``CompanionTurnResult.assistant_text``, and injected into the parallel tool path as the chat-track
+  snippet (so ``voice_message`` turns do not drop the spoken script when ``user_facing_reply`` holds
+  only meta or captions).
 - **Kernel return**: ``CompanionTurnResult.significance_perception`` (``models.py``) carries the dict;
   may be ``None`` if parse failed.
 - **Transcript**: ``turn.run_turn`` JSONL assistant row; ``turn_engine.persist_repl_turn_transcript_rows``
@@ -241,6 +246,30 @@ def envelope_to_assistant_metadata_dict(
         "importance_user_message": env.importance_user_message,
         "importance_assistant_message": env.importance_assistant_message,
     }
+
+
+def canonical_dual_llm_assistant_prose(
+    *,
+    reply_modality: Literal["text", "voice_message"],
+    user_facing_reply: str,
+    voice_message_script: str,
+) -> str:
+    """One assistant string for transcript, memory, ``CompanionTurnResult.assistant_text``, and tool-track injection.
+
+    For ``reply_modality == "voice_message"`` with a non-empty ``voice_message_script``, the script
+    is the authoritative spoken wording (primary delivery / TTS). ``user_facing_reply`` may be an
+    optional short caption; models sometimes put meta narration in ``user_facing_reply`` and the real
+    lines in ``voice_message_script``—preferring the script keeps the parallel tool path and memory
+    aligned with what the companion actually said.
+
+    For ``text`` or empty script under ``voice_message``, fall back to stripped ``user_facing_reply``.
+    """
+
+    script = (voice_message_script or "").strip()
+    ufr = (user_facing_reply or "").strip()
+    if reply_modality == "voice_message" and script:
+        return script
+    return ufr
 
 
 @dataclass(frozen=True)

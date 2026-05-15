@@ -76,6 +76,7 @@ from .models import (
 from .prompt_stack import companion_turn_tools_and_system_messages
 from .dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
+    canonical_dual_llm_assistant_prose,
     split_dual_llm_chat_branch_message,
 )
 from app.core.companion_harness.memory.transcript_compaction import (
@@ -520,7 +521,11 @@ async def run_turn(
                         )
                         msg = resp.choices[0].message
                         _dual_split = split_dual_llm_chat_branch_message(msg)
-                        last_text = _dual_split.visible_text
+                        last_text = canonical_dual_llm_assistant_prose(
+                            reply_modality=_dual_split.reply_modality,
+                            user_facing_reply=_dual_split.visible_text,
+                            voice_message_script=_dual_split.voice_message_script,
+                        )
                         significance_meta = _dual_split.significance_meta
                         fg_output_to_user = _dual_split.output_to_user
                         reply_modality = _dual_split.reply_modality
@@ -638,7 +643,11 @@ async def run_turn(
                     msg = resp.choices[0].message
                     if use_dual_structured_chat:
                         _dual_split = split_dual_llm_chat_branch_message(msg)
-                        last_text = _dual_split.visible_text
+                        last_text = canonical_dual_llm_assistant_prose(
+                            reply_modality=_dual_split.reply_modality,
+                            user_facing_reply=_dual_split.visible_text,
+                            voice_message_script=_dual_split.voice_message_script,
+                        )
                         significance_meta = _dual_split.significance_meta
                         fg_output_to_user = _dual_split.output_to_user
                         reply_modality = _dual_split.reply_modality
