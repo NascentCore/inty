@@ -39,7 +39,7 @@ description: >-
 - **LangSmith 兜底（仅旧帧或交叉验证）**
   - 从 metadata section 取 `langsmith_run_id=…`
   - 仓库根执行：
-    - `python tools/scripts/download_run.py <RUN_ID> -o tmp/langsmith_runs/<RUN_ID>.json`
+    - `python tools/scripts/download_run.py --run-id <RUN_ID>`（或位置参数 `RUN_ID`；见 `python tools/scripts/download_run.py --help`）
   - 打开 JSON，看 **`extra.metadata`**
     - **`inner_tick_mode`**：`proactive_chat` | `maintenance`
     - **`inty_turn_lane`**：如 `inner_tick`

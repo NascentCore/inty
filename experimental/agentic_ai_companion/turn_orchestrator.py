@@ -1,3 +1,5 @@
+"""通用回合编排骨架：仅供本实验包（async REPL）使用，不进入生产 WebSocket 主链路。"""
+
 from __future__ import annotations
 
 import inspect

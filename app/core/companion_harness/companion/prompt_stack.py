@@ -107,7 +107,7 @@ def companion_turn_tools_and_system_messages(
     # turns that use ``use_dual_structured_chat`` in run_turn, and for the *foreground* chat stack
     # in ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL (``_async_dual_llm_system_message_variants`` forces
     # include_significance_perception_slice=True on the chat side). Tells the model how to fill
-    # importance_* fields in the JSON envelope; see ``significance_perception.py`` module docstring.
+    # importance_* fields in the JSON envelope; see ``dual_llm_chat_branch_envelope`` module docstring.
     resolved_sig = (
         include_significance_perception_slice
         if include_significance_perception_slice is not None
@@ -122,15 +122,14 @@ def companion_turn_tools_and_system_messages(
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=route_inner_mode,
             ai_private_text=ai_private_text,
-            include_repl_image_generation_contract=True,
             tool_side_compact=True,
             interactive_bootstrap_active=system_prompt_interactive_bootstrap,
             include_significance_perception_slice=False,
             implicit_signal_bundle=implicit_signal_bundle,
         )
     else:
-        # Foreground dual-LLM chat uses tools=None; use mirrored-tools contract + envelope slice
-        # instead of the full "(6) call companion_runtime_inspect" block (impossible on this API).
+        # Foreground chat completion uses tools=None; mirrored contract + envelope slice
+        # instead of the full "(6) companion_runtime_inspect" block (impossible without tools=).
         async_fg_chat = (
             route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
         )
@@ -141,7 +140,7 @@ def companion_turn_tools_and_system_messages(
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=route_inner_mode,
             ai_private_text=ai_private_text,
-            include_repl_image_generation_contract=not async_fg_chat,
+            async_foreground_chat_stack=async_fg_chat,
             interactive_bootstrap_active=system_prompt_interactive_bootstrap,
             include_significance_perception_slice=resolved_sig,
             implicit_signal_bundle=implicit_signal_bundle,

@@ -3,7 +3,7 @@
 LOCAL=false
 DEBUG=false
 BUILD_FRONTEND=true
-LOG_FILE=""
+WORKSPACE=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/../../backend/alembic/alembic.ini" ]]; then
   REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -11,6 +11,33 @@ else
   REPO_ROOT="$SCRIPT_DIR"
 fi
 cd "$REPO_ROOT"
+
+print_usage() {
+  cat <<EOF
+Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-build-frontend]
+
+  Ops (uvicorn backend.ops.main:app). Repo cwd is set to REPO_ROOT before migrations and server.
+
+  Always (before uvicorn): alembic upgrade head (see ALEMBIC_CONFIG / backend/alembic/alembic.ini).
+  Listen port: \${PORT:-8001}.
+
+  Environment (common):
+    INTY_CONFIG_YAML   Config path relative to repo root (e.g. devops/config.yaml.local).
+    INTY_OPS_BEARER_TOKEN_FILE  Where to write the local JWT in --local mode (default: <repo>/.inty_ops_bearer_token).
+
+  Flags (any mode):
+    --debug              Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL).
+    --workspace DIR      Local working directory for file log DIR/inty.log (INTY_LOG_FILE); default DIR is .inty under repo root.
+                         Existing log file is removed at startup. With --debug: console INFO, file DEBUG.
+
+  Flags (--local|--dev only):
+    --local|--dev        Seed admin + report fixtures; uvicorn --reload; write JWT for user-testing (see INTY_OPS_BEARER_TOKEN_FILE).
+    --build-frontend     Run evaluation/build.sh before uvicorn (default: on).
+    --no-build-frontend  Skip that step; use existing app/static/evaluation.
+
+  There is no --log-file; use --workspace DIR if you need logs outside the default .inty directory.
+EOF
+}
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -30,35 +57,27 @@ while [[ $# -gt 0 ]]; do
       BUILD_FRONTEND=false
       shift
       ;;
-    --log-file)
+    --workspace)
       shift
-      if [[ $# -eq 0 ]]; then echo "error: --log-file requires a path"; exit 1; fi
-      LOG_FILE="$1"
+      if [[ $# -eq 0 ]]; then echo "error: --workspace requires a directory path"; exit 1; fi
+      WORKSPACE="$1"
       shift
       ;;
     --help|-h)
-      echo "Usage: $0 [--local|--dev] [--debug] [--log-file PATH] [--build-frontend|--no-build-frontend]"
-      echo ""
-      echo "  Always (before uvicorn): alembic upgrade head (see ALEMBIC_CONFIG / repo backend/alembic/alembic.ini)."
-      echo "  Listen port: \${PORT:-8001}."
-      echo ""
-      echo "  Flags (any mode):"
-      echo "  --debug         Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL)"
-      echo "  --log-file PATH UTF-8 file log at PATH (INTY_LOG_FILE); removed if it already exists at startup."
-      echo "                  With --debug: console INFO (INTY_CONSOLE_LOGGING_LEVEL), file DEBUG."
-      echo ""
-      echo "  Flags (--local|--dev only):"
-      echo "  --build-frontend     Run evaluation/build.sh before uvicorn (default: on)"
-      echo "  --no-build-frontend  Skip that step; use existing app/static/evaluation"
-      echo "  --local|--dev        Seed admin + report fixtures, uvicorn --reload;"
-      echo "                       JWT for user-testing -> \${INTY_OPS_BEARER_TOKEN_FILE:-<repo>/.inty_ops_bearer_token}"
+      print_usage
       exit 0
       ;;
     *)
-      echo "Unknown option: $1"; echo "Use --help for usage"; exit 1
+      echo "Unknown option: $1" >&2
+      print_usage >&2
+      exit 1
       ;;
   esac
 done
+
+WORKSPACE="${WORKSPACE:-.inty}"
+mkdir -p "$WORKSPACE"
+LOG_FILE="$WORKSPACE/inty.log"
 
 echo "Starting database migrations..."
 export PYTHONPATH=.
@@ -71,14 +90,12 @@ if [ "$DEBUG" = true ]; then
   export INTY_LOGGING_LEVEL=DEBUG
 fi
 
-if [ -n "$LOG_FILE" ]; then
-  if [[ -e "$LOG_FILE" || -L "$LOG_FILE" ]]; then
-    rm -f "$LOG_FILE"
-  fi
-  export INTY_LOG_FILE="$LOG_FILE"
-  if [ "$DEBUG" = true ]; then
-    export INTY_CONSOLE_LOGGING_LEVEL=INFO
-  fi
+if [[ -e "$LOG_FILE" || -L "$LOG_FILE" ]]; then
+  rm -f "$LOG_FILE"
+fi
+export INTY_LOG_FILE="$LOG_FILE"
+if [ "$DEBUG" = true ]; then
+  export INTY_CONSOLE_LOGGING_LEVEL=INFO
 fi
 
 UVICORN_LOG_LEVEL=()

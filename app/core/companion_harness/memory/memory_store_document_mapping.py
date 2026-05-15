@@ -20,6 +20,7 @@ class CompanionMemoryDocumentKind(str, Enum):
 
     IDENTITY = "identity"
     SOUL = "soul"
+    STYLE = "style"
     USER = "user"
     MEMORY = "memory"
     TECHNO_CORE = "techno_core"
@@ -51,6 +52,7 @@ class CompanionMemoryDocumentKind(str, Enum):
 _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "IDENTITY.md": (CompanionMemoryDocumentKind.IDENTITY, None),
     "SOUL.md": (CompanionMemoryDocumentKind.SOUL, None),
+    "STYLE.md": (CompanionMemoryDocumentKind.STYLE, None),
     "USER.md": (CompanionMemoryDocumentKind.USER, None),
     "MEMORY.md": (CompanionMemoryDocumentKind.MEMORY, None),
     "TECHNO_CORE.md": (CompanionMemoryDocumentKind.TECHNO_CORE, None),

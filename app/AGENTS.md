@@ -16,3 +16,8 @@
 - **AI 生成物可追溯**：凡落库的生成内容，应能还原「用了哪套模型配置 + 哪条提示」，以便审计与复现；具体字段以 ORM 与迁移为准。
 - **客户端版本门控**：与 App 能力开关相关的，用 **配置中的最小编码 + 统一门控逻辑** 表达；约定 **版本号单调前进**，不处理「用户降级旧包」的复杂分支。
 - **大功能长文**：单功能有效代码量很大时，在 `app/docs/` 用 **一篇** 专题写清目的、架构与取舍；**不要**在 AGENTS 里复制实现细节。
+
+## Instructions
+
+- When the user asks for configurable behavior, wire it through `config.yaml.<env>` under [`devops`](/devops/),
+  [`app/utils/config.py`](/app/utils/config.py) and [`app/core/config.py`](/app/core/config.py).

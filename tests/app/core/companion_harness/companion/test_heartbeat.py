@@ -4,7 +4,6 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.heartbeat import (
@@ -24,7 +23,7 @@ def test_heartbeat_disabled(tmp_path: Path) -> None:
 
 def test_heartbeat_empty_transcript(tmp_path: Path) -> None:
     sc = CompanionScope("hb", "a", f"e-{tmp_path.name}")
-    store = get_memory_store(sc, dsn="")
+    store = MemoryStore(scope=sc, repository=None)
     store.write_document("transcript.jsonl", "")
     cfg = HeartbeatConfig(enabled=True, min_transcript_lines=1)
     assert next_heartbeat_wait_seconds(store, cfg) == 86400.0 * 365.0
@@ -38,7 +37,7 @@ def test_next_heartbeat_wait_seconds_successive_proactive_after_heartbeat_turn(
 ) -> None:
     """After a proactive heartbeat (heartbeat user + assistant), scheduling must not stick at _NEVER until a real user speaks."""
     sc = CompanionScope("hb", "a", f"succ-{tmp_path.name}")
-    store = get_memory_store(sc, dsn="")
+    store = MemoryStore(scope=sc, repository=None)
     t0 = "2026-01-01T10:00:00+00:00"
     t1 = "2026-01-01T10:00:10+00:00"
     t2 = "2026-01-01T10:05:00+00:00"

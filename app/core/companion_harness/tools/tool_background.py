@@ -61,7 +61,7 @@ from app.core.companion_harness.companion.prompt_stack import (
     refresh_companion_turn_prompt_stack,
 )
 from app.core.companion_harness.companion.runtime_events import append_runtime_event
-from app.core.companion_harness.companion.significance_perception import (
+from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     envelope_to_assistant_metadata_dict,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
@@ -824,6 +824,9 @@ async def _run_background_tool_loop(
             trace_id=trace_id,
         )
         output_to_user_flag = routing.output_to_user
+        # TODO(product): If InnerTickMode.MAINTENANCE must never deliver client-visible NL, gate
+        # should_push here (and/or output_to_user interpretation) before emitting ToolOutputEvent;
+        # document decision in docs/companion_harness/ARCH.md. Current: same should_push as chat.
         should_push = generation_deliver or output_to_user_flag
         base_nl = (routing.user_facing_reply or "").strip()
         significance_meta = envelope_to_assistant_metadata_dict(routing)

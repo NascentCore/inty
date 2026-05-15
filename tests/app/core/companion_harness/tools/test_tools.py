@@ -4,7 +4,7 @@ import asyncio
 import json
 from pathlib import Path
 
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
 from app.core.companion_harness.tools.companion_tools import WRITABLE_RELATIVE_PATHS
@@ -25,7 +25,10 @@ def _run_tool(
 
 
 def test_tool_memory_store_list_paths(tmp_path: Path) -> None:
-    st = get_memory_store(CompanionScope("tools", "a", tmp_path.name), dsn="")
+    st = MemoryStore(
+        scope=CompanionScope("tools", "a", tmp_path.name),
+        repository=None,
+    )
     st.write_document("USER.md", "u")
     st.write_document("memory/daily/2099-01-01.md", "d")
     out = _run_tool(
@@ -44,7 +47,10 @@ def test_tool_memory_store_list_paths(tmp_path: Path) -> None:
 
 
 def test_tool_memory_store_read_write(tmp_path: Path) -> None:
-    st = get_memory_store(CompanionScope("tools", "a", f"{tmp_path.name}-rw"), dsn="")
+    st = MemoryStore(
+        scope=CompanionScope("tools", "a", f"{tmp_path.name}-rw"),
+        repository=None,
+    )
     w = _run_tool(
         st,
         "memory_store_write_document",
@@ -61,7 +67,10 @@ def test_tool_memory_store_read_write(tmp_path: Path) -> None:
 
 
 def test_tool_memory_store_write_not_in_allowlist(tmp_path: Path) -> None:
-    st = get_memory_store(CompanionScope("tools", "a", f"{tmp_path.name}-wl"), dsn="")
+    st = MemoryStore(
+        scope=CompanionScope("tools", "a", f"{tmp_path.name}-wl"),
+        repository=None,
+    )
     out = _run_tool(
         st,
         "memory_store_write_document",

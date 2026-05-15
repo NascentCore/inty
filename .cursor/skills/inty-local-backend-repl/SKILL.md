@@ -14,15 +14,15 @@ description: >-
 
 ## Ops
 
-Use `INTY_CONFIG_YAML` env var to sepcify the config file for launching the ops variant
+Use `INTY_CONFIG_YAML` env var to specify the config file for launching the ops variant
 of Inty backend.
 
 ```bash
 export INTY_CONFIG_YAML=devops/config.yaml.local
-backend/ops/start.sh --local --debug --no-build-frontend --log-file ./tmp/inty-ops-local.log
+backend/ops/start.sh --local --debug --no-build-frontend
 ```
 
-`INTY_CONFIG_YAML` `--log-file` use replative path from the root of the repo
+`INTY_CONFIG_YAML` 使用仓库根目录为相对路径基准；**不传 `--workspace` 时**默认工作目录为仓库根下 **`.inty`**，文件日志 **`.inty/inty.log`**（启动时若已存在会先删除再写）；需要把日志放到其它目录时再传 **`--workspace DIR`**（见 **`backend/ops/start.sh --help`**）。
 
 ## Terminate Ops
 
@@ -46,6 +46,8 @@ pgrep -af 'python -m tools\.inty_v2_repl' || true
 
 Bearer 默认读 **`${INTY_OPS_BEARER_TOKEN_FILE:-.inty_ops_bearer_token}`**（`--local` 启动已写入）。API 基址默认 **`http://127.0.0.1:8001`**；若使用环境变量 **`PORT`** 覆盖监听端口，请同步改 **`INTY_API_BASE_URL`**（例如 `export INTY_API_BASE_URL=http://127.0.0.1:9001`）。
 
+Read `.inty_ops_bearer_token` to fill in the value of `INTY_ACCESS_TOKEN` env var in `tools/inty_v2_repl/.env`
+
 Run the command below to get the agent ID for launching the repl:
 
 ```bash
@@ -56,7 +58,7 @@ AGENT_ID=$(python3 tools/scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR=
 
 After ops instance is ready, respond to user with：
 
-1. Log file path
+1. Log file path：**`.inty/inty.log`**（仓库根相对路径）
 2. Repl launch command, use the AGENT_ID obtained before:
 
    ```bash

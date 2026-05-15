@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 
 import pytest
 
@@ -14,12 +15,22 @@ from techno_core.models import (
     TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
 )
+from tests.app.core.companion_harness.companion_memory_registry_dsn import (
+    companion_memory_registry_dsn,
+)
 
 
 @pytest.mark.asyncio
 async def test_techno_core_record_event_appends_valid_jsonl() -> None:
-    manager = CompanionManager(CompanionConfig(llm=CompanionLLMConfig(api_key="k")))
-    session = manager.get_or_create_session("u-tce", "c-tce", "chat-tce")
+    rid = uuid.uuid4().hex[:12]
+    uid, cid, chid = f"u-tce-{rid}", f"c-tce-{rid}", f"chat-tce-{rid}"
+    manager = CompanionManager(
+        CompanionConfig(
+            llm=CompanionLLMConfig(api_key="k"),
+            memory_pg_dsn=companion_memory_registry_dsn(),
+        )
+    )
+    session = manager.get_or_create_session(uid, cid, chid)
     store = session.store
     payload = {
         "sphere": "living_sphere",
@@ -39,16 +50,23 @@ async def test_techno_core_record_event_appends_valid_jsonl() -> None:
     row = json.loads(lines[0])
     assert row["sphere"] == "living_sphere"
     assert row["source"] == "inner_tick"
-    assert row["actor_companion_id"] == "c-tce"
-    assert row["related_user_id"] == "u-tce"
+    assert row["actor_companion_id"] == cid
+    assert row["related_user_id"] == uid
     assert row["summary"] == payload["summary"]
     manager.shutdown_all()
 
 
 @pytest.mark.asyncio
 async def test_techno_core_record_event_rejects_bad_sphere() -> None:
-    manager = CompanionManager(CompanionConfig(llm=CompanionLLMConfig(api_key="k")))
-    session = manager.get_or_create_session("u-tce2", "c-tce2", "chat-tce2")
+    rid = uuid.uuid4().hex[:12]
+    uid, cid, chid = f"u-tce2-{rid}", f"c-tce2-{rid}", f"chat-tce2-{rid}"
+    manager = CompanionManager(
+        CompanionConfig(
+            llm=CompanionLLMConfig(api_key="k"),
+            memory_pg_dsn=companion_memory_registry_dsn(),
+        )
+    )
+    session = manager.get_or_create_session(uid, cid, chid)
     store = session.store
     out = await execute_tool_call(
         store,

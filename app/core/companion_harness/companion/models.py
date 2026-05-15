@@ -16,7 +16,10 @@ from app.core.companion_harness.experience_profile import (
 )
 
 from .utc import local_date_str
-from app.core.companion_harness.memory.memory_store_scope import load_template_seed_text
+from app.core.companion_harness.memory.memory_store_scope import (
+    ensure_template_seeded_core_documents_in_store,
+    load_template_seed_text,
+)
 
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -56,7 +59,7 @@ class CompanionTurnResult(BaseModel):
         default="text",
         description=(
             "Structured envelope intent from dual-LLM chat: normal text bubble vs voice-note "
-            "delivery (see significance_perception.DUAL_LLM_CHAT_RESPONSE_FORMAT / "
+            "delivery (see dual_llm_chat_branch_envelope.DUAL_LLM_CHAT_RESPONSE_FORMAT / "
             "DualLlmChatBranchEnvelope wire schema)."
         ),
     )
@@ -73,7 +76,7 @@ class CompanionTurnResult(BaseModel):
             "When foreground chat used the dual JSON envelope, parsed importance triple "
             "(importance_round, importance_user_message, importance_assistant_message). "
             "Propagated to transcript JSONL and API meta_data; optional consumer: memory extraction. "
-            "See significance_perception module docstring."
+            "See dual_llm_chat_branch_envelope module docstring."
         ),
     )
     user_msg_uuid: str = ""
@@ -177,6 +180,10 @@ def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
 class PromptBundle(BaseModel):
     identity: str
     soul: str
+    style_md: str = Field(
+        default="",
+        description="Communication style: STYLE.md body for system injection (tone, pacing, expression boundaries).",
+    )
     user_md: str
     memory_md: str = Field(
         ...,
@@ -250,6 +257,7 @@ def load_prompt_bundle(
     私人记忆三层（见 ``memory_taxonomy``）：``memory/daily/<日期>.md`` 情景记忆 episodic，
     ``memory/<日期>.md`` gist 单日摘要，``MEMORY.md`` semantic 语义记忆。
     未启用私人记忆的体验配置时不读取上述日程路径且将 ``MEMORY.md`` 注入留空。"""
+    ensure_template_seeded_core_documents_in_store(store)
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
     inject_private = experience_profile_injects_private_memory(m.context_mode)
@@ -274,6 +282,7 @@ def load_prompt_bundle(
     return PromptBundle(
         identity=_read_memory_document_required(store, "IDENTITY.md"),
         soul=_read_memory_document_required(store, "SOUL.md"),
+        style_md=_read_memory_document_required(store, "STYLE.md"),
         user_md=_read_memory_document_required(store, "USER.md"),
         memory_md=memory_long,
         techno_core_md=_read_memory_document_optional(store, "TECHNO_CORE.md"),

@@ -198,6 +198,8 @@ def _repl_inner_tick_activity_display(activity: str) -> str:
     return s
 
 
+# TODO(ux): Prefer meta_data.source == tool_bg (e.g. label "toolcall") before inner_tick_activity so
+# maintenance tool_bg frames are not misread as foreground inner-tick lines.
 def _repl_assistant_banner_label(
     ids: Mapping[str, str] | None,
     *,
@@ -331,6 +333,8 @@ def _correlation_uuid_from_meta(meta_data: Mapping[str, Any]) -> str | None:
     return None
 
 
+# TODO(ux): Server-pushed frames (inner-tick, tool_bg) use user_msg_uuid not present in outbound_t0;
+# show wall-clock delta or "n/a" instead of misleading 0ms.
 def _elapsed_for_downlink_assistant(
     meta_data: Mapping[str, Any],
     outbound_t0: dict[str, float],

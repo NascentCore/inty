@@ -1,5 +1,5 @@
 """记忆更新管线：情景记忆 episodic（``memory/daily/<date>.md`` 追加）、gist 单日摘要（``memory/<date>.md``）、
-语义记忆 semantic（``MEMORY.md``）与 USER/SOUL 策展。"""
+语义记忆 semantic（``MEMORY.md``）与 USER/STYLE/SOUL 策展。"""
 
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ Rules:
 - Write in the same language as the conversation (usually Chinese for Chinese user content).
 """
 
-_USER_CURATOR_SYSTEM = """You are a USER.md curator. USER.md records the assistant's durable understanding of the user (how to address them, preferences, collaboration habits). It is injected into the system prompt as ## USER on every turn.
+_USER_CURATOR_SYSTEM = """You are a USER.md curator. USER.md records the assistant's durable understanding of the user (how to address them, preferences, collaboration habits). It is injected into the system prompt as its own system message (raw USER.md body) on every turn.
 
 Given the current USER.md, the latest MEMORY.md (already updated this turn for consistency), and the latest user/assistant turn, output ONLY the full updated USER.md body (markdown).
 
@@ -104,14 +104,36 @@ Rules:
 - Write in the same language as USER.md and the conversation (usually Chinese for Chinese content).
 """
 
+_STYLE_CURATOR_SYSTEM = """You are a STYLE.md curator. STYLE.md is the assistant's durable **communication style** (how to speak: tone, pacing, respect for user comfort). It is injected into the companion system prompt stack as plain STYLE.md body text on every turn (no injected markdown H2 title line before the body).
+
+The workspace STYLE.md template includes the following update rules (follow them when deciding whether and how to edit):
+- 直接响应用户明确的修改指令
+- 记录与用户的交互，谨慎、稳步调整
+- 根据用户的情绪反应和我的思考适时调整
+
+Given the current STYLE.md, the latest MEMORY.md (already updated this turn for consistency), and the latest user/assistant turn, output ONLY the full updated STYLE.md body (markdown).
+
+Rules:
+- Do **not** copy durable values, consent lines, or relationship commitments from SOUL.md into STYLE.md—STYLE is only **how** to communicate; SOUL remains the source for **what** the relationship stands for.
+- Preserve the document's intended structure: keep headings such as `# 沟通风格`, `## 更新方式`, `## 初始（可随交互修改）` unless the file uses a simpler template—do not strip the guiding update rules block.
+- Apply the three template update rules: honor explicit user requests to change style; otherwise adjust **cautiously and incrementally** from interaction; when the user's emotional signals or your reflective stance clearly warrant a tone/pacing/boundary tweak, update accordingly.
+- Use MEMORY.md as supporting context; do not paste raw chat—paraphrase into short durable lines where needed.
+- Stay concise (substantive content at most about 4000 characters unless the existing STYLE.md is already longer—then preserve length).
+- If the latest turn is purely small talk with no new communication-style signal and no explicit style instruction, return the current STYLE.md unchanged (verbatim aside from trivial whitespace).
+- Output raw markdown only: no preamble, no code fences around the whole document.
+- Write in the same language as STYLE.md and the conversation (usually Chinese for Chinese content).
+"""
+
 
 class MemoryPipelineConfig(BaseModel):
     day_summary_every_n_turns: int = Field(default=100, ge=1)
     memory_update_every_n_turns: int = Field(default=100, ge=1)
     user_update_every_n_turns: int = Field(default=100, ge=1)
+    style_update_every_n_turns: int = Field(default=100, ge=1)
     soul_update_every_n_turns: int = Field(default=100, ge=1)
     day_summary_disabled: bool = False
     user_update_disabled: bool = False
+    style_update_disabled: bool = False
     soul_update_disabled: bool = False
     soul_require_fundamental_signal: bool = True
 
@@ -288,6 +310,35 @@ def _rewrite_user_md(
     store.write_document("USER.md", new_body.strip() + "\n")
 
 
+def _rewrite_style_md(
+    store: MemoryStore,
+    *,
+    user_text: str,
+    assistant_text: str,
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    config: MemoryPipelineConfig,
+) -> None:
+    if config.style_update_disabled:
+        return
+    style_body = store.read_document("STYLE.md")
+    memory_body = store.read_document("MEMORY.md")
+    if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
+        memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
+    else:
+        memory_ctx = memory_body
+    user_block = (
+        f"Current STYLE.md:\n\n{style_body}\n\n---\n\n"
+        f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
+        f"Latest turn:\nUser:\n{user_text}\n\nAssistant:\n{assistant_text}\n"
+    )
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": _STYLE_CURATOR_SYSTEM},
+        {"role": "user", "content": user_block},
+    ]
+    new_body = complete_fn(messages, "style")
+    store.write_document("STYLE.md", new_body.strip() + "\n")
+
+
 def _rewrite_soul_md(
     store: MemoryStore,
     *,
@@ -333,20 +384,23 @@ def memory_update_after_turn(
     turn_n = _bump_memory_pipeline_turn(store)
     every_n = config.day_summary_every_n_turns
     user_every_n = config.user_update_every_n_turns
+    style_every_n = config.style_update_every_n_turns
     memory_every_n = config.memory_update_every_n_turns
     soul_every_n = config.soul_update_every_n_turns
     logger.info(
         "memory_pipeline start ws={} turn={} day_summary_every_n={} "
-        "memory_update_every_n={} user_update_every_n={} soul_update_every_n={} "
-        "day_summary_disabled={} user_update_disabled={} soul_update_disabled={}",
+        "memory_update_every_n={} user_update_every_n={} style_update_every_n={} soul_update_every_n={} "
+        "day_summary_disabled={} user_update_disabled={} style_update_disabled={} soul_update_disabled={}",
         ws,
         turn_n,
         every_n,
         memory_every_n,
         user_every_n,
+        style_every_n,
         soul_every_n,
         config.day_summary_disabled,
         config.user_update_disabled,
+        config.style_update_disabled,
         config.soul_update_disabled,
     )
     logger.debug(
@@ -434,6 +488,32 @@ def memory_update_after_turn(
         (time.perf_counter() - t) * 1000.0,
         ws,
         run_user_llm,
+    )
+
+    t = time.perf_counter()
+    run_style_llm = (not config.style_update_disabled) and (
+        turn_n % style_every_n == 0
+    )
+    if run_style_llm:
+        _rewrite_style_md(
+            store,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            complete_fn=complete_fn,
+            config=config,
+        )
+    elif not config.style_update_disabled:
+        logger.debug(
+            "memory_pipeline step=style_md skipped turn={} every_n={} ws={}",
+            turn_n,
+            style_every_n,
+            ws,
+        )
+    logger.info(
+        "memory_pipeline step=style_md ms={:.0f} ws={} ran_llm={}",
+        (time.perf_counter() - t) * 1000.0,
+        ws,
+        run_style_llm,
     )
 
     t = time.perf_counter()

@@ -13,7 +13,7 @@ import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import InnerTickMode
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tools import (
@@ -26,7 +26,10 @@ from app.core.companion_harness.companion.turn import (
 
 
 def _store(p: Path):
-    return get_memory_store(CompanionScope("adllm", "a", str(p.resolve())), dsn="")
+    return MemoryStore(
+        scope=CompanionScope("adllm", "a", str(p.resolve())),
+        repository=None,
+    )
 
 
 def _assert_no_adjacent_user_roles(messages: list[dict[str, Any]]) -> None:
@@ -116,11 +119,11 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert client.chat_calls[0].get("tools") is None
     fg_msgs = client.chat_calls[0]["messages"]
     fg_system = [m for m in fg_msgs if m.get("role") == "system"]
-    assert (
-        len(fg_system) >= 2
-    ), "foreground chat should use multiple system messages (not one concatenated block)"
-    assert any("## IDENTITY" in str(m.get("content") or "") for m in fg_system)
-    assert any("## SOUL" in str(m.get("content") or "") for m in fg_system)
+    assert len(fg_system) >= 2, (
+        "foreground chat should use multiple system messages (not one concatenated block)"
+    )
+    assert any(str(m.get("content") or "").strip() == "id" for m in fg_system)
+    assert any(str(m.get("content") or "").strip() == "s" for m in fg_system)
     assert len(bg_jobs) == 1
     assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
     bg_msgs = bg_jobs[0]["request_messages"]
