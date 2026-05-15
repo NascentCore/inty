@@ -215,10 +215,12 @@ class GenAIModel(BaseModel):
     )
 
     context_window_tokens: int = Field(
+        default=0,
         description="""
         供应商标称的上下文窗口上限（tokens），用于与 API usage 中的 prompt_tokens 等对比。
         口径以对该条目负责的 provider 官方文档为准（通常为总上下文或文档声明的 max context）。
         0 表示无适用的 token 级窗口（例如仅按次计费且无统一 context 的生图/视频管线），不计算利用率。
+        对未编入本目录、仅通过 OpenRouter 等裸 id 接入的模型，默认亦为 0，直至在目录中写明官方窗口。
         """,
     )
 
