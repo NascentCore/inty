@@ -1,24 +1,18 @@
-"""Assemble the companion's multi-slice system stack for each LLM call.
+"""Companion **system context** assembly: one place to turn ``PromptBundle`` + turn
+flags into what the model sees as system role(s) before user/assistant messages.
 
-``build_system_messages`` returns ordered ``{"role":"system","content":...}`` dicts;
-``build_system_prompt`` joins their ``content`` with ``SYSTEM_PROMPT_SEP`` for legacy
-callers. The first slice is the product axiom from ``prompts/AXIOM.md`` via
-``get_imate_axiom_system_text`` (see ``app.core.companion_harness.memory.memory_store_scope``); then security,
-optional ``tools_md`` (verbatim; omitted on the async-foreground path when tools are
-enabled but the completion runs **without** OpenAI ``tools=``—see ``..prompt_stack``),
-heartbeat / inner-tick / REPL-ack / compact-tool clauses as applicable, experience
-profile clause, identity / soul / TechnoCore / LivingSphere / user bodies (each stripped
-Markdown as stored; no outer ``## …`` wrappers), optional memory headings + bodies,
-interactive-bootstrap parts, and finally the output-contract slice (full tools,
-bootstrap tools, inner-tick, no-tools text, or **mirrored-tools** when
-``async_foreground_chat_stack`` is true).
+**Intent**: keep product law, safety, persona, world anchors, memory, and **output /
+tool contracts** aligned with how each completion is actually invoked (plain chat,
+tool API, inner tick, or async foreground without OpenAI ``tools=``). Call sites live
+in ``..prompt_stack`` and related turn code; **significance / dual-envelope** semantics
+and parsing are owned by ``..significance_perception``.
 
-When ``include_significance_perception_slice`` is true and not an inner-tick turn,
-injects ``PromptBundle.significance_perception_md`` (``SIGNIFICANCE_PERCEPTION.md`` body).
-When that flag is true and ``chat_branch_no_tool_api`` holds (tools on, non-inner-tick,
-``async_foreground_chat_stack``), also appends ``_dual_llm_chat_structured_output_contract_text``
-so the model can fill ``importance_*`` in the reply envelope; semantics and consumers are in
-``..significance_perception``.
+**Surfaces**: ``build_system_messages`` is the canonical multi-message list;
+``build_system_prompt`` exists only for callers that still need one concatenated string
+(``SYSTEM_PROMPT_SEP``). Seed text such as the product axiom is loaded via
+``app.core.companion_harness.memory.memory_store_scope`` (companion templates under
+``prompts/``). Kept beside prompt assets so ``prompts/__init__.py`` stays docstring-only
+(see ``app/AGENTS.md``).
 """
 
 from __future__ import annotations
@@ -380,6 +374,7 @@ def build_system_messages(
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(inner_tick_turn, inner_tick_mode)
     tools_on = enable_tools or enable_user_profile_tool
+    # Dual-LLM foreground completion: tools exist in product, but this request omits OpenAI ``tools=``.
     chat_branch_no_tool_api = (
         tools_on and not inner_tick_turn and async_foreground_chat_stack
     )

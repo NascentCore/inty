@@ -22,7 +22,7 @@ export INTY_CONFIG_YAML=devops/config.yaml.local
 backend/ops/start.sh --local --debug --no-build-frontend
 ```
 
-`INTY_CONFIG_YAML` 使用仓库根目录为相对路径基准；**不要传 `--workspace`**，沿用 `start.sh` 默认工作目录 **`.inty`**，文件日志 **`.inty/inty.log`**（启动时若已存在会先删除再写）；完整参数与环境说明见 **`backend/ops/start.sh --help`**。
+`INTY_CONFIG_YAML` 使用仓库根目录为相对路径基准；**不传 `--workspace` 时**默认工作目录为仓库根下 **`.inty`**，文件日志 **`.inty/inty.log`**（启动时若已存在会先删除再写）；需要把日志放到其它目录时再传 **`--workspace DIR`**（见 **`backend/ops/start.sh --help`**）。
 
 ## Terminate Ops
 
