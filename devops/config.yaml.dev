@@ -14,6 +14,9 @@ app:
     subscribed_user_agent_creation_24h_limit: 10
   gcp_service_account_key: "inty-backend-key.json"
   min_app_version_code_for_festival_memory: 3345
+  # If app.features is added: do not set removed inner-tick toggles (FeaturesConfig no longer defines them):
+  # companion_ws_proactive_heartbeat_enabled, companion_ws_maintenance_inner_tick_enabled,
+  # companion_ws_dream_inner_tick_enabled, companion_ws_night_maintenance_inner_tick_only_when_dream_due
 
 sentry:
   # dev-inty/default
