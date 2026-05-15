@@ -32,11 +32,18 @@ from app.core.companion_harness.companion.bootstrap_user_interactive import (
     tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
 )
-from app.core.companion_harness.companion.message_format import openai_assistant_message_dict
+from app.core.companion_harness.companion.message_format import (
+    openai_assistant_message_dict,
+)
 from app.core.companion_harness.companion.models import ChatMessage, load_context_meta
 from app.core.companion_harness.companion.schedule_queue import add_schedule_task
-from app.core.companion_harness.memory.memory_store import MemoryStore, normalize_memory_store_relative_path
-from app.core.companion_harness.memory.memory_store_document_mapping import parse_memory_store_relative_path
+from app.core.companion_harness.memory.memory_store import (
+    MemoryStore,
+    normalize_memory_store_relative_path,
+)
+from app.core.companion_harness.memory.memory_store_document_mapping import (
+    parse_memory_store_relative_path,
+)
 from techno_core.models import (
     Sphere,
     TechnoCoreEvent,
@@ -389,7 +396,9 @@ def tool_techno_core_record_event(store: MemoryStore, arguments: dict[str, Any])
     uid = store.scope.user_id.strip()
     cid = store.scope.companion_id.strip()
     if not cid:
-        return f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}"
+        return (
+            f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}"
+        )
 
     ev_kwargs: dict[str, Any] = {
         "sphere": sphere,

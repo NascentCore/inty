@@ -54,10 +54,17 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     companion_llm_runtime_event_bind_ctx,
     exc_chain_includes_llm_inference_failure_root_causes,
 )
-from app.core.companion_harness.companion.models import InnerTickMode, transcript_relative_path_for_turn_persistence
-from app.core.companion_harness.companion.prompt_stack import refresh_companion_turn_prompt_stack
+from app.core.companion_harness.companion.models import (
+    InnerTickMode,
+    transcript_relative_path_for_turn_persistence,
+)
+from app.core.companion_harness.companion.prompt_stack import (
+    refresh_companion_turn_prompt_stack,
+)
 from app.core.companion_harness.companion.runtime_events import append_runtime_event
-from app.core.companion_harness.companion.significance_perception import envelope_to_assistant_metadata_dict
+from app.core.companion_harness.companion.significance_perception import (
+    envelope_to_assistant_metadata_dict,
+)
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 

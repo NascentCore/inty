@@ -8,7 +8,6 @@ import re
 import sys
 from pathlib import Path
 
-
 RUNTIME_ERROR_PATTERNS = (
     re.compile(r"\bDATABASE_ERROR\b"),
     re.compile(r"\bMissingGreenlet\b"),

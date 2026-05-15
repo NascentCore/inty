@@ -401,7 +401,6 @@ def test_refresh_tool_side_compact_drops_bootstrap_after_complete(tmp_path) -> N
         enable_tools=True,
         enable_user_profile_tool=False,
         inner_tick_turn=False,
-        include_repl_image_generation_contract=True,
         tool_side_compact=True,
         interactive_bootstrap_active=True,
         include_significance_perception_slice=False,

@@ -234,7 +234,9 @@ class ChatWsCompanionWireMetaData(BaseModel):
     )
 
 
-def dump_chat_ws_companion_wire_meta(meta: ChatWsCompanionWireMetaData) -> dict[str, Any]:
+def dump_chat_ws_companion_wire_meta(
+    meta: ChatWsCompanionWireMetaData,
+) -> dict[str, Any]:
     """Serialize companion WebSocket ``meta_data`` for ORM / ``send_json`` (omit nulls, camelCase aliases)."""
     return meta.model_dump(exclude_none=True, by_alias=True)
 

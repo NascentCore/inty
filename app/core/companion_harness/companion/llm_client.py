@@ -18,7 +18,7 @@ from app.core.companion_harness.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_sync_client,
 )
-from app.utils.models_catalog import DEEPSEEK_V3_2, GenAIModel, resolve_chat_text_model
+from app.utils.models_catalog import DEEPSEEK_V3_2, GenAIModel
 
 LLM_SCENE_CHAT = "chat"
 LLM_SCENE_TOOL_CALL = "tool_call"
@@ -42,9 +42,13 @@ class CompanionLLMConfig(BaseModel):
     async_chat_front_timeout_sec: float = Field(default=600.0, ge=1.0)
 
     @classmethod
-    def from_openrouter_env(
-        cls,
-    ) -> CompanionLLMConfig:
+    def from_openrouter_env(cls) -> CompanionLLMConfig:
+        """Load credentials and HTTP timeout from the process environment.
+
+        Model identifiers are **not** read from the environment; production and
+        scripts should set ``default_model`` / role models via ``config.yaml`` or
+        explicit ``CompanionLLMConfig(...)`` construction.
+        """
         key = (
             os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
         ).strip()
@@ -56,29 +60,12 @@ class CompanionLLMConfig(BaseModel):
         except ValueError:
             timeout_sec = 600.0
 
-        def _opt_model(env_name: str) -> GenAIModel | None:
-            raw = (os.getenv(env_name) or "").strip()
-            if not raw:
-                return None
-            return resolve_chat_text_model(raw)
-
-        default_raw = (
-            os.getenv("INTY_V2_PROTO_MODEL", "deepseek/deepseek-v3.2").strip()
-            or "deepseek/deepseek-v3.2"
-        )
         return cls(
             api_key=key,
             api_base=os.getenv(
                 "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
             ).strip()
             or "https://openrouter.ai/api/v1",
-            default_model=resolve_chat_text_model(default_raw),
-            chat_model=_opt_model("INTY_V2_PROTO_CHAT_MODEL"),
-            tool_model=_opt_model("INTY_V2_PROTO_TOOL_MODEL"),
-            memory_model=_opt_model("INTY_V2_PROTO_MEMORY_MODEL"),
-            day_summary_model=_opt_model("INTY_V2_PROTO_DAY_SUMMARY_MODEL"),
-            user_model=_opt_model("INTY_V2_PROTO_USER_MODEL"),
-            soul_model=_opt_model("INTY_V2_PROTO_SOUL_MODEL"),
             async_chat_front_timeout_sec=timeout_sec,
         )
 

@@ -20,7 +20,10 @@ from app.core.companion_harness.companion.manager import (
     CompanionSession,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.models import CompanionTurnResult, InnerTickMode
+from app.core.companion_harness.companion.models import (
+    CompanionTurnResult,
+    InnerTickMode,
+)
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )

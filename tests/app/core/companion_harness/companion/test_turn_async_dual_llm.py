@@ -116,8 +116,8 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     fg_msgs = client.chat_calls[0]["messages"]
     fg_system = [m for m in fg_msgs if m.get("role") == "system"]
     assert len(fg_system) >= 2, "foreground chat should use multiple system messages (not one concatenated block)"
-    assert any("## IDENTITY" in str(m.get("content") or "") for m in fg_system)
-    assert any("## SOUL" in str(m.get("content") or "") for m in fg_system)
+    assert any(str(m.get("content") or "").strip() == "id" for m in fg_system)
+    assert any(str(m.get("content") or "").strip() == "s" for m in fg_system)
     assert len(bg_jobs) == 1
     assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
     bg_msgs = bg_jobs[0]["request_messages"]
