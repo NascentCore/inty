@@ -4,19 +4,19 @@
 
 ## 昼夜节律（Day / Night shift）
 
-**适用边界**：调度读的是连接/请求里随路携带的**用户本地时间**（与 `UserTimeContext` / `ImplicitSignalBundle.client_time` 对齐）。默认把本地 wall-clock **\[22:00, 7:00)** 判为夜间（跨午夜区间）；**解析不到本地时间或缺少可用信息时按白昼处理**，避免对未上报时间的客户端误抑行为。总开关为配置项 `companion_ws_agent_circadian_enabled`；关闭后下文凡依赖「判夜」的策略都不会启用，**但**不影响你在其它小节里单独打开的 DREAM/静息等能力（与「昼夜」正交）。
+**适用边界**：调度读的是连接/请求里随路携带的**用户本地时间**（与 `UserTimeContext` / `ImplicitSignalBundle.client_time` 对齐）。默认把本地 wall-clock **\[22:00, 7:00)** 判为夜间（跨午夜区间）；**解析不到本地时间或缺少可用信息时按白昼处理**，避免对未上报时间的客户端误抑行为。总开关为配置项 `companion_ws_agent_circadian_enabled`；关闭后下文凡依赖「判夜」的策略都不会启用，**但**不影响自动巩固（DREAM）门闩与静息窗等与「昼夜」正交的机制。
 
 **陪伴侧在「夜间」相对白昼多做了什么**（策略层，不是新人设文档）：
 
 - **主动心跳 / proactive 搭话**：更倾向抑制或放行更少，体感是对方**夜里更少冷不丁发一条**。
 - **维护性 inner tick**（后台「自己琢磨」、不占你当前一句一轮的主对话）：同一套门闩下，夜间两次触发之间的**最短间隔按倍率拉长**（`companion_ws_night_maintenance_inner_tick_gap_multiplier`），体感是**深夜后台自发思考更稀疏**。
-- **夜间与 Autodreaming 的一体化**：在本地夜间且 **Autodreaming（`companion_ws_dream_inner_tick_enabled`）打开** 时，**维护性 inner tick 把「到点的自动巩固（DREAM）」算作夜里的那份维护**；若当前还不到 DREAM 门闩，则本轮**不打普通 MAINTENANCE 的 LLM**（仍会推进调度，体感仍是夜里安静），等到门闩满足时同一通道会以 DREAM 跑起来。**若关闭 Autodreaming**，夜间仍可按稀疏节拍跑普通 MAINTENANCE（只有 `min_gap` 倍率，无处跳过）。
+- **夜间与 Autodreaming 的一体化**：在**本地夜间**时，维护性 inner tick 把「到点的自动巩固（DREAM）」算作夜里的那份维护；若当前还不到 DREAM 门闩，则本轮**不打普通 MAINTENANCE 的 LLM**（仍会推进调度，体感仍是夜里安静），门闩满足时同一通道以 DREAM 运行。白昼仍跑普通 MAINTENANCE（及到点时的 DREAM）。关闭昼夜节律时「夜间」不成立，上述跳过不发生。
 
 **用户在白昼侧对应的直觉**：白天连接正常、本地时间可信时，对方更「在线」——主动关切与后台节拍相对更密；这一切**不要求你在 UI 里切换模式**，由本地钟与配置共同决定。
 
 ## Autodreaming
 
-当冷却时间与主轨 `transcript.jsonl` 用户互动增量满足门闩时，下一次维护性 inner 节拍以 DREAM 模式运行：在无用户对白需求的前提下用专用 system 与放宽的 `memory/` 写路径引导模型整理语义与情景记忆，并在成功后更新 `.companion_dream_state.json`。
+当冷却时间与主轨 `transcript.jsonl` 用户互动增量满足门闩时，下一次维护性 inner 节拍以 DREAM 模式运行（维护 inner tick 路径**始终**评估该门闩，**无**关闭自动巩固的配置开关）：在无用户对白需求的前提下用专用 system 与放宽的 `memory/` 写路径引导模型整理语义与情景记忆，并在成功后更新 `.companion_dream_state.json`。
 
 **巩固后的「静息」窗**：成功结束一轮 DREAM 后，可配置在接下来若干小时（`companion_ws_inner_tick_quiet_hours_after_dream`）内**不再起维护性 inner tick 的 LLM**，像对方**补完觉、先别喊她加班琢磨**。这段静息**仅在昼夜节律开启且当前判为白昼时**会按「日出」逻辑被清掉；若关闭了昼夜节律，静息只随时间自然过期，而不会在每次轮询时被误清空。
 

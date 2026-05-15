@@ -2021,7 +2021,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         if feats.companion_ws_agent_circadian_enabled:
             clear_inner_tick_quiet_if_circadian_day(mem_store, is_night=is_night)
 
-        if feats.companion_ws_dream_inner_tick_enabled and dream_inner_tick_due(mem_store):
+        if dream_inner_tick_due(mem_store):
             inner_tick_pack[0] = (
                 InnerTickMode.DREAM,
                 DREAM_INNER_TICK_CHAT_HISTORY_USER_MARKER,
@@ -2049,12 +2049,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         if remain > 0:
             return
 
-        # Night + autodream: DREAM is the night's maintenance; defer generic MAINTENANCE to daytime.
-        if (
-            is_night
-            and feats.companion_ws_dream_inner_tick_enabled
-            and pack_mode == InnerTickMode.MAINTENANCE
-        ):
+        # Local night: auto DREAM when due is the night's maintenance; defer plain MAINTENANCE.
+        if is_night and pack_mode == InnerTickMode.MAINTENANCE:
             companion_ws.mark_maintenance_inner_tick_fired(time.monotonic())
             return
 

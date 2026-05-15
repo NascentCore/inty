@@ -201,8 +201,7 @@ class FeaturesConfig:
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
     # User local wall-clock night window: suppress proactive heartbeat when client_time parses and falls in night.
     companion_ws_agent_circadian_enabled: bool = True
-    # When due (see companion.dream_state), maintenance worker may run InnerTickMode.DREAM instead of MAINTENANCE.
-    companion_ws_dream_inner_tick_enabled: bool = True
+    # Maintenance worker may run InnerTickMode.DREAM when dream_inner_tick_due (see companion.dream_state); always on.
     # After a successful DREAM consolidation (see companion.sleep_state), block maintenance inner-tick LLM for this many hours.
     companion_ws_inner_tick_quiet_hours_after_dream: float = 3.0
     # At local night, multiply maintenance inner-tick min_gap by this factor (must be >= 1.0).
