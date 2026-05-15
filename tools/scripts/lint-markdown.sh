@@ -2,5 +2,5 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
-npm ci --prefix tools/markdownlint
+npm install --prefix tools/markdownlint
 exec npx --prefix tools/markdownlint markdownlint-cli2

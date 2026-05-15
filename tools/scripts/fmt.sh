@@ -1,10 +1,10 @@
 #!/bin/bash -e
 
-# 与 tools/scripts/lint-markdown.sh 使用同一 CLI；本地若无 node_modules 则自动 npm ci。
+# 与 tools/scripts/lint-markdown.sh 使用同一 CLI；本地若无 node_modules 则自动 npm install。
 run_markdownlint() {
     echo "Linting Markdown (markdownlint-cli2)..."
     if [ ! -d tools/markdownlint/node_modules ]; then
-        npm ci --prefix tools/markdownlint
+        npm install --prefix tools/markdownlint
     fi
     npx --prefix tools/markdownlint markdownlint-cli2
 }
