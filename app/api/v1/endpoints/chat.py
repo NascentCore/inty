@@ -2049,9 +2049,10 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         if remain > 0:
             return
 
+        # Night + autodream: DREAM is the night's maintenance; defer generic MAINTENANCE to daytime.
         if (
             is_night
-            and feats.companion_ws_night_maintenance_inner_tick_only_when_dream_due
+            and feats.companion_ws_dream_inner_tick_enabled
             and pack_mode == InnerTickMode.MAINTENANCE
         ):
             companion_ws.mark_maintenance_inner_tick_fired(time.monotonic())

@@ -207,8 +207,6 @@ class FeaturesConfig:
     companion_ws_inner_tick_quiet_hours_after_dream: float = 3.0
     # At local night, multiply maintenance inner-tick min_gap by this factor (must be >= 1.0).
     companion_ws_night_maintenance_inner_tick_gap_multiplier: float = 3.0
-    # When True at local night, skip MAINTENANCE inner-tick unless DREAM is due (noop still advances schedule).
-    companion_ws_night_maintenance_inner_tick_only_when_dream_due: bool = False
     # After successful DREAM, with this probability run one short ``complete_text`` and append a private fragment JSONL line.
     companion_creative_dream_probability: float = 0.0
     companion_creative_dream_max_fragment_chars: int = 800

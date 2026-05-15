@@ -10,7 +10,7 @@
 
 - **主动心跳 / proactive 搭话**：更倾向抑制或放行更少，体感是对方**夜里更少冷不丁发一条**。
 - **维护性 inner tick**（后台「自己琢磨」、不占你当前一句一轮的主对话）：同一套门闩下，夜间两次触发之间的**最短间隔按倍率拉长**（`companion_ws_night_maintenance_inner_tick_gap_multiplier`），体感是**深夜后台自发思考更稀疏**。
-- **可选收紧**：若打开 `companion_ws_night_maintenance_inner_tick_only_when_dream_due`，夜间仅在「下一轮本该做记忆巩固（DREAM）」时才真的跑维护性 inner tick；否则本轮**不打维护 LLM**，体感仍是**夜里更安静**，巩固仍会在门闩满足时出现。
+- **夜间与 Autodreaming 的一体化**：在本地夜间且 **Autodreaming（`companion_ws_dream_inner_tick_enabled`）打开** 时，**维护性 inner tick 把「到点的自动巩固（DREAM）」算作夜里的那份维护**；若当前还不到 DREAM 门闩，则本轮**不打普通 MAINTENANCE 的 LLM**（仍会推进调度，体感仍是夜里安静），等到门闩满足时同一通道会以 DREAM 跑起来。**若关闭 Autodreaming**，夜间仍可按稀疏节拍跑普通 MAINTENANCE（只有 `min_gap` 倍率，无处跳过）。
 
 **用户在白昼侧对应的直觉**：白天连接正常、本地时间可信时，对方更「在线」——主动关切与后台节拍相对更密；这一切**不要求你在 UI 里切换模式**，由本地钟与配置共同决定。
 
