@@ -39,6 +39,9 @@ jobs:
         working-directory: evaluation
         run: npm ci
 
+      - name: Install markdownlint-cli2 (tools/markdownlint)
+        run: npm install --prefix tools/markdownlint
+
       - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
@@ -79,6 +82,7 @@ jobs:
             - Python: black (from requirements-dev.txt), paths aligned with CI
             - Kotlin: ktfmt
             - JS/TS: prettier (evaluation)
+            - Markdown: prettier（变更路径）+ markdownlint-cli2（与 `.markdownlint*.yaml` 一致）
           branch: automation/format-code
           delete-branch: true
           author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"

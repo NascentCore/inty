@@ -21,6 +21,7 @@ from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConf
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import run_turn
+from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 _OPENROUTER_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
 
@@ -46,7 +47,7 @@ class _InstrumentedCompanionLLMClient(CompanionLLMClient):
         self,
         *,
         messages: list[dict[str, Any]],
-        model: str | None = None,
+        model: GenAIModel | None = None,
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
@@ -88,9 +89,9 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
     cfg = CompanionLLMConfig(
         api_key=os.environ["OPENROUTER_API_KEY"].strip(),
         api_base=os.getenv("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"),
-        default_model=_OPENROUTER_MODEL,
-        chat_model=_OPENROUTER_MODEL,
-        tool_model=_OPENROUTER_MODEL,
+        default_model=resolve_chat_text_model(_OPENROUTER_MODEL),
+        chat_model=resolve_chat_text_model(_OPENROUTER_MODEL),
+        tool_model=resolve_chat_text_model(_OPENROUTER_MODEL),
     )
     client = _InstrumentedCompanionLLMClient(cfg)
 

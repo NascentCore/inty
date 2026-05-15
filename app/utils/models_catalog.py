@@ -9,6 +9,7 @@ https://openrouter.ai/rankings?category=roleplay&benchmark=agentic#categories
 """
 
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -913,6 +914,66 @@ CHAT_TEXT_MODELS = [
 ]
 
 
+def openrouter_chat_model_from_id_uncatalogued(id_on_provider: str) -> GenAIModel:
+    """
+    Build a minimal catalog entry for OpenRouter chat model IDs not listed in ``CHAT_TEXT_MODELS``.
+
+    ``id_on_provider`` is used verbatim (after strip) for API calls. Pricing is a placeholder and
+    must not be used for billing without extending the catalog.
+    """
+
+    trimmed = id_on_provider.strip()
+    return GenAIModel(
+        nickname=trimmed,
+        modalities=ModelModalities(
+            inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]
+        ),
+        builder=ModelBuilder.OPENAI,
+        provider=ModelAPIProvider.OPENROUTER,
+        id_on_provider=trimmed,
+        pricing=Pricing(
+            inputs=[
+                PriceInfo(
+                    price=0.0,
+                    model=PricingModel.BY_1M_TOKEN,
+                    modality=DataModality.TEXT,
+                )
+            ],
+            outputs=[
+                PriceInfo(
+                    price=0.0,
+                    model=PricingModel.BY_1M_TOKEN,
+                    modality=DataModality.TEXT,
+                )
+            ],
+            official_url="",
+            notes="Placeholder; uncatalogued OpenRouter chat model.",
+        ),
+        notes="uncatalogued OpenRouter chat model; extend CHAT_TEXT_MODELS for full metadata.",
+        response_format_with_tools_compatibility=(
+            ResponseFormatWithToolsCompatibility.UNSPECIFIED
+        ),
+    )
+
+
+def resolve_chat_text_model(value: str) -> GenAIModel:
+    """
+    Resolve YAML/config chat model string (nickname or ``id_on_provider``) to ``GenAIModel``.
+
+    Matches ``CHAT_TEXT_MODELS`` first; otherwise wraps the trimmed string as an uncatalogued
+    OpenRouter model (same API id as the config value). Empty/whitespace input yields
+    ``DEEPSEEK_V3_2`` (harness default chat model).
+    """
+
+    normalized = (value or "").strip()
+    if not normalized:
+        return DEEPSEEK_V3_2
+    for model in CHAT_TEXT_MODELS:
+        if model.nickname == normalized or model.id_on_provider == normalized:
+            return model
+    return openrouter_chat_model_from_id_uncatalogued(normalized)
+
+
 def resolve_chat_model_to_id(value: str) -> str:
     """
     Resolve chat model config (nickname or id_on_provider) to provider model ID.
@@ -922,10 +983,21 @@ def resolve_chat_model_to_id(value: str) -> str:
     normalized = value.strip() if value else ""
     if not normalized:
         return value
-    for model in CHAT_TEXT_MODELS:
-        if model.nickname == normalized or model.id_on_provider == normalized:
-            return model.id_on_provider
-    return value
+    return resolve_chat_text_model(value).id_on_provider
+
+
+def genai_model_langsmith_meta_subset(model: GenAIModel) -> dict[str, Any]:
+    """JSON-safe catalog subset for LangSmith / inspect (excludes pricing trees)."""
+
+    return {
+        "nickname": model.nickname,
+        "id_on_provider": model.id_on_provider,
+        "builder": model.builder.value,
+        "provider": model.provider.value,
+        "response_format_with_tools_compatibility": (
+            model.response_format_with_tools_compatibility.value
+        ),
+    }
 
 
 class ModelNameFamily(StrEnum):
@@ -1027,15 +1099,17 @@ def is_fal_model(model: str) -> bool:
     return detect_model_name_family(model) == ModelNameFamily.FAL
 
 
-def is_gemini_model(model: str) -> bool:
+def is_gemini_model(model: str | GenAIModel) -> bool:
     """
     Check if a model is a gemini model.
     """
-    return detect_model_name_family(model) == ModelNameFamily.GEMINI
+    sid = model.id_on_provider if isinstance(model, GenAIModel) else model
+    return detect_model_name_family(sid) == ModelNameFamily.GEMINI
 
 
-def is_deepseek_on_openrouter(model: str) -> bool:
+def is_deepseek_on_openrouter(model: str | GenAIModel) -> bool:
     """
     Check if a model is a DeepSeek model on OpenRouter (id starts with "deepseek/").
     """
-    return normalize_model_name(model).startswith("deepseek/")
+    sid = model.id_on_provider if isinstance(model, GenAIModel) else model
+    return normalize_model_name(sid).startswith("deepseek/")

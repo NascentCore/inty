@@ -1,0 +1,8 @@
+{
+  "name": "@inty/markdownlint-tools",
+  "private": true,
+  "description": "Pinned markdownlint-cli2 for repo-wide Markdown lint (CI + local script).",
+  "devDependencies": {
+    "markdownlint-cli2": "^0.18.0"
+  }
+}

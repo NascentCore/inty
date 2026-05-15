@@ -43,6 +43,7 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_prompt,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
+from app.utils.models_catalog import resolve_chat_text_model
 
 _LANGSMITH_TEST_PROJECT = "inty-backend-test-runtime-inspect"
 
@@ -72,7 +73,7 @@ class _DualLlmForegroundStubCompanionLLMClient(CompanionLLMClient):
         self,
         *,
         messages: list[dict[str, Any]],
-        model: str | None = None,
+        model: Any | None = None,
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
@@ -115,7 +116,7 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         client = CompanionLLMClient(
             CompanionLLMConfig(
                 api_key="super-secret-key",
-                default_model="test/model-a",
+                default_model=resolve_chat_text_model("test/model-a"),
                 api_base="https://example.invalid/v1",
             )
         )
@@ -136,7 +137,7 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         )
         runtime_inspect_set_last_chat_completion_request(
             build_last_chat_completion_request_payload(
-                model="test/model-a",
+                model=resolve_chat_text_model("test/model-a"),
                 messages=[
                     {"role": "system", "content": "system text"},
                     {"role": "user", "content": "hello"},
@@ -196,7 +197,7 @@ def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
     try:
         ric.runtime_inspect_set_last_chat_completion_request(
             build_last_chat_completion_request_payload(
-                model="bg/model",
+                model=resolve_chat_text_model("bg/model"),
                 messages=[{"role": "user", "content": "bg-user"}],
                 tools=[],
             )
@@ -293,7 +294,7 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
         json.dumps(envelope),
         CompanionLLMConfig(
             api_key="secret-key",
-            default_model="snap/model",
+            default_model=resolve_chat_text_model("snap/model"),
         ),
     )
 

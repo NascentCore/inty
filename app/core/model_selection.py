@@ -10,14 +10,15 @@ from app.utils.models_catalog import (
 )
 
 
-def select_chat_model(*, user: object, is_subscribed: bool) -> str:
+def select_chat_model(*, user: object, is_subscribed: bool) -> GenAIModel:
     """
     Select chat LLM model based on user's subscription/superuser status.
-    Config may use nickname (e.g. "DeepSeek V3.2") or provider ID; returns provider ID for API.
+    Config may use nickname (e.g. "DeepSeek V3.2") or provider ID; returns ``GenAIModel``
+    (use ``.id_on_provider`` for OpenAI-compatible API calls outside the companion harness).
     """
     config = global_config_loaded_from_config_yaml.agent
     raw = config.sub_user_chat_model if is_subscribed else config.free_user_chat_model
-    return resolve_chat_model_to_id(raw)
+    return resolve_chat_text_model(raw)
 
 
 def select_text_to_image_model(*, user: object, is_subscribed: bool) -> str:

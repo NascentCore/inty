@@ -1,0 +1,30 @@
+# Inty 仓库 Markdown 规则（与 markdownlint-cli2 / VS Code markdownlint 共用）。
+# 有意先放宽与长文档、技术说明写作冲突较多的规则，后续可按目录或全仓逐步收紧。
+default: true
+MD001: false # 标题层级递增
+MD007: false # 无序列表缩进
+MD009: false # 行尾空格
+MD012: false # 连续空行
+MD013: false # 行宽（与 Prettier/长 URL、中文段落不兼容）
+MD022: false # 标题周围空行
+MD024: false # 重复标题
+MD025: false # 单文档多个一级标题
+MD026: false # 标题尾随标点
+MD027: false # 引用块多空格
+MD028: false # 引用块中空行
+MD029: false # 有序列表前缀
+MD031: false # 围栏代码块周围空行
+MD032: false # 列表周围空行
+MD033: false # 行内 HTML
+MD034: false # 裸 URL
+MD036: false # 用强调代替标题
+MD037: false # 强调内空格
+MD038: false # 行内代码内空格
+MD040: false # 围栏代码语言标签
+MD041: false # 首行必须一级标题
+MD045: false # 图片 alt
+MD047: false # 文件末尾单一换行
+MD049: false # 强调风格统一
+MD051: false # 链接片段
+MD056: false # 表格列数
+MD058: false # 表格周围空行

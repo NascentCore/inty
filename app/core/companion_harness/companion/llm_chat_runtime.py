@@ -29,6 +29,7 @@ from app.core.companion_harness.companion.langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
 from app.core.companion_harness.companion.models import InnerTickMode
+from app.utils.models_catalog import GenAIModel, genai_model_langsmith_meta_subset
 
 _OPEN_LANGSMITH_PARENT_LOCK = threading.Lock()
 _OPEN_LANGSMITH_PARENT_RUNS: dict[int, Any] = {}
@@ -68,13 +69,11 @@ _LANGSMITH_PARENT_SKIP_PLACEHOLDER_TOOL_MODEL = "m/tool"
 
 
 def _langsmith_parent_models_are_kernel_test_placeholders(
-    chat_model: str, tool_model: str
+    chat_model: GenAIModel, tool_model: GenAIModel
 ) -> bool:
-    cm = (chat_model or "").strip()
-    tm = (tool_model or "").strip()
     return (
-        cm == _LANGSMITH_PARENT_SKIP_PLACEHOLDER_CHAT_MODEL
-        and tm == _LANGSMITH_PARENT_SKIP_PLACEHOLDER_TOOL_MODEL
+        chat_model.id_on_provider == _LANGSMITH_PARENT_SKIP_PLACEHOLDER_CHAT_MODEL
+        and tool_model.id_on_provider == _LANGSMITH_PARENT_SKIP_PLACEHOLDER_TOOL_MODEL
     )
 
 
@@ -84,17 +83,21 @@ def companion_turn_langsmith_parent_enabled() -> bool:
 
 def _langsmith_parent_run_extra_metadata(
     *,
-    chat_model: str,
-    tool_model: str,
+    chat_model: GenAIModel,
+    tool_model: GenAIModel,
     user_id: str = "",
     companion_id: str = "",
 ) -> dict[str, Any]:
     """Align with langsmith.wrappers._openai ``ls_model_name`` for trace filtering."""
-    cm = (chat_model or "").strip()
-    tm = (tool_model or "").strip()
+    cm = chat_model.id_on_provider.strip()
+    tm = tool_model.id_on_provider.strip()
     meta: dict[str, Any] = {
         "inty_chat_model": cm,
         "inty_tool_model": tm,
+        "inty_chat_model_nickname": chat_model.nickname,
+        "inty_tool_model_nickname": tool_model.nickname,
+        "inty_chat_model_catalog": genai_model_langsmith_meta_subset(chat_model),
+        "inty_tool_model_catalog": genai_model_langsmith_meta_subset(tool_model),
         "inty_user_id": (user_id or "").strip(),
         "inty_companion_id": (companion_id or "").strip(),
     }
@@ -150,8 +153,8 @@ def create_companion_turn_root_run(
     *,
     inty_trace_id: str,
     user_msg_uuid: str,
-    chat_model: str = "",
-    tool_model: str = "",
+    chat_model: GenAIModel,
+    tool_model: GenAIModel,
     user_id: str = "",
     companion_id: str = "",
     parent_run_enabled: bool | None = None,
@@ -166,14 +169,12 @@ def create_companion_turn_root_run(
     )
     if not enabled:
         return None
-    cm = (chat_model or "").strip()
-    tm = (tool_model or "").strip()
-    if _langsmith_parent_models_are_kernel_test_placeholders(cm, tm):
+    if _langsmith_parent_models_are_kernel_test_placeholders(chat_model, tool_model):
         logger.debug(
             "companion_turn_langsmith_parent skipped: kernel test placeholder models "
             "chat_model={!r} tool_model={!r}",
-            cm,
-            tm,
+            chat_model.id_on_provider,
+            tool_model.id_on_provider,
         )
         return None
     try:
@@ -191,8 +192,8 @@ def create_companion_turn_root_run(
             )
         )
         meta = _langsmith_parent_run_extra_metadata(
-            chat_model=cm,
-            tool_model=tm,
+            chat_model=chat_model,
+            tool_model=tool_model,
             user_id=uid,
             companion_id=cid,
         )
@@ -204,8 +205,10 @@ def create_companion_turn_root_run(
         root_inputs: dict[str, Any] = {
             "inty_trace_id": inty_trace_id,
             "user_msg_uuid": user_msg_uuid,
-            "chat_model": cm,
-            "tool_model": tm,
+            "chat_model": chat_model.id_on_provider,
+            "tool_model": tool_model.id_on_provider,
+            "chat_model_catalog": genai_model_langsmith_meta_subset(chat_model),
+            "tool_model_catalog": genai_model_langsmith_meta_subset(tool_model),
             "user_id": uid,
             "companion_id": cid,
             "inty_turn_lane": turn_lane,
