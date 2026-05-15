@@ -18,6 +18,7 @@ class PromptSliceId(StrEnum):
 
     BOOTSTRAP = "BOOTSTRAP"
     SOUL = "SOUL"
+    STYLE = "STYLE"
     IDENTITY = "IDENTITY"
     USER = "USER"
     MEMORY = "MEMORY"
@@ -38,6 +39,7 @@ _PERSISTABLE_SLICE_IDS: Final[frozenset[PromptSliceId]] = frozenset(
     {
         PromptSliceId.IDENTITY,
         PromptSliceId.SOUL,
+        PromptSliceId.STYLE,
         PromptSliceId.USER,
         PromptSliceId.MEMORY,
     }

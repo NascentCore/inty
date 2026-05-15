@@ -19,6 +19,9 @@ from app.core.companion_harness.companion.manager import (
     CompanionManager,
     CompanionSession,
 )
+from app.core.companion_harness.memory.memory_registry import (
+    MEMORY_STORE_REGISTRY_REQUIRES_DSN,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
@@ -178,8 +181,11 @@ def _companion_manager_for_resolved_model(
         if tc_raw is not None
         else None
     )
+    db_url = (cfg.database.url or "").strip()
+    if not db_url:
+        raise RuntimeError(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
     companion_cfg = CompanionConfig(
-        memory_pg_dsn=cfg.database.url,
+        memory_pg_dsn=db_url,
         llm=llm,
         default_context_mode=feats.companion_default_context_mode,
         transcript_compaction=transcript_compaction,

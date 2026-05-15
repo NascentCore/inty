@@ -12,7 +12,7 @@ async dual-LLM (tools present) always for that chat leg; for the single-completi
 ``use_dual_structured_chat`` is true (no tools, not inner-tick async background route). If the parsed
 envelope has ``output_to_user=false`` on either foreground chat path, ``run_turn`` logs WARNING with
 ``trace_id``: the prompt/schema contract requires true on chat branches (false is for tool_background
-routing); the model may still drift. Full pipeline notes: ``significance_perception.py`` module docstring.
+routing); the model may still drift. Full pipeline notes: ``dual_llm_chat_branch_envelope`` module docstring.
 
 **``output_to_user`` warning**: The dual-LLM JSON envelope is shared with ``tool_background`` finish,
 where ``output_to_user`` may be false (silent recap). On **foreground** chat completions it must be
@@ -76,7 +76,7 @@ from .models import (
     transcript_relative_path_for_turn_persistence,
 )
 from .prompt_stack import companion_turn_tools_and_system_messages
-from .significance_perception import (
+from .dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
 )

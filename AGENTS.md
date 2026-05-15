@@ -86,7 +86,7 @@ such experience is between human users and AI, but they have real-world patterns
     - [iMate iOS app](/imate_ios_app/)
 - Repo agentic harness
   - [.agents](/.agents/) contextual information for your reference
-    - [USER_PREFERENCES.md](/.agents/USER_PREFERENCES.md): Learn user preferences and save them here.
+    - [USERS.md](/.agents/USERS.md): Learn user preferences and save them here.
       Some occasions to learn user preferences:
       - User corrects your mistake(s)
       - User states what they prefer from your suggested options
@@ -96,6 +96,7 @@ such experience is between human users and AI, but they have real-world patterns
   - [.cursor](/.cursor/) Cursor-specific harness
 - Rest of the repo
   - Docs for your human partners: markdown files spread across the repo not under `/.agents/`
+  - Do not bother updating affected code under `/experimental/`
 
 ## General instructions
 
@@ -113,10 +114,20 @@ such experience is between human users and AI, but they have real-world patterns
 
 ## Engineering guidelines
 
+- Functions/classes/code-files/components/packages should be deep in effectiveness, and narrow interfaces.
 - Document your code as you go, not after.
 - Make a plan before diving into the coding.
 - Derive solution from the essence of the problem.
 - Test everything, often, as you write it.
+
+### Smells
+
+- If a simple changes requires scattered changes, that means
+  code that changes together are not grouped together
+- If writing tests are complicated, that means interface is incoherent,
+  behaviors are not well abstracted
+- If code is difficult to described in much shorter documentation,
+  that means the code lacks hierarchy.
 
 ### Writing code
 
@@ -146,6 +157,7 @@ such experience is between human users and AI, but they have real-world patterns
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
 - **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
   document the intention and effect of the code, do not explain how the code works.
+  - Write TODOs close to the code place should be changed.
 - Do not repeat information that can be easily derived from code.
 - Things do write:
   - higher-logical-level design of components and systems

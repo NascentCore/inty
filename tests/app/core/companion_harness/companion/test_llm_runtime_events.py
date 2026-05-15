@@ -13,7 +13,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     exc_chain_includes_llm_inference_failure_root_causes,
     record_llm_inference_failure,
 )
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.runtime_events import read_runtime_events
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.llm.chat_completions import (
@@ -24,7 +24,7 @@ from app.core.companion_harness.llm.chat_completions import (
 
 def test_record_llm_inference_failure_skips_without_bind(tmp_path) -> None:
     scope = CompanionScope("lr", "a", tmp_path.name)
-    store = get_memory_store(scope, dsn="")
+    store = MemoryStore(scope=scope, repository=None)
     record_llm_inference_failure(
         model="m/a",
         exc=CompanionLLMInferenceBackendError(
@@ -36,7 +36,7 @@ def test_record_llm_inference_failure_skips_without_bind(tmp_path) -> None:
 
 def test_create_chat_completion_sync_writes_llm_inference_failure(tmp_path) -> None:
     scope = CompanionScope("lr", "a", f"{tmp_path.name}-ev")
-    store = get_memory_store(scope, dsn="")
+    store = MemoryStore(scope=scope, repository=None)
     bind = LlmRuntimeEventBind(
         memory_store=store,
         trace_id="tr-ev-1",

@@ -13,7 +13,7 @@ import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import InnerTickMode
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
@@ -24,7 +24,10 @@ from app.core.companion_harness.companion.turn import (
 
 
 def _store(p: Path):
-    return get_memory_store(CompanionScope("adllm", "a", str(p.resolve())), dsn="")
+    return MemoryStore(
+        scope=CompanionScope("adllm", "a", str(p.resolve())),
+        repository=None,
+    )
 
 
 def _assert_no_adjacent_user_roles(messages: list[dict[str, Any]]) -> None:

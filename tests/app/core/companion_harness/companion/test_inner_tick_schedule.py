@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from datetime import timedelta
 
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.inner_tick_schedule import (
     InnerTickScheduleOverrides,
@@ -22,9 +22,11 @@ from app.core.companion_harness.companion.sleep_state import (
 )
 
 
-def _write_transcript_store(scope: CompanionScope, rows: list[dict[str, object]]) -> None:
+def _write_transcript_store(scope: CompanionScope, rows: list[dict[str, object]]) -> MemoryStore:
     body = "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n"
-    get_memory_store(scope, dsn="").write_document("transcript.jsonl", body)
+    st = MemoryStore(scope=scope, repository=None)
+    st.write_document("transcript.jsonl", body)
+    return st
 
 
 def test_inner_tick_env_unset_defaults_enabled() -> None:
@@ -34,7 +36,7 @@ def test_inner_tick_env_unset_defaults_enabled() -> None:
 
 def test_next_inner_tick_short_transcript_returns_poll_chunk(tmp_path: Path) -> None:
     sc = CompanionScope("it", "a", f"short-{tmp_path.name}")
-    _write_transcript_store(
+    store = _write_transcript_store(
         sc,
         [
             {
@@ -45,7 +47,6 @@ def test_next_inner_tick_short_transcript_returns_poll_chunk(tmp_path: Path) -> 
             },
         ],
     )
-    store = get_memory_store(sc, dsn="")
     with patch.dict(os.environ, {}, clear=True):
         w = next_inner_tick_wait_seconds(store, last_inner_fire_monotonic=None)
     assert 0.0 < w < 86400.0 * 10
@@ -53,7 +54,7 @@ def test_next_inner_tick_short_transcript_returns_poll_chunk(tmp_path: Path) -> 
 
 def test_next_inner_tick_overrides_enabled_false_disables(tmp_path: Path) -> None:
     sc = CompanionScope("it", "a", f"ov-{tmp_path.name}")
-    _write_transcript_store(
+    store = _write_transcript_store(
         sc,
         [
             {
@@ -70,7 +71,6 @@ def test_next_inner_tick_overrides_enabled_false_disables(tmp_path: Path) -> Non
             },
         ],
     )
-    store = get_memory_store(sc, dsn="")
     w = next_inner_tick_wait_seconds(
         store,
         last_inner_fire_monotonic=None,
@@ -81,7 +81,7 @@ def test_next_inner_tick_overrides_enabled_false_disables(tmp_path: Path) -> Non
 
 def test_inner_tick_quiet_remain_and_day_clear(tmp_path: Path) -> None:
     sc = CompanionScope("it", "a", f"sleep-{tmp_path.name}")
-    store = get_memory_store(sc, dsn="")
+    store = MemoryStore(scope=sc, repository=None)
     record_inner_tick_quiet_hours_from_now(store, hours=4.0)
     st = load_sleep_state(store)
     mid = st.inner_tick_quiet_until_utc
@@ -96,7 +96,7 @@ def test_inner_tick_quiet_remain_and_day_clear(tmp_path: Path) -> None:
 
 def test_maintenance_wait_matches_max_of_schedule_and_quiet(tmp_path: Path) -> None:
     sc = CompanionScope("it", "a", f"max-{tmp_path.name}")
-    _write_transcript_store(
+    store = _write_transcript_store(
         sc,
         [
             {
@@ -113,7 +113,6 @@ def test_maintenance_wait_matches_max_of_schedule_and_quiet(tmp_path: Path) -> N
             },
         ],
     )
-    store = get_memory_store(sc, dsn="")
     record_inner_tick_quiet_hours_from_now(store, hours=10.0)
     with patch.dict(os.environ, {}, clear=True):
         sched = next_inner_tick_wait_seconds(
@@ -136,7 +135,7 @@ def test_inner_tick_quiet_cleared_only_after_explicit_day_clear_call(
     tmp_path: Path,
 ) -> None:
     sc = CompanionScope("it", "a", f"dayclear-{tmp_path.name}")
-    store = get_memory_store(sc, dsn="")
+    store = MemoryStore(scope=sc, repository=None)
     record_inner_tick_quiet_hours_from_now(store, hours=1.0)
     clear_inner_tick_quiet_if_circadian_day(store, is_night=True)
     assert load_sleep_state(store).inner_tick_quiet_until_utc is not None

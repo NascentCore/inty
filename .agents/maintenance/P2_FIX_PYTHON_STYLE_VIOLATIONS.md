@@ -78,7 +78,7 @@ maintenance agents can fix the highest-impact item first.
 ### Newly discovered open violations
 
 - [x] Google 2.4 "Exceptions":
-  `/app/core/companion_harness/companion/significance_perception.py` catches broad
+  `/app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py` catches broad
   `Exception` while parsing and extracting dual-LLM envelope candidates, then
   silently returns `None` or `[]`. Narrow to JSON/Pydantic/model-dump failures
   or log unexpected parser failures so malformed companion envelopes do not

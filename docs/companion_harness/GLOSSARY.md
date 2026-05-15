@@ -37,7 +37,7 @@
 
 | 术语 | 定义 |
 |------|------|
-| **Inner-tick** | 用户空闲时的**合成轮次**；模式上分为 **proactive_chat**、**maintenance** 等（以 `InnerTickMode` 与 wire `meta_data` 为准）。 |
+| **Inner-tick** | 用户空闲时的**合成轮次**；模式上分为 **proactive_chat**、**maintenance** 等（以 `InnerTickMode` 与 wire `meta_data` 为准）。**当前实现**：`maintenance` 在带工具时常跳过前台，对客户侧若出现可见正文，多经 **`tool_bg` 对话下行**（与 `proactive_chat` 的前台助手帧路径不同）；见 [ARCH.md「当前事实：/api/v1/chat/ws 下行与内在节拍」](/docs/companion_harness/ARCH.md)。 |
 | **ai_private** | **非独立运行时循环**；`MemoryStore` 中 `ai_private.jsonl` / `ai_private.md` 的**提示词注入材料**（「内在活动」），供 inner-tick 等组装 system 时使用。 |
 
 ## 使用约定（避免歧义）
