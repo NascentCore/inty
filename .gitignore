@@ -70,10 +70,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 yarn.lock
+tools/markdownlint/package-lock.json
 
 # IDE相关
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 *.swp
 *.swo
 .DS_Store

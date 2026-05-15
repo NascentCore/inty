@@ -1,0 +1,8 @@
+# markdownlint-cli2 入口：glob / 忽略 / 与 .gitignore 对齐（仅 CLI 层；规则见 .markdownlint.yaml）。
+gitignore: true
+globs:
+  - "**/*.md"
+ignores:
+  - "**/node_modules/**"
+  - "**/.venv/**"
+  - ".github/ISSUE_TEMPLATE/**"

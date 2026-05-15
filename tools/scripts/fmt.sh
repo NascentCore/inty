@@ -1,5 +1,14 @@
 #!/bin/bash -e
 
+# 与 tools/scripts/lint-markdown.sh 使用同一 CLI；本地若无 node_modules 则自动 npm install。
+run_markdownlint() {
+    echo "Linting Markdown (markdownlint-cli2)..."
+    if [ ! -d tools/markdownlint/node_modules ]; then
+        npm install --prefix tools/markdownlint
+    fi
+    npx --prefix tools/markdownlint markdownlint-cli2
+}
+
 # Check for --all flag and CI commit behavior
 FORMAT_ALL=false
 FMT_NO_COMMIT=${FMT_NO_COMMIT:-false}
@@ -15,6 +24,7 @@ if [ "$FORMAT_ALL" = true ]; then
     black app/ tools/scripts/ experimental/
     # Format all other files
     npx prettier --write evaluation/ web_app/
+    run_markdownlint
     echo "Formatting complete!"
     echo
     
@@ -76,6 +86,8 @@ if [ -n "$OTHER_FILES" ]; then
     echo "Formatting other files with prettier..."
     npx prettier --write $OTHER_FILES
 fi
+
+run_markdownlint
 
 echo "Formatting complete!"
 echo
