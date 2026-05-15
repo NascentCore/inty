@@ -41,9 +41,13 @@ class CompanionLLMConfig(BaseModel):
     async_chat_front_timeout_sec: float = Field(default=600.0, ge=1.0)
 
     @classmethod
-    def from_openrouter_env(
-        cls,
-    ) -> CompanionLLMConfig:
+    def from_openrouter_env(cls) -> CompanionLLMConfig:
+        """Load credentials and HTTP timeout from the process environment.
+
+        Model identifiers are **not** read from the environment; production and
+        scripts should set ``default_model`` / role models via ``config.yaml`` or
+        explicit ``CompanionLLMConfig(...)`` construction.
+        """
         key = (
             os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
         ).strip()
@@ -60,18 +64,6 @@ class CompanionLLMConfig(BaseModel):
                 "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
             ).strip()
             or "https://openrouter.ai/api/v1",
-            default_model=os.getenv(
-                "INTY_V2_PROTO_MODEL", "deepseek/deepseek-v3.2"
-            ).strip()
-            or "deepseek/deepseek-v3.2",
-            chat_model=(os.getenv("INTY_V2_PROTO_CHAT_MODEL") or "").strip(),
-            tool_model=(os.getenv("INTY_V2_PROTO_TOOL_MODEL") or "").strip(),
-            memory_model=(os.getenv("INTY_V2_PROTO_MEMORY_MODEL") or "").strip(),
-            day_summary_model=(
-                os.getenv("INTY_V2_PROTO_DAY_SUMMARY_MODEL") or ""
-            ).strip(),
-            user_model=(os.getenv("INTY_V2_PROTO_USER_MODEL") or "").strip(),
-            soul_model=(os.getenv("INTY_V2_PROTO_SOUL_MODEL") or "").strip(),
             async_chat_front_timeout_sec=timeout_sec,
         )
 
