@@ -21,6 +21,7 @@ from app.core.companion_harness.companion.turn import (
     CHAT_TRACK_RESPONSE_MESSAGE_TITLE,
     run_turn,
 )
+from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
 def _store(p: Path):
@@ -42,15 +43,15 @@ class _FakeAsyncDualLLMClient:
     def __init__(self) -> None:
         self.config = CompanionLLMConfig(
             api_key="k",
-            default_model="m/default",
-            chat_model="m/chat",
-            tool_model="m/tool",
+            default_model=resolve_chat_text_model("m/default"),
+            chat_model=resolve_chat_text_model("m/chat"),
+            tool_model=resolve_chat_text_model("m/tool"),
             async_chat_front_timeout_sec=120.0,
         )
         self.chat_calls: list[dict[str, Any]] = []
 
-    def resolve_model(self, role: str) -> str:
-        return f"m/{role}"
+    def resolve_model(self, role: str) -> GenAIModel:
+        return resolve_chat_text_model(f"m/{role}")
 
     def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_calls.append(kwargs)
@@ -125,7 +126,7 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     bg_msgs = bg_jobs[0]["request_messages"]
     bg_system = [m for m in bg_msgs if m.get("role") == "system"]
     assert len(bg_system) >= 2, "background tool path should use multiple system messages"
-    assert bg_jobs[0]["tool_model_name"] == "m/tool"
+    assert bg_jobs[0]["tool_model"].id_on_provider == "m/tool"
     assert bg_jobs[0]["main_event_loop"] is loop
     assert bg_jobs[0]["force_tools_first_round"] is False
     _assert_no_adjacent_user_roles(bg_msgs)
@@ -217,15 +218,15 @@ class _FakeAsyncDualLLMClientEmptyFg:
     def __init__(self) -> None:
         self.config = CompanionLLMConfig(
             api_key="k",
-            default_model="m/default",
-            chat_model="m/chat",
-            tool_model="m/tool",
+            default_model=resolve_chat_text_model("m/default"),
+            chat_model=resolve_chat_text_model("m/chat"),
+            tool_model=resolve_chat_text_model("m/tool"),
             async_chat_front_timeout_sec=120.0,
         )
         self.chat_calls: list[dict[str, Any]] = []
 
-    def resolve_model(self, role: str) -> str:
-        return f"m/{role}"
+    def resolve_model(self, role: str) -> GenAIModel:
+        return resolve_chat_text_model(f"m/{role}")
 
     def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_calls.append(kwargs)

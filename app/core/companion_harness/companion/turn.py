@@ -495,7 +495,7 @@ async def run_turn(
                                 langsmith_llm_run_acc = ls_lr
                         except asyncio.TimeoutError as exc:
                             record_llm_inference_failure(
-                                model=chat_model,
+                                model=chat_model.id_on_provider,
                                 exc=exc,
                                 foreground_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
                             )
@@ -549,7 +549,7 @@ async def run_turn(
                     start_tool_background_job(
                         memory_store=store,
                         request_messages=tool_msgs_for_bg,
-                        tool_model_name=tool_model,
+                        tool_model=tool_model,
                         user_msg_uuid=user_msg_uuid,
                         trace_id=trace_id,
                         tools=tools_for_turn,

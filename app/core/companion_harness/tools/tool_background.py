@@ -26,6 +26,7 @@ from app.services.agent_status_line import (
     set_tool_background_db_loop,
 )
 from app.utils.config import CompanionMemoryBootstrapType
+from app.utils.models_catalog import GenAIModel, genai_model_langsmith_meta_subset
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
@@ -544,7 +545,7 @@ async def _run_background_tool_loop(
     *,
     memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
-    tool_model_name: str,
+    tool_model: GenAIModel,
     user_msg_uuid: str,
     trace_id: str,
     tools: list[Any],
@@ -567,6 +568,7 @@ async def _run_background_tool_loop(
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=inner_tick_mode,
     )
+    tool_api_id = tool_model.id_on_provider
     try:
         if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
@@ -580,7 +582,8 @@ async def _run_background_tool_loop(
             {
                 "runtime_config": {
                     "source": "tool_background",
-                    "tool_model_name": tool_model_name,
+                    "tool_model_name": tool_api_id,
+                    "tool_model_catalog": genai_model_langsmith_meta_subset(tool_model),
                     "trace_id": trace_id,
                     "inner_tick_turn": inner_tick_turn,
                     "inner_tick_mode": inner_tick_mode.value,
@@ -588,11 +591,11 @@ async def _run_background_tool_loop(
                     "force_tools_first_round": force_tools_first_round,
                     "llm_call_notes": (
                         "Foreground CompanionLLMConfig is not copied into this async tool_background "
-                        "path; use tool_model_name and last_chat_completion_request. "
+                        "path; use tool_model_name (API id), tool_model_catalog, and last_chat_completion_request. "
                         "temperature/max_tokens are not set in companion code (provider defaults)."
                     ),
                     "openrouter_extra_body_tool_path": tool_path_chat_completion_kwargs(
-                        tool_model_name
+                        tool_model
                     ),
                 },
                 "last_chat_completion_request": None,
@@ -618,14 +621,14 @@ async def _run_background_tool_loop(
             _initial_tool_bg_completion_with_fallbacks,
             resolved_client,
             chat_completion_sync,
-            model=tool_model_name,
+            model=tool_api_id,
             messages_payload=payload,
             tools=tools,
             force_tools=force_tools,
         )
         runtime_inspect_set_last_chat_completion_request(
             build_last_chat_completion_request_payload(
-                model=tool_model_name,
+                model=tool_model,
                 messages=list(payload),
                 tools=tools,
                 tool_choice=initial_meta.tool_choice,
@@ -645,7 +648,7 @@ async def _run_background_tool_loop(
         active_round = rounds_used
         _log_bg_llm_round_result(
             round_idx=active_round,
-            model=tool_model_name,
+            model=tool_api_id,
             resp=initial_response,
             request_messages=request_snapshot,
             scope_registry_key=scope_registry_key,
@@ -723,7 +726,7 @@ async def _run_background_tool_loop(
             inner_payload = _openai_messages_payload(messages_with_tool_results)
             runtime_inspect_set_last_chat_completion_request(
                 build_last_chat_completion_request_payload(
-                    model=tool_model_name,
+                    model=tool_model,
                     messages=list(inner_payload),
                     tools=tools,
                 )
@@ -731,7 +734,7 @@ async def _run_background_tool_loop(
             next_resp = await asyncio.to_thread(
                 chat_completion_sync,
                 resolved_client,
-                model=tool_model_name,
+                model=tool_api_id,
                 messages_payload=inner_payload,
                 tools=tools,
                 langsmith_extra=tool_call_langsmith_extra(
@@ -744,7 +747,7 @@ async def _run_background_tool_loop(
             )
             _log_bg_llm_round_result(
                 round_idx=active_round,
-                model=tool_model_name,
+                model=tool_api_id,
                 resp=next_resp,
                 request_messages=request_snapshot_inner,
                 scope_registry_key=scope_registry_key,
@@ -814,7 +817,7 @@ async def _run_background_tool_loop(
         )
         routing = resolve_tool_bg_routing_sync(
             client=resolved_client,
-            model=tool_model_name,
+            model=tool_api_id,
             create_completion_sync=chat_completion_sync,
             conversation_messages=list(loop_result.messages),
             final_assistant_content=raw_final,
@@ -978,7 +981,7 @@ def start_tool_background_job(
     *,
     memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
-    tool_model_name: str,
+    tool_model: GenAIModel,
     user_msg_uuid: str,
     trace_id: str,
     tools: list[Any],
@@ -1027,7 +1030,7 @@ def start_tool_background_job(
                 _run_background_tool_loop(
                     memory_store=memory_store,
                     request_messages=request_messages,
-                    tool_model_name=tool_model_name,
+                    tool_model=tool_model,
                     user_msg_uuid=user_msg_uuid,
                     trace_id=trace_id,
                     tools=tools,
@@ -1066,7 +1069,7 @@ def start_tool_background_job(
                         "kind": "tool_background_failure",
                         "trace_id": trace_id,
                         "user_msg_uuid": user_msg_uuid,
-                        "tool_model_name": tool_model_name,
+                        "tool_model_name": tool_model.id_on_provider,
                         "inner_tick_turn": inner_tick_turn,
                         "inner_tick_mode": inner_tick_mode.value,
                         "error_type": type(exc).__name__,

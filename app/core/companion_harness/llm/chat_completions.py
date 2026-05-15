@@ -30,6 +30,7 @@ from app.core.companion_harness.llm.langsmith_completion_enrich import (
 from app.core.companion_harness.llm.openrouter_tool_params import (
     tool_path_chat_completion_kwargs,
 )
+from app.utils.models_catalog import resolve_chat_text_model
 
 _OPENROUTER_JSON_MAX_ATTEMPTS = 3
 _OPENROUTER_JSON_BACKOFF_SECONDS = (0.25, 0.75)
@@ -63,7 +64,9 @@ def create_chat_completion_sync(
     # ``reasoning_details`` while leaving ``message.content`` empty. Companion parsing validates
     # those side channels before using them; raw non-JSON reasoning is never surfaced.
     if high_reasoning:
-        create_kw.update(tool_path_chat_completion_kwargs(model))
+        create_kw.update(
+            tool_path_chat_completion_kwargs(resolve_chat_text_model(model))
+        )
     if tools:
         create_kw["tools"] = tools
         create_kw["parallel_tool_calls"] = True

@@ -18,6 +18,7 @@ from app.core.companion_harness.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_sync_client,
 )
+from app.utils.models_catalog import DEEPSEEK_V3_2, GenAIModel
 
 LLM_SCENE_CHAT = "chat"
 LLM_SCENE_TOOL_CALL = "tool_call"
@@ -29,14 +30,14 @@ LLMScene = Literal["chat", "tool_call", "inner_tick"]
 class CompanionLLMConfig(BaseModel):
     """LLM model configuration for companion."""
 
-    default_model: str = "deepseek/deepseek-v3.2"
-    chat_model: str = ""
-    tool_model: str = ""
-    memory_model: str = ""
-    day_summary_model: str = ""
-    user_model: str = ""
-    style_model: str = ""
-    soul_model: str = ""
+    default_model: GenAIModel = Field(default_factory=lambda: DEEPSEEK_V3_2)
+    chat_model: GenAIModel | None = None
+    tool_model: GenAIModel | None = None
+    memory_model: GenAIModel | None = None
+    day_summary_model: GenAIModel | None = None
+    user_model: GenAIModel | None = None
+    style_model: GenAIModel | None = None
+    soul_model: GenAIModel | None = None
     api_base: str = "https://openrouter.ai/api/v1"
     api_key: str = ""
     async_chat_front_timeout_sec: float = Field(default=600.0, ge=1.0)
@@ -59,6 +60,7 @@ class CompanionLLMConfig(BaseModel):
             timeout_sec = float(timeout_raw) if timeout_raw else 600.0
         except ValueError:
             timeout_sec = 600.0
+
         return cls(
             api_key=key,
             api_base=os.getenv(
@@ -148,16 +150,16 @@ class CompanionLLMClient:
             return self._ensure_inner_tick_client()
         return self._client
 
-    def resolve_model(self, role: str) -> str:
-        """Return model id for a config role (``chat``, ``tool``, ``memory``, ...), else ``default_model``."""
-        model = getattr(self._config, f"{role}_model", "") or ""
-        return model if model else self._config.default_model
+    def resolve_model(self, role: str) -> GenAIModel:
+        """Return catalog model for a config role (``chat``, ``tool``, ``memory``, ...), else ``default_model``."""
+        m: GenAIModel | None = getattr(self._config, f"{role}_model", None)
+        return m if m is not None else self._config.default_model
 
     def chat_completion(
         self,
         *,
         messages: list[dict[str, Any]],
-        model: str | None = None,
+        model: GenAIModel | None = None,
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
@@ -180,9 +182,10 @@ class CompanionLLMClient:
         else:
             client = self._ensure_dual_chat_client()
             m = model or self.resolve_model("chat")
+        api_model = m.id_on_provider
         return self.chat_completions_sync(
             client,
-            model=m,
+            model=api_model,
             messages_payload=messages,
             tools=tool_list,
             tool_choice=tool_choice,
@@ -195,16 +198,17 @@ class CompanionLLMClient:
         self,
         *,
         messages: list[dict[str, Any]],
-        model: str | None = None,
+        model: GenAIModel | None = None,
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
         high_reasoning: bool = False,
     ) -> Any:
         """Single client path (no dual routing), for bootstrap or tests."""
         m = model or self.resolve_model("tool" if tools else "chat")
+        api_model = m.id_on_provider
         return self.chat_completions_sync(
             self._client,
-            model=m,
+            model=api_model,
             messages_payload=messages,
             tools=list(tools or []),
             tool_choice=tool_choice,
@@ -218,11 +222,12 @@ class CompanionLLMClient:
         model_role: str = "memory",
     ) -> str:
         m = self.resolve_model(model_role)
+        api_model = m.id_on_provider
         approx_chars = sum(len(str(x.get("content") or "")) for x in messages)
         t_api = time.perf_counter()
         resp = self.chat_completions_sync(
             self._client,
-            model=m,
+            model=api_model,
             messages_payload=messages,
             tools=[],
             langsmith_extra=memory_pipeline_langsmith_extra(model_role=model_role),
@@ -231,7 +236,7 @@ class CompanionLLMClient:
         logger.info(
             "companion complete_text model_role={} model={} chat_completions_ms={:.0f} approx_chars={}",
             model_role,
-            m,
+            api_model,
             api_ms,
             approx_chars,
         )
@@ -240,7 +245,7 @@ class CompanionLLMClient:
             logger.warning(
                 "complete_text got non-string content model_role={} model={}",
                 model_role,
-                m,
+                api_model,
             )
             return ""
         return content.strip()

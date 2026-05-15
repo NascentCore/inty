@@ -42,6 +42,7 @@ from app.services import companion_chat_service
 from app.services.global_services import (
     subscription_service as global_subscription_service,
 )
+from app.utils.models_catalog import GenAIModel
 from tests.app.api.test_client import TestClient
 from tests.app.api.v1.endpoints.conftest import (
     _client_with_user,
@@ -2347,8 +2348,8 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
     assert kw["user_id"] == "user-so-1"
     assert kw["agent_id"] == "agent-so-1"
     assert kw["chat_id"] == 42
-    assert isinstance(kw["resolved_chat_model_id"], str)
-    assert kw["resolved_chat_model_id"]
+    assert isinstance(kw["resolved_chat_model"], GenAIModel)
+    assert kw["resolved_chat_model"].id_on_provider
     line = kw["line"]
     assert isinstance(line, str)
     assert "**user_signed_out**" in line
@@ -2559,8 +2560,8 @@ def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
     assert kw["user_id"] == "user-wd-1"
     assert kw["agent_id"] == "agent-wd-1"
     assert kw["chat_id"] == 42
-    assert isinstance(kw["resolved_chat_model_id"], str)
-    assert kw["resolved_chat_model_id"]
+    assert isinstance(kw["resolved_chat_model"], GenAIModel)
+    assert kw["resolved_chat_model"].id_on_provider
     line = kw["line"]
     assert isinstance(line, str)
     assert "**ws_conn_dropped**" in line

@@ -16,6 +16,7 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
     tool_path_chat_completion_kwargs,
 )
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient
+from app.utils.models_catalog import GenAIModel, genai_model_langsmith_meta_subset
 from app.core.companion_harness.companion.models import (
     AI_PRIVATE_INJECT_MAX_CHARS,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -219,8 +220,8 @@ def build_turn_runtime_config_dict(
             "chat_id": context.chat_id,
         },
         "llm": llm_dump,
-        "resolved_model_chat": rm_chat,
-        "resolved_model_tool": rm_tool,
+        "resolved_model_chat": genai_model_langsmith_meta_subset(rm_chat),
+        "resolved_model_tool": genai_model_langsmith_meta_subset(rm_tool),
         "openrouter_extra_kwargs_chat": tool_path_chat_completion_kwargs(rm_chat),
         "openrouter_extra_kwargs_tool": tool_path_chat_completion_kwargs(rm_tool),
         "llm_call_notes": (
@@ -253,7 +254,7 @@ def build_turn_runtime_config_dict(
 
 def build_last_chat_completion_request_payload(
     *,
-    model: str,
+    model: GenAIModel,
     messages: list[dict[str, Any]],
     tools: list[Any] | None,
     tool_choice: str | None = None,
@@ -261,7 +262,8 @@ def build_last_chat_completion_request_payload(
 ) -> dict[str, Any]:
     norm, w = normalize_messages_for_snapshot(messages)
     payload: dict[str, Any] = {
-        "model": model,
+        "model": model.id_on_provider,
+        "model_catalog": genai_model_langsmith_meta_subset(model),
         "messages": norm,
         "tools_summary": tools_summary_from_openai_tools(tools),
         "openrouter_extra_body": tool_path_chat_completion_kwargs(model),

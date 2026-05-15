@@ -28,6 +28,7 @@ from app.core.companion_harness.companion.user_time_context_llm_slice import (
 )
 from app.schemas.chat import UserTimeContext
 from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
 class _FakeLLMClient:
@@ -42,8 +43,8 @@ class _FakeLLMClient:
     def chat_completions_sync(self):
         return create_chat_completion_sync
 
-    def resolve_model(self, role: str) -> str:
-        return f"test/{role}"
+    def resolve_model(self, role: str) -> GenAIModel:
+        return resolve_chat_text_model(f"test/{role}")
 
     def chat_completion(self, **kwargs: Any) -> Any:
         rec = dict(kwargs)
