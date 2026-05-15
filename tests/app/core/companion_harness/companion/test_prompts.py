@@ -54,11 +54,17 @@ def test_build_system_prompt_heartbeat() -> None:
 
 
 def test_build_system_prompt_tools() -> None:
+    b = _minimal_bundle().model_copy(
+        update={"tools_md": "# Tools heading\n\nTool slice body for test."}
+    )
     text = build_system_prompt(
-        _minimal_bundle(),
+        b,
         ContextMeta(),
         enable_tools=True,
     )
+    assert "## TOOLS" not in text
+    assert "# Tools heading" in text
+    assert "Tool slice body for test." in text
     assert "user_profile_record" in text
     assert "memory_store_read_document" in text
 

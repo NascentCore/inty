@@ -1,20 +1,21 @@
 """Canonical companion system-message stack assembly.
 
-Builds the ordered list of `{"role":"system","content":...}` slices injected before each
-companion LLM round (chat / tool-side / inner-tick / dual-LLM chat-only branch). Memory-backed
-bodies (IDENTITY / SOUL / USER / TechnoCore / LivingSphere / significance) are each one system
-message whose content is the stored Markdown as-is—no extra synthetic ``## SLICE`` line is
-prepended, so documents may use their own headings without duplicate hierarchy. Reads axiom text
-via ``get_imate_axiom_system_text`` and slice constants from ``..prompt_slices``; consumed by
-``..turn``, ``..turn_engine``, ``..prompt_stack``.
+Builds the ordered `{"role":"system","content":...}` messages prepended before each
+companion LLM call: main chat, tool-side compact, inner tick, and dual-LLM chat-only.
+Each logical slice—identity, soul, user, TechnoCore / LivingSphere, optional significance,
+the packaged tools template, and selected fixed clauses (security, heartbeat, contracts,
+etc.)—is its own system message; `content` is the stored or packaged Markdown verbatim.
 
-When ``include_significance_perception_slice`` is true, injects ``SIGNIFICANCE_PERCEPTION.md``
-(body from ``PromptBundle.significance_perception_md``) plus the dual-envelope JSON output contract
-(``_dual_llm_chat_structured_output_contract_text``) so the model fills ``importance_*`` fields;
-downstream usage is documented in ``..significance_perception`` module docstring.
+Axiom prose comes from `get_imate_axiom_system_text`; shared slice material from
+`..prompt_slices`. Callers: `..turn`, `..turn_engine`, `..prompt_stack`.
 
-Kept as a sibling module of the MD assets in this package so `prompts/__init__.py` stays
-docstring-only (see `app/AGENTS.md`).
+When `include_significance_perception_slice` is true (and the path is not inner-tick-only),
+appends `SIGNIFICANCE_PERCEPTION.md` body from `PromptBundle.significance_perception_md`
+plus `_dual_llm_chat_structured_output_contract_text` so the model can emit `importance_*`
+fields; semantics and consumers live in `..significance_perception`.
+
+Co-located with prompt markdown assets so `prompts/__init__.py` stays docstring-only
+(see `app/AGENTS.md`).
 """
 
 from __future__ import annotations
@@ -385,15 +386,11 @@ def build_system_messages(
     )
 
     out: list[dict[str, Any]] = []
-    axiom = get_imate_axiom_system_text()
-    if axiom:
-        out.append(_system_message(axiom))
+    out.append(_system_message(get_imate_axiom_system_text()))
     out.append(_system_message(_security_base()))
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
-        out.append(
-            _system_message("## TOOLS（工具说明切片）\n\n" + bundle.tools_md.strip())
-        )
+        out.append(_system_message(bundle.tools_md.strip()))
 
     if tick_proactive:
         out.append(_system_message(_heartbeat_clause()))

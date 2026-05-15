@@ -56,10 +56,7 @@ def _is_official_assistant(*, context: Any, config: PromptAssemblerConfig) -> bo
 
 
 def _axiom_system_messages_prefix() -> list[SystemMessage]:
-    axiom = get_imate_axiom_system_text()
-    if not axiom:
-        return []
-    return [SystemMessage(content=axiom)]
+    return [SystemMessage(content=get_imate_axiom_system_text())]
 
 
 def _get_effective_main_prompt(
