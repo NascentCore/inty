@@ -18,10 +18,6 @@ app:
     subscribed_user_agent_creation_24h_limit: 5
     free_user_chat_messages_limit: 100
   gcp_service_account_key: "inty-backend-key.json"
-  # If app.features is added: do not set removed inner-tick toggles (FeaturesConfig no longer defines them):
-  # companion_ws_proactive_heartbeat_enabled, companion_ws_maintenance_inner_tick_enabled,
-  # companion_ws_dream_inner_tick_enabled, companion_ws_night_maintenance_inner_tick_only_when_dream_due,
-  # companion_creative_dream_probability
 
 sentry:
   # inty-backend/default
