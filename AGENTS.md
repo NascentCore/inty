@@ -142,6 +142,7 @@ such experience is between human users and AI, but they have real-world patterns
 
 #### Python
 
+- Do not use `.strip()` all the time to clean strings
 - Data structures all use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models
 - CLIs all use [Cyclopts](https://github.com/BrianPugh/cyclopts)
 - Document Python package/module in `__init__.py` docstring.
