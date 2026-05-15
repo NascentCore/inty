@@ -12,6 +12,33 @@ else
 fi
 cd "$REPO_ROOT"
 
+print_usage() {
+  cat <<EOF
+Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-build-frontend]
+
+  Ops (uvicorn backend.ops.main:app). Repo cwd is set to REPO_ROOT before migrations and server.
+
+  Always (before uvicorn): alembic upgrade head (see ALEMBIC_CONFIG / backend/alembic/alembic.ini).
+  Listen port: \${PORT:-8001}.
+
+  Environment (common):
+    INTY_CONFIG_YAML   Config path relative to repo root (e.g. devops/config.yaml.local).
+    INTY_OPS_BEARER_TOKEN_FILE  Where to write the local JWT in --local mode (default: <repo>/.inty_ops_bearer_token).
+
+  Flags (any mode):
+    --debug              Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL).
+    --workspace DIR      Local working directory for file log DIR/inty.log (INTY_LOG_FILE); default DIR is .inty under repo root.
+                         Existing log file is removed at startup. With --debug: console INFO, file DEBUG.
+
+  Flags (--local|--dev only):
+    --local|--dev        Seed admin + report fixtures; uvicorn --reload; write JWT for user-testing (see INTY_OPS_BEARER_TOKEN_FILE).
+    --build-frontend     Run evaluation/build.sh before uvicorn (default: on).
+    --no-build-frontend  Skip that step; use existing app/static/evaluation.
+
+  There is no --log-file; use --workspace DIR if you need logs outside the default .inty directory.
+EOF
+}
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     --local|--dev)
@@ -37,26 +64,13 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --help|-h)
-      echo "Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-build-frontend]"
-      echo ""
-      echo "  Always (before uvicorn): alembic upgrade head (see ALEMBIC_CONFIG / repo backend/alembic/alembic.ini)."
-      echo "  Listen port: \${PORT:-8001}."
-      echo ""
-      echo "  Flags (any mode):"
-      echo "  --debug         Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL)"
-      echo "  --workspace DIR Local working directory for file log DIR/inty.log (INTY_LOG_FILE); default DIR is .inty (repo root)."
-      echo "                  Log file is removed if it already exists at startup."
-      echo "                  With --debug: console INFO (INTY_CONSOLE_LOGGING_LEVEL), file DEBUG."
-      echo ""
-      echo "  Flags (--local|--dev only):"
-      echo "  --build-frontend     Run evaluation/build.sh before uvicorn (default: on)"
-      echo "  --no-build-frontend  Skip that step; use existing app/static/evaluation"
-      echo "  --local|--dev        Seed admin + report fixtures, uvicorn --reload;"
-      echo "                       JWT for user-testing -> \${INTY_OPS_BEARER_TOKEN_FILE:-<repo>/.inty_ops_bearer_token}"
+      print_usage
       exit 0
       ;;
     *)
-      echo "Unknown option: $1"; echo "Use --help for usage"; exit 1
+      echo "Unknown option: $1" >&2
+      print_usage >&2
+      exit 1
       ;;
   esac
 done
