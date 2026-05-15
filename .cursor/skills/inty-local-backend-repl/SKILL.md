@@ -14,7 +14,7 @@ description: >-
 
 ## Ops
 
-Use `INTY_CONFIG_YAML` env var to sepcify the config file for launching the ops variant
+Use `INTY_CONFIG_YAML` env var to specify the config file for launching the ops variant
 of Inty backend.
 
 ```bash
@@ -22,7 +22,7 @@ export INTY_CONFIG_YAML=devops/config.yaml.local
 backend/ops/start.sh --local --debug --no-build-frontend
 ```
 
-`INTY_CONFIG_YAML` 使用仓库根目录为相对路径基准；Ops 文件日志默认为仓库根下 `.inty/inty.log`（可用 `--workspace` 指定其它目录）。
+`INTY_CONFIG_YAML` 使用仓库根目录为相对路径基准；**不传 `--workspace` 时**默认工作目录为仓库根下 **`.inty`**，文件日志 **`.inty/inty.log`**（启动时若已存在会先删除再写）；需要把日志放到其它目录时再传 **`--workspace DIR`**（见 **`backend/ops/start.sh --help`**）。
 
 ## Terminate Ops
 
@@ -56,7 +56,7 @@ AGENT_ID=$(python3 tools/scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR=
 
 After ops instance is ready, respond to user with：
 
-1. Log file path（默认：仓库根下 **`.inty/inty.log`**；若启动时传了 **`--workspace DIR`** 则为 **`DIR/inty.log`**）
+1. Log file path：**`.inty/inty.log`**（仓库根相对路径）
 2. Repl launch command, use the AGENT_ID obtained before:
 
    ```bash

@@ -1,17 +1,18 @@
-"""Canonical companion system-message stack assembly.
+"""Companion **system context** assembly: one place to turn ``PromptBundle`` + turn
+flags into what the model sees as system role(s) before user/assistant messages.
 
-Builds the ordered list of `{"role":"system","content":...}` slices injected before each
-companion LLM round (chat / tool-side / inner-tick / dual-LLM chat-only branch). Reads MD seed
-files via `app.core.companion_harness.memory.memory_store_scope.get_imate_axiom_system_text` and prompt slice constants from
-`..prompt_slices`; consumed by `..turn`, `..turn_engine`, `..prompt_stack`.
+**Intent**: keep product law, safety, persona, world anchors, memory, and **output /
+tool contracts** aligned with how each completion is actually invoked (plain chat,
+tool API, inner tick, or async foreground without OpenAI ``tools=``). Call sites live
+in ``..prompt_stack`` and related turn code; **significance / dual-envelope** semantics
+and parsing are owned by ``..significance_perception``.
 
-When ``include_significance_perception_slice`` is true, injects ``SIGNIFICANCE_PERCEPTION.md``
-(body from ``PromptBundle.significance_perception_md``) plus the dual-envelope JSON output contract
-(``_dual_llm_chat_structured_output_contract_text``) so the model fills ``importance_*`` fields;
-downstream usage is documented in ``..significance_perception`` module docstring.
-
-Kept as a sibling module of the MD assets in this package so `prompts/__init__.py` stays
-docstring-only (see `app/AGENTS.md`).
+**Surfaces**: ``build_system_messages`` is the canonical multi-message list;
+``build_system_prompt`` exists only for callers that still need one concatenated string
+(``SYSTEM_PROMPT_SEP``). Seed text such as the product axiom is loaded via
+``app.core.companion_harness.memory.memory_store_scope`` (companion templates under
+``prompts/``). Kept beside prompt assets so ``prompts/__init__.py`` stays docstring-only
+(see ``app/AGENTS.md``).
 """
 
 from __future__ import annotations
@@ -181,7 +182,6 @@ def _repl_tool_contract_suffix_after_image_clause(
 
 def _output_contract_text_with_tools(
     *,
-    include_repl_image_generation_contract: bool = True,
     tool_side_compact: bool = False,
 ) -> str:
     base = (
@@ -212,8 +212,7 @@ def _output_contract_text_with_tools(
         "且需要可核验的事实时，必须先调用 companion_runtime_inspect 读取 JSON 快照，再依据其中字段用自然语言作答；"
         "**禁止**编造与实现不符的技术说法（例如错误描述模型族系、温度或未发生的调用方式）。"
     )
-    if include_repl_image_generation_contract:
-        base += _repl_tool_contract_image_generation_clause()
+    base += _repl_tool_contract_image_generation_clause()
     base += _repl_tool_contract_suffix_after_image_clause(
         tool_side_compact=tool_side_compact
     )
@@ -222,7 +221,6 @@ def _output_contract_text_with_tools(
 
 def _output_contract_text_interactive_bootstrap_tools(
     *,
-    include_repl_image_generation_contract: bool = True,
     tool_side_compact: bool = False,
 ) -> str:
     base = (
@@ -243,8 +241,7 @@ def _output_contract_text_interactive_bootstrap_tools(
         "（4）需要公开可核验信息且持久化文档无依据时，须先调用 google_web_search。"
         "（5）模型与实现细节类问题须先调用 companion_runtime_inspect。"
     )
-    if include_repl_image_generation_contract:
-        base += _repl_tool_contract_image_generation_clause()
+    base += _repl_tool_contract_image_generation_clause()
     base += _repl_tool_contract_suffix_after_image_clause(
         tool_side_compact=tool_side_compact
     )
@@ -374,7 +371,7 @@ def build_system_messages(
     inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     repl_online_ack_turn: bool = False,
     ai_private_text: str = "",
-    include_repl_image_generation_contract: bool = True,
+    async_foreground_chat_stack: bool = False,
     tool_side_compact: bool = False,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
@@ -382,20 +379,17 @@ def build_system_messages(
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(inner_tick_turn, inner_tick_mode)
     tools_on = enable_tools or enable_user_profile_tool
+    # Dual-LLM foreground completion: tools exist in product, but this request omits OpenAI ``tools=``.
     chat_branch_no_tool_api = (
-        tools_on and not inner_tick_turn and not include_repl_image_generation_contract
+        tools_on and not inner_tick_turn and async_foreground_chat_stack
     )
 
     out: list[dict[str, Any]] = []
-    axiom = get_imate_axiom_system_text()
-    if axiom:
-        out.append(_system_message(axiom))
+    out.append(_system_message(get_imate_axiom_system_text()))
     out.append(_system_message(_security_base()))
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
-        out.append(
-            _system_message("## TOOLS（工具说明切片）\n\n" + bundle.tools_md.strip())
-        )
+        out.append(_system_message(bundle.tools_md.strip()))
 
     if tick_proactive:
         out.append(_system_message(_heartbeat_clause()))
@@ -417,32 +411,17 @@ def build_system_messages(
                 _system_message(_tool_background_first_round_skip_contract_text())
             )
 
-    out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
-    out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))
+    out.append(_system_message(bundle.identity.strip()))
+    out.append(_system_message(bundle.soul.strip()))
     out.append(_system_message(experience_profile_system_clause(context.context_mode)))
     if bundle.techno_core_md.strip():
-        out.append(
-            _system_message(
-                "## TECHNO CORE（Inty 的虚拟居留层）\n\n"
-                + bundle.techno_core_md.strip()
-            )
-        )
+        out.append(_system_message(bundle.techno_core_md.strip()))
     if bundle.living_sphere_md.strip():
-        out.append(
-            _system_message(
-                "## LIVING SPHERE（TechnoCore 内的虚拟居所锚点）\n\n"
-                + bundle.living_sphere_md.strip()
-            )
-        )
-    out.append(_system_message("## USER\n\n" + bundle.user_md.strip()))
+        out.append(_system_message(bundle.living_sphere_md.strip()))
+    out.append(_system_message(bundle.user_md.strip()))
 
     if include_significance_perception_slice and not inner_tick_turn:
-        out.append(
-            _system_message(
-                "## SIGNIFICANCE PERCEPTION\n\n"
-                + bundle.significance_perception_md.strip()
-            )
-        )
+        out.append(_system_message(bundle.significance_perception_md.strip()))
 
     skip_memory_blocks = tool_side_compact and not inner_tick_turn
     if experience_profile_injects_private_memory(context.context_mode):
@@ -477,12 +456,11 @@ def build_system_messages(
         else:
             out.append(_system_message(_output_contract_text_inner_tick()))
     elif tools_on and not inner_tick_turn:
-        if include_repl_image_generation_contract:
+        if not async_foreground_chat_stack:
             if interactive_bootstrap_active:
                 out.append(
                     _system_message(
                         _output_contract_text_interactive_bootstrap_tools(
-                            include_repl_image_generation_contract=True,
                             tool_side_compact=tool_side_compact,
                         )
                     )
@@ -491,7 +469,6 @@ def build_system_messages(
                 out.append(
                     _system_message(
                         _output_contract_text_with_tools(
-                            include_repl_image_generation_contract=True,
                             tool_side_compact=tool_side_compact,
                         )
                     )
@@ -519,7 +496,7 @@ def build_system_prompt(
     inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     repl_online_ack_turn: bool = False,
     ai_private_text: str = "",
-    include_repl_image_generation_contract: bool = True,
+    async_foreground_chat_stack: bool = False,
     tool_side_compact: bool = False,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
@@ -534,7 +511,7 @@ def build_system_prompt(
         inner_tick_mode=inner_tick_mode,
         repl_online_ack_turn=repl_online_ack_turn,
         ai_private_text=ai_private_text,
-        include_repl_image_generation_contract=include_repl_image_generation_contract,
+        async_foreground_chat_stack=async_foreground_chat_stack,
         tool_side_compact=tool_side_compact,
         interactive_bootstrap_active=interactive_bootstrap_active,
         include_significance_perception_slice=include_significance_perception_slice,
