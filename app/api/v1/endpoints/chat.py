@@ -551,8 +551,10 @@ async def _try_handle_ws_user_signed_out_frame(
     """
     Consume ``{"type":"user_signed_out","agent_id":...}``.
 
-    Appends one English markdown line to companion ``CHAT_LOGS.md`` (MemoryStore). Does not alter
-    inner-tick coords or transcript.
+    Ends the companion scope for this chat: shuts down the in-process ``CompanionSession``,
+    deletes persisted MemoryStore rows for ``(user_id, agent_id, chat_id)``, clears
+    ``chat_history`` for the chat's ``session_id``, then appends one English markdown line to
+    ``CHAT_LOGS.md`` on the fresh scope.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -601,13 +603,14 @@ async def _try_handle_ws_user_signed_out_frame(
             f"- **user_signed_out** `utc_ts={utc_iso_ts()}` `user_id={current_user.id}` "
             f"`chat_id={chat.id}` `agent_id={agent_id}` `received_message_uuid={uuid_part}`"
         )
-        companion_chat_service.append_companion_chat_logs_line_for_ws_control(
-            user_id=current_user.id,
-            agent_id=agent_id,
-            chat_id=chat.id,
-            resolved_chat_model_id=model_override,
-            line=log_line,
-        )
+        async with companion_ws.turn_lock:
+            await companion_chat_service.conclude_companion_scope_on_user_signed_out(
+                user_id=current_user.id,
+                agent_id=agent_id,
+                chat_id=chat.id,
+                resolved_chat_model_id=model_override,
+                log_line=log_line,
+            )
         await websocket.send_json(
             ChatWsUserSignedOutAckFrame(ok=True).model_dump(exclude_none=True)
         )

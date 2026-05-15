@@ -2298,7 +2298,7 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
 ):
     captured: dict[str, object] = {}
 
-    def fake_append(**kwargs):
+    async def fake_conclude(**kwargs):
         captured["kwargs"] = kwargs
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
@@ -2309,8 +2309,8 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
 
     monkeypatch.setattr(
         companion_chat_service,
-        "append_companion_chat_logs_line_for_ws_control",
-        fake_append,
+        "conclude_companion_scope_on_user_signed_out",
+        fake_conclude,
     )
     monkeypatch.setattr(
         chat_service,
@@ -2349,7 +2349,7 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
     assert kw["chat_id"] == 42
     assert isinstance(kw["resolved_chat_model_id"], str)
     assert kw["resolved_chat_model_id"]
-    line = kw["line"]
+    line = kw["log_line"]
     assert isinstance(line, str)
     assert "**user_signed_out**" in line
     assert f"`received_message_uuid={msg_uuid}`" in line

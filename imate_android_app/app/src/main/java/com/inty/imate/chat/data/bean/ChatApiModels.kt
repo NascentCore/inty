@@ -122,6 +122,13 @@ data class ChatUserSignedOnWsMessage(
 )
 
 @Serializable
+data class ChatUserSignedOutWsMessage(
+    val type: String = "user_signed_out",
+    @SerialName("agent_id") val agentId: String,
+    @SerialName("message_id") val messageId: String? = null,
+)
+
+@Serializable
 data class ChatWsControlFrame(@SerialName("type") val type: String?)
 
 fun ChatWsControlFrame?.shouldDeferChatResponseParsing(): Boolean =

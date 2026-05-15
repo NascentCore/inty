@@ -111,7 +111,11 @@ constructor(
     }
 
     fun logout() {
-        viewModelScope.launch { authRepository.logout() }
+        viewModelScope.launch {
+            val aid = agent.value?.id?.takeIf { it.isNotBlank() }
+            chatMainRepository.signOutFromChatSession(aid)
+            authRepository.logout()
+        }
     }
 
     fun deleteAccount() {

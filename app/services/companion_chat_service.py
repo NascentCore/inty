@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import os
@@ -90,6 +91,77 @@ def append_companion_chat_logs_line_for_ws_control(
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     session.store.append_line(COMPANION_CHAT_LOGS_RELATIVE_PATH, line)
+
+
+def delete_companion_memory_document_versions_for_scope_sync(
+    *,
+    user_id: str,
+    companion_id: str,
+    chat_id: str,
+) -> int:
+    """Delete all ``companion_memory_document_versions`` rows for one companion chat scope."""
+    from sqlalchemy import delete
+
+    from app.db.base import SessionLocal
+    from app.models.companion_memory_documents import CompanionMemoryDocumentVersion
+
+    with SessionLocal() as session:
+        result = session.execute(
+            delete(CompanionMemoryDocumentVersion).where(
+                CompanionMemoryDocumentVersion.user_id == user_id,
+                CompanionMemoryDocumentVersion.companion_id == companion_id,
+                CompanionMemoryDocumentVersion.chat_id == chat_id,
+            )
+        )
+        session.commit()
+        return int(result.rowcount or 0)
+
+
+async def delete_companion_memory_document_versions_for_scope_async(
+    *,
+    user_id: str,
+    companion_id: str,
+    chat_id: str,
+) -> int:
+    return await asyncio.to_thread(
+        delete_companion_memory_document_versions_for_scope_sync,
+        user_id=user_id,
+        companion_id=companion_id,
+        chat_id=chat_id,
+    )
+
+
+async def conclude_companion_scope_on_user_signed_out(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model_id: str,
+    log_line: str,
+) -> None:
+    """End in-process companion session, wipe persisted MemoryStore scope, clear ``chat_history``."""
+    from app.services import chat_history_service, chat_service
+
+    chat_key = str(chat_id)
+    manager = _companion_manager_for_resolved_model(
+        resolved_chat_model_id,
+        _companion_runtime_config_fingerprint(),
+    )
+    manager.shutdown_session(user_id, agent_id, chat_key)
+    await delete_companion_memory_document_versions_for_scope_async(
+        user_id=user_id,
+        companion_id=agent_id,
+        chat_id=chat_key,
+    )
+    session_id = chat_service.generate_session_id(chat_key)
+    await chat_history_service.clear_session_async(session_id)
+    append_companion_chat_logs_line_for_ws_control(
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_key,
+        resolved_chat_model_id=resolved_chat_model_id,
+        line=log_line,
+    )
 
 
 def clear_companion_chat_service_caches() -> None:

@@ -92,7 +92,7 @@ class ChatWsUserSignedOnFrame(BaseModel):
 
 
 class ChatWsUserSignedOutFrame(BaseModel):
-    """**Client → server** control frame: records user leaving the chat channel for companion CHAT_LOGS.md."""
+    """**Client → server** control frame: end companion scope and reset chat history for this chat."""
 
     type: Literal["user_signed_out"] = "user_signed_out"
     agent_id: str = Field(..., min_length=1)
