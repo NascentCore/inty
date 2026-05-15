@@ -215,6 +215,16 @@ class GenAIModel(BaseModel):
         )
     )
 
+    context_window_tokens: int = Field(
+        default=0,
+        description="""
+        供应商标称的上下文窗口上限（tokens），用于与 API usage 中的 prompt_tokens 等对比。
+        口径以对该条目负责的 provider 官方文档为准（通常为总上下文或文档声明的 max context）。
+        0 表示无适用的 token 级窗口（例如仅按次计费且无统一 context 的生图/视频管线），不计算利用率。
+        对未编入本目录、仅通过 OpenRouter 等裸 id 接入的模型，默认亦为 0，直至在目录中写明官方窗口。
+        """,
+    )
+
 
 DEEPSEEK_V3_2 = GenAIModel(
     nickname="DeepSeek V3.2",
@@ -222,6 +232,7 @@ DEEPSEEK_V3_2 = GenAIModel(
     builder=ModelBuilder.DEEPSEEK,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="deepseek/deepseek-v3.2",
+    context_window_tokens=163_840,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -249,6 +260,7 @@ DEEPSEEK_V4_PRO = GenAIModel(
     builder=ModelBuilder.DEEPSEEK,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="deepseek/deepseek-v4-pro",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -276,6 +288,7 @@ DEEPSEEK_V4_FLASH = GenAIModel(
     builder=ModelBuilder.DEEPSEEK,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="deepseek/deepseek-v4-flash",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -303,6 +316,7 @@ GEMINI_2_5_FLASH_LITE = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="google/gemini-2.5-flash-lite",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -329,6 +343,7 @@ GEMINI_2_5_FLASH = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="google/gemini-2.5-flash",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -360,6 +375,7 @@ NANO_BANANA = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-flash-image",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -385,6 +401,7 @@ NANO_BANANA_PRO = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3-pro-image-preview",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -415,6 +432,7 @@ NANO_BANANA_2 = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3.1-flash-image-preview",
+    context_window_tokens=200_000,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -447,6 +465,7 @@ NEWAPI_NANO_BANANA_2 = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.NEWAPI_GEMINI,
     id_on_provider="google/gemini-3-pro-image-preview",
+    context_window_tokens=1_048_576,
     pricing=NANO_BANANA_PRO.pricing,
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
     notes="经 NewAPI Gemini 端点；需配置 agent.newapi_gemini_base_url 与 Bearer。",
@@ -459,6 +478,7 @@ VERTEX_GEMINI_2_5_FLASH_LITE = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-flash-lite",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -481,6 +501,7 @@ VERTEX_GEMINI_2_5_FLASH = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-flash",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -503,6 +524,7 @@ VERTEX_GEMINI_2_5_PRO = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-pro",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -525,6 +547,7 @@ VERTEX_GEMINI_2_0_FLASH = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.0-flash-001",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -547,6 +570,7 @@ VERTEX_GEMINI_2_0_FLASH_LITE = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.0-flash-lite-001",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -569,6 +593,7 @@ VERTEX_GEMINI_3_1_FLASH_LITE_PREVIEW = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3.1-flash-lite-preview",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -591,6 +616,7 @@ VERTEX_GEMINI_3_1_PRO_PREVIEW = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3.1-pro-preview",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -613,6 +639,7 @@ VERTEX_GEMINI_3_FLASH_PREVIEW = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3-flash-preview",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -635,6 +662,7 @@ VERTEX_GEMINI_3_PRO_PREVIEW = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3-pro-preview",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -657,6 +685,7 @@ VERTEX_GEMINI_2_5_FLASH_LITE_PREVIEW_09_2025 = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-flash-lite-preview-09-2025",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[
             PriceInfo(
@@ -682,6 +711,7 @@ VERTEX_GEMINI_LIVE_2_5_FLASH_NATIVE_AUDIO = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-live-2.5-flash-native-audio",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[],
         outputs=[],
@@ -720,6 +750,7 @@ IMAGEN_4_FAST = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="imagen-4.0-fast-generate-001",
+    context_window_tokens=0,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -741,6 +772,7 @@ IMAGEN_4 = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="imagen-4.0-generate-001",
+    context_window_tokens=0,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -762,6 +794,7 @@ VEO_3_1_FAST = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="veo-3.1-fast-generate-001",
+    context_window_tokens=0,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -782,6 +815,7 @@ VEO_3_1 = GenAIModel(
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="veo-3.1-generate-001",
+    context_window_tokens=0,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -804,6 +838,7 @@ SEEDREAM_V4_5_EDIT = GenAIModel(
     # Ref: https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api?platform=python
     provider=ModelAPIProvider.FALAI,
     id_on_provider="fal-ai/bytedance/seedream/v4.5/edit",
+    context_window_tokens=0,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -825,6 +860,7 @@ GPT_IMAGE_1_5 = GenAIModel(
     builder=ModelBuilder.OPENAI,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="openai/gpt-image-1.5/edit",
+    context_window_tokens=1_048_576,
     pricing=Pricing(
         inputs=[],
         outputs=[
@@ -848,6 +884,7 @@ Z_IMAGE_TURBO = GenAIModel(
     builder=ModelBuilder.ALIBABA_TONGYI,
     provider=ModelAPIProvider.FALAI,
     id_on_provider="fal-ai/z-image/turbo",
+    context_window_tokens=0,
     official_url="https://github.com/Tongyi-MAI/Z-Image",
     pricing=Pricing(
         inputs=[],
@@ -869,6 +906,7 @@ Z_IMAGE_TURBO_IMAGE_TO_IMAGE = GenAIModel(
     builder=ModelBuilder.ALIBABA_TONGYI,
     provider=ModelAPIProvider.FALAI,
     id_on_provider="fal-ai/z-image/turbo/image-to-image",
+    context_window_tokens=0,
     official_url="https://github.com/Tongyi-MAI/Z-Image",
     pricing=Pricing(
         inputs=[],
@@ -881,6 +919,11 @@ Z_IMAGE_TURBO_IMAGE_TO_IMAGE = GenAIModel(
     ),
     playground_url="https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/playground",
 )
+
+# Follow-up (context utilization): ``GenAIModel.context_window_tokens`` is not wired here.
+# Intentionally leave ``chat_completions.py`` / ``runtime_inspect_context.py`` unchanged in this PR
+# (see PR review); future work: merge ``response.usage`` + catalog window in those harness paths.
+# Other anchors: ``app/core/agent/agent.py`` (LangSmith usage), ``tests/app/utils/test_models_catalog.py``.
 
 # Chat image (message-to-image): only these models are allowed; config uses nickname.
 CHAT_IMAGE_GEN_MODELS = [
