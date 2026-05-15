@@ -454,7 +454,9 @@ def tool_schedule_task(store: MemoryStore, exec_time_utc: str, task_text: str) -
     )
 
 
-async def tool_phone_call_user(store: MemoryStore, phone_number: str, reason: str) -> str:
+async def tool_phone_call_user(
+    store: MemoryStore, phone_number: str, reason: str
+) -> str:
     context = load_context_meta(store=store)
     user_id = context.user_id.strip()
     agent_id = context.companion_id.strip()

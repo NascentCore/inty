@@ -491,9 +491,7 @@ def memory_update_after_turn(
     )
 
     t = time.perf_counter()
-    run_style_llm = (not config.style_update_disabled) and (
-        turn_n % style_every_n == 0
-    )
+    run_style_llm = (not config.style_update_disabled) and (turn_n % style_every_n == 0)
     if run_style_llm:
         _rewrite_style_md(
             store,
