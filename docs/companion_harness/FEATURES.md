@@ -8,6 +8,7 @@
 
 **陪伴侧在「夜间」相对白昼多做了什么**（策略层，不是新人设文档）：
 
+- **Inner tick worker**：每个 poll 周期都会评估**维护性**节拍（普通 MAINTENANCE 或到点的 DREAM）；**无**关闭整条维护路径的配置项——仅 **`companion_ws_proactive_heartbeat_enabled`** 单独管住主动搭话类回合。
 - **主动心跳 / proactive 搭话**：更倾向抑制或放行更少，体感是对方**夜里更少冷不丁发一条**。
 - **维护性 inner tick**（后台「自己琢磨」、不占你当前一句一轮的主对话）：同一套门闩下，夜间两次触发之间的**最短间隔按倍率拉长**（`companion_ws_night_maintenance_inner_tick_gap_multiplier`），体感是**深夜后台自发思考更稀疏**。
 - **夜间与 Autodreaming 的一体化**：在**本地夜间**时，维护性 inner tick 把「到点的自动巩固（DREAM）」算作夜里的那份维护；若当前还不到 DREAM 门闩，则本轮**不打普通 MAINTENANCE 的 LLM**（仍会推进调度，体感仍是夜里安静），门闩满足时同一通道以 DREAM 运行。白昼仍跑普通 MAINTENANCE（及到点时的 DREAM）。关闭昼夜节律时「夜间」不成立，上述跳过不发生。

@@ -1700,7 +1700,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
 def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    """Scheduled reminder path runs even when proactive and maintenance inner-tick are off."""
+    """Scheduled reminder path runs when proactive heartbeat is off; maintenance inner tick is always attempted."""
     ticks = {"scheduled": 0}
 
     async def spy_scheduled(**_kwargs):
@@ -1710,7 +1710,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
         raise AssertionError("proactive should not run when disabled")
 
     async def spy_maintenance(**_kwargs):
-        raise AssertionError("maintenance should not run when disabled")
+        return
 
     async def fake_run_companion_chat_turn_for_api(**_kwargs):
         return CompanionTurnResult(assistant_text="unused")
@@ -1735,11 +1735,6 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
         "companion_ws_proactive_heartbeat_enabled",
-        False,
-    )
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_maintenance_inner_tick_enabled",
         False,
     )
     monkeypatch.setattr(
