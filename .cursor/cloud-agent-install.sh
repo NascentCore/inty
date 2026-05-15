@@ -9,11 +9,12 @@ cd "$ROOT"
 need_apt=
 command -v python3.12 >/dev/null 2>&1 || need_apt=1
 dpkg -s python3.12-venv >/dev/null 2>&1 || need_apt=1
+dpkg -s python3.12-dev >/dev/null 2>&1 || need_apt=1
 dpkg -s libpq-dev >/dev/null 2>&1 || need_apt=1
 
 if [[ -n "${need_apt}" ]]; then
   sudo apt-get update -qq
-  sudo apt-get install -y -qq python3.12 python3.12-venv libpq-dev
+  sudo apt-get install -y -qq python3.12 python3.12-venv python3.12-dev libpq-dev
 fi
 
 if [[ ! -d .venv ]]; then
