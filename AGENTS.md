@@ -114,8 +114,7 @@ such experience is between human users and AI, but they have real-world patterns
 
 ## Engineering guidelines
 
-- Constantly create functions/classes/code-files/components/packages
-  that are effective, and with a narrow interface.
+- Functions/classes/code-files/components/packages should be deep in effectiveness, and narrow interfaces.
 - Document your code as you go, not after.
 - Make a plan before diving into the coding.
 - Derive solution from the essence of the problem.
