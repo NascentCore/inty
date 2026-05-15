@@ -1,8 +1,7 @@
-"""巩固（DREAM）成功后可选的一次性「创造性片段」：短补全写入私有 JSONL，不进入主 transcript。"""
+"""巩固（DREAM）成功后的一次「创造性片段」：短补全写入私有 JSONL，不进入主 transcript。"""
 
 from __future__ import annotations
 
-import random
 import uuid
 from datetime import date
 
@@ -68,11 +67,7 @@ def maybe_append_creative_dream_fragment_after_consolidation(
     feats: FeaturesConfig,
     implicit: ImplicitSignalBundle | None,
 ) -> None:
-    """概率门控 + 本地日限额；失败或空输出会回滚当日预留槽。"""
-    if feats.companion_creative_dream_probability <= 0.0:
-        return
-    if random.random() >= float(feats.companion_creative_dream_probability):
-        return
+    """本地日限额内各 DREAM 成功后可跑一次；失败或空输出会回滚当日预留槽。``max_fragments_per_local_day``≤0 则不写。"""
     local_key = _local_date_key(implicit)
     max_per = int(feats.companion_creative_dream_max_fragments_per_local_day)
     if not try_reserve_creative_fragment_slot(store, local_date=local_key, max_per_day=max_per):

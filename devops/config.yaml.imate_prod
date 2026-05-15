@@ -16,7 +16,8 @@ app:
   gcp_service_account_key: "inty-backend-key.json"
   # If app.features is added: do not set removed inner-tick toggles (FeaturesConfig no longer defines them):
   # companion_ws_proactive_heartbeat_enabled, companion_ws_maintenance_inner_tick_enabled,
-  # companion_ws_dream_inner_tick_enabled, companion_ws_night_maintenance_inner_tick_only_when_dream_due
+  # companion_ws_dream_inner_tick_enabled, companion_ws_night_maintenance_inner_tick_only_when_dream_due,
+  # companion_creative_dream_probability
 
 sentry:
   dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"

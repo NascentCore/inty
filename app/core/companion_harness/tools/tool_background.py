@@ -564,8 +564,6 @@ def _finalize_dream_inner_tick_success(
     )
     if companion_llm_client_for_aux is None:
         return
-    if feats.companion_creative_dream_probability <= 0.0:
-        return
     maybe_append_creative_dream_fragment_after_consolidation(
         store=memory_store,
         llm_client=companion_llm_client_for_aux,

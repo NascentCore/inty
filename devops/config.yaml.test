@@ -13,7 +13,7 @@ app:
     chat_ws_idle_timeout_seconds: 180
     # Removed from FeaturesConfig — do not add (YAML load will fail): companion_ws_proactive_heartbeat_enabled,
     # companion_ws_maintenance_inner_tick_enabled, companion_ws_dream_inner_tick_enabled,
-    # companion_ws_night_maintenance_inner_tick_only_when_dream_due
+    # companion_ws_night_maintenance_inner_tick_only_when_dream_due, companion_creative_dream_probability
 
 sentry:
   # 测试当中关闭 sentry 数据采集，避免混杂测试数据与 dev/prod 环境、干扰正常阅读 sentry web ui 上的数据

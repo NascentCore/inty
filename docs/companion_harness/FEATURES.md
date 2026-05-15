@@ -21,6 +21,6 @@
 
 **巩固后的「静息」窗**：成功结束一轮 DREAM 后，可配置在接下来若干小时（`companion_ws_inner_tick_quiet_hours_after_dream`）内**不再起维护性 inner tick 的 LLM**，像对方**补完觉、先别喊她加班琢磨**。这段静息**仅在昼夜节律开启且当前判为白昼时**会按「日出」逻辑被清掉；若关闭了昼夜节律，静息只随时间自然过期，而不会在每次轮询时被误清空。
 
-**可选「创造性梦境」**：在配置概率与每日条数上限内，巩固完成后偶发一次短补全，将片段写入私有 `.companion_creative_dream_fragments.jsonl`（`companion_creative_dream_*`）；默认对用户**无单独界面**，属于内在记述，产品可择机引用。
+**「创造性梦境」片段**：每次 DREAM 巩固成功后，在 **`companion_creative_dream_max_fragments_per_local_day`** 限额内会尝试一次短 `complete_text`，将片段写入私有 `.companion_creative_dream_fragments.jsonl`（另受 **`companion_creative_dream_max_fragment_chars`** 约束）；对用户**无单独界面**。若日限额为 **0** 则跳过该补全。
 
 从用户体验串起来看：你照常说话即可——若启用上文「昼夜节律」，夜里对方更少主动来烦你、后台自发节拍也更稀；聊了一阵之后，对方会在后台悄悄做完这轮「收记忆」，聊天气泡侧通常没有要你点的整理入口，但后续回复会更贴上下文、少老话重提；巩固刚结束时还会有一小段「别吵她」的静息，你多半只觉得**那一会儿她特别不折腾后台**。

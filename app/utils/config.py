@@ -201,8 +201,8 @@ class FeaturesConfig:
     companion_ws_inner_tick_quiet_hours_after_dream: float = 3.0
     # At local night, multiply maintenance inner-tick min_gap by this factor (must be >= 1.0).
     companion_ws_night_maintenance_inner_tick_gap_multiplier: float = 3.0
-    # After successful DREAM, with this probability run one short ``complete_text`` and append a private fragment JSONL line.
-    companion_creative_dream_probability: float = 0.0
+    # After successful DREAM, run one short ``complete_text`` and append a private creative fragment JSONL line
+    # (when ``companion_creative_dream_max_fragments_per_local_day`` > 0; daily cap only).
     companion_creative_dream_max_fragment_chars: int = 800
     companion_creative_dream_max_fragments_per_local_day: int = 1
 
@@ -225,11 +225,6 @@ class FeaturesConfig:
         if float(self.companion_ws_night_maintenance_inner_tick_gap_multiplier) < 1.0:
             raise ValueError(
                 "app.features.companion_ws_night_maintenance_inner_tick_gap_multiplier must be >= 1.0"
-            )
-        p = float(self.companion_creative_dream_probability)
-        if p < 0.0 or p > 1.0:
-            raise ValueError(
-                "app.features.companion_creative_dream_probability must be in [0, 1]"
             )
 
 

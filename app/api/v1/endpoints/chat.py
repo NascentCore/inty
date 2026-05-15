@@ -2147,8 +2147,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             companion_ws.remove_foreground_pending(preset_uid)
 
         if (
-            feats.companion_creative_dream_probability > 0.0
-            and _inner_mode == InnerTickMode.DREAM
+            _inner_mode == InnerTickMode.DREAM
             and not companion_turn.tool_background_started
         ):
             aux_sess = companion_chat_service.companion_session_for_initialized_chat(

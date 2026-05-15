@@ -15,7 +15,8 @@ app:
   min_app_version_code_for_festival_memory: 3345
   # If app.features is added: do not set removed inner-tick toggles (FeaturesConfig no longer defines them):
   # companion_ws_proactive_heartbeat_enabled, companion_ws_maintenance_inner_tick_enabled,
-  # companion_ws_dream_inner_tick_enabled, companion_ws_night_maintenance_inner_tick_only_when_dream_due
+  # companion_ws_dream_inner_tick_enabled, companion_ws_night_maintenance_inner_tick_only_when_dream_due,
+  # companion_creative_dream_probability
 
 sentry:
   dsn: "https://43877f17f1d13e7e2847d7fa994b5fd9@o4510350447411200.ingest.us.sentry.io/4510871322034176"
