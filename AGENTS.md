@@ -169,3 +169,4 @@ such experience is between human users and AI, but they have real-world patterns
 - **Over engineering**: speculation, defensive programming, optionality, multiple alternatives, etc.
   - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
     only add configurability the user explicitly requested.
+  - **Do not add enable/disable knob for new features**: just implement the features.
