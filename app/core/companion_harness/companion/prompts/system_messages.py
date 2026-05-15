@@ -5,7 +5,7 @@ flags into what the model sees as system role(s) before user/assistant messages.
 tool contracts** aligned with how each completion is actually invoked (plain chat,
 tool API, inner tick, or async foreground without OpenAI ``tools=``). Call sites live
 in ``..prompt_stack`` and related turn code; **significance / dual-envelope** semantics
-and parsing are owned by ``..significance_perception``.
+and parsing are owned by ``dual_llm_chat_branch_envelope``.
 
 **Surfaces**: ``build_system_messages`` is the canonical multi-message list;
 ``build_system_prompt`` exists only for callers that still need one concatenated string
@@ -93,11 +93,11 @@ def _output_contract_text_inner_tick() -> str:
 
 
 def _dual_llm_chat_structured_output_contract_text() -> str:
-    """Prompt text paired with dual-envelope ``response_format`` from ``significance_perception``.
+    """Prompt text paired with dual-envelope ``response_format`` from ``dual_llm_chat_branch_envelope``.
 
     The API ``response_format`` is ``DUAL_LLM_CHAT_RESPONSE_FORMAT``, produced by
     ``_build_dual_llm_chat_response_format()`` from the ``DualLlmChatBranchEnvelope`` Pydantic model;
-    parsing uses the same model in ``significance_perception``.
+    parsing uses the same model in ``dual_llm_chat_branch_envelope``.
     """
     return (
         "## Dual-LLM chat branch: structured reply envelope\n\n"

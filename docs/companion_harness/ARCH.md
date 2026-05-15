@@ -94,8 +94,7 @@ flowchart TD
 | MemoryStore | `/app/core/companion_harness/memory/memory_store.py` |
 | 记忆管线 | `/app/core/companion_harness/memory/memory_pipeline.py` |
 | async tool background | `/app/core/companion_harness/tools/tool_background.py` |
-| dual-LLM envelope 实现（schema / parse / split） | `/app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py` |
-| dual-LLM envelope 门面（再导出，稳定 import） | `/app/core/companion_harness/companion/significance_perception.py` |
+| dual-LLM envelope（schema / parse / split / 契约说明） | `/app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py` |
 | 通用 turn 合同 | `/app/core/companion_harness/contracts/turn.py` |
 | REPL 实验 turn 编排（非生产） | `/experimental/agentic_ai_companion/turn_orchestrator.py`、`experimental_bridge.py` |
 | WebSocket schema | `/app/schemas/chat_websocket.py` |

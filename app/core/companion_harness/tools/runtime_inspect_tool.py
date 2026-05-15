@@ -231,6 +231,6 @@ def tool_companion_runtime_inspect(
         "include_full_tools_schema is not implemented; use tools_summary in last_chat_completion_request. "
         "TOOLS / SIGNIFICANCE_PERCEPTION operator guidance are fixed package templates in PromptBundle, "
         "not authoritative MemoryStore documents here; importance scoring contract and consumers are "
-        "documented in significance_perception.py module docstring."
+        "documented in dual_llm_chat_branch_envelope module docstring."
     )
     return json.dumps(out, ensure_ascii=False, indent=2) + "\n"

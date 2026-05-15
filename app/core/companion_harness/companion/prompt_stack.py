@@ -107,7 +107,7 @@ def companion_turn_tools_and_system_messages(
     # turns that use ``use_dual_structured_chat`` in run_turn, and for the *foreground* chat stack
     # in ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL (``_async_dual_llm_system_message_variants`` forces
     # include_significance_perception_slice=True on the chat side). Tells the model how to fill
-    # importance_* fields in the JSON envelope; see ``significance_perception.py`` module docstring.
+    # importance_* fields in the JSON envelope; see ``dual_llm_chat_branch_envelope`` module docstring.
     resolved_sig = (
         include_significance_perception_slice
         if include_significance_perception_slice is not None

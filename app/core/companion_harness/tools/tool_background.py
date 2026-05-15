@@ -61,7 +61,7 @@ from app.core.companion_harness.companion.prompt_stack import (
     refresh_companion_turn_prompt_stack,
 )
 from app.core.companion_harness.companion.runtime_events import append_runtime_event
-from app.core.companion_harness.companion.significance_perception import (
+from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     envelope_to_assistant_metadata_dict,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts

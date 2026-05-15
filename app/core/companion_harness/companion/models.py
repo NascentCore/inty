@@ -59,7 +59,7 @@ class CompanionTurnResult(BaseModel):
         default="text",
         description=(
             "Structured envelope intent from dual-LLM chat: normal text bubble vs voice-note "
-            "delivery (see significance_perception.DUAL_LLM_CHAT_RESPONSE_FORMAT / "
+            "delivery (see dual_llm_chat_branch_envelope.DUAL_LLM_CHAT_RESPONSE_FORMAT / "
             "DualLlmChatBranchEnvelope wire schema)."
         ),
     )
@@ -76,7 +76,7 @@ class CompanionTurnResult(BaseModel):
             "When foreground chat used the dual JSON envelope, parsed importance triple "
             "(importance_round, importance_user_message, importance_assistant_message). "
             "Propagated to transcript JSONL and API meta_data; optional consumer: memory extraction. "
-            "See significance_perception module docstring."
+            "See dual_llm_chat_branch_envelope module docstring."
         ),
     )
     user_msg_uuid: str = ""

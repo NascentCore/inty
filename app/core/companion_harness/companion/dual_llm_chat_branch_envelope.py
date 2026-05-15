@@ -1,12 +1,36 @@
-"""Dual-LLM chat branch JSON: schema, OpenAI ``response_format``, and parse/split helpers.
+"""Dual-LLM chat branch JSON: schema, OpenAI ``response_format``, parse/split, and pipeline notes.
 
-This module holds (1) the ``DualLlmChatBranchEnvelope`` Pydantic model and
+**This module owns** (1) the ``DualLlmChatBranchEnvelope`` Pydantic model and
 ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` built from it, and (2) parsing from raw strings or
 structured provider ``message`` objects into ``DualLlmChatBranchSplit`` for the
 companion turn pipeline.
 
-Cross-module data flow and persistence contracts are summarized on the thin facade
-``significance_perception`` (re-exports from here for stable import paths).
+**Where the three importance integers flow (read this when changing the contract):**
+
+- **Produced**: Foreground ``chat.completions`` may set ``response_format`` to
+  ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` (``_build_dual_llm_chat_response_format()``; ``turn.run_turn``)
+  so the model returns JSON with ``user_facing_reply``, ``output_to_user``, plus
+  ``importance_round`` / ``importance_user_message`` / ``importance_assistant_message``.
+  The same envelope is used for async ``tool_background`` finish (see ``tool_bg_routing``).
+  Operator guidance lives in ``prompts/SIGNIFICANCE_PERCEPTION.md`` (injected when
+  ``include_significance_perception_slice`` is on; see ``prompts/system_messages.py`` and
+  ``prompt_stack.companion_turn_tools_and_system_messages``).
+- **Parsed / split**: ``split_dual_llm_chat_branch_message`` / ``split_dual_llm_chat_branch_content``
+  return ``DualLlmChatBranchSplit`` (visible text, optional significance metadata dict,
+  ``output_to_user``, ``reply_modality``, ``voice_message_script``). Validated payloads deserialize
+  as ``DualLlmChatBranchEnvelope``.
+- **Kernel return**: ``CompanionTurnResult.significance_perception`` (``models.py``) carries the dict;
+  may be ``None`` if parse failed.
+- **Transcript**: ``turn.run_turn`` JSONL assistant row; ``turn_engine.persist_repl_turn_transcript_rows``
+  for REPL paths.
+- **Product DB / WS**: ``app/api/v1/endpoints/chat._companion_ai_meta_from_turn_result`` mirrors into
+  ``chat_history`` / WS. Async ``tool_bg``: ``ToolOutputEvent.significance_perception`` via
+  ``tool_bg_routing`` → ``chat._build_companion_tool_background_ws_payload``.
+- **Memory extraction (optional)**: ``memory_extraction.use_significance_perception_in_extraction`` →
+  ``memory_extraction_service`` sorts by ``meta_data.significance_perception.importance_round``.
+
+Design: ``/docs/imate/DESIGN.md``. LangSmith: ``inty_llm_source=foreground_dual_llm_envelope``
+(``llm/langsmith_invocation_extra.py``).
 """
 
 from __future__ import annotations

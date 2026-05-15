@@ -63,7 +63,7 @@
 #### Phase 3.2：拆出 `system_hierarchy/`
 
 - 迁移固定 system 层级资源：`prompts/AXIOM.md`、`BOOTSTRAP.md`、`TOOLS.md`、`SIGNIFICANCE_PERCEPTION.md` 与 `prompts/system_messages.py`。
-- 迁移 prompt 组装与切片：`prompt_slices.py`、`prompt_stack.py`、`ai_private_prompt.py`、`significance_perception.py`。
+- 迁移 prompt 组装与切片：`prompt_slices.py`、`prompt_stack.py`、`ai_private_prompt.py`、`dual_llm_chat_branch_envelope.py`。
 - 收敛现有 `prompting/` 过渡包；最终 system message 组装真源只保留在 `system_hierarchy/`。
 - 同步移动 `test_prompts.py`、`test_prompt_stack.py`、`test_ai_private_prompt.py`、`test_significance_perception_envelope.py`。
 - 切片验收：AXIOM 首条注入、bootstrap prompt 读取、TOOLS contract、significance envelope 解析与前台/后台注入测试通过。
