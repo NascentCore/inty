@@ -11,21 +11,26 @@ from .memory_store import MemoryStore, SqlAlchemyMemoryRepository
 _REGISTRY_LOCK = threading.Lock()
 _MEMORY_STORES: dict[str, MemoryStore] = {}
 
+MEMORY_STORE_REGISTRY_REQUIRES_DSN = (
+    "companion MemoryStore registry requires a non-empty memory_pg_dsn "
+    "(configure app.database.url in repo-root config.yaml)."
+)
 
-def get_memory_store(scope: CompanionScope, *, dsn: str = "") -> MemoryStore:
+
+def get_memory_store(scope: CompanionScope, *, dsn: str) -> MemoryStore:
+    if not (dsn or "").strip():
+        raise ValueError(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
     key = scope.registry_key()
     with _REGISTRY_LOCK:
         cur = _MEMORY_STORES.get(key)
         if cur is not None:
             return cur
 
-        repository = None
-        if (dsn or "").strip():
-            repository = SqlAlchemyMemoryRepository(
-                user_id=scope.user_id,
-                companion_id=scope.companion_id,
-                chat_id=scope.chat_id,
-            )
+        repository = SqlAlchemyMemoryRepository(
+            user_id=scope.user_id,
+            companion_id=scope.companion_id,
+            chat_id=scope.chat_id,
+        )
 
         store = MemoryStore(scope=scope, repository=repository)
         _MEMORY_STORES[key] = store

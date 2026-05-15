@@ -36,6 +36,7 @@ class CompanionLLMConfig(BaseModel):
     memory_model: GenAIModel | None = None
     day_summary_model: GenAIModel | None = None
     user_model: GenAIModel | None = None
+    style_model: GenAIModel | None = None
     soul_model: GenAIModel | None = None
     api_base: str = "https://openrouter.ai/api/v1"
     api_key: str = ""

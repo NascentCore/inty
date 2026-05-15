@@ -56,6 +56,10 @@ class MemoryStoreScopePaths:
         return "SOUL.md"
 
     @property
+    def style_md(self) -> str:
+        return "STYLE.md"
+
+    @property
     def user_md(self) -> str:
         return "USER.md"
 
@@ -166,6 +170,7 @@ _MINIMAL_TRANSCRIPT_SEED = ""
 _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "identity",
     "soul",
+    "style_md",
     "user_md",
     "memory_md",
 )
@@ -173,7 +178,7 @@ _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
 
 def ensure_template_seeded_core_documents_in_store(store: MemoryStore) -> None:
     """
-    Persist package templates for IDENTITY / SOUL / USER / MEMORY when the store has no usable
+    Persist package templates for IDENTITY / SOUL / STYLE / USER / MEMORY when the store has no usable
     body (None or whitespace). Uses MemoryStore.write_document (repository append + cache).
     Does not touch transcript.jsonl; ``ensure_minimal_documents_in_store`` creates an
     empty transcript when the five-piece is not yet satisfied.

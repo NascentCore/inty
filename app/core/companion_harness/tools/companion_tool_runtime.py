@@ -97,11 +97,14 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
         "IDENTITY.md",
         "MEMORY.md",
         "SOUL.md",
+        "STYLE.md",
         "USER.md",
     }
 )
 
 
+# TODO(product): ai_private.jsonl is ORM-mapped but not in REPL_WRITABLE_RELATIVE_PATHS; model
+# cannot memory_store_write_document it until allowlist or a dedicated append tool exists.
 def _latest_generated_image_http_url_from_index(store: MemoryStore) -> str | None:
     for row in reversed(list_image_asset_records(store)):
         u = str(row.get("gcs_http_url") or "").strip()
@@ -355,7 +358,7 @@ def tool_memory_store_write_document(
     if rel == "SOUL.md" and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
         return (
             "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
-            "you may still update IDENTITY.md, USER.md, MEMORY.md, and other allowed paths."
+            "you may still update IDENTITY.md, STYLE.md, USER.md, MEMORY.md, and other allowed paths."
         )
     if rel in ("transcript.jsonl", "transcript_inner_tick.jsonl"):
         v_err = _transcript_jsonl_validate_for_tool_write(content)
@@ -451,9 +454,8 @@ def tool_schedule_task(store: MemoryStore, exec_time_utc: str, task_text: str) -
     )
 
 
-async def tool_phone_call_user(root: Path, phone_number: str, reason: str) -> str:
-    store = get_memory_store(root)
-    context = load_context_meta(root / "context.json", store=store)
+async def tool_phone_call_user(store: MemoryStore, phone_number: str, reason: str) -> str:
+    context = load_context_meta(store=store)
     user_id = context.user_id.strip()
     agent_id = context.companion_id.strip()
     if not user_id or not agent_id:
@@ -787,7 +789,7 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                     "Use during interactive relationship bootstrap instead of memory_store_write_document. "
                     "Pass the full updated markdown as content. "
                     "After companion_bootstrap_user_interactive_complete, SOUL is locked; "
-                    "IDENTITY / USER / MEMORY may still be updated. "
+                    "IDENTITY / STYLE / USER / MEMORY may still be updated. "
                     "TOOLS / significance-perception operator text are fixed package templates, not slices."
                 ),
                 "parameters": {
@@ -816,7 +818,7 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                     "Mark interactive workspace bootstrap as finished in context.json. "
                     "Bootstrap here means the SOUL slice has been initialized for this relationship; "
                     "after this call SOUL.md must not change (tools and background updates). "
-                    "Call when that phase is done; IDENTITY / USER / MEMORY slices may still be edited later."
+                    "Call when that phase is done; IDENTITY / STYLE / USER / MEMORY slices may still be edited later."
                 ),
                 "parameters": {
                     "type": "object",
@@ -895,7 +897,7 @@ def build_openai_repl_tools(
                 "In REPL, only these root files are writable: "
                 + ", ".join(sorted(REPL_WRITABLE_RELATIVE_PATHS))
                 + ". When the user explicitly asks to change how you relate, boundaries, or "
-                "persistent preferences, read the current file first (e.g. SOUL.md, USER.md), "
+                "persistent preferences, read the current file first (e.g. SOUL.md, STYLE.md, USER.md), "
                 "then write the full updated content. Do not use for transcript.jsonl or context.json."
             )
             w["function"] = wfn
@@ -922,7 +924,7 @@ def build_openai_repl_tools(
                     "Return a JSON snapshot of the current companion runtime: in-process LLM config, "
                     "last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), "
                     "runtime events, and optionally workspace documents from MemoryStore "
-                    "(SOUL, USER, MEMORY.md, episodic/gist day paths). "
+                    "(SOUL, STYLE, USER, MEMORY.md, episodic/gist day paths). "
                     "Use when the user asks for verifiable facts about the active model, parameters, or injected "
                     "prompt stack. For self-check only: answer the user in natural language without reading "
                     "this JSON aloud verbatim."
@@ -1299,7 +1301,7 @@ async def _dispatch(
             return "ERROR: phone_number must be a string"
         if not isinstance(raw_reason, str):
             return "ERROR: reason must be a string"
-        return await tool_phone_call_user(root, raw_phone, raw_reason)
+        return await tool_phone_call_user(store, raw_phone, raw_reason)
     if name == "companion_runtime_inspect":
         return tool_companion_runtime_inspect(store, dict(arguments or {}))
     if name == "companion_set_experience_profile":

@@ -14,10 +14,7 @@ from app.core.companion_harness.tools import runtime_inspect_context as ric
 from app.core.companion_harness.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
-from app.core.companion_harness.memory.memory_registry import (
-    get_memory_store,
-    shutdown_memory_store,
-)
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import ContextMeta, InnerTickMode
 from app.core.companion_harness.tools.runtime_inspect_context import (
     build_last_chat_completion_request_payload,
@@ -90,19 +87,18 @@ class _DualLlmForegroundStubCompanionLLMClient(CompanionLLMClient):
 
 def test_companion_runtime_inspect_outside_scope(tmp_path: Path) -> None:
     scope = CompanionScope("ri", "a", f"out-{tmp_path.name}")
-    store = get_memory_store(scope, dsn="")
+    store = MemoryStore(scope=scope, repository=None)
     out = _run_tool(store, "companion_runtime_inspect", "{}")
     data = json.loads(out)
     assert "runtime_unavailable_reason" in data
     assert data["runtime_config"] is None
     assert data["last_chat_completion_request"] is None
     assert "correlation" not in data
-    shutdown_memory_store(scope)
 
 
 def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
     scope = CompanionScope("ri", "a", f"ctx-{tmp_path.name}")
-    store = get_memory_store(scope, dsn="")
+    store = MemoryStore(scope=scope, repository=None)
     store.write_document("SOUL.md", "soul-content-here")
     append_runtime_event(
         store,
@@ -176,12 +172,11 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         }
     finally:
         runtime_inspect_end_turn(token)
-    shutdown_memory_store(scope)
 
 
 def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
     scope = CompanionScope("ri", "a", f"ov-{tmp_path.name}")
-    scoped = get_memory_store(scope, dsn="")
+    scoped = MemoryStore(scope=scope, repository=None)
     ric.runtime_inspect_thread_overlay_begin(
         {
             "runtime_config": {"source": "tool_background", "tool_model_name": "bg/model"},
@@ -212,15 +207,14 @@ def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
         assert "store_documents" not in data
     finally:
         ric.runtime_inspect_thread_overlay_end()
-    shutdown_memory_store(scope)
 
 
 def test_companion_runtime_inspect_prefers_scoped_memory_store(tmp_path: Path) -> None:
     scope_default = CompanionScope("u-d", "a", f"def-{tmp_path.name}")
     scope_scoped = CompanionScope("u-s", "a", f"scoped-{tmp_path.name}")
-    store_scoped = get_memory_store(scope_scoped, dsn="")
+    store_scoped = MemoryStore(scope=scope_scoped, repository=None)
     store_scoped.write_document("SOUL.md", "scoped-soul-body")
-    store_default = get_memory_store(scope_default, dsn="")
+    store_default = MemoryStore(scope=scope_default, repository=None)
     assert store_default is not store_scoped
     token = runtime_inspect_begin_turn()
     try:
@@ -230,8 +224,6 @@ def test_companion_runtime_inspect_prefers_scoped_memory_store(tmp_path: Path) -
         assert "scoped-soul-body" in data["store_documents"]["SOUL.md"]["text"]
     finally:
         runtime_inspect_end_turn(token)
-    shutdown_memory_store(scope_scoped)
-    shutdown_memory_store(scope_default)
 
 
 def test_build_system_prompt_tools_contract_mentions_inspect() -> None:
@@ -275,7 +267,7 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
     from app.core.companion_harness.companion.turn import run_turn
 
     scope = CompanionScope("ri", "a", f"dual-{tmp_path.name}")
-    store = get_memory_store(scope, dsn="")
+    store = MemoryStore(scope=scope, repository=None)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
@@ -317,4 +309,3 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
     )
     assert out.assistant_text == "final assistant"
     assert out.tool_background_started is True
-    shutdown_memory_store(scope)

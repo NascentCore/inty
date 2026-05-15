@@ -6,10 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_registry import (
+    get_memory_store,
+    shutdown_memory_store,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 
 from experimental.harness_seeding_demo.workspace_setup import seed_memory_store_from_directory
+from tests.app.core.companion_harness.companion_memory_registry_dsn import (
+    companion_memory_registry_dsn,
+)
 
 
 def test_seed_memory_store_rejects_missing_seed_dir(tmp_path: Path) -> None:
@@ -23,7 +29,10 @@ def test_seed_memory_store_populates_store(tmp_path: Path) -> None:
     repo = Path(__file__).resolve().parents[2]
     seed = repo / "experimental/harness_seeding_demo/seeds/baseline"
     scope = CompanionScope("harness_user_x", "demo_companion", "demo_chat")
-    seed_memory_store_from_directory(seed, scope)
-    store = get_memory_store(scope, dsn="")
-    assert store.read_document_if_exists("SOUL.md")
-    assert store.read_document_if_exists("transcript.jsonl") is not None
+    try:
+        seed_memory_store_from_directory(seed, scope)
+        store = get_memory_store(scope, dsn=companion_memory_registry_dsn())
+        assert store.read_document_if_exists("SOUL.md")
+        assert store.read_document_if_exists("transcript.jsonl") is not None
+    finally:
+        shutdown_memory_store(scope)

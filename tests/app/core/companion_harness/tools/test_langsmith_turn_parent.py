@@ -18,7 +18,6 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
 )
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.models import InnerTickMode
-from app.core.companion_harness.memory.memory_registry import get_memory_store
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import start_tool_background_job
@@ -368,9 +367,9 @@ class _FakeAsyncDualLLMClient:
 async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    store = get_memory_store(
-        CompanionScope("ls", "agent", str(tmp_path.resolve())),
-        dsn="",
+    store = MemoryStore(
+        scope=CompanionScope("ls", "agent", str(tmp_path.resolve())),
+        repository=None,
     )
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")

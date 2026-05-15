@@ -33,6 +33,7 @@ _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
 _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
     "IDENTITY.md",
     "SOUL.md",
+    "STYLE.md",
     "USER.md",
     "MEMORY.md",
 )
@@ -153,7 +154,7 @@ def tool_companion_update_prompt_slice(
     ):
         return (
             "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
-            "you may still update IDENTITY / USER / MEMORY via companion_update_prompt_slice "
+            "you may still update IDENTITY / STYLE / USER / MEMORY via companion_update_prompt_slice "
             "or memory_store_write_document (where permitted)."
         )
     st.write_document(rel_posix, content)
@@ -212,7 +213,7 @@ def tool_companion_bootstrap_user_interactive_complete(
     )
     return (
         "OK interactive bootstrap marked complete; SOUL.md is now locked (no tool or background "
-        "SOUL rewrites). IDENTITY / USER / MEMORY may still be updated via companion_update_prompt_slice "
+        "SOUL rewrites). IDENTITY / STYLE / USER / MEMORY may still be updated via companion_update_prompt_slice "
         "or memory_store_write_document (where permitted)."
     )
 
