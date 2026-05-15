@@ -1,0 +1,10 @@
+{
+  "name": "Inty backend (cloud agent)",
+  "install": "bash .cursor/cloud-agent-install.sh",
+  "start": "bash .cursor/cloud-agent-start.sh",
+  "ports": [
+    { "name": "Inty API", "port": 8000 },
+    { "name": "Ops / REPL", "port": 8001 },
+    { "name": "PostgreSQL", "port": 5432 }
+  ]
+}
