@@ -2,10 +2,10 @@
 name: inty-backend-ci-local
 description: >-
   Replicate GitHub workflow `.github/workflows/ci_backend.yaml` locally: venv, layer
-  checks, single Alembic head, `tests/alembic/test_custom_config.sh`, test config,
-  Inty server on :8000, `pytest -m "not noci"`, and push worker smoke check. Use
-  when the user wants to run the same checks as backend CI before opening a PR, or
-  when debugging CI failures.
+  checks, single Alembic head, `tests/alembic/test_custom_config.sh`, test config via
+  `INTY_CONFIG_YAML` (or cp like CI), Inty server on :8000, `pytest -m "not noci"`, optional
+  log scan and push worker smoke. Use when running the same checks as backend CI before a
+  PR, or when debugging CI failures.
 ---
 
 # Run backend CI locally (mirror `ci_backend.yaml`)
@@ -72,14 +72,32 @@ export PYTHONPATH=.
 
 ## 5) 起 Inty 后端并跑 Pytest（与 `Run python tests` 步一致）
 
-先**停掉**本机占用 **8000** 的旧 `uvicorn`/旧 `./backend/inty/start.sh`（若存在），再：
+### 配置路径：推荐 `INTY_CONFIG_YAML`（不覆盖 `config.yaml`）
+
+[`app/core/config.py`](app/core/config.py)：`INTY_CONFIG_YAML` 优先；未设置时才读仓库根 `config.yaml`。本地跑 CI 同款测试叠层时，**推荐**导出：
 
 ```bash
-cp devops/config.yaml.test config.yaml
-./backend/inty/start.sh --test &
+export INTY_CONFIG_YAML=devops/config.yaml.test
 ```
 
-等待服务就绪（与 workflow 中循环等价；可用 `curl -s http://localhost:8000` 或带 `--fail`）：
+路径为**相对当前工作目录**（在仓库根执行即为 `devops/config.yaml.test`）。**起 `./backend/inty/start.sh` 与 `pytest` 的 shell 都要带上该变量**（子进程继承即可）。
+
+Alembic：`backend/alembic/env.py` 在未传 `-x config=...` 时会回落到 **`app.core.config` 已加载的那份全局配置**；因此 `start.sh` 里 `python -m alembic upgrade head` 与随后 uvicorn **与上述 `INTY_CONFIG_YAML` 一致**，无需再 `cp` 成 `config.yaml`。
+
+### 与 GHA 文案差异（可选 `cp`）
+
+[`ci_backend.yaml`](.github/workflows/ci_backend.yaml) 里仍是 `cp devops/config.yaml.test config.yaml`；若你要**逐字对齐 workflow 的 shell**，可继续用复制；与 `INTY_CONFIG_YAML=devops/config.yaml.test` **在行为上等价**（只要在任何进程首次 `import app.core.config` 之前定好其一）。
+
+先**停掉**本机占用 **8000** 的旧 `uvicorn`/旧 `./backend/inty/start.sh`（若存在）。若还要跑 [`tools/scripts/check_ci_backend_logs.py`](tools/scripts/check_ci_backend_logs.py)，建议**删旧日志再起服**，避免历史 ERROR 误报：
+
+```bash
+rm -f inty_backend.log
+export INTY_CONFIG_YAML=devops/config.yaml.test
+export PYTHONPATH=.
+./backend/inty/start.sh --test >> inty_backend.log 2>&1 &
+```
+
+等待服务就绪（与 workflow 中循环等价）：
 
 ```bash
 for i in {1..30}; do
@@ -93,16 +111,39 @@ done
 curl --verbose --fail http://localhost:8000
 ```
 
-`pytest` 与 CI 相同：跳过 `noci` 标记的用例（见 `pytest.ini`）：
+`pytest` 与 CI 相同：跳过 `noci` 标记的用例（见 `pytest.ini`）；workflow 里对日志级别有 `env`，本地可对齐抄入：
 
 ```bash
-python -m pytest -m "not noci" -v -s tests/
+export INTY_CONFIG_YAML=devops/config.yaml.test
+export PYTHONPATH=.
+export INTY_LOGGING_LEVEL=INFO
+export INTY_CONSOLE_LOGGING_LEVEL=INFO
+export UVICORN_LOG_LEVEL=warning
+python -m pytest -m "not noci" -v -s tests/ --capture=fd --show-capture=no
+```
+
+可选：与 workflow 该 job 内一致扫后端日志（依赖上面的 `inty_backend.log`）：
+
+```bash
+python tools/scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
 ```
 
 完成后**按需**结束后台的 `start.sh`/`uvicorn` 进程，避免与后续或日常开发占口冲突。
 
+## 6) Push worker 启动自检（选做，对应 workflow `Start push worker...`）
+
+同样导出 `INTY_CONFIG_YAML` 即可与「不覆盖 `config.yaml`」一致；就绪判定与断言以 [`.github/workflows/ci_backend.yaml`](.github/workflows/ci_backend.yaml) 该 step 为准（`tee push_worker.log`、`grep` 循环等）。
+
+```bash
+export INTY_CONFIG_YAML=devops/config.yaml.test
+export PYTHONPATH=.
+./backend/push_worker/start.sh 2>&1 | tee push_worker.log &
+# … 见 ci_backend.yaml …
+```
+
 ## 与真实 CI 的差异（心里有数即可）
 
+- **配置落地**：CI job 写 `cp ... config.yaml`；本地推荐 **`INTY_CONFIG_YAML`**，避免动默认 `config.yaml`。
 - **Runner**：你本机的 OS/文件句柄/负载与 `ubuntu-latest` 可能不同；**偶发**的时序/端口问题在 CI 上可能不出现或相反。
 - **cache**：CI 会 cache `~/.cache/pip` 与 `.venv`；本地可省略，结果应一致。
 - **服务编排**：若你在一条 shell 里顺序执行 5) 和 6)，`start.sh` 的进程通常仍在，与 GHA 同一 job 内多 step **共享**一台机器、后台进程不清理的行为类似；若你分开终端跑，**注意** 8000/重复迁移等冲突。
@@ -110,3 +151,4 @@ python -m pytest -m "not noci" -v -s tests/
 ## 权威来源
 
 - 工作流定义：`.github/workflows/ci_backend.yaml`（`jobs.test` 各 step 名称与 `run:` 即上面对应关系）
+- 配置路径语义：`app/core/config.py`（`INTY_CONFIG_YAML`）

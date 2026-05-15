@@ -46,6 +46,8 @@ pgrep -af 'python -m tools\.inty_v2_repl' || true
 
 Bearer 默认读 **`${INTY_OPS_BEARER_TOKEN_FILE:-.inty_ops_bearer_token}`**（`--local` 启动已写入）。API 基址默认 **`http://127.0.0.1:8001`**；若使用环境变量 **`PORT`** 覆盖监听端口，请同步改 **`INTY_API_BASE_URL`**（例如 `export INTY_API_BASE_URL=http://127.0.0.1:9001`）。
 
+Read `.inty_ops_bearer_token` to fill in the value of `INTY_ACCESS_TOKEN` env var in `tools/inty_v2_repl/.env`
+
 Run the command below to get the agent ID for launching the repl:
 
 ```bash

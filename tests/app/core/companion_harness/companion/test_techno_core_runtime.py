@@ -11,12 +11,16 @@ from techno_core.seeding import (
     TECHNO_CORE_RELATIVE_PATH,
     ensure_techno_core_seeded,
 )
+from tests.app.core.companion_harness.companion_memory_registry_dsn import (
+    companion_memory_registry_dsn,
+)
 
 
 def test_companion_session_seeds_techno_core_and_injects_prompt() -> None:
     manager = CompanionManager(
         CompanionConfig(
             llm=CompanionLLMConfig(api_key="test-key"),
+            memory_pg_dsn=companion_memory_registry_dsn(),
         )
     )
     session = manager.get_or_create_session("user-tc", "companion-tc", "chat-tc")

@@ -28,6 +28,7 @@ from .llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
 from app.core.companion_harness.memory.transcript_compaction import CompactionConfig
 from app.core.companion_harness.memory.memory_registry import (
+    MEMORY_STORE_REGISTRY_REQUIRES_DSN,
     get_memory_store,
     shutdown_memory_store,
 )
@@ -177,6 +178,8 @@ class CompanionManager:
                 return existing
 
             scope = CompanionScope(user_id, companion_id, chat_id)
+            if not (self._config.memory_pg_dsn or "").strip():
+                raise ValueError(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
             store = get_memory_store(scope, dsn=self._config.memory_pg_dsn)
 
             user_interactive = (

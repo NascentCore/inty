@@ -35,6 +35,7 @@ class CompanionLLMConfig(BaseModel):
     memory_model: str = ""
     day_summary_model: str = ""
     user_model: str = ""
+    style_model: str = ""
     soul_model: str = ""
     api_base: str = "https://openrouter.ai/api/v1"
     api_key: str = ""

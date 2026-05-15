@@ -2965,6 +2965,9 @@ async def agent_chat_completions(
     if request.stream:
         raise HTTPException(status_code=400, detail="Stream is not supported")
 
+    # TODO(transport): HTTP companion omits companion_background_sink; tool_bg falls through to
+    # push_output_event global queue (see tool_background._effective_on_event). Align with WS
+    # sink or explicitly document unsupported async tool_bg delivery for this route.
     return await _agent_chat_completions_impl(
         db=db,
         agent_id=agent_id,
@@ -3128,6 +3131,8 @@ async def chat_completions_websocket(
                 except Exception as exc:
                     logger.warning(f"companion tool_bg queue result failed: {exc}")
                     continue
+                # TODO(observability): missing ctx often means stale user_msg_uuid or lifecycle bug;
+                # consider metrics and whether to drop vs dead-letter ToolOutputEvent.
                 ctx = companion_ws.pop_foreground_pending(ev.user_msg_uuid)
                 if ctx is None:
                     logger.warning(

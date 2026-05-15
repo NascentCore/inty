@@ -6,7 +6,7 @@ description: >-
   Covers WebSocket / REPL issues and timestamp-specific verification (message.timestamp vs UserTimeContext).
 ---
 
-# Investigate Inty backend（通用方法：日志 + LangSmith + 数据库）
+# Inspect local Inty backend runtime（通用方法：日志 + LangSmith + 数据库）
 
 面向 **`/api/v1/chat/ws`**、**`tools.inty_v2_repl`** 及同类后端问题。先建立 **三条独立数据源** 上的事实，再用 **关联键** 对齐同一事件；避免只信单一来源或混淆「连接级」与「回合级」ID。
 

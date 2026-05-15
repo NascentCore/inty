@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.read_web_page import run_read_web_page_sync
 
@@ -19,7 +19,7 @@ _HTML = """<!DOCTYPE html>
 
 def test_run_read_web_page_writes_memory_and_returns_markdown(tmp_path: Path) -> None:
     sc = CompanionScope("rwp", "a", tmp_path.name)
-    store = get_memory_store(sc, dsn="")
+    store = MemoryStore(scope=sc, repository=None)
 
     mock_resp = MagicMock()
     mock_resp.content = _HTML.encode("utf-8")
@@ -51,7 +51,7 @@ def test_run_read_web_page_writes_memory_and_returns_markdown(tmp_path: Path) ->
 
 def test_run_read_web_page_rejects_localhost(tmp_path: Path) -> None:
     sc = CompanionScope("rwp", "a", f"{tmp_path.name}-loc")
-    store = get_memory_store(sc, dsn="")
+    store = MemoryStore(scope=sc, repository=None)
     out = run_read_web_page_sync(store, url="http://127.0.0.1:8080/secret")
     assert out.startswith("ERROR:")
     assert "local" in out.lower()
