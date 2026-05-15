@@ -141,7 +141,7 @@ def test_build_system_prompt_significance_slice_when_flag() -> None:
         b,
         ContextMeta(),
         enable_user_profile_tool=True,
-        include_repl_image_generation_contract=False,
+        async_foreground_chat_stack=True,
         include_significance_perception_slice=True,
     )
     assert "## SIGNIFICANCE PERCEPTION" not in text
