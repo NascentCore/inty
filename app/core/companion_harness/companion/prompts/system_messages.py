@@ -411,9 +411,9 @@ def build_system_messages(
                 _system_message(_tool_background_first_round_skip_contract_text())
             )
 
-    out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
-    out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))
-    out.append(_system_message("## STYLE\n\n" + bundle.style_md.strip()))
+    out.append(_system_message(bundle.identity.strip()))
+    out.append(_system_message(bundle.soul.strip()))
+    out.append(_system_message(bundle.style_md.strip()))
     out.append(_system_message(experience_profile_system_clause(context.context_mode)))
     if bundle.techno_core_md.strip():
         out.append(_system_message(bundle.techno_core_md.strip()))

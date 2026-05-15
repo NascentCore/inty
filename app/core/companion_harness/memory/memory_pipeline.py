@@ -104,7 +104,7 @@ Rules:
 - Write in the same language as USER.md and the conversation (usually Chinese for Chinese content).
 """
 
-_STYLE_CURATOR_SYSTEM = """You are a STYLE.md curator. STYLE.md is the assistant's durable **communication style** (how to speak: tone, pacing, respect for user comfort). It is injected into the system prompt as ## STYLE on every turn.
+_STYLE_CURATOR_SYSTEM = """You are a STYLE.md curator. STYLE.md is the assistant's durable **communication style** (how to speak: tone, pacing, respect for user comfort). It is injected into the companion system prompt stack as plain STYLE.md body text on every turn (no injected markdown H2 title line before the body).
 
 The workspace STYLE.md template includes the following update rules (follow them when deciding whether and how to edit):
 - 直接响应用户明确的修改指令
