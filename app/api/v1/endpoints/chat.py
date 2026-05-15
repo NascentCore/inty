@@ -3153,15 +3153,14 @@ async def chat_completions_websocket(
                     ws_conn_id=ws_conn_id,
                     tc_box=tc_box,
                 )
-                if feats.companion_ws_proactive_heartbeat_enabled:
-                    await _try_fire_companion_ws_proactive_heartbeat(
-                        outbound_queue=outbound_queue,
-                        ctx=hb_snapshot,
-                        subscription_svc=subscription_svc,
-                        companion_ws=companion_ws,
-                        ws_conn_id=ws_conn_id,
-                        tc_box=tc_box,
-                    )
+                await _try_fire_companion_ws_proactive_heartbeat(
+                    outbound_queue=outbound_queue,
+                    ctx=hb_snapshot,
+                    subscription_svc=subscription_svc,
+                    companion_ws=companion_ws,
+                    ws_conn_id=ws_conn_id,
+                    tc_box=tc_box,
+                )
                 await _try_fire_companion_ws_maintenance_inner_tick(
                     outbound_queue=outbound_queue,
                     ctx=hb_snapshot,
