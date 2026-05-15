@@ -9,6 +9,7 @@ Create Date: 2025-12-03 10:03:47.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -97,3 +98,4 @@ def downgrade() -> None:
         table_name="feedback_push_history",
     )
     op.drop_table("feedback_push_history")
+

@@ -5,14 +5,14 @@ Revises: 65cecc256473
 Create Date: 2025-06-11 09:03:17.123456+00:00
 
 """
-
 from typing import Sequence, Union
 
 from alembic import op
 
+
 # revision identifiers, used by Alembic.
-revision: str = "8f7a7e953b2c"
-down_revision: Union[str, None] = "65cecc256473"
+revision: str = '8f7a7e953b2c'
+down_revision: Union[str, None] = '65cecc256473'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -29,7 +29,7 @@ def upgrade() -> None:
             ORDER BY user_id, agent_id, created_at DESC
         ) AND is_active = true;
     """)
-
+    
     # 使用原生SQL添加部分唯一约束：每个用户与每个Agent只能有一个活跃的聊天会话
     op.execute("""
         CREATE UNIQUE INDEX uq_chats_user_agent_active 

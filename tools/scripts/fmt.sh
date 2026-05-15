@@ -11,7 +11,8 @@ if [ "$FORMAT_ALL" = true ]; then
     echo "Formatting all files..."
     # Format all Kotlin files
     ktfmt --kotlinlang-style android_app/
-    # Format all Python files (paths must stay aligned with CI black --check)
+    # Format all Python files (paths must stay aligned with CI black --check).
+    # backend/alembic/versions/ is excluded via pyproject.toml [tool.black] extend-exclude (Alembic-generated).
     black app/ backend/ tools/scripts/ experimental/
     # Format all other files
     npx prettier --write evaluation/ web_app/

@@ -31,7 +31,9 @@ def upgrade() -> None:
         ),
     )
     # 迁移关键步骤：把历史 festival_name/festival_date 回填到 metadata，平滑兼容新读路径。
-    op.execute(sa.text("""
+    op.execute(
+        sa.text(
+            """
             UPDATE memory
             SET metadata = json_build_object(
                 'festival_name', festival_name,
@@ -42,7 +44,9 @@ def upgrade() -> None:
                 AND metadata IS NULL
                 AND festival_name IS NOT NULL
                 AND festival_date IS NOT NULL
-            """))
+            """
+        )
+    )
 
 
 def downgrade() -> None:
