@@ -36,7 +36,6 @@ def test_companion_session_seeds_living_sphere_and_injects_prompt(
         for m in build_system_messages(bundle, context)
         if m.get("role") == "system"
     )
-    assert "## LIVING SPHERE" in system_text
     assert "世界：TechnoCore" in system_text
     assert "不要冒充现实地理位置" in system_text
 

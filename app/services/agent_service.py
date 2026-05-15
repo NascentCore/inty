@@ -101,9 +101,7 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: Agent) -> None:
         )
 
 
-async def generate_agent_opening_voice(
-    agent: Agent, db: AsyncSession
-) -> Optional[str]:
+async def generate_agent_opening_voice(agent: Agent, db: AsyncSession) -> Optional[str]:
     """
     为Agent生成开场白语音并返回音频URL
     """
@@ -911,10 +909,7 @@ async def get_balanced_score_based_agents(
     offset = (page - 1) * page_size
 
     base_score = (
-        func.coalesce(
-            Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0
-        )
-        * 2
+        func.coalesce(Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0) * 2
         + func.abs(func.hashtext(func.concat(Agent.id, sort_seed))) % 100
     )
     order_by_clauses = []
@@ -1141,9 +1136,7 @@ async def get_recommended_agents_paginated(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def create_agent(
-    db: AsyncSession, agent_in: AgentCreate, user_id: str
-) -> Agent:
+async def create_agent(db: AsyncSession, agent_in: AgentCreate, user_id: str) -> Agent:
     """
     创建新的AI角色
     如果 agent_in 没有 avatar，则自动为用户扣一个 avatar，crop_avatar()

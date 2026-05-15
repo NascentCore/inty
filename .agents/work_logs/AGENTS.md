@@ -1,11 +1,8 @@
-# Work Logs
+# `.agents/work_logs/`：工作日志（追加-only）
 
-**Never update previous work logs, those are for history records.**
+**一句话**：按 **日期 / 任务** 记录对代码库影响较大的工作，供以后的人类与智能体 **快速复盘**。
 
-Write important work logs to `/.agents/work_logs/{date}/{task_name}.md`,
-in order to note siagnificant changes in the code base,
-for each work item:
+## 规则
 
-- Write 1 sentence summary of your work
-- Write bullet points of actions
-- Write follow-ups (if there is any)
+- **禁止改写历史文件**：旧日志是时间线的一部分。
+- **新文件模板**：一句话摘要 → 行动要点列表 → 若有则写 **后续待办**。

@@ -80,7 +80,9 @@ from .significance_perception import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
 )
-from app.core.companion_harness.memory.transcript_compaction import CompactionConfig as TranscriptCompactionConfig
+from app.core.companion_harness.memory.transcript_compaction import (
+    CompactionConfig as TranscriptCompactionConfig,
+)
 from .turn_pipeline import (
     build_companion_turn_prompt_plan,
     load_companion_turn_state,
@@ -119,7 +121,9 @@ from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from app.core.companion_harness.memory.memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 
 CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 
@@ -836,9 +840,7 @@ async def run_turn(
         langsmith_llm_run_acc or "",
     )
     transcript_user_content = (
-        USER_SIGNED_ON_TRIGGER_USER_TEXT
-        if implicit_sign_on_turn
-        else user_text
+        USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
     )
     return CompanionTurnResult(
         assistant_text=last_text,

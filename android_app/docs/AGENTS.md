@@ -1,4 +1,8 @@
-# Android App Docs
+# `android_app/docs/`：面向公众的 Android 文档
 
-- CHANGE_LOGS.md must use English, it's for public users
-- Each feature only write 1 sentence, very succinct for users to quickly get the idea
+**一句话**：这里放 **给最终用户或商店页面看** 的 Android 侧说明；语气与语言需 **对公众友好**。
+
+## 写作规则
+
+- **CHANGELOG**：对用户可见条目使用 **英文**，一条一事一句，便于快速扫读。
+- **粒度**：每个功能点 **一句话** 说清「用户能得到什么」，不展开实现。

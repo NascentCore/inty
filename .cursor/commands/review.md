@@ -1,8 +1,8 @@
-# Review and Enhance
+# Review change in the current conversation
 
 ## Overview
 
-Review and commit pending changes in the current conversation.
+As a fellow team member, review and revise the pending changes in the current conversation, and commit in the end.
 
 ## Instructions
 
@@ -33,6 +33,5 @@ Review and commit pending changes in the current conversation.
 - [ ] Confirm that changes match user intention, revise changes if needed
 - [ ] Confirm that implementation architecture is sound, revise changes if needed
 - [ ] Tests are added if needed
-- [ ] Changes passed tests, revise changes if needed
-- [ ] **Changes committed**
-- [ ] **Commit(s) pushed to remote**
+- [ ] Changes passed tests, fix test failures if needed
+- [ ] **Changes committed and pushed to remote**

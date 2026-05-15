@@ -1,13 +1,17 @@
 ---
-name: inty-companion-memory-db-inspect
+name: inspect-companion-harness
 description: >-
-  Inspect whether companion MemoryStore logical documents (IDENTITY.md, transcript,
-  context.json, etc.) are persisted in Postgres table companion_memory_document_versions.
-  Use after REPL/chat turns, tool_background, or when debugging dual MemoryStore registry
-  keys (scope vs path). Load DB credentials from repo config.yaml.
+  For humans to understand the companion runtime's foundational working conditions. Inspect companion harness persistence in Postgres (MemoryStore document versions).
+  Covers companion_memory_document_versions, scope triples, and SQL templates for
+  identity/transcript/context, etc. Load DB credentials from repo config.yaml. Sub-skill
+  for reading context_mode only: context-mode-in-db/SKILL.md.
 ---
 
 # Inty companion：核对 MemoryStore 与 Postgres 落库
+
+## Sub-skills
+
+- **`context-mode-in-db/SKILL.md`**：只查 **`context.json`** 落库里的 **`context_mode`** / **`post_bootstrap_context_mode`**（`document_kind = context_json`），按 **`agent_id`（`companion_id`）** 排查体验配置。
 
 ## 何时使用
 

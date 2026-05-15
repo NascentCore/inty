@@ -1,3 +1,8 @@
-# Research projects
+# `research/`：研究与试做沙盒
 
-Various exploratary research projects to explore AI agentic capabilities.
+**一句话**：放 **不直接上生产** 的探索代码——验证想法、打原型、试模型交互；默认 **读者是研究者本人与编码智能体**。
+
+## 边界
+
+- **不服务线上用户**；稳定性与长期维护 **不做保证**。
+- 子项目各自 README 说明如何运行；跨目录复用主产品线代码前先看子目录 AGENTS。

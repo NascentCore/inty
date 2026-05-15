@@ -1,6 +1,11 @@
-# 直接调用 localhost:8000 API Endpoints 的端到端功能测试
+# `tests/app/features/`：直连本机后端的特性级 E2E
 
-专门存放端到端功能测试，这些测试直接访问本地运行的后端实例；
-使用 tests/app/api/test_client.py 来访问 API Endpoints；完整模拟一个功能端到端的使用流程，来完成测试。
+**一句话**：这里的测试 **假设 `localhost:8000` 上已有运行中的后端**，用共享的 HTTP 客户端 helper **模拟真实用户旅程**。
 
-- Always calls the backend runs at localhost:8000
+## 读者
+
+- 为「完整用户故事」写 **粗粒度断言** 的后端工程师。
+
+## 约定
+
+- **单一真源**：业务路径与端口假设以父级 `tests/AGENTS.md` 为准；本目录不再重复长篇启动说明。

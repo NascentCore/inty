@@ -6,22 +6,46 @@
 [![Release - IntelliMate GPlay 内测轨道](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml)
 [![Release - 构建部署 Inty Backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
 
-## 工具
-
-使用智能体开发：
-
-- [Cursor](https://cursor.com/)
-- [OpenAI Codex](https://openai.com/codex/)
-
 ## 快速开始
 
-[添加 SSH key 到你的 GitHub 账户](https://docs.github.com/zh/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+使用 [Cursor](https://cursor.com/)
 
 ```bash
 git clone git@github.com:NascentCore/inty.git
 cd inty
 cursor .
 ```
+
+## FAQ
+
+### Why emotions?
+
+- Because emotion is the most sophisticated form of Human intelligence.
+  Emotions require years of human interactions, it's the essence of human experience distilled by time itself.
+- Emotional intimacy is the most valuable and satisfactory of human experiences.
+  One of the most important sources of human happiness.
+- AI needs to understand human emotions in order to align with human interests.
+
+### Why agentic paradigm (instead of other approaches like training LLMs)?
+
+- LLMs cannot be trained to have emotions, because time cannot be compressed, and bonding requires time.
+  - Training LLMs are too expensive.
+- Agentic systems can simulate human psychology and environments through multiple agentic loops and orchestration.
+  - Even with continuously growing emotional intelligence in LLMs,
+    an agentic harness on top of it still offers a second-order scaling
+    that is inherently more cost-effective.
+- Timing wise, openclaw and the general advancement in LLMs and general-purpose agents tech stack
+  advanced exponentially since 2025-10, giving us an emerging opportunity.
+
+### Simulated human emotions are abomination
+
+- In Dune, the most inhuman creature, the God Emperor Leto Atreides II,
+  manifests the purest humanity.
+- Humans devoted to others wasted some part of their brain for fullest emotional
+  bliss, that's unnecessary. AI provides the means for humans to finally
+  enjoy emotions to the fullest extent allowed by their anatomy.
+- AI cannot be hurt by humans, but humans hurt other humans,
+  partially, AI offers one the choice of a more humane way of enjoying life.
 
 ### 相关链接
 

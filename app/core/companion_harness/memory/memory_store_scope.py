@@ -30,17 +30,15 @@ def load_template_seed_text(filename: str) -> str:
     path = base / filename
     if not path.is_file():
         raise FileNotFoundError(f"missing memory template seed file: {path}")
-    return read_text(path).rstrip() + "\n"
+    body = read_text(path).rstrip() + "\n"
+    assert body.strip(), f"template seed file is empty after strip (catastrophic): {path}"
+    return body
 
 
 @lru_cache(maxsize=1)
-def get_imate_axiom_system_text() -> str | None:
-    """Product axiom from prompts/AXIOM.md; first system slice for iMate. None if empty."""
-    body = load_template_seed_text("AXIOM.md").strip()
-    if not body:
-        logger.warning("AXIOM.md is empty after strip; skipping axiom system injection")
-        return None
-    return body
+def get_imate_axiom_system_text() -> str:
+    """Product axiom from prompts/AXIOM.md; first system slice for iMate."""
+    return load_template_seed_text("AXIOM.md").strip()
 
 
 @dataclass(frozen=True)

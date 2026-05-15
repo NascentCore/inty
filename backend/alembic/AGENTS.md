@@ -1,29 +1,18 @@
-# AGENTS.md · backend/alembic/（数据库迁移）
+# `backend/alembic/`：数据库模式演进
 
-- Alembic is the database schema management tool
-- 配置文件为 `backend/alembic/alembic.ini`；从仓库根目录执行时需 `export ALEMBIC_CONFIG=backend/alembic/alembic.ini` 或 `alembic -c backend/alembic/alembic.ini ...`。
-- `backend/alembic/versions/` 是 Inty 主后端、Ops 与 push worker 共用的数据库 schema revision 链。
-- Ops 读写的共享业务表必须跟随同一 Alembic head；禁止为 Ops 拆出独立 migration 目录。
-- 禁止生成更新数据表的 version 文件
-- `alembic revision --autogenerate -m "<revision description>"`
-  使用该命令生成新的 version 文件
-- 一切数据库模式变更必须通过迁移完成；禁止绕过迁移直接改表。
-- 禁止重写或删除历史迁移；如需修复，追加新迁移说明原因与影响。
+**一句话**：全仓库 **唯一权威的 schema migration 链**——Inty 主服务、Ops、push worker **共用** 同一 `versions/` 目录；**禁止**为 Ops 单独分叉一套迁移历史。
 
-配置文件位于 `backend/alembic/alembic.ini`。从仓库根目录执行 alembic 时需指定配置：先 `export ALEMBIC_CONFIG=backend/alembic/alembic.ini`，或使用 `alembic -c backend/alembic/alembic.ini ...`。
+## 读者
 
-## 增加新的 Alembic version 文件的步骤
+- 改 SQLAlchemy 模型、需要演进表结构的任何人。
 
-```bash
-# 删除现有的 postgres 实例及其存储卷，从而彻底清空；然后启动并确保数据库为空
-docker rm -f -v pg-inty
-docker run --rm --name pg-inty -p 5432:5432 \
-    -e POSTGRES_PASSWORD=sxwl666! -e POSTGRES_DB='inty' -d \
-    postgres:16
-# 运行 alembic 将数据库升级到最新状态，此时必须确保没有新增的 alembic version 文件！！！
-cp devops/config.yaml.test config.yaml
-export PYTHONPATH=.
-export ALEMBIC_CONFIG=backend/alembic/alembic.ini
-alembic upgrade head
-alembic revision --autogenerate -m "<revision description>"
-```
+## 原则（比命令更重要）
+
+- **一切表结构变更走迁移**：不要手工在生产改表后忘了补 revision。
+- **禁止改写历史**：已合并的 revision 文件视为 **只读**；修正用 **新 revision** 说明补救原因。
+- **数据回填**：避免生成「仅批量改数据」的 migration 文件——数据修复用脚本或运维任务，schema 迁移专注 DDL。
+- **Ops 与主站共头**：任何 Ops 会读写的共享表，必须在 **同一 Alembic head** 上演进。
+
+## 实操入口
+
+- 具体 `alembic.ini` 路径、`PYTHONPATH`、与 Postgres 基线等 **可复制命令** 见仓库技能 **inty-alembic-revision** 与 `backend/alembic` 旁维护说明；此处不重复长脚本块以免与真环境漂移。

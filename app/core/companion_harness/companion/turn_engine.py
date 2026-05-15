@@ -63,7 +63,9 @@ def build_repl_turn_base_messages(
         messages.append(row)
     user_msg_uuid = str(uuid.uuid4())
     if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
-        messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE})
+        messages.append(
+            {"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE}
+        )
         messages.append(
             {
                 "role": "user",

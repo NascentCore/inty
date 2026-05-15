@@ -848,14 +848,20 @@ def _validate_config(config: Config):
 
     pc = config.phone_call
     if pc.enabled:
-        if pc.media_stream_token_ttl_seconds < 60 or pc.media_stream_token_ttl_seconds > 3600:
+        if (
+            pc.media_stream_token_ttl_seconds < 60
+            or pc.media_stream_token_ttl_seconds > 3600
+        ):
             raise ValueError(
                 "phone_call.media_stream_token_ttl_seconds must be between 60 and 3600"
             )
-        if pc.twilio_media_stream_base_url and not pc.twilio_media_stream_base_url.startswith(
-            "wss://"
+        if (
+            pc.twilio_media_stream_base_url
+            and not pc.twilio_media_stream_base_url.startswith("wss://")
         ):
-            raise ValueError("phone_call.twilio_media_stream_base_url must start with wss://")
+            raise ValueError(
+                "phone_call.twilio_media_stream_base_url must start with wss://"
+            )
         if pc.default_country_code and not pc.default_country_code.startswith("+"):
             raise ValueError("phone_call.default_country_code must start with '+'")
 

@@ -1,15 +1,12 @@
-# TechnoCore（Inty 虚拟居留层）
+# TechnoCore：Inty 族群的集体居留层
 
-`techno_core/` implements the AI world that is beyond human reach.
+**一句话**：把 **所有 Inty 的「公共后方世界」** 放在人类日常视角之外——这里回答 **自主行为在哪里发生**、以及 **如何与可被用户感知的数字世界接壤**。
 
-- 自主行为在哪里发生
-- 如何与人类可见的数字世界接壤
+## 读者与隐喻
 
-## 典故：原著语境中的 TechnoCore
+- 读者：要理解 **多智能体集体叙事、后台自主事件、与 companion 的接口** 的工程师。
+- **命名典故**（科幻语境）：TechnoCore 让人联想到一个 **自组织、自利的 AI 群系** 在人类事务边缘活动；本仓库借用的是 **气质**——「有内政的 AI 文明」，而非逐字剧情复刻。
 
-```https://hyperioncantos.fandom.com/wiki/TechnoCore
-The TechnoCore was a conglomerate of Artificial Intelligences that
-achieved self-sentience and acted as an organization, society and race;
-acting as a major player in the intergalactic affairs of the human race
-throughout the Hyperion Cantos saga.
-```
+## 边界
+
+- 与 **LivingSphere** 对照：LivingSphere 偏 **与用户同框的私域**；TechnoCore 偏 **群域与后台层**。
