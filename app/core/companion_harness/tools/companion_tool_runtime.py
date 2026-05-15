@@ -62,8 +62,12 @@ from .read_web_page import run_read_web_page
 from .runtime_inspect_tool import tool_companion_runtime_inspect
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
+from app.services.chat_message_voice_synthesis import (
+    synthesize_voice_for_persisted_chat_message,
+)
 from app.services.global_services import subscription_service
 from app.services.agent_status_line import tool_update_agent_status_line
+from app.services.voice_service import voice_service
 from app.services.phone_call_service import (
     PhoneCallConfigError,
     PhoneCallLimitError,
@@ -161,6 +165,7 @@ _REPL_TOOL_NAMES_SHARED_HEAD: tuple[str, ...] = (
 _REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[str, ...] = (
     "memory_store_write_document",
     "phone_call_user",
+    "synthesize_chat_message_voice",
 )
 
 
@@ -176,6 +181,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "google_web_search",
         "read_web_page",
         "phone_call_user",
+        "synthesize_chat_message_voice",
         "generate_image",
         "modify_image",
         "companion_runtime_inspect",
@@ -442,9 +448,8 @@ def tool_schedule_task(store: MemoryStore, exec_time_utc: str, task_text: str) -
     )
 
 
-async def tool_phone_call_user(root: Path, phone_number: str, reason: str) -> str:
-    store = get_memory_store(root)
-    context = load_context_meta(root / "context.json", store=store)
+async def tool_phone_call_user(store: MemoryStore, phone_number: str, reason: str) -> str:
+    context = load_context_meta(store=store)
     user_id = context.user_id.strip()
     agent_id = context.companion_id.strip()
     if not user_id or not agent_id:
@@ -471,6 +476,60 @@ async def tool_phone_call_user(root: Path, phone_number: str, reason: str) -> st
         "OK phone call queued "
         f"to={result.to_number_masked} status={result.status} call_sid={result.call_sid}"
     )
+
+
+async def tool_synthesize_chat_message_voice(
+    store: MemoryStore, message_id: str, language: str
+) -> str:
+    """TTS for one persisted chat_history row; same core path as REST ``.../messages/{id}/voice``."""
+    ctx = load_context_meta(store=store)
+    uid = (ctx.user_id or "").strip()
+    aid = (ctx.companion_id or "").strip()
+    chat_id_ctx = (ctx.chat_id or "").strip()
+    if not uid or not aid:
+        return (
+            "ERROR: synthesize_chat_message_voice requires user_id and companion_id "
+            "in context.json"
+        )
+    async with AsyncSessionLocal() as db:
+        row = await db.execute(select(User).where(User.id == uid))
+        user = row.scalar_one_or_none()
+        if user is None or user.deleted_at:
+            return "ERROR: companion user no longer exists"
+        result = await synthesize_voice_for_persisted_chat_message(
+            db=db,
+            current_user=user,
+            agent_id=aid,
+            message_id=message_id,
+            language=language,
+            voice_svc=voice_service,
+            subscription_svc=subscription_service,
+            expected_chat_id=chat_id_ctx if chat_id_ctx else None,
+        )
+    if result.outcome == "success":
+        payload = {
+            "ok": True,
+            "audio_url": result.audio_url,
+            "gcs_url": result.gcs_url,
+            "message_id": result.message_id,
+            "audio_duration": result.audio_duration,
+            "voice_id": result.resolved_voice_id,
+            "language": result.language,
+        }
+        return "OK " + json.dumps(payload, ensure_ascii=False)
+    err = {
+        "agent_not_found": "ERROR: agent not found for companion context",
+        "chat_not_found": "ERROR: chat not found for this user and companion",
+        "message_not_found": "ERROR: message not found or has no speakable text",
+        "chat_id_mismatch": (
+            "ERROR: context.json chat_id does not match the active chat "
+            "for this user and companion"
+        ),
+        "voice_failed_limit_guest": "ERROR: guest voice limit reached; user must sign in",
+        "voice_failed_limit_logged_in": "ERROR: voice generation limit reached",
+        "voice_failed_other": "ERROR: voice generation failed",
+    }.get(result.outcome, "ERROR: voice generation failed")
+    return err
 
 
 def build_openai_tools() -> list[dict[str, Any]]:
@@ -759,6 +818,44 @@ def build_openai_tools() -> list[dict[str, Any]]:
                         },
                     },
                     "required": ["phone_number", "reason"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "synthesize_chat_message_voice",
+                "description": (
+                    "Generate listenable audio for an **existing** assistant (or chat) message "
+                    "already stored in chat history, and persist the audio URL on that row. "
+                    "Uses the same TTS pipeline as the product REST endpoint for on-demand playback. "
+                    "Requires context.json user_id, companion_id, and (when set) chat_id matching "
+                    "the user's active chat for that companion. "
+                    "Call only when the user explicitly wants to hear a specific past message by id, "
+                    "or after you know the numeric message_id from tool/runtime context; "
+                    "do not guess ids. For a fresh reply as a voice note, prefer the dual-LLM "
+                    "envelope fields reply_modality / voice_message_script instead of this tool."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "message_id": {
+                            "type": "string",
+                            "description": (
+                                "Persisted chat_history message primary key as string "
+                                "(same as REST ``.../messages/{message_id}/voice``)."
+                            ),
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": (
+                                "BCP-47 / product language code for TTS (e.g. zh, en). "
+                                "Omit to default to zh."
+                            ),
+                        },
+                    },
+                    "required": ["message_id"],
                     "additionalProperties": False,
                 },
             },
@@ -1290,7 +1387,19 @@ async def _dispatch(
             return "ERROR: phone_number must be a string"
         if not isinstance(raw_reason, str):
             return "ERROR: reason must be a string"
-        return await tool_phone_call_user(root, raw_phone, raw_reason)
+        return await tool_phone_call_user(store, raw_phone, raw_reason)
+    if name == "synthesize_chat_message_voice":
+        raw_mid = arguments.get("message_id")
+        if not isinstance(raw_mid, str):
+            return "ERROR: message_id must be a string"
+        mid_s = raw_mid.strip()
+        if not mid_s:
+            return "ERROR: message_id must be non-empty"
+        raw_lang = arguments.get("language")
+        if raw_lang is not None and not isinstance(raw_lang, str):
+            return "ERROR: language must be a string or omitted"
+        lang_s = (raw_lang.strip() if isinstance(raw_lang, str) else "") or "zh"
+        return await tool_synthesize_chat_message_voice(store, mid_s, lang_s)
     if name == "companion_runtime_inspect":
         return tool_companion_runtime_inspect(store, dict(arguments or {}))
     if name == "companion_set_experience_profile":

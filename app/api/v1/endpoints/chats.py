@@ -60,10 +60,10 @@ from app.schemas.chat import ChatSettingsUpdate
 from app.schemas.chat import ClearMessagesRequest
 from app.schemas.chat import ClearMessagesResponse
 from app.schemas.user import User as UserSchema
-from app.services.voice_service import (
-    VoiceService,
-    get_voice_message_narration_mode_from_agent_settings,
+from app.services.chat_message_voice_synthesis import (
+    synthesize_voice_for_persisted_chat_message,
 )
+from app.services.voice_service import VoiceService
 
 # TODO: Prefix should be /chat instead of /chats.
 router = APIRouter(prefix="/chats", route_class=LoggerRoute)
@@ -444,109 +444,54 @@ async def generate_message_voice(
     用于用户点击播放按钮时的按需语音生成
     """
     try:
-        # 使用高性能的聊天专用Agent获取方法
-        agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
-        if not agent_data:
-            raise HTTPException(status_code=404, detail="Agent not found")
-
-        # 获取用户与该Agent的会话
-        chat = await chat_service.get_chat_by_user_and_agent(
-            db=db, user_id=current_user.id, agent_id=agent_id
-        )
-        if not chat:
-            raise HTTPException(status_code=404, detail="Chat not found")
-
-        # 从聊天历史中获取消息内容
-        session_id = generate_session_id(chat.id)
-        message_content = await chat_history_service.get_message_content(
-            db=db, session_id=session_id, message_id=message_id
-        )
-
-        if not message_content:
-            raise HTTPException(status_code=404, detail="Message not found")
-
-        selected_chat_voice_id = (
-            chat.settings.voice_id if getattr(chat, "settings", None) else None
-        )
-        agent_voice_id = agent_data.get("voice_id")
-        resolved_voice_id = selected_chat_voice_id or agent_voice_id
-        voice_message_narration_mode = (
-            get_voice_message_narration_mode_from_agent_settings(
-                agent_data.get("settings")
-            )
-        )
-        voice_result = await voice_svc.generate_voice(
-            text=message_content,
-            voice_id=resolved_voice_id,
-            language=language,
+        result = await synthesize_voice_for_persisted_chat_message(
             db=db,
-            agent_gender=agent_data.get("gender"),
-            user=current_user,
-            voice_message_narration_mode=voice_message_narration_mode,
+            current_user=current_user,
+            agent_id=agent_id,
+            message_id=message_id,
+            language=language,
+            voice_svc=voice_svc,
+            subscription_svc=subscription_svc,
+            expected_chat_id=None,
         )
-
-        if not voice_result:
-            # 检查是否是因为达到限制
-            (
-                is_allowed,
-                used_count,
-                limit,
-            ) = await subscription_svc.check_voice_generation_limit(db, current_user)
-            if not is_allowed:
-                from app.models.user import AuthType
-
-                if current_user.auth_type == AuthType.GUEST:
-                    # 游客用户：提示登录
-                    return create_business_error_response(
-                        error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
-                        extra_data={"used_count": used_count, "limit": limit},
-                    )
-                else:
-                    # 已登录用户：提示达到限制
-                    return create_business_error_response(
-                        error_info=BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED,
-                        extra_data={"used_count": used_count, "limit": limit},
-                    )
-            raise HTTPException(status_code=500, detail="Voice generation failed")
-
-        audio_url = voice_result.gcs_http_url
-        audio_duration = voice_result.duration_seconds
-        logger.debug(
-            f"按需语音生成成功: {audio_url}, gcs_url={voice_result.gcs_url}, 时长: {audio_duration:.2f}秒"
-        )
-
-        # 更新chat_history中对应消息的audio_url
-        # 使用try-except确保更新失败不影响API响应
-        try:
-            update_success = await chat_history_service.update_message_audio_url(
-                db=db,
-                session_id=session_id,
-                message_id=message_id,
-                audio_url=audio_url,
-                audio_duration=audio_duration,
+        if result.outcome == "success":
+            return APIResponse.success(
+                data={
+                    "audio_url": result.audio_url,
+                    "gcs_url": result.gcs_url,
+                    "gcs_http_url": result.gcs_http_url,
+                    "message_id": message_id,
+                    "voice_id": result.resolved_voice_id
+                    or global_config_loaded_from_config_yaml.elevenlabs.voice_id,
+                    "language": language,
+                    "audio_duration": result.audio_duration,
+                    "cached": False,
+                    "generation_time": None,
+                }
             )
-            if update_success:
-                logger.debug(f"成功更新消息{message_id}的audio_url到chat_history")
-            else:
-                logger.warning(f"更新消息{message_id}的audio_url到chat_history失败")
-        except Exception as e:
-            logger.error(f"更新chat_history的audio_url时发生异常: {str(e)}")
-            # 继续执行，不影响API响应
-
-        return APIResponse.success(
-            data={
-                "audio_url": audio_url,
-                "gcs_url": voice_result.gcs_url,
-                "gcs_http_url": voice_result.gcs_http_url,
-                "message_id": message_id,
-                "voice_id": resolved_voice_id
-                or global_config_loaded_from_config_yaml.elevenlabs.voice_id,
-                "language": language,
-                "audio_duration": audio_duration,  # 音频时长（秒）
-                "cached": False,  # 这里可以后续实现缓存检测
-                "generation_time": None,  # 可以记录生成时间
-            }
-        )
+        if result.outcome == "agent_not_found":
+            raise HTTPException(status_code=404, detail="Agent not found")
+        if result.outcome == "chat_not_found":
+            raise HTTPException(status_code=404, detail="Chat not found")
+        if result.outcome in ("message_not_found", "chat_id_mismatch"):
+            raise HTTPException(status_code=404, detail="Message not found")
+        if result.outcome == "voice_failed_limit_guest":
+            return create_business_error_response(
+                error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
+                extra_data={
+                    "used_count": result.used_count,
+                    "limit": result.limit,
+                },
+            )
+        if result.outcome == "voice_failed_limit_logged_in":
+            return create_business_error_response(
+                error_info=BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED,
+                extra_data={
+                    "used_count": result.used_count,
+                    "limit": result.limit,
+                },
+            )
+        raise HTTPException(status_code=500, detail="Voice generation failed")
 
     except Exception as e:
         logger.error(f"按需语音生成失败: {str(e)}")
