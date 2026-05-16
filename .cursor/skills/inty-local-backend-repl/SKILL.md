@@ -4,11 +4,11 @@ description: >-
   Launch inty backend connected with terminal REPL, for local development and evaluation.
 ---
 
-# Launching local backend for terminal REPL
+# Launch Inty backend locally for terminal REPL
 
 ## When to use
 
-- Launch Inty ops on `:8001` for `tools.inty_v2_repl` to connect with
+- Launch Inty ops on current workspace on `:8001` for `tools.inty_v2_repl` to connect with
 - [`Terminal REPL AGENTS.md`](/tools/inty_v2_repl/AGENTS.md)
 
 ## Ops

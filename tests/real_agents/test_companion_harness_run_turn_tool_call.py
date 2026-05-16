@@ -90,11 +90,7 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
     )
     client = _InstrumentedCompanionLLMClient(cfg)
 
-    mem_cfg = MemoryPipelineConfig(
-        day_summary_disabled=True,
-        user_update_disabled=True,
-        soul_update_disabled=True,
-    )
+    mem_cfg = MemoryPipelineConfig(memory_update_every_n_turns=999)
     user_prompt = (
         "You MUST call the memory_store_list_paths tool first with relative_path \"\" (empty string) "
         "to list the MemoryStore scope root. Do not guess. After you receive the tool output, reply in one "

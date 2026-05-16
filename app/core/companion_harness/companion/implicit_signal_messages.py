@@ -7,7 +7,7 @@ similar greetings across turns (models weigh trailing system instructions heavil
 framing the trigger as user input improves variation while keeping the signal last in
 the dialogue before the assistant reply. The Chinese bootstrap line mirrors the old
 WebSocket connect-time interactive kickoff placeholder so USER_INTERACTIVE sessions
-still open naturally when the client triggers implicit greeting via ``user_signed_on`` (+ ``implicit_greeting``).
+still open naturally when the client triggers greeting via ``user_signed_on`` with ``message_id``.
 
 Client wall-clock context (``ImplicitSignalBundle.client_time``) is not injected here;
 ``turn_pipeline`` emits a dedicated ``## user-time-context`` **system** message

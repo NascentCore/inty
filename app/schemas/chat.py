@@ -362,15 +362,9 @@ ChatMessageContentPart = Annotated[
 
 
 class CompanionChatTurnMessageType(str, enum.Enum):
-    """Turn category for companion plumbing.
-
-    ``IMPLICIT_USER_SIGNED_ON`` marks implicit sign-on rounds (server synthetic from ``user_signed_on``
-    + ``implicit_greeting``, or the same shape on a WebSocket chat frame). **Product** clients prefer
-    the control frame; HTTP completions do not use ``IMPLICIT_USER_SIGNED_ON``.
-    """
+    """Turn category for companion chat completion requests (normal user turns)."""
 
     USER_MESSAGE = "USER_MESSAGE"
-    IMPLICIT_USER_SIGNED_ON = "IMPLICIT_USER_SIGNED_ON"
 
 
 class ChatMessage(BaseModel):
@@ -435,11 +429,7 @@ class ChatCompletionRequest(BaseModel):
     message_type: CompanionChatTurnMessageType = Field(
         default=CompanionChatTurnMessageType.USER_MESSAGE,
         alias="messageType",
-        description=(
-            "Turn kind: USER_MESSAGE for normal chat; IMPLICIT_USER_SIGNED_ON for implicit sign-on "
-            "(product: user_signed_on + implicit_greeting; wire may use the same message_type on "
-            "chat frames). Not supported on HTTP completions."
-        ),
+        description="Turn kind; greeting uses WebSocket ``user_signed_on`` with ``message_id``.",
     )
 
     @model_validator(mode="after")
@@ -450,19 +440,6 @@ class ChatCompletionRequest(BaseModel):
             logger.warning("DEPRECATED: 'model' parameter has no use")
         if self.language != "zh":
             logger.warning("DEPRECATED: 'language' parameter has no use")
-        return self
-
-    @model_validator(mode="after")
-    def implicit_user_signed_on_requires_empty_user_text(
-        self,
-    ) -> "ChatCompletionRequest":
-        if self.message_type != CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON:
-            return self
-        user_msgs = [m for m in self.messages if m.role == "user"]
-        if user_msgs and user_msgs[-1].extract_text_content().strip():
-            raise ValueError(
-                "messageType IMPLICIT_USER_SIGNED_ON requires an empty user message text"
-            )
         return self
 
 

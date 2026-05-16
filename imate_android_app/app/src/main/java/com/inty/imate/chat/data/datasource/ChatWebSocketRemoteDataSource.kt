@@ -81,7 +81,6 @@ constructor() {
                         ChatUserSignedOnWsMessage(
                             agentId = aid,
                             messageId = implicitMsgId,
-                            implicitGreeting = true,
                         ),
                     ),
                 ),
@@ -102,7 +101,10 @@ constructor() {
                     Frame.Text(
                         json.encodeToString(
                             ChatUserSignedOnWsMessage.serializer(),
-                            ChatUserSignedOnWsMessage(agentId = agentId),
+                            ChatUserSignedOnWsMessage(
+                                agentId = agentId,
+                                messageId = UUID.randomUUID().toString(),
+                            ),
                         ),
                     ),
                 )

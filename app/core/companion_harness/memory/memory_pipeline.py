@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import json
 import queue
-import re
 import threading
 import time
 from collections.abc import Callable
@@ -15,9 +14,6 @@ from loguru import logger
 from openai import APIConnectionError, APIError, APITimeoutError, RateLimitError
 from pydantic import BaseModel, Field
 
-from app.core.companion_harness.companion.bootstrap_user_interactive import (
-    soul_prompt_is_locked_after_interactive_bootstrap,
-)
 from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
@@ -35,16 +31,6 @@ _SOUL_MEMORY_CTX_MAX = 12_000
 
 _SOUL_FROZEN_APPEARANCE_MARKER = "<<<SOUL_CURATOR_FROZEN_APPEARANCE>>>"
 
-_SOUL_FUNDAMENTAL_SIGNAL_RE = re.compile(
-    r"底线|边界|原则|相处模式|互动模式|角色设定|基础模式|"
-    r"IDENTITY\.md|SOUL\.md|USER\.md|"
-    r"无法满足|不舒服|拒绝|不能满足|"
-    r"创造者模式|亲密模式|正经做事|重启|"
-    r"memory_store_write_document|memory_store_read_document",
-    re.IGNORECASE,
-)
-_SOUL_FUNDAMENTAL_SIGNAL_EN_RE = re.compile(r"\bSOUL\b|\bIDENTITY\b|\bBOUNDARY\b")
-
 _MEMORY_CURATOR_SYSTEM = """You are a memory curator for semantic long-term memory (MEMORY.md). Given the current MEMORY.md, optional current-day gist summary (memory/<date>.md), and the latest user/assistant turn, output ONLY the full updated MEMORY.md body (markdown).
 
 Rules:
@@ -58,7 +44,7 @@ Rules:
 
 _SOUL_CURATOR_SYSTEM = """You are a SOUL document curator. SOUL.md is injected into the assistant's system prompt on every turn; it must stay aligned with durable values, boundaries, consent/safety lines, and persistent interaction commitments.
 
-You are only invoked when this turn already signals a **fundamental interaction mode / values / boundaries** change (see user message: latest turn). Your job is to update **only** those durable commitments—not scene play-by-play, not episodic flavor, not visual/physical 形象 or 外貌.
+You run on the scheduled memory-curation turn with other long-term documents. Your job is to update **only** durable values, boundaries, and interaction commitments—not scene play-by-play, not episodic flavor, not visual/physical 形象 or 外貌.
 
 Given the current SOUL.md (the `<<<SOUL_CURATOR_FROZEN_APPEARANCE>>>` line is a merge slot—see below), the latest MEMORY.md (after this turn's memory step, for consistency), and the latest user/assistant turn, output ONLY the full updated SOUL.md body (markdown).
 
@@ -126,16 +112,7 @@ Rules:
 
 
 class MemoryPipelineConfig(BaseModel):
-    day_summary_every_n_turns: int = Field(default=100, ge=1)
     memory_update_every_n_turns: int = Field(default=100, ge=1)
-    user_update_every_n_turns: int = Field(default=100, ge=1)
-    style_update_every_n_turns: int = Field(default=100, ge=1)
-    soul_update_every_n_turns: int = Field(default=100, ge=1)
-    day_summary_disabled: bool = False
-    user_update_disabled: bool = False
-    style_update_disabled: bool = False
-    soul_update_disabled: bool = False
-    soul_require_fundamental_signal: bool = True
 
 
 def _bump_memory_pipeline_turn(store: MemoryStore) -> int:
@@ -154,13 +131,6 @@ def _bump_memory_pipeline_turn(store: MemoryStore) -> int:
     data["turns_completed"] = n
     store.write_document(rel, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
     return n
-
-
-def _soul_turn_has_fundamental_signal(user_text: str, assistant_text: str) -> bool:
-    combined = f"{user_text}\n{assistant_text}"
-    if _SOUL_FUNDAMENTAL_SIGNAL_RE.search(combined):
-        return True
-    return _SOUL_FUNDAMENTAL_SIGNAL_EN_RE.search(combined) is not None
 
 
 def _split_soul_appearance_section(soul_body: str) -> tuple[str, str | None]:
@@ -201,6 +171,49 @@ def _clip(s: str, n: int) -> str:
     return s[: n - 1] + "…"
 
 
+def _log_memory_pipeline_skipped(
+    *,
+    step: str,
+    ws: str,
+    turn_n: int,
+    every_n: int | None = None,
+    reason: str | None = None,
+) -> None:
+    if reason is not None:
+        logger.debug(
+            "memory_pipeline skipped step={} turn={} ws={} reason={}",
+            step,
+            turn_n,
+            ws,
+            reason,
+        )
+        return
+    assert every_n is not None
+    logger.debug(
+        "memory_pipeline skipped step={} turn={} every_n={} ws={}",
+        step,
+        turn_n,
+        every_n,
+        ws,
+    )
+
+
+def _log_memory_pipeline_curated(
+    *,
+    step: str,
+    ws: str,
+    turn_n: int,
+    ms: float,
+) -> None:
+    logger.info(
+        "memory_pipeline curated step={} ms={:.0f} ws={} turn={}",
+        step,
+        ms,
+        ws,
+        turn_n,
+    )
+
+
 def _raw_for_summary_prompt(raw: str) -> str:
     if len(raw) <= _RAW_FOR_SUMMARY_MAX:
         return raw
@@ -231,10 +244,7 @@ def _rewrite_day_summary_md(
     user_text: str,
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
-    config: MemoryPipelineConfig,
 ) -> None:
-    if config.day_summary_disabled:
-        return
     day = local_date_str()
     raw_full = store.read_document_if_exists(f"memory/daily/{day}.md") or ""
     prev_summary = store.read_document_if_exists(f"memory/{day}.md") or ""
@@ -287,10 +297,7 @@ def _rewrite_user_md(
     user_text: str,
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
-    config: MemoryPipelineConfig,
 ) -> None:
-    if config.user_update_disabled:
-        return
     user_body = store.read_document("USER.md")
     memory_body = store.read_document("MEMORY.md")
     if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
@@ -316,10 +323,7 @@ def _rewrite_style_md(
     user_text: str,
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
-    config: MemoryPipelineConfig,
 ) -> None:
-    if config.style_update_disabled:
-        return
     style_body = store.read_document("STYLE.md")
     memory_body = store.read_document("MEMORY.md")
     if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
@@ -345,10 +349,7 @@ def _rewrite_soul_md(
     user_text: str,
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
-    config: MemoryPipelineConfig,
 ) -> None:
-    if config.soul_update_disabled:
-        return
     soul_body = store.read_document("SOUL.md")
     curator_doc, frozen_appearance = _split_soul_appearance_section(soul_body)
     memory_body = store.read_document("MEMORY.md")
@@ -378,30 +379,19 @@ def memory_update_after_turn(
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
     config: MemoryPipelineConfig,
-) -> None:
+) -> bool:
+    """Run post-turn memory pipeline. Returns True if any LLM curation step ran."""
     t_all = time.perf_counter()
     ws = store.scope.registry_key()
     turn_n = _bump_memory_pipeline_turn(store)
-    every_n = config.day_summary_every_n_turns
-    user_every_n = config.user_update_every_n_turns
-    style_every_n = config.style_update_every_n_turns
-    memory_every_n = config.memory_update_every_n_turns
-    soul_every_n = config.soul_update_every_n_turns
-    logger.info(
-        "memory_pipeline start ws={} turn={} day_summary_every_n={} "
-        "memory_update_every_n={} user_update_every_n={} style_update_every_n={} soul_update_every_n={} "
-        "day_summary_disabled={} user_update_disabled={} style_update_disabled={} soul_update_disabled={}",
+    every_n = config.memory_update_every_n_turns
+    curation_turn = turn_n % every_n == 0
+    logger.debug(
+        "memory_pipeline start ws={} turn={} memory_update_every_n={} curation_turn={}",
         ws,
         turn_n,
         every_n,
-        memory_every_n,
-        user_every_n,
-        style_every_n,
-        soul_every_n,
-        config.day_summary_disabled,
-        config.user_update_disabled,
-        config.style_update_disabled,
-        config.soul_update_disabled,
+        curation_turn,
     )
     logger.debug(
         "memory_pipeline turn_preview user_chars={} assistant_chars={} user={} assistant={}",
@@ -413,159 +403,131 @@ def memory_update_after_turn(
 
     t = time.perf_counter()
     _append_diary(store, user_text=user_text, assistant_text=assistant_text)
-    logger.info(
-        "memory_pipeline step=append_diary ms={:.0f} ws={}",
+    logger.debug(
+        "memory_pipeline append_diary ms={:.0f} ws={} turn={}",
         (time.perf_counter() - t) * 1000.0,
         ws,
+        turn_n,
     )
 
+    any_curation = False
+
     t = time.perf_counter()
-    run_day_summary_llm = (not config.day_summary_disabled) and (turn_n % every_n == 0)
-    if run_day_summary_llm:
+    if curation_turn:
         _rewrite_day_summary_md(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
             complete_fn=complete_fn,
-            config=config,
         )
-    elif not config.day_summary_disabled:
-        logger.debug(
-            "memory_pipeline step=day_summary_md skipped turn={} every_n={} ws={}",
-            turn_n,
-            every_n,
-            ws,
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="day_summary_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
         )
-    logger.info(
-        "memory_pipeline step=day_summary_md ms={:.0f} ws={} ran_llm={}",
-        (time.perf_counter() - t) * 1000.0,
-        ws,
-        run_day_summary_llm,
-    )
+    else:
+        _log_memory_pipeline_skipped(
+            step="day_summary_md", ws=ws, turn_n=turn_n, every_n=every_n
+        )
 
     t = time.perf_counter()
-    run_memory_llm = turn_n % memory_every_n == 0
-    if run_memory_llm:
+    if curation_turn:
         _rewrite_memory_md(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
             complete_fn=complete_fn,
         )
-    else:
-        logger.debug(
-            "memory_pipeline step=memory_md skipped turn={} every_n={} ws={}",
-            turn_n,
-            memory_every_n,
-            ws,
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="memory_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
         )
-    logger.info(
-        "memory_pipeline step=memory_md ms={:.0f} ws={} ran_llm={}",
-        (time.perf_counter() - t) * 1000.0,
-        ws,
-        run_memory_llm,
-    )
+    else:
+        _log_memory_pipeline_skipped(
+            step="memory_md", ws=ws, turn_n=turn_n, every_n=every_n
+        )
 
     t = time.perf_counter()
-    run_user_llm = (not config.user_update_disabled) and (turn_n % user_every_n == 0)
-    if run_user_llm:
+    if curation_turn:
         _rewrite_user_md(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
             complete_fn=complete_fn,
-            config=config,
         )
-    elif not config.user_update_disabled:
-        logger.debug(
-            "memory_pipeline step=user_md skipped turn={} every_n={} ws={}",
-            turn_n,
-            user_every_n,
-            ws,
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="user_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
         )
-    logger.info(
-        "memory_pipeline step=user_md ms={:.0f} ws={} ran_llm={}",
-        (time.perf_counter() - t) * 1000.0,
-        ws,
-        run_user_llm,
-    )
+    else:
+        _log_memory_pipeline_skipped(
+            step="user_md", ws=ws, turn_n=turn_n, every_n=every_n
+        )
 
     t = time.perf_counter()
-    run_style_llm = (not config.style_update_disabled) and (
-        turn_n % style_every_n == 0
-    )
-    if run_style_llm:
+    if curation_turn:
         _rewrite_style_md(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
             complete_fn=complete_fn,
-            config=config,
         )
-    elif not config.style_update_disabled:
-        logger.debug(
-            "memory_pipeline step=style_md skipped turn={} every_n={} ws={}",
-            turn_n,
-            style_every_n,
-            ws,
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="style_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
         )
-    logger.info(
-        "memory_pipeline step=style_md ms={:.0f} ws={} ran_llm={}",
-        (time.perf_counter() - t) * 1000.0,
-        ws,
-        run_style_llm,
-    )
+    else:
+        _log_memory_pipeline_skipped(
+            step="style_md", ws=ws, turn_n=turn_n, every_n=every_n
+        )
 
     t = time.perf_counter()
-    soul_interval_hits = (not config.soul_update_disabled) and (
-        turn_n % soul_every_n == 0
-    )
-    soul_signal_ok = (not config.soul_require_fundamental_signal) or (
-        _soul_turn_has_fundamental_signal(user_text, assistant_text)
-    )
-    soul_locked = soul_prompt_is_locked_after_interactive_bootstrap(store=store)
-    run_soul_llm = (not soul_locked) and soul_interval_hits and soul_signal_ok
-    if run_soul_llm:
+    if curation_turn:
         _rewrite_soul_md(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
             complete_fn=complete_fn,
-            config=config,
         )
-    elif soul_locked and soul_interval_hits:
-        logger.debug(
-            "memory_pipeline step=soul_md skipped turn={} every_n={} ws={} reason=soul_locked_after_interactive_bootstrap",
-            turn_n,
-            soul_every_n,
-            ws,
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="soul_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
         )
-    elif soul_interval_hits and not soul_signal_ok:
-        logger.debug(
-            "memory_pipeline step=soul_md skipped turn={} every_n={} ws={} reason=no_fundamental_signal",
-            turn_n,
-            soul_every_n,
-            ws,
+    else:
+        _log_memory_pipeline_skipped(
+            step="soul_md", ws=ws, turn_n=turn_n, every_n=every_n
         )
-    elif not config.soul_update_disabled:
-        logger.debug(
-            "memory_pipeline step=soul_md skipped turn={} every_n={} ws={}",
-            turn_n,
-            soul_every_n,
-            ws,
-        )
-    logger.info(
-        "memory_pipeline step=soul_md ms={:.0f} ws={} ran_llm={}",
-        (time.perf_counter() - t) * 1000.0,
-        ws,
-        run_soul_llm,
-    )
 
-    logger.info(
-        "memory_pipeline done total_ms={:.0f} ws={}",
-        (time.perf_counter() - t_all) * 1000.0,
-        ws,
-    )
+    total_ms = (time.perf_counter() - t_all) * 1000.0
+    if any_curation:
+        logger.info(
+            "memory_pipeline done total_ms={:.0f} ws={} turn={}",
+            total_ms,
+            ws,
+            turn_n,
+        )
+    else:
+        logger.debug(
+            "memory_pipeline done total_ms={:.0f} ws={} turn={}",
+            total_ms,
+            ws,
+            turn_n,
+        )
+    return any_curation
 
 
 _MEMORY_WORKER_ERRORS: tuple[type[BaseException], ...] = (
@@ -629,8 +591,9 @@ def _memory_worker_loop() -> None:
             )
         )
         try:
+            curated = False
             try:
-                memory_update_after_turn(
+                curated = memory_update_after_turn(
                     store,
                     user_text,
                     assistant_text,
@@ -641,11 +604,20 @@ def _memory_worker_loop() -> None:
                 logger.exception("memory_update_after_turn failed")
         finally:
             companion_llm_runtime_event_bind_ctx.reset(mem_bind_tok)
-            logger.info(
-                "memory_pipeline worker_job wall_ms={:.0f} scope={}",
-                (time.perf_counter() - t_job) * 1000.0,
-                store.scope.registry_key(),
-            )
+            wall_ms = (time.perf_counter() - t_job) * 1000.0
+            scope = store.scope.registry_key()
+            if curated:
+                logger.info(
+                    "memory_pipeline worker_job wall_ms={:.0f} scope={}",
+                    wall_ms,
+                    scope,
+                )
+            else:
+                logger.debug(
+                    "memory_pipeline worker_job wall_ms={:.0f} scope={}",
+                    wall_ms,
+                    scope,
+                )
             _memory_queue.task_done()
 
 
@@ -679,7 +651,7 @@ def schedule_memory_update_after_turn(
             user_msg_uuid,
         ),
     )
-    logger.info(
+    logger.debug(
         "memory_pipeline enqueued scope={} pending_jobs={}",
         store.scope.registry_key(),
         _memory_queue.qsize(),
