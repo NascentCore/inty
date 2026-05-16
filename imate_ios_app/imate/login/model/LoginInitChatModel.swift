@@ -11,6 +11,7 @@ struct ChatMessage: Identifiable {
     let id = UUID()
     let text: String
     let isUser: Bool
+    let isBot: Bool
 }
 
 struct GenerateAvatarResponse: Decodable {

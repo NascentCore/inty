@@ -189,7 +189,7 @@ class LoginInitChatVM: ObservableObject {
     
     func appendMessage(content: String, isSelf: Bool) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-            messages.append(.init(text: content, isUser: isSelf))
+            messages.append(.init(text: content, isUser: isSelf, isBot: !isSelf))
         }
     }
 }
