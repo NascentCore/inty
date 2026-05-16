@@ -1,7 +1,7 @@
 # CREATED_BY_AGENT
 # Daily user analytics / usage rollup on production primary DB (same path as push_worker
 # _run_user_analytics_daily_report: T-1 UTC, AsyncSessionLocal → primary when replica_host absent).
-name: Daily primary DB usage report
+name: Daily - IntelliMate User Activity Report
 
 # 手动：仓库 Actions → 本 workflow →「Run workflow」（可选填日期、是否 force）。
 on:
@@ -14,7 +14,7 @@ on:
       force:
         description: "Force overwrite existing report row"
         required: false
-        default: false
+        default: true
         type: boolean
   schedule:
     # Align with push_worker default user_analytics_report.daily_cron_hour (UTC 6).
