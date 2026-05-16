@@ -31,7 +31,9 @@ def load_template_seed_text(filename: str) -> str:
     if not path.is_file():
         raise FileNotFoundError(f"missing memory template seed file: {path}")
     body = read_text(path).rstrip() + "\n"
-    assert body.strip(), f"template seed file is empty after strip (catastrophic): {path}"
+    assert (
+        body.strip()
+    ), f"template seed file is empty after strip (catastrophic): {path}"
     return body
 
 
