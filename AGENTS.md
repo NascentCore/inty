@@ -114,7 +114,7 @@ such experience is between human users and AI, but they have real-world patterns
 
 ## Engineering guidelines
 
-- Functions/classes/code-files/components/packages should be deep in effectiveness, and narrow interfaces.
+- Always confirm design decisions with the user
 - Document your code as you go, not after.
 - Make a plan before diving into the coding.
 - Derive solution from the essence of the problem.
@@ -143,12 +143,17 @@ such experience is between human users and AI, but they have real-world patterns
 - Do not use `.strip()` all the time to clean strings
 - Use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models, [Cyclopts](https://github.com/BrianPugh/cyclopts), `uv`
 - Document Python package/module in `__init__.py` docstring.
+- Do not allow None argument
+- Do not use global variable, pass variable as argument
+- Do not allow default value for function argument
+- Do not use string literals, use `StrEnum` instead
+- Use `match ... case` for options, never use multiple `if ... elif ... else`
 
 ### Documentation
 
 **Write for your human partners, do not paraphrase the code.**
 
-- Do not repeat what the code does in documentation in code files.
+- Do not reference code in markdown files.
 - **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等
 - **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
