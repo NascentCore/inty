@@ -9,7 +9,9 @@ def test_zero_delta_respected():
     token = security.create_access_token("user", expires_delta=timedelta(seconds=0))
     exp = jwt.get_unverified_claims(token)['exp']
     diff = exp - datetime.utcnow().timestamp()
-    assert -1 <= diff <= 1
+    # ``exp`` is ``int(expire.timestamp())`` while ``expire`` and this ``utcnow()`` are two samples;
+    # across a second boundary ``diff`` can dip slightly below -1 without a logic bug (CI saw ~-1.00008).
+    assert -2 <= diff <= 1
 
 
 def test_default_expiration_when_none():

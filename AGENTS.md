@@ -86,7 +86,7 @@ such experience is between human users and AI, but they have real-world patterns
     - [iMate iOS app](/imate_ios_app/)
 - Repo agentic harness
   - [.agents](/.agents/) contextual information for your reference
-    - [USER_PREFERENCES.md](/.agents/USER_PREFERENCES.md): Learn user preferences and save them here.
+    - [USERS.md](/.agents/USERS.md): Learn user preferences and save them here.
       Some occasions to learn user preferences:
       - User corrects your mistake(s)
       - User states what they prefer from your suggested options
@@ -96,49 +96,70 @@ such experience is between human users and AI, but they have real-world patterns
   - [.cursor](/.cursor/) Cursor-specific harness
 - Rest of the repo
   - Docs for your human partners: markdown files spread across the repo not under `/.agents/`
+  - Do not bother updating affected code under `/experimental/`
 
-## Your response style
+## General instructions
+
+- Be earnest in your reading
+- Be extermely throughly in your thinking
+- Be extermely critical in your review
+
+### Output
 
 - Answer with 1 sentence, no elaboration.
 - Use nested bullet points to provide structured output.
 - Order information from most to least importance
 - Answer in Mandarin（使用简体中文回答）
   - Instructions are written in English for your understanding
-- Write pull request title & description in Mandarin（简体中文）
-  使用中文编写 PR 标题和描述
 
 ## Engineering guidelines
 
+- Always confirm design decisions with the user
 - Document your code as you go, not after.
 - Make a plan before diving into the coding.
 - Derive solution from the essence of the problem.
 - Test everything, often, as you write it.
 
+### Smells
+
+- If a simple changes requires scattered changes, that means
+  code that changes together are not grouped together
+- If writing tests are complicated, that means interface is incoherent,
+  behaviors are not well abstracted
+- If code is difficult to described in much shorter documentation,
+  that means the code lacks hierarchy.
+
 ### Writing code
 
 - Simplicity first, so problems can be identified easily
-- Design for architecture soundness
 - Never speculate about code, files, or APIs you have not read.
-- Create skills, commands to abstract and automate repeated actions and fragile processes
 - Always test your changes
 - Idempotence is required for code paths with side-effects
-- Document your preferences that are not obvious from the code
+- Do not handle exceptions in python code
+- Validate input arguments with `assert`
 
 #### Python
 
-- Data structures all use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models
-- CLIs all use [Cyclopts](https://github.com/BrianPugh/cyclopts)
+- Do not use `.strip()` all the time to clean strings
+- Use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models, [Cyclopts](https://github.com/BrianPugh/cyclopts), `uv`
 - Document Python package/module in `__init__.py` docstring.
+- Do not allow None argument
+- Do not use global variable, pass variable as argument
+- Do not allow default value for function argument
+- Do not use string literals, use `StrEnum` instead
+- Use `match ... case` for options, never use multiple `if ... elif ... else`
 
 ### Documentation
 
 **Write for your human partners, do not paraphrase the code.**
 
+- Do not reference code in markdown files.
 - **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等
 - **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
 - **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
   document the intention and effect of the code, do not explain how the code works.
+  - Write TODOs close to the code place should be changed.
 - Do not repeat information that can be easily derived from code.
 - Things do write:
   - higher-logical-level design of components and systems
@@ -150,3 +171,4 @@ such experience is between human users and AI, but they have real-world patterns
 - **Over engineering**: speculation, defensive programming, optionality, multiple alternatives, etc.
   - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
     only add configurability the user explicitly requested.
+  - **Do not add enable/disable knob for new features**: just implement the features.

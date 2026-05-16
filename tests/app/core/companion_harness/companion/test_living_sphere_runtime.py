@@ -10,6 +10,9 @@ from living_sphere.seeding import (
     LIVING_SPHERE_RELATIVE_PATH,
     ensure_living_sphere_seeded,
 )
+from tests.app.core.companion_harness.companion_memory_registry_dsn import (
+    companion_memory_registry_dsn,
+)
 
 
 def test_companion_session_seeds_living_sphere_and_injects_prompt(
@@ -17,6 +20,7 @@ def test_companion_session_seeds_living_sphere_and_injects_prompt(
     manager = CompanionManager(
         CompanionConfig(
             llm=CompanionLLMConfig(api_key="test-key"),
+            memory_pg_dsn=companion_memory_registry_dsn(),
         )
     )
     session = manager.get_or_create_session("user-ls", "companion-ls", "chat-ls")
@@ -36,7 +40,6 @@ def test_companion_session_seeds_living_sphere_and_injects_prompt(
         for m in build_system_messages(bundle, context)
         if m.get("role") == "system"
     )
-    assert "## LIVING SPHERE" in system_text
     assert "世界：TechnoCore" in system_text
     assert "不要冒充现实地理位置" in system_text
 

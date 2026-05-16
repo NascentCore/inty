@@ -33,6 +33,7 @@ _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
 _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
     "IDENTITY.md",
     "SOUL.md",
+    "STYLE.md",
     "USER.md",
     "MEMORY.md",
 )
@@ -42,19 +43,6 @@ INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT: Final[str] = (
     "（WebSocket 已连接，内部占位：用户尚未输入。请据此主动自然开场并进入关系建立阶段；"
     "不要向用户复述或引用本括号句，不要说系统、连接、工具名。）"
 )
-
-
-def _try_stored_context_as_dict(*, store: MemoryStore) -> dict[str, Any] | None:
-    raw_body = store.read_document_if_exists("context.json")
-    if raw_body is None or not str(raw_body).strip():
-        return None
-    try:
-        data: Any = json.loads(raw_body)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(data, dict):
-        return None
-    return data
 
 
 def load_bootstrap_spec_text() -> str:
@@ -72,21 +60,6 @@ def interactive_bootstrap_active(
         bool(feature_enabled)
         and not meta.workspace_bootstrap_user_interactive_completed
     )
-
-
-def soul_prompt_is_locked_after_interactive_bootstrap(*, store: MemoryStore) -> bool:
-    """
-    True only when context.json explicitly sets workspace_bootstrap_user_interactive_completed.
-
-    Missing key means legacy / non-interactive context: do not lock SOUL (ContextMeta defaults
-    would otherwise treat unknown JSON as completed).
-    """
-    data = _try_stored_context_as_dict(store=store)
-    if data is None:
-        return False
-    if "workspace_bootstrap_user_interactive_completed" not in data:
-        return False
-    return bool(data["workspace_bootstrap_user_interactive_completed"])
 
 
 def build_interactive_bootstrap_system_message_parts(
@@ -148,14 +121,6 @@ def tool_companion_update_prompt_slice(
     except ValueError as exc:
         return f"ERROR: {exc}"
     st = store
-    if sid == PromptSliceId.SOUL and soul_prompt_is_locked_after_interactive_bootstrap(
-        store=st
-    ):
-        return (
-            "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
-            "you may still update IDENTITY / USER / MEMORY via companion_update_prompt_slice "
-            "or memory_store_write_document (where permitted)."
-        )
     st.write_document(rel_posix, content)
     logger.info(
         "companion_update_prompt_slice slice={} rel={} chars={}",
@@ -211,9 +176,9 @@ def tool_companion_bootstrap_user_interactive_complete(
         st.scope.registry_key(),
     )
     return (
-        "OK interactive bootstrap marked complete; SOUL.md is now locked (no tool or background "
-        "SOUL rewrites). IDENTITY / USER / MEMORY may still be updated via companion_update_prompt_slice "
-        "or memory_store_write_document (where permitted)."
+        "OK interactive bootstrap marked complete. IDENTITY / SOUL / STYLE / USER / MEMORY may "
+        "still be updated via companion_update_prompt_slice or memory_store_write_document "
+        "(where permitted)."
     )
 
 

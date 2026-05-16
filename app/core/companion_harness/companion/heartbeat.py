@@ -24,7 +24,9 @@ HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE = (
 )
 
 # 主动心跳回退文案：当调用方拿不到 ``CompanionTurnResult.transcript_user_content`` 等内核结果时使用；主路径用 ``build_proactive_heartbeat_transcript_user_marker``。
-PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER = "[SYSTEM HEARTBEAT] The user has not sent a new message for some time."
+PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER = (
+    "[SYSTEM HEARTBEAT] The user has not sent a new message for some time."
+)
 
 _NEVER = 86400.0 * 365.0
 _RHYTHM_CLAMP_SEC = (90.0, 900.0)

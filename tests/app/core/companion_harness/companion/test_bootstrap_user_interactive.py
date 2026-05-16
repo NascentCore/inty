@@ -6,12 +6,11 @@ from pathlib import Path
 
 from app.core.companion_harness.companion.bootstrap_user_interactive import (
     interactive_bootstrap_active,
-    soul_prompt_is_locked_after_interactive_bootstrap,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
 )
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import ContextMeta
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
@@ -22,9 +21,9 @@ from app.core.companion_harness.tools.companion_tools import build_companion_too
 
 
 def _store(root: Path):
-    return get_memory_store(
-        CompanionScope("bootstrap", "agent", str(root.resolve())),
-        dsn="",
+    return MemoryStore(
+        scope=CompanionScope("bootstrap", "agent", str(root.resolve())),
+        repository=None,
     )
 
 
@@ -229,37 +228,18 @@ def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:
     assert json.loads(st.read_document("context.json"))[
         "workspace_bootstrap_user_interactive_completed"
     ] is True
-
-
-def test_soul_lock_helper_requires_explicit_context_key(tmp_path: Path) -> None:
-    st = _store(tmp_path)
-    assert not soul_prompt_is_locked_after_interactive_bootstrap(store=st)
-    st.write_document(
-        "context.json",
-        json.dumps({"user_id": "u"}, ensure_ascii=False) + "\n",
-    )
-    assert not soul_prompt_is_locked_after_interactive_bootstrap(store=st)
-    st.write_document(
-        "context.json",
-        json.dumps(
-            {"user_id": "u", "workspace_bootstrap_user_interactive_completed": False},
-            ensure_ascii=False,
+    r3 = asyncio.run(
+        execute_tool_call(
+            st,
+            "companion_update_prompt_slice",
+            json.dumps({"slice": "SOUL", "content": "soul after complete"}),
         )
-        + "\n",
     )
-    assert not soul_prompt_is_locked_after_interactive_bootstrap(store=st)
-    st.write_document(
-        "context.json",
-        json.dumps(
-            {"user_id": "u", "workspace_bootstrap_user_interactive_completed": True},
-            ensure_ascii=False,
-        )
-        + "\n",
-    )
-    assert soul_prompt_is_locked_after_interactive_bootstrap(store=st)
+    assert r3.startswith("OK ")
+    assert st.read_document("SOUL.md") == "soul after complete"
 
 
-def test_soul_slice_rejected_after_interactive_bootstrap_complete(tmp_path: Path) -> None:
+def test_soul_slice_allowed_after_interactive_bootstrap_complete(tmp_path: Path) -> None:
     root = tmp_path
     st = _store(root)
     st.write_document("SOUL.md", "seed")
@@ -277,15 +257,12 @@ def test_soul_slice_rejected_after_interactive_bootstrap_complete(tmp_path: Path
         )
         + "\n",
     )
-    err = tool_companion_update_prompt_slice(st, "SOUL", "nope")
-    assert err.startswith("ERROR:")
-    assert st.read_document("SOUL.md") == "seed"
-    ok = tool_companion_update_prompt_slice(st, "USER", "# ok\n")
+    ok = tool_companion_update_prompt_slice(st, "SOUL", "updated soul\n")
     assert ok.startswith("OK ")
-    assert st.read_document("USER.md") == "# ok\n"
+    assert st.read_document("SOUL.md") == "updated soul\n"
 
 
-def test_memory_store_write_soul_rejected_after_interactive_bootstrap_complete(
+def test_memory_store_write_soul_allowed_after_interactive_bootstrap_complete(
     tmp_path: Path,
 ) -> None:
     root = tmp_path
@@ -301,6 +278,6 @@ def test_memory_store_write_soul_rejected_after_interactive_bootstrap_complete(
         )
         + "\n",
     )
-    err = tool_memory_store_write_document(st, "SOUL.md", "hacked")
-    assert err.startswith("ERROR:")
-    assert st.read_document("SOUL.md") == "seed"
+    ok = tool_memory_store_write_document(st, "SOUL.md", "updated via store")
+    assert ok.startswith("OK ")
+    assert st.read_document("SOUL.md") == "updated via store"

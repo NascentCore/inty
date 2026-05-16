@@ -79,7 +79,6 @@ from app.models.user import AuthType, User
 from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
-    CompanionChatTurnMessageType,
     UserTimeContext,
 )
 from app.schemas.chat_websocket import (
@@ -299,7 +298,7 @@ def _implicit_signal_bundle_from_ws_tc_box(
     )
 
 
-async def _enqueue_companion_implicit_greeting_ws_turn_after_signed_on(
+async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
     *,
     db: AsyncSession,
     agent_id: str,
@@ -312,39 +311,45 @@ async def _enqueue_companion_implicit_greeting_ws_turn_after_signed_on(
     tc_box: list[Optional[dict]],
     outbound_queue: asyncio.Queue[WsOutboundPayload],
 ) -> None:
-    """Run one IMPLICIT_USER_SIGNED_ON companion turn after successful ``user_signed_on_ack``."""
-    base = ChatCompletionRequest(
-        messages=[ChatMessage(role="user", content="")],
-        message_id=preset_message_id,
-        message_type=CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON,
-    )
-    merged = _chat_request_with_merged_ws_time_context(base, tc_box[0])
+    """Run one companion greeting turn scheduled from ``user_signed_on`` (with ``message_id``)."""
     try:
-        async with companion_ws.turn_lock:
-            response = await _agent_chat_completions_impl(
-                db=db,
-                agent_id=agent_id,
-                request=merged,
-                current_user=current_user,
-                app_version_code=app_version_code,
-                subscription_svc=subscription_svc,
-                voice_svc=voice_svc,
-                chat_route="websocket",
-                companion_background_sink=companion_ws.background_sink,
-                companion_ws_foreground_pending=companion_ws.foreground_pending,
-                companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
-            )
-    except HTTPException as e:
-        await outbound_queue.put(
-            _chat_ws_error_payload_from_http_exception(e, agent_id=agent_id)
+        base = ChatCompletionRequest(
+            messages=[ChatMessage(role="user", content="")],
+            message_id=preset_message_id,
         )
-        return
-    if isinstance(response, dict):
-        response_data = dict(response)
-    else:
-        response_data = response.model_dump(exclude_none=True)
-    response_data["agent_id"] = agent_id
-    await outbound_queue.put(response_data)
+        merged = _chat_request_with_merged_ws_time_context(base, tc_box[0])
+        try:
+            async with companion_ws.turn_lock:
+                response = await _agent_chat_completions_impl(
+                    db=db,
+                    agent_id=agent_id,
+                    request=merged,
+                    current_user=current_user,
+                    app_version_code=app_version_code,
+                    subscription_svc=subscription_svc,
+                    voice_svc=voice_svc,
+                    chat_route="websocket",
+                    companion_background_sink=companion_ws.background_sink,
+                    companion_ws_foreground_pending=companion_ws.foreground_pending,
+                    companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
+                    implicit_greeting_turn=True,
+                )
+        except HTTPException as e:
+            await outbound_queue.put(
+                _chat_ws_error_payload_from_http_exception(e, agent_id=agent_id)
+            )
+            return
+        if isinstance(response, dict):
+            response_data = dict(response)
+        else:
+            response_data = response.model_dump(exclude_none=True)
+        response_data["agent_id"] = agent_id
+        await outbound_queue.put(response_data)
+    except Exception:
+        logger.exception(
+            "chat_ws user_signed_on greeting failed agent_id={}",
+            agent_id,
+        )
 
 
 async def _handle_chat_websocket_control_json(
@@ -404,8 +409,8 @@ async def _try_handle_ws_user_signed_on_frame(
     Consume ``{"type":"user_signed_on","agent_id":...}``.
 
     Product intent: arms inner-tick WebSocket coordinates (proactive heartbeat, maintenance inner-tick,
-    and due ``schedule_queue`` reminders share this registration) and optionally runs the implicit
-    sign-on greeting companion turn when ``implicit_greeting: true`` (after ``user_signed_on_ack``).
+    and due ``schedule_queue`` reminders share this registration). Requires ``message_id`` (RFC4122);
+    missing/invalid ids fail before ack; greeting turn is scheduled before ``user_signed_on_ack``.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -416,6 +421,15 @@ async def _try_handle_ws_user_signed_on_frame(
             ChatWsUserSignedOnAckFrame(
                 ok=False,
                 reason="not_supported",
+            ).model_dump(exclude_none=True)
+        )
+        return True
+    raw_mid_field = data.get("message_id")
+    if raw_mid_field is None or not str(raw_mid_field).strip():
+        await websocket.send_json(
+            ChatWsUserSignedOnAckFrame(
+                ok=False,
+                reason="missing_message_id",
             ).model_dump(exclude_none=True)
         )
         return True
@@ -430,27 +444,16 @@ async def _try_handle_ws_user_signed_on_frame(
         )
         return True
     agent_id = frame.agent_id.strip()
-    preset_mid: str | None = None
-    if frame.implicit_greeting:
-        raw_mid = (frame.message_id or "").strip()
-        if not raw_mid:
-            await websocket.send_json(
-                ChatWsUserSignedOnAckFrame(
-                    ok=False,
-                    reason="missing_message_id",
-                ).model_dump(exclude_none=True)
-            )
-            return True
-        try:
-            preset_mid = normalize_websocket_companion_message_id_uuid(raw_mid)
-        except ValueError:
-            await websocket.send_json(
-                ChatWsUserSignedOnAckFrame(
-                    ok=False,
-                    reason="invalid_message_id",
-                ).model_dump(exclude_none=True)
-            )
-            return True
+    try:
+        preset_mid = normalize_websocket_companion_message_id_uuid(frame.message_id)
+    except ValueError:
+        await websocket.send_json(
+            ChatWsUserSignedOnAckFrame(
+                ok=False,
+                reason="invalid_message_id",
+            ).model_dump(exclude_none=True)
+        )
+        return True
     try:
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db, user_id=current_user.id, agent_id=agent_id
@@ -468,61 +471,48 @@ async def _try_handle_ws_user_signed_on_frame(
             agent_id=agent_id,
             chat_id=chat.id,
         )
+        greeting_scheduled = False
+        if (
+            outbound_queue is None
+            or tc_box is None
+            or subscription_svc is None
+            or voice_svc is None
+        ):
+            logger.error(
+                "chat_ws user_signed_on greeting missing ws deps ws_conn_id={} agent_id={}",
+                ws_conn_id,
+                agent_id,
+            )
+        else:
+            asyncio.create_task(
+                _enqueue_companion_greeting_ws_turn_after_user_signed_on(
+                    db=db,
+                    agent_id=agent_id,
+                    preset_message_id=preset_mid,
+                    current_user=current_user,
+                    app_version_code=app_version_code,
+                    subscription_svc=subscription_svc,
+                    voice_svc=voice_svc,
+                    companion_ws=companion_ws,
+                    tc_box=tc_box,
+                    outbound_queue=outbound_queue,
+                ),
+                name=f"chat_ws_user_signed_on_greeting_{ws_conn_id}",
+            )
+            greeting_scheduled = True
         await websocket.send_json(
             ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
         )
-        recv_msg_uuid = (frame.message_id or "").strip()
-        if frame.implicit_greeting:
-            ig_log = "implicit_greeting=True (enqueue_after_ack)"
-        else:
-            raw_note = (frame.implicit_greeting_note or "").strip()
-            ig_log = (
-                f"implicit_greeting=False ({raw_note})"
-                if raw_note
-                else "implicit_greeting=False (not_requested)"
-            )
         logger.info(
             "chat_ws user_signed_on armed inner_tick coords ws_conn_id={} user={} agent={} "
-            "chat_id={} received_message_uuid={} {}",
+            "chat_id={} received_message_uuid={} greeting_scheduled={}",
             ws_conn_id,
             current_user.id,
             agent_id,
             chat.id,
-            recv_msg_uuid or "-",
-            ig_log,
+            preset_mid,
+            greeting_scheduled,
         )
-        if frame.implicit_greeting and preset_mid is not None:
-            if (
-                outbound_queue is None
-                or tc_box is None
-                or subscription_svc is None
-                or voice_svc is None
-            ):
-                logger.error(
-                    "chat_ws implicit_greeting missing ws deps ws_conn_id={} agent_id={}",
-                    ws_conn_id,
-                    agent_id,
-                )
-            else:
-                try:
-                    await _enqueue_companion_implicit_greeting_ws_turn_after_signed_on(
-                        db=db,
-                        agent_id=agent_id,
-                        preset_message_id=preset_mid,
-                        current_user=current_user,
-                        app_version_code=app_version_code,
-                        subscription_svc=subscription_svc,
-                        voice_svc=voice_svc,
-                        companion_ws=companion_ws,
-                        tc_box=tc_box,
-                        outbound_queue=outbound_queue,
-                    )
-                except Exception:
-                    logger.exception(
-                        "chat_ws implicit_greeting companion enqueue failed ws_conn_id={} agent_id={}",
-                        ws_conn_id,
-                        agent_id,
-                    )
     except Exception:
         logger.exception(
             "chat_ws user_signed_on failed ws_conn_id={} agent_id={}",
@@ -608,7 +598,7 @@ async def _try_handle_ws_user_signed_out_frame(
                 user_id=current_user.id,
                 agent_id=agent_id,
                 chat_id=chat.id,
-                resolved_chat_model_id=model_override,
+                resolved_chat_model=model_override,
                 log_line=log_line,
             )
         await websocket.send_json(
@@ -714,7 +704,7 @@ async def _try_handle_ws_ws_conn_dropped_frame(
             user_id=current_user.id,
             agent_id=agent_id,
             chat_id=chat.id,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
             line=log_line,
         )
         await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
@@ -1116,7 +1106,7 @@ async def _try_generate_premium_preview_choice(
         messages=[HumanMessage(content=premium_preview_prompt)],
         chat_settings=premium_settings,
         user_time_context=user_time_context,
-        model_override=premium_model_override,
+        model_override=premium_model_override.id_on_provider,
         is_subscribed=True,
     )
     if not gen_result:
@@ -1306,7 +1296,7 @@ async def _persist_companion_user_message_for_bg(
     session_id: str,
     last_user_message: ChatMessage,
     effective_local_id: Optional[str],
-    implicit_signed_on_ws: bool,
+    implicit_greeting_turn: bool,
 ) -> Optional[int]:
     """Write user message into ``chat_history`` for one companion turn (success or bg-survives-fg-fail).
 
@@ -1314,11 +1304,11 @@ async def _persist_companion_user_message_for_bg(
     this helper remains as a defensive path for any future or alternate companion wiring.
 
     Mirrors the success-path branching:
-    - ``implicit_signed_on_ws`` -> no row written; returns ``None`` (protocol skips user history).
+    - ``implicit_greeting_turn`` -> no row written; returns ``None`` (protocol skips user history).
     - ``effective_local_id`` -> row with ``meta_data.localId``.
     - else -> plain row.
     """
-    if implicit_signed_on_ws:
+    if implicit_greeting_turn:
         return None
     if effective_local_id:
         return await chat_history_service.add_user_message_async(
@@ -1379,7 +1369,7 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat.id,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
         )
         if mem_store is None:
             return
@@ -1433,19 +1423,21 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
             )
             return
         try:
-            companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
-                user_id=user_id,
-                agent_id=agent_id,
-                chat_id=chat_row_id,
-                user_text=synthetic_user_text,
-                resolved_chat_model_id=model_override,
-                defer_memory_update=True,
-                session_id=session_id,
-                background_output_sink=None,
-                preset_user_msg_uuid=preset_uid,
-                inner_tick_turn=True,
-                inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
-                implicit_signal_bundle=ws_implicit,
+            companion_turn = (
+                await companion_chat_service.run_companion_chat_turn_for_api(
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    chat_id=chat_row_id,
+                    user_text=synthetic_user_text,
+                    resolved_chat_model=model_override,
+                    defer_memory_update=True,
+                    session_id=session_id,
+                    background_output_sink=None,
+                    preset_user_msg_uuid=preset_uid,
+                    inner_tick_turn=True,
+                    inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+                    implicit_signal_bundle=ws_implicit,
+                )
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):
@@ -1464,7 +1456,7 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_row_id,
-                    resolved_chat_model_id=model_override,
+                    resolved_chat_model=model_override,
                 )
             )
         else:
@@ -1689,7 +1681,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat.id,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
         )
         if mem_store is None:
             return
@@ -1735,7 +1727,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             agent_id=agent_id,
             chat_id=chat_row_id,
             user_text=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
             defer_memory_update=True,
             session_id=session_id,
             background_output_sink=None,
@@ -1754,7 +1746,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_row_id,
-                    resolved_chat_model_id=model_override,
+                    resolved_chat_model=model_override,
                 )
             )
         else:
@@ -1969,7 +1961,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat.id,
-            resolved_chat_model_id=model_override,
+            resolved_chat_model=model_override,
         )
         if mem_store is None:
             return
@@ -2048,7 +2040,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     agent_id=agent_id,
                     chat_id=chat_row_id,
                     user_text="",
-                    resolved_chat_model_id=model_override,
+                    resolved_chat_model=model_override,
                     defer_memory_update=True,
                     session_id=session_id,
                     background_output_sink=companion_ws.background_sink,
@@ -2244,6 +2236,7 @@ async def _agent_chat_completions_impl(
     companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
     companion_ws_heartbeat_ctx: dict[str, Any] | None = None,
+    implicit_greeting_turn: bool = False,
 ) -> Union[APIResponse[dict], dict]:
     try:
         request_handling_timer = Timer("请求处理")
@@ -2291,29 +2284,12 @@ async def _agent_chat_completions_impl(
             request.local_id or request.message_id or ""
         ).strip() or None
 
-        if (
-            chat_route != "websocket"
-            and request.message_type
-            == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="messageType IMPLICIT_USER_SIGNED_ON is not supported",
-            )
-
-        # TODO(implicit-sign-on): If _agent_chat_completions_impl is split into helpers, pass
-        # implicit_signed_on_ws explicitly into companion / persistence paths.
-        implicit_signed_on_ws = (
-            chat_route == "websocket"
-            and request.message_type
-            == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON
-        )
-        if implicit_signed_on_ws and last_user_chat_message.has_image_content_part():
+        implicit_greeting_ws = chat_route == "websocket" and implicit_greeting_turn
+        if implicit_greeting_ws and last_user_chat_message.has_image_content_part():
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    "messageType IMPLICIT_USER_SIGNED_ON does not support "
-                    "multimodal or image content"
+                    "Implicit greeting turns do not support multimodal or image content"
                 ),
             )
 
@@ -2381,11 +2357,9 @@ async def _agent_chat_completions_impl(
                     is_subscribed,
                     _chat_llm_base,
                 )
-                # TODO(implicit-sign-on): USER_MESSAGE + image-only still uses this generic 400;
-                # IMPLICIT_USER_SIGNED_ON + image is rejected earlier with a different message.
                 if (
                     use_companion
-                    and (not implicit_signed_on_ws)
+                    and (not implicit_greeting_ws)
                     and _companion_rejects_multimodal_user_turn(user_messages[-1])
                 ):
                     raise HTTPException(
@@ -2397,7 +2371,7 @@ async def _agent_chat_completions_impl(
                     )
                 phone_call_trigger_number = (
                     None
-                    if implicit_signed_on_ws
+                    if implicit_greeting_ws
                     else phone_call_service.extract_call_me_at_number(last_user_text)
                 )
                 if phone_call_trigger_number:
@@ -2447,16 +2421,18 @@ async def _agent_chat_completions_impl(
                             session_id=session_id,
                             last_user_message=last_user_message,
                             effective_local_id=effective_local_id,
-                            implicit_signed_on_ws=implicit_signed_on_ws,
+                            implicit_greeting_turn=implicit_greeting_ws,
                         )
                     )
-                    ai_message_id = await chat_history_service.add_ai_message_sync_async(
-                        session_id,
-                        response_text_content,
-                        agent_id=chat.agent_id,
-                        meta_data=dump_chat_ws_companion_wire_meta(
-                            ChatWsCompanionWireMetaData.model_validate(phone_meta)
-                        ),
+                    ai_message_id = (
+                        await chat_history_service.add_ai_message_sync_async(
+                            session_id,
+                            response_text_content,
+                            agent_id=chat.agent_id,
+                            meta_data=dump_chat_ws_companion_wire_meta(
+                                ChatWsCompanionWireMetaData.model_validate(phone_meta)
+                            ),
+                        )
                     )
                     if (
                         companion_ws_heartbeat_ctx is not None
@@ -2493,10 +2469,7 @@ async def _agent_chat_completions_impl(
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
                             client_time=request.user_time_context,
-                            user_signed_on=(
-                                request.message_type
-                                == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON
-                            ),
+                            user_signed_on=implicit_greeting_ws,
                             server_received_at_utc=datetime.now(timezone.utc),
                         )
                         companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
@@ -2504,7 +2477,7 @@ async def _agent_chat_completions_impl(
                             agent_id=agent_id,
                             chat_id=chat.id,
                             user_text=last_user_text,
-                            resolved_chat_model_id=model_override,
+                            resolved_chat_model=model_override,
                             defer_memory_update=True,
                             session_id=session_id,
                             background_output_sink=companion_background_sink,
@@ -2542,7 +2515,7 @@ async def _agent_chat_completions_impl(
                                         session_id=session_id,
                                         last_user_message=last_user_message,
                                         effective_local_id=effective_local_id,
-                                        implicit_signed_on_ws=implicit_signed_on_ws,
+                                        implicit_greeting_turn=implicit_greeting_ws,
                                     )
                                 )
                             except Exception as persist_exc:
@@ -2565,16 +2538,12 @@ async def _agent_chat_completions_impl(
                     companion_ai_meta = _companion_ai_meta_from_turn_result(
                         companion_turn
                     )
-                    if implicit_signed_on_ws:
-                        companion_ai_meta["messageType"] = (
-                            CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON.value
-                        )
                     companion_user_row_id = (
                         await _persist_companion_user_message_for_bg(
                             session_id=session_id,
                             last_user_message=last_user_message,
                             effective_local_id=effective_local_id,
-                            implicit_signed_on_ws=implicit_signed_on_ws,
+                            implicit_greeting_turn=implicit_greeting_ws,
                         )
                     )
                     if (
@@ -2625,7 +2594,7 @@ async def _agent_chat_completions_impl(
                         messages=messages,
                         chat_settings=chat_settings,
                         user_time_context=user_time_context,
-                        model_override=model_override,
+                        model_override=model_override.id_on_provider,
                         is_subscribed=is_subscribed,
                         client_local_message_id=effective_local_id,
                     )
@@ -2731,17 +2700,11 @@ async def _agent_chat_completions_impl(
         # 记录聊天使用情况
         try:
             with log_time(f"记录使用情况: user_id={current_user.id}"):
-                # TODO(implicit-sign-on): Implicit sign-on still increments chat usage like a normal
-                # turn; product may exempt IMPLICIT_USER_SIGNED_ON from limits later.
                 usage_extra: dict[str, Any] = {
                     "agent_id": agent_id,
                     "message_length": len(last_user_text),
                 }
-                if (
-                    chat_route == "websocket"
-                    and request.message_type
-                    == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON
-                ):
+                if implicit_greeting_ws:
                     usage_extra["implicit_user_signed_on"] = True
                 await subscription_svc.record_usage(
                     db,
@@ -2964,6 +2927,9 @@ async def agent_chat_completions(
     if request.stream:
         raise HTTPException(status_code=400, detail="Stream is not supported")
 
+    # TODO(transport): HTTP companion omits companion_background_sink; tool_bg falls through to
+    # push_output_event global queue (see tool_background._effective_on_event). Align with WS
+    # sink or explicitly document unsupported async tool_bg delivery for this route.
     return await _agent_chat_completions_impl(
         db=db,
         agent_id=agent_id,
@@ -3127,6 +3093,8 @@ async def chat_completions_websocket(
                 except Exception as exc:
                     logger.warning(f"companion tool_bg queue result failed: {exc}")
                     continue
+                # TODO(observability): missing ctx often means stale user_msg_uuid or lifecycle bug;
+                # consider metrics and whether to drop vs dead-letter ToolOutputEvent.
                 ctx = companion_ws.pop_foreground_pending(ev.user_msg_uuid)
                 if ctx is None:
                     logger.warning(
@@ -3441,7 +3409,7 @@ async def chat_completions_websocket_verify(
                 response_text = await _verify_ws_simple_llm_reply(
                     agent_row=agent_row,
                     user_text=last_user_text or "",
-                    model_name=model_override,
+                    model_name=model_override.id_on_provider,
                 )
             except Exception as e:
                 logger.exception("ws/verify simple chat.completions failed")

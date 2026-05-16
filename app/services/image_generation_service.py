@@ -573,16 +573,12 @@ class ImageGenerationService:
 
             if only_include_ai_character is True:
                 conditions.append(
-                    Resource.resource_metadata.op("->>")(
-                        "only_include_ai_character"
-                    )
+                    Resource.resource_metadata.op("->>")("only_include_ai_character")
                     == "true"
                 )
 
             query = (
-                select(Resource)
-                .where(*conditions)
-                .order_by(Resource.created_at.desc())
+                select(Resource).where(*conditions).order_by(Resource.created_at.desc())
             )
 
             result = await db.execute(query)

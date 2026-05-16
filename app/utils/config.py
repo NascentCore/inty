@@ -136,8 +136,9 @@ class DatabaseSettings(BaseModel):
         )
 
 
-@dataclass
-class GoogleOAuthConfig:
+class GoogleOAuthConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     redirect_uri: Optional[str] = None
@@ -302,7 +303,7 @@ class AgentConfig:
     # Companion WS tool-call route model id (passed to OpenAI-compatible gateway via
     # CompanionLLMConfig.tool_model). Independent of foreground chat envelope model so
     # the dual-LLM tool loop can scale separately. Empty string falls back to the chat
-    # model at companion_chat_service wiring time (resolved_chat_model_id).
+    # model at companion_chat_service wiring time (resolved_chat_model GenAIModel).
     companion_tool_call_model: str = "google/gemini-3-flash-preview"
     # 免费用户商业化触达：定期返回一条“付费专属预览”消息并引导订阅。
     enable_free_user_premium_preview: bool = False
@@ -487,7 +488,7 @@ class MemoryExtractionConfig:
     # When companion kernel fills CompanionTurnResult.significance_perception, chat.py mirrors it
     # into chat_history AI meta_data. Enabling this sorts extraction input by
     # meta_data.significance_perception.importance_round and adds bracket hints for the extractor LLM.
-    # Pipeline overview: app/core/companion_harness/companion/significance_perception.py module docstring.
+    # Pipeline overview: app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py module docstring.
     use_significance_perception_in_extraction: bool = False
 
     def __post_init__(self):
@@ -715,7 +716,7 @@ def load_config(path: str) -> Config:
         app=AppConfig(**app_data),
         security=SecurityConfig.model_validate(data.get("security") or {}),
         database=DatabaseSettings.model_validate(data.get("database") or {}),
-        google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
+        google_oauth=GoogleOAuthConfig.model_validate(data.get("google_oauth") or {}),
         verification=VerificationConfig(**data.get("verification", {})),
         logging=LoggingConfig.model_validate(data.get("logging") or {}),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
@@ -825,14 +826,20 @@ def _validate_config(config: Config):
 
     pc = config.phone_call
     if pc.enabled:
-        if pc.media_stream_token_ttl_seconds < 60 or pc.media_stream_token_ttl_seconds > 3600:
+        if (
+            pc.media_stream_token_ttl_seconds < 60
+            or pc.media_stream_token_ttl_seconds > 3600
+        ):
             raise ValueError(
                 "phone_call.media_stream_token_ttl_seconds must be between 60 and 3600"
             )
-        if pc.twilio_media_stream_base_url and not pc.twilio_media_stream_base_url.startswith(
-            "wss://"
+        if (
+            pc.twilio_media_stream_base_url
+            and not pc.twilio_media_stream_base_url.startswith("wss://")
         ):
-            raise ValueError("phone_call.twilio_media_stream_base_url must start with wss://")
+            raise ValueError(
+                "phone_call.twilio_media_stream_base_url must start with wss://"
+            )
         if pc.default_country_code and not pc.default_country_code.startswith("+"):
             raise ValueError("phone_call.default_country_code must start with '+'")
 

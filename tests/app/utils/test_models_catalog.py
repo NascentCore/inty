@@ -1,4 +1,7 @@
-"""Tests for models_catalog resolve_nickname, must_resolve_nickname, resolve_id_on_provider and CHAT_IMAGE_GEN_MODELS."""
+"""Tests for models_catalog resolve_nickname, must_resolve_nickname, resolve_id_on_provider and CHAT_IMAGE_GEN_MODELS.
+
+TODO(context-utilization): Add assertions for ``GenAIModel.context_window_tokens`` when catalog consumers are wired.
+"""
 
 import pytest
 

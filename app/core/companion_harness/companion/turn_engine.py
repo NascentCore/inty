@@ -63,7 +63,9 @@ def build_repl_turn_base_messages(
         messages.append(row)
     user_msg_uuid = str(uuid.uuid4())
     if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
-        messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE})
+        messages.append(
+            {"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE}
+        )
         messages.append(
             {
                 "role": "user",
@@ -103,7 +105,7 @@ def persist_repl_turn_transcript_rows(
     ``importance_round`` / ``importance_user_message`` / ``importance_assistant_message``), it is
     stored under the assistant row key ``significance_perception`` for parity with ``turn.run_turn``.
     Full importance
-    contract: ``significance_perception`` module docstring.
+    contract: ``dual_llm_chat_branch_envelope`` module docstring.
     """
     rel_tr = transcript_relative_path_for_turn_persistence(
         inner_tick_turn=inner_tick_turn,

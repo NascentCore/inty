@@ -8,6 +8,7 @@ import pytest
 
 from app.services import chat_history_service, chat_service
 from app.services import companion_chat_service
+from app.utils.models_catalog import DEEPSEEK_V3_2
 
 
 @pytest.mark.asyncio
@@ -39,7 +40,7 @@ async def test_conclude_companion_scope_on_user_signed_out_order_and_session_id(
     monkeypatch.setattr(
         companion_chat_service,
         "_companion_manager_for_resolved_model",
-        lambda _resolved_id, _fp: fake_mgr,
+        lambda _chat_id, _tool_id, _fp: fake_mgr,
     )
 
     async def fake_delete(**kwargs: object) -> int:
@@ -68,7 +69,7 @@ async def test_conclude_companion_scope_on_user_signed_out_order_and_session_id(
         user_id="u1",
         agent_id="a1",
         chat_id=99,
-        resolved_chat_model_id="m1",
+        resolved_chat_model=DEEPSEEK_V3_2,
         log_line=log_line,
     )
 

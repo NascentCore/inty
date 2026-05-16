@@ -1,28 +1,31 @@
 ---
 name: inty-local-backend-repl
 description: >-
-  Launch inty backend for running terminal REPL.
-  This is used for local development and evaluation of the agentic companion experience.
+  Launch inty backend connected with terminal REPL, for local development and evaluation.
 ---
 
-# Launching local backend for terminal REPL
+# Launch Inty backend locally for terminal REPL
 
 ## When to use
 
-- Launch Inty ops on `:8001` for `tools.inty_v2_repl` to connect with
-- [`Local REPL README.md`](/tools/inty_v2_repl/README.md)
+- Launch Inty ops on current workspace on `:8001` for `tools.inty_v2_repl` to connect with
+- [`Terminal REPL AGENTS.md`](/tools/inty_v2_repl/AGENTS.md)
 
 ## Ops
 
-Use `INTY_CONFIG_YAML` env var to sepcify the config file for launching the ops variant
+From repository root: `uv venv`, `source .venv/bin/activate`, then
+`uv pip install -r requirements.txt -r tools/inty_v2_repl/requirements.txt`
+(see [repl AGENTS.md](/tools/inty_v2_repl/AGENTS.md) Setup).
+
+Use `INTY_CONFIG_YAML` env var to specify the config file for launching the ops variant
 of Inty backend.
 
 ```bash
 export INTY_CONFIG_YAML=devops/config.yaml.local
-backend/ops/start.sh --local --debug --no-build-frontend --log-file ./tmp/inty-ops-local.log
+backend/ops/start.sh --local --debug --no-build-frontend
 ```
 
-`INTY_CONFIG_YAML` `--log-file` use replative path from the root of the repo
+`INTY_CONFIG_YAML` 使用仓库根目录为相对路径基准；**不传 `--workspace` 时**默认工作目录为仓库根下 **`.inty`**，文件日志 **`.inty/inty.log`**（启动时若已存在会先删除再写）；需要把日志放到其它目录时再传 **`--workspace DIR`**（见 **`backend/ops/start.sh --help`**）。
 
 ## Terminate Ops
 
@@ -46,6 +49,8 @@ pgrep -af 'python -m tools\.inty_v2_repl' || true
 
 Bearer 默认读 **`${INTY_OPS_BEARER_TOKEN_FILE:-.inty_ops_bearer_token}`**（`--local` 启动已写入）。API 基址默认 **`http://127.0.0.1:8001`**；若使用环境变量 **`PORT`** 覆盖监听端口，请同步改 **`INTY_API_BASE_URL`**（例如 `export INTY_API_BASE_URL=http://127.0.0.1:9001`）。
 
+Read `.inty_ops_bearer_token` to fill in the value of `INTY_ACCESS_TOKEN` env var in `tools/inty_v2_repl/.env`
+
 Run the command below to get the agent ID for launching the repl:
 
 ```bash
@@ -54,18 +59,9 @@ AGENT_ID=$(python3 tools/scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR=
 
 ## Final reply to user（默认）
 
-After ops instance is ready, respond to user with：
+First, read [repl AGENTS.md](/tools/inty_v2_repl/AGENTS.md) to understand how to launch repl.
 
-1. Log file path
-2. Repl launch command, use the AGENT_ID obtained before:
+After ops instance is ready, respond to user with the following:
 
-   ```bash
-   source .venv/bin/activate
-   python -m tools.inty_v2_repl.main repl \
-     --api-base-url http://127.0.0.1:8001 \
-     --agent-id AGENT_ID
-   ```
-
-## Reference
-
-- [`tools/inty_v2_repl/AGENTS.md`](../../../tools/inty_v2_repl/AGENTS.md)
+1. Log file path：**`.inty/inty.log`**（仓库根相对路径）
+2. Instructions to launching REPL

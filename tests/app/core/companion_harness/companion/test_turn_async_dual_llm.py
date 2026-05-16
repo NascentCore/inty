@@ -13,7 +13,7 @@ import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import InnerTickMode
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
@@ -21,10 +21,14 @@ from app.core.companion_harness.companion.turn import (
     CHAT_TRACK_RESPONSE_MESSAGE_TITLE,
     run_turn,
 )
+from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
 def _store(p: Path):
-    return get_memory_store(CompanionScope("adllm", "a", str(p.resolve())), dsn="")
+    return MemoryStore(
+        scope=CompanionScope("adllm", "a", str(p.resolve())),
+        repository=None,
+    )
 
 
 def _assert_no_adjacent_user_roles(messages: list[dict[str, Any]]) -> None:
@@ -39,15 +43,15 @@ class _FakeAsyncDualLLMClient:
     def __init__(self) -> None:
         self.config = CompanionLLMConfig(
             api_key="k",
-            default_model="m/default",
-            chat_model="m/chat",
-            tool_model="m/tool",
+            default_model=resolve_chat_text_model("m/default"),
+            chat_model=resolve_chat_text_model("m/chat"),
+            tool_model=resolve_chat_text_model("m/tool"),
             async_chat_front_timeout_sec=120.0,
         )
         self.chat_calls: list[dict[str, Any]] = []
 
-    def resolve_model(self, role: str) -> str:
-        return f"m/{role}"
+    def resolve_model(self, role: str) -> GenAIModel:
+        return resolve_chat_text_model(f"m/{role}")
 
     def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_calls.append(kwargs)
@@ -115,14 +119,14 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     fg_msgs = client.chat_calls[0]["messages"]
     fg_system = [m for m in fg_msgs if m.get("role") == "system"]
     assert len(fg_system) >= 2, "foreground chat should use multiple system messages (not one concatenated block)"
-    assert any("## IDENTITY" in str(m.get("content") or "") for m in fg_system)
-    assert any("## SOUL" in str(m.get("content") or "") for m in fg_system)
+    assert any(str(m.get("content") or "").strip() == "id" for m in fg_system)
+    assert any(str(m.get("content") or "").strip() == "s" for m in fg_system)
     assert len(bg_jobs) == 1
     assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
     bg_msgs = bg_jobs[0]["request_messages"]
     bg_system = [m for m in bg_msgs if m.get("role") == "system"]
     assert len(bg_system) >= 2, "background tool path should use multiple system messages"
-    assert bg_jobs[0]["tool_model_name"] == "m/tool"
+    assert bg_jobs[0]["tool_model"].id_on_provider == "m/tool"
     assert bg_jobs[0]["main_event_loop"] is loop
     assert bg_jobs[0]["force_tools_first_round"] is False
     _assert_no_adjacent_user_roles(bg_msgs)
@@ -214,15 +218,15 @@ class _FakeAsyncDualLLMClientEmptyFg:
     def __init__(self) -> None:
         self.config = CompanionLLMConfig(
             api_key="k",
-            default_model="m/default",
-            chat_model="m/chat",
-            tool_model="m/tool",
+            default_model=resolve_chat_text_model("m/default"),
+            chat_model=resolve_chat_text_model("m/chat"),
+            tool_model=resolve_chat_text_model("m/tool"),
             async_chat_front_timeout_sec=120.0,
         )
         self.chat_calls: list[dict[str, Any]] = []
 
-    def resolve_model(self, role: str) -> str:
-        return f"m/{role}"
+    def resolve_model(self, role: str) -> GenAIModel:
+        return resolve_chat_text_model(f"m/{role}")
 
     def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_calls.append(kwargs)

@@ -20,14 +20,21 @@ from app.core.companion_harness.companion.manager import (
     CompanionManager,
     CompanionSession,
 )
+from app.core.companion_harness.memory.memory_registry import (
+    MEMORY_STORE_REGISTRY_REQUIRES_DSN,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.models import CompanionTurnResult, InnerTickMode
+from app.core.companion_harness.companion.models import (
+    CompanionTurnResult,
+    InnerTickMode,
+)
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
+from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 COMPANION_CHAT_LOGS_RELATIVE_PATH = "CHAT_LOGS.md"
 
@@ -42,16 +49,28 @@ def _companion_tool_call_model_yaml(agent: object) -> str:
     return (getattr(agent, "companion_tool_call_model", "") or "").strip()
 
 
+def _companion_tool_model_api_id(chat_model_api_id: str) -> str:
+    """OpenRouter-style id for tool rounds; defaults to chat model when YAML override is empty."""
+    cfg = global_config_loaded_from_config_yaml
+    raw = _companion_tool_call_model_yaml(cfg.agent)
+    if not raw:
+        return chat_model_api_id
+    return resolve_chat_text_model(raw).id_on_provider
+
+
 def companion_memory_store_if_ready(
     *,
     user_id: str,
     agent_id: str,
     chat_id: str | int,
-    resolved_chat_model_id: str,
+    resolved_chat_model: GenAIModel,
 ) -> MemoryStore | None:
     """Return the session MemoryStore when minimal companion documents are initialized."""
+    chat_api_id = resolved_chat_model.id_on_provider
+    tool_api_id = _companion_tool_model_api_id(chat_api_id)
     manager = _companion_manager_for_resolved_model(
-        resolved_chat_model_id,
+        chat_api_id,
+        tool_api_id,
         _companion_runtime_config_fingerprint(),
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
@@ -65,11 +84,14 @@ def companion_session_tool_bg_idle_event(
     user_id: str,
     agent_id: str,
     chat_id: str | int,
-    resolved_chat_model_id: str,
+    resolved_chat_model: GenAIModel,
 ) -> threading.Event:
     """Return ``CompanionSession.tool_bg_idle`` for WebSocket inner-tick overlap checks."""
+    chat_api_id = resolved_chat_model.id_on_provider
+    tool_api_id = _companion_tool_model_api_id(chat_api_id)
     manager = _companion_manager_for_resolved_model(
-        resolved_chat_model_id,
+        chat_api_id,
+        tool_api_id,
         _companion_runtime_config_fingerprint(),
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
@@ -81,12 +103,15 @@ def append_companion_chat_logs_line_for_ws_control(
     user_id: str,
     agent_id: str,
     chat_id: str | int,
-    resolved_chat_model_id: str,
+    resolved_chat_model: GenAIModel,
     line: str,
 ) -> None:
     """Append one line to ``CHAT_LOGS.md`` for the companion MemoryStore scope (DB-backed)."""
+    chat_api_id = resolved_chat_model.id_on_provider
+    tool_api_id = _companion_tool_model_api_id(chat_api_id)
     manager = _companion_manager_for_resolved_model(
-        resolved_chat_model_id,
+        chat_api_id,
+        tool_api_id,
         _companion_runtime_config_fingerprint(),
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
@@ -136,15 +161,18 @@ async def conclude_companion_scope_on_user_signed_out(
     user_id: str,
     agent_id: str,
     chat_id: str | int,
-    resolved_chat_model_id: str,
+    resolved_chat_model: GenAIModel,
     log_line: str,
 ) -> None:
     """End in-process companion session, wipe persisted MemoryStore scope, clear ``chat_history``."""
     from app.services import chat_history_service, chat_service
 
     chat_key = str(chat_id)
+    chat_api_id = resolved_chat_model.id_on_provider
+    tool_api_id = _companion_tool_model_api_id(chat_api_id)
     manager = _companion_manager_for_resolved_model(
-        resolved_chat_model_id,
+        chat_api_id,
+        tool_api_id,
         _companion_runtime_config_fingerprint(),
     )
     manager.shutdown_session(user_id, agent_id, chat_key)
@@ -159,7 +187,7 @@ async def conclude_companion_scope_on_user_signed_out(
         user_id=user_id,
         agent_id=agent_id,
         chat_id=chat_key,
-        resolved_chat_model_id=resolved_chat_model_id,
+        resolved_chat_model=resolved_chat_model,
         line=log_line,
     )
 
@@ -192,7 +220,9 @@ def _companion_runtime_config_fingerprint() -> str:
 
 @lru_cache(maxsize=64)
 def _companion_manager_for_resolved_model(
-    resolved_chat_model_id: str, runtime_fingerprint: str
+    chat_model_api_id: str,
+    tool_model_api_id: str,
+    runtime_fingerprint: str,
 ) -> CompanionManager:
     _ = runtime_fingerprint
     cfg = global_config_loaded_from_config_yaml
@@ -203,17 +233,19 @@ def _companion_manager_for_resolved_model(
         async_chat_timeout = float(timeout_raw) if timeout_raw else 600.0
     except ValueError:
         async_chat_timeout = 600.0
+    chat_m = resolve_chat_text_model(chat_model_api_id)
+    tool_m = resolve_chat_text_model(tool_model_api_id)
     llm = CompanionLLMConfig(
         api_key=api_key,
         api_base=(cfg.agent.chat_llm_base_url or cfg.agent.base_url or "").strip()
         or "https://openrouter.ai/api/v1",
-        default_model=resolved_chat_model_id,
-        chat_model=resolved_chat_model_id,
-        tool_model=_companion_tool_call_model_yaml(cfg.agent) or resolved_chat_model_id,
-        memory_model=resolved_chat_model_id,
-        day_summary_model=resolved_chat_model_id,
-        user_model=resolved_chat_model_id,
-        soul_model=resolved_chat_model_id,
+        default_model=chat_m,
+        chat_model=chat_m,
+        tool_model=tool_m,
+        memory_model=chat_m,
+        day_summary_model=chat_m,
+        user_model=chat_m,
+        soul_model=chat_m,
         async_chat_front_timeout_sec=async_chat_timeout,
     )
     tc_raw = feats.companion_transcript_compaction
@@ -222,8 +254,11 @@ def _companion_manager_for_resolved_model(
         if tc_raw is not None
         else None
     )
+    db_url = (cfg.database.url or "").strip()
+    if not db_url:
+        raise RuntimeError(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
     companion_cfg = CompanionConfig(
-        memory_pg_dsn=cfg.database.url,
+        memory_pg_dsn=db_url,
         llm=llm,
         default_context_mode=feats.companion_default_context_mode,
         transcript_compaction=transcript_compaction,
@@ -318,7 +353,7 @@ async def run_companion_chat_turn_for_api(
     agent_id: str,
     chat_id: str | int,
     user_text: str,
-    resolved_chat_model_id: str,
+    resolved_chat_model: GenAIModel,
     defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
@@ -335,7 +370,7 @@ async def run_companion_chat_turn_for_api(
     ``run_turn`` only; ``USER_INTERACTIVE`` seeds minimal docs and every message uses ``run_turn`` with
     interactive bootstrap tools until the model calls ``companion_bootstrap_user_interactive_complete``.
 
-    ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
+    ``resolved_chat_model`` must match ``select_chat_model`` for the same user and subscription
     (caller typically passes ``model_override`` from the chat completion path, e.g. WebSocket handler).
     """
     cfg = global_config_loaded_from_config_yaml
@@ -344,18 +379,20 @@ async def run_companion_chat_turn_for_api(
         agent_cfg.chat_llm_base_url or agent_cfg.base_url or ""
     ).strip() or "https://openrouter.ai/api/v1"
     t0 = time.perf_counter()
+    chat_api_id = resolved_chat_model.id_on_provider
+    tool_api_id = _companion_tool_model_api_id(chat_api_id)
     logger.debug(
         "companion_chat_turn start user={} agent={} chat={} model={} api_base={} defer_memory={}",
         user_id,
         agent_id,
         chat_id,
-        resolved_chat_model_id,
+        chat_api_id,
         api_base,
         defer_memory_update,
     )
     t_mgr0 = time.perf_counter()
     manager = _companion_manager_for_resolved_model(
-        resolved_chat_model_id, _companion_runtime_config_fingerprint()
+        chat_api_id, tool_api_id, _companion_runtime_config_fingerprint()
     )
     chat_key = str(chat_id)
     session = manager.get_or_create_session(user_id, agent_id, chat_key)
@@ -397,7 +434,7 @@ async def run_companion_chat_turn_for_api(
         user_id,
         agent_id,
         chat_id,
-        resolved_chat_model_id,
+        chat_api_id,
         (time.perf_counter() - t0) * 1000.0,
         manager_session_ms,
         ws_system_ms,

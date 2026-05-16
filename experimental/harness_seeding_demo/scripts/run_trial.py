@@ -41,11 +41,18 @@ def _maybe_load_config_yaml(path: Path | None) -> dict[str, str]:
     return apply_llm_env_from_config_yaml(p)
 
 
-from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
+from app.core.companion_harness.companion.manager import (
+    CompanionConfig,
+    CompanionManager,
+)
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
-from app.core.companion_harness.memory.memory_registry import shutdown_memory_store
+from app.core.companion_harness.memory.memory_registry import (
+    MEMORY_STORE_REGISTRY_REQUIRES_DSN,
+    shutdown_memory_store,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.config import global_config_loaded_from_config_yaml
 
 from experimental.harness_seeding_demo.scorer.rubrics import (
     DEFAULT_RUBRIC_THRESHOLDS,
@@ -166,18 +173,16 @@ async def _run(args: argparse.Namespace) -> dict:
     shutdown_memory_store(scope)
     seed_memory_store_from_directory(args.seed_dir.resolve(), scope)
 
-    mem_cfg = MemoryPipelineConfig(
-        day_summary_disabled=True,
-        user_update_disabled=True,
-        soul_update_disabled=True,
-        memory_update_every_n_turns=99999,
-        soul_update_every_n_turns=99999,
-    )
+    mem_cfg = MemoryPipelineConfig(memory_update_every_n_turns=99999)
+
+    memory_pg_dsn = (global_config_loaded_from_config_yaml.database.url or "").strip()
+    if not memory_pg_dsn:
+        raise SystemExit(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
 
     cfg = CompanionConfig(
         llm=llm_cfg,
         memory=mem_cfg,
-        memory_pg_dsn="",
+        memory_pg_dsn=memory_pg_dsn,
     )
     manager = CompanionManager(cfg)
     session = manager.get_or_create_session(user_id, companion_id, chat_id)

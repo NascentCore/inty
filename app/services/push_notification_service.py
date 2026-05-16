@@ -1604,7 +1604,7 @@ async def generate_agent_message(
         subscription = await subscription_service.get_user_current_subscription(
             db, user_id
         )
-        model_override = select_chat_model(user=user, is_subscribed=bool(subscription))
+        model_override = select_chat_model(user=user, is_subscribed=bool(subscription)).id_on_provider
 
         # 查询之前的推送消息内容（用于避免重复生成）
         previous_push_messages = await get_previous_push_messages(

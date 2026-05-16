@@ -1332,6 +1332,9 @@ class Agent:
                         )
                         # 记录输出到 trace
                         if response.choices:
+                            # TODO(context-utilization): Extend LangSmith ``usage`` with
+                            # ``app.utils.models_catalog`` ``context_window_tokens`` and prompt/window ratio
+                            # for this ``model`` (non-harness path; does not use create_chat_completion_sync).
                             run.end(
                                 outputs={
                                     "content": response.choices[0].message.content,

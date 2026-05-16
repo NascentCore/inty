@@ -65,29 +65,18 @@ class ChatWsClientContextAckFrame(BaseModel):
 
 
 class ChatWsUserSignedOnFrame(BaseModel):
-    """**Client → server** control frame: arms inner-tick coords for this user/agent/chat.
+    """**Client → server** control frame: arms inner-tick coords and schedules greeting turn.
 
-    When ``implicit_greeting`` is true, the server runs an internal implicit sign-on companion
-    turn after a successful ``user_signed_on_ack`` (same semantics as the former IMPLICIT chat
-    frame); see ``/app/core/companion_harness/companion/implicit_signal_messages.py``.
+    ``message_id`` (RFC4122 UUID) is required; see
+    ``/app/core/companion_harness/companion/implicit_signal_messages.py``.
     """
 
     type: Literal["user_signed_on"] = "user_signed_on"
     agent_id: str = Field(..., min_length=1)
-    message_id: Optional[str] = Field(
-        default=None,
-        description="Optional RFC4122 UUID string for client/server log correlation; "
-        "required when implicit_greeting is true (also used as companion transcript user_msg_uuid).",
-    )
-    implicit_greeting: bool = Field(
-        default=False,
-        description="When true, run implicit sign-on greeting companion turn after coords arm.",
-    )
-    implicit_greeting_note: Optional[str] = Field(
-        default=None,
-        max_length=160,
-        description="Optional client hint when implicit_greeting is false (e.g. reconnect); "
-        "server may include it in logs only.",
+    message_id: str = Field(
+        ...,
+        min_length=1,
+        description="RFC4122 UUID for log correlation and companion transcript user_msg_uuid.",
     )
 
 
@@ -234,7 +223,9 @@ class ChatWsCompanionWireMetaData(BaseModel):
     )
 
 
-def dump_chat_ws_companion_wire_meta(meta: ChatWsCompanionWireMetaData) -> dict[str, Any]:
+def dump_chat_ws_companion_wire_meta(
+    meta: ChatWsCompanionWireMetaData,
+) -> dict[str, Any]:
     """Serialize companion WebSocket ``meta_data`` for ORM / ``send_json`` (omit nulls, camelCase aliases)."""
     return meta.model_dump(exclude_none=True, by_alias=True)
 

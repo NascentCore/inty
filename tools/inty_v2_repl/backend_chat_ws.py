@@ -62,25 +62,14 @@ def _ws_close_reason_text(reason: object | None) -> str:
     return str(reason)
 
 
-def _ws_user_signed_on_json(
-    agent_id: str,
-    *,
-    message_id: str,
-    implicit_greeting: bool = False,
-    implicit_greeting_note: str | None = None,
-) -> str:
-    payload: dict[str, Any] = {
-        "type": "user_signed_on",
-        "agent_id": agent_id.strip(),
-        "message_id": message_id,
-    }
-    if implicit_greeting:
-        payload["implicit_greeting"] = True
-    else:
-        note = (implicit_greeting_note or "").strip()
-        if note:
-            payload["implicit_greeting_note"] = note
-    return json.dumps(payload)
+def _ws_user_signed_on_json(agent_id: str, *, message_id: str) -> str:
+    return json.dumps(
+        {
+            "type": "user_signed_on",
+            "agent_id": agent_id.strip(),
+            "message_id": message_id,
+        }
+    )
 
 
 def _ws_conn_dropped_json(
@@ -338,7 +327,6 @@ class BackendChatWsBridge:
         self._reconnect_max = default_reconnect_max_sec()
         self._send_max_retries = default_send_turn_retries()
         self._online_ev: asyncio.Event | None = None
-        self._implicit_greeting_sent: bool = False
         self._had_transport_drop: bool = False
         self._pending_ws_drop: dict[str, Any] | None = None
         self._pending_ws_conn_dropped_ack_fut: asyncio.Future[dict[str, Any]] | None = (
@@ -540,33 +528,15 @@ class BackendChatWsBridge:
             finally:
                 self._pending_ws_conn_dropped_ack_fut = None
 
-        use_implicit = not self._implicit_greeting_sent
         try:
             frame_mid = str(uuid.uuid4())
             await ws.send(
-                _ws_user_signed_on_json(
-                    aid,
-                    message_id=frame_mid,
-                    implicit_greeting=use_implicit,
-                    implicit_greeting_note=(
-                        None
-                        if use_implicit
-                        else "repl already resumed"
-                    ),
-                )
+                _ws_user_signed_on_json(aid, message_id=frame_mid),
             )
-            if use_implicit:
-                self._implicit_greeting_sent = True
             logger.info(
-                "chat ws user_signed_on sent (repl) agent_id={} message_id={} implicit_greeting={}{}",
+                "chat ws user_signed_on sent (repl) agent_id={} message_id={}",
                 aid,
                 frame_mid,
-                use_implicit,
-                (
-                    ""
-                    if use_implicit
-                    else " (repl already resumed)"
-                ),
             )
             if self._on_user_signed_on_sent is not None:
                 try:

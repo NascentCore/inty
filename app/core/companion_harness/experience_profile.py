@@ -32,7 +32,7 @@ _PRIVATE_MEMORY_SHARED_EMOTIONAL_CLAUSE_IDS = frozenset(
     _PRIVATE_MEMORY_PROFILE_IDS - {ExperienceContextMode.INTIMATE}
 )
 
-EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING = "## 当前体验配置（context_mode）"
+EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING = "当前体验配置（context_mode）"
 
 
 def _experience_profile_clause(body: str) -> str:

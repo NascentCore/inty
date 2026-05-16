@@ -12,7 +12,7 @@ async dual-LLM (tools present) always for that chat leg; for the single-completi
 ``use_dual_structured_chat`` is true (no tools, not inner-tick async background route). If the parsed
 envelope has ``output_to_user=false`` on either foreground chat path, ``run_turn`` logs WARNING with
 ``trace_id``: the prompt/schema contract requires true on chat branches (false is for tool_background
-routing); the model may still drift. Full pipeline notes: ``significance_perception.py`` module docstring.
+routing); the model may still drift. Full pipeline notes: ``dual_llm_chat_branch_envelope`` module docstring.
 
 **``output_to_user`` warning**: The dual-LLM JSON envelope is shared with ``tool_background`` finish,
 where ``output_to_user`` may be false (silent recap). On **foreground** chat completions it must be
@@ -74,11 +74,13 @@ from .models import (
     transcript_relative_path_for_turn_persistence,
 )
 from .prompt_stack import companion_turn_tools_and_system_messages
-from .significance_perception import (
+from .dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
 )
-from app.core.companion_harness.memory.transcript_compaction import CompactionConfig as TranscriptCompactionConfig
+from app.core.companion_harness.memory.transcript_compaction import (
+    CompactionConfig as TranscriptCompactionConfig,
+)
 from .turn_pipeline import (
     build_companion_turn_prompt_plan,
     load_companion_turn_state,
@@ -117,7 +119,9 @@ from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from app.core.companion_harness.memory.memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 
 CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 
@@ -491,7 +495,7 @@ async def run_turn(
                                 langsmith_llm_run_acc = ls_lr
                         except asyncio.TimeoutError as exc:
                             record_llm_inference_failure(
-                                model=chat_model,
+                                model=chat_model.id_on_provider,
                                 exc=exc,
                                 foreground_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
                             )
@@ -545,7 +549,7 @@ async def run_turn(
                     start_tool_background_job(
                         memory_store=store,
                         request_messages=tool_msgs_for_bg,
-                        tool_model_name=tool_model,
+                        tool_model=tool_model,
                         user_msg_uuid=user_msg_uuid,
                         trace_id=trace_id,
                         tools=tools_for_turn,
@@ -814,9 +818,7 @@ async def run_turn(
         langsmith_llm_run_acc or "",
     )
     transcript_user_content = (
-        USER_SIGNED_ON_TRIGGER_USER_TEXT
-        if implicit_sign_on_turn
-        else user_text
+        USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
     )
     return CompanionTurnResult(
         assistant_text=last_text,
