@@ -1,6 +1,11 @@
 # CREATED_BY_AGENT
 # Daily user analytics / usage rollup on production primary DB (same path as push_worker
 # _run_user_analytics_daily_report: T-1 UTC, AsyncSessionLocal → primary when replica_host absent).
+#
+# This overlaps with push_worker's daily report.
+# The push worker's daily report always produces empty results.
+# Which prevents the workflow from producing data.
+# So I have disabled the push worker on the server.
 name: Daily - IntelliMate User Activity Report
 
 # 手动：仓库 Actions → 本 workflow →「Run workflow」（可选填日期、是否 force）。
