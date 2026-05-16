@@ -136,8 +136,9 @@ class DatabaseSettings(BaseModel):
         )
 
 
-@dataclass
-class GoogleOAuthConfig:
+class GoogleOAuthConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     redirect_uri: Optional[str] = None
@@ -715,7 +716,7 @@ def load_config(path: str) -> Config:
         app=AppConfig(**app_data),
         security=SecurityConfig.model_validate(data.get("security") or {}),
         database=DatabaseSettings.model_validate(data.get("database") or {}),
-        google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
+        google_oauth=GoogleOAuthConfig.model_validate(data.get("google_oauth") or {}),
         verification=VerificationConfig(**data.get("verification", {})),
         logging=LoggingConfig.model_validate(data.get("logging") or {}),
         embedding=EmbeddingConfig(**data.get("embedding", {})),

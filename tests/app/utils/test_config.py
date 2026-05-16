@@ -394,6 +394,21 @@ def test_database_settings_model_validate_preserves_database_urls():
     )
 
 
+def test_google_oauth_config_model_validate_ignores_unknown_keys():
+    settings = GoogleOAuthConfig.model_validate(
+        {
+            "client_id": "google-client",
+            "client_secret": "google-secret",
+            "redirect_uri": "https://example.com/oauth/google/callback",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.client_id == "google-client"
+    assert settings.client_secret == "google-secret"
+    assert settings.redirect_uri == "https://example.com/oauth/google/callback"
+
+
 def test_agent_config_langsmith_always_trace_user_emails_defaults_to_empty_list():
     agent_config = AgentConfig(api_key="test", langchain_api_key="test")
 
@@ -499,3 +514,29 @@ def test_load_config_database_settings_uses_pydantic_validation():
         cfg.database.url
         == "postgresql://inty_user:secret@primary.internal:15432/inty_prod"
     )
+
+
+def test_load_config_google_oauth_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "security:\n",
+        "\n".join(
+            [
+                "google_oauth:",
+                "  client_id: google-client",
+                "  client_secret: google-secret",
+                "  redirect_uri: https://example.com/oauth/google/callback",
+                "  unknown_key: ignored",
+                "security:",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.google_oauth.client_id == "google-client"
+    assert cfg.google_oauth.client_secret == "google-secret"
+    assert cfg.google_oauth.redirect_uri == "https://example.com/oauth/google/callback"
