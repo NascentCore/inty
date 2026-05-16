@@ -201,6 +201,49 @@ def _clip(s: str, n: int) -> str:
     return s[: n - 1] + "…"
 
 
+def _log_memory_pipeline_skipped(
+    *,
+    step: str,
+    ws: str,
+    turn_n: int,
+    every_n: int | None = None,
+    reason: str | None = None,
+) -> None:
+    if reason is not None:
+        logger.debug(
+            "memory_pipeline skipped step={} turn={} ws={} reason={}",
+            step,
+            turn_n,
+            ws,
+            reason,
+        )
+        return
+    assert every_n is not None
+    logger.debug(
+        "memory_pipeline skipped step={} turn={} every_n={} ws={}",
+        step,
+        turn_n,
+        every_n,
+        ws,
+    )
+
+
+def _log_memory_pipeline_curated(
+    *,
+    step: str,
+    ws: str,
+    turn_n: int,
+    ms: float,
+) -> None:
+    logger.info(
+        "memory_pipeline curated step={} ms={:.0f} ws={} turn={}",
+        step,
+        ms,
+        ws,
+        turn_n,
+    )
+
+
 def _raw_for_summary_prompt(raw: str) -> str:
     if len(raw) <= _RAW_FOR_SUMMARY_MAX:
         return raw
@@ -378,7 +421,8 @@ def memory_update_after_turn(
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
     config: MemoryPipelineConfig,
-) -> None:
+) -> bool:
+    """Run post-turn memory pipeline. Returns True if any LLM curation step ran."""
     t_all = time.perf_counter()
     ws = store.scope.registry_key()
     turn_n = _bump_memory_pipeline_turn(store)
@@ -387,7 +431,7 @@ def memory_update_after_turn(
     style_every_n = config.style_update_every_n_turns
     memory_every_n = config.memory_update_every_n_turns
     soul_every_n = config.soul_update_every_n_turns
-    logger.info(
+    logger.debug(
         "memory_pipeline start ws={} turn={} day_summary_every_n={} "
         "memory_update_every_n={} user_update_every_n={} style_update_every_n={} soul_update_every_n={} "
         "day_summary_disabled={} user_update_disabled={} style_update_disabled={} soul_update_disabled={}",
@@ -413,11 +457,14 @@ def memory_update_after_turn(
 
     t = time.perf_counter()
     _append_diary(store, user_text=user_text, assistant_text=assistant_text)
-    logger.info(
-        "memory_pipeline step=append_diary ms={:.0f} ws={}",
+    logger.debug(
+        "memory_pipeline append_diary ms={:.0f} ws={} turn={}",
         (time.perf_counter() - t) * 1000.0,
         ws,
+        turn_n,
     )
+
+    any_curation = False
 
     t = time.perf_counter()
     run_day_summary_llm = (not config.day_summary_disabled) and (turn_n % every_n == 0)
@@ -429,19 +476,17 @@ def memory_update_after_turn(
             complete_fn=complete_fn,
             config=config,
         )
-    elif not config.day_summary_disabled:
-        logger.debug(
-            "memory_pipeline step=day_summary_md skipped turn={} every_n={} ws={}",
-            turn_n,
-            every_n,
-            ws,
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="day_summary_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
         )
-    logger.info(
-        "memory_pipeline step=day_summary_md ms={:.0f} ws={} ran_llm={}",
-        (time.perf_counter() - t) * 1000.0,
-        ws,
-        run_day_summary_llm,
-    )
+    elif not config.day_summary_disabled:
+        _log_memory_pipeline_skipped(
+            step="day_summary_md", ws=ws, turn_n=turn_n, every_n=every_n
+        )
 
     t = time.perf_counter()
     run_memory_llm = turn_n % memory_every_n == 0
@@ -452,19 +497,17 @@ def memory_update_after_turn(
             assistant_text=assistant_text,
             complete_fn=complete_fn,
         )
-    else:
-        logger.debug(
-            "memory_pipeline step=memory_md skipped turn={} every_n={} ws={}",
-            turn_n,
-            memory_every_n,
-            ws,
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="memory_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
         )
-    logger.info(
-        "memory_pipeline step=memory_md ms={:.0f} ws={} ran_llm={}",
-        (time.perf_counter() - t) * 1000.0,
-        ws,
-        run_memory_llm,
-    )
+    else:
+        _log_memory_pipeline_skipped(
+            step="memory_md", ws=ws, turn_n=turn_n, every_n=memory_every_n
+        )
 
     t = time.perf_counter()
     run_user_llm = (not config.user_update_disabled) and (turn_n % user_every_n == 0)
@@ -476,19 +519,17 @@ def memory_update_after_turn(
             complete_fn=complete_fn,
             config=config,
         )
-    elif not config.user_update_disabled:
-        logger.debug(
-            "memory_pipeline step=user_md skipped turn={} every_n={} ws={}",
-            turn_n,
-            user_every_n,
-            ws,
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="user_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
         )
-    logger.info(
-        "memory_pipeline step=user_md ms={:.0f} ws={} ran_llm={}",
-        (time.perf_counter() - t) * 1000.0,
-        ws,
-        run_user_llm,
-    )
+    elif not config.user_update_disabled:
+        _log_memory_pipeline_skipped(
+            step="user_md", ws=ws, turn_n=turn_n, every_n=user_every_n
+        )
 
     t = time.perf_counter()
     run_style_llm = (not config.style_update_disabled) and (
@@ -502,19 +543,17 @@ def memory_update_after_turn(
             complete_fn=complete_fn,
             config=config,
         )
-    elif not config.style_update_disabled:
-        logger.debug(
-            "memory_pipeline step=style_md skipped turn={} every_n={} ws={}",
-            turn_n,
-            style_every_n,
-            ws,
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="style_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
         )
-    logger.info(
-        "memory_pipeline step=style_md ms={:.0f} ws={} ran_llm={}",
-        (time.perf_counter() - t) * 1000.0,
-        ws,
-        run_style_llm,
-    )
+    elif not config.style_update_disabled:
+        _log_memory_pipeline_skipped(
+            step="style_md", ws=ws, turn_n=turn_n, every_n=style_every_n
+        )
 
     t = time.perf_counter()
     soul_interval_hits = (not config.soul_update_disabled) and (
@@ -533,39 +572,48 @@ def memory_update_after_turn(
             complete_fn=complete_fn,
             config=config,
         )
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="soul_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
+        )
     elif soul_locked and soul_interval_hits:
-        logger.debug(
-            "memory_pipeline step=soul_md skipped turn={} every_n={} ws={} reason=soul_locked_after_interactive_bootstrap",
-            turn_n,
-            soul_every_n,
-            ws,
+        _log_memory_pipeline_skipped(
+            step="soul_md",
+            ws=ws,
+            turn_n=turn_n,
+            reason="soul_locked_after_interactive_bootstrap",
         )
     elif soul_interval_hits and not soul_signal_ok:
-        logger.debug(
-            "memory_pipeline step=soul_md skipped turn={} every_n={} ws={} reason=no_fundamental_signal",
-            turn_n,
-            soul_every_n,
-            ws,
+        _log_memory_pipeline_skipped(
+            step="soul_md",
+            ws=ws,
+            turn_n=turn_n,
+            reason="no_fundamental_signal",
         )
     elif not config.soul_update_disabled:
-        logger.debug(
-            "memory_pipeline step=soul_md skipped turn={} every_n={} ws={}",
-            turn_n,
-            soul_every_n,
-            ws,
+        _log_memory_pipeline_skipped(
+            step="soul_md", ws=ws, turn_n=turn_n, every_n=soul_every_n
         )
-    logger.info(
-        "memory_pipeline step=soul_md ms={:.0f} ws={} ran_llm={}",
-        (time.perf_counter() - t) * 1000.0,
-        ws,
-        run_soul_llm,
-    )
 
-    logger.info(
-        "memory_pipeline done total_ms={:.0f} ws={}",
-        (time.perf_counter() - t_all) * 1000.0,
-        ws,
-    )
+    total_ms = (time.perf_counter() - t_all) * 1000.0
+    if any_curation:
+        logger.info(
+            "memory_pipeline done total_ms={:.0f} ws={} turn={}",
+            total_ms,
+            ws,
+            turn_n,
+        )
+    else:
+        logger.debug(
+            "memory_pipeline done total_ms={:.0f} ws={} turn={}",
+            total_ms,
+            ws,
+            turn_n,
+        )
+    return any_curation
 
 
 _MEMORY_WORKER_ERRORS: tuple[type[BaseException], ...] = (
@@ -629,8 +677,9 @@ def _memory_worker_loop() -> None:
             )
         )
         try:
+            curated = False
             try:
-                memory_update_after_turn(
+                curated = memory_update_after_turn(
                     store,
                     user_text,
                     assistant_text,
@@ -641,11 +690,20 @@ def _memory_worker_loop() -> None:
                 logger.exception("memory_update_after_turn failed")
         finally:
             companion_llm_runtime_event_bind_ctx.reset(mem_bind_tok)
-            logger.info(
-                "memory_pipeline worker_job wall_ms={:.0f} scope={}",
-                (time.perf_counter() - t_job) * 1000.0,
-                store.scope.registry_key(),
-            )
+            wall_ms = (time.perf_counter() - t_job) * 1000.0
+            scope = store.scope.registry_key()
+            if curated:
+                logger.info(
+                    "memory_pipeline worker_job wall_ms={:.0f} scope={}",
+                    wall_ms,
+                    scope,
+                )
+            else:
+                logger.debug(
+                    "memory_pipeline worker_job wall_ms={:.0f} scope={}",
+                    wall_ms,
+                    scope,
+                )
             _memory_queue.task_done()
 
 
@@ -679,7 +737,7 @@ def schedule_memory_update_after_turn(
             user_msg_uuid,
         ),
     )
-    logger.info(
+    logger.debug(
         "memory_pipeline enqueued scope={} pending_jobs={}",
         store.scope.registry_key(),
         _memory_queue.qsize(),
