@@ -1,6 +1,11 @@
 # CREATED_BY_AGENT
 # Daily user analytics / usage rollup on production primary DB (same path as push_worker
 # _run_user_analytics_daily_report: T-1 UTC, AsyncSessionLocal → primary when replica_host absent).
+#
+# 运维注意（双写 / 「绿但不落库」）：
+# 生产机上 push worker 若仍在调度用户数据分析日报，会先插入当日 daily 行；本 workflow 再跑会
+# 「已存在，跳过」且 exit 0，评测台/库里看不到「本次新增」属预期。排障见
+# .agents/work_logs/2026-05-16/daily-usage-report-vs-push-worker.md；需重算时用 workflow_dispatch + force。
 name: Daily primary DB usage report
 
 # 手动：仓库 Actions → 本 workflow →「Run workflow」（可选填日期、是否 force）。
