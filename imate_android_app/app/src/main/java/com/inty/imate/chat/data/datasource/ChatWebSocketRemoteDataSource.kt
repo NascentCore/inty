@@ -5,6 +5,7 @@ import com.ai.core.utils.LogUtils
 import com.inty.imate.chat.data.ChatTextSendRequestFactory
 import com.inty.imate.chat.data.bean.ChatClientContextWsMessage
 import com.inty.imate.chat.data.bean.ChatUserSignedOnWsMessage
+import com.inty.imate.chat.data.bean.ChatUserSignedOutWsMessage
 import com.inty.imate.chat.data.bean.ChatWebSocketReq
 import com.inty.imate.chat.data.bean.ChatWsControlFrame
 import com.inty.imate.chat.data.bean.SendMsgReq
@@ -87,6 +88,26 @@ constructor() {
             )
             userSignedOnAgentIdForConnection.set(aid)
             implicitSignOnSentAgentIds.add(aid)
+        }
+    }
+
+    suspend fun sendUserSignedOutFireAndForget(agentId: String) {
+        val aid = agentId.trim()
+        if (aid.isEmpty()) return
+        waitUntilSessionReadyOrThrow()
+        sendMutex.withLock {
+            val session =
+                currentSession.get()
+                    ?: throw IllegalStateException("Chat WebSocket not connected")
+            val outMsgId = UUID.randomUUID().toString()
+            session.send(
+                Frame.Text(
+                    json.encodeToString(
+                        ChatUserSignedOutWsMessage.serializer(),
+                        ChatUserSignedOutWsMessage(agentId = aid, messageId = outMsgId),
+                    ),
+                ),
+            )
         }
     }
 
