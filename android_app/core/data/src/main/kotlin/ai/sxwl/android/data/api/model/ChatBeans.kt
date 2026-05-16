@@ -65,8 +65,8 @@ data class SendMsgReqMessage(val role: String = "", val content: Any = "") {
 // TODO: Run :core:data:compileDebugKotlin (or full app compile) when changing SendMsgReq.
 
 /**
- * Companion WebSocket `messageType` string (request body). Implicit greeting uses
- * `user_signed_on` control messages only. Aligns with backend `ChatCompletionRequest.message_type`.
+ * Companion WebSocket `messageType` string (request body). Implicit greeting uses `user_signed_on`
+ * control messages only. Aligns with backend `ChatCompletionRequest.message_type`.
  */
 object CompanionChatTurnMessageType {
     const val USER_MESSAGE = "USER_MESSAGE"
