@@ -27,7 +27,6 @@ from app.core.companion_harness.tools.dispatchers.memory_store import (
 
 from app.core.companion_harness.companion.bootstrap_user_interactive import (
     PROMPT_SLICE_TO_REL,
-    soul_prompt_is_locked_after_interactive_bootstrap,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
@@ -355,11 +354,6 @@ def tool_memory_store_write_document(
     st = store
     if not _is_orm_mapped_store_relative_path(rel):
         return f"ERROR: cannot write {relative_path!r} (not a persisted companion document)"
-    if rel == "SOUL.md" and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
-        return (
-            "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
-            "you may still update IDENTITY.md, STYLE.md, USER.md, MEMORY.md, and other allowed paths."
-        )
     if rel in ("transcript.jsonl", "transcript_inner_tick.jsonl"):
         v_err = _transcript_jsonl_validate_for_tool_write(content)
         if v_err is not None:
@@ -788,8 +782,6 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                     "Overwrite one workspace prompt slice (root markdown) in MemoryStore. "
                     "Use during interactive relationship bootstrap instead of memory_store_write_document. "
                     "Pass the full updated markdown as content. "
-                    "After companion_bootstrap_user_interactive_complete, SOUL is locked; "
-                    "IDENTITY / STYLE / USER / MEMORY may still be updated. "
                     "TOOLS / significance-perception operator text are fixed package templates, not slices."
                 ),
                 "parameters": {
@@ -816,9 +808,7 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                 "name": "companion_bootstrap_user_interactive_complete",
                 "description": (
                     "Mark interactive workspace bootstrap as finished in context.json. "
-                    "Bootstrap here means the SOUL slice has been initialized for this relationship; "
-                    "after this call SOUL.md must not change (tools and background updates). "
-                    "Call when that phase is done; IDENTITY / STYLE / USER / MEMORY slices may still be edited later."
+                    "Call when the relationship-establishment phase is done."
                 ),
                 "parameters": {
                     "type": "object",

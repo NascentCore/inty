@@ -173,13 +173,7 @@ async def _run(args: argparse.Namespace) -> dict:
     shutdown_memory_store(scope)
     seed_memory_store_from_directory(args.seed_dir.resolve(), scope)
 
-    mem_cfg = MemoryPipelineConfig(
-        day_summary_disabled=True,
-        user_update_disabled=True,
-        soul_update_disabled=True,
-        memory_update_every_n_turns=99999,
-        soul_update_every_n_turns=99999,
-    )
+    mem_cfg = MemoryPipelineConfig(memory_update_every_n_turns=99999)
 
     memory_pg_dsn = (global_config_loaded_from_config_yaml.database.url or "").strip()
     if not memory_pg_dsn:
