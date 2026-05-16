@@ -132,19 +132,16 @@ such experience is between human users and AI, but they have real-world patterns
 ### Writing code
 
 - Simplicity first, so problems can be identified easily
-- Design for architecture soundness
 - Never speculate about code, files, or APIs you have not read.
-- Create skills, commands to abstract and automate repeated actions and fragile processes
 - Always test your changes
 - Idempotence is required for code paths with side-effects
-- Document your preferences that are not obvious from the code
-- Write pull request title & description in Mandarin（使用中文编写 PR 标题和描述）
+- Do not handle exceptions in python code
+- Validate input arguments with `assert`
 
 #### Python
 
 - Do not use `.strip()` all the time to clean strings
-- Data structures all use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models
-- CLIs all use [Cyclopts](https://github.com/BrianPugh/cyclopts)
+- Use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models, [Cyclopts](https://github.com/BrianPugh/cyclopts), `uv`
 - Document Python package/module in `__init__.py` docstring.
 
 ### Documentation

@@ -1,8 +1,7 @@
 ---
 name: inty-local-backend-repl
 description: >-
-  Launch inty backend for running terminal REPL.
-  This is used for local development and evaluation of the agentic companion experience.
+  Launch inty backend connected with terminal REPL, for local development and evaluation.
 ---
 
 # Launching local backend for terminal REPL
@@ -10,9 +9,13 @@ description: >-
 ## When to use
 
 - Launch Inty ops on `:8001` for `tools.inty_v2_repl` to connect with
-- [`Local REPL README.md`](/tools/inty_v2_repl/README.md)
+- [`Terminal REPL AGENTS.md`](/tools/inty_v2_repl/AGENTS.md)
 
 ## Ops
+
+From repository root: `uv venv`, `source .venv/bin/activate`, then
+`uv pip install -r requirements.txt -r tools/inty_v2_repl/requirements.txt`
+(see [repl AGENTS.md](/tools/inty_v2_repl/AGENTS.md) Setup).
 
 Use `INTY_CONFIG_YAML` env var to specify the config file for launching the ops variant
 of Inty backend.
@@ -56,18 +59,9 @@ AGENT_ID=$(python3 tools/scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR=
 
 ## Final reply to user（默认）
 
-After ops instance is ready, respond to user with：
+First, read [repl AGENTS.md](/tools/inty_v2_repl/AGENTS.md) to understand how to launch repl.
+
+After ops instance is ready, respond to user with the following:
 
 1. Log file path：**`.inty/inty.log`**（仓库根相对路径）
-2. Repl launch command, use the AGENT_ID obtained before:
-
-   ```bash
-   source .venv/bin/activate
-   python -m tools.inty_v2_repl.main repl \
-     --api-base-url http://127.0.0.1:8001 \
-     --agent-id AGENT_ID
-   ```
-
-## Reference
-
-- [`tools/inty_v2_repl/AGENTS.md`](../../../tools/inty_v2_repl/AGENTS.md)
+2. Instructions to launching REPL
