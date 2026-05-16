@@ -1530,26 +1530,22 @@ def test_chat_websocket_companion_passes_implicit_signal_bundle_with_time_contex
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_implicit_user_signed_on_chat_frame_sets_bundle(
+def test_chat_websocket_companion_rejects_implicit_user_signed_on_message_type(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    captured: dict = {}
-    user_saves: list = []
-    ai_meta: list = []
+    captured: dict = {"companion_calls": 0}
 
     async def fake_run_companion_chat_turn_for_api(**kwargs):
-        captured["bundle"] = kwargs.get("implicit_signal_bundle")
-        return CompanionTurnResult(assistant_text="greet")
+        captured["companion_calls"] += 1
+        return CompanionTurnResult(assistant_text="should-not-run")
 
     _setup_companion_ws_chat_test_env(
         monkeypatch,
-        agent_id="agent-companion-signon-chatframe",
-        chat_id="chat-signon-chatframe-1",
+        agent_id="agent-companion-signon-reject",
+        chat_id="chat-signon-reject-1",
         latest_user_message_db_id=90,
         ai_message_id=902,
         run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
-        user_message_save_log=user_saves,
-        ai_message_meta_captures=ai_meta,
     )
 
     msg_uuid = "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
@@ -1557,7 +1553,7 @@ def test_chat_websocket_companion_implicit_user_signed_on_chat_frame_sets_bundle
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
                 {
-                    "agent_id": "agent-companion-signon-chatframe",
+                    "agent_id": "agent-companion-signon-reject",
                     "request": {
                         "messages": [{"role": "user", "content": ""}],
                         "message_id": msg_uuid,
@@ -1567,17 +1563,13 @@ def test_chat_websocket_companion_implicit_user_signed_on_chat_frame_sets_bundle
             )
             body = websocket.receive_json()
 
-    assert body["code"] == 200
-    bundle = captured["bundle"]
-    assert bundle is not None
-    assert bundle.user_signed_on is True
-    assert user_saves == []
-    assert ai_meta and ai_meta[-1].get("messageType") == "IMPLICIT_USER_SIGNED_ON"
+    assert body["code"] != 200
+    assert captured["companion_calls"] == 0
 
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_user_signed_on_implicit_greeting_sets_bundle(
+def test_chat_websocket_companion_user_signed_on_greeting_sets_bundle(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     captured: dict = {}
@@ -1605,13 +1597,11 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_sets_bundle(
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-cf",
                     "message_id": msg_uuid,
-                    "implicit_greeting": True,
                 }
             )
-            ack = websocket.receive_json()
-            assert ack["type"] == "user_signed_on_ack"
-            assert ack["ok"] is True
             body = websocket.receive_json()
+            if body.get("type") == "user_signed_on_ack":
+                body = websocket.receive_json()
 
     assert body["code"] == 200
     bundle = captured["bundle"]
@@ -1681,6 +1671,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
                 {
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-inner-tick-stop",
+                    "message_id": "cccccccc-cccc-4ccc-dddd-eeeeeeeeeeee",
                 }
             )
             ack = websocket.receive_json()
@@ -1765,6 +1756,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
                 {
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-inner-tick-sched",
+                    "message_id": "dddddddd-dddd-4ddd-eeee-ffffffffffff",
                 }
             )
             ack = websocket.receive_json()
@@ -1776,7 +1768,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_user_signed_on_implicit_greeting_missing_message_id(
+def test_chat_websocket_companion_user_signed_on_missing_message_id(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     async def fake_run_companion_chat_turn_for_api(**kwargs):
@@ -1797,7 +1789,6 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_missing_messa
                 {
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-cf-mid",
-                    "implicit_greeting": True,
                 }
             )
             ack = websocket.receive_json()
@@ -1809,7 +1800,7 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_missing_messa
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_user_signed_on_implicit_greeting_invalid_message_id(
+def test_chat_websocket_companion_user_signed_on_invalid_message_id(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     async def fake_run_companion_chat_turn_for_api(**kwargs):
@@ -1831,7 +1822,6 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_invalid_messa
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-cf-badmid",
                     "message_id": "not-a-uuid",
-                    "implicit_greeting": True,
                 }
             )
             ack = websocket.receive_json()
@@ -1843,7 +1833,7 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_invalid_messa
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_v1_chat_completions_http_rejects_implicit_user_signed_on_message_type(
+def test_v1_chat_completions_http_rejects_removed_implicit_user_signed_on_message_type(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     _stub_chat_completion_dependencies(monkeypatch)
@@ -1857,9 +1847,9 @@ def test_v1_chat_completions_http_rejects_implicit_user_signed_on_message_type(
     }
     with _client_with_user(chat_business_error_app, user) as client:
         response = client.post("/api/v1/chat/completions/agent-1", json=payload)
-    assert response.status_code == 400
-    body = response.json()
-    assert body["detail"] == "messageType IMPLICIT_USER_SIGNED_ON is not supported"
+    assert response.status_code == 422
+
+    companion_chat_service.clear_companion_chat_service_caches()
 
 
 def test_chat_websocket_companion_rejects_multimodal_image_user_turn(

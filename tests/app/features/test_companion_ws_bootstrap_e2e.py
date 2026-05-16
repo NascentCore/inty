@@ -1,5 +1,5 @@
 """
-E2E: ``/api/v1/chat/ws`` implicit greeting via ``user_signed_on`` + ``implicit_greeting`` returns assistant JSON.
+E2E: ``/api/v1/chat/ws`` greeting via ``user_signed_on`` + ``message_id`` returns assistant JSON.
 
 Requires PostgreSQL reachable at 127.0.0.1:5432 with migrations applied (same as CI ``devops/config.yaml.test``).
 Subprocess loads that YAML via ``INTY_CONFIG_YAML``; the pytest process does not.

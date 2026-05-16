@@ -64,7 +64,12 @@ object ChatWebSocketSessionManager {
                 if (userSignedOnAgentIdForSession != agentId) {
                     activeSession.send(
                         Frame.Text(
-                            userSignedOnAdapter.toJson(ChatUserSignedOnWsMessage(agentId = agentId))
+                            userSignedOnAdapter.toJson(
+                                ChatUserSignedOnWsMessage(
+                                    agentId = agentId,
+                                    messageId = UUID.randomUUID().toString(),
+                                )
+                            )
                         )
                     )
                     userSignedOnAgentIdForSession = agentId

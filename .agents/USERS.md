@@ -4,7 +4,7 @@
 
 - **不做防御式编程**：不要为「万一」加可选分支、吞错、静默降级或多余 try/except；与仓库 `AGENTS.md` 里「不臆造旋钮 / 不过度防御」一致。**灾难性前提缺失**（缺文件、空种子模板、不可恢复的配置）应在清晰边界上**尽快硬失败**（如 `FileNotFoundError`、对不变量的 `assert`），而不是打日志后继续跑。
 - **避免组合爆炸的内部机制**：不要堆叠多个独立 on/off、`*_every_n`、条件门控等，让运行时状态呈 \(2^k\) 级组合却无人实际配置（例：记忆管线曾有的 `*_disabled` + 分文档 `*_every_n` + SOUL 信号/ bootstrap lock）。默认一条清晰路径；真需要调参时只加**用户会用的**、**已验证需要**的单一旋钮。
-- Companion WebSocket：**产品约定**隐式问候用 **`user_signed_on` + `implicit_greeting` + `message_id`**；不在服务端对 **`IMPLICIT_USER_SIGNED_ON`** 聊天帧做 wire 预拒绝（与内部 synthetic 一致）。
+- Companion WebSocket 问候：`user_signed_on` **必须**带 RFC4122 **`message_id`**，缺则 `user_signed_on_ack` 失败；不用 `messageType: IMPLICIT_USER_SIGNED_ON` 聊天帧。
 
 ## 人类队友（Human Partners）
 
