@@ -312,38 +312,44 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
     outbound_queue: asyncio.Queue[WsOutboundPayload],
 ) -> None:
     """Run one companion greeting turn scheduled from ``user_signed_on`` (with ``message_id``)."""
-    base = ChatCompletionRequest(
-        messages=[ChatMessage(role="user", content="")],
-        message_id=preset_message_id,
-    )
-    merged = _chat_request_with_merged_ws_time_context(base, tc_box[0])
     try:
-        async with companion_ws.turn_lock:
-            response = await _agent_chat_completions_impl(
-                db=db,
-                agent_id=agent_id,
-                request=merged,
-                current_user=current_user,
-                app_version_code=app_version_code,
-                subscription_svc=subscription_svc,
-                voice_svc=voice_svc,
-                chat_route="websocket",
-                companion_background_sink=companion_ws.background_sink,
-                companion_ws_foreground_pending=companion_ws.foreground_pending,
-                companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
-                implicit_greeting_turn=True,
-            )
-    except HTTPException as e:
-        await outbound_queue.put(
-            _chat_ws_error_payload_from_http_exception(e, agent_id=agent_id)
+        base = ChatCompletionRequest(
+            messages=[ChatMessage(role="user", content="")],
+            message_id=preset_message_id,
         )
-        return
-    if isinstance(response, dict):
-        response_data = dict(response)
-    else:
-        response_data = response.model_dump(exclude_none=True)
-    response_data["agent_id"] = agent_id
-    await outbound_queue.put(response_data)
+        merged = _chat_request_with_merged_ws_time_context(base, tc_box[0])
+        try:
+            async with companion_ws.turn_lock:
+                response = await _agent_chat_completions_impl(
+                    db=db,
+                    agent_id=agent_id,
+                    request=merged,
+                    current_user=current_user,
+                    app_version_code=app_version_code,
+                    subscription_svc=subscription_svc,
+                    voice_svc=voice_svc,
+                    chat_route="websocket",
+                    companion_background_sink=companion_ws.background_sink,
+                    companion_ws_foreground_pending=companion_ws.foreground_pending,
+                    companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
+                    implicit_greeting_turn=True,
+                )
+        except HTTPException as e:
+            await outbound_queue.put(
+                _chat_ws_error_payload_from_http_exception(e, agent_id=agent_id)
+            )
+            return
+        if isinstance(response, dict):
+            response_data = dict(response)
+        else:
+            response_data = response.model_dump(exclude_none=True)
+        response_data["agent_id"] = agent_id
+        await outbound_queue.put(response_data)
+    except Exception:
+        logger.exception(
+            "chat_ws user_signed_on greeting failed agent_id={}",
+            agent_id,
+        )
 
 
 async def _handle_chat_websocket_control_json(
@@ -383,41 +389,6 @@ async def _handle_chat_websocket_control_json(
     except ValidationError:
         await websocket.send_json(ChatWsClientContextAckFrame(ok=False).model_dump())
     return True
-
-
-async def _run_companion_greeting_ws_turn_after_user_signed_on(
-    *,
-    db: AsyncSession,
-    agent_id: str,
-    preset_message_id: str,
-    current_user: UserSchema,
-    app_version_code: Optional[int],
-    subscription_svc: SubscriptionService,
-    voice_svc: VoiceService,
-    companion_ws: CompanionWebSocketCoordinator,
-    tc_box: list[Optional[dict]],
-    outbound_queue: asyncio.Queue[WsOutboundPayload],
-    ws_conn_id: str,
-) -> None:
-    try:
-        await _enqueue_companion_greeting_ws_turn_after_user_signed_on(
-            db=db,
-            agent_id=agent_id,
-            preset_message_id=preset_message_id,
-            current_user=current_user,
-            app_version_code=app_version_code,
-            subscription_svc=subscription_svc,
-            voice_svc=voice_svc,
-            companion_ws=companion_ws,
-            tc_box=tc_box,
-            outbound_queue=outbound_queue,
-        )
-    except Exception:
-        logger.exception(
-            "chat_ws user_signed_on greeting failed ws_conn_id={} agent_id={}",
-            ws_conn_id,
-            agent_id,
-        )
 
 
 async def _try_handle_ws_user_signed_on_frame(
@@ -514,7 +485,7 @@ async def _try_handle_ws_user_signed_on_frame(
             )
         else:
             asyncio.create_task(
-                _run_companion_greeting_ws_turn_after_user_signed_on(
+                _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                     db=db,
                     agent_id=agent_id,
                     preset_message_id=preset_mid,
@@ -525,7 +496,6 @@ async def _try_handle_ws_user_signed_on_frame(
                     companion_ws=companion_ws,
                     tc_box=tc_box,
                     outbound_queue=outbound_queue,
-                    ws_conn_id=ws_conn_id,
                 ),
                 name=f"chat_ws_user_signed_on_greeting_{ws_conn_id}",
             )
