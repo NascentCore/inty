@@ -61,7 +61,7 @@ flowchart TB
 | CFG-PYD-01 | done | `LoggingConfig` | — | `logging` | 已迁移为 `BaseModel`；`colorize` 格式覆盖由 `model_validator(after)` 保持 |
 | CFG-PYD-02 | done | `SecurityConfig` | — | `security` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-03 | done | `DatabaseSettings` | — | `database` | 已迁移为 `BaseModel`；保留 `@property`：`url` / `async_url` / `async_replica_url` |
-| CFG-PYD-04 | claimed: `cursor/agent-maintenance-task-d2be` | `GoogleOAuthConfig` | — | `google_oauth` | 纯字段 |
+| CFG-PYD-04 | done | `GoogleOAuthConfig` | — | `google_oauth` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-05 | todo | `VerificationConfig` | — | `verification` | 纯字段 |
 | CFG-PYD-06 | todo | `APIEndpointsConfig` | — | `app.api_endpoints`（预处理 dict） | 被 `AppConfig` 引用；先迁移便于 `AppConfig` 一次到位 |
 | CFG-PYD-07 | todo | `EmbeddingConfig` | — | `embedding` | 纯字段 |
