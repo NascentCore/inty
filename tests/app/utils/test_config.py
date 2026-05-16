@@ -526,7 +526,7 @@ def test_load_config_google_oauth_uses_pydantic_validation():
                 "google_oauth:",
                 "  client_id: google-client",
                 "  client_secret: google-secret",
-                "  redirect_uri: https://example.com/oauth/google/callback",
+                '  redirect_uri: "https://example.com/oauth/google/callback"',
                 "  unknown_key: ignored",
                 "security:",
             ]
