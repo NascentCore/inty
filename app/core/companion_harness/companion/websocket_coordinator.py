@@ -17,9 +17,11 @@ import asyncio
 import threading
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
+
+_ChatWsInflightTurnResult = TypeVar("_ChatWsInflightTurnResult")
 
 
 @dataclass
@@ -28,7 +30,12 @@ class ChatWsInflightTurnTracker:
 
     _tasks: set[asyncio.Task[Any]] = field(default_factory=set)
 
-    def spawn(self, coro: Coroutine[Any, Any, Any], *, name: str) -> asyncio.Task[Any]:
+    def spawn(
+        self,
+        coro: Coroutine[Any, Any, _ChatWsInflightTurnResult],
+        *,
+        name: str,
+    ) -> asyncio.Task[_ChatWsInflightTurnResult]:
         task = asyncio.create_task(coro, name=name)
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
@@ -44,7 +51,24 @@ class ChatWsInflightTurnTracker:
 
 
 class ChatWsInflightShutdownRegistry:
-    """Process-wide index of live trackers so SIGINT/uvicorn shutdown cancels in-flight companion turns."""
+    """Process-wide index of live :class:`ChatWsInflightTurnTracker` instances for shutdown.
+
+    **Usage** (one tracker per ``/api/v1/chat/ws`` connection):
+
+    1. After opening the socket, ``tracker = ChatWsInflightTurnTracker()`` then
+       ``ChatWsInflightShutdownRegistry.register(tracker)``.
+    2. Wrap each detached companion turn (user message completion, ``user_signed_on``
+       greeting, etc.) in ``tracker.spawn(coro, name=...)`` so disconnect/sign-out and
+       process shutdown can cancel it.
+    3. In the connection ``finally``, ``await tracker.cancel_all()`` then
+       ``unregister(tracker)``.
+    4. Register ``cancel_all_registered`` on app shutdown (see ``backend/inty/main.py``).
+
+    **Interim behavior:** ``cancel_all`` / ``cancel_all_registered`` cancel tasks today.
+    TODO(ws-disconnect-lifecycle): replace with detach + undelivered persistence (module
+    docstring); this registry must follow the same lifecycle change as per-connection
+    trackers.
+    """
 
     _trackers: list[ChatWsInflightTurnTracker] = []
 
