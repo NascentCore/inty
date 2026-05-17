@@ -219,7 +219,8 @@ class PushSchedulerService:
                     "已添加节日记忆通知任务: 启动后立即执行，之后每 15 分钟扫描"
                 )
 
-            # 用户数据分析日报周报：每日/每周执行（若启用）
+            # 用户分析预计算：默认全关（user_analytics_report.* 见 config 与 FR_USER_ANALYTICS_REPORTS.md）。
+            # 生产日报由 GitHub Actions 跑；此处仅在有显式配置时注册 cron / 启动补算。
             uar_cfg = getattr(
                 global_config_loaded_from_config_yaml,
                 "user_analytics_report",
@@ -628,7 +629,7 @@ class PushSchedulerService:
             logger.error(f"[节日记忆通知] 执行失败: {str(e)}")
 
     async def _run_user_analytics_daily_report(self) -> None:
-        """每日用户数据分析日报：统计 T-1 日数据。"""
+        """每日用户数据分析日报（T-1 UTC）；仅 daily_enabled 时由 scheduler 调用。"""
         try:
             from datetime import timedelta, timezone
 
@@ -642,7 +643,7 @@ class PushSchedulerService:
             logger.exception("[用户数据分析日报] 执行失败")
 
     async def _run_user_analytics_weekly_report(self) -> None:
-        """每周用户数据分析周报：统计上一周（周一到周日）数据。"""
+        """每周用户数据分析周报；仅 weekly_enabled 时由 scheduler 调用。"""
         try:
             from datetime import timedelta, timezone
 

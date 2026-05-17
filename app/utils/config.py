@@ -528,14 +528,20 @@ class SurpriseSnapConfig:
 
 @dataclass
 class UserAnalyticsReportConfig:
-    """用户数据分析日报周报定时任务配置（push worker 调度；默认全关）"""
+    """push worker 侧用户分析预计算调度配置。
 
-    enabled: bool = False
-    daily_enabled: bool = False  # 生产日报由 GitHub Actions 承担
-    weekly_enabled: bool = False
-    backfill_enabled: bool = False
-    daily_cron_hour: int = 6  # UTC 小时，每日执行，统计 T-1 日
-    weekly_cron_hour: int = 6  # UTC 小时，每周一执行，统计上一周
+    默认 enabled / daily_enabled / weekly_enabled / backfill_enabled 均为 False，
+    push worker 不跑日报、周报 cron 与启动补算。生产 IntelliMate 日报由
+    .github/workflows/daily_intellimate_user_activity_report.yaml 承担。
+    见 docs/FR_USER_ANALYTICS_REPORTS.md。
+    """
+
+    enabled: bool = False  # False 时 push_scheduler 不注册任何 user_analytics 任务
+    daily_enabled: bool = False  # True 且 enabled 时注册日报 cron（勿与 GitHub Actions 日报并行）
+    weekly_enabled: bool = False  # True 且 enabled 时注册周报 cron
+    backfill_enabled: bool = False  # True 且 enabled 时启动补算；范围受 daily/weekly 开关约束
+    daily_cron_hour: int = 6  # UTC；daily_enabled 时统计 T-1 日
+    weekly_cron_hour: int = 6  # UTC 每周一；weekly_enabled 时统计上一周
     statement_timeout_sec: int = 600  # 单条 SQL 超时秒数，生产大数据量时需调大
     batch_size: int = (
         500  # 分批查询 session/chat 时每批数量，减小可降低 standby conflict with recovery
