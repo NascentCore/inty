@@ -96,13 +96,6 @@ flowchart TD
 {"type": "user_signed_out", "agent_id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", "message_id": "77777777-8888-4aaa-8bbb-999999999999"}
 ```
 
-### 排障约束
-
-- `ws_conn_id` 只定位传输连接；单轮业务相关性优先看用户消息 UUID、trace id、LangSmith id 和 assistant 消息 UUID。
-- 重连后出现重复问候时，先确认客户端是否把普通重连误当成首次登录，或是否遗漏了掉线声明与重新签到的顺序。
-- 退出后仍出现回复时，先确认客户端是否发送了 `user_signed_out`、服务端是否返回 ack，以及该回复是否来自关闭前已排队的业务 FIFO。
-- 本地 REPL 与移动端应共享同一套信令语义；REPL 只做传输适配，不拥有独立的 companion 记忆或登出规则。
-
 ## 实现索引
 
 | 主题 | 路径 |
