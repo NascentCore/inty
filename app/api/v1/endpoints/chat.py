@@ -320,7 +320,7 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
         merged = _chat_request_with_merged_ws_time_context(base, tc_box[0])
         try:
             async with companion_ws.turn_lock:
-                response = await _agent_chat_completions_impl(
+                response = await _agent_chat_ws_completions_impl(
                     db=db,
                     agent_id=agent_id,
                     request=merged,
@@ -328,7 +328,6 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                     app_version_code=app_version_code,
                     subscription_svc=subscription_svc,
                     voice_svc=voice_svc,
-                    chat_route="websocket",
                     companion_background_sink=companion_ws.background_sink,
                     companion_ws_foreground_pending=companion_ws.foreground_pending,
                     companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
@@ -364,7 +363,7 @@ async def _handle_chat_websocket_control_json(
     **Transport vs logical channel:** control frames (ping/pong, client_context_ack) are answered
     directly on the WebSocket. Proactive heartbeat coords are set by ``user_signed_on`` (see
     ``_try_handle_ws_user_signed_on_frame``) and refreshed on each successful WebSocket companion
-    chat turn (``_agent_chat_completions_impl``). They are independent of the connection-level outbound queue used
+    chat turn (``_agent_chat_ws_completions_impl``). They are independent of the connection-level outbound queue used
     for assistant/business JSON. Intentionally so: the WebSocket sits *below* the repl/client
     logical session with the agent; control traffic only confirms link/time-context at the wire layer,
     not the agent dialogue FIFO (which is serialized via ``outbound_queue`` + pump).
@@ -2220,6 +2219,592 @@ async def _agent_status_line_for_chat_header(
     return text if text else None
 
 
+async def _agent_chat_ws_completions_impl(
+    *,
+    db: AsyncSession,
+    agent_id: str,
+    request: ChatCompletionRequest,
+    current_user: UserSchema,
+    app_version_code: Optional[int],
+    subscription_svc: SubscriptionService,
+    voice_svc: VoiceService,
+    companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
+    companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
+    companion_ws_heartbeat_ctx: dict[str, Any] | None = None,
+    implicit_greeting_turn: bool = False,
+) -> dict:
+    """One companion chat turn for ``/api/v1/chat/ws`` (production WebSocket path).
+
+    Intentionally duplicates the ``chat_route == \"websocket\"`` branch of
+    ``_agent_chat_completions_impl`` until cleanup converges the two.
+    """
+    # TODO(cleanup-ws-http-chat-impl): Deduplicate with _agent_chat_completions_impl;
+    # extract shared _assemble_chat_completion_payload for post-turn finalize.
+    try:
+        request_handling_timer = Timer("请求处理")
+        logger.debug(
+            f"聊天请求 - agent_id={agent_id}, user_id={current_user.id}, messages={len(request.messages)}"
+        )
+
+        with log_time(
+            f"获取或创建聊天会话: user_id={current_user.id}, agent_id={agent_id}"
+        ):
+            chat = await chat_service.get_or_create_chat_by_agent(
+                db=db, user_id=current_user.id, agent_id=agent_id
+            )
+
+        if chat.agent_id != agent_id:
+            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}",
+            )
+
+        user_messages = [msg for msg in request.messages if msg.role == "user"]
+        if not user_messages:
+            raise HTTPException(status_code=400, detail="No user message found")
+
+        last_user_message = user_messages[-1].to_model_content()
+        last_user_chat_message = user_messages[-1]
+        last_user_text = last_user_chat_message.extract_text_content()
+        logger.debug(
+            f"聊天请求最后一条用户消息: has_multimodal={isinstance(last_user_message, list)}, text_length={len(last_user_text)}"
+        )
+        user_time_context = (
+            request.user_time_context.model_dump(exclude_none=True)
+            if request.user_time_context
+            else None
+        )
+        if user_time_context == {}:
+            user_time_context = None
+
+        effective_local_id = (
+            request.local_id or request.message_id or ""
+        ).strip() or None
+
+        implicit_greeting_ws = implicit_greeting_turn
+        if implicit_greeting_ws and last_user_chat_message.has_image_content_part():
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Implicit greeting turns do not support multimodal or image content"
+                ),
+            )
+
+        with log_time(f"查询 Agent 数据: {chat.agent_id}"):
+            agent_data = await agent_service.get_agent_for_chat(
+                db, agent_id=chat.agent_id
+            )
+
+        if not agent_data:
+            logger.error(f"Agent数据未找到: {chat.agent_id}")
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        with log_time(f"获取 Agent 实例: {chat.agent_id}"):
+            await agent_manager.get_agent(agent_data)
+
+        session_id = generate_session_id(str(chat.id))
+
+        with log_time(f"订阅检查: user_id={current_user.id}"):
+            is_allowed, used_count, daily_limit = (
+                await subscription_svc.check_chat_limit(db, current_user)
+            )
+
+        if not is_allowed:
+            limit_response = await _handle_subscription_limit_error(
+                session_id,
+                last_user_message,
+                current_user,
+                used_count,
+                daily_limit,
+                client_local_id=effective_local_id,
+            )
+            return limit_response.model_dump(exclude_none=True)
+
+        use_companion = True
+        companion_reply_modality = "text"
+        companion_voice_script = ""
+        try:
+            with log_time(f"获取聊天设置: chat_id={chat.id}"):
+                chat_settings = await chat_service.get_or_create_chat_settings(
+                    db, chat.id, current_user.id, agent_id
+                )
+
+            with log_time(f"AI聊天处理: session_id={session_id}"):
+                subscription = await subscription_svc.get_user_current_subscription(
+                    db, current_user.id
+                )
+                is_subscribed = bool(subscription)
+                model_override = select_chat_model(
+                    user=current_user, is_subscribed=is_subscribed
+                )
+                _agent_cfg = global_config_loaded_from_config_yaml.agent
+                _chat_llm_base = (
+                    _agent_cfg.chat_llm_base_url or _agent_cfg.base_url or ""
+                ).strip() or "https://openrouter.ai/api/v1"
+                logger.debug(
+                    "chat_turn route=websocket companion={} user={} chat_id={} agent_id={} model={} subscribed={} chat_llm_api_base={}",
+                    use_companion,
+                    current_user.id,
+                    chat.id,
+                    agent_id,
+                    model_override,
+                    is_subscribed,
+                    _chat_llm_base,
+                )
+                if (
+                    not implicit_greeting_ws
+                    and _companion_rejects_multimodal_user_turn(user_messages[-1])
+                ):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Multimodal user turns with images are not supported for the "
+                            "companion kernel on WebSocket yet. Send text-only content."
+                        ),
+                    )
+                phone_call_trigger_number = (
+                    None
+                    if implicit_greeting_ws
+                    else phone_call_service.extract_call_me_at_number(last_user_text)
+                )
+                if phone_call_trigger_number:
+                    try:
+                        phone_result = await phone_call_service.start_outbound_call(
+                            db=db,
+                            current_user=current_user,
+                            agent_id=agent_id,
+                            phone_number=phone_call_trigger_number,
+                            subscription_svc=subscription_svc,
+                            reason="chat_message_call_me_at",
+                        )
+                        response_text_content = (
+                            "I'm calling you now at "
+                            f"{phone_result.to_number_masked}."
+                        )
+                        response_content_parts = None
+                        phone_meta = {
+                            "agentId": agent_id,
+                            "phone_call": {
+                                "trigger": "chat_message_call_me_at",
+                                "call_sid": phone_result.call_sid,
+                                "status": phone_result.status,
+                                "to_number_masked": phone_result.to_number_masked,
+                            },
+                        }
+                    except PhoneCallLimitError as exc:
+                        out = dict(exc.error_response)
+                        out["agent_id"] = agent_id
+                        return out
+                    except (PhoneCallConfigError, ValueError) as exc:
+                        response_text_content = (
+                            "I can't place the phone call yet: " f"{str(exc)}."
+                        )
+                        response_content_parts = None
+                        phone_meta = {
+                            "agentId": agent_id,
+                            "phone_call": {
+                                "trigger": "chat_message_call_me_at",
+                                "status": "failed",
+                                "reason": str(exc),
+                            },
+                        }
+
+                    companion_user_row_id = (
+                        await _persist_companion_user_message_for_bg(
+                            session_id=session_id,
+                            last_user_message=last_user_message,
+                            effective_local_id=effective_local_id,
+                            implicit_greeting_turn=implicit_greeting_ws,
+                        )
+                    )
+                    ai_message_id = (
+                        await chat_history_service.add_ai_message_sync_async(
+                            session_id,
+                            response_text_content,
+                            agent_id=chat.agent_id,
+                            meta_data=dump_chat_ws_companion_wire_meta(
+                                ChatWsCompanionWireMetaData.model_validate(phone_meta)
+                            ),
+                        )
+                    )
+                    if companion_ws_heartbeat_ctx is not None:
+                        apply_companion_ws_heartbeat_coords(
+                            companion_ws_heartbeat_ctx,
+                            user_id=current_user.id,
+                            agent_id=agent_id,
+                            chat_id=chat.id,
+                        )
+                    _ = companion_user_row_id
+                else:
+                    companion_preset_uid: str | None = None
+                    if companion_ws_foreground_pending is not None:
+                        companion_preset_uid = (
+                            _require_websocket_companion_message_id_uuid(request)
+                        )
+                        companion_ws_foreground_pending[companion_preset_uid] = {
+                            "session_id": session_id,
+                            "agent_id": agent_id,
+                            "request": request,
+                            "effective_local_id": effective_local_id,
+                            "user_id": str(current_user.id),
+                            "voice_enabled": chat_settings.voice_enabled,
+                            "chat_voice_id": chat_settings.voice_id,
+                            "agent_voice_id": agent_data.get("voice_id"),
+                            "agent_gender": agent_data.get("gender"),
+                            "agent_settings": agent_data.get("settings"),
+                        }
+                    try:
+                        companion_implicit_bundle = ImplicitSignalBundle(
+                            client_time=request.user_time_context,
+                            user_signed_on=implicit_greeting_ws,
+                            server_received_at_utc=datetime.now(timezone.utc),
+                        )
+                        companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
+                            user_id=current_user.id,
+                            agent_id=agent_id,
+                            chat_id=chat.id,
+                            user_text=last_user_text,
+                            resolved_chat_model=model_override,
+                            defer_memory_update=True,
+                            session_id=session_id,
+                            background_output_sink=companion_background_sink,
+                            preset_user_msg_uuid=companion_preset_uid,
+                            implicit_signal_bundle=companion_implicit_bundle,
+                        )
+                        companion_reply_modality = companion_turn.reply_modality
+                        companion_voice_script = (
+                            companion_turn.voice_message_script or ""
+                        )
+                        if (
+                            companion_preset_uid is not None
+                            and companion_ws_foreground_pending is not None
+                            and not companion_turn.tool_background_started
+                        ):
+                            companion_ws_foreground_pending.pop(
+                                companion_preset_uid, None
+                            )
+                    except Exception as exc:
+                        bg_started_on_exc = bool(
+                            getattr(exc, "companion_tool_background_started", False)
+                        )
+                        if (
+                            companion_preset_uid is not None
+                            and companion_ws_foreground_pending is not None
+                            and not bg_started_on_exc
+                        ):
+                            companion_ws_foreground_pending.pop(
+                                companion_preset_uid, None
+                            )
+                        if bg_started_on_exc:
+                            try:
+                                bg_user_row_id = (
+                                    await _persist_companion_user_message_for_bg(
+                                        session_id=session_id,
+                                        last_user_message=last_user_message,
+                                        effective_local_id=effective_local_id,
+                                        implicit_greeting_turn=implicit_greeting_ws,
+                                    )
+                                )
+                            except Exception as persist_exc:
+                                logger.warning(
+                                    "companion bg-survives-fg-fail user message persist failed: {}",
+                                    persist_exc,
+                                )
+                                bg_user_row_id = None
+                            if (
+                                companion_preset_uid is not None
+                                and companion_ws_foreground_pending is not None
+                                and companion_preset_uid
+                                in companion_ws_foreground_pending
+                            ):
+                                companion_ws_foreground_pending[companion_preset_uid][
+                                    "foreground_user_message_id"
+                                ] = bg_user_row_id
+                        raise
+                    companion_reply = companion_turn.assistant_text
+                    companion_ai_meta = _companion_ai_meta_from_turn_result(
+                        companion_turn
+                    )
+                    companion_user_row_id = (
+                        await _persist_companion_user_message_for_bg(
+                            session_id=session_id,
+                            last_user_message=last_user_message,
+                            effective_local_id=effective_local_id,
+                            implicit_greeting_turn=implicit_greeting_ws,
+                        )
+                    )
+                    if (
+                        companion_preset_uid is not None
+                        and companion_ws_foreground_pending is not None
+                        and companion_preset_uid in companion_ws_foreground_pending
+                    ):
+                        companion_ws_foreground_pending[companion_preset_uid][
+                            "foreground_user_message_id"
+                        ] = companion_user_row_id
+                    ai_message_id = (
+                        await chat_history_service.add_ai_message_sync_async(
+                            session_id,
+                            companion_reply,
+                            agent_id=chat.agent_id,
+                            meta_data=companion_ai_meta,
+                        )
+                    )
+                    response_content = companion_reply
+                    if response_content is None or not str(response_content).strip():
+                        logger.error(
+                            f"Companion chat returned no content - agent_id={agent_id}, user_id={current_user.id}"
+                        )
+                        raise HTTPException(
+                            status_code=500, detail="Chat returned no content"
+                        )
+                    (
+                        response_text_content,
+                        response_content_parts,
+                    ) = _normalize_chat_response_content(response_content)
+                    if companion_ws_heartbeat_ctx is not None:
+                        apply_companion_ws_heartbeat_coords(
+                            companion_ws_heartbeat_ctx,
+                            user_id=current_user.id,
+                            agent_id=agent_id,
+                            chat_id=chat.id,
+                        )
+
+            response_preview = (
+                response_text_content[:100]
+                if response_text_content
+                else f"[multimodal parts={len(response_content_parts or [])}]"
+            )
+            logger.debug(f"Agent聊天响应成功: {response_preview}...")
+            subscription_actions = None
+
+            try:
+                read_count = await mark_user_push_notifications_as_read(
+                    db, current_user.id
+                )
+                if read_count > 0:
+                    logger.debug(
+                        f"标记用户推送为已读: user_id={current_user.id}, count={read_count}"
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"标记用户推送为已读失败: user_id={current_user.id}, error={str(e)}"
+                )
+
+        except HTTPException:
+            raise
+        except CompanionLLMInferenceBackendError:
+            raise
+        except Exception as e:
+            logger.error(f"Agent聊天处理失败: {str(e)}")
+            raise
+
+        audio_url = None
+        audio_duration = None
+        try:
+            audio_url, audio_duration = await synthesize_chat_assistant_audio(
+                db=db,
+                session_id=session_id,
+                ai_message_id=ai_message_id,
+                voice_enabled=chat_settings.voice_enabled,
+                chat_voice_id=chat_settings.voice_id,
+                agent_voice_id=agent_data.get("voice_id"),
+                agent_gender=agent_data.get("gender"),
+                agent_settings=agent_data.get("settings"),
+                language=request.language,
+                current_user=current_user,
+                voice_svc=voice_svc,
+                response_text_content=response_text_content,
+                use_companion=use_companion,
+                companion_reply_modality=companion_reply_modality,
+                companion_voice_script=companion_voice_script,
+            )
+        except Exception as e:
+            logger.error(f"语音生成失败: {str(e)}")
+            logger.exception("语音生成异常详细信息:")
+
+        try:
+            with log_time(f"记录使用情况: user_id={current_user.id}"):
+                usage_extra: dict[str, Any] = {
+                    "agent_id": agent_id,
+                    "message_length": len(last_user_text),
+                }
+                if implicit_greeting_ws:
+                    usage_extra["implicit_user_signed_on"] = True
+                await subscription_svc.record_usage(
+                    db,
+                    current_user.id,
+                    "chat",
+                    1,
+                    extra_data=usage_extra,
+                )
+            logger.debug("聊天使用情况记录成功")
+        except Exception as e:
+            logger.warning(f"记录聊天使用情况失败: {str(e)}")
+
+        surprise_snap_message_id = None
+        try:
+            surprise_snap_message_id = await try_trigger_surprise_snap(
+                db, session_id, current_user.id, agent_id
+            )
+        except Exception as e:
+            logger.warning(f"Surprise Snap 触发失败: {e}")
+
+        latest_message_info = None
+        try:
+            if ai_message_id is not None:
+                with log_time(f"获取AI消息信息: message_id={ai_message_id}"):
+                    latest_message_info = (
+                        await chat_history_service.get_ai_message_info_by_id(
+                            db, ai_message_id
+                        )
+                    )
+            if latest_message_info is None:
+                with log_time(f"获取最新消息: session_id={session_id}"):
+                    latest_message_info = (
+                        await chat_history_service.get_latest_ai_message_info(
+                            db, session_id
+                        )
+                    )
+        except Exception as e:
+            logger.warning(f"获取最新消息信息失败: {str(e)}")
+
+        user_message_id = None
+        try:
+            with log_time(f"获取最新用户消息ID: session_id={session_id}"):
+                user_message_id = await chat_history_service.get_latest_user_message_id(
+                    db, session_id
+                )
+        except Exception as e:
+            logger.warning(f"获取最新用户消息ID失败: {str(e)}")
+
+        delivered_prompts = []
+        if is_festival_memory_enabled(app_version_code):
+            try:
+                with log_time(
+                    f"投递节日记忆提示: user_id={current_user.id}, agent_id={agent_id}"
+                ):
+                    delivered_prompts = await deliver_festival_memories_for_user_agent(
+                        db, current_user.id, agent_id
+                    )
+            except Exception as e:
+                await db.rollback()
+                logger.warning(f"投递节日记忆提示失败: {e}")
+                delivered_prompts = []
+
+        delivered_daily_prompts = []
+        if is_daily_memory_enabled(app_version_code):
+            try:
+                with log_time(
+                    f"投递日常记忆提示: user_id={current_user.id}, agent_id={agent_id}"
+                ):
+                    delivered_daily_prompts = (
+                        await deliver_daily_memories_for_user_agent(
+                            db, current_user.id, agent_id
+                        )
+                    )
+            except Exception as e:
+                await db.rollback()
+                logger.warning(f"投递日常记忆提示失败: {e}")
+                delivered_daily_prompts = []
+
+        data = _build_chat_response(
+            response_text_content,
+            response_content_parts,
+            last_user_text,
+            latest_message_info,
+            audio_url,
+            request,
+            source_imate_id=request.target_imate_id,
+            user_message_id=user_message_id,
+            subscription_actions=subscription_actions,
+            client_local_id=effective_local_id,
+        )
+
+        if delivered_prompts:
+            msg_ids = [
+                item["message_id"]
+                for item in delivered_prompts
+                if item.get("message_id") is not None
+            ]
+            infos_map = await chat_history_service.get_ai_message_infos_by_ids(
+                db, msg_ids
+            )
+            for item in delivered_prompts:
+                msg_id = item.get("message_id")
+                info = infos_map.get(msg_id) if msg_id is not None else None
+                message = _build_festival_prompt_choice_message(item, info)
+                idx = len(data["choices"])
+                data["choices"].append(
+                    {"index": idx, "message": message, "finish_reason": "stop"}
+                )
+
+        if delivered_daily_prompts:
+            msg_ids = [
+                item["message_id"]
+                for item in delivered_daily_prompts
+                if item.get("message_id") is not None
+            ]
+            infos_map = await chat_history_service.get_ai_message_infos_by_ids(
+                db, msg_ids
+            )
+            for item in delivered_daily_prompts:
+                msg_id = item.get("message_id")
+                info = infos_map.get(msg_id) if msg_id is not None else None
+                message = _build_daily_prompt_choice_message(item, info)
+                idx = len(data["choices"])
+                data["choices"].append(
+                    {"index": idx, "message": message, "finish_reason": "stop"}
+                )
+
+        if surprise_snap_message_id is not None:
+            info = await chat_history_service.get_surprise_snap_message_display_info(
+                db, surprise_snap_message_id
+            )
+            if info is not None:
+                unlocked_ids = await get_unlocked_surprise_snap_message_ids(
+                    db, current_user.id
+                )
+                message = _build_surprise_snap_choice_message(
+                    info,
+                    unlocked_message_ids=unlocked_ids,
+                )
+                idx = len(data["choices"])
+                data["choices"].append(
+                    {"index": idx, "message": message, "finish_reason": "stop"}
+                )
+
+        timing_message = request_handling_timer.stop()
+        logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")
+
+        payload = APIResponse.success(data=data)
+        sl = await _agent_status_line_for_chat_header(db, agent_id)
+        out = payload.model_dump(exclude_none=True)
+        out["status_line"] = sl
+        return out
+
+    except HTTPException:
+        raise
+    except CompanionLLMInferenceBackendError as exc:
+        logger.error(
+            "Companion LLM inference backend error provider_http_status={} message={!r}",
+            exc.provider_http_status,
+            exc.client_message_en,
+        )
+        raise CompanionInferenceUpstreamHTTPException(
+            status_code=502,
+            detail=exc.client_message_en,
+            ws_extra={
+                "error_kind": "llm_inference_backend",
+                "llm_provider_http_status": exc.provider_http_status,
+            },
+        ) from exc
+    except Exception as e:
+        logger.error(f"聊天请求处理失败: {str(e)}")
+        logger.exception("聊天请求异常详细信息:")
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
 async def _agent_chat_completions_impl(
     *,
     db: AsyncSession,
@@ -2235,6 +2820,8 @@ async def _agent_chat_completions_impl(
     companion_ws_heartbeat_ctx: dict[str, Any] | None = None,
     implicit_greeting_turn: bool = False,
 ) -> Union[APIResponse[dict], dict]:
+    # TODO(cleanup-ws-http-chat-impl): WS callers use _agent_chat_ws_completions_impl;
+    # remove chat_route, WS-only params, and chat_route=="websocket" branches here.
     try:
         request_handling_timer = Timer("请求处理")
         logger.debug(
@@ -2338,6 +2925,7 @@ async def _agent_chat_completions_impl(
                 model_override = select_chat_model(
                     user=current_user, is_subscribed=is_subscribed
                 )
+                # TODO(cleanup-ws-http-chat-impl): dead for WS callers; HTTP-only -> False, drop companion block.
                 use_companion = chat_route == "websocket"
                 _agent_cfg = global_config_loaded_from_config_yaml.agent
                 _chat_llm_base = (
@@ -2442,6 +3030,7 @@ async def _agent_chat_completions_impl(
                             chat_id=chat.id,
                         )
                     _ = companion_user_row_id
+                # TODO(cleanup-ws-http-chat-impl): companion block WS-only; delete when HTTP-only.
                 elif use_companion:
                     companion_preset_uid: str | None = None
                     if (
@@ -2865,6 +3454,7 @@ async def _agent_chat_completions_impl(
         logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")
 
         payload = APIResponse.success(data=data)
+        # TODO(cleanup-ws-http-chat-impl): WS dict return dead; HTTP keeps APIResponse only.
         if chat_route == "websocket":
             sl = await _agent_status_line_for_chat_header(db, agent_id)
             out = payload.model_dump(exclude_none=True)
@@ -2927,6 +3517,8 @@ async def agent_chat_completions(
     # TODO(transport): HTTP companion omits companion_background_sink; tool_bg falls through to
     # push_output_event global queue (see tool_background._effective_on_event). Align with WS
     # sink or explicitly document unsupported async tool_bg delivery for this route.
+    # TODO(cleanup-ws-http-chat-impl): HTTP uses _agent_chat_completions_impl; WS uses
+    # _agent_chat_ws_completions_impl — evolve companion_background_sink on HTTP independently.
     return await _agent_chat_completions_impl(
         db=db,
         agent_id=agent_id,
@@ -3203,7 +3795,7 @@ async def chat_completions_websocket(
             )
             try:
                 async with companion_ws.turn_lock:
-                    response = await _agent_chat_completions_impl(
+                    response = await _agent_chat_ws_completions_impl(
                         db=db,
                         agent_id=websocket_request.agent_id,
                         request=merged_request,
@@ -3211,7 +3803,6 @@ async def chat_completions_websocket(
                         app_version_code=app_version_code,
                         subscription_svc=subscription_svc,
                         voice_svc=voice_svc,
-                        chat_route="websocket",
                         companion_background_sink=companion_ws.background_sink,
                         companion_ws_foreground_pending=companion_ws.foreground_pending,
                         companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
