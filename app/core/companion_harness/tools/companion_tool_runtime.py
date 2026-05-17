@@ -1184,7 +1184,7 @@ def build_openai_repl_tools(
     return prepare_openai_tools_for_chat_completions(out)
 
 
-_INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
+_INNER_TICK_TOOL_NAMES: tuple[str, ...] = (
     "user_profile_record",
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
     "tool_update_agent_status_line",
@@ -1199,7 +1199,7 @@ def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     内在节拍：USER 档案、LivingSphere/TechnoCore 事件日志、工作区读写；不含定时、联网、生图/改图。
     """
     full = build_openai_repl_tools()
-    want = set(_INNER_TICK_REPL_TOOL_NAMES)
+    want = set(_INNER_TICK_TOOL_NAMES)
     picked = [
         t
         for t in full
@@ -1211,7 +1211,7 @@ def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
         raise RuntimeError(
             f"build_openai_repl_tools_inner_tick: missing tool defs {sorted(missing)}"
         )
-    return [by_name[n] for n in _INNER_TICK_REPL_TOOL_NAMES]
+    return [by_name[n] for n in _INNER_TICK_TOOL_NAMES]
 
 
 def _memory_store_write_document_allowlist_reject(
