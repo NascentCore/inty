@@ -162,6 +162,7 @@ _REPL_TOOL_NAMES_SHARED_HEAD: tuple[str, ...] = (
     "user_profile_record",
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
     "schedule_task",
+    "tool_update_agent_status_line",
     "memory_store_list_paths",
     "memory_store_read_document",
 )
@@ -1186,6 +1187,7 @@ def build_openai_repl_tools(
 _INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
     "user_profile_record",
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
+    "tool_update_agent_status_line",
     "memory_store_list_paths",
     "memory_store_read_document",
     "memory_store_write_document",

@@ -1,4 +1,4 @@
-"""REPL tool surface omits tool_update_agent_status_line (not LLM-callable)."""
+"""REPL and inner-tick tool surfaces always include tool_update_agent_status_line."""
 
 from __future__ import annotations
 
@@ -16,12 +16,12 @@ def _tool_names(tools: list) -> list[str]:
     return out
 
 
-def test_status_line_tool_omitted_from_repl_tools():
+def test_status_line_tool_present_on_repl_tools():
     for bootstrap in (False, True):
         tools = build_openai_repl_tools(interactive_bootstrap_active=bootstrap)
-        assert "tool_update_agent_status_line" not in _tool_names(tools)
+        assert "tool_update_agent_status_line" in _tool_names(tools)
 
 
-def test_status_line_tool_omitted_from_inner_tick_repl_tools():
+def test_status_line_tool_present_on_inner_tick_repl_tools():
     tools = build_openai_repl_tools_inner_tick()
-    assert "tool_update_agent_status_line" not in _tool_names(tools)
+    assert "tool_update_agent_status_line" in _tool_names(tools)
