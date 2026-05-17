@@ -131,15 +131,9 @@ such experience is between human users and AI, but they have real-world patterns
 
 ### Writing code
 
-- Simplicity first, so problems can be identified easily
 - Never speculate about code, files, or APIs you have not read.
 - Always test your changes
-- Idempotence is required for code paths with side-effects
-- Do not handle exceptions in python code
 - Validate input arguments with `assert`
-
-#### Python
-
 - Do not use `.strip()` all the time to clean strings
 - Use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models, [Cyclopts](https://github.com/BrianPugh/cyclopts), `uv`
 - Document Python package/module in `__init__.py` docstring.
@@ -148,10 +142,11 @@ such experience is between human users and AI, but they have real-world patterns
 - Do not allow default value for function argument
 - Do not use string literals, use `StrEnum` instead
 - Use `match ... case` for options, never use multiple `if ... elif ... else`
+- Do not write wrapper functions
 
 ### Documentation
 
-**Write for your human partners, do not paraphrase the code.**
+**Write for human readers to understand your intention and designs.**
 
 - Do not reference code in markdown files.
 - **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等

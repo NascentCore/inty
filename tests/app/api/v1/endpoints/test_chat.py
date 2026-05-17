@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import threading
 import time
 import uuid
 from datetime import date, datetime, timezone
@@ -1612,6 +1613,49 @@ def test_chat_websocket_companion_user_signed_on_greeting_sets_bundle(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_chat_websocket_companion_user_signed_on_greeting_cancelled_on_disconnect(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """Regression: detached greeting turn is cancelled when the WebSocket session ends."""
+    turn_started = threading.Event()
+    turn_completed = threading.Event()
+
+    async def slow_run_companion_chat_turn_for_api(**_kwargs):
+        turn_started.set()
+        await asyncio.sleep(60.0)
+        turn_completed.set()
+        return CompanionTurnResult(assistant_text="never")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon-cancel",
+        chat_id="chat-signon-cancel-1",
+        latest_user_message_db_id=91,
+        ai_message_id=911,
+        run_companion_chat_turn_for_api=slow_run_companion_chat_turn_for_api,
+    )
+
+    msg_uuid = "bbbbbbbb-bbbb-4bbb-bbbb-aaaaaaaaaaaa"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-companion-signon-cancel",
+                    "message_id": msg_uuid,
+                }
+            )
+            ack = websocket.receive_json()
+            assert ack["type"] == "user_signed_on_ack"
+            assert ack["ok"] is True
+            assert turn_started.wait(timeout=2.0)
+
+    time.sleep(0.15)
+    assert not turn_completed.is_set()
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
@@ -2287,6 +2331,8 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
 def test_chat_websocket_user_signed_out_appends_chat_logs_line(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
+    import time
+
     captured: dict[str, object] = {}
 
     async def fake_conclude(**kwargs):
@@ -2334,6 +2380,10 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
             ack = websocket.receive_json()
 
     assert ack == {"type": "user_signed_out_ack", "ok": True}
+    deadline = time.monotonic() + 2.0
+    while "kwargs" not in captured and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert "kwargs" in captured, "conclude_companion_scope should run after ack"
     kw = captured["kwargs"]
     assert kw["user_id"] == "user-so-1"
     assert kw["agent_id"] == "agent-so-1"

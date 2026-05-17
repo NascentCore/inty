@@ -11,10 +11,53 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from typing import Any
 
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
+
+
+@dataclass
+class ChatWsInflightTurnTracker:
+    """Per ``/api/v1/chat/ws`` connection: companion turns that must stop on disconnect or process shutdown."""
+
+    _tasks: set[asyncio.Task[Any]] = field(default_factory=set)
+
+    def spawn(self, coro: Coroutine[Any, Any, Any], *, name: str) -> asyncio.Task[Any]:
+        task = asyncio.create_task(coro, name=name)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return task
+
+    async def cancel_all(self) -> None:
+        pending = [t for t in list(self._tasks) if not t.done()]
+        for task in pending:
+            task.cancel()
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
+
+
+class ChatWsInflightShutdownRegistry:
+    """Process-wide index of live trackers so SIGINT/uvicorn shutdown cancels in-flight companion turns."""
+
+    _trackers: list[ChatWsInflightTurnTracker] = []
+
+    @classmethod
+    def register(cls, tracker: ChatWsInflightTurnTracker) -> None:
+        cls._trackers.append(tracker)
+
+    @classmethod
+    def unregister(cls, tracker: ChatWsInflightTurnTracker) -> None:
+        try:
+            cls._trackers.remove(tracker)
+        except ValueError:
+            pass
+
+    @classmethod
+    async def cancel_all_registered(cls) -> None:
+        for tracker in list(cls._trackers):
+            await tracker.cancel_all()
 
 
 def apply_companion_ws_heartbeat_coords(

@@ -643,6 +643,20 @@ def _repl_run_backend_ws_branch(
             f"[{repl_wall_ts_str()}] repl: user_signed_on_ack ok={ok}{extra}"
         )
 
+    def _user_signed_out_notice(aid: str, message_id: str) -> None:
+        repl_notice_q.put(
+            f"[{repl_wall_ts_str()}] repl: user_signed_out sent "
+            f"(agent_id={aid} message_id={message_id})"
+        )
+
+    def _user_signed_out_ack_notice(payload: dict[str, Any]) -> None:
+        ok = payload.get("ok")
+        reason = payload.get("reason")
+        extra = f" reason={reason}" if reason else ""
+        repl_notice_q.put(
+            f"[{repl_wall_ts_str()}] repl: user_signed_out_ack ok={ok}{extra}"
+        )
+
     def _transport_lost_notice(code: int | None, reason: str) -> None:
         code_part = code if code is not None else "-"
         repl_notice_q.put(
@@ -664,6 +678,8 @@ def _repl_run_backend_ws_branch(
         bearer_token=token,
         on_user_signed_on_sent=_user_signed_on_notice,
         on_user_signed_on_ack=_user_signed_on_ack_notice,
+        on_user_signed_out_sent=_user_signed_out_notice,
+        on_user_signed_out_ack=_user_signed_out_ack_notice,
         on_transport_lost=_transport_lost_notice,
         on_transport_ready=_transport_ready_notice,
     )

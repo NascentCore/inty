@@ -237,6 +237,12 @@ async def _preload_database_tables(db: AsyncSession):
 async def shutdown_event():
     """应用关闭事件"""
     try:
+        from app.core.companion_harness.companion.websocket_coordinator import (
+            ChatWsInflightShutdownRegistry,
+        )
+
+        logger.info("正在取消进行中的 chat WebSocket companion turn...")
+        await ChatWsInflightShutdownRegistry.cancel_all_registered()
 
         logger.info("正在停止Agent管理器...")
         agent_manager.stop()
