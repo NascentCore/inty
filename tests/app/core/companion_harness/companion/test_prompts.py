@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from app.core.companion_harness.companion.models import (
     ContextMeta,
     InnerTickMode,
@@ -10,9 +12,23 @@ from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
-from app.core.companion_harness.companion.prompts.system_messages import (
-    build_system_prompt,
+from app.core.companion_harness.companion.prompt_slices import (
+    SYSTEM_PROMPT_SLICE_SEPARATOR,
 )
+from app.core.companion_harness.companion.prompts.system_messages import (
+    build_system_messages,
+)
+
+
+def _concatenated_system_text(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    **kwargs: Any,
+) -> str:
+    msgs = build_system_messages(bundle, context, **kwargs)
+    return SYSTEM_PROMPT_SLICE_SEPARATOR.join(
+        str(m.get("content") or "") for m in msgs
+    )
 
 
 def _minimal_bundle() -> PromptBundle:
@@ -26,7 +42,7 @@ def _minimal_bundle() -> PromptBundle:
 
 
 def test_build_system_prompt_basic() -> None:
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         _minimal_bundle(),
         ContextMeta(),
     )
@@ -46,7 +62,7 @@ def test_build_system_prompt_basic() -> None:
 
 
 def test_build_system_prompt_heartbeat() -> None:
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         _minimal_bundle(),
         ContextMeta(),
         inner_tick_turn=True,
@@ -60,7 +76,7 @@ def test_build_system_prompt_tools() -> None:
     b = _minimal_bundle().model_copy(
         update={"tools_md": "# Tools heading\n\nTool slice body for test."}
     )
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         b,
         ContextMeta(),
         enable_tools=True,
@@ -73,7 +89,7 @@ def test_build_system_prompt_tools() -> None:
 
 
 def test_build_system_prompt_interactive_bootstrap_injects_spec() -> None:
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         _minimal_bundle(),
         ContextMeta(workspace_bootstrap_user_interactive_completed=False),
         enable_tools=True,
@@ -93,7 +109,7 @@ def test_build_system_prompt_intimate_memory() -> None:
         memory_raw_diary_today_md="raw today",
         memory_day_summary_today_md="summary today",
     )
-    text = build_system_prompt(b, ContextMeta(context_mode="intimate"))
+    text = _concatenated_system_text(b, ContextMeta(context_mode="intimate"))
     assert MEMORY_SYSTEM_HEADING_EPISODIC.strip() in text
     assert "raw today" in text
     assert MEMORY_SYSTEM_HEADING_GIST.strip() in text
@@ -111,7 +127,9 @@ def test_build_system_prompt_emotional_companion_memory_same_as_intimate() -> No
         memory_raw_diary_today_md="raw today",
         memory_day_summary_today_md="summary today",
     )
-    text = build_system_prompt(b, ContextMeta(context_mode="emotional_companion"))
+    text = _concatenated_system_text(
+        b, ContextMeta(context_mode="emotional_companion")
+    )
     assert MEMORY_SYSTEM_HEADING_EPISODIC.strip() in text
     assert "raw today" in text
     assert MEMORY_SYSTEM_HEADING_SEMANTIC.strip() in text
@@ -128,7 +146,7 @@ def test_build_system_prompt_non_intimate_no_memory() -> None:
         memory_raw_diary_today_md="raw",
         memory_day_summary_today_md="sum",
     )
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         b,
         ContextMeta(context_mode="public"),
     )
@@ -140,7 +158,7 @@ def test_build_system_prompt_non_intimate_no_memory() -> None:
 def test_build_system_prompt_significance_slice_when_flag() -> None:
     b = _minimal_bundle()
     b.significance_perception_md = "Custom slice body."
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         b,
         ContextMeta(),
         enable_user_profile_tool=True,
