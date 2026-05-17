@@ -226,16 +226,18 @@ class PushSchedulerService:
                 None,
             )
             if uar_cfg and getattr(uar_cfg, "enabled", False):
-                self.scheduler.add_job(
-                    self._run_user_analytics_daily_report,
-                    trigger=CronTrigger(hour=uar_cfg.daily_cron_hour, minute=0),
-                    id="run_user_analytics_daily_report",
-                    name="用户数据分析日报",
-                    replace_existing=True,
-                    coalesce=True,
-                    max_instances=1,
-                    next_run_time=datetime.datetime.now(),
-                )
+                daily_enabled = getattr(uar_cfg, "daily_enabled", False)
+                if daily_enabled:
+                    self.scheduler.add_job(
+                        self._run_user_analytics_daily_report,
+                        trigger=CronTrigger(hour=uar_cfg.daily_cron_hour, minute=0),
+                        id="run_user_analytics_daily_report",
+                        name="用户数据分析日报",
+                        replace_existing=True,
+                        coalesce=True,
+                        max_instances=1,
+                        next_run_time=datetime.datetime.now(),
+                    )
                 self.scheduler.add_job(
                     self._run_user_analytics_weekly_report,
                     trigger=CronTrigger(
@@ -250,21 +252,30 @@ class PushSchedulerService:
                     max_instances=1,
                     next_run_time=datetime.datetime.now(),
                 )
-                logger.info(
-                    f"已添加用户数据分析日报周报任务: 日报每日 UTC {uar_cfg.daily_cron_hour}:00, "
-                    f"周报每周一 UTC {uar_cfg.weekly_cron_hour}:00"
-                )
+                if daily_enabled:
+                    logger.info(
+                        f"已添加用户数据分析任务: 日报每日 UTC {uar_cfg.daily_cron_hour}:00, "
+                        f"周报每周一 UTC {uar_cfg.weekly_cron_hour}:00"
+                    )
+                else:
+                    logger.info(
+                        f"已添加用户数据分析周报任务: 每周一 UTC {uar_cfg.weekly_cron_hour}:00 "
+                        f"(日报已禁用，由 GitHub Actions 承担)"
+                    )
 
                 async def backfill_user_analytics_reports():
                     from app.services.user_analytics_report_service import (
                         backfill_missing_reports,
                     )
 
-                    logger.info("[用户数据分析补算] 开始检查并补算缺失的日报与周报")
+                    backfill_scope = "日报与周报" if daily_enabled else "周报"
+                    logger.info(
+                        f"[用户数据分析补算] 开始检查并补算缺失的{backfill_scope}"
+                    )
                     try:
                         async with AsyncSessionLocal() as db:
                             daily_count, weekly_count = await backfill_missing_reports(
-                                db
+                                db, include_daily=daily_enabled
                             )
                             logger.info(
                                 f"[用户数据分析补算] 完成: 日报 {daily_count} 条, 周报 {weekly_count} 条"
