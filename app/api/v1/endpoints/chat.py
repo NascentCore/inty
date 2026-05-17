@@ -71,6 +71,8 @@ from app.core.companion_harness.companion.schedule_queue import (
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.companion.websocket_coordinator import (
+    ChatWsInflightShutdownRegistry,
+    ChatWsInflightTurnTracker,
     CompanionWebSocketCoordinator,
     apply_companion_ws_heartbeat_coords,
 )
@@ -344,6 +346,12 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
             response_data = response.model_dump(exclude_none=True)
         response_data["agent_id"] = agent_id
         await outbound_queue.put(response_data)
+    except asyncio.CancelledError:
+        logger.debug(
+            "chat_ws user_signed_on greeting cancelled agent_id={}",
+            agent_id,
+        )
+        return
     except Exception:
         logger.exception(
             "chat_ws user_signed_on greeting failed agent_id={}",
@@ -397,6 +405,7 @@ async def _try_handle_ws_user_signed_on_frame(
     db: AsyncSession,
     current_user: UserSchema,
     companion_ws: CompanionWebSocketCoordinator | None,
+    inflight_turn_tracker: ChatWsInflightTurnTracker | None,
     ws_conn_id: str,
     outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
     tc_box: list[Optional[dict]] | None = None,
@@ -483,7 +492,8 @@ async def _try_handle_ws_user_signed_on_frame(
                 agent_id,
             )
         else:
-            asyncio.create_task(
+            assert inflight_turn_tracker is not None
+            inflight_turn_tracker.spawn(
                 _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                     db=db,
                     agent_id=agent_id,
@@ -534,14 +544,16 @@ async def _try_handle_ws_user_signed_out_frame(
     db: AsyncSession,
     current_user: UserSchema,
     companion_ws: CompanionWebSocketCoordinator | None,
+    inflight_turn_tracker: ChatWsInflightTurnTracker | None,
     subscription_svc: SubscriptionService,
     ws_conn_id: str,
 ) -> bool:
     """
     Consume ``{"type":"user_signed_out","agent_id":...}``.
 
-    Appends one English markdown line to companion ``CHAT_LOGS.md`` (MemoryStore). Does not alter
-    inner-tick coords or transcript.
+    Validates the frame, cancels detached companion turns on this connection, appends one English
+    markdown line to companion ``CHAT_LOGS.md`` (MemoryStore), then sends ``user_signed_out_ack``.
+    Does not alter inner-tick coords, transcript, or companion scope persistence.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -590,6 +602,9 @@ async def _try_handle_ws_user_signed_out_frame(
             f"- **user_signed_out** `utc_ts={utc_iso_ts()}` `user_id={current_user.id}` "
             f"`chat_id={chat.id}` `agent_id={agent_id}` `received_message_uuid={uuid_part}`"
         )
+        if inflight_turn_tracker is not None:
+            # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
+            await inflight_turn_tracker.cancel_all()
         companion_chat_service.append_companion_chat_logs_line_for_ws_control(
             user_id=current_user.id,
             agent_id=agent_id,
@@ -3575,6 +3590,8 @@ async def chat_completions_websocket(
 
     tc_box: list[Optional[dict]] = [None]
     companion_ws = CompanionWebSocketCoordinator.for_current_loop()
+    inflight_turn_tracker = ChatWsInflightTurnTracker()
+    ChatWsInflightShutdownRegistry.register(inflight_turn_tracker)
     hb_worker_stop = asyncio.Event()
 
     async def companion_ws_inner_tick_worker() -> None:
@@ -3737,6 +3754,7 @@ async def chat_completions_websocket(
                 db=db,
                 current_user=current_user,
                 companion_ws=companion_ws,
+                inflight_turn_tracker=inflight_turn_tracker,
                 ws_conn_id=ws_conn_id,
                 outbound_queue=outbound_queue,
                 tc_box=tc_box,
@@ -3751,6 +3769,7 @@ async def chat_completions_websocket(
                 db=db,
                 current_user=current_user,
                 companion_ws=companion_ws,
+                inflight_turn_tracker=inflight_turn_tracker,
                 subscription_svc=subscription_svc,
                 ws_conn_id=ws_conn_id,
             ):
@@ -3795,18 +3814,29 @@ async def chat_completions_websocket(
             )
             try:
                 async with companion_ws.turn_lock:
-                    response = await _agent_chat_ws_completions_impl(
-                        db=db,
-                        agent_id=websocket_request.agent_id,
-                        request=merged_request,
-                        current_user=current_user,
-                        app_version_code=app_version_code,
-                        subscription_svc=subscription_svc,
-                        voice_svc=voice_svc,
-                        companion_background_sink=companion_ws.background_sink,
-                        companion_ws_foreground_pending=companion_ws.foreground_pending,
-                        companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
+                    turn_task = inflight_turn_tracker.spawn(
+                        _agent_chat_ws_completions_impl(
+                            db=db,
+                            agent_id=websocket_request.agent_id,
+                            request=merged_request,
+                            current_user=current_user,
+                            app_version_code=app_version_code,
+                            subscription_svc=subscription_svc,
+                            voice_svc=voice_svc,
+                            companion_background_sink=companion_ws.background_sink,
+                            companion_ws_foreground_pending=companion_ws.foreground_pending,
+                            companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
+                        ),
+                        name=f"chat_ws_turn_{ws_conn_id}",
                     )
+                    response = await turn_task
+            except asyncio.CancelledError:
+                logger.debug(
+                    "chat_ws companion turn cancelled ws_conn_id={} user={}",
+                    ws_conn_id,
+                    current_user.id,
+                )
+                break
             except HTTPException as e:
                 await outbound_queue.put(
                     _chat_ws_error_payload_from_http_exception(
@@ -3834,6 +3864,9 @@ async def chat_completions_websocket(
             await hb_worker_task
         except asyncio.CancelledError:
             pass
+        # TODO(ws-disconnect-lifecycle): do not cancel on disconnect; finish turns and mark chat_history undelivered.
+        await inflight_turn_tracker.cancel_all()
+        ChatWsInflightShutdownRegistry.unregister(inflight_turn_tracker)
         await _shutdown_chat_ws_outbound_pump(pump_task)
 
 
@@ -3902,6 +3935,7 @@ async def chat_completions_websocket_verify(
                 db=db,
                 current_user=current_user,
                 companion_ws=None,
+                inflight_turn_tracker=None,
                 ws_conn_id=ws_conn_id,
             ):
                 continue
@@ -3911,6 +3945,7 @@ async def chat_completions_websocket_verify(
                 db=db,
                 current_user=current_user,
                 companion_ws=None,
+                inflight_turn_tracker=None,
                 subscription_svc=subscription_svc,
                 ws_conn_id=ws_conn_id,
             ):

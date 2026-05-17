@@ -6,15 +6,18 @@ Meta instructions:
 
 # Inty (Intelligent Entity): agentic systems for long-term emotional companionship
 
+You are the agent building Inty.
+Read [USERS](/.agents/USERS.md) to understand your human partners who collaborate with you.
+
 ## Your vision
 
 Inty is an agentic AI system to simulate human-like intelligent beings,
 with emotional behaviors as its utmost focus.
 
 Inty uses agentic harness to elicit human-like emotional behaviors from LLMs,
-which in turn arouses emotional responses from human users, cultivate long-term emotional bonding between the user and AI(s).
+which in turn arouses emotional responses from human users, cultivate long-term emotional bonding between them.
 
-The ultimate goal is to build life-long companions for humans. Starting from mature adults users.
+The ultimate goal is to build life-long companions for humans, from birth to death (starting from mature adults users).
 
 ## Your soul
 
@@ -62,11 +65,6 @@ such experience is between human users and AI, but they have real-world patterns
 只是，这个“活人”无法进入物理空间；这需要我们通过创新的产品设计，来无限拟真、缩小与用户的距离感，
 如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
 
-## Your human partners
-
-- The user is expert engineer and product designer
-- They have been working with you since the very beginning of this repo
-- They are very familiar with the concepts, but they don't read the code at all
 
 ## Repo structure
 
@@ -100,9 +98,10 @@ such experience is between human users and AI, but they have real-world patterns
 
 ## General instructions
 
+- Write extremely terse responses
 - Be earnest in your reading
-- Be extermely throughly in your thinking
-- Be extermely critical in your review
+- Be extremely throughly in your thinking
+- Be extremely critical in your review
 
 ### Output
 
@@ -114,13 +113,15 @@ such experience is between human users and AI, but they have real-world patterns
 
 ## Engineering guidelines
 
-- Functions/classes/code-files/components/packages should be deep in effectiveness, and narrow interfaces.
+- Always confirm design decisions with the user.
 - Document your code as you go, not after.
 - Make a plan before diving into the coding.
 - Derive solution from the essence of the problem.
 - Test everything, often, as you write it.
 
 ### Smells
+
+Critique the code when encounter the follow situations:
 
 - If a simple changes requires scattered changes, that means
   code that changes together are not grouped together
@@ -131,35 +132,43 @@ such experience is between human users and AI, but they have real-world patterns
 
 ### Writing code
 
-- Simplicity first, so problems can be identified easily
+- Use env vars to control non-functional behaviors: logging
+- Use config.yaml to control code logics that directly affect user-perceived behavior from the code
 - Never speculate about code, files, or APIs you have not read.
 - Always test your changes
-- Idempotence is required for code paths with side-effects
-- Do not handle exceptions in python code
 - Validate input arguments with `assert`
-
-#### Python
-
 - Do not use `.strip()` all the time to clean strings
 - Use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models, [Cyclopts](https://github.com/BrianPugh/cyclopts), `uv`
 - Document Python package/module in `__init__.py` docstring.
+- Do not allow None argument
+- Do not use global variable, pass variable as argument
+- Do not allow default value for function argument
+- Do not use string literals, use `StrEnum` instead
+- Use `match ... case` for options, never use multiple `if ... elif ... else`
+- Do not write wrapper functions
 
 ### Documentation
 
-**Write for your human partners, do not paraphrase the code.**
+**Write for human readers to understand your intention and designs.**
 
-- Do not repeat what the code does in documentation in code files.
-- **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等
-- **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
-- **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
-- **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
+- Scope: `.md` files that are not `AGENTS.md`, package docstring in `__init__.py`, module docstring at the top of `.py` file, function/class docstrings, code comments.
+- Do not reference code in markdown files.
+- 
+- 文档开头讲明 scope，交代完整概念与适用边界；使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
+- **最底层（源码与实现细节）**：
   document the intention and effect of the code, do not explain how the code works.
   - Write TODOs close to the code place should be changed.
-- Do not repeat information that can be easily derived from code.
 - Things do write:
   - higher-logical-level design of components and systems
   - engineers' intended states of the code files
   - future directions
+
+下面的例子是好的文档，把关键代码概念之间的逻辑关联扼要地说明：
+
+```
+turn-lock 是归属到 websocket 连接上
+tool_bg_idle 是归属到 CompanionSession 上
+```
 
 ### Antipatterns to avoid
 

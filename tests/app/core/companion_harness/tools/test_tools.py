@@ -7,7 +7,9 @@ from pathlib import Path
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
-from app.core.companion_harness.tools.companion_tools import WRITABLE_RELATIVE_PATHS
+from app.core.companion_harness.tools.companion_tools import (
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+)
 
 
 def _run_tool(
@@ -55,7 +57,7 @@ def test_tool_memory_store_read_write(tmp_path: Path) -> None:
         st,
         "memory_store_write_document",
         json.dumps({"relative_path": "USER.md", "content": "full text"}),
-        write_allowlist=WRITABLE_RELATIVE_PATHS,
+        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     )
     assert w.startswith("OK ")
     r = _run_tool(
@@ -75,7 +77,7 @@ def test_tool_memory_store_write_not_in_allowlist(tmp_path: Path) -> None:
         st,
         "memory_store_write_document",
         json.dumps({"relative_path": "secret.txt", "content": "nope"}),
-        write_allowlist=WRITABLE_RELATIVE_PATHS,
+        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     )
     assert out.startswith("ERROR:")
     assert "only allows" in out

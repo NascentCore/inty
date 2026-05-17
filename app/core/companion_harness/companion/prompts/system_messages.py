@@ -1,18 +1,5 @@
 """Companion **system context** assembly: one place to turn ``PromptBundle`` + turn
 flags into what the model sees as system role(s) before user/assistant messages.
-
-**Intent**: keep product law, safety, persona, world anchors, memory, and **output /
-tool contracts** aligned with how each completion is actually invoked (plain chat,
-tool API, inner tick, or async foreground without OpenAI ``tools=``). Call sites live
-in ``..prompt_stack`` and related turn code; **significance / dual-envelope** semantics
-and parsing are owned by ``dual_llm_chat_branch_envelope``.
-
-**Surfaces**: ``build_system_messages`` is the canonical multi-message list;
-``build_system_prompt`` exists only for callers that still need one concatenated string
-(``SYSTEM_PROMPT_SEP``). Seed text such as the product axiom is loaded via
-``app.core.companion_harness.memory.memory_store_scope`` (companion templates under
-``prompts/``). Kept beside prompt assets so ``prompts/__init__.py`` stays docstring-only
-(see ``app/AGENTS.md``).
 """
 
 from __future__ import annotations
@@ -30,6 +17,7 @@ from ..bootstrap_user_interactive import (
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
+    get_inty_facts_system_text,
 )
 from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
@@ -37,14 +25,10 @@ from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
 from ..models import ContextMeta, InnerTickMode, PromptBundle
-from ..prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
 from .inner_tick_ls_tc import (
     INNER_TICK_LS_TC_AUTONOMY_SECTION,
     INNER_TICK_LS_TC_TOOL_BULLET,
 )
-
-SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
-
 
 def _inner_tick_proactive_chat(
     inner_tick_turn: bool, inner_tick_mode: InnerTickMode
@@ -386,6 +370,7 @@ def build_system_messages(
 
     out: list[dict[str, Any]] = []
     out.append(_system_message(get_imate_axiom_system_text()))
+    out.append(_system_message(get_inty_facts_system_text()))
     out.append(_system_message(_security_base()))
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
@@ -485,37 +470,3 @@ def build_system_messages(
         out.append(_system_message(_dual_llm_chat_structured_output_contract_text()))
 
     return out
-
-
-def build_system_prompt(
-    bundle: PromptBundle,
-    context: ContextMeta,
-    *,
-    enable_tools: bool = False,
-    enable_user_profile_tool: bool = False,
-    inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
-    repl_online_ack_turn: bool = False,
-    ai_private_text: str = "",
-    async_foreground_chat_stack: bool = False,
-    tool_side_compact: bool = False,
-    interactive_bootstrap_active: bool = False,
-    include_significance_perception_slice: bool = False,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
-) -> str:
-    msgs = build_system_messages(
-        bundle,
-        context,
-        enable_tools=enable_tools,
-        enable_user_profile_tool=enable_user_profile_tool,
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
-        repl_online_ack_turn=repl_online_ack_turn,
-        ai_private_text=ai_private_text,
-        async_foreground_chat_stack=async_foreground_chat_stack,
-        tool_side_compact=tool_side_compact,
-        interactive_bootstrap_active=interactive_bootstrap_active,
-        include_significance_perception_slice=include_significance_perception_slice,
-        implicit_signal_bundle=implicit_signal_bundle,
-    )
-    return SYSTEM_PROMPT_SEP.join(str(m.get("content") or "") for m in msgs)

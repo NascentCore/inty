@@ -409,6 +409,17 @@ def test_google_oauth_config_model_validate_ignores_unknown_keys():
     assert settings.redirect_uri == "https://example.com/oauth/google/callback"
 
 
+def test_verification_config_model_validate_ignores_unknown_keys():
+    settings = VerificationConfig.model_validate(
+        {
+            "code_expire_minutes": 11,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.code_expire_minutes == 11
+
+
 def test_agent_config_langsmith_always_trace_user_emails_defaults_to_empty_list():
     agent_config = AgentConfig(api_key="test", langchain_api_key="test")
 
@@ -540,3 +551,25 @@ def test_load_config_google_oauth_uses_pydantic_validation():
     assert cfg.google_oauth.client_id == "google-client"
     assert cfg.google_oauth.client_secret == "google-secret"
     assert cfg.google_oauth.redirect_uri == "https://example.com/oauth/google/callback"
+
+
+def test_load_config_verification_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "security:\n",
+        "\n".join(
+            [
+                "verification:",
+                "  code_expire_minutes: 13",
+                "  unknown_key: ignored",
+                "security:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.verification.code_expire_minutes == 13

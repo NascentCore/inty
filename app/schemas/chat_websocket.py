@@ -106,10 +106,12 @@ class ChatWsUserSignedOnAckFrame(BaseModel):
 
 
 class ChatWsUserSignedOutAckFrame(BaseModel):
-    """**Server → client (immediate)** result of ``user_signed_out`` handling.
+    """**Server → client (immediate)** acceptance of ``user_signed_out``.
 
-    Known ``reason`` values include ``not_supported``, ``invalid_payload``, ``agent_mismatch``,
-    ``server_error``; the wire may carry other strings for forward compatibility.
+    When ``ok`` is true, scope teardown (session shutdown, memory delete, history clear) continues
+    asynchronously on the server. Known ``reason`` values for ``ok: false`` include
+    ``not_supported``, ``invalid_payload``, ``agent_mismatch``, ``server_error``; the wire may carry
+    other strings for forward compatibility.
     """
 
     type: Literal["user_signed_out_ack"] = "user_signed_out_ack"
