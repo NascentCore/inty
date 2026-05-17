@@ -528,12 +528,12 @@ class SurpriseSnapConfig:
 
 @dataclass
 class UserAnalyticsReportConfig:
-    """用户数据分析日报周报定时任务配置"""
+    """用户数据分析日报周报定时任务配置（push worker 调度；默认全关）"""
 
-    enabled: bool = True
-    daily_enabled: bool = False  # push worker 日报；生产日报由 GitHub Actions 承担
-    weekly_enabled: bool = False  # push worker 周报
-    backfill_enabled: bool = False  # push worker 启动时日报/周报补算
+    enabled: bool = False
+    daily_enabled: bool = False  # 生产日报由 GitHub Actions 承担
+    weekly_enabled: bool = False
+    backfill_enabled: bool = False
     daily_cron_hour: int = 6  # UTC 小时，每日执行，统计 T-1 日
     weekly_cron_hour: int = 6  # UTC 小时，每周一执行，统计上一周
     statement_timeout_sec: int = 600  # 单条 SQL 超时秒数，生产大数据量时需调大
