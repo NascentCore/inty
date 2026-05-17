@@ -1,6 +1,6 @@
 # Google Python 本地风格（Cursor 交互）
 
-依据 [Google Python Style Guide](https://google.github.io/styleguide/pyguide.md)。仓库根 [`pylintrc`](../pylintrc) 与 [`pyproject.toml`](../pyproject.toml) 中的 `[tool.black]` / `[tool.pylint.main]` 为唯一配置来源。
+依据 [Google Python Style Guide](https://google.github.io/styleguide/pyguide.md)。仓库根 [`pylintrc`](../../pylintrc) 与 [`pyproject.toml`](../../pyproject.toml) 中的 `[tool.black]` / `[tool.pylint.main]` 为唯一配置来源。
 
 ## 安装
 
@@ -56,6 +56,6 @@ def do_PUT(self):  # WSGI name, so pylint: disable=invalid-name
 2. **`tools/scripts/lint-python.sh`**：与 `fmt.sh` 对称的一键 check / `--fix`。
 3. **fmt 对齐**：`fmt.sh` 与定时 format workflow 使用 `pyproject.toml` 80 列。
 4. **CI**：`ci_backend.yaml` 增加 lint（可先 `pylint --errors-only`）。
-5. **Cloud Agent**：`.agents/guidelines/cursor-cloud-environment.md` 增加 `uv sync --group dev`。
+5. **Cloud Agent**：[`cursor-cloud-environment.md`](cursor-cloud-environment.md) 增加 `uv sync --group dev`。
 6. **消噪 / 格式化 PR**：全库 black 80、pylint 配置收紧。
 7. **Pyink**（可选）：替换 Black。
