@@ -5,6 +5,7 @@ from __future__ import annotations
 from app.core.companion_harness.companion.models import ContextMeta, PromptBundle
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
+    system_prompt_security_prefix,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
@@ -30,3 +31,4 @@ def test_build_system_messages_injects_inty_after_axiom() -> None:
     system_contents = [m["content"] for m in msgs if m.get("role") == "system"]
     assert system_contents[0] == get_imate_axiom_system_text()
     assert system_contents[1] == get_inty_facts_system_text()
+    assert system_contents[2] == system_prompt_security_prefix()
