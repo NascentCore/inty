@@ -28,7 +28,9 @@ async def check_version(
         ..., alias="appVersionCode", description="应用版本代码"
     ),
     app_version_name: Optional[str] = Header(
-        None, alias="appVersionName", description="应用版本名称（向后兼容，忽略）"
+        None,
+        alias="appVersionName",
+        description="应用版本名称（向后兼容，忽略）",
     ),
     current_user: UserSchema = Depends(deps.get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
@@ -83,7 +85,9 @@ async def check_version(
 
         # 如果检查失败，返回保守的响应
         fallback_version_code = (
-            str(app_version_code) if "app_version_code" in locals() else "unknown"
+            str(app_version_code)
+            if "app_version_code" in locals()
+            else "unknown"
         )
         fallback_response = VersionCheckResponse(
             current_version=fallback_version_code,
@@ -98,5 +102,6 @@ async def check_version(
         )
 
         return APIResponse.success(
-            data=fallback_response, message="Version check failed but app can continue"
+            data=fallback_response,
+            message="Version check failed but app can continue",
         )

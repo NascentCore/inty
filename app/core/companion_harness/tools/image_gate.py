@@ -39,7 +39,9 @@ def current_persona_revision_id(store: MemoryStore) -> str:
     return compute_persona_revision_id(store)
 
 
-def append_image_asset_record(store: MemoryStore, record: dict[str, Any]) -> None:
+def append_image_asset_record(
+    store: MemoryStore, record: dict[str, Any]
+) -> None:
     store.append_jsonl_record(_IMAGE_ASSET_INDEX_REL, record)
 
 
@@ -142,6 +144,8 @@ def find_latest_asset_by_local_relative_path(
     return None
 
 
-def relative_path_under_workspace(store: MemoryStore, absolute_path: Path) -> str:
+def relative_path_under_workspace(
+    store: MemoryStore, absolute_path: Path
+) -> str:
     """Map a local absolute path to a scope-relative key segment (basename when not under synthetic root)."""
     return PurePosixPath(absolute_path.resolve().as_posix()).name

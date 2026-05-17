@@ -23,7 +23,10 @@ router = APIRouter(prefix="/text-to-speech", route_class=LoggerRoute)
 async def list_voices(
     search: Optional[str] = Query(None, description="搜索音色名称关键词"),
     page_size: Optional[int] = Query(
-        None, ge=1, le=1000, description="每页返回结果数，默认返回所有音色，最大1000"
+        None,
+        ge=1,
+        le=1000,
+        description="每页返回结果数，默认返回所有音色，最大1000",
     ),
     voice_type: Optional[str] = Query(
         None, description="音色类型过滤 (如: personal, preset)"

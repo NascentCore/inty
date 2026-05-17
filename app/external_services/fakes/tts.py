@@ -11,7 +11,9 @@ from typing import Any
 from app.core.voice.tts_api import TTSRequest, TTSResult
 
 
-def _silent_wav_bytes(duration_seconds: float = 0.1, sample_rate: int = 24000) -> bytes:
+def _silent_wav_bytes(
+    duration_seconds: float = 0.1, sample_rate: int = 24000
+) -> bytes:
     frame_count = max(1, int(duration_seconds * sample_rate))
     pcm = b"\x00\x00" * frame_count
     buf = io.BytesIO()
@@ -54,7 +56,9 @@ class FakeTextToSpeechAPI:
     async def synthesize(self, request: TTSRequest) -> TTSResult:
         return TTSResult(audio_bytes=self._audio, mime_type="audio/wav")
 
-    async def synthesize_with_roleplay_prompt(self, request: TTSRequest) -> TTSResult:
+    async def synthesize_with_roleplay_prompt(
+        self, request: TTSRequest
+    ) -> TTSResult:
         return TTSResult(audio_bytes=self._audio, mime_type="audio/wav")
 
     async def synthesize_with_full_dialogue_prompt(

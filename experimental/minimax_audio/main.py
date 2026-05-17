@@ -94,7 +94,9 @@ def _write_hex_mp3(hex_audio: str, path: Path) -> None:
     path.write_bytes(bytes.fromhex(hex_audio))
 
 
-app = cyclopts.App(help="MiniMax 音频 API 最小演示（T2A HTTP + music_generation）")
+app = cyclopts.App(
+    help="MiniMax 音频 API 最小演示（T2A HTTP + music_generation）"
+)
 
 
 @app.command
@@ -116,7 +118,9 @@ def tts(
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     with httpx.Client(base_url=API_BASE, timeout=120.0) as client:
-        r = client.post(T2A_PATH, headers=_bearer_headers(), json=body.model_dump())
+        r = client.post(
+            T2A_PATH, headers=_bearer_headers(), json=body.model_dump()
+        )
     payload = r.json()
     hex_audio = payload["data"]["audio"]
     _write_hex_mp3(hex_audio, out)
@@ -138,7 +142,9 @@ def music(
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     with httpx.Client(base_url=API_BASE, timeout=600.0) as client:
-        r = client.post(MUSIC_PATH, headers=_bearer_headers(), json=body.model_dump())
+        r = client.post(
+            MUSIC_PATH, headers=_bearer_headers(), json=body.model_dump()
+        )
     payload = r.json()
     hex_audio = payload["data"]["audio"]
     _write_hex_mp3(hex_audio, out)

@@ -35,7 +35,9 @@ def normalize_langsmith_metadata_value(value: Any) -> Any:
     return str(value)
 
 
-def normalize_langsmith_metadata(metadata: Optional[dict[str, Any]]) -> dict[str, Any]:
+def normalize_langsmith_metadata(
+    metadata: Optional[dict[str, Any]],
+) -> dict[str, Any]:
     if not metadata:
         return {}
     return {

@@ -29,7 +29,9 @@ def _load_prompts_data() -> dict[str, str]:
     with PROMPTS_DATA_PATH.open(encoding="utf-8") as fp:
         data = yaml.safe_load(fp)
     if not isinstance(data, dict):
-        raise ValueError(f"Prompt data must be a YAML mapping: {PROMPTS_DATA_PATH}")
+        raise ValueError(
+            f"Prompt data must be a YAML mapping: {PROMPTS_DATA_PATH}"
+        )
     return data
 
 
@@ -37,7 +39,9 @@ def _get_prompt_text(key: str) -> str:
     try:
         value = _load_prompts_data()[key]
     except KeyError as exc:
-        raise KeyError(f"Prompt '{key}' not found in {PROMPTS_DATA_PATH}") from exc
+        raise KeyError(
+            f"Prompt '{key}' not found in {PROMPTS_DATA_PATH}"
+        ) from exc
     if not isinstance(value, str):
         raise TypeError(f"Prompt '{key}' must be a string, got {type(value)!r}")
     return value
@@ -61,7 +65,9 @@ ROLEPLAY_MAIN_PROMPT = _get_prompt_text("ROLEPLAY_MAIN_PROMPT")
 # Flirting mode is for romantic roleplay.
 FLIRTING_MODE_PROMPT = _get_prompt_text("FLIRTING_MODE_PROMPT")
 
-FLIRTING_MODE_PROMPT_20250902 = _get_prompt_text("FLIRTING_MODE_PROMPT_20250902")
+FLIRTING_MODE_PROMPT_20250902 = _get_prompt_text(
+    "FLIRTING_MODE_PROMPT_20250902"
+)
 
 FLIRTING_OUTPUT_FORMAT_PROMPT_20250902 = _get_prompt_text(
     "FLIRTING_OUTPUT_FORMAT_PROMPT_20250902"
@@ -73,7 +79,9 @@ PURITY_MAIN_PROMPT_0725 = _get_prompt_text("PURITY_MAIN_PROMPT_0725")
 
 PURITY_MODE_PROMPT_0725 = _get_prompt_text("PURITY_MODE_PROMPT_0725")
 
-PURITY_OUTPUT_FORMAT_PROMPT_0725 = _get_prompt_text("PURITY_OUTPUT_FORMAT_PROMPT_0725")
+PURITY_OUTPUT_FORMAT_PROMPT_0725 = _get_prompt_text(
+    "PURITY_OUTPUT_FORMAT_PROMPT_0725"
+)
 
 ROLEPLAY_MAIN_PROMPT_1225 = _get_prompt_text("ROLEPLAY_MAIN_PROMPT_1225")
 
@@ -192,7 +200,9 @@ USER_FACING_CHAT_MODE_IDS: tuple[str, ...] = (
 
 def get_user_facing_chat_mode_options() -> list[PromptOption]:
     """Return mode options for the three user-facing chat modes (id, short_name, name, description)."""
-    return [p for p in AVAILABLE_MODE_PROMPTS if p.id in USER_FACING_CHAT_MODE_IDS]
+    return [
+        p for p in AVAILABLE_MODE_PROMPTS if p.id in USER_FACING_CHAT_MODE_IDS
+    ]
 
 
 def get_main_prompt_by_id(prompt_id: str) -> str:
@@ -259,7 +269,9 @@ class StructuredPrompt(BaseModel):
             {"role": "system", "content": self.mode_prompt},
         ]
         if self.output_format_prompt:
-            messages.append({"role": "system", "content": self.output_format_prompt})
+            messages.append(
+                {"role": "system", "content": self.output_format_prompt}
+            )
         return messages
 
 
@@ -286,7 +298,9 @@ PURITY_ROLEPLAY_PROMPT = StructuredPrompt(
 # Image generation prompt
 ###############################################################################
 
-IMAGE_GENERATION_PROMPT_TEMPLATE = _get_prompt_text("IMAGE_GENERATION_PROMPT_TEMPLATE")
+IMAGE_GENERATION_PROMPT_TEMPLATE = _get_prompt_text(
+    "IMAGE_GENERATION_PROMPT_TEMPLATE"
+)
 
 # 用于 Gemini 图像生成系统指令
 # 明确要求产生图片，检测能否降低 NO_IMAGE 的概率

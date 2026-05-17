@@ -237,7 +237,9 @@ async def sync_theme_agents(
 
     # 删除 prod 中该主题的所有关联
     await prod_session.execute(
-        delete(CharacterThemeAgent).where(CharacterThemeAgent.theme_id == theme_id)
+        delete(CharacterThemeAgent).where(
+            CharacterThemeAgent.theme_id == theme_id
+        )
     )
 
     synced = 0
@@ -332,7 +334,9 @@ async def sync_themes(
                     prod_agent_ids,
                     dry_run=True,
                 )
-                skip_note = f" [将跳过 {skipped} 个不存在的角色关联]" if skipped else ""
+                skip_note = (
+                    f" [将跳过 {skipped} 个不存在的角色关联]" if skipped else ""
+                )
                 logger.info(
                     f"  ✨ 创建: {theme.name} (ID: {theme_id}, "
                     f"角色数: {synced}{skip_note})"
@@ -350,7 +354,9 @@ async def sync_themes(
                     prod_agent_ids,
                     dry_run=True,
                 )
-                skip_note = f" [将跳过 {skipped} 个不存在的角色关联]" if skipped else ""
+                skip_note = (
+                    f" [将跳过 {skipped} 个不存在的角色关联]" if skipped else ""
+                )
                 logger.info(
                     f"  🔄 更新: {theme.name} (ID: {theme_id}, "
                     f"角色数: {synced}{skip_note})"
@@ -405,7 +411,9 @@ async def sync_themes(
                 # 处理可见性唯一性约束
                 if source_theme.visibility != CharacterThemeVisibility.HIDDEN:
                     await ensure_visibility_uniqueness(
-                        prod_session, source_theme.visibility, exclude_theme_id=theme_id
+                        prod_session,
+                        source_theme.visibility,
+                        exclude_theme_id=theme_id,
                     )
 
                 copy_theme_fields(source_theme, prod_theme)
@@ -490,7 +498,9 @@ async def sync_themes(
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="同步 dev 环境主题专区到 prod 环境")
+    parser = argparse.ArgumentParser(
+        description="同步 dev 环境主题专区到 prod 环境"
+    )
     parser.add_argument(
         "--config",
         default="config.yaml",
@@ -528,7 +538,9 @@ async def main():
         f"正在连接 Prod 数据库: "
         f"{prod_db_config['host']}:{prod_db_config['port']}/{prod_db_config['db']}"
     )
-    prod_engine = create_async_engine(prod_url, echo=False, **prod_engine_kwargs)
+    prod_engine = create_async_engine(
+        prod_url, echo=False, **prod_engine_kwargs
+    )
 
     DevSession = sessionmaker(
         bind=dev_engine, class_=AsyncSession, expire_on_commit=False
@@ -543,10 +555,14 @@ async def main():
         prod_ok = await test_connection(prod_engine, "Prod")
 
         if not dev_ok:
-            logger.error("Dev 数据库连接失败，请检查配置和网络连接，需要运行在 GCP 上")
+            logger.error(
+                "Dev 数据库连接失败，请检查配置和网络连接，需要运行在 GCP 上"
+            )
             sys.exit(1)
         if not prod_ok:
-            logger.error("Prod 数据库连接失败，请检查配置和网络连接，需要运行在 GCP 上")
+            logger.error(
+                "Prod 数据库连接失败，请检查配置和网络连接，需要运行在 GCP 上"
+            )
             sys.exit(1)
 
         logger.info("")

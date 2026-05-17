@@ -142,7 +142,9 @@ async def send_audio_worker_sounddevice(
             elif sent_audio:
                 print("Done, triggering inference")
                 await connection.send({"type": "input_audio_buffer.commit"})
-                await connection.send({"type": "response.create", "response": {}})
+                await connection.send(
+                    {"type": "response.create", "response": {}}
+                )
                 sent_audio = False
 
             await asyncio.sleep(0)

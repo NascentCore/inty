@@ -107,7 +107,9 @@ def apply_companion_ws_heartbeat_coords(
     prev_chat = hb_ctx.get("chat_id")
     prev_mono = hb_ctx.get("_last_maintenance_inner_tick_monotonic")
     hb_ctx.clear()
-    hb_ctx.update({"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id})
+    hb_ctx.update(
+        {"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id}
+    )
     same_coords = (
         str(prev_user or "") == str(user_id or "")
         and str(prev_agent or "") == str(agent_id or "")
@@ -151,7 +153,9 @@ class CompanionWebSocketCoordinator:
         if user_msg_uuid in self.foreground_pending:
             self.foreground_pending[user_msg_uuid].update(updates)
 
-    def pop_foreground_pending(self, user_msg_uuid: str) -> dict[str, Any] | None:
+    def pop_foreground_pending(
+        self, user_msg_uuid: str
+    ) -> dict[str, Any] | None:
         return self.foreground_pending.pop(user_msg_uuid, None)
 
     def remove_foreground_pending(self, user_msg_uuid: str) -> None:
@@ -183,7 +187,9 @@ class CompanionWebSocketCoordinator:
         return {"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id}
 
     def last_maintenance_inner_tick_monotonic(self) -> Any:
-        return self.heartbeat_context.get("_last_maintenance_inner_tick_monotonic")
+        return self.heartbeat_context.get(
+            "_last_maintenance_inner_tick_monotonic"
+        )
 
     def mark_maintenance_inner_tick_fired(self, monotonic_time: float) -> None:
         self.heartbeat_context["_last_maintenance_inner_tick_monotonic"] = (

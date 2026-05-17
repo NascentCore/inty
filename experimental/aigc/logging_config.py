@@ -87,7 +87,9 @@ def log_api_request(request_data: dict, logger: logging.Logger):
     logger.debug(f"Request data: {request_data}")
 
 
-def log_api_response(response_data: dict, logger: logging.Logger, response_time: float):
+def log_api_response(
+    response_data: dict, logger: logging.Logger, response_time: float
+):
     """Log API response details"""
     logger.info(f"API Response sent (time: {response_time:.3f}s)")
     logger.debug(f"Response data: {response_data}")
@@ -165,14 +167,18 @@ def log_file_operation(
 def setup_development_logging():
     """Setup logging for development environment"""
     return setup_logging(
-        log_level="DEBUG", log_to_file=True, log_file="logs/character_generator_dev.log"
+        log_level="DEBUG",
+        log_to_file=True,
+        log_file="logs/character_generator_dev.log",
     )
 
 
 def setup_production_logging():
     """Setup logging for production environment"""
     return setup_logging(
-        log_level="INFO", log_to_file=True, log_file="logs/character_generator_prod.log"
+        log_level="INFO",
+        log_to_file=True,
+        log_file="logs/character_generator_prod.log",
     )
 
 

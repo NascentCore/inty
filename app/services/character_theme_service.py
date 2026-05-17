@@ -86,7 +86,9 @@ async def create_theme(
     return theme
 
 
-async def get_theme(db: AsyncSession, theme_id: str) -> Optional[CharacterTheme]:
+async def get_theme(
+    db: AsyncSession, theme_id: str
+) -> Optional[CharacterTheme]:
     """获取角色主题专区详情（包含角色列表，按 order_index 排序）"""
     stmt = (
         select(CharacterTheme)
@@ -103,7 +105,10 @@ async def get_theme(db: AsyncSession, theme_id: str) -> Optional[CharacterTheme]
 
 
 async def list_themes(
-    db: AsyncSession, skip: int = 0, limit: int = 100, include_hidden: bool = False
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 100,
+    include_hidden: bool = False,
 ) -> List[CharacterTheme]:
     """获取角色主题专区列表
 
@@ -118,7 +123,10 @@ async def list_themes(
     if not include_hidden:
         stmt = stmt.where(
             CharacterTheme.visibility.in_(
-                [CharacterThemeVisibility.PRIMARY, CharacterThemeVisibility.SECONDARY]
+                [
+                    CharacterThemeVisibility.PRIMARY,
+                    CharacterThemeVisibility.SECONDARY,
+                ]
             )
         )
 
@@ -253,7 +261,9 @@ async def add_agent_to_theme(
             CharacterThemeAgent.theme_id == theme_id,
             CharacterThemeAgent.agent_id == agent_id,
         )
-        .options(selectinload(CharacterThemeAgent.agent).selectinload(Agent.creator))
+        .options(
+            selectinload(CharacterThemeAgent.agent).selectinload(Agent.creator)
+        )
     )
     result = await db.execute(stmt)
     theme_agent = result.scalar_one()
@@ -281,7 +291,9 @@ async def remove_agent_from_theme(
     return True
 
 
-async def reorder_agents(db: AsyncSession, theme_id: str, agent_ids: List[str]) -> bool:
+async def reorder_agents(
+    db: AsyncSession, theme_id: str, agent_ids: List[str]
+) -> bool:
     """调整角色顺序"""
     # 检查专区是否存在
     theme = await get_theme(db, theme_id)
@@ -289,7 +301,9 @@ async def reorder_agents(db: AsyncSession, theme_id: str, agent_ids: List[str]) 
         raise HTTPException(status_code=404, detail="Theme section not found")
 
     # 获取专区中所有角色关联记录
-    stmt = select(CharacterThemeAgent).where(CharacterThemeAgent.theme_id == theme_id)
+    stmt = select(CharacterThemeAgent).where(
+        CharacterThemeAgent.theme_id == theme_id
+    )
     result = await db.execute(stmt)
     theme_agents = result.scalars().all()
 

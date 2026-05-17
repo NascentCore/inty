@@ -194,7 +194,10 @@ Don't you know me ?
             ],
             # 测试6：只有用户信息System Message + 历史对话（最小化测试）
             "minimal_with_history": [
-                {"role": "system", "content": f"你正在与用户dx对话。\n\n{user_info}"},
+                {
+                    "role": "system",
+                    "content": f"你正在与用户dx对话。\n\n{user_info}",
+                },
                 *history_info,
                 {"role": "user", "content": user_query},
             ],
@@ -242,8 +245,12 @@ Don't you know me ?
                 "duration": duration,
                 "messages": messages,
                 "response": response_content or "[空响应]",
-                "response_raw": repr(response_content) if response_content else None,
-                "usage": response.usage.model_dump() if response.usage else None,
+                "response_raw": (
+                    repr(response_content) if response_content else None
+                ),
+                "usage": (
+                    response.usage.model_dump() if response.usage else None
+                ),
                 "timestamp": datetime.now().isoformat(),
             }
 
@@ -354,7 +361,9 @@ Don't you know me ?
 
                 # 统计消息类型
                 messages = test.get("messages", [])
-                system_count = sum(1 for msg in messages if msg["role"] == "system")
+                system_count = sum(
+                    1 for msg in messages if msg["role"] == "system"
+                )
                 user_count = sum(1 for msg in messages if msg["role"] == "user")
                 assistant_count = sum(
                     1 for msg in messages if msg["role"] == "assistant"
@@ -380,7 +389,8 @@ Don't you know me ?
 
                     # 检查是否符合角色设定
                     if any(
-                        keyword in response for keyword in ["daisies", "nature", "Lily"]
+                        keyword in response
+                        for keyword in ["daisies", "nature", "Lily"]
                     ):
                         print(f"   ✅ 响应符合Lily角色设定")
                     else:
@@ -419,7 +429,9 @@ Don't you know me ?
                 if r.get("response", "").strip() and r["response"] != "[空响应]"
             ]
             name_mentioned = [
-                r for r in valid_responses if "dx" in r.get("response", "").lower()
+                r
+                for r in valid_responses
+                if "dx" in r.get("response", "").lower()
             ]
 
             print(f"\n🔹 {category}:")

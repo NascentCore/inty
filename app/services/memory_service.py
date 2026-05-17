@@ -11,7 +11,11 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import get_sync_engine
-from app.models.memory import DailyBondingMemoryMetadata, FestivalMemoryMetadata, Memory
+from app.models.memory import (
+    DailyBondingMemoryMetadata,
+    FestivalMemoryMetadata,
+    Memory,
+)
 from app.services.chat_history_service import (
     add_daily_memory_prompt_message_sync,
     add_festival_memory_prompt_message_sync,
@@ -281,7 +285,9 @@ async def get_daily_memories_for_user_agent(
     ]
 
 
-def _get_session_id_for_user_agent_sync(user_id: str, agent_id: str) -> str | None:
+def _get_session_id_for_user_agent_sync(
+    user_id: str, agent_id: str
+) -> str | None:
     """根据 (user_id, agent_id) 获取该会话的 session_id，无会话则返回 None。"""
     conn = get_chat_history_connection()
     with conn.cursor() as cur:
@@ -400,7 +406,10 @@ async def get_undelivered_festival_memories(
             }
         )
     items.sort(
-        key=lambda item: (_festival_date_sort_key(item["festival_date"]), item["id"])
+        key=lambda item: (
+            _festival_date_sort_key(item["festival_date"]),
+            item["id"],
+        )
     )
     return items
 
@@ -480,7 +489,9 @@ async def deliver_festival_memories_for_user_agent(
     return delivered
 
 
-def _get_undelivered_festival_memories_sync(user_id: str, agent_id: str) -> list[dict]:
+def _get_undelivered_festival_memories_sync(
+    user_id: str, agent_id: str
+) -> list[dict]:
     """同步查询未投递节日记忆，供 to_thread 调用。"""
     engine = get_sync_engine()
     with engine.connect() as conn:
@@ -509,7 +520,10 @@ def _get_undelivered_festival_memories_sync(user_id: str, agent_id: str) -> list
             }
         )
     items.sort(
-        key=lambda item: (_festival_date_sort_key(item["festival_date"]), item["id"])
+        key=lambda item: (
+            _festival_date_sort_key(item["festival_date"]),
+            item["id"],
+        )
     )
     return items
 
@@ -555,7 +569,10 @@ async def get_undelivered_daily_memories(
             continue
         items.append({"id": memory_id, "local_date": local_date})
     items.sort(
-        key=lambda item: (_daily_local_date_sort_key(item["local_date"]), item["id"])
+        key=lambda item: (
+            _daily_local_date_sort_key(item["local_date"]),
+            item["id"],
+        )
     )
     return items
 
@@ -623,7 +640,9 @@ async def deliver_daily_memories_for_user_agent(
     return delivered
 
 
-def _get_undelivered_daily_memories_sync(user_id: str, agent_id: str) -> list[dict]:
+def _get_undelivered_daily_memories_sync(
+    user_id: str, agent_id: str
+) -> list[dict]:
     """同步查询未投递日常记忆，供 to_thread 调用。"""
     engine = get_sync_engine()
     with engine.connect() as conn:
@@ -646,7 +665,10 @@ def _get_undelivered_daily_memories_sync(user_id: str, agent_id: str) -> list[di
             continue
         items.append({"id": memory_id, "local_date": local_date})
     items.sort(
-        key=lambda item: (_daily_local_date_sort_key(item["local_date"]), item["id"])
+        key=lambda item: (
+            _daily_local_date_sort_key(item["local_date"]),
+            item["id"],
+        )
     )
     return items
 

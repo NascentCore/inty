@@ -170,7 +170,9 @@ Probability:"""
                 scale = 512 / max(width, height)
                 new_width = int(width * scale)
                 new_height = int(height * scale)
-                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                img = img.resize(
+                    (new_width, new_height), Image.Resampling.LANCZOS
+                )
 
             # Convert to bytes
             bytesio = io.BytesIO()
@@ -222,7 +224,8 @@ def main():
         "--definitions", help="Path to JSON file with content definitions"
     )
     parser.add_argument(
-        "--save-definitions", help="Path to save current definitions to JSON file"
+        "--save-definitions",
+        help="Path to save current definitions to JSON file",
     )
     parser.add_argument(
         "--add-definition",
@@ -263,7 +266,9 @@ def main():
         print(f"Definitions saved to {args.save_definitions}")
 
     # Determine content type
-    content_type = ContentType.TEXT if args.type == "text" else ContentType.IMAGE
+    content_type = (
+        ContentType.TEXT if args.type == "text" else ContentType.IMAGE
+    )
 
     # Analyze content
     print(f"Analyzing {args.type} content...")

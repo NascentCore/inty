@@ -12,7 +12,9 @@ from app.core.companion_harness.contracts.turn import (
     TurnInput,
     TurnOutput,
 )
-from app.core.companion_harness.runtime.persistence import CallableTurnPersistence
+from app.core.companion_harness.runtime.persistence import (
+    CallableTurnPersistence,
+)
 
 from .turn_orchestrator import TurnOrchestrator, TurnOrchestratorResult
 
@@ -27,10 +29,17 @@ class ExperimentalTurnBridgeInput:
     metadata: dict[str, Any] | None = None
 
 
-_ALLOWED_MESSAGE_ROLES: set[MessageRole] = {"system", "user", "assistant", "tool"}
+_ALLOWED_MESSAGE_ROLES: set[MessageRole] = {
+    "system",
+    "user",
+    "assistant",
+    "tool",
+}
 
 
-def _to_message_snapshots(messages: list[dict[str, Any]]) -> list[MessageSnapshot]:
+def _to_message_snapshots(
+    messages: list[dict[str, Any]],
+) -> list[MessageSnapshot]:
     out: list[MessageSnapshot] = []
     for index, row in enumerate(messages):
         role = row.get("role")
@@ -73,7 +82,9 @@ def _to_message_snapshots(messages: list[dict[str, Any]]) -> list[MessageSnapsho
     return out
 
 
-def message_snapshots_to_dicts(messages: list[MessageSnapshot]) -> list[dict[str, Any]]:
+def message_snapshots_to_dicts(
+    messages: list[MessageSnapshot],
+) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for message in messages:
         row: dict[str, Any] = {
@@ -105,7 +116,9 @@ async def run_experimental_turn(
     payload: ExperimentalTurnBridgeInput,
     prepare_turn: Callable[[TurnInput], TurnInput | Awaitable[TurnInput]],
     invoke_model: Callable[[TurnInput], Any | Awaitable[Any]],
-    handle_response: Callable[[TurnInput, Any], TurnOutput | Awaitable[TurnOutput]],
+    handle_response: Callable[
+        [TurnInput, Any], TurnOutput | Awaitable[TurnOutput]
+    ],
     persist_fn: (
         Callable[
             [TurnInput, TurnOutput],

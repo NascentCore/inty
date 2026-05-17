@@ -80,7 +80,10 @@ async def run_scenario(
         if ai_text:
             detected = detect_language(ai_text)
             print(f"  检测到语言: {detected}")
-            if detected != scenario["expected_language"] and detected != "mixed":
+            if (
+                detected != scenario["expected_language"]
+                and detected != "mixed"
+            ):
                 print(
                     f"  [WARNING] 语言不匹配! 期望 {scenario['expected_language']}, 实际 {detected}"
                 )
@@ -98,7 +101,9 @@ async def main():
     parser = argparse.ArgumentParser(description="复现语言混用问题")
     parser.add_argument("--token", required=True, help="认证 token")
     parser.add_argument("--agent-id", required=True, help="Agent ID")
-    parser.add_argument("--base-url", default="ws://localhost:8000", help="服务端地址")
+    parser.add_argument(
+        "--base-url", default="ws://localhost:8000", help="服务端地址"
+    )
     parser.add_argument(
         "--language", default="Chinese", help="期望的回复语言 (默认: Chinese)"
     )

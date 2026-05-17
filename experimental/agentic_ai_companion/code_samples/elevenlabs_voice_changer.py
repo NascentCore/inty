@@ -15,9 +15,7 @@ elevenlabs = ElevenLabs(
 )
 voice_id = "JBFqnCBsd6RMkjVDRZzb"
 
-audio_url = (
-    "https://storage.googleapis.com/eleven-public-cdn/audio/marketing/nicole.mp3"
-)
+audio_url = "https://storage.googleapis.com/eleven-public-cdn/audio/marketing/nicole.mp3"
 response = requests.get(audio_url)
 audio_data = BytesIO(response.content)
 

@@ -9,7 +9,9 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from app.core.user_time_context_llm_meta import build_user_time_context_meta_lines
+from app.core.user_time_context_llm_meta import (
+    build_user_time_context_meta_lines,
+)
 
 USER_TIME_CONTEXT_SYSTEM_HEADER = "## user-time-context"
 

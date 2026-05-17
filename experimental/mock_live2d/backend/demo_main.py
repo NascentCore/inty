@@ -79,9 +79,13 @@ def get_demo_response(message: str) -> str:
 
     if any(word in message_lower for word in ["你好", "hi", "hello", "嗨"]):
         return random.choice(DEMO_RESPONSES["greeting"])
-    elif any(word in message_lower for word in ["天气", "weather", "下雨", "晴天"]):
+    elif any(
+        word in message_lower for word in ["天气", "weather", "下雨", "晴天"]
+    ):
         return random.choice(DEMO_RESPONSES["weather"])
-    elif any(word in message_lower for word in ["帮助", "help", "帮忙", "协助"]):
+    elif any(
+        word in message_lower for word in ["帮助", "help", "帮忙", "协助"]
+    ):
         return random.choice(DEMO_RESPONSES["help"])
     else:
         return random.choice(DEMO_RESPONSES["default"])
@@ -93,7 +97,15 @@ def analyze_sentiment_demo(message: str) -> str:
 
     if any(
         word in message_lower
-        for word in ["开心", "高兴", "快乐", "兴奋", "太棒了", "awesome", "great"]
+        for word in [
+            "开心",
+            "高兴",
+            "快乐",
+            "兴奋",
+            "太棒了",
+            "awesome",
+            "great",
+        ]
     ):
         return "happy"
     elif any(
@@ -102,18 +114,24 @@ def analyze_sentiment_demo(message: str) -> str:
     ):
         return "sad"
     elif any(
-        word in message_lower for word in ["生气", "愤怒", "恼火", "angry", "mad"]
+        word in message_lower
+        for word in ["生气", "愤怒", "恼火", "angry", "mad"]
     ):
         return "angry"
     elif any(
-        word in message_lower for word in ["惊讶", "震惊", "意外", "surprised", "wow"]
+        word in message_lower
+        for word in ["惊讶", "震惊", "意外", "surprised", "wow"]
     ):
         return "surprised"
     elif any(
-        word in message_lower for word in ["担心", "焦虑", "紧张", "worried", "anxious"]
+        word in message_lower
+        for word in ["担心", "焦虑", "紧张", "worried", "anxious"]
     ):
         return "worried"
-    elif any(word in message_lower for word in ["兴奋", "激动", "excited", "thrilled"]):
+    elif any(
+        word in message_lower
+        for word in ["兴奋", "激动", "excited", "thrilled"]
+    ):
         return "excited"
     else:
         return "neutral"

@@ -84,7 +84,10 @@ class RunPodClient:
 
         try:
             response = requests.post(
-                f"{self.base_url}/run", headers=self.headers, json=payload, timeout=60
+                f"{self.base_url}/run",
+                headers=self.headers,
+                json=payload,
+                timeout=60,
             )
             response.raise_for_status()
             return response.json()
@@ -105,7 +108,9 @@ class RunPodClient:
         """
         try:
             response = requests.get(
-                f"{self.base_url}/status/{job_id}", headers=self.headers, timeout=30
+                f"{self.base_url}/status/{job_id}",
+                headers=self.headers,
+                timeout=30,
             )
             response.raise_for_status()
             return response.json()
@@ -116,7 +121,9 @@ class RunPodClient:
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="RunPod API Client for ComfyUI")
+    parser = argparse.ArgumentParser(
+        description="RunPod API Client for ComfyUI"
+    )
     parser.add_argument(
         "--endpoint",
         type=str,

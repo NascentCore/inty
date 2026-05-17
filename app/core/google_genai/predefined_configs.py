@@ -37,6 +37,8 @@ GEN_CONTENT_CONFIG_IMAGE_9_16_1K_MLDEV: Final[types.GenerateContentConfig] = (
         top_p=0.95,
         max_output_tokens=8192,
         response_modalities=["IMAGE"],
-        image_config=types.ImageConfig(aspect_ratio=ASPECT_RATIO_9_16, image_size="1K"),
+        image_config=types.ImageConfig(
+            aspect_ratio=ASPECT_RATIO_9_16, image_size="1K"
+        ),
     )
 )

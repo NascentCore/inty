@@ -75,7 +75,9 @@ class Report(Base):
     )
     image_urls = Column(ARRAY(String), default=list, comment="举报图片URL列表")
     description = Column(Text, nullable=True, comment="举报描述")
-    github_issue = Column(String(500), nullable=True, comment="关联的 GitHub issue URL")
+    github_issue = Column(
+        String(500), nullable=True, comment="关联的 GitHub issue URL"
+    )
     status = Column(
         SAEnum(ReportStatus),
         default=ReportStatus.PENDING,
@@ -88,7 +90,9 @@ class Report(Base):
         comment="记录类型：举报或反馈，为空时默认为 REPORT",
     )
     created_at = Column(
-        DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
+        DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        comment="创建时间",
     )
 
     # 关系

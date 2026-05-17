@@ -74,7 +74,9 @@ def _build_cache_key(
     )
 
 
-def _build_openai_compatible_sync_client(options: OpenAICompatibleClientOptions) -> Any:
+def _build_openai_compatible_sync_client(
+    options: OpenAICompatibleClientOptions,
+) -> Any:
     return create_sync_client(
         OpenAICompatibleSyncOptions(
             base_url=options.base_url,
@@ -103,7 +105,9 @@ def _build_openai_compatible_async_client(
     )
 
 
-def get_openai_compatible_sync_client(options: OpenAICompatibleClientOptions) -> Any:
+def get_openai_compatible_sync_client(
+    options: OpenAICompatibleClientOptions,
+) -> Any:
     """Get or create cached OpenAI-compatible sync client (shared instance by option key)."""
     key = _build_cache_key("sync", options)
     if key in _CLIENT_CACHE:
@@ -116,7 +120,9 @@ def get_openai_compatible_sync_client(options: OpenAICompatibleClientOptions) ->
         return client
 
 
-def get_openai_compatible_async_client(options: OpenAICompatibleClientOptions) -> Any:
+def get_openai_compatible_async_client(
+    options: OpenAICompatibleClientOptions,
+) -> Any:
     """Get or create cached OpenAI-compatible async client (shared instance by option key)."""
     key = _build_cache_key("async", options)
     if key in _CLIENT_CACHE:

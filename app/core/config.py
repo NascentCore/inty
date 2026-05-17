@@ -78,7 +78,9 @@ def set_langsmith_environment_variables(config: Config) -> None:
     # LangSmith SDK 仍读取进程环境变量；此处根据 YAML 写入 LANGSMITH_TRACING_V2 等。
     langsmith_project = f"{config.app.name}-{config.app.environment.value}"
     if config.app.environment == Environment.LOCAL:
-        langsmith_project = f"{langsmith_project}-{_langsmith_local_username_slug()}"
+        langsmith_project = (
+            f"{langsmith_project}-{_langsmith_local_username_slug()}"
+        )
     tracing_enabled = _langsmith_tracing_v2_enabled(config)
     os.environ["LANGSMITH_TRACING_V2"] = "true" if tracing_enabled else "false"
     os.environ["LANGSMITH_PROJECT"] = langsmith_project
@@ -97,7 +99,9 @@ def set_langsmith_environment_variables(config: Config) -> None:
 set_langsmith_environment_variables(global_config_loaded_from_config_yaml)
 
 os.environ["FAL_KEY"] = global_config_loaded_from_config_yaml.fal.api_key
-has_fal_key = bool((global_config_loaded_from_config_yaml.fal.api_key or "").strip())
+has_fal_key = bool(
+    (global_config_loaded_from_config_yaml.fal.api_key or "").strip()
+)
 logger.debug(
     f"fal_client 读取环境变量：FAL_KEY {'set' if has_fal_key else 'empty'} (value not logged)"
 )

@@ -12,7 +12,9 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.config import global_config_loaded_from_config_yaml as _global_config
+from app.core.config import (
+    global_config_loaded_from_config_yaml as _global_config,
+)
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 from .heartbeat import (
@@ -23,7 +25,9 @@ from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )
-from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
+from app.core.companion_harness.memory.memory_pipeline import (
+    MemoryPipelineConfig,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
@@ -101,8 +105,12 @@ def resolve_turn_runtime_flags(
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> CompanionTurnRuntimeFlags:
     """Normalize user text and turn labels before MemoryStore reads."""
-    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
-    route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
+    tick_proactive = (
+        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    )
+    route_inner_mode = (
+        inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
+    )
     implicit_sign_on_turn = implicit_user_signed_on_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         inner_tick_turn=inner_tick_turn,
@@ -136,7 +144,9 @@ def _companion_tail_user_body_for_llm(
     implicit_sign_on_turn: bool,
 ) -> str:
     """Tail **user** message body only (no wall-clock lines; those go in a separate system slice)."""
-    return USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
+    return (
+        USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
+    )
 
 
 def _companion_user_time_context_system_for_llm(
@@ -150,7 +160,9 @@ def _companion_user_time_context_system_for_llm(
     ctx = None
     if implicit_signal_bundle and implicit_signal_bundle.client_time:
         ctx = implicit_signal_bundle.client_time.model_dump(exclude_none=True)
-    return build_companion_user_time_context_system_content(ctx, enabled=enabled)
+    return build_companion_user_time_context_system_content(
+        ctx, enabled=enabled
+    )
 
 
 def load_companion_turn_state(

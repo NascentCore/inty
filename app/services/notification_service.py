@@ -58,7 +58,10 @@ async def create_notification_template(
 
 
 async def query_templates(
-    db: AsyncSession, skip: int = 0, limit: int = 20, is_active: Optional[bool] = None
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 20,
+    is_active: Optional[bool] = None,
 ) -> Tuple[List[NotificationTemplate], int]:
     """
     分页查询通知模板列表
@@ -95,7 +98,8 @@ async def query_notifications(
     """
     # 构建基础查询
     stmt = select(UserNotification).filter(
-        UserNotification.user_id == query.user_id, UserNotification.deleted_at.is_(None)
+        UserNotification.user_id == query.user_id,
+        UserNotification.deleted_at.is_(None),
     )
 
     # 添加过滤条件
@@ -162,14 +166,18 @@ async def send_notification(
             rendered_image_urls = []
             if template.image_urls:
                 for image_url in template.image_urls:
-                    rendered_image_url = Template(image_url).render(**request.params)
+                    rendered_image_url = Template(image_url).render(
+                        **request.params
+                    )
                     rendered_image_urls.append(rendered_image_url)
 
             # Render link URLs
             rendered_link_urls = []
             if template.link_urls:
                 for link_url in template.link_urls:
-                    rendered_link_url = Template(link_url).render(**request.params)
+                    rendered_link_url = Template(link_url).render(
+                        **request.params
+                    )
                     rendered_link_urls.append(rendered_link_url)
 
         except Exception as e:
@@ -365,7 +373,9 @@ async def send_fcm_multicast(
             if invalid_tokens:
                 try:
                     await db.execute(
-                        delete(DeviceToken).where(DeviceToken.token.in_(invalid_tokens))
+                        delete(DeviceToken).where(
+                            DeviceToken.token.in_(invalid_tokens)
+                        )
                     )
                     await db.commit()
                     logger.debug(f"已清理 {len(invalid_tokens)} 个无效 token")
@@ -382,7 +392,9 @@ async def send_fcm_multicast(
                             )
                         )
                         if invalid_user_ids:
-                            await _mark_users_with_invalid_tokens(db, invalid_user_ids)
+                            await _mark_users_with_invalid_tokens(
+                                db, invalid_user_ids
+                            )
                 except Exception as e:
                     logger.error(f"清理无效 token 失败: {str(e)}")
                     logger.error(f"错误堆栈: {traceback.format_exc()}")
@@ -421,7 +433,9 @@ async def send_fcm_data_only(
     """
     try:
         if dry_run:
-            logger.info(f"[DRY RUN] FCM 数据消息测试模式：验证消息格式，不会实际发送")
+            logger.info(
+                f"[DRY RUN] FCM 数据消息测试模式：验证消息格式，不会实际发送"
+            )
 
         # 1. 获取所有设备 token
         tokens = await user_service.get_users_device_tokens(db, user_ids)
@@ -528,7 +542,9 @@ async def send_fcm_data_only(
             if invalid_tokens:
                 try:
                     await db.execute(
-                        delete(DeviceToken).where(DeviceToken.token.in_(invalid_tokens))
+                        delete(DeviceToken).where(
+                            DeviceToken.token.in_(invalid_tokens)
+                        )
                     )
                     await db.commit()
                     logger.debug(f"已清理 {len(invalid_tokens)} 个无效 token")
@@ -543,7 +559,9 @@ async def send_fcm_data_only(
                             )
                         )
                         if invalid_user_ids:
-                            await _mark_users_with_invalid_tokens(db, invalid_user_ids)
+                            await _mark_users_with_invalid_tokens(
+                                db, invalid_user_ids
+                            )
                 except Exception as e:
                     logger.error(f"清理无效 token 失败: {str(e)}")
                     logger.error(f"错误堆栈: {traceback.format_exc()}")
@@ -574,7 +592,9 @@ async def _mark_users_with_invalid_tokens(
     try:
         now = datetime.now(UTC)
         stmt = (
-            update(User).where(User.id.in_(user_ids)).values(fcm_token_invalid_at=now)
+            update(User)
+            .where(User.id.in_(user_ids))
+            .values(fcm_token_invalid_at=now)
         )
         await db.execute(stmt)
         await db.commit()

@@ -24,7 +24,10 @@ def _read_bearer_token(token_path: str) -> str | None:
         with open(token_path, encoding="utf-8") as f:
             raw = f.read()
     except OSError as exc:
-        print(f"error: cannot read token file {token_path!r}: {exc}", file=sys.stderr)
+        print(
+            f"error: cannot read token file {token_path!r}: {exc}",
+            file=sys.stderr,
+        )
         return None
     tok = raw.strip()
     if not tok:
@@ -112,7 +115,9 @@ def run_list(
         if not isinstance(a, dict):
             print("error: agent entry is not an object", file=stderr)
             return 1
-        print(str(a.get("id", "")), str(a.get("name", "")), sep="\t", file=stdout)
+        print(
+            str(a.get("id", "")), str(a.get("name", "")), sep="\t", file=stdout
+        )
     return 0
 
 

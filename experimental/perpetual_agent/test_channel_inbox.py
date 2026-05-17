@@ -5,7 +5,9 @@ import logging
 import pytest
 
 from experimental.perpetual_agent.channel_inbox import TelegramInbox
-from experimental.perpetual_agent.telegram_channel import TelegramIncomingMessage
+from experimental.perpetual_agent.telegram_channel import (
+    TelegramIncomingMessage,
+)
 
 
 def _msg(
@@ -105,12 +107,18 @@ def test_drain_merge_multiple_lines_in_one_user_message() -> None:
     n = inbox.drain_into_llm_messages(messages, merge_batches=True)
     assert n == 2
     assert messages[0]["role"] == "user"
-    assert "first" in messages[0]["content"] and "second" in messages[0]["content"]
+    assert (
+        "first" in messages[0]["content"] and "second" in messages[0]["content"]
+    )
 
 
 @pytest.fixture
-def caplog_channel_inbox(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
-    caplog.set_level(logging.INFO, logger="experimental.perpetual_agent.channel_inbox")
+def caplog_channel_inbox(
+    caplog: pytest.LogCaptureFixture,
+) -> pytest.LogCaptureFixture:
+    caplog.set_level(
+        logging.INFO, logger="experimental.perpetual_agent.channel_inbox"
+    )
     return caplog
 
 
@@ -147,5 +155,7 @@ def test_drain_poll_timeout_override_passed_to_api() -> None:
         ]
     )
     inbox = TelegramInbox(bot_api=api, poll_timeout_seconds=99, bound_chat_id="42")  # type: ignore[arg-type]
-    inbox.drain_into_llm_messages([], merge_batches=True, poll_timeout_override=0)
+    inbox.drain_into_llm_messages(
+        [], merge_batches=True, poll_timeout_override=0
+    )
     assert api.calls == [(None, 0)]

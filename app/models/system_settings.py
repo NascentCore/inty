@@ -33,7 +33,10 @@ class SystemSettings(Base):
     key = Column(String(100), primary_key=True, comment="配置键名")
     value = Column(Text, nullable=False, comment="配置值")
     value_type = Column(
-        Enum(SettingType), nullable=False, default=SettingType.STRING, comment="值类型"
+        Enum(SettingType),
+        nullable=False,
+        default=SettingType.STRING,
+        comment="值类型",
     )
     category = Column(
         Enum(SettingCategory),
@@ -53,7 +56,9 @@ class SystemSettings(Base):
 
     # 时间戳
     created_at = Column(
-        DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
+        DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        comment="创建时间",
     )
     updated_at = Column(
         DateTime(timezone=True), onupdate=sa.text("now()"), comment="更新时间"

@@ -211,7 +211,9 @@ async def _run(
                     )
                     return (d, pair_message)
 
-        results = await asyncio.gather(*[_extract_one(uid, aid) for uid, aid in pairs])
+        results = await asyncio.gather(
+            *[_extract_one(uid, aid) for uid, aid in pairs]
+        )
         for d, pair_message in results:
             if d is not None:
                 memories.append(d)
@@ -294,7 +296,9 @@ async def _run(
 
 def _load_pairs_messages_from_file(
     path: Path,
-) -> tuple[list[tuple[str, str]], dict[tuple[str, str], list[tuple[str, str]]], dict]:
+) -> tuple[
+    list[tuple[str, str]], dict[tuple[str, str], list[tuple[str, str]]], dict
+]:
     """读入 --messages-output 写出的 JSON，返回 (pairs 有序列表, (user_id, agent_id) -> messages, query 元数据)。"""
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
@@ -418,7 +422,9 @@ async def _run_query(
     """仅从 memory 表查询已有节日记忆并写 JSON，不执行抽取。"""
     _ensure_config(config)
     from app.db.session import AsyncSessionLocal
-    from app.services.festival_memory_service import query_festival_memories_from_db
+    from app.services.festival_memory_service import (
+        query_festival_memories_from_db,
+    )
 
     async with AsyncSessionLocal() as db:
         memories = await query_festival_memories_from_db(
@@ -445,7 +451,8 @@ def main(
         str, cyclopts.Parameter(name="--festival-name", help="节日名称")
     ],
     festival_date: Annotated[
-        str, cyclopts.Parameter(name="--festival-date", help="节日日期 YYYY-MM-DD")
+        str,
+        cyclopts.Parameter(name="--festival-date", help="节日日期 YYYY-MM-DD"),
     ],
     output: Annotated[
         Optional[str],
@@ -458,7 +465,8 @@ def main(
         Optional[str], cyclopts.Parameter(name="--prompt", help="抽取提示词")
     ] = None,
     prompt_file: Annotated[
-        Optional[str], cyclopts.Parameter(name="--prompt-file", help="从文件读取提示词")
+        Optional[str],
+        cyclopts.Parameter(name="--prompt-file", help="从文件读取提示词"),
     ] = None,
     timezone: Annotated[str, cyclopts.Parameter(name="--timezone")] = "UTC",
     min_rounds: Annotated[int, cyclopts.Parameter(name="--min-rounds")] = 50,
@@ -469,10 +477,14 @@ def main(
             help="仅处理前 count 个 (user, agent) 对，不传则处理全部；便于测试",
         ),
     ] = None,
-    config: Annotated[Optional[str], cyclopts.Parameter(name="--config")] = None,
+    config: Annotated[
+        Optional[str], cyclopts.Parameter(name="--config")
+    ] = None,
     query: Annotated[
         bool,
-        cyclopts.Parameter(name="--query", help="仅查询 memory 表已有结果，不执行抽取"),
+        cyclopts.Parameter(
+            name="--query", help="仅查询 memory 表已有结果，不执行抽取"
+        ),
     ] = False,
     messages_output: Annotated[
         Optional[str],
@@ -566,7 +578,9 @@ def main(
             output_path=output_path,
             config=config,
             limit=limit,
-            messages_output_path=Path(messages_output) if messages_output else None,
+            messages_output_path=(
+                Path(messages_output) if messages_output else None
+            ),
             parallel_workers=parallel_workers,
             llm_model_id=llm,
         )

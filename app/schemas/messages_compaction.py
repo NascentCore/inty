@@ -14,7 +14,9 @@ class CompactedMessageItem(BaseModel):
 
 
 class MessagesCompactionPayload(BaseModel):
-    source_session_id: str = Field(..., description="Chat session that was compacted")
+    source_session_id: str = Field(
+        ..., description="Chat session that was compacted"
+    )
     max_messages_limit: int = Field(
         ..., description="Current chat history window limit used for truncation"
     )
@@ -25,5 +27,6 @@ class MessagesCompactionPayload(BaseModel):
         ..., description="Number of compacted message items"
     )
     compacted_messages: List[CompactedMessageItem] = Field(
-        default_factory=list, description="Compacted messages that preserve key context"
+        default_factory=list,
+        description="Compacted messages that preserve key context",
     )

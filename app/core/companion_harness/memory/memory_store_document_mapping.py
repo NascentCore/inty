@@ -40,11 +40,15 @@ class CompanionMemoryDocumentKind(str, Enum):
     MEMORY_DAILY_RAW = "memory_daily_raw"  # episodic: memory/daily/<date>.md
     MEMORY_DAY_SUMMARY = "memory_day_summary"  # gist: memory/<date>.md
     COMPANION_MEMORY_PIPELINE_JSON = "companion_memory_pipeline_json"
-    COMPANION_CONTEXT_COMPACTION_STATE_JSON = "companion_context_compaction_state_json"
+    COMPANION_CONTEXT_COMPACTION_STATE_JSON = (
+        "companion_context_compaction_state_json"
+    )
     COMPANION_SCHEDULE_TASKS_JSON = "companion_schedule_tasks_json"
     COMPANION_RUNTIME_EVENTS_JSONL = "companion_runtime_events_jsonl"
     INTY_V2_MEMORY_PIPELINE_JSON = "inty_v2_memory_pipeline_json"
-    INTY_V2_CONTEXT_COMPACTION_STATE_JSON = "inty_v2_context_compaction_state_json"
+    INTY_V2_CONTEXT_COMPACTION_STATE_JSON = (
+        "inty_v2_context_compaction_state_json"
+    )
     INTY_V2_SCHEDULE_TASKS_JSON = "inty_v2_schedule_tasks_json"
     CHAT_LOGS_MD = "chat_logs_md"
 
@@ -76,7 +80,10 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "context.json": (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
     "ai_private.md": (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
     "ai_private.jsonl": (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
-    "tool_background.jsonl": (CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL, None),
+    "tool_background.jsonl": (
+        CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL,
+        None,
+    ),
     "generated_images/index.jsonl": (
         CompanionMemoryDocumentKind.GENERATED_IMAGES_INDEX_JSONL,
         None,

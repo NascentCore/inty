@@ -42,7 +42,9 @@ class DeletionCheckResponse(BaseModel):
 
     can_delete: bool = Field(..., description="是否可以删除")
     error_message: Optional[str] = Field(None, description="错误信息")
-    active_subscription: Optional[bool] = Field(None, description="是否有活跃订阅")
+    active_subscription: Optional[bool] = Field(
+        None, description="是否有活跃订阅"
+    )
 
     class Config:
         json_schema_extra = {
@@ -70,7 +72,9 @@ class UserDeletionLogSchema(BaseModel):
     subscription_status_at_deletion: Optional[str] = Field(
         None, description="删除时订阅状态"
     )
-    related_data_action: Optional[str] = Field(None, description="关联数据处理方式")
+    related_data_action: Optional[str] = Field(
+        None, description="关联数据处理方式"
+    )
     created_at: datetime = Field(..., description="日志创建时间")
     processed_at: Optional[datetime] = Field(None, description="处理完成时间")
     processor_id: Optional[str] = Field(None, description="处理者ID")

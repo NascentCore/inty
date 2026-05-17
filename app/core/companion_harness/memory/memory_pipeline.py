@@ -18,7 +18,10 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
 )
-from app.core.companion_harness.companion.utc import local_date_str, local_iso_ts
+from app.core.companion_harness.companion.utc import (
+    local_date_str,
+    local_iso_ts,
+)
 
 from .memory_store import MemoryStore
 from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
@@ -129,7 +132,9 @@ def _bump_memory_pipeline_turn(store: MemoryStore) -> int:
     prev = int(data.get("turns_completed", 0))
     n = prev + 1
     data["turns_completed"] = n
-    store.write_document(rel, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    store.write_document(
+        rel, json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    )
     return n
 
 
@@ -161,7 +166,9 @@ def _merge_soul_frozen_appearance(curator_out: str, frozen: str) -> str:
         raise ValueError(
             "SOUL curator output must contain the frozen appearance marker exactly once"
         )
-    return curator_out.replace(_SOUL_FROZEN_APPEARANCE_MARKER, frozen.rstrip("\n"), 1)
+    return curator_out.replace(
+        _SOUL_FROZEN_APPEARANCE_MARKER, frozen.rstrip("\n"), 1
+    )
 
 
 def _clip(s: str, n: int) -> str:
@@ -218,7 +225,8 @@ def _raw_for_summary_prompt(raw: str) -> str:
     if len(raw) <= _RAW_FOR_SUMMARY_MAX:
         return raw
     return (
-        "(Earlier lines omitted; tail only.)\n\n" + raw[-(_RAW_FOR_SUMMARY_MAX - 80) :]
+        "(Earlier lines omitted; tail only.)\n\n"
+        + raw[-(_RAW_FOR_SUMMARY_MAX - 80) :]
     )
 
 

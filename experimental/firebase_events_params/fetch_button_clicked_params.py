@@ -16,7 +16,9 @@ import sys
 from pathlib import Path
 from typing import List, Sequence, Tuple
 
-from app.core.config import global_config_loaded_from_config_yaml as global_config
+from app.core.config import (
+    global_config_loaded_from_config_yaml as global_config,
+)
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.analytics.data_v1beta.types import (
     DateRange,
@@ -108,7 +110,9 @@ def print_rows(rows: Sequence[Tuple[str, str, str, str]]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="查询 Firebase GA4 事件的参数分布。")
+    parser = argparse.ArgumentParser(
+        description="查询 Firebase GA4 事件的参数分布。"
+    )
     parser.add_argument(
         "--property-id",
         required=True,
