@@ -8,7 +8,8 @@
 
 ## 与 Inty 的关系（探索性）
 
-长期伴侣可能需要从演示中持续学技能且不伤既有能力；SDFT 是「仅演示、无 reward」的 on-policy 路径，与 companion harness 无直接耦合，仅供研究对照。
+长期伴侣可能需要从演示中持续学技能且不伤既有能力；SDFT 是「仅演示、无 reward」的 on-policy 路径，当前与 companion harness 无直接耦合。
+长期可能用于优化 toocall 模型的工具调用准确度、效率，或其他能力指标。
 
 ## 本 PR 范围
 
