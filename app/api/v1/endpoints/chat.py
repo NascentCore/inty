@@ -327,7 +327,6 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                     agent_id=agent_id,
                     request=merged,
                     current_user=current_user,
-                    app_version_code=app_version_code,
                     subscription_svc=subscription_svc,
                     voice_svc=voice_svc,
                     companion_background_sink=companion_ws.background_sink,
@@ -2240,7 +2239,6 @@ async def _agent_chat_ws_completions_impl(
     agent_id: str,
     request: ChatCompletionRequest,
     current_user: UserSchema,
-    app_version_code: Optional[int],
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService,
     companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
@@ -2250,11 +2248,11 @@ async def _agent_chat_ws_completions_impl(
 ) -> dict:
     """One companion chat turn for ``/api/v1/chat/ws`` (production WebSocket path).
 
-    Intentionally duplicates the ``chat_route == \"websocket\"`` branch of
-    ``_agent_chat_completions_impl`` until cleanup converges the two.
+    Companion kernel + wire envelope only. HTTP-era extras (surprise snap, festival/daily
+    memory prompts in-frame, premium preview, legacy agent runtime) stay on
+    ``_agent_chat_completions_impl``.
     """
-    # TODO(cleanup-ws-http-chat-impl): Deduplicate with _agent_chat_completions_impl;
-    # extract shared _assemble_chat_completion_payload for post-turn finalize.
+    # TODO(cleanup-ws-http-chat-impl): Deduplicate post-turn finalize with HTTP impl where shared.
     try:
         request_handling_timer = Timer("请求处理")
         logger.debug(
@@ -2285,13 +2283,6 @@ async def _agent_chat_ws_completions_impl(
         logger.debug(
             f"聊天请求最后一条用户消息: has_multimodal={isinstance(last_user_message, list)}, text_length={len(last_user_text)}"
         )
-        user_time_context = (
-            request.user_time_context.model_dump(exclude_none=True)
-            if request.user_time_context
-            else None
-        )
-        if user_time_context == {}:
-            user_time_context = None
 
         effective_local_id = (
             request.local_id or request.message_id or ""
@@ -2314,9 +2305,6 @@ async def _agent_chat_ws_completions_impl(
         if not agent_data:
             logger.error(f"Agent数据未找到: {chat.agent_id}")
             raise HTTPException(status_code=404, detail="Agent not found")
-
-        with log_time(f"获取 Agent 实例: {chat.agent_id}"):
-            await agent_manager.get_agent(agent_data)
 
         session_id = generate_session_id(str(chat.id))
 
@@ -2591,7 +2579,6 @@ async def _agent_chat_ws_completions_impl(
                 else f"[multimodal parts={len(response_content_parts or [])}]"
             )
             logger.debug(f"Agent聊天响应成功: {response_preview}...")
-            subscription_actions = None
 
             try:
                 read_count = await mark_user_push_notifications_as_read(
@@ -2657,14 +2644,6 @@ async def _agent_chat_ws_completions_impl(
         except Exception as e:
             logger.warning(f"记录聊天使用情况失败: {str(e)}")
 
-        surprise_snap_message_id = None
-        try:
-            surprise_snap_message_id = await try_trigger_surprise_snap(
-                db, session_id, current_user.id, agent_id
-            )
-        except Exception as e:
-            logger.warning(f"Surprise Snap 触发失败: {e}")
-
         latest_message_info = None
         try:
             if ai_message_id is not None:
@@ -2693,36 +2672,6 @@ async def _agent_chat_ws_completions_impl(
         except Exception as e:
             logger.warning(f"获取最新用户消息ID失败: {str(e)}")
 
-        delivered_prompts = []
-        if is_festival_memory_enabled(app_version_code):
-            try:
-                with log_time(
-                    f"投递节日记忆提示: user_id={current_user.id}, agent_id={agent_id}"
-                ):
-                    delivered_prompts = await deliver_festival_memories_for_user_agent(
-                        db, current_user.id, agent_id
-                    )
-            except Exception as e:
-                await db.rollback()
-                logger.warning(f"投递节日记忆提示失败: {e}")
-                delivered_prompts = []
-
-        delivered_daily_prompts = []
-        if is_daily_memory_enabled(app_version_code):
-            try:
-                with log_time(
-                    f"投递日常记忆提示: user_id={current_user.id}, agent_id={agent_id}"
-                ):
-                    delivered_daily_prompts = (
-                        await deliver_daily_memories_for_user_agent(
-                            db, current_user.id, agent_id
-                        )
-                    )
-            except Exception as e:
-                await db.rollback()
-                logger.warning(f"投递日常记忆提示失败: {e}")
-                delivered_daily_prompts = []
-
         data = _build_chat_response(
             response_text_content,
             response_content_parts,
@@ -2732,62 +2681,9 @@ async def _agent_chat_ws_completions_impl(
             request,
             source_imate_id=request.target_imate_id,
             user_message_id=user_message_id,
-            subscription_actions=subscription_actions,
+            subscription_actions=None,
             client_local_id=effective_local_id,
         )
-
-        if delivered_prompts:
-            msg_ids = [
-                item["message_id"]
-                for item in delivered_prompts
-                if item.get("message_id") is not None
-            ]
-            infos_map = await chat_history_service.get_ai_message_infos_by_ids(
-                db, msg_ids
-            )
-            for item in delivered_prompts:
-                msg_id = item.get("message_id")
-                info = infos_map.get(msg_id) if msg_id is not None else None
-                message = _build_festival_prompt_choice_message(item, info)
-                idx = len(data["choices"])
-                data["choices"].append(
-                    {"index": idx, "message": message, "finish_reason": "stop"}
-                )
-
-        if delivered_daily_prompts:
-            msg_ids = [
-                item["message_id"]
-                for item in delivered_daily_prompts
-                if item.get("message_id") is not None
-            ]
-            infos_map = await chat_history_service.get_ai_message_infos_by_ids(
-                db, msg_ids
-            )
-            for item in delivered_daily_prompts:
-                msg_id = item.get("message_id")
-                info = infos_map.get(msg_id) if msg_id is not None else None
-                message = _build_daily_prompt_choice_message(item, info)
-                idx = len(data["choices"])
-                data["choices"].append(
-                    {"index": idx, "message": message, "finish_reason": "stop"}
-                )
-
-        if surprise_snap_message_id is not None:
-            info = await chat_history_service.get_surprise_snap_message_display_info(
-                db, surprise_snap_message_id
-            )
-            if info is not None:
-                unlocked_ids = await get_unlocked_surprise_snap_message_ids(
-                    db, current_user.id
-                )
-                message = _build_surprise_snap_choice_message(
-                    info,
-                    unlocked_message_ids=unlocked_ids,
-                )
-                idx = len(data["choices"])
-                data["choices"].append(
-                    {"index": idx, "message": message, "finish_reason": "stop"}
-                )
 
         timing_message = request_handling_timer.stop()
         logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")
@@ -3820,7 +3716,6 @@ async def chat_completions_websocket(
                             agent_id=websocket_request.agent_id,
                             request=merged_request,
                             current_user=current_user,
-                            app_version_code=app_version_code,
                             subscription_svc=subscription_svc,
                             voice_svc=voice_svc,
                             companion_background_sink=companion_ws.background_sink,
