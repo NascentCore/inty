@@ -4,6 +4,8 @@ flags into what the model sees as system role(s) before user/assistant messages.
 
 from __future__ import annotations
 
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from app.core.companion_harness.experience_profile import (
@@ -40,6 +42,39 @@ def _inner_tick_proactive_chat(
 
 # 与 memory_store_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
 _MEMORYSTORE_PATH_TOOLS_INTRO_ZH = "路径工具（memory_store_*）访问本会话持久化档案（MemoryStore），类 POSIX 路径，并非用户设备上的文件夹。"
+
+_REPO_ROOT = Path(__file__).resolve().parents[5]
+
+_TOOL_SIDE_COMPACT_DEBUG = (
+    "app/core/companion_harness/companion/prompts/contracts/TOOL_SIDE_COMPACT.debug.md"
+)
+_TOOL_SIDE_COMPACT_PROD = (
+    "app/core/companion_harness/companion/prompts/contracts/TOOL_SIDE_COMPACT.prod.md"
+)
+_TOOL_BACKGROUND_FIRST_ROUND_DEBUG = (
+    "app/core/companion_harness/companion/prompts/contracts/"
+    "TOOL_BACKGROUND_FIRST_ROUND.debug.md"
+)
+_TOOL_BACKGROUND_FIRST_ROUND_PROD = (
+    "app/core/companion_harness/companion/prompts/contracts/"
+    "TOOL_BACKGROUND_FIRST_ROUND.prod.md"
+)
+_CHAT_BRANCH_MIRRORED_TOOLS_DEBUG = (
+    "app/core/companion_harness/companion/prompts/contracts/"
+    "CHAT_BRANCH_MIRRORED_TOOLS.debug.md"
+)
+_CHAT_BRANCH_MIRRORED_TOOLS_PROD = (
+    "app/core/companion_harness/companion/prompts/contracts/"
+    "CHAT_BRANCH_MIRRORED_TOOLS.prod.md"
+)
+
+
+@lru_cache(maxsize=None)
+def _read_contract(repo_rel_path: str) -> str:
+    path = _REPO_ROOT / repo_rel_path
+    if not path.is_file():
+        raise FileNotFoundError(f"missing system contract: {repo_rel_path}")
+    return path.read_text(encoding="utf-8").rstrip()
 
 
 def _prod_runtime_implementation_boundary_clause() -> str:
@@ -147,31 +182,9 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
 
 
 def _output_contract_text_chat_branch_mirrored_tools() -> str:
-    tool_slow_path = (
-        "读档案、联网、生图、`companion_runtime_inspect` 等须核对或慢步骤。"
-        if inty_runtime_mode_is_debug()
-        else "读档案、联网、生图等须核对或慢步骤。"
-    )
-    impl_detail = (
-        "可核对事实由并行工具路自愿调用 `companion_runtime_inspect` 取得 JSON 后再由该路收口。\n\n"
-        if inty_runtime_mode_is_debug()
-        else f"{_prod_runtime_implementation_boundary_clause()}\n\n"
-    )
-    return (
-        "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致\n\n"
-        "你与**并行工具路**是同一人格的两种速度：本路优先低延迟外显；工具路负责"
-        + tool_slow_path
-        + "对用户的事实立场、边界与态度必须一致，禁止「一路拒绝、一路照做」的分裂。\n\n"
-        "本路 **API 不带工具**（禁止在本路发起任何 tool_calls），系统提示里也可能未展开完整 TOOLS 操作说明，但你仍须遵守：凡应以持久化档案原文、检索结果或工具返回为准的问题，"
-        "不得以「无法读取」「不能向你展示内部文件」等说法抢先否定并行路即将执行的核对；"
-        "不要编造档案内容；若并行路会给出依据或原文，本路只用简短自然的承接语（可表示细节马上对齐），"
-        "或将 `user_facing_reply` 留空/极短，把可核对正文交给工具路落点。\n\n"
-        "当用户询问**当前模型、调用侧参数、真实注入的 system/对话栈**等须可核验的实现细节时："
-        "本路只给即时、克制的衔接语，**不得**输出具体模型名、参数或栈细节，**不得**暗示已在无工具返回前完成自省；"
-        + impl_detail
-        + "当用户请求生图、改图、联网检索、持久化文档核对等工具型任务时：不要拒绝，不要宣称已完成或编造结果；"
-        "一句承接即可。保持简洁有温度，避免机械列表堆砌。"
-    )
+    if inty_runtime_mode_is_debug():
+        return _read_contract(_CHAT_BRANCH_MIRRORED_TOOLS_DEBUG)
+    return _read_contract(_CHAT_BRANCH_MIRRORED_TOOLS_PROD)
 
 
 def _repl_tool_contract_image_generation_clause() -> str:
@@ -343,53 +356,15 @@ def _inner_tick_turn_section() -> str:
 
 
 def _tool_side_compact_directive() -> str:
-    tool_list = (
-        "（联网检索、生图/改图、档案、持久化约定文档路径工具、companion_runtime_inspect 等）"
-        if inty_runtime_mode_is_debug()
-        else "（联网检索、生图/改图、档案、持久化约定文档路径工具等）"
-    )
     if inty_runtime_mode_is_debug():
-        runtime_line = (
-            "若用户问当前模型名、调用参数、真实请求内容或可核验的运行时状态，"
-            "须自愿调用 companion_runtime_inspect 再作答；"
-        )
-    else:
-        runtime_line = _prod_runtime_implementation_boundary_clause() + " "
-    return (
-        "## 工具侧（后台 / 系统 2）\n\n"
-        "本回合须优先根据用户**最后一轮**与**上文**判断是否需要调用工具"
-        + tool_list
-        + "。若需要，必须先调用工具并依据返回作答；"
-        "不要仅用角色扮演替代未执行的工具。"
-        + runtime_line
-        + "快路径一句「我去看看 / 稍等」**不等于**已完成核验，你仍须在适当时机发出 tool_calls。\n\n"
-        "与并行快思考路径同一立场：若快路径仅有短承接、未下事实断言，你可在工具依据上完整作答；"
-        "若快路径已有表态，非经档案或工具返回明确要求修正，不要随意推翻，避免同一轮两路口径冲突。"
-        "若上下文末尾有一条来自快思考路径的 **`assistant`** 用户可见回复，须按该句口径衔接。"
-    )
+        return _read_contract(_TOOL_SIDE_COMPACT_DEBUG)
+    return _read_contract(_TOOL_SIDE_COMPACT_PROD)
 
 
 def _tool_background_first_round_skip_contract_text() -> str:
-    return (
-        "## 工具路首轮\n\n"
-        "在**异步工具后台**下，首轮 `chat.completions` 有两种模式（由服务端与上下文决定，你须自行对齐）：\n\n"
-        "**模式 A（并行快思考已注入）**：若对话末尾出现一条额外的 **`assistant`** 正文，"
-        "那是并行快思考路径（前台）已对用户说过的话；你须与其口径一致：需要工具则调；"
-        + (
-            "若用户索要**可核验**的运行时/模型/实现细节而快路径仅有短承接，你仍须自愿调用 "
-            "`companion_runtime_inspect`（不得以空话代替）。"
-            if inty_runtime_mode_is_debug()
-            else ""
-        )
-        + "若快路径已在澄清、等待用户选择或明确拒绝执行，不要擅自用工具推翻或抢答；"
-        "不要输出与快路径重复的长篇角色扮演正文。\n\n"
-        "**模式 B（快思考让位）**：若**没有**上述注入的 `assistant` 行，首轮可能被设为 "
-        "`tool_choice=required`：必须在**同一条** assistant 消息里发出至少一条 `tool_calls`；"
-        "不要输出对用户可读的长篇角色扮演正文（并行 chat 路已把可见话术让给工具路）。\n\n"
-        "在**未被强制**出工具的首轮（自动模式）且你判定本回合**不需要**任何工具时："
-        "`content` 可留空或极简，仍不要写长篇对用户可见正文。\n"
-        "工具环内后续轮次与**收尾**消息仍遵循上文「工具环收尾：结构化信封」。\n"
-    )
+    if inty_runtime_mode_is_debug():
+        return _read_contract(_TOOL_BACKGROUND_FIRST_ROUND_DEBUG)
+    return _read_contract(_TOOL_BACKGROUND_FIRST_ROUND_PROD)
 
 
 def _tool_background_final_json_routing_contract_text() -> str:
