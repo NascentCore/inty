@@ -20,6 +20,7 @@ maintenance agents can fix the highest-impact item first.
   catches broad `Exception` while waiting for prefill completion in
   `_flush_after_prefill`, then returns without logging. Log unexpected wait
   failures while still allowing cancellation to stop the background task.
+  Claimed in `cursor/agent-maintenance-tasks-4b37`.
 - [ ] Google 2.4 "Exceptions": `/app/services/voice_cache_service.py`
   suppresses rollback failures with `except Exception: pass` in the save and
   access-stat update paths. Log rollback failure context so voice cache database
@@ -27,7 +28,7 @@ maintenance agents can fix the highest-impact item first.
 - [ ] Google 2.4 "Exceptions": `/app/services/push_notification_service.py`
   silently returns the original avatar URL when mobile image transformation
   fails. Log the transformation failure so push image delivery regressions are
-  observable.
+  observable. Claimed in `cursor/agent-maintenance-tasks-4b37`.
 - [ ] Google 2.4 "Exceptions": `/app/services/memory_extraction_service.py`
   silently drops malformed metadata and messages with broad `Exception`
   fallbacks while reading chat history. Narrow expected JSON/data errors or log
@@ -125,7 +126,7 @@ maintenance agents can fix the highest-impact item first.
 - [ ] Google 2.14 "True/False Evaluations":
   `/tools/scripts/create_email_password_user.py` uses SQLAlchemy
   `User.deleted_at == None`. Prefer `User.deleted_at.is_(None)` for explicit
-  SQL `IS NULL` semantics.
+  SQL `IS NULL` semantics. Claimed in `cursor/agent-maintenance-tasks-4b37`.
 
 ### Open violations
 
@@ -151,4 +152,5 @@ maintenance agents can fix the highest-impact item first.
   option.
 - [ ] Google 2.14 "True/False Evaluations": `/app/api/v1/endpoints/auth.py`
   uses SQLAlchemy `User.deleted_at == None`. Prefer `User.deleted_at.is_(None)`
-  for explicit SQL `IS NULL` semantics.
+  for explicit SQL `IS NULL` semantics. Claimed in
+  `cursor/agent-maintenance-tasks-4b37`.
