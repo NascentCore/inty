@@ -54,9 +54,9 @@ def do_PUT(self):  # WSGI name, so pylint: disable=invalid-name
 
 1. **ty agentic loop**：按 [Pyrefly agentic loop](https://pyrefly.org/blog/pyrefly-agentic-loop/) 的模式，用已有 `uv run ty check` 落地（不引入 Pyrefly）——Cursor skill、根 `AGENTS.md` 或 harness AGENTS 的「改 Python 后必须 ty check → 修错 → 再跑」、可选 Stop hook；参考 [pyrefly_hooks_demo](https://github.com/kinto0/pyrefly_hooks_demo)。
 2. **pre-commit**：black + pylint + 可选 ty。
-2. **`tools/scripts/lint-python.sh`**：与 `fmt.sh` 对称的一键 check / `--fix`。
-3. **fmt 对齐**：`fmt.sh` 与定时 format workflow 使用 `pyproject.toml` 80 列。
-4. **CI**：`ci_backend.yaml` 增加 lint（可先 `pylint --errors-only`）。
-5. **Cloud Agent**：[`cursor-cloud-environment.md`](cursor-cloud-environment.md) 增加 `uv sync --group dev`。
-6. **消噪 / 格式化 PR**：全库 black 80、pylint 配置收紧。
-7. **Pyink**（可选）：替换 Black。
+3. **`tools/scripts/lint-python.sh`**：与 `fmt.sh` 对称的一键 check / `--fix`。
+4. **fmt 对齐**：`fmt.sh` 与定时 format workflow 使用 `pyproject.toml` 80 列。
+5. **CI**：`ci_backend.yaml` 增加 lint（可先 `pylint --errors-only`）。
+6. **Cloud Agent**：[`cursor-cloud-environment.md`](cursor-cloud-environment.md) 增加 `uv sync --group dev`。
+7. **消噪 / 格式化 PR**：全库 black 80、pylint 配置收紧。
+8. **Pyink**（可选）：替换 Black。
