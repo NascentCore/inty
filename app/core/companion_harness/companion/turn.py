@@ -90,7 +90,9 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
 )
-from app.core.companion_harness.tools.companion_tools import WRITABLE_RELATIVE_PATHS
+from app.core.companion_harness.tools.companion_tools import (
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+)
 from app.core.companion_harness.tools.runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     build_turn_runtime_config_dict,
@@ -560,7 +562,7 @@ async def run_turn(
                         execute_tool_call_fn=repl_execute_tool_call,
                         client=llm_client.sync_client_for_route("tool"),
                         chat_completions_sync=llm_client.chat_completions_sync,
-                        write_allowlist=WRITABLE_RELATIVE_PATHS,
+                        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
                         repository_only_store_text=repository_only_store_text,
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
