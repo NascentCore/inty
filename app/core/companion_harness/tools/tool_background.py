@@ -69,7 +69,7 @@ from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
 from .companion_tool_runtime import (
-    REPL_WRITABLE_RELATIVE_PATHS,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     execute_tool_call,
     openai_assistant_message_dict,
     round_includes_generation_tool,
@@ -695,7 +695,7 @@ async def _run_background_tool_loop(
         allow = (
             write_allowlist
             if write_allowlist is not None
-            else REPL_WRITABLE_RELATIVE_PATHS
+            else MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
         )
 
         async def execute_tool_call(

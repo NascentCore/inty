@@ -90,8 +90,8 @@ _TOOL_TAGS_BY_NAME: dict[str, frozenset[str]] = {
 # memory_store_read_document：可选 max_chars 上限，避免单次 tool 返回撑爆上下文。
 MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 
-# REPL 对话轮允许整文件覆盖写入的相对路径（根目录约定文档；不含 transcript/context 等）
-REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
+# memory_store_write_document：模型可整文件覆盖写入的根目录约定稿（不含 transcript/context 等）
+MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
     {
         "IDENTITY.md",
         "MEMORY.md",
@@ -102,7 +102,7 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
 )
 
 
-# TODO(product): ai_private.jsonl is ORM-mapped but not in REPL_WRITABLE_RELATIVE_PATHS; model
+# TODO(product): ai_private.jsonl is ORM-mapped but not in MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST; model
 # cannot memory_store_write_document it until allowlist or a dedicated append tool exists.
 def _latest_generated_image_http_url_from_index(store: MemoryStore) -> str | None:
     for row in reversed(list_image_asset_records(store)):
@@ -832,7 +832,7 @@ def build_openai_repl_tools(
     *, interactive_bootstrap_active: bool = False
 ) -> list[dict[str, Any]]:
     """
-    REPL 对话轮：用户档案追加、LivingSphere/TechnoCore 事件落库、工作区文档读写（写入仅限 REPL_WRITABLE_RELATIVE_PATHS）。
+    伴侣对话轮：用户档案追加、LivingSphere/TechnoCore 事件落库、工作区文档读写（写入仅限 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST）。
     """
     disable_status = os.getenv(
         "INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL", ""
@@ -886,8 +886,8 @@ def build_openai_repl_tools(
             wfn = dict(w["function"])
             wfn["description"] = (
                 "Create or overwrite a UTF-8 logical document in MemoryStore. "
-                "In REPL, only these root files are writable: "
-                + ", ".join(sorted(REPL_WRITABLE_RELATIVE_PATHS))
+                "Only these root files are writable via this tool: "
+                + ", ".join(sorted(MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST))
                 + ". When the user explicitly asks to change how you relate, boundaries, or "
                 "persistent preferences, read the current file first (e.g. SOUL.md, STYLE.md, USER.md), "
                 "then write the full updated content. Do not use for transcript.jsonl or context.json."
@@ -1220,17 +1220,18 @@ def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     return [by_name[n] for n in _INNER_TICK_REPL_TOOL_NAMES]
 
 
-def _repl_write_allowed(
+def _memory_store_write_document_allowlist_reject(
     store: MemoryStore, relative_path: str, write_allowlist: frozenset[str]
 ) -> str | None:
     """若不允许写入则返回错误信息字符串，否则 None。"""
+    _ = store
     try:
         rel_posix = _tool_rel_posix_from_arg(relative_path)
     except ValueError as exc:
         return f"ERROR: {exc}"
     if rel_posix not in write_allowlist:
         return (
-            "ERROR: REPL memory_store_write_document only allows: "
+            "ERROR: memory_store_write_document only allows: "
             + ", ".join(sorted(write_allowlist))
             + f"; got {rel_posix!r}"
         )
@@ -1260,7 +1261,7 @@ async def _dispatch(
         tool_memory_store_mkdir=tool_memory_store_mkdir,
         tool_user_profile_record=tool_user_profile_record,
         parse_optional_max_chars=_parse_optional_max_chars,
-        repl_write_allowed=_repl_write_allowed,
+        write_document_allowlist_reject=_memory_store_write_document_allowlist_reject,
     )
     if memory_store_dispatch_result is not None:
         return memory_store_dispatch_result
