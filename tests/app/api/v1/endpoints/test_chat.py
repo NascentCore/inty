@@ -2076,19 +2076,17 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_completions(
+    async def fake_agent_chat_ws_completions(
         *,
         db,
         agent_id,
         request,
         current_user,
-        app_version_code,
         subscription_svc,
-        voice_svc,
-        chat_route,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_heartbeat_ctx=None,
+        implicit_greeting_turn=False,
     ):
         return APIResponse.success(
             data={
@@ -2104,11 +2102,11 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
                 ],
                 "source_imate_id": request.target_imate_id,
             }
-        )
+        ).model_dump(exclude_none=True)
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
@@ -2154,8 +2152,8 @@ def test_chat_websocket_idle_timeout_reads_config(
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_completions(**kwargs):
-        return APIResponse.success(data={"choices": []})
+    async def fake_agent_chat_ws_completions(**kwargs):
+        return APIResponse.success(data={"choices": []}).model_dump(exclude_none=True)
 
     expected_idle = float(
         global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds
@@ -2178,7 +2176,7 @@ def test_chat_websocket_idle_timeout_reads_config(
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
     monkeypatch.setattr(chat_v1.asyncio, "wait_for", fake_wait_for)
 
@@ -2207,19 +2205,17 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_completions(
+    async def fake_agent_chat_ws_completions(
         *,
         db,
         agent_id,
         request,
         current_user,
-        app_version_code,
         subscription_svc,
-        voice_svc,
-        chat_route,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_heartbeat_ctx=None,
+        implicit_greeting_turn=False,
     ):
         captured["effective_user_id"] = current_user.id
         return APIResponse.success(
@@ -2232,11 +2228,11 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
                     }
                 ],
             }
-        )
+        ).model_dump(exclude_none=True)
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
@@ -2263,19 +2259,17 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_completions(
+    async def fake_agent_chat_ws_completions(
         *,
         db,
         agent_id,
         request,
         current_user,
-        app_version_code,
         subscription_svc,
-        voice_svc,
-        chat_route,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_heartbeat_ctx=None,
+        implicit_greeting_turn=False,
     ):
         captured["user_time_context"] = request.user_time_context
         return APIResponse.success(
@@ -2288,11 +2282,11 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
                     }
                 ],
             }
-        )
+        ).model_dump(exclude_none=True)
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
