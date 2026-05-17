@@ -2390,7 +2390,10 @@ def test_chat_websocket_user_signed_out_records_ws_lifecycle_event(
         captured["kwargs"] = kwargs
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
-        return SimpleNamespace(id=42, agent_id=agent_id)
+        return SimpleNamespace(
+            id="aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+            agent_id=agent_id,
+        )
 
     async def fake_get_user_current_subscription(db, user_id):
         return None
@@ -2446,7 +2449,7 @@ def test_chat_websocket_user_signed_out_records_ws_lifecycle_event(
     kw = captured["kwargs"]
     assert kw["user_id"] == "user-so-1"
     assert kw["agent_id"] == "agent-so-1"
-    assert kw["chat_id"] == 42
+    assert kw["chat_id"] == "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
     assert isinstance(kw["resolved_chat_model"], GenAIModel)
     assert kw["received_message_uuid"] == msg_uuid
     tc_box = kw["tc_box"]
@@ -2609,7 +2612,10 @@ def test_chat_websocket_ws_conn_dropped_records_ws_lifecycle_event(
         captured["kwargs"] = kwargs
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
-        return SimpleNamespace(id=42, agent_id=agent_id)
+        return SimpleNamespace(
+            id="bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee",
+            agent_id=agent_id,
+        )
 
     async def fake_get_user_current_subscription(db, user_id):
         return None
@@ -2669,7 +2675,7 @@ def test_chat_websocket_ws_conn_dropped_records_ws_lifecycle_event(
     kw = captured["kwargs"]
     assert kw["user_id"] == "user-wd-1"
     assert kw["agent_id"] == "agent-wd-1"
-    assert kw["chat_id"] == 42
+    assert kw["chat_id"] == "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
     assert kw["dropped_at_utc"] == dropped_at
     assert kw["ws_close_code"] == 1006
     assert kw["ws_close_reason"] == "connection reset"

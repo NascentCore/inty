@@ -61,7 +61,7 @@ def test_record_user_signed_on_appends_jsonl(tmp_path) -> None:
         timezone_label="Asia/Shanghai",
         user_id="u1",
         agent_id="a1",
-        chat_id=7,
+        chat_id="1bcb5cfa-b11a-48cd-8903-c227a1a890a5",
         received_message_uuid="11111111-2222-4333-8444-555555555555",
         ws_conn_id="22222222-3333-4333-8444-555555555555",
     )
@@ -75,7 +75,7 @@ def test_record_user_signed_on_appends_jsonl(tmp_path) -> None:
     assert row["kind"] == "user_signed_on"
     assert row["ts"] == "2026-05-17T09:00:00+08:00"
     assert row["timezone"] == "Asia/Shanghai"
-    assert row["chat_id"] == 7
+    assert row["chat_id"] == "1bcb5cfa-b11a-48cd-8903-c227a1a890a5"
     assert row["received_message_uuid"] == "11111111-2222-4333-8444-555555555555"
 
 

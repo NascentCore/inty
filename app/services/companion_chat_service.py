@@ -157,7 +157,7 @@ def record_companion_user_signed_on_ws_lifecycle(
     *,
     user_id: str,
     agent_id: str,
-    chat_id: str | int,
+    chat_id: str,
     resolved_chat_model: GenAIModel,
     tc_box: list[object | None],
     received_message_uuid: str,
@@ -180,7 +180,7 @@ def record_companion_user_signed_on_ws_lifecycle(
         timezone_label=timezone_label,
         user_id=user_id,
         agent_id=agent_id,
-        chat_id=int(chat_id),
+        chat_id=chat_id,
         received_message_uuid=normalize_received_message_uuid_for_lifecycle(
             received_message_uuid
         ),
@@ -192,7 +192,7 @@ def record_companion_user_signed_out_ws_lifecycle(
     *,
     user_id: str,
     agent_id: str,
-    chat_id: str | int,
+    chat_id: str,
     resolved_chat_model: GenAIModel,
     tc_box: list[object | None],
     received_message_uuid: str,
@@ -215,7 +215,7 @@ def record_companion_user_signed_out_ws_lifecycle(
         timezone_label=timezone_label,
         user_id=user_id,
         agent_id=agent_id,
-        chat_id=int(chat_id),
+        chat_id=chat_id,
         received_message_uuid=normalize_received_message_uuid_for_lifecycle(
             received_message_uuid
         ),
@@ -227,7 +227,7 @@ def record_companion_ws_conn_dropped_ws_lifecycle(
     *,
     user_id: str,
     agent_id: str,
-    chat_id: str | int,
+    chat_id: str,
     resolved_chat_model: GenAIModel,
     tc_box: list[object | None],
     dropped_at_utc: str,
@@ -253,7 +253,7 @@ def record_companion_ws_conn_dropped_ws_lifecycle(
         timezone_label=timezone_label,
         user_id=user_id,
         agent_id=agent_id,
-        chat_id=int(chat_id),
+        chat_id=chat_id,
         received_message_uuid=normalize_received_message_uuid_for_lifecycle(
             received_message_uuid
         ),

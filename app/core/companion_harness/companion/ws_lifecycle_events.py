@@ -35,7 +35,7 @@ class CompanionWsLifecycleEvent(BaseModel):
     kind: CompanionWsLifecycleEventKind
     user_id: str
     agent_id: str
-    chat_id: int
+    chat_id: str
     received_message_uuid: str
     ws_conn_id: str
     ws_close_code: int | str | None = None
@@ -130,7 +130,7 @@ def record_user_signed_on(
     timezone_label: str,
     user_id: str,
     agent_id: str,
-    chat_id: int,
+    chat_id: str,
     received_message_uuid: str,
     ws_conn_id: str,
 ) -> None:
@@ -154,7 +154,7 @@ def record_user_signed_out(
     timezone_label: str,
     user_id: str,
     agent_id: str,
-    chat_id: int,
+    chat_id: str,
     received_message_uuid: str,
     ws_conn_id: str,
 ) -> None:
@@ -178,7 +178,7 @@ def record_ws_conn_dropped(
     timezone_label: str,
     user_id: str,
     agent_id: str,
-    chat_id: int,
+    chat_id: str,
     received_message_uuid: str,
     ws_conn_id: str,
     ws_close_code: int | str,
