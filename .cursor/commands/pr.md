@@ -1,33 +1,30 @@
 # Create PR
 
-Create a well-structured pull request: ensure changes are committed and pushed, then open a PR with a clear description.
+Create a pull request for the current working branch
 
 ## Instructions
 
-- Write pull request title & description in Mandarin（使用中文编写 PR 标题和描述）
-
-## Steps
-
 1. **Prepare branch**
-   - Ensure all changes are committed (with a one-line summary and optional body describing the request and approach).
-   - Push branch to remote.
-   - Verify branch is up to date with the base (e.g. main).
+   - Ensure all changes are committed
+   - Ensure the working branch is up to date with the remote main branch.
+   - Ensure the working branch is pushed to remote.
+   
 
 2. **Write PR title & description**
-   - Summarize changes clearly in PR title; prefer 中文 for title and description when it does not affect correctness.
-   - Include context and motivation.
-   - List breaking changes, config/env changes, and migration steps if any.
+   - 输出中文
+   - Summarize changes clearly in PR title
+   - In PR description, describe changed behaviors from the user's persecptive, include context and motivation.
 
 3. **Create PR**
    - Create the PR with the above title and description.
 
-## Repo conventions (AGENTS.md)
-
-- Small changes: include the user’s original request in the commit message (e.g. in body) and a short note on how it was handled.
-- Do not add a separate summary markdown file for the change.
-
 ## Checklist
 
-- [ ] All intended changes committed and pushed
+- [ ] All intended changes committed
+- [ ] Working branch rebased and pushed
 - [ ] PR title and description written
-- [ ] Manual testing / test steps noted if relevant
+- [ ] PR is created on GitHub
+
+## Output
+
+Just the PR URL.
