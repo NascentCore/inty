@@ -1,0 +1,27 @@
+experiment_name: sdft_smoke
+output_dir: research/sdft/results/smoke
+upstream_dir: research/sdft/upstream
+seed: 42
+model_name: Qwen/Qwen2.5-0.5B-Instruct
+dataset: toy
+train:
+  learning_rate: 5.0e-5
+  num_train_epochs: 1
+  num_prompts_per_batch: 1
+  ref_model_mixup_alpha: 0.01
+  max_prompt_length: 128
+  max_completion_length: 64
+  per_device_train_batch_size: 1
+  use_vllm: false
+  vllm_mode: colocate
+  vllm_gpu_memory_utilization: 0.3
+  sync_ref_model: true
+  ref_model_sync_steps: 1
+  save_steps: 999999
+  max_grad_norm: 1.0
+  report_to: none
+  bf16: false
+eval:
+  max_new_tokens: 64
+  temperature: 0.0
+  model_path: research/sdft/results/smoke

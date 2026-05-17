@@ -1,0 +1,8 @@
+upstream/
+results/*
+!results/validation_log.md
+!results/.gitkeep
+__pycache__/
+*.pt
+*.pth
+wandb/
