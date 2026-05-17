@@ -53,6 +53,8 @@ def _concatenated_system_text(
     return SYSTEM_PROMPT_SLICE_SEPARATOR.join(
         str(m.get("content") or "") for m in msgs
     )
+
+
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.utils.models_catalog import resolve_chat_text_model
 
@@ -282,10 +284,8 @@ def test_runtime_inspect_writes_zip(tmp_path: Path) -> None:
 
 
 def test_system_prompt_prod_no_inspect(monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.core.companion_harness.companion.models import PromptBundle
-
     monkeypatch.setenv("INTY_RUNTIME_MODE", "PROD")
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         PromptBundle(
             identity="i",
             soul="s",
