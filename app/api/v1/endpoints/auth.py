@@ -146,7 +146,7 @@ async def google_login(
 
         # 检查用户是否已存在
         stmt = select(User).where(
-            and_(User.google_id == idinfo["sub"], User.deleted_at == None)
+            and_(User.google_id == idinfo["sub"], User.deleted_at.is_(None))
         )
         result = await db.execute(stmt)
         existing_user = result.scalar_one_or_none()
@@ -198,7 +198,7 @@ async def google_login(
                 f"Checking if email is used by another active account: {idinfo['email']}"
             )
             email_stmt = select(User).where(
-                and_(User.email == idinfo["email"], User.deleted_at == None)
+                and_(User.email == idinfo["email"], User.deleted_at.is_(None))
             )
             email_result = await db.execute(email_stmt)
             existing_email_users = email_result.scalars().all()
@@ -307,7 +307,7 @@ async def email_password_login(
         stmt = select(User).where(
             and_(
                 User.email == email,
-                User.deleted_at == None,
+                User.deleted_at.is_(None),
                 User.auth_type == AuthType.EMAIL,
             )
         )
