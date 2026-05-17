@@ -18,8 +18,8 @@ from app.core.config import (
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 from .heartbeat import (
-    HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+    append_proactive_heartbeat_system_message,
 )
 from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
@@ -286,9 +286,7 @@ def build_companion_turn_prompt_plan(
             messages.append({"role": m.role, "content": m.content})
 
     if tick_proactive:
-        messages.append(
-            {"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE}
-        )
+        append_proactive_heartbeat_system_message(messages)
     time_ctx_system = _companion_user_time_context_system_for_llm(
         implicit_signal_bundle=implicit_signal_bundle,
     )

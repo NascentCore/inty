@@ -61,15 +61,25 @@ def test_build_system_prompt_basic() -> None:
     assert "仅自然语言文本回复" in text
 
 
-def test_build_system_prompt_heartbeat() -> None:
+def test_build_system_prompt_heartbeat_prefix_excludes_turn_clause() -> None:
     text = _concatenated_system_text(
         _minimal_bundle(),
         ContextMeta(),
         inner_tick_turn=True,
         inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
     )
-    assert "## 本轮（陪伴心跳）" in text
-    assert "用户尚未发送新消息" in text
+    assert "## 本轮（陪伴心跳）" not in text
+    assert "仅自然语言文本回复" in text
+
+
+def test_proactive_heartbeat_synthetic_system_message_merged() -> None:
+    from app.core.companion_harness.companion.heartbeat import (
+        HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
+    )
+
+    assert "## 本轮（陪伴心跳）" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
+    assert "用户尚未发送新消息" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
+    assert "[SILENT]" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
 
 
 def test_build_system_prompt_tools() -> None:

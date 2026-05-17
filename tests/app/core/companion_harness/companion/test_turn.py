@@ -199,8 +199,24 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     assert "Time since the user's last message:" in user_tail
     assert "Time since the assistant's last message:" in user_tail
     assert out.transcript_user_content == user_tail
-    assert llm_msgs[-2]["role"] == "system"
-    assert llm_msgs[-2]["content"] == HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
+    hb_system = [
+        m
+        for m in llm_msgs
+        if m.get("role") == "system"
+        and m.get("content") == HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
+    ]
+    assert len(hb_system) == 1
+    hb_idx = llm_msgs.index(hb_system[0])
+    assert hb_idx < len(llm_msgs) - 1
+    assert llm_msgs[hb_idx + 1]["role"] == "user"
+    prefix_system = [
+        m
+        for m in llm_msgs[:hb_idx]
+        if m.get("role") == "system"
+    ]
+    assert not any("## 本轮（陪伴心跳）" in (m.get("content") or "") for m in prefix_system)
+    assert "用户尚未发送新消息" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
+    assert "[SILENT]" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
     assert not any(
         m.get("role") == "user"
         and (m.get("content") or "").strip() == INNER_TICK_SYNTHETIC_USER_TEXT.strip()

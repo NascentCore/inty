@@ -524,21 +524,24 @@ async def _try_handle_ws_user_signed_on_frame(
             subscription = await subscription_svc.get_user_current_subscription(
                 db, current_user.id
             )
-            model_override = select_chat_model(
-                user=current_user, is_subscribed=bool(subscription)
-            )
-            effective_tc_box: list[object | None] = (
-                tc_box if tc_box is not None else []
-            )
-            companion_chat_service.record_companion_user_signed_on_ws_lifecycle(
-                user_id=current_user.id,
-                agent_id=agent_id,
-                chat_id=chat.id,
-                resolved_chat_model=model_override,
-                tc_box=effective_tc_box,
-                received_message_uuid=preset_mid,
-                ws_conn_id=ws_conn_id,
-            )
+            is_subscribed = bool(subscription)
+        else:
+            is_subscribed = False
+        model_override = select_chat_model(
+            user=current_user, is_subscribed=is_subscribed
+        )
+        effective_tc_box: list[object | None] = (
+            tc_box if tc_box is not None else []
+        )
+        companion_chat_service.record_companion_user_signed_on_ws_lifecycle(
+            user_id=current_user.id,
+            agent_id=agent_id,
+            chat_id=chat.id,
+            resolved_chat_model=model_override,
+            tc_box=effective_tc_box,
+            received_message_uuid=preset_mid,
+            ws_conn_id=ws_conn_id,
+        )
         await websocket.send_json(
             ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
         )

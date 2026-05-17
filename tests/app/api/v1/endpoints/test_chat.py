@@ -8,6 +8,7 @@ import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -1665,6 +1666,77 @@ def test_chat_websocket_user_signed_on_records_ws_lifecycle_event(
                 body = websocket.receive_json()
 
     assert body["code"] == 200
+    kw = captured["kwargs"]
+    assert kw["received_message_uuid"] == msg_uuid
+    assert kw["tc_box"][0]["local_time"] == local_time
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+@pytest.mark.asyncio
+async def test_user_signed_on_records_lifecycle_when_subscription_svc_missing(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Lifecycle JSONL must not depend on subscription_svc (matches sign-out / drop)."""
+    from app.core.companion_harness.companion.websocket_coordinator import (
+        CompanionWebSocketCoordinator,
+    )
+
+    captured: dict[str, object] = {}
+
+    def fake_record(**kwargs):
+        captured["kwargs"] = kwargs
+
+    monkeypatch.setattr(
+        companion_chat_service,
+        "record_companion_user_signed_on_ws_lifecycle",
+        fake_record,
+    )
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id, **_kwargs):
+        return SimpleNamespace(id="chat-no-sub-svc", agent_id=agent_id)
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+
+    sent: list[dict] = []
+
+    class FakeWebSocket:
+        async def send_json(self, data):
+            sent.append(data)
+
+    msg_uuid = "dddddddd-bbbb-4ccc-dddd-ffffffffffff"
+    local_time = "2026-05-17T09:30:00+00:00"
+    tc_box: list = [
+        {
+            "local_time": local_time,
+            "timezone": "UTC",
+            "utc_offset_minutes": 0,
+        }
+    ]
+    companion_ws = CompanionWebSocketCoordinator.for_current_loop()
+    handled = await chat_v1._try_handle_ws_user_signed_on_frame(
+        FakeWebSocket(),
+        {
+            "type": "user_signed_on",
+            "agent_id": "agent-no-sub-svc",
+            "message_id": msg_uuid,
+        },
+        db=AsyncMock(),
+        current_user=_make_user(user_id="user-no-sub-svc"),
+        companion_ws=companion_ws,
+        inflight_turn_tracker=None,
+        ws_conn_id="ws-test-no-sub",
+        outbound_queue=None,
+        tc_box=tc_box,
+        subscription_svc=None,
+    )
+
+    assert handled is True
+    assert sent[0] == {"type": "user_signed_on_ack", "ok": True}
     kw = captured["kwargs"]
     assert kw["received_message_uuid"] == msg_uuid
     assert kw["tc_box"][0]["local_time"] == local_time

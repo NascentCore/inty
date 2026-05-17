@@ -2,11 +2,10 @@
 
 ## 范围
 
-本文用三层模型归纳 **伴侣 WebSocket 聊天** 上各类输入/输出的归属：传输帧、回合信封、持久化落点。适用于讨论「某事件会不会进 transcript」「和 `chat_history` 是否一致」「lifecycle 事件落在哪」等架构问题。
+三层模型归纳 **伴侣 WebSocket 聊天** 上输入/输出的归属：传输帧（Wire）、回合信封（Turn）、持久化落点（Persistence）。用于讨论「某事件会不会进 transcript」「和 `chat_history` 是否一致」「lifecycle 事件落在哪」等。
 
-**在范围内**：生产路径 `/api/v1/chat/ws` 上的控制帧、用户消息、MemoryStore 轨迹、`chat_history` 镜像。
-
-**不在范围内**：Gemini Live 音频、legacy 非 companion 聊天、Ops 专用表；字段级协议真源仍以 `app/schemas/chat_websocket.py` 与端点实现为准。
+- **在范围内**：`/api/v1/chat/ws` 控制帧、用户消息、MemoryStore 轨迹、`chat_history` 镜像。
+- **不在范围内**：Gemini Live、legacy 非 companion、Ops 专用表；字段级协议真源见 `app/schemas/chat_websocket.py` 与端点实现。
 
 **See also**：[ARCH.md](ARCH.md) · [MEMORY_STORE.md](MEMORY_STORE.md) · [GLOSSARY.md](GLOSSARY.md)
 
@@ -24,57 +23,43 @@
 | **F** | Agent 状态与记忆 | `IDENTITY`/`SOUL`/…、`context.json`、压实/schedule 快照等（非逐轮 log） |
 | **G** | 客户端可见历史 | 产品 API 的 `chat_history`（应与 D 语义对齐，结构不同） |
 
-**注意**：`transcript.jsonl` 只是 **D** 的主轨；完整 Inty 侧轨迹还需 **D 副轨 + E（自我轨迹）+ F**，客户端时间线看 **G**。
+`transcript.jsonl` 只是 **D** 主轨；完整 Inty 侧轨迹 = **D（含 inner_tick 副轨）+ E + F**；客户端时间线看 **G**。
 
 ---
 
-## 用语：Messages vs structured logs
+## 四类用语
 
-| 用语 | 定义 | 例子 |
-|------|------|------|
-| **Messages（消息）** | 有 role + 内容，进入对话语义或 UI 历史 | C：`chat_history`；D：transcript 的 user/assistant（含 synthetic user） |
-| **Control frames（控制帧）** | WS JSON 信封，多数不持久化为 message | A：`ping`、`user_signed_on`、`*_ack` |
-| **Turn metadata（回合元数据）** | 附着在一次 completion / `run_turn` 上，不单独成「一句用户话」 | B：`ImplicitSignalBundle`、`UserTimeContext` |
-| **Structured logs（结构化日志）** | 追加一行/一条 JSONL，审计或排障；属 **E 自我轨迹** | `runtime_events` 的 `kind`+`ts`（含 WS lifecycle 与 LLM/工具失败） |
+- **Messages（消息）** — 有 role + 内容，进入对话语义或 UI 历史。例：C `chat_history`；D transcript user/assistant（含 synthetic user）。
+- **Control frames（控制帧）** — WS JSON 信封，多数不持久化为 message。例：A `ping`、`user_signed_on`、`*_ack`。
+- **Turn metadata（回合元数据）** — 附着在一次 completion / `run_turn`，不单独成「一句用户话」。例：B `ImplicitSignalBundle`、`UserTimeContext`。
+- **Structured logs（结构化日志）** — 追加一行/一条 JSONL，审计或排障；属 **E**。例：`runtime_events` 的 `kind`+`ts`（WS lifecycle 与 LLM/工具失败）。
 
 ---
 
-## WS lifecycle → `.companion_runtime_events.jsonl`（E，不是 B）
-
-**写入方**：成功 ack 路径上的 `user_signed_on`、`user_signed_out`、`ws_conn_dropped`。
-
-**格式**：每事件一条 JSON（`kind` 为 `user_signed_on` / `user_signed_out` / `ws_conn_dropped`）；`ts` 为 **用户本地墙钟**（优先 `client_context` 的 `local_time`；drop 可在无 `local_time` 时用 `dropped_at_utc`+时区换算）。另含 `timezone`、`user_id`、`chat_id`、`agent_id`、`received_message_uuid`、`ws_conn_id`；drop 另有 `ws_close_code` / `ws_close_reason`。
-
-**不写入**：`ping`、`client_context`、各 `ack`；校验失败的 lifecycle 帧。
-
-**与 B 的区别**：B 在 `tc_box` 内存中消费；lifecycle 行是 **跨连接追加的 JSONL 审计**，默认不进 LLM 对话窗口。
-
-**与 D 的关系**：`user_signed_on` 仍触发问候 → D（synthetic user + assistant）与 G（仅 assistant）。是否已问候看 transcript：**是否存在 `assistant.reply_to == sign-on message_id`**，不在 lifecycle 行里重复记录。
-
-**前置**：客户端宜在 lifecycle 帧之前发送 `client_context`；无本地 `ts` 时服务端跳过 append 但仍 ack。
-
----
-
-## 控制帧 → 回合元数据（A → B，分事件）
+## 事件 → Turn → Persistence
 
 同一 WS 事件在三层可有 **0 / 1 / 多条** 持久化记录；**不是**所有 A 都会变成 B，也 **不是** B 的 duplicate。
 
 | WS 事件（A） | Turn 层（B/C） | 典型 Persistence |
 |--------------|----------------|------------------|
 | `ping` / `pong` / `*_ack` | 无 | 0 |
-| `client_context` | `tc_box` → 后续 turn 的 `UserTimeContext`（B） | 0（帧本身不落库） |
-| `user_signed_on` | RAM `heartbeat_context`；问候轮 `ImplicitSignalBundle.user_signed_on`（B） | E：1× lifecycle JSONL；D：synthetic user + assistant；G：仅 assistant |
+| `client_context` | `tc_box` → 后续 turn 的 `UserTimeContext`（B） | 0（帧本身不落库）；**后续轮**可在 prompt/meta 用时间 |
+| `user_signed_on` | RAM `heartbeat_context`；问候轮 `ImplicitSignalBundle.user_signed_on`（B） | E：1× lifecycle JSONL；D：synthetic user + assistant；**G：仅 assistant（无 user 行）** |
 | `user_signed_out` | 无 B | E：1× lifecycle JSONL；0×D |
 | `ws_conn_dropped` | 无 B | E：1× lifecycle JSONL；0×D |
-| 用户 `chat` 帧（C） | C + B（时间等） | G + D |
-| 服务端 `inner_tick` | 无 Wire | D 或 `transcript_inner_tick.jsonl` |
-| LLM/工具失败 | 无 Wire | E：`runtime_events.jsonl`（failure kind） |
+| 用户 `chat` 帧（C） | C + B（时间等） | G + D；**可选** 经 tools / memory pipeline 更新 **F** |
+| 服务端 `inner_tick` | 无 Wire | D 或 `transcript_inner_tick.jsonl`；**不进** public chat LLM 窗口 |
+| LLM/工具失败 | 无 Wire | E：`runtime_events.jsonl`（failure kind）；**另** loguru 服务端日志（ops，非 MemoryStore） |
 
 **`ChatMessage.presence`（`repl_online` / `repl_offline`）**：transcript 上的预留字段 + 尾部剥离逻辑；**生产 WS 主路径未写入**，与 `user_signed_on/out` 不是同一机制。
+
+**`.companion_runtime_events.jsonl`（WS lifecycle，E）**：成功 ack 路径写入 `user_signed_on` / `user_signed_out` / `ws_conn_dropped`（`kind` + **用户本地墙钟** `ts`，优先 `client_context.local_time`；drop 可无 `local_time` 时用 `dropped_at_utc`+时区）。另含 `timezone`、`user_id`、`chat_id`、`agent_id`、`received_message_uuid`、`ws_conn_id`；drop 另有 `ws_close_code` / `ws_close_reason`。**不写入**：`ping`、`client_context`、各 `ack`、校验失败的 lifecycle 帧。与 **B**：B 在 `tc_box` 内存消费；lifecycle 行跨连接 JSONL 审计，默认不进 LLM。`user_signed_on` 仍走问候 → D/G；是否已问候看 transcript **`assistant.reply_to == sign-on message_id`**，不在 lifecycle 行重复。客户端宜在 lifecycle 前发 `client_context`；无本地 `ts` 时跳过 append 仍 ack。
 
 ---
 
 ## ASCII：三层总览
+
+纯文本图：在 Git、IDE、飞书/Notion 粘贴与 diff 里均可读，不依赖 Mermaid 渲染。与上表互补——上表查落点，下图看端到端帧流、三层布局与同事件多落点。
 
 ```
                     Inty: Wire → Turn → Persistence

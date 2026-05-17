@@ -1,27 +1,37 @@
 """陪伴侧「安静多久可以主动开口」的调度与文案素材。
 
 - **调度**：依据 transcript 里用户消息间隔估计对话节奏，再结合配置（基准安静时长、两次心跳最短间隔、最少 transcript 行数等）计算 ``next_heartbeat_wait_seconds``；不满足前置条件时等价于「暂不开口」。
-- **文案常量**：为主动心跳回合提供 system 侧约束与 user 占位（满足多轮 chat 形态）；占位正文的主路径在 turn 管线里按时间与 transcript 生成，本模块内的字面常量仅作回退。
-- **与回合执行的关系**：真正触发 LLM 时使用内层 tick、``InnerTickMode.PROACTIVE_CHAT``；transcript 对用户占位行打 ``heartbeat`` 标记，供 ``min_gap_sec``（锚上一次心跳 user）与占位文案（如 ``build_proactive_heartbeat_transcript_user_marker``）区分合成 user 与真人 user。具体注入顺序见 companion turn 管线实现。
+- **文案常量**：主动心跳回合的 system 约束（``HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE``）**仅**在 transcript 之后注入；``build_system_messages`` 前缀栈不含心跳块。user 占位主路径为 ``build_proactive_heartbeat_transcript_user_marker``。
+- **与回合执行的关系**：真正触发 LLM 时使用内层 tick、``InnerTickMode.PROACTIVE_CHAT``；transcript 对用户占位行打 ``heartbeat`` 标记，供 ``min_gap_sec``（锚上一次心跳 user）区分合成 user 与真人 user。注入顺序：前缀 → transcript → ``append_proactive_heartbeat_system_message`` → 可选 user-time-context → 尾 user。
 """
 
 from __future__ import annotations
 
 import statistics
 from datetime import datetime, timedelta, timezone
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import ChatMessage, load_transcript_from_store
 
-# 主动心跳回合里追加为 **system**：约束模型在用户未发新消息时如何接话（延续场景、禁工具、禁元话语）。
+# 主动心跳：transcript 后单条 system（续语境、禁工具、[SILENT]）。
 HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE = (
+    "## 本轮（陪伴心跳）\n\n"
+    "用户尚未发送新消息。承接上文**同一语境**：延续当前场景、话题与表达风格，自然续一句或两句，"
+    "勿改换语气或像重新开始一段对话；仅输出自然语言短句，不要调用工具。\n\n"
     "## Proactive Messaging (Heartbeat)\n"
     "- The user has not sent a new message for some time.\n"
-    "- Based on the conversation context, your character's personality, and the time elapsed, decide whether to proactively send a message.\n"
+    "- Based on the conversation context, your character's personality, and the time elapsed, "
+    "decide whether to proactively send a message.\n"
     "- If you have something meaningful, respond appropriately.\n"
     "- If there is nothing appropriate to say right now, respond with exactly: [SILENT]\n"
 )
+
+
+def append_proactive_heartbeat_system_message(messages: list[dict[str, Any]]) -> None:
+    messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE})
 
 # 主动心跳回退文案：当调用方拿不到 ``CompanionTurnResult.transcript_user_content`` 等内核结果时使用；主路径用 ``build_proactive_heartbeat_transcript_user_marker``。
 PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER = (

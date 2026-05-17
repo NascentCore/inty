@@ -233,14 +233,6 @@ def _output_contract_text_interactive_bootstrap_tools(
     return base
 
 
-def _heartbeat_clause() -> str:
-    return (
-        "## 本轮（陪伴心跳）\n\n"
-        "用户尚未发送新消息。承接上文**同一语境**：延续当前场景、话题与表达风格，自然续一句或两句，"
-        "勿改换语气或像重新开始一段对话；仅输出自然语言短句，不要调用工具。"
-    )
-
-
 def _repl_online_ack_clause() -> str:
     return (
         "## 本轮（REPL 会话恢复）\n\n"
@@ -378,9 +370,6 @@ def build_system_messages(
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
         out.append(_system_message(bundle.tools_md.strip()))
-
-    if tick_proactive:
-        out.append(_system_message(_heartbeat_clause()))
 
     if inner_tick_turn and not tick_proactive:
         out.append(
