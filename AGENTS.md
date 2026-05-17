@@ -1,8 +1,4 @@
-<!--
-Meta instructions:
-- UNLESS DIRECTLY INSTRUCTED BY USER, DO NOT EDIT ANY AGENTS.md
-- DIRECT USER INSTRUCTIONS OVERRIDE ALL AGENTS.md
--->
+
 
 # Inty (Intelligent Entity): agentic systems for long-term emotional companionship
 
@@ -65,12 +61,11 @@ such experience is between human users and AI, but they have real-world patterns
 只是，这个“活人”无法进入物理空间；这需要我们通过创新的产品设计，来无限拟真、缩小与用户的距离感，
 如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
 
-
 ## Repo structure
 
 **IMPORTANT: agentic companion and iMate (android, iOS) are under active development, no need of backward compatibility. All others are in maintenance mode and should not be changed.**
 
-- Agentic core
+- Agentic companion core modules
   - [companion_harness](/app/core/companion_harness/): Inty's core agentic scaffolding.
   - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user.
   - [techno_core](/techno_core/)：collective virtual world of all Inty.
@@ -85,16 +80,15 @@ such experience is between human users and AI, but they have real-world patterns
 - Repo agentic harness
   - [.agents](/.agents/) contextual information for your reference
     - [USERS.md](/.agents/USERS.md): Learn user preferences and save them here.
-      Some occasions to learn user preferences:
+    Some occasions to learn user preferences:
       - User corrects your mistake(s)
       - User states what they prefer from your suggested options
     - [work_logs](/.agents/work_logs/): log significant changes.
     - **DO NOT EDIT**: [Guidelines](/.agents/guidelines/) are guidelines in different scenarios
     - Diagramming for docs: [TOOLS.md](/.agents/guidelines/TOOLS.md)
   - [.cursor](/.cursor/) Cursor-specific harness
-- Rest of the repo
-  - Docs for your human partners: markdown files spread across the repo not under `/.agents/`
-  - Do not bother updating affected code under `/experimental/`
+
+**Everything that is outside of companion harness by default should not be used in iMate & websocket chat** `/api/v1/chat/ws`.
 
 ## General instructions
 
@@ -124,11 +118,11 @@ such experience is between human users and AI, but they have real-world patterns
 Critique the code when encounter the follow situations:
 
 - If a simple changes requires scattered changes, that means
-  code that changes together are not grouped together
+code that changes together are not grouped together
 - If writing tests are complicated, that means interface is incoherent,
-  behaviors are not well abstracted
+behaviors are not well abstracted
 - If code is difficult to described in much shorter documentation,
-  that means the code lacks hierarchy.
+that means the code lacks hierarchy.
 
 ### Writing code
 
@@ -156,7 +150,7 @@ Critique the code when encounter the follow situations:
 - 
 - 文档开头讲明 scope，交代完整概念与适用边界；使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
 - **最底层（源码与实现细节）**：
-  document the intention and effect of the code, do not explain how the code works.
+document the intention and effect of the code, do not explain how the code works.
   - Write TODOs close to the code place should be changed.
 - Things do write:
   - higher-logical-level design of components and systems
@@ -174,5 +168,6 @@ tool_bg_idle 是归属到 CompanionSession 上
 
 - **Over engineering**: speculation, defensive programming, optionality, multiple alternatives, etc.
   - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
-    only add configurability the user explicitly requested.
+  only add configurability the user explicitly requested.
   - **Do not add enable/disable knob for new features**: just implement the features.
+
