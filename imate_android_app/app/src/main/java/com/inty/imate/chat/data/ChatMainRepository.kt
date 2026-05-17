@@ -52,19 +52,6 @@ constructor(
         chatWebSocketRemoteDataSource.sendImplicitUserSignedOnFireAndForget(agentId)
     }
 
-    /** Best-effort server-side session reset; clears local chat cache before auth is cleared. */
-    suspend fun signOutFromChatSession(agentId: String?) {
-        val aid = agentId?.trim().orEmpty()
-        if (aid.isNotEmpty()) {
-            try {
-                chatWebSocketRemoteDataSource.sendUserSignedOutFireAndForget(aid)
-            } catch (e: Exception) {
-                LogUtils.d("sendUserSignedOutFireAndForget failed: ${e.message}")
-            }
-        }
-        chatLocalDataSource.clearAllMessages()
-    }
-
     suspend fun connectWebSocketWhenLoggedIn() {
         authRepository.isLogin.distinctUntilChanged().collectLatest { loggedIn ->
             if (loggedIn) {

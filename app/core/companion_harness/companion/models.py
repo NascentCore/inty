@@ -25,7 +25,7 @@ from app.core.companion_harness.runtime_mode import inty_runtime_mode_is_debug
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
 
-AssistantTurnSource = Literal["chat", "inner_tick"]
+AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 CompanionReplyModality = Literal["text", "voice_message"]
 
 

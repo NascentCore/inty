@@ -3,7 +3,8 @@ name: inty-backend-inspect
 description: >-
   General Inty backend investigation: correlate local Ops logs, LangSmith traces, and Postgres
   (DSN from repo config.yaml) using ws_conn_id, trace/run IDs, user_msg_uuid, inty_trace_id.
-  Covers WebSocket / REPL issues and timestamp-specific verification (message.timestamp vs UserTimeContext).
+  Covers WebSocket / REPL issues, stuck tool_background blocking turn_lock, and timestamp-specific
+  verification (message.timestamp vs UserTimeContext).
 ---
 
 # Inspect local Inty backend runtime（通用方法：日志 + LangSmith + 数据库）
@@ -37,7 +38,8 @@ description: >-
 
 ## 何时使用
 
-- REPL 已打印 `user-input message-uuid=…`，长时间没有 `[…] chat …` 助手行，也没有 `chat-ws-error`。
+- REPL 已打印 `user-input message-uuid=…`，长时间没有 `[…] chat …` 助手行，也没有 `chat-ws-error`（含 **inner-tick `[SILENT]` 已出现但仍无 `chat`** 的情况）。
+- 怀疑 **maintenance / proactive inner-tick** 或 **`tool_background`** 占住会话，用户轮在排队。
 - 需要串联 **`user_msg_uuid`**、**`langsmith_trace_id` / `langsmith_run_id`**、**`inty_trace_id`**、**`ws_conn_id`**。
 - LangSmith 上 **`pending`**、或本地日志与 trace **时间对不上**。
 - 需要对照 **DB 落库** 与 **日志 / trace**（例如消息是否写入、`created_at` 是否合理）。
@@ -68,6 +70,7 @@ description: >-
 
 - **先**确认文件**最后一行时间** ≥ 事发时刻；否则结论只能是「此日志无法证明当晚」。
 - `grep`：`ws_conn_id`、`user_msg_uuid`、`inty_trace_id`、`langsmith_trace_id`、`019e` 形态 run id、`session_id`、`agent_id`。
+- 无 `chat` 回复时额外 `grep`：`tool_bg_idle`、`tool_bg_thread_start`、`companion_ws_maintenance_inner_tick`、`companion_ws_proactive_hb`、`invalid_json_response`、`USER_MESSAGE`（WS 已收帧）、`run_turn start` / `companion_chat_turn start`（回合是否真正开跑）。
 
 ### C. LangSmith
 
@@ -116,6 +119,23 @@ LIMIT 30;
 
 **Inner-tick**（proactive / maintenance）可能从连接缓存 **`tc_box`**（最近一次成功 `client_context`）构造隐式时间上下文；若从未成功 `client_context`，模型侧可能缺少用户时间块（见 [`_implicit_signal_bundle_from_ws_tc_box`](../../../app/api/v1/endpoints/chat.py)）。
 
+## 专项：有 `user-input`、无 `chat`（卡住的 `tool_background` + `turn_lock`）
+
+同一 **`ws_conn_id`** 上，[`chat.py`](../../../app/api/v1/endpoints/chat.py) 用 **`companion_ws.turn_lock`** 串行所有 companion 回合（用户消息、greeting、inner-tick）。每轮 [`run_turn`](../../../app/core/companion_harness/companion/turn.py) 在加载 transcript **之前** 会 `await` **`CompanionSession.tool_bg_idle`**（`threading.Event`）；后台 [`tool_background`](../../../app/core/companion_harness/tools/tool_background.py) 启动时 `clear()`，正常结束时 `set()`。
+
+**典型链路（勿把 REPL 的 `inner-tick … [SILENT]` 当成对用户消息的回复）**：
+
+1. **maintenance inner-tick** 拉起 `tool_background`（常为 **tool 模型**，如 `moonshotai/kimi-k2.6`），前台很快结束，但 **tool 线程未收尾** → `tool_bg_idle` 长期为 cleared。
+2. 下一次 **proactive inner-tick** 或 **用户 `USER_MESSAGE`** 拿到 `turn_lock` 后，在 `run_turn` 开头 **空等** `tool_bg_idle`（默认超时 ≈ **`INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC`**，未设则跟 `async_chat_front_timeout_sec`，常 **600s**）。
+3. 等待期间：日志里 **有** WS `< TEXT … USER_MESSAGE`，**无** 该 `user_msg_uuid` 的 `run_turn start` / LangSmith parent / `chat_history` 行（回合尚未开跑）。
+4. 超时后出现 **`run_turn tool_bg_idle wait timed out after 600.00s scope=…`**；若僵死 tool 线程仍在，**下一轮用户 chat 可能再次卡在同一个 wait**。
+
+**LangSmith 侧**：找事发前几分钟的 **`agentic_companion_inner_tick` … maintenance** 父 trace（常 **pending**）；子 span **`tool_background_initial`** 为 **error**（如 `invalid_json_response`）或仍 **pending**——这是 **inner-tick 后台 tool**，不是用户 `user_msg_uuid` 的 chat trace。用 [`download_run.py`](../../../tools/scripts/download_run.py) 拉全 trace 核对。
+
+**快速定性**：用户发消息后 ~10 分钟仍无 `chat`，且日志有 `tool_bg_idle wait timed out` → 优先怀疑 **卡死的 maintenance tool_bg**，而非「tracing 未开」或 REPL 未发送。
+
+**临时恢复**：重启 backend 或断开 WS 重连（清 session / 杀 `inty-v2-tool-bg` 线程）后再复测用户轮。
+
 ## 按 `user_msg_uuid` 扫 LangSmith（仓库根 + venv）
 
 ```bash
@@ -134,7 +154,8 @@ python3 tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py \
 |--------------|-----------|------|--------|
 | 否 | （任意） | 无 error | 换真实日志或确认 `.inty/inty.log`（或 `--workspace` 对应路径）；勿从旧文件推断。 |
 | 是 | 对应 UUID + chat **pending** | 无下行 | 查 reload/crash/OOM、上游 LLM 超时。 |
-| 是 | **无** run | 无 error | 核对 project/API key、tracing 开关、消息是否到达。 |
+| 是 | **无** 该 `user_msg_uuid` 的 run，但有 **maintenance** trace **pending** + `tool_bg_idle` / `tool_bg_thread_start` | 无 `chat`、可有 inner-tick `[SILENT]` | **卡住的 tool_background + `turn_lock` 排队**；见上文专项；勿误判 tracing。 |
+| 是 | **无** run | 无 error | 核对 project/API key、tracing 开关；并确认 WS 是否已收 `USER_MESSAGE`、`run_turn start` 是否出现（未开跑 vs 未 tracing）。 |
 | 是 | success | 无下行 | 查客户端解析/sideband（少见）。 |
 | （任意） | （任意） | **`chat-ws-error`** | 读 `code`/`message`、鉴权与业务错误。 |
 

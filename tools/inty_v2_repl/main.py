@@ -200,6 +200,7 @@ def _repl_inner_tick_activity_display(activity: str) -> str:
 
 # TODO(ux): Prefer meta_data.source == tool_bg (e.g. label "toolcall") before inner_tick_activity so
 # maintenance tool_bg frames are not misread as foreground inner-tick lines.
+# TODO(simplification): This translation is unnecessary, just display the text provided by the backend.
 def _repl_assistant_banner_label(
     ids: Mapping[str, str] | None,
     *,
@@ -221,12 +222,16 @@ def _repl_assistant_banner_label(
         return "toolcall"
     if src == "inner_tick":
         return "inner-tick"
+    if src == "greeting":
+        return "greeting"
     if src == "chat":
         return "chat"
     if ids:
         raw = ids.get("assistant_source", "chat")
         if raw == "inner_tick":
             return "inner-tick"
+        if raw == "greeting":
+            return "greeting"
         if raw == "chat":
             return "chat"
     return "chat"
@@ -428,7 +433,8 @@ def _emit_repl_notice_over_prompt(*, prompt: str, buf: str, text: str) -> None:
     sys.stdout.flush()
 
 
-def _drain_repl_notice_queue_before_blocking_input(notice_q: queue.Queue[str]) -> None:
+def _drain_repl_notice_queue(notice_q: queue.Queue[str]) -> None:
+    """Print control-plane notices (signed_on/out ack, transport) queued from the WS thread."""
     while True:
         try:
             text = notice_q.get_nowait()
@@ -463,7 +469,7 @@ def _readline_backend_ws_with_sideband(
     """
     sel = _posix_select_module_for_stdin()
     if sel is None:
-        _drain_repl_notice_queue_before_blocking_input(notice_q)
+        _drain_repl_notice_queue(notice_q)
         line = input(prompt)
         _drain_downlink_queue(bridge, outbound_t0)
         return line
@@ -511,7 +517,7 @@ def _readline_backend_ws_with_sideband(
                     [sys.stdin], [], [], _BACKEND_WS_SIDEBAND_POLL_SEC
                 )
             except (ValueError, OSError):
-                _drain_repl_notice_queue_before_blocking_input(notice_q)
+                _drain_repl_notice_queue(notice_q)
                 line = input(prompt)
                 _drain_downlink_queue(bridge, outbound_t0)
                 return line
@@ -688,6 +694,7 @@ def _repl_run_backend_ws_branch(
         _repl_interactive_backend_ws_loop(bridge, agent_resolved, repl_notice_q)
     finally:
         bridge.stop()
+        _drain_repl_notice_queue(repl_notice_q)
 
 
 _REPL_APP_HELP = (

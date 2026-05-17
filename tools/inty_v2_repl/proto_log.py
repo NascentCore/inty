@@ -9,14 +9,14 @@ from loguru import logger
 
 _CONFIGURED = False
 
-# 与 app.utils.config.LOGGING_TIME_FORMAT 中 ZZ 一致，便于与 REPL 横幅对齐
-_PROTO_TIME = "{time:YYYY-MM-DD HH:mm:ss.SSS ZZ}"
+# REPL 终端展示：本地墙钟，精确到秒，不含时区偏移。
+_PROTO_TIME = "{time:YYYY-MM-DD HH:mm:ss}"
 
 
 def repl_wall_ts_str() -> str:
-    """本地墙钟时间字符串，与 proto log / 后端 LOGGING_TIME_FORMAT（ZZ）一致。"""
+    """本地墙钟时间字符串，供 stdout 横幅与 stderr proto log 共用。"""
     dt = datetime.now().astimezone()
-    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + dt.strftime(" %z")
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def configure_proto_log(*, stderr_level: str = "INFO") -> None:

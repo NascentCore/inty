@@ -15,7 +15,11 @@ from app.core.companion_harness.companion.llm_chat_runtime import tool_path_chat
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.models import ContextMeta, InnerTickMode
+from app.core.companion_harness.companion.models import (
+    ContextMeta,
+    InnerTickMode,
+    PromptBundle,
+)
 from app.core.companion_harness.tools.runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     build_turn_runtime_config_dict,
@@ -32,9 +36,23 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
 )
 from app.core.companion_harness.tools.runtime_inspect_tool import tool_companion_runtime_inspect
-from app.core.companion_harness.companion.prompts.system_messages import (
-    build_system_prompt,
+from app.core.companion_harness.companion.prompt_slices import (
+    SYSTEM_PROMPT_SLICE_SEPARATOR,
 )
+from app.core.companion_harness.companion.prompts.system_messages import (
+    build_system_messages,
+)
+
+
+def _concatenated_system_text(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    **kwargs: Any,
+) -> str:
+    msgs = build_system_messages(bundle, context, **kwargs)
+    return SYSTEM_PROMPT_SLICE_SEPARATOR.join(
+        str(m.get("content") or "") for m in msgs
+    )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.utils.models_catalog import resolve_chat_text_model
 
@@ -283,7 +301,7 @@ def test_system_prompt_prod_no_inspect(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_build_system_prompt_tools_contract_mentions_inspect() -> None:
     from app.core.companion_harness.companion.models import PromptBundle
 
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         PromptBundle(
             identity="i",
             soul="s",
@@ -300,7 +318,7 @@ def test_build_system_prompt_tools_contract_mentions_inspect() -> None:
 def test_tool_side_compact_mentions_inspect() -> None:
     from app.core.companion_harness.companion.models import PromptBundle
 
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         PromptBundle(
             identity="i",
             soul="s",

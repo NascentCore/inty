@@ -1,10 +1,10 @@
 # User preferences
 
-**Users' general preferences, not specific to individuals.**
+**通用偏好（不针对个人）；不含具体子系统、协议字段或文件路径示例。**
 
-- **不做防御式编程**：不要为「万一」加可选分支、吞错、静默降级或多余 try/except；与仓库 `AGENTS.md` 里「不臆造旋钮 / 不过度防御」一致。**灾难性前提缺失**（缺文件、空种子模板、不可恢复的配置）应在清晰边界上**尽快硬失败**（如 `FileNotFoundError`、对不变量的 `assert`），而不是打日志后继续跑。
-- **避免组合爆炸的内部机制**：不要堆叠多个独立 on/off、`*_every_n`、条件门控等，让运行时状态呈 \(2^k\) 级组合却无人实际配置（例：记忆管线曾有的 `*_disabled` + 分文档 `*_every_n` + SOUL 信号/ bootstrap lock）。默认一条清晰路径；真需要调参时只加**用户会用的**、**已验证需要**的单一旋钮。
-- Companion WebSocket 问候：`user_signed_on` **必须**带 RFC4122 **`message_id`**，缺则 `user_signed_on_ack` 失败；不用 `messageType: IMPLICIT_USER_SIGNED_ON` 聊天帧。
+- **不做防御式编程**：不要为「万一」加可选分支、吞错、静默降级或多余 try/except；与仓库 `AGENTS.md` 里「不臆造旋钮 / 不过度防御」一致。**灾难性前提缺失**应在清晰边界上**尽快硬失败**，而不是打日志后继续跑。
+- **避免组合爆炸的内部机制**：不要堆叠多个独立 on/off、周期门控、条件分支，使运行时状态呈组合爆炸却无人配置。默认一条清晰路径；真需要调参时只加**用户会用的**、**已验证需要**的单一旋钮。
+- **技术文档：归属优先**：说明并发、锁、会话或后台任务时，**先写「挂在谁身上」**（连接、进程内会话对象、scope 等），**再写机制**；粒度与归属一致，避免把连接级与 scope 级原语混为一谈。
 
 ## 人类队友（Human Partners）
 
@@ -12,9 +12,10 @@
 
 - Companion Harness 开发者，Inty 构思者，1984 年出生，计算机科学博士，14 年专业工作经验（Amazon、Google、AI startups）
 - 对代码理解深刻
-- 记忆管线等 harness 配置：**从未用过**细粒度开关；倾向删掉未使用的组合式配置，而非继续维护。
+- 细粒度配置开关：未实际使用则倾向删除，而非继续维护组合式配置。
 
 ### 王琢誉/wangz233
 
 - 产品经理，本科学历，6 年工作经验，多款 AIGC、AI 陪伴产品经验
 - 评价产品体验
+- **iMate 人感 · 隐藏后台概念**（2026-05-17，[飞书](https://applink.feishu.cn/client/message/link/open?token=AmhrKaifiMAEagk76hmAjL4%3D)）：终端用户不应看到或感知 memory、tools 调用、runtime 等 harness/工程语汇——会直接破坏「活人」感；这些概念必须在 **用户可见层包装** 成关系/情绪/日常互动语言（例：「记得」「在想」「稍等」），技术术语只留在 REPL、Ops、日志与内部文档。
