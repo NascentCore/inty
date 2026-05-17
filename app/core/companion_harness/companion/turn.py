@@ -369,10 +369,6 @@ async def run_turn(
                 ),
             )
         )
-        runtime_inspect_set_correlation(
-            {"trace_id": trace_id, "user_msg_uuid": user_msg_uuid}
-        )
-
         langsmith_parent_run = create_companion_turn_root_run(
             inty_trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
@@ -388,6 +384,13 @@ async def run_turn(
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
         if _ls_tid:
             langsmith_trace_acc = _ls_tid
+        corr: dict[str, str] = {
+            "trace_id": trace_id,
+            "user_msg_uuid": user_msg_uuid,
+        }
+        if _ls_tid:
+            corr["langsmith_trace_id"] = _ls_tid
+        runtime_inspect_set_correlation(corr)
         if langsmith_parent_run is not None:
             logger.debug(
                 "langsmith_companion_parent_run run_turn_bind inty_trace_id={} "

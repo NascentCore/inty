@@ -66,6 +66,7 @@ from .image_gate import (
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
 from .runtime_inspect_tool import tool_companion_runtime_inspect
+from app.core.companion_harness.runtime_mode import inty_runtime_mode_is_debug
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.global_services import subscription_service
@@ -173,27 +174,33 @@ _REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[str, ...] = (
 )
 
 
-_BASE_TOOL_REGISTRY = ToolRegistry(
-    (
-        "memory_store_list_paths",
-        "memory_store_read_document",
-        "memory_store_write_document",
-        "memory_store_mkdir",
-        "user_profile_record",
-        TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
-        "schedule_task",
-        "google_web_search",
-        "read_web_page",
-        "phone_call_user",
-        "generate_image",
-        "modify_image",
-        "companion_runtime_inspect",
-        "companion_set_experience_profile",
-        "companion_update_prompt_slice",
-        "companion_bootstrap_user_interactive_complete",
-        "tool_update_agent_status_line",
-    )
+_REPL_TOOL_REGISTRY_BASE_NAMES: tuple[str, ...] = (
+    "memory_store_list_paths",
+    "memory_store_read_document",
+    "memory_store_write_document",
+    "memory_store_mkdir",
+    "user_profile_record",
+    TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
+    "schedule_task",
+    "google_web_search",
+    "read_web_page",
+    "phone_call_user",
+    "generate_image",
+    "modify_image",
+    "companion_set_experience_profile",
+    "companion_update_prompt_slice",
+    "companion_bootstrap_user_interactive_complete",
+    "tool_update_agent_status_line",
 )
+
+_BASE_TOOL_REGISTRY = ToolRegistry(_REPL_TOOL_REGISTRY_BASE_NAMES)
+
+
+def _repl_tool_allowed_names() -> frozenset[str]:
+    names = set(_REPL_TOOL_REGISTRY_BASE_NAMES)
+    if inty_runtime_mode_is_debug():
+        names.add("companion_runtime_inspect")
+    return frozenset(names)
 
 
 def tool_has_tag(tool_name: str, tag: str) -> bool:
@@ -828,6 +835,51 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
     ]
 
 
+def _openai_companion_runtime_inspect_tool_def() -> dict[str, Any]:
+    return {
+        "type": "function",
+        "function": {
+            "name": "companion_runtime_inspect",
+            "description": (
+                "Return a JSON snapshot of the current companion runtime: in-process LLM config, "
+                "last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), "
+                "runtime events, and optionally workspace documents from MemoryStore "
+                "(SOUL, STYLE, USER, MEMORY.md, episodic/gist day paths). "
+                "Writes a debug zip under INTY_OPS_WORKSPACE/runtime_inspect/ and returns "
+                "export_zip_repo_relative_path and export_zip_absolute_path. "
+                "Use when the user asks for verifiable facts about the active model, parameters, or injected "
+                "prompt stack. Tell the user the zip path in natural language; do not read raw JSON aloud."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "max_chars_per_doc": {
+                        "type": "integer",
+                        "description": "Max characters per stored document body (default 8000, min 100).",
+                    },
+                    "max_chars_llm_messages": {
+                        "type": "integer",
+                        "description": (
+                            "Max serialized size for last request messages array "
+                            "(default 120000, min 1000)."
+                        ),
+                    },
+                    "include_store_documents": {
+                        "type": "boolean",
+                        "description": "If false, omit MemoryStore document bodies (default true).",
+                    },
+                    "max_runtime_events": {
+                        "type": "integer",
+                        "description": "Max newest runtime event records to include (default 20, min 0).",
+                    },
+                },
+                "required": [],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+
 def build_openai_repl_tools(
     *, interactive_bootstrap_active: bool = False
 ) -> list[dict[str, Any]]:
@@ -907,49 +959,8 @@ def build_openai_repl_tools(
             out.append(w)
         else:
             out.append(t)
-    out.append(
-        {
-            "type": "function",
-            "function": {
-                "name": "companion_runtime_inspect",
-                "description": (
-                    "Return a JSON snapshot of the current companion runtime: in-process LLM config, "
-                    "last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), "
-                    "runtime events, and optionally workspace documents from MemoryStore "
-                    "(SOUL, STYLE, USER, MEMORY.md, episodic/gist day paths). "
-                    "Use when the user asks for verifiable facts about the active model, parameters, or injected "
-                    "prompt stack. For self-check only: answer the user in natural language without reading "
-                    "this JSON aloud verbatim."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "max_chars_per_doc": {
-                            "type": "integer",
-                            "description": "Max characters per stored document body (default 8000, min 100).",
-                        },
-                        "max_chars_llm_messages": {
-                            "type": "integer",
-                            "description": (
-                                "Max serialized size for last request messages array "
-                                "(default 120000, min 1000)."
-                            ),
-                        },
-                        "include_store_documents": {
-                            "type": "boolean",
-                            "description": "If false, omit MemoryStore document bodies (default true).",
-                        },
-                        "max_runtime_events": {
-                            "type": "integer",
-                            "description": "Max newest runtime event records to include (default 20, min 0).",
-                        },
-                    },
-                    "required": [],
-                    "additionalProperties": False,
-                },
-            },
-        }
-    )
+    if inty_runtime_mode_is_debug():
+        out.append(_openai_companion_runtime_inspect_tool_def())
     out.append(
         {
             "type": "function",
@@ -1246,7 +1257,7 @@ async def _dispatch(
     repository_only_store_text: bool = False,
 ) -> str:
     _ = repository_only_store_text
-    if not _BASE_TOOL_REGISTRY.is_allowed(name):
+    if name not in _repl_tool_allowed_names():
         return f"ERROR: unknown tool {name!r}"
 
     memory_store_dispatch_result = dispatch_memory_store_tool(

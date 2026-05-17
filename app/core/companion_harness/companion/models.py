@@ -20,6 +20,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     ensure_template_seeded_core_documents_in_store,
     load_template_seed_text,
 )
+from app.core.companion_harness.runtime_mode import inty_runtime_mode_is_debug
 
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -177,6 +178,18 @@ def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
     return text
 
 
+def _tools_md_for_runtime_mode(*, max_chars: int) -> str:
+    base = _template_doc_truncated("TOOLS.md", max_chars=max_chars)
+    if not inty_runtime_mode_is_debug():
+        return base
+    extra = _template_doc_truncated("TOOLS.runtime_inspect.md", max_chars=max_chars)
+    if not extra.strip():
+        return base
+    if not base.strip():
+        return extra
+    return base + "\n\n" + extra
+
+
 class PromptBundle(BaseModel):
     identity: str
     soul: str
@@ -287,7 +300,7 @@ def load_prompt_bundle(
         memory_md=memory_long,
         techno_core_md=_read_memory_document_optional(store, "TECHNO_CORE.md"),
         living_sphere_md=_read_memory_document_optional(store, "LIVING_SPHERE.md"),
-        tools_md=_template_doc_truncated("TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS),
+        tools_md=_tools_md_for_runtime_mode(max_chars=_OPTIONAL_DOC_MAX_CHARS),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),

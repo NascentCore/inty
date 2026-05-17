@@ -26,7 +26,7 @@ Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-bui
     INTY_OPS_BEARER_TOKEN_FILE  Where to write the local JWT in --local mode (default: <repo>/.inty_ops_bearer_token).
 
   Flags (any mode):
-    --debug              Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL).
+    --debug              Loguru + uvicorn DEBUG; INTY_RUNTIME_MODE=DEBUG (runtime inspect + zip export).
     --workspace DIR      Local working directory for file log DIR/inty.log (INTY_LOG_FILE); default DIR is .inty under repo root.
                          Existing log file is removed at startup. With --debug: console INFO, file DEBUG.
 
@@ -77,6 +77,8 @@ done
 
 WORKSPACE="${WORKSPACE:-.inty}"
 mkdir -p "$WORKSPACE"
+OPS_WORKSPACE_ABS="$(cd "$REPO_ROOT" && cd "$WORKSPACE" && pwd)"
+export INTY_OPS_WORKSPACE="$OPS_WORKSPACE_ABS"
 LOG_FILE="$WORKSPACE/inty.log"
 
 echo "Starting database migrations..."
@@ -88,6 +90,9 @@ OPS_PORT="${PORT:-8001}"
 
 if [ "$DEBUG" = true ]; then
   export INTY_LOGGING_LEVEL=DEBUG
+  export INTY_RUNTIME_MODE=DEBUG
+else
+  export INTY_RUNTIME_MODE=PROD
 fi
 
 if [[ -e "$LOG_FILE" || -L "$LOG_FILE" ]]; then

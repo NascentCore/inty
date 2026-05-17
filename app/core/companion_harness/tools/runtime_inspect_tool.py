@@ -7,6 +7,7 @@ executions appear in traces; large JSON outputs are summarized via ``process_out
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import Any
 
 from langsmith import traceable
@@ -14,14 +15,30 @@ from langsmith import traceable
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.runtime_events import read_runtime_events
 from app.core.companion_harness.companion.utc import local_date_str
+from app.core.companion_harness.runtime_mode import inty_runtime_mode_is_debug
 
 from .runtime_inspect_context import (
     runtime_inspect_get_bundle,
     runtime_inspect_get_correlation_snapshot,
     runtime_inspect_get_scoped_memory_store,
 )
+from .runtime_inspect_zip_export import (
+    write_runtime_inspect_zip,
+    zip_export_paths,
+)
 
 _LANGSMITH_OUTPUT_PREVIEW_CHARS = 6000
+
+_LLM_DEFAULT_MAX_CHARS_PER_DOC = 8000
+_LLM_DEFAULT_MAX_CHARS_LLM_MESSAGES = 120_000
+_EXPORT_MAX_CHARS_PER_DOC = 200_000
+_EXPORT_MAX_CHARS_LLM_MESSAGES = 500_000
+
+
+@dataclass(frozen=True)
+class _InspectLimits:
+    max_chars_per_doc: int
+    max_chars_llm_messages: int
 
 
 def _langsmith_process_outputs_runtime_inspect(result: str) -> dict[str, Any]:
@@ -134,20 +151,34 @@ def _read_store_optional(
     }
 
 
-@traceable(
-    name="companion_runtime_inspect",
-    run_type="tool",
-    process_outputs=_langsmith_process_outputs_runtime_inspect,
-)
-def tool_companion_runtime_inspect(
-    store: MemoryStore, arguments: dict[str, Any]
-) -> str:
+def _limits_from_arguments(
+    arguments: dict[str, Any],
+    *,
+    default_per_doc: int,
+    default_llm_messages: int,
+) -> _InspectLimits:
     max_chars_per_doc = _parse_optional_int(
-        arguments.get("max_chars_per_doc"), default=8000, minimum=100
+        arguments.get("max_chars_per_doc"),
+        default=default_per_doc,
+        minimum=100,
     )
     max_chars_llm_messages = _parse_optional_int(
-        arguments.get("max_chars_llm_messages"), default=120_000, minimum=1000
+        arguments.get("max_chars_llm_messages"),
+        default=default_llm_messages,
+        minimum=1000,
     )
+    return _InspectLimits(
+        max_chars_per_doc=max_chars_per_doc,
+        max_chars_llm_messages=max_chars_llm_messages,
+    )
+
+
+def build_runtime_inspect_payload(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+    *,
+    limits: _InspectLimits,
+) -> dict[str, Any]:
     include_store_documents = _parse_optional_bool(
         arguments.get("include_store_documents"), default=True
     )
@@ -174,7 +205,7 @@ def tool_companion_runtime_inspect(
             if isinstance(msgs, list):
                 msgs2, trunc = _truncate_messages_for_max_chars(
                     [m for m in msgs if isinstance(m, dict)],
-                    max_chars_llm_messages,
+                    limits.max_chars_llm_messages,
                 )
                 last = {**last, "messages": msgs2, "messages_truncated": trunc}
             out["last_chat_completion_request"] = last
@@ -188,28 +219,28 @@ def tool_companion_runtime_inspect(
         day = local_date_str()
         out["store_documents"] = {
             "context_json": _read_store_optional(
-                eff_store, "context.json", max_chars=max_chars_per_doc
+                eff_store, "context.json", max_chars=limits.max_chars_per_doc
             ),
             "IDENTITY.md": _read_store_optional(
-                eff_store, "IDENTITY.md", max_chars=max_chars_per_doc
+                eff_store, "IDENTITY.md", max_chars=limits.max_chars_per_doc
             ),
             "SOUL.md": _read_store_optional(
-                eff_store, "SOUL.md", max_chars=max_chars_per_doc
+                eff_store, "SOUL.md", max_chars=limits.max_chars_per_doc
             ),
             "STYLE.md": _read_store_optional(
-                eff_store, "STYLE.md", max_chars=max_chars_per_doc
+                eff_store, "STYLE.md", max_chars=limits.max_chars_per_doc
             ),
             "USER.md": _read_store_optional(
-                eff_store, "USER.md", max_chars=max_chars_per_doc
+                eff_store, "USER.md", max_chars=limits.max_chars_per_doc
             ),
             "MEMORY.md": _read_store_optional(
-                eff_store, "MEMORY.md", max_chars=max_chars_per_doc
+                eff_store, "MEMORY.md", max_chars=limits.max_chars_per_doc
             ),
             f"memory/daily/{day}.md": _read_store_optional(
-                eff_store, f"memory/daily/{day}.md", max_chars=max_chars_per_doc
+                eff_store, f"memory/daily/{day}.md", max_chars=limits.max_chars_per_doc
             ),
             f"memory/{day}.md": _read_store_optional(
-                eff_store, f"memory/{day}.md", max_chars=max_chars_per_doc
+                eff_store, f"memory/{day}.md", max_chars=limits.max_chars_per_doc
             ),
         }
         state: dict[str, Any] = {}
@@ -219,11 +250,11 @@ def tool_companion_runtime_inspect(
             if eff_store.read_document_if_exists(mp) is not None:
                 raw = eff_store.read_document_if_exists(mp)
                 if raw is not None:
-                    state[mp] = raw[:max_chars_per_doc]
+                    state[mp] = raw[: limits.max_chars_per_doc]
             if eff_store.read_document_if_exists(cc) is not None:
                 raw2 = eff_store.read_document_if_exists(cc)
                 if raw2 is not None:
-                    state[cc] = raw2[:max_chars_per_doc]
+                    state[cc] = raw2[: limits.max_chars_per_doc]
         out["store_state_json"] = state
 
     out["notes"] = (
@@ -233,4 +264,36 @@ def tool_companion_runtime_inspect(
         "not authoritative MemoryStore documents here; importance scoring contract and consumers are "
         "documented in dual_llm_chat_branch_envelope module docstring."
     )
-    return json.dumps(out, ensure_ascii=False, indent=2) + "\n"
+    return out
+
+
+@traceable(
+    name="companion_runtime_inspect",
+    run_type="tool",
+    process_outputs=_langsmith_process_outputs_runtime_inspect,
+)
+def tool_companion_runtime_inspect(
+    store: MemoryStore, arguments: dict[str, Any]
+) -> str:
+    assert inty_runtime_mode_is_debug()
+    llm_limits = _limits_from_arguments(
+        arguments,
+        default_per_doc=_LLM_DEFAULT_MAX_CHARS_PER_DOC,
+        default_llm_messages=_LLM_DEFAULT_MAX_CHARS_LLM_MESSAGES,
+    )
+    export_limits = _InspectLimits(
+        max_chars_per_doc=_EXPORT_MAX_CHARS_PER_DOC,
+        max_chars_llm_messages=_EXPORT_MAX_CHARS_LLM_MESSAGES,
+    )
+    llm_payload = build_runtime_inspect_payload(
+        store, arguments, limits=llm_limits
+    )
+    export_payload = build_runtime_inspect_payload(
+        store, arguments, limits=export_limits
+    )
+    corr = runtime_inspect_get_correlation_snapshot()
+    zip_path = write_runtime_inspect_zip(payload=export_payload, correlation=corr)
+    export_abs, export_rel = zip_export_paths(zip_path)
+    llm_payload["export_zip_absolute_path"] = export_abs
+    llm_payload["export_zip_repo_relative_path"] = export_rel
+    return json.dumps(llm_payload, ensure_ascii=False, indent=2) + "\n"

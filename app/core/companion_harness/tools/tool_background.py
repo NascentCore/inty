@@ -78,6 +78,7 @@ from .companion_tool_runtime import (
 from .image_gate import list_image_asset_records
 from .runtime_inspect_context import (
     build_last_chat_completion_request_payload,
+    runtime_inspect_set_correlation,
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_thread_overlay_begin,
     runtime_inspect_thread_overlay_end,
@@ -809,6 +810,13 @@ async def _run_background_tool_loop(
         raw_final = _assistant_text_from_completion_response(loop_result.response)
         bg_ls_trace = langsmith_trace_id_from_completion(loop_result.response)
         bg_ls_llm_run = langsmith_llm_run_id_from_completion(loop_result.response)
+        bg_corr: dict[str, str] = {
+            "trace_id": trace_id,
+            "user_msg_uuid": user_msg_uuid,
+        }
+        if bg_ls_trace:
+            bg_corr["langsmith_trace_id"] = bg_ls_trace
+        runtime_inspect_set_correlation(bg_corr)
         appended_turn_msgs = loop_result.messages[len(working_messages) :]
         tool_call_names = _extract_tool_call_names(appended_turn_msgs)
         image_paths = _local_paths_from_tool_messages(loop_result.messages)

@@ -52,6 +52,14 @@ def _isolate_langsmith_test_project(
         yield
 
 
+@pytest.fixture(autouse=True)
+def _debug_runtime_inspect_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("INTY_RUNTIME_MODE", "DEBUG")
+    monkeypatch.setenv("INTY_OPS_WORKSPACE", str(tmp_path))
+
+
 def _run_tool(store, name: str, args: str) -> str:
     return asyncio.run(execute_tool_call(store, name, args))
 
@@ -224,6 +232,52 @@ def test_companion_runtime_inspect_prefers_scoped_memory_store(tmp_path: Path) -
         assert "scoped-soul-body" in data["store_documents"]["SOUL.md"]["text"]
     finally:
         runtime_inspect_end_turn(token)
+
+
+def test_runtime_inspect_writes_zip(tmp_path: Path) -> None:
+    scope = CompanionScope("ri", "a", f"zip-{tmp_path.name}")
+    store = MemoryStore(scope=scope, repository=None)
+    store.write_document("SOUL.md", "zip-soul")
+    token = runtime_inspect_begin_turn()
+    try:
+        runtime_inspect_set_scoped_memory_store(store)
+        runtime_inspect_set_correlation(
+            {"trace_id": "t-zip", "user_msg_uuid": "u-zip-test"}
+        )
+        out = tool_companion_runtime_inspect(store, {})
+        data = json.loads(out)
+        zip_abs = data["export_zip_absolute_path"]
+        zip_rel = data["export_zip_repo_relative_path"]
+        assert zip_abs
+        assert zip_rel
+        zip_path = Path(zip_abs)
+        assert zip_path.is_file()
+        assert zip_path.suffix == ".zip"
+        import zipfile
+
+        with zipfile.ZipFile(zip_path) as zf:
+            names = zf.namelist()
+        assert "inspect_snapshot.json" in names
+        assert "manifest.json" in names
+    finally:
+        runtime_inspect_end_turn(token)
+
+
+def test_system_prompt_prod_no_inspect(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core.companion_harness.companion.models import PromptBundle
+
+    monkeypatch.setenv("INTY_RUNTIME_MODE", "PROD")
+    text = build_system_prompt(
+        PromptBundle(
+            identity="i",
+            soul="s",
+            user_md="u",
+            memory_md="m",
+        ),
+        ContextMeta(),
+        enable_tools=True,
+    )
+    assert "companion_runtime_inspect" not in text
 
 
 def test_build_system_prompt_tools_contract_mentions_inspect() -> None:
