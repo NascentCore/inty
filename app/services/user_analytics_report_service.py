@@ -2,8 +2,12 @@
 """
 用户数据分析预计算报告服务
 
-定时任务调用 compute_and_save_daily_report / compute_and_save_weekly_report，
-将全部用户的聚合统计写入 user_analytics_report 表，供独立日报周报页面快速展示。
+compute_and_save_* 将全部用户聚合写入 user_analytics_report，供评测页只读展示。
+
+调度入口（互斥注意生产日报勿双开）：
+- 生产 IntelliMate 日报：GitHub Actions + run_user_analytics_report.py
+- push worker：push_scheduler_service，默认 user_analytics_report 四项开关均为 false
+- 手动/回填：tools/scripts/run_user_analytics_report.py、backfill_missing_reports
 """
 
 import asyncio
@@ -569,14 +573,28 @@ async def backfill_missing_reports(
     db: AsyncSession,
     days: int = BACKFILL_DAILY_DAYS,
     year: int | None = None,
+    include_daily: bool = True,
+    include_weekly: bool = True,
 ) -> tuple[int, int]:
-    missing_daily = await get_missing_daily_report_dates(db, days=days)
-    if year is not None:
-        missing_weekly = await get_missing_weekly_report_dates_first_half(db, year)
-        scope_desc = f"日报最近 {days} 天、周报当年上半年"
-    else:
-        missing_weekly = await get_missing_weekly_report_dates_past_weeks(db, weeks=7)
-        scope_desc = f"日报最近 {days} 天、周报过去 7 周"
+    """补算缺失日报/周报。push worker 仅在 backfill_enabled 且对应 daily/weekly 开关为 true 时调用。"""
+    missing_daily: list[date] = []
+    if include_daily:
+        missing_daily = await get_missing_daily_report_dates(db, days=days)
+    missing_weekly: list[date] = []
+    if include_weekly:
+        if year is not None:
+            missing_weekly = await get_missing_weekly_report_dates_first_half(db, year)
+        else:
+            missing_weekly = await get_missing_weekly_report_dates_past_weeks(db, weeks=7)
+    scope_parts: list[str] = []
+    if include_daily:
+        scope_parts.append(f"日报最近 {days} 天")
+    if include_weekly:
+        if year is not None:
+            scope_parts.append("周报当年上半年")
+        else:
+            scope_parts.append("周报过去 7 周")
+    scope_desc = "、".join(scope_parts) if scope_parts else "无"
 
     logger.info(
         f"[用户数据分析补算] 补算范围: {scope_desc}; "

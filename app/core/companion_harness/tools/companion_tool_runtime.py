@@ -502,7 +502,6 @@ def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     )
 
 
-
 def _memory_store_write_document_allowlist_reject(
     store: MemoryStore, relative_path: str, write_allowlist: frozenset[str]
 ) -> str | None:

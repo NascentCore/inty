@@ -12,6 +12,7 @@ disable-model-invocation: true
 
 ## Before you start
 
+- **Production daily rollups** come from GitHub Actions (`daily_intellimate_user_activity_report.yaml`), not push worker (`user_analytics_report` defaults all off). See `docs/FR_USER_ANALYTICS_REPORTS.md`.
 - Needs **network access** to the DB host in repo-root `config.yaml` (`database` section). Do **not** paste passwords, DSNs, or full `config.yaml` into chat.
 - Prefer a **read-only** DB role for queries.
 - Repo doc with SQL templates: [tests/docs/TEST_USER_ANALYTICS_REPORT_DB_VERIFICATION.md](../../../tests/docs/TEST_USER_ANALYTICS_REPORT_DB_VERIFICATION.md).
