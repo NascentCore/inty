@@ -143,9 +143,9 @@ class GoogleOAuthConfig(BaseModel):
     client_secret: Optional[str] = None
     redirect_uri: Optional[str] = None
 
+class VerificationConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
 
-@dataclass
-class VerificationConfig:
     code_expire_minutes: int = 5
 
 
@@ -717,7 +717,7 @@ def load_config(path: str) -> Config:
         security=SecurityConfig.model_validate(data.get("security") or {}),
         database=DatabaseSettings.model_validate(data.get("database") or {}),
         google_oauth=GoogleOAuthConfig.model_validate(data.get("google_oauth") or {}),
-        verification=VerificationConfig(**data.get("verification", {})),
+        verification=VerificationConfig.model_validate(data.get("verification") or {}),
         logging=LoggingConfig.model_validate(data.get("logging") or {}),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
         agent=AgentConfig(**data.get("agent", {})),
