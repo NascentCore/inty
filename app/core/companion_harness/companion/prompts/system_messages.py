@@ -301,7 +301,8 @@ def _living_sphere_persistence_clause() -> str:
         "上文 ``LIVING_SPHERE.md`` 是**可读快照**（最终一致）：用户明确要改小家布局、物件、锚点时，"
         f"调用 ``{LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME}`` 记入更新日志，**不要**用 "
         "``memory_store_write_document`` 覆盖 ``LIVING_SPHERE.md``。"
-        "系统在用户回合后的记忆管线里合并进快照（与 MEMORY 慢路径同类预期）。\n"
+        "系统在用户回合后的记忆管线里合并进快照（与 MEMORY 慢路径同类预期）；"
+        "若本回合走异步 tool_background，compact 会等待其收尾后再合并。\n"
         "``TECHNO_CORE.md`` 描述 Inty 集体居留层，**用户不能改写**；勿用 "
         "``techno_core_record_event`` 代替小家布局变更（该工具用于自主节拍/居留层事件日志）。"
     )
@@ -418,8 +419,8 @@ def build_system_messages(
         out.append(_system_message(bundle.techno_core_md.strip()))
     if bundle.living_sphere_md.strip():
         out.append(_system_message(bundle.living_sphere_md.strip()))
-        if not inner_tick_turn:
-            out.append(_system_message(_living_sphere_persistence_clause()))
+    if not inner_tick_turn:
+        out.append(_system_message(_living_sphere_persistence_clause()))
     out.append(_system_message(bundle.user_md.strip()))
 
     if include_significance_perception_slice and not inner_tick_turn:

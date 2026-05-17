@@ -783,6 +783,7 @@ async def run_turn(
             config=mem_cfg,
             trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
+            tool_bg_idle_event=tool_bg_idle_event,
         )
     else:
         _mem_sync_tok = companion_llm_runtime_event_bind_ctx.set(
@@ -805,6 +806,7 @@ async def run_turn(
                 assistant_text=last_text,
                 complete_fn=_complete_fn_sync,
                 config=mem_cfg,
+                tool_bg_idle_event=tool_bg_idle_event,
             )
         finally:
             companion_llm_runtime_event_bind_ctx.reset(_mem_sync_tok)

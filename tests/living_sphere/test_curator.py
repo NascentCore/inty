@@ -5,10 +5,22 @@ from pathlib import Path
 from typing import Any
 
 from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.memory.living_sphere_curator import (
+    LivingSphereCuratorOutputRejected,
+    compact_living_sphere_batch,
+    compact_living_sphere_if_pending,
+    living_sphere_curator_output_rejection_reason,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from living_sphere.curator import compact_living_sphere_if_pending
 from living_sphere.models import LivingSphereUpdate
 from living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown
+
+
+def _valid_md(suffix: str = "") -> str:
+    base = seed_living_sphere_markdown()
+    if suffix:
+        return base.replace("氛围：", f"氛围：{suffix}，", 1)
+    return base
 
 
 def test_curator_merges_pending_into_living_sphere_md(tmp_path: Path) -> None:
@@ -29,11 +41,110 @@ def test_curator_merges_pending_into_living_sphere_md(tmp_path: Path) -> None:
 
     def fake_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
         assert model_role == "memory"
-        return "# LIVING SPHERE\n\nmerged with 台灯\n"
+        return _valid_md("台灯")
 
     assert compact_living_sphere_if_pending(store, fake_complete) is True
     assert "台灯" in store.read_document(LIVING_SPHERE_RELATIVE_PATH)
     state = json.loads(store.read_document(".companion_memory_pipeline.json"))
     assert state["living_sphere_curated_through_update_id"] == u2.update_id
-
     assert compact_living_sphere_if_pending(store, fake_complete) is False
+
+
+def test_curator_drains_more_than_batch_cap_without_skipping(tmp_path: Path) -> None:
+    root = tmp_path / "ls-cap"
+    root.mkdir()
+    store = MemoryStore(
+        scope=CompanionScope("t", "a", str(root.resolve())),
+        repository=None,
+    )
+    store.write_document(LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown())
+    updates = [
+        LivingSphereUpdate(change_request=f"变更-{i}") for i in range(25)
+    ]
+    for u in updates:
+        store.append_jsonl_record(
+            "living_sphere_updates.jsonl",
+            u.model_dump(mode="json"),
+        )
+    calls = 0
+
+    def fake_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
+        nonlocal calls
+        calls += 1
+        return _valid_md(f"batch-{calls}")
+
+    assert compact_living_sphere_if_pending(store, fake_complete) is True
+    assert calls == 2
+    state = json.loads(store.read_document(".companion_memory_pipeline.json"))
+    assert state["living_sphere_curated_through_update_id"] == updates[-1].update_id
+    assert compact_living_sphere_if_pending(store, fake_complete) is False
+
+
+def test_curator_rejects_bad_output_without_advancing_cursor(tmp_path: Path) -> None:
+    root = tmp_path / "ls-reject"
+    root.mkdir()
+    store = MemoryStore(
+        scope=CompanionScope("t", "a", str(root.resolve())),
+        repository=None,
+    )
+    original = seed_living_sphere_markdown()
+    store.write_document(LIVING_SPHERE_RELATIVE_PATH, original)
+    u = LivingSphereUpdate(change_request="加绿植")
+    store.append_jsonl_record(
+        "living_sphere_updates.jsonl",
+        u.model_dump(mode="json"),
+    )
+
+    def fake_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
+        return "too short"
+
+    assert living_sphere_curator_output_rejection_reason("too short") is not None
+    assert compact_living_sphere_if_pending(store, fake_complete) is False
+    assert store.read_document(LIVING_SPHERE_RELATIVE_PATH) == original
+    raw = store.read_document_if_exists(".companion_memory_pipeline.json")
+    assert raw is None or "living_sphere_curated_through_update_id" not in raw
+
+
+def test_curator_skips_malformed_jsonl_lines(tmp_path: Path) -> None:
+    root = tmp_path / "ls-bad-line"
+    root.mkdir()
+    store = MemoryStore(
+        scope=CompanionScope("t", "a", str(root.resolve())),
+        repository=None,
+    )
+    store.write_document(LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown())
+    good = LivingSphereUpdate(change_request="有效变更")
+    store.write_document(
+        "living_sphere_updates.jsonl",
+        "not-json\n"
+        + json.dumps(good.model_dump(mode="json"), ensure_ascii=False)
+        + "\n",
+    )
+
+    def fake_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
+        return _valid_md("有效")
+
+    assert compact_living_sphere_if_pending(store, fake_complete) is True
+    state = json.loads(store.read_document(".companion_memory_pipeline.json"))
+    assert state["living_sphere_curated_through_update_id"] == good.update_id
+
+
+def test_compact_living_sphere_batch_raises_on_rejected_output(tmp_path: Path) -> None:
+    root = tmp_path / "ls-batch-reject"
+    root.mkdir()
+    store = MemoryStore(
+        scope=CompanionScope("t", "a", str(root.resolve())),
+        repository=None,
+    )
+    store.write_document(LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown())
+    batch = [LivingSphereUpdate(change_request="x")]
+
+    def bad_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
+        return "# oops\n\nno markers"
+
+    try:
+        compact_living_sphere_batch(store, batch, bad_complete)
+        raised = False
+    except LivingSphereCuratorOutputRejected:
+        raised = True
+    assert raised

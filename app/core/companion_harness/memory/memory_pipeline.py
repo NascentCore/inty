@@ -7,6 +7,7 @@ import json
 import queue
 import threading
 import time
+from threading import Event
 from collections.abc import Callable
 from typing import Any
 
@@ -20,7 +21,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
 )
 from app.core.companion_harness.companion.utc import local_date_str, local_iso_ts
 
-from living_sphere.curator import compact_living_sphere_if_pending
+from .living_sphere_curator import compact_living_sphere_if_pending
 
 from .memory_store import MemoryStore
 from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
@@ -381,6 +382,8 @@ def memory_update_after_turn(
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
     config: MemoryPipelineConfig,
+    *,
+    tool_bg_idle_event: Event | None = None,
 ) -> bool:
     """Run post-turn memory pipeline. Returns True if any LLM curation step ran."""
     t_all = time.perf_counter()
@@ -515,8 +518,9 @@ def memory_update_after_turn(
         )
 
     t = time.perf_counter()
-    if compact_living_sphere_if_pending(store, complete_fn):
-        any_curation = True
+    if compact_living_sphere_if_pending(
+        store, complete_fn, tool_bg_idle_event=tool_bg_idle_event
+    ):
         _log_memory_pipeline_curated(
             step="living_sphere_md",
             ws=ws,
@@ -573,6 +577,7 @@ _memory_queue: (
             MemoryPipelineConfig,
             str,
             str,
+            Event | None,
         ]
     ]
     | None
@@ -592,6 +597,7 @@ def _memory_worker_loop() -> None:
             config,
             trace_id,
             user_msg_uuid,
+            tool_bg_idle_event,
         ) = _memory_queue.get()
         t_job = time.perf_counter()
         logger.debug(
@@ -618,6 +624,7 @@ def _memory_worker_loop() -> None:
                     assistant_text,
                     complete_fn,
                     config,
+                    tool_bg_idle_event=tool_bg_idle_event,
                 )
             except _MEMORY_WORKER_ERRORS:
                 logger.exception("memory_update_after_turn failed")
@@ -649,6 +656,7 @@ def schedule_memory_update_after_turn(
     *,
     trace_id: str = "",
     user_msg_uuid: str = "",
+    tool_bg_idle_event: Event | None = None,
 ) -> None:
     global _memory_queue
     with _worker_lock:
@@ -668,6 +676,7 @@ def schedule_memory_update_after_turn(
             config,
             trace_id,
             user_msg_uuid,
+            tool_bg_idle_event,
         ),
     )
     logger.debug(

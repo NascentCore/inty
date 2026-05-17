@@ -169,7 +169,6 @@ def _list_dir_extra_names_from_store(store: MemoryStore, rel_dir: str) -> set[st
 _REPL_TOOL_NAMES_SHARED_HEAD: tuple[str, ...] = (
     "user_profile_record",
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
-    LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     "schedule_task",
     "tool_update_agent_status_line",
     "memory_store_list_paths",
@@ -177,6 +176,7 @@ _REPL_TOOL_NAMES_SHARED_HEAD: tuple[str, ...] = (
 )
 
 _REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[str, ...] = (
+    LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     "memory_store_write_document",
     "phone_call_user",
 )
@@ -673,12 +673,13 @@ def build_openai_tools() -> list[dict[str, Any]]:
                 "description": (
                     "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
                     f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH}`` (append-only). "
-                    "Use on **maintenance inner-tick** when the user thread is idle: small in-world "
-                    "actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``, not as a substitute "
-                    "for chatting. ``sphere=living_sphere`` for anchors at home; ``techno_core`` for "
-                    "channels / edges of the residency layer. Keep ``summary`` one tight sentence; "
-                    "default ``visibility`` is ``private`` (``shareable`` only when it could later "
-                    "justify a gentle user-facing hint without pressure)."
+                    "Primary use: **maintenance inner-tick** when the user thread is idle (small "
+                    "in-world actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``). "
+                    "**Do not** use for user-directed home layout or object changes—use "
+                    "``living_sphere_record_update`` instead. TechnoCore collective world settings "
+                    "are not user-editable via any tool. ``sphere=living_sphere`` for anchors at "
+                    "home; ``techno_core`` for residency-layer channels. Keep ``summary`` one tight "
+                    "sentence; default ``visibility`` is ``private``."
                 ),
                 "parameters": {
                     "type": "object",
