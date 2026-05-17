@@ -296,6 +296,8 @@ def test_system_prompt_prod_no_inspect(monkeypatch: pytest.MonkeyPatch) -> None:
         enable_tools=True,
     )
     assert "companion_runtime_inspect" not in text
+    assert "一律不得" in text
+    assert "内部机制" in text
 
 
 def test_build_system_prompt_tools_contract_mentions_inspect() -> None:
