@@ -1,17 +1,5 @@
 """Companion **system context** assembly: one place to turn ``PromptBundle`` + turn
 flags into what the model sees as system role(s) before user/assistant messages.
-
-**Intent**: keep product law, safety, persona, world anchors, memory, and **output /
-tool contracts** aligned with how each completion is actually invoked (plain chat,
-tool API, inner tick, or async foreground without OpenAI ``tools=``). Call sites live
-in ``..prompt_stack`` and related turn code; **significance / dual-envelope** semantics
-and parsing are owned by ``dual_llm_chat_branch_envelope``.
-
-**Surfaces**: ``build_system_messages`` is the canonical multi-message list.
-Seed text such as the product axiom is loaded via
-``app.core.companion_harness.memory.memory_store_scope`` (companion templates under
-``prompts/``). Kept beside prompt assets so ``prompts/__init__.py`` stays docstring-only
-(see ``app/AGENTS.md``).
 """
 
 from __future__ import annotations
@@ -29,6 +17,7 @@ from ..bootstrap_user_interactive import (
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
+    get_inty_facts_system_text,
 )
 from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
@@ -381,6 +370,7 @@ def build_system_messages(
 
     out: list[dict[str, Any]] = []
     out.append(_system_message(get_imate_axiom_system_text()))
+    out.append(_system_message(get_inty_facts_system_text()))
     out.append(_system_message(_security_base()))
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
