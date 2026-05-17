@@ -18,3 +18,4 @@
 
 - 产品经理，本科学历，6 年工作经验，多款 AIGC、AI 陪伴产品经验
 - 评价产品体验
+- **iMate 人感 · 隐藏后台概念**（2026-05-17，[飞书](https://applink.feishu.cn/client/message/link/open?token=AmhrKaifiMAEagk76hmAjL4%3D)）：终端用户不应看到或感知 memory、tools 调用、runtime 等 harness/工程语汇——会直接破坏「活人」感；这些概念必须在 **用户可见层包装** 成关系/情绪/日常互动语言（例：「记得」「在想」「稍等」），技术术语只留在 REPL、Ops、日志与内部文档。
