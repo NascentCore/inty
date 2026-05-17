@@ -29,6 +29,7 @@ from ..bootstrap_user_interactive import (
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
+    get_inty_facts_system_text,
 )
 from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
@@ -381,6 +382,7 @@ def build_system_messages(
 
     out: list[dict[str, Any]] = []
     out.append(_system_message(get_imate_axiom_system_text()))
+    out.append(_system_message(get_inty_facts_system_text()))
     out.append(_system_message(_security_base()))
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
