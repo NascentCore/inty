@@ -227,6 +227,8 @@ class PushSchedulerService:
             )
             if uar_cfg and getattr(uar_cfg, "enabled", False):
                 daily_enabled = getattr(uar_cfg, "daily_enabled", False)
+                weekly_enabled = getattr(uar_cfg, "weekly_enabled", False)
+                backfill_enabled = getattr(uar_cfg, "backfill_enabled", False)
                 if daily_enabled:
                     self.scheduler.add_job(
                         self._run_user_analytics_daily_report,
@@ -238,52 +240,71 @@ class PushSchedulerService:
                         max_instances=1,
                         next_run_time=datetime.datetime.now(),
                     )
-                self.scheduler.add_job(
-                    self._run_user_analytics_weekly_report,
-                    trigger=CronTrigger(
-                        day_of_week="mon",
-                        hour=uar_cfg.weekly_cron_hour,
-                        minute=0,
-                    ),
-                    id="run_user_analytics_weekly_report",
-                    name="用户数据分析周报",
-                    replace_existing=True,
-                    coalesce=True,
-                    max_instances=1,
-                    next_run_time=datetime.datetime.now(),
-                )
+                if weekly_enabled:
+                    self.scheduler.add_job(
+                        self._run_user_analytics_weekly_report,
+                        trigger=CronTrigger(
+                            day_of_week="mon",
+                            hour=uar_cfg.weekly_cron_hour,
+                            minute=0,
+                        ),
+                        id="run_user_analytics_weekly_report",
+                        name="用户数据分析周报",
+                        replace_existing=True,
+                        coalesce=True,
+                        max_instances=1,
+                        next_run_time=datetime.datetime.now(),
+                    )
+                scheduled_parts: list[str] = []
                 if daily_enabled:
-                    logger.info(
-                        f"已添加用户数据分析任务: 日报每日 UTC {uar_cfg.daily_cron_hour}:00, "
+                    scheduled_parts.append(
+                        f"日报每日 UTC {uar_cfg.daily_cron_hour}:00"
+                    )
+                if weekly_enabled:
+                    scheduled_parts.append(
                         f"周报每周一 UTC {uar_cfg.weekly_cron_hour}:00"
                     )
-                else:
+                if scheduled_parts:
                     logger.info(
-                        f"已添加用户数据分析周报任务: 每周一 UTC {uar_cfg.weekly_cron_hour}:00 "
-                        f"(日报已禁用，由 GitHub Actions 承担)"
+                        f"已添加用户数据分析任务: {', '.join(scheduled_parts)}"
                     )
-
-                async def backfill_user_analytics_reports():
-                    from app.services.user_analytics_report_service import (
-                        backfill_missing_reports,
-                    )
-
-                    backfill_scope = "日报与周报" if daily_enabled else "周报"
+                elif not backfill_enabled:
                     logger.info(
-                        f"[用户数据分析补算] 开始检查并补算缺失的{backfill_scope}"
+                        "用户数据分析日报/周报/补算均未启用（push worker 默认关闭；日报由 GitHub Actions 承担）"
                     )
-                    try:
-                        async with AsyncSessionLocal() as db:
-                            daily_count, weekly_count = await backfill_missing_reports(
-                                db, include_daily=daily_enabled
-                            )
-                            logger.info(
-                                f"[用户数据分析补算] 完成: 日报 {daily_count} 条, 周报 {weekly_count} 条"
-                            )
-                    except Exception as e:
-                        logger.error(f"[用户数据分析补算] 执行失败: {str(e)}")
 
-                asyncio.create_task(backfill_user_analytics_reports())
+                if backfill_enabled:
+
+                    async def backfill_user_analytics_reports():
+                        from app.services.user_analytics_report_service import (
+                            backfill_missing_reports,
+                        )
+
+                        scope_parts: list[str] = []
+                        if daily_enabled:
+                            scope_parts.append("日报")
+                        if weekly_enabled:
+                            scope_parts.append("周报")
+                        backfill_scope = "与".join(scope_parts) if scope_parts else "无"
+                        logger.info(
+                            f"[用户数据分析补算] 开始检查并补算缺失的{backfill_scope}"
+                        )
+                        try:
+                            async with AsyncSessionLocal() as db:
+                                daily_count, weekly_count = (
+                                    await backfill_missing_reports(
+                                        db,
+                                        include_daily=daily_enabled,
+                                        include_weekly=weekly_enabled,
+                                    )
+                                )
+                                logger.info(
+                                    f"[用户数据分析补算] 完成: 日报 {daily_count} 条, 周报 {weekly_count} 条"
+                                )
+                        except Exception as e:
+                            logger.error(f"[用户数据分析补算] 执行失败: {str(e)}")
+
+                    asyncio.create_task(backfill_user_analytics_reports())
 
             logger.info("已添加所有推送检查任务（记忆抽取除外，按 cron 执行）")
 

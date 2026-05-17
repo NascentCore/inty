@@ -570,24 +570,26 @@ async def backfill_missing_reports(
     days: int = BACKFILL_DAILY_DAYS,
     year: int | None = None,
     include_daily: bool = True,
+    include_weekly: bool = True,
 ) -> tuple[int, int]:
     missing_daily: list[date] = []
     if include_daily:
         missing_daily = await get_missing_daily_report_dates(db, days=days)
-    if year is not None:
-        missing_weekly = await get_missing_weekly_report_dates_first_half(db, year)
-        scope_desc = (
-            f"日报最近 {days} 天、周报当年上半年"
-            if include_daily
-            else "周报当年上半年"
-        )
-    else:
-        missing_weekly = await get_missing_weekly_report_dates_past_weeks(db, weeks=7)
-        scope_desc = (
-            f"日报最近 {days} 天、周报过去 7 周"
-            if include_daily
-            else "周报过去 7 周"
-        )
+    missing_weekly: list[date] = []
+    if include_weekly:
+        if year is not None:
+            missing_weekly = await get_missing_weekly_report_dates_first_half(db, year)
+        else:
+            missing_weekly = await get_missing_weekly_report_dates_past_weeks(db, weeks=7)
+    scope_parts: list[str] = []
+    if include_daily:
+        scope_parts.append(f"日报最近 {days} 天")
+    if include_weekly:
+        if year is not None:
+            scope_parts.append("周报当年上半年")
+        else:
+            scope_parts.append("周报过去 7 周")
+    scope_desc = "、".join(scope_parts) if scope_parts else "无"
 
     logger.info(
         f"[用户数据分析补算] 补算范围: {scope_desc}; "
