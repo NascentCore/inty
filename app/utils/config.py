@@ -143,6 +143,7 @@ class GoogleOAuthConfig(BaseModel):
     client_secret: Optional[str] = None
     redirect_uri: Optional[str] = None
 
+
 class VerificationConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
