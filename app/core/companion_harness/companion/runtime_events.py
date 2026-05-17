@@ -36,7 +36,13 @@ def append_runtime_event(store: MemoryStore, record: dict[str, Any]) -> None:
     tail = f" trace_id={tid}" if tid else ""
     tail += f" user_msg_uuid={uid}" if uid else ""
     msg = f"companion_runtime_event kind={kind!r}{tail}"
-    if kind in ("llm_inference_failure", "tool_background_failure"):
+    if kind in (
+        "llm_inference_failure",
+        "tool_background_failure",
+        "user_signed_on",
+        "user_signed_out",
+        "ws_conn_dropped",
+    ):
         logger.info(msg)
     else:
         logger.debug(msg)

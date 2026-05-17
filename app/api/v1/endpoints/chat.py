@@ -520,6 +520,25 @@ async def _try_handle_ws_user_signed_on_frame(
                 name=f"chat_ws_user_signed_on_greeting_{ws_conn_id}",
             )
             greeting_scheduled = True
+        if subscription_svc is not None:
+            subscription = await subscription_svc.get_user_current_subscription(
+                db, current_user.id
+            )
+            model_override = select_chat_model(
+                user=current_user, is_subscribed=bool(subscription)
+            )
+            effective_tc_box: list[object | None] = (
+                tc_box if tc_box is not None else []
+            )
+            companion_chat_service.record_companion_user_signed_on_ws_lifecycle(
+                user_id=current_user.id,
+                agent_id=agent_id,
+                chat_id=chat.id,
+                resolved_chat_model=model_override,
+                tc_box=effective_tc_box,
+                received_message_uuid=preset_mid,
+                ws_conn_id=ws_conn_id,
+            )
         await websocket.send_json(
             ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
         )
@@ -558,13 +577,15 @@ async def _try_handle_ws_user_signed_out_frame(
     inflight_turn_tracker: ChatWsInflightTurnTracker | None,
     subscription_svc: SubscriptionService,
     ws_conn_id: str,
+    tc_box: list[Optional[dict]],
 ) -> bool:
     """
     Consume ``{"type":"user_signed_out","agent_id":...}``.
 
-    Validates the frame, cancels detached companion turns on this connection, appends one English
-    markdown line to companion ``CHAT_LOGS.md`` (MemoryStore), then sends ``user_signed_out_ack``.
-    Does not alter inner-tick coords, transcript, or companion scope persistence.
+    Validates the frame, cancels detached companion turns on this connection, appends one
+    ``user_signed_out`` row to companion ``.companion_runtime_events.jsonl``, then sends
+    ``user_signed_out_ack``. Does not alter inner-tick coords, transcript, or companion scope
+    persistence.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -608,26 +629,23 @@ async def _try_handle_ws_user_signed_out_frame(
             user=current_user, is_subscribed=bool(subscription)
         )
         recv_msg_uuid = (frame.message_id or "").strip()
-        uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
-        log_line = (
-            f"- **user_signed_out** `utc_ts={utc_iso_ts()}` `user_id={current_user.id}` "
-            f"`chat_id={chat.id}` `agent_id={agent_id}` `received_message_uuid={uuid_part}`"
-        )
         if inflight_turn_tracker is not None:
             # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
             await inflight_turn_tracker.cancel_all()
-        companion_chat_service.append_companion_chat_logs_line_for_ws_control(
+        companion_chat_service.record_companion_user_signed_out_ws_lifecycle(
             user_id=current_user.id,
             agent_id=agent_id,
             chat_id=chat.id,
             resolved_chat_model=model_override,
-            line=log_line,
+            tc_box=tc_box,
+            received_message_uuid=recv_msg_uuid,
+            ws_conn_id=ws_conn_id,
         )
         await websocket.send_json(
             ChatWsUserSignedOutAckFrame(ok=True).model_dump(exclude_none=True)
         )
         logger.info(
-            "chat_ws user_signed_out logged CHAT_LOGS.md ws_conn_id={} user={} agent={} chat_id={} "
+            "chat_ws user_signed_out runtime_event ws_conn_id={} user={} agent={} chat_id={} "
             "received_message_uuid={}",
             ws_conn_id,
             current_user.id,
@@ -659,12 +677,13 @@ async def _try_handle_ws_ws_conn_dropped_frame(
     companion_ws: CompanionWebSocketCoordinator | None,
     subscription_svc: SubscriptionService,
     ws_conn_id: str,
+    tc_box: list[Optional[dict]],
 ) -> bool:
     """
     Consume ``{"type":"ws_conn_dropped","agent_id":...,"dropped_at_utc":...}``.
 
-    Appends one English markdown line to companion ``CHAT_LOGS.md`` (MemoryStore). Does not alter
-    inner-tick coords or transcript.
+    Appends one ``ws_conn_dropped`` row to companion ``.companion_runtime_events.jsonl``. Does not
+    alter inner-tick coords or transcript.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -711,30 +730,25 @@ async def _try_handle_ws_ws_conn_dropped_frame(
             user=current_user, is_subscribed=bool(subscription)
         )
         recv_msg_uuid = (frame.message_id or "").strip()
-        uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
-        code_part = (
-            frame.ws_close_code if frame.ws_close_code is not None else "-"
-        )
+        code_part = frame.ws_close_code if frame.ws_close_code is not None else "-"
         reason_raw = (frame.ws_close_reason or "").strip()
         reason_part = reason_raw if reason_raw else "-"
-        log_line = (
-            f"- **ws_conn_dropped** `utc_ts={utc_iso_ts()}` `user_id={current_user.id}` "
-            f"`chat_id={chat.id}` `agent_id={agent_id}` "
-            f"`client_dropped_at_utc={frame.dropped_at_utc}` "
-            f"`ws_close_code={code_part}` `ws_close_reason={reason_part}` "
-            f"`received_message_uuid={uuid_part}`"
-        )
-        companion_chat_service.append_companion_chat_logs_line_for_ws_control(
+        companion_chat_service.record_companion_ws_conn_dropped_ws_lifecycle(
             user_id=current_user.id,
             agent_id=agent_id,
             chat_id=chat.id,
             resolved_chat_model=model_override,
-            line=log_line,
+            tc_box=tc_box,
+            dropped_at_utc=frame.dropped_at_utc,
+            received_message_uuid=recv_msg_uuid,
+            ws_conn_id=ws_conn_id,
+            ws_close_code=code_part,
+            ws_close_reason=reason_part,
         )
         await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
         logger.info(
-            "chat_ws ws_conn_dropped logged CHAT_LOGS.md ws_conn_id={} user={} agent={} chat_id={} "
-            "client_dropped_at_utc={} received_message_uuid={}",
+            "chat_ws ws_conn_dropped runtime_event ws_conn_id={} user={} agent={} chat_id={} "
+            "dropped_at_utc={} received_message_uuid={}",
             ws_conn_id,
             current_user.id,
             agent_id,
@@ -3700,6 +3714,7 @@ async def chat_completions_websocket(
                 inflight_turn_tracker=inflight_turn_tracker,
                 subscription_svc=subscription_svc,
                 ws_conn_id=ws_conn_id,
+                tc_box=tc_box,
             ):
                 continue
             if await _try_handle_ws_ws_conn_dropped_frame(
@@ -3710,6 +3725,7 @@ async def chat_completions_websocket(
                 companion_ws=companion_ws,
                 subscription_svc=subscription_svc,
                 ws_conn_id=ws_conn_id,
+                tc_box=tc_box,
             ):
                 continue
             if await _handle_chat_websocket_control_json(
@@ -3878,6 +3894,7 @@ async def chat_completions_websocket_verify(
                 inflight_turn_tracker=None,
                 subscription_svc=subscription_svc,
                 ws_conn_id=ws_conn_id,
+                tc_box=tc_box,
             ):
                 continue
             if await _try_handle_ws_ws_conn_dropped_frame(
@@ -3888,6 +3905,7 @@ async def chat_completions_websocket_verify(
                 companion_ws=None,
                 subscription_svc=subscription_svc,
                 ws_conn_id=ws_conn_id,
+                tc_box=tc_box,
             ):
                 continue
             if await _handle_chat_websocket_control_json(

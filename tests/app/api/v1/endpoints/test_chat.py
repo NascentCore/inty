@@ -1613,6 +1613,65 @@ def test_chat_websocket_companion_user_signed_on_greeting_sets_bundle(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_chat_websocket_user_signed_on_records_ws_lifecycle_event(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict[str, object] = {}
+
+    def fake_record(**kwargs):
+        captured["kwargs"] = kwargs
+
+    async def fake_run_companion_chat_turn_for_api(**_kwargs):
+        return CompanionTurnResult(assistant_text="greet-lc")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-signon-lc",
+        chat_id="chat-signon-lc-1",
+        latest_user_message_db_id=91,
+        ai_message_id=911,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+    monkeypatch.setattr(
+        companion_chat_service,
+        "record_companion_user_signed_on_ws_lifecycle",
+        fake_record,
+    )
+
+    msg_uuid = "cccccccc-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    local_time = "2026-05-17T12:00:00+08:00"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "client_context",
+                    "time_context": {
+                        "local_time": local_time,
+                        "timezone": "Asia/Shanghai",
+                        "utc_offset_minutes": 480,
+                    },
+                }
+            )
+            assert websocket.receive_json()["type"] == "client_context_ack"
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-signon-lc",
+                    "message_id": msg_uuid,
+                }
+            )
+            body = websocket.receive_json()
+            if body.get("type") == "user_signed_on_ack":
+                body = websocket.receive_json()
+
+    assert body["code"] == 200
+    kw = captured["kwargs"]
+    assert kw["received_message_uuid"] == msg_uuid
+    assert kw["tc_box"][0]["local_time"] == local_time
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_companion_user_signed_on_greeting_cancelled_on_disconnect(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
@@ -2322,14 +2381,12 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
     assert utc.utc_offset_minutes == 480
 
 
-def test_chat_websocket_user_signed_out_appends_chat_logs_line(
+def test_chat_websocket_user_signed_out_records_ws_lifecycle_event(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    import time
-
     captured: dict[str, object] = {}
 
-    def fake_append(**kwargs):
+    def fake_record(**kwargs):
         captured["kwargs"] = kwargs
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
@@ -2340,8 +2397,8 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
 
     monkeypatch.setattr(
         companion_chat_service,
-        "append_companion_chat_logs_line_for_ws_control",
-        fake_append,
+        "record_companion_user_signed_out_ws_lifecycle",
+        fake_record,
     )
     monkeypatch.setattr(
         chat_service,
@@ -2362,8 +2419,20 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
 
     msg_uuid = "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    local_time = "2026-05-17T18:00:00+08:00"
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "client_context",
+                    "time_context": {
+                        "local_time": local_time,
+                        "timezone": "Asia/Shanghai",
+                        "utc_offset_minutes": 480,
+                    },
+                }
+            )
+            assert websocket.receive_json()["type"] == "client_context_ack"
             websocket.send_json(
                 {
                     "type": "user_signed_out",
@@ -2374,20 +2443,15 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
             ack = websocket.receive_json()
 
     assert ack == {"type": "user_signed_out_ack", "ok": True}
-    deadline = time.monotonic() + 2.0
-    while "kwargs" not in captured and time.monotonic() < deadline:
-        time.sleep(0.01)
-    assert "kwargs" in captured, "conclude_companion_scope should run after ack"
     kw = captured["kwargs"]
     assert kw["user_id"] == "user-so-1"
     assert kw["agent_id"] == "agent-so-1"
     assert kw["chat_id"] == 42
     assert isinstance(kw["resolved_chat_model"], GenAIModel)
-    assert kw["resolved_chat_model"].id_on_provider
-    line = kw["line"]
-    assert isinstance(line, str)
-    assert "**user_signed_out**" in line
-    assert f"`received_message_uuid={msg_uuid}`" in line
+    assert kw["received_message_uuid"] == msg_uuid
+    tc_box = kw["tc_box"]
+    assert isinstance(tc_box, list)
+    assert tc_box[0]["local_time"] == local_time
 
 
 def test_chat_websocket_verify_user_signed_out_not_supported(
@@ -2536,12 +2600,12 @@ def test_chat_websocket_invalid_ws_conn_id_query_logs_fallback(
     assert not any("not-a-valid-uuid" in m for m in session_open_msgs), session_open_msgs
 
 
-def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
+def test_chat_websocket_ws_conn_dropped_records_ws_lifecycle_event(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     captured: dict[str, object] = {}
 
-    def fake_append(**kwargs):
+    def fake_record(**kwargs):
         captured["kwargs"] = kwargs
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
@@ -2552,8 +2616,8 @@ def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
 
     monkeypatch.setattr(
         companion_chat_service,
-        "append_companion_chat_logs_line_for_ws_control",
-        fake_append,
+        "record_companion_ws_conn_dropped_ws_lifecycle",
+        fake_record,
     )
     monkeypatch.setattr(
         chat_service,
@@ -2575,8 +2639,20 @@ def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
 
     msg_uuid = "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
     dropped_at = "2026-05-11T12:00:00+00:00"
+    local_time = "2026-05-11T20:00:00+08:00"
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "client_context",
+                    "time_context": {
+                        "local_time": local_time,
+                        "timezone": "Asia/Shanghai",
+                        "utc_offset_minutes": 480,
+                    },
+                }
+            )
+            assert websocket.receive_json()["type"] == "client_context_ack"
             websocket.send_json(
                 {
                     "type": "ws_conn_dropped",
@@ -2594,15 +2670,11 @@ def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
     assert kw["user_id"] == "user-wd-1"
     assert kw["agent_id"] == "agent-wd-1"
     assert kw["chat_id"] == 42
-    assert isinstance(kw["resolved_chat_model"], GenAIModel)
-    assert kw["resolved_chat_model"].id_on_provider
-    line = kw["line"]
-    assert isinstance(line, str)
-    assert "**ws_conn_dropped**" in line
-    assert f"`client_dropped_at_utc={dropped_at}`" in line
-    assert "`ws_close_code=1006`" in line
-    assert "`ws_close_reason=connection reset`" in line
-    assert f"`received_message_uuid={msg_uuid}`" in line
+    assert kw["dropped_at_utc"] == dropped_at
+    assert kw["ws_close_code"] == 1006
+    assert kw["ws_close_reason"] == "connection reset"
+    assert kw["received_message_uuid"] == msg_uuid
+    assert kw["tc_box"][0]["local_time"] == local_time
 
 
 def test_chat_websocket_verify_ws_conn_dropped_not_supported(

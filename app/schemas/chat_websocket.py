@@ -65,10 +65,10 @@ class ChatWsClientContextAckFrame(BaseModel):
 
 
 class ChatWsUserSignedOnFrame(BaseModel):
-    """**Client → server** control frame: arms inner-tick coords and schedules greeting turn.
+    """**Client → server** control frame: arms inner-tick coords, appends lifecycle runtime JSONL, schedules greeting.
 
-    ``message_id`` (RFC4122 UUID) is required; see
-    ``/app/core/companion_harness/companion/implicit_signal_messages.py``.
+    ``message_id`` (RFC4122 UUID) is required. Local ``ts`` in runtime JSONL comes from prior
+    ``client_context`` when present.
     """
 
     type: Literal["user_signed_on"] = "user_signed_on"
@@ -81,7 +81,7 @@ class ChatWsUserSignedOnFrame(BaseModel):
 
 
 class ChatWsUserSignedOutFrame(BaseModel):
-    """**Client → server** control frame: records user leaving the chat channel for companion CHAT_LOGS.md."""
+    """**Client → server** control frame: records user leaving via companion lifecycle runtime JSONL."""
 
     type: Literal["user_signed_out"] = "user_signed_out"
     agent_id: str = Field(..., min_length=1)
@@ -120,7 +120,7 @@ class ChatWsUserSignedOutAckFrame(BaseModel):
 
 
 class ChatWsWsConnDroppedFrame(BaseModel):
-    """**Client → server** control frame: prior transport disconnect context for companion CHAT_LOGS.md."""
+    """**Client → server** control frame: prior transport disconnect for companion lifecycle runtime JSONL."""
 
     type: Literal["ws_conn_dropped"] = "ws_conn_dropped"
     agent_id: str = Field(..., min_length=1)

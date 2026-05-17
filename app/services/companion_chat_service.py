@@ -24,6 +24,13 @@ from app.core.companion_harness.companion.manager import (
 from app.core.companion_harness.memory.memory_registry import (
     MEMORY_STORE_REGISTRY_REQUIRES_DSN,
 )
+from app.core.companion_harness.companion.ws_lifecycle_events import (
+    normalize_received_message_uuid_for_lifecycle,
+    record_user_signed_on,
+    record_user_signed_out,
+    record_ws_conn_dropped,
+    resolve_client_local_ts_for_ws_lifecycle,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
@@ -36,8 +43,6 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
-
-COMPANION_CHAT_LOGS_RELATIVE_PATH = "CHAT_LOGS.md"
 
 DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
     "（会话入线，内部指令）用户已进入本聊天。请在本轮及之后延续自然陪伴：可先简短问候，"
@@ -99,15 +104,13 @@ def companion_session_tool_bg_idle_event(
     return session.tool_bg_idle
 
 
-def append_companion_chat_logs_line_for_ws_control(
+def _companion_store_for_scope(
     *,
     user_id: str,
     agent_id: str,
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
-    line: str,
-) -> None:
-    """Append one line to ``CHAT_LOGS.md`` for the companion MemoryStore scope (DB-backed)."""
+) -> MemoryStore:
     chat_api_id = resolved_chat_model.id_on_provider
     tool_api_id = _companion_tool_model_api_id(chat_api_id)
     manager = _companion_manager_for_resolved_model(
@@ -116,7 +119,148 @@ def append_companion_chat_logs_line_for_ws_control(
         _companion_runtime_config_fingerprint(),
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
-    session.store.append_line(COMPANION_CHAT_LOGS_RELATIVE_PATH, line)
+    return session.store
+
+
+def _lifecycle_ts_timezone_and_store(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    tc_box: list[object | None],
+    dropped_at_utc: str | None,
+) -> tuple[str, str, MemoryStore] | None:
+    resolved = resolve_client_local_ts_for_ws_lifecycle(
+        tc_box=tc_box,
+        dropped_at_utc=dropped_at_utc,
+    )
+    if resolved is None:
+        logger.warning(
+            "companion_ws_lifecycle skipped missing client local ts user={} agent={} chat_id={}",
+            user_id,
+            agent_id,
+            chat_id,
+        )
+        return None
+    ts, timezone_label = resolved
+    store = _companion_store_for_scope(
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+    )
+    return ts, timezone_label, store
+
+
+def record_companion_user_signed_on_ws_lifecycle(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    tc_box: list[object | None],
+    received_message_uuid: str,
+    ws_conn_id: str,
+) -> None:
+    packed = _lifecycle_ts_timezone_and_store(
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+        tc_box=tc_box,
+        dropped_at_utc=None,
+    )
+    if packed is None:
+        return
+    ts, timezone_label, store = packed
+    record_user_signed_on(
+        store,
+        ts=ts,
+        timezone_label=timezone_label,
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=int(chat_id),
+        received_message_uuid=normalize_received_message_uuid_for_lifecycle(
+            received_message_uuid
+        ),
+        ws_conn_id=ws_conn_id,
+    )
+
+
+def record_companion_user_signed_out_ws_lifecycle(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    tc_box: list[object | None],
+    received_message_uuid: str,
+    ws_conn_id: str,
+) -> None:
+    packed = _lifecycle_ts_timezone_and_store(
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+        tc_box=tc_box,
+        dropped_at_utc=None,
+    )
+    if packed is None:
+        return
+    ts, timezone_label, store = packed
+    record_user_signed_out(
+        store,
+        ts=ts,
+        timezone_label=timezone_label,
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=int(chat_id),
+        received_message_uuid=normalize_received_message_uuid_for_lifecycle(
+            received_message_uuid
+        ),
+        ws_conn_id=ws_conn_id,
+    )
+
+
+def record_companion_ws_conn_dropped_ws_lifecycle(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    tc_box: list[object | None],
+    dropped_at_utc: str,
+    received_message_uuid: str,
+    ws_conn_id: str,
+    ws_close_code: int | str,
+    ws_close_reason: str,
+) -> None:
+    packed = _lifecycle_ts_timezone_and_store(
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+        tc_box=tc_box,
+        dropped_at_utc=dropped_at_utc,
+    )
+    if packed is None:
+        return
+    ts, timezone_label, store = packed
+    record_ws_conn_dropped(
+        store,
+        ts=ts,
+        timezone_label=timezone_label,
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=int(chat_id),
+        received_message_uuid=normalize_received_message_uuid_for_lifecycle(
+            received_message_uuid
+        ),
+        ws_conn_id=ws_conn_id,
+        ws_close_code=ws_close_code,
+        ws_close_reason=ws_close_reason,
+    )
 
 
 def clear_companion_chat_service_caches() -> None:
