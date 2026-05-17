@@ -162,7 +162,6 @@ _REPL_TOOL_NAMES_SHARED_HEAD: tuple[str, ...] = (
     "user_profile_record",
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
     "schedule_task",
-    "tool_update_agent_status_line",
     "memory_store_list_paths",
     "memory_store_read_document",
 )
@@ -834,10 +833,6 @@ def build_openai_repl_tools(
     """
     REPL 对话轮：用户档案追加、LivingSphere/TechnoCore 事件落库、工作区文档读写（写入仅限 REPL_WRITABLE_RELATIVE_PATHS）。
     """
-    disable_status = os.getenv(
-        "INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL", ""
-    ).strip().lower() in ("1", "true", "yes", "on")
-
     full = build_openai_tools()
     by_name = {
         t["function"]["name"]: t
@@ -848,8 +843,6 @@ def build_openai_repl_tools(
         names = _REPL_TOOL_NAMES_SHARED_HEAD
     else:
         names = _REPL_TOOL_NAMES_SHARED_HEAD + _REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL
-    if disable_status:
-        names = tuple(n for n in names if n != "tool_update_agent_status_line")
     out: list[dict[str, Any]] = []
     for n in names:
         t = by_name.get(n)
@@ -1193,7 +1186,6 @@ def build_openai_repl_tools(
 _INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
     "user_profile_record",
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
-    "tool_update_agent_status_line",
     "memory_store_list_paths",
     "memory_store_read_document",
     "memory_store_write_document",
