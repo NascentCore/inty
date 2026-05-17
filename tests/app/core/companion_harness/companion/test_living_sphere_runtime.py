@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -101,12 +102,15 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
             return body.replace("氛围：", "氛围：落地灯旁更暖，")
         return "noop\n"
 
+    idle = threading.Event()
+    idle.set()
     memory_update_after_turn(
         store,
         "加灯",
         "好",
         fake_complete,
         MemoryPipelineConfig(memory_update_every_n_turns=999),
+        tool_bg_idle_event=idle,
     )
     context = load_context_meta(store=store)
     bundle = load_prompt_bundle(store, meta=context)

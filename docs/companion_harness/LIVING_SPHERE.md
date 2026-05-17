@@ -34,7 +34,7 @@ flowchart TB
 
 - **快路径**：`living_sphere_record_update` 仅 `append_jsonl_record` 到 `living_sphere_updates.jsonl`，同轮不改 `LIVING_SPHERE.md`。
 - **慢路径**：`memory_update_after_turn` 末尾若存在游标之后的 jsonl 行，则调用 `app.core.companion_harness.memory.living_sphere_curator.compact_living_sphere_if_pending`（`complete_fn(..., model_role="memory")`），按时间顺序分批（每批最多 20 条）写回完整 `LIVING_SPHERE.md`，直至 pending 清空或达到每回合批次数上限；游标 `living_sphere_curated_through_update_id` 存在 `.companion_memory_pipeline.json`。
-- **与 tool_background 的时序**：默认 `defer_memory_update` 下，memory worker 在 LivingSphere compact 前会等待本会话 `tool_bg_idle`（与下一轮 `run_turn` 开头等待同一 Event），以便 `living_sphere_record_update` 在异步工具线程里先 append jsonl。
+- **与 tool_background 的时序**：默认 `defer_memory_update` 下，memory worker 在 LivingSphere compact 前会等待本会话 `tool_bg_idle`（与下一轮 `run_turn` 开头等待同一 Event），以便 `living_sphere_record_update` 在异步工具线程里先 append jsonl；等待上限由 `app.features.companion_tool_bg_idle_wait_timeout_sec`（默认 120s）配置。
 - **最终一致**：prompt 中的 `LIVING_SPHERE.md` 可能晚一两拍更新；维护性 inner tick **不**跑该 compact（仅用户回合后的 memory worker）。
 - **Curator 输出门控**：写回前校验须含「对用户表达」与 LIVING SPHERE 标题等最小结构；校验失败则不写 MD、不推进游标（下轮重试）。
 

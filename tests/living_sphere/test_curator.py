@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import threading
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.living_sphere_curator import (
@@ -21,6 +24,12 @@ def _valid_md(suffix: str = "") -> str:
     if suffix:
         return base.replace("氛围：", f"氛围：{suffix}，", 1)
     return base
+
+
+def _idle_tool_bg() -> threading.Event:
+    ev = threading.Event()
+    ev.set()
+    return ev
 
 
 def test_curator_merges_pending_into_living_sphere_md(tmp_path: Path) -> None:
@@ -43,11 +52,12 @@ def test_curator_merges_pending_into_living_sphere_md(tmp_path: Path) -> None:
         assert model_role == "memory"
         return _valid_md("台灯")
 
-    assert compact_living_sphere_if_pending(store, fake_complete) is True
+    idle = _idle_tool_bg()
+    assert compact_living_sphere_if_pending(store, fake_complete, tool_bg_idle_event=idle) is True
     assert "台灯" in store.read_document(LIVING_SPHERE_RELATIVE_PATH)
     state = json.loads(store.read_document(".companion_memory_pipeline.json"))
     assert state["living_sphere_curated_through_update_id"] == u2.update_id
-    assert compact_living_sphere_if_pending(store, fake_complete) is False
+    assert compact_living_sphere_if_pending(store, fake_complete, tool_bg_idle_event=idle) is False
 
 
 def test_curator_drains_more_than_batch_cap_without_skipping(tmp_path: Path) -> None:
@@ -73,11 +83,12 @@ def test_curator_drains_more_than_batch_cap_without_skipping(tmp_path: Path) -> 
         calls += 1
         return _valid_md(f"batch-{calls}")
 
-    assert compact_living_sphere_if_pending(store, fake_complete) is True
+    idle = _idle_tool_bg()
+    assert compact_living_sphere_if_pending(store, fake_complete, tool_bg_idle_event=idle) is True
     assert calls == 2
     state = json.loads(store.read_document(".companion_memory_pipeline.json"))
     assert state["living_sphere_curated_through_update_id"] == updates[-1].update_id
-    assert compact_living_sphere_if_pending(store, fake_complete) is False
+    assert compact_living_sphere_if_pending(store, fake_complete, tool_bg_idle_event=idle) is False
 
 
 def test_curator_rejects_bad_output_without_advancing_cursor(tmp_path: Path) -> None:
@@ -99,13 +110,16 @@ def test_curator_rejects_bad_output_without_advancing_cursor(tmp_path: Path) -> 
         return "too short"
 
     assert living_sphere_curator_output_rejection_reason("too short") is not None
-    assert compact_living_sphere_if_pending(store, fake_complete) is False
+    with pytest.raises(LivingSphereCuratorOutputRejected):
+        compact_living_sphere_if_pending(
+            store, fake_complete, tool_bg_idle_event=_idle_tool_bg()
+        )
     assert store.read_document(LIVING_SPHERE_RELATIVE_PATH) == original
     raw = store.read_document_if_exists(".companion_memory_pipeline.json")
     assert raw is None or "living_sphere_curated_through_update_id" not in raw
 
 
-def test_curator_skips_malformed_jsonl_lines(tmp_path: Path) -> None:
+def test_curator_malformed_jsonl_line_raises(tmp_path: Path) -> None:
     root = tmp_path / "ls-bad-line"
     root.mkdir()
     store = MemoryStore(
@@ -124,9 +138,10 @@ def test_curator_skips_malformed_jsonl_lines(tmp_path: Path) -> None:
     def fake_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
         return _valid_md("有效")
 
-    assert compact_living_sphere_if_pending(store, fake_complete) is True
-    state = json.loads(store.read_document(".companion_memory_pipeline.json"))
-    assert state["living_sphere_curated_through_update_id"] == good.update_id
+    with pytest.raises(json.JSONDecodeError):
+        compact_living_sphere_if_pending(
+            store, fake_complete, tool_bg_idle_event=_idle_tool_bg()
+        )
 
 
 def test_compact_living_sphere_batch_raises_on_rejected_output(tmp_path: Path) -> None:
@@ -142,9 +157,5 @@ def test_compact_living_sphere_batch_raises_on_rejected_output(tmp_path: Path) -
     def bad_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
         return "# oops\n\nno markers"
 
-    try:
+    with pytest.raises(LivingSphereCuratorOutputRejected):
         compact_living_sphere_batch(store, batch, bad_complete)
-        raised = False
-    except LivingSphereCuratorOutputRejected:
-        raised = True
-    assert raised

@@ -18,6 +18,12 @@ from living_sphere.models import LivingSphereUpdate
 from living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown
 
 
+def _idle_tool_bg() -> threading.Event:
+    ev = threading.Event()
+    ev.set()
+    return ev
+
+
 def _seed_pipeline_store(store: MemoryStore) -> None:
     for name, body in (
         ("IDENTITY.md", "id\n"),
@@ -59,7 +65,7 @@ def test_memory_pipeline_compacts_living_sphere_when_pending(
 
     cfg = MemoryPipelineConfig(memory_update_every_n_turns=999)
     memory_curation = memory_update_after_turn(
-        store, "hi", "hello", fake_complete, cfg
+        store, "hi", "hello", fake_complete, cfg, tool_bg_idle_event=_idle_tool_bg()
     )
     assert "memory" in roles
     assert "合并" in store.read_document(LIVING_SPHERE_RELATIVE_PATH)
@@ -86,7 +92,9 @@ def test_memory_pipeline_skips_living_sphere_curator_without_pending(
         return "noop\n"
 
     cfg = MemoryPipelineConfig(memory_update_every_n_turns=999)
-    memory_update_after_turn(store, "hi", "hello", fake_complete, cfg)
+    memory_update_after_turn(
+        store, "hi", "hello", fake_complete, cfg, tool_bg_idle_event=_idle_tool_bg()
+    )
     assert "memory" not in roles
     assert store.read_document(LIVING_SPHERE_RELATIVE_PATH) == original
 
@@ -109,7 +117,10 @@ def test_memory_update_waits_for_tool_background_before_compact(
     )
     ev = threading.Event()
     ev.clear()
-    monkeypatch.setenv("INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC", "2")
+    monkeypatch.setattr(
+        "app.core.companion_harness.memory.living_sphere_curator._tool_bg_idle_wait_timeout_sec",
+        lambda: 2.0,
+    )
 
     def release_idle() -> None:
         time.sleep(0.05)

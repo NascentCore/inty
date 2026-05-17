@@ -383,7 +383,7 @@ def memory_update_after_turn(
     complete_fn: Callable[[list[dict[str, Any]], str], str],
     config: MemoryPipelineConfig,
     *,
-    tool_bg_idle_event: Event | None = None,
+    tool_bg_idle_event: Event,
 ) -> bool:
     """Run post-turn memory pipeline. Returns True if any LLM curation step ran."""
     t_all = time.perf_counter()
@@ -577,7 +577,7 @@ _memory_queue: (
             MemoryPipelineConfig,
             str,
             str,
-            Event | None,
+            Event,
         ]
     ]
     | None
@@ -656,7 +656,7 @@ def schedule_memory_update_after_turn(
     *,
     trace_id: str = "",
     user_msg_uuid: str = "",
-    tool_bg_idle_event: Event | None = None,
+    tool_bg_idle_event: Event,
 ) -> None:
     global _memory_queue
     with _worker_lock:

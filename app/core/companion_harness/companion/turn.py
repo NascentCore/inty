@@ -771,6 +771,7 @@ async def run_turn(
             inner_tick_mode.value,
         )
     elif defer_memory_update:
+        assert tool_bg_idle_event is not None
 
         def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:
             return llm_client.complete_text(msgs, model_role=model_role)
@@ -786,6 +787,7 @@ async def run_turn(
             tool_bg_idle_event=tool_bg_idle_event,
         )
     else:
+        assert tool_bg_idle_event is not None
         _mem_sync_tok = companion_llm_runtime_event_bind_ctx.set(
             LlmRuntimeEventBind(
                 memory_store=store,

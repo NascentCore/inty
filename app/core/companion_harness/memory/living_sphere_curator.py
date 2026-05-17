@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import threading
 from collections.abc import Callable
 from typing import Any
@@ -18,6 +17,7 @@ from app.core.companion_harness.memory.memory_store_document_mapping import (
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+from app.core.config import global_config_loaded_from_config_yaml
 from living_sphere.models import (
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
     LivingSphereUpdate,
@@ -67,19 +67,18 @@ def living_sphere_curator_output_rejection_reason(body: str) -> str | None:
 
 
 def _tool_bg_idle_wait_timeout_sec() -> float:
-    raw = os.environ.get("INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC", "").strip()
-    if raw:
-        return float(raw)
-    return 120.0
+    return float(
+        global_config_loaded_from_config_yaml.app.features.companion_tool_bg_idle_wait_timeout_sec
+    )
 
 
 def wait_for_tool_background_before_living_sphere_compact(
-    tool_bg_idle_event: threading.Event | None,
+    tool_bg_idle_event: threading.Event,
     *,
     scope_registry_key: str,
 ) -> None:
     """Let async tool_background finish appending jsonl before LivingSphere compact."""
-    if tool_bg_idle_event is None or tool_bg_idle_event.is_set():
+    if tool_bg_idle_event.is_set():
         return
     timeout_s = _tool_bg_idle_wait_timeout_sec()
     logger.debug(
@@ -111,32 +110,42 @@ def _write_pipeline_state(store: MemoryStore, data: dict[str, object]) -> None:
     store.write_document(rel, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
 
+def _pipeline_curated_through_update_id(state: dict[str, object]) -> str:
+    """Last ``LivingSphereUpdate.update_id`` merged into LIVING_SPHERE.md; ``""`` if never compacted."""
+    cursor_raw = state.get(_PIPELINE_CURSOR_KEY)
+    if isinstance(cursor_raw, str):
+        return cursor_raw.strip()
+    return ""
+
+
 def _read_all_updates(store: MemoryStore) -> list[LivingSphereUpdate]:
     raw = store.read_document_if_exists(LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH)
     if raw is None or not raw.strip():
         return []
     out: list[LivingSphereUpdate] = []
-    scope = store.scope.registry_key()
-    for line_no, line in enumerate(raw.splitlines(), start=1):
+    for line in raw.splitlines():
         line = line.strip()
         if not line:
             continue
-        try:
-            out.append(LivingSphereUpdate.model_validate(json.loads(line)))
-        except (json.JSONDecodeError, ValueError) as exc:
-            logger.warning(
-                "living_sphere_updates.jsonl skip invalid line scope={} line_no={} err={}",
-                scope,
-                line_no,
-                exc,
-            )
+        out.append(LivingSphereUpdate.model_validate(json.loads(line)))
     return out
 
 
 def _pending_updates_after_cursor(
-    rows: list[LivingSphereUpdate], *, curated_through_update_id: str | None
+    rows: list[LivingSphereUpdate],
+    *,
+    curated_through_update_id: str,
 ) -> tuple[list[LivingSphereUpdate], bool]:
-    """Return (pending rows in file order, cursor_was_missing)."""
+    """Rows not yet merged into LIVING_SPHERE.md, in jsonl file order.
+
+    ``curated_through_update_id`` is the last ``update_id`` written by a successful compact
+    (stored in ``.companion_memory_pipeline.json`` as ``living_sphere_curated_through_update_id``).
+    Use ``""`` when no compact has run yet—all rows are pending.
+
+    Returns ``(pending_rows, cursor_missing)``. ``cursor_missing`` is True when
+    ``curated_through_update_id`` is non-empty but does not appear in ``rows`` (stale cursor);
+    callers re-merge all rows in that case.
+    """
     if not rows:
         return [], False
     if not curated_through_update_id:
@@ -185,7 +194,7 @@ def compact_living_sphere_if_pending(
     store: MemoryStore,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
     *,
-    tool_bg_idle_event: threading.Event | None = None,
+    tool_bg_idle_event: threading.Event,
 ) -> bool:
     """Drain pending jsonl in chronological batches. Returns True if any batch compacted."""
     wait_for_tool_background_before_living_sphere_compact(
@@ -197,16 +206,11 @@ def compact_living_sphere_if_pending(
     for batch_idx in range(_MAX_COMPACT_BATCHES_PER_TURN):
         rows = _read_all_updates(store)
         state = _load_pipeline_state(store)
-        cursor_raw = state.get(_PIPELINE_CURSOR_KEY)
-        cursor = (
-            cursor_raw.strip()
-            if isinstance(cursor_raw, str) and cursor_raw.strip()
-            else None
-        )
+        cursor = _pipeline_curated_through_update_id(state)
         pending, cursor_missing = _pending_updates_after_cursor(
             rows, curated_through_update_id=cursor
         )
-        if cursor_missing and cursor is not None:
+        if cursor_missing and cursor:
             logger.warning(
                 "living_sphere_curator cursor not found in jsonl; re-merging all rows scope={} cursor={}",
                 scope,
@@ -215,16 +219,7 @@ def compact_living_sphere_if_pending(
         if not pending:
             break
         batch = pending[:_PENDING_UPDATES_BATCH_CAP]
-        try:
-            last_id = compact_living_sphere_batch(store, batch, complete_fn)
-        except LivingSphereCuratorOutputRejected as exc:
-            logger.warning(
-                "living_sphere_curator rejected output scope={} batch_idx={} reason={}",
-                scope,
-                batch_idx,
-                exc,
-            )
-            break
+        last_id = compact_living_sphere_batch(store, batch, complete_fn)
         state[_PIPELINE_CURSOR_KEY] = last_id
         _write_pipeline_state(store, state)
         any_ran = True
@@ -233,17 +228,12 @@ def compact_living_sphere_if_pending(
     else:
         rows_after = _read_all_updates(store)
         state_after = _load_pipeline_state(store)
-        cursor_after_raw = state_after.get(_PIPELINE_CURSOR_KEY)
-        cursor_after = (
-            cursor_after_raw.strip()
-            if isinstance(cursor_after_raw, str) and cursor_after_raw.strip()
-            else None
-        )
+        cursor_after = _pipeline_curated_through_update_id(state_after)
         still_pending, _ = _pending_updates_after_cursor(
             rows_after, curated_through_update_id=cursor_after
         )
         if still_pending:
-            logger.warning(
+            logger.error(
                 "living_sphere_curator hit max batches per turn scope={} remaining_pending={}",
                 scope,
                 len(still_pending),
