@@ -328,7 +328,6 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                     request=merged,
                     current_user=current_user,
                     subscription_svc=subscription_svc,
-                    voice_svc=voice_svc,
                     companion_background_sink=companion_ws.background_sink,
                     companion_ws_foreground_pending=companion_ws.foreground_pending,
                     companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
@@ -2240,7 +2239,6 @@ async def _agent_chat_ws_completions_impl(
     request: ChatCompletionRequest,
     current_user: UserSchema,
     subscription_svc: SubscriptionService,
-    voice_svc: VoiceService,
     companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
     companion_ws_heartbeat_ctx: dict[str, Any] | None = None,
@@ -2248,9 +2246,9 @@ async def _agent_chat_ws_completions_impl(
 ) -> dict:
     """One companion chat turn for ``/api/v1/chat/ws`` (production WebSocket path).
 
-    Companion kernel + wire envelope only. HTTP-era extras (surprise snap, festival/daily
-    memory prompts in-frame, premium preview, legacy agent runtime) stay on
-    ``_agent_chat_completions_impl``.
+    Companion kernel + wire envelope only. HTTP-era extras (chat limit gate, TTS,
+    usage accounting, push read side-effects, surprise snap, in-frame memory prompts)
+    stay on ``_agent_chat_completions_impl`` or other routes.
     """
     # TODO(cleanup-ws-http-chat-impl): Deduplicate post-turn finalize with HTTP impl where shared.
     try:
@@ -2308,25 +2306,6 @@ async def _agent_chat_ws_completions_impl(
 
         session_id = generate_session_id(str(chat.id))
 
-        with log_time(f"订阅检查: user_id={current_user.id}"):
-            is_allowed, used_count, daily_limit = (
-                await subscription_svc.check_chat_limit(db, current_user)
-            )
-
-        if not is_allowed:
-            limit_response = await _handle_subscription_limit_error(
-                session_id,
-                last_user_message,
-                current_user,
-                used_count,
-                daily_limit,
-                client_local_id=effective_local_id,
-            )
-            return limit_response.model_dump(exclude_none=True)
-
-        use_companion = True
-        companion_reply_modality = "text"
-        companion_voice_script = ""
         try:
             with log_time(f"获取聊天设置: chat_id={chat.id}"):
                 chat_settings = await chat_service.get_or_create_chat_settings(
@@ -2346,8 +2325,7 @@ async def _agent_chat_ws_completions_impl(
                     _agent_cfg.chat_llm_base_url or _agent_cfg.base_url or ""
                 ).strip() or "https://openrouter.ai/api/v1"
                 logger.debug(
-                    "chat_turn route=websocket companion={} user={} chat_id={} agent_id={} model={} subscribed={} chat_llm_api_base={}",
-                    use_companion,
+                    "chat_turn route=websocket user={} chat_id={} agent_id={} model={} subscribed={} chat_llm_api_base={}",
                     current_user.id,
                     chat.id,
                     agent_id,
@@ -2475,10 +2453,6 @@ async def _agent_chat_ws_completions_impl(
                             preset_user_msg_uuid=companion_preset_uid,
                             implicit_signal_bundle=companion_implicit_bundle,
                         )
-                        companion_reply_modality = companion_turn.reply_modality
-                        companion_voice_script = (
-                            companion_turn.voice_message_script or ""
-                        )
                         if (
                             companion_preset_uid is not None
                             and companion_ws_foreground_pending is not None
@@ -2580,19 +2554,6 @@ async def _agent_chat_ws_completions_impl(
             )
             logger.debug(f"Agent聊天响应成功: {response_preview}...")
 
-            try:
-                read_count = await mark_user_push_notifications_as_read(
-                    db, current_user.id
-                )
-                if read_count > 0:
-                    logger.debug(
-                        f"标记用户推送为已读: user_id={current_user.id}, count={read_count}"
-                    )
-            except Exception as e:
-                logger.warning(
-                    f"标记用户推送为已读失败: user_id={current_user.id}, error={str(e)}"
-                )
-
         except HTTPException:
             raise
         except CompanionLLMInferenceBackendError:
@@ -2600,49 +2561,6 @@ async def _agent_chat_ws_completions_impl(
         except Exception as e:
             logger.error(f"Agent聊天处理失败: {str(e)}")
             raise
-
-        audio_url = None
-        audio_duration = None
-        try:
-            audio_url, audio_duration = await synthesize_chat_assistant_audio(
-                db=db,
-                session_id=session_id,
-                ai_message_id=ai_message_id,
-                voice_enabled=chat_settings.voice_enabled,
-                chat_voice_id=chat_settings.voice_id,
-                agent_voice_id=agent_data.get("voice_id"),
-                agent_gender=agent_data.get("gender"),
-                agent_settings=agent_data.get("settings"),
-                language=request.language,
-                current_user=current_user,
-                voice_svc=voice_svc,
-                response_text_content=response_text_content,
-                use_companion=use_companion,
-                companion_reply_modality=companion_reply_modality,
-                companion_voice_script=companion_voice_script,
-            )
-        except Exception as e:
-            logger.error(f"语音生成失败: {str(e)}")
-            logger.exception("语音生成异常详细信息:")
-
-        try:
-            with log_time(f"记录使用情况: user_id={current_user.id}"):
-                usage_extra: dict[str, Any] = {
-                    "agent_id": agent_id,
-                    "message_length": len(last_user_text),
-                }
-                if implicit_greeting_ws:
-                    usage_extra["implicit_user_signed_on"] = True
-                await subscription_svc.record_usage(
-                    db,
-                    current_user.id,
-                    "chat",
-                    1,
-                    extra_data=usage_extra,
-                )
-            logger.debug("聊天使用情况记录成功")
-        except Exception as e:
-            logger.warning(f"记录聊天使用情况失败: {str(e)}")
 
         latest_message_info = None
         try:
@@ -2677,7 +2595,7 @@ async def _agent_chat_ws_completions_impl(
             response_content_parts,
             last_user_text,
             latest_message_info,
-            audio_url,
+            None,
             request,
             source_imate_id=request.target_imate_id,
             user_message_id=user_message_id,
@@ -3717,7 +3635,6 @@ async def chat_completions_websocket(
                             request=merged_request,
                             current_user=current_user,
                             subscription_svc=subscription_svc,
-                            voice_svc=voice_svc,
                             companion_background_sink=companion_ws.background_sink,
                             companion_ws_foreground_pending=companion_ws.foreground_pending,
                             companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
