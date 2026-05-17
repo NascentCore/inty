@@ -43,6 +43,14 @@ from app.core.companion_harness.memory.memory_store import (
 from app.core.companion_harness.memory.memory_store_document_mapping import (
     parse_memory_store_relative_path,
 )
+from app.core.companion_harness.companion.llm_runtime_events import (
+    companion_llm_runtime_event_bind_ctx,
+)
+from living_sphere.models import (
+    LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
+    LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
+    LivingSphereUpdate,
+)
 from techno_core.models import (
     Sphere,
     TechnoCoreEvent,
@@ -161,6 +169,7 @@ def _list_dir_extra_names_from_store(store: MemoryStore, rel_dir: str) -> set[st
 _REPL_TOOL_NAMES_SHARED_HEAD: tuple[str, ...] = (
     "user_profile_record",
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
+    LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     "schedule_task",
     "tool_update_agent_status_line",
     "memory_store_list_paths",
@@ -181,6 +190,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "memory_store_mkdir",
         "user_profile_record",
         TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
+        LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
         "schedule_task",
         "google_web_search",
         "read_web_page",
@@ -436,6 +446,41 @@ def tool_techno_core_record_event(store: MemoryStore, arguments: dict[str, Any])
     return f"OK recorded techno_core event_id={event.event_id}"
 
 
+def tool_living_sphere_record_update(
+    store: MemoryStore, arguments: dict[str, Any]
+) -> str:
+    """Append one LivingSphere change intent to ``living_sphere_updates.jsonl``."""
+    raw_change = arguments.get("change_request")
+    if not isinstance(raw_change, str):
+        return "ERROR: change_request must be a string"
+    cid = store.scope.companion_id.strip()
+    if not cid:
+        return (
+            f"ERROR: missing companion scope for {LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME}"
+        )
+    ev_kwargs: dict[str, Any] = {
+        "change_request": raw_change,
+        "source": "chat_tool",
+    }
+    bind = companion_llm_runtime_event_bind_ctx.get()
+    if bind is not None:
+        trace = bind.trace_id.strip()
+        if trace:
+            ev_kwargs["trace_id"] = trace
+        um = bind.user_msg_uuid.strip()
+        if um:
+            ev_kwargs["user_msg_uuid"] = um
+    try:
+        update = LivingSphereUpdate.model_validate(ev_kwargs)
+    except ValidationError as exc:
+        return f"ERROR: {exc}"
+    store.append_jsonl_record(
+        LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
+        update.model_dump(mode="json"),
+    )
+    return f"OK recorded update_id={update.update_id}"
+
+
 def tool_schedule_task(store: MemoryStore, exec_time_utc: str, task_text: str) -> str:
     task_id = add_schedule_task(
         store,
@@ -680,6 +725,35 @@ def build_openai_tools() -> list[dict[str, Any]]:
                         },
                     },
                     "required": ["sphere", "summary"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
+                "description": (
+                    "Record a user-directed change to the private LivingSphere home "
+                    f"(append-only ``{LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH}``). "
+                    "Call when the user **explicitly** asks to add, move, or re-layout "
+                    "objects or anchors in the virtual home—not for TechnoCore collective "
+                    "world edits. ``LIVING_SPHERE.md`` in context is a **snapshot** merged "
+                    "after the turn; do not use ``memory_store_write_document`` on it. "
+                    "Do not use ``techno_core_record_event`` for layout/setup changes."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "change_request": {
+                            "type": "string",
+                            "description": (
+                                "Concise natural-language summary of the user's "
+                                "LivingSphere change intent from chat."
+                            ),
+                        },
+                    },
+                    "required": ["change_request"],
                     "additionalProperties": False,
                 },
             },
@@ -1261,6 +1335,8 @@ async def _dispatch(
         return memory_store_dispatch_result
     if name == TECHNO_CORE_RECORD_EVENT_TOOL_NAME:
         return tool_techno_core_record_event(store, arguments)
+    if name == LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME:
+        return tool_living_sphere_record_update(store, arguments)
     if name == "tool_update_agent_status_line":
         raw_sl = arguments.get("status_line")
         if not isinstance(raw_sl, str):

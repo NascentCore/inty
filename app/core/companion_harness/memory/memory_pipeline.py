@@ -20,6 +20,8 @@ from app.core.companion_harness.companion.llm_runtime_events import (
 )
 from app.core.companion_harness.companion.utc import local_date_str, local_iso_ts
 
+from living_sphere.curator import compact_living_sphere_if_pending
+
 from .memory_store import MemoryStore
 from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
@@ -510,6 +512,23 @@ def memory_update_after_turn(
     else:
         _log_memory_pipeline_skipped(
             step="soul_md", ws=ws, turn_n=turn_n, every_n=every_n
+        )
+
+    t = time.perf_counter()
+    if compact_living_sphere_if_pending(store, complete_fn):
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="living_sphere_md",
+            ws=ws,
+            turn_n=turn_n,
+            ms=(time.perf_counter() - t) * 1000.0,
+        )
+    else:
+        _log_memory_pipeline_skipped(
+            step="living_sphere_md",
+            ws=ws,
+            turn_n=turn_n,
+            reason="no_pending_living_sphere_updates",
         )
 
     total_ms = (time.perf_counter() - t_all) * 1000.0
