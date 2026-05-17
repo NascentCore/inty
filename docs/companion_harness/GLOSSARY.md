@@ -54,3 +54,7 @@
 - 写「**下行**」若含确认/心跳类帧，建议标明 **对话下行 / 信令下行**。
 - **「智能体」边界**与「编排入口」是否在 WebSocket 处理层内：团队需在架构文档中单点约定，避免「上行」与「内核输入」混用。
 - **「前台」** ≠ **当轮上下文表** ≠ Android 前台进程。
+
+## See also
+
+- [Wire → Turn → Persistence](WIRE_TURN_PERSISTENCE.md)：控制帧、回合元数据、`transcript` / runtime lifecycle / `chat_history` 分层与落库对照。
