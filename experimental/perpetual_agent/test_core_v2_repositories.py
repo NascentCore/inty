@@ -16,9 +16,15 @@ from experimental.perpetual_agent.core_v2.repositories.cursor_repo import (
 from experimental.perpetual_agent.core_v2.repositories.events_repo import (
     EventsRepository,
 )
-from experimental.perpetual_agent.core_v2.repositories.plan_repo import PlanRepository
-from experimental.perpetual_agent.core_v2.repositories.sqlite_db import SQLiteDatabase
-from experimental.perpetual_agent.core_v2.repositories.sqlite_schema import init_schema
+from experimental.perpetual_agent.core_v2.repositories.plan_repo import (
+    PlanRepository,
+)
+from experimental.perpetual_agent.core_v2.repositories.sqlite_db import (
+    SQLiteDatabase,
+)
+from experimental.perpetual_agent.core_v2.repositories.sqlite_schema import (
+    init_schema,
+)
 
 
 def _db(tmp_path: Path) -> SQLiteDatabase:
@@ -52,7 +58,9 @@ def test_cursor_repo_set_get(tmp_path: Path) -> None:
         cursor_key="telegram_last_applied_update_id",
         cursor_value="101",
     )
-    assert repo.get_cursor(cursor_key="telegram_last_applied_update_id") == "101"
+    assert (
+        repo.get_cursor(cursor_key="telegram_last_applied_update_id") == "101"
+    )
 
 
 def test_plan_repo_due_claim_done_idempotent(tmp_path: Path) -> None:
@@ -79,8 +87,12 @@ def test_plan_repo_due_claim_done_idempotent(tmp_path: Path) -> None:
     assert len(due) == 1
     assert repo.claim_action_running(action_id="act_1") is True
     assert repo.claim_action_running(action_id="act_1") is False
-    assert repo.mark_done(action_id="act_1", result_event_id="evt_result") is True
-    assert repo.mark_done(action_id="act_1", result_event_id="evt_result") is False
+    assert (
+        repo.mark_done(action_id="act_1", result_event_id="evt_result") is True
+    )
+    assert (
+        repo.mark_done(action_id="act_1", result_event_id="evt_result") is False
+    )
 
 
 def test_plan_repo_mark_failed_from_pending(tmp_path: Path) -> None:

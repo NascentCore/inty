@@ -27,7 +27,10 @@ from .living_companion import (
     ScriptedModelExecutor,
     classify_emotion,
 )
-from .telegram_agentic_loop import PULSE_TOOL_DEFINITION, run_telegram_llm_session
+from .telegram_agentic_loop import (
+    PULSE_TOOL_DEFINITION,
+    run_telegram_llm_session,
+)
 
 SYSTEM_PROMPT_TEMPLATE = """
 You are a perpetual demo agent.
@@ -263,7 +266,9 @@ def _render_emotional_state_layer(layer: EmotionalStateLayer) -> str:
     )
 
 
-def _latest_user_message(conversation_messages: list[dict[str, Any]]) -> str | None:
+def _latest_user_message(
+    conversation_messages: list[dict[str, Any]],
+) -> str | None:
     for message in reversed(conversation_messages):
         if message.get("role") == "user":
             return str(message.get("content", ""))
@@ -277,7 +282,8 @@ def _apply_emotion_classification_from_user_message(
     layer.emotion = classification.emotion
     layer.expression = classification.expression
     layer.update_source = (
-        "user_message_classifier:" f"{_flatten_text(text=user_message, max_chars=80)}"
+        "user_message_classifier:"
+        f"{_flatten_text(text=user_message, max_chars=80)}"
     )
     return {
         "updated_emotion": layer.emotion,
@@ -322,7 +328,9 @@ def _layer_update_tool_name(layer_name: str) -> str:
     return f"update_layer_{_normalize_layer_name(layer_name)}"
 
 
-def _build_layer_update_tool_definition(layer: CharacterLayer) -> dict[str, Any]:
+def _build_layer_update_tool_definition(
+    layer: CharacterLayer,
+) -> dict[str, Any]:
     return {
         "type": "function",
         "function": {
@@ -421,11 +429,15 @@ def _build_default_character_layers() -> list[CharacterLayer]:
 def _validate_character_layers(layers: list[CharacterLayer]) -> None:
     if not layers:
         raise ValueError("Character layers cannot be empty.")
-    conversation_layers = [layer for layer in layers if layer.is_conversation_layer]
+    conversation_layers = [
+        layer for layer in layers if layer.is_conversation_layer
+    ]
     if len(conversation_layers) != 1:
         raise ValueError("Exactly one conversation layer is required.")
     if not layers[-1].is_conversation_layer:
-        raise ValueError("Conversation layer must be the shallowest (last) layer.")
+        raise ValueError(
+            "Conversation layer must be the shallowest (last) layer."
+        )
     for layer in layers:
         if layer.nesting_level < 0:
             raise ValueError("Layer nesting_level must be >= 0.")
@@ -453,7 +465,8 @@ def _render_layer_message(layer: CharacterLayer) -> str:
 def _build_layer_messages(layers: list[CharacterLayer]) -> list[dict[str, str]]:
     _validate_character_layers(layers)
     return [
-        {"role": "system", "content": _render_layer_message(layer)} for layer in layers
+        {"role": "system", "content": _render_layer_message(layer)}
+        for layer in layers
     ]
 
 
@@ -497,7 +510,10 @@ def _execute_layer_update_tool(
         for existing_layer in layers:
             if existing_layer is layer or existing_layer.is_conversation_layer:
                 continue
-            if _normalize_layer_name(existing_layer.name) == normalized_updated_name:
+            if (
+                _normalize_layer_name(existing_layer.name)
+                == normalized_updated_name
+            ):
                 raise ValueError(
                     "Layer rename would collide with an existing layer name after normalization."
                 )
@@ -598,7 +614,9 @@ def _execute_compact_conversation_layer_tool(
     else:
         compactable_end_index = max_compactable_messages
     compacted_start_index = compactable_end_index - recent_message_count
-    compacted_slice = conversation_messages[compacted_start_index:compactable_end_index]
+    compacted_slice = conversation_messages[
+        compacted_start_index:compactable_end_index
+    ]
     del conversation_messages[compacted_start_index:compactable_end_index]
 
     compacted_transcript = "\n".join(
@@ -615,7 +633,9 @@ def _execute_compact_conversation_layer_tool(
     _validate_character_layers(layers)
     return {
         "created_layer_name": compacted_layer.name,
-        "created_layer_tool_name": _layer_update_tool_name(compacted_layer.name),
+        "created_layer_tool_name": _layer_update_tool_name(
+            compacted_layer.name
+        ),
         "created_layer_nesting_level": compacted_layer.nesting_level,
         "compacted_message_count": recent_message_count,
         "raw_compacted_messages": _clone_messages(compacted_layer.raw_messages),
@@ -632,7 +652,9 @@ def _execute_compact_named_layers_tool(
 ) -> dict[str, Any]:
     _validate_character_layers(layers)
     if not source_layer_names:
-        raise ValueError("source_layer_names must contain at least one layer name.")
+        raise ValueError(
+            "source_layer_names must contain at least one layer name."
+        )
 
     normalized_source_names = [
         _normalize_layer_name(name) for name in source_layer_names
@@ -651,7 +673,9 @@ def _execute_compact_named_layers_tool(
     selected_indices = []
     for normalized_name in normalized_source_names:
         if normalized_name not in index_by_name:
-            raise ValueError(f"Unknown source layer for compaction: {normalized_name}")
+            raise ValueError(
+                f"Unknown source layer for compaction: {normalized_name}"
+            )
         selected_indices.append(index_by_name[normalized_name])
     selected_indices = sorted(selected_indices)
     for idx in range(1, len(selected_indices)):
@@ -830,7 +854,9 @@ def _create_openai_client(api_key_env: str, base_url: str) -> Any:
     return OpenAI(api_key=os.environ[api_key_env], base_url=base_url)
 
 
-def _execute_pulse_tool(seconds: int, pulse_count: int) -> tuple[int, dict[str, Any]]:
+def _execute_pulse_tool(
+    seconds: int, pulse_count: int
+) -> tuple[int, dict[str, Any]]:
     time.sleep(seconds)
     updated_pulse_count = pulse_count + 1
     return (
@@ -850,7 +876,9 @@ def _execute_call_user_tool(
     create_call: Any = _create_twilio_call,
 ) -> dict[str, Any]:
     config = _load_twilio_call_config()
-    twilio_response = create_call(to_number=phone_number, reason=reason, config=config)
+    twilio_response = create_call(
+        to_number=phone_number, reason=reason, config=config
+    )
     return {
         "to_number": phone_number,
         "reason": reason,
@@ -960,7 +988,8 @@ def run_perpetual_agent(
                 emotion = str(tool_args["emotion"]).strip()
                 expression = (
                     str(tool_args["expression"]).strip()
-                    if "expression" in tool_args and tool_args["expression"] is not None
+                    if "expression" in tool_args
+                    and tool_args["expression"] is not None
                     else None
                 )
                 reason = (
@@ -978,7 +1007,10 @@ def run_perpetual_agent(
                     expression=expression,
                     reason=reason,
                 )
-            elif tool_call.function.name == "compact_recent_conversation_into_layer":
+            elif (
+                tool_call.function.name
+                == "compact_recent_conversation_into_layer"
+            ):
                 layer_name = str(tool_args["layer_name"]).strip()
                 layer_content = str(tool_args["layer_content"]).strip()
                 recent_message_count = int(tool_args["recent_message_count"])
@@ -1001,7 +1033,8 @@ def run_perpetual_agent(
                 layer_name = str(tool_args["layer_name"]).strip()
                 layer_content = str(tool_args["layer_content"]).strip()
                 source_layer_names = [
-                    str(item).strip() for item in tool_args["source_layer_names"]
+                    str(item).strip()
+                    for item in tool_args["source_layer_names"]
                 ]
                 print(
                     f"[step={step}] compact_named_layers_into_layer("
@@ -1031,9 +1064,13 @@ def run_perpetual_agent(
                     ),
                 )
             else:
-                raise ValueError(f"Unsupported tool call: {tool_call.function.name}")
-            tool_output_for_conversation = _sanitize_tool_output_for_conversation(
-                tool_name=tool_call.function.name, tool_output=tool_output
+                raise ValueError(
+                    f"Unsupported tool call: {tool_call.function.name}"
+                )
+            tool_output_for_conversation = (
+                _sanitize_tool_output_for_conversation(
+                    tool_name=tool_call.function.name, tool_output=tool_output
+                )
             )
             conversation_messages.append(
                 {
@@ -1146,7 +1183,9 @@ def main() -> None:
     parser.add_argument("--user-contact", default="alex@example.com")
     parser.add_argument("--initial-virtual-age-years", type=float, default=2.0)
     parser.add_argument("--clock-rate", type=float, default=10.0)
-    parser.add_argument("--proactive-interval-seconds", type=float, default=300.0)
+    parser.add_argument(
+        "--proactive-interval-seconds", type=float, default=300.0
+    )
     parser.add_argument("--tick-seconds", type=float, default=90.0)
     parser.add_argument(
         "--telegram-bot-token-env",
@@ -1225,13 +1264,16 @@ def main() -> None:
     if args.telegram_llm:
         assert args.model, "--model is required with --telegram-llm"
         telegram_bot_token = _required_env(args.telegram_bot_token_env)
-        tools = [PULSE_TOOL_DEFINITION] if args.telegram_llm_pulse_tool else None
+        tools = (
+            [PULSE_TOOL_DEFINITION] if args.telegram_llm_pulse_tool else None
+        )
         run_telegram_llm_session(
             model=args.model,
             api_key_env=args.api_key_env,
             base_url=args.base_url,
             telegram_bot_token=telegram_bot_token,
-            telegram_chat_id=args.telegram_chat_id or _optional_env("TELEGRAM_CHAT_ID"),
+            telegram_chat_id=args.telegram_chat_id
+            or _optional_env("TELEGRAM_CHAT_ID"),
             telegram_poll_timeout_seconds=args.telegram_poll_timeout_seconds,
             max_user_turns=args.telegram_llm_max_user_turns,
             merge_telegram_batches=not args.telegram_llm_no_merge_batches,

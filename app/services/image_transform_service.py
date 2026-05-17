@@ -17,7 +17,9 @@ class ImageTransformService:
 
     def __init__(self):
         self.config = global_config_loaded_from_config_yaml.cloudflare
-        self.gcs_pattern = re.compile(r"https?://storage\.googleapis\.com/([^/]+/.+)")
+        self.gcs_pattern = re.compile(
+            r"https?://storage\.googleapis\.com/([^/]+/.+)"
+        )
         self.gcs_uri_pattern = re.compile(r"gs://([^/]+/.+)")  # 支持 gs:// 格式
         # CDN URL pattern: https://domain.com/bucket/path (简单代理模式)
         self.cdn_pattern = None
@@ -30,7 +32,9 @@ class ImageTransformService:
         """检查是否为GCS URL（支持 https:// 和 gs:// 格式）"""
         if not url:
             return False
-        return bool(self.gcs_pattern.match(url) or self.gcs_uri_pattern.match(url))
+        return bool(
+            self.gcs_pattern.match(url) or self.gcs_uri_pattern.match(url)
+        )
 
     def extract_gcs_path(self, gcs_url: str) -> Optional[str]:
         """从GCS URL中提取bucket和路径部分（支持 https:// 和 gs:// 格式）"""
@@ -70,7 +74,9 @@ class ImageTransformService:
             if match:
                 gcs_path = match.group(1)  # 提取bucket/path部分
                 gcs_url = f"https://storage.googleapis.com/{gcs_path}"
-                logger.debug(f"Converted CDN URL to GCS: {cdn_url} -> {gcs_url}")
+                logger.debug(
+                    f"Converted CDN URL to GCS: {cdn_url} -> {gcs_url}"
+                )
                 return gcs_url
         except Exception as e:
             logger.error(
@@ -99,14 +105,18 @@ class ImageTransformService:
 
         # 检查domain配置
         if not self.config.domain:
-            logger.warning("Cloudflare domain not configured, returning original URL")
+            logger.warning(
+                "Cloudflare domain not configured, returning original URL"
+            )
             return original_url
 
         try:
             # 从GCS URL提取路径部分
             gcs_path = self.extract_gcs_path(original_url)
             if not gcs_path:
-                logger.warning(f"Failed to extract path from GCS URL: {original_url}")
+                logger.warning(
+                    f"Failed to extract path from GCS URL: {original_url}"
+                )
                 return original_url
 
             # 构建Cloudflare CDN代理URL，简单的代理模式
@@ -185,7 +195,9 @@ class ImageTransformService:
         if self.is_cloudflare_url(url):
             gcs_url = self.cloudflare_to_gcs(url)
             if gcs_url:
-                logger.debug(f"已将CDN URL转换为GCS URL用于存储: {url} -> {gcs_url}")
+                logger.debug(
+                    f"已将CDN URL转换为GCS URL用于存储: {url} -> {gcs_url}"
+                )
                 return gcs_url
             else:
                 logger.warning(f"CDN URL转换失败，使用原URL: {url}")
@@ -205,7 +217,9 @@ class ImageTransformService:
         # 处理单个URL字段
         for field in url_fields:
             if field in result and result[field]:
-                result[field] = self.normalize_image_url_for_storage(result[field])
+                result[field] = self.normalize_image_url_for_storage(
+                    result[field]
+                )
 
         # 处理URL列表字段
         for field in list_url_fields:
@@ -255,14 +269,18 @@ class ImageTransformService:
 
         # 检查domain配置
         if not self.config.domain:
-            logger.warning("Cloudflare domain not configured, returning original URL")
+            logger.warning(
+                "Cloudflare domain not configured, returning original URL"
+            )
             return background_url
 
         try:
             # 从GCS URL提取路径部分
             gcs_path = self.extract_gcs_path(background_url)
             if not gcs_path:
-                logger.warning(f"Failed to extract path from GCS URL: {background_url}")
+                logger.warning(
+                    f"Failed to extract path from GCS URL: {background_url}"
+                )
                 return background_url
 
             # 构建带有裁切参数的Cloudflare CDN URL
@@ -280,7 +298,9 @@ class ImageTransformService:
 
             # 方案2：假设是 top;right;bottom;left 边距格式
             trim_top = avatar_crop.y
-            trim_right = avatar_crop.image_width - (avatar_crop.x + avatar_crop.width)
+            trim_right = avatar_crop.image_width - (
+                avatar_crop.x + avatar_crop.width
+            )
             trim_bottom = avatar_crop.image_height - (
                 avatar_crop.y + avatar_crop.height
             )

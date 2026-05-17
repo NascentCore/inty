@@ -29,7 +29,9 @@ class TurnRouteMode(str, Enum):
     HEARTBEAT_SYNC = "heartbeat_sync"
     INNER_TICK_SYNC = "inner_tick_sync"
     CHAT_ONLY_SYNC = "chat_only_sync"
-    ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL = "async_foreground_chat_background_tool"
+    ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL = (
+        "async_foreground_chat_background_tool"
+    )
 
 
 def resolve_turn_route_mode(

@@ -38,13 +38,17 @@ def build_repl_turn_base_messages(
     include_significance_perception_slice: bool = False,
 ) -> tuple[list[dict[str, Any]], str]:
     effective_ai_private = ai_private_text
-    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    tick_proactive = (
+        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    )
     if (
         inner_tick_turn
         and not tick_proactive
         and not (effective_ai_private or "").strip()
     ):
-        effective_ai_private = get_ai_private_jsonl_text_for_prompt(memory_store)
+        effective_ai_private = get_ai_private_jsonl_text_for_prompt(
+            memory_store
+        )
     system_messages = build_system_messages(
         bundle,
         context,
@@ -69,7 +73,9 @@ def build_repl_turn_base_messages(
         messages.append(
             {
                 "role": "user",
-                "content": build_proactive_heartbeat_transcript_user_marker(transcript),
+                "content": build_proactive_heartbeat_transcript_user_marker(
+                    transcript
+                ),
                 TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
             }
         )

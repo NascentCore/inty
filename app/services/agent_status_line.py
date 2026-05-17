@@ -61,7 +61,9 @@ async def _persist_agent_status_line_body(
         )
 
 
-async def persist_agent_status_line(agent_id: str, status_line: Optional[str]) -> None:
+async def persist_agent_status_line(
+    agent_id: str, status_line: Optional[str]
+) -> None:
     """Writes ``agents.status_line``. Empty or whitespace clears the column."""
     normalized = (status_line or "").strip()
     payload = normalized if normalized else None
@@ -89,7 +91,9 @@ async def persist_agent_status_line(agent_id: str, status_line: Optional[str]) -
             logger.exception(
                 "persist_agent_status_line bridge failed agent_id={}", agent_id
             )
-            raise ValueError(f"persist_agent_status_line failed: {exc}") from exc
+            raise ValueError(
+                f"persist_agent_status_line failed: {exc}"
+            ) from exc
         return
     await _persist_agent_status_line_body(agent_id, payload)
 
@@ -102,7 +106,9 @@ def _status_line_tool_result_quoted_fragment(text: str) -> str:
     return escaped
 
 
-async def tool_update_agent_status_line(store: MemoryStore, status_line: str) -> str:
+async def tool_update_agent_status_line(
+    store: MemoryStore, status_line: str
+) -> str:
     """Companion tool: set short chat-header status line for this agent."""
     agent_id = agent_id_from_companion_memory_store(store)
     await persist_agent_status_line(agent_id, status_line)

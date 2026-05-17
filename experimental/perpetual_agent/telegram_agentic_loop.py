@@ -107,7 +107,9 @@ def _run_tool(name: str, arguments_json: str) -> dict[str, Any]:
     raise ValueError(f"unsupported tool: {name}")
 
 
-def _tool_names_from_definitions(tools: list[dict[str, Any]] | None) -> list[str]:
+def _tool_names_from_definitions(
+    tools: list[dict[str, Any]] | None,
+) -> list[str]:
     if not tools:
         return []
     names: list[str] = []
@@ -166,7 +168,9 @@ def _response_payload_for_debug_log(response: Any) -> dict[str, Any]:
         "message": {
             "role": getattr(msg, "role", None),
             "content": msg.content,
-            "tool_calls": _serialize_tool_calls(tool_calls) if tool_calls else None,
+            "tool_calls": (
+                _serialize_tool_calls(tool_calls) if tool_calls else None
+            ),
         },
     }
     usage = getattr(response, "usage", None)

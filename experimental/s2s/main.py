@@ -161,7 +161,9 @@ def main() -> None:
         print(f"Network error while connecting realtime API: {error}")
         raise
     except APIStatusError as error:
-        print(f"Realtime API request failed: status={error.status_code}, body={error}")
+        print(
+            f"Realtime API request failed: status={error.status_code}, body={error}"
+        )
         raise
 
 

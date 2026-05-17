@@ -47,4 +47,6 @@ def get_password_hash(password: str) -> str:
     """
     获取密码哈希
     """
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode(
+        "utf-8"
+    )

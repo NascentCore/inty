@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from app.core.user_time_context_llm_meta import build_user_time_context_meta_lines
+from app.core.user_time_context_llm_meta import (
+    build_user_time_context_meta_lines,
+)
 
 
 def suffix_user_text_with_time_context_lines(

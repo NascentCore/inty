@@ -54,9 +54,15 @@ class ImageGenerationAnalytics:
                 failures = df.iloc[0]["total_failures"]
                 unknown = df.iloc[0]["unknown_status"]
 
-                df["success_rate"] = (success / total * 100) if total > 0 else 0.0
-                df["failure_rate"] = (failures / total * 100) if total > 0 else 0.0
-                df["unknown_rate"] = (unknown / total * 100) if total > 0 else 0.0
+                df["success_rate"] = (
+                    (success / total * 100) if total > 0 else 0.0
+                )
+                df["failure_rate"] = (
+                    (failures / total * 100) if total > 0 else 0.0
+                )
+                df["unknown_rate"] = (
+                    (unknown / total * 100) if total > 0 else 0.0
+                )
 
             return df
         finally:
@@ -91,7 +97,9 @@ class ImageGenerationAnalytics:
                 success_total = new_gen + fallback
                 df["total_success"] = success_total
                 df["fallback_ratio_of_success_pct"] = (
-                    (fallback / success_total * 100) if success_total > 0 else 0.0
+                    (fallback / success_total * 100)
+                    if success_total > 0
+                    else 0.0
                 )
                 df["fallback_ratio_of_requests_pct"] = (
                     (fallback / total * 100) if total > 0 else 0.0
@@ -176,7 +184,9 @@ class ImageGenerationAnalytics:
         finally:
             cursor.close()
 
-    def get_daily_trend(self, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+    def get_daily_trend(
+        self, start_date: datetime, end_date: datetime
+    ) -> pd.DataFrame:
         """按日期统计趋势"""
         query = """
             SELECT 
@@ -517,7 +527,9 @@ def load_database_config(config_file: Optional[str] = None) -> Dict[str, Any]:
     db_config["host"] = os.getenv("DB_HOST", db_config.get("host", "localhost"))
     db_config["port"] = int(os.getenv("DB_PORT", db_config.get("port", 5432)))
     db_config["user"] = os.getenv("DB_USER", db_config.get("user", "postgres"))
-    db_config["password"] = os.getenv("DB_PASSWORD", db_config.get("password", ""))
+    db_config["password"] = os.getenv(
+        "DB_PASSWORD", db_config.get("password", "")
+    )
     db_config["dbname"] = os.getenv("DB_NAME", db_config.get("dbname", "inty"))
     if "replica_host" not in db_config:
         db_config["replica_host"] = None
@@ -541,7 +553,9 @@ def parse_arguments() -> argparse.Namespace:
     # 时间范围参数
     time_group = parser.add_mutually_exclusive_group(required=True)
     time_group.add_argument("--last-days", type=int, help="分析最近 N 天的数据")
-    time_group.add_argument("--start-date", type=str, help="开始日期 (YYYY-MM-DD)")
+    time_group.add_argument(
+        "--start-date", type=str, help="开始日期 (YYYY-MM-DD)"
+    )
 
     parser.add_argument("--end-date", type=str, help="结束日期 (YYYY-MM-DD)")
     parser.add_argument(
@@ -570,7 +584,9 @@ def parse_arguments() -> argparse.Namespace:
         help="使用只读副本（config 中 database.replica_host）；未配置时回退到主库",
     )
     parser.add_argument(
-        "--db-host", type=str, help="数据库主机（显式指定时覆盖 config 与 --replica）"
+        "--db-host",
+        type=str,
+        help="数据库主机（显式指定时覆盖 config 与 --replica）",
     )
     parser.add_argument("--db-port", type=int, help="数据库端口")
     parser.add_argument("--db-user", type=str, help="数据库用户名")
@@ -671,7 +687,9 @@ def main():
         fallback_df = analytics.get_fallback_stats(start_date, end_date)
 
         logger.info("查询失败类型统计...")
-        failures_by_type_df = analytics.get_failures_by_type(start_date, end_date)
+        failures_by_type_df = analytics.get_failures_by_type(
+            start_date, end_date
+        )
 
         logger.info("查询失败原因统计...")
         failures_by_reason_df = analytics.get_failures_by_reason(
@@ -682,10 +700,14 @@ def main():
         daily_trend_df = analytics.get_daily_trend(start_date, end_date)
 
         logger.info("查询 Agent 维度统计...")
-        failures_by_agent_df = analytics.get_failures_by_agent(start_date, end_date)
+        failures_by_agent_df = analytics.get_failures_by_agent(
+            start_date, end_date
+        )
 
         logger.info("查询详细失败记录...")
-        detailed_failures_df = analytics.get_detailed_failures(start_date, end_date)
+        detailed_failures_df = analytics.get_detailed_failures(
+            start_date, end_date
+        )
 
         # 显示统计信息
         if not summary_df.empty:
@@ -727,7 +749,9 @@ def main():
         # 保存 CSV 文件
         generator.save_csv(summary_df, "image_generation_summary.csv")
         generator.save_csv(fallback_df, "image_generation_fallback_stats.csv")
-        generator.save_csv(failures_by_type_df, "image_generation_failures_by_type.csv")
+        generator.save_csv(
+            failures_by_type_df, "image_generation_failures_by_type.csv"
+        )
         generator.save_csv(
             failures_by_reason_df, "image_generation_failures_by_reason.csv"
         )

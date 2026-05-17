@@ -13,11 +13,15 @@ class PhoneCallCallerBinding(Base):
     __tablename__ = "phone_call_caller_bindings"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     phone_number_hmac = Column(String(64), nullable=False, unique=True)
     phone_number_masked = Column(String(32), nullable=False)
     last_agent_id = Column(String, ForeignKey("agents.id", ondelete="SET NULL"))
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
     user = relationship("User")

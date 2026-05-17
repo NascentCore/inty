@@ -61,7 +61,9 @@ class _FakeGeminiModels:
         self._client = client
 
     def generate_images(self, *, model: str, prompt: str, config):
-        return self._client._generate_images(model=model, prompt=prompt, config=config)
+        return self._client._generate_images(
+            model=model, prompt=prompt, config=config
+        )
 
     def generate_content(self, *, model: str, contents, config):
         return self._client._generate_content(
@@ -76,7 +78,9 @@ class _FakeGeminiModelsAio:
         self._client = client
 
     async def generate_images(self, *, model: str, prompt: str, config):
-        return self._client._generate_images(model=model, prompt=prompt, config=config)
+        return self._client._generate_images(
+            model=model, prompt=prompt, config=config
+        )
 
     async def generate_content(self, *, model: str, contents, config):
         return self._client._generate_content(
@@ -110,7 +114,9 @@ class FakeGeminiClient:
         self._fail_generate_content = fail_generate_content
 
     def _generate_images(self, *, model: str, prompt: str, config):
-        gcs_base = getattr(config, "output_gcs_uri", "gs://fake-bucket/generated")
+        gcs_base = getattr(
+            config, "output_gcs_uri", "gs://fake-bucket/generated"
+        )
         count = int(getattr(config, "number_of_images", 1) or 1)
         generated_images: List[_FakeGeneratedImage] = []
 

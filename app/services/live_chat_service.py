@@ -19,7 +19,12 @@ from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 from google import genai
 from google.genai import types
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+)
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -66,11 +71,15 @@ class LiveSession:
     user_transcript_buffer: str = ""
     ai_transcript_buffer: str = ""
     gemini_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
-    reconnect_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
+    reconnect_lock: asyncio.Lock = field(
+        default_factory=asyncio.Lock, repr=False
+    )
     reconnect_count: int = 0
     # 预填充完成事件：receive_loop 收到首个 turn_complete（无 model_turn）时 set，
     # 在此之前音频发送到 Gemini 可能被丢弃（模型还在处理预填充）。
-    prefill_complete: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
+    prefill_complete: asyncio.Event = field(
+        default_factory=asyncio.Event, repr=False
+    )
     pending_audio: deque[bytes] = field(
         default_factory=lambda: deque(maxlen=1000), repr=False
     )
@@ -109,7 +118,9 @@ class LiveSession:
                 self.last_response_after_silence_ms
             )
         if self.turn_latencies:
-            metrics["turn_latencies_ms"] = [int(t * 1000) for t in self.turn_latencies]
+            metrics["turn_latencies_ms"] = [
+                int(t * 1000) for t in self.turn_latencies
+            ]
             metrics["avg_turn_latency_ms"] = int(
                 sum(self.turn_latencies) / len(self.turn_latencies) * 1000
             )
@@ -142,7 +153,9 @@ class LiveChatService:
             and audio_data
             and self._should_save_user_audio_chunk(session)
         ):
-            session.conversation_audio_chunks.append(("user", bytes(audio_data)))
+            session.conversation_audio_chunks.append(
+                ("user", bytes(audio_data))
+            )
 
     def _get_client(self) -> genai.Client:
         """获取或创建 Gemini 客户端"""
@@ -156,7 +169,11 @@ class LiveChatService:
                     project=self._config.project_id,
                     location=self._config.location,
                     wrap_langsmith=True,
-                    tags=("google-genai", "gemini-live", "app-services-live-chat"),
+                    tags=(
+                        "google-genai",
+                        "gemini-live",
+                        "app-services-live-chat",
+                    ),
                     metadata={
                         "source": "app.services.live_chat_service",
                         "project_id": self._config.project_id,
@@ -195,7 +212,9 @@ class LiveChatService:
         chat = await get_or_create_chat_by_agent(db, user_id, agent_id)
         session_id = generate_session_id(chat.id)
 
-        agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+        agent_data = await agent_service.get_agent_for_chat(
+            db, agent_id=agent_id
+        )
         if not agent_data:
             raise ValueError(f"Agent not found: {agent_id}")
 
@@ -277,7 +296,9 @@ class LiveChatService:
                 getattr(self._config, "response_language_name", "") or ""
             ).strip()
         else:
-            response_language_name = (merged_response_language_name or "").strip()
+            response_language_name = (
+                merged_response_language_name or ""
+            ).strip()
         if response_language_name:
             parts.append(
                 "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY\n\n"
@@ -319,7 +340,9 @@ class LiveChatService:
         """
         instruction_parts: List[str] = []
         for message in system_messages:
-            text = self._message_content_to_text(getattr(message, "content", ""))
+            text = self._message_content_to_text(
+                getattr(message, "content", "")
+            )
             if text:
                 instruction_parts.append(text)
         instruction_parts.append(
@@ -344,13 +367,19 @@ class LiveChatService:
             else:
                 continue
 
-            text = self._message_content_to_text(getattr(message, "content", ""))
+            text = self._message_content_to_text(
+                getattr(message, "content", "")
+            )
             if not text:
                 continue
-            turns.append(types.Content(role=role, parts=[types.Part(text=text)]))
+            turns.append(
+                types.Content(role=role, parts=[types.Part(text=text)])
+            )
         return turns
 
-    def _summarize_history(self, messages: List[Any], max_turns: int = 10) -> str:
+    def _summarize_history(
+        self, messages: List[Any], max_turns: int = 10
+    ) -> str:
         """将对话历史转换为文本摘要"""
         if not messages:
             return ""
@@ -487,7 +516,9 @@ class LiveChatService:
         speech_ov = session.config.speech_language_code
         if speech_ov is not None and speech_ov.strip():
             return speech_ov.strip()
-        return (getattr(self._config, "response_language_name", "") or "").strip()
+        return (
+            getattr(self._config, "response_language_name", "") or ""
+        ).strip()
 
     def _build_live_config(
         self,
@@ -514,7 +545,11 @@ class LiveChatService:
             and raw in self.GEMINI_PREBUILT_VOICES
         ):
             voice_name = raw
-        elif voice_id and prefix == "" and voice_id in self.GEMINI_PREBUILT_VOICES:
+        elif (
+            voice_id
+            and prefix == ""
+            and voice_id in self.GEMINI_PREBUILT_VOICES
+        ):
             voice_name = voice_id
         else:
             voice_name = fallback_voice_name
@@ -530,7 +565,9 @@ class LiveChatService:
 
         speech_config_kwargs: Dict[str, Any] = {
             "voice_config": types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name=voice_name
+                )
             )
         }
         speech_language_code = (merged_speech_language_code or "").strip()
@@ -779,8 +816,8 @@ class LiveChatService:
             # 构建 system_instruction（文本聊天 system messages + 语言约束）
             # 预填充（prefill）仅在 enable_prefill=True 时执行，默认关闭
             prefill_turns: List[types.Content] = []
-            merged_response_language_name = self._resolved_response_language_name(
-                session
+            merged_response_language_name = (
+                self._resolved_response_language_name(session)
             )
             resolved_speech_code = self._resolved_speech_language_code(session)
             try:
@@ -800,18 +837,20 @@ class LiveChatService:
                     user_time_context=None,
                     include_output_format_prompt=False,
                 )
-                system_instruction = (
-                    self._build_system_instruction_from_text_chat_system_messages(
-                        text_chat_system_messages,
-                        merged_response_language_name=merged_response_language_name,
-                    )
+                system_instruction = self._build_system_instruction_from_text_chat_system_messages(
+                    text_chat_system_messages,
+                    merged_response_language_name=merged_response_language_name,
                 )
                 if session.config.enable_prefill:
-                    history_messages = chat_history_service.get_history_messages(
-                        session.session_id
+                    history_messages = (
+                        chat_history_service.get_history_messages(
+                            session.session_id
+                        )
                     )
-                    prefill_turns = self._build_prefill_turns_from_history_messages(
-                        history_messages
+                    prefill_turns = (
+                        self._build_prefill_turns_from_history_messages(
+                            history_messages
+                        )
                     )
             except Exception as e:
                 logger.warning(
@@ -826,8 +865,10 @@ class LiveChatService:
                     merged_response_language_name=merged_response_language_name,
                 )
                 if session.config.enable_prefill:
-                    prefill_turns = self._build_prefill_turns_from_history_messages(
-                        history_messages
+                    prefill_turns = (
+                        self._build_prefill_turns_from_history_messages(
+                            history_messages
+                        )
                     )
 
             voice_id = session.config.voice_id or agent_data.get("voice_id")
@@ -841,7 +882,9 @@ class LiveChatService:
 
             client = self._get_client()
 
-            await on_status(LiveChatStatus.CONNECTING, "正在连接到 Gemini Live...")
+            await on_status(
+                LiveChatStatus.CONNECTING, "正在连接到 Gemini Live..."
+            )
             session.connect_start_time = time.time()
             gemini_cm, gemini_session = await self._open_gemini_session(
                 client=client,
@@ -865,9 +908,14 @@ class LiveChatService:
             session.status = LiveChatStatus.CONNECTED
             await on_status(LiveChatStatus.CONNECTED, "已连接")
 
-            if on_latency and session.connect_start_time and session.connect_end_time:
+            if (
+                on_latency
+                and session.connect_start_time
+                and session.connect_end_time
+            ):
                 connect_latency_ms = int(
-                    (session.connect_end_time - session.connect_start_time) * 1000
+                    (session.connect_end_time - session.connect_start_time)
+                    * 1000
                 )
                 await on_latency({"connect_latency_ms": connect_latency_ms})
 
@@ -932,7 +980,9 @@ class LiveChatService:
                                 )
                             )
                             flushed += 1
-                        await gs.send_realtime_input(activity_end=types.ActivityEnd())
+                        await gs.send_realtime_input(
+                            activity_end=types.ActivityEnd()
+                        )
                         logger.debug(
                             f"预填充完成后 flush {flushed} 个缓冲音频包到 Gemini"
                         )
@@ -1083,7 +1133,10 @@ class LiveChatService:
                     logger.debug(f"收到 Gemini 响应: {type(response)}")
 
                     # 处理 Gemini Live API 周期性返回的 token 用量统计
-                    if hasattr(response, "usage_metadata") and response.usage_metadata:
+                    if (
+                        hasattr(response, "usage_metadata")
+                        and response.usage_metadata
+                    ):
                         usage = response.usage_metadata
                         if (
                             hasattr(usage, "total_token_count")
@@ -1102,9 +1155,9 @@ class LiveChatService:
                                     detail, "token_count"
                                 ):
                                     modality_str = str(detail.modality)
-                                    session.response_token_details[modality_str] = (
-                                        detail.token_count
-                                    )
+                                    session.response_token_details[
+                                        modality_str
+                                    ] = detail.token_count
                                     logger.debug(
                                         f"  - {modality_str}: {detail.token_count} tokens"
                                     )
@@ -1125,19 +1178,28 @@ class LiveChatService:
                                 f"收到会话恢复句柄: {session.session_handle[:20]}..."
                             )
 
-                    if hasattr(response, "server_content") and response.server_content:
+                    if (
+                        hasattr(response, "server_content")
+                        and response.server_content
+                    ):
                         server_content = response.server_content
-                        logger.debug(f"收到 server_content: {type(server_content)}")
+                        logger.debug(
+                            f"收到 server_content: {type(server_content)}"
+                        )
 
                         if (
                             hasattr(server_content, "input_transcription")
                             and server_content.input_transcription
-                            and hasattr(server_content.input_transcription, "text")
+                            and hasattr(
+                                server_content.input_transcription, "text"
+                            )
                             and server_content.input_transcription.text
                         ):
                             # 运行证据：在部分模型/通道组合下，finished 可能长期为 false。
                             # 因此这里仅累计最新文本，最终在 turn_complete 时统一 flush。
-                            piece = server_content.input_transcription.text or ""
+                            piece = (
+                                server_content.input_transcription.text or ""
+                            )
                             if piece != session.last_user_transcription_piece:
                                 session.pending_user_transcript = (
                                     self._merge_transcription_piece(
@@ -1151,11 +1213,15 @@ class LiveChatService:
                         if (
                             hasattr(server_content, "output_transcription")
                             and server_content.output_transcription
-                            and hasattr(server_content.output_transcription, "text")
+                            and hasattr(
+                                server_content.output_transcription, "text"
+                            )
                             and server_content.output_transcription.text
                         ):
                             # 同上：只累计最新文本，最终在 turn_complete 时 flush。
-                            piece = server_content.output_transcription.text or ""
+                            piece = (
+                                server_content.output_transcription.text or ""
+                            )
                             if piece != session.last_ai_transcription_piece:
                                 session.pending_ai_transcript = (
                                     self._merge_transcription_piece(
@@ -1175,7 +1241,10 @@ class LiveChatService:
                                 response_after_silence_ms: Optional[int] = None
                                 if session.last_audio_sent_time is not None:
                                     response_after_silence_ms = int(
-                                        (time.time() - session.last_audio_sent_time)
+                                        (
+                                            time.time()
+                                            - session.last_audio_sent_time
+                                        )
                                         * 1000
                                     )
                                     session.last_response_after_silence_ms = (
@@ -1183,7 +1252,8 @@ class LiveChatService:
                                     )
                                 if session.current_turn_start_time is not None:
                                     turn_latency = (
-                                        time.time() - session.current_turn_start_time
+                                        time.time()
+                                        - session.current_turn_start_time
                                     )
                                     session.turn_latencies.append(turn_latency)
                                     session.current_turn_start_time = None
@@ -1201,7 +1271,10 @@ class LiveChatService:
                                             "turn_latencies_ms": turn_latencies_ms,
                                             "avg_turn_latency_ms": avg_turn_latency_ms,
                                         }
-                                        if response_after_silence_ms is not None:
+                                        if (
+                                            response_after_silence_ms
+                                            is not None
+                                        ):
                                             payload[
                                                 "first_response_after_silence_ms"
                                             ] = response_after_silence_ms
@@ -1214,7 +1287,10 @@ class LiveChatService:
                             )
 
                             for part in server_content.model_turn.parts:
-                                if hasattr(part, "inline_data") and part.inline_data:
+                                if (
+                                    hasattr(part, "inline_data")
+                                    and part.inline_data
+                                ):
                                     logger.debug(
                                         f"收到音频数据: {len(part.inline_data.data)} bytes"
                                     )
@@ -1238,7 +1314,9 @@ class LiveChatService:
                             and server_content.turn_complete
                         ):
                             had_model_turn = getattr(
-                                session, "_current_turn_has_model_response", False
+                                session,
+                                "_current_turn_has_model_response",
+                                False,
                             )
                             if not had_model_turn:
                                 logger.debug(
@@ -1250,10 +1328,14 @@ class LiveChatService:
 
                             # 模型真正回复了一轮：保存转录、重置状态、保持同一 session 继续监听
                             session._current_turn_has_model_response = False
-                            logger.debug("AI 回复完成，发送 LISTENING 状态到前端")
+                            logger.debug(
+                                "AI 回复完成，发送 LISTENING 状态到前端"
+                            )
                             session.status = LiveChatStatus.LISTENING
                             await on_status(LiveChatStatus.LISTENING, None)
-                            session._turn_num = getattr(session, "_turn_num", 0) + 1
+                            session._turn_num = (
+                                getattr(session, "_turn_num", 0) + 1
+                            )
 
                             user_text = self._normalize_transcript_text(
                                 session.pending_user_transcript
@@ -1386,27 +1468,31 @@ class LiveChatService:
 
         try:
             if session.user_transcript_buffer:
-                user_message_id = await chat_history_service.add_user_message_async(
-                    session.session_id,
-                    session.user_transcript_buffer,
-                    meta_data={
-                        "is_voice": True,
-                        "voice_session_id": session.voice_session_id,
-                    },
+                user_message_id = (
+                    await chat_history_service.add_user_message_async(
+                        session.session_id,
+                        session.user_transcript_buffer,
+                        meta_data={
+                            "is_voice": True,
+                            "voice_session_id": session.voice_session_id,
+                        },
+                    )
                 )
                 logger.debug(
                     f"保存用户语音转录: {session.user_transcript_buffer[:50]}..."
                 )
 
             if session.ai_transcript_buffer:
-                ai_message_id = await chat_history_service.add_ai_message_sync_async(
-                    session_id=session.session_id,
-                    message=session.ai_transcript_buffer,
-                    agent_id=session.agent_id,
-                    meta_data={
-                        "is_voice": True,
-                        "voice_session_id": session.voice_session_id,
-                    },
+                ai_message_id = (
+                    await chat_history_service.add_ai_message_sync_async(
+                        session_id=session.session_id,
+                        message=session.ai_transcript_buffer,
+                        agent_id=session.agent_id,
+                        meta_data={
+                            "is_voice": True,
+                            "voice_session_id": session.voice_session_id,
+                        },
+                    )
                 )
                 logger.debug(
                     f"保存 AI 语音转录: {session.ai_transcript_buffer[:50]}..."
@@ -1420,8 +1506,10 @@ class LiveChatService:
             return
 
         if user_message_id is None:
-            user_message_id = await chat_history_service.get_latest_user_message_id(
-                db, session.session_id
+            user_message_id = (
+                await chat_history_service.get_latest_user_message_id(
+                    db, session.session_id
+                )
             )
         if ai_message_id is None:
             ai_message_id = await chat_history_service.get_latest_ai_message_id(
@@ -1459,7 +1547,9 @@ class LiveChatService:
                 logger.warning("Live chat 音频上传 GCS 未返回 URL，跳过写表")
                 return
 
-            total_duration = len(pcm_24k) / (self._config.receive_sample_rate * 2)
+            total_duration = len(pcm_24k) / (
+                self._config.receive_sample_rate * 2
+            )
             if user_message_id is not None:
                 await chat_history_service.update_message_audio_url(
                     db,
@@ -1499,7 +1589,9 @@ class LiveChatService:
         """发送音频数据到 Gemini Live"""
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"Session not found or not connected: {session_id}")
+            raise ValueError(
+                f"Session not found or not connected: {session_id}"
+            )
 
         await session.gemini_session.send_realtime_input(
             audio=types.Blob(
@@ -1511,7 +1603,9 @@ class LiveChatService:
     async def send_activity_start(self, session_id: str):
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"Session not found or not connected: {session_id}")
+            raise ValueError(
+                f"Session not found or not connected: {session_id}"
+            )
         await session.gemini_session.send_realtime_input(
             activity_start=types.ActivityStart()
         )
@@ -1519,13 +1613,17 @@ class LiveChatService:
     async def send_activity_end(self, session_id: str):
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"Session not found or not connected: {session_id}")
+            raise ValueError(
+                f"Session not found or not connected: {session_id}"
+            )
         await session.gemini_session.send_realtime_input(
             activity_end=types.ActivityEnd()
         )
 
     @staticmethod
-    def _opening_conversation_trigger_text(merged_response_language_name: str) -> str:
+    def _opening_conversation_trigger_text(
+        merged_response_language_name: str,
+    ) -> str:
         """傀用户回合用：触发模型先开口，勿写入用户可见转录。"""
         raw = (merged_response_language_name or "").strip()
         lang = raw if raw else "the configured reply language"
@@ -1548,7 +1646,9 @@ class LiveChatService:
             gs = session.gemini_session
         if gs is None:
             return
-        text = self._opening_conversation_trigger_text(merged_response_language_name)
+        text = self._opening_conversation_trigger_text(
+            merged_response_language_name
+        )
         try:
             # google-genai Live：send 的 input 需为 str（或 SDK 支持的少数类型），
             # 传 types.Content 会报 Unsupported input type。
@@ -1570,7 +1670,9 @@ class LiveChatService:
         """发送文本消息到 Gemini Live"""
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"Session not found or not connected: {session_id}")
+            raise ValueError(
+                f"Session not found or not connected: {session_id}"
+            )
 
         await session.gemini_session.send(input=text, end_of_turn=True)
 

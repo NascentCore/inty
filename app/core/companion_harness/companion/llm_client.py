@@ -9,7 +9,9 @@ from typing import Any, Literal
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
+from app.core.companion_harness.llm.chat_completions import (
+    create_chat_completion_sync,
+)
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     memory_pipeline_langsmith_extra,
 )
@@ -230,7 +232,9 @@ class CompanionLLMClient:
             model=api_model,
             messages_payload=messages,
             tools=[],
-            langsmith_extra=memory_pipeline_langsmith_extra(model_role=model_role),
+            langsmith_extra=memory_pipeline_langsmith_extra(
+                model_role=model_role
+            ),
         )
         api_ms = (time.perf_counter() - t_api) * 1000.0
         logger.info(

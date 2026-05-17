@@ -40,7 +40,9 @@ def build_live_config() -> types.LiveConnectConfig:
         response_modalities=["AUDIO"],
         speech_config=types.SpeechConfig(
             voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Zephyr")
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name="Zephyr"
+                )
             ),
             language_code="en-US",
         ),
@@ -81,7 +83,10 @@ async def resumable_session_example():
                         session_handle = update.new_handle
                         print(f"Received session handle: {session_handle}")
                         break
-                if message.server_content and message.server_content.turn_complete:
+                if (
+                    message.server_content
+                    and message.server_content.turn_complete
+                ):
                     print(
                         f"Received server content: {message.server_content},text:{message.text}"
                     )
@@ -90,10 +95,14 @@ async def resumable_session_example():
         return
 
     if not session_handle:
-        print("Did not receive a session handle. Cannot demonstrate resumption.")
+        print(
+            "Did not receive a session handle. Cannot demonstrate resumption."
+        )
         return
 
-    print(f"\nSimulating disconnect and reconnecting with handle {session_handle}...")
+    print(
+        f"\nSimulating disconnect and reconnecting with handle {session_handle}..."
+    )
 
     try:
         async with client.aio.live.connect(
@@ -120,7 +129,9 @@ async def resumable_session_example():
                     update = message.session_resumption_update
                     if update.resumable and update.new_handle:
                         session_handle = update.new_handle
-                        print(f"Received updated session handle: {session_handle}")
+                        print(
+                            f"Received updated session handle: {session_handle}"
+                        )
                 if message.server_content:
                     print(f"Received server content: {message.server_content}")
                     if message.server_content.turn_complete:

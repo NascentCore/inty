@@ -209,13 +209,17 @@ def load_openrouter_from_config(config_path: Path) -> tuple[str, str]:
         raise ValueError("config yaml must be a mapping")
     load_dotenv()
     env_key = (
-        os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+        os.environ.get("OPENROUTER_API_KEY")
+        or os.environ.get("OPENAI_API_KEY")
+        or ""
     ).strip()
     agent_cfg = raw.get("agent", {})
     if not isinstance(agent_cfg, dict):
         raise ValueError("config missing 'agent' mapping")
     key_from_file = str(agent_cfg.get("api_key", "")).strip()
-    base_url = str(agent_cfg.get("base_url", "https://openrouter.ai/api/v1")).strip()
+    base_url = str(
+        agent_cfg.get("base_url", "https://openrouter.ai/api/v1")
+    ).strip()
     api_key = env_key or key_from_file
     if not api_key:
         raise ValueError("No API key in env or config agent.api_key")
@@ -363,7 +367,10 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
             round(match_stats[m]["hit"] / t, 4) if t else 0.0
         )
 
-    return {"noop_by_model_category": rates, "aligned_expected_tool_match": match_stats}
+    return {
+        "noop_by_model_category": rates,
+        "aligned_expected_tool_match": match_stats,
+    }
 
 
 def main() -> int:

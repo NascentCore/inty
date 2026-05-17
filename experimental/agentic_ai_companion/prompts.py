@@ -61,7 +61,9 @@ Roleplay Text Output Format:
 """
 
 
-def build_imate_photo_album_system_message(*, _logger=None) -> dict[str, str] | None:
+def build_imate_photo_album_system_message(
+    *, _logger=None
+) -> dict[str, str] | None:
     """构建相册索引的系统消息，列出可用照片文件名（无后缀）。若无照片则返回 None。"""
     index = tools.get_photo_album_index()
     if not index:
@@ -149,6 +151,8 @@ def build_system_messages_openai(
         msgs.append(photo_album_msg)
     if _logger is not None:
         _logger.info(
-            "系统消息已构建，共 %d 条（heartbeat=%s）", len(msgs), heartbeat_enabled
+            "系统消息已构建，共 %d 条（heartbeat=%s）",
+            len(msgs),
+            heartbeat_enabled,
         )
     return msgs

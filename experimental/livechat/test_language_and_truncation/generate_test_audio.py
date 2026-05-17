@@ -88,7 +88,9 @@ TEST_CASES = [
     ),
     (
         "en_long_pause",
-        ("I'd like to talk about the history of artificial intelligence in detail, "),
+        (
+            "I'd like to talk about the history of artificial intelligence in detail, "
+        ),
         "en-US-JennyNeural",
         "英文长句+人工静音段(触发VAD截断)",
         True,
@@ -137,7 +139,9 @@ def _check_edge_tts():
 
 def _install_edge_tts():
     print("edge-tts 未安装，正在安装...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "edge-tts"], check=True)
+    subprocess.run(
+        [sys.executable, "-m", "pip", "install", "edge-tts"], check=True
+    )
 
 
 async def _tts(text: str, voice: str, output_path: Path) -> None:

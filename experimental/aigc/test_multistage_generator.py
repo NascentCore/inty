@@ -74,7 +74,9 @@ class MultiStageGeneratorTests(unittest.TestCase):
             num_images=3,
         )
 
-        generator = MultiStageCharacterGenerator(gemini_client=DummyGeminiClient())
+        generator = MultiStageCharacterGenerator(
+            gemini_client=DummyGeminiClient()
+        )
         result = generator.generate(request)
 
         self.assertTrue(result.success)

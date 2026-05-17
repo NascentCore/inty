@@ -16,7 +16,9 @@ from app.models.surprise_snap import SurpriseSnapProgress, SurpriseSnapUnlock
 from app.services import chat_history_service
 
 
-async def _get_agent_exclusive_photos(db: AsyncSession, agent_id: str) -> List[dict]:
+async def _get_agent_exclusive_photos(
+    db: AsyncSession, agent_id: str
+) -> List[dict]:
     """返回角色的 exclusive_photos 列表，每项含 image_url, caption, credits_required。"""
     stmt = select(Agent.exclusive_photos).where(Agent.id == agent_id)
     result = await db.execute(stmt)
@@ -113,7 +115,9 @@ async def try_trigger_surprise_snap(
     return None
 
 
-async def get_unlocked_surprise_snap_message_ids(db: AsyncSession, user_id: str) -> set:
+async def get_unlocked_surprise_snap_message_ids(
+    db: AsyncSession, user_id: str
+) -> set:
     """返回该用户已解锁的 surprise_snap 消息 ID 集合。"""
     stmt = select(SurpriseSnapUnlock.message_id).where(
         SurpriseSnapUnlock.user_id == user_id

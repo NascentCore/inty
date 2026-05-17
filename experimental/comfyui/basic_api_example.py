@@ -63,7 +63,9 @@ def wait_for_completion(prompt_id, max_wait=60):
             print(f"Error checking history: {e}")
             time.sleep(1)
 
-    raise TimeoutError(f"Prompt {prompt_id} did not complete within {max_wait} seconds")
+    raise TimeoutError(
+        f"Prompt {prompt_id} did not complete within {max_wait} seconds"
+    )
 
 
 def save_images_from_history(history_data, output_dir="output"):

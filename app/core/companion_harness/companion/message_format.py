@@ -26,7 +26,9 @@ def openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
                 "type": getattr(tc, "type", "function"),
                 "function": {
                     "name": fn.name,
-                    "arguments": fn.arguments if fn.arguments is not None else "",
+                    "arguments": (
+                        fn.arguments if fn.arguments is not None else ""
+                    ),
                 },
             }
         )

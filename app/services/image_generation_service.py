@@ -107,7 +107,9 @@ def _truncate_trace_text(value: Any) -> str:
     return text[:_MAX_TRACE_TEXT_PREVIEW_LEN] + "…"
 
 
-def _process_inputs_generate_chat_image(inputs: Dict[str, Any]) -> Dict[str, Any]:
+def _process_inputs_generate_chat_image(
+    inputs: Dict[str, Any],
+) -> Dict[str, Any]:
     agent_data = inputs.get("agent_data") or {}
     message_content = inputs.get("message_content") or ""
     output: Dict[str, Any] = {
@@ -148,7 +150,9 @@ def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
     return out
 
 
-def _fill_serialized_gemini_response(out: Dict[str, Any], response: Any) -> None:
+def _fill_serialized_gemini_response(
+    out: Dict[str, Any], response: Any
+) -> None:
     """填充 out，可能抛错；由 _serialize_gemini_response_for_log 捕获。"""
     if hasattr(response, "prompt_feedback") and response.prompt_feedback:
         pf = response.prompt_feedback
@@ -184,11 +188,15 @@ def _fill_serialized_gemini_response(out: Dict[str, Any], response: Any) -> None
                         parts_info.append(
                             {
                                 "kind": "inline_data",
-                                "size_bytes": len(getattr(p.inline_data, "data", b"")),
+                                "size_bytes": len(
+                                    getattr(p.inline_data, "data", b"")
+                                ),
                             }
                         )
                     elif hasattr(p, "text") and p.text:
-                        parts_info.append({"kind": "text", "length": len(p.text)})
+                        parts_info.append(
+                            {"kind": "text", "length": len(p.text)}
+                        )
                     else:
                         parts_info.append({"kind": "other"})
                 entry["content_parts"] = parts_info
@@ -250,7 +258,9 @@ class ImageGenerationService:
             完整的生图提示词
         """
         # 提取角色背景（scenario 优先，无则用 intro）与性格
-        agent_background = agent_data.get("scenario", "") or agent_data.get("intro", "")
+        agent_background = agent_data.get("scenario", "") or agent_data.get(
+            "intro", ""
+        )
         agent_personality = agent_data.get("personality", "")
 
         # 若调用方传入 char_name 与 user_name，则用 jinja2 渲染 personality/background 中的 {{ char }} / {{ user }}
@@ -358,7 +368,9 @@ class ImageGenerationService:
         similarity = intersection / union
         return similarity
 
-    def _resolve_chat_image_gen_model_id_or_nickname(self, id_or_nickname: str) -> str:
+    def _resolve_chat_image_gen_model_id_or_nickname(
+        self, id_or_nickname: str
+    ) -> str:
         """
         解析聊天生图模型：支持直接传 provider model id，也支持传模型 nickname。
         model 可以是 GenAIModel.nickname 或 GenAIModel.id_on_provider。
@@ -370,7 +382,9 @@ class ImageGenerationService:
         if model:
             return model.id_on_provider
         allowed_nicknames = [m.nickname for m in CHAT_IMAGE_GEN_MODELS]
-        allowed_ids_on_provider = [m.id_on_provider for m in CHAT_IMAGE_GEN_MODELS]
+        allowed_ids_on_provider = [
+            m.id_on_provider for m in CHAT_IMAGE_GEN_MODELS
+        ]
         allowed = allowed_nicknames + allowed_ids_on_provider
         raise ValueError(
             f"Chat image model {id_or_nickname!r} not allowed; allowed: {', '.join(allowed)}"
@@ -396,7 +410,9 @@ class ImageGenerationService:
     def _build_chat_image_prompt_for_model(
         self, prompt: str, message_history: List[Dict[str, Any]]
     ) -> str:
-        history_text = self._format_message_history_for_model_prompt(message_history)
+        history_text = self._format_message_history_for_model_prompt(
+            message_history
+        )
         if not history_text:
             return prompt
         if history_text in prompt:
@@ -420,7 +436,9 @@ class ImageGenerationService:
         contents = [reference_image_url]
         if user_reference_image_url:
             contents.append(user_reference_image_url)
-            logger.info("添加用户自拍照片作为参考图: {}", user_reference_image_url)
+            logger.info(
+                "添加用户自拍照片作为参考图: {}", user_reference_image_url
+            )
         contents.append(prompt)
 
         async def _generate_images() -> list[GeneratedImageProcessResult]:
@@ -462,14 +480,17 @@ class ImageGenerationService:
                 prompt=prompt,
                 # strength=0.6（官方推荐平衡性较好的数值、越大 strength 意味着会更按照提示词进行修改）num_images=1
             )
-            return await z_image_turbo_image_to_image(args, gcs_uri_base=gcs_uri_base)
+            return await z_image_turbo_image_to_image(
+                args, gcs_uri_base=gcs_uri_base
+            )
 
         if model_id == SEEDREAM_V4_5_EDIT.id_on_provider:
             seedream_image_urls = [reference_image_url]
             if user_reference_image_url:
                 seedream_image_urls.append(user_reference_image_url)
                 logger.info(
-                    "Seedream 使用用户自拍作为第二参考图: {}", user_reference_image_url
+                    "Seedream 使用用户自拍作为第二参考图: {}",
+                    user_reference_image_url,
                 )
             if len(seedream_image_urls) < 2:
                 seedream_image_urls.append(reference_image_url)
@@ -573,12 +594,16 @@ class ImageGenerationService:
 
             if only_include_ai_character is True:
                 conditions.append(
-                    Resource.resource_metadata.op("->>")("only_include_ai_character")
+                    Resource.resource_metadata.op("->>")(
+                        "only_include_ai_character"
+                    )
                     == "true"
                 )
 
             query = (
-                select(Resource).where(*conditions).order_by(Resource.created_at.desc())
+                select(Resource)
+                .where(*conditions)
+                .order_by(Resource.created_at.desc())
             )
 
             result = await db.execute(query)
@@ -596,13 +621,19 @@ class ImageGenerationService:
                         continue
 
                     size = metadata.get("size", {})
-                    width = size.get("width") if isinstance(size, dict) else None
-                    height = size.get("height") if isinstance(size, dict) else None
+                    width = (
+                        size.get("width") if isinstance(size, dict) else None
+                    )
+                    height = (
+                        size.get("height") if isinstance(size, dict) else None
+                    )
 
                     # 从content_type提取格式
                     content_type = metadata.get("content_type", "image/jpeg")
                     format_str = (
-                        content_type.split("/")[-1] if "/" in content_type else "jpeg"
+                        content_type.split("/")[-1]
+                        if "/" in content_type
+                        else "jpeg"
                     )
 
                     images.append(
@@ -668,7 +699,9 @@ class ImageGenerationService:
             if not saved_prompt:
                 continue
 
-            similarity = self.calculate_prompt_similarity(current_prompt, saved_prompt)
+            similarity = self.calculate_prompt_similarity(
+                current_prompt, saved_prompt
+            )
             if similarity > best_similarity:
                 best_similarity = similarity
                 best_match = image.copy()
@@ -741,7 +774,9 @@ class ImageGenerationService:
                 )
             else:
                 current_user_images = await self.get_generated_images_for_agent(
-                    db, agent_id, only_include_ai_character=only_include_ai_character
+                    db,
+                    agent_id,
+                    only_include_ai_character=only_include_ai_character,
                 )
             current_user_images = self._exclude_image_ids(
                 current_user_images, exclude_image_ids
@@ -825,7 +860,9 @@ class ImageGenerationService:
 
         reference_url = agent_data.get("background") or agent_data.get("avatar")
         if not reference_url:
-            raise ValueError("Agent has no background or avatar; cannot generate image")
+            raise ValueError(
+                "Agent has no background or avatar; cannot generate image"
+            )
         if reference_url.startswith(GCS_GS_PREFIX):
             reference_url = reference_url.replace(
                 GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
@@ -883,7 +920,9 @@ class ImageGenerationService:
             model,
         )
 
-        resolved_model_id = self._resolve_chat_image_gen_model_id_or_nickname(model)
+        resolved_model_id = self._resolve_chat_image_gen_model_id_or_nickname(
+            model
+        )
         resolved_model_family = detect_model_name_family(resolved_model_id)
 
         # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
@@ -919,7 +958,9 @@ class ImageGenerationService:
 
         agent_id = agent_data.get("id")
         if not agent_id:
-            raise ValueError("Agent data missing ID; cannot generate image path")
+            raise ValueError(
+                "Agent data missing ID; cannot generate image path"
+            )
         gcs_uri_base = f"chat_images/{agent_id}"
 
         system_instructions: Optional[List[str]] = None
@@ -973,7 +1014,9 @@ class ImageGenerationService:
             metadata_update=metadata_update,
         )
         if not success:
-            raise ValueError(f"Failed to update meta_data for message {message_id}")
+            raise ValueError(
+                f"Failed to update meta_data for message {message_id}"
+            )
 
         await agent_service.append_agent_background_image(
             db=db, agent_id=agent_id, image_url=gcs_uri
@@ -981,7 +1024,9 @@ class ImageGenerationService:
 
         if user_id:
             try:
-                langsmith_trace_id, langsmith_trace_url = get_current_trace_info()
+                langsmith_trace_id, langsmith_trace_url = (
+                    get_current_trace_info()
+                )
                 byte_size = result.raw_data_total_bytes
                 if byte_size <= 0 and isinstance(result.raw_data, bytes):
                     byte_size = len(result.raw_data)

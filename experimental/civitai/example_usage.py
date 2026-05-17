@@ -39,7 +39,9 @@ def main():
             print(f"Tags: {', '.join(result.get('tags', []))}")
             print(f"Download Links: {len(result.get('download_links', []))}")
             print(f"Stats: {result.get('stats', {})}")
-            print(f"Version: {result.get('version_info', {}).get('version', 'N/A')}")
+            print(
+                f"Version: {result.get('version_info', {}).get('version', 'N/A')}"
+            )
 
             # Print about section (truncated)
             about = result.get("about", "")

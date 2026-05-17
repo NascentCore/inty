@@ -58,7 +58,9 @@ def create_google_genai_client():
     使用 Vertex AI 配置创建并返回包装后的 Google Gen AI 客户端。
     使用与 GCS 相同的 service account 凭证；可抛出 ValueError 或 genai 相关异常。
     """
-    credentials_path = global_config_loaded_from_config_yaml.app.gcp_service_account_key
+    credentials_path = (
+        global_config_loaded_from_config_yaml.app.gcp_service_account_key
+    )
     if not os.path.exists(credentials_path):
         raise ValueError(
             f"Service account credentials file not found at: {credentials_path}"
@@ -379,7 +381,9 @@ def text_to_image(
                 gcs_uri = f"https://storage.googleapis.com/{gcs_path}"
                 logger.debug(f"Image {i}: {gcs_uri}")
             elif gcs_uri is None:
-                logger.debug(f"Image {i}: Filtered by RAI - no GCS URI available")
+                logger.debug(
+                    f"Image {i}: Filtered by RAI - no GCS URI available"
+                )
 
             # Try to get size from image.image.image_bytes if available
             size = None
@@ -403,7 +407,10 @@ def text_to_image(
                             f"(比例 {current_aspect_ratio:.4f}) -> 9:16"
                         )
                         cropped_image = crop_image_to_9_16(pil_image)
-                        cropped_size = (cropped_image.width, cropped_image.height)
+                        cropped_size = (
+                            cropped_image.width,
+                            cropped_image.height,
+                        )
 
                         # 将裁剪后的图片转换为 JPEG bytes
                         cropped_image_bytes = get_jpg_bytes_from_pil_image(
@@ -411,8 +418,8 @@ def text_to_image(
                         )
 
                         # 从 GCS URI 提取 bucket 和 path
-                        bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(
-                            gcs_uri
+                        bucket_name, gcs_path = (
+                            get_bucket_and_path_from_gcs_url(gcs_uri)
                         )
 
                         # 删除原图

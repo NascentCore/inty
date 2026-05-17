@@ -71,7 +71,9 @@ def _build_error_response(
     return response
 
 
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+):
     """Handle request validation errors"""
     logger.error(f"=== 请求验证失败 (422错误) ===")
     logger.error(f"请求方法: {request.method}")
@@ -102,7 +104,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return _build_error_response(
         request=request,
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        code=map_http_status_to_error_code(status.HTTP_422_UNPROCESSABLE_ENTITY),
+        code=map_http_status_to_error_code(
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+        ),
         message="Request validation failed",
         details=exc.errors(),
     )
@@ -172,7 +176,9 @@ async def validation_error_handler(request: Request, exc: ValidationError):
     return _build_error_response(
         request=request,
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        code=map_http_status_to_error_code(status.HTTP_422_UNPROCESSABLE_ENTITY),
+        code=map_http_status_to_error_code(
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+        ),
         message="Data validation failed",
         details=exc.errors(),
     )
@@ -204,7 +210,9 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     return _build_error_response(
         request=request,
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        code=map_http_status_to_error_code(status.HTTP_500_INTERNAL_SERVER_ERROR),
+        code=map_http_status_to_error_code(
+            status.HTTP_500_INTERNAL_SERVER_ERROR
+        ),
         message="Internal server error",
         details={"error_type": type(exc).__name__},
     )

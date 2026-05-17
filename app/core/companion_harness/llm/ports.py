@@ -10,7 +10,8 @@ optional ``high_reasoning`` OpenRouter extras, optional JSON ``response_format``
 metadata). The canonical implementation is
 ``create_chat_completion_sync`` in ``llm.chat_completions``; it is exposed from
 ``CompanionLLMClient.chat_completions_sync`` and injected into background tool paths
-(``tools.tool_background``) so foreground and tool loops can share the same pipeline."""
+(``tools.tool_background``) so foreground and tool loops can share the same pipeline.
+"""
 
 from __future__ import annotations
 

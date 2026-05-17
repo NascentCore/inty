@@ -40,7 +40,9 @@ class MultiStageCharacterGenerator:
             description: str,
             worker: Callable[[], Tuple[Any, Dict[str, Any]]],
         ):
-            stage = GenerationStage(key=key, title=title, description=description)
+            stage = GenerationStage(
+                key=key, title=title, description=description
+            )
             stage.status = StageStatus.RUNNING
             stage_start = time.time()
 
@@ -155,7 +157,9 @@ class MultiStageCharacterGenerator:
         }
 
     def _stage_intro(
-        self, request: CharacterGenerationRequest, identity: CharacterIdentityCard
+        self,
+        request: CharacterGenerationRequest,
+        identity: CharacterIdentityCard,
     ) -> Tuple[CharacterIntroPack, Dict[str, Any]]:
         prompt = dedent(f"""
             We already defined this identity: {identity.model_dump_json()}.
@@ -185,7 +189,9 @@ class MultiStageCharacterGenerator:
             ),
             conversation_openers=self._ensure_list(
                 data.get("conversation_openers"),
-                fallback=[f"So, ready to explore {request.genre} corners with me?"],
+                fallback=[
+                    f"So, ready to explore {request.genre} corners with me?"
+                ],
             ),
         )
 
@@ -201,12 +207,16 @@ class MultiStageCharacterGenerator:
         intro: CharacterIntroPack,
     ) -> Tuple[List[RoleplayPrompt], Dict[str, Any]]:
         desired = max(3, min(5, request.num_images or 3))
-        prompt = self._roleplay_prompt_request(identity, intro, request, desired)
+        prompt = self._roleplay_prompt_request(
+            identity, intro, request, desired
+        )
         data = self._invoke_json(prompt)
         prompts_raw = data.get("roleplay_prompts") or []
 
         if not prompts_raw:
-            prompts_raw = self._fallback_roleplay_prompts(identity, intro, desired)
+            prompts_raw = self._fallback_roleplay_prompts(
+                identity, intro, desired
+            )
 
         prompts = self._hydrate_roleplay_prompts(
             prompts_raw, identity, request, desired
@@ -387,7 +397,9 @@ class MultiStageCharacterGenerator:
                     or "Describe how you'd join forces.",
                     sample_dialogue=item.get("sample_dialogue")
                     or f'"{identity.alias}: Step closer, the night is still young."',
-                    tags=self._ensure_list(item.get("tags"), fallback=[request.tone]),
+                    tags=self._ensure_list(
+                        item.get("tags"), fallback=[request.tone]
+                    ),
                 )
             )
         return prompts

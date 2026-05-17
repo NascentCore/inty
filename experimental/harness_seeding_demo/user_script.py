@@ -17,7 +17,9 @@ def load_user_script(path: Path) -> list[str]:
             return [str(x).strip() for x in data if str(x).strip()]
         if isinstance(data, dict) and "lines" in data:
             return [str(x).strip() for x in data["lines"] if str(x).strip()]
-        raise ValueError('JSON script must be a list of strings or {"lines": [...]}')
+        raise ValueError(
+            'JSON script must be a list of strings or {"lines": [...]}'
+        )
     out: list[str] = []
     for line in raw.splitlines():
         s = line.strip()

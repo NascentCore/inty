@@ -33,7 +33,9 @@ def parse_pg_url(pg_url: str) -> str:
 async def get_agents_by_name(session: AsyncSession, name: str) -> list[Agent]:
     """Get all agents with the given name from the database."""
     result = await session.execute(
-        select(Agent).where(and_(Agent.name == name, Agent.deleted_at.is_(None)))
+        select(Agent).where(
+            and_(Agent.name == name, Agent.deleted_at.is_(None))
+        )
     )
     agents = result.scalars().all()
 
@@ -71,7 +73,9 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Copy an agent from one database to another"
     )
-    parser.add_argument("--name", required=True, help="Name of the agent to copy")
+    parser.add_argument(
+        "--name", required=True, help="Name of the agent to copy"
+    )
     parser.add_argument(
         "--source-pg",
         required=False,
@@ -117,7 +121,10 @@ async def main():
         sys.exit(1)
 
     try:
-        async with SourceSession() as source_session, DestSession() as dest_session:
+        async with (
+            SourceSession() as source_session,
+            DestSession() as dest_session,
+        ):
             # Get all agents from source by name
             source_agents = await get_agents_by_name(source_session, args.name)
             logger.info(
@@ -132,12 +139,18 @@ async def main():
                 )
                 if await copy_agent(source_session, dest_session, source_agent):
                     success_count += 1
-                    logger.info(f"Successfully copied agent {i}/{len(source_agents)}")
+                    logger.info(
+                        f"Successfully copied agent {i}/{len(source_agents)}"
+                    )
                 else:
-                    logger.error(f"Failed to copy agent {i}/{len(source_agents)}")
+                    logger.error(
+                        f"Failed to copy agent {i}/{len(source_agents)}"
+                    )
 
             if success_count == len(source_agents):
-                logger.info(f"All {success_count} agent(s) copied successfully!")
+                logger.info(
+                    f"All {success_count} agent(s) copied successfully!"
+                )
             else:
                 logger.error(
                     f"Only {success_count}/{len(source_agents)} agent(s) copied successfully!"

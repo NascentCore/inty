@@ -11,7 +11,9 @@ from app.core.companion_harness.runtime.persistence import TurnPersistence
 
 PrepareTurnFn = Callable[[TurnInput], TurnInput | Awaitable[TurnInput]]
 InvokeModelFn = Callable[[TurnInput], Any | Awaitable[Any]]
-HandleResponseFn = Callable[[TurnInput, Any], TurnOutput | Awaitable[TurnOutput]]
+HandleResponseFn = Callable[
+    [TurnInput, Any], TurnOutput | Awaitable[TurnOutput]
+]
 
 
 @dataclass(frozen=True)
@@ -42,8 +44,12 @@ class TurnOrchestrator:
         self._persistence = persistence
 
     async def run(self, turn_input: TurnInput) -> TurnOrchestratorResult:
-        prepared_turn_input = await _await_if_needed(self._prepare_turn(turn_input))
-        raw_response = await _await_if_needed(self._invoke_model(prepared_turn_input))
+        prepared_turn_input = await _await_if_needed(
+            self._prepare_turn(turn_input)
+        )
+        raw_response = await _await_if_needed(
+            self._invoke_model(prepared_turn_input)
+        )
         output = await _await_if_needed(
             self._handle_response(prepared_turn_input, raw_response)
         )

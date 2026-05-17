@@ -179,7 +179,9 @@ def generate_test_character():
     print("=" * 50)
 
     if not os.getenv("GEMINI_API_KEY"):
-        print("  ❌ GEMINI_API_KEY not set - skipping character generation test")
+        print(
+            "  ❌ GEMINI_API_KEY not set - skipping character generation test"
+        )
         return
 
     try:
@@ -201,9 +203,13 @@ def generate_test_character():
         if response.success:
             character = response.character
             print(f"  ✅ Test character generated: {character.name}")
-            print(f"  📊 Generation time: {response.generation_time:.2f} seconds")
+            print(
+                f"  📊 Generation time: {response.generation_time:.2f} seconds"
+            )
             print(f"  📄 Character age: {character.age}")
-            print(f"  📄 Character occupation: {character.background.occupation}")
+            print(
+                f"  📄 Character occupation: {character.background.occupation}"
+            )
             print(f"  📄 Images generated: {len(character.images)}")
         else:
             print(f"  ❌ Test character generation failed: {response.error}")
@@ -233,9 +239,13 @@ def main():
     print("🎉 Debugging complete!")
     print("\n📋 Next steps:")
     print("1. Check the output above for any ❌ errors")
-    print("2. Review logs/character_generator_verbose.log for detailed information")
+    print(
+        "2. Review logs/character_generator_verbose.log for detailed information"
+    )
     print("3. If Gemini API tests failed, verify your API key")
-    print("4. If dependencies are missing, run: pip install -r requirements.txt")
+    print(
+        "4. If dependencies are missing, run: pip install -r requirements.txt"
+    )
 
 
 if __name__ == "__main__":

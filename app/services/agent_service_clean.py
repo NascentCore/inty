@@ -12,7 +12,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.agent import Agent
-from app.core.agent.clean_prompt_system import AgentPromptContext, AgentRuntimeSettings
+from app.core.agent.clean_prompt_system import (
+    AgentPromptContext,
+    AgentRuntimeSettings,
+)
 from app.core.config import (
     global_config_loaded_from_config_yaml as global_config,
 )

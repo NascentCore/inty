@@ -65,6 +65,9 @@ async def generate_chat_stream(
     except Exception as e:
         logger.error(f"Streaming chat failed: {str(e)}")
         error_chunk = {
-            "error": {"message": f"Chat failed: {str(e)}", "type": "server_error"}
+            "error": {
+                "message": f"Chat failed: {str(e)}",
+                "type": "server_error",
+            }
         }
         yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"

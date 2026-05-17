@@ -9,7 +9,12 @@ from loguru import logger
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG
+from app.api.tags import (
+    ANDROID_APP_TAG,
+    INTY_EVAL_TAG,
+    WEB_APP_TAG,
+    NOT_USED_TAG,
+)
 from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
 from app.utils.image_upload import process_image_upload
@@ -48,7 +53,9 @@ async def upload_image(
         # Use helper function to process image upload
         # Use avatars directory for unified storage, similar to backgrounds
         base_path = (
-            f"avatars/{current_user.id}" if cropping_avatar else "images/uploads"
+            f"avatars/{current_user.id}"
+            if cropping_avatar
+            else "images/uploads"
         )
         result = await process_image_upload(
             file=file,

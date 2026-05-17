@@ -25,7 +25,9 @@ from .prompt_slices import (
     parse_persistable_prompt_slice_id,
     persistable_slice_names_csv,
 )
-from app.core.companion_harness.memory.memory_store_scope import load_template_seed_text
+from app.core.companion_harness.memory.memory_store_scope import (
+    load_template_seed_text,
+)
 
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
@@ -47,7 +49,9 @@ INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT: Final[str] = (
 
 def load_bootstrap_spec_text() -> str:
     if not _BOOTSTRAP_SPEC_PATH.is_file():
-        raise FileNotFoundError(f"missing bootstrap spec: {_BOOTSTRAP_SPEC_PATH}")
+        raise FileNotFoundError(
+            f"missing bootstrap spec: {_BOOTSTRAP_SPEC_PATH}"
+        )
     return _BOOTSTRAP_SPEC_PATH.read_text(encoding="utf-8").rstrip()
 
 
@@ -166,9 +170,9 @@ def tool_companion_bootstrap_user_interactive_complete(
         del data["post_bootstrap_context_mode"]
     data["workspace_bootstrap_user_interactive_completed"] = True
     if note is not None and str(note).strip():
-        data["workspace_bootstrap_user_interactive_complete_note"] = str(note).strip()[
-            :2000
-        ]
+        data["workspace_bootstrap_user_interactive_complete_note"] = str(
+            note
+        ).strip()[:2000]
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel, out)
     logger.info(

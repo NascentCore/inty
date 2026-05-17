@@ -28,7 +28,9 @@ def _iter_seed_files(seed_dir: Path) -> list[Path]:
     return sorted(p for p in seed_dir.iterdir() if p.is_file())
 
 
-def seed_memory_store_from_directory(seed_dir: Path, scope: CompanionScope) -> None:
+def seed_memory_store_from_directory(
+    seed_dir: Path, scope: CompanionScope
+) -> None:
     """
     Write each text file from seed_dir into MemoryStore for ``scope``.
 

@@ -125,7 +125,10 @@ class VertexAIModel(ImageModel):
             first_response_time = (time.perf_counter() - start_time) * 1000
 
             # 检查响应
-            if hasattr(response, "prompt_feedback") and response.prompt_feedback:
+            if (
+                hasattr(response, "prompt_feedback")
+                and response.prompt_feedback
+            ):
                 if hasattr(response.prompt_feedback, "block_reason"):
                     raise ValueError(
                         f"请求被安全过滤器阻止: {response.prompt_feedback.block_reason}"

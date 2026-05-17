@@ -97,9 +97,15 @@ def test_memory_compaction_extracts_semantic_facts_and_open_loops():
     )
     messages = [
         {"role": "system", "content": "You are a companion."},
-        {"role": "user", "content": "I am a product designer. I like jazz and hiking."},
+        {
+            "role": "user",
+            "content": "I am a product designer. I like jazz and hiking.",
+        },
         {"role": "assistant", "content": "That is wonderful."},
-        {"role": "user", "content": "Can you remind me to recharge after work?"},
+        {
+            "role": "user",
+            "content": "Can you remind me to recharge after work?",
+        },
         {"role": "assistant", "content": "Yes, I can help with that."},
         {"role": "user", "content": "I need deeper emotional support tonight."},
         {"role": "assistant", "content": "I will stay with you."},
