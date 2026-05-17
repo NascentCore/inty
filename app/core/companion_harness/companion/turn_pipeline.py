@@ -31,6 +31,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
+    AssistantTurnSource,
     ChatMessage,
     ContextMeta,
     InnerTickMode,
@@ -63,6 +64,7 @@ class CompanionTurnRuntimeFlags:
     tick_proactive: bool
     route_inner_mode: InnerTickMode
     implicit_sign_on_turn: bool
+    turn_type: AssistantTurnSource
 
 
 @dataclass(frozen=True)
@@ -112,11 +114,19 @@ def resolve_turn_runtime_flags(
             if tick_proactive
             else INNER_TICK_SYNTHETIC_USER_TEXT
         )
+    turn_type: AssistantTurnSource
+    if inner_tick_turn:
+        turn_type = "inner_tick"
+    elif implicit_sign_on_turn:
+        turn_type = "greeting"
+    else:
+        turn_type = "chat"
     return CompanionTurnRuntimeFlags(
         effective_user_text=effective_user_text,
         tick_proactive=tick_proactive,
         route_inner_mode=route_inner_mode,
         implicit_sign_on_turn=implicit_sign_on_turn,
+        turn_type=turn_type,
     )
 
 

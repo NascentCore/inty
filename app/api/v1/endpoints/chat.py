@@ -604,6 +604,7 @@ async def _try_handle_ws_user_signed_out_frame(
             f"`chat_id={chat.id}` `agent_id={agent_id}` `received_message_uuid={uuid_part}`"
         )
         if inflight_turn_tracker is not None:
+            # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
             await inflight_turn_tracker.cancel_all()
         companion_chat_service.append_companion_chat_logs_line_for_ws_control(
             user_id=current_user.id,
@@ -3272,6 +3273,7 @@ async def chat_completions_websocket(
             await hb_worker_task
         except asyncio.CancelledError:
             pass
+        # TODO(ws-disconnect-lifecycle): do not cancel on disconnect; finish turns and mark chat_history undelivered.
         await inflight_turn_tracker.cancel_all()
         ChatWsInflightShutdownRegistry.unregister(inflight_turn_tracker)
         await _shutdown_chat_ws_outbound_pump(pump_task)

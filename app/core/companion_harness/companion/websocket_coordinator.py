@@ -5,6 +5,10 @@ the small set of per-connection companion invariants that must stay together: tu
 serialization, background tool event delivery, foreground/background correlation,
 inner-tick coordinates, and overlap guards when a prior inner-tick pass still has async
 tool_background work in flight.
+
+TODO(ws-disconnect-lifecycle): On server shutdown or WebSocket session end, do not cancel
+in-flight companion turns. Let background tasks finish, persist produced messages to storage,
+and mark them undelivered so the client can receive them after ``user_signed_on``.
 """
 
 from __future__ import annotations
@@ -13,9 +17,11 @@ import asyncio
 import threading
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
+
+_ChatWsInflightTurnResult = TypeVar("_ChatWsInflightTurnResult")
 
 
 @dataclass
@@ -24,13 +30,19 @@ class ChatWsInflightTurnTracker:
 
     _tasks: set[asyncio.Task[Any]] = field(default_factory=set)
 
-    def spawn(self, coro: Coroutine[Any, Any, Any], *, name: str) -> asyncio.Task[Any]:
+    def spawn(
+        self,
+        coro: Coroutine[Any, Any, _ChatWsInflightTurnResult],
+        *,
+        name: str,
+    ) -> asyncio.Task[_ChatWsInflightTurnResult]:
         task = asyncio.create_task(coro, name=name)
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return task
 
     async def cancel_all(self) -> None:
+        # TODO(ws-disconnect-lifecycle): replace cancel with detach + undelivered persistence (see module docstring).
         pending = [t for t in list(self._tasks) if not t.done()]
         for task in pending:
             task.cancel()
@@ -39,7 +51,24 @@ class ChatWsInflightTurnTracker:
 
 
 class ChatWsInflightShutdownRegistry:
-    """Process-wide index of live trackers so SIGINT/uvicorn shutdown cancels in-flight companion turns."""
+    """Process-wide index of live :class:`ChatWsInflightTurnTracker` instances for shutdown.
+
+    **Usage** (one tracker per ``/api/v1/chat/ws`` connection):
+
+    1. After opening the socket, ``tracker = ChatWsInflightTurnTracker()`` then
+       ``ChatWsInflightShutdownRegistry.register(tracker)``.
+    2. Wrap each detached companion turn (user message completion, ``user_signed_on``
+       greeting, etc.) in ``tracker.spawn(coro, name=...)`` so disconnect/sign-out and
+       process shutdown can cancel it.
+    3. In the connection ``finally``, ``await tracker.cancel_all()`` then
+       ``unregister(tracker)``.
+    4. Register ``cancel_all_registered`` on app shutdown (see ``backend/inty/main.py``).
+
+    **Interim behavior:** ``cancel_all`` / ``cancel_all_registered`` cancel tasks today.
+    TODO(ws-disconnect-lifecycle): replace with detach + undelivered persistence (module
+    docstring); this registry must follow the same lifecycle change as per-connection
+    trackers.
+    """
 
     _trackers: list[ChatWsInflightTurnTracker] = []
 
@@ -56,6 +85,7 @@ class ChatWsInflightShutdownRegistry:
 
     @classmethod
     async def cancel_all_registered(cls) -> None:
+        # TODO(ws-disconnect-lifecycle): process shutdown — same as ``cancel_all`` (module docstring).
         for tracker in list(cls._trackers):
             await tracker.cancel_all()
 

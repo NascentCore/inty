@@ -24,7 +24,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
 
-AssistantTurnSource = Literal["chat", "inner_tick"]
+AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 CompanionReplyModality = Literal["text", "voice_message"]
 
 
