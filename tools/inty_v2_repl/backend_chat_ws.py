@@ -672,9 +672,15 @@ class BackendChatWsBridge:
                         {reader_task, halt_task},
                         return_when=asyncio.FIRST_COMPLETED,
                     )
-                    for t in pending:
-                        t.cancel()
-                    await asyncio.gather(*pending, return_exceptions=True)
+                    if halt.is_set():
+                        # Reader must stay alive until user_signed_out_ack is consumed.
+                        if halt_task in pending:
+                            halt_task.cancel()
+                            await asyncio.gather(halt_task, return_exceptions=True)
+                    else:
+                        for t in pending:
+                            t.cancel()
+                        await asyncio.gather(*pending, return_exceptions=True)
                 finally:
                     pinger.cancel()
                     try:

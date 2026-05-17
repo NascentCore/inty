@@ -5,6 +5,10 @@ the small set of per-connection companion invariants that must stay together: tu
 serialization, background tool event delivery, foreground/background correlation,
 inner-tick coordinates, and overlap guards when a prior inner-tick pass still has async
 tool_background work in flight.
+
+TODO(ws-disconnect-lifecycle): On server shutdown or WebSocket session end, do not cancel
+in-flight companion turns. Let background tasks finish, persist produced messages to storage,
+and mark them undelivered so the client can receive them after ``user_signed_on``.
 """
 
 from __future__ import annotations
@@ -31,6 +35,7 @@ class ChatWsInflightTurnTracker:
         return task
 
     async def cancel_all(self) -> None:
+        # TODO(ws-disconnect-lifecycle): replace cancel with detach + undelivered persistence (see module docstring).
         pending = [t for t in list(self._tasks) if not t.done()]
         for task in pending:
             task.cancel()
@@ -56,6 +61,7 @@ class ChatWsInflightShutdownRegistry:
 
     @classmethod
     async def cancel_all_registered(cls) -> None:
+        # TODO(ws-disconnect-lifecycle): process shutdown — same as ``cancel_all`` (module docstring).
         for tracker in list(cls._trackers):
             await tracker.cancel_all()
 
