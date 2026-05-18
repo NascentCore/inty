@@ -1,3 +1,14 @@
+---
+name: two-step-structured-bridge-for-llms
+description: >-
+  Two-step pattern for LLM outputs: narrow-schema intermediate representation
+  (IR) in step one, then trusted validation and materialization in step two.
+  Triggers: agent tool protocols, precise parameters (coordinates, time, money,
+  IDs), composition-sensitive pipelines, audit/replay, preview-before-execute;
+  user mentions structured bridge, IR + materializer, or separating model
+  decisions from deterministic execution.
+---
+
 # 两步结构化桥接：用「中间表示 + 物化器」提升 LLM 产出质量
 
 **一句话**：让模型只负责在**窄 schema** 里做决策，把「落到真实世界」交给**可测试、可回放**的第二步程序，用来降低歧义、便于校验、并抑制长链迭代里的误差放大。
@@ -40,6 +51,7 @@
 
 - **工具调用（function calling）**：常已是「模型产结构化参数 + 运行环境执行」；本指南强调的是**刻意收窄参数空间**与**物化阶段的可验证性**，不仅限于单次 tool call。
 - **ReAct / 多步 agent**：每一步仍可遵守本模式；关键是**每步对外部世界的写入**尽量经由 IR，而不是长文本直接驱动副作用。
+- **图像底稿两步**（underdrawing + paint）：域特化实例，见 [image-underdrawing-two-step](/.cursor/skills/image-underdrawing-two-step/SKILL.md)。
 
 ## 落地检查清单
 
