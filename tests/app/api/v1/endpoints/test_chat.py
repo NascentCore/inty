@@ -1614,6 +1614,73 @@ def test_chat_websocket_companion_user_signed_on_greeting_sets_bundle(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_chat_websocket_user_signed_on_greeting_uses_own_async_session(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """Regression: greeting spawn must not share the WebSocket connection AsyncSession."""
+    async_session_ids: list[int] = []
+
+    def tracking_async_session_local():
+        session = _create_mock_db_session()
+        async_session_ids.append(id(session))
+        return session
+
+    monkeypatch.setattr(chat_v1, "AsyncSessionLocal", tracking_async_session_local)
+
+    async def noop_inner_tick(**_kwargs):
+        return None
+
+    monkeypatch.setattr(
+        chat_v1, "_try_fire_companion_ws_proactive_heartbeat", noop_inner_tick
+    )
+    monkeypatch.setattr(
+        chat_v1, "_try_fire_companion_ws_maintenance_inner_tick", noop_inner_tick
+    )
+    monkeypatch.setattr(
+        chat_v1, "_try_fire_companion_ws_scheduled_task_inner_tick", noop_inner_tick
+    )
+
+    ws_db = _create_mock_db_session()
+    ws_db_id = id(ws_db)
+
+    async def override_db():
+        yield ws_db
+
+    chat_business_error_app.dependency_overrides[deps.get_async_db] = override_db
+
+    async def fake_run_companion_chat_turn_for_api(**_kwargs):
+        return CompanionTurnResult(assistant_text="greet-session")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon-session",
+        chat_id="chat-signon-session-1",
+        latest_user_message_db_id=92,
+        ai_message_id=912,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    msg_uuid = "dddddddd-bbbb-4ccc-dddd-ffffffffffff"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-companion-signon-session",
+                    "message_id": msg_uuid,
+                }
+            )
+            ack = websocket.receive_json()
+            assert ack["type"] == "user_signed_on_ack"
+            assert ack["ok"] is True
+            time.sleep(0.15)
+
+    assert async_session_ids
+    assert all(sid != ws_db_id for sid in async_session_ids)
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_user_signed_on_records_ws_lifecycle_event(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):

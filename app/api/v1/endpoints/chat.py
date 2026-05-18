@@ -180,6 +180,7 @@ def _chat_ws_error_payload_from_http_exception(
 # WebSocket: one AsyncSession is bound for the whole connection (Depends(get_async_db)).
 # Handlers must not pass that session into asyncio.to_thread or other threads; open a new
 # session inside the worker if agentic work runs off the event loop.
+# Tasks started via spawn must not use the connection-level db; use AsyncSessionLocal().
 
 
 def _chat_ws_idle_timeout_seconds() -> float:
@@ -307,7 +308,6 @@ def _implicit_signal_bundle_from_ws_tc_box(
 
 async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
     *,
-    db: AsyncSession,
     agent_id: str,
     preset_message_id: str,
     current_user: UserSchema,
@@ -325,30 +325,34 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
             message_id=preset_message_id,
         )
         merged = _chat_request_with_merged_ws_time_context(base, tc_box[0])
-        try:
-            async with companion_ws.turn_lock:
-                response = await _agent_chat_ws_completions_impl(
-                    db=db,
-                    agent_id=agent_id,
-                    request=merged,
-                    current_user=current_user,
-                    subscription_svc=subscription_svc,
-                    companion_background_sink=companion_ws.background_sink,
-                    companion_ws_foreground_pending=companion_ws.foreground_pending,
-                    companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
-                    implicit_greeting_turn=True,
+        async with AsyncSessionLocal() as db:
+            try:
+                async with companion_ws.turn_lock:
+                    response = await _agent_chat_completions_impl(
+                        db=db,
+                        agent_id=agent_id,
+                        request=merged,
+                        current_user=current_user,
+                        app_version_code=app_version_code,
+                        subscription_svc=subscription_svc,
+                        voice_svc=voice_svc,
+                        chat_route="websocket",
+                        companion_background_sink=companion_ws.background_sink,
+                        companion_ws_foreground_pending=companion_ws.foreground_pending,
+                        companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
+                        implicit_greeting_turn=True,
+                    )
+            except HTTPException as e:
+                await outbound_queue.put(
+                    _chat_ws_error_payload_from_http_exception(e, agent_id=agent_id)
                 )
-        except HTTPException as e:
-            await outbound_queue.put(
-                _chat_ws_error_payload_from_http_exception(e, agent_id=agent_id)
-            )
-            return
-        if isinstance(response, dict):
-            response_data = dict(response)
-        else:
-            response_data = response.model_dump(exclude_none=True)
-        response_data["agent_id"] = agent_id
-        await outbound_queue.put(response_data)
+                return
+            if isinstance(response, dict):
+                response_data = dict(response)
+            else:
+                response_data = response.model_dump(exclude_none=True)
+            response_data["agent_id"] = agent_id
+            await outbound_queue.put(response_data)
     except asyncio.CancelledError:
         logger.debug(
             "chat_ws user_signed_on greeting cancelled agent_id={}",
@@ -506,7 +510,6 @@ async def _try_handle_ws_user_signed_on_frame(
             assert inflight_turn_tracker is not None
             inflight_turn_tracker.spawn(
                 _enqueue_companion_greeting_ws_turn_after_user_signed_on(
-                    db=db,
                     agent_id=agent_id,
                     preset_message_id=preset_mid,
                     current_user=current_user,
