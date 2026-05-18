@@ -100,19 +100,26 @@ async def offer(sdp: SDP):
             asyncio.create_task(_consume_uplink(track, session.uplink_queue))
             # start the Gemini bridge when first audio arrives
             if session.bridge_task is None:
-                session.bridge_task = asyncio.create_task(gemini_bridge(session))
+                session.bridge_task = asyncio.create_task(
+                    gemini_bridge(session)
+                )
 
     # Set remote
     try:
-        await pc.setRemoteDescription(RTCSessionDescription(sdp=sdp.sdp, type=sdp.type))
+        await pc.setRemoteDescription(
+            RTCSessionDescription(sdp=sdp.sdp, type=sdp.type)
+        )
     except Exception as e:
         await pc.close()
-        raise HTTPException(status_code=400, detail=f"setRemoteDescription failed: {e}")
+        raise HTTPException(
+            status_code=400, detail=f"setRemoteDescription failed: {e}"
+        )
 
     # Add downlink audio track so client can receive audio
     pc.addTrack(
         DownlinkAudioTrack(
-            session.downlink_queue, sample_rate=config.gemini.receive_sample_rate
+            session.downlink_queue,
+            sample_rate=config.gemini.receive_sample_rate,
         )
     )
 
@@ -149,12 +156,16 @@ async def gemini_bridge(session: SessionState):
         response_modalities=["AUDIO"],
         speech_config=types.SpeechConfig(
             voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name=voice
+                )
             )
         ),
     )
 
-    async with client.aio.live.connect(model=model, config=live_config) as session_live:
+    async with client.aio.live.connect(
+        model=model, config=live_config
+    ) as session_live:
 
         async def uplink():
             while True:

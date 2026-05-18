@@ -28,7 +28,9 @@ async def chat_ws_outbound_pump(
             try:
                 await websocket.send_json(payload)
             except WebSocketDisconnect:
-                logger.debug("chat_ws_outbound_pump send_json: client disconnected")
+                logger.debug(
+                    "chat_ws_outbound_pump send_json: client disconnected"
+                )
                 break
             except Exception:
                 logger.exception("chat_ws_outbound_pump send_json failed")

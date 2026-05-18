@@ -35,9 +35,14 @@ def _ensure_langsmith_handle_container_end_patch() -> None:
             outputs_processor: Any = None,
         ) -> None:
             try:
-                if outputs_processor is not None and isinstance(container, dict):
+                if outputs_processor is not None and isinstance(
+                    container, dict
+                ):
                     nr = container.get("new_run")
-                    if nr is not None and getattr(nr, "run_type", None) == "llm":
+                    if (
+                        nr is not None
+                        and getattr(nr, "run_type", None) == "llm"
+                    ):
                         rid = getattr(nr, "id", None)
                         if rid is not None:
                             s = str(rid).strip()
@@ -89,7 +94,11 @@ def _langsmith_trace_id_from_active_run_tree() -> str:
         if rt is None:
             return ""
         tid = getattr(rt, "trace_id", None)
-        if tid is None or not str(tid).strip() or str(tid).strip().lower() == "none":
+        if (
+            tid is None
+            or not str(tid).strip()
+            or str(tid).strip().lower() == "none"
+        ):
             tid = getattr(rt, "id", None)
         if tid is None:
             return ""

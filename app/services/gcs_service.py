@@ -41,7 +41,9 @@ class GCSService:
             date_path = datetime.now().strftime("%Y%m")
             file_path = f"voice/{date_path}/{file_name}"
 
-            logger.debug(f"GCS上传路径: {file_path}, 文件大小: {len(file_data)} bytes")
+            logger.debug(
+                f"GCS上传路径: {file_path}, 文件大小: {len(file_data)} bytes"
+            )
 
             # 检查文件是否已存在（缓存机制）
             logger.debug(f"检查GCS文件是否存在: {file_path}")

@@ -50,7 +50,9 @@ class EvaluationService:
         agents = result.scalars().all()
 
         if len(agents) != len(selected_agents):
-            missing_agents = set(selected_agents) - {agent.id for agent in agents}
+            missing_agents = set(selected_agents) - {
+                agent.id for agent in agents
+            }
             raise ValueError(f"Agents not found: {missing_agents}")
 
         # 创建会话
@@ -86,7 +88,9 @@ class EvaluationService:
         """启动评测会话"""
 
         # 获取会话信息
-        stmt = select(EvaluationSession).where(EvaluationSession.id == session_id)
+        stmt = select(EvaluationSession).where(
+            EvaluationSession.id == session_id
+        )
         result = await self.db.execute(stmt)
         session = result.scalar_one_or_none()
 
@@ -94,13 +98,17 @@ class EvaluationService:
             raise ValueError(f"Evaluation session not found: {session_id}")
 
         if session.status != EvaluationStatus.PENDING:
-            raise ValueError(f"Invalid evaluation session status: {session.status}")
+            raise ValueError(
+                f"Invalid evaluation session status: {session.status}"
+            )
 
         # 更新会话状态
         await self.db.execute(
             update(EvaluationSession)
             .where(EvaluationSession.id == session_id)
-            .values(status=EvaluationStatus.RUNNING, started_at=datetime.utcnow())
+            .values(
+                status=EvaluationStatus.RUNNING, started_at=datetime.utcnow()
+            )
         )
         try:
             await self.db.commit()
@@ -201,7 +209,9 @@ class EvaluationService:
                     logger.debug(
                         f"并行执行问题 {question_index + 1} 的 {len(agent_tasks)} 个智能体测试"
                     )
-                    results = await asyncio.gather(*agent_tasks, return_exceptions=True)
+                    results = await asyncio.gather(
+                        *agent_tasks, return_exceptions=True
+                    )
 
                     # 处理并行执行的结果
                     for i, result in enumerate(results):
@@ -226,7 +236,9 @@ class EvaluationService:
                                 {
                                     "type": "test_completed",
                                     "session_id": session.id,
-                                    "result": bg_service._serialize_result(result),
+                                    "result": bg_service._serialize_result(
+                                        result
+                                    ),
                                 },
                             )
 
@@ -308,7 +320,9 @@ class EvaluationService:
             # 发起对话
             start_time = datetime.utcnow()
             chat_response = await self._send_evaluation_message(
-                agent_id=agent_id, question=question, user_identity=user_identity
+                agent_id=agent_id,
+                question=question,
+                user_identity=user_identity,
             )
             end_time = datetime.utcnow()
 
@@ -349,7 +363,9 @@ class EvaluationService:
 
                 if scoring_result["success"]:
                     result.overall_score = scoring_result.get("overall_score")
-                    result.detailed_scores = scoring_result.get("detailed_scores")
+                    result.detailed_scores = scoring_result.get(
+                        "detailed_scores"
+                    )
                     result.scoring_reason = scoring_result.get("reason")
                     result.scoring_model_used = session.scoring_model
 
@@ -378,7 +394,11 @@ class EvaluationService:
         if session.use_new_user_identity:
             # 创建临时游客身份
             device_id = f"eval_{session.id}_{uuid.uuid4().hex[:8]}"
-            return {"type": "guest", "device_id": device_id, "session_id": session.id}
+            return {
+                "type": "guest",
+                "device_id": device_id,
+                "session_id": session.id,
+            }
         else:
             # 使用创建者身份
             return {
@@ -506,7 +526,11 @@ class EvaluationService:
         # 广播完成消息
         await self._broadcast_update(
             session_id,
-            {"type": "session_completed", "session_id": session_id, "stats": stats},
+            {
+                "type": "session_completed",
+                "session_id": session_id,
+                "stats": stats,
+            },
         )
 
         # 清理内存状态
@@ -519,7 +543,9 @@ class EvaluationService:
         await self.db.execute(
             update(EvaluationSession)
             .where(EvaluationSession.id == session_id)
-            .values(status=EvaluationStatus.FAILED, completed_at=datetime.utcnow())
+            .values(
+                status=EvaluationStatus.FAILED, completed_at=datetime.utcnow()
+            )
         )
         try:
             await self.db.commit()
@@ -543,7 +569,9 @@ class EvaluationService:
 
     async def _calculate_session_stats(self, session_id: str) -> Dict[str, Any]:
         """计算会话统计信息"""
-        stmt = select(EvaluationResult).where(EvaluationResult.session_id == session_id)
+        stmt = select(EvaluationResult).where(
+            EvaluationResult.session_id == session_id
+        )
         result = await self.db.execute(stmt)
         results = result.scalars().all()
 
@@ -553,7 +581,9 @@ class EvaluationService:
         successful_results = [r for r in results if r.is_success]
         success_rate = len(successful_results) / len(results)
 
-        scores = [r.overall_score for r in results if r.overall_score is not None]
+        scores = [
+            r.overall_score for r in results if r.overall_score is not None
+        ]
         average_score = sum(scores) / len(scores) if scores else None
 
         return {
@@ -592,7 +622,9 @@ class EvaluationService:
             "scoring_reason": result.scoring_reason,
             "is_success": result.is_success,
             "error_message": result.error_message,
-            "created_at": result.created_at.isoformat() if result.created_at else None,
+            "created_at": (
+                result.created_at.isoformat() if result.created_at else None
+            ),
         }
 
     async def get_session(self, session_id: str) -> Optional[EvaluationSession]:
@@ -637,18 +669,24 @@ class EvaluationService:
                 pass
 
         stmt = (
-            stmt.order_by(EvaluationSession.created_at.desc()).offset(skip).limit(limit)
+            stmt.order_by(EvaluationSession.created_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
 
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
-    async def get_session_results(self, session_id: str) -> List[EvaluationResult]:
+    async def get_session_results(
+        self, session_id: str
+    ) -> List[EvaluationResult]:
         """获取会话结果"""
         stmt = (
             select(EvaluationResult)
             .where(EvaluationResult.session_id == session_id)
-            .order_by(EvaluationResult.question_index, EvaluationResult.created_at)
+            .order_by(
+                EvaluationResult.question_index, EvaluationResult.created_at
+            )
         )
 
         result = await self.db.execute(stmt)
@@ -663,7 +701,10 @@ class EvaluationService:
         await self.db.execute(
             update(EvaluationSession)
             .where(EvaluationSession.id == session_id)
-            .values(status=EvaluationStatus.CANCELLED, completed_at=datetime.utcnow())
+            .values(
+                status=EvaluationStatus.CANCELLED,
+                completed_at=datetime.utcnow(),
+            )
         )
         try:
             await self.db.commit()
@@ -748,10 +789,14 @@ class EvaluationService:
             if user_identity["type"] == "user":
                 try:
                     chat = await chat_service.get_or_create_chat_by_agent(
-                        db=self.db, user_id=user_identity["user_id"], agent_id=agent_id
+                        db=self.db,
+                        user_id=user_identity["user_id"],
+                        agent_id=agent_id,
                     )
                 except Exception as e:
-                    logger.warning(f"创建聊天会话失败，但评测可以继续: {str(e)}")
+                    logger.warning(
+                        f"创建聊天会话失败，但评测可以继续: {str(e)}"
+                    )
 
             return {
                 "response": response_content,
@@ -762,10 +807,14 @@ class EvaluationService:
                     "user_identity": user_identity,
                     "agent_id": agent_id,
                     "question_length": len(question),
-                    "response_length": len(response_content) if response_content else 0,
+                    "response_length": (
+                        len(response_content) if response_content else 0
+                    ),
                 },
             }
 
         except Exception as e:
-            logger.error(f"评测消息发送失败 - Agent: {agent_id}, 错误: {str(e)}")
+            logger.error(
+                f"评测消息发送失败 - Agent: {agent_id}, 错误: {str(e)}"
+            )
             raise ValueError(f"Agent communication failed: {str(e)}")

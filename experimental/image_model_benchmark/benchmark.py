@@ -41,7 +41,9 @@ app = cyclopts.App(
 console = Console()
 
 
-def create_model(model_config: ModelConfig, config: BenchmarkConfig) -> ImageModel:
+def create_model(
+    model_config: ModelConfig, config: BenchmarkConfig
+) -> ImageModel:
     """根据配置创建模型实例"""
     if model_config.name == "seedream":
         if not config.openrouter_api_key:
@@ -151,7 +153,9 @@ def print_results_table(
 @app.command()
 def report(
     results_dir: Annotated[str, cyclopts.Parameter(name=["--dir", "-d"])],
-    output: Annotated[str, cyclopts.Parameter(name=["--output", "-o"])] = "report.md",
+    output: Annotated[
+        str, cyclopts.Parameter(name=["--output", "-o"])
+    ] = "report.md",
 ) -> None:
     """
     从结果目录生成 Markdown 报告
@@ -301,7 +305,9 @@ def _generate_markdown_report(results: list[dict], results_dir: Path) -> str:
                 size_str = f"{size_kb:.0f}KB" if success else "-"
                 status = "✓" if success else "✗"
 
-                lines.append(f"| {model_name} | {time_str} | {size_str} | {status} |")
+                lines.append(
+                    f"| {model_name} | {time_str} | {size_str} | {status} |"
+                )
 
             lines.append("")
 
@@ -335,7 +341,9 @@ def _generate_markdown_report(results: list[dict], results_dir: Path) -> str:
 
     if sorted_models:
         fastest_model = sorted_models[0][0]
-        lines.append(f"根据本次评测，**{fastest_model}** 在响应速度方面表现最佳。")
+        lines.append(
+            f"根据本次评测，**{fastest_model}** 在响应速度方面表现最佳。"
+        )
         lines.append("")
 
     return "\n".join(lines)
@@ -344,14 +352,18 @@ def _generate_markdown_report(results: list[dict], results_dir: Path) -> str:
 @app.command()
 def list_models() -> None:
     """列出所有支持的模型"""
-    table = Table(title="支持的模型", show_header=True, header_style="bold blue")
+    table = Table(
+        title="支持的模型", show_header=True, header_style="bold blue"
+    )
     table.add_column("名称", style="cyan")
     table.add_column("显示名称")
     table.add_column("Model ID")
     table.add_column("Provider")
 
     for name, config in MODELS.items():
-        table.add_row(name, config.display_name, config.model_id, config.provider.value)
+        table.add_row(
+            name, config.display_name, config.model_id, config.provider.value
+        )
 
     console.print(table)
 
@@ -386,8 +398,12 @@ def list_scenarios() -> None:
 
 @app.command()
 def run(
-    all_models: Annotated[bool, cyclopts.Parameter(name=["--all", "-a"])] = False,
-    model: Annotated[Optional[str], cyclopts.Parameter(name=["--model", "-m"])] = None,
+    all_models: Annotated[
+        bool, cyclopts.Parameter(name=["--all", "-a"])
+    ] = False,
+    model: Annotated[
+        Optional[str], cyclopts.Parameter(name=["--model", "-m"])
+    ] = None,
     scenario: Annotated[
         Optional[str], cyclopts.Parameter(name=["--scenario", "-s"])
     ] = None,
@@ -438,7 +454,9 @@ def run(
             scenarios_to_test = [get_scenario(scenario_type)]
         except ValueError:
             console.print(f"[red]未知场景: {scenario}[/red]")
-            console.print(f"可用场景: {', '.join(s.value for s in ScenarioType)}")
+            console.print(
+                f"可用场景: {', '.join(s.value for s in ScenarioType)}"
+            )
             return
     else:
         scenarios_to_test = get_all_scenarios()
@@ -483,7 +501,9 @@ async def _run_benchmarks(
             console.print(f"已加载 {len(test_images)} 张测试图片")
         except FileNotFoundError as e:
             console.print(f"[red]{e}[/red]")
-            console.print("[yellow]请将测试图片放到 test_images/ 目录下[/yellow]")
+            console.print(
+                "[yellow]请将测试图片放到 test_images/ 目录下[/yellow]"
+            )
             continue
 
         # 确定要测试的变体
@@ -500,7 +520,9 @@ async def _run_benchmarks(
                 f"\n[magenta]变体: {variant.name}[/magenta] - {variant.description}"
             )
 
-            scenario_results: list[tuple[str, str, str, ImageGenerationResult]] = []
+            scenario_results: list[
+                tuple[str, str, str, ImageGenerationResult]
+            ] = []
 
             for model_config in models_to_test:
                 console.print(f"\n  [cyan]{model_config.display_name}[/cyan]")
@@ -552,7 +574,9 @@ async def _run_benchmarks(
                             f"  [green]成功[/green] - {result.total_time_ms:.0f}ms, {result.image_size_kb:.1f}KB"
                         )
                     else:
-                        console.print(f"  [red]失败[/red] - {result.error_message}")
+                        console.print(
+                            f"  [red]失败[/red] - {result.error_message}"
+                        )
 
                 except Exception as e:
                     console.print(f"  [red]错误: {e}[/red]")
@@ -560,7 +584,9 @@ async def _run_benchmarks(
             # 打印当前变体的结果表格
             if scenario_results:
                 console.print()
-                print_results_table(scenario_results, scenario.name, variant.name)
+                print_results_table(
+                    scenario_results, scenario.name, variant.name
+                )
 
     # 保存 JSON 结果
     if save_images and all_results:

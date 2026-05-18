@@ -1,0 +1,9 @@
+torch
+transformers>=4.57.0
+datasets>=4.0.0
+accelerate>=1.11.0
+trl>=0.24.0
+pydantic>=2.0
+cyclopts
+pyyaml
+loguru

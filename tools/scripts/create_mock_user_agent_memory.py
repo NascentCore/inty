@@ -72,7 +72,9 @@ async def _get_festival_name_date(
         )
         config = r.scalar_one_or_none()
         if config is None:
-            logger.error(f"节日配置不存在: festival_config_id={festival_config_id}")
+            logger.error(
+                f"节日配置不存在: festival_config_id={festival_config_id}"
+            )
             sys.exit(1)
         return config.festival_name, config.festival_date
     name = festival_name or DEFAULT_FESTIVAL_NAME
@@ -81,7 +83,9 @@ async def _get_festival_name_date(
 
 
 def _add_mock_chat_messages_sync(session_id: str, agent_id: str) -> None:
-    chat_history_service.add_user_message(session_id, MOCK_HUMAN_CONTENT, meta_data={})
+    chat_history_service.add_user_message(
+        session_id, MOCK_HUMAN_CONTENT, meta_data={}
+    )
     chat_history_service.add_ai_message_sync(
         session_id, MOCK_AI_CONTENT, agent_id=agent_id
     )
@@ -117,8 +121,14 @@ async def _run(
 
         if memory_type == "festival":
             try:
-                festival_name_val, festival_date_val = await _get_festival_name_date(
-                    db, memory_type, festival_config_id, festival_name, festival_date
+                festival_name_val, festival_date_val = (
+                    await _get_festival_name_date(
+                        db,
+                        memory_type,
+                        festival_config_id,
+                        festival_name,
+                        festival_date,
+                    )
                 )
             except SystemExit:
                 raise
@@ -149,7 +159,9 @@ async def _run(
             return
 
         try:
-            chat = await chat_service.get_or_create_chat_by_agent(db, user_id, agent_id)
+            chat = await chat_service.get_or_create_chat_by_agent(
+                db, user_id, agent_id
+            )
         except Exception as e:
             logger.error(f"get_or_create_chat_by_agent 失败: {e}")
             sys.exit(1)
@@ -160,8 +172,14 @@ async def _run(
         memory_row = None
 
         if memory_type == "festival":
-            festival_name_val, festival_date_val = await _get_festival_name_date(
-                db, memory_type, festival_config_id, festival_name, festival_date
+            festival_name_val, festival_date_val = (
+                await _get_festival_name_date(
+                    db,
+                    memory_type,
+                    festival_config_id,
+                    festival_name,
+                    festival_date,
+                )
             )
             existing_rows = await db.execute(
                 select(
@@ -177,7 +195,12 @@ async def _run(
             )
             existing_ids = []
             for row in existing_rows.fetchall():
-                memory_id, metadata, legacy_festival_name, legacy_festival_date = row
+                (
+                    memory_id,
+                    metadata,
+                    legacy_festival_name,
+                    legacy_festival_date,
+                ) = row
                 resolved_name, resolved_date = resolve_festival_name_and_date(
                     metadata, legacy_festival_name, legacy_festival_date
                 )
@@ -187,7 +210,9 @@ async def _run(
                 ):
                     existing_ids.append(memory_id)
             if existing_ids:
-                await db.execute(delete(Memory).where(Memory.id.in_(existing_ids)))
+                await db.execute(
+                    delete(Memory).where(Memory.id.in_(existing_ids))
+                )
             memory_row = Memory(
                 user_id=user_id,
                 memory_type="festival",
@@ -221,7 +246,9 @@ async def _run(
         await db.commit()
 
         if add_mock_chat:
-            await asyncio.to_thread(_add_mock_chat_messages_sync, session_id, agent_id)
+            await asyncio.to_thread(
+                _add_mock_chat_messages_sync, session_id, agent_id
+            )
             logger.info("已插入 mock 人机消息 2 条")
 
         # 节日记忆与生产一致：仅写 memory，不在此处写 chat_history；用户发起聊天或拉取消息列表时会按需投递

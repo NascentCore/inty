@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 
 
 def main() -> None:
-    print("gcp_scheduled_job demo run at", datetime.now(timezone.utc).isoformat())
+    print(
+        "gcp_scheduled_job demo run at", datetime.now(timezone.utc).isoformat()
+    )
     sys.exit(0)
 
 

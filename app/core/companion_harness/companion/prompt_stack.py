@@ -66,15 +66,20 @@ def companion_turn_tools_and_system_messages(
     """
     interactive_bootstrap = interactive_bootstrap_active(
         feature_enabled=(
-            memory_bootstrap_type == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+            memory_bootstrap_type
+            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
         ),
         meta=context,
     )
-    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    tick_proactive = (
+        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    )
     ai_private_text = ""
     if inner_tick_turn and not tick_proactive:
         ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
-    route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
+    route_inner_mode = (
+        inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
+    )
     tools_for_turn: list[dict[str, Any]] = (
         []
         if tick_proactive
@@ -86,7 +91,9 @@ def companion_turn_tools_and_system_messages(
             )
         )
     )
-    chat_only_implicit_sign_on = implicit_user_signed_on_turn and not inner_tick_turn
+    chat_only_implicit_sign_on = (
+        implicit_user_signed_on_turn and not inner_tick_turn
+    )
     if chat_only_implicit_sign_on:
         tools_for_turn = []
     # Compact system stack is only for the background tool LLM path; skip interactive-bootstrap
@@ -141,7 +148,8 @@ def companion_turn_tools_and_system_messages(
         system_messages = build_system_messages(
             bundle,
             context,
-            enable_tools=(not tick_proactive) and not chat_only_implicit_sign_on,
+            enable_tools=(not tick_proactive)
+            and not chat_only_implicit_sign_on,
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=route_inner_mode,
             ai_private_text=ai_private_text,
@@ -172,17 +180,19 @@ def refresh_companion_turn_prompt_stack(
         implicit_signal_bundle=implicit_signal_bundle,
         inner_tick_turn=inner_tick_turn,
     )
-    tools_for_turn, refreshed, _route_mode = companion_turn_tools_and_system_messages(
-        store=store,
-        bundle=bundle,
-        context=context,
-        memory_bootstrap_type=memory_bootstrap_type,
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
-        tool_side_compact_system_prompt=tool_side_compact_system_prompt,
-        include_significance_perception_slice=None,
-        implicit_signal_bundle=implicit_signal_bundle,
-        implicit_user_signed_on_turn=implicit_user_signed_on_turn,
+    tools_for_turn, refreshed, _route_mode = (
+        companion_turn_tools_and_system_messages(
+            store=store,
+            bundle=bundle,
+            context=context,
+            memory_bootstrap_type=memory_bootstrap_type,
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_mode=inner_tick_mode,
+            tool_side_compact_system_prompt=tool_side_compact_system_prompt,
+            include_significance_perception_slice=None,
+            implicit_signal_bundle=implicit_signal_bundle,
+            implicit_user_signed_on_turn=implicit_user_signed_on_turn,
+        )
     )
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn

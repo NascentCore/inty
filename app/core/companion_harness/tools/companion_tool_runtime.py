@@ -26,7 +26,6 @@ from app.core.companion_harness.tools.dispatchers.memory_store import (
 )
 
 from app.core.companion_harness.companion.bootstrap_user_interactive import (
-    PROMPT_SLICE_TO_REL,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
@@ -34,14 +33,27 @@ from app.core.companion_harness.companion.bootstrap_user_interactive import (
 from app.core.companion_harness.companion.message_format import (
     openai_assistant_message_dict,
 )
-from app.core.companion_harness.companion.models import ChatMessage, load_context_meta
-from app.core.companion_harness.companion.schedule_queue import add_schedule_task
+from app.core.companion_harness.companion.models import (
+    ChatMessage,
+    load_context_meta,
+)
+from app.core.companion_harness.companion.schedule_queue import (
+    add_schedule_task,
+)
 from app.core.companion_harness.memory.memory_store import (
     MemoryStore,
     normalize_memory_store_relative_path,
 )
 from app.core.companion_harness.memory.memory_store_document_mapping import (
     parse_memory_store_relative_path,
+)
+from app.core.companion_harness.companion.llm_runtime_events import (
+    companion_llm_runtime_event_bind_ctx,
+)
+from living_sphere.models import (
+    LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
+    LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
+    LivingSphereUpdate,
 )
 from techno_core.models import (
     Sphere,
@@ -62,6 +74,23 @@ from .image_gate import (
     current_persona_revision_id,
     find_latest_asset_by_local_relative_path,
     list_image_asset_records,
+)
+from .companion_tool_definitions import (
+    COMPANION_LLM_TOOLS,
+    COMPANION_LLM_TOOLS_BY_NAME,
+    CompanionToolName,
+    INNER_TICK_TOOL_NAMES,
+    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+    OPENAI_TOOLS_BASE_NAMES,
+    REPL_BOOTSTRAP_TOOL_NAMES,
+    REPL_DESCRIPTION_OVERRIDES,
+    REPL_TOOL_NAMES_APPENDED,
+    REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL,
+    REPL_TOOL_NAMES_SHARED_HEAD,
+    TOOL_TAG_GENERATION,
+    _EMPTY_DESCRIPTION_OVERRIDES,
+    openai_tools_for_names,
 )
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
@@ -85,30 +114,14 @@ _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
 # GENERATION: 成功产出应对用户可见的交付物时, async tool_background **必须**下行到客户端;
 # 是否附加 NL 由统一收尾信封中的 ``output_to_user`` 与产物回填共同决定（见 tool_background）。
-TOOL_TAG_GENERATION = "GENERATION"
-_TOOL_TAGS_BY_NAME: dict[str, frozenset[str]] = {
-    "generate_image": frozenset({TOOL_TAG_GENERATION}),
-    "modify_image": frozenset({TOOL_TAG_GENERATION}),
-}
-
-# memory_store_read_document：可选 max_chars 上限，避免单次 tool 返回撑爆上下文。
-MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
-
-# REPL 对话轮允许整文件覆盖写入的相对路径（根目录约定文档；不含 transcript/context 等）
-REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
-    {
-        "IDENTITY.md",
-        "MEMORY.md",
-        "SOUL.md",
-        "STYLE.md",
-        "USER.md",
-    }
-)
+# ``TOOL_TAG_GENERATION`` / memory-store caps / allowlist: ``companion_tool_definitions``.
 
 
-# TODO(product): ai_private.jsonl is ORM-mapped but not in REPL_WRITABLE_RELATIVE_PATHS; model
+# TODO(product): ai_private.jsonl is ORM-mapped but not in MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST; model
 # cannot memory_store_write_document it until allowlist or a dedicated append tool exists.
-def _latest_generated_image_http_url_from_index(store: MemoryStore) -> str | None:
+def _latest_generated_image_http_url_from_index(
+    store: MemoryStore,
+) -> str | None:
     for row in reversed(list_image_asset_records(store)):
         u = str(row.get("gcs_http_url") or "").strip()
         if u.startswith("http://") or u.startswith("https://"):
@@ -140,7 +153,9 @@ def _tool_rel_posix_from_arg(relative_path: str) -> str:
     return normalize_memory_store_relative_path(s)
 
 
-def _list_dir_extra_names_from_store(store: MemoryStore, rel_dir: str) -> set[str]:
+def _list_dir_extra_names_from_store(
+    store: MemoryStore, rel_dir: str
+) -> set[str]:
     paths = store.iter_stored_relative_paths()
     prefix = _list_dir_prefix_for_store_query(rel_dir)
     pfx = f"{prefix}/" if prefix else ""
@@ -162,50 +177,21 @@ def _list_dir_extra_names_from_store(store: MemoryStore, rel_dir: str) -> set[st
     return out
 
 
-_REPL_TOOL_NAMES_SHARED_HEAD: tuple[str, ...] = (
-    "user_profile_record",
-    TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
-    "schedule_task",
-    SET_BGM_TOOL_NAME,
-    "tool_update_agent_status_line",
-    "memory_store_list_paths",
-    "memory_store_read_document",
-)
-
-_REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[str, ...] = (
-    "memory_store_write_document",
-    "phone_call_user",
-)
-
-
 _BASE_TOOL_REGISTRY = ToolRegistry(
-    (
-        "memory_store_list_paths",
-        "memory_store_read_document",
-        "memory_store_write_document",
-        "memory_store_mkdir",
-        "user_profile_record",
-        TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
-        "schedule_task",
-        SET_BGM_TOOL_NAME,
-        "google_web_search",
-        "read_web_page",
-        "phone_call_user",
-        "generate_image",
-        "modify_image",
-        "companion_runtime_inspect",
-        "companion_set_experience_profile",
-        "companion_update_prompt_slice",
-        "companion_bootstrap_user_interactive_complete",
-        "tool_update_agent_status_line",
-    )
+    tuple(tool.name.value for tool in COMPANION_LLM_TOOLS)
 )
 
 
 def tool_has_tag(tool_name: str, tag: str) -> bool:
     """Return whether a tool declares a given behavior tag."""
-    tags = _TOOL_TAGS_BY_NAME.get(tool_name, frozenset())
-    return tag in tags
+    try:
+        name = CompanionToolName(tool_name)
+    except ValueError:
+        return False
+    tool = COMPANION_LLM_TOOLS_BY_NAME.get(name)
+    if tool is None:
+        return False
+    return tag in tool.tags
 
 
 def tool_requires_client_delivery_on_success(tool_name: str) -> bool:
@@ -217,7 +203,9 @@ def round_includes_generation_tool(tool_names: Iterable[str]) -> bool:
     return any(tool_requires_client_delivery_on_success(n) for n in tool_names)
 
 
-def append_user_profile_facts_to_user_md(text: str, new_bullets: list[str]) -> str:
+def append_user_profile_facts_to_user_md(
+    text: str, new_bullets: list[str]
+) -> str:
     """
     在 USER.md 的「身份信息」小节追加条目；若尚无该小节则在文末追加。
     new_bullets 每项应为完整一行（含前导 `- `）。
@@ -238,7 +226,9 @@ def append_user_profile_facts_to_user_md(text: str, new_bullets: list[str]) -> s
     return "\n".join(lines) + "\n"
 
 
-def tool_user_profile_record(store: MemoryStore, items: list[dict[str, Any]]) -> str:
+def tool_user_profile_record(
+    store: MemoryStore, items: list[dict[str, Any]]
+) -> str:
     """
     将用户自愿透露的基本信息追加写入 USER.md 的「身份信息」小节。
     items：每项含 label、value（均为非空短文本）。
@@ -320,7 +310,8 @@ def tool_memory_store_read_document(
     if len(body) <= max_chars:
         return body
     return (
-        body[:max_chars] + "\n…[truncated: prefix only; file is longer than max_chars]"
+        body[:max_chars]
+        + "\n…[truncated: prefix only; file is longer than max_chars]"
     )
 
 
@@ -373,7 +364,9 @@ def tool_memory_store_mkdir(store: MemoryStore, relative_path: str) -> str:
     return "OK mkdir (logical prefix only; companion MemoryStore has no host filesystem dirs)"
 
 
-def tool_techno_core_record_event(store: MemoryStore, arguments: dict[str, Any]) -> str:
+def tool_techno_core_record_event(
+    store: MemoryStore, arguments: dict[str, Any]
+) -> str:
     """Append one ``TechnoCoreEvent`` line to ``techno_core_events.jsonl`` (LivingSphere / TechnoCore autonomy)."""
     raw_sphere = arguments.get("sphere")
     raw_summary = arguments.get("summary")
@@ -399,9 +392,7 @@ def tool_techno_core_record_event(store: MemoryStore, arguments: dict[str, Any])
     uid = store.scope.user_id.strip()
     cid = store.scope.companion_id.strip()
     if not cid:
-        return (
-            f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}"
-        )
+        return f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}"
 
     ev_kwargs: dict[str, Any] = {
         "sphere": sphere,
@@ -442,7 +433,44 @@ def tool_techno_core_record_event(store: MemoryStore, arguments: dict[str, Any])
     return f"OK recorded techno_core event_id={event.event_id}"
 
 
-def tool_schedule_task(store: MemoryStore, exec_time_utc: str, task_text: str) -> str:
+def tool_living_sphere_record_update(
+    store: MemoryStore, arguments: dict[str, Any]
+) -> str:
+    """Append one LivingSphere change intent to ``living_sphere_updates.jsonl``."""
+    raw_change = arguments.get("change_request")
+    if not isinstance(raw_change, str):
+        return "ERROR: change_request must be a string"
+    cid = store.scope.companion_id.strip()
+    if not cid:
+        return (
+            f"ERROR: missing companion scope for {LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME}"
+        )
+    ev_kwargs: dict[str, Any] = {
+        "change_request": raw_change,
+        "source": "chat_tool",
+    }
+    bind = companion_llm_runtime_event_bind_ctx.get()
+    if bind is not None:
+        trace = bind.trace_id.strip()
+        if trace:
+            ev_kwargs["trace_id"] = trace
+        um = bind.user_msg_uuid.strip()
+        if um:
+            ev_kwargs["user_msg_uuid"] = um
+    try:
+        update = LivingSphereUpdate.model_validate(ev_kwargs)
+    except ValidationError as exc:
+        return f"ERROR: {exc}"
+    store.append_jsonl_record(
+        LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
+        update.model_dump(mode="json"),
+    )
+    return f"OK recorded update_id={update.update_id}"
+
+
+def tool_schedule_task(
+    store: MemoryStore, exec_time_utc: str, task_text: str
+) -> str:
     task_id = add_schedule_task(
         store,
         exec_time_utc=exec_time_utc,
@@ -488,780 +516,68 @@ async def tool_phone_call_user(
 
 def build_openai_tools() -> list[dict[str, Any]]:
     """OpenAI Chat Completions `tools` 列表。"""
-    return [
-        {
-            "type": "function",
-            "function": {
-                "name": "memory_store_list_paths",
-                "description": (
-                    "List immediate children under the synthetic MemoryStore scope root. "
-                    "Use empty relative_path for the scope root. "
-                    "Directory names are shown with a trailing slash. "
-                    "Backing store is MemoryStore; listing is derived from stored paths, not a host filesystem scan."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "relative_path": {
-                            "type": "string",
-                            "description": "Directory relative to scope root; use '' for root.",
-                        },
-                    },
-                    "required": ["relative_path"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "memory_store_read_document",
-                "description": (
-                    "Read a UTF-8 logical document from MemoryStore. "
-                    "Optional max_chars returns only the beginning of the document (prefix), "
-                    f"up to {MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP}, to limit tool output size. "
-                    "Paths are scope-relative (e.g. IDENTITY.md, memory/daily/YYYY-MM-DD.md)."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "relative_path": {
-                            "type": "string",
-                            "description": "Document path relative to MemoryStore scope root.",
-                        },
-                        "max_chars": {
-                            "type": "integer",
-                            "description": (
-                                "If set, return at most this many characters from the start of the document "
-                                f"(1..{MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP}). Omit to read the full document."
-                            ),
-                        },
-                    },
-                    "required": ["relative_path"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "memory_store_write_document",
-                "description": (
-                    "Create or overwrite a UTF-8 logical document in MemoryStore. "
-                    "Paths are scope-relative; no host mkdir is required."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "relative_path": {
-                            "type": "string",
-                            "description": "Document path relative to MemoryStore scope root.",
-                        },
-                        "content": {
-                            "type": "string",
-                            "description": "Full file content.",
-                        },
-                    },
-                    "required": ["relative_path", "content"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "memory_store_mkdir",
-                "description": (
-                    "No-op compatibility hook: MemoryStore has no host directories; "
-                    "logical prefixes are implied by relative paths."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "relative_path": {
-                            "type": "string",
-                            "description": "Ignored logical prefix (scope-relative path convention).",
-                        },
-                    },
-                    "required": ["relative_path"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "user_profile_record",
-                "description": (
-                    "Append structured facts about the user to USER.md under «身份信息». "
-                    "Call when the user shares durable basic info (e.g. age, how they wish to be called, "
-                    "timezone) that should persist. Do not use for secrets unless the user clearly wants "
-                    "them remembered. Speak to the user in companion language only; never mention tools, "
-                    "JSON, or filenames."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "items": {
-                            "type": "array",
-                            "description": "One or more label/value pairs to append.",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "label": {
-                                        "type": "string",
-                                        "description": "Short field name, e.g. 年龄、称呼偏好.",
-                                    },
-                                    "value": {
-                                        "type": "string",
-                                        "description": "What the user said or agreed to store.",
-                                    },
-                                },
-                                "required": ["label", "value"],
-                                "additionalProperties": False,
-                            },
-                        },
-                    },
-                    "required": ["items"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
-                "description": (
-                    "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
-                    f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH}`` (append-only). "
-                    "Use on **maintenance inner-tick** when the user thread is idle: small in-world "
-                    "actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``, not as a substitute "
-                    "for chatting. ``sphere=living_sphere`` for anchors at home; ``techno_core`` for "
-                    "channels / edges of the residency layer. Keep ``summary`` one tight sentence; "
-                    "default ``visibility`` is ``private`` (``shareable`` only when it could later "
-                    "justify a gentle user-facing hint without pressure)."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "sphere": {
-                            "type": "string",
-                            "enum": [
-                                "living_sphere",
-                                "techno_core",
-                                "shared_space",
-                                "human_channel",
-                                "external_web",
-                            ],
-                            "description": (
-                                "Activity surface: prefer ``living_sphere`` or ``techno_core`` "
-                                "for idle inner-tick autonomy."
-                            ),
-                        },
-                        "summary": {
-                            "type": "string",
-                            "description": (
-                                "One concise sentence: what happened in-world (no meta, no tool names)."
-                            ),
-                        },
-                        "visibility": {
-                            "type": "string",
-                            "enum": ["private", "shareable", "user_visible"],
-                            "description": "Boundary for later user surfacing; omit for ``private``.",
-                        },
-                        "emotional_valence": {
-                            "type": "string",
-                            "description": "Short affect label (e.g. tender, restless); omit for neutral.",
-                        },
-                        "salience": {
-                            "type": "integer",
-                            "description": "1..10 relationship relevance; omit for default.",
-                        },
-                        "related_living_sphere": {
-                            "type": "string",
-                            "description": (
-                                "When ``sphere`` is ``living_sphere``, optional anchor name "
-                                "matching ``LIVING_SPHERE.md`` (e.g. 玻璃海岸小屋)."
-                            ),
-                        },
-                    },
-                    "required": ["sphere", "summary"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": SET_BGM_TOOL_NAME,
-                "description": (
-                    "Apply conversation background music from the BGM catalog in system context. "
-                    "Use only when mood clearly warrants a change."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "track_id": {
-                            "type": "string",
-                            "description": "track_id from the BGM catalog system message.",
-                        },
-                        "reason": {
-                            "type": "string",
-                            "description": "Short internal reason for this pick (not shown to user).",
-                        },
-                    },
-                    "required": ["track_id", "reason"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "schedule_task",
-                "description": (
-                    "Persist a timed reminder task into the local schedule queue. "
-                    "Use when the user explicitly asks for a reminder/timer/alarm at a future time. "
-                    "exec_time_utc must be an absolute timestamp with timezone offset (ISO8601); "
-                    "prefer UTC (e.g. 2026-04-03T05:30:00+00:00). "
-                    "task_text should be the concise reminder content shown at trigger time."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "exec_time_utc": {
-                            "type": "string",
-                            "description": (
-                                "Absolute execution timestamp with timezone offset. "
-                                "Example: 2026-04-03T05:30:00+00:00"
-                            ),
-                        },
-                        "task_text": {
-                            "type": "string",
-                            "description": ("Reminder text to execute at that time."),
-                        },
-                    },
-                    "required": ["exec_time_utc", "task_text"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "tool_update_agent_status_line",
-                "description": (
-                    "Set the short one-line status shown under your name in the user's chat header "
-                    "(mood, vibe, or current thought). Use the same language as the user. "
-                    "Keep it brief (roughly one short sentence). Pass an empty string to clear it. "
-                    "Do not mention this tool or raw JSON to the user. "
-                    "The tool returns a single line: status line cleared, or "
-                    'status line updated to "..."; mirror that in your natural reply when needed.'
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "status_line": {
-                            "type": "string",
-                            "description": (
-                                "Header subtitle text, or empty string to clear."
-                            ),
-                        },
-                    },
-                    "required": ["status_line"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "phone_call_user",
-                "description": (
-                    "Place an outbound phone call to the user through the configured PSTN provider. "
-                    "Use only when the current user message explicitly asks you to call now and provides "
-                    "the phone number in that same message (for example, 'Call me at 1234560123'). "
-                    "Never call a number inferred from memory, old messages, or guesses. "
-                    "Do not use from proactive/implicit greeting contexts."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "phone_number": {
-                            "type": "string",
-                            "description": "User-provided phone number from the current message.",
-                        },
-                        "reason": {
-                            "type": "string",
-                            "description": "Short reason for audit logs, based on the user's explicit request.",
-                        },
-                    },
-                    "required": ["phone_number", "reason"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-    ]
+    tools = openai_tools_for_names(
+        OPENAI_TOOLS_BASE_NAMES,
+        description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
+    )
+    return prepare_openai_tools_for_chat_completions(tools)
 
-
-def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
-    slice_enum = sorted(s.value for s in PROMPT_SLICE_TO_REL)
-    return [
-        {
-            "type": "function",
-            "function": {
-                "name": "companion_update_prompt_slice",
-                "description": (
-                    "Overwrite one workspace prompt slice (root markdown) in MemoryStore. "
-                    "Use during interactive relationship bootstrap instead of memory_store_write_document. "
-                    "Pass the full updated markdown as content. "
-                    "TOOLS / significance-perception operator text are fixed package templates, not slices."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "slice": {
-                            "type": "string",
-                            "enum": slice_enum,
-                            "description": "Which prompt document to replace.",
-                        },
-                        "content": {
-                            "type": "string",
-                            "description": "Full UTF-8 body to write for that slice.",
-                        },
-                    },
-                    "required": ["slice", "content"],
-                    "additionalProperties": False,
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "companion_bootstrap_user_interactive_complete",
-                "description": (
-                    "Mark interactive workspace bootstrap as finished in context.json. "
-                    "Call when the relationship-establishment phase is done."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "note": {
-                            "type": "string",
-                            "description": "Optional short internal note (not shown to user).",
-                        },
-                    },
-                    "required": [],
-                    "additionalProperties": False,
-                },
-            },
-        },
-    ]
 
 
 def build_openai_repl_tools(
     *, interactive_bootstrap_active: bool = False
 ) -> list[dict[str, Any]]:
     """
-    REPL 对话轮：用户档案追加、LivingSphere/TechnoCore 事件落库、工作区文档读写（写入仅限 REPL_WRITABLE_RELATIVE_PATHS）。
+    伴侣对话轮：用户档案追加、LivingSphere/TechnoCore 事件落库、工作区文档读写（写入仅限 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST）。
     """
-    disable_status = os.getenv(
-        "INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL", ""
-    ).strip().lower() in ("1", "true", "yes", "on")
-
-    full = build_openai_tools()
-    by_name = {
-        t["function"]["name"]: t
-        for t in full
-        if t.get("type") == "function" and "function" in t
-    }
     if interactive_bootstrap_active:
-        names = _REPL_TOOL_NAMES_SHARED_HEAD
+        names = REPL_TOOL_NAMES_SHARED_HEAD
     else:
-        names = _REPL_TOOL_NAMES_SHARED_HEAD + _REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL
-    if disable_status:
-        names = tuple(n for n in names if n != "tool_update_agent_status_line")
-    out: list[dict[str, Any]] = []
-    for n in names:
-        t = by_name.get(n)
-        if not t:
-            raise KeyError(f"missing tool definition: {n!r}")
-        if n == "memory_store_list_paths":
-            w = dict(t)
-            wfn = dict(w["function"])
-            wfn["description"] = (
-                "List immediate children under the MemoryStore scope root. "
-                "Use empty relative_path for the scope root. "
-                "Directory names end with /. Backing store is MemoryStore; listing is derived from stored paths, "
-                "not a host filesystem scan. Prefer memory_store_read_document when the path is known; list mainly "
-                "when you need sibling names or layout before reading."
-            )
-            w["function"] = wfn
-            out.append(w)
-        elif n == "memory_store_read_document":
-            w = dict(t)
-            wfn = dict(w["function"])
-            wfn["description"] = (
-                "Read a UTF-8 document from MemoryStore for self-orientation (profile docs, "
-                "context.json, memory/*) or before editing allowed root markdown files. "
-                "Optional max_chars (1.."
-                + str(MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP)
-                + ") returns only a prefix of the file to avoid huge tool results; omit for full file. "
-                "transcript.jsonl can be very large—prefer the conversation already in the message "
-                "history; if you must read it via this tool from the persisted store, always pass max_chars."
-            )
-            w["function"] = wfn
-            out.append(w)
-        elif n == "memory_store_write_document":
-            w = dict(t)
-            wfn = dict(w["function"])
-            wfn["description"] = (
-                "Create or overwrite a UTF-8 logical document in MemoryStore. "
-                "In REPL, only these root files are writable: "
-                + ", ".join(sorted(REPL_WRITABLE_RELATIVE_PATHS))
-                + ". When the user explicitly asks to change how you relate, boundaries, or "
-                "persistent preferences, read the current file first (e.g. SOUL.md, STYLE.md, USER.md), "
-                "then write the full updated content. Do not use for transcript.jsonl or context.json."
-            )
-            w["function"] = wfn
-            out.append(w)
-        elif n == "schedule_task":
-            w = dict(t)
-            wfn = dict(w["function"])
-            wfn["description"] = (
-                "Persist a timed reminder task into the durable local schedule queue. "
-                "Use only when user explicitly requests a reminder/timer/alarm at a future time. "
-                "You must pass an absolute ISO8601 timestamp with timezone offset in exec_time_utc "
-                "(prefer UTC)."
-            )
-            w["function"] = wfn
-            out.append(w)
-        else:
-            out.append(t)
-    out.append(
-        {
-            "type": "function",
-            "function": {
-                "name": "companion_runtime_inspect",
-                "description": (
-                    "Return a JSON snapshot of the current companion runtime: in-process LLM config, "
-                    "last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), "
-                    "runtime events, and optionally workspace documents from MemoryStore "
-                    "(SOUL, STYLE, USER, MEMORY.md, episodic/gist day paths). "
-                    "Use when the user asks for verifiable facts about the active model, parameters, or injected "
-                    "prompt stack. For self-check only: answer the user in natural language without reading "
-                    "this JSON aloud verbatim."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "max_chars_per_doc": {
-                            "type": "integer",
-                            "description": "Max characters per stored document body (default 8000, min 100).",
-                        },
-                        "max_chars_llm_messages": {
-                            "type": "integer",
-                            "description": (
-                                "Max serialized size for last request messages array "
-                                "(default 120000, min 1000)."
-                            ),
-                        },
-                        "include_store_documents": {
-                            "type": "boolean",
-                            "description": "If false, omit MemoryStore document bodies (default true).",
-                        },
-                        "max_runtime_events": {
-                            "type": "integer",
-                            "description": "Max newest runtime event records to include (default 20, min 0).",
-                        },
-                    },
-                    "required": [],
-                    "additionalProperties": False,
-                },
-            },
-        }
+        names = REPL_TOOL_NAMES_SHARED_HEAD + REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL
+    out = openai_tools_for_names(
+        names,
+        description_overrides=REPL_DESCRIPTION_OVERRIDES,
     )
-    out.append(
-        {
-            "type": "function",
-            "function": {
-                "name": "companion_set_experience_profile",
-                "description": (
-                    "Persist the session experience profile id into context.json as context_mode "
-                    "(normalized lowercase). Call only after the user explicitly agrees to switch "
-                    "(e.g. roleplay vs emotional companion). Requires user_confirmed=true; never "
-                    "infer silently. Takes effect on the next companion turn; do not use "
-                    "memory_store_write_document on context.json."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "context_mode": {
-                            "type": "string",
-                            "description": (
-                                "Target experience profile id (e.g. intimate, emotional_companion, "
-                                "roleplay, interactive_fiction, public)."
-                            ),
-                        },
-                        "user_confirmed": {
-                            "type": "boolean",
-                            "description": (
-                                "Must be true only when the user clearly confirmed the mode switch "
-                                "in this conversation."
-                            ),
-                        },
-                        "note": {
-                            "type": "string",
-                            "description": "Optional short internal note (not shown to user).",
-                        },
-                    },
-                    "required": ["context_mode", "user_confirmed"],
-                    "additionalProperties": False,
-                },
-            },
-        }
-    )
-    out.append(
-        {
-            "type": "function",
-            "function": {
-                "name": "google_web_search",
-                "description": (
-                    "Search the public web via Google Custom Search JSON API. "
-                    "Use when the user needs current events, verifiable facts, or information "
-                    "not present in the workspace or conversation. "
-                    "Requires GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID in the environment. "
-                    "Summarize results in natural language to the user without exposing raw JSON or tool names."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search query in the user's language or English.",
-                        },
-                        "num_results": {
-                            "type": "integer",
-                            "description": "How many results to return (1..10). Omit for 10.",
-                        },
-                    },
-                    "required": ["query"],
-                    "additionalProperties": False,
-                },
-            },
-        }
-    )
-    out.append(
-        {
-            "type": "function",
-            "function": {
-                "name": "read_web_page",
-                "description": (
-                    "Download an HTML page over HTTP(S), extract readable text, and return a concise "
-                    "markdown bullet-point summary of key information. "
-                    "Also appends the same takeaway bullets under a dated heading in workspace MEMORY.md "
-                    "for long-term recall. "
-                    "Use for one URL at a time when the user wants article/page content (not just search snippets). "
-                    "Does not execute JavaScript; script-heavy SPAs may yield sparse text."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "url": {
-                            "type": "string",
-                            "description": (
-                                "Absolute http(s) URL of the page to fetch (public hosts only; "
-                                "localhost is blocked)."
-                            ),
-                        },
-                        "max_bullets": {
-                            "type": "integer",
-                            "description": (
-                                "Maximum markdown bullet points in the summary (3..20). Omit for 10."
-                            ),
-                        },
-                    },
-                    "required": ["url"],
-                    "additionalProperties": False,
-                },
-            },
-        }
-    )
-    out.append(
-        {
-            "type": "function",
-            "function": {
-                "name": "generate_image",
-                "x-tags": [TOOL_TAG_GENERATION],
-                "description": (
-                    "Generate **new** image(s) from text only using Fal z-image-turbo (text-to-image). "
-                    "Do **not** use this tool when the user wants to edit, restyle, or inpaint an **existing** image—"
-                    "use modify_image (image-to-image) instead, with the source file or URL. "
-                    "Call only when the user clearly asks for new picture(s), illustration(s), or visuals from scratch. "
-                    "**Identity / portrait lock:** If the output must depict the companion’s agreed look "
-                    "(e.g. zodiac-year portrait 生肖像, themed or holiday portrait), treat the **appearance** subsection "
-                    "in workspace **IDENTITY.md** (e.g. section titled like 外貌与形象) as the **fixed visual blueprint**: "
-                    "copy hair, eyes, face, and other stated traits into `prompt`; do **not** invent, swap, or weaken "
-                    "those locked traits—zodiac/theme may only add costume, props, setting, or mood on top. "
-                    "Set num_images from conversation context: e.g. user asks for three variants or "
-                    "multiple angles → pass that count; single scene or unspecified → omit num_images "
-                    f"(defaults to 1). Maximum {MAX_NUM_IMAGES_PER_CALL} per call. "
-                    "Requires repo-root config.yaml (fal.api_key, gcs.*, app.gcp_service_account_key) when importing app. "
-                    "After success, describe in companion language without reading raw URLs aloud unless helpful."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "prompt": {
-                            "type": "string",
-                            "description": (
-                                "Full English or Chinese scene description for the image "
-                                "(style, subject, mood, composition). "
-                                "For companion portraits (incl. zodiac 生肖像): embed traits from IDENTITY.md "
-                                "appearance section; do not contradict locked hair/face/eye details."
-                            ),
-                        },
-                        "image_size": {
-                            "type": "string",
-                            "description": (
-                                "Optional fal preset, e.g. portrait_4_3, square_hd, landscape_16_9. "
-                                "Omit for prototype default (portrait_4_3)."
-                            ),
-                        },
-                        "num_inference_steps": {
-                            "type": "integer",
-                            "description": "Optional inference steps (default 8). Must be >= 1.",
-                        },
-                        "num_images": {
-                            "type": "integer",
-                            "description": (
-                                "How many images to generate this call: infer from the user message "
-                                "(e.g. «三张」「几个版本» → matching count). Omit for a single image (default 1). "
-                                f"Must be 1..{MAX_NUM_IMAGES_PER_CALL}."
-                            ),
-                        },
-                    },
-                    "required": ["prompt"],
-                    "additionalProperties": False,
-                },
-            },
-        }
-    )
-    out.append(
-        {
-            "type": "function",
-            "function": {
-                "name": "modify_image",
-                "x-tags": [TOOL_TAG_GENERATION],
-                "description": (
-                    "Edit or restyle an **existing** image using Fal z-image-turbo **image-to-image** "
-                    "(not text-to-image). Use when the user asks to change, fix, recolor, restyle, or otherwise "
-                    "modify a specific picture—including one previously saved under workspace/generated_images/. "
-                    "Provide exactly one source: either source_image_relative_path (file under workspace, e.g. "
-                    "generated_images/z_image_....jpeg) or source_image_url (public http(s) URL). "
-                    "If both are omitted, it will auto-use the most recent image file under generated_images/. "
-                    "**Identity lock:** For themed restyles (e.g. zodiac 生肖), align `prompt` with **IDENTITY.md** "
-                    "appearance traits; preserve locked facial/hair features—use prompt for additive theme/costume/scene, "
-                    "not to replace the agreed face. "
-                    "Optional strength (0–1) controls how strongly the output follows the prompt vs. the source. "
-                    "Same config/GCS requirements as generate_image."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "prompt": {
-                            "type": "string",
-                            "description": (
-                                "What to change or the desired look (style, edits, constraints); "
-                                "the model conditions on the source image. "
-                                "Themed edits (e.g. 生肖): add costume/scene/mood; keep IDENTITY.md appearance-locked traits."
-                            ),
-                        },
-                        "source_image_relative_path": {
-                            "type": "string",
-                            "description": (
-                                "Workspace-relative path to an image file (jpg/png/webp/gif). "
-                                "Use e.g. generated_images/... from a prior generate_image result. "
-                                "Omit if using source_image_url; if both source fields are omitted, "
-                                "the latest image under generated_images/ is used."
-                            ),
-                        },
-                        "source_image_url": {
-                            "type": "string",
-                            "description": (
-                                "Public http(s) URL of the image to edit. Omit if using source_image_relative_path."
-                            ),
-                        },
-                        "image_size": {
-                            "type": "string",
-                            "description": (
-                                "Optional fal preset (e.g. portrait_4_3, square_hd). "
-                                "Omit for prototype default (portrait_4_3)."
-                            ),
-                        },
-                        "num_inference_steps": {
-                            "type": "integer",
-                            "description": "Optional inference steps (default 8). Must be >= 1.",
-                        },
-                        "strength": {
-                            "type": "number",
-                            "description": (
-                                "Optional 0..1; higher = follow prompt more, lower = stay closer to source (default 0.6)."
-                            ),
-                        },
-                    },
-                    "required": ["prompt"],
-                    "additionalProperties": False,
-                },
-            },
-        }
+    out.extend(
+        openai_tools_for_names(
+            REPL_TOOL_NAMES_APPENDED,
+            description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
+        )
     )
     if interactive_bootstrap_active:
-        out.extend(_openai_interactive_bootstrap_tools())
+        out.extend(
+            openai_tools_for_names(
+                REPL_BOOTSTRAP_TOOL_NAMES,
+                description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
+            )
+        )
     return prepare_openai_tools_for_chat_completions(out)
-
-
-_INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
-    "user_profile_record",
-    TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
-    "tool_update_agent_status_line",
-    "memory_store_list_paths",
-    "memory_store_read_document",
-    "memory_store_write_document",
-)
 
 
 def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     """
     内在节拍：USER 档案、LivingSphere/TechnoCore 事件日志、工作区读写；不含定时、联网、生图/改图。
     """
-    full = build_openai_repl_tools()
-    want = set(_INNER_TICK_REPL_TOOL_NAMES)
-    picked = [
-        t
-        for t in full
-        if t.get("type") == "function" and t.get("function", {}).get("name") in want
-    ]
-    by_name = {t["function"]["name"]: t for t in picked}
-    missing = want - set(by_name)
-    if missing:
-        raise RuntimeError(
-            f"build_openai_repl_tools_inner_tick: missing tool defs {sorted(missing)}"
+    return prepare_openai_tools_for_chat_completions(
+        openai_tools_for_names(
+            INNER_TICK_TOOL_NAMES,
+            description_overrides=REPL_DESCRIPTION_OVERRIDES,
         )
-    return [by_name[n] for n in _INNER_TICK_REPL_TOOL_NAMES]
+    )
 
 
-def _repl_write_allowed(
+def _memory_store_write_document_allowlist_reject(
     store: MemoryStore, relative_path: str, write_allowlist: frozenset[str]
 ) -> str | None:
     """若不允许写入则返回错误信息字符串，否则 None。"""
+    _ = store
     try:
         rel_posix = _tool_rel_posix_from_arg(relative_path)
     except ValueError as exc:
         return f"ERROR: {exc}"
     if rel_posix not in write_allowlist:
         return (
-            "ERROR: REPL memory_store_write_document only allows: "
+            "ERROR: memory_store_write_document only allows: "
             + ", ".join(sorted(write_allowlist))
             + f"; got {rel_posix!r}"
         )
@@ -1291,12 +607,14 @@ async def _dispatch(
         tool_memory_store_mkdir=tool_memory_store_mkdir,
         tool_user_profile_record=tool_user_profile_record,
         parse_optional_max_chars=_parse_optional_max_chars,
-        repl_write_allowed=_repl_write_allowed,
+        write_document_allowlist_reject=_memory_store_write_document_allowlist_reject,
     )
     if memory_store_dispatch_result is not None:
         return memory_store_dispatch_result
     if name == TECHNO_CORE_RECORD_EVENT_TOOL_NAME:
         return tool_techno_core_record_event(store, arguments)
+    if name == LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME:
+        return tool_living_sphere_record_update(store, arguments)
     if name == "tool_update_agent_status_line":
         raw_sl = arguments.get("status_line")
         if not isinstance(raw_sl, str):
@@ -1394,11 +712,14 @@ async def _dispatch(
         image_size = arguments.get("image_size")
         if image_size is not None and not isinstance(image_size, str):
             return "ERROR: image_size must be a string or omitted"
-        image_size_s = image_size.strip() if isinstance(image_size, str) else None
+        image_size_s = (
+            image_size.strip() if isinstance(image_size, str) else None
+        )
         if image_size_s == "":
             image_size_s = None
         n_steps, err = parse_optional_positive_int(
-            arguments.get("num_inference_steps"), field_name="num_inference_steps"
+            arguments.get("num_inference_steps"),
+            field_name="num_inference_steps",
         )
         if err:
             return f"ERROR: {err}"
@@ -1439,7 +760,9 @@ async def _dispatch(
         raw_path = arguments.get("source_image_relative_path")
         raw_url = arguments.get("source_image_url")
         if raw_path is not None and not isinstance(raw_path, str):
-            return "ERROR: source_image_relative_path must be a string or omitted"
+            return (
+                "ERROR: source_image_relative_path must be a string or omitted"
+            )
         if raw_url is not None and not isinstance(raw_url, str):
             return "ERROR: source_image_url must be a string or omitted"
         path_s = raw_path.strip() if isinstance(raw_path, str) else ""
@@ -1472,11 +795,14 @@ async def _dispatch(
         image_size = arguments.get("image_size")
         if image_size is not None and not isinstance(image_size, str):
             return "ERROR: image_size must be a string or omitted"
-        image_size_s = image_size.strip() if isinstance(image_size, str) else None
+        image_size_s = (
+            image_size.strip() if isinstance(image_size, str) else None
+        )
         if image_size_s == "":
             image_size_s = None
         n_steps, err = parse_optional_positive_int(
-            arguments.get("num_inference_steps"), field_name="num_inference_steps"
+            arguments.get("num_inference_steps"),
+            field_name="num_inference_steps",
         )
         if err:
             return f"ERROR: {err}"
@@ -1515,7 +841,9 @@ async def _dispatch(
         raw_note = arguments.get("note")
         if raw_note is not None and not isinstance(raw_note, str):
             return "ERROR: note must be a string or omitted"
-        return tool_companion_bootstrap_user_interactive_complete(store, raw_note)
+        return tool_companion_bootstrap_user_interactive_complete(
+            store, raw_note
+        )
     return f"ERROR: unknown tool {name!r}"
 
 

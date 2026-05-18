@@ -45,7 +45,8 @@ def get_voice_service() -> VoiceService:
 
 def _build_user_auth_snapshot(user: User) -> Dict[str, Any]:
     return {
-        column.name: getattr(user, column.name) for column in User.__table__.columns
+        column.name: getattr(user, column.name)
+        for column in User.__table__.columns
     }
 
 
@@ -81,7 +82,8 @@ def _get_user_from_auth_snapshot(
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_async_db),
 ) -> User:
     """获取当前用户"""
     credentials_exception = HTTPException(
@@ -94,7 +96,9 @@ async def get_current_user(
         payload = jwt.decode(
             token,
             global_config_loaded_from_config_yaml.security.secret_key,
-            algorithms=[global_config_loaded_from_config_yaml.security.algorithm],
+            algorithms=[
+                global_config_loaded_from_config_yaml.security.algorithm
+            ],
         )
 
         user_id: str = payload.get("sub")
@@ -125,7 +129,9 @@ async def get_current_user(
         raise credentials_exception
 
     try:
-        cached_user = _get_user_from_auth_snapshot(user_id, credentials_exception)
+        cached_user = _get_user_from_auth_snapshot(
+            user_id, credentials_exception
+        )
         if cached_user is not None:
             return cached_user
 
@@ -252,7 +258,9 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User | None:
         payload = jwt.decode(
             token,
             global_config_loaded_from_config_yaml.security.secret_key,
-            algorithms=[global_config_loaded_from_config_yaml.security.algorithm],
+            algorithms=[
+                global_config_loaded_from_config_yaml.security.algorithm
+            ],
         )
 
         user_id: str = payload.get("sub")
@@ -271,7 +279,9 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User | None:
         return None
 
     try:
-        cached_user = _get_user_from_auth_snapshot(user_id, credentials_exception)
+        cached_user = _get_user_from_auth_snapshot(
+            user_id, credentials_exception
+        )
     except HTTPException:
         return None
     if cached_user is not None:

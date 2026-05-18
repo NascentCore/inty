@@ -65,7 +65,9 @@ def load_database_config(config_file: Optional[str] = None) -> Dict[str, Any]:
     db_config["host"] = os.getenv("DB_HOST", db_config.get("host", "localhost"))
     db_config["port"] = int(os.getenv("DB_PORT", db_config.get("port", 5432)))
     db_config["user"] = os.getenv("DB_USER", db_config.get("user", "postgres"))
-    db_config["password"] = os.getenv("DB_PASSWORD", db_config.get("password", ""))
+    db_config["password"] = os.getenv(
+        "DB_PASSWORD", db_config.get("password", "")
+    )
     db_config["dbname"] = os.getenv("DB_NAME", db_config.get("dbname", "inty"))
 
     return db_config
@@ -98,7 +100,9 @@ def find_user_by_email(
         cursor.close()
 
 
-def get_user_chat_ids(conn: psycopg2.extensions.connection, user_id: str) -> list:
+def get_user_chat_ids(
+    conn: psycopg2.extensions.connection, user_id: str
+) -> list:
     """获取用户的所有 chat_id"""
     query = """
         SELECT id
@@ -203,7 +207,9 @@ def format_table_output(df: pd.DataFrame, user_info: Dict[str, Any]) -> str:
 
 def parse_arguments() -> argparse.Namespace:
     """解析命令行参数"""
-    parser = argparse.ArgumentParser(description="通过邮箱查询用户每日聊天消息统计")
+    parser = argparse.ArgumentParser(
+        description="通过邮箱查询用户每日聊天消息统计"
+    )
 
     parser.add_argument(
         "--email",
@@ -321,7 +327,9 @@ def main():
             logger.error(f"未找到邮箱为 {args.email} 的用户")
             sys.exit(1)
 
-        logger.info(f"找到用户: {user_info['id']} ({user_info.get('nickname', 'N/A')})")
+        logger.info(
+            f"找到用户: {user_info['id']} ({user_info.get('nickname', 'N/A')})"
+        )
 
         # 获取用户的 chat_id
         logger.info("查询用户的聊天会话...")
@@ -343,7 +351,9 @@ def main():
 
         # 统计每日消息数
         logger.info("统计每日消息数...")
-        daily_df = get_daily_message_count(conn, session_ids, start_date, end_date)
+        daily_df = get_daily_message_count(
+            conn, session_ids, start_date, end_date
+        )
 
         if daily_df.empty:
             logger.warning("在指定时间范围内没有找到消息记录")
@@ -374,7 +384,14 @@ def main():
 
             # 重新排列列顺序
             result_df = result_df[
-                ["user_id", "email", "nickname", "auth_type", "date", "message_count"]
+                [
+                    "user_id",
+                    "email",
+                    "nickname",
+                    "auth_type",
+                    "date",
+                    "message_count",
+                ]
             ]
 
             result_df.to_csv(output_path, index=False, encoding="utf-8-sig")

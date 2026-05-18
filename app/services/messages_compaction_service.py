@@ -42,7 +42,9 @@ def _build_compacted_messages(
         if not message_content:
             continue
         created_at = _safe_isoformat(
-            (getattr(message, "additional_kwargs", None) or {}).get("created_at")
+            (getattr(message, "additional_kwargs", None) or {}).get(
+                "created_at"
+            )
         )
         compacted_messages.append(
             CompactedMessageItem(
@@ -71,7 +73,9 @@ def maybe_compact_and_save_overflow_history(
     if len(history_messages) <= max_messages_limit:
         return False
 
-    overflow_messages = history_messages[: len(history_messages) - max_messages_limit]
+    overflow_messages = history_messages[
+        : len(history_messages) - max_messages_limit
+    ]
     compacted_messages = _build_compacted_messages(overflow_messages)
     payload = MessagesCompactionPayload(
         source_session_id=session_id,
@@ -143,7 +147,8 @@ def upsert_compaction_payload(
         return True
     except SQLAlchemyError as error:
         logger.error(
-            "Messages compaction failed: " f"key={compaction_key}, error={error!s}"
+            "Messages compaction failed: "
+            f"key={compaction_key}, error={error!s}"
         )
         return False
 

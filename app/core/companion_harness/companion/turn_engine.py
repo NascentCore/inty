@@ -1,87 +1,16 @@
-"""REPL-grade turn helpers: message assembly and transcript rows via MemoryStore."""
+"""REPL-grade turn helpers: transcript row persistence via MemoryStore."""
 
 from __future__ import annotations
 
 import uuid
-from pathlib import Path
 from typing import Any
 
-from .ai_private_prompt import get_ai_private_jsonl_text_for_prompt
-from .heartbeat import (
-    HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
-    build_proactive_heartbeat_transcript_user_marker,
-)
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .message_format import TRANSCRIPT_MSG_UUID_KEY
 from .models import (
-    ChatMessage,
-    ContextMeta,
     InnerTickMode,
-    PromptBundle,
     transcript_relative_path_for_turn_persistence,
 )
-from .prompts.system_messages import build_system_messages
 from .utc import utc_iso_ts
-
-
-def build_repl_turn_base_messages(
-    *,
-    memory_store: MemoryStore,
-    bundle: PromptBundle,
-    context: ContextMeta,
-    transcript: list[ChatMessage],
-    user_text: str,
-    repl_online_ack_turn: bool = False,
-    inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
-    ai_private_text: str = "",
-    include_significance_perception_slice: bool = False,
-) -> tuple[list[dict[str, Any]], str]:
-    effective_ai_private = ai_private_text
-    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
-    if (
-        inner_tick_turn
-        and not tick_proactive
-        and not (effective_ai_private or "").strip()
-    ):
-        effective_ai_private = get_ai_private_jsonl_text_for_prompt(memory_store)
-    system_messages = build_system_messages(
-        bundle,
-        context,
-        enable_user_profile_tool=True,
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
-        repl_online_ack_turn=repl_online_ack_turn,
-        ai_private_text=effective_ai_private,
-        include_significance_perception_slice=include_significance_perception_slice,
-    )
-    messages: list[dict[str, Any]] = list(system_messages)
-    for m in transcript:
-        row: dict[str, Any] = {"role": m.role, "content": m.content}
-        if m.uuid:
-            row[TRANSCRIPT_MSG_UUID_KEY] = m.uuid
-        messages.append(row)
-    user_msg_uuid = str(uuid.uuid4())
-    if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
-        messages.append(
-            {"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE}
-        )
-        messages.append(
-            {
-                "role": "user",
-                "content": build_proactive_heartbeat_transcript_user_marker(transcript),
-                TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
-            }
-        )
-    else:
-        messages.append(
-            {
-                "role": "user",
-                "content": user_text,
-                TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
-            }
-        )
-    return messages, user_msg_uuid
 
 
 def persist_repl_turn_transcript_rows(

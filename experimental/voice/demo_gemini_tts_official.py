@@ -39,7 +39,9 @@ def generate():
         ],
         speech_config=types.SpeechConfig(
             voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Zephyr")
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name="Zephyr"
+                )
             )
         ),
     )
@@ -67,7 +69,9 @@ def generate():
             file_extension = mimetypes.guess_extension(inline_data.mime_type)
             if file_extension is None:
                 file_extension = ".wav"
-                data_buffer = convert_to_wav(inline_data.data, inline_data.mime_type)
+                data_buffer = convert_to_wav(
+                    inline_data.data, inline_data.mime_type
+                )
             save_binary_file(f"{file_name}{file_extension}", data_buffer)
         else:
             print(chunk.text)
@@ -91,7 +95,9 @@ def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
     bytes_per_sample = bits_per_sample // 8
     block_align = num_channels * bytes_per_sample
     byte_rate = sample_rate * block_align
-    chunk_size = 36 + data_size  # 36 bytes for header fields before data chunk size
+    chunk_size = (
+        36 + data_size
+    )  # 36 bytes for header fields before data chunk size
 
     # http://soundfile.sapp.org/doc/WaveFormat/
 

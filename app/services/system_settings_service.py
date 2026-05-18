@@ -68,7 +68,11 @@ class SystemSettingsService:
             return default_value
 
     async def set_setting(
-        self, db: AsyncSession, key: str, value: Any, updated_by: Optional[str] = None
+        self,
+        db: AsyncSession,
+        key: str,
+        value: Any,
+        updated_by: Optional[str] = None,
     ) -> bool:
         """
         设置系统配置值

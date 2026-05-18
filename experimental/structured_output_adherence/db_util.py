@@ -29,7 +29,8 @@ def load_db_config(
         return env_url, {}
 
     path = config_path or os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config.yaml"
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "config.yaml",
     )
     db_kwargs: Dict[str, Any] = {}
     if os.path.isfile(path):
@@ -54,7 +55,9 @@ def load_db_config(
     return None, db_kwargs
 
 
-def connect_db(config_path: Optional[str], database_url: Optional[str]) -> PgConnection:
+def connect_db(
+    config_path: Optional[str], database_url: Optional[str]
+) -> PgConnection:
     url, kwargs = load_db_config(config_path, database_url)
     if url:
         return psycopg2.connect(url)

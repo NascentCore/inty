@@ -24,14 +24,18 @@ def get_settings(db: Session, user_id: str) -> Optional[Settings]:
         raise
 
 
-def create_settings(db: Session, settings_in: SettingsCreate, user_id: str) -> Settings:
+def create_settings(
+    db: Session, settings_in: SettingsCreate, user_id: str
+) -> Settings:
     """
     创建新的用户设置
     """
     try:
         # 排除数据库模型中不存在的字段
         settings_data = settings_in.model_dump(exclude=EXCLUDE_FIELDS)
-        db_settings = Settings(id=str(uuid.uuid4()), **settings_data, user_id=user_id)
+        db_settings = Settings(
+            id=str(uuid.uuid4()), **settings_data, user_id=user_id
+        )
         db.add(db_settings)
         db.commit()
         db.refresh(db_settings)

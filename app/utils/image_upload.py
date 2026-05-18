@@ -146,7 +146,11 @@ async def process_image_upload(
 
     # Get image size - for GIF, use first frame if animated
     img = Image.open(io.BytesIO(original_file_data))
-    if file_ext == ImageFormat.GIF and hasattr(img, "is_animated") and img.is_animated:
+    if (
+        file_ext == ImageFormat.GIF
+        and hasattr(img, "is_animated")
+        and img.is_animated
+    ):
         # For animated GIF, get size from first frame
         img.seek(0)
     size = ImageSize(width=img.width, height=img.height)
@@ -198,12 +202,16 @@ async def process_image_upload(
             uncompressed_url = image_transform_service.transform_mobile(
                 uncompressed_gcs_url
             )
-            logger.debug(f"Uploaded original image, CDN URL: {uncompressed_url}")
+            logger.debug(
+                f"Uploaded original image, CDN URL: {uncompressed_url}"
+            )
         except Exception as transform_error:
             logger.warning(
                 f"Failed to transform original URL to CDN: {uncompressed_gcs_url}, error: {str(transform_error)}"
             )
-            uncompressed_url = uncompressed_gcs_url  # Fallback to original GCS URL
+            uncompressed_url = (
+                uncompressed_gcs_url  # Fallback to original GCS URL
+            )
 
         result.original_url = uncompressed_url
 
@@ -255,12 +263,16 @@ async def process_image_upload(
             cropped_avatar_url = image_transform_service.transform_mobile(
                 cropped_avatar_gcs_url
             )
-            logger.debug(f"扣脸图片上传 GCS 成功, CDN URL: {cropped_avatar_url}")
+            logger.debug(
+                f"扣脸图片上传 GCS 成功, CDN URL: {cropped_avatar_url}"
+            )
         except Exception as transform_error:
             logger.warning(
                 f"Failed to transform avatar URL to CDN: {cropped_avatar_gcs_url}, error: {str(transform_error)}"
             )
-            cropped_avatar_url = cropped_avatar_gcs_url  # Fallback to original GCS URL
+            cropped_avatar_url = (
+                cropped_avatar_gcs_url  # Fallback to original GCS URL
+            )
 
         result.avatar_url = cropped_avatar_url
 

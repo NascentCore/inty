@@ -6,12 +6,10 @@ from typing import Any
 
 from .companion_tool_runtime import (
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
-    REPL_WRITABLE_RELATIVE_PATHS,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,
 )
-
-WRITABLE_RELATIVE_PATHS = REPL_WRITABLE_RELATIVE_PATHS
 
 
 def build_companion_tools(
@@ -24,7 +22,7 @@ def build_companion_tools(
 
 __all__ = [
     "MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP",
-    "WRITABLE_RELATIVE_PATHS",
+    "MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST",
     "build_companion_tools",
     "build_openai_repl_tools_inner_tick",
 ]

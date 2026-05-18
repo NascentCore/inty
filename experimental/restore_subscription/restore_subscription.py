@@ -57,7 +57,9 @@ async def find_user_by_email(db: AsyncSession, email: str) -> User:
     return user
 
 
-async def find_subscription_plan(db: AsyncSession, plan_id: str) -> SubscriptionPlan:
+async def find_subscription_plan(
+    db: AsyncSession, plan_id: str
+) -> SubscriptionPlan:
     """查找订阅计划"""
     plan = await db.get(SubscriptionPlan, plan_id)
 
@@ -235,7 +237,9 @@ async def restore_subscription(dry_run: bool = False):
         async with AsyncSessionLocal() as db:
             logger.info("=" * 60)
             if dry_run:
-                logger.info("开始恢复用户订阅 [DRY RUN 模式 - 不会实际修改数据库]")
+                logger.info(
+                    "开始恢复用户订阅 [DRY RUN 模式 - 不会实际修改数据库]"
+                )
             else:
                 logger.info("开始恢复用户订阅")
             logger.info("=" * 60)
@@ -313,7 +317,9 @@ async def restore_subscription(dry_run: bool = False):
             plan_name = plan.name
             subscription_status = subscription.status
             start_date_str = (
-                str(subscription.start_date) if subscription.start_date else "N/A"
+                str(subscription.start_date)
+                if subscription.start_date
+                else "N/A"
             )
             end_date_str = (
                 str(subscription.end_date) if subscription.end_date else "N/A"
@@ -331,7 +337,9 @@ async def restore_subscription(dry_run: bool = False):
 
             logger.info("=" * 60)
             if dry_run:
-                logger.info("订阅恢复校验完成！[DRY RUN 模式 - 未实际修改数据库]")
+                logger.info(
+                    "订阅恢复校验完成！[DRY RUN 模式 - 未实际修改数据库]"
+                )
             else:
                 logger.info("订阅恢复成功！")
             logger.info("=" * 60)

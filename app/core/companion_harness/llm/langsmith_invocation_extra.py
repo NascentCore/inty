@@ -58,7 +58,9 @@ def tool_call_langsmith_extra(
 def tool_choice_attempt_metadata(tool_choice: str | None) -> dict[str, Any]:
     """Normalize ``tool_choice`` argument into ``inty_tool_choice_attempt`` metadata."""
     if tool_choice == "required":
-        return {INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY: TOOL_CHOICE_ATTEMPT_REQUIRED}
+        return {
+            INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY: TOOL_CHOICE_ATTEMPT_REQUIRED
+        }
     return {INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY: TOOL_CHOICE_ATTEMPT_AUTO}
 
 

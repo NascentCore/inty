@@ -85,7 +85,9 @@ class AudioLoop:
         else:
             kwargs = {}
         while True:
-            data = await asyncio.to_thread(self.audio_stream.read, CHUNK_SIZE, **kwargs)
+            data = await asyncio.to_thread(
+                self.audio_stream.read, CHUNK_SIZE, **kwargs
+            )
             await self.out_queue.put({"data": data, "mime_type": "audio/pcm"})
 
     async def receive_audio(self):

@@ -26,9 +26,14 @@ from app.services.agent_status_line import (
     set_tool_background_db_loop,
 )
 from app.utils.config import CompanionMemoryBootstrapType
-from app.utils.models_catalog import GenAIModel, genai_model_langsmith_meta_subset
+from app.utils.models_catalog import (
+    GenAIModel,
+    genai_model_langsmith_meta_subset,
+)
 
-from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
+from app.core.companion_harness.llm.chat_completions import (
+    create_chat_completion_sync,
+)
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     INTY_TOOL_BG_ROUND_METADATA_KEY,
     SOURCE_TOOL_BACKGROUND_CONTINUE,
@@ -61,7 +66,9 @@ from app.core.companion_harness.companion.models import (
 from app.core.companion_harness.companion.prompt_stack import (
     refresh_companion_turn_prompt_stack,
 )
-from app.core.companion_harness.companion.runtime_events import append_runtime_event
+from app.core.companion_harness.companion.runtime_events import (
+    append_runtime_event,
+)
 from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     envelope_to_assistant_metadata_dict,
 )
@@ -69,7 +76,7 @@ from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
 from .companion_tool_runtime import (
-    REPL_WRITABLE_RELATIVE_PATHS,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     execute_tool_call,
     openai_assistant_message_dict,
     round_includes_generation_tool,
@@ -192,7 +199,9 @@ def build_tool_background_transcript_body(
     nl = (display_text or "").strip()
     digest_core = ""
     if total_tool_calls > 0:
-        digest_core = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs).strip()
+        digest_core = _tool_bg_nl_filler_from_appended_turn(
+            appended_turn_msgs
+        ).strip()
     digest_block = ""
     if digest_core:
         digest_block = f"{TOOL_RESULTS_TRANSCRIPT_MARKER}\n{digest_core}"
@@ -302,7 +311,9 @@ class ToolOutputEvent:
     text: str
     ts: str
     elapsed_ms: int
-    trace_id: str = ""  # run_turn turn id; links transcript rows + tool_background_done
+    trace_id: str = (
+        ""  # run_turn turn id; links transcript rows + tool_background_done
+    )
     langsmith_trace_id: str = ""
     langsmith_run_id: str = ""
     output_to_user: bool = False
@@ -343,7 +354,9 @@ def push_output_event(event: ToolOutputEvent) -> None:
     output_queue().put(event)
 
 
-def pop_output_events_nowait(*, scope_registry_key: str) -> list[ToolOutputEvent]:
+def pop_output_events_nowait(
+    *, scope_registry_key: str
+) -> list[ToolOutputEvent]:
     want = scope_registry_key.strip()
     out: list[ToolOutputEvent] = []
     q = output_queue()
@@ -459,8 +472,12 @@ def _initial_tool_bg_completion_with_fallbacks(
     raise RuntimeError("tool_background initial completion: empty attempts")
 
 
-def _openai_messages_payload(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [{k: v for k, v in m.items() if not k.startswith("_")} for m in messages]
+def _openai_messages_payload(
+    messages: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        {k: v for k, v in m.items() if not k.startswith("_")} for m in messages
+    ]
 
 
 def _log_bg_llm_round_result(
@@ -588,7 +605,9 @@ async def _run_background_tool_loop(
                 "runtime_config": {
                     "source": "tool_background",
                     "tool_model_name": tool_api_id,
-                    "tool_model_catalog": genai_model_langsmith_meta_subset(tool_model),
+                    "tool_model_catalog": genai_model_langsmith_meta_subset(
+                        tool_model
+                    ),
                     "trace_id": trace_id,
                     "inner_tick_turn": inner_tick_turn,
                     "inner_tick_mode": inner_tick_mode.value,
@@ -670,11 +689,17 @@ async def _run_background_tool_loop(
         )
 
         initial_tool_calls = (
-            getattr(initial_response.choices[0].message, "tool_calls", None) or []
+            getattr(initial_response.choices[0].message, "tool_calls", None)
+            or []
         )
         if not initial_tool_calls:
-            early_text = _assistant_text_from_completion_response(initial_response)
-            finish0 = getattr(initial_response.choices[0], "finish_reason", None) or "?"
+            early_text = _assistant_text_from_completion_response(
+                initial_response
+            )
+            finish0 = (
+                getattr(initial_response.choices[0], "finish_reason", None)
+                or "?"
+            )
             if early_text.strip():
                 logger.info(
                     "repl.turn.bg no_tool_calls skip_output_queue trace_id={} "
@@ -700,7 +725,7 @@ async def _run_background_tool_loop(
         allow = (
             write_allowlist
             if write_allowlist is not None
-            else REPL_WRITABLE_RELATIVE_PATHS
+            else MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
         )
 
         async def execute_tool_call(
@@ -759,7 +784,9 @@ async def _run_background_tool_loop(
                 trace_id=trace_id,
                 trace_hooks=trace_hooks,
             )
-            tool_calls = getattr(next_resp.choices[0].message, "tool_calls", None) or []
+            tool_calls = (
+                getattr(next_resp.choices[0].message, "tool_calls", None) or []
+            )
             total_tool_calls += len(tool_calls)
             return next_resp, None
 
@@ -811,9 +838,13 @@ async def _run_background_tool_loop(
             )
             return
 
-        raw_final = _assistant_text_from_completion_response(loop_result.response)
+        raw_final = _assistant_text_from_completion_response(
+            loop_result.response
+        )
         bg_ls_trace = langsmith_trace_id_from_completion(loop_result.response)
-        bg_ls_llm_run = langsmith_llm_run_id_from_completion(loop_result.response)
+        bg_ls_llm_run = langsmith_llm_run_id_from_completion(
+            loop_result.response
+        )
         appended_turn_msgs = loop_result.messages[len(working_messages) :]
         tool_call_names = _extract_tool_call_names(appended_turn_msgs)
         image_paths = _local_paths_from_tool_messages(loop_result.messages)
@@ -975,7 +1006,9 @@ async def _run_background_tool_loop(
                 output_to_user=output_to_user_flag,
                 generation_deliver=generation_deliver,
                 reply_modality=routing.reply_modality,
-                voice_message_script=(routing.voice_message_script or "").strip(),
+                voice_message_script=(
+                    routing.voice_message_script or ""
+                ).strip(),
                 image_asset_baseline=image_asset_baseline,
                 local_image_paths=tuple(image_paths),
                 significance_perception=significance_meta,
@@ -1076,7 +1109,9 @@ def start_tool_background_job(
             except Exception as exc:
                 bg_ls_err = repr(exc)
                 logger.exception("repl.turn.bg job failed")
-                if not exc_chain_includes_llm_inference_failure_root_causes(exc):
+                if not exc_chain_includes_llm_inference_failure_root_causes(
+                    exc
+                ):
                     ev: dict[str, Any] = {
                         "ts": utc_iso_ts(),
                         "kind": "tool_background_failure",

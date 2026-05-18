@@ -103,7 +103,9 @@ def generate_gemini_audio(
         raise RuntimeError("Gemini candidate does not contain content parts.")
     first_part = candidate.content.parts[0]
     if not first_part.inline_data or not first_part.inline_data.data:
-        raise RuntimeError("Gemini response does not contain inline audio data.")
+        raise RuntimeError(
+            "Gemini response does not contain inline audio data."
+        )
 
     mime_type = first_part.inline_data.mime_type or "audio/L16;rate=24000"
     return GeminiAudio(
@@ -112,7 +114,9 @@ def generate_gemini_audio(
     )
 
 
-def save_pcm_as_wav(output_path: Path, pcm_data: bytes, sample_rate: int) -> None:
+def save_pcm_as_wav(
+    output_path: Path, pcm_data: bytes, sample_rate: int
+) -> None:
     with wave.open(str(output_path), "wb") as wave_file:
         wave_file.setnchannels(1)
         wave_file.setsampwidth(2)
@@ -180,7 +184,9 @@ def main() -> None:
         output_format=ELEVENLABS_OUTPUT_FORMAT,
     )
     output_paths.voice_changed_audio_path.write_bytes(changed_audio)
-    print(f"Voice-changed audio saved to: {output_paths.voice_changed_audio_path}")
+    print(
+        f"Voice-changed audio saved to: {output_paths.voice_changed_audio_path}"
+    )
 
 
 if __name__ == "__main__":

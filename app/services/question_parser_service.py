@@ -43,8 +43,10 @@ class QuestionParserService:
                             questions.append(question)
                     elif isinstance(item, dict):
                         # 对象数组格式: [{"question": "...", "other": "..."}, ...]
-                        question = QuestionParserService._extract_question_from_dict(
-                            item
+                        question = (
+                            QuestionParserService._extract_question_from_dict(
+                                item
+                            )
                         )
                         if question:
                             questions.append(question)
@@ -59,14 +61,16 @@ class QuestionParserService:
                             if question:  # 只要不是空字符串就保留
                                 questions.append(question)
                         elif isinstance(item, dict):
-                            question = (
-                                QuestionParserService._extract_question_from_dict(item)
+                            question = QuestionParserService._extract_question_from_dict(
+                                item
                             )
                             if question:
                                 questions.append(question)
                 else:
                     # 可能是单个问题对象
-                    question = QuestionParserService._extract_question_from_dict(data)
+                    question = (
+                        QuestionParserService._extract_question_from_dict(data)
+                    )
                     if question:
                         questions.append(question)
 
@@ -161,8 +165,12 @@ class QuestionParserService:
                 issues.append(f"...还有{len(duplicates)-5}个重复问题")
 
         # 检查问题质量
-        short_questions = [i + 1 for i, q in enumerate(questions) if len(q) < 10]
-        long_questions = [i + 1 for i, q in enumerate(questions) if len(q) > 500]
+        short_questions = [
+            i + 1 for i, q in enumerate(questions) if len(q) < 10
+        ]
+        long_questions = [
+            i + 1 for i, q in enumerate(questions) if len(q) > 500
+        ]
 
         # 检查编码问题
         encoding_issues = []

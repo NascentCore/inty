@@ -184,7 +184,9 @@ class DualLlmChatBranchEnvelope(BaseModel):
         raise ValueError("score must be integer 1-10")
 
     @model_validator(mode="after")
-    def _clear_voice_script_when_text_modality(self) -> DualLlmChatBranchEnvelope:
+    def _clear_voice_script_when_text_modality(
+        self,
+    ) -> DualLlmChatBranchEnvelope:
         if self.reply_modality == "text":
             self.voice_message_script = ""
         return self
@@ -224,7 +226,9 @@ def _strip_markdown_json_fence(raw: str) -> str:
     return s
 
 
-def parse_dual_llm_chat_envelope_json(raw: str) -> DualLlmChatBranchEnvelope | None:
+def parse_dual_llm_chat_envelope_json(
+    raw: str,
+) -> DualLlmChatBranchEnvelope | None:
     s = _strip_markdown_json_fence((raw or "").strip())
     if not s:
         return None
@@ -309,7 +313,9 @@ def _dual_llm_message_candidate_texts(message: Any) -> list[str]:
     )
     reasoning_candidates = [
         *_string_candidates_from_value(_message_field(message, "reasoning")),
-        *_string_candidates_from_value(_message_field(message, "reasoning_details")),
+        *_string_candidates_from_value(
+            _message_field(message, "reasoning_details")
+        ),
     ]
     return [*content_candidates, *reasoning_candidates]
 

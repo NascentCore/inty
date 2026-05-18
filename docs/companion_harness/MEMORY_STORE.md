@@ -27,7 +27,13 @@ MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口
 - **`transcript_inner_tick.jsonl`**：仅承载**维护型**内在节拍；与主 transcript 按时间合并后供 inner_tick scene；proactive heartbeat 仍写主轨。
 - **`ai_private.md` / `ai_private.jsonl`**：内在活动语料，供 inner-tick 等注入 `## 内在活动（ai_private）` system 块。
   - **读**：由 `get_ai_private_jsonl_text_for_prompt` / `get_ai_private_text_for_prompt` 等从 MemoryStore 读取（实现见 `app/core/companion_harness/companion/ai_private_prompt.py`）。
-  - **写（当前事实）**：`ai_private.jsonl` 已映射到 ORM（`memory_store_document_mapping.py`），但伴侣工具链里 **`memory_store_write_document` 受 `REPL_WRITABLE_RELATIVE_PATHS` 约束**（仅 `IDENTITY.md`、`MEMORY.md`、`SOUL.md`、`USER.md`），**不含** `ai_private.jsonl`，故 **模型经工具默认不可写**该文件；运维/测试或代码内直接 `MemoryStore.write_document` 仍可写入。若产品要求「维护方仅 append JSONL」，需 **扩展白名单或专用 append 工具**（另行设计）。
+  - **写（当前事实）**：`ai_private.jsonl` 已映射到 ORM（`memory_store_document_mapping.py`），但伴侣工具链里 **`memory_store_write_document` 受 `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` 约束**（仅 `IDENTITY.md`、`MEMORY.md`、`SOUL.md`、`STYLE.md`、`USER.md`），**不含** `ai_private.jsonl`，故 **模型经工具默认不可写**该文件；运维/测试或代码内直接 `MemoryStore.write_document` 仍可写入。若产品要求「维护方仅 append JSONL」，需 **扩展白名单或专用 append 工具**（另行设计）。
+
+### LivingSphere 小家（`LIVING_SPHERE.md` + `living_sphere_updates.jsonl`）
+
+- **`LIVING_SPHERE.md`**：可读快照，注入 system prompt；由 `living_sphere` curator 在 memory pipeline 写回，**不在** `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` 内。
+- **`living_sphere_updates.jsonl`**：用户明确指令的快路径 append 日志（工具 `living_sphere_record_update`）；同样有 ORM 映射，**不在** allowlist，**不可**经 `memory_store_write_document` 整文件覆盖。
+- 详见 [`LIVING_SPHERE.md`](./LIVING_SPHERE.md)。
 
 > 设计要点：用户可见 vs 维护型轨迹**物理分文件**，否则上下文压实与 LangSmith trace 都会混入半相关的对白。
 

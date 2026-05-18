@@ -7,7 +7,14 @@ import json
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    Response,
+    WebSocket,
+)
 from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,9 +85,13 @@ async def twilio_inbound_call(
         inbound = PhoneCallInboundWebhookRequest.model_validate(dict(form))
     except ValidationError as exc:
         logger.warning("invalid Twilio inbound webhook: {}", exc)
-        twiml = phone_call_service.build_reject_twiml("Invalid phone-call request.")
+        twiml = phone_call_service.build_reject_twiml(
+            "Invalid phone-call request."
+        )
     else:
-        twiml = await phone_call_service.build_inbound_twiml(db=db, inbound=inbound)
+        twiml = await phone_call_service.build_inbound_twiml(
+            db=db, inbound=inbound
+        )
     return Response(content=twiml, media_type="application/xml")
 
 
@@ -139,7 +150,9 @@ async def twilio_media_stream(
         ) -> None:
             _ = text, role, message_id, timestamp
 
-        async def on_status(status: LiveChatStatus, message: Optional[str]) -> None:
+        async def on_status(
+            status: LiveChatStatus, message: Optional[str]
+        ) -> None:
             _ = status, message
 
         async def on_error(
@@ -188,14 +201,16 @@ async def twilio_media_stream(
                 frame = json.loads(raw)
                 event = frame.get("event")
                 if event == "start":
-                    stream_sid = frame.get("streamSid") or frame.get("start", {}).get(
-                        "streamSid"
-                    )
+                    stream_sid = frame.get("streamSid") or frame.get(
+                        "start", {}
+                    ).get("streamSid")
                 elif event == "media":
                     media = frame.get("media") or {}
                     media_payload = media.get("payload")
                     if isinstance(media_payload, str):
-                        pcm16 = codec.twilio_mulaw_8k_to_pcm16_16k(media_payload)
+                        pcm16 = codec.twilio_mulaw_8k_to_pcm16_16k(
+                            media_payload
+                        )
                         await input_queue.put({"type": "audio", "data": pcm16})
                 elif event == "stop":
                     await input_queue.put(None)

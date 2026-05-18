@@ -47,7 +47,9 @@ class PlanRepository:
             )
             return cursor.rowcount > 0
 
-    def list_due_actions(self, *, now: datetime, limit: int) -> list[PlanAction]:
+    def list_due_actions(
+        self, *, now: datetime, limit: int
+    ) -> list[PlanAction]:
         with self._db.connect() as conn:
             rows = conn.execute(
                 """

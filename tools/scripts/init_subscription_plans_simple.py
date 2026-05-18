@@ -308,7 +308,9 @@ async def init_subscription_plans():
             print(f"   - ID: {created_plan.id}")
             print(f"   - 类型: {created_plan.plan_type}")
             print(f"   - 价格: {created_plan.price} {created_plan.currency}")
-            print(f"   - Google Play Product ID: {created_plan.google_play_product_id}")
+            print(
+                f"   - Google Play Product ID: {created_plan.google_play_product_id}"
+            )
             print(f"   - 聊天限制: {created_plan.chat_limit_per_day}")
             print(f"   - Agent创建限制: {created_plan.agent_creation_limit}")
             print()

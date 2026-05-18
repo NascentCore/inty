@@ -22,7 +22,10 @@ def parse_args():
         description="RunPod ComfyUI Serverless Endpoint Example"
     )
     parser.add_argument(
-        "--endpoint", type=str, required=True, help="The endpoint ID to send to the API"
+        "--endpoint",
+        type=str,
+        required=True,
+        help="The endpoint ID to send to the API",
     )
     parser.add_argument(
         "--workflow", type=str, required=True, help="The workflow file to use"
@@ -42,7 +45,9 @@ req_json = {"input": {"workflow": workflow_json}}
 
 def save_images(image_base64_data: str):
     rand_int = random.randint(0, 1000000)
-    out_path = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{rand_int}.png"
+    out_path = (
+        f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{rand_int}.png"
+    )
     image_data = base64.b64decode(image_base64_data)
     with open(out_path, "wb") as f:
         f.write(image_data)

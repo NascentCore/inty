@@ -46,7 +46,9 @@ from app.core.companion_harness.companion.manager import (
     CompanionManager,
 )
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
+from app.core.companion_harness.memory.memory_pipeline import (
+    MemoryPipelineConfig,
+)
 from app.core.companion_harness.memory.memory_registry import (
     MEMORY_STORE_REGISTRY_REQUIRES_DSN,
     shutdown_memory_store,
@@ -112,13 +114,17 @@ def _parse_rubric_threshold_overrides(raw: list[str]) -> dict[str, float]:
     out: dict[str, float] = {}
     for item in raw:
         if "=" not in item:
-            raise SystemExit(f"invalid --rubric-threshold {item!r}, expected id=float")
+            raise SystemExit(
+                f"invalid --rubric-threshold {item!r}, expected id=float"
+            )
         k, v = item.split("=", 1)
         k = k.strip()
         try:
             fv = float(v.strip())
         except ValueError as e:
-            raise SystemExit(f"invalid float in --rubric-threshold {item!r}") from e
+            raise SystemExit(
+                f"invalid float in --rubric-threshold {item!r}"
+            ) from e
         if not (0.0 <= fv <= 1.0):
             raise SystemExit(f"threshold for {k} must be in [0, 1]")
         out[k] = fv
@@ -138,7 +144,9 @@ async def _run(args: argparse.Namespace) -> dict:
         )
     th_map = dict(DEFAULT_RUBRIC_THRESHOLDS)
     th_map["default"] = args.threshold
-    th_map.update(_parse_rubric_threshold_overrides(list(args.rubric_threshold)))
+    th_map.update(
+        _parse_rubric_threshold_overrides(list(args.rubric_threshold))
+    )
 
     script_lines = load_user_script(args.script)
     if not script_lines:
@@ -175,7 +183,9 @@ async def _run(args: argparse.Namespace) -> dict:
 
     mem_cfg = MemoryPipelineConfig(memory_update_every_n_turns=99999)
 
-    memory_pg_dsn = (global_config_loaded_from_config_yaml.database.url or "").strip()
+    memory_pg_dsn = (
+        global_config_loaded_from_config_yaml.database.url or ""
+    ).strip()
     if not memory_pg_dsn:
         raise SystemExit(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
 
@@ -188,7 +198,9 @@ async def _run(args: argparse.Namespace) -> dict:
     session = manager.get_or_create_session(user_id, companion_id, chat_id)
 
     turns_out: list[dict] = []
-    first_pass_turn_by_rubric: dict[str, int | None] = {rid: None for rid in rubric_ids}
+    first_pass_turn_by_rubric: dict[str, int | None] = {
+        rid: None for rid in rubric_ids
+    }
 
     try:
         for i, user_text in enumerate(script_lines[: args.max_turns], start=1):
@@ -242,8 +254,10 @@ async def _run(args: argparse.Namespace) -> dict:
         "llm": {
             "api_base": llm_cfg.api_base,
             "default_model": llm_cfg.default_model,
-            "chat_model": (llm_cfg.chat_model or "").strip() or llm_cfg.default_model,
-            "tool_model": (llm_cfg.tool_model or "").strip() or llm_cfg.default_model,
+            "chat_model": (llm_cfg.chat_model or "").strip()
+            or llm_cfg.default_model,
+            "tool_model": (llm_cfg.tool_model or "").strip()
+            or llm_cfg.default_model,
             "api_key_source": api_key_source,
         },
     }

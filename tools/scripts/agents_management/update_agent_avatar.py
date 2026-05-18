@@ -36,7 +36,9 @@ def download_image(url: str) -> Optional[bytes]:
     logger.info(f"Downloading image from: {url}")
     response = requests.get(url, timeout=30)
     if response.status_code != 200:
-        logger.error(f"Failed to download image from {url}: {response.status_code}")
+        logger.error(
+            f"Failed to download image from {url}: {response.status_code}"
+        )
         return None
 
     image_data = response.content
@@ -44,7 +46,9 @@ def download_image(url: str) -> Optional[bytes]:
     return image_data
 
 
-def _get_jpeg_bytes_from_pil_image(pil_image: Image.Image, quality: int) -> bytes:
+def _get_jpeg_bytes_from_pil_image(
+    pil_image: Image.Image, quality: int
+) -> bytes:
     """Get image bytes from PIL image"""
     output_buffer = io.BytesIO()
     pil_image.save(
@@ -74,7 +78,9 @@ def compress_to_jpeg(image_data: bytes, quality: int = 80) -> bytes:
     # Save as JPEG to bytes
     jpeg_data = _get_jpeg_bytes_from_pil_image(image, quality)
 
-    logger.debug(f"Compressed PNG to JPEG: {len(image_data)} -> {len(jpeg_data)} bytes")
+    logger.debug(
+        f"Compressed PNG to JPEG: {len(image_data)} -> {len(jpeg_data)} bytes"
+    )
     return jpeg_data
 
 
@@ -131,11 +137,15 @@ def process_one_agent_avatar_with_database(db: Session, agent_id: str):
 
     png_data = download_image(agent.avatar)
     if not png_data:
-        logger.error(f"Failed to download image from {agent.avatar}, skipping...")
+        logger.error(
+            f"Failed to download image from {agent.avatar}, skipping..."
+        )
         return
     compressed_avatar_url = agent.avatar
     if len(png_data) >= 500 * 1024:
-        jpeg_path = _get_gcs_base_path(agent.avatar) + f"/{str(uuid.uuid4())}.jpeg"
+        jpeg_path = (
+            _get_gcs_base_path(agent.avatar) + f"/{str(uuid.uuid4())}.jpeg"
+        )
         consent = input(
             f"Compress agent {agent_id} avatar and upload to {jpeg_path}? (y/n): "
         )
@@ -236,7 +246,9 @@ def main():
     logger.info(f"JPEG quality: {args.quality}")
 
     # Ask for user confirmation to proceed
-    user_input = input(f"Are you sure you want to proceed with {args.pg_url}? (y/n): ")
+    user_input = input(
+        f"Are you sure you want to proceed with {args.pg_url}? (y/n): "
+    )
     if user_input.lower() != "y":
         logger.info("User did not confirm, exiting...")
         sys.exit(0)
@@ -254,7 +266,9 @@ def main():
         )
         return
     else:
-        engine = create_engine(global_config_loaded_from_config_yaml.database.url)
+        engine = create_engine(
+            global_config_loaded_from_config_yaml.database.url
+        )
         db = Session(engine)
 
         agent_ids = (

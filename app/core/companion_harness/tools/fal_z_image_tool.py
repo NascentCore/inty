@@ -102,8 +102,12 @@ _SOURCE_IMAGE_EXT_TO_UPLOAD: dict[str, tuple[str, str]] = {
 }
 
 
-def _upload_local_image_file_to_gcs_for_fal(image_path: Path, gcs_uri_base: str) -> str:
-    from app.core.config import global_config_loaded_from_config_yaml as global_config
+def _upload_local_image_file_to_gcs_for_fal(
+    image_path: Path, gcs_uri_base: str
+) -> str:
+    from app.core.config import (
+        global_config_loaded_from_config_yaml as global_config,
+    )
     from app.external_services.gcs import upload_to_gcs
 
     suffix = image_path.suffix.lower()
@@ -117,7 +121,9 @@ def _upload_local_image_file_to_gcs_for_fal(image_path: Path, gcs_uri_base: str)
     if len(file_data) == 0:
         raise ValueError("source image file is empty")
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    gcs_path = f"{gcs_uri_base}/i2i_src_{timestamp}_{uuid.uuid4().hex[:8]}.{ext_value}"
+    gcs_path = (
+        f"{gcs_uri_base}/i2i_src_{timestamp}_{uuid.uuid4().hex[:8]}.{ext_value}"
+    )
     return upload_to_gcs(
         file_data=file_data,
         content_type=content_type,
@@ -176,7 +182,9 @@ def _record_image_asset(
         {
             "asset_id": asset_id,
             "tool_name": tool_name,
-            "image_mode": "regenerate" if tool_name == "generate_image" else "modify",
+            "image_mode": (
+                "regenerate" if tool_name == "generate_image" else "modify"
+            ),
             "persona_revision_id": persona_revision_id,
             "source_asset_id": source_asset_id,
             "source_persona_revision_id": source_persona_revision_id,
@@ -212,7 +220,9 @@ async def run_generate_image_z_image_turbo(
     )
     gcs_base = _gcs_uri_base_for_store(store)
     skip_gcs = env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
-    maybe_results = _z_image_turbo_call(z_in, gcs_base, skip_gcs_upload=skip_gcs)
+    maybe_results = _z_image_turbo_call(
+        z_in, gcs_base, skip_gcs_upload=skip_gcs
+    )
     if asyncio.iscoroutine(maybe_results):
         results = await maybe_results
     else:
@@ -280,7 +290,9 @@ async def run_modify_image_z_image_turbo(
             source_persona_revision_id = (
                 str(source_asset.get("persona_revision_id") or "") or None
             )
-        image_url_for_fal = _upload_local_image_file_to_gcs_for_fal(path, gcs_base)
+        image_url_for_fal = _upload_local_image_file_to_gcs_for_fal(
+            path, gcs_base
+        )
     else:
         u = source_image_url.strip()
         if not (u.startswith("https://") or u.startswith("http://")):
@@ -306,7 +318,9 @@ async def run_modify_image_z_image_turbo(
 
     z_in = _build_image_to_image_input(kwargs)
     skip_gcs = env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
-    maybe_result = _z_image_turbo_i2i_call(z_in, gcs_base, skip_gcs_upload=skip_gcs)
+    maybe_result = _z_image_turbo_i2i_call(
+        z_in, gcs_base, skip_gcs_upload=skip_gcs
+    )
     if asyncio.iscoroutine(maybe_result):
         result = await maybe_result
     else:

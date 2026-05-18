@@ -13,7 +13,9 @@ from fastapi.responses import HTMLResponse
 DATA_PATH = Path(__file__).parent / "sample_data" / "events.json"
 DIMENSION_EXTRACTORS = {
     "geo_country": lambda row: row.get("geo", {}).get("country", "unknown"),
-    "device_category": lambda row: row.get("device", {}).get("category", "unknown"),
+    "device_category": lambda row: row.get("device", {}).get(
+        "category", "unknown"
+    ),
     "app_version": lambda row: row.get("app", {}).get("version", "0.0"),
     "screen_class": lambda row: row.get("screen_class", "unknown"),
 }
@@ -28,14 +30,17 @@ def _load_events() -> List[Dict[str, Any]]:
     return payload.get("events", [])
 
 
-def _dimension_breakdown(rows: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+def _dimension_breakdown(
+    rows: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
     result: Dict[str, List[Dict[str, Any]]] = {}
     for name, extractor in DIMENSION_EXTRACTORS.items():
         counter: Counter[str] = Counter()
         for row in rows:
             counter[str(extractor(row))] += 1
         result[name] = [
-            {"value": value, "count": count} for value, count in counter.most_common(3)
+            {"value": value, "count": count}
+            for value, count in counter.most_common(3)
         ]
     return result
 
@@ -59,7 +64,9 @@ def _summarize_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "event_name": event_name,
                 "count": len(rows),
                 "unique_users": len(unique_users),
-                "avg_value": round(sum(values) / len(values), 2) if values else None,
+                "avg_value": (
+                    round(sum(values) / len(values), 2) if values else None
+                ),
                 "dimension_breakdown": _dimension_breakdown(rows),
                 "latest_params": latest_params,
             }

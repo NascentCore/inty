@@ -49,7 +49,9 @@ def process_single_tool_call(
     """
     raw_tool_calls = getattr(message, "tool_calls", None) or []
     if not raw_tool_calls:
-        raise ValueError("process_single_tool_call requires at least one tool_call")
+        raise ValueError(
+            "process_single_tool_call requires at least one tool_call"
+        )
     if len(raw_tool_calls) > 1:
         raise ValueError("parallel_tool_calls are not supported")
 
@@ -160,10 +162,13 @@ def resolve_official_assistant_tool_loop(
                     messages_with_tool_results,
                     injected_system_message,
                 )
-        current_response, last_trace_id = continue_chat(messages_with_tool_results)
+        current_response, last_trace_id = continue_chat(
+            messages_with_tool_results
+        )
 
     raise ValueError(
-        "Official assistant tool call rounds exceeded " f"limit={max_tool_call_rounds}"
+        "Official assistant tool call rounds exceeded "
+        f"limit={max_tool_call_rounds}"
     )
 
 
@@ -173,7 +178,9 @@ async def resolve_official_assistant_tool_loop_async(
     openai_messages: list[dict[str, Any]],
     max_tool_call_rounds: int,
     execute_tool_call: Callable[[str, str], Awaitable[tuple[str, str | None]]],
-    continue_chat: Callable[[list[dict[str, Any]]], Awaitable[tuple[Any, str | None]]],
+    continue_chat: Callable[
+        [list[dict[str, Any]]], Awaitable[tuple[Any, str | None]]
+    ],
     build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
     insert_system_message: Callable[[list[dict[str, Any]], str], None],
     initial_trace_id: str | None = None,
@@ -234,5 +241,6 @@ async def resolve_official_assistant_tool_loop_async(
         )
 
     raise ValueError(
-        "Official assistant tool call rounds exceeded " f"limit={max_tool_call_rounds}"
+        "Official assistant tool call rounds exceeded "
+        f"limit={max_tool_call_rounds}"
     )

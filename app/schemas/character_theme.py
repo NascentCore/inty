@@ -14,7 +14,9 @@ class CharacterThemeBase(BaseModel):
 
     name: str = Field(..., max_length=255, description="专区名称")
     description: Optional[str] = Field(None, description="专区描述")
-    background_image_url: Optional[str] = Field(None, description="背景图URL地址")
+    background_image_url: Optional[str] = Field(
+        None, description="背景图URL地址"
+    )
     visibility: Optional[CharacterThemeVisibility] = Field(
         None, description="可见性：第一展示、第二展示、不可见"
     )
@@ -25,7 +27,9 @@ class CharacterThemeBase(BaseModel):
         if not v or not v.strip():
             raise ValueError("Theme section name cannot be empty")
         if len(v) > 255:
-            raise ValueError("Theme section name must not exceed 255 characters")
+            raise ValueError(
+                "Theme section name must not exceed 255 characters"
+            )
         return v.strip()
 
 
@@ -43,7 +47,9 @@ class CharacterThemeUpdate(BaseModel):
 
     name: Optional[str] = Field(None, max_length=255, description="专区名称")
     description: Optional[str] = Field(None, description="专区描述")
-    background_image_url: Optional[str] = Field(None, description="背景图URL地址")
+    background_image_url: Optional[str] = Field(
+        None, description="背景图URL地址"
+    )
     visibility: Optional[CharacterThemeVisibility] = Field(
         None, description="可见性：第一展示、第二展示、不可见"
     )
@@ -55,7 +61,9 @@ class CharacterThemeUpdate(BaseModel):
             if not v.strip():
                 raise ValueError("Theme section name cannot be empty")
             if len(v) > 255:
-                raise ValueError("Theme section name must not exceed 255 characters")
+                raise ValueError(
+                    "Theme section name must not exceed 255 characters"
+                )
             return v.strip()
         return v
 

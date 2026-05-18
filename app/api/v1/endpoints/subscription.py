@@ -10,7 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, NOT_USED_TAG, WEB_APP_TAG
+from app.api.tags import (
+    ANDROID_APP_TAG,
+    INTERNAL_API_TAG,
+    NOT_USED_TAG,
+    WEB_APP_TAG,
+)
 from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
 
@@ -56,8 +61,10 @@ async def get_subscription_plans(
         )
 
         # 获取用户当前订阅
-        current_subscription = await subscription_service.get_user_current_subscription(
-            db, current_user.id
+        current_subscription = (
+            await subscription_service.get_user_current_subscription(
+                db, current_user.id
+            )
         )
 
         # 获取用户历史订阅记录
@@ -68,8 +75,10 @@ async def get_subscription_plans(
         # 获取用户最新的订阅计划ID（仅当曾经订阅过时）
         previous_plan_id = None
         if has_ever_subscribed:
-            previous_plan_id = await subscription_service.get_user_latest_plan_id(
-                db, current_user.id
+            previous_plan_id = (
+                await subscription_service.get_user_latest_plan_id(
+                    db, current_user.id
+                )
             )
 
         # 将 SQLAlchemy 模型转换为 Pydantic 模型
@@ -212,7 +221,9 @@ async def google_play_webhook(
         if global_config_loaded_from_config_yaml.google_play.webhook_secret:
             signature = request.headers.get("X-Goog-Message-Signature")
             if not signature or not _verify_webhook_signature(body, signature):
-                raise HTTPException(status_code=400, detail="Invalid webhook signature")
+                raise HTTPException(
+                    status_code=400, detail="Invalid webhook signature"
+                )
 
         # 解析请求数据
         try:
@@ -251,7 +262,9 @@ async def _process_google_play_notification(
             ):
                 import base64
 
-                decoded_data = base64.b64decode(notification_data["message"]["data"])
+                decoded_data = base64.b64decode(
+                    notification_data["message"]["data"]
+                )
                 notification_json = json.loads(decoded_data.decode("utf-8"))
 
                 # 记录详细的通知信息
@@ -271,8 +284,10 @@ async def _process_google_play_notification(
                 )
 
                 # 处理订阅通知
-                success = await subscription_service.handle_subscription_notification(
-                    db, notification_json
+                success = (
+                    await subscription_service.handle_subscription_notification(
+                        db, notification_json
+                    )
                 )
 
                 if success:
@@ -349,7 +364,9 @@ async def create_subscription_plan(
     创建订阅计划（管理员接口）
     """
     try:
-        plan = await subscription_service.create_subscription_plan(db, plan_data)
+        plan = await subscription_service.create_subscription_plan(
+            db, plan_data
+        )
         # 将 SQLAlchemy 模型转换为 Pydantic 模型
         plan_schema = SubscriptionPlan.model_validate(plan)
         return APIResponse.success(
@@ -377,7 +394,9 @@ async def get_all_subscription_plans(
     获取所有订阅计划（管理员接口）
     """
     try:
-        plans = await subscription_service.get_subscription_plans(db, include_inactive)
+        plans = await subscription_service.get_subscription_plans(
+            db, include_inactive
+        )
         return APIResponse.success(data=plans)
 
     except Exception as e:
@@ -400,7 +419,9 @@ async def get_user_subscription_status_admin(
     获取指定用户的订阅状态（管理员接口）
     """
     try:
-        status = await subscription_service.get_user_subscription_status(db, user_id)
+        status = await subscription_service.get_user_subscription_status(
+            db, user_id
+        )
         return APIResponse.success(data=status)
 
     except Exception as e:
@@ -423,7 +444,9 @@ async def get_user_usage_statistics_admin(
     获取指定用户的使用统计（管理员接口）
     """
     try:
-        usage_stats = await subscription_service.get_user_usage_statistics(db, user_id)
+        usage_stats = await subscription_service.get_user_usage_statistics(
+            db, user_id
+        )
         return APIResponse.success(data=usage_stats)
 
     except Exception as e:
@@ -464,7 +487,9 @@ async def process_manual_refund(
             subscription = result.scalar_one_or_none()
 
             refund_info = (
-                subscription.extra_data.get("refund_info", {}) if subscription else {}
+                subscription.extra_data.get("refund_info", {})
+                if subscription
+                else {}
             )
 
             response = RefundResponse(

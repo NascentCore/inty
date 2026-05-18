@@ -1,8 +1,20 @@
-# `research/`：研究与试做沙盒
+# `research/`：研究项目
 
-**一句话**：放 **不直接上生产** 的探索代码——验证想法、打原型、试模型交互；默认 **读者是研究者本人与编码智能体**。
+## 硬边界
 
-## 边界
+- 每个项目单独创建文件夹
+- 不进生产发布
+- **自包含**：每个子目录包含全部外部依赖说明。
+- 不依赖生产代码：除非用户明确要求、不引用本目录以外本代码库其他代码。
+- **文档齐全**：记录原始请求、如何运行、记录分析结论。
+- **代码不做容错处理**：只考虑成功路径
+- **只做手动测试**：不写单元测试和其他自动化测试
 
-- **不服务线上用户**；稳定性与长期维护 **不做保证**。
-- 子项目各自 README 说明如何运行；跨目录复用主产品线代码前先看子目录 AGENTS。
+## Python
+
+- 虚拟环境：使用 `requirements.txt` `uv venv` `uv pip install -r ...`
+- 使用：`python-dotenv` `Cyclopts`
+
+## Additional instructions
+
+- Record interesting ideas and general inspirations to [THINGS_TO_EXPLORE.md](/research/THINGS_TO_EXPLORE.md)

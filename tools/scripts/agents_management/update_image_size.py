@@ -42,7 +42,9 @@ async def process_agent_urls(db: AsyncSession, agent: Agent) -> None:
         and is_valid_gcs_url(agent.avatar)
         and agent.avatar not in _process_single_url
     ):
-        await process_single_url(db, agent.avatar, agent.creator_id, agent.id, "avatar")
+        await process_single_url(
+            db, agent.avatar, agent.creator_id, agent.id, "avatar"
+        )
         _process_single_url.add(agent.avatar)
 
     # Process background URL
@@ -147,7 +149,9 @@ async def process_single_url(
             )
 
             # Update agent_id for the resource
-            result = await db.execute(select(Resource).filter(Resource.url == url))
+            result = await db.execute(
+                select(Resource).filter(Resource.url == url)
+            )
             resource = result.scalar_one_or_none()
             if resource:
                 resource.agent_id = agent_id
