@@ -150,8 +150,9 @@ class VerificationConfig(BaseModel):
     code_expire_minutes: int = 5
 
 
-@dataclass
-class APIEndpointsConfig:
+class APIEndpointsConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     disable_api_v1_chat_completions: bool = False
     # 使用虚假的 Google 登录接口，用于测试，设为 True 时可以在 auth.py 中直接定义返回值来支持 app 前端测试。
     use_dummy_api_v1_auth_google_login: bool = False
@@ -291,8 +292,9 @@ class AppConfig:
         return f"https://{self.name}-{self.environment.value}"
 
 
-@dataclass
-class EmbeddingConfig:
+class EmbeddingConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     base_url: str = "http://localhost:8001/v1"
     api_key: str = "sk-proj-1234567890"
     model: str = "DMetaSoul/Dmeta-embedding-zh-small"
@@ -403,8 +405,9 @@ class AgentConfig:
     agent_config_cache_ttl_seconds: int = 20 * 60  # 默认 20 分钟
 
 
-@dataclass
-class GCSConfig:
+class GCSConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     bucket: str = "inty-storage"
     # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
     # 删除部署环境中的配置文件使用，然后删除这个代码。
@@ -744,8 +747,8 @@ def load_config(path: str) -> Config:
     if "api_endpoints" in app_data and isinstance(
         app_data["api_endpoints"], dict
     ):
-        app_data["api_endpoints"] = APIEndpointsConfig(
-            **app_data["api_endpoints"]
+        app_data["api_endpoints"] = APIEndpointsConfig.model_validate(
+            app_data["api_endpoints"]
         )
 
     # Convert environment string to Environment enum if present
@@ -763,9 +766,9 @@ def load_config(path: str) -> Config:
             data.get("verification") or {}
         ),
         logging=LoggingConfig.model_validate(data.get("logging") or {}),
-        embedding=EmbeddingConfig(**data.get("embedding", {})),
+        embedding=EmbeddingConfig.model_validate(data.get("embedding") or {}),
         agent=AgentConfig(**data.get("agent", {})),
-        gcs=GCSConfig(**data.get("gcs", {})),
+        gcs=GCSConfig.model_validate(data.get("gcs") or {}),
         firebase=FirebaseConfig(**data.get("firebase", {})),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
