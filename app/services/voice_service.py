@@ -246,6 +246,324 @@ class VoiceService:
         )
         return None
 
+    async def check_quota(
+        self,
+        *,
+        db: AsyncSession,
+        user: Any,
+    ) -> Tuple[bool, int, int]:
+        """订阅语音配额：过去 24h 用量是否低于 voice_24h_limit。"""
+        (
+            is_allowed,
+            used_count,
+            limit,
+        ) = await subscription_service.check_voice_generation_limit(db, user)
+        if not is_allowed:
+            logger.warning(
+                f"用户 {user.id} 已达到语音生成限制: {used_count}/{limit}"
+            )
+        return is_allowed, used_count, limit
+
+    async def resolve_generation_model(
+        self,
+        *,
+        provider_selected: str,
+        requested_model: Optional[str],
+        db: Optional[AsyncSession],
+        user: Optional[Any],
+    ) -> Tuple[str, str]:
+        """按 provider / 订阅 / 配置解析 TTS model id（与 tts_catalog 查表无关）。"""
+        if requested_model is not None:
+            return requested_model, TTS_MODEL_SOURCE_EXPLICIT
+
+        if provider_selected == TTS_PROVIDER_GEMINI:
+            if user and db:
+                subscription = await subscription_service.get_user_current_subscription(
+                    db, user.id
+                )
+                model_selected = select_chat_tts_model(
+                    user=user, is_subscribed=bool(subscription)
+                )
+                return model_selected, TTS_MODEL_SOURCE_SUBSCRIPTION
+
+            return (
+                global_config_loaded_from_config_yaml.agent.free_user_chat_tts_model,
+                TTS_MODEL_SOURCE_CONFIG,
+            )
+
+        return self.config.model, TTS_MODEL_SOURCE_CONFIG
+
+    def prepare_synthesis_voice_id_and_text(
+        self,
+        text: str,
+        voice_id: Optional[str],
+        agent_gender: Optional[str],
+    ) -> Tuple[Optional[str], str]:
+        """解析 voice_id 并按 TTS 链路规则清理文本（与 generate_voice 内一致）。"""
+        _voice_id_for_decision = voice_id
+        if not _voice_id_for_decision:
+            _voice_id_for_decision = (
+                GENDER_VOICE_MAPPING.get(agent_gender)
+                if agent_gender
+                else self.config.voice_id
+            )
+        use_prompted_gemini = (
+            is_gemini_voice(_voice_id_for_decision)
+            and global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
+        )
+        use_gemini_then_elevenlabs_voice_changer = (
+            (not is_gemini_voice(_voice_id_for_decision))
+            and global_config_loaded_from_config_yaml.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
+        )
+        if not (use_prompted_gemini or use_gemini_then_elevenlabs_voice_changer):
+            text = self._clean_text_for_voice(text)
+        if len(text) > self.config.max_text_length:
+            text = text[: self.config.max_text_length]
+        return _voice_id_for_decision, text
+
+    async def lookup_cached_voice(
+        self,
+        *,
+        db: AsyncSession,
+        text: str,
+        voice_id: str,
+        model: str,
+        language: str,
+    ) -> Optional[VoiceGenerationResult]:
+        from app.services.voice_cache_service import voice_cache_service
+
+        cached_result = await voice_cache_service.get_cached_voice(
+            db, text, voice_id, model, language
+        )
+        if not cached_result:
+            return None
+        cached_url, cached_duration = cached_result
+        gcs_url, gcs_http_url = self._build_gcs_urls(cached_url)
+        return VoiceGenerationResult(
+            gcs_url=gcs_url,
+            gcs_http_url=gcs_http_url,
+            duration_seconds=cached_duration,
+        )
+
+    async def record_voice_usage(
+        self,
+        *,
+        db: AsyncSession,
+        user: Any,
+        text_length: int,
+        voice_id: str,
+        cached: bool,
+    ) -> None:
+        try:
+            await subscription_service.record_usage(
+                db,
+                user.id,
+                "voice_generation",
+                1,
+                extra_data={
+                    "text_length": text_length,
+                    "voice_id": voice_id,
+                    "cached": cached,
+                },
+            )
+        except Exception as e:
+            logger.warning(f"记录语音生成用量失败: {str(e)}")
+
+    @traceable(
+        name="generate_voice_no_quota_limit_check",
+        run_type="chain",
+        process_outputs=_process_outputs_generate_voice,
+    )
+    async def generate_voice_no_quota_limit_check(
+        self,
+        text: str,
+        voice_id: Optional[str],
+        language: str,
+        model: str,
+        model_source: str,
+        agent_gender: Optional[str],
+        voice_message_narration_mode: Optional[Any],
+        gemini_source_model: Optional[str],
+    ) -> Optional[VoiceGenerationResult]:
+        """
+        仅 TTS + GCS + 异步写缓存；不含配额检查、DB 缓存读、用量记录。
+        调用方须先 check_quota / lookup_cached_voice / record_voice_usage。
+        """
+        narration_mode = resolve_voice_message_narration_mode(
+            voice_message_narration_mode
+        )
+
+        if not self.config.enabled:
+            logger.warning("ElevenLabs语音生成已禁用")
+            return self._trace_and_return_none("tts_disabled")
+
+        if not text.strip():
+            logger.warning("文本内容为空，跳过语音生成")
+            return self._trace_and_return_none("empty_input_text")
+
+        _voice_id_for_decision = voice_id
+        if not _voice_id_for_decision:
+            _voice_id_for_decision = (
+                GENDER_VOICE_MAPPING.get(agent_gender)
+                if agent_gender
+                else self.config.voice_id
+            )
+        use_prompted_gemini = (
+            is_gemini_voice(_voice_id_for_decision)
+            and global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
+        )
+        use_gemini_then_elevenlabs_voice_changer = (
+            (not is_gemini_voice(_voice_id_for_decision))
+            and global_config_loaded_from_config_yaml.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
+        )
+        voice_id = _voice_id_for_decision
+
+        original_text = text
+        if not (use_prompted_gemini or use_gemini_then_elevenlabs_voice_changer):
+            logger.debug(f"清理文本: {text}")
+            text = self._clean_text_for_voice(text)
+
+        if not text.strip():
+            logger.warning("文本清理后为空（可能全部是心理/动作描写），跳过语音生成")
+            return self._trace_and_return_none("empty_text_after_cleaning")
+
+        if text != original_text:
+            logger.debug(
+                f"文本已清理，原长度: {len(original_text)}, 清理后长度: {len(text)}"
+            )
+
+        if len(text) > self.config.max_text_length:
+            logger.warning(f"文本长度超过限制 {self.config.max_text_length}，截断处理")
+            text = text[: self.config.max_text_length]
+
+        try:
+            if not voice_id:
+                logger.warning(
+                    f"无法确定音色ID: agent_gender={agent_gender}, 配置文件voice_id={self.config.voice_id}"
+                )
+                return self._trace_and_return_none("missing_voice_id")
+
+            provider_selected = (
+                TTS_PROVIDER_GEMINI
+                if is_gemini_voice(voice_id)
+                else TTS_PROVIDER_ELEVENLABS
+            )
+            self._validate_model_provider_match(
+                provider_selected=provider_selected,
+                model_selected=model,
+            )
+            if gemini_source_model is not None:
+                self._validate_model_provider_match(
+                    provider_selected=TTS_PROVIDER_GEMINI,
+                    model_selected=gemini_source_model,
+                )
+
+            logger.debug(
+                f"开始语音生成(无配额检查): voice_id={voice_id}, provider_selected={provider_selected}, "
+                f"model_selected={model}, model_source={model_source}, language={language}, "
+                f"text_length={len(text)}"
+            )
+
+            audio_result = await self._call_tts_api(
+                text=text,
+                voice_id=voice_id,
+                model=model,
+                language=language,
+                voice_message_narration_mode=narration_mode,
+                agent_gender=agent_gender,
+                gemini_source_model=gemini_source_model,
+            )
+            if not audio_result:
+                logger.error(
+                    "TTS 生成返回空数据: provider_selected={}, model_selected={}, "
+                    "model_source={}, final_status={}",
+                    provider_selected,
+                    model,
+                    model_source,
+                    "failed",
+                )
+                return self._trace_and_return_none(
+                    "tts_provider_returned_empty",
+                    provider_selected=provider_selected,
+                    model_selected=model,
+                    model_source=model_source,
+                )
+
+            audio_data, duration, mime_type, provider_used = audio_result
+            final_model_selected = model
+            if (
+                provider_selected == TTS_PROVIDER_GEMINI
+                and provider_used == TTS_PROVIDER_ELEVENLABS
+            ):
+                final_model_selected = self.config.model
+
+            file_name = self._generate_file_name(
+                text, voice_id, model, self._get_audio_extension(mime_type)
+            )
+            upload_task = asyncio.create_task(
+                self.gcs_service.upload_voice_file(
+                    file_name,
+                    audio_data,
+                    content_type=mime_type or "application/octet-stream",
+                )
+            )
+            audio_url = await upload_task
+
+            if not audio_url:
+                logger.error("GCS上传失败")
+                return self._trace_and_return_none(
+                    "gcs_upload_failed",
+                    provider_selected=provider_selected,
+                    model_selected=model,
+                )
+
+            gcs_url, gcs_http_url = self._build_gcs_urls(audio_url)
+
+            from app.services.voice_cache_service import voice_cache_service
+
+            asyncio.create_task(
+                voice_cache_service.save_voice_cache(
+                    None,
+                    text,
+                    voice_id,
+                    model,
+                    language,
+                    gcs_http_url,
+                    duration,
+                    len(audio_data),
+                )
+            )
+
+            self._set_trace_metadata(
+                status="success",
+                cache_hit=False,
+                provider_selected=provider_selected,
+                model_selected=final_model_selected,
+                model_source=model_source,
+                final_provider=provider_used,
+            )
+            return VoiceGenerationResult(
+                gcs_url=gcs_url,
+                gcs_http_url=gcs_http_url,
+                duration_seconds=duration,
+            )
+
+        except ValueError:
+            logger.error("语音生成参数校验失败（provider/model 不一致）")
+            self._set_trace_metadata(
+                status="error",
+                failure_reason="provider_model_mismatch",
+            )
+            raise
+        except Exception as e:
+            logger.error(f"语音生成失败: {str(e)}")
+            logger.exception("语音生成异常详细信息:")
+            return self._trace_and_return_none(
+                "unexpected_exception",
+                exception_type=type(e).__name__,
+                exception_message=str(e),
+            )
+
     @traceable(
         name="generate_voice",
         run_type="chain",
@@ -289,6 +607,8 @@ class VoiceService:
             logger.warning("文本内容为空，跳过语音生成")
             return self._trace_and_return_none("empty_input_text")
 
+        # TODO(followup): 新路径已用 check_quota + generate_voice_no_quota_limit_check；
+        # 待 chats REST / agent 开场白等迁移后，删除本块（原 L292–310）。
         # 如果提供了用户信息，检查语音生成限制
         if user and db:
             from app.services.global_services import subscription_service

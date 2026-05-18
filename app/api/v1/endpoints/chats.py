@@ -475,6 +475,8 @@ async def generate_message_voice(
                 agent_data.get("settings")
             )
         )
+        # TODO(followup): 迁移至 check_quota + lookup_cached_voice +
+        # generate_voice_no_quota_limit_check（与 chat_assistant_voice 一致）。
         voice_result = await voice_svc.generate_voice(
             text=message_content,
             voice_id=resolved_voice_id,
