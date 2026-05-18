@@ -1,4 +1,5 @@
 import dataclasses
+import math
 import os
 import sys
 from dataclasses import dataclass, field
@@ -9,11 +10,15 @@ from typing import Any, List, Optional
 
 import yaml
 from loguru import logger
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, model_validator
 
 from loguru import logger
 
 from app.utils import models_catalog
+from app.core.companion_harness.experience_profile import (
+    ExperienceContextMode,
+    normalize_experience_profile_id,
+)
 from app.utils.companion_feature_defaults import (
     DEFAULT_COMPANION_FEATURE_COMPACTION,
 )
@@ -60,28 +65,32 @@ class Environment(str, Enum):
 
 LOGGING_TIME_FORMAT = "{time:YYYY-MM-DD HH:mm:ss.SSS ZZ}"
 LOGGING_LEVEL_FORMAT = "{level: <8}"
-LOGGING_FILE_FORMAT = "{file.path}:{line} {function}"
+LOGGING_FILE_FORMAT = "{extra[inty_rel_file]}:{line} {function}"
 LOGGING_MESSAGE_FORMAT = "{message}"
 
 
-@dataclass
-class LoggingConfig:
+class LoggingConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     level: str = "INFO"
-    # 默认格式，不使用颜色；{file.path} 为完整路径，便于终端/IDE 点击跳转
+    # 默认格式，不使用颜色；路径为仓库根相对路径（由 init_logger 的 patcher 写入 extra[inty_rel_file]）
     format: str = (
         f"{LOGGING_TIME_FORMAT} | {LOGGING_LEVEL_FORMAT} | {LOGGING_FILE_FORMAT} - {LOGGING_MESSAGE_FORMAT}"
     )
     # 是否使用颜色
     colorize: bool = False
 
-    def __post_init__(self):
+    @model_validator(mode="after")
+    def apply_colorized_format(self) -> "LoggingConfig":
         if self.colorize:
             # 区分四块：时间=绿，级别=按级别着色，位置=品红(含完整路径)，正文=白
             self.format = f"<green>{LOGGING_TIME_FORMAT}</green> | <level>{LOGGING_LEVEL_FORMAT}</level> | <magenta>{LOGGING_FILE_FORMAT}</magenta> - <white>{LOGGING_MESSAGE_FORMAT}</white>"
+        return self
 
 
-@dataclass
-class SecurityConfig:
+class SecurityConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     # This config cannot be changed after it's deployed, otherwise the existing tokens will be invalid.
     # This is because the token is encrypted using this secret key.
     secret_key: str = "your-secret-key-here"
@@ -89,8 +98,9 @@ class SecurityConfig:
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
 
 
-@dataclass
-class DatabaseSettings:
+class DatabaseSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     host: str = "localhost"
     port: int = 5432
     user: str = "postgres"
@@ -126,15 +136,17 @@ class DatabaseSettings:
         )
 
 
-@dataclass
-class GoogleOAuthConfig:
+class GoogleOAuthConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     redirect_uri: Optional[str] = None
 
 
-@dataclass
-class VerificationConfig:
+class VerificationConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     code_expire_minutes: int = 5
 
 
@@ -147,8 +159,8 @@ class APIEndpointsConfig:
     use_dummy_api_v1_character_themes_id_get: bool = False
 
 
-class CompanionWorkspaceBootstrapType(StrEnum):
-    """WS companion workspace bootstrap mode (app.features.companion_workspace_bootstrap_type)."""
+class CompanionMemoryBootstrapType(StrEnum):
+    """WS companion MemoryStore bootstrap mode (app.features.companion_memory_bootstrap_type)."""
 
     NONE = "NONE"
     USER_INTERACTIVE = "USER_INTERACTIVE"
@@ -162,7 +174,7 @@ class FeaturesConfig:
     # Chat WebSocket: max seconds to wait for the next text frame before closing (ping/pong resets the wait).
     # Long-running LLM or tools do not extend this window unless the client sends ping or another frame.
     chat_ws_idle_timeout_seconds: int = 60
-    # Default context_mode written to new companion context.json (e.g. intimate).
+    # Default experience profile id (context.json field context_mode), e.g. intimate.
     companion_default_context_mode: str = "intimate"
     # OpenAI message-list compaction for companion kernel (same stack as WS): older transcript
     # dialogue is folded into a structured system snapshot when over budget. Default matches
@@ -175,25 +187,49 @@ class FeaturesConfig:
     companion_transcript_llm_window_max_messages: Optional[int] = None
     # WS companion: NONE = seed minimal docs only, always run_turn;
     # USER_INTERACTIVE = always run_turn with slice tools until model calls companion_bootstrap_user_interactive_complete.
-    companion_workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
+    companion_memory_bootstrap_type: str = (
+        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    )
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
     companion_ws_session_system_text: Optional[str] = None
+    # When True, ``/api/v1/chat/ws`` unified inner-tick worker may emit proactive companion turns
+    # (``InnerTickActivity.PROACTIVE_CHAT``) when ``next_heartbeat_wait_seconds`` says ready.
+    companion_ws_proactive_heartbeat_enabled: bool = True
+    # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
+    companion_ws_proactive_heartbeat_poll_seconds: float = 60.0
+    # When True, the same worker may emit maintenance inner-tick turns (``InnerTickActivity.MAINTENANCE``).
+    companion_ws_maintenance_inner_tick_enabled: bool = True
+    # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
+    companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
+    # Seconds to wait on ``CompanionSession.tool_bg_idle`` before LivingSphere jsonl compact
+    # (memory worker after user turns with defer_memory_update).
+    companion_tool_bg_idle_wait_timeout_sec: float = 120.0
 
     def __post_init__(self) -> None:
-        raw = (self.companion_workspace_bootstrap_type or "").strip().upper()
-        allowed = {m.value for m in CompanionWorkspaceBootstrapType}
+        raw = (self.companion_memory_bootstrap_type or "").strip().upper()
+        allowed = {m.value for m in CompanionMemoryBootstrapType}
         if raw not in allowed:
             raise ValueError(
-                "app.features.companion_workspace_bootstrap_type must be one of "
-                f"{sorted(allowed)}, got {self.companion_workspace_bootstrap_type!r}"
+                "app.features.companion_memory_bootstrap_type must be one of "
+                f"{sorted(allowed)}, got {self.companion_memory_bootstrap_type!r}"
             )
-        self.companion_workspace_bootstrap_type = raw
+        self.companion_memory_bootstrap_type = raw
+        self.companion_default_context_mode = normalize_experience_profile_id(
+            self.companion_default_context_mode
+        )
+        if (
+            self.companion_default_context_mode
+            == ExperienceContextMode.BOOTSTRAP
+        ):
+            raise ValueError(
+                "app.features.companion_default_context_mode cannot be 'bootstrap'"
+            )
 
 
 @dataclass
 class AppConfig:
     name: str = "inty-backend"
-    # The app tolerates more failures, and does more logging in the debug mode.
+    # OpenAPI/docs and some non-fatal init failures (e.g. optional Firebase). Log level is not tied to this flag; use logging.level / INTY_* env.
     debug: bool = False
     # DEPRECATED: Do not use.
     debug_messages: bool = True
@@ -210,7 +246,9 @@ class AppConfig:
     # 仅当请求头 appVersionCode >= 此值时返回日常记忆提醒（消息列表 daily_memory_prompt、角色详情 daily_memories）；小于此值按旧版不返回。0 表示不按版本限制。
     min_app_version_code_for_daily_memory: int = 0
 
-    api_endpoints: APIEndpointsConfig = field(default_factory=APIEndpointsConfig)
+    api_endpoints: APIEndpointsConfig = field(
+        default_factory=APIEndpointsConfig
+    )
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
 
     @dataclass
@@ -271,6 +309,11 @@ class AgentConfig:
     free_user_chat_model: str = GEMINI_2_5_FLASH_LITE
     # Subscribed users: default chat model (OpenRouter model id), invoked via OpenAI client + OpenRouter.
     sub_user_chat_model: str = GEMINI_2_5_FLASH
+    # Companion WS tool-call route model id (passed to OpenAI-compatible gateway via
+    # CompanionLLMConfig.tool_model). Independent of foreground chat envelope model so
+    # the dual-LLM tool loop can scale separately. Empty string falls back to the chat
+    # model at companion_chat_service wiring time (resolved_chat_model GenAIModel).
+    companion_tool_call_model: str = "google/gemini-3-flash-preview"
     # 免费用户商业化触达：定期返回一条“付费专属预览”消息并引导订阅。
     enable_free_user_premium_preview: bool = False
     # 触发频率（按聊天次数）：例如 5 表示每 5 条聊天触发一次；<=0 表示关闭。
@@ -299,6 +342,9 @@ class AgentConfig:
     presence_penalty: float = 0.5
     # DEPRECATED: Do not use.
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
+    # 是否向 LangSmith 上报 trace（应用启动时写入 LANGSMITH_TRACING_V2）。
+    # 关闭时仍会设置 LANGSMITH_PROJECT / LANGCHAIN_API_KEY，仅 tracing 为 false。
+    langsmith_tracing_enabled: bool = True
     # LangSmith 文本聊天追踪采样率（0.0-1.0）。
     # 实际生效值在调用处会被限制到 <=10%，避免文本聊天成功请求过量追踪。
     # 文本聊天的失败概率也极低，因此不需要特别关注错误信息。
@@ -316,7 +362,9 @@ class AgentConfig:
 
     free_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_FAST
     sub_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4
-    force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
+    force_default_prompts: bool = (
+        False  # 强制使用默认提示词，忽略Agent自定义提示词
+    )
     enable_christmas_prompt: bool = False  # 是否启用圣诞节季节性提示词
     # 图片生成配置
     image_generation_default_history_count: int = 10
@@ -386,7 +434,9 @@ class GooglePlayConfig:
     min_supported_version: int = 1  # 最低支持版本代码
     # DEPRECATED: 未被使用过。
     # 删除部署环境中的配置文件使用，然后删除这个代码。
-    release_track: str = "production"  # 发布轨道：internal/closed/open/production
+    release_track: str = (
+        "production"  # 发布轨道：internal/closed/open/production
+    )
     # DEPRECATED: 未被使用过。
     # 删除部署环境中的配置文件使用，然后删除这个代码。
     fallback_tracks: List[str] = None  # 备用轨道列表
@@ -399,8 +449,12 @@ class GooglePlayConfig:
     # 版本代码差距阈值配置；线性递增的多个阈值，超过某个阈值意味着之前超越的阈值的动作都会在 app 端执行。
     # 比如，触发 popup_reminder_version_code_gap 动作，意味着 settings reminder 与 popup reminder 都会在 app 端执行。
     force_update_version_code_gap: int = 1000  # 版本代码差距超过此值则强制更新
-    popup_reminder_version_code_gap: int = 200  # 版本代码差距在此值以上则显示弹窗提醒
-    settings_reminder_version_code_gap: int = 1  # 版本代码差距在此值以上则显示设置提醒
+    popup_reminder_version_code_gap: int = (
+        200  # 版本代码差距在此值以上则显示弹窗提醒
+    )
+    settings_reminder_version_code_gap: int = (
+        1  # 版本代码差距在此值以上则显示设置提醒
+    )
 
 
 @dataclass
@@ -444,12 +498,16 @@ class MemoryExtractionConfig:
         WorkflowMode.ALWAYS_SUMMARIZE_FULL_CHAT_MESSAGES_HISTORY
     )
     cron_hour: int = 3  # UTC 小时，每日执行
-    trigger_new_user_messages: int = 30  # 新用户总聊天次数阈值（subscription_usage）
+    trigger_new_user_messages: int = (
+        30  # 新用户总聊天次数阈值（subscription_usage）
+    )
     trigger_incremental_messages: int = (
         30  # 已提取用户自上次后新增聊天次数阈值（subscription_usage）
     )
-    # When companion writes significance_perception into chat_history.meta_data, use it to
-    # rank turns and annotate the extraction prompt (does not drop messages by default).
+    # When companion kernel fills CompanionTurnResult.significance_perception, chat.py mirrors it
+    # into chat_history AI meta_data. Enabling this sorts extraction input by
+    # meta_data.significance_perception.importance_round and adds bracket hints for the extractor LLM.
+    # Pipeline overview: app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py module docstring.
     use_significance_perception_in_extraction: bool = False
 
     def __post_init__(self):
@@ -463,7 +521,9 @@ def _parse_surprise_snap_config(data: dict) -> "SurpriseSnapConfig":
     enabled_since = raw.get("enabled_since")
     if isinstance(enabled_since, str):
         try:
-            enabled_since = datetime.fromisoformat(enabled_since.replace("Z", "+00:00"))
+            enabled_since = datetime.fromisoformat(
+                enabled_since.replace("Z", "+00:00")
+            )
         except (ValueError, TypeError):
             enabled_since = None
     elif not isinstance(enabled_since, datetime):
@@ -490,11 +550,26 @@ class SurpriseSnapConfig:
 
 @dataclass
 class UserAnalyticsReportConfig:
-    """用户数据分析日报周报定时任务配置"""
+    """push worker 侧用户分析预计算调度配置。
 
-    enabled: bool = True
-    daily_cron_hour: int = 6  # UTC 小时，每日执行，统计 T-1 日
-    weekly_cron_hour: int = 6  # UTC 小时，每周一执行，统计上一周
+    默认 enabled / daily_enabled / weekly_enabled / backfill_enabled 均为 False，
+    push worker 不跑日报、周报 cron 与启动补算。生产 IntelliMate 日报由
+    .github/workflows/daily_intellimate_user_activity_report.yaml 承担。
+    见 docs/FR_USER_ANALYTICS_REPORTS.md。
+    """
+
+    enabled: bool = (
+        False  # False 时 push_scheduler 不注册任何 user_analytics 任务
+    )
+    daily_enabled: bool = (
+        False  # True 且 enabled 时注册日报 cron（勿与 GitHub Actions 日报并行）
+    )
+    weekly_enabled: bool = False  # True 且 enabled 时注册周报 cron
+    backfill_enabled: bool = (
+        False  # True 且 enabled 时启动补算；范围受 daily/weekly 开关约束
+    )
+    daily_cron_hour: int = 6  # UTC；daily_enabled 时统计 T-1 日
+    weekly_cron_hour: int = 6  # UTC 每周一；weekly_enabled 时统计上一周
     statement_timeout_sec: int = 600  # 单条 SQL 超时秒数，生产大数据量时需调大
     batch_size: int = (
         500  # 分批查询 session/chat 时每批数量，减小可降低 standby conflict with recovery
@@ -547,7 +622,7 @@ class GeminiLiveConfig:
     enabled: bool = False  # 是否启用实时语音通话功能
     project_id: str = "inty-backend"  # GCP 项目 ID
     location: str = "us-central1"  # Vertex AI 区域
-    model: str = "gemini-live-2.5-flash-preview-native-audio-09-2025"  # Live API 模型
+    model: str = "gemini-live-2.5-flash-native-audio"  # Live API 模型
     send_sample_rate: int = 16000  # 上行音频采样率 (Hz)
     receive_sample_rate: int = 24000  # 下行音频采样率 (Hz)
     default_voice: str = "Zephyr"  # 默认 AI 语音
@@ -573,9 +648,35 @@ class GeminiLiveConfig:
 
 
 @dataclass
+class PhoneCallConfig:
+    """PSTN phone-call bridge configuration.
+
+    The feature flag defaults to on so product surfaces may show the capability,
+    while runtime availability is still gated by Twilio/Gemini/public-WSS config.
+    Secrets should be supplied by environment variables in deployments.
+    """
+
+    enabled: bool = True
+    default_country_code: str = "+1"
+    twilio_from_number: str = ""
+    twilio_media_stream_base_url: str = ""
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    inbound_number_agent_map: dict = None
+    default_inbound_agent_id: str = ""
+    media_stream_token_ttl_seconds: int = 300
+
+    def __post_init__(self):
+        if self.inbound_number_agent_map is None:
+            self.inbound_number_agent_map = {}
+
+
+@dataclass
 class TTSConfig:
     """语音播报配置"""
 
+    # 测试环境启用 fake provider，避免 CI/本地测试依赖真实 TTS API。
+    use_fake_tts: bool = False
     # Gemini tts 还不稳定，经常出现措辞失误：把括号里面内容讲出来、重复对话内容
     use_gemini_prompted_tts: bool = True
     # iMate 语音播报模式：
@@ -612,6 +713,7 @@ class Config:
     )
     fal: FalConfig = field(default_factory=FalConfig)
     gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
+    phone_call: PhoneCallConfig = field(default_factory=PhoneCallConfig)
     tts: TTSConfig = field(default_factory=TTSConfig)
     surprise_snap: SurpriseSnapConfig = field(
         default_factory=lambda: SurpriseSnapConfig()
@@ -639,8 +741,12 @@ def load_config(path: str) -> Config:
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
     if "features" in app_data and isinstance(app_data["features"], dict):
         app_data["features"] = FeaturesConfig(**dict(app_data["features"]))
-    if "api_endpoints" in app_data and isinstance(app_data["api_endpoints"], dict):
-        app_data["api_endpoints"] = APIEndpointsConfig(**app_data["api_endpoints"])
+    if "api_endpoints" in app_data and isinstance(
+        app_data["api_endpoints"], dict
+    ):
+        app_data["api_endpoints"] = APIEndpointsConfig(
+            **app_data["api_endpoints"]
+        )
 
     # Convert environment string to Environment enum if present
     if "environment" in app_data and isinstance(app_data["environment"], str):
@@ -648,11 +754,15 @@ def load_config(path: str) -> Config:
 
     return Config(
         app=AppConfig(**app_data),
-        security=SecurityConfig(**data.get("security", {})),
-        database=DatabaseSettings(**data.get("database", {})),
-        google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
-        verification=VerificationConfig(**data.get("verification", {})),
-        logging=LoggingConfig(**data.get("logging", {})),
+        security=SecurityConfig.model_validate(data.get("security") or {}),
+        database=DatabaseSettings.model_validate(data.get("database") or {}),
+        google_oauth=GoogleOAuthConfig.model_validate(
+            data.get("google_oauth") or {}
+        ),
+        verification=VerificationConfig.model_validate(
+            data.get("verification") or {}
+        ),
+        logging=LoggingConfig.model_validate(data.get("logging") or {}),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
         agent=AgentConfig(**data.get("agent", {})),
         gcs=GCSConfig(**data.get("gcs", {})),
@@ -660,7 +770,9 @@ def load_config(path: str) -> Config:
         google_play=GooglePlayConfig(**data.get("google_play", {})),
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
-        push_notification=PushNotificationConfig(**data.get("push_notification", {})),
+        push_notification=PushNotificationConfig(
+            **data.get("push_notification", {})
+        ),
         memory_extraction=MemoryExtractionConfig(
             **(data.get("memory_extraction") or {})
         ),
@@ -669,6 +781,7 @@ def load_config(path: str) -> Config:
         ),
         fal=FalConfig(**data.get("fal", {})),
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
+        phone_call=PhoneCallConfig(**(data.get("phone_call") or {})),
         tts=TTSConfig(**data.get("tts", {})),
         surprise_snap=_parse_surprise_snap_config(data),
     )
@@ -690,7 +803,9 @@ def _validate_config(config: Config):
         raise ValueError("elevenlabs.api_key is required")
 
     # 消息生图模型 nickname 必须能解析为允许的模型
-    models_catalog.must_resolve_nickname(config.agent.free_user_chat_image_model)
+    models_catalog.must_resolve_nickname(
+        config.agent.free_user_chat_image_model
+    )
     models_catalog.must_resolve_nickname(config.agent.sub_user_chat_image_model)
 
     if config.agent.chat_llm_provider not in ("openrouter", "litellm"):
@@ -757,7 +872,30 @@ def _validate_config(config: Config):
             "app.features.chat_ws_idle_timeout_seconds must be between 10 and 3600"
         )
 
-    from app.core.agentic_kernel.companion.transcript_compaction import (
+    pc = config.phone_call
+    if pc.enabled:
+        if (
+            pc.media_stream_token_ttl_seconds < 60
+            or pc.media_stream_token_ttl_seconds > 3600
+        ):
+            raise ValueError(
+                "phone_call.media_stream_token_ttl_seconds must be between 60 and 3600"
+            )
+        if (
+            pc.twilio_media_stream_base_url
+            and not pc.twilio_media_stream_base_url.startswith("wss://")
+        ):
+            raise ValueError(
+                "phone_call.twilio_media_stream_base_url must start with wss://"
+            )
+        if pc.default_country_code and not pc.default_country_code.startswith(
+            "+"
+        ):
+            raise ValueError(
+                "phone_call.default_country_code must start with '+'"
+            )
+
+    from app.core.companion_harness.memory.transcript_compaction import (
         CompactionConfig as CompanionTranscriptCompactionConfig,
     )
 
@@ -771,4 +909,9 @@ def _validate_config(config: Config):
     if feats.companion_transcript_compaction is not None:
         CompanionTranscriptCompactionConfig.model_validate(
             feats.companion_transcript_compaction
+        )
+    tb_wait = feats.companion_tool_bg_idle_wait_timeout_sec
+    if tb_wait < 1.0 or tb_wait > 3600.0:
+        raise ValueError(
+            "app.features.companion_tool_bg_idle_wait_timeout_sec must be between 1 and 3600"
         )

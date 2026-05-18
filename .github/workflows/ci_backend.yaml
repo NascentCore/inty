@@ -10,13 +10,13 @@ on:
       - "backend/inty/start.sh"
       - "app/**/*.py"
       - "requirements.txt"
-      - "scripts/"
+      - "tools/scripts/"
       - "tests/**/*.py"
       - "tests/alembic/test_custom_config.sh"
       - "tests/requirements.txt"
       - "backend/push_worker/**"
       # Alembic files
-      - "alembic/**/*"
+      - "backend/alembic/**/*"
       # 这个是测试用配置文件
       - "devops/config.yaml.test"
       # 工作流文件
@@ -30,13 +30,13 @@ on:
       - "backend/inty/start.sh"
       - "app/**/*.py"
       - "requirements.txt"
-      - "scripts/"
+      - "tools/scripts/"
       - "tests/**/*.py"
       - "tests/alembic/test_custom_config.sh"
       - "tests/requirements.txt"
       - "backend/push_worker/**"
       # Alembic files
-      - "alembic/**/*"
+      - "backend/alembic/**/*"
       # 这个是测试用配置文件
       - "devops/config.yaml.test"
       # 工作流文件
@@ -111,12 +111,12 @@ jobs:
 
       - name: Check architecture layer boundaries
         run: |
-          python scripts/check_layer_dependencies.py
+          python tools/scripts/check_layer_dependencies.py
 
       - name: Ensure single alembic head
         run: |
           export PYTHONPATH=.
-          export ALEMBIC_CONFIG=alembic/alembic.ini
+          export ALEMBIC_CONFIG=backend/alembic/alembic.ini
           heads_count=$(python -m alembic heads | wc -l)
           if [ "$heads_count" -ne 1 ]; then
             echo "Expected exactly one alembic head, got $heads_count:"
@@ -133,7 +133,7 @@ jobs:
         run: |
           cp devops/config.yaml.test config.yaml
           # alembic upgrade head: no need to run, as backend/inty/start.sh already includes it
-          ./backend/inty/start.sh --test &
+          ./backend/inty/start.sh --test 2>&1 | tee inty_backend.log &
 
           # Wait for the server to be ready with better retry logic
           echo "Waiting for server to start..."
@@ -151,7 +151,20 @@ jobs:
 
           # noci marker is defined in pytest.ini
           # applied on test functions with noci marker will be skipped on CI
-          python -m pytest -m "not noci" -v -s tests/
+          set +e
+          python -m pytest -m "not noci" -v -s tests/ --capture=fd --show-capture=no
+          pytest_exit=$?
+          python tools/scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
+          log_scan_exit=$?
+          set -e
+          if [ "$pytest_exit" -ne 0 ]; then
+            exit "$pytest_exit"
+          fi
+          exit "$log_scan_exit"
+        env:
+          INTY_LOGGING_LEVEL: INFO
+          INTY_CONSOLE_LOGGING_LEVEL: INFO
+          UVICORN_LOG_LEVEL: warning
 
       - name: Start push worker and verify startup
         run: |

@@ -8,12 +8,17 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from loguru import logger
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
-from app import schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG
+from app.api.tags import (
+    ANDROID_APP_TAG,
+    INTY_EVAL_TAG,
+    WEB_APP_TAG,
+    NOT_USED_TAG,
+)
 from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
 from app.utils.image_upload import process_image_upload
+from app.schemas.user import User as UserSchema
 
 router = APIRouter(prefix="/images", route_class=LoggerRoute)
 
@@ -28,7 +33,7 @@ router = APIRouter(prefix="/images", route_class=LoggerRoute)
 async def upload_image(
     file: UploadFile = File(...),
     cropping_avatar: bool = Form(False),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
     # 更新图片元数据
     async_db: AsyncSession = Depends(deps.get_async_db),
 ) -> APIResponse[dict]:
@@ -48,7 +53,9 @@ async def upload_image(
         # Use helper function to process image upload
         # Use avatars directory for unified storage, similar to backgrounds
         base_path = (
-            f"avatars/{current_user.id}" if cropping_avatar else "images/uploads"
+            f"avatars/{current_user.id}"
+            if cropping_avatar
+            else "images/uploads"
         )
         result = await process_image_upload(
             file=file,

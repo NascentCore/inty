@@ -16,7 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 
 
 class EvaluationStatus(str, enum.Enum):
@@ -34,7 +34,9 @@ class EvaluationSession(Base):
 
     __tablename__ = "evaluation_sessions"
 
-    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    id = Column(
+        String, primary_key=True, index=True, default=lambda: str(uuid.uuid4())
+    )
     name = Column(String(255), nullable=False, comment="评测会话名称")
     creator_id = Column(
         String, ForeignKey("users.id"), nullable=False, comment="创建者ID"
@@ -50,7 +52,9 @@ class EvaluationSession(Base):
     selected_agents = Column(JSON, nullable=False, comment="选中的智能体ID列表")
     scoring_model = Column(String(255), nullable=False, comment="评分模型")
     scoring_criteria = Column(Text, comment="评分标准")
-    use_new_user_identity = Column(Boolean, default=False, comment="是否使用新用户身份")
+    use_new_user_identity = Column(
+        Boolean, default=False, comment="是否使用新用户身份"
+    )
 
     # 配置参数
     config = Column(JSON, comment="其他配置参数")
@@ -62,7 +66,9 @@ class EvaluationSession(Base):
     average_score = Column(Float, comment="平均分数")
 
     # 时间戳
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
     started_at = Column(DateTime(timezone=True), comment="开始时间")
     completed_at = Column(DateTime(timezone=True), comment="完成时间")
@@ -70,10 +76,14 @@ class EvaluationSession(Base):
     # 关系
     creator = relationship("User", back_populates="evaluation_sessions")
     results = relationship(
-        "EvaluationResult", back_populates="session", cascade="all, delete-orphan"
+        "EvaluationResult",
+        back_populates="session",
+        cascade="all, delete-orphan",
     )
     interactions = relationship(
-        "EvaluationInteraction", back_populates="session", cascade="all, delete-orphan"
+        "EvaluationInteraction",
+        back_populates="session",
+        cascade="all, delete-orphan",
     )
 
 
@@ -82,10 +92,16 @@ class EvaluationResult(Base):
 
     __tablename__ = "evaluation_results"
 
-    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
-    session_id = Column(String, ForeignKey("evaluation_sessions.id"), nullable=False)
+    id = Column(
+        String, primary_key=True, index=True, default=lambda: str(uuid.uuid4())
+    )
+    session_id = Column(
+        String, ForeignKey("evaluation_sessions.id"), nullable=False
+    )
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
-    agent_name = Column(String(255), comment="智能体名称（冗余字段，提高查询效率）")
+    agent_name = Column(
+        String(255), comment="智能体名称（冗余字段，提高查询效率）"
+    )
     question = Column(Text, nullable=False, comment="测试问题")
     question_index = Column(Integer, nullable=False, comment="问题序号")
 
@@ -107,13 +123,17 @@ class EvaluationResult(Base):
     extra_data = Column(JSON, comment="其他元数据")
 
     # 时间戳
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
     # 关系
     session = relationship("EvaluationSession", back_populates="results")
     agent = relationship("Agent")
-    interactions = relationship("EvaluationInteraction", back_populates="result")
+    interactions = relationship(
+        "EvaluationInteraction", back_populates="result"
+    )
 
 
 class EvaluationInteraction(Base):
@@ -121,11 +141,20 @@ class EvaluationInteraction(Base):
 
     __tablename__ = "evaluation_interactions"
 
-    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
-    session_id = Column(String, ForeignKey("evaluation_sessions.id"), nullable=False)
-    result_id = Column(String, ForeignKey("evaluation_results.id"), nullable=False)
+    id = Column(
+        String, primary_key=True, index=True, default=lambda: str(uuid.uuid4())
+    )
+    session_id = Column(
+        String, ForeignKey("evaluation_sessions.id"), nullable=False
+    )
+    result_id = Column(
+        String, ForeignKey("evaluation_results.id"), nullable=False
+    )
     chat_id = Column(
-        String, ForeignKey("chats.id"), nullable=True, comment="关联的聊天会话ID"
+        String,
+        ForeignKey("chats.id"),
+        nullable=True,
+        comment="关联的聊天会话ID",
     )
 
     # 交互信息
@@ -138,7 +167,9 @@ class EvaluationInteraction(Base):
     response_metadata = Column(JSON, comment="回复元数据")
 
     # 时间戳
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
 
     # 关系
     session = relationship("EvaluationSession", back_populates="interactions")
@@ -151,7 +182,9 @@ class EvaluationTemplate(Base):
 
     __tablename__ = "evaluation_templates"
 
-    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    id = Column(
+        String, primary_key=True, index=True, default=lambda: str(uuid.uuid4())
+    )
     name = Column(String(255), nullable=False, comment="模板名称")
     description = Column(Text, comment="模板描述")
     creator_id = Column(String, ForeignKey("users.id"), nullable=False)
@@ -173,7 +206,9 @@ class EvaluationTemplate(Base):
     is_active = Column(Boolean, default=True, comment="是否活跃")
 
     # 时间戳
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
     # 关系

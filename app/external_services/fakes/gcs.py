@@ -1,7 +1,12 @@
+"""In-memory filesystem-backed fake for google.cloud.storage used in tests and local dev.
+
+Writes blobs under a configurable base directory and exposes ``Blob.public_url`` as a
+local ``file://`` URI so callers match production layout without implying a real GCS HTTP endpoint.
+"""
+
 from __future__ import annotations
 
 import shutil
-import tempfile
 from pathlib import Path
 from typing import Optional, Union
 
@@ -40,9 +45,9 @@ class FakeBucket:
 
 
 class FakeBlob:
-    GCS_PUBLIC_HTTPS_PREFIX = "https://storage.googleapis.com/"
-
-    def __init__(self, client: FakeGCSClient, bucket_name: str, path: str) -> None:
+    def __init__(
+        self, client: FakeGCSClient, bucket_name: str, path: str
+    ) -> None:
         self._client = client
         self._bucket_name = bucket_name
         # 统一去掉前导斜杠，避免生成路径时出现双斜杠
@@ -51,7 +56,7 @@ class FakeBlob:
     # 与 google.cloud.storage.Blob 接口保持一致（属性）
     @property
     def public_url(self) -> str:
-        return f"{self.GCS_PUBLIC_HTTPS_PREFIX}{self._bucket_name}/{self._path}"
+        return self._fs_path().resolve().as_uri()
 
     # 与 google.cloud.storage.Blob 接口保持一致（方法）
     def upload_from_string(

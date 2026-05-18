@@ -1,4 +1,4 @@
-name: CI - 安卓 IntelliMate App
+name: CI - IntelliMate Android App
 
 # TODOs:
 # - [ ] 自动化模块映射：ci_android_app.yaml 的测试任务解析依赖手工 case，新建模块会被漏测。重写为基于 settings.gradle.kts/gradlew projects 的映射，并在无法匹配时回退到执行完整 ./gradlew testDebugUnitTest。

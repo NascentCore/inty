@@ -1,6 +1,12 @@
 # CREATED_BY_AGENT
 """
 记忆抽取服务：筛选待抽取用户、拉取全量消息、调用 LLM 抽取并写入 memory、memory_extraction_log。
+
+**Companion importance scores**（可选）：当配置 ``memory_extraction.use_significance_perception_in_extraction``
+为真时，从 PostgreSQL ``chat_history.meta_data.significance_perception`` 读取内核写入的重要性三元组
+（``importance_round`` / ``importance_user_message`` / ``importance_assistant_message``），按
+``importance_round`` 对消息排序并在拼装给抽取模型的文本中附加简短标注（见 ``_prepare_messages_for_memory_extraction``、
+``_format_chat_for_prompt``）。数据来源与契约说明见 ``app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py`` 模块 docstring。
 """
 
 import asyncio
@@ -222,7 +228,10 @@ def _utc_day_bounds(target_date_utc: date) -> tuple[datetime, datetime]:
 
 
 def _build_daily_profile_prompt(
-    chat_text: str, target_date_utc: date, *, include_significance_hints: bool = False
+    chat_text: str,
+    target_date_utc: date,
+    *,
+    include_significance_hints: bool = False,
 ) -> str:
     header = _DAILY_PROFILE_PROMPT_TEMPLATE.format(
         target_day=target_date_utc.isoformat()
@@ -232,9 +241,7 @@ def _build_daily_profile_prompt(
         if include_significance_hints
         else ""
     )
-    return (
-        f"{header}{sig}\n\n---\n\n# User chat history for the target day\n\n{chat_text}"
-    )
+    return f"{header}{sig}\n\n---\n\n# User chat history for the target day\n\n{chat_text}"
 
 
 def _build_incremental_update_prompt(
@@ -260,6 +267,7 @@ def _build_incremental_update_prompt(
 
 
 def _importance_round_from_meta(meta: dict[str, Any] | None) -> int:
+    """Extract ``importance_round`` from ``chat_history.meta_data`` for significance-aware ordering."""
     if not meta:
         return 0
     sp = meta.get("significance_perception")
@@ -285,7 +293,8 @@ def _format_chat_for_prompt(
                 iu = sp.get("importance_user_message")
                 ia = sp.get("importance_assistant_message")
                 if all(
-                    isinstance(x, int) and not isinstance(x, bool) for x in (ir, iu, ia)
+                    isinstance(x, int) and not isinstance(x, bool)
+                    for x in (ir, iu, ia)
                 ):
                     extra = (
                         f" [significance round={ir}/10 user_msg={iu}/10 "
@@ -339,8 +348,12 @@ async def _chat_completion_with_structured_fallback(
             prompt, llm_config=llm_config, response_format=response_format
         )
     except Exception as format_err:
-        logger.debug(f"{log_prefix} structured output 失败，回退自由文本: {format_err}")
-        return await chat_completion_for_extraction(prompt, llm_config=llm_config)
+        logger.debug(
+            f"{log_prefix} structured output 失败，回退自由文本: {format_err}"
+        )
+        return await chat_completion_for_extraction(
+            prompt, llm_config=llm_config
+        )
 
 
 def get_all_messages_for_user(
@@ -355,7 +368,9 @@ def get_all_messages_for_user(
         try:
             conn = get_chat_history_replica_connection()
         except psycopg.Error as e:
-            logger.warning(f"[记忆抽取] 获取副本连接失败，回退主库读取消息: {e}")
+            logger.warning(
+                f"[记忆抽取] 获取副本连接失败，回退主库读取消息: {e}"
+            )
     if conn is None:
         conn = get_chat_history_connection()
     with conn.cursor() as cur:
@@ -413,7 +428,9 @@ def get_all_messages_for_user(
                 content = data["data"]["content"] or ""
             elif "content" in data:
                 content = data["content"] or ""
-            role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
+            role = (
+                "user" if msg_type in ("human", "HumanMessage") else "assistant"
+            )
             out.append((role, str(content), meta))
     return out
 
@@ -430,7 +447,9 @@ def get_messages_for_user_in_utc_day(
         try:
             conn = get_chat_history_replica_connection()
         except psycopg.Error as e:
-            logger.warning(f"[记忆抽取] 获取副本连接失败，回退主库读取消息: {e}")
+            logger.warning(
+                f"[记忆抽取] 获取副本连接失败，回退主库读取消息: {e}"
+            )
     if conn is None:
         conn = get_chat_history_connection()
     with conn.cursor() as cur:
@@ -491,7 +510,9 @@ def get_messages_for_user_in_utc_day(
                 content = data["data"]["content"] or ""
             elif "content" in data:
                 content = data["content"] or ""
-            role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
+            role = (
+                "user" if msg_type in ("human", "HumanMessage") else "assistant"
+            )
             out.append((role, str(content), meta))
     return out
 
@@ -500,10 +521,14 @@ _USAGE_TYPE_CHAT = "chat"
 
 
 def _get_sync_replica_db_url() -> Optional[str]:
-    async_replica_url = global_config_loaded_from_config_yaml.database.async_replica_url
+    async_replica_url = (
+        global_config_loaded_from_config_yaml.database.async_replica_url
+    )
     if not async_replica_url:
         return None
-    return async_replica_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    return async_replica_url.replace(
+        "postgresql+asyncpg://", "postgresql://", 1
+    )
 
 
 def _resolve_sync_read_db_url(prefer_replica_read: bool) -> str:
@@ -530,9 +555,13 @@ def _compute_users_to_extract_sync(
         return []
 
     candidate_user_ids = list(user_to_chats.keys())
-    new_user_ids = [uid for uid in candidate_user_ids if uid not in user_to_last]
+    new_user_ids = [
+        uid for uid in candidate_user_ids if uid not in user_to_last
+    ]
     old_user_items = [
-        (uid, user_to_last[uid]) for uid in candidate_user_ids if uid in user_to_last
+        (uid, user_to_last[uid])
+        for uid in candidate_user_ids
+        if uid in user_to_last
     ]
     num_users = len(candidate_user_ids)
     logger.info(
@@ -547,7 +576,9 @@ def _compute_users_to_extract_sync(
     except psycopg.Error as e:
         if read_db_url and db_url != primary_db_url:
             # 迁移关键步骤：离线读优先副本，副本不可达时自动回退主库，保证任务可继续执行。
-            logger.warning(f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}")
+            logger.warning(
+                f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}"
+            )
             conn = psycopg.connect(primary_db_url, autocommit=True)
         else:
             raise
@@ -574,7 +605,9 @@ def _compute_users_to_extract_sync(
         if old_user_items:
             for i in range(0, len(old_user_items), _MAX_IN_PARAMS):
                 chunk = old_user_items[i : i + _MAX_IN_PARAMS]
-                values_ph = ",".join("(%s::text, %s::timestamptz)" for _ in chunk)
+                values_ph = ",".join(
+                    "(%s::text, %s::timestamptz)" for _ in chunk
+                )
                 flat = []
                 for uid, last_at in chunk:
                     flat.append(uid)
@@ -613,7 +646,9 @@ def _compute_users_with_messages_in_utc_day_sync(
         conn = psycopg.connect(db_url, autocommit=True)
     except psycopg.Error as e:
         if read_db_url and db_url != primary_db_url:
-            logger.warning(f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}")
+            logger.warning(
+                f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}"
+            )
             conn = psycopg.connect(primary_db_url, autocommit=True)
         else:
             raise
@@ -659,7 +694,9 @@ async def get_users_to_extract(
     thresh_incr = cfg.trigger_incremental_messages
 
     # 所有有会话的用户及其 chat_id
-    r = await db.execute(text("SELECT user_id, id FROM chats WHERE is_active = true"))
+    r = await db.execute(
+        text("SELECT user_id, id FROM chats WHERE is_active = true")
+    )
     rows = r.fetchall()
     user_to_chats: dict = {}
     for uid, cid in rows:
@@ -705,7 +742,9 @@ async def get_users_with_messages_in_utc_day(
 
 
 def _memory_llm_config(cfg) -> LLMConfig:
-    model_name = cfg.model.strip() if cfg.model else DEFAULT_MEMORY_EXTRACTION_MODEL
+    model_name = (
+        cfg.model.strip() if cfg.model else DEFAULT_MEMORY_EXTRACTION_MODEL
+    )
     return LLMConfig(
         model=model_name or None,
         max_tokens=4000,
@@ -713,7 +752,9 @@ def _memory_llm_config(cfg) -> LLMConfig:
     )
 
 
-async def _latest_user_common_memory_content(db: AsyncSession, user_id: str) -> str:
+async def _latest_user_common_memory_content(
+    db: AsyncSession, user_id: str
+) -> str:
     result = await db.execute(
         text("""
             SELECT content

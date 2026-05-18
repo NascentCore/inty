@@ -9,7 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app import models
+from app.models.agent import Agent
+from app.models.character_theme import CharacterTheme, CharacterThemeAgent
 from app.models.character_theme import CharacterThemeVisibility
 from app.schemas import character_theme as character_theme_schemas
 
@@ -31,11 +32,9 @@ async def _ensure_visibility_uniqueness(
     if visibility == CharacterThemeVisibility.HIDDEN:
         return
 
-    stmt = select(models.CharacterTheme).where(
-        models.CharacterTheme.visibility == visibility
-    )
+    stmt = select(CharacterTheme).where(CharacterTheme.visibility == visibility)
     if exclude_theme_id:
-        stmt = stmt.where(models.CharacterTheme.id != exclude_theme_id)
+        stmt = stmt.where(CharacterTheme.id != exclude_theme_id)
 
     result = await db.execute(stmt)
     conflicting_themes = result.scalars().all()
@@ -49,7 +48,7 @@ async def _ensure_visibility_uniqueness(
 
 async def create_theme(
     db: AsyncSession, theme_in: character_theme_schemas.CharacterThemeCreate
-) -> models.CharacterTheme:
+) -> CharacterTheme:
     """创建角色主题专区"""
     visibility = (
         theme_in.visibility
@@ -59,7 +58,7 @@ async def create_theme(
 
     await _ensure_visibility_uniqueness(db, visibility)
 
-    theme = models.CharacterTheme(
+    theme = CharacterTheme(
         id=str(uuid.uuid4()),
         name=theme_in.name,
         description=theme_in.description,
@@ -72,12 +71,12 @@ async def create_theme(
 
     # 重新加载 theme 对象，确保 agents 关系被正确加载（即使是空列表）
     stmt = (
-        select(models.CharacterTheme)
-        .where(models.CharacterTheme.id == theme.id)
+        select(CharacterTheme)
+        .where(CharacterTheme.id == theme.id)
         .options(
-            selectinload(models.CharacterTheme.agents)
-            .selectinload(models.CharacterThemeAgent.agent)
-            .selectinload(models.Agent.creator)
+            selectinload(CharacterTheme.agents)
+            .selectinload(CharacterThemeAgent.agent)
+            .selectinload(Agent.creator)
         )
     )
     result = await db.execute(stmt)
@@ -87,15 +86,17 @@ async def create_theme(
     return theme
 
 
-async def get_theme(db: AsyncSession, theme_id: str) -> Optional[models.CharacterTheme]:
+async def get_theme(
+    db: AsyncSession, theme_id: str
+) -> Optional[CharacterTheme]:
     """获取角色主题专区详情（包含角色列表，按 order_index 排序）"""
     stmt = (
-        select(models.CharacterTheme)
-        .where(models.CharacterTheme.id == theme_id)
+        select(CharacterTheme)
+        .where(CharacterTheme.id == theme_id)
         .options(
-            selectinload(models.CharacterTheme.agents)
-            .selectinload(models.CharacterThemeAgent.agent)
-            .selectinload(models.Agent.creator)
+            selectinload(CharacterTheme.agents)
+            .selectinload(CharacterThemeAgent.agent)
+            .selectinload(Agent.creator)
         )
     )
     result = await db.execute(stmt)
@@ -104,8 +105,11 @@ async def get_theme(db: AsyncSession, theme_id: str) -> Optional[models.Characte
 
 
 async def list_themes(
-    db: AsyncSession, skip: int = 0, limit: int = 100, include_hidden: bool = False
-) -> List[models.CharacterTheme]:
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 100,
+    include_hidden: bool = False,
+) -> List[CharacterTheme]:
     """获取角色主题专区列表
 
     Args:
@@ -114,12 +118,15 @@ async def list_themes(
         limit: 返回的记录数
         include_hidden: 是否包含不可见的专区，默认 False（只返回可见专区）
     """
-    stmt = select(models.CharacterTheme)
+    stmt = select(CharacterTheme)
 
     if not include_hidden:
         stmt = stmt.where(
-            models.CharacterTheme.visibility.in_(
-                [CharacterThemeVisibility.PRIMARY, CharacterThemeVisibility.SECONDARY]
+            CharacterTheme.visibility.in_(
+                [
+                    CharacterThemeVisibility.PRIMARY,
+                    CharacterThemeVisibility.SECONDARY,
+                ]
             )
         )
 
@@ -127,9 +134,9 @@ async def list_themes(
         stmt.offset(skip)
         .limit(limit)
         .options(
-            selectinload(models.CharacterTheme.agents)
-            .selectinload(models.CharacterThemeAgent.agent)
-            .selectinload(models.Agent.creator)
+            selectinload(CharacterTheme.agents)
+            .selectinload(CharacterThemeAgent.agent)
+            .selectinload(Agent.creator)
         )
     )
     result = await db.execute(stmt)
@@ -148,7 +155,7 @@ async def update_theme(
     db: AsyncSession,
     theme_id: str,
     theme_in: character_theme_schemas.CharacterThemeUpdate,
-) -> Optional[models.CharacterTheme]:
+) -> Optional[CharacterTheme]:
     """更新角色主题专区信息"""
     theme = await get_theme(db, theme_id)
     if not theme:
@@ -172,12 +179,12 @@ async def update_theme(
 
     # 重新加载 theme 对象，确保 agents 关系被正确加载
     stmt = (
-        select(models.CharacterTheme)
-        .where(models.CharacterTheme.id == theme.id)
+        select(CharacterTheme)
+        .where(CharacterTheme.id == theme.id)
         .options(
-            selectinload(models.CharacterTheme.agents)
-            .selectinload(models.CharacterThemeAgent.agent)
-            .selectinload(models.Agent.creator)
+            selectinload(CharacterTheme.agents)
+            .selectinload(CharacterThemeAgent.agent)
+            .selectinload(Agent.creator)
         )
     )
     result = await db.execute(stmt)
@@ -201,7 +208,7 @@ async def delete_theme(db: AsyncSession, theme_id: str) -> bool:
 
 async def add_agent_to_theme(
     db: AsyncSession, theme_id: str, agent_id: str
-) -> models.CharacterThemeAgent:
+) -> CharacterThemeAgent:
     """向专区添加角色"""
     # 检查专区是否存在
     theme = await get_theme(db, theme_id)
@@ -209,16 +216,16 @@ async def add_agent_to_theme(
         raise HTTPException(status_code=404, detail="Theme section not found")
 
     # 检查角色是否存在
-    agent_stmt = select(models.Agent).where(models.Agent.id == agent_id)
+    agent_stmt = select(Agent).where(Agent.id == agent_id)
     agent_result = await db.execute(agent_stmt)
     agent = agent_result.scalar_one_or_none()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
     # 检查角色是否已在专区中
-    existing_stmt = select(models.CharacterThemeAgent).where(
-        models.CharacterThemeAgent.theme_id == theme_id,
-        models.CharacterThemeAgent.agent_id == agent_id,
+    existing_stmt = select(CharacterThemeAgent).where(
+        CharacterThemeAgent.theme_id == theme_id,
+        CharacterThemeAgent.agent_id == agent_id,
     )
     existing_result = await db.execute(existing_stmt)
     existing = existing_result.scalar_one_or_none()
@@ -230,15 +237,15 @@ async def add_agent_to_theme(
     # 获取当前最大 order_index
     from sqlalchemy import func
 
-    max_order_stmt = select(func.max(models.CharacterThemeAgent.order_index)).where(
-        models.CharacterThemeAgent.theme_id == theme_id
+    max_order_stmt = select(func.max(CharacterThemeAgent.order_index)).where(
+        CharacterThemeAgent.theme_id == theme_id
     )
     max_order_result = await db.execute(max_order_stmt)
     max_order = max_order_result.scalar()
     next_order = (max_order + 1) if max_order is not None else 0
 
     # 创建关联记录
-    theme_agent = models.CharacterThemeAgent(
+    theme_agent = CharacterThemeAgent(
         theme_id=theme_id,
         agent_id=agent_id,
         order_index=next_order,
@@ -249,15 +256,13 @@ async def add_agent_to_theme(
 
     # 重新加载 theme_agent 对象，确保 agent 关系被正确加载
     stmt = (
-        select(models.CharacterThemeAgent)
+        select(CharacterThemeAgent)
         .where(
-            models.CharacterThemeAgent.theme_id == theme_id,
-            models.CharacterThemeAgent.agent_id == agent_id,
+            CharacterThemeAgent.theme_id == theme_id,
+            CharacterThemeAgent.agent_id == agent_id,
         )
         .options(
-            selectinload(models.CharacterThemeAgent.agent).selectinload(
-                models.Agent.creator
-            )
+            selectinload(CharacterThemeAgent.agent).selectinload(Agent.creator)
         )
     )
     result = await db.execute(stmt)
@@ -271,9 +276,9 @@ async def remove_agent_from_theme(
     db: AsyncSession, theme_id: str, agent_id: str
 ) -> bool:
     """从专区移除角色"""
-    stmt = select(models.CharacterThemeAgent).where(
-        models.CharacterThemeAgent.theme_id == theme_id,
-        models.CharacterThemeAgent.agent_id == agent_id,
+    stmt = select(CharacterThemeAgent).where(
+        CharacterThemeAgent.theme_id == theme_id,
+        CharacterThemeAgent.agent_id == agent_id,
     )
     result = await db.execute(stmt)
     theme_agent = result.scalar_one_or_none()
@@ -286,7 +291,9 @@ async def remove_agent_from_theme(
     return True
 
 
-async def reorder_agents(db: AsyncSession, theme_id: str, agent_ids: List[str]) -> bool:
+async def reorder_agents(
+    db: AsyncSession, theme_id: str, agent_ids: List[str]
+) -> bool:
     """调整角色顺序"""
     # 检查专区是否存在
     theme = await get_theme(db, theme_id)
@@ -294,8 +301,8 @@ async def reorder_agents(db: AsyncSession, theme_id: str, agent_ids: List[str]) 
         raise HTTPException(status_code=404, detail="Theme section not found")
 
     # 获取专区中所有角色关联记录
-    stmt = select(models.CharacterThemeAgent).where(
-        models.CharacterThemeAgent.theme_id == theme_id
+    stmt = select(CharacterThemeAgent).where(
+        CharacterThemeAgent.theme_id == theme_id
     )
     result = await db.execute(stmt)
     theme_agents = result.scalars().all()

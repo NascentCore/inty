@@ -1,5 +1,23 @@
-# backend/ops（运营平台）
+# `backend/ops/`：Ops 进程（评测 Web + 扩展 API）
 
-- Ops 提供 evaluation Web UI 与完整 `/api/v1`（evaluation、festival_memory + 与 Android 共用的 shared 端点）。
-- 启动：`./backend/ops/start.sh [--local|--dev] [--debug] [--log-file PATH] [--build-frontend|--no-build-frontend]`（`--local`/`--dev` 等价；`--debug` 打开 DEBUG；`--log-file` 写文件；**同时** `--debug` 与 `--log-file` 时终端为 INFO、文件为 DEBUG，等价于 `INTY_CONSOLE_LOGGING_LEVEL=INFO`）。`--local` 下默认会先跑 `evaluation/build.sh`，`--no-build-frontend` 可跳过。任意入口也可设 `INTY_LOG_FILE`；手动分流见 `app/core/logging.py` 的 `INTY_CONSOLE_LOGGING_LEVEL`。
-- 部署域名：ops.inty.cc（prod）、dev.ops.inty.cc（dev）；部署方式见计划与 [backend/README.md](../README.md)。
+**一句话**：运行 **带评测前端的运营服务**，并在标准 `/api/v1` 前缀下挂载 **评测、节日记忆、与主站共享的一批端点**；适合 **本地 8001** 或 `ops.*` 域名部署。
+
+## 读者
+
+- 需要本地起 Ops、排障评测前端、或理解「为什么同一仓库还有第二套端口」的工程师。
+
+## 行为直觉
+
+- **启动时迁移**：进程在对外服务前会尝试把数据库 **升到当前 Alembic head**——确保 Ops 与主站共用 **同一迁移链**。
+- **默认端口**：与 Inty 主后端 **不同**；可用环境变量覆盖监听端口。
+- **本地 token**：开发模式下常把测试用户 JWT 写到 **gitignore 的本地文件**，供 smoke 脚本与 REPL **免手抄** Bearer。
+- **静态评测 UI**：本地默认可选 **先构建前端再启服**；也可用 flag 跳过以加快纯 API 调试。
+- **日志**：支持文件与控制台 **分级**；调试组合下可能出现「终端 INFO + 文件 DEBUG」这类分流。
+
+## 与 Inty 主进程的差异
+
+- **健康检查与根路径**：Ops 可能挂载 **HTML 评测入口**；不要假设与主后端的 JSON 根响应一致。
+
+## 深入阅读
+
+- 端到端 smoke（含 WebSocket）与 bearer 读取：仓库技能 **inty-server-module-verify**；部署拓扑见 `backend/README.md`。

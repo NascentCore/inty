@@ -1,5 +1,5 @@
 """
-OpenAI API client helpers and shared client singleton.
+OpenAI API client helpers backed by the Companion Harness provider cache.
 
 Chat LLM (e.g. google/gemini-2.5-flash-lite) is invoked via this client against the
 OpenRouter endpoint (agent.base_url, agent.api_key). Do not use Vertex/genai client
@@ -21,7 +21,6 @@ LLM_PROVIDER_LITELLM = "litellm"
 # 之前尝试：https://github.com/NascentCore/inty/pull/2310 没有完成
 
 import os
-import threading
 from enum import StrEnum
 from typing import Any, Optional, Tuple
 
@@ -30,7 +29,7 @@ from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 
 from app.api.types.llm_config import LLMConfig
-from app.core.agentic_kernel.providers.facade import (
+from app.core.companion_harness.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_async_client,
     get_openai_compatible_sync_client,
@@ -73,25 +72,14 @@ def _warn_env_var(env_var: str):
 
 
 _warn_env_var("LANGCHAIN_API_KEY")
-_warn_env_var("LANGSMITH_TRACING_V2")
 _warn_env_var("LANGSMITH_PROJECT")
-
-
-# 全局单例基础客户端，用于复用HTTP连接
-_base_client: Optional[OpenAI] = None
-_client_lock = threading.Lock()
-
-_async_client: Optional[AsyncOpenAI] = None
-_async_client_lock = threading.Lock()
-
-_chat_client: Optional[OpenAI] = None
-_chat_client_lock = threading.Lock()
 
 
 def _create_openai_client():
     """创建基础OpenAI客户端实例（不含LangSmith包装）"""
     use_fake_openai = (
-        global_config_loaded_from_config_yaml.app.environment == Environment.TEST
+        global_config_loaded_from_config_yaml.app.environment
+        == Environment.TEST
     )
     return get_openai_compatible_sync_client(
         OpenAICompatibleClientOptions(
@@ -110,18 +98,11 @@ def _create_openai_client():
 
 def get_base_openai_client() -> OpenAI:
     """
-    获取全局单例的基础OpenAI客户端（不含LangSmith包装）
+    获取基础OpenAI客户端（不含LangSmith包装）。
 
-    使用双重检查锁定模式确保线程安全的单例创建。
-    复用HTTP连接池以提升性能。
+    实例复用由 Companion Harness provider 的 option-key cache 负责。
     """
-    global _base_client
-    if _base_client is None:
-        with _client_lock:
-            if _base_client is None:
-                logger.debug("创建全局基础OpenAI客户端")
-                _base_client = _create_openai_client()
-    return _base_client
+    return _create_openai_client()
 
 
 def _create_chat_openai_client() -> OpenAI:
@@ -130,7 +111,8 @@ def _create_chat_openai_client() -> OpenAI:
     base_url = cfg.chat_llm_base_url or cfg.base_url
     api_key = cfg.chat_llm_api_key or cfg.api_key
     use_fake_openai = (
-        global_config_loaded_from_config_yaml.app.environment == Environment.TEST
+        global_config_loaded_from_config_yaml.app.environment
+        == Environment.TEST
     )
     return get_openai_compatible_sync_client(
         OpenAICompatibleClientOptions(
@@ -148,16 +130,11 @@ def _create_chat_openai_client() -> OpenAI:
 
 def get_chat_openai_client() -> OpenAI:
     """
-    获取 Agent 聊天专用 OpenAI 客户端单例。
+    获取 Agent 聊天专用 OpenAI 客户端。
+
     当配置了 agent.chat_llm_base_url 与 agent.chat_llm_api_key 时使用该端点（如 LiteLLM），否则与 get_base_openai_client() 相同。
     """
-    global _chat_client
-    if _chat_client is None:
-        with _chat_client_lock:
-            if _chat_client is None:
-                logger.debug("创建 Agent 聊天专用 OpenAI 客户端")
-                _chat_client = _create_chat_openai_client()
-    return _chat_client
+    return _create_chat_openai_client()
 
 
 def get_chat_llm_provider() -> str:
@@ -185,16 +162,11 @@ def _create_async_openai_client() -> AsyncOpenAI:
 
 def get_async_openai_client() -> AsyncOpenAI:
     """
-    获取全局单例的 AsyncOpenAI 客户端。
+    获取 AsyncOpenAI 客户端。
+
     用于记忆抽取等异步调用，与 get_base_openai_client() 配置一致。
     """
-    global _async_client
-    if _async_client is None:
-        with _async_client_lock:
-            if _async_client is None:
-                logger.debug("创建全局 AsyncOpenAI 客户端")
-                _async_client = _create_async_openai_client()
-    return _async_client
+    return _create_async_openai_client()
 
 
 def _default_extraction_llm_config() -> LLMConfig:
@@ -234,7 +206,11 @@ async def chat_completion_for_extraction(
     llm_config 为 None 时使用默认配置（DEFAULT_MEMORY_EXTRACTION_MODEL、max_tokens=4000、temperature=0.3）。
     response_format 非空时传入 create（OpenRouter/OpenAI 结构化输出），content 为 JSON 字符串，由调用方解析。
     """
-    cfg = llm_config if llm_config is not None else _default_extraction_llm_config()
+    cfg = (
+        llm_config
+        if llm_config is not None
+        else _default_extraction_llm_config()
+    )
     client = get_async_openai_client()
     create_kwargs = _llm_config_to_create_kwargs(cfg)
     if response_format is not None:
@@ -244,7 +220,9 @@ async def chat_completion_for_extraction(
         messages=[{"role": "user", "content": prompt}],
         **create_kwargs,
     )
-    content = (response.choices[0].message.content or "") if response.choices else ""
+    content = (
+        (response.choices[0].message.content or "") if response.choices else ""
+    )
     usage = response.usage
     prompt_tokens = usage.prompt_tokens if usage else None
     completion_tokens = usage.completion_tokens if usage else None

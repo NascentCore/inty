@@ -74,22 +74,32 @@ from app.core.google_genai.predefined_configs import (
     GEN_CONTENT_CONFIG_IMAGE_9_16_1K_MLDEV,
 )
 from app.core.images.types import GeneratedImageProcessResult
-from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
+from app.external_services.gcs import upload_to_gcs
 from app.utils.gemini import get_genai_client, get_newapi_gemini_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
-from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO, NEWAPI_NANO_BANANA_2
+from app.utils.models_catalog import (
+    NANO_BANANA,
+    NANO_BANANA_PRO,
+    NEWAPI_NANO_BANANA_2,
+)
 
 # LangSmith trace 中只记录 raw_data 的前 N 字节，避免大块二进制写入 trace。
 _LANGSMITH_RAW_DATA_TRACE_BYTES = 100
-_LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT = "[omitted raw image data after GCS upload]"
+_LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT = (
+    "[omitted raw image data after GCS upload]"
+)
 
 
 def _build_omitted_raw_image_data_marker(raw_value: Any) -> str:
     if isinstance(raw_value, bytes):
-        return f"{_LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT} ({len(raw_value)} bytes)"
+        return (
+            f"{_LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT} ({len(raw_value)} bytes)"
+        )
     if isinstance(raw_value, str):
-        return f"{_LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT} ({len(raw_value)} chars)"
+        return (
+            f"{_LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT} ({len(raw_value)} chars)"
+        )
     return _LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT
 
 
@@ -102,7 +112,9 @@ def _remove_raw_image_data_inplace(payload: dict[str, Any] | list[Any]) -> None:
 
     inline_data = payload.get("inline_data")
     if isinstance(inline_data, dict) and "data" in inline_data:
-        inline_data["data"] = _build_omitted_raw_image_data_marker(inline_data["data"])
+        inline_data["data"] = _build_omitted_raw_image_data_marker(
+            inline_data["data"]
+        )
 
     for value in payload.values():
         if isinstance(value, (dict, list)):
@@ -239,7 +251,9 @@ class WrappedClient:
                 # 新的多模态模型 API 使用 generate_content 方法，支持文本和图像输入。
                 # 复制 config 以设置 candidate_count 及可选的 system_instruction，避免污染全局预设。
                 use_newapi = model == NEWAPI_NANO_BANANA_2.id_on_provider
-                newapi_client = get_newapi_gemini_client() if use_newapi else None
+                newapi_client = (
+                    get_newapi_gemini_client() if use_newapi else None
+                )
                 if use_newapi and newapi_client is None:
                     raise ValueError(
                         "消息生图模型为 NewAPI Nano Banana 2 时需在配置中设置 "
@@ -254,7 +268,9 @@ class WrappedClient:
                 config = copy.copy(base_cfg)
                 config.candidate_count = count
                 if system_instructions is not None:
-                    config.system_instruction = get_text_parts(system_instructions)
+                    config.system_instruction = get_text_parts(
+                        system_instructions
+                    )
 
                 contents_parts = get_jpeg_url_and_text_mixed_parts(contents)
                 response = await gen_client.aio.models.generate_content(
@@ -275,7 +291,9 @@ class WrappedClient:
                     parts.append(_process_one_candidate(candidate))
                 results = []
                 for part in parts:
-                    result = _process_image_part_to_generated_image(part, gcs_uri_base)
+                    result = _process_image_part_to_generated_image(
+                        part, gcs_uri_base
+                    )
                     result.raw_response_from_provider = response
                     results.append(result)
                 return results
@@ -292,7 +310,10 @@ def _validate_gemini_image_response(response: Any) -> None:
     if hasattr(response, "prompt_feedback") and response.prompt_feedback:
         prompt_feedback = response.prompt_feedback
         logger.warning("Prompt feedback: {}", prompt_feedback)
-        if hasattr(prompt_feedback, "block_reason") and prompt_feedback.block_reason:
+        if (
+            hasattr(prompt_feedback, "block_reason")
+            and prompt_feedback.block_reason
+        ):
             logger.warning("请求被阻止，原因: {}", prompt_feedback.block_reason)
             raise ValueError(
                 f"Image generation request blocked by safety filter: {prompt_feedback.block_reason}"
@@ -347,9 +368,7 @@ def _process_one_candidate(candidate: Any) -> gemini_types.Part:
         if hasattr(r, "blocked") and r.blocked
     ]
     if blocked_ratings:
-        error_msg = (
-            f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
-        )
+        error_msg = f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
         logger.error(error_msg)
         raise ValueError(error_msg)
 
@@ -436,7 +455,9 @@ def _process_image_part_to_generated_image(
         pil_image = PIL.Image.open(io.BytesIO(image_data))
         width, height = pil_image.size
         image_format = pil_image.format
-        logger.info("成功解析图片: {}x{}, 格式: {}", width, height, image_format)
+        logger.info(
+            "成功解析图片: {}x{}, 格式: {}", width, height, image_format
+        )
     except Exception as e:
         logger.error("PIL 无法解析图片: {}", str(e))
         try:
@@ -459,17 +480,18 @@ def _process_image_part_to_generated_image(
     content_type = _FORMAT_TO_MIME.get(fmt_upper, "image/jpeg")
     ext = _FORMAT_TO_EXT.get(fmt_upper, "jpg")
 
-    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime(
+        "%Y%m%d_%H%M%S"
+    )
     gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{ext}"
     bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
-    upload_to_gcs(
+    gcs_http_url = upload_to_gcs(
         file_data=image_data,
         content_type=content_type,
         bucket_name=bucket_name,
         path=gcs_path,
     )
     gcs_uri = f"gs://{bucket_name}/{gcs_path}"
-    gcs_http_url = f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket_name}/{gcs_path}"
     logger.info("图片已上传到 GCS: {}", gcs_uri)
 
     now_utc = datetime.datetime.now(datetime.timezone.utc)

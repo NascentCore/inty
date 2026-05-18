@@ -13,7 +13,7 @@ CREATED_BY_AGENT: gpt-5.2-codex-high
 - 为后续拆分后台任务与性能治理奠定基础。
 
 ### 范围
-- 仅覆盖 `app/` 后端服务；数据库迁移仍在 `alembic/` 管理。
+- 仅覆盖 `app/` 后端服务；数据库迁移仍在 `backend/alembic/` 管理。
 - 不涉及 OpenAPI/SDK 的生成流程修改。
 - 不引入破坏性接口变更，除非明确标注与同步升级客户端。
 
@@ -45,7 +45,7 @@ CREATED_BY_AGENT: gpt-5.2-codex-high
 
 **0.1 架构现状盘点**
 - 任务：整理核心链路（登录、聊天、语音、订阅、评测）调用图。
-- 产出：`app/docs/ARCH_BASELINE.md`（若超 500 行功能改动，需遵循 app/docs/AGENTS.md）
+- 产出：`app/docs/ARCH_BASELINE.md`（若超 500 行功能改动，需遵循 `app/AGENTS.md`）
 - 验收：每条核心链路包含路由、服务、外部调用、DB 模型与缓存说明。
 
 **0.2 风险清单**

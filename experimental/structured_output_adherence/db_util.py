@@ -29,7 +29,8 @@ def load_db_config(
         return env_url, {}
 
     path = config_path or os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config.yaml"
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "config.yaml",
     )
     db_kwargs: Dict[str, Any] = {}
     if os.path.isfile(path):

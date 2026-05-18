@@ -15,13 +15,11 @@ They differ in:
 This file is for the genai API.
 """
 
-import contextlib
 import io
 import json
 import os
 from enum import StrEnum
 import threading
-from collections.abc import Iterator
 from typing import List, Optional
 
 from google import genai
@@ -31,7 +29,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.agentic_kernel.providers.gemini import (
+from app.core.companion_harness.providers.gemini import (
     GeminiClientOptions,
     get_gemini_client as get_kernel_gemini_client,
 )
@@ -60,7 +58,9 @@ def create_google_genai_client():
     使用 Vertex AI 配置创建并返回包装后的 Google Gen AI 客户端。
     使用与 GCS 相同的 service account 凭证；可抛出 ValueError 或 genai 相关异常。
     """
-    credentials_path = global_config_loaded_from_config_yaml.app.gcp_service_account_key
+    credentials_path = (
+        global_config_loaded_from_config_yaml.app.gcp_service_account_key
+    )
     if not os.path.exists(credentials_path):
         raise ValueError(
             f"Service account credentials file not found at: {credentials_path}"
@@ -114,33 +114,8 @@ def get_genai_client():
     return _google_genai_client
 
 
-_GOOGLE_ENV_POP = (
-    "GOOGLE_CLOUD_LOCATION",
-    "GOOGLE_CLOUD_PROJECT",
-    "GOOGLE_API_KEY",
-    "GEMINI_API_KEY",
-    "GOOGLE_APPLICATION_CREDENTIALS",
-)
-_newapi_client_cache: tuple[str, str, genai.Client] | None = None
-_newapi_client_lock = threading.Lock()
-
-
-@contextlib.contextmanager
-def _without_google_env_for_newapi() -> Iterator[None]:
-    saved = {k: os.environ[k] for k in _GOOGLE_ENV_POP if k in os.environ}
-    try:
-        for k in _GOOGLE_ENV_POP:
-            os.environ.pop(k, None)
-        yield
-    finally:
-        for k in _GOOGLE_ENV_POP:
-            os.environ.pop(k, None)
-        os.environ.update(saved)
-
-
 def get_newapi_gemini_client() -> genai.Client | None:
     """若配置了 newapi_gemini_base_url 则返回指向 NewAPI 的 client，否则 None。"""
-    global _newapi_client_cache
     agent = global_config_loaded_from_config_yaml.agent
     base = (agent.newapi_gemini_base_url or "").strip().rstrip("/")
     if not base:
@@ -148,23 +123,19 @@ def get_newapi_gemini_client() -> genai.Client | None:
     tok = (agent.newapi_gemini_bearer_token or "").strip() or (
         os.environ.get("NEWAPI_GEMINI_BEARER_TOKEN") or ""
     ).strip()
-    key = (base, tok)
-    with _newapi_client_lock:
-        if _newapi_client_cache and _newapi_client_cache[0:2] == key:
-            return _newapi_client_cache[2]
-        hdrs = {"Authorization": f"Bearer {tok}"}
-        with _without_google_env_for_newapi():
-            client = genai.Client(
-                vertexai=False,
-                api_key=tok,
-                http_options=types.HttpOptions(
-                    base_url=base,
-                    headers=hdrs,
-                    api_version="v1beta",
-                ),
-            )
-        _newapi_client_cache = (base, tok, client)
-        return client
+    hdrs = {"Authorization": f"Bearer {tok}"}
+    return get_kernel_gemini_client(
+        GeminiClientOptions(
+            vertexai=False,
+            api_key=tok or None,
+            http_options={
+                "base_url": base,
+                "headers": hdrs,
+                "api_version": "v1beta",
+            },
+            clear_google_env=True,
+        )
+    )
 
 
 def enhance_prompt(prompt: str, gender: str) -> str:
@@ -410,7 +381,9 @@ def text_to_image(
                 gcs_uri = f"https://storage.googleapis.com/{gcs_path}"
                 logger.debug(f"Image {i}: {gcs_uri}")
             elif gcs_uri is None:
-                logger.debug(f"Image {i}: Filtered by RAI - no GCS URI available")
+                logger.debug(
+                    f"Image {i}: Filtered by RAI - no GCS URI available"
+                )
 
             # Try to get size from image.image.image_bytes if available
             size = None
@@ -434,7 +407,10 @@ def text_to_image(
                             f"(比例 {current_aspect_ratio:.4f}) -> 9:16"
                         )
                         cropped_image = crop_image_to_9_16(pil_image)
-                        cropped_size = (cropped_image.width, cropped_image.height)
+                        cropped_size = (
+                            cropped_image.width,
+                            cropped_image.height,
+                        )
 
                         # 将裁剪后的图片转换为 JPEG bytes
                         cropped_image_bytes = get_jpg_bytes_from_pil_image(
@@ -442,8 +418,8 @@ def text_to_image(
                         )
 
                         # 从 GCS URI 提取 bucket 和 path
-                        bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(
-                            gcs_uri
+                        bucket_name, gcs_path = (
+                            get_bucket_and_path_from_gcs_url(gcs_uri)
                         )
 
                         # 删除原图

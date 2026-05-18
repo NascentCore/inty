@@ -1,0 +1,34 @@
+# Intelligence (columns) × realtime (rows) conversation-type grid (English)
+title: "Conversation types on intelligence (x) × realtime (y), including a moderate band"
+layout:
+  fig_width_in: 14
+  fig_height_in: 10
+  dpi: 150
+style:
+  figure_facecolor: "#121212"
+  cell_facecolor: "#2a2a2a"
+  edgecolor: "#888888"
+  linewidth: 1.2
+  text_color: "#eaeaea"
+  title_color: "#ffffff"
+  font_size_title: 13
+  font_size_header: 11
+  font_size_cell: 9
+  font_family: "DejaVu Sans"
+rows:
+  - - "Realtime · Intelligence"
+    - "Low"
+    - "Moderate"
+    - "High"
+  - - "Slow"
+    - "Templated small-talk\nHollow pacing\nFiller beats"
+    - "Everyday warm-up\nLight rapport\nGentle follow-ups"
+    - "Dialectic depth\nLong-chain reasoning\nResearch synthesis"
+  - - "Moderate"
+    - "FAQ placeholders\nQueue/hand-off scripts\nLong disclaimers"
+    - "Goal co-work\nExplain-and-practice\nBalanced chat"
+    - "Multi-step troubleshooting\nOption tradeoffs\nStructured probing"
+  - - "Fast"
+    - "Polite greetings\nTerse acknowledgments\nCommand/response"
+    - "One-line progress\nLight tips/nudges\nLow-cringe icebreakers"
+    - "Strong affect now\nCrisis calming\nLive repair"

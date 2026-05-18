@@ -76,9 +76,13 @@ class FalAIClient:
     def subscribe(
         self, *, model: str, arguments: dict[str, Any], with_logs: bool = False
     ) -> dict[str, Any]:
-        result = fal_client.subscribe(model, arguments=arguments, with_logs=with_logs)
+        result = fal_client.subscribe(
+            model, arguments=arguments, with_logs=with_logs
+        )
         if not isinstance(result, dict):
-            raise TypeError(f"fal_client.subscribe returned non-dict: {type(result)}")
+            raise TypeError(
+                f"fal_client.subscribe returned non-dict: {type(result)}"
+            )
         return result
 
     def text_to_image(
@@ -89,7 +93,9 @@ class FalAIClient:
         with_logs: bool = False,
     ) -> FalTextToImageResult:
         return _parse_fal_text_to_image_result(
-            self.subscribe(model=model, arguments=arguments, with_logs=with_logs)
+            self.subscribe(
+                model=model, arguments=arguments, with_logs=with_logs
+            )
         )
 
     def text_to_speech(
@@ -100,7 +106,9 @@ class FalAIClient:
         with_logs: bool = False,
     ) -> FalTextToSpeechResult:
         return _parse_fal_text_to_speech_result(
-            self.subscribe(model=model, arguments=arguments, with_logs=with_logs)
+            self.subscribe(
+                model=model, arguments=arguments, with_logs=with_logs
+            )
         )
 
     def text_to_video(
@@ -111,7 +119,9 @@ class FalAIClient:
         with_logs: bool = False,
     ) -> FalTextToVideoResult:
         return _parse_fal_text_to_video_result(
-            self.subscribe(model=model, arguments=arguments, with_logs=with_logs)
+            self.subscribe(
+                model=model, arguments=arguments, with_logs=with_logs
+            )
         )
 
     def image_to_image(
@@ -158,7 +168,9 @@ class FalAIClient:
             arguments.update(extra_args)
 
         return _parse_fal_text_to_image_result(
-            self.subscribe(model=model, arguments=arguments, with_logs=with_logs)
+            self.subscribe(
+                model=model, arguments=arguments, with_logs=with_logs
+            )
         )
 
 
@@ -169,17 +181,27 @@ def is_fal_model(model: Optional[str]) -> bool:
     return normalized.startswith("fal-ai/") or normalized.startswith("fal/")
 
 
-def _parse_fal_text_to_image_result(result: dict[str, Any]) -> FalTextToImageResult:
+def _parse_fal_text_to_image_result(
+    result: dict[str, Any],
+) -> FalTextToImageResult:
     images: list[FalGeneratedImage] = []
-    for img in (result.get("images", []) or []) if isinstance(result, dict) else []:
+    for img in (
+        (result.get("images", []) or []) if isinstance(result, dict) else []
+    ):
         if not isinstance(img, dict) or "url" not in img:
             continue
         images.append(
             FalGeneratedImage(
                 url=str(img["url"]),
-                width=img.get("width") if isinstance(img.get("width"), int) else None,
+                width=(
+                    img.get("width")
+                    if isinstance(img.get("width"), int)
+                    else None
+                ),
                 height=(
-                    img.get("height") if isinstance(img.get("height"), int) else None
+                    img.get("height")
+                    if isinstance(img.get("height"), int)
+                    else None
                 ),
                 content_type=(
                     img.get("content_type")
@@ -192,7 +214,9 @@ def _parse_fal_text_to_image_result(result: dict[str, Any]) -> FalTextToImageRes
     seed = result.get("seed")
     prompt = result.get("prompt")
     has_nsfw_concepts = result.get("has_nsfw_concepts")
-    if has_nsfw_concepts is not None and not isinstance(has_nsfw_concepts, list):
+    if has_nsfw_concepts is not None and not isinstance(
+        has_nsfw_concepts, list
+    ):
         has_nsfw_concepts = None
 
     return FalTextToImageResult(
@@ -204,7 +228,9 @@ def _parse_fal_text_to_image_result(result: dict[str, Any]) -> FalTextToImageRes
     )
 
 
-def _parse_fal_text_to_speech_result(result: dict[str, Any]) -> FalTextToSpeechResult:
+def _parse_fal_text_to_speech_result(
+    result: dict[str, Any],
+) -> FalTextToSpeechResult:
     audio_url: Optional[str] = None
     content_type: Optional[str] = None
 
@@ -233,7 +259,9 @@ def _parse_fal_text_to_speech_result(result: dict[str, Any]) -> FalTextToSpeechR
     return FalTextToSpeechResult(audio=audio, raw=result)
 
 
-def _parse_fal_text_to_video_result(result: dict[str, Any]) -> FalTextToVideoResult:
+def _parse_fal_text_to_video_result(
+    result: dict[str, Any],
+) -> FalTextToVideoResult:
     videos: list[FalGeneratedVideo] = []
 
     # Common shapes:
@@ -241,7 +269,9 @@ def _parse_fal_text_to_video_result(result: dict[str, Any]) -> FalTextToVideoRes
     # - {"videos": [{"url": "..."}, ...]}
     if isinstance(result.get("videos"), list):
         for item in result["videos"]:
-            if not isinstance(item, dict) or not isinstance(item.get("url"), str):
+            if not isinstance(item, dict) or not isinstance(
+                item.get("url"), str
+            ):
                 continue
             videos.append(
                 FalGeneratedVideo(

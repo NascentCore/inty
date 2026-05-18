@@ -17,7 +17,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, validates
 
-from app.models import Base
+from app.models.base import Base
 
 
 class AuthType(str, enum.Enum):
@@ -63,10 +63,11 @@ class User(Base):
 
     @validates("phone")
     def validate_phone(self, key, value):
-        logger.warning(
-            "The 'phone' is added without a clear plan to be used. Please do not use it. Ask @yaxiong if you need phone.",
-            DeprecationWarning,
-        )
+        if value:
+            logger.warning(
+                "The 'phone' is added without a clear plan to be used. Please do not use it. Ask @yaxiong if you need phone.",
+                DeprecationWarning,
+            )
         return value
 
     phone = Column(String, unique=True, comment="手机号码，唯一，用于登录")
@@ -77,15 +78,23 @@ class User(Base):
         Enum(AuthType), nullable=False, comment="认证类型：手机号/Google/游客"
     )
     google_id = Column(String, comment="Google账号ID，用于支持用户注册登录")
-    password = Column(String, nullable=True, comment="密码哈希，用于 email 登录")
-    device_id = Column(String, unique=True, comment="设备ID，唯一，用于设备识别")
-    system_language = Column(String, default="en", comment="系统语言偏好，默认英语")
+    password = Column(
+        String, nullable=True, comment="密码哈希，用于 email 登录"
+    )
+    device_id = Column(
+        String, unique=True, comment="设备ID，唯一，用于设备识别"
+    )
+    system_language = Column(
+        String, default="en", comment="系统语言偏好，默认英语"
+    )
     meta_data = Column(
         JSON, nullable=True, comment="用户元数据（可扩展，例如 MBTI 类型）"
     )
     is_superuser = Column(Boolean, default=False, comment="是否为超级管理员")
     created_at = Column(
-        DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
+        DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        comment="创建时间",
     )
     updated_at = Column(
         DateTime(timezone=True), onupdate=sa.text("now()"), comment="更新时间"
@@ -131,10 +140,14 @@ class User(Base):
     subscription_transactions = relationship(
         "SubscriptionTransaction", back_populates="user"
     )
-    subscription_usage = relationship("SubscriptionUsage", back_populates="user")
+    subscription_usage = relationship(
+        "SubscriptionUsage", back_populates="user"
+    )
 
     # 评测相关关系
-    evaluation_sessions = relationship("EvaluationSession", back_populates="creator")
+    evaluation_sessions = relationship(
+        "EvaluationSession", back_populates="creator"
+    )
 
 
 class DeviceToken(Base):
@@ -142,8 +155,12 @@ class DeviceToken(Base):
 
     id = Column(Integer, primary_key=True)
     token = Column(Text, nullable=False, unique=True)
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     updated_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

@@ -17,7 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from typing_extensions import deprecated
 
-from app import models, schemas
+from app.models.agent import Agent
+from app.models.chat import Chat
+from app.models.resource import Resource
+from app.models.user import User
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.agent.agent import agent_manager
 from app.core.agent.prompt_template import (
@@ -49,9 +52,15 @@ from app.services.voice_service import (
 )
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import ImageFormat, ImageSize, get_jpg_bytes_from_pil_image
+from app.schemas.agent import Agent as AgentSchema
+from app.schemas.agent import AgentCreate
+from app.schemas.agent import AgentUpdate
+from app.schemas.agent import CreatorAgentStats
+from app.schemas.response import PaginationData
+from app.schemas.user import User as UserSchema
 
 
-async def _populate_agent_image_sizes(db: AsyncSession, agent: models.Agent) -> None:
+async def _populate_agent_image_sizes(db: AsyncSession, agent: Agent) -> None:
     """
     从 resources 表填充 agent 的 avatar_size 和 background_size
     """
@@ -66,7 +75,7 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: models.Agent) -> 
         return
     logger.debug(f"Agent {agent.id} Resource URLs: {resource_urls}")
     # 查询 resources 表获取图片尺寸信息
-    query = select(models.Resource).where(models.Resource.url.in_(resource_urls))
+    query = select(Resource).where(Resource.url.in_(resource_urls))
 
     result = await db.execute(query)
     resources = result.scalars().all()
@@ -93,7 +102,7 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: models.Agent) -> 
 
 
 async def generate_agent_opening_voice(
-    agent: models.Agent, db: AsyncSession
+    agent: Agent, db: AsyncSession
 ) -> Optional[str]:
     """
     为Agent生成开场白语音并返回音频URL
@@ -196,11 +205,11 @@ async def _generate_agent_opening_voice_in_background(
     """
     async with AsyncSessionLocal() as background_db:
         result = await background_db.execute(
-            select(models.Agent).where(
+            select(Agent).where(
                 and_(
-                    models.Agent.id == agent_id,
-                    models.Agent.deleted_at.is_(None),
-                    models.Agent.version == expected_version,
+                    Agent.id == agent_id,
+                    Agent.deleted_at.is_(None),
+                    Agent.version == expected_version,
                 )
             )
         )
@@ -246,7 +255,7 @@ async def generate_next_readable_id(db: AsyncSession) -> str:
 
 async def get_agent(
     db: AsyncSession, agent_id: str, current_user_id: Optional[str] = None
-) -> Optional[models.Agent]:
+) -> Optional[Agent]:
     """
     Get AI agent by ID
     """
@@ -254,19 +263,21 @@ async def get_agent(
         # follower 功能已下线，仅保留 connector_count 统计
         query = (
             select(
-                models.Agent,
-                func.count(func.distinct(models.Chat.user_id)).label("connector_count"),
-            )
-            .outerjoin(
-                models.Chat,
-                and_(
-                    models.Agent.id == models.Chat.agent_id,
-                    models.Chat.is_active == True,
+                Agent,
+                func.count(func.distinct(Chat.user_id)).label(
+                    "connector_count"
                 ),
             )
-            .options(selectinload(models.Agent.creator))
-            .where(and_(models.Agent.id == agent_id, models.Agent.deleted_at.is_(None)))
-            .group_by(models.Agent.id)
+            .outerjoin(
+                Chat,
+                and_(
+                    Agent.id == Chat.agent_id,
+                    Chat.is_active == True,
+                ),
+            )
+            .options(selectinload(Agent.creator))
+            .where(and_(Agent.id == agent_id, Agent.deleted_at.is_(None)))
+            .group_by(Agent.id)
         )
 
         result = await db.execute(query)
@@ -289,7 +300,9 @@ async def get_agent(
         # Get creator's statistics
         if agent.creator_id and agent.creator:
             creator_stats = await get_creator_agent_stats(db, agent.creator_id)
-            agent.creator.public_agents_count = creator_stats.public_agents_count
+            agent.creator.public_agents_count = (
+                creator_stats.public_agents_count
+            )
             agent.creator.total_public_agents_follows = (
                 creator_stats.total_public_agents_follows
             )
@@ -324,31 +337,31 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
 
         # 2. 缓存未命中，执行轻量级数据库查询（仅查询聊天必需字段）
         query = select(
-            models.Agent.id,
-            models.Agent.name,
-            models.Agent.gender,
-            models.Agent.settings,
-            models.Agent.main_prompt,
-            models.Agent.mode_prompt,
-            models.Agent.personality,
-            models.Agent.scenario,
-            models.Agent.message_example,
-            models.Agent.creator_notes,
-            models.Agent.tags,
-            models.Agent.character_version,
-            models.Agent.extensions,
-            models.Agent.intro,
-            models.Agent.status_line,
-            models.Agent.avatar,
-            models.Agent.background,
-            models.Agent.background_animated,
-            models.Agent.opening,
-            models.Agent.voice_id,
-            models.Agent.opening_audio_url,
-            models.Agent.created_at,
-            models.Agent.updated_at,
-            models.Agent.version,
-        ).where(and_(models.Agent.id == agent_id, models.Agent.deleted_at.is_(None)))
+            Agent.id,
+            Agent.name,
+            Agent.gender,
+            Agent.settings,
+            Agent.main_prompt,
+            Agent.mode_prompt,
+            Agent.personality,
+            Agent.scenario,
+            Agent.message_example,
+            Agent.creator_notes,
+            Agent.tags,
+            Agent.character_version,
+            Agent.extensions,
+            Agent.intro,
+            Agent.status_line,
+            Agent.avatar,
+            Agent.background,
+            Agent.background_animated,
+            Agent.opening,
+            Agent.voice_id,
+            Agent.opening_audio_url,
+            Agent.created_at,
+            Agent.updated_at,
+            Agent.version,
+        ).where(and_(Agent.id == agent_id, Agent.deleted_at.is_(None)))
 
         result = await db.execute(query)
         row = result.first()
@@ -387,7 +400,9 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
         }
 
         # 4. 缓存完整的Agent数据；TTL 由配置项控制（默认 10 分钟），以兼容 ops 与后端分离部署、ops 直写 DB 的场景
-        ttl = global_config_loaded_from_config_yaml.agent.agent_config_cache_ttl_seconds
+        ttl = (
+            global_config_loaded_from_config_yaml.agent.agent_config_cache_ttl_seconds
+        )
         cache_service.set_agent_config(agent_id, agent_data, ttl=ttl)
 
         logger.debug(f"获取并缓存Agent聊天数据: {agent_data['name']}")
@@ -403,10 +418,10 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
 
 async def get_user_agents(
     db: AsyncSession,
-    current_user: schemas.User,
+    current_user: UserSchema,
     skip: int = 0,
     limit: int = 100,
-) -> List[models.Agent]:
+) -> List[Agent]:
     """
     Get user's created AI agents list
     """
@@ -422,17 +437,17 @@ async def get_user_agents(
             )
 
         query = (
-            select(models.Agent)
-            .options(selectinload(models.Agent.creator))
+            select(Agent)
+            .options(selectinload(Agent.creator))
             .where(
                 and_(
-                    models.Agent.creator_id == current_user.id,
-                    models.Agent.deleted_at.is_(None),
+                    Agent.creator_id == current_user.id,
+                    Agent.deleted_at.is_(None),
                 )
             )
             .offset(skip)
             .limit(limit)
-            .order_by(desc(models.Agent.created_at))
+            .order_by(desc(Agent.created_at))
         )
 
         result = await db.execute(query)
@@ -440,7 +455,9 @@ async def get_user_agents(
 
         for agent in agents:
             # 设置用户名字，用于模板变量替换
-            agent.user = current_user.nickname if current_user.nickname else "you"
+            agent.user = (
+                current_user.nickname if current_user.nickname else "you"
+            )
 
         # 批量填充图片尺寸信息
         for agent in agents:
@@ -463,7 +480,7 @@ async def get_all_agents_for_admin(
     *,
     skip: int = 0,
     limit: int = 1000,
-) -> List[models.Agent]:
+) -> List[Agent]:
     """
     获取所有 AI 角色（仅供超级用户管理后台使用）。
 
@@ -482,12 +499,12 @@ async def get_all_agents_for_admin(
             )
 
         query = (
-            select(models.Agent)
-            .options(selectinload(models.Agent.creator))
-            .where(models.Agent.deleted_at.is_(None))
+            select(Agent)
+            .options(selectinload(Agent.creator))
+            .where(Agent.deleted_at.is_(None))
             .offset(skip)
             .limit(limit)
-            .order_by(desc(models.Agent.created_at))
+            .order_by(desc(Agent.created_at))
         )
 
         result = await db.execute(query)
@@ -505,7 +522,9 @@ async def get_all_agents_for_admin(
     except HTTPException:
         raise
     except SQLAlchemyError as e:
-        logger.error(f"Database query error - get all agents for admin: {str(e)}")
+        logger.error(
+            f"Database query error - get all agents for admin: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
         logger.error(f"Unknown error - get all agents for admin: {str(e)}")
@@ -517,7 +536,7 @@ async def get_recommended_agents(
     skip: int = 0,
     limit: int = 100,
     current_user_id: Optional[str] = None,
-) -> List[models.Agent]:
+) -> List[Agent]:
     """
     Get recommended AI agents list (public agents created by superusers, ordered by energy points desc)
     """
@@ -534,21 +553,21 @@ async def get_recommended_agents(
 
         # follower 功能已下线，不再读取关注关系表
         query = (
-            select(models.Agent)
-            .join(models.User, models.Agent.creator_id == models.User.id)
-            .options(selectinload(models.Agent.creator))
+            select(Agent)
+            .join(User, Agent.creator_id == User.id)
+            .options(selectinload(Agent.creator))
             .where(
                 and_(
-                    models.Agent.visibility == AgentVisibility.PUBLIC,
-                    models.Agent.deleted_at.is_(None),
-                    models.User.is_superuser == True,
+                    Agent.visibility == AgentVisibility.PUBLIC,
+                    Agent.deleted_at.is_(None),
+                    User.is_superuser == True,
                 )
             )
             .offset(skip)
             .limit(limit)
             .order_by(
-                desc(func.coalesce(models.Agent.points, 0)),
-                desc(models.Agent.created_at),
+                desc(func.coalesce(Agent.points, 0)),
+                desc(Agent.created_at),
             )
         )
 
@@ -566,7 +585,9 @@ async def get_recommended_agents(
     except HTTPException:
         raise
     except SQLAlchemyError as e:
-        logger.error(f"Database query error - get recommended agents list: {str(e)}")
+        logger.error(
+            f"Database query error - get recommended agents list: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
         logger.error(f"Unknown error - get recommended agents list: {str(e)}")
@@ -581,45 +602,47 @@ def get_deterministic_random_order(sort_seed: str):
         return func.random()
 
     # 使用MD5(concat(id, sort_seed))来实现确定性排序
-    return func.md5(func.concat(models.Agent.id, sort_seed))
+    return func.md5(func.concat(Agent.id, sort_seed))
 
 
 def _select_agents_with_sizes() -> select:
-    avatar_resource = models.Resource.__table__.alias("avatar_resource")
-    background_resource = models.Resource.__table__.alias("background_resource")
+    avatar_resource = Resource.__table__.alias("avatar_resource")
+    background_resource = Resource.__table__.alias("background_resource")
     conditions = [
-        models.Agent.deleted_at.is_(None),
-        models.User.is_superuser == True,  # 只返回超级用户创建的角色
-        models.Agent.visibility == AgentVisibility.PUBLIC,  # 推荐列表不返回私有角色
+        Agent.deleted_at.is_(None),
+        User.is_superuser == True,  # 只返回超级用户创建的角色
+        Agent.visibility == AgentVisibility.PUBLIC,  # 推荐列表不返回私有角色
     ]
     return (
         select(
-            models.Agent,
+            Agent,
             avatar_resource.c.resource_metadata.label("avatar_metadata"),
-            background_resource.c.resource_metadata.label("background_metadata"),
+            background_resource.c.resource_metadata.label(
+                "background_metadata"
+            ),
         )
         # eager loading optimization that tells SQLAlchemy to load the related creator data in a separate, efficient query.
         # 1. Prevents N+1 queries: Without this, if you access agent.creator for each agent,
         #    SQLAlchemy would make a separate database query for each one
         # 2. Loads all creator data upfront: It performs one additional query to load all the creator information for all agents at once
         # 3. Makes the relationship immediately available: You can access agent.creator without triggering additional database hits
-        .options(selectinload(models.Agent.creator))
-        .join(models.User, models.Agent.creator_id == models.User.id)
+        .options(selectinload(Agent.creator))
+        .join(User, Agent.creator_id == User.id)
         .outerjoin(
             avatar_resource,
-            avatar_resource.c.url == models.Agent.avatar,
+            avatar_resource.c.url == Agent.avatar,
         )
         .outerjoin(
             background_resource,
-            background_resource.c.url == models.Agent.background,
+            background_resource.c.url == Agent.background,
         )
         .where(*conditions)
     )
 
 
 def _fill_agent_image_sizes(
-    agent: models.Agent, avatar_metadata: dict, bg_metadata: dict
-) -> models.Agent:
+    agent: Agent, avatar_metadata: dict, bg_metadata: dict
+) -> Agent:
     if avatar_metadata:
         agent.avatar_size = ImageSize.model_validate(avatar_metadata["size"])
     if bg_metadata:
@@ -649,7 +672,9 @@ def _image_url_resource_lookup_keys(url: str) -> List[str]:
     return keys
 
 
-def _register_prompt_keys(out: dict[str, str], keys: List[str], prompt: str) -> None:
+def _register_prompt_keys(
+    out: dict[str, str], keys: List[str], prompt: str
+) -> None:
     p = prompt.strip()
     if not p:
         return
@@ -707,9 +732,9 @@ async def _resource_url_to_generation_prompt(
     chunk_size = 400
     for i in range(0, len(unique_keys), chunk_size):
         chunk = unique_keys[i : i + chunk_size]
-        stmt = select(models.Resource.url, models.Resource.resource_metadata).where(
-            models.Resource.url.in_(chunk),
-            models.Resource.type == ResourceType.IMAGE,
+        stmt = select(Resource.url, Resource.resource_metadata).where(
+            Resource.url.in_(chunk),
+            Resource.type == ResourceType.IMAGE,
         )
         result = await db.execute(stmt)
         for url, meta in result.all():
@@ -718,13 +743,15 @@ async def _resource_url_to_generation_prompt(
             gp = meta.get("generation_prompt")
             if not isinstance(gp, str) or not gp.strip():
                 continue
-            _register_prompt_keys(out, _prompt_keys_from_resource_row(url, meta), gp)
+            _register_prompt_keys(
+                out, _prompt_keys_from_resource_row(url, meta), gp
+            )
 
     for i in range(0, len(gcs_for_metadata_match), chunk_size):
         chunk = gcs_for_metadata_match[i : i + chunk_size]
-        stmt = select(models.Resource.url, models.Resource.resource_metadata).where(
-            models.Resource.type == ResourceType.IMAGE,
-            models.Resource.resource_metadata.op("->>")("gcs_url").in_(chunk),
+        stmt = select(Resource.url, Resource.resource_metadata).where(
+            Resource.type == ResourceType.IMAGE,
+            Resource.resource_metadata.op("->>")("gcs_url").in_(chunk),
         )
         result = await db.execute(stmt)
         for url, meta in result.all():
@@ -733,12 +760,16 @@ async def _resource_url_to_generation_prompt(
             gp = meta.get("generation_prompt")
             if not isinstance(gp, str) or not gp.strip():
                 continue
-            _register_prompt_keys(out, _prompt_keys_from_resource_row(url, meta), gp)
+            _register_prompt_keys(
+                out, _prompt_keys_from_resource_row(url, meta), gp
+            )
 
     return out
 
 
-def _generation_prompt_for_url(url: str, prompt_by_resource_url: dict[str, str]) -> str:
+def _generation_prompt_for_url(
+    url: str, prompt_by_resource_url: dict[str, str]
+) -> str:
     for k in _image_url_resource_lookup_keys(url):
         p = prompt_by_resource_url.get(k)
         if p:
@@ -760,7 +791,7 @@ async def _paginate_agents_by_text_image_match(
     description_text: str,
     top_n: int,
 ) -> tuple[
-    List[models.Agent],
+    List[Agent],
     List[MatchedAgentImageItem],
     int,
     int,
@@ -768,17 +799,17 @@ async def _paginate_agents_by_text_image_match(
     query_norm = description_text.strip()
     rows = await db.execute(
         select(
-            models.Agent.id,
-            models.Agent.background,
-            models.Agent.photos,
-            models.Agent.background_images,
-            models.Agent.exclusive_photos,
+            Agent.id,
+            Agent.background,
+            Agent.photos,
+            Agent.background_images,
+            Agent.exclusive_photos,
         )
-        .join(models.User, models.Agent.creator_id == models.User.id)
+        .join(User, Agent.creator_id == User.id)
         .where(
-            models.Agent.deleted_at.is_(None),
-            models.User.is_superuser == True,
-            models.Agent.visibility == AgentVisibility.PUBLIC,
+            Agent.deleted_at.is_(None),
+            User.is_superuser == True,
+            Agent.visibility == AgentVisibility.PUBLIC,
         )
     )
     pending: List[Tuple[str, str, Optional[str]]] = []
@@ -802,7 +833,11 @@ async def _paginate_agents_by_text_image_match(
                 if not u:
                     continue
                 cap = item.get("caption")
-                explicit = cap.strip() if isinstance(cap, str) and cap.strip() else None
+                explicit = (
+                    cap.strip()
+                    if isinstance(cap, str) and cap.strip()
+                    else None
+                )
                 resource_urls.append(u)
                 canon = _canonical_agent_image_url(u)
                 if not canon:
@@ -870,10 +905,15 @@ async def _paginate_agents_by_text_image_match(
             agent_ids_ordered.append(agent_id)
 
     if not agent_ids_ordered:
-        return [], matched_items, total, math.ceil(total / page_size) if total else 1
+        return (
+            [],
+            matched_items,
+            total,
+            math.ceil(total / page_size) if total else 1,
+        )
 
     data_result = await db.execute(
-        _select_agents_with_sizes().where(models.Agent.id.in_(agent_ids_ordered))
+        _select_agents_with_sizes().where(Agent.id.in_(agent_ids_ordered))
     )
     row_by_id = {row[0].id: row for row in data_result.all()}
     agents_list = []
@@ -893,7 +933,7 @@ async def get_balanced_score_based_agents(
     sort_seed: str = "",
     current_user_id: Optional[str] = None,  # pylint: disable=unused-argument
     current_user_gender: Optional[Gender] = None,
-) -> List[models.Agent]:
+) -> List[Agent]:
     """
     简化的平衡权重排序：score * 2 + random(0-100)
     既保持高分优先，又确保各页面有多样性。
@@ -903,28 +943,28 @@ async def get_balanced_score_based_agents(
 
     base_score = (
         func.coalesce(
-            models.Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0
+            Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0
         )
         * 2
-        + func.abs(func.hashtext(func.concat(models.Agent.id, sort_seed))) % 100
+        + func.abs(func.hashtext(func.concat(Agent.id, sort_seed))) % 100
     )
     order_by_clauses = []
     if current_user_gender == Gender.FEMALE:
-        is_opposite = case((models.Agent.gender == Gender.MALE, 1), else_=0)
+        is_opposite = case((Agent.gender == Gender.MALE, 1), else_=0)
         order_by_clauses = [
             is_opposite.desc(),
             base_score.desc(),
-            models.Agent.id.asc(),
+            Agent.id.asc(),
         ]
     elif current_user_gender == Gender.MALE:
-        is_opposite = case((models.Agent.gender == Gender.FEMALE, 1), else_=0)
+        is_opposite = case((Agent.gender == Gender.FEMALE, 1), else_=0)
         order_by_clauses = [
             is_opposite.desc(),
             base_score.desc(),
-            models.Agent.id.asc(),
+            Agent.id.asc(),
         ]
     else:
-        order_by_clauses = [base_score.desc(), models.Agent.id.asc()]
+        order_by_clauses = [base_score.desc(), Agent.id.asc()]
 
     query = (
         _select_agents_with_sizes()
@@ -937,19 +977,21 @@ async def get_balanced_score_based_agents(
     query_results = result.all()
 
     # 处理查询结果，提取agent和metadata信息
-    return [_fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results]
+    return [
+        _fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results
+    ]
 
 
 async def get_recommended_agents_paginated(
     db: AsyncSession,
-    current_user: schemas.User,
+    current_user: UserSchema,
     page: int = 1,
     page_size: int = 10,
     sort_by: Optional[AgentSortOption] = None,
     sort_seed: str = "",
     match_description: Optional[str] = None,
     match_top_n: int = 50,
-) -> schemas.PaginationData[schemas.Agent]:
+) -> PaginationData[AgentSchema]:
     """
     获取推荐的AI角色列表（分页版本）
 
@@ -964,7 +1006,8 @@ async def get_recommended_agents_paginated(
             )
         if page_size <= 0 or page_size > 100:
             raise HTTPException(
-                status_code=400, detail="Page size parameter must be between 1-100"
+                status_code=400,
+                detail="Page size parameter must be between 1-100",
             )
 
         if sort_by == AgentSortOption.TEXT_MATCH_IMAGE_DESCRIPTION:
@@ -990,8 +1033,10 @@ async def get_recommended_agents_paginated(
             for agent in agents_list:
                 agent.follower_count = 0
                 agent.is_followed = False
-                agent.user = current_user.nickname if current_user.nickname else "you"
-            return schemas.PaginationData[schemas.Agent](
+                agent.user = (
+                    current_user.nickname if current_user.nickname else "you"
+                )
+            return PaginationData[AgentSchema](
                 list=agents_list,
                 total=total,
                 page=page,
@@ -1002,13 +1047,13 @@ async def get_recommended_agents_paginated(
 
         # 构建基础查询条件：只返回超级用户创建的公开角色，不返回私有角色
         base_conditions = [
-            models.Agent.deleted_at.is_(None),
-            models.User.is_superuser == True,
-            models.Agent.visibility == AgentVisibility.PUBLIC,
+            Agent.deleted_at.is_(None),
+            User.is_superuser == True,
+            Agent.visibility == AgentVisibility.PUBLIC,
         ]
         base_query = (
-            select(models.Agent)
-            .join(models.User, models.Agent.creator_id == models.User.id)
+            select(Agent)
+            .join(User, Agent.creator_id == User.id)
             .where(and_(*base_conditions))
         )
 
@@ -1044,22 +1089,24 @@ async def get_recommended_agents_paginated(
                 )
             ):
                 opposite_gender = (
-                    Gender.FEMALE if current_user.gender == Gender.MALE else Gender.MALE
+                    Gender.FEMALE
+                    if current_user.gender == Gender.MALE
+                    else Gender.MALE
                 )
 
             if opposite_gender is not None:
                 # Count and data use same filters: base (public, superuser, not deleted) + opposite gender
                 count_query = select(func.count()).select_from(
-                    base_query.where(models.Agent.gender == opposite_gender).subquery()
+                    base_query.where(Agent.gender == opposite_gender).subquery()
                 )
                 count_result = await db.execute(count_query)
                 total = count_result.scalar()
                 data_query = (
                     _select_agents_with_sizes()
-                    .where(models.Agent.gender == opposite_gender)
+                    .where(Agent.gender == opposite_gender)
                     .offset(skip)
                     .limit(page_size)
-                    .order_by(desc(models.Agent.created_at))
+                    .order_by(desc(Agent.created_at))
                 )
                 result = await db.execute(data_query)
                 query_results = result.all()
@@ -1071,18 +1118,22 @@ async def get_recommended_agents_paginated(
                 # 确定排序方式
                 order_by_clauses = []
                 if sort_by == AgentSortOption.CREATED_ASC:
-                    order_by_clauses = [models.Agent.created_at.asc()]
+                    order_by_clauses = [Agent.created_at.asc()]
                 elif sort_by == AgentSortOption.RANDOM:
-                    order_by_clauses = [get_deterministic_random_order(sort_seed)]
+                    order_by_clauses = [
+                        get_deterministic_random_order(sort_seed)
+                    ]
                 elif sort_by == AgentSortOption.ENERGY_POINTS:
                     order_by_clauses = [
-                        desc(func.coalesce(models.Agent.points, 0)),
-                        desc(models.Agent.created_at),
+                        desc(func.coalesce(Agent.points, 0)),
+                        desc(Agent.created_at),
                     ]
-                elif sort_by == AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER:
-                    order_by_clauses = [desc(models.Agent.created_at)]
+                elif (
+                    sort_by == AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER
+                ):
+                    order_by_clauses = [desc(Agent.created_at)]
                 else:  # 默认为 CREATED_DESC
-                    order_by_clauses = [desc(models.Agent.created_at)]
+                    order_by_clauses = [desc(Agent.created_at)]
 
                 # 获取分页数据，同时获取头像和背景图的尺寸信息
                 data_query = (
@@ -1108,13 +1159,15 @@ async def get_recommended_agents_paginated(
             agent.follower_count = 0
             agent.is_followed = False  # 默认值
             # 设置用户名字，用于模板变量替换
-            agent.user = current_user.nickname if current_user.nickname else "you"
+            agent.user = (
+                current_user.nickname if current_user.nickname else "you"
+            )
             agents.append(agent)
 
         # 计算总页数
         total_pages = math.ceil(total / page_size) if total > 0 else 1
 
-        return schemas.PaginationData[schemas.Agent](
+        return PaginationData[AgentSchema](
             list=agents,
             total=total,
             page=page,
@@ -1133,8 +1186,8 @@ async def get_recommended_agents_paginated(
 
 
 async def create_agent(
-    db: AsyncSession, agent_in: schemas.AgentCreate, user_id: str
-) -> models.Agent:
+    db: AsyncSession, agent_in: AgentCreate, user_id: str
+) -> Agent:
     """
     创建新的AI角色
     如果 agent_in 没有 avatar，则自动为用户扣一个 avatar，crop_avatar()
@@ -1142,7 +1195,9 @@ async def create_agent(
     try:
         # 验证必填字段
         if not agent_in.name or not agent_in.name.strip():
-            raise HTTPException(status_code=400, detail="Agent name cannot be empty")
+            raise HTTPException(
+                status_code=400, detail="Agent name cannot be empty"
+            )
 
         # 处理prompt到personality的转换（向后兼容）
         if (
@@ -1195,7 +1250,9 @@ async def create_agent(
                 f"Agent avatar为空，尝试从background裁剪avatar - Agent ID: {agent_id}"
             )
             background_url = processed_agent_data["background"]
-            crop_avatar_result = await _crop_avatar_from_background(background_url)
+            crop_avatar_result = await _crop_avatar_from_background(
+                background_url
+            )
             cropped_avatar_url = crop_avatar_result.avatar_url
             processed_agent_data["avatar"] = cropped_avatar_url
             logger.debug(
@@ -1211,7 +1268,7 @@ async def create_agent(
                 crop_avatar_result.byte_size,
             )
 
-        db_agent = models.Agent(
+        db_agent = Agent(
             id=agent_id,
             readable_id=readable_id,
             **processed_agent_data,
@@ -1234,9 +1291,9 @@ async def create_agent(
         )
 
         result = await db.execute(
-            select(models.Agent)
-            .options(selectinload(models.Agent.creator))
-            .where(models.Agent.id == db_agent.id)
+            select(Agent)
+            .options(selectinload(Agent.creator))
+            .where(Agent.id == db_agent.id)
         )
         return result.scalar_one()
 
@@ -1283,19 +1340,25 @@ async def _crop_avatar_from_background(
     background_data = download_from_gcs(background_url)
     if not background_data:
         logger.warning(f"无法下载background图片: {background_url}")
-        raise RuntimeError(f"Failed to download background image: {background_url}")
+        raise RuntimeError(
+            f"Failed to download background image: {background_url}"
+        )
 
     crop_avatar_result = crop_avatar(background_data)
     cropped_avatar = crop_avatar_result.image
     avatar_data = get_jpg_bytes_from_pil_image(cropped_avatar)
     avatar_byte_size = len(avatar_data)
 
-    bucket, background_gcs_path = get_bucket_and_path_from_gcs_url(background_url)
+    bucket, background_gcs_path = get_bucket_and_path_from_gcs_url(
+        background_url
+    )
     avatar_gcs_path = append_filename_suffix(
         background_gcs_path, CROPPED_AVATAR_FILENAME_SUFFIX
     )
 
-    avatar_url = upload_to_gcs(avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path)
+    avatar_url = upload_to_gcs(
+        avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path
+    )
     return CropAvatarFromGCSUrlResult(
         avatar_url, crop_avatar_result.size, ImageFormat.JPEG, avatar_byte_size
     )
@@ -1327,13 +1390,15 @@ def _normalize_gender(gender_value: Any) -> Gender:
         return Gender.OTHER
 
 
-def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
+def _update_agent_in_db(update_data: dict, db_agent: Agent):
     # 验证更新数据
     # 验证名称不为空（如果提供了名称）
     if "name" in update_data and (
         not update_data["name"] or not update_data["name"].strip()
     ):
-        raise HTTPException(status_code=400, detail="Agent name cannot be empty")
+        raise HTTPException(
+            status_code=400, detail="Agent name cannot be empty"
+        )
 
     # 处理prompt到personality的转换（向后兼容）
     if (
@@ -1343,7 +1408,8 @@ def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
     ):
         # 如果没有提供personality或personality为空，则使用prompt的值
         if "personality" not in update_data or not (
-            update_data.get("personality") and update_data["personality"].strip()
+            update_data.get("personality")
+            and update_data["personality"].strip()
         ):
             logger.debug(f"将prompt转换为personality以保持向后兼容")
             update_data["personality"] = update_data["prompt"]
@@ -1405,8 +1471,8 @@ def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
 
 
 async def update_agent(
-    db: AsyncSession, db_agent: models.Agent, agent_in: schemas.AgentUpdate
-) -> models.Agent:
+    db: AsyncSession, db_agent: Agent, agent_in: AgentUpdate
+) -> Agent:
     """
     更新AI角色
     """
@@ -1420,11 +1486,18 @@ async def update_agent(
         energy_points_delta = update_data.pop("energy_points", None)
         if energy_points_delta is not None and energy_points_delta <= 0:
             raise HTTPException(
-                status_code=400, detail="energy_points must be a positive integer"
+                status_code=400,
+                detail="energy_points must be a positive integer",
             )
-        should_regenerate_voice = "opening" in update_data or "voice_id" in update_data
+        should_regenerate_voice = (
+            "opening" in update_data or "voice_id" in update_data
+        )
 
         update_data = process_agent_image_urls(update_data)
+        # 与写入 DB 的 update_data 对齐：不含 energy_points；图片 URL 已规范化/校验
+        reload_log_reason = "update_agent fields=" + ",".join(
+            sorted(update_data.keys())
+        )
 
         _update_agent_in_db(update_data, db_agent)
 
@@ -1492,9 +1565,9 @@ async def update_agent(
 
         # 重新查询以加载关系数据
         result = await db.execute(
-            select(models.Agent)
-            .options(selectinload(models.Agent.creator))
-            .where(models.Agent.id == db_agent.id)
+            select(Agent)
+            .options(selectinload(Agent.creator))
+            .where(Agent.id == db_agent.id)
         )
         updated_agent = result.scalar_one()
 
@@ -1508,7 +1581,9 @@ async def update_agent(
             # 这里我们无法直接清除特定 agent 的会话缓存，但会话缓存 TTL 较短（5分钟），影响有限
 
         except Exception as e:
-            logger.error(f"清除Agent缓存时发生错误 {updated_agent.id}: {str(e)}")
+            logger.error(
+                f"清除Agent缓存时发生错误 {updated_agent.id}: {str(e)}"
+            )
             # 注意：这里不抛出异常，因为数据库更新已经成功了
 
         # 重新加载Agent实例到AgentManager缓存中，AgentManager 仅用于提供聊天所需的提示词，
@@ -1533,7 +1608,7 @@ async def update_agent(
             }
 
             reload_success = await agent_manager.reload_agent(
-                updated_agent.id, agent_data
+                updated_agent.id, agent_data, reason=reload_log_reason
             )
             if reload_success:
                 logger.debug(f"Agent {updated_agent.id} 缓存重载成功")
@@ -1541,7 +1616,9 @@ async def update_agent(
                 logger.warning(f"Agent {updated_agent.id} 缓存重载失败")
 
         except Exception as e:
-            logger.error(f"重载Agent缓存时发生错误 {updated_agent.id}: {str(e)}")
+            logger.error(
+                f"重载Agent缓存时发生错误 {updated_agent.id}: {str(e)}"
+            )
             # 注意：这里不抛出异常，因为数据库更新已经成功了
 
         return updated_agent
@@ -1570,7 +1647,7 @@ async def update_agent(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent:
+async def delete_agent(db: AsyncSession, db_agent: Agent) -> Agent:
     """
     逻辑删除AI角色
     设置deleted_at字段，不删除相关资源
@@ -1581,7 +1658,9 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
 
         # 检查是否已经被删除
         if db_agent.deleted_at:
-            raise HTTPException(status_code=400, detail="Agent has been deleted")
+            raise HTTPException(
+                status_code=400, detail="Agent has been deleted"
+            )
 
         agent_id = db_agent.id
         logger.info(f"开始逻辑删除agent {agent_id}")
@@ -1684,7 +1763,9 @@ def process_agent_image_urls(agent_data: dict) -> dict:
 
     # 构建最终的background_images列表，顺序：avatar -> background -> background_images
     final_images = []
-    for url in images_urls:  # images_urls已经包含了avatar和background（按添加顺序）
+    for (
+        url
+    ) in images_urls:  # images_urls已经包含了avatar和background（按添加顺序）
         final_images.append(url)
     for url in valid_bg_images:  # 添加原始的background_images
         if url not in final_images:  # 避免重复
@@ -1707,14 +1788,16 @@ async def append_agent_background_image(
         )
         return False
 
-    normalized_url = image_transform_service.normalize_image_url_for_storage(image_url)
+    normalized_url = image_transform_service.normalize_image_url_for_storage(
+        image_url
+    )
     if not is_valid_gcs_url(normalized_url):
         logger.warning(f"无效的背景图URL，无法追加: {normalized_url}")
         return False
 
     try:
-        query = select(models.Agent).where(
-            and_(models.Agent.id == agent_id, models.Agent.deleted_at.is_(None))
+        query = select(Agent).where(
+            and_(Agent.id == agent_id, Agent.deleted_at.is_(None))
         )
         result = await db.execute(query)
         db_agent = result.scalar_one_or_none()
@@ -1767,7 +1850,7 @@ async def unfollow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
 
 async def get_user_followed_agents(
     db: AsyncSession, user_id: str, page: int = 1, page_size: int = 10
-) -> schemas.PaginationData[schemas.Agent]:
+) -> PaginationData[AgentSchema]:
     """
     获取用户关注的AI角色列表（分页）
     """
@@ -1780,11 +1863,11 @@ async def get_user_followed_agents(
 
 async def search_agents(
     db: AsyncSession,
-    current_user: schemas.User,
+    current_user: UserSchema,
     keyword: str,
     page: int = 1,
     page_size: int = 10,
-) -> schemas.PaginationData[schemas.Agent]:
+) -> PaginationData[AgentSchema]:
     """
     搜索公开的AI角色（分页版本）
     支持按名称、介绍、分类进行模糊查询
@@ -1792,7 +1875,9 @@ async def search_agents(
     try:
         # 验证参数
         if page <= 0:
-            raise HTTPException(status_code=400, detail="page must be greater than 0")
+            raise HTTPException(
+                status_code=400, detail="page must be greater than 0"
+            )
         if page_size <= 0 or page_size > 100:
             raise HTTPException(
                 status_code=400, detail="page_size must be between 1 and 100"
@@ -1811,16 +1896,16 @@ async def search_agents(
         if keyword:
             search_pattern = f"%{keyword}%"
             search_conditions = [
-                models.Agent.name.ilike(search_pattern),
-                models.Agent.intro.ilike(search_pattern),
-                models.Agent.category.ilike(search_pattern),
+                Agent.name.ilike(search_pattern),
+                Agent.intro.ilike(search_pattern),
+                Agent.category.ilike(search_pattern),
             ]
 
         # 构建基础查询条件 - 只搜索公开且未删除的agent
         base_conditions = [
-            models.Agent.visibility == AgentVisibility.PUBLIC,
-            models.Agent.deleted_at.is_(None),
-            # models.Agent.status == AgentStatus.APPROVED  # 如果需要只搜索已审核的
+            Agent.visibility == AgentVisibility.PUBLIC,
+            Agent.deleted_at.is_(None),
+            # Agent.status == AgentStatus.APPROVED  # 如果需要只搜索已审核的
         ]
 
         # 如果有搜索条件，添加OR条件
@@ -1828,7 +1913,7 @@ async def search_agents(
             base_conditions.append(or_(*search_conditions))
 
         # 构建基础查询
-        base_query = select(models.Agent).where(*base_conditions)
+        base_query = select(Agent).where(*base_conditions)
 
         # 获取总数
         count_query = select(func.count()).select_from(base_query.subquery())
@@ -1837,12 +1922,12 @@ async def search_agents(
 
         # 获取分页数据（关注功能已下线）
         data_query = (
-            select(models.Agent)
-            .options(selectinload(models.Agent.creator))
+            select(Agent)
+            .options(selectinload(Agent.creator))
             .where(*base_conditions)
             .offset(skip)
             .limit(page_size)
-            .order_by(desc(models.Agent.created_at))  # 按创建时间倒序排列
+            .order_by(desc(Agent.created_at))  # 按创建时间倒序排列
         )
 
         result = await db.execute(data_query)
@@ -1854,13 +1939,15 @@ async def search_agents(
             agent.follower_count = 0
             agent.is_followed = False  # 默认值
             # 设置用户名字，用于模板变量替换
-            agent.user = current_user.nickname if current_user.nickname else "you"
+            agent.user = (
+                current_user.nickname if current_user.nickname else "you"
+            )
             agents.append(agent)
 
         # 计算总页数
         total_pages = math.ceil(total / page_size) if total > 0 else 1
 
-        return schemas.PaginationData[schemas.Agent](
+        return PaginationData[AgentSchema](
             list=agents,
             total=total,
             page=page,
@@ -1880,17 +1967,17 @@ async def search_agents(
 
 async def get_creator_agent_stats(
     db: AsyncSession, creator_id: str
-) -> schemas.CreatorAgentStats:
+) -> CreatorAgentStats:
     """
     获取创建者的公共角色统计信息
     """
     try:
         # 获取创建者创建的公共角色数量
-        public_agents_count_query = select(func.count(models.Agent.id)).where(
+        public_agents_count_query = select(func.count(Agent.id)).where(
             and_(
-                models.Agent.creator_id == creator_id,
-                models.Agent.visibility == AgentVisibility.PUBLIC,
-                models.Agent.deleted_at.is_(None),
+                Agent.creator_id == creator_id,
+                Agent.visibility == AgentVisibility.PUBLIC,
+                Agent.deleted_at.is_(None),
             )
         )
 
@@ -1900,7 +1987,7 @@ async def get_creator_agent_stats(
         # follower 功能已下线，保留字段兼容，固定返回 0
         total_follows = 0
 
-        return schemas.CreatorAgentStats(
+        return CreatorAgentStats(
             creator_id=creator_id,
             public_agents_count=public_agents_count,
             total_public_agents_follows=total_follows,

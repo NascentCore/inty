@@ -48,6 +48,10 @@ constructor(
         chatWebSocketRemoteDataSource.sendMessageFireAndForget(agentId, request)
     }
 
+    suspend fun sendImplicitUserSignedOnFireAndForget(agentId: String) {
+        chatWebSocketRemoteDataSource.sendImplicitUserSignedOnFireAndForget(agentId)
+    }
+
     suspend fun connectWebSocketWhenLoggedIn() {
         authRepository.isLogin.distinctUntilChanged().collectLatest { loggedIn ->
             if (loggedIn) {

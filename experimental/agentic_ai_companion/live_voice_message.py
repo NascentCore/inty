@@ -34,7 +34,9 @@ def _live_client() -> genai.Client:
     )
 
 
-def _format_messages_as_context(messages: list[dict[str, Any]], recent_n: int) -> str:
+def _format_messages_as_context(
+    messages: list[dict[str, Any]], recent_n: int
+) -> str:
     """将最近 N 条 user/assistant 消息格式化为对话上下文字符串。"""
     lines: list[str] = []
     for m in messages[-recent_n:]:
@@ -57,7 +59,9 @@ def _system_instruction_to_content(
     if isinstance(system_instruction, types.Content):
         return system_instruction
     return types.Content(
-        parts=[types.Part.from_text(text=(system_instruction or "").strip() or ".")],
+        parts=[
+            types.Part.from_text(text=(system_instruction or "").strip() or ".")
+        ],
         role="user",
     )
 
@@ -89,7 +93,9 @@ async def generate_speech_via_live(
         response_modalities=["AUDIO"],
         speech_config=types.SpeechConfig(
             voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name=voice_name
+                )
             )
         ),
         context_window_compression=types.ContextWindowCompressionConfig(
@@ -105,7 +111,9 @@ async def generate_speech_via_live(
 
     async def _run() -> None:
         nonlocal chunks, transcript_parts
-        async with live_client.aio.live.connect(model=model, config=config) as session:
+        async with live_client.aio.live.connect(
+            model=model, config=config
+        ) as session:
             await session.send(input=payload, end_of_turn=True)
             turn = session.receive()
             async for response in turn:

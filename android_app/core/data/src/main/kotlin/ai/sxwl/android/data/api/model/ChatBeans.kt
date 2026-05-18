@@ -20,7 +20,7 @@ data class SendMsgResponse(
     val code: Int? = null,
     val message: String? = null,
     val data: SentMsgRspData? = null,
-    /** 下行顶层 agent_id，多角色时区分；与 FR_CHAT_WS_VERIFY 约定一致。 */
+    /** 下行顶层 agent_id，多角色时区分（与后端 `app/api/AGENTS.md` WebSocket 约定一致）。 */
     @Json(name = "agent_id") val agentId: String? = null,
 ) {
     @Serializable
@@ -62,6 +62,16 @@ data class SendMsgReqMessage(val role: String = "", val content: Any = "") {
     }
 }
 
+// TODO: Run :core:data:compileDebugKotlin (or full app compile) when changing SendMsgReq.
+
+/**
+ * Companion WebSocket `messageType` string (request body). Implicit greeting uses `user_signed_on`
+ * control messages only. Aligns with backend `ChatCompletionRequest.message_type`.
+ */
+object CompanionChatTurnMessageType {
+    const val USER_MESSAGE = "USER_MESSAGE"
+}
+
 @JsonClass(generateAdapter = true)
 data class SendMsgReq(
     val messages: List<SendMsgReqMessage> = listOf(),
@@ -69,6 +79,8 @@ data class SendMsgReq(
     val stream: Boolean = false,
     @Json(name = "time_context") val timeContext: UserTimeContext? = null,
     @Json(name = "target_imate_id") val targetImateId: String? = null,
+    /** Optional; default server-side is USER_MESSAGE. */
+    @Json(name = "messageType") val messageType: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -81,12 +93,22 @@ data class ChatClientContextWsMessage(
     @Json(name = "time_context") val timeContext: UserTimeContext,
 )
 
+@JsonClass(generateAdapter = true)
+data class ChatUserSignedOnWsMessage(
+    val type: String = "user_signed_on",
+    @Json(name = "agent_id") val agentId: String,
+    @Json(name = "message_id") val messageId: String,
+)
+
 /** Chat WebSocket downstream frames that only carry `type` (e.g. pong, client_context_ack). */
 @JsonClass(generateAdapter = true)
 data class ChatWsControlFrame(@Json(name = "type") val type: String?)
 
 fun ChatWsControlFrame?.shouldDeferChatResponseParsing(): Boolean =
-    this?.type == "pong" || this?.type == "client_context_ack"
+    this?.type == "pong" ||
+        this?.type == "client_context_ack" ||
+        this?.type == "user_signed_on_ack" ||
+        this?.type == "user_signed_out_ack"
 
 @JsonClass(generateAdapter = true)
 data class UserTimeContext(
@@ -222,6 +244,10 @@ data class MsgInfo(
         val voice_session_id: String? = null,
         @Json(name = "generated_image") val generatedImage: GeneratedImage? = null,
         @Json(name = "generated_music") val generatedMusic: GeneratedMusic? = null,
+        @Json(name = "tool_background_started") val toolBackgroundStarted: Boolean = false,
+        @Json(name = "reply_modality") val replyModality: String? = null,
+        @Json(name = "voice_message_script") val voiceMessageScript: String? = null,
+        @Json(name = "audioDuration") val audioDuration: Double? = null,
     ) {
         @Serializable
         @JsonClass(generateAdapter = true)

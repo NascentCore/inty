@@ -15,7 +15,6 @@ from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG
 from app.schemas.live_chat import (
@@ -32,13 +31,15 @@ from app.schemas.live_chat import (
 from app.schemas.response import BusinessErrorCode
 from app.services.global_services import subscription_service
 from app.services.live_chat_service import live_chat_service
+from app.schemas.response import APIResponse
+from app.schemas.user import User as UserSchema
 
 router = APIRouter(prefix="/live-chat")
 
 
 @router.get("/status", tags=[INTY_EVAL_TAG])
 async def get_live_chat_status(
-    current_user: schemas.User = Depends(deps.get_current_user),
+    current_user: UserSchema = Depends(deps.get_current_user),
 ):
     """
     获取实时语音通话服务状态
@@ -46,7 +47,7 @@ async def get_live_chat_status(
     返回 Live Chat 服务的启用状态和配置信息。
     """
     config = live_chat_service._config
-    return schemas.APIResponse.success(
+    return APIResponse.success(
         data={
             "enabled": config.enabled,
             "model": config.model,
@@ -62,7 +63,7 @@ async def get_live_chat_status(
 async def get_current_user_ws(
     websocket: WebSocket,
     db: AsyncSession,
-) -> Optional[schemas.User]:
+) -> Optional[UserSchema]:
     """
     从 WebSocket 连接中获取当前用户
 
@@ -136,6 +137,8 @@ async def live_chat_session(
     Optional query params (per-session language for SDK clients):
     - speech_language_code: BCP-47 tag for SpeechConfig.language_code (e.g. ar-SA, en-US)
     - response_language_name: human-readable reply language for system instruction (e.g. Arabic)
+    - agent_starts_conversation: if true/1/yes, server sends a hidden trigger after connect
+      (and after history prefill when enabled) so the model speaks first; not stored as user text
 
     WebSocket 关闭码与错误信息：
     - 4000: Invalid language query parameters
@@ -163,7 +166,9 @@ async def live_chat_session(
         from sqlalchemy import select
         from app.models.user import User
 
-        row = await db.execute(select(User).where(User.id == assume_user_id.strip()))
+        row = await db.execute(
+            select(User).where(User.id == assume_user_id.strip())
+        )
         assumed_user = row.scalar_one_or_none()
         if assumed_user and not assumed_user.deleted_at:
             logger.info(
@@ -171,7 +176,9 @@ async def live_chat_session(
             )
             current_user = assumed_user
         else:
-            logger.warning(f"assume_user_id not found or deleted: {assume_user_id}")
+            logger.warning(
+                f"assume_user_id not found or deleted: {assume_user_id}"
+            )
 
     if not live_chat_service.is_enabled():
         logger.warning("Live chat 功能未启用，拒绝连接")
@@ -179,7 +186,9 @@ async def live_chat_session(
         return
 
     is_allowed, reject_reason, limit_info = (
-        await subscription_service.check_live_chat_limit(db, current_user, agent_id)
+        await subscription_service.check_live_chat_limit(
+            db, current_user, agent_id
+        )
     )
 
     if not is_allowed:
@@ -207,13 +216,22 @@ async def live_chat_session(
 
     speech_q = websocket.query_params.get("speech_language_code")
     response_q = websocket.query_params.get("response_language_name")
+    starts_q = (
+        (websocket.query_params.get("agent_starts_conversation") or "")
+        .strip()
+        .lower()
+    )
     live_cfg_kwargs = {}
     if speech_q is not None and speech_q.strip():
         live_cfg_kwargs["speech_language_code"] = speech_q.strip()
     if response_q is not None and response_q.strip():
         live_cfg_kwargs["response_language_name"] = response_q.strip()
+    if starts_q in ("1", "true", "yes"):
+        live_cfg_kwargs["agent_starts_conversation"] = True
     try:
-        live_overrides = LiveChatConfig(**live_cfg_kwargs) if live_cfg_kwargs else None
+        live_overrides = (
+            LiveChatConfig(**live_cfg_kwargs) if live_cfg_kwargs else None
+        )
     except ValidationError as e:
         logger.warning(f"Live chat invalid language query: {e}")
         await websocket.close(code=4000, reason="Invalid language parameters")
@@ -241,6 +259,28 @@ async def live_chat_session(
     timeout_task: Optional[asyncio.Task] = None
     session_ended_by_timeout = False
 
+    # 下行 AI PCM 合并发送：减轻 Gemini 多小包导致的客户端 AudioTrack 颗粒感（与 WAV 接缝无关）
+    audio_downlink_buf = bytearray()
+    audio_downlink_lock = asyncio.Lock()
+    _DOWNLINK_BATCH_BYTES = 1920  # ~40ms @ 24kHz mono int16
+
+    async def flush_audio_downlink() -> None:
+        remainder = b""
+        async with audio_downlink_lock:
+            if audio_downlink_buf:
+                remainder = bytes(audio_downlink_buf)
+                audio_downlink_buf.clear()
+        if not remainder:
+            return
+        try:
+            msg = LiveChatAudioResponseMessage(
+                data=base64.b64encode(remainder).decode("utf-8"),
+                sample_rate=live_chat_service._config.receive_sample_rate,
+            )
+            await websocket.send_json(msg.model_dump())
+        except Exception as e:
+            logger.debug(f"发送音频失败（连接可能已关闭）: {str(e)}")
+
     try:
         session = await live_chat_service.create_session(
             db=db,
@@ -252,17 +292,35 @@ async def live_chat_session(
         input_queue: asyncio.Queue[Optional[dict]] = asyncio.Queue()
 
         async def on_audio(data: bytes):
-            """处理下行音频"""
+            """处理下行音频（按批发送，减少 WS 小包）"""
             if session_ended_by_timeout:
                 return
             try:
-                msg = LiveChatAudioResponseMessage(
-                    data=base64.b64encode(data).decode("utf-8"),
-                    sample_rate=live_chat_service._config.receive_sample_rate,
-                )
-                await websocket.send_json(msg.model_dump())
+                async with audio_downlink_lock:
+                    audio_downlink_buf.extend(data)
+                while True:
+                    async with audio_downlink_lock:
+                        if len(audio_downlink_buf) < _DOWNLINK_BATCH_BYTES:
+                            break
+                        batch = bytes(
+                            audio_downlink_buf[:_DOWNLINK_BATCH_BYTES]
+                        )
+                        del audio_downlink_buf[:_DOWNLINK_BATCH_BYTES]
+                    try:
+                        msg = LiveChatAudioResponseMessage(
+                            data=base64.b64encode(batch).decode("utf-8"),
+                            sample_rate=live_chat_service._config.receive_sample_rate,
+                        )
+                        await websocket.send_json(msg.model_dump())
+                    except Exception as send_e:
+                        logger.debug(
+                            f"发送音频失败（连接可能已关闭）: {str(send_e)}"
+                        )
+                        async with audio_downlink_lock:
+                            audio_downlink_buf[:0] = batch
+                        break
             except Exception as e:
-                logger.debug(f"发送音频失败（连接可能已关闭）: {str(e)}")
+                logger.debug(f"处理下行音频失败: {str(e)}")
 
         async def on_transcript(
             text: str,
@@ -295,6 +353,12 @@ async def live_chat_session(
             if session_ended_by_timeout:
                 return
             try:
+                if status in (
+                    LiveChatStatus.LISTENING,
+                    LiveChatStatus.DISCONNECTED,
+                    LiveChatStatus.ERROR,
+                ):
+                    await flush_audio_downlink()
                 msg = LiveChatStatusMessage(
                     status=status,
                     message=message,
@@ -303,7 +367,9 @@ async def live_chat_session(
             except Exception as e:
                 logger.debug(f"发送状态失败（连接可能已关闭）: {str(e)}")
 
-        async def on_error(error_code: str, message: str, code: Optional[int] = None):
+        async def on_error(
+            error_code: str, message: str, code: Optional[int] = None
+        ):
             """处理错误"""
             try:
                 msg = LiveChatErrorMessage(
@@ -342,7 +408,9 @@ async def live_chat_session(
                     )
                 )
                 if subscription_status.is_subscribed:
-                    error_info = BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                    error_info = (
+                        BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                    )
                 else:
                     error_info = BusinessErrorCode.SUBSCRIPTION_REQUIRED
                 await on_error(
@@ -392,8 +460,8 @@ async def live_chat_session(
             finally:
                 try:
                     await live_gen.aclose()
-                except Exception:
-                    pass
+                except RuntimeError as e:
+                    logger.warning(f"关闭 Live chat 生成器失败: {str(e)}")
 
         send_task = asyncio.create_task(send_audio_loop())
 
@@ -406,12 +474,16 @@ async def live_chat_session(
 
                     if msg_type == "audio":
                         audio_bytes = base64.b64decode(data.get("data", ""))
-                        await input_queue.put({"type": "audio", "data": audio_bytes})
+                        await input_queue.put(
+                            {"type": "audio", "data": audio_bytes}
+                        )
 
                     elif msg_type == "text":
                         text = data.get("data", "")
                         if text and session:
-                            await live_chat_service.send_text(session.session_id, text)
+                            await live_chat_service.send_text(
+                                session.session_id, text
+                            )
 
                     elif msg_type == "activity_start":
                         await input_queue.put({"type": "activity_start"})
@@ -445,8 +517,8 @@ async def live_chat_session(
                 message=str(e),
             )
             await websocket.send_json(msg.model_dump())
-        except Exception:
-            pass
+        except (RuntimeError, WebSocketDisconnect) as send_error:
+            logger.debug(f"发送 Live chat 会话错误消息失败: {str(send_error)}")
 
     finally:
         if timeout_task and not timeout_task.done():
@@ -507,9 +579,13 @@ async def live_chat_session(
             await live_chat_service.end_session(session.session_id)
 
         try:
+            await flush_audio_downlink()
+        except RuntimeError as e:
+            logger.warning(f"刷新 Live chat 下行音频失败: {str(e)}")
+        try:
             await websocket.close()
-        except Exception:
-            pass
+        except RuntimeError as e:
+            logger.debug(f"关闭 Live chat WebSocket 失败: {str(e)}")
 
         logger.info(
             f"Live chat 会话结束 - user_id: {current_user.id}, agent_id: {agent_id}, "

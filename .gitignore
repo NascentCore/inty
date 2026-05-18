@@ -52,6 +52,10 @@ cover/
 .env
 .venv
 venv
+# Ops local dev: JWT from backend/ops/start.sh --local (tools/scripts/init_admin_user.py --token-file)
+.inty_ops_bearer_token
+# Ops / start.sh default workspace (Loguru file log .inty/inty.log)
+.inty/
 
 # 前端相关
 node_modules/
@@ -66,10 +70,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 yarn.lock
+tools/markdownlint/package-lock.json
 
 # IDE相关
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 *.swp
 *.swo
 .DS_Store
@@ -87,6 +94,7 @@ htmlcov/
 .pytest_cache/
 config.yaml*
 !devops/config.yaml.*
+!tools/scripts/**/config.yaml.example
 
 # google key
 inty-backend-key.json
@@ -98,7 +106,7 @@ inty-firebase-key.json
 # 敏感文件
 /.secrets/
 
-# OpenAPI 生成脚本临时输出（generate_kotlin_models_from_openapi.sh）
+# OpenAPI Kotlin 生成临时输出（历史脚本已移除；路径仍可用于本地生成物）
 .openapi_generated.json
 
 # stainless output sdks
@@ -118,6 +126,9 @@ inty-firebase-key.json
 
 # 临时文件目录
 tmp/
+
+# 本地 Inty 后端统一工作区（LangSmith 导出、排障产物等）
+.inty/
 
 # Cursor plans
 .cursor/plans/

@@ -9,7 +9,7 @@ from app.utils.companion_feature_defaults import (
 from app.utils.config import (
     AgentConfig,
     AppConfig,
-    CompanionWorkspaceBootstrapType,
+    CompanionMemoryBootstrapType,
     FeaturesConfig,
     CloudflareConfig,
     Config,
@@ -366,6 +366,60 @@ def test_chat_messages_window_limit_defaults():
     assert limits.sub_user_chat_messages_limit == 1000
 
 
+def test_database_settings_model_validate_preserves_database_urls():
+    settings = DatabaseSettings.model_validate(
+        {
+            "host": "primary.internal",
+            "port": 15432,
+            "user": "inty_user",
+            "password": "secret",
+            "db": "inty_prod",
+            "replica_host": "replica.internal",
+            "replica_port": 25432,
+            "ignored_yaml_key": "ignored",
+        }
+    )
+
+    assert (
+        settings.url
+        == "postgresql://inty_user:secret@primary.internal:15432/inty_prod"
+    )
+    assert (
+        settings.async_url
+        == "postgresql+asyncpg://inty_user:secret@primary.internal:15432/inty_prod"
+    )
+    assert (
+        settings.async_replica_url
+        == "postgresql+asyncpg://inty_user:secret@replica.internal:25432/inty_prod"
+    )
+
+
+def test_google_oauth_config_model_validate_ignores_unknown_keys():
+    settings = GoogleOAuthConfig.model_validate(
+        {
+            "client_id": "google-client",
+            "client_secret": "google-secret",
+            "redirect_uri": "https://example.com/oauth/google/callback",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.client_id == "google-client"
+    assert settings.client_secret == "google-secret"
+    assert settings.redirect_uri == "https://example.com/oauth/google/callback"
+
+
+def test_verification_config_model_validate_ignores_unknown_keys():
+    settings = VerificationConfig.model_validate(
+        {
+            "code_expire_minutes": 11,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.code_expire_minutes == 11
+
+
 def test_agent_config_langsmith_always_trace_user_emails_defaults_to_empty_list():
     agent_config = AgentConfig(api_key="test", langchain_api_key="test")
 
@@ -388,21 +442,23 @@ def test_agent_config_langsmith_always_trace_user_emails_supports_explicit_value
     ]
 
 
-def test_features_config_companion_workspace_bootstrap_type_default():
+def test_features_config_companion_memory_bootstrap_type_default():
     f = FeaturesConfig()
-    assert f.companion_workspace_bootstrap_type == CompanionWorkspaceBootstrapType.NONE.value
-
-
-def test_features_config_companion_workspace_bootstrap_type_normalizes_case():
-    f = FeaturesConfig(companion_workspace_bootstrap_type="user_interactive")
-    assert f.companion_workspace_bootstrap_type == (
-        CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+    assert f.companion_memory_bootstrap_type == (
+        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     )
 
 
-def test_features_config_companion_workspace_bootstrap_type_invalid_raises():
-    with pytest.raises(ValueError, match="companion_workspace_bootstrap_type"):
-        FeaturesConfig(companion_workspace_bootstrap_type="BOGUS")
+def test_features_config_companion_memory_bootstrap_type_normalizes_case():
+    f = FeaturesConfig(companion_memory_bootstrap_type="user_interactive")
+    assert f.companion_memory_bootstrap_type == (
+        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    )
+
+
+def test_features_config_companion_memory_bootstrap_type_invalid_raises():
+    with pytest.raises(ValueError, match="companion_memory_bootstrap_type"):
+        FeaturesConfig(companion_memory_bootstrap_type="BOGUS")
 
 
 def _minimal_yaml_for_load_config(extra_features: str) -> str:
@@ -429,14 +485,91 @@ elevenlabs:
 """
 
 
-def test_load_config_explicit_companion_workspace_bootstrap_type():
+def test_load_config_explicit_companion_memory_bootstrap_type():
     yaml_text = _minimal_yaml_for_load_config(
-        "    companion_workspace_bootstrap_type: USER_INTERACTIVE\n",
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
     )
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.yaml"
         path.write_text(yaml_text, encoding="utf-8")
         cfg = load_config(str(path))
-    assert cfg.app.features.companion_workspace_bootstrap_type == (
-        CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+    assert cfg.app.features.companion_memory_bootstrap_type == (
+        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     )
+
+
+def test_load_config_database_settings_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "database:\n  host: localhost\n",
+        "\n".join(
+            [
+                "database:",
+                "  host: primary.internal",
+                "  port: 15432",
+                "  user: inty_user",
+                "  password: secret",
+                "  db: inty_prod",
+                "  unknown_key: ignored",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert (
+        cfg.database.url
+        == "postgresql://inty_user:secret@primary.internal:15432/inty_prod"
+    )
+
+
+def test_load_config_google_oauth_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "security:\n",
+        "\n".join(
+            [
+                "google_oauth:",
+                "  client_id: google-client",
+                "  client_secret: google-secret",
+                '  redirect_uri: "https://example.com/oauth/google/callback"',
+                "  unknown_key: ignored",
+                "security:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.google_oauth.client_id == "google-client"
+    assert cfg.google_oauth.client_secret == "google-secret"
+    assert cfg.google_oauth.redirect_uri == "https://example.com/oauth/google/callback"
+
+
+def test_load_config_verification_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "security:\n",
+        "\n".join(
+            [
+                "verification:",
+                "  code_expire_minutes: 13",
+                "  unknown_key: ignored",
+                "security:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.verification.code_expire_minutes == 13

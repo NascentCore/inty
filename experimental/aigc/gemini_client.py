@@ -37,7 +37,9 @@ class GeminiClient:
         try:
             # Check if we should use Vertex AI or Gemini API (Google AI Studio)
             # Vertex AI requires service account credentials, not API key
-            use_vertex_ai = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") is not None
+            use_vertex_ai = (
+                os.getenv("GOOGLE_APPLICATION_CREDENTIALS") is not None
+            )
 
             if use_vertex_ai:
                 # Use Vertex AI with service account credentials
@@ -58,14 +60,19 @@ class GeminiClient:
                 self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
 
             logger.info(f"Gemini client initialized successfully")
-            logger.debug(f"Character model: {Config.CHARACTER_GENERATION_MODEL}")
+            logger.debug(
+                f"Character model: {Config.CHARACTER_GENERATION_MODEL}"
+            )
             logger.debug(f"Image model: {Config.IMAGE_GENERATION_MODEL}")
         except Exception as e:
             logger.error(f"Failed to initialize Gemini client: {e}")
             raise
 
     def generate_character_profile(
-        self, brief_description: str, genre: str = "fantasy", tone: str = "neutral"
+        self,
+        brief_description: str,
+        genre: str = "fantasy",
+        tone: str = "neutral",
     ) -> CharacterProfile:
         """Generate a complete character profile from a brief description"""
 
@@ -133,8 +140,12 @@ class GeminiClient:
             )
 
             api_time = time.time() - start_time
-            logger.info(f"Gemini API response received in {api_time:.2f} seconds")
-            logger.debug(f"Response text length: {len(response.text)} characters")
+            logger.info(
+                f"Gemini API response received in {api_time:.2f} seconds"
+            )
+            logger.debug(
+                f"Response text length: {len(response.text)} characters"
+            )
 
             # Log the first 200 characters of response for debugging
             response_preview = (
@@ -153,9 +164,15 @@ class GeminiClient:
                 raise ValueError("Character data validation failed")
 
             # Log character data structure
-            logger.debug(f"Character name: {character_data.get('name', 'Unknown')}")
-            logger.debug(f"Character age: {character_data.get('age', 'Unknown')}")
-            logger.debug(f"Character gender: {character_data.get('gender', 'Unknown')}")
+            logger.debug(
+                f"Character name: {character_data.get('name', 'Unknown')}"
+            )
+            logger.debug(
+                f"Character age: {character_data.get('age', 'Unknown')}"
+            )
+            logger.debug(
+                f"Character gender: {character_data.get('gender', 'Unknown')}"
+            )
 
             # Create CharacterProfile object
             logger.info("Creating CharacterProfile object...")
@@ -173,7 +190,9 @@ class GeminiClient:
                 images=[],  # Will be populated separately
             )
 
-            logger.info(f"Character profile created successfully: {character.name}")
+            logger.info(
+                f"Character profile created successfully: {character.name}"
+            )
             return character
 
         except json.JSONDecodeError as e:
@@ -187,7 +206,9 @@ class GeminiClient:
             logger.error(
                 f"Available fields: {list(character_data.keys()) if 'character_data' in locals() else 'No data'}"
             )
-            raise Exception(f"Missing required field in character profile: {str(e)}")
+            raise Exception(
+                f"Missing required field in character profile: {str(e)}"
+            )
         except Exception as e:
             logger.error(f"Failed to generate character profile: {str(e)}")
             raise Exception(f"Failed to generate character profile: {str(e)}")
@@ -214,7 +235,9 @@ class GeminiClient:
         Accessories: {', '.join(appearance.get('accessories', []))}
         """
 
-        logger.debug(f"Physical description length: {len(physical_desc)} characters")
+        logger.debug(
+            f"Physical description length: {len(physical_desc)} characters"
+        )
 
         images = []
         num_scenes = len(character.images)
@@ -258,9 +281,13 @@ class GeminiClient:
 
             # Extract image data from the response
             assert response.generated_images, "No images generated"
-            assert len(response.generated_images) == 1, "Expected exactly one image"
+            assert (
+                len(response.generated_images) == 1
+            ), "Expected exactly one image"
 
-            generated_image: gemini_types.Image = response.generated_images[0].image
+            generated_image: gemini_types.Image = response.generated_images[
+                0
+            ].image
             assert generated_image, "No image data"
             gemini_image = GeminiImage(**generated_image.model_dump())
             gemini_image.decode_base64()
@@ -268,7 +295,9 @@ class GeminiClient:
 
             logger.info(f"Image {i+1} processed in {image_time:.2f} seconds")
 
-        logger.info(f"Successfully generated {len(images)} images for {character.name}")
+        logger.info(
+            f"Successfully generated {len(images)} images for {character.name}"
+        )
         return images
 
     def enhance_character_details(
@@ -300,7 +329,9 @@ class GeminiClient:
         """
 
         try:
-            logger.info("Sending character enhancement request to Gemini API...")
+            logger.info(
+                "Sending character enhancement request to Gemini API..."
+            )
             start_time = time.time()
 
             response = self.client.models.generate_content(
@@ -308,7 +339,9 @@ class GeminiClient:
             )
 
             api_time = time.time() - start_time
-            logger.info(f"Enhancement API response received in {api_time:.2f} seconds")
+            logger.info(
+                f"Enhancement API response received in {api_time:.2f} seconds"
+            )
 
             enhancements = safe_json_loads(response.text, self.logger)
             logger.info("Enhancement JSON parsed successfully")
@@ -327,7 +360,9 @@ class GeminiClient:
                 {
                     "speech_patterns": enhancements.get("speech_patterns", ""),
                     "body_language": enhancements.get("body_language", ""),
-                    "emotional_triggers": enhancements.get("emotional_triggers", []),
+                    "emotional_triggers": enhancements.get(
+                        "emotional_triggers", []
+                    ),
                     "growth_arc": enhancements.get("growth_arc", ""),
                 }
             )

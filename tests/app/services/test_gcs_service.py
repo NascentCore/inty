@@ -18,8 +18,26 @@ def fake_gcs(monkeypatch: pytest.MonkeyPatch, tmp_path):
     """注入 FakeGCSClient 到 app.external_services.gcs，返回 fake 实例供断言使用。"""
     import app.external_services.gcs as gcs_module
 
-    fake = FakeGCSClient(base_dir=str(tmp_path))
+    base = str(tmp_path.resolve())
+    fake = FakeGCSClient(base_dir=base)
     monkeypatch.setattr(gcs_module, "gcs_client", fake, raising=True)
+    gcs_cfg = types.SimpleNamespace(
+        bucket="test-bucket",
+        use_fake_gcs=True,
+        fake_gcs_base_dir=base,
+    )
+    merged = types.SimpleNamespace(gcs=gcs_cfg)
+    monkeypatch.setattr(
+        gcs_module,
+        "global_config_loaded_from_config_yaml",
+        merged,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        "app.services.gcs_service.global_config_loaded_from_config_yaml",
+        merged,
+        raising=True,
+    )
     yield fake
 
 
@@ -37,7 +55,7 @@ def stub_config(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.mark.asyncio
-async def test_upload_live_chat_audio_success(fake_gcs: FakeGCSClient, stub_config):
+async def test_upload_live_chat_audio_success(fake_gcs: FakeGCSClient):
     """成功路径：上传后返回正确 URL，fake 中可下载到相同内容。"""
     wav_bytes = b"fake-wav-content"
     service = GCSService()
@@ -45,7 +63,9 @@ async def test_upload_live_chat_audio_success(fake_gcs: FakeGCSClient, stub_conf
         "user1", "agent1", "sess1", "voice1", wav_bytes
     )
 
-    expected_url = "https://storage.googleapis.com/test-bucket/live_chat/user1/agent1/sess1_voice1.wav"
+    expected_url = (
+        fake_gcs.base_dir / "test-bucket" / "live_chat/user1/agent1/sess1_voice1.wav"
+    ).resolve().as_uri()
     assert url == expected_url
 
     blob = fake_gcs.bucket("test-bucket").blob(
@@ -69,9 +89,7 @@ async def test_upload_live_chat_audio_returns_none_on_upload_failure(stub_config
 
 
 @pytest.mark.asyncio
-async def test_upload_live_chat_audio_e2e_download_by_url(
-    fake_gcs: FakeGCSClient, stub_config
-):
+async def test_upload_live_chat_audio_e2e_download_by_url(fake_gcs: FakeGCSClient):
     """端到端：上传后按返回 URL 用 FakeGCS 下载，验证路径正确且文件可检索。"""
     wav_bytes = b"fake-wav-content"
     service = GCSService()

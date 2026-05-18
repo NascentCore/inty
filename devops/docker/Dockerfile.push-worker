@@ -44,9 +44,8 @@ fi
 # 复制应用代码
 COPY app/ app/
 COPY backend/ backend/
-COPY alembic/ alembic/
 # Used for manipulate backend system with bundled configurations.
-COPY scripts/ scripts/
+COPY tools/scripts/ tools/scripts/
 COPY backend/push_worker/start.sh .
 
 # 复制指定的配置文件到 config.yaml

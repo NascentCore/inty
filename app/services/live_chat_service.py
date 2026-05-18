@@ -19,12 +19,17 @@ from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 from google import genai
 from google.genai import types
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+)
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import agent_manager
-from app.core.agentic_kernel.providers.gemini import (
+from app.core.companion_harness.providers.gemini import (
     GeminiClientOptions,
     get_gemini_client as get_kernel_gemini_client,
 )
@@ -66,10 +71,17 @@ class LiveSession:
     user_transcript_buffer: str = ""
     ai_transcript_buffer: str = ""
     gemini_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
-    reconnect_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
+    reconnect_lock: asyncio.Lock = field(
+        default_factory=asyncio.Lock, repr=False
+    )
     reconnect_count: int = 0
+    # 预填充完成事件：receive_loop 收到首个 turn_complete（无 model_turn）时 set，
+    # 在此之前音频发送到 Gemini 可能被丢弃（模型还在处理预填充）。
+    prefill_complete: asyncio.Event = field(
+        default_factory=asyncio.Event, repr=False
+    )
     pending_audio: deque[bytes] = field(
-        default_factory=lambda: deque(maxlen=300), repr=False
+        default_factory=lambda: deque(maxlen=1000), repr=False
     )
     pending_user_transcript: str = ""
     pending_ai_transcript: str = ""
@@ -91,6 +103,8 @@ class LiveSession:
     conversation_audio_chunks: List[Tuple[str, bytes]] = field(
         default_factory=list, repr=False
     )
+    # 服务端「开场触发」仅发送一次（重连后不再重复问候）
+    opening_conversation_trigger_sent: bool = False
 
     def get_latency_metrics(self) -> dict:
         """计算并返回延迟指标"""
@@ -104,7 +118,9 @@ class LiveSession:
                 self.last_response_after_silence_ms
             )
         if self.turn_latencies:
-            metrics["turn_latencies_ms"] = [int(t * 1000) for t in self.turn_latencies]
+            metrics["turn_latencies_ms"] = [
+                int(t * 1000) for t in self.turn_latencies
+            ]
             metrics["avg_turn_latency_ms"] = int(
                 sum(self.turn_latencies) / len(self.turn_latencies) * 1000
             )
@@ -119,6 +135,28 @@ class LiveChatService:
         self._client: Optional[genai.Client] = None
         self._active_sessions: Dict[str, LiveSession] = {}
 
+    @staticmethod
+    def _should_save_user_audio_chunk(session: LiveSession) -> bool:
+        """AI 回复期间客户端仍会持续上传麦克风静音；保存 WAV 时不要把它插进 AI 轨。"""
+        return not (
+            session.status == LiveChatStatus.SPEAKING
+            or getattr(session, "_current_turn_has_model_response", False)
+        )
+
+    def _append_user_audio_chunk_for_history(
+        self,
+        session: LiveSession,
+        audio_data: bytes,
+    ) -> None:
+        if (
+            session.config.save_history
+            and audio_data
+            and self._should_save_user_audio_chunk(session)
+        ):
+            session.conversation_audio_chunks.append(
+                ("user", bytes(audio_data))
+            )
+
     def _get_client(self) -> genai.Client:
         """获取或创建 Gemini 客户端"""
         if self._client is None:
@@ -131,7 +169,11 @@ class LiveChatService:
                     project=self._config.project_id,
                     location=self._config.location,
                     wrap_langsmith=True,
-                    tags=("google-genai", "gemini-live", "app-services-live-chat"),
+                    tags=(
+                        "google-genai",
+                        "gemini-live",
+                        "app-services-live-chat",
+                    ),
                     metadata={
                         "source": "app.services.live_chat_service",
                         "project_id": self._config.project_id,
@@ -170,7 +212,9 @@ class LiveChatService:
         chat = await get_or_create_chat_by_agent(db, user_id, agent_id)
         session_id = generate_session_id(chat.id)
 
-        agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+        agent_data = await agent_service.get_agent_for_chat(
+            db, agent_id=agent_id
+        )
         if not agent_data:
             raise ValueError(f"Agent not found: {agent_id}")
 
@@ -236,7 +280,12 @@ class LiveChatService:
     def _build_live_response_constraints(
         self, merged_response_language_name: Optional[str] = None
     ) -> str:
-        """构建 Live 对话回复约束。"""
+        """构建 Live 对话回复约束。
+
+        对于 native-audio 模型（gemini-live-2.5-flash-native-audio），
+        speech_config.language_code 不生效，必须通过 system instruction 强制约束语言。
+        参考: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/live-api/configure-language-voice
+        """
         parts = [
             "## 输出格式\n"
             "这是实时语音对话，请直接用自然口语回复，不要使用括号描述动作或场景。"
@@ -247,13 +296,20 @@ class LiveChatService:
                 getattr(self._config, "response_language_name", "") or ""
             ).strip()
         else:
-            response_language_name = (merged_response_language_name or "").strip()
+            response_language_name = (
+                merged_response_language_name or ""
+            ).strip()
         if response_language_name:
             parts.append(
-                "## Language policy\n"
-                f"You must speak ONLY in {response_language_name}. "
-                "Never switch to any other language, even if the user asks or speaks in another language. "
-                "If the user speaks another language, politely continue in the required language."
+                "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY\n\n"
+                f"YOU MUST SPEAK ONLY IN {response_language_name} AT ALL TIMES. "
+                "This is a strict requirement that cannot be overridden. "
+                "Even if the user speaks to you in a different language, "
+                "you MUST reply ONLY in the required language. "
+                "DO NOT code-switch or mix languages under any circumstances. "
+                "DO NOT translate what the user said — just respond naturally in the required language. "
+                "If you are unsure, default to the required language. "
+                "VIOLATING THIS RULE IS UNACCEPTABLE."
             )
         return "\n\n".join(parts)
 
@@ -284,7 +340,9 @@ class LiveChatService:
         """
         instruction_parts: List[str] = []
         for message in system_messages:
-            text = self._message_content_to_text(getattr(message, "content", ""))
+            text = self._message_content_to_text(
+                getattr(message, "content", "")
+            )
             if text:
                 instruction_parts.append(text)
         instruction_parts.append(
@@ -309,13 +367,19 @@ class LiveChatService:
             else:
                 continue
 
-            text = self._message_content_to_text(getattr(message, "content", ""))
+            text = self._message_content_to_text(
+                getattr(message, "content", "")
+            )
             if not text:
                 continue
-            turns.append(types.Content(role=role, parts=[types.Part(text=text)]))
+            turns.append(
+                types.Content(role=role, parts=[types.Part(text=text)])
+            )
         return turns
 
-    def _summarize_history(self, messages: List[Any], max_turns: int = 10) -> str:
+    def _summarize_history(
+        self, messages: List[Any], max_turns: int = 10
+    ) -> str:
         """将对话历史转换为文本摘要"""
         if not messages:
             return ""
@@ -452,7 +516,9 @@ class LiveChatService:
         speech_ov = session.config.speech_language_code
         if speech_ov is not None and speech_ov.strip():
             return speech_ov.strip()
-        return (getattr(self._config, "response_language_name", "") or "").strip()
+        return (
+            getattr(self._config, "response_language_name", "") or ""
+        ).strip()
 
     def _build_live_config(
         self,
@@ -461,8 +527,14 @@ class LiveChatService:
         voice_id: Optional[str] = None,
         agent_gender: Optional[str] = None,
         system_instruction: Optional[str] = None,
+        session_handle: Optional[str] = None,
     ) -> types.LiveConnectConfig:
-        """构建 Gemini Live 连接配置。支持带 google/ 前缀与无前缀的 voice_id。"""
+        """构建 Gemini Live 连接配置。
+
+        Args:
+            session_handle: 会话恢复句柄。传入时使用 SessionResumptionConfig
+                           恢复之前的对话上下文，而非创建全新会话。
+        """
         fallback_voice_name = GENDER_TO_GEMINI_VOICE_MAPPING.get(
             agent_gender, self._config.default_voice
         )
@@ -473,7 +545,11 @@ class LiveChatService:
             and raw in self.GEMINI_PREBUILT_VOICES
         ):
             voice_name = raw
-        elif voice_id and prefix == "" and voice_id in self.GEMINI_PREBUILT_VOICES:
+        elif (
+            voice_id
+            and prefix == ""
+            and voice_id in self.GEMINI_PREBUILT_VOICES
+        ):
             voice_name = voice_id
         else:
             voice_name = fallback_voice_name
@@ -489,7 +565,9 @@ class LiveChatService:
 
         speech_config_kwargs: Dict[str, Any] = {
             "voice_config": types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name=voice_name
+                )
             )
         }
         speech_language_code = (merged_speech_language_code or "").strip()
@@ -501,6 +579,16 @@ class LiveChatService:
                 "当前 google-genai SDK 的 SpeechConfig 不支持 language_code，"
                 "将仅依赖 system instruction 约束回复语言"
             )
+
+        # 会话恢复：传入 handle 时恢复上下文；首次连接时启用 resumption 以便后续恢复
+        if session_handle:
+            session_resumption_cfg = types.SessionResumptionConfig(
+                handle=session_handle,
+            )
+        elif self._config.session_resumption:
+            session_resumption_cfg = types.SessionResumptionConfig(handle=None)
+        else:
+            session_resumption_cfg = None
 
         live_cfg = types.LiveConnectConfig(
             response_modalities=["AUDIO"],
@@ -516,14 +604,23 @@ class LiveChatService:
                 if self._config.output_transcription
                 else None
             ),
-            # 恢复自动 VAD 模式进行测试（手动 VAD 多轮问题待排查）
+            session_resumption=session_resumption_cfg,
+            context_window_compression=types.ContextWindowCompressionConfig(
+                trigger_tokens=self._config.trigger_tokens,
+                sliding_window=types.SlidingWindow(
+                    target_tokens=self._config.target_tokens,
+                ),
+            ),
+            # 自动 VAD 模式
+            # silence_duration_ms=800: 容忍长句中自然的换气/逗号停顿，避免长句被截断
+            # end_of_speech_sensitivity=LOW: 降低结束检测敏感度，减少误触发
             realtime_input_config=types.RealtimeInputConfig(
                 automatic_activity_detection=types.AutomaticActivityDetection(
                     disabled=False,
                     start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_HIGH,
                     end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_LOW,
                     prefix_padding_ms=20,
-                    silence_duration_ms=500,
+                    silence_duration_ms=800,
                 )
             ),
         )
@@ -568,11 +665,12 @@ class LiveChatService:
         reason: str = "",
     ):
         """
-        重要：根据运行证据（google-genai==1.55.0 + gemini-live-2.5-flash-preview-native-audio-09-2025）
-        “同一 session 音频多轮”可能在 turn_complete 后卡死；这里采用“每轮重连 session”的绕过方案。
+        仅在 goAway 或异常断开时重连，使用 session_resumption 恢复对话上下文。
+
+        与之前的"每轮重连"不同：此方法通过 SessionResumptionConfig 将之前
+        捕获的 session_handle 传递给新会话，从而保留模型对对话历史的记忆。
         """
         async with session.reconnect_lock:
-            # 关键：先把 gemini_session 置空，避免发送侧继续把第二轮语音发到“已卡死”的旧 session。
             async with session.gemini_lock:
                 old_cm = session.gemini_cm
                 old_session = session.gemini_session
@@ -581,17 +679,33 @@ class LiveChatService:
                 old_receive_task = session.receive_task
                 session.receive_task = None
 
-            # 注意：重连期间不发送 CONNECTING 状态到前端，避免 UI 抖动
-            # 前端会继续保持 LISTENING/CONNECTED 状态，用户体验更流畅
             logger.debug(
                 f"开始重建 Gemini Live session: reason={reason}, "
-                f"next_reconnect={session.reconnect_count + 1}, has_old={old_session is not None}"
+                f"next_reconnect={session.reconnect_count + 1}, "
+                f"has_handle={session.session_handle is not None}"
             )
+
+            # 用 session_resumption 恢复上下文（如果有 handle）
+            if session.session_handle:
+                resume_config = types.LiveConnectConfig(
+                    response_modalities=live_config.response_modalities,
+                    speech_config=live_config.speech_config,
+                    system_instruction=live_config.system_instruction,
+                    input_audio_transcription=live_config.input_audio_transcription,
+                    output_audio_transcription=live_config.output_audio_transcription,
+                    session_resumption=types.SessionResumptionConfig(
+                        handle=session.session_handle,
+                    ),
+                    context_window_compression=live_config.context_window_compression,
+                    realtime_input_config=live_config.realtime_input_config,
+                )
+            else:
+                resume_config = live_config
 
             try:
                 new_cm, new_session = await self._open_gemini_session(
                     client=client,
-                    live_config=live_config,
+                    live_config=resume_config,
                 )
             except Exception as e:
                 await on_error("RECONNECT_ERROR", str(e))
@@ -699,12 +813,11 @@ class LiveChatService:
                 )
                 return
 
-            # 启动 Live 会话时预填充文本聊天上下文：
-            # 1) 文本聊天 system messages 作为 system_instruction
-            # 2) 既有 user/AI 消息作为 turns 回放到 Live 模型
+            # 构建 system_instruction（文本聊天 system messages + 语言约束）
+            # 预填充（prefill）仅在 enable_prefill=True 时执行，默认关闭
             prefill_turns: List[types.Content] = []
-            merged_response_language_name = self._resolved_response_language_name(
-                session
+            merged_response_language_name = (
+                self._resolved_response_language_name(session)
             )
             resolved_speech_code = self._resolved_speech_language_code(session)
             try:
@@ -724,18 +837,21 @@ class LiveChatService:
                     user_time_context=None,
                     include_output_format_prompt=False,
                 )
-                history_messages = chat_history_service.get_history_messages(
-                    session.session_id
+                system_instruction = self._build_system_instruction_from_text_chat_system_messages(
+                    text_chat_system_messages,
+                    merged_response_language_name=merged_response_language_name,
                 )
-                system_instruction = (
-                    self._build_system_instruction_from_text_chat_system_messages(
-                        text_chat_system_messages,
-                        merged_response_language_name=merged_response_language_name,
+                if session.config.enable_prefill:
+                    history_messages = (
+                        chat_history_service.get_history_messages(
+                            session.session_id
+                        )
                     )
-                )
-                prefill_turns = self._build_prefill_turns_from_history_messages(
-                    history_messages
-                )
+                    prefill_turns = (
+                        self._build_prefill_turns_from_history_messages(
+                            history_messages
+                        )
+                    )
             except Exception as e:
                 logger.warning(
                     f"构建文本聊天上下文失败，降级为旧版上下文构建: session_id={session.session_id}, error={e}"
@@ -748,9 +864,12 @@ class LiveChatService:
                     history_messages,
                     merged_response_language_name=merged_response_language_name,
                 )
-                prefill_turns = self._build_prefill_turns_from_history_messages(
-                    history_messages
-                )
+                if session.config.enable_prefill:
+                    prefill_turns = (
+                        self._build_prefill_turns_from_history_messages(
+                            history_messages
+                        )
+                    )
 
             voice_id = session.config.voice_id or agent_data.get("voice_id")
             agent_gender = agent_data.get("gender")
@@ -763,7 +882,9 @@ class LiveChatService:
 
             client = self._get_client()
 
-            await on_status(LiveChatStatus.CONNECTING, "正在连接到 Gemini Live...")
+            await on_status(
+                LiveChatStatus.CONNECTING, "正在连接到 Gemini Live..."
+            )
             session.connect_start_time = time.time()
             gemini_cm, gemini_session = await self._open_gemini_session(
                 client=client,
@@ -773,20 +894,28 @@ class LiveChatService:
             session.gemini_cm = gemini_cm
             session.gemini_session = gemini_session
 
-            if prefill_turns:
+            if session.config.enable_prefill and prefill_turns:
                 await gemini_session.send_client_content(
                     turns=prefill_turns, turn_complete=False
                 )
                 logger.debug(
                     f"Live 会话预填充完成: session_id={session.session_id}, turns={len(prefill_turns)}"
                 )
+            else:
+                # 未启用预填充：直接标记完成，音频无需缓冲，直通 Gemini
+                session.prefill_complete.set()
 
             session.status = LiveChatStatus.CONNECTED
             await on_status(LiveChatStatus.CONNECTED, "已连接")
 
-            if on_latency and session.connect_start_time and session.connect_end_time:
+            if (
+                on_latency
+                and session.connect_start_time
+                and session.connect_end_time
+            ):
                 connect_latency_ms = int(
-                    (session.connect_end_time - session.connect_start_time) * 1000
+                    (session.connect_end_time - session.connect_start_time)
+                    * 1000
                 )
                 await on_latency({"connect_latency_ms": connect_latency_ms})
 
@@ -804,6 +933,69 @@ class LiveChatService:
                     on_latency=on_latency,
                 )
             )
+
+            if session.config.agent_starts_conversation:
+
+                async def _opening_after_prefill() -> None:
+                    try:
+                        await session.prefill_complete.wait()
+                    except asyncio.CancelledError:
+                        return
+                    await self._send_opening_conversation_trigger(
+                        session,
+                        merged_response_language_name,
+                    )
+
+                asyncio.create_task(_opening_after_prefill())
+
+            if session.config.enable_prefill:
+                # 独立任务：等待预填充完成后 flush 缓冲的音频。
+                # 生成器的 yield 会阻塞等待输入，如果客户端在预填充完成前已发完所有音频，
+                # 缓冲的音频将永远不会被 flush。此任务在预填充完成时主动 flush。
+                async def _flush_after_prefill():
+                    try:
+                        await session.prefill_complete.wait()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:
+                        logger.warning(
+                            "等待 Live 预填充完成失败: "
+                            f"session_id={session.session_id}, error={e}"
+                        )
+                        return
+                    async with session.gemini_lock:
+                        gs = session.gemini_session
+                    if gs is None:
+                        return
+                    if not session.pending_audio:
+                        return
+                    try:
+                        await gs.send_realtime_input(
+                            activity_start=types.ActivityStart()
+                        )
+                        flushed = 0
+                        while True:
+                            try:
+                                chunk = session.pending_audio.popleft()
+                            except IndexError:
+                                break
+                            await gs.send_realtime_input(
+                                audio=types.Blob(
+                                    data=chunk,
+                                    mime_type=f"audio/pcm;rate={self._config.send_sample_rate}",
+                                )
+                            )
+                            flushed += 1
+                        await gs.send_realtime_input(
+                            activity_end=types.ActivityEnd()
+                        )
+                        logger.debug(
+                            f"预填充完成后 flush {flushed} 个缓冲音频包到 Gemini"
+                        )
+                    except Exception as e:
+                        logger.debug(f"预填充 flush 失败（忽略）: {e}")
+
+                prefill_flush_task = asyncio.create_task(_flush_after_prefill())
 
             try:
                 logger.debug("生成器已启动，等待接收输入数据...")
@@ -836,10 +1028,28 @@ class LiveChatService:
                                 and audio_data
                             ):
                                 session.pending_audio.append(bytes(audio_data))
-                                if session.config.save_history:
-                                    session.conversation_audio_chunks.append(
-                                        ("user", bytes(audio_data))
-                                    )
+                                self._append_user_audio_chunk_for_history(
+                                    session, bytes(audio_data)
+                                )
+                        continue
+
+                    # 预填充尚未完成：缓冲音频，等 Gemini 就绪后由 _flush_after_prefill 任务统一 flush。
+                    # 预填充期间发送到 Gemini 的音频可能被丢弃（模型还在处理上下文）。
+                    if not session.prefill_complete.is_set():
+                        if item_type == "audio":
+                            audio_data = (
+                                input_item.get("data")
+                                if isinstance(input_item, dict)
+                                else input_item
+                            )
+                            if (
+                                isinstance(audio_data, (bytes, bytearray))
+                                and audio_data
+                            ):
+                                session.pending_audio.append(bytes(audio_data))
+                                self._append_user_audio_chunk_for_history(
+                                    session, bytes(audio_data)
+                                )
                         continue
 
                     if item_type == "activity_start":
@@ -878,10 +1088,9 @@ class LiveChatService:
                             mime_type=f"audio/pcm;rate={self._config.send_sample_rate}",
                         )
                     )
-                    if session.config.save_history:
-                        session.conversation_audio_chunks.append(
-                            ("user", bytes(audio_data))
-                        )
+                    self._append_user_audio_chunk_for_history(
+                        session, bytes(audio_data)
+                    )
             finally:
                 if session.receive_task is not None:
                     session.receive_task.cancel()
@@ -923,266 +1132,329 @@ class LiveChatService:
         """接收 Gemini Live 响应的循环"""
         try:
             logger.debug("开始接收 Gemini Live 响应...")
-            async for response in gemini_session.receive():
-                logger.debug(f"收到 Gemini 响应: {type(response)}")
+            # google-genai：receive() 在携带 turn_complete 的消息后即结束该轮迭代；
+            # 须外层 while True 反复拉起，否则首条 setup turn_complete 即可耗尽迭代器，后续无人读下行。
+            while True:
+                async for response in gemini_session.receive():
+                    logger.debug(f"收到 Gemini 响应: {type(response)}")
 
-                # 处理 Gemini Live API 周期性返回的 token 用量统计
-                if hasattr(response, "usage_metadata") and response.usage_metadata:
-                    usage = response.usage_metadata
-                    if hasattr(usage, "total_token_count") and usage.total_token_count:
-                        session.total_token_count = usage.total_token_count
-                        logger.debug(
-                            f"Token 用量统计 - 总计: {usage.total_token_count} tokens"
-                        )
+                    # 处理 Gemini Live API 周期性返回的 token 用量统计
                     if (
-                        hasattr(usage, "response_tokens_details")
-                        and usage.response_tokens_details
+                        hasattr(response, "usage_metadata")
+                        and response.usage_metadata
                     ):
-                        for detail in usage.response_tokens_details:
-                            if hasattr(detail, "modality") and hasattr(
-                                detail, "token_count"
-                            ):
-                                modality_str = str(detail.modality)
-                                session.response_token_details[modality_str] = (
-                                    detail.token_count
-                                )
-                                logger.debug(
-                                    f"  - {modality_str}: {detail.token_count} tokens"
-                                )
-
-                if (
-                    hasattr(response, "session_resumption_update")
-                    and response.session_resumption_update
-                ):
-                    update = response.session_resumption_update
-                    if (
-                        hasattr(update, "resumable")
-                        and update.resumable
-                        and hasattr(update, "new_handle")
-                        and update.new_handle
-                    ):
-                        session.session_handle = update.new_handle
-                        logger.debug(
-                            f"收到会话恢复句柄: {session.session_handle[:20]}..."
-                        )
-
-                if hasattr(response, "server_content") and response.server_content:
-                    server_content = response.server_content
-                    logger.debug(f"收到 server_content: {type(server_content)}")
-
-                    if (
-                        hasattr(server_content, "input_transcription")
-                        and server_content.input_transcription
-                        and hasattr(server_content.input_transcription, "text")
-                        and server_content.input_transcription.text
-                    ):
-                        # 运行证据：在部分模型/通道组合下，finished 可能长期为 false。
-                        # 因此这里仅累计最新文本，最终在 turn_complete 时统一 flush。
-                        piece = server_content.input_transcription.text or ""
-                        if piece != session.last_user_transcription_piece:
-                            session.pending_user_transcript = (
-                                self._merge_transcription_piece(
-                                    session.pending_user_transcript,
-                                    piece,
-                                )
+                        usage = response.usage_metadata
+                        if (
+                            hasattr(usage, "total_token_count")
+                            and usage.total_token_count
+                        ):
+                            session.total_token_count = usage.total_token_count
+                            logger.debug(
+                                f"Token 用量统计 - 总计: {usage.total_token_count} tokens"
                             )
-                            session.last_user_transcription_piece = piece
-                        session.user_transcription_updates += 1
+                        if (
+                            hasattr(usage, "response_tokens_details")
+                            and usage.response_tokens_details
+                        ):
+                            for detail in usage.response_tokens_details:
+                                if hasattr(detail, "modality") and hasattr(
+                                    detail, "token_count"
+                                ):
+                                    modality_str = str(detail.modality)
+                                    session.response_token_details[
+                                        modality_str
+                                    ] = detail.token_count
+                                    logger.debug(
+                                        f"  - {modality_str}: {detail.token_count} tokens"
+                                    )
 
                     if (
-                        hasattr(server_content, "output_transcription")
-                        and server_content.output_transcription
-                        and hasattr(server_content.output_transcription, "text")
-                        and server_content.output_transcription.text
+                        hasattr(response, "session_resumption_update")
+                        and response.session_resumption_update
                     ):
-                        # 同上：只累计最新文本，最终在 turn_complete 时 flush。
-                        piece = server_content.output_transcription.text or ""
-                        if piece != session.last_ai_transcription_piece:
-                            session.pending_ai_transcript = (
-                                self._merge_transcription_piece(
-                                    session.pending_ai_transcript,
-                                    piece,
-                                )
+                        update = response.session_resumption_update
+                        if (
+                            hasattr(update, "resumable")
+                            and update.resumable
+                            and hasattr(update, "new_handle")
+                            and update.new_handle
+                        ):
+                            session.session_handle = update.new_handle
+                            logger.debug(
+                                f"收到会话恢复句柄: {session.session_handle[:20]}..."
                             )
-                            session.last_ai_transcription_piece = piece
-                        session.ai_transcription_updates += 1
 
                     if (
-                        hasattr(server_content, "model_turn")
-                        and server_content.model_turn
+                        hasattr(response, "server_content")
+                        and response.server_content
                     ):
-                        if session.status != LiveChatStatus.SPEAKING:
-                            response_after_silence_ms: Optional[int] = None
-                            if session.last_audio_sent_time is not None:
-                                response_after_silence_ms = int(
-                                    (time.time() - session.last_audio_sent_time) * 1000
+                        server_content = response.server_content
+                        logger.debug(
+                            f"收到 server_content: {type(server_content)}"
+                        )
+
+                        if (
+                            hasattr(server_content, "input_transcription")
+                            and server_content.input_transcription
+                            and hasattr(
+                                server_content.input_transcription, "text"
+                            )
+                            and server_content.input_transcription.text
+                        ):
+                            # 运行证据：在部分模型/通道组合下，finished 可能长期为 false。
+                            # 因此这里仅累计最新文本，最终在 turn_complete 时统一 flush。
+                            piece = (
+                                server_content.input_transcription.text or ""
+                            )
+                            if piece != session.last_user_transcription_piece:
+                                session.pending_user_transcript = (
+                                    self._merge_transcription_piece(
+                                        session.pending_user_transcript,
+                                        piece,
+                                    )
                                 )
-                                session.last_response_after_silence_ms = (
-                                    response_after_silence_ms
+                                session.last_user_transcription_piece = piece
+                            session.user_transcription_updates += 1
+
+                        if (
+                            hasattr(server_content, "output_transcription")
+                            and server_content.output_transcription
+                            and hasattr(
+                                server_content.output_transcription, "text"
+                            )
+                            and server_content.output_transcription.text
+                        ):
+                            # 同上：只累计最新文本，最终在 turn_complete 时 flush。
+                            piece = (
+                                server_content.output_transcription.text or ""
+                            )
+                            if piece != session.last_ai_transcription_piece:
+                                session.pending_ai_transcript = (
+                                    self._merge_transcription_piece(
+                                        session.pending_ai_transcript,
+                                        piece,
+                                    )
                                 )
-                            if session.current_turn_start_time is not None:
-                                turn_latency = (
-                                    time.time() - session.current_turn_start_time
-                                )
-                                session.turn_latencies.append(turn_latency)
-                                session.current_turn_start_time = None
-                                if on_latency:
-                                    turn_latencies_ms = [
-                                        int(t * 1000) for t in session.turn_latencies
-                                    ]
-                                    avg_turn_latency_ms = int(
-                                        sum(session.turn_latencies)
-                                        / len(session.turn_latencies)
+                                session.last_ai_transcription_piece = piece
+                            session.ai_transcription_updates += 1
+
+                        if (
+                            hasattr(server_content, "model_turn")
+                            and server_content.model_turn
+                        ):
+                            session._current_turn_has_model_response = True
+                            if session.status != LiveChatStatus.SPEAKING:
+                                response_after_silence_ms: Optional[int] = None
+                                if session.last_audio_sent_time is not None:
+                                    response_after_silence_ms = int(
+                                        (
+                                            time.time()
+                                            - session.last_audio_sent_time
+                                        )
                                         * 1000
                                     )
-                                    payload: Dict[str, Any] = {
-                                        "turn_latencies_ms": turn_latencies_ms,
-                                        "avg_turn_latency_ms": avg_turn_latency_ms,
-                                    }
-                                    if response_after_silence_ms is not None:
-                                        payload["first_response_after_silence_ms"] = (
-                                            response_after_silence_ms
-                                        )
-                                    await on_latency(payload)
-                            session.status = LiveChatStatus.SPEAKING
-                            logger.debug("发送 SPEAKING 状态到前端")
-                            await on_status(LiveChatStatus.SPEAKING, None)
-                        logger.debug(
-                            f"AI 开始回复，parts 数量: {len(server_content.model_turn.parts)}"
-                        )
-
-                        for part in server_content.model_turn.parts:
-                            if hasattr(part, "inline_data") and part.inline_data:
-                                logger.debug(
-                                    f"收到音频数据: {len(part.inline_data.data)} bytes"
-                                )
-                                if session.config.save_history:
-                                    session.conversation_audio_chunks.append(
-                                        ("ai", bytes(part.inline_data.data))
+                                    session.last_response_after_silence_ms = (
+                                        response_after_silence_ms
                                     )
-                                await on_audio(part.inline_data.data)
+                                if session.current_turn_start_time is not None:
+                                    turn_latency = (
+                                        time.time()
+                                        - session.current_turn_start_time
+                                    )
+                                    session.turn_latencies.append(turn_latency)
+                                    session.current_turn_start_time = None
+                                    if on_latency:
+                                        turn_latencies_ms = [
+                                            int(t * 1000)
+                                            for t in session.turn_latencies
+                                        ]
+                                        avg_turn_latency_ms = int(
+                                            sum(session.turn_latencies)
+                                            / len(session.turn_latencies)
+                                            * 1000
+                                        )
+                                        payload: Dict[str, Any] = {
+                                            "turn_latencies_ms": turn_latencies_ms,
+                                            "avg_turn_latency_ms": avg_turn_latency_ms,
+                                        }
+                                        if (
+                                            response_after_silence_ms
+                                            is not None
+                                        ):
+                                            payload[
+                                                "first_response_after_silence_ms"
+                                            ] = response_after_silence_ms
+                                        await on_latency(payload)
+                                session.status = LiveChatStatus.SPEAKING
+                                logger.debug("发送 SPEAKING 状态到前端")
+                                await on_status(LiveChatStatus.SPEAKING, None)
+                            logger.debug(
+                                f"AI 开始回复，parts 数量: {len(server_content.model_turn.parts)}"
+                            )
 
-                            # 兼容：如果未启用 output_audio_transcription，且模型确实返回文本 parts
+                            for part in server_content.model_turn.parts:
+                                if (
+                                    hasattr(part, "inline_data")
+                                    and part.inline_data
+                                ):
+                                    logger.debug(
+                                        f"收到音频数据: {len(part.inline_data.data)} bytes"
+                                    )
+                                    if session.config.save_history:
+                                        session.conversation_audio_chunks.append(
+                                            ("ai", bytes(part.inline_data.data))
+                                        )
+                                    await on_audio(part.inline_data.data)
+
+                                # 兼容：如果未启用 output_audio_transcription，且模型确实返回文本 parts
+                                if (
+                                    not self._config.output_transcription
+                                    and hasattr(part, "text")
+                                    and part.text
+                                ):
+                                    session.ai_transcript_buffer += part.text
+                                    await on_transcript(part.text, "assistant")
+
+                        if (
+                            hasattr(server_content, "turn_complete")
+                            and server_content.turn_complete
+                        ):
+                            had_model_turn = getattr(
+                                session,
+                                "_current_turn_has_model_response",
+                                False,
+                            )
+                            if not had_model_turn:
+                                logger.debug(
+                                    "收到 turn_complete 但本轮无 model_turn（预填充完成信号），"
+                                    "保持 session 继续监听"
+                                )
+                                session.prefill_complete.set()
+                                continue
+
+                            # 模型真正回复了一轮：保存转录、重置状态、保持同一 session 继续监听
+                            session._current_turn_has_model_response = False
+                            logger.debug(
+                                "AI 回复完成，发送 LISTENING 状态到前端"
+                            )
+                            session.status = LiveChatStatus.LISTENING
+                            await on_status(LiveChatStatus.LISTENING, None)
+                            session._turn_num = (
+                                getattr(session, "_turn_num", 0) + 1
+                            )
+
+                            user_text = self._normalize_transcript_text(
+                                session.pending_user_transcript
+                            )
+                            ai_text = self._normalize_transcript_text(
+                                session.pending_ai_transcript
+                            )
+
+                            if user_text:
+                                if session.config.save_history:
+                                    user_message_id = await chat_history_service.add_user_message_async(
+                                        session.session_id,
+                                        user_text,
+                                        meta_data={
+                                            "is_voice": True,
+                                            "voice_session_id": session.voice_session_id,
+                                        },
+                                    )
+                                    ts = time.time() * 1000
+                                    await on_transcript(
+                                        user_text, "user", user_message_id, ts
+                                    )
+                                else:
+                                    await on_transcript(user_text, "user")
+                            if ai_text:
+                                if session.config.save_history:
+                                    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+                                        session_id=session.session_id,
+                                        message=ai_text,
+                                        agent_id=session.agent_id,
+                                        meta_data={
+                                            "is_voice": True,
+                                            "voice_session_id": session.voice_session_id,
+                                        },
+                                    )
+                                    ts = time.time() * 1000
+                                    await on_transcript(
+                                        ai_text, "assistant", ai_message_id, ts
+                                    )
+                                else:
+                                    await on_transcript(ai_text, "assistant")
+
+                            session.pending_user_transcript = ""
+                            session.pending_ai_transcript = ""
+                            session.user_transcription_updates = 0
+                            session.ai_transcription_updates = 0
+                            session.last_user_transcription_piece = ""
+                            session.last_ai_transcription_piece = ""
+
                             if (
-                                not self._config.output_transcription
-                                and hasattr(part, "text")
-                                and part.text
+                                (not self._config.output_transcription)
+                                and session.ai_transcript_buffer
+                                and session.config.save_history
                             ):
-                                session.ai_transcript_buffer += part.text
-                                await on_transcript(part.text, "assistant")
-
-                    if (
-                        hasattr(server_content, "turn_complete")
-                        and server_content.turn_complete
-                    ):
-                        logger.debug("AI 回复完成，发送 LISTENING 状态到前端")
-                        session.status = LiveChatStatus.LISTENING
-                        await on_status(LiveChatStatus.LISTENING, None)
-                        session._turn_num = getattr(session, "_turn_num", 0) + 1
-
-                        # 关键修复：不依赖 transcription.finished（运行证据显示可能一直为 false），
-                        # 在 turn_complete 时将当前累计的转录作为本轮最终文本进行展示与落库。
-                        flushed_user = False
-                        flushed_ai = False
-                        user_text = self._normalize_transcript_text(
-                            session.pending_user_transcript
-                        )
-                        ai_text = self._normalize_transcript_text(
-                            session.pending_ai_transcript
-                        )
-
-                        if user_text:
-                            flushed_user = True
-                            if session.config.save_history:
-                                user_message_id = await chat_history_service.add_user_message_async(
-                                    session.session_id,
-                                    user_text,
-                                    meta_data={
-                                        "is_voice": True,
-                                        "voice_session_id": session.voice_session_id,
-                                    },
-                                )
-                                ts = time.time() * 1000
-                                await on_transcript(
-                                    user_text, "user", user_message_id, ts
-                                )
-                            else:
-                                await on_transcript(user_text, "user")
-                        if ai_text:
-                            flushed_ai = True
-                            if session.config.save_history:
-                                ai_message_id = await chat_history_service.add_ai_message_sync_async(
+                                await chat_history_service.add_ai_message_sync_async(
                                     session_id=session.session_id,
-                                    message=ai_text,
+                                    message=session.ai_transcript_buffer.strip(),
                                     agent_id=session.agent_id,
                                     meta_data={
                                         "is_voice": True,
                                         "voice_session_id": session.voice_session_id,
                                     },
                                 )
-                                ts = time.time() * 1000
-                                await on_transcript(
-                                    ai_text, "assistant", ai_message_id, ts
-                                )
-                            else:
-                                await on_transcript(ai_text, "assistant")
+                                session.ai_transcript_buffer = ""
 
-                        session.pending_user_transcript = ""
-                        session.pending_ai_transcript = ""
-                        session.user_transcription_updates = 0
-                        session.ai_transcription_updates = 0
-                        session.last_user_transcription_piece = ""
-                        session.last_ai_transcription_piece = ""
+                            # 保持同一 session 继续多轮对话，不重连。
+                            # session_resumption 句柄已在上方捕获，仅在 goAway 或异常时用于恢复。
 
-                        # 兼容：若未启用 output_audio_transcription，则在 turn_complete 时落库并清空 buffer
-                        if (
-                            (not self._config.output_transcription)
-                            and session.ai_transcript_buffer
-                            and session.config.save_history
-                        ):
-                            await chat_history_service.add_ai_message_sync_async(
-                                session_id=session.session_id,
-                                message=session.ai_transcript_buffer.strip(),
-                                agent_id=session.agent_id,
-                                meta_data={
-                                    "is_voice": True,
-                                    "voice_session_id": session.voice_session_id,
-                                },
-                            )
-                            session.ai_transcript_buffer = ""
-
-                        # 运行证据：同一 session 的音频多轮可能在 turn_complete 后卡死。
-                        # 这里直接触发"重建 Gemini Live session"的绕过方案（等价于脚本中的"每轮重连"）。
-                        asyncio.create_task(
-                            self._reconnect_gemini_session(
-                                session=session,
-                                client=client,
-                                live_config=live_config,
-                                db=db,
-                                on_audio=on_audio,
-                                on_transcript=on_transcript,
-                                on_status=on_status,
-                                on_error=on_error,
-                                on_latency=on_latency,
-                                reason="turn_complete",
-                            )
+                    if response.go_away:
+                        logger.warning(
+                            f"收到 goAway 通知，剩余时间: {response.go_away.time_left}"
+                        )
+                        await on_status(
+                            LiveChatStatus.CONNECTED,
+                            f"连接即将断开，剩余 {response.go_away.time_left} 秒",
+                        )
+                        # 等待 goAway 倒计时结束后，用 session_resumption 恢复会话上下文
+                        await asyncio.sleep(response.go_away.time_left + 1)
+                        await self._reconnect_gemini_session(
+                            session=session,
+                            client=client,
+                            live_config=live_config,
+                            db=db,
+                            on_audio=on_audio,
+                            on_transcript=on_transcript,
+                            on_status=on_status,
+                            on_error=on_error,
+                            on_latency=on_latency,
+                            reason="go_away",
                         )
                         return
-
-                if response.go_away:
-                    logger.warning(
-                        f"收到 goAway 通知，剩余时间: {response.go_away.time_left}"
-                    )
-                    await on_status(
-                        LiveChatStatus.CONNECTED,
-                        f"连接即将断开，剩余 {response.go_away.time_left} 秒",
-                    )
 
         except asyncio.CancelledError:
             pass
         except Exception as e:
             logger.error(f"接收循环错误: {str(e)}")
             await on_error("RECEIVE_ERROR", str(e))
+            # 异常断开时用 session_resumption 恢复会话上下文
+            try:
+                await self._reconnect_gemini_session(
+                    session=session,
+                    client=client,
+                    live_config=live_config,
+                    db=db,
+                    on_audio=on_audio,
+                    on_transcript=on_transcript,
+                    on_status=on_status,
+                    on_error=on_error,
+                    on_latency=on_latency,
+                    reason=f"error:{e}",
+                )
+            except Exception as reconnect_error:
+                logger.error(f"异常后重连失败: {reconnect_error}")
 
     async def _save_conversation_history(
         self,
@@ -1202,27 +1474,31 @@ class LiveChatService:
 
         try:
             if session.user_transcript_buffer:
-                user_message_id = await chat_history_service.add_user_message_async(
-                    session.session_id,
-                    session.user_transcript_buffer,
-                    meta_data={
-                        "is_voice": True,
-                        "voice_session_id": session.voice_session_id,
-                    },
+                user_message_id = (
+                    await chat_history_service.add_user_message_async(
+                        session.session_id,
+                        session.user_transcript_buffer,
+                        meta_data={
+                            "is_voice": True,
+                            "voice_session_id": session.voice_session_id,
+                        },
+                    )
                 )
                 logger.debug(
                     f"保存用户语音转录: {session.user_transcript_buffer[:50]}..."
                 )
 
             if session.ai_transcript_buffer:
-                ai_message_id = await chat_history_service.add_ai_message_sync_async(
-                    session_id=session.session_id,
-                    message=session.ai_transcript_buffer,
-                    agent_id=session.agent_id,
-                    meta_data={
-                        "is_voice": True,
-                        "voice_session_id": session.voice_session_id,
-                    },
+                ai_message_id = (
+                    await chat_history_service.add_ai_message_sync_async(
+                        session_id=session.session_id,
+                        message=session.ai_transcript_buffer,
+                        agent_id=session.agent_id,
+                        meta_data={
+                            "is_voice": True,
+                            "voice_session_id": session.voice_session_id,
+                        },
+                    )
                 )
                 logger.debug(
                     f"保存 AI 语音转录: {session.ai_transcript_buffer[:50]}..."
@@ -1236,8 +1512,10 @@ class LiveChatService:
             return
 
         if user_message_id is None:
-            user_message_id = await chat_history_service.get_latest_user_message_id(
-                db, session.session_id
+            user_message_id = (
+                await chat_history_service.get_latest_user_message_id(
+                    db, session.session_id
+                )
             )
         if ai_message_id is None:
             ai_message_id = await chat_history_service.get_latest_ai_message_id(
@@ -1275,7 +1553,9 @@ class LiveChatService:
                 logger.warning("Live chat 音频上传 GCS 未返回 URL，跳过写表")
                 return
 
-            total_duration = len(pcm_24k) / (self._config.receive_sample_rate * 2)
+            total_duration = len(pcm_24k) / (
+                self._config.receive_sample_rate * 2
+            )
             if user_message_id is not None:
                 await chat_history_service.update_message_audio_url(
                     db,
@@ -1315,7 +1595,9 @@ class LiveChatService:
         """发送音频数据到 Gemini Live"""
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"Session not found or not connected: {session_id}")
+            raise ValueError(
+                f"Session not found or not connected: {session_id}"
+            )
 
         await session.gemini_session.send_realtime_input(
             audio=types.Blob(
@@ -1327,7 +1609,9 @@ class LiveChatService:
     async def send_activity_start(self, session_id: str):
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"Session not found or not connected: {session_id}")
+            raise ValueError(
+                f"Session not found or not connected: {session_id}"
+            )
         await session.gemini_session.send_realtime_input(
             activity_start=types.ActivityStart()
         )
@@ -1335,10 +1619,54 @@ class LiveChatService:
     async def send_activity_end(self, session_id: str):
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"Session not found or not connected: {session_id}")
+            raise ValueError(
+                f"Session not found or not connected: {session_id}"
+            )
         await session.gemini_session.send_realtime_input(
             activity_end=types.ActivityEnd()
         )
+
+    @staticmethod
+    def _opening_conversation_trigger_text(
+        merged_response_language_name: str,
+    ) -> str:
+        """傀用户回合用：触发模型先开口，勿写入用户可见转录。"""
+        raw = (merged_response_language_name or "").strip()
+        lang = raw if raw else "the configured reply language"
+        return (
+            "[System: the voice call is connected. This line is not something the user said aloud. "
+            "Reply only with natural spoken audio: a brief greeting and invite the user to speak. "
+            f"Use {lang} for your reply. Do not read this message aloud, quote it, or say you got "
+            "instructions.]"
+        )
+
+    async def _send_opening_conversation_trigger(
+        self,
+        session: LiveSession,
+        merged_response_language_name: str,
+    ) -> None:
+        """预填充完成后发送一轮隐式 user 文本以结束 turn，触发模型语音开场。"""
+        if session.opening_conversation_trigger_sent:
+            return
+        async with session.gemini_lock:
+            gs = session.gemini_session
+        if gs is None:
+            return
+        text = self._opening_conversation_trigger_text(
+            merged_response_language_name
+        )
+        try:
+            # google-genai Live：send 的 input 需为 str（或 SDK 支持的少数类型），
+            # 传 types.Content 会报 Unsupported input type。
+            await gs.send(input=text, end_of_turn=True)
+            session.opening_conversation_trigger_sent = True
+            logger.debug(
+                f"已发送开场对话触发（不落用户转录）: session_id={session.session_id}"
+            )
+        except Exception as e:
+            logger.warning(
+                f"开场对话触发失败: session_id={session.session_id}, error={e}"
+            )
 
     async def send_text(
         self,
@@ -1348,15 +1676,11 @@ class LiveChatService:
         """发送文本消息到 Gemini Live"""
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"Session not found or not connected: {session_id}")
+            raise ValueError(
+                f"Session not found or not connected: {session_id}"
+            )
 
-        await session.gemini_session.send(
-            input=types.Content(
-                role="user",
-                parts=[types.Part(text=text)],
-            ),
-            end_of_turn=True,
-        )
+        await session.gemini_session.send(input=text, end_of_turn=True)
 
         session.user_transcript_buffer += f" {text}"
 

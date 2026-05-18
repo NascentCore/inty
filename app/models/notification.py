@@ -16,7 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 
 
 class NotificationTemplateType(str, enum.Enum):
@@ -58,11 +58,15 @@ class NotificationTemplate(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(
-        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     # 索引
-    __table_args__ = (Index("ix_notification_templates_is_active", "is_active"),)
+    __table_args__ = (
+        Index("ix_notification_templates_is_active", "is_active"),
+    )
 
     # 关联关系
     notifications = relationship("UserNotification", back_populates="template")
@@ -90,7 +94,9 @@ class UserNotification(Base):
     link_urls = Column(ARRAY(String))  # 实际使用链接
     is_read = Column(Boolean, default=False)
     read_at = Column(DateTime)
-    created_at = Column(DateTime, default=lambda: datetime.now())  # 使用 naive datetime
+    created_at = Column(
+        DateTime, default=lambda: datetime.now()
+    )  # 使用 naive datetime
     deleted_at = Column(DateTime)
 
     # 索引
@@ -111,7 +117,9 @@ class UserNotification(Base):
     )
 
     # 关联关系
-    template = relationship("NotificationTemplate", back_populates="notifications")
+    template = relationship(
+        "NotificationTemplate", back_populates="notifications"
+    )
     user = relationship("User", back_populates="notifications")
 
     def __repr__(self):

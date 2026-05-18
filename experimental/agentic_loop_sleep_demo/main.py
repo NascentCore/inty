@@ -62,7 +62,9 @@ def _extract_sleep_seconds_from_context(messages: list[dict]) -> int:
     从上下文中提取“用户要求等待几秒”。
     这里故意做成最简单实现：取最后一条 user 消息里的第一个整数。
     """
-    latest_user_text = [m["content"] for m in messages if m["role"] == "user"][-1]
+    latest_user_text = [m["content"] for m in messages if m["role"] == "user"][
+        -1
+    ]
     return int(re.search(r"\d+", latest_user_text).group(0))
 
 
@@ -160,8 +162,12 @@ def run_agentic_loop(
             )
             tool_args = json.loads(tool_call.function.arguments)
             tool_input = SleepToolInput(reason=tool_args["reason"])
-            tool_output = _execute_sleep_tool(messages=messages, tool_input=tool_input)
-            tool_output_json = json.dumps(asdict(tool_output), ensure_ascii=False)
+            tool_output = _execute_sleep_tool(
+                messages=messages, tool_input=tool_input
+            )
+            tool_output_json = json.dumps(
+                asdict(tool_output), ensure_ascii=False
+            )
             print(f"[Loop Step {step}] 工具返回: {tool_output_json}")
             messages.append(
                 {

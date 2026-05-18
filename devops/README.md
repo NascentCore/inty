@@ -26,14 +26,14 @@
   ```bash
   ssh <gcp-vm>
   docker exec -it inty-backend-dev bash
-  python scripts/<...>.py <flags>
+  python tools/scripts/<...>.py <flags>
   ```
 
 ### dev 环境测试用户
 
 ** 需要时可以随时添加**
 
-dev 环境预制了 3 个测试用户（使用`python scripts/create_email_password_superuser.py --email test@local.ai --password test`）：
+dev 环境预制了 3 个测试用户（使用`python tools/scripts/create_email_password_superuser.py --email test@local.ai --password test`）：
 - test1@sxwl.ai sxwl666!
 - test2@sxwl.ai sxwl666!
 - test3@sxwl.ai sxwl666!
@@ -60,9 +60,3 @@ dev 环境预制了 3 个测试用户（使用`python scripts/create_email_passw
   - `nginx/conf.d/sxwl.ai.conf`：站点配置
   - `nginx/validate.sh`：配置校验
 - **docker/**：运维侧的 Docker 相关材料（如有）
-
-## Notes
-
-同样的提示词，Cursor 搞定了，Copilot 搞不定：
-* Copilot 搞不定，引入新的错误：https://github.com/NascentCore/inty/pull/2246
-* Cursor 搞定，未引入新的错误：https://github.com/NascentCore/inty/pull/2249

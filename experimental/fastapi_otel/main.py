@@ -6,10 +6,15 @@ Every HTTP request is automatically traced; spans go to console and optionally O
 import os
 
 from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter,
+)
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    ConsoleSpanExporter,
+)
 
 # Tracing setup: must run before creating the FastAPI app
 _service_name = os.environ.get("OTEL_SERVICE_NAME", "fastapi-otel-demo")

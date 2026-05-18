@@ -1,9 +1,16 @@
-import requests
-from bs4 import BeautifulSoup
+"""Parse Civitai model pages for prototype metadata extraction.
+
+This experimental scraper pulls model details, creator metadata, stats, and
+download links from Civitai HTML pages for local exploration.
+"""
+
 import json
 import re
-from urllib.parse import urljoin
 from typing import Dict, List
+from urllib.parse import urljoin
+
+import requests
+from bs4 import BeautifulSoup
 
 
 class CivitaiParser:
@@ -170,7 +177,9 @@ class CivitaiParser:
 
             # Clean up the URL
             if link_info["url"] and not link_info["url"].startswith("http"):
-                link_info["url"] = urljoin("https://civitai.com", link_info["url"])
+                link_info["url"] = urljoin(
+                    "https://civitai.com", link_info["url"]
+                )
 
             # If no href, try to find a download link in the element or its children
             if not link_info["url"]:
@@ -179,7 +188,9 @@ class CivitaiParser:
                 )
                 if download_link:
                     link_info["url"] = download_link.get("href", "")
-                    if link_info["url"] and not link_info["url"].startswith("http"):
+                    if link_info["url"] and not link_info["url"].startswith(
+                        "http"
+                    ):
                         link_info["url"] = urljoin(
                             "https://civitai.com", link_info["url"]
                         )
@@ -235,8 +246,8 @@ class CivitaiParser:
                 data = json.loads(script.string)
                 if isinstance(data, dict):
                     details.update(data)
-            except:
-                pass
+            except (json.JSONDecodeError, TypeError):
+                continue
 
         return details
 
@@ -268,7 +279,9 @@ class CivitaiParser:
         stats = {}
 
         # Look for stats in various formats
-        stat_elements = soup.find_all(string=re.compile(r"\d+[km]?", re.IGNORECASE))
+        stat_elements = soup.find_all(
+            string=re.compile(r"\d+[km]?", re.IGNORECASE)
+        )
         for element in stat_elements:
             if element.parent:
                 parent_text = element.parent.get_text()
@@ -304,7 +317,9 @@ class CivitaiParser:
         license_text = ""
 
         # Look for license information
-        license_elements = soup.find_all(string=re.compile(r"license", re.IGNORECASE))
+        license_elements = soup.find_all(
+            string=re.compile(r"license", re.IGNORECASE)
+        )
         for element in license_elements:
             if element.parent:
                 text = element.parent.get_text().strip()
@@ -337,7 +352,9 @@ class CivitaiParser:
         version_info = {}
 
         # Look for version information
-        version_elements = soup.find_all(string=re.compile(r"v\d+\.\d+", re.IGNORECASE))
+        version_elements = soup.find_all(
+            string=re.compile(r"v\d+\.\d+", re.IGNORECASE)
+        )
         for element in version_elements:
             version_match = re.search(r"v(\d+\.\d+)", element, re.IGNORECASE)
             if version_match:

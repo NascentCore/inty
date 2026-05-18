@@ -38,7 +38,9 @@ def build_push_message_prompt(
 
     # Time information
     if time_since_last_message:
-        prompt_parts.append(f"Time since last message: {time_since_last_message}")
+        prompt_parts.append(
+            f"Time since last message: {time_since_last_message}"
+        )
 
     # Chat history summary
     if chat_history_summary:

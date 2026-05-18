@@ -20,7 +20,7 @@ from app.core.build_info import build_time_utc, vcs_dirty, vcs_revision
 from app.core.config import global_config_loaded_from_config_yaml
 from app.api.deps import get_async_db
 from app.api.utils.health_check_payload import build_health_check_data
-from app.api.evaluation_web import configure_evaluation_web_routes
+from backend.ops.api.evaluation_web import configure_evaluation_web_routes
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
 from app.external_services.firebase import init_firebase
@@ -136,11 +136,10 @@ async def _preload_database_connections():
 async def _preload_database_tables(db: AsyncSession):
     try:
         from sqlalchemy import select, text
-        from app import models
 
-        await db.execute(select(models.Chat).limit(1))
-        await db.execute(select(models.Agent).limit(1))
-        await db.execute(select(models.User).limit(1))
+        await db.execute(select(Chat).limit(1))
+        await db.execute(select(Agent).limit(1))
+        await db.execute(select(User).limit(1))
         await db.execute(text("SELECT 1 FROM chat_history LIMIT 1"))
     except Exception as e:
         logger.warning(f"数据库表预初始化失败（可忽略）: {str(e)}")
@@ -165,6 +164,11 @@ async def _preload_popular_agent_data(db: AsyncSession):
 @app.on_event("shutdown")
 async def shutdown_event():
     try:
+        from app.core.companion_harness.companion.websocket_coordinator import (
+            ChatWsInflightShutdownRegistry,
+        )
+
+        await ChatWsInflightShutdownRegistry.cancel_all_registered()
         agent_manager.stop()
         from app.services.cache_service import cache_service
 

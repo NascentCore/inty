@@ -12,7 +12,9 @@ from typing import Any
 _GET_UPDATES_URLOPEN_TIMEOUT_SLACK_S = 5
 
 
-def format_epoch_for_local_log(ts: float | int | None, *, missing: str = "n/a") -> str:
+def format_epoch_for_local_log(
+    ts: float | int | None, *, missing: str = "n/a"
+) -> str:
     """Format Unix epoch seconds for logs: convert to **system local** timezone with offset.
 
     Use for ``time.time()`` (local receive) and Telegram ``message.date`` (UTC unix).
@@ -50,7 +52,9 @@ class TelegramBotApi:
         timeout_seconds: int,
     ) -> tuple[list[TelegramIncomingMessage], int | None]:
         # Telegram: timeout=0 is short polling; >0 is long-poll up to that many seconds.
-        query_params: dict[str, str | int] = {"timeout": max(0, timeout_seconds)}
+        query_params: dict[str, str | int] = {
+            "timeout": max(0, timeout_seconds)
+        }
         if offset is not None:
             query_params["offset"] = offset
         request = urllib.request.Request(
@@ -58,7 +62,8 @@ class TelegramBotApi:
             method="GET",
         )
         with self.urlopen(
-            request, timeout=timeout_seconds + _GET_UPDATES_URLOPEN_TIMEOUT_SLACK_S
+            request,
+            timeout=timeout_seconds + _GET_UPDATES_URLOPEN_TIMEOUT_SLACK_S,
         ) as response:
             payload = json.loads(response.read().decode("utf-8"))
         if payload.get("ok") is not True:
@@ -92,9 +97,9 @@ class TelegramBotApi:
         return messages, next_offset
 
     def send_message(self, *, chat_id: str, text: str) -> dict[str, Any]:
-        body = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode(
-            "utf-8"
-        )
+        body = urllib.parse.urlencode(
+            {"chat_id": chat_id, "text": text}
+        ).encode("utf-8")
         request = urllib.request.Request(
             url=self._method_url("sendMessage"),
             method="POST",

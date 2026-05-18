@@ -4,6 +4,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
+// TODO: Verify :app:compileDebugKotlin with ANDROID_HOME before release when changing WS payloads.
+
+/**
+ * Companion WebSocket `messageType` string (chat frame request body).
+ * Aligns with backend `ChatCompletionRequest.message_type` ([USER_MESSAGE] only).
+ * Greeting uses `user_signed_on` with `message_id` (RFC4122).
+ */
+object CompanionChatTurnMessageType {
+    const val USER_MESSAGE = "USER_MESSAGE"
+}
+
 @Serializable
 data class AgentInfo(
     val avatar: String = "",
@@ -82,6 +93,10 @@ data class SendMsgReq(
     val stream: Boolean = false,
     @SerialName("time_context") val timeContext: UserTimeContext? = null,
     @SerialName("target_imate_id") val targetImateId: String? = null,
+    /** RFC4122; companion WebSocket uses as transcript user_msg_uuid when valid. */
+    @SerialName("message_id") val messageId: String? = null,
+    /** Optional; default server-side is USER_MESSAGE. */
+    @SerialName("messageType") val messageType: String? = null,
 )
 
 @Serializable
@@ -97,10 +112,20 @@ data class ChatClientContextWsMessage(
 )
 
 @Serializable
+data class ChatUserSignedOnWsMessage(
+    val type: String = "user_signed_on",
+    @SerialName("agent_id") val agentId: String,
+    @SerialName("message_id") val messageId: String,
+)
+
+@Serializable
 data class ChatWsControlFrame(@SerialName("type") val type: String?)
 
 fun ChatWsControlFrame?.shouldDeferChatResponseParsing(): Boolean =
-    this?.type == "pong" || this?.type == "client_context_ack"
+    this?.type == "pong" ||
+        this?.type == "client_context_ack" ||
+        this?.type == "user_signed_on_ack" ||
+        this?.type == "user_signed_out_ack"
 
 @Serializable
 data class UserTimeContext(
@@ -134,6 +159,10 @@ data class MsgInfo(
         val isOpening: Boolean = false,
         @SerialName("voice_session_id") val voice_session_id: String? = null,
         @SerialName("generated_image") val generatedImage: GeneratedImage? = null,
+        @SerialName("tool_background_started") val toolBackgroundStarted: Boolean = false,
+        @SerialName("reply_modality") val replyModality: String? = null,
+        @SerialName("voice_message_script") val voiceMessageScript: String? = null,
+        @SerialName("audioDuration") val audioDuration: Double? = null,
     ) {
         @Serializable
         data class GeneratedImage(

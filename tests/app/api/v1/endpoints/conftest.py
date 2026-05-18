@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient as FastAPITestClient
 
 from app.api import deps
 from app.models.user import AuthType
-from app.schemas import User
+from app.schemas.user import User
 from tests.app.api.test_client import TestClient
 
 
@@ -68,7 +68,7 @@ def _client_with_user(app: FastAPI, user: User):
 def integration_client():
     base = API_BASE_URL.rstrip("/")
     try:
-        httpx.get(f"{base}/docs", timeout=2.0)
+        httpx.get(f"{base}/", timeout=2.0)
     except (httpx.ConnectError, httpx.TimeoutException, OSError) as exc:
         pytest.skip(
             f"HTTP API not reachable at {base} ({exc!r}); "

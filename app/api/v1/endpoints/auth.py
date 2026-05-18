@@ -10,7 +10,6 @@ from pydantic import ValidationError
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from app.api.constants import API_V1_PREFIX
 from app.api.tags import ANDROID_APP_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
@@ -18,22 +17,29 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.security import create_access_token, verify_password
 from app.core.uuid import get_new_user_id
 from app.db.session import get_async_db
-from app.models import User
+from app.models.user import User
 from app.models.user import AuthType
 from app.schemas.auth import GuestResponse, LoginResponse, LoginUserResponse
 from app.schemas.response import APIResponse
 from app.services.global_services import subscription_service
-from app.services.user_service import create_guest_user, generate_next_readable_id
+from app.services.user_service import (
+    create_guest_user,
+    generate_next_readable_id,
+)
+from app.schemas.auth import GoogleAuthRequest
+from app.schemas.auth import GuestRequest
 
 router = APIRouter(prefix="/auth", route_class=LoggerRoute)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_V1_PREFIX}/auth/login")
 
 
-@router.post("/guest", response_model=APIResponse[GuestResponse], tags=[WEB_APP_TAG])
+@router.post(
+    "/guest", response_model=APIResponse[GuestResponse], tags=[WEB_APP_TAG]
+)
 async def create_guest(
     *,
     db: AsyncSession = Depends(get_async_db),
-    guest_in: schemas.GuestRequest,
+    guest_in: GuestRequest,
 ) -> Any:
     """
     创建游客账号
@@ -47,7 +53,9 @@ async def create_guest(
         )
         access_token = create_access_token(user.id)
         return APIResponse.success(
-            data=GuestResponse(guest_id=user.id, token=access_token, is_new_guest=True)
+            data=GuestResponse(
+                guest_id=user.id, token=access_token, is_new_guest=True
+            )
         )
     except Exception as e:
         logger.error(f"create guest user error: {str(e)}")
@@ -63,9 +71,14 @@ async def create_guest(
 async def google_login(
     *,
     db: AsyncSession = Depends(get_async_db),
-    login_in: schemas.GoogleAuthRequest,
+    login_in: GoogleAuthRequest,
 ) -> Any:
-    """Google登录或Email密码登录"""
+    """
+    两种登录二选一（请求体在 `GoogleAuthRequest` 中互斥校验）：
+
+    - 仅 `id_token`：Google OAuth
+    - 仅 `email` + `password`：邮箱密码（不走 Google 验证）
+    """
     if (
         global_config_loaded_from_config_yaml.app.api_endpoints.use_dummy_api_v1_auth_google_login
     ):
@@ -79,7 +92,9 @@ async def google_login(
         #    async def google_login(..., request: Request):
         #        path = request.url.path
         #        print(path)  # 输出当前请求的完整 path
-        logger.info(f"### 使用虚假的 Google 登录接口 {router.prefix}/google/login ###")
+        logger.info(
+            f"### 使用虚假的 Google 登录接口 {router.prefix}/google/login ###"
+        )
         logger.info(f"### 修改下方定义直接改变返回值 ###")
         return APIResponse.success(
             data=LoginResponse(
@@ -102,7 +117,9 @@ async def google_login(
     try:
         # 如果提供了 email 和 password，使用 email + password 登录
         if login_in.email and login_in.password:
-            return await email_password_login(db, login_in.email, login_in.password)
+            return await email_password_login(
+                db, login_in.email, login_in.password
+            )
 
         # 否则使用 Google ID token 登录（向后兼容）
         if not login_in.id_token:
@@ -120,19 +137,24 @@ async def google_login(
         logger.info(f"Google login idinfo: {idinfo}")
 
         # 验证发行者
-        if idinfo["iss"] not in ["accounts.google.com", "https://accounts.google.com"]:
+        if idinfo["iss"] not in [
+            "accounts.google.com",
+            "https://accounts.google.com",
+        ]:
             logger.error(f"invalid google token issuer: {idinfo['iss']}")
             return APIResponse.error(message="invalid google token issuer")
 
         # 检查用户是否已存在
         stmt = select(User).where(
-            and_(User.google_id == idinfo["sub"], User.deleted_at == None)
+            and_(User.google_id == idinfo["sub"], User.deleted_at.is_(None))
         )
         result = await db.execute(stmt)
         existing_user = result.scalar_one_or_none()
 
         if existing_user and not existing_user.deleted_at:
-            logger.debug(f"Google login user already exists: {existing_user.id}")
+            logger.debug(
+                f"Google login user already exists: {existing_user.id}"
+            )
 
             # 尝试恢复孤立的订阅记录
             try:
@@ -176,7 +198,7 @@ async def google_login(
                 f"Checking if email is used by another active account: {idinfo['email']}"
             )
             email_stmt = select(User).where(
-                and_(User.email == idinfo["email"], User.deleted_at == None)
+                and_(User.email == idinfo["email"], User.deleted_at.is_(None))
             )
             email_result = await db.execute(email_stmt)
             existing_email_users = email_result.scalars().all()
@@ -202,7 +224,9 @@ async def google_login(
             avatar=idinfo.get("picture"),
             email=idinfo.get("email"),
             system_language=(
-                login_in.user_info.system_language if login_in.user_info else "en"
+                login_in.user_info.system_language
+                if login_in.user_info
+                else "en"
             ),
         )
 
@@ -216,11 +240,15 @@ async def google_login(
 
         # 尝试恢复孤立的订阅记录（新用户也可能需要恢复之前的订阅）
         try:
-            recovered_count = await subscription_service.recover_orphaned_subscriptions(
-                db, new_user.id, idinfo.get("email"), idinfo["sub"]
+            recovered_count = (
+                await subscription_service.recover_orphaned_subscriptions(
+                    db, new_user.id, idinfo.get("email"), idinfo["sub"]
+                )
             )
             if recovered_count > 0:
-                logger.info(f"新用户 {new_user.id} 恢复了 {recovered_count} 个历史订阅")
+                logger.info(
+                    f"新用户 {new_user.id} 恢复了 {recovered_count} 个历史订阅"
+                )
         except Exception as e:
             logger.error(f"新用户 {new_user.id} 恢复订阅失败: {str(e)}")
             # 订阅恢复失败不影响注册流程
@@ -279,7 +307,7 @@ async def email_password_login(
         stmt = select(User).where(
             and_(
                 User.email == email,
-                User.deleted_at == None,
+                User.deleted_at.is_(None),
                 User.auth_type == AuthType.EMAIL,
             )
         )
@@ -288,24 +316,34 @@ async def email_password_login(
 
         if not user:
             logger.warning(f"User not found with email: {email}")
-            return APIResponse.error(message="Invalid Email password combination")
+            return APIResponse.error(
+                message="Invalid Email password combination"
+            )
 
         # 验证密码
         if not user.password:
             logger.error(f"User {user.id} has no password set")
-            return APIResponse.error(message="Invalid Email password combination")
+            return APIResponse.error(
+                message="Invalid Email password combination"
+            )
 
         if not verify_password(password, user.password):
             logger.error(f"Invalid password for user: {user.id}")
-            return APIResponse.error(message="Invalid Email password combination")
+            return APIResponse.error(
+                message="Invalid Email password combination"
+            )
 
         # 尝试恢复孤立的订阅记录
         try:
-            recovered_count = await subscription_service.recover_orphaned_subscriptions(
-                db, user.id, email, None
+            recovered_count = (
+                await subscription_service.recover_orphaned_subscriptions(
+                    db, user.id, email, None
+                )
             )
             if recovered_count > 0:
-                logger.info(f"用户 {user.id} 登录时恢复了 {recovered_count} 个订阅")
+                logger.info(
+                    f"用户 {user.id} 登录时恢复了 {recovered_count} 个订阅"
+                )
         except Exception as e:
             logger.error(f"用户 {user.id} 恢复订阅失败: {str(e)}")
             # 订阅恢复失败不影响登录流程

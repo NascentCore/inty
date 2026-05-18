@@ -60,8 +60,9 @@ firebase:
 agent:
   # 测试用 API key，每周上限 $10，inty-dev API key，intellimate-dev project
   api_key: "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"
-  # intellimate-dev project, inty-dev api key, personal access token
-  langchain_api_key: "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"
+  # intellimate-dev project, inty-dev-shared api key, personal access token
+  # 用于所有 dev 环境的 trace 记录
+  langchain_api_key: "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"
   # 与 Prod 环境配置保持一致，方便测试
   # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本）
   free_user_chat_image_model: "Z Image Turbo Image to Image"
@@ -74,6 +75,9 @@ agent:
   langsmith_text_chat_sample_rate: 1.0
   # 打开生图兜底，使用只包含 iMate 形象的图片作为候选
   enable_chat_image_match_fallback: true
+  # 设置为最理想的聊天模型
+  free_user_chat_model: "deepseek/deepseek-v4-pro"
+  sub_user_chat_model: "deepseek/deepseek-v4-pro"
 
   # 打开高级功能预览，吸引用户付费
   enable_free_user_premium_preview: true
@@ -119,7 +123,7 @@ gemini_live:
   # Live Chat 用量限制（开发环境放宽限制）
   free_user_max_session_duration: 120  # 免费用户单次会话最大时长（秒）
   sub_user_max_session_duration: 300  # 订阅用户单次会话最大时长（秒）
-  free_user_total_duration_24h: 12000
+  free_user_total_duration_24h: 120000
 
 fal:
   # inty-dev API Key FAL.AI

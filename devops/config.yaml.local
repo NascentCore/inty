@@ -18,7 +18,7 @@ app:
     subscribed_user_agent_creation_24h_limit: 2
   features:
     # WS companion bootstrap: NONE | USER_INTERACTIVE
-    companion_workspace_bootstrap_type: USER_INTERACTIVE
+    companion_memory_bootstrap_type: USER_INTERACTIVE
 
 sentry:
   # dev-inty/default
@@ -46,6 +46,7 @@ google_oauth:
   redirect_uri: "http://localhost:8000/api/v1/auth/google/callback"
 
 gcs:
+  use_fake_gcs: true
   bucket: "inty-static"
 
 verification:
@@ -60,16 +61,27 @@ firebase:
 
 agent:
   # 测试用 API key，每周上限 $1，inty-testing API key，intellimate-dev project
-  api_key: "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"
+  api_key: "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"
   # intellimate-dev project, inty-testing api key, personal access token
-  langchain_api_key: "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"
+  langchain_api_key: "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"
   # 模型本地无法访问，IP 被限制
-  # sub_user_chat_model: "google/gemini-2.5-flash-lite"
   # free_user_chat_model: "google/gemini-2.5-flash-lite"
+  # sub_user_chat_model: "google/gemini-2.5-flash-lite"
   # free_user_chat_model: "inception/mercury-2"
   # sub_user_chat_model: "inception/mercury-2"
-  free_user_chat_model: "deepseek/deepseek-v3.2"
-  sub_user_chat_model: "deepseek/deepseek-v3.2"
+  # free_user_chat_model: "deepseek/deepseek-v3.2"
+  # sub_user_chat_model: "deepseek/deepseek-v3.2"
+  free_user_chat_model: "deepseek/deepseek-v4-flash"
+  sub_user_chat_model: "deepseek/deepseek-v4-flash"
+  # companion_tool_call_model: "deepseek/deepseek-v4-flash"
+  # 2026/05/08 openrouter agentic leaderboard https://openrouter.ai/rankings?benchmark=agentic
+  # 最好的可用模型，其他排名更高模型都无法在中国使用
+  companion_tool_call_model: "xiaomi/mimo-v2.5-pro"
+  # v4 很不稳定，会出现没有输出的情况，可能是 provider 问题，也可能是模型自身问题：
+  # https://smith.langchain.com/public/93dc20b8-5bfe-48b8-8958-528f853f4146/r
+  # https://smith.langchain.com/public/b71416d1-9b03-4322-8f46-bf3deb134a44/r
+  # free_user_chat_model: "deepseek/deepseek-v4-pro"
+  # sub_user_chat_model: "deepseek/deepseek-v4-pro"
   # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本）
   free_user_chat_image_model: "Z Image Turbo Image to Image"
   sub_user_chat_image_model: "Z Image Turbo Image to Image"

@@ -27,8 +27,10 @@ from db_util import (  # noqa: E402
     session_id_for_chat,
 )
 from messages import parse_lc_message_row, transcript_upto  # noqa: E402
-from schema import ConversationScenario, response_format_json_schema_strict  # noqa: E402
-
+from schema import (
+    ConversationScenario,
+    response_format_json_schema_strict,
+)  # noqa: E402
 
 SYSTEM_PROMPT = """You label a private chat transcript for internal research.
 Return ONLY one JSON object. No markdown fences. No outer wrapper key.
@@ -90,7 +92,9 @@ def _load_fixture(path: Path) -> List[Tuple[str, List[Dict[str, str]]]]:
                     role = str(m.get("role", "user")).lower()
                     if role not in ("user", "assistant", "system"):
                         role = "user"
-                    msgs.append({"role": role, "content": str(m.get("content", ""))})
+                    msgs.append(
+                        {"role": role, "content": str(m.get("content", ""))}
+                    )
                 out.append((cid, msgs))
             else:
                 turns = obj.get("turns") or []
@@ -293,7 +297,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Replay chat_history and measure structured JSON adherence."
     )
-    parser.add_argument("--config", default=None, help="Path to config.yaml for DB.")
+    parser.add_argument(
+        "--config", default=None, help="Path to config.yaml for DB."
+    )
     parser.add_argument(
         "--database-url",
         default=None,
@@ -303,15 +309,27 @@ def main() -> int:
     parser.add_argument("--min-rows", type=int, default=10)
     parser.add_argument("--max-turns-per-chat", type=int, default=20)
     parser.add_argument("--stride", type=int, default=1)
-    parser.add_argument("--since", default=None, help="ISO date/datetime UTC lower bound.")
-    parser.add_argument("--until", default=None, help="ISO date/datetime UTC upper bound (exclusive).")
-    parser.add_argument("--fixture", default=None, help="JSONL fixture: {chat_id, turns: [text...]}")
+    parser.add_argument(
+        "--since", default=None, help="ISO date/datetime UTC lower bound."
+    )
+    parser.add_argument(
+        "--until",
+        default=None,
+        help="ISO date/datetime UTC upper bound (exclusive).",
+    )
+    parser.add_argument(
+        "--fixture",
+        default=None,
+        help="JSONL fixture: {chat_id, turns: [text...]}",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--model", default="openai/gpt-4o-mini")
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--no-strict-schema", action="store_true")
-    parser.add_argument("--out-dir", default="experimental/structured_output_adherence/out")
+    parser.add_argument(
+        "--out-dir", default="experimental/structured_output_adherence/out"
+    )
     parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
     if args.seed is not None:
@@ -330,10 +348,14 @@ def main() -> int:
 
     client: Optional[OpenAI] = None
     if not args.dry_run:
-        base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("OPENROUTER_BASE_URL")
+        base_url = os.getenv("OPENAI_BASE_URL") or os.getenv(
+            "OPENROUTER_BASE_URL"
+        )
         api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
         if not api_key:
-            print("Missing OPENROUTER_API_KEY or OPENAI_API_KEY", file=sys.stderr)
+            print(
+                "Missing OPENROUTER_API_KEY or OPENAI_API_KEY", file=sys.stderr
+            )
             return 2
         kwargs: Dict[str, Any] = {"api_key": api_key}
         if base_url:
@@ -390,7 +412,8 @@ def main() -> int:
         out_path=jsonl_path,
     )
     summary_path.write_text(
-        json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        json.dumps(summary, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
     )
     print(json.dumps(summary, ensure_ascii=False))
     return 0

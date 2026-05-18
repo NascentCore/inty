@@ -25,6 +25,7 @@ YAML). Use e.g. ``INTY_LOGGING_LEVEL=DEBUG`` + ``INTY_CONSOLE_LOGGING_LEVEL=INFO
 import logging
 import os
 import sys
+from pathlib import Path
 
 from loguru import logger
 
@@ -35,6 +36,18 @@ from app.utils.config import (
     LOGGING_MESSAGE_FORMAT,
     LOGGING_TIME_FORMAT,
 )
+
+_INTY_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def _patch_log_record_repo_relative_file(record: dict) -> None:
+    """将源码位置写成相对仓库根目录的路径，便于本地日志阅读与分享。"""
+    raw_path = record["file"].path
+    try:
+        rel = Path(raw_path).resolve().relative_to(_INTY_REPO_ROOT)
+        record["extra"]["inty_rel_file"] = rel.as_posix()
+    except (OSError, ValueError):
+        record["extra"]["inty_rel_file"] = raw_path
 
 
 class InterceptHandler(logging.Handler):
@@ -59,8 +72,12 @@ def init_logger():
     # 移除默认的处理器
     logger.remove()
 
-    # 配置默认的 request_id，避免在非请求上下文中出错
-    logger.configure(extra={"request_id": "-"})
+    # 配置默认的 request_id，避免在非请求上下文中出错；
+    # inty_rel_file 由 patcher 填充（与 LOGGING_FILE_FORMAT 中 {extra[inty_rel_file]} 对应）
+    logger.configure(
+        extra={"request_id": "-", "inty_rel_file": ""},
+        patcher=_patch_log_record_repo_relative_file,
+    )
 
     log_level = os.environ.get("INTY_LOGGING_LEVEL", "").strip()
     if not log_level:
@@ -119,3 +136,23 @@ def init_logger():
     logging.getLogger("openai._base_client").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+    # LangSmith：set_langsmith_environment_variables 在 import app.core.config 时已执行，
+    # 那会早于本函数，早先的 logger.debug 往往进不了文件 sink；这里再打一条便于确认是否开启。
+    _raw = (os.environ.get("LANGSMITH_TRACING_V2") or "").strip().lower()
+    _tracing_on = _raw in ("1", "true", "yes", "on")
+    _project = os.environ.get("LANGSMITH_PROJECT", "")
+    _key_set = bool((os.environ.get("LANGCHAIN_API_KEY") or "").strip())
+    logger.info(
+        "LangSmith: tracing_v2={} (env LANGSMITH_TRACING_V2={!r}), project={!r}, api_key_set={}",
+        "on" if _tracing_on else "off",
+        os.environ.get("LANGSMITH_TRACING_V2"),
+        _project,
+        _key_set,
+    )
+    logger.debug(
+        "LangSmith: full env check LANGSMITH_TRACING_V2={!r} LANGSMITH_PROJECT={!r} LANGCHAIN_API_KEY_set={}",
+        os.environ.get("LANGSMITH_TRACING_V2"),
+        os.environ.get("LANGSMITH_PROJECT"),
+        _key_set,
+    )

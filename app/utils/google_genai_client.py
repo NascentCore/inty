@@ -22,7 +22,10 @@ def wrap_google_genai_client_with_langsmith(
     - LangSmith 不可用或包装失败时，自动回退原客户端，避免阻断主流程。
     """
 
-    if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
+    if (
+        global_config_loaded_from_config_yaml.app.environment
+        == Environment.TEST
+    ):
         return client
 
     wrap_gemini = getattr(langsmith_wrappers, "wrap_gemini", None)

@@ -32,7 +32,10 @@ def make_dummy_character():
             motivations=["discovery", "adventure"],
             fears=["failure"],
             dreams=["finding lost cities"],
-            relationships={"family": "unknown", "friends": "many met on travels"},
+            relationships={
+                "family": "unknown",
+                "friends": "many met on travels",
+            },
             skills=["navigation", "climbing", "negotiation"],
             quirks=["talks to self"],
             backstory="Born in mystery, always seeking the next horizon.",
@@ -78,7 +81,9 @@ def test_generate_char_images_happy_path():
     dummy_response.generated_images = [dummy_image_obj]
 
     client = GeminiClient()
-    images = client.generate_character_images(dummy_character, num_images_per_scene=1)
+    images = client.generate_character_images(
+        dummy_character, num_images_per_scene=1
+    )
 
     for image in images:
         image.show()

@@ -13,11 +13,11 @@ from typing_extensions import deprecated
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import get_new_user_id
-from app.models import User
+from app.models.user import User
 from app.models.chat import Chat
 from app.models.subscription import SubscriptionStatus, UserSubscription
 from app.models.user import AuthType, DeviceToken
-from app.schemas import UserUpdate
+from app.schemas.user import UserUpdate
 from app.services.cache_service import cache_service
 from app.services.subscription_service import SubscriptionService
 
@@ -34,7 +34,9 @@ async def generate_next_readable_id(db: AsyncSession) -> str:
     """
     try:
         # Use database sequence to generate next readable_id atomically
-        result = await db.execute(text("SELECT nextval('user_readable_id_seq')"))
+        result = await db.execute(
+            text("SELECT nextval('user_readable_id_seq')")
+        )
         next_id = result.scalar()
         return str(next_id).zfill(8)
     except Exception as e:
@@ -107,7 +109,9 @@ async def create_guest_user(
         logger.error(f"Integrity error creating guest user: {str(e)}")
         # If readable_id conflicts, try again with a new one
         if "readable_id" in str(e):
-            return await create_guest_user(db, device_id, system_language, age_group)
+            return await create_guest_user(
+                db, device_id, system_language, age_group
+            )
         raise e
     except Exception as e:
         await db.rollback()
@@ -116,7 +120,9 @@ async def create_guest_user(
         raise e
 
 
-async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> User:
+async def update_user(
+    db: AsyncSession, user_id: str, user_in: UserUpdate
+) -> User:
     """Update user information"""
     try:
         stmt = select(User).where(User.id == user_id)
@@ -130,7 +136,9 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
 
         # 处理头像URL：如果是CDN URL则转换为GCS URL用于存储
         if "avatar" in update_data and update_data["avatar"]:
-            from app.services.image_transform_service import image_transform_service
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
 
             update_data["avatar"] = (
                 image_transform_service.normalize_image_url_for_storage(
@@ -140,7 +148,9 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
 
         # 处理用户自拍照片URL：同样转换为GCS URL用于存储
         if "user_photo" in update_data and update_data["user_photo"]:
-            from app.services.image_transform_service import image_transform_service
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
 
             update_data["user_photo"] = (
                 image_transform_service.normalize_image_url_for_storage(
@@ -157,7 +167,9 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
             "created_at",
             "updated_at",
         }
-        update_data = {k: v for k, v in update_data.items() if k not in excluded_fields}
+        update_data = {
+            k: v for k, v in update_data.items() if k not in excluded_fields
+        }
 
         # 过滤掉值为 None 或空字符串的字段，防止误清空数据库中的有效数据
         # 这样可以保护已有数据不被客户端误传的 None 值覆盖
@@ -166,7 +178,8 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
         }
 
         user_photo_changed = (
-            "user_photo" in update_data and update_data["user_photo"] != user.user_photo
+            "user_photo" in update_data
+            and update_data["user_photo"] != user.user_photo
         )
         selfie_persona_feature_enabled = (
             global_config_loaded_from_config_yaml.app.features.enable_selfie_persona_summary
@@ -186,8 +199,14 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
         _invalidate_user_related_cache(user_id)
         logger.debug(f"已清除用户 {user_id} 的缓存信息与鉴权快照")
 
-        if selfie_persona_feature_enabled and user_photo_changed and user.user_photo:
-            from app.services.selfie_persona_service import selfie_persona_service
+        if (
+            selfie_persona_feature_enabled
+            and user_photo_changed
+            and user.user_photo
+        ):
+            from app.services.selfie_persona_service import (
+                selfie_persona_service,
+            )
 
             selfie_persona_service.enqueue_selfie_persona_inference(
                 user_id=user_id,
@@ -226,7 +245,9 @@ def generate_avatar_path(user_id: str, filename: str) -> str:
 GENDER_DISPLAY_MAP = {"MALE": "Male", "FEMALE": "Female", "OTHER": "Other"}
 
 
-async def get_user_display_name_for_prompt(db: AsyncSession, user_id: str) -> str:
+async def get_user_display_name_for_prompt(
+    db: AsyncSession, user_id: str
+) -> str:
     """
     获取用于提示词渲染的用户显示名（如 personality/scenario 中的 {{ user }}）。
     用于图片生成等需要与 char 一起渲染 Jinja2 模板的场景。
@@ -280,8 +301,13 @@ async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:
                     parts.append(f"Age: {user.age_group}")
                 if user.description:
                     parts.append(f"Description: {user.description}")
-                if selfie_persona_feature_enabled and user.selfie_persona_summary:
-                    parts.append(f"Selfie Persona: {user.selfie_persona_summary}")
+                if (
+                    selfie_persona_feature_enabled
+                    and user.selfie_persona_summary
+                ):
+                    parts.append(
+                        f"Selfie Persona: {user.selfie_persona_summary}"
+                    )
                 user_info_text = (
                     "##User Information\n" + "\n".join(parts) if parts else ""
                 )
@@ -293,7 +319,9 @@ async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:
 
     memory_text = await get_user_memory_for_prompt_async(db, user_id)
     if memory_text:
-        user_info_text = (user_info_text or "") + "\n\n##User Memory\n" + memory_text
+        user_info_text = (
+            (user_info_text or "") + "\n\n##User Memory\n" + memory_text
+        )
     return user_info_text
 
 
@@ -341,7 +369,9 @@ async def register_device_token(
         raise e
 
 
-async def get_users_device_tokens(db: AsyncSession, user_ids: list[str]) -> list[str]:
+async def get_users_device_tokens(
+    db: AsyncSession, user_ids: list[str]
+) -> list[str]:
     """Get the latest device token for each user
 
     Args:
@@ -357,7 +387,8 @@ async def get_users_device_tokens(db: AsyncSession, user_ids: list[str]) -> list
         row_number = (
             func.row_number()
             .over(
-                partition_by=DeviceToken.user_id, order_by=DeviceToken.updated_at.desc()
+                partition_by=DeviceToken.user_id,
+                order_by=DeviceToken.updated_at.desc(),
             )
             .label("rn")
         )
@@ -450,7 +481,11 @@ async def delete_user_account(
         user = result.scalars().first()
 
         if not user:
-            return {"success": False, "message": "用户不存在", "user_id": user_id}
+            return {
+                "success": False,
+                "message": "用户不存在",
+                "user_id": user_id,
+            }
 
         subscription_status_response = (
             await subscription_service.get_user_subscription_status(db, user_id)
@@ -460,12 +495,12 @@ async def delete_user_account(
         cancellation_stats = None
         if subscription_status_response.is_subscribed:
             try:
-                cancellation_stats = (
-                    await subscription_service.cancel_user_subscriptions_for_deletion(
-                        db, user_id
-                    )
+                cancellation_stats = await subscription_service.cancel_user_subscriptions_for_deletion(
+                    db, user_id
                 )
-                logger.debug(f"用户 {user_id} 订阅取消统计: {cancellation_stats}")
+                logger.debug(
+                    f"用户 {user_id} 订阅取消统计: {cancellation_stats}"
+                )
             except Exception as e:
                 logger.warning(f"取消用户订阅失败，继续删除流程: {str(e)}")
 
@@ -494,7 +529,10 @@ async def delete_user_account(
 
 
 async def get_all_users(
-    db: AsyncSession, skip: int = 0, limit: int = 50, search: Optional[str] = None
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 50,
+    search: Optional[str] = None,
 ) -> dict:
     """
     获取所有用户信息，支持分页和关键字搜索
@@ -530,7 +568,9 @@ async def get_all_users(
 
         # 获取分页数据
         result = await db.execute(
-            base_query.order_by(User.created_at.desc()).offset(skip).limit(limit)
+            base_query.order_by(User.created_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
         users = result.scalars().all()
 

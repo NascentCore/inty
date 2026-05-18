@@ -25,7 +25,8 @@ from app.core.prompting.push_message_prompt import (
 )
 from app.core.uuid import uid
 from app.db.session import AsyncSessionLocal
-from app.models import Chat, PushNotificationHistory
+from app.models.chat import Chat
+from app.models.push_notification import PushNotificationHistory
 from app.models.agent import Agent, AgentVisibility
 from app.models.chat_history import ChatHistory
 from app.models.user import DeviceToken, User
@@ -283,7 +284,9 @@ async def _check_user_has_device_token(
         device_token_result = await db.execute(device_token_stmt)
         return device_token_result.first() is not None
     except Exception as e:
-        logger.error(f"检查用户 device_token 失败: user_id={user_id}, error={str(e)}")
+        logger.error(
+            f"检查用户 device_token 失败: user_id={user_id}, error={str(e)}"
+        )
         return False
 
 
@@ -350,7 +353,9 @@ async def _query_users_by_unread_count(
             )
             .where(PushNotificationHistory.read_at.is_(None))
             .group_by(PushNotificationHistory.user_id)
-            .having(func.count(PushNotificationHistory.id) == expected_unread_count)
+            .having(
+                func.count(PushNotificationHistory.id) == expected_unread_count
+            )
         )
         result = await db.execute(stmt)
         return result.all()
@@ -380,7 +385,9 @@ async def _check_read_push_users_for_recall(
     for read_user_id in read_push_user_ids:
         try:
             # 获取用户最近聊天
-            recent_chat_data = await get_user_recent_chat(db, read_user_id, stage=stage)
+            recent_chat_data = await get_user_recent_chat(
+                db, read_user_id, stage=stage
+            )
             if recent_chat_data:
                 chat, last_user_message_time = recent_chat_data
                 # 如果最后消息时间超过阈值，说明用户不聊了，检查推送状态
@@ -396,18 +403,31 @@ async def _check_read_push_users_for_recall(
                             db, read_user_id
                         )
                         if unread_count == expected_unread_count:
-                            recalled_users.append(SimpleNamespace(user_id=read_user_id))
+                            recalled_users.append(
+                                SimpleNamespace(user_id=read_user_id)
+                            )
             else:
                 # 用户没有最近聊天，检查用户注册时间（仅对24h/48h阶段）
                 if stage in ("24h", "48h"):
                     user_stmt = (
                         select(User)
-                        .options(load_only(User.id, User.created_at, User.deleted_at))
-                        .where(and_(User.id == read_user_id, User.deleted_at.is_(None)))
+                        .options(
+                            load_only(User.id, User.created_at, User.deleted_at)
+                        )
+                        .where(
+                            and_(
+                                User.id == read_user_id,
+                                User.deleted_at.is_(None),
+                            )
+                        )
                     )
                     user_result = await db.execute(user_stmt)
                     user = user_result.scalar_one_or_none()
-                    if user and user.created_at and user.created_at <= threshold_time:
+                    if (
+                        user
+                        and user.created_at
+                        and user.created_at <= threshold_time
+                    ):
                         reset_count = await reset_user_read_push_notifications(
                             db, read_user_id
                         )
@@ -438,7 +458,9 @@ async def _filter_users_by_push_conditions(
     threshold_time: datetime.datetime,
     popular_agent: Optional[Agent],
     batch_size: int,
-) -> List[Tuple[User, Optional[Chat], Optional[datetime.datetime], Optional[Agent]]]:
+) -> List[
+    Tuple[User, Optional[Chat], Optional[datetime.datetime], Optional[Agent]]
+]:
     """
     按推送条件过滤用户
 
@@ -490,7 +512,9 @@ async def _filter_users_by_push_conditions(
                 continue
 
             # 获取用户最近聊天
-            recent_chat_data = await get_user_recent_chat(db, user_id, stage=stage)
+            recent_chat_data = await get_user_recent_chat(
+                db, user_id, stage=stage
+            )
             if recent_chat_data:
                 # 用户有活跃聊天
                 chat, last_user_message_time = recent_chat_data
@@ -500,7 +524,9 @@ async def _filter_users_by_push_conditions(
 
                 if stage == "10min":
                     # 10min 阶段：基于最后用户消息时间
-                    time_condition_met = last_user_message_time <= threshold_time
+                    time_condition_met = (
+                        last_user_message_time <= threshold_time
+                    )
                 else:
                     # 后续阶段（30min, 2h, 24h, 48h）：基于前一个阶段的推送时间
                     previous_push_time = await get_previous_stage_push_time(
@@ -526,7 +552,9 @@ async def _filter_users_by_push_conditions(
                     time_since_previous_push = (
                         now - previous_push_time
                     ).total_seconds() / 60
-                    time_condition_met = time_since_previous_push >= interval_minutes
+                    time_condition_met = (
+                        time_since_previous_push >= interval_minutes
+                    )
 
                     logger.debug(
                         f"检查前一个阶段推送时间: user_id={user_id}, chat_id={chat.id}, stage={stage}, "
@@ -560,7 +588,10 @@ async def _filter_users_by_push_conditions(
 
                     if previous_push_time is None:
                         # 不存在前一个阶段的未读推送，检查用户注册时间（作为后备逻辑）
-                        if user.created_at and user.created_at <= threshold_time:
+                        if (
+                            user.created_at
+                            and user.created_at <= threshold_time
+                        ):
                             if not popular_agent:
                                 skipped_no_popular_agent += 1
                                 continue
@@ -813,7 +844,9 @@ def mark_push_system_initialized() -> None:
     logger.info("推送系统已标记为已初始化")
 
 
-async def initialize_push_system(db: AsyncSession, batch_size: int = 1000) -> int:
+async def initialize_push_system(
+    db: AsyncSession, batch_size: int = 1000
+) -> int:
     """
     初始化推送系统：第一次全量查询所有符合条件的用户
 
@@ -840,7 +873,9 @@ async def initialize_push_system(db: AsyncSession, batch_size: int = 1000) -> in
             get_chat_history_connection()
             logger.info("[初始化] chat_history 连接预加载完成")
         except Exception as e:
-            logger.warning(f"[初始化] chat_history 连接预加载失败（可忽略）: {str(e)}")
+            logger.warning(
+                f"[初始化] chat_history 连接预加载失败（可忽略）: {str(e)}"
+            )
 
         # 查询所有有 device_token 的用户
         stmt = (
@@ -857,7 +892,9 @@ async def initialize_push_system(db: AsyncSession, batch_size: int = 1000) -> in
         logger.info(f"[初始化] 找到 {total_users} 个有 device_token 的用户")
 
         # 发现新用户（没有推送记录的用户）
-        new_users_count = await discover_new_users_for_push(db, batch_size=batch_size)
+        new_users_count = await discover_new_users_for_push(
+            db, batch_size=batch_size
+        )
         logger.info(f"[初始化] 发现 {new_users_count} 个新用户（没有推送记录）")
 
         # 标记为已初始化
@@ -915,7 +952,9 @@ async def discover_new_users_for_push(
         result = await db.execute(stmt)
         new_user_ids = [row[0] for row in result.all()]
 
-        logger.info(f"[用户维度] 发现 {len(new_user_ids)} 个新用户（没有推送记录）")
+        logger.info(
+            f"[用户维度] 发现 {len(new_user_ids)} 个新用户（没有推送记录）"
+        )
 
         # 新用户不需要创建初始推送记录，因为未读推送记录数为0时会被查询函数自动发现
         # 这里只是记录日志，方便监控
@@ -983,7 +1022,9 @@ async def discover_users_with_updated_tokens(
             if not users_with_invalid_tokens:
                 # 没有更多用户需要处理，退出循环
                 if iteration == 1:
-                    logger.debug("[token 更新扫描] 没有发现被标记为无效 token 的用户")
+                    logger.debug(
+                        "[token 更新扫描] 没有发现被标记为无效 token 的用户"
+                    )
                 else:
                     logger.info(
                         f"[token 更新扫描] 所有用户已处理完成，共处理 {total_processed_count} 个用户，清除 {total_cleared_count} 个标记"
@@ -1039,7 +1080,9 @@ async def discover_users_with_updated_tokens(
                         f"[token 更新扫描] 第 {iteration} 批完成: 清除 {batch_cleared_count} 个用户的无效 token 标记"
                     )
                 except Exception as e:
-                    logger.error(f"[token 更新扫描] 提交事务失败: error={str(e)}")
+                    logger.error(
+                        f"[token 更新扫描] 提交事务失败: error={str(e)}"
+                    )
                     await db.rollback()
                     # 继续处理下一批，不中断整个流程
 
@@ -1097,7 +1140,9 @@ async def get_user_unread_push_count(
         count = result.scalar() or 0
         return count
     except Exception as e:
-        logger.error(f"统计用户未读推送记录数失败: user_id={user_id}, error={str(e)}")
+        logger.error(
+            f"统计用户未读推送记录数失败: user_id={user_id}, error={str(e)}"
+        )
         return 0
 
 
@@ -1131,7 +1176,9 @@ async def has_sent_push_for_stage(
 
         # 如果提供了最后消息时间，只检查推送时间在最后消息时间之后的记录
         if last_message_time is not None:
-            conditions.append(PushNotificationHistory.sent_at > last_message_time)
+            conditions.append(
+                PushNotificationHistory.sent_at > last_message_time
+            )
 
         stmt = select(PushNotificationHistory).where(and_(*conditions))
         result = await db.execute(stmt)
@@ -1265,7 +1312,9 @@ async def get_previous_push_messages(
             PushNotificationHistory.stage.in_(previous_stages),
             PushNotificationHistory.push_type == push_type,
             PushNotificationHistory.read_at.is_(None),  # 只查询未读推送
-            PushNotificationHistory.message_content.isnot(None),  # 确保有消息内容
+            PushNotificationHistory.message_content.isnot(
+                None
+            ),  # 确保有消息内容
         ]
 
         # 根据推送类型添加 chat_id 条件
@@ -1381,7 +1430,9 @@ async def get_chats_needing_push(
                 session_id = generate_session_id(chat.id)
 
                 # 获取最后一条用户消息时间
-                last_user_message_time = await get_last_user_message_time(session_id)
+                last_user_message_time = await get_last_user_message_time(
+                    session_id
+                )
 
                 if not last_user_message_time:
                     # 没有用户消息，跳过
@@ -1484,7 +1535,11 @@ async def get_agent_avatar_url(
         if avatar:
             try:
                 return image_transform_service.transform_mobile(avatar)
-            except Exception:
+            except Exception as transform_error:
+                logger.warning(
+                    "转换 Agent 备用头像 URL 失败，使用原始头像: "
+                    f"agent_id={agent_data.get('id')}, error={transform_error}"
+                )
                 return avatar
         return None
 
@@ -1582,7 +1637,9 @@ async def generate_agent_message(
     try:
         # 获取 Agent 数据（如果未提供）
         if agent_data is None:
-            agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+            agent_data = await agent_service.get_agent_for_chat(
+                db, agent_id=agent_id
+            )
             if not agent_data:
                 logger.error(f"Agent数据未找到: {agent_id}")
                 return None
@@ -1603,7 +1660,9 @@ async def generate_agent_message(
         subscription = await subscription_service.get_user_current_subscription(
             db, user_id
         )
-        model_override = select_chat_model(user=user, is_subscribed=bool(subscription))
+        model_override = select_chat_model(
+            user=user, is_subscribed=bool(subscription)
+        ).id_on_provider
 
         # 查询之前的推送消息内容（用于避免重复生成）
         previous_push_messages = await get_previous_push_messages(
@@ -1660,7 +1719,9 @@ async def generate_agent_message(
         )
 
         if not gen_result:
-            logger.warning(f"Agent未生成消息: user_id={user_id}, agent_id={agent_id}")
+            logger.warning(
+                f"Agent未生成消息: user_id={user_id}, agent_id={agent_id}"
+            )
             return None
 
         response_content, trace_id = (
@@ -1754,7 +1815,9 @@ async def send_push_notification(
         image_url = None
         if agent_avatar_url:
             try:
-                image_url = image_transform_service.transform_mobile(agent_avatar_url)
+                image_url = image_transform_service.transform_mobile(
+                    agent_avatar_url
+                )
             except Exception as e:
                 logger.warning(
                     f"头像 URL 转换失败: {agent_avatar_url}, error={str(e)}, 使用原始 URL"
@@ -1805,7 +1868,9 @@ async def send_festival_memory_push(
         image_url = None
         if agent_avatar_url:
             try:
-                image_url = image_transform_service.transform_mobile(agent_avatar_url)
+                image_url = image_transform_service.transform_mobile(
+                    agent_avatar_url
+                )
             except Exception as e:
                 logger.warning(
                     f"头像 URL 转换失败: {agent_avatar_url}, error={str(e)}, 使用原始 URL"
@@ -1915,12 +1980,16 @@ async def reset_user_read_push_notifications(
         count = result.scalar() or 0
 
         if count > 0:
-            logger.debug(f"[用户维度] 用户有 {count} 条已读推送记录: user_id={user_id}")
+            logger.debug(
+                f"[用户维度] 用户有 {count} 条已读推送记录: user_id={user_id}"
+            )
 
         return count
 
     except Exception as e:
-        logger.error(f"统计用户已读推送记录数失败: user_id={user_id}, error={str(e)}")
+        logger.error(
+            f"统计用户已读推送记录数失败: user_id={user_id}, error={str(e)}"
+        )
         return 0
 
 
@@ -1959,11 +2028,15 @@ async def mark_user_push_notifications_as_read(
             count += 1
 
         await db.commit()
-        logger.info(f"[用户维度] 标记用户推送为已读: user_id={user_id}, count={count}")
+        logger.info(
+            f"[用户维度] 标记用户推送为已读: user_id={user_id}, count={count}"
+        )
         return count
 
     except Exception as e:
-        logger.error(f"标记用户推送为已读失败: user_id={user_id}, error={str(e)}")
+        logger.error(
+            f"标记用户推送为已读失败: user_id={user_id}, error={str(e)}"
+        )
         await db.rollback()
         return 0
 
@@ -2028,7 +2101,9 @@ async def process_single_user_recent_chat_push(
             return False, "推送历史已存在"
 
         # 获取 Agent 数据（用于生成消息和获取头像）
-        agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+        agent_data = await agent_service.get_agent_for_chat(
+            db, agent_id=agent_id
+        )
         if not agent_data:
             error_msg = f"Agent数据未找到: {agent_id}"
             logger.error(f"[用户维度] {error_msg}")
@@ -2110,9 +2185,7 @@ async def process_single_user_recent_chat_push(
             return False, error_msg
 
     except Exception as e:
-        error_msg = (
-            f"处理推送任务失败: user_id={user_id}, chat_id={chat_id}, error={str(e)}"
-        )
+        error_msg = f"处理推送任务失败: user_id={user_id}, chat_id={chat_id}, error={str(e)}"
         logger.error(f"[用户维度] {error_msg}")
         import traceback
 
@@ -2152,14 +2225,18 @@ async def process_single_user_no_chat_push(
             return False, "推送次数已达上限"
 
         # 检查是否已发送过推送
-        if await has_sent_push_for_user_stage(db, user_id, stage, PUSH_TYPE_NO_CHAT):
+        if await has_sent_push_for_user_stage(
+            db, user_id, stage, PUSH_TYPE_NO_CHAT
+        ):
             logger.debug(
                 f"[用户维度] 推送已发送过，跳过: user_id={user_id}, stage={stage}"
             )
             return False, "已发送过推送"
 
         # 获取 Agent 数据
-        agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+        agent_data = await agent_service.get_agent_for_chat(
+            db, agent_id=agent_id
+        )
         if not agent_data:
             error_msg = f"Agent数据未找到: {agent_id}"
             logger.error(f"[用户维度] {error_msg}")
@@ -2241,9 +2318,7 @@ async def process_single_user_no_chat_push(
             return False, error_msg
 
     except Exception as e:
-        error_msg = (
-            f"处理推送任务失败: user_id={user_id}, agent_id={agent_id}, error={str(e)}"
-        )
+        error_msg = f"处理推送任务失败: user_id={user_id}, agent_id={agent_id}, error={str(e)}"
         logger.error(f"[用户维度] {error_msg}")
         import traceback
 
@@ -2315,19 +2390,27 @@ async def process_single_user_push(
                 )
                 return False, "已发送过推送"
             # 检查是否已存在推送历史（防止重复推送）
-            if await has_sent_push_for_stage(db, chat_id, stage, push_type, None):
+            if await has_sent_push_for_stage(
+                db, chat_id, stage, push_type, None
+            ):
                 logger.debug(
                     f"推送历史已存在，跳过: user_id={user_id}, chat_id={chat_id}, stage={stage}"
                 )
                 return False, "推送历史已存在"
         else:
             # 无聊天：检查是否已发送过推送
-            if await has_sent_push_for_user_stage(db, user_id, stage, push_type):
-                logger.debug(f"推送已发送过，跳过: user_id={user_id}, stage={stage}")
+            if await has_sent_push_for_user_stage(
+                db, user_id, stage, push_type
+            ):
+                logger.debug(
+                    f"推送已发送过，跳过: user_id={user_id}, stage={stage}"
+                )
                 return False, "已发送过推送"
 
         # 获取 Agent 数据（用于生成消息和获取头像）
-        agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+        agent_data = await agent_service.get_agent_for_chat(
+            db, agent_id=agent_id
+        )
         if not agent_data:
             error_msg = f"Agent数据未找到: {agent_id}"
             logger.error(f"{error_msg} (stage={stage})")
@@ -2409,9 +2492,7 @@ async def process_single_user_push(
             return False, error_msg
 
     except Exception as e:
-        error_msg = (
-            f"处理推送任务失败: user_id={user_id}, stage={stage}, error={str(e)}"
-        )
+        error_msg = f"处理推送任务失败: user_id={user_id}, stage={stage}, error={str(e)}"
         logger.error(f"{error_msg} (stage={stage})")
         import traceback
 
@@ -2532,7 +2613,9 @@ async def process_festival_memory_push_batch(
     发送 FCM 后记录推送历史并更新 memory.system_notification_sent_at。
     """
     try:
-        pairs = await get_pairs_with_undelivered_festival_memories(db, limit=batch_size)
+        pairs = await get_pairs_with_undelivered_festival_memories(
+            db, limit=batch_size
+        )
         if not pairs:
             logger.debug("[节日记忆推送] 无待推送的对")
             return 0, 0
@@ -2550,14 +2633,18 @@ async def process_festival_memory_push_batch(
                     )
                     fail_count += 1
                     continue
-                if not await _user_satisfies_festival_memory_version_gate(db, user_id):
+                if not await _user_satisfies_festival_memory_version_gate(
+                    db, user_id
+                ):
                     logger.debug(
                         "[节日记忆推送] 用户版本不满足门控（未上报或低于 min_app_version_code_for_festival_memory），跳过: user_id=%s",
                         user_id,
                     )
                     fail_count += 1
                     continue
-                if await has_sent_festival_push_for_user_agent(db, user_id, agent_id):
+                if await has_sent_festival_push_for_user_agent(
+                    db, user_id, agent_id
+                ):
                     logger.debug(
                         f"[节日记忆推送] 已发过，跳过: user_id={user_id}, agent_id={agent_id}"
                     )
@@ -2572,7 +2659,9 @@ async def process_festival_memory_push_batch(
                     )
                     fail_count += 1
                     continue
-                agent_name, agent_avatar_url = await _extract_agent_info(agent_data)
+                agent_name, agent_avatar_url = await _extract_agent_info(
+                    agent_data
+                )
 
                 sent = await send_festival_memory_push(
                     db,
@@ -2675,7 +2764,9 @@ async def process_no_chat_push_batch(
         semaphore = asyncio.Semaphore(concurrent_workers)
 
         # Worker 函数：处理单个用户（使用独立的数据库会话）
-        async def process_user_worker(user, agent) -> Tuple[bool, Optional[str]]:
+        async def process_user_worker(
+            user, agent
+        ) -> Tuple[bool, Optional[str]]:
             async with semaphore:
                 async with AsyncSessionLocal() as worker_db:
                     try:
@@ -2686,13 +2777,18 @@ async def process_no_chat_push_batch(
                             stage=stage,
                         )
                     except Exception as e:
-                        error_msg = f"Worker处理失败: user_id={user.id}, error={str(e)}"
+                        error_msg = (
+                            f"Worker处理失败: user_id={user.id}, error={str(e)}"
+                        )
                         logger.error(f"[用户维度] {error_msg}")
                         return False, error_msg
 
         # 并发处理所有用户
         results = await asyncio.gather(
-            *[process_user_worker(user, agent) for user, agent in users_with_agents],
+            *[
+                process_user_worker(user, agent)
+                for user, agent in users_with_agents
+            ],
             return_exceptions=True,
         )
 
@@ -2792,7 +2888,9 @@ async def get_user_recent_chat(
     """
     try:
         stage_info = f", stage={stage}" if stage else ""
-        logger.debug(f"[用户维度] 获取用户最近聊天: user_id={user_id}{stage_info}")
+        logger.debug(
+            f"[用户维度] 获取用户最近聊天: user_id={user_id}{stage_info}"
+        )
 
         # 查询用户的所有活跃聊天
         stmt = (
@@ -2812,7 +2910,9 @@ async def get_user_recent_chat(
 
         if not chats:
             stage_info = f", stage={stage}" if stage else ""
-            logger.debug(f"[用户维度] 用户没有活跃聊天: user_id={user_id}{stage_info}")
+            logger.debug(
+                f"[用户维度] 用户没有活跃聊天: user_id={user_id}{stage_info}"
+            )
             return None
 
         stage_info = f", stage={stage}" if stage else ""
@@ -2824,7 +2924,9 @@ async def get_user_recent_chat(
         chat_with_times = []
         for chat in chats:
             session_id = generate_session_id(chat.id)
-            last_user_message_time = await get_last_user_message_time(session_id)
+            last_user_message_time = await get_last_user_message_time(
+                session_id
+            )
 
             if last_user_message_time:
                 chat_with_times.append((chat, last_user_message_time))
@@ -2971,7 +3073,8 @@ async def has_sent_festival_push_for_user_agent(
                 and_(
                     PushNotificationHistory.user_id == user_id,
                     PushNotificationHistory.agent_id == agent_id,
-                    PushNotificationHistory.push_type == PUSH_TYPE_FESTIVAL_MEMORY,
+                    PushNotificationHistory.push_type
+                    == PUSH_TYPE_FESTIVAL_MEMORY,
                 )
             )
             .limit(1)
@@ -2987,7 +3090,9 @@ async def get_users_needing_push(
     db: AsyncSession,
     stage: str,
     batch_size: int = 50,
-) -> List[Tuple[User, Optional[Chat], Optional[datetime.datetime], Optional[Agent]]]:
+) -> List[
+    Tuple[User, Optional[Chat], Optional[datetime.datetime], Optional[Agent]]
+]:
     """
     统一查询需要推送的用户（所有阶段统一处理）
 
@@ -3075,7 +3180,11 @@ async def get_users_needing_push(
         # 检查已读推送用户是否需要重新召回
         if read_push_user_ids:
             recalled_users = await _check_read_push_users_for_recall(
-                db, read_push_user_ids, stage, expected_unread_count, threshold_time
+                db,
+                read_push_user_ids,
+                stage,
+                expected_unread_count,
+                threshold_time,
             )
             users_with_unread_count.extend(recalled_users)
 
@@ -3083,9 +3192,13 @@ async def get_users_needing_push(
             return []
 
         # 获取这些用户的详细信息
-        user_ids = [row.user_id for row in users_with_unread_count[: batch_size * 3]]
+        user_ids = [
+            row.user_id for row in users_with_unread_count[: batch_size * 3]
+        ]
 
-        logger.debug(f"开始处理 {len(user_ids)} 个用户，检查推送条件 (stage={stage})")
+        logger.debug(
+            f"开始处理 {len(user_ids)} 个用户，检查推送条件 (stage={stage})"
+        )
 
         # 按推送条件过滤用户
         users_needing_push = await _filter_users_by_push_conditions(
@@ -3103,7 +3216,9 @@ async def get_users_needing_push(
         )
 
         # 按时间排序（最早的优先），取前 batch_size 个
-        users_needing_push.sort(key=lambda x: x[2] if x[2] else datetime.datetime.max)
+        users_needing_push.sort(
+            key=lambda x: x[2] if x[2] else datetime.datetime.max
+        )
         return users_needing_push[:batch_size]
 
     except Exception as e:
@@ -3165,7 +3280,9 @@ async def get_users_needing_no_chat_push(
             )
             .where(PushNotificationHistory.read_at.is_(None))
             .group_by(PushNotificationHistory.user_id)
-            .having(func.count(PushNotificationHistory.id) == expected_unread_count)
+            .having(
+                func.count(PushNotificationHistory.id) == expected_unread_count
+            )
         )
 
         # 查询推送记录表中未读推送的用户
@@ -3221,12 +3338,23 @@ async def get_users_needing_no_chat_push(
                     # 用户没有聊天，检查是否达到推送时间阈值
                     user_stmt = (
                         select(User)
-                        .options(load_only(User.id, User.created_at, User.deleted_at))
-                        .where(and_(User.id == read_user_id, User.deleted_at.is_(None)))
+                        .options(
+                            load_only(User.id, User.created_at, User.deleted_at)
+                        )
+                        .where(
+                            and_(
+                                User.id == read_user_id,
+                                User.deleted_at.is_(None),
+                            )
+                        )
                     )
                     user_result = await db.execute(user_stmt)
                     user = user_result.scalar_one_or_none()
-                    if user and user.created_at and user.created_at <= threshold_time:
+                    if (
+                        user
+                        and user.created_at
+                        and user.created_at <= threshold_time
+                    ):
                         # 检查已读推送记录
                         reset_count = await reset_user_read_push_notifications(
                             db, read_user_id
@@ -3257,7 +3385,9 @@ async def get_users_needing_no_chat_push(
             return []
 
         # 获取这些用户的详细信息
-        user_ids = [row.user_id for row in users_with_unread_count[: batch_size * 3]]
+        user_ids = [
+            row.user_id for row in users_with_unread_count[: batch_size * 3]
+        ]
 
         # 过滤用户：只保留没有活跃聊天且满足时间条件的用户
         users_needing_push = []
@@ -3377,7 +3507,11 @@ async def get_users_needing_recent_chat_push(
         # 检查已读推送用户是否需要重新召回
         if read_push_user_ids:
             recalled_users = await _check_read_push_users_for_recall(
-                db, read_push_user_ids, stage, expected_unread_count, threshold_time
+                db,
+                read_push_user_ids,
+                stage,
+                expected_unread_count,
+                threshold_time,
             )
             users_with_unread_count.extend(recalled_users)
 
@@ -3385,7 +3519,9 @@ async def get_users_needing_recent_chat_push(
             return []
 
         # 获取这些用户的详细信息
-        user_ids = [row.user_id for row in users_with_unread_count[: batch_size * 3]]
+        user_ids = [
+            row.user_id for row in users_with_unread_count[: batch_size * 3]
+        ]
 
         # 查询这些用户及其最近聊天
         users_with_recent_chats = []
@@ -3401,7 +3537,9 @@ async def get_users_needing_recent_chat_push(
                     continue
 
                 # 获取用户最近聊天
-                recent_chat_data = await get_user_recent_chat(db, user_id, stage=stage)
+                recent_chat_data = await get_user_recent_chat(
+                    db, user_id, stage=stage
+                )
                 if not recent_chat_data:
                     continue
 
@@ -3409,7 +3547,9 @@ async def get_users_needing_recent_chat_push(
 
                 # 检查时间是否匹配
                 if last_user_message_time <= threshold_time:
-                    users_with_recent_chats.append((user, chat, last_user_message_time))
+                    users_with_recent_chats.append(
+                        (user, chat, last_user_message_time)
+                    )
                     logger.debug(
                         f"[用户维度] 用户满足推送条件: user_id={user_id}, chat_id={chat.id}, "
                         f"unread_count={expected_unread_count}, last_message_time={last_user_message_time.isoformat()}, threshold={threshold_time.isoformat()}"

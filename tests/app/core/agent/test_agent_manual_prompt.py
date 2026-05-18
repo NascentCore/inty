@@ -2,6 +2,7 @@
 from app.core.agent import agent as agent_module
 from app.core.agent import prompts
 from app.core.agent.agent import Agent, INTELLIMATE_AGENT_ID, INTELLIMATE_AGENT_NAME
+from app.core.user_time_context_prompt import suffix_user_text_with_time_context_lines
 from langchain_core.messages import SystemMessage
 
 
@@ -212,7 +213,7 @@ def test_intellimate_official_has_empty_main_and_mode_prompts(tmp_path, monkeypa
     assert not any("##IntelliMate Change Logs" in c for c in contents)
 
 
-def test_build_system_messages_includes_time_context(monkeypatch):
+def test_build_system_messages_excludes_user_time_from_system(monkeypatch):
     monkeypatch.setattr(
         agent_module.global_config.app.features,
         "experimental_enable_chat_with_user_time_context",
@@ -233,11 +234,38 @@ def test_build_system_messages_includes_time_context(monkeypatch):
     )
     combined = "\n".join(contents)
 
-    assert "##User Time Context" in combined
-    assert "2026-02-05T18:30:00" in combined
-    assert "Asia/Shanghai" in combined
-    assert "UTC+08:00" in combined
-    assert "Do not claim to need sleep or be offline." in combined
+    assert "##User Time Context" not in combined
+
+
+def test_openai_tail_user_message_includes_time_suffix(monkeypatch):
+    monkeypatch.setattr(
+        agent_module.global_config.app.features,
+        "experimental_enable_chat_with_user_time_context",
+        True,
+    )
+    from langchain_core.messages import HumanMessage
+
+    ctx = {
+        "local_time": "2026-02-05T18:30:00",
+        "timezone": "Asia/Shanghai",
+        "utc_offset_minutes": 480,
+    }
+    expected = suffix_user_text_with_time_context_lines("hello", ctx, enabled=True)
+    msgs = [
+        SystemMessage(content="sys"),
+        HumanMessage(content="hello"),
+    ]
+    out = agent_module._openai_messages_from_lc_messages_with_tail_user_time(
+        msgs,
+        user_name="U",
+        agent_name="A",
+        user_time_context=ctx,
+    )
+    assert out[-1]["role"] == "user"
+    body = out[-1]["content"]
+    assert isinstance(body, str)
+    assert body == expected
+    assert "user-time-utc-offset" not in body
 
 
 def test_build_system_messages_can_omit_output_format_prompt():

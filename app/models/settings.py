@@ -2,7 +2,7 @@ import sqlalchemy as sa
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 
 
 class Settings(Base):
@@ -21,7 +21,9 @@ class Settings(Base):
     user = relationship("User", back_populates="settings")
 
     # 时间戳
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
     # 外键

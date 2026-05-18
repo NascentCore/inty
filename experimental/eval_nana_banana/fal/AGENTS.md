@@ -1,14 +1,12 @@
-# 评测 Fal 上的图片模型
+# `eval_nana_banana/fal/`：Fal 图像模型离线评测
 
-- **lib.py**：封装 fal 的 generate（text-to-image / image-to-image）与 save_result_to_files（按 URL 下载图片并写 JSON），供评测脚本调用。输出路径：`output_dir/<model_subdir>/`，其中模型名中的 `/` 会变成子目录（如 `fal-ai/gpt-image-1.5/edit` → `tmp/fal-ai/gpt-image-1.5/edit/`），jpeg 与 json 均落在该目录下。
-- **eval_prod_failed_prompts.py**：对 `tmp/scene_prompt_*.txt` 逐条读 prompt，调用 fal 生成并落盘；默认 text-to-image。传入 `--image-url` 时改为 image-to-image；传入 `--image-path` 时会先将该本地文件上传到 fal CDN，再用返回的 URL 做 image-to-image（无需自备公网 URL）。成功时图片与 JSON 写入 `output_dir/<model_subdir>/`；若某条 prompt 触发 fal 报错（如 422 content_policy_violation）：会打印异常、将完整错误信息写入同目录下 `{files_prefix}_fal_output_{timestamp}_error.json`，然后继续下一条。示例：`python -m experimental.eval_nana_banana.fal.eval_prod_failed_prompts --model fal-ai/gpt-image-1.5/edit --image-path tests/files/nurse_char_full_body.jpeg`。
+**一句话**：对生产失败 prompt 集 **批量调用 Fal 文生图 / 图生图**，把 **图片 + 元 JSON + 错误 JSON** 落到按模型分子目录的输出树中，用于 **横向对比模型鲁棒性**。
 
-根据初步评测，下面模型能处理超限提示词：
+## 心智
 
-- fal-ai/bytedance/seedream/v4.5/edit <https://fal.ai/sandbox/share/I03ZcQbgF4II>
-- fal-ai/gpt-image-1.5/edit <https://fal.ai/sandbox/share/I03ZcQbgF4II>
+- **lib**：封装 Fal generate 与「按 URL 拉取落盘」；模型名里的 `/` 会展开成子目录层级。
+- **eval 脚本**：逐条 prompt 调用；单条失败 **记录后继续**，避免整批停摆。
 
-Models to test:
+## 候选模型（高阶备忘）
 
-- fal-ai/gpt-image-1.5/edit
-- fal-ai/bytedance/seedream/v4.5/edit
+- 曾观测到对「超长/越界提示」更友好的若干 `fal-ai/...` 模型——以 **Fal sandbox 链接与当时评测** 为准，运行前仍应验活。

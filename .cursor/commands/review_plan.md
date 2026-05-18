@@ -1,6 +1,11 @@
-# 计划模式下审查计划
+# Review plan in plan mode
 
-## 概述
+Do nothing and stop if not in plan mode!
 
-当前位于计划模式时，审查并根据审查结论来修正和优化计划。
-如果不在计划模式中，则什么都不做，退出。
+Review and revise the plan:
+
+- The plan addresses the user request(s)
+- The plan makes no speculative designs
+- The plan is simple and clear
+- The plan does not include nonessential designs
+- The plan has tests

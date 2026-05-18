@@ -745,6 +745,7 @@ export interface UserTodayStatsResponse {
 
 export interface UserSessionItem {
   chat_id: string;
+  agent_id: string;
   agent_name: string;
   agent_avatar_url?: string | null;
   created_at: string | null;

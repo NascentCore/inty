@@ -14,7 +14,7 @@ ssh inty
 docker exec -it inty-backend-{dev|prod} bash
 # 进入运行中的容器后：
 export PYTHONPATH=.
-python scripts/create_email_password_superuser.py \
+python tools/scripts/create_email_password_superuser.py \
   --email test@sxwl.ai \
   --password sxwltest \
   --nickname "Free Test User" \        
@@ -27,7 +27,7 @@ python scripts/create_email_password_superuser.py \
 - 找到对应环境的 docker image
 - `docker run -it <docker-image> bash`
 - `export PYTHONPATH=.`
-- 使用 `alembic -c alembic/alembic.ini ...` 命令行来操作
+- 使用 `alembic -c backend/alembic/alembic.ini ...` 命令行来操作
 
 ## 重启后端服务器
 
@@ -56,9 +56,9 @@ ssh inty # 登录生产服务器
 docker exec -it inty-backend-prod bash # 进入生产环境后端容器
 # 每次运行都会生成新的 api key
 # 生产环境，360 指有效的天数
-python3 scripts/generate_prod_token.py --env prod  user-01JWZ34Y4D1C92GD86A5R6EWYJ  360
+python3 tools/scripts/generate_prod_token.py --env prod  user-01JWZ34Y4D1C92GD86A5R6EWYJ  360
 # dev环境，360 指有效的天数
-python3 scripts/generate_prod_token.py --env dev  user-01JWZ34Y4D1C92GD86A5R6EWYJ 360 
+python3 tools/scripts/generate_prod_token.py --env dev  user-01JWZ34Y4D1C92GD86A5R6EWYJ 360 
 ```
 
 ## 增加数据连接数

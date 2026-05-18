@@ -1,13 +1,22 @@
 import React from "react";
-import { Button, Modal } from "antd";
+import { Button, Modal, Spin, Typography } from "antd";
+import { LinkOutlined } from "@ant-design/icons";
 import type { Agent } from "../../types";
 import AgentInfoDisplay from "./AgentInfoDisplay";
+import {
+  buildAgentProfilePageUrl,
+  getEvaluationBaseUrl,
+} from "../../utils/profileLinks";
+
+const { Text } = Typography;
 
 type AgentDetailModalActionKey = "close" | "edit";
 
 interface AgentDetailModalProps {
   open: boolean;
   agent: Agent | null;
+  /** When true, show loading spinner until agent is set */
+  loading?: boolean;
   onClose: () => void;
   onEdit?: (agent: Agent) => void;
   onDeleteBackgroundImage?: (imageUrl: string) => void;
@@ -30,6 +39,7 @@ export const getAgentDetailModalActionKeys = (
 export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
   open,
   agent,
+  loading = false,
   onClose,
   onEdit,
   onDeleteBackgroundImage,
@@ -37,6 +47,9 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
   width = 800,
 }) => {
   const actionKeys = getAgentDetailModalActionKeys(agent, Boolean(onEdit));
+  const permalink = agent
+    ? buildAgentProfilePageUrl(getEvaluationBaseUrl(), agent.id)
+    : "";
 
   const footer = actionKeys.map((actionKey) => {
     if (actionKey === "edit") {
@@ -70,11 +83,36 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
       footer={footer}
       width={width}
     >
-      {agent && (
-        <AgentInfoDisplay
-          agent={agent}
-          onDeleteBackgroundImage={onDeleteBackgroundImage}
-        />
+      {loading && !agent ? (
+        <div style={{ padding: 48, textAlign: "center" }}>
+          <Spin size="large" />
+        </div>
+      ) : (
+        agent && (
+          <>
+            <div
+              style={{
+                marginBottom: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              <Text strong>永久链接:</Text>
+              <a href={permalink} target="_blank" rel="noopener noreferrer">
+                <LinkOutlined /> 智能体管理详情
+              </a>
+              <Text copyable={{ text: permalink }} type="secondary">
+                {permalink}
+              </Text>
+            </div>
+            <AgentInfoDisplay
+              agent={agent}
+              onDeleteBackgroundImage={onDeleteBackgroundImage}
+            />
+          </>
+        )
       )}
     </Modal>
   );

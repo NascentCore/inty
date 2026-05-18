@@ -1,1 +1,1 @@
-"""INTY v2 本地文本聊天原型：Memory 语义存储、单进程 CLI。"""
+"""Chat WebSocket REPL for Inty (/api/v1/chat/ws). See README.md."""

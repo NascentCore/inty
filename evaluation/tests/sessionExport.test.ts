@@ -5,6 +5,7 @@ import { buildSessionExportContent } from "../utils/sessionExport";
 
 const baseSession: UserSessionItem = {
   chat_id: "chat-123",
+  agent_id: "agent-uuid-1",
   agent_name: "Amber",
   agent_avatar_url: null,
   created_at: "2026-03-16T21:16:22Z",

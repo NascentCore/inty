@@ -2,7 +2,7 @@
 name: Firebase 记录崩溃
 about: 记录一个 firebase 崩溃事件的处理
 title: "【Firebase 上记录的崩溃】"
-labels: bug, p0, s0
+labels: p0, s0
 assignees: ''
 
 ---

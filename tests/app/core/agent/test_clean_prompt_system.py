@@ -378,7 +378,6 @@ def test_clean_prompt_builder_honors_override_mode_and_suppresses_output_format(
         lookup_prompt_override=lambda *_: AgentPromptOverride(
             main_prompt=None, mode_prompt="OVERRIDE_MODE_FOR_{{char}}"
         ),
-        is_user_time_context_enabled=lambda: False,
         is_christmas_prompt_enabled=lambda: False,
     )
     context = AgentPromptContext(
@@ -411,7 +410,6 @@ def test_clean_prompt_builder_uses_chat_mode_branch_and_output_format():
     deps = PromptAssemblyDeps(
         render_prompt=render,
         lookup_prompt_override=lambda *_: None,
-        is_user_time_context_enabled=lambda: False,
         is_christmas_prompt_enabled=lambda: False,
     )
     context = AgentPromptContext(
@@ -450,7 +448,6 @@ def test_clean_prompt_builder_uses_premium_mode_branch():
     deps = PromptAssemblyDeps(
         render_prompt=render,
         lookup_prompt_override=lambda *_: None,
-        is_user_time_context_enabled=lambda: False,
         is_christmas_prompt_enabled=lambda: False,
     )
     context = AgentPromptContext(
@@ -479,7 +476,6 @@ def test_clean_prompt_builder_excludes_time_context_when_disabled():
     deps = PromptAssemblyDeps(
         render_prompt=lambda tmpl, char, user: tmpl,
         lookup_prompt_override=lambda *_: None,
-        is_user_time_context_enabled=lambda: False,
         is_christmas_prompt_enabled=lambda: False,
     )
     context = AgentPromptContext(agent_id="agent-time-1", name="TimeAgent")
@@ -501,7 +497,6 @@ def test_clean_prompt_builder_includes_christmas_prompts_when_enabled():
             "{{user}}", user or ""
         ),
         lookup_prompt_override=lambda *_: None,
-        is_user_time_context_enabled=lambda: False,
         is_christmas_prompt_enabled=lambda: True,
     )
     context = AgentPromptContext(
@@ -520,7 +515,6 @@ def test_clean_official_builder_always_appends_introduction_message():
     deps = PromptAssemblyDeps(
         render_prompt=lambda tmpl, char, user: tmpl,
         lookup_prompt_override=lambda *_: None,
-        is_user_time_context_enabled=lambda: False,
         is_christmas_prompt_enabled=lambda: False,
     )
     context = AgentPromptContext(

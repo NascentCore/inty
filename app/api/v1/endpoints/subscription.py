@@ -9,9 +9,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, NOT_USED_TAG, WEB_APP_TAG
+from app.api.tags import (
+    ANDROID_APP_TAG,
+    INTERNAL_API_TAG,
+    NOT_USED_TAG,
+    WEB_APP_TAG,
+)
 from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
 
@@ -34,6 +38,8 @@ from app.services.global_services import subscription_service
 
 router = APIRouter(prefix="/subscription", route_class=LoggerRoute)
 from loguru import logger
+from app.schemas import subscription as subscription_schemas
+from app.schemas.user import User as UserSchema
 
 
 @router.get(
@@ -46,7 +52,7 @@ from loguru import logger
 async def get_subscription_plans(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     try:
         # 获取所有激活的订阅计划
@@ -55,8 +61,10 @@ async def get_subscription_plans(
         )
 
         # 获取用户当前订阅
-        current_subscription = await subscription_service.get_user_current_subscription(
-            db, current_user.id
+        current_subscription = (
+            await subscription_service.get_user_current_subscription(
+                db, current_user.id
+            )
         )
 
         # 获取用户历史订阅记录
@@ -67,8 +75,10 @@ async def get_subscription_plans(
         # 获取用户最新的订阅计划ID（仅当曾经订阅过时）
         previous_plan_id = None
         if has_ever_subscribed:
-            previous_plan_id = await subscription_service.get_user_latest_plan_id(
-                db, current_user.id
+            previous_plan_id = (
+                await subscription_service.get_user_latest_plan_id(
+                    db, current_user.id
+                )
             )
 
         # 将 SQLAlchemy 模型转换为 Pydantic 模型
@@ -101,7 +111,7 @@ async def get_subscription_plans(
 async def get_subscription_status(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     获取用户订阅状态
@@ -127,7 +137,7 @@ async def get_subscription_status(
 async def get_usage_statistics(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     获取用户使用统计
@@ -156,7 +166,7 @@ async def verify_purchase(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     purchase_request: PurchaseVerificationRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     验证 Google Play 购买并创建订阅
@@ -172,7 +182,7 @@ async def verify_purchase(
             db, current_user.id, google_play_request
         )
 
-        logger.error(f"购买验证结果: {result}")
+        logger.info(f"购买验证结果: {result}")
 
         if result.is_verified:
             return APIResponse.success(
@@ -211,7 +221,9 @@ async def google_play_webhook(
         if global_config_loaded_from_config_yaml.google_play.webhook_secret:
             signature = request.headers.get("X-Goog-Message-Signature")
             if not signature or not _verify_webhook_signature(body, signature):
-                raise HTTPException(status_code=400, detail="Invalid webhook signature")
+                raise HTTPException(
+                    status_code=400, detail="Invalid webhook signature"
+                )
 
         # 解析请求数据
         try:
@@ -250,7 +262,9 @@ async def _process_google_play_notification(
             ):
                 import base64
 
-                decoded_data = base64.b64decode(notification_data["message"]["data"])
+                decoded_data = base64.b64decode(
+                    notification_data["message"]["data"]
+                )
                 notification_json = json.loads(decoded_data.decode("utf-8"))
 
                 # 记录详细的通知信息
@@ -270,8 +284,10 @@ async def _process_google_play_notification(
                 )
 
                 # 处理订阅通知
-                success = await subscription_service.handle_subscription_notification(
-                    db, notification_json
+                success = (
+                    await subscription_service.handle_subscription_notification(
+                        db, notification_json
+                    )
                 )
 
                 if success:
@@ -341,14 +357,16 @@ def _verify_webhook_signature(body: bytes, signature: str) -> bool:
 async def create_subscription_plan(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    plan_data: schemas.subscription.SubscriptionPlanCreate,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    plan_data: subscription_schemas.SubscriptionPlanCreate,
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建订阅计划（管理员接口）
     """
     try:
-        plan = await subscription_service.create_subscription_plan(db, plan_data)
+        plan = await subscription_service.create_subscription_plan(
+            db, plan_data
+        )
         # 将 SQLAlchemy 模型转换为 Pydantic 模型
         plan_schema = SubscriptionPlan.model_validate(plan)
         return APIResponse.success(
@@ -369,14 +387,16 @@ async def create_subscription_plan(
 async def get_all_subscription_plans(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
     include_inactive: bool = False,
 ) -> Any:
     """
     获取所有订阅计划（管理员接口）
     """
     try:
-        plans = await subscription_service.get_subscription_plans(db, include_inactive)
+        plans = await subscription_service.get_subscription_plans(
+            db, include_inactive
+        )
         return APIResponse.success(data=plans)
 
     except Exception as e:
@@ -393,13 +413,15 @@ async def get_user_subscription_status_admin(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     user_id: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取指定用户的订阅状态（管理员接口）
     """
     try:
-        status = await subscription_service.get_user_subscription_status(db, user_id)
+        status = await subscription_service.get_user_subscription_status(
+            db, user_id
+        )
         return APIResponse.success(data=status)
 
     except Exception as e:
@@ -416,13 +438,15 @@ async def get_user_usage_statistics_admin(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     user_id: str,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取指定用户的使用统计（管理员接口）
     """
     try:
-        usage_stats = await subscription_service.get_user_usage_statistics(db, user_id)
+        usage_stats = await subscription_service.get_user_usage_statistics(
+            db, user_id
+        )
         return APIResponse.success(data=usage_stats)
 
     except Exception as e:
@@ -440,7 +464,7 @@ async def process_manual_refund(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     refund_request: RefundRequest,
-    current_user: schemas.User = Depends(deps.get_current_superuser),
+    current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     手动处理退款（管理员接口）
@@ -463,7 +487,9 @@ async def process_manual_refund(
             subscription = result.scalar_one_or_none()
 
             refund_info = (
-                subscription.extra_data.get("refund_info", {}) if subscription else {}
+                subscription.extra_data.get("refund_info", {})
+                if subscription
+                else {}
             )
 
             response = RefundResponse(

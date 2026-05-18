@@ -18,6 +18,10 @@ def _build_service_with_language_config() -> LiveChatService:
         send_sample_rate=16000,
         speech_language_code="en-US",
         response_language_name="English",
+        # Matches app.utils.config.LiveChat* section when _build_live_config reads it.
+        session_resumption=True,
+        trigger_tokens=10000,
+        target_tokens=512,
     )
     return service
 
@@ -34,9 +38,9 @@ def test_build_system_instruction_includes_english_only_policy():
         history_messages=[],
     )
 
-    assert "Language policy" in instruction
-    assert "ONLY in English" in instruction
-    assert "Never switch to any other language" in instruction
+    assert "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY" in instruction
+    assert "YOU MUST SPEAK ONLY IN English AT ALL TIMES." in instruction
+    assert "DO NOT code-switch or mix languages" in instruction
 
 
 def test_build_system_instruction_merged_response_language_override():
@@ -48,8 +52,8 @@ def test_build_system_instruction_merged_response_language_override():
         merged_response_language_name="Arabic",
     )
 
-    assert "ONLY in Arabic" in instruction
-    assert "ONLY in English" not in instruction
+    assert "YOU MUST SPEAK ONLY IN Arabic AT ALL TIMES." in instruction
+    assert "YOU MUST SPEAK ONLY IN English AT ALL TIMES." not in instruction
 
 
 def test_resolved_response_language_falls_back_to_speech_code():
@@ -161,8 +165,8 @@ def test_build_system_instruction_from_text_chat_system_messages():
     assert "System A" in instruction
     assert "System B" in instruction
     assert "这是实时语音对话" in instruction
-    assert "Language policy" in instruction
-    assert "ONLY in English" in instruction
+    assert "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY" in instruction
+    assert "YOU MUST SPEAK ONLY IN English AT ALL TIMES." in instruction
 
 
 def test_build_prefill_turns_from_history_messages():
@@ -203,6 +207,9 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
         response_language_name="English",
         enabled=True,
         audio_temp_dir="",
+        session_resumption=True,
+        trigger_tokens=10000,
+        target_tokens=512,
     )
 
     async def fake_get_agent_for_chat(db, agent_id):
@@ -296,6 +303,7 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
         agent_id="agent-1",
         user_id="user-1",
         chat_id="chat-1",
+        config=LiveChatConfig(enable_prefill=True),
     )
 
     status_events = []
@@ -335,3 +343,39 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
     assert live_chat_module.LiveChatStatus.CONNECTED in status_events
     assert fake_agent_holder["agent"] is not None
     assert fake_agent_holder["agent"].include_output_format_prompt_value is False
+
+
+def test_opening_conversation_trigger_text_uses_language_or_fallback():
+    t = LiveChatService._opening_conversation_trigger_text("Japanese")
+    assert "Japanese" in t
+    t_empty = LiveChatService._opening_conversation_trigger_text("")
+    assert "the configured reply language" in t_empty
+
+
+@pytest.mark.asyncio
+async def test_send_opening_conversation_trigger_idempotent_and_no_user_buffer():
+    service = _build_service_with_language_config()
+    sent: list[tuple] = []
+
+    class _FakeGs:
+        async def send(self, input=None, end_of_turn=False):
+            sent.append((input, end_of_turn))
+
+    session = LiveSession(
+        session_id="s-open",
+        agent_id="a1",
+        user_id="u1",
+        chat_id="c1",
+        config=LiveChatConfig(agent_starts_conversation=True),
+    )
+    session.gemini_session = _FakeGs()
+    await service._send_opening_conversation_trigger(session, "English")
+    assert len(sent) == 1
+    assert sent[0][1] is True
+    assert isinstance(sent[0][0], str)
+    assert "English" in sent[0][0]
+    assert session.user_transcript_buffer == ""
+    assert session.opening_conversation_trigger_sent is True
+
+    await service._send_opening_conversation_trigger(session, "English")
+    assert len(sent) == 1

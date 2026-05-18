@@ -14,7 +14,7 @@ from loguru import logger
 from google.genai.errors import ClientError
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.agentic_kernel.tools.runtime import process_single_tool_call
+from app.core.companion_harness.tools.runtime import process_single_tool_call
 
 _THIS_DIR = Path(__file__).resolve().parent
 DATA_DIR = _THIS_DIR / "tmp"
@@ -49,8 +49,12 @@ class ToolContextType(Enum):
     NONE = "none"
     GEMINI_CLIENT = "gemini_client"
     GEMINI_CLIENT_WITH_MESSAGES = "gemini_client_with_messages"
-    GEMINI_CLIENT_WITH_MESSAGES_AND_SYSTEM = "gemini_client_with_messages_and_system"
-    GEMINI_CLIENT_WITH_MESSAGES_AND_NAMES = "gemini_client_with_messages_and_names"
+    GEMINI_CLIENT_WITH_MESSAGES_AND_SYSTEM = (
+        "gemini_client_with_messages_and_system"
+    )
+    GEMINI_CLIENT_WITH_MESSAGES_AND_NAMES = (
+        "gemini_client_with_messages_and_names"
+    )
 
 
 class ProcessedResponse(BaseModel):
@@ -100,7 +104,9 @@ def execute_send_app_icon(*, _logger=None) -> tuple[str, str | None]:
 def execute_send_zun_long_photo(*, _logger=None) -> tuple[str, str | None]:
     """执行发送尊龙照片：校验 尊龙.png 存在。返回 (供 API 的结果字符串, 成功时为可点击的绝对路径否则 None)。"""
     if _logger is not None:
-        _logger.info("执行 send_zun_long_photo 工具，图片路径: %s", ZUN_LONG_PHOTO_PATH)
+        _logger.info(
+            "执行 send_zun_long_photo 工具，图片路径: %s", ZUN_LONG_PHOTO_PATH
+        )
     if not ZUN_LONG_PHOTO_PATH.exists():
         if _logger is not None:
             _logger.warning("send_zun_long_photo 失败: 图片文件不存在")
@@ -109,7 +115,9 @@ def execute_send_zun_long_photo(*, _logger=None) -> tuple[str, str | None]:
         ZUN_LONG_PHOTO_PATH.read_bytes()
     except OSError as e:
         if _logger is not None:
-            _logger.warning("send_zun_long_photo 失败: 无法读取图片, error=%s", e)
+            _logger.warning(
+                "send_zun_long_photo 失败: 无法读取图片, error=%s", e
+            )
         return (f"send_zun_long_photo: Failed to read image ({e!s}).", None)
     path_str = str(ZUN_LONG_PHOTO_PATH.resolve())
     if _logger is not None:
@@ -153,7 +161,9 @@ def execute_send_selfie_photo(*, _logger=None) -> tuple[str, str | None]:
     candidates = _list_companion_photos()
     if not candidates:
         if _logger is not None:
-            _logger.warning("send_selfie_photo 失败: companion_profile 中无图片")
+            _logger.warning(
+                "send_selfie_photo 失败: companion_profile 中无图片"
+            )
         return ("send_selfie_photo: No photos available in album.", None)
     for p in candidates:
         path_str = str(p.resolve())
@@ -162,7 +172,9 @@ def execute_send_selfie_photo(*, _logger=None) -> tuple[str, str | None]:
                 p.read_bytes()
             except OSError as e:
                 if _logger is not None:
-                    _logger.warning("send_selfie_photo 跳过无法读取的文件 %s: %s", p, e)
+                    _logger.warning(
+                        "send_selfie_photo 跳过无法读取的文件 %s: %s", p, e
+                    )
                 continue
             if _logger is not None:
                 _logger.info("send_selfie_photo 成功，已返回路径: %s", path_str)
@@ -246,7 +258,10 @@ def execute_text_to_speech(
         if _logger is not None:
             _logger.warning("text_to_speech 失败: %s", e)
         attempted = (text or "").strip()
-        return (f"text_to_speech: Failed ({e}). Spoken (attempted): {attempted}", None)
+        return (
+            f"text_to_speech: Failed ({e}). Spoken (attempted): {attempted}",
+            None,
+        )
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     out_path = DATA_DIR / f"generated_speech_{int(time.time() * 1000)}.wav"
     with wave.open(str(out_path), "wb") as wf:
@@ -309,11 +324,11 @@ def execute_live_voice_message_reply(
         _logger.info("live_voice_message_reply 成功，已写入: %s", path_str)
     # Path is shown once via image_path (new_pending) in REPL; do not embed in result to avoid double print
     if transcript:
-        result = (
-            f'live_voice_message_reply: Speech generated. Transcript: "{transcript}".'
-        )
+        result = f'live_voice_message_reply: Speech generated. Transcript: "{transcript}".'
     else:
-        result = "live_voice_message_reply: Speech generated. Transcript: (none)."
+        result = (
+            "live_voice_message_reply: Speech generated. Transcript: (none)."
+        )
     return (result, path_str)
 
 
@@ -353,7 +368,9 @@ def execute_erotic_scene_generate(
         return (f"erotic_scene_generate: Failed ({e}).", None)
     result_msg = "erotic_scene_generate: Scene:\n" + (text or "").strip()
     if _logger is not None:
-        _logger.info("erotic_scene_generate 成功，scene 长度=%d", len(text or ""))
+        _logger.info(
+            "erotic_scene_generate 成功，scene 长度=%d", len(text or "")
+        )
     return (result_msg, None)
 
 
@@ -659,7 +676,11 @@ def process_response_with_tools(
         tool_name = getattr(message.tool_calls[0].function, "name", "<unknown>")
         _logger.info("工具 %s 执行完毕，result 长度=%d", tool_name, len(result))
 
-    content = (assistant_content + "\n" + result).strip() if runtime_out.done else None
+    content = (
+        (assistant_content + "\n" + result).strip()
+        if runtime_out.done
+        else None
+    )
     return ProcessedResponse(
         messages=runtime_out.messages,
         content=content,

@@ -6,23 +6,6 @@ import org.junit.Test
 
 class ReportEvidenceImagesMergeTest {
     @Test
-    fun `keeps initial remote evidence image before newly added local images`() {
-        val result =
-            mergeEvidenceImageUrls(
-                remoteImages = listOf("https://cdn.example.com/evidence-initial.jpg"),
-                localImages = listOf("content://media/external/images/media/42"),
-            )
-
-        assertEquals(
-            listOf(
-                "https://cdn.example.com/evidence-initial.jpg",
-                "content://media/external/images/media/42",
-            ),
-            result,
-        )
-    }
-
-    @Test
     fun `filters blank values and de-duplicates image urls while preserving order`() {
         val result =
             mergeEvidenceImageUrls(

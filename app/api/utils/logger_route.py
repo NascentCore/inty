@@ -9,11 +9,11 @@ import uuid
 from datetime import datetime
 from typing import Any, Callable
 
-from fastapi import Request, Response
+from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
-from fastapi import HTTPException
 from loguru import logger
+from starlette.requests import ClientDisconnect
 
 from app.core.config import global_config_loaded_from_config_yaml
 
@@ -61,12 +61,30 @@ class LoggerRoute(APIRoute):
                     try:
                         body = await request.body()
                         if body:
+                            decoded_body = body.decode()
                             try:
-                                request_body = json.loads(body.decode())
-                            except Exception:
-                                request_body = body.decode()
-                    except Exception:
-                        pass
+                                request_body = json.loads(decoded_body)
+                            except json.JSONDecodeError:
+                                request_body = decoded_body
+                    except UnicodeDecodeError as e:
+                        request_body = (
+                            f"<non-utf8 request body: {len(body)} bytes>"
+                        )
+                        logger.warning(
+                            "[{}] Failed to decode request body: {}, method={}, path={}",
+                            request_id,
+                            e,
+                            request.method,
+                            request.url.path,
+                        )
+                    except (ClientDisconnect, RuntimeError) as e:
+                        logger.warning(
+                            "[{}] Failed to read request body: {}, method={}, path={}",
+                            request_id,
+                            e,
+                            request.method,
+                            request.url.path,
+                        )
 
                 # Log request
                 client = request.client.host if request.client else "unknown"
@@ -79,7 +97,9 @@ class LoggerRoute(APIRoute):
                         body=request_body,
                     )
                 else:
-                    filtered_headers = self._filter_headers(dict(request.headers))
+                    filtered_headers = self._filter_headers(
+                        dict(request.headers)
+                    )
                     self._log_request_readable(
                         request_id=request_id,
                         method=request.method,
@@ -126,32 +146,34 @@ class LoggerRoute(APIRoute):
                     return response
                 except Exception as e:
                     duration = time.time() - start_time
-                    # 401 鉴权失败（含 JWT 过期、未带 token）为预期情况，降级为 WARNING 减少 error 日志噪音
-                    is_401 = (
+                    # 4xx HTTPException 是预期的客户端错误，降级为 WARNING 减少测试/CI error 日志噪音。
+                    is_client_error = (
                         isinstance(e, HTTPException)
-                        and getattr(e, "status_code", None) == 401
+                        and 400 <= getattr(e, "status_code", 0) < 500
                     )
                     if use_json_format:
                         error_log_data = {
                             "request_id": request_id,
-                            "type": "error" if not is_401 else "warning",
+                            "type": "warning" if is_client_error else "error",
                             "method": request.method,
                             "path": request.url.path,
                             "error": str(e),
                             "duration": round(duration, 3),
                             "timestamp": datetime.utcnow().isoformat() + "Z",
                         }
-                        if is_401:
+                        if is_client_error:
                             logger.warning(
                                 json.dumps(error_log_data, ensure_ascii=False)
                             )
                         else:
-                            logger.error(json.dumps(error_log_data, ensure_ascii=False))
+                            logger.error(
+                                json.dumps(error_log_data, ensure_ascii=False)
+                            )
                     else:
-                        if is_401:
+                        if is_client_error:
                             logger.warning(
                                 f"\n{'='*80}\n"
-                                f"⚠️ 401 [{request_id}]\n"
+                                f"⚠️ {getattr(e, 'status_code', '4xx')} [{request_id}]\n"
                                 f"{'='*80}\n"
                                 f"Method:      {request.method}\n"
                                 f"Path:        {request.url.path}\n"
@@ -188,26 +210,24 @@ class LoggerRoute(APIRoute):
                 try:
                     # JSONResponse may store content in different attributes
                     # Try _content first (internal attribute used by Starlette)
-                    if hasattr(response, "_content") and response._content is not None:
-                        try:
-                            if isinstance(response._content, (dict, list)):
-                                response_body = response._content
-                                return response_body
-                        except Exception:
-                            pass
+                    response_content = getattr(response, "_content", None)
+                    if isinstance(response_content, (dict, list)):
+                        response_body = response_content
+                        return response_body
 
                     # Try content attribute (some versions of Starlette/FastAPI)
-                    if hasattr(response, "content") and response.content is not None:
+                    response_content = getattr(response, "content", None)
+                    if response_content is not None:
                         try:
                             # content might be a dict, list, or already serialized string
-                            if isinstance(response.content, (dict, list)):
-                                response_body = response.content
+                            if isinstance(response_content, (dict, list)):
+                                response_body = response_content
                                 return response_body
-                            elif isinstance(response.content, str):
+                            elif isinstance(response_content, str):
                                 try:
-                                    response_body = json.loads(response.content)
+                                    response_body = json.loads(response_content)
                                 except (json.JSONDecodeError, ValueError):
-                                    response_body = response.content
+                                    response_body = response_content
                                 return response_body
                         except Exception as e:
                             extraction_error = (
@@ -216,7 +236,9 @@ class LoggerRoute(APIRoute):
 
                     # Fall through to try body attribute
                 except Exception as e:
-                    extraction_error = f"Failed to access JSONResponse attributes: {e}"
+                    extraction_error = (
+                        f"Failed to access JSONResponse attributes: {e}"
+                    )
 
             # Try method 2: Direct body access (for responses that are already serialized)
             if hasattr(response, "body") and response.body is not None:
@@ -269,7 +291,9 @@ class LoggerRoute(APIRoute):
                     pass
                 except Exception as e:
                     if not extraction_error:
-                        extraction_error = f"Failed to read from body_iterator: {e}"
+                        extraction_error = (
+                            f"Failed to read from body_iterator: {e}"
+                        )
 
         except Exception as e:
             extraction_error = f"Unexpected error: {e}"
@@ -392,7 +416,12 @@ class LoggerRoute(APIRoute):
         )
 
     def _log_error_readable(
-        self, request_id: str, method: str, path: str, error: str, duration: float
+        self,
+        request_id: str,
+        method: str,
+        path: str,
+        error: str,
+        duration: float,
     ):
         """Readable format logging for error (development)"""
         logger.error(
@@ -412,7 +441,12 @@ class LoggerRoute(APIRoute):
         for key, value in headers.items():
             if key.lower() in cls.SENSITIVE_HEADERS:
                 filtered[key] = "***REDACTED***"
-            elif key.lower() in ["host", "content-type", "content-length", "accept"]:
+            elif key.lower() in [
+                "host",
+                "content-type",
+                "content-length",
+                "accept",
+            ]:
                 filtered[key] = value
         return filtered
 

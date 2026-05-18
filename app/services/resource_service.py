@@ -4,34 +4,35 @@ from loguru import logger
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import Session
 
-from app import models, schemas
+from app.models.resource import Resource
 from app.models.resource import ImageResourceMetadata, ResourceType
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.resource import ResourceCreate
 from app.utils.image import ImageFormat, ImageSize
+from app.schemas.resource import ResourceUpdate
 
 
-def get_resource(db: Session, resource_id: str) -> Optional[models.Resource]:
+def get_resource(db: Session, resource_id: str) -> Optional[Resource]:
     """
     Get resource by ID
     """
-    return db.query(models.Resource).filter(models.Resource.id == resource_id).first()
+    return db.query(Resource).filter(Resource.id == resource_id).first()
 
 
 def get_resources(
     db: Session, skip: int = 0, limit: int = 100
-) -> List[models.Resource]:
+) -> List[Resource]:
     """
     Get resources list
     """
-    return db.query(models.Resource).offset(skip).limit(limit).all()
+    return db.query(Resource).offset(skip).limit(limit).all()
 
 
 def create_resource(
     db: Session,
-    resource_in: schemas.ResourceCreate,
+    resource_in: ResourceCreate,
     user_id: str,
-) -> models.Resource:
+) -> Resource:
     """
     Create new resource
     """
@@ -39,7 +40,7 @@ def create_resource(
     resource_data = resource_in.model_dump(exclude=EXCLUDE_FIELDS)
 
     # 创建资源记录，如果发生冲突则抛出异常
-    db_resource = models.Resource(**resource_data, user_id=user_id)
+    db_resource = Resource(**resource_data, user_id=user_id)
     db.add(db_resource)
     db.commit()
     db.refresh(db_resource)
@@ -47,8 +48,8 @@ def create_resource(
 
 
 def update_resource(
-    db: Session, *, db_resource: models.Resource, resource_in: schemas.ResourceUpdate
-) -> models.Resource:
+    db: Session, *, db_resource: Resource, resource_in: ResourceUpdate
+) -> Resource:
     """
     Update resource
     """
@@ -61,7 +62,7 @@ def update_resource(
     return db_resource
 
 
-def delete_resource(db: Session, *, db_resource: models.Resource) -> models.Resource:
+def delete_resource(db: Session, *, db_resource: Resource) -> Resource:
     """
     Delete resource
     """
@@ -124,19 +125,21 @@ def create_image_resource(
         ),
         user_id=user_id,
     )
-    logger.debug(f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}")
+    logger.debug(
+        f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}"
+    )
 
 
 async def async_create_resource(
     async_db: AsyncSession,
-    resource_in: schemas.ResourceCreate,
+    resource_in: ResourceCreate,
     user_id: str,
-) -> models.Resource:
+) -> Resource:
     # 排除数据库模型中不存在的字段
     resource_data = resource_in.model_dump(exclude=EXCLUDE_FIELDS)
 
     # 创建资源记录，如果发生冲突则抛出异常
-    db_resource = models.Resource(**resource_data, user_id=user_id)
+    db_resource = Resource(**resource_data, user_id=user_id)
     async_db.add(db_resource)
     await async_db.commit()
     await async_db.refresh(db_resource)
@@ -209,4 +212,6 @@ async def async_create_image_resource(
         ),
         user_id=user_id,
     )
-    logger.debug(f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}")
+    logger.debug(
+        f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}"
+    )

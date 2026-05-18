@@ -1,16 +1,20 @@
-# AGENTS.md · experimental/（原型与实验）
+# `experimental/`：演示、概念验证
 
-- 非生产代码；
-- 最小化依赖、隔离环境；如需脚本/服务，请在本目录自备 `requirements.txt` 或说明。
-- requirements.txt 不指定版本，默认最新版本，使用以下步骤强制安装最新版本
-  ```bash
-  uv pip uninstall -r requirements.txt
-  uv pip install -r requirements.txt
-  ```
-- 使用 https://pypi.org/project/python-dotenv/ 来读取环境变量来获得 API Key
-  ```python
-  from dotenv import load_dotenv
-  load_dotenv()
-  ```
-- Telegram + `perpetual_agent` 本地联调、token 校验与 `TELEGRAM_CHAT_ID` 排错：见 [perpetual_agent/README.md](perpetual_agent/README.md) 与仓库根目录 [tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md](../tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md)。
-- OpenAI 兼容 API + Telegram 入站通道（`TelegramInbox` / `--telegram-llm`）：见 [perpetual_agent/README.md](perpetual_agent/README.md)「Telegram + OpenAI」节与 [perpetual_agent/channel_inbox.py](perpetual_agent/channel_inbox.py)。
+## 硬边界
+
+- 每个项目单独创建文件夹
+- 不进生产发布
+- **自包含**：每个子目录包含全部外部依赖说明。
+- 不依赖生产代码：除非用户明确要求、不引用本目录以外本代码库其他代码。
+- **文档齐全**：记录原始请求、如何运行、记录分析结论。
+- **代码不做容错处理**：只考虑成功路径
+- **只做手动测试**：不写单元测试和其他自动化测试
+
+## Python
+
+- 虚拟环境：使用 `requirements.txt` `uv venv` `uv pip install -r ...`
+- 使用：`python-dotenv` `Cyclopts`
+
+## Additional instructions
+
+- Record interesting ideas and general inspirations to [THINGS_TO_EXPLORE.md](/experimental/THINGS_TO_EXPLORE.md)

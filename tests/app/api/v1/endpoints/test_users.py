@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.api import deps
 from app.api.v1.endpoints import users
 from app.models.user import AuthType
-from app.schemas import User as UserSchema
+from app.schemas.user import User as UserSchema
 from app.services import user_service
 
 

@@ -28,7 +28,7 @@ from google.genai import types
 from langsmith import traceable
 from loguru import logger
 
-from app.core.agentic_kernel.providers.gemini import (
+from app.core.companion_harness.providers.gemini import (
     GeminiClientOptions,
     get_gemini_client as get_kernel_gemini_client,
 )
@@ -152,7 +152,13 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Kore.mp3",
-        "keywords": ["bright", "high-pitched", "slow pacing", "natural", "smooth"],
+        "keywords": [
+            "bright",
+            "high-pitched",
+            "slow pacing",
+            "natural",
+            "smooth",
+        ],
     },
     {
         "voice_id": "Fenrir",
@@ -228,7 +234,13 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Algenib.mp3",
-        "keywords": ["clear", "low-pitched", "medium pacing", "gentle", "smooth"],
+        "keywords": [
+            "clear",
+            "low-pitched",
+            "medium pacing",
+            "gentle",
+            "smooth",
+        ],
     },
     {
         "voice_id": "Algieba",
@@ -238,7 +250,13 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Algieba.mp3",
-        "keywords": ["clear", "low-pitched", "medium pacing", "strong", "expressive"],
+        "keywords": [
+            "clear",
+            "low-pitched",
+            "medium pacing",
+            "strong",
+            "expressive",
+        ],
     },
     {
         "voice_id": "Alnilam",
@@ -394,7 +412,13 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Sulafat.mp3",
-        "keywords": ["bright", "high-pitched", "slow pacing", "strong", "smooth"],
+        "keywords": [
+            "bright",
+            "high-pitched",
+            "slow pacing",
+            "strong",
+            "smooth",
+        ],
     },
     {
         "voice_id": "Umbriel",
@@ -432,7 +456,11 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
 USE_CASES_SHORTLIST: Dict[str, List[str]] = {
     "general_ai_assistant": ["Callirrhoe", "Rasalgethi", "Enceladus"],
     "customer_support_help_center": ["Puck", "Achird", "Aoede"],
-    "long_form_narration_explainers": ["Autonoe", "Sadaltager", "Zubenelgenubi"],
+    "long_form_narration_explainers": [
+        "Autonoe",
+        "Sadaltager",
+        "Zubenelgenubi",
+    ],
     "calm_soothing_wellness": ["Zubenelgenubi", "Iapetus", "Laomedeia"],
     "premium_authoritative_executive": ["Algieba", "Fenrir", "Pulcherrima"],
     "energetic_marketing_promos": ["Schedar", "Sadachbia", "Orus"],
@@ -496,7 +524,9 @@ def resolve_voice_message_narration_mode(
     return VoiceMessageNarrationMode.DIALOGUE_ONLY
 
 
-def select_default_gemini_voice_for_imate_gender(agent_gender: Optional[str]) -> str:
+def select_default_gemini_voice_for_imate_gender(
+    agent_gender: Optional[str],
+) -> str:
     """
     选择 Gemini 源音色（用于 Gemini->ElevenLabs 变声链路）。
     未知性别或空值回退到 DEFAULT_GEMINI_TTS_VOICE_NAME。
@@ -676,7 +706,9 @@ def _pace_instruction_for_gemini(speaking_rate: float) -> str:
         return ""
     if rate < 1.0:
         return f"Deliver the following at {rate:.1f}x normal speaking rate (slower). "
-    return f"Deliver the following at {rate:.1f}x normal speaking rate (faster). "
+    return (
+        f"Deliver the following at {rate:.1f}x normal speaking rate (faster). "
+    )
 
 
 def sanitize_text_for_gemini_tts(text: str) -> Tuple[List[str], List[str]]:
@@ -733,7 +765,9 @@ class GeminiTTSAPI:
                 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = gcp_key_path
                 logger.debug(f"Gemini TTS 设置 GCP 凭证: {gcp_key_path}")
 
-            gemini_live_config = global_config_loaded_from_config_yaml.gemini_live
+            gemini_live_config = (
+                global_config_loaded_from_config_yaml.gemini_live
+            )
             self._client = get_kernel_gemini_client(
                 GeminiClientOptions(
                     vertexai=True,
@@ -762,7 +796,9 @@ class GeminiTTSAPI:
     async def synthesize(self, request: TTSRequest) -> Optional[TTSResult]:
         client = self._get_client()
         if client is None:
-            logger.info("Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider")
+            logger.info(
+                "Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider"
+            )
             return None
 
         prefix, raw = parse_voice_id(request.voice_id)
@@ -842,7 +878,9 @@ class GeminiTTSAPI:
 
         client = self._get_client()
         if client is None:
-            logger.info("Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider")
+            logger.info(
+                "Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider"
+            )
             return None
 
         prefix, raw = parse_voice_id(request.voice_id)
@@ -862,14 +900,21 @@ class GeminiTTSAPI:
         narration_mode = resolve_voice_message_narration_mode(
             request.voice_message_narration_mode
         )
-        if narration_mode == VoiceMessageNarrationMode.DIALOGUE_AND_STAGE_DIRECTIONS:
+        if (
+            narration_mode
+            == VoiceMessageNarrationMode.DIALOGUE_AND_STAGE_DIRECTIONS
+        ):
             full_text = request.text
             if pace:
                 full_text = pace + full_text
             contents = [
                 types.Content(
                     role="user",
-                    parts=[types.Part.from_text(text=TTS_FULL_NARRATION_INSTRUCTION)],
+                    parts=[
+                        types.Part.from_text(
+                            text=TTS_FULL_NARRATION_INSTRUCTION
+                        )
+                    ],
                 ),
                 types.Content(
                     role="user",
@@ -877,7 +922,9 @@ class GeminiTTSAPI:
                 ),
             ]
         else:
-            stage_directions, dialogues = sanitize_text_for_gemini_tts(request.text)
+            stage_directions, dialogues = sanitize_text_for_gemini_tts(
+                request.text
+            )
             dialogue_text = (
                 "Do not speak the stage directions, only speak the dialogues: "
                 + " ".join(dialogues)
@@ -955,12 +1002,16 @@ class GeminiTTSAPI:
         - does not split stage directions and dialogues
         """
         if not (request.text or "").strip():
-            logger.warning("synthesize_with_full_dialogue_prompt: 文本为空，跳过")
+            logger.warning(
+                "synthesize_with_full_dialogue_prompt: 文本为空，跳过"
+            )
             return None
 
         client = self._get_client()
         if client is None:
-            logger.info("Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider")
+            logger.info(
+                "Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider"
+            )
             return None
 
         prefix, raw = parse_voice_id(request.voice_id)
@@ -984,7 +1035,9 @@ class GeminiTTSAPI:
             types.Content(
                 role="user",
                 parts=[
-                    types.Part.from_text(text=TTS_FULL_DIALOGUE_CONVERSION_INSTRUCTION)
+                    types.Part.from_text(
+                        text=TTS_FULL_DIALOGUE_CONVERSION_INSTRUCTION
+                    )
                 ],
             ),
             types.Content(
@@ -1044,7 +1097,9 @@ class ElevenLabsTTSAPI:
         try:
             prefix, raw = parse_voice_id(request.voice_id)
             elevenlabs_voice_id = (
-                raw if prefix == VOICE_ID_PREFIX_ELEVENLABS else request.voice_id
+                raw
+                if prefix == VOICE_ID_PREFIX_ELEVENLABS
+                else request.voice_id
             )
 
             voice_settings = VoiceSettings(
@@ -1118,7 +1173,9 @@ class ElevenLabsTTSAPI:
             raw if prefix == VOICE_ID_PREFIX_ELEVENLABS else target_voice_id
         )
         filename = (
-            "source.wav" if "wav" in (source_mime_type or "").lower() else "source.mp3"
+            "source.wav"
+            if "wav" in (source_mime_type or "").lower()
+            else "source.mp3"
         )
         content_type = source_mime_type or "application/octet-stream"
         audio_payload = (filename, source_audio_bytes, content_type)
@@ -1153,7 +1210,9 @@ class ElevenLabsTTSAPI:
         )
 
     async def get_shared_voices(self, **search_params: Any) -> Any:
-        return await asyncio.to_thread(self._client.voices.get_shared, **search_params)
+        return await asyncio.to_thread(
+            self._client.voices.get_shared, **search_params
+        )
 
     async def get_voice(self, voice_id: str) -> Any:
         return await asyncio.to_thread(self._client.voices.get, voice_id)

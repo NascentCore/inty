@@ -1,8 +1,16 @@
 import sqlalchemy as sa
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text, Index
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+    Index,
+)
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 
 
 class ChatSettings(Base):
@@ -14,7 +22,9 @@ class ChatSettings(Base):
     """
 
     __tablename__ = "chat_settings"
-    __table_args__ = (Index("uq_chat_settings_chat_id", "chat_id", unique=True),)
+    __table_args__ = (
+        Index("uq_chat_settings_chat_id", "chat_id", unique=True),
+    )
 
     id = Column(String, primary_key=True, index=True)
     language = Column(String, default="en")
@@ -25,7 +35,9 @@ class ChatSettings(Base):
         comment="Per-chat selected voice id (MVP supports Gemini voices only)",
     )
     keep_talking = Column(Boolean, default=True)
-    style_prompt = Column(Text, nullable=True, comment="风格提示词，仅订阅用户可设置")
+    style_prompt = Column(
+        Text, nullable=True, comment="风格提示词，仅订阅用户可设置"
+    )
     # 对应的，App chat settings 中使用的名字是 premium model (vs mode)
     # 实际 backend 这里的实现仅仅是提示词的变化。
     premium_mode = Column(
@@ -36,7 +48,9 @@ class ChatSettings(Base):
         nullable=True,
         comment="User-selected chat mode id (e.g. flirting_mode_20250902). Null = use agent default.",
     )
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
     # 外键

@@ -1,3 +1,6 @@
+"""Subscription limits, purchases, and usage accounting."""
+
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -7,7 +10,6 @@ from sqlalchemy import Integer, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app import schemas
 from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.core.user_privilege.superuser_check import (
     SUPERUSER_LIMIT_CHECK_RESULT,
@@ -39,6 +41,7 @@ from app.schemas.subscription import (
 )
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
 from app.services.system_settings_service import system_settings_service
+from app.schemas.user import User as UserSchema
 
 TEST_ENVIRONMENT_LIMIT = 1_000_000
 
@@ -68,7 +71,9 @@ class SubscriptionService:
             plans = result.scalars().all()
 
             # 将 SQLAlchemy 模型转换为 Pydantic 模型
-            return [SubscriptionPlanSchema.model_validate(plan) for plan in plans]
+            return [
+                SubscriptionPlanSchema.model_validate(plan) for plan in plans
+            ]
 
         except Exception as e:
             logger.error(f"获取订阅计划列表失败: {str(e)}")
@@ -143,7 +148,9 @@ class SubscriptionService:
             )
             return result.first() is not None
         except Exception as e:
-            logger.error(f"检查用户历史订阅记录失败: user_id={user_id}, error={str(e)}")
+            logger.error(
+                f"检查用户历史订阅记录失败: user_id={user_id}, error={str(e)}"
+            )
             return False
 
     async def get_user_latest_plan_id(
@@ -180,11 +187,15 @@ class SubscriptionService:
                         UserSubscription.user_id == user_id,
                         # 包含ACTIVE和CANCELLED状态，只要未到期就有效
                         UserSubscription.status.in_(
-                            [SubscriptionStatus.ACTIVE, SubscriptionStatus.CANCELLED]
+                            [
+                                SubscriptionStatus.ACTIVE,
+                                SubscriptionStatus.CANCELLED,
+                            ]
                         ),
                         or_(
                             UserSubscription.end_date.is_(None),
-                            UserSubscription.end_date > datetime.now(timezone.utc),
+                            UserSubscription.end_date
+                            > datetime.now(timezone.utc),
                         ),
                     )
                 )
@@ -216,7 +227,9 @@ class SubscriptionService:
 
                 # 付费用户获得所有权益
                 feature_list = []
-                for feature_data in SubscriptionFeatures.get_premium_features_list():
+                for (
+                    feature_data
+                ) in SubscriptionFeatures.get_premium_features_list():
                     feature_list.append(
                         FeatureInfo(
                             key=feature_data["key"],
@@ -244,12 +257,16 @@ class SubscriptionService:
                 will_auto_renew = subscription.auto_renew
 
                 if subscription.status == SubscriptionStatus.CANCELLED:
-                    subscription_status = "subscribed_expiring"  # 已取消但未到期
+                    subscription_status = (
+                        "subscribed_expiring"  # 已取消但未到期
+                    )
                     will_auto_renew = False
                 elif subscription.auto_renew:
                     subscription_status = "subscribed"  # 正常订阅
                 else:
-                    subscription_status = "subscribed_expiring"  # 未取消但不自动续费
+                    subscription_status = (
+                        "subscribed_expiring"  # 未取消但不自动续费
+                    )
 
                 return SubscriptionStatusResponse(
                     is_subscribed=True,
@@ -269,7 +286,9 @@ class SubscriptionService:
                     agent_creation_24h_limit=global_config_loaded_from_config_yaml.app.limits.subscribed_user_agent_creation_24h_limit,
                     agent_creation_limit=subscription.plan.agent_creation_limit,
                     background_generation_limit_per_day=getattr(
-                        subscription.plan, "background_generation_limit_per_day", -1
+                        subscription.plan,
+                        "background_generation_limit_per_day",
+                        -1,
                     ),
                     features=subscription.plan.features or {},
                     feature_list=feature_list,
@@ -278,7 +297,9 @@ class SubscriptionService:
                 # 免费用户的默认限制
                 # 免费用户只启用真实权益，虚假权益显示但不启用
                 feature_list = []
-                for feature_data in SubscriptionFeatures.get_premium_features_list():
+                for (
+                    feature_data
+                ) in SubscriptionFeatures.get_premium_features_list():
                     is_real_feature = SubscriptionFeatures.is_real_feature(
                         feature_data["key"]
                     )
@@ -295,7 +316,9 @@ class SubscriptionService:
                     )
 
                 # 从动态配置获取免费用户限制
-                free_limits = await system_settings_service.get_free_user_limits(db)
+                free_limits = (
+                    await system_settings_service.get_free_user_limits(db)
+                )
 
                 return SubscriptionStatusResponse(
                     is_subscribed=False,
@@ -312,7 +335,9 @@ class SubscriptionService:
                     voice_24h_limit=free_limits["voice_24h_limit"],
                     guest_voice_24h_limit=free_limits["guest_voice_24h_limit"],
                     image_gen_24h_limit=free_limits["image_gen_24h_limit"],
-                    agent_creation_24h_limit=free_limits["agent_creation_24h_limit"],
+                    agent_creation_24h_limit=free_limits[
+                        "agent_creation_24h_limit"
+                    ],
                     agent_creation_limit=free_limits["agent_creation_limit"],
                     background_generation_limit_per_day=free_limits[
                         "background_generation_limit"
@@ -370,7 +395,9 @@ class SubscriptionService:
                     == purchase_request.purchase_token
                 )
             )
-            existing_subscription = existing_subscription_result.scalar_one_or_none()
+            existing_subscription = (
+                existing_subscription_result.scalar_one_or_none()
+            )
 
             if existing_subscription:
                 # 检查是否属于当前用户
@@ -402,7 +429,9 @@ class SubscriptionService:
                     )
 
             # 检查用户是否有已取消但未到期的订阅
-            current_subscription = await self.get_user_current_subscription(db, user_id)
+            current_subscription = await self.get_user_current_subscription(
+                db, user_id
+            )
 
             if (
                 current_subscription
@@ -425,15 +454,17 @@ class SubscriptionService:
                             "start_time"
                         )
                     if purchase_info.get("expiry_time"):
-                        current_subscription.end_date = purchase_info.get("expiry_time")
+                        current_subscription.end_date = purchase_info.get(
+                            "expiry_time"
+                        )
 
                     # 更新元数据
                     extra_data = current_subscription.extra_data or {}
                     extra_data["resubscribed_at"] = datetime.now(
                         timezone.utc
                     ).isoformat()
-                    extra_data["google_play_info"] = self._make_json_serializable(
-                        purchase_info
+                    extra_data["google_play_info"] = (
+                        self._make_json_serializable(purchase_info)
                     )
                     current_subscription.extra_data = extra_data
 
@@ -479,7 +510,9 @@ class SubscriptionService:
                     end_date=end_date,
                     auto_renew=purchase_info.get("auto_renewing", True),
                     extra_data={
-                        "google_play_info": self._make_json_serializable(purchase_info)
+                        "google_play_info": self._make_json_serializable(
+                            purchase_info
+                        )
                     },
                 )
 
@@ -500,7 +533,9 @@ class SubscriptionService:
                     status="COMPLETED",
                     transaction_time=start_date,
                     extra_data={
-                        "google_play_info": self._make_json_serializable(purchase_info)
+                        "google_play_info": self._make_json_serializable(
+                            purchase_info
+                        )
                     },
                 )
 
@@ -527,7 +562,9 @@ class SubscriptionService:
             )
 
             # 将 SQLAlchemy 模型转换为 Pydantic 模型
-            subscription_schema = UserSubscriptionSchema.model_validate(subscription)
+            subscription_schema = UserSubscriptionSchema.model_validate(
+                subscription
+            )
 
             return PurchaseVerificationResponse(
                 is_verified=True,
@@ -570,12 +607,17 @@ class SubscriptionService:
 
                 # 尝试在Google Play端取消订阅
                 try:
-                    if subscription.google_play_purchase_token and subscription.plan:
+                    if (
+                        subscription.google_play_purchase_token
+                        and subscription.plan
+                    ):
                         self.google_play_service.cancel_subscription(
                             subscription.plan.google_play_product_id,
                             subscription.google_play_purchase_token,
                         )
-                        logger.info(f"已在Google Play端取消订阅: {subscription.id}")
+                        logger.info(
+                            f"已在Google Play端取消订阅: {subscription.id}"
+                        )
                 except Exception as e:
                     logger.warning(
                         f"Google Play端取消订阅失败: {subscription.id}, 错误: {str(e)}"
@@ -636,21 +678,28 @@ class SubscriptionService:
                     "cancelled_at": datetime.now(timezone.utc).isoformat(),
                     "reason": "user_account_deletion",
                 }
-                subscription.extra_data = self._make_json_serializable(extra_data)
+                subscription.extra_data = self._make_json_serializable(
+                    extra_data
+                )
 
                 cancellation_stats["subscriptions_cancelled"] += 1
 
                 # 尝试在Google Play端取消订阅
                 google_play_success = False
                 try:
-                    if subscription.google_play_purchase_token and subscription.plan:
+                    if (
+                        subscription.google_play_purchase_token
+                        and subscription.plan
+                    ):
                         self.google_play_service.cancel_subscription(
                             subscription.plan.google_play_product_id,
                             subscription.google_play_purchase_token,
                         )
                         google_play_success = True
                         cancellation_stats["google_play_cancelled"] += 1
-                        logger.info(f"Google Play端取消订阅成功: {subscription.id}")
+                        logger.info(
+                            f"Google Play端取消订阅成功: {subscription.id}"
+                        )
                 except Exception as e:
                     logger.warning(
                         f"Google Play端取消订阅失败: {subscription.id}, 错误: {str(e)}"
@@ -671,7 +720,9 @@ class SubscriptionService:
 
             await db.commit()
 
-            logger.info(f"用户 {user_id} 订阅取消完成，统计: {cancellation_stats}")
+            logger.info(
+                f"用户 {user_id} 订阅取消完成，统计: {cancellation_stats}"
+            )
 
             return cancellation_stats
 
@@ -694,7 +745,9 @@ class SubscriptionService:
                 user_id=subscription.user_id,
                 transaction_type=TransactionType.CANCEL,
                 amount=0.0,  # 取消不涉及金额
-                currency=subscription.plan.currency if subscription.plan else "USD",
+                currency=(
+                    subscription.plan.currency if subscription.plan else "USD"
+                ),
                 google_play_purchase_token=subscription.google_play_purchase_token,
                 google_play_order_id=subscription.google_play_order_id,
                 status="COMPLETED",
@@ -769,12 +822,20 @@ class SubscriptionService:
 
             return usage
 
-        except Exception as e:
+        except Exception:
+            logger.exception(
+                "记录用户使用情况失败: user_id={}, usage_type={}",
+                user_id,
+                usage_type,
+            )
             try:
                 await db.rollback()
             except Exception:
-                pass  # 如果rollback也失败，忽略
-            logger.error(f"记录用户使用情况失败: {str(e)}")
+                logger.exception(
+                    "记录用户使用情况失败后的数据库回滚失败: user_id={}, usage_type={}",
+                    user_id,
+                    usage_type,
+                )
             return None  # 返回None而不是抛异常，避免影响主流程
 
     async def get_user_usage_statistics(
@@ -783,7 +844,9 @@ class SubscriptionService:
         """获取用户使用统计"""
         try:
             # 获取订阅状态
-            subscription_status = await self.get_user_subscription_status(db, user_id)
+            subscription_status = await self.get_user_subscription_status(
+                db, user_id
+            )
 
             # 获取今日聊天次数
             today = datetime.now(timezone.utc).date()
@@ -839,7 +902,9 @@ class SubscriptionService:
 
             agent_count_result = await db.execute(
                 select(func.count(Agent.id)).where(
-                    and_(Agent.creator_id == user_id, Agent.deleted_at.is_(None))
+                    and_(
+                        Agent.creator_id == user_id, Agent.deleted_at.is_(None)
+                    )
                 )
             )
             agent_count = agent_count_result.scalar() or 0
@@ -859,7 +924,8 @@ class SubscriptionService:
             )
 
             usage_history_schemas = [
-                SubscriptionUsageSchema.model_validate(usage) for usage in usage_history
+                SubscriptionUsageSchema.model_validate(usage)
+                for usage in usage_history
             ]
 
             return UsageStatisticsResponse(
@@ -879,7 +945,7 @@ class SubscriptionService:
             raise
 
     async def check_chat_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: UserSchema
     ) -> Tuple[bool, int, int]:
         """
         检查用户聊天次数限制
@@ -888,6 +954,9 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许聊天, 已用次数, 限制次数)
         """
         try:
+            # Opt-in for isolated test subprocesses only (see tests/companion_ws_bootstrap/server.py).
+            if os.environ.get("INTY_E2E_RELAX_SUBSCRIPTION") == "1":
+                return True, 0, TEST_ENVIRONMENT_LIMIT
             if (
                 global_config_loaded_from_config_yaml.app.environment
                 == Environment.TEST
@@ -901,7 +970,9 @@ class SubscriptionService:
                 return SUPERUSER_LIMIT_CHECK_RESULT
 
             # 获取订阅状态
-            subscription_status = await self.get_user_subscription_status(db, user.id)
+            subscription_status = await self.get_user_subscription_status(
+                db, user.id
+            )
 
             # 免费用户：检查24小时聊天次数限制
             if subscription_status.chat_24h_limit is not None:
@@ -973,9 +1044,15 @@ class SubscriptionService:
             today_chat_count = chat_count_result.scalar() or 0
 
             # 检查是否超出限制
-            is_allowed = today_chat_count < subscription_status.chat_limit_per_day
+            is_allowed = (
+                today_chat_count < subscription_status.chat_limit_per_day
+            )
 
-            return is_allowed, today_chat_count, subscription_status.chat_limit_per_day
+            return (
+                is_allowed,
+                today_chat_count,
+                subscription_status.chat_limit_per_day,
+            )
 
         except Exception as e:
             logger.error(f"检查聊天次数限制失败: {str(e)}")
@@ -983,7 +1060,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_voice_generation_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: UserSchema
     ) -> Tuple[bool, int, int]:
         """
         检查用户语音生成次数限制
@@ -1001,11 +1078,15 @@ class SubscriptionService:
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
-                logger.debug(f"Superuser {user.id} has unlimited voice generation")
+                logger.debug(
+                    f"Superuser {user.id} has unlimited voice generation"
+                )
                 return SUPERUSER_LIMIT_CHECK_RESULT
 
             # 获取订阅状态
-            subscription_status = await self.get_user_subscription_status(db, user.id)
+            subscription_status = await self.get_user_subscription_status(
+                db, user.id
+            )
 
             # 确定语音生成限制
             if subscription_status.is_subscribed:
@@ -1048,7 +1129,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_agent_creation_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: UserSchema
     ) -> Tuple[bool, int, int]:
         """
         检查用户Agent创建数量限制（24小时滚动窗口）
@@ -1062,14 +1143,18 @@ class SubscriptionService:
                 == Environment.TEST
                 and not global_config_loaded_from_config_yaml.app.debug
             ):
-                logger.debug("TEST 环境下放宽 Agent 创建限额: user_id=%s", user.id)
+                logger.debug(
+                    "TEST 环境下放宽 Agent 创建限额: user_id=%s", user.id
+                )
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
                 return SUPERUSER_LIMIT_CHECK_RESULT
 
             # 获取订阅状态
-            subscription_status = await self.get_user_subscription_status(db, user.id)
+            subscription_status = await self.get_user_subscription_status(
+                db, user.id
+            )
 
             # 确定Agent创建限制
             if subscription_status.is_subscribed:
@@ -1115,7 +1200,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_image_gen_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: UserSchema
     ) -> Tuple[bool, int, int]:
         """
         检查用户图片生成次数限制（24小时滚动窗口）
@@ -1133,16 +1218,22 @@ class SubscriptionService:
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
-                logger.debug(f"Superuser {user.id} has unlimited image generation")
+                logger.debug(
+                    f"Superuser {user.id} has unlimited image generation"
+                )
                 return SUPERUSER_LIMIT_CHECK_RESULT
 
             # 游客用户不允许生成图片
             if user.auth_type == AuthType.GUEST:
-                logger.debug(f"Guest user {user.id} is not allowed to generate images")
+                logger.debug(
+                    f"Guest user {user.id} is not allowed to generate images"
+                )
                 return False, 0, 0
 
             # 获取订阅状态
-            subscription_status = await self.get_user_subscription_status(db, user.id)
+            subscription_status = await self.get_user_subscription_status(
+                db, user.id
+            )
 
             # 确定图片生成限制
             if subscription_status.is_subscribed:
@@ -1189,7 +1280,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_music_gen_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: UserSchema
     ) -> Tuple[bool, int, int]:
         """
         检查用户音乐生成次数限制（24小时滚动窗口）
@@ -1207,15 +1298,21 @@ class SubscriptionService:
                 return True, 0, TEST_ENVIRONMENT_LIMIT
 
             if is_superuser(user):
-                logger.debug(f"Superuser {user.id} has unlimited music generation")
+                logger.debug(
+                    f"Superuser {user.id} has unlimited music generation"
+                )
                 return SUPERUSER_LIMIT_CHECK_RESULT
 
             # 游客用户不允许生成音乐
             if user.auth_type == AuthType.GUEST:
-                logger.debug(f"Guest user {user.id} is not allowed to generate music")
+                logger.debug(
+                    f"Guest user {user.id} is not allowed to generate music"
+                )
                 return False, 0, 0
 
-            subscription_status = await self.get_user_subscription_status(db, user.id)
+            subscription_status = await self.get_user_subscription_status(
+                db, user.id
+            )
             if subscription_status.is_subscribed:
                 music_limit = (
                     global_config_loaded_from_config_yaml.app.limits.subscribed_user_music_gen_24h_limit
@@ -1247,7 +1344,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_live_chat_limit(
-        self, db: AsyncSession, user: schemas.User, agent_id: str
+        self, db: AsyncSession, user: UserSchema, agent_id: str
     ) -> Tuple[bool, str, Dict[str, Any]]:
         """
         检查用户 Live Chat 用量限制
@@ -1268,23 +1365,37 @@ class SubscriptionService:
             - 拒绝时: (False, "reason_code", {"detail": ...})
         """
         try:
-            gemini_live_config = global_config_loaded_from_config_yaml.gemini_live
+            gemini_live_config = (
+                global_config_loaded_from_config_yaml.gemini_live
+            )
 
             is_superuser_flag = is_superuser(user)
             if is_superuser_flag:
                 logger.debug(f"Superuser {user.id}: 不限制 24h 总时长")
 
-            subscription_status = await self.get_user_subscription_status(db, user.id)
-            is_subscribed = subscription_status.is_subscribed or is_superuser_flag
+            subscription_status = await self.get_user_subscription_status(
+                db, user.id
+            )
+            is_subscribed = (
+                subscription_status.is_subscribed or is_superuser_flag
+            )
 
             if is_subscribed:
                 agent_limit = gemini_live_config.sub_user_agent_limit
-                max_session_duration = gemini_live_config.sub_user_max_session_duration
-                total_duration_limit = gemini_live_config.sub_user_total_duration_24h
+                max_session_duration = (
+                    gemini_live_config.sub_user_max_session_duration
+                )
+                total_duration_limit = (
+                    gemini_live_config.sub_user_total_duration_24h
+                )
             else:
                 agent_limit = gemini_live_config.free_user_agent_limit
-                max_session_duration = gemini_live_config.free_user_max_session_duration
-                total_duration_limit = gemini_live_config.free_user_total_duration_24h
+                max_session_duration = (
+                    gemini_live_config.free_user_max_session_duration
+                )
+                total_duration_limit = (
+                    gemini_live_config.free_user_total_duration_24h
+                )
 
             # 使用 ->> 操作符提取 JSON 字段为文本（兼容 JSON 和 JSONB 类型）
             distinct_agents_result = await db.execute(
@@ -1357,13 +1468,18 @@ class SubscriptionService:
             total_used_duration = total_duration_result.scalar() or 0
 
             # Superuser 不检查 24h 总时长限制
-            if not is_superuser_flag and total_used_duration >= total_duration_limit:
+            if (
+                not is_superuser_flag
+                and total_used_duration >= total_duration_limit
+            ):
                 logger.info(
                     f"用户 {user.id} 的 24h Live Chat 总时长已达上限: "
                     f"{total_used_duration}/{total_duration_limit}s"
                 )
                 if subscription_status.is_subscribed:
-                    error_info = BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                    error_info = (
+                        BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                    )
                 else:
                     error_info = BusinessErrorCode.SUBSCRIPTION_REQUIRED
                 return (
@@ -1381,7 +1497,9 @@ class SubscriptionService:
             if is_superuser_flag:
                 remaining_duration = 86400  # 24 小时，实际不限制
             else:
-                remaining_total = max(0, total_duration_limit - total_used_duration)
+                remaining_total = max(
+                    0, total_duration_limit - total_used_duration
+                )
                 remaining_duration = min(max_session_duration, remaining_total)
             logger.info(
                 f"Live Chat 限制检查 - user_id: {user.id}, agent_id: {agent_id}, "
@@ -1424,7 +1542,9 @@ class SubscriptionService:
                 return False
 
             purchase_token = subscription_notification.get("purchaseToken")
-            notification_type = subscription_notification.get("notificationType")
+            notification_type = subscription_notification.get(
+                "notificationType"
+            )
 
             logger.info(
                 f"处理订阅通知: {subscription_notification}, notification_type: {notification_type}"
@@ -1437,14 +1557,19 @@ class SubscriptionService:
             result = await db.execute(
                 select(UserSubscription)
                 .options(selectinload(UserSubscription.plan))
-                .where(UserSubscription.google_play_purchase_token == purchase_token)
+                .where(
+                    UserSubscription.google_play_purchase_token
+                    == purchase_token
+                )
             )
             subscription = result.scalar_one_or_none()
 
             if not subscription:
                 # 尝试自动创建订阅记录
-                subscription = await self._try_create_subscription_from_notification(
-                    db, purchase_token, notification_type, notification_data
+                subscription = (
+                    await self._try_create_subscription_from_notification(
+                        db, purchase_token, notification_type, notification_data
+                    )
                 )
 
                 if not subscription:
@@ -1461,7 +1586,9 @@ class SubscriptionService:
                     logger.warning(
                         f"未找到对应的订阅记录且无法创建: {purchase_token}, 通知类型: {notification_type}"
                     )
-                    logger.error(f"无法为购买令牌创建订阅记录: {purchase_token}")
+                    logger.error(
+                        f"无法为购买令牌创建订阅记录: {purchase_token}"
+                    )
                     return False
 
                 logger.info(f"成功从RTDN通知创建订阅记录: {subscription.id}")
@@ -1554,7 +1681,9 @@ class SubscriptionService:
                         )
 
                         if subscription_created:
-                            logger.info(f"成功创建订阅记录: {subscription_created.id}")
+                            logger.info(
+                                f"成功创建订阅记录: {subscription_created.id}"
+                            )
                             break
 
                 except Exception as e:
@@ -1582,7 +1711,9 @@ class SubscriptionService:
         """
         try:
             # 尝试从购买信息中获取用户标识
-            obfuscated_account_id = purchase_info.get("obfuscated_external_account_id")
+            obfuscated_account_id = purchase_info.get(
+                "obfuscated_external_account_id"
+            )
             email_address = purchase_info.get("email_address")
             profile_id = purchase_info.get("profile_id")
             order_id = purchase_info.get("order_id")
@@ -1673,7 +1804,8 @@ class SubscriptionService:
             # 检查是否已经存在相同的购买令牌
             existing_subscription = await db.execute(
                 select(UserSubscription).where(
-                    UserSubscription.google_play_purchase_token == purchase_token
+                    UserSubscription.google_play_purchase_token
+                    == purchase_token
                 )
             )
 
@@ -1685,7 +1817,9 @@ class SubscriptionService:
             await self._cancel_user_active_subscriptions(db, user_id)
 
             # 创建新的订阅记录
-            start_date = purchase_info.get("start_time") or datetime.now(timezone.utc)
+            start_date = purchase_info.get("start_time") or datetime.now(
+                timezone.utc
+            )
             end_date = purchase_info.get("expiry_time")
             order_id = purchase_info.get("order_id")
 
@@ -1851,7 +1985,9 @@ class SubscriptionService:
 
             if "error" not in latest_info:
                 subscription.end_date = latest_info.get("expiry_time")
-                subscription.auto_renew = latest_info.get("auto_renewing", False)
+                subscription.auto_renew = latest_info.get(
+                    "auto_renewing", False
+                )
 
                 # 更新元数据
                 extra_data = subscription.extra_data or {}
@@ -1860,7 +1996,9 @@ class SubscriptionService:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "data": notification_data,
                 }
-                subscription.extra_data = self._make_json_serializable(extra_data)
+                subscription.extra_data = self._make_json_serializable(
+                    extra_data
+                )
 
             await db.commit()
 
@@ -2006,7 +2144,9 @@ class SubscriptionService:
 
             if subscription_notification:
                 purchase_token = subscription_notification.get("purchaseToken")
-                notification_type = subscription_notification.get("notificationType")
+                notification_type = subscription_notification.get(
+                    "notificationType"
+                )
 
                 # Google Play通知类型14通常表示退款
                 if notification_type == 14:  # SUBSCRIPTION_REFUNDED
@@ -2022,7 +2162,9 @@ class SubscriptionService:
                     subscription = result.scalar_one_or_none()
 
                     if subscription:
-                        await self.handle_refund(db, subscription, notification_data)
+                        await self.handle_refund(
+                            db, subscription, notification_data
+                        )
                         return True
                     else:
                         logger.warning(
@@ -2031,12 +2173,16 @@ class SubscriptionService:
 
             elif one_time_product_notification:
                 # 处理一次性产品退款
-                purchase_token = one_time_product_notification.get("purchaseToken")
+                purchase_token = one_time_product_notification.get(
+                    "purchaseToken"
+                )
                 notification_type = one_time_product_notification.get(
                     "notificationType"
                 )
 
-                if notification_type == 3:  # ONE_TIME_PRODUCT_CANCELED (可能包含退款)
+                if (
+                    notification_type == 3
+                ):  # ONE_TIME_PRODUCT_CANCELED (可能包含退款)
                     logger.info(f"收到一次性产品退款通知: {purchase_token}")
                     # 这里可以添加一次性产品退款处理逻辑
 
@@ -2182,7 +2328,9 @@ class SubscriptionService:
                         # 更新元数据记录恢复信息
                         extra_data = subscription.extra_data or {}
                         extra_data["recovered_subscription"] = {
-                            "recovered_at": datetime.now(timezone.utc).isoformat(),
+                            "recovered_at": datetime.now(
+                                timezone.utc
+                            ).isoformat(),
                             "original_user_id": old_user_id,
                             "recovery_method": "email_match",
                             "user_email": email,
@@ -2246,7 +2394,9 @@ class SubscriptionService:
                         # 更新元数据记录恢复信息
                         extra_data = subscription.extra_data or {}
                         extra_data["recovered_subscription"] = {
-                            "recovered_at": datetime.now(timezone.utc).isoformat(),
+                            "recovered_at": datetime.now(
+                                timezone.utc
+                            ).isoformat(),
                             "original_user_id": old_user_id,
                             "recovery_method": "google_id_match",
                             "google_id": google_id,
@@ -2262,7 +2412,9 @@ class SubscriptionService:
 
             if recovered_count > 0:
                 await db.commit()
-                logger.info(f"用户 {user_id} 恢复了 {recovered_count} 个订阅记录")
+                logger.info(
+                    f"用户 {user_id} 恢复了 {recovered_count} 个订阅记录"
+                )
 
             return recovered_count
 
@@ -2285,7 +2437,8 @@ class SubscriptionService:
             return data.isoformat()
         elif isinstance(data, dict):
             return {
-                key: self._make_json_serializable(value) for key, value in data.items()
+                key: self._make_json_serializable(value)
+                for key, value in data.items()
             }
         elif isinstance(data, list):
             return [self._make_json_serializable(item) for item in data]

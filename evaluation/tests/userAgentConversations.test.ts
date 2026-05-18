@@ -1,21 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import type { UserAgentConversationItem } from "../types";
+import type { UserAgentConversationItem, UserSessionItem } from "../types";
 import {
   countUserAgentConversationMessages,
   countUserAgentConversationSessions,
-  isUserMessageType,
+  filterSessionsWithMessages,
 } from "../utils/userAgentConversations";
 
 describe("userAgentConversations", () => {
-  it("detects user message type", () => {
-    expect(isUserMessageType("human")).toBe(true);
-    expect(isUserMessageType("HumanMessage")).toBe(true);
-    expect(isUserMessageType("USER")).toBe(true);
-    expect(isUserMessageType("ai")).toBe(false);
-    expect(isUserMessageType(undefined)).toBe(false);
-  });
-
   it("counts sessions and messages for one page", () => {
     const items: UserAgentConversationItem[] = [
       {
@@ -48,5 +40,29 @@ describe("userAgentConversations", () => {
 
     expect(countUserAgentConversationSessions(items)).toBe(3);
     expect(countUserAgentConversationMessages(items)).toBe(11);
+  });
+
+  it("filterSessionsWithMessages omits zero message_count rows", () => {
+    const sessions: UserSessionItem[] = [
+      {
+        chat_id: "c1",
+        agent_id: "agent-1",
+        agent_name: "A",
+        created_at: "2025-01-01T00:00:00Z",
+        updated_at: "2025-01-01T00:00:00Z",
+        message_count: 0,
+      },
+      {
+        chat_id: "c2",
+        agent_id: "agent-2",
+        agent_name: "B",
+        created_at: "2025-01-01T00:00:00Z",
+        updated_at: "2025-01-01T00:00:00Z",
+        message_count: 3,
+      },
+    ];
+    const filtered = filterSessionsWithMessages(sessions);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].chat_id).toBe("c2");
   });
 });

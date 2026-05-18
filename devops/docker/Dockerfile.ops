@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
-COPY scripts/requirements.txt scripts_requirements.txt
+COPY tools/scripts/requirements.txt scripts_requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r scripts_requirements.txt
 
 FROM base
@@ -51,10 +51,12 @@ fi
 
 COPY app/ app/
 COPY backend/ backend/
-COPY alembic/ alembic/
+# companion_harness 在 PYTHONPATH 根目录 import living_sphere / techno_core
+COPY living_sphere/ living_sphere/
+COPY techno_core/ techno_core/
 # 获取各个环节对应的配置文件，方便操作
 COPY devops/ devops/
-COPY scripts/ scripts/
+COPY tools/scripts/ tools/scripts/
 COPY docs/INTELLIMATE.md docs/INTELLIMATE.md
 COPY android_app/docs/CHANGE_LOGS.md android_app/docs/CHANGE_LOGS.md
 

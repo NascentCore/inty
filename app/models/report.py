@@ -1,3 +1,5 @@
+"""Defines report and feedback persistence models used by moderation flows."""
+
 import enum
 
 import sqlalchemy as sa
@@ -6,7 +8,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 
 # 举报原因 ID 到代码的映射（硬编码，不再使用数据库表）
 # 对应关系与 Android 端老版本保持一致（参考 ReportViewModel.kt）：
@@ -71,9 +73,11 @@ class Report(Base):
         nullable=True,
         comment="举报原因代码列表，用来替代 reason_ids，因为 id 很难维护",
     )
-    image_urls = Column(ARRAY(String), default=[], comment="举报图片URL列表")
+    image_urls = Column(ARRAY(String), default=list, comment="举报图片URL列表")
     description = Column(Text, nullable=True, comment="举报描述")
-    github_issue = Column(String(500), nullable=True, comment="关联的 GitHub issue URL")
+    github_issue = Column(
+        String(500), nullable=True, comment="关联的 GitHub issue URL"
+    )
     status = Column(
         SAEnum(ReportStatus),
         default=ReportStatus.PENDING,
@@ -86,7 +90,9 @@ class Report(Base):
         comment="记录类型：举报或反馈，为空时默认为 REPORT",
     )
     created_at = Column(
-        DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
+        DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        comment="创建时间",
     )
 
     # 关系

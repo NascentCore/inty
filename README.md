@@ -1,75 +1,51 @@
-# InTy - 长期 AI 情感陪伴
-
-![](https://api.checklyhq.com/v1/badges/checks/6c7437a4-e239-473b-b08d-8285fc16ce4e?style=flat&theme=default&responseTime=true)
-![](https://api.checklyhq.com/v1/badges/checks/1e149f71-dcad-49cc-a7bb-e0aecc429e6c?style=flat&theme=default&responseTime=true)
-![](https://api.checklyhq.com/v1/badges/checks/f2988f0a-f58a-4e75-87bc-e5700869ba68?style=flat&theme=default&responseTime=true)
+# Inty: AI 长期情感陪伴
 
 [![Android App Tests](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml)
 [![CI - Backend](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml)
-[![CI - Web App](https://github.com/NascentCore/inty/actions/workflows/ci_web_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_web_app.yaml)
 [![Validate configs](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml)
-
-[![dev-prod 同步 AI 角色](https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml)
 [![Release - IntelliMate GPlay 内测轨道](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml)
 [![Release - 构建部署 Inty Backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
-[![Release - 构建部署 Inty Push Worker](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_push_worker.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_push_worker.yml)
 
 ## 快速开始
 
-[添加 SSH key 到你的 GitHub 账户](https://docs.github.com/zh/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+使用 [Cursor](https://cursor.com/)
 
 ```bash
-# 克隆仓库并初始化子模块：
-git clone --recurse-submodules git@github.com:NascentCore/inty.git
+git clone git@github.com:NascentCore/inty.git
+cd inty
+cursor .
 ```
 
-Android Studio 打开`inty/android_app`，详情参考 [android_app/README.md](android_app/README.md)。
+## FAQ
 
-后端系统代码位于 `app` 目录（目前正在逐步向 `backend` 目录迁移），参考 [backend/README.md](backend/README.md)。
+### Why emotions?
 
-如果子模块出现脏数据（如下图所示），可以按照下面的流程重置：
+- Because emotion is the most sophisticated form of Human intelligence.
+  Emotions require years of human interactions, it's the essence of human experience distilled by time itself.
+- Emotional intimacy is the most valuable and satisfactory of human experiences.
+  One of the most important sources of human happiness.
+- AI needs to understand human emotions in order to align with human interests.
 
-<img width="480" height="436" alt="image" src="https://github.com/user-attachments/assets/23852e45-cfe6-4686-9282-c138d40bf96f" />
+### Why agentic paradigm (instead of other approaches like training LLMs)?
 
-```bash
-# 清理子模块的缓存配置
-git submodule deinit -f .
+- LLMs cannot be trained to have emotions, because time cannot be compressed, and bonding requires time.
+  - Training LLMs are too expensive.
+- Agentic systems can simulate human psychology and environments through multiple agentic loops and orchestration.
+  - Even with continuously growing emotional intelligence in LLMs,
+    an agentic harness on top of it still offers a second-order scaling
+    that is inherently more cost-effective.
+- Timing wise, openclaw and the general advancement in LLMs and general-purpose agents tech stack
+  advanced exponentially since 2025-10, giving us an emerging opportunity.
 
-# 重新拉取子模块代码
-git submodule update --init --recursive
+### Simulated human emotions are abomination
 
-# 使用下面步骤启动后端服务
-cp devops/config.yaml.local config.yaml
-
-# 创建虚拟环境供后端 python 代码运行
-uv venv
-source .venv/bin/activate
-uv pip install -r requirements.txt
-
-# 启动 postgres 数据库
-docker run --rm --name pg-inty -p 5432:5432 \
-  -e POSTGRES_PASSWORD=sxwl666! \
-  -e POSTGRES_DB=inty \
-  -d postgres:16
-
-# 启动主后端（Android API）
-./backend/inty/start.sh --dev
-
-# 启动 ops 平台（evaluation Web UI + ops API，默认 8001）
-./backend/ops/start.sh --local
-```
-
-本地联调：本地后端+Android Studio App（USB 连接、wifi 连接不支持）指向本地后端
-
-```bash
-# 打开 Android Studio
-# 选择 debug build type，编译运行
-# 然后在 me->settings->backend 选择 local
-
-# 同时打开端口代理、让模拟器可以访问本机端口
-# -s 在多个模拟器时可以指向特定模拟器
-adb reverse [-s <设备 ID>] tcp:8000 tcp:8000
-```
+- In Dune, the most inhuman creature, the God Emperor Leto Atreides II,
+  manifests the purest humanity.
+- Humans devoted to others wasted some part of their brain for fullest emotional
+  bliss, that's unnecessary. AI provides the means for humans to finally
+  enjoy emotions to the fullest extent allowed by their anatomy.
+- AI cannot be hurt by humans, but humans hurt other humans,
+  partially, AI offers one the choice of a more humane way of enjoying life.
 
 ### 相关链接
 

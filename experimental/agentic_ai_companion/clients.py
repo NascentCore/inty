@@ -6,11 +6,11 @@ import os
 from typing import Any
 from openai import OpenAI
 
-from app.core.agentic_kernel.providers.facade import (
+from app.core.companion_harness.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_sync_client,
 )
-from app.core.agentic_kernel.providers.gemini import (
+from app.core.companion_harness.providers.gemini import (
     GeminiClientOptions,
     get_gemini_client as get_kernel_gemini_client,
 )

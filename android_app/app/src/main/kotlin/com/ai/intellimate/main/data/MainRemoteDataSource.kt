@@ -20,6 +20,7 @@ import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.client.request.header
 import io.ktor.client.request.url
 import io.ktor.websocket.Frame
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -33,7 +34,8 @@ private const val CHAT_WEBSOCKET_VERIFY_PATH = "api/v1/chat/ws/verify"
 private const val PING_INTERVAL_MS = 25_000L
 
 /**
- * 主 WebSocket 数据源单例，保证接收（connectWebsocket）与发送（sendMessageFireAndForget）共用同一连接。对接 FR_CHAT_WS_VERIFY。
+ * 主 WebSocket 数据源单例，保证接收（connectWebsocket）与发送（sendMessageFireAndForget）共用同一连接（`/api/v1/chat/ws`，见后端
+ * `app/api/AGENTS.md`）。
  */
 object MainRemoteDataSource {
     private val httpClient: HttpClient = HttpClientProvider.ktorClient
@@ -125,6 +127,7 @@ object MainRemoteDataSource {
             if (DebugBackendEndpointStore.getChatWebSocketUseVerifyPath())
                 CHAT_WEBSOCKET_VERIFY_PATH
             else CHAT_WEBSOCKET_PATH
-        return "$websocketBase/$path"
+        val wsConnId = UUID.randomUUID().toString()
+        return "$websocketBase/$path?ws_conn_id=$wsConnId"
     }
 }

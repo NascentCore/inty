@@ -9,7 +9,11 @@ export function buildAgentProfilePageUrl(
   baseUrl: string,
   agentId: string,
 ): string {
-  return `${baseUrl}#agents?agentId=${encodeURIComponent(agentId)}`;
+  return `${baseUrl}${buildAgentProfilePageHash(agentId)}`;
+}
+
+export function buildAgentProfilePageHash(agentId: string): string {
+  return `#agents?agent_id=${encodeURIComponent(agentId)}`;
 }
 
 export function buildUserProfilePageUrl(
@@ -24,6 +28,38 @@ export function buildReportUserConversationsPageUrl(
   reportId: string,
 ): string {
   return `${baseUrl}#report-user-conversations?reportId=${encodeURIComponent(reportId)}`;
+}
+
+/** Query params for the ops-site voice recording detail view (hash route `voice-recording`). */
+export type VoiceRecordingLinkParams = {
+  audioUrl: string;
+  userId: string;
+  agentId: string;
+  agentName?: string;
+  createdAt: string | null;
+  durationSeconds: number | null;
+  messageId: number;
+};
+
+export function buildVoiceRecordingPageUrl(
+  baseUrl: string,
+  params: VoiceRecordingLinkParams,
+): string {
+  const search = new URLSearchParams();
+  search.set("audioUrl", params.audioUrl);
+  search.set("userId", params.userId);
+  search.set("agentId", params.agentId);
+  search.set("messageId", String(params.messageId));
+  if (params.agentName != null && params.agentName !== "") {
+    search.set("agentName", params.agentName);
+  }
+  if (params.createdAt != null && params.createdAt !== "") {
+    search.set("createdAt", params.createdAt);
+  }
+  if (params.durationSeconds != null) {
+    search.set("durationSeconds", String(params.durationSeconds));
+  }
+  return `${baseUrl}#voice-recording?${search.toString()}`;
 }
 
 export function parseEvaluationHashRoute(hash: string): {
@@ -51,7 +87,15 @@ function getHashParamForPage(
 }
 
 export function getDeepLinkedAgentIdFromHash(hash: string): string {
-  return getHashParamForPage(hash, "agents", "agentId");
+  const parsed = parseEvaluationHashRoute(hash);
+  if (parsed.pageKey !== "agents") {
+    return "";
+  }
+  return (
+    parsed.params.get("agent_id")?.trim() ||
+    parsed.params.get("agentId")?.trim() ||
+    ""
+  );
 }
 
 export function getDeepLinkedUserIdFromHash(hash: string): string {

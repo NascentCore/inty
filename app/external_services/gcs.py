@@ -1,8 +1,16 @@
+"""Google Cloud Storage helpers used by services and tests.
+
+This module centralizes GCS client creation, URL parsing, and common object
+operations so callers can work with both real GCS and the fake test client.
+"""
+
+from __future__ import annotations
+
 import asyncio
 import re
-import shutil
-import traceback
+import sys
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 import loguru
 from google.cloud import storage
@@ -21,6 +29,44 @@ GCS_GS_PREFIX = "gs://"
 gcs_client = None
 
 
+def path_from_file_uri(uri: str) -> Path:
+    """Resolve a ``file://`` URI to a local :class:`pathlib.Path` (POSIX and Windows)."""
+    parsed = urlparse(uri)
+    if parsed.scheme != "file":
+        raise ValueError(f"Expected file URI, got {uri!r}")
+    path = unquote(parsed.path or "")
+    if (
+        sys.platform == "win32"
+        and path.startswith("/")
+        and len(path) >= 3
+        and path[2] == ":"
+    ):
+        path = path.lstrip("/")
+    return Path(path)
+
+
+def _bucket_and_path_from_fake_local_file_uri(url: str) -> tuple[str, str]:
+    cfg = global_config_loaded_from_config_yaml.gcs
+    if not cfg.use_fake_gcs:
+        raise ValueError(
+            f"file URI not supported when use_fake_gcs is false: {url}"
+        )
+    base = Path(cfg.fake_gcs_base_dir).resolve()
+    full = path_from_file_uri(url).resolve()
+    try:
+        rel = full.relative_to(base)
+    except ValueError as e:
+        raise ValueError(
+            f"file URL is not under fake_gcs_base_dir ({base}): {url}"
+        ) from e
+    parts = rel.parts
+    if len(parts) < 2:
+        raise ValueError(
+            f"Invalid fake storage path (need bucket/object): {url}"
+        )
+    return parts[0], "/".join(parts[1:])
+
+
 def get_gcs_client():
     """获取GCS客户端，根据配置选择真实或假客户端"""
     global gcs_client
@@ -29,7 +75,9 @@ def get_gcs_client():
             fake_gcs_base_dir = (
                 global_config_loaded_from_config_yaml.gcs.fake_gcs_base_dir
             )
-            logger.info(f"使用 GCS Fake 客户端，存储目录为: {fake_gcs_base_dir}")
+            logger.info(
+                f"使用 GCS Fake 客户端，存储目录为: {fake_gcs_base_dir}"
+            )
             gcs_client = FakeGCSClient(fake_gcs_base_dir)
         else:
             gcs_client = storage.Client.from_service_account_json(
@@ -86,7 +134,9 @@ def delete_from_gcs(bucket_name, path):
             raise e
 
 
-def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> str:
+def copy_gcs_file(
+    source_url: str, destination_path: str, bucket_name: str
+) -> str:
     """
     复制GCS文件到新位置
 
@@ -123,17 +173,18 @@ def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> s
     return destination_blob.public_url
 
 
-def get_bucket_and_path_from_gcs_url(url: str) -> str:
-    """从GCS URL中提取文件路径"""
-    assert (
+def get_bucket_and_path_from_gcs_url(url: str) -> tuple[str, str]:
+    """Parse bucket name and object path from ``gs://``, ``https://storage...``, ``https://storage.cloud...``, or fake ``file://`` URLs."""
+    if url.startswith("file:"):
+        return _bucket_and_path_from_fake_local_file_uri(url)
+
+    if not (
         url.startswith(GCS_PUBLIC_HTTPS_PREFIX)
         or url.startswith(GCS_GS_PREFIX)
         or url.startswith(GCS_PRIVATE_HTTPS_PREFIX)
-    )
+    ):
+        raise ValueError(f"Invalid GCS URL: {url}")
 
-    # 处理两种URL格式：
-    # 1. https://storage.googleapis.com/bucket/path
-    # 2. gs://bucket/path
     if url.startswith(GCS_GS_PREFIX):
         url = url.removeprefix(GCS_GS_PREFIX)
 
@@ -143,7 +194,22 @@ def get_bucket_and_path_from_gcs_url(url: str) -> str:
     if url.startswith(GCS_PRIVATE_HTTPS_PREFIX):
         url = url.removeprefix(GCS_PRIVATE_HTTPS_PREFIX)
 
-    return url.split("/", 1)
+    bucket_name, separator, gcs_path = url.partition("/")
+    if not bucket_name or not separator or not gcs_path:
+        raise ValueError(f"Invalid GCS URL: {url}")
+    return bucket_name, gcs_path
+
+
+def gs_uri_from_storage_reference_url(url: str) -> str | None:
+    """Map ``gs://``, ``https://storage...``, or fake-mode ``file://`` to ``gs://bucket/path``."""
+    u = (url or "").strip()
+    if not u:
+        return None
+    try:
+        bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(u)
+        return f"gs://{bucket_name}/{gcs_path}"
+    except ValueError:
+        return None
 
 
 def is_valid_gcs_url(url: str) -> bool:
@@ -151,9 +217,23 @@ def is_valid_gcs_url(url: str) -> bool:
     if not url:
         return False
 
+    if (
+        global_config_loaded_from_config_yaml.gcs.use_fake_gcs
+        and url.startswith("file:")
+    ):
+        try:
+            base = Path(
+                global_config_loaded_from_config_yaml.gcs.fake_gcs_base_dir
+            ).resolve()
+            path_from_file_uri(url).resolve().relative_to(base)
+            return True
+        except ValueError:
+            return False
+
     # 检查是否为GCS URL格式
     gcs_patterns = [
         r"^https://storage\.googleapis\.com/[^/]+/.+",
+        r"^https://storage\.cloud\.google\.com/[^/]+/.+",
         r"^gs://[^/]+/.+",
     ]
 
@@ -205,8 +285,12 @@ def check_gcs_file_exists(bucket_name: str, path: str) -> bool:
 
 def download_from_gcs(url: str) -> bytes:
     """从GCS下载文件"""
+    if url.startswith("file:"):
+        p = path_from_file_uri(url).resolve()
+        logger.debug(f"read local file (fake GCS): {p}")
+        return p.read_bytes()
+
     bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(url)
-    assert gcs_path
 
     client = get_gcs_client()
     bucket = client.bucket(bucket_name)
@@ -221,5 +305,4 @@ def append_filename_suffix(gcs_path: str, suffix: str) -> str:
     if DOT not in gcs_path:
         return f"{gcs_path}{suffix}"
     parts = gcs_path.split(".", 1)
-    assert len(parts) == 2
     return f"{parts[0]}{suffix}.{parts[1]}"

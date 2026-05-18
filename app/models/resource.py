@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 from app.utils.image import ImageSize
 
 
@@ -26,7 +26,9 @@ class Resource(Base):
     url = Column(String, nullable=False, primary_key=True, index=True)
     type = Column(Enum(ResourceType))
     resource_metadata = Column(JSON)  # 存储资源的元数据，如尺寸、格式等
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
     # 外键

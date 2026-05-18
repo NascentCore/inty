@@ -18,7 +18,9 @@ class TelegramInboundEnvelope:
     message_date_unix: int | None
 
 
-def envelope_from_incoming(message: TelegramIncomingMessage) -> TelegramInboundEnvelope:
+def envelope_from_incoming(
+    message: TelegramIncomingMessage,
+) -> TelegramInboundEnvelope:
     return TelegramInboundEnvelope(
         update_id=message.update_id,
         chat_id=message.chat_id,
@@ -55,7 +57,9 @@ def build_inbound_event(
 
 
 class TelegramAdapter:
-    def __init__(self, bot_api: TelegramBotApi, poll_timeout_seconds: int) -> None:
+    def __init__(
+        self, bot_api: TelegramBotApi, poll_timeout_seconds: int
+    ) -> None:
         self._bot_api = bot_api
         self._poll_timeout_seconds = poll_timeout_seconds
 

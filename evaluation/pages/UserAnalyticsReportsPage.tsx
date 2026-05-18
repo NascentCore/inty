@@ -12,6 +12,7 @@ import React, {
   useState,
 } from "react";
 import {
+  Button,
   Card,
   Select,
   Space,
@@ -78,10 +79,13 @@ import {
   type GeneratedImageDetail,
 } from "../utils/generatedImageDetail";
 import {
-  buildAgentProfilePageUrl,
-  buildUserProfilePageUrl,
+  buildVoiceRecordingPageUrl,
   getEvaluationBaseUrl,
 } from "../utils/profileLinks";
+import {
+  OpsAgentDetailModal,
+  OpsUserDetailModal,
+} from "../components/common/OpsEntityDetailModals";
 
 type ReportType = "daily" | "weekly";
 
@@ -216,7 +220,7 @@ function getAgentTrendColor(agentName: string): string {
   return TOP_AGENT_TREND_COLORS[colorIndex];
 }
 
-function VoiceAudiosGroupCard({
+export function VoiceAudiosGroupCard({
   title,
   groups,
   previewLimit,
@@ -226,6 +230,8 @@ function VoiceAudiosGroupCard({
   previewLimit: number;
 }) {
   const baseUrl = getEvaluationBaseUrl();
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
+  const [detailAgentId, setDetailAgentId] = useState<string | null>(null);
 
   if (groups.length === 0) {
     return (
@@ -262,25 +268,25 @@ function VoiceAudiosGroupCard({
           >
             <div style={{ wordBreak: "break-all" }}>
               用户ID:{" "}
-              <a
-                href={buildUserProfilePageUrl(baseUrl, group.user_id)}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontFamily: "monospace" }}
+              <Button
+                type="link"
+                size="small"
+                style={{ padding: 0, height: "auto", fontFamily: "monospace" }}
+                onClick={() => setDetailUserId(group.user_id)}
               >
                 {group.user_id}
-              </a>
+              </Button>
             </div>
             <div style={{ wordBreak: "break-all" }}>
               角色: {group.agent_name || "-"} · Agent ID:{" "}
-              <a
-                href={buildAgentProfilePageUrl(baseUrl, group.agent_id)}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontFamily: "monospace" }}
+              <Button
+                type="link"
+                size="small"
+                style={{ padding: 0, height: "auto", fontFamily: "monospace" }}
+                onClick={() => setDetailAgentId(group.agent_id)}
               >
                 {group.agent_id}
-              </a>
+              </Button>
             </div>
           </div>
           {group.audios.map((a, i) => (
@@ -294,6 +300,23 @@ function VoiceAudiosGroupCard({
                   style={{ fontSize: 12 }}
                 >
                   Open recording
+                </a>
+                <a
+                  href={buildVoiceRecordingPageUrl(baseUrl, {
+                    audioUrl: a.audio_url,
+                    userId: group.user_id,
+                    agentId: group.agent_id,
+                    agentName: group.agent_name,
+                    createdAt: a.created_at,
+                    durationSeconds: a.duration_seconds,
+                    messageId: a.message_id,
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Permanent link (ops recording page)"
+                  style={{ fontSize: 12 }}
+                >
+                  Permanent link
                 </a>
                 {a.duration_seconds != null && (
                   <span style={{ fontSize: 12, color: "#999" }}>
@@ -333,6 +356,16 @@ function VoiceAudiosGroupCard({
           仅展示前 {previewLimit} 组
         </div>
       )}
+      <OpsUserDetailModal
+        open={detailUserId != null}
+        userId={detailUserId ?? ""}
+        onClose={() => setDetailUserId(null)}
+      />
+      <OpsAgentDetailModal
+        open={detailAgentId != null}
+        agentId={detailAgentId ?? ""}
+        onClose={() => setDetailAgentId(null)}
+      />
     </Card>
   );
 }

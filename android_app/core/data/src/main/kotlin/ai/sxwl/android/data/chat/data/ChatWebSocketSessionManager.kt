@@ -1,6 +1,7 @@
 package ai.sxwl.android.data.chat.data
 
 import ai.sxwl.android.data.api.model.ChatClientContextWsMessage
+import ai.sxwl.android.data.api.model.ChatUserSignedOnWsMessage
 import ai.sxwl.android.data.api.model.ChatWebSocketReq
 import ai.sxwl.android.data.api.model.ChatWsControlFrame
 import ai.sxwl.android.data.api.model.SendMsgReq
@@ -21,6 +22,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.url
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
+import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -32,6 +34,11 @@ object ChatWebSocketSessionManager {
     private val requestMutex = Mutex()
     private var session: DefaultClientWebSocketSession? = null
     private var sessionToken: String? = null
+    /**
+     * Last agent_id we sent `user_signed_on` for on this connection; cleared when the socket
+     * closes.
+     */
+    private var userSignedOnAgentIdForSession: String? = null
 
     private val httpClient by lazy {
         HttpClient(OkHttp) {
@@ -45,6 +52,7 @@ object ChatWebSocketSessionManager {
     private val responseAdapter = moshi.adapter(SendMsgResponse::class.java)
     private val controlFrameAdapter = moshi.adapter(ChatWsControlFrame::class.java)
     private val clientContextAdapter = moshi.adapter(ChatClientContextWsMessage::class.java)
+    private val userSignedOnAdapter = moshi.adapter(ChatUserSignedOnWsMessage::class.java)
 
     suspend fun sendMessage(agentId: String, request: SendMsgReq): HttpResult<SendMsgResponse> {
         return try {
@@ -53,6 +61,19 @@ object ChatWebSocketSessionManager {
             // 3) 解析成与 HTTP 相同的 SendMsgResponse，保持上层逻辑不变。
             requestMutex.withLock {
                 val activeSession = ensureSession()
+                if (userSignedOnAgentIdForSession != agentId) {
+                    activeSession.send(
+                        Frame.Text(
+                            userSignedOnAdapter.toJson(
+                                ChatUserSignedOnWsMessage(
+                                    agentId = agentId,
+                                    messageId = UUID.randomUUID().toString(),
+                                )
+                            )
+                        )
+                    )
+                    userSignedOnAgentIdForSession = agentId
+                }
                 val websocketPayload = ChatWebSocketReq(agentId = agentId, request = request)
                 activeSession.send(Frame.Text(requestAdapter.toJson(websocketPayload)))
 
@@ -121,6 +142,7 @@ object ChatWebSocketSessionManager {
         session?.close()
         session = null
         sessionToken = null
+        userSignedOnAgentIdForSession = null
     }
 
     private fun buildChatWebSocketUrl(): String {
@@ -131,6 +153,7 @@ object ChatWebSocketSessionManager {
                 httpBase.startsWith("http://") -> "ws://${httpBase.removePrefix("http://")}"
                 else -> httpBase
             }
-        return "$websocketBase/$CHAT_WEBSOCKET_PATH"
+        val wsConnId = UUID.randomUUID().toString()
+        return "$websocketBase/$CHAT_WEBSOCKET_PATH?ws_conn_id=$wsConnId"
     }
 }

@@ -1,6 +1,7 @@
 import io
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock, patch
 
 import pytest
@@ -11,7 +12,9 @@ from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app import models
+from app.models.agent import Agent
+from app.models.chat import Chat
+from app.models.user import AuthType, Gender, User
 from app.api.deps import get_async_db
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
@@ -22,8 +25,9 @@ from app.external_services.gcs import (
 )
 from app.models.agent import AgentVisibility
 from app.schemas.agent import AgentSortOption, AgentUpdate, ModelConfig
+from app.schemas.agent import AgentCreate
+from app.schemas.user import User as UserSchema
 from app.schemas.user import UserCreate
-from app import schemas
 from app.services import agent_service
 from app.services.agent_service import (
     _crop_avatar_from_background,
@@ -65,10 +69,10 @@ async def db_session():
     async with async_session() as session:
         user_id = str(uuid.uuid4())
         readable_id = str(uuid.uuid4().int)[:8]
-        admin_user = models.User(
+        admin_user = User(
             id=user_id,
             readable_id=readable_id,
-            auth_type=models.AuthType.PHONE,
+            auth_type=AuthType.PHONE,
             nickname="admin",
             email="admin@sxwl.ai",
             system_language="en",
@@ -108,7 +112,16 @@ async def test_crop_avatar_from_background():
         f"https://storage.cloud.google.com/yx-test/{random_filename}.png",
     )
     cropped_avatar_url = crop_avatar_result.avatar_url
-    assert cropped_avatar_url == expected_avatar_url
+    gcs_cfg = global_config_loaded_from_config_yaml.gcs
+    if gcs_cfg.use_fake_gcs:
+        expected_file_uri = (
+            Path(gcs_cfg.fake_gcs_base_dir).resolve()
+            / "yx-test"
+            / f"{random_filename}-cropped-avatar.png"
+        ).resolve().as_uri()
+        assert cropped_avatar_url == expected_file_uri
+    else:
+        assert cropped_avatar_url == expected_avatar_url
     logger.info(f"Cropped avatar URL: {cropped_avatar_url}")
     # 本地运行时，可以打开图片查看
     # jpe_data = download_from_gcs(cropped_avatar_url)
@@ -124,7 +137,7 @@ def test_update_agent_in_db():
 
     # Note: This test only validates in-memory object updates, not database constraints
     # The creator_id doesn't need to exist in the database since we're not saving
-    agent_in_db = models.Agent(
+    agent_in_db = Agent(
         name="Original Agent",
         personality="Original personality",
         settings={"existing_setting": "value"},
@@ -223,11 +236,11 @@ def test_process_agent_image_urls():
 async def test_update_agent_increments_version(db_session, monkeypatch):
     """确保更新Agent时版本号自增"""
 
-    agent = models.Agent(
+    agent = Agent(
         id=str(uuid.uuid4()),
         readable_id="verstest",
         name="Version Test Agent",
-        gender=models.Gender.FEMALE,
+        gender=Gender.FEMALE,
         creator_id=admin_user.id,
     )
     db_session.add(agent)
@@ -271,7 +284,7 @@ async def test_get_balanced_score_based_agents_pagination(db_session):
 
     for i in range(10):
         db_session.add(
-            models.Agent(
+            Agent(
                 id=f"test-agent-{test_id}-{i}",
                 readable_id=f"{test_id}{i:04d}",  # 4 + 4 = 8 chars max
                 name=f"Test Agent {i}",
@@ -299,7 +312,7 @@ async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session)
 
     for i in range(10):
         db_session.add(
-            models.Agent(
+            Agent(
                 id=f"test-agent-seed-{test_id}-{i}",
                 readable_id=f"{test_id}{i:04d}",  # 4 + 4 = 8 chars max
                 name=f"Test Seed Agent {i}",
@@ -341,11 +354,11 @@ async def test_get_balanced_score_based_agents_female_user_opposite_gender_first
     test_id = str(uuid.uuid4())[:4]
     for i in range(4):
         db_session.add(
-            models.Agent(
+            Agent(
                 id=f"test-male-{test_id}-{i}",
                 readable_id=f"m{test_id}{i:02d}"[:8],
                 name=f"Male Agent {i}",
-                gender=models.Gender.MALE,
+                gender=Gender.MALE,
                 meta_data={"score": 5},
                 visibility=AgentVisibility.PUBLIC,
                 creator_id=admin_user.id,
@@ -353,11 +366,11 @@ async def test_get_balanced_score_based_agents_female_user_opposite_gender_first
         )
     for i in range(4):
         db_session.add(
-            models.Agent(
+            Agent(
                 id=f"test-female-{test_id}-{i}",
                 readable_id=f"f{test_id}{i:02d}"[:8],
                 name=f"Female Agent {i}",
-                gender=models.Gender.FEMALE,
+                gender=Gender.FEMALE,
                 meta_data={"score": 5},
                 visibility=AgentVisibility.PUBLIC,
                 creator_id=admin_user.id,
@@ -366,11 +379,11 @@ async def test_get_balanced_score_based_agents_female_user_opposite_gender_first
     await db_session.commit()
 
     agents = await get_balanced_score_based_agents(
-        db_session, 1, 20, "gender-seed", None, models.Gender.FEMALE
+        db_session, 1, 20, "gender-seed", None, Gender.FEMALE
     )
-    male_indices = [i for i, a in enumerate(agents) if a.gender == models.Gender.MALE]
+    male_indices = [i for i, a in enumerate(agents) if a.gender == Gender.MALE]
     female_other_indices = [
-        i for i, a in enumerate(agents) if a.gender != models.Gender.MALE
+        i for i, a in enumerate(agents) if a.gender != Gender.MALE
     ]
     if male_indices and female_other_indices:
         assert max(male_indices) < min(
@@ -383,19 +396,19 @@ async def test_get_recommended_agents_paginated_excludes_private_always(db_sessi
     """推荐列表始终只返回公开角色，超级用户也不会看到私有角色。"""
     test_id = str(uuid.uuid4())[:6]
 
-    public_agent = models.Agent(
+    public_agent = Agent(
         id=f"test-reco-public-{test_id}",
         readable_id=f"rp{test_id}"[:8],
         name=f"Reco Public {test_id}",
-        gender=models.Gender.FEMALE,
+        gender=Gender.FEMALE,
         visibility=AgentVisibility.PUBLIC,
         creator_id=admin_user.id,
     )
-    private_agent = models.Agent(
+    private_agent = Agent(
         id=f"test-reco-private-{test_id}",
         readable_id=f"rv{test_id}"[:8],
         name=f"Reco Private {test_id}",
-        gender=models.Gender.FEMALE,
+        gender=Gender.FEMALE,
         visibility=AgentVisibility.PRIVATE,
         creator_id=admin_user.id,
     )
@@ -442,21 +455,21 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_filters
     """CREATED_DESC_WITH_GENDER: MALE user gets only FEMALE agents; FEMALE user gets only MALE agents."""
     test_id = str(uuid.uuid4())[:6]
     agents = [
-        models.Agent(
+        Agent(
             id=f"test-gender-{test_id}-f{i}",
             readable_id=f"gf{i}{test_id}"[:8],
             name=f"Female {i} {test_id}",
-            gender=models.Gender.FEMALE,
+            gender=Gender.FEMALE,
             visibility=AgentVisibility.PUBLIC,
             creator_id=admin_user.id,
         )
         for i in range(2)
     ] + [
-        models.Agent(
+        Agent(
             id=f"test-gender-{test_id}-m{i}",
             readable_id=f"gm{i}{test_id}"[:8],
             name=f"Male {i} {test_id}",
-            gender=models.Gender.MALE,
+            gender=Gender.MALE,
             visibility=AgentVisibility.PUBLIC,
             creator_id=admin_user.id,
         )
@@ -466,7 +479,7 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_filters
         db_session.add(a)
     await db_session.commit()
 
-    male_user = DummyUserWithGender("u-male", "male", False, models.Gender.MALE)
+    male_user = DummyUserWithGender("u-male", "male", False, Gender.MALE)
     page_male = await agent_service.get_recommended_agents_paginated(
         db_session,
         current_user=male_user,  # type: ignore[arg-type]
@@ -474,9 +487,9 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_filters
         page_size=10,
         sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
     )
-    assert all(a.gender == models.Gender.FEMALE for a in page_male.list)
+    assert all(a.gender == Gender.FEMALE for a in page_male.list)
 
-    female_user = DummyUserWithGender("u-female", "female", False, models.Gender.FEMALE)
+    female_user = DummyUserWithGender("u-female", "female", False, Gender.FEMALE)
     page_female = await agent_service.get_recommended_agents_paginated(
         db_session,
         current_user=female_user,  # type: ignore[arg-type]
@@ -484,7 +497,7 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_filters
         page_size=10,
         sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
     )
-    assert all(a.gender == models.Gender.MALE for a in page_female.list)
+    assert all(a.gender == Gender.MALE for a in page_female.list)
 
 
 @pytest.mark.asyncio
@@ -493,11 +506,11 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_other_n
 ):
     """CREATED_DESC_WITH_GENDER with user gender OTHER or None: no gender filter, same as created_desc."""
     test_id = str(uuid.uuid4())[:6]
-    agent = models.Agent(
+    agent = Agent(
         id=f"test-gender-other-{test_id}",
         readable_id=f"go{test_id}"[:8],
         name=f"Agent Other {test_id}",
-        gender=models.Gender.FEMALE,
+        gender=Gender.FEMALE,
         visibility=AgentVisibility.PUBLIC,
         creator_id=admin_user.id,
     )
@@ -506,14 +519,14 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_other_n
 
     desc_page = await agent_service.get_recommended_agents_paginated(
         db_session,
-        current_user=DummyUserWithGender("u", "u", False, models.Gender.OTHER),  # type: ignore[arg-type]
+        current_user=DummyUserWithGender("u", "u", False, Gender.OTHER),  # type: ignore[arg-type]
         page=1,
         page_size=10,
         sort_by=AgentSortOption.CREATED_DESC,
     )
     with_gender_other_page = await agent_service.get_recommended_agents_paginated(
         db_session,
-        current_user=DummyUserWithGender("u", "u", False, models.Gender.OTHER),  # type: ignore[arg-type]
+        current_user=DummyUserWithGender("u", "u", False, Gender.OTHER),  # type: ignore[arg-type]
         page=1,
         page_size=10,
         sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
@@ -541,10 +554,10 @@ async def test_get_user_agents_returns_created_agents_ordered_by_created_at(db_s
     user_id = str(uuid.uuid4())
     readable_id = str(uuid.uuid4().int)[:8]
 
-    db_user = models.User(
+    db_user = User(
         id=user_id,
         readable_id=readable_id,
-        auth_type=models.AuthType.PHONE,
+        auth_type=AuthType.PHONE,
         nickname="TestCreator",
         email="creator@test.local",
         system_language="en",
@@ -553,19 +566,19 @@ async def test_get_user_agents_returns_created_agents_ordered_by_created_at(db_s
     db_session.add(db_user)
     await db_session.flush()
 
-    agent_a = models.Agent(
+    agent_a = Agent(
         id=f"test-ua-a-{test_id}",
         readable_id=f"uaa{test_id}"[:8],
         name=f"Agent A {test_id}",
-        gender=models.Gender.FEMALE,
+        gender=Gender.FEMALE,
         visibility=AgentVisibility.PUBLIC,
         creator_id=db_user.id,
     )
-    agent_b = models.Agent(
+    agent_b = Agent(
         id=f"test-ua-b-{test_id}",
         readable_id=f"uab{test_id}"[:8],
         name=f"Agent B {test_id}",
-        gender=models.Gender.FEMALE,
+        gender=Gender.FEMALE,
         visibility=AgentVisibility.PUBLIC,
         creator_id=db_user.id,
     )
@@ -576,7 +589,7 @@ async def test_get_user_agents_returns_created_agents_ordered_by_created_at(db_s
     await db_session.refresh(agent_a)
     await db_session.refresh(agent_b)
 
-    current_user = schemas.User.model_validate(db_user)
+    current_user = UserSchema.model_validate(db_user)
 
     agents = await get_user_agents(db_session, current_user, skip=0, limit=100)
     assert len(agents) == 2
@@ -589,7 +602,7 @@ async def test_get_user_agents_returns_created_agents_ordered_by_created_at(db_s
 
     # 无 nickname 时应为 "you"
     db_user.nickname = None
-    current_user_no_nick = schemas.User.model_validate(db_user)
+    current_user_no_nick = UserSchema.model_validate(db_user)
     agents2 = await get_user_agents(db_session, current_user_no_nick, skip=0, limit=100)
     for agent in agents2:
         assert agent.user == "you"
@@ -601,10 +614,10 @@ async def test_get_user_agents_empty_when_no_agents(db_session):
     test_id = str(uuid.uuid4())[:8]
     user_id = str(uuid.uuid4())
     readable_id = str(uuid.uuid4().int)[:8]
-    db_user = models.User(
+    db_user = User(
         id=user_id,
         readable_id=readable_id,
-        auth_type=models.AuthType.PHONE,
+        auth_type=AuthType.PHONE,
         nickname="NoAgents",
         email="noagents@test.local",
         system_language="en",
@@ -613,7 +626,7 @@ async def test_get_user_agents_empty_when_no_agents(db_session):
     db_session.add(db_user)
     await db_session.commit()
     await db_session.refresh(db_user)
-    current_user = schemas.User.model_validate(db_user)
+    current_user = UserSchema.model_validate(db_user)
 
     agents = await get_user_agents(db_session, current_user)
     assert agents == []
@@ -623,7 +636,7 @@ async def test_get_user_agents_empty_when_no_agents(db_session):
 async def test_get_user_agents_validation_skip_negative():
     """skip < 0 时抛出 HTTPException 400。"""
     mock_db = MagicMock()
-    mock_user = schemas.User(
+    mock_user = UserSchema(
         id="u",
         readable_id="r",
         auth_type="PHONE",
@@ -642,7 +655,7 @@ async def test_get_user_agents_validation_skip_negative():
 async def test_get_user_agents_validation_limit_invalid():
     """limit <= 0 或 > 1000 时抛出 HTTPException 400。"""
     mock_db = MagicMock()
-    mock_user = schemas.User(
+    mock_user = UserSchema(
         id="u",
         readable_id="r",
         auth_type="PHONE",
@@ -662,19 +675,19 @@ async def test_get_user_agents_validation_limit_invalid():
 @pytest.mark.asyncio
 async def test_get_agent_follow_fields_are_defaults_without_follow_table(db_session):
     """get_agent 不再依赖 agent_followers，关注字段返回默认值。"""
-    creator = models.User(
+    creator = User(
         id=str(uuid.uuid4()),
         readable_id=str(uuid.uuid4().int)[:8],
-        auth_type=models.AuthType.PHONE,
+        auth_type=AuthType.PHONE,
         nickname="creator",
         email=f"creator-{uuid.uuid4().hex[:8]}@example.com",
         system_language="en",
         is_superuser=False,
     )
-    viewer = models.User(
+    viewer = User(
         id=str(uuid.uuid4()),
         readable_id=str(uuid.uuid4().int)[:8],
-        auth_type=models.AuthType.PHONE,
+        auth_type=AuthType.PHONE,
         nickname="viewer",
         email=f"viewer-{uuid.uuid4().hex[:8]}@example.com",
         system_language="en",
@@ -683,18 +696,18 @@ async def test_get_agent_follow_fields_are_defaults_without_follow_table(db_sess
     db_session.add_all([creator, viewer])
     await db_session.flush()
 
-    agent = models.Agent(
+    agent = Agent(
         id=str(uuid.uuid4()),
         readable_id=str(uuid.uuid4().int)[:8],
         name=f"agent-{uuid.uuid4().hex[:6]}",
-        gender=models.Gender.FEMALE,
+        gender=Gender.FEMALE,
         visibility=AgentVisibility.PUBLIC,
         creator_id=creator.id,
     )
     db_session.add(agent)
     await db_session.flush()
 
-    chat = models.Chat(
+    chat = Chat(
         id=str(uuid.uuid4()),
         user_id=viewer.id,
         agent_id=agent.id,
@@ -737,10 +750,10 @@ async def test_get_user_followed_agents_returns_410():
 @pytest.mark.asyncio
 async def test_create_agent_enqueues_opening_voice_generation(db_session, monkeypatch):
     """创建 Agent 时只投递后台任务，不在当前调用中等待语音生成。"""
-    user = models.User(
+    user = User(
         id=str(uuid.uuid4()),
         readable_id=str(uuid.uuid4().int)[:8],
-        auth_type=models.AuthType.PHONE,
+        auth_type=AuthType.PHONE,
         nickname="creator",
         email=f"creator-{uuid.uuid4().hex[:8]}@example.com",
         system_language="en",
@@ -763,7 +776,7 @@ async def test_create_agent_enqueues_opening_voice_generation(db_session, monkey
     )
     monkeypatch.setattr(agent_service, "generate_agent_opening_voice", generate_mock)
 
-    agent_in = schemas.AgentCreate(
+    agent_in = AgentCreate(
         name="Create Async Voice Agent",
         gender="FEMALE",
         opening="Hello there.",
@@ -781,10 +794,10 @@ async def test_create_agent_enqueues_opening_voice_generation(db_session, monkey
 @pytest.mark.asyncio
 async def test_update_agent_enqueues_opening_voice_generation(db_session, monkeypatch):
     """更新 opening 时只投递后台任务，不在当前调用中等待语音生成。"""
-    user = models.User(
+    user = User(
         id=str(uuid.uuid4()),
         readable_id=str(uuid.uuid4().int)[:8],
-        auth_type=models.AuthType.PHONE,
+        auth_type=AuthType.PHONE,
         nickname="creator",
         email=f"creator-{uuid.uuid4().hex[:8]}@example.com",
         system_language="en",
@@ -793,11 +806,11 @@ async def test_update_agent_enqueues_opening_voice_generation(db_session, monkey
     db_session.add(user)
     await db_session.flush()
 
-    agent = models.Agent(
+    agent = Agent(
         id=str(uuid.uuid4()),
         readable_id=str(uuid.uuid4().int)[:8],
         name="Update Async Voice Agent",
-        gender=models.Gender.FEMALE,
+        gender=Gender.FEMALE,
         opening="Old opening",
         creator_id=user.id,
     )

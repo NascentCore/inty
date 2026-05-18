@@ -79,6 +79,17 @@ class LiveChatConfig(BaseModel):
         default=None,
         description="指定 AI 语音 ID，为空则使用角色默认语音或系统默认语音",
     )
+    enable_prefill: bool = Field(
+        default=False,
+        description="是否启用文本聊天历史预填充（将既有对话上下文灌入 Gemini Live）",
+    )
+    agent_starts_conversation: bool = Field(
+        default=False,
+        description=(
+            "是否在会话就绪（含预填充完成）后由服务端发送隐式触发，让模型先用语音开场问候；"
+            "不写入用户转录缓冲，不落库为 user 消息"
+        ),
+    )
 
     @field_validator("speech_language_code", mode="before")
     @classmethod
@@ -122,7 +133,9 @@ class LiveChatMessage(BaseModel):
 
     type: LiveChatMessageType = Field(..., description="消息类型")
     data: Optional[str] = Field(default=None, description="消息数据")
-    timestamp: Optional[float] = Field(default=None, description="时间戳（毫秒）")
+    timestamp: Optional[float] = Field(
+        default=None, description="时间戳（毫秒）"
+    )
 
 
 class LiveChatAudioMessage(BaseModel):

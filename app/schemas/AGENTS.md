@@ -1,8 +1,25 @@
-# Pydantic models for API endpoints
+# `app/schemas/`：跨边界的数据形状（Wire & DTO）
 
-- Ops platform analytics schemas live under `app/schemas/analytics/` (e.g. user_analytics).
-- Must keep consistent between data types here and
-  [kotlin data types](/android_app/library/inty)
-- Also keep consistent with [SqlAlchemy table models](/app/models/)
-- Do not use `model_config` as field name in Pydantic Model objects,
-  which conflicts with <https://docs.pydantic.dev/2.0/usage/model_config/>
+**一句话**：放 **会离开 Python 进程边界的 Pydantic 模型**——HTTP JSON、WebSocket 帧、以及其它 **序列化契约**；是后端、移动端与排障工具 **对齐字段名的罗塞塔石碑**。
+
+## 读者
+
+- 改 API 或 WS 载荷、需要理解 `meta_data` 键、或在多语言客户端间对齐枚举的人。
+
+## 归属规则
+
+- **放这里**：请求/响应体、WS 信封、与 wire 强相关的枚举与小工具类型。
+- **不放这里**：业务流程编排、prompt 拼装、纯内部领域服务；**Ops 专用分析报告 DTO** 应跟 Ops 应用侧 schema，而不是塞进通用 `app/schemas`。
+- **包根 re-export**：历史兼容入口；**新类型**请放命名模块并由调用方 **显式 import**，避免继续堆宽公共表面。
+
+## 契约纪律
+
+- **跨语言**：字段改名/枚举改值 = **对外发布行为**；要么版本门，要么多端同迁。
+- **客户端对齐**：聊天相关 `meta_data`、隐式信号、语音消息等 **新增键**，需要 **Kotlin/Swift 与后端同步** 或明确忽略策略。
+- **文案**：用户可见字符串的 **产品措辞** 归属 companion / 前端呈现层；schema 只承载 **结构与枚举**。
+- **与持久化对齐**：若载荷刻意镜像 DB，字段约束应与 **ORM + 迁移** 一致，避免「能序列化但不能落库」。
+- **相关 ID**：`ws_conn_id` 属于 **传输层握手参数**，服务日志相关；**不要**把它与 `user_msg_uuid`、trace id 等 **单轮业务关联键**混为一谈。
+
+## 小坑
+
+- Pydantic v2 下 **不要用 `model_config` 作字段名**——会与框架配置入口冲突。

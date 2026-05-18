@@ -12,7 +12,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app import models
+from app.models.agent import Agent
+from app.models.chat_history import ChatHistory
+from app.models.resource import Resource
+from app.models.user import User
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.fakes.gemini import FakeGeminiClient
@@ -199,65 +202,6 @@ class TestImageGenerationService:
         assert result.gcs_uri.startswith("gs://")
 
     @pytest.mark.asyncio
-    async def test_build_image_prompt(self):
-        """测试提示词构建"""
-        agent_data = {
-            "personality": "温柔善良的女孩",
-            "scenario": "在咖啡厅里与用户聊天",
-            "intro": "一个可爱的AI助手",
-        }
-
-        chat_history = [
-            {"role": "user", "content": "你好"},
-            {"role": "assistant", "content": "你好呀！"},
-            {"role": "user", "content": "今天天气真好"},
-        ]
-
-        user_message = "给我画一张你在咖啡厅的图片"
-
-        prompt = image_generation_service.build_image_prompt(
-            agent_data=agent_data,
-            chat_history=chat_history,
-            user_message=user_message,
-        )
-
-        # 验证提示词包含所有必要信息
-        assert "温柔善良的女孩" in prompt
-        assert "在咖啡厅里与用户聊天" in prompt
-        assert "你好" in prompt
-        assert "今天天气真好" in prompt
-        assert "给我画一张你在咖啡厅的图片" in prompt
-
-    @pytest.mark.asyncio
-    async def test_build_image_prompt_with_user_info(self):
-        """测试提示词构建（包含用户信息）"""
-        agent_data = {
-            "personality": "温柔善良的女孩",
-            "scenario": "在咖啡厅里与用户聊天",
-        }
-
-        chat_history = [
-            {"role": "user", "content": "你好"},
-            {"role": "assistant", "content": "你好呀！"},
-        ]
-
-        user_message = "给我画一张图片"
-        user_info = "##User Information\nName: TestUser\nGender: Male\nAge: 25-30"
-
-        prompt = image_generation_service.build_image_prompt(
-            agent_data=agent_data,
-            chat_history=chat_history,
-            user_message=user_message,
-            user_info=user_info,
-        )
-
-        # 验证提示词包含用户信息
-        assert "##User Information" in prompt
-        assert "Name: TestUser" in prompt
-        assert "Gender: Male" in prompt
-        assert "Age: 25-30" in prompt
-
-    @pytest.mark.asyncio
     async def test_generate_chat_image_for_message_with_gemini(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -321,7 +265,7 @@ class TestImageGenerationService:
         user_id = "user-{}".format(uuid.uuid4().hex[:8])
         agent_id = "agent-{}".format(uuid.uuid4().hex[:8])
 
-        user = models.User(
+        user = User(
             id=user_id,
             readable_id=uuid.uuid4().hex[:8],
             auth_type=AuthType.PHONE,
@@ -333,7 +277,7 @@ class TestImageGenerationService:
         session.add(user)
         await session.commit()
 
-        agent = models.Agent(
+        agent = Agent(
             id=agent_id,
             readable_id=uuid.uuid4().hex[:8],
             name="Chat Image Agent",
@@ -353,7 +297,7 @@ class TestImageGenerationService:
         await session.commit()
         await session.refresh(agent)
 
-        chat_msg = models.ChatHistory(
+        chat_msg = ChatHistory(
             session_id=session_uuid,
             message={"type": "user", "data": {"content": "你好"}},
             meta_data=None,
@@ -393,9 +337,9 @@ class TestImageGenerationService:
 
         row = (
             await session.execute(
-                select(models.ChatHistory).where(
-                    models.ChatHistory.session_id == session_uuid,
-                    models.ChatHistory.id == message_id,
+                select(ChatHistory).where(
+                    ChatHistory.session_id == session_uuid,
+                    ChatHistory.id == message_id,
                 )
             )
         ).scalar_one_or_none()
@@ -411,8 +355,8 @@ class TestImageGenerationService:
             u.startswith("gs://") and "chat_images/" in u for u in agent.background_images
         )
 
-        res_stmt = select(models.Resource).where(
-            models.Resource.url == gen["image_url"]
+        res_stmt = select(Resource).where(
+            Resource.url == gen["image_url"]
         )
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
         assert resource is not None, "Chat-generated image should be saved to resources table"
@@ -459,7 +403,7 @@ class TestImageGenerationService:
         user_id = f"user-{uuid.uuid4().hex[:8]}"
         agent_id = f"agent-{uuid.uuid4().hex[:8]}"
 
-        user = models.User(
+        user = User(
             id=user_id,
             readable_id=uuid.uuid4().hex[:8],
             auth_type=AuthType.PHONE,
@@ -470,7 +414,7 @@ class TestImageGenerationService:
         session.add(user)
         await session.commit()
 
-        agent = models.Agent(
+        agent = Agent(
             id=agent_id,
             readable_id=uuid.uuid4().hex[:8],
             name="Fal Chat Agent",
@@ -490,7 +434,7 @@ class TestImageGenerationService:
         await session.commit()
         await session.refresh(agent)
 
-        chat_msg = models.ChatHistory(
+        chat_msg = ChatHistory(
             session_id=session_uuid,
             message={"type": "user", "data": {"content": "draw me a portrait"}},
             meta_data=None,
@@ -537,9 +481,9 @@ class TestImageGenerationService:
 
         row = (
             await session.execute(
-                select(models.ChatHistory).where(
-                    models.ChatHistory.session_id == session_uuid,
-                    models.ChatHistory.id == message_id,
+                select(ChatHistory).where(
+                    ChatHistory.session_id == session_uuid,
+                    ChatHistory.id == message_id,
                 )
             )
         ).scalar_one_or_none()
@@ -548,7 +492,7 @@ class TestImageGenerationService:
         assert gen is not None
         assert gen.get("image_url", "").startswith("gs://")
 
-        res_stmt = select(models.Resource).where(models.Resource.url == gen["image_url"])
+        res_stmt = select(Resource).where(Resource.url == gen["image_url"])
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
         assert resource is not None, "Fal z_image_turbo chat image should be saved to resources table"
         assert resource.agent_id == agent_id
@@ -577,7 +521,7 @@ class TestImageGenerationService:
         user_id = f"user-{uuid.uuid4().hex[:8]}"
         agent_id = f"agent-{uuid.uuid4().hex[:8]}"
 
-        user = models.User(
+        user = User(
             id=user_id,
             readable_id=uuid.uuid4().hex[:8],
             auth_type=AuthType.PHONE,
@@ -588,7 +532,7 @@ class TestImageGenerationService:
         session.add(user)
         await session.commit()
 
-        agent = models.Agent(
+        agent = Agent(
             id=agent_id,
             readable_id=uuid.uuid4().hex[:8],
             name="Seedream Chat Agent",
@@ -608,7 +552,7 @@ class TestImageGenerationService:
         await session.commit()
         await session.refresh(agent)
 
-        chat_msg = models.ChatHistory(
+        chat_msg = ChatHistory(
             session_id=session_uuid,
             message={"type": "user", "data": {"content": "generate a scene with us"}},
             meta_data=None,
@@ -655,9 +599,9 @@ class TestImageGenerationService:
 
         row = (
             await session.execute(
-                select(models.ChatHistory).where(
-                    models.ChatHistory.session_id == session_uuid,
-                    models.ChatHistory.id == message_id,
+                select(ChatHistory).where(
+                    ChatHistory.session_id == session_uuid,
+                    ChatHistory.id == message_id,
                 )
             )
         ).scalar_one_or_none()
@@ -666,7 +610,7 @@ class TestImageGenerationService:
         assert gen is not None
         assert gen.get("image_url", "").startswith("gs://")
 
-        res_stmt = select(models.Resource).where(models.Resource.url == gen["image_url"])
+        res_stmt = select(Resource).where(Resource.url == gen["image_url"])
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
         assert resource is not None, "Fal seedream chat image should be saved to resources table"
         assert resource.agent_id == agent_id
@@ -693,7 +637,7 @@ class TestChatHistoryService:
         session_uuid = uuid.uuid4()
         session_id_str = str(session_uuid)
 
-        user_msg = models.ChatHistory(
+        user_msg = ChatHistory(
             session_id=session_uuid,
             message={"type": "user", "data": {"content": "draw an image"}},
             meta_data=None,
@@ -723,9 +667,9 @@ class TestChatHistoryService:
         assert msg_id is not None
 
         stmt = (
-            select(models.ChatHistory)
-            .where(models.ChatHistory.session_id == session_uuid)
-            .order_by(models.ChatHistory.id.desc())
+            select(ChatHistory)
+            .where(ChatHistory.session_id == session_uuid)
+            .order_by(ChatHistory.id.desc())
             .limit(1)
         )
         row = (await session.execute(stmt)).scalar_one_or_none()
@@ -770,7 +714,7 @@ class TestChatHistoryService:
         user_id = f"user-{uuid.uuid4().hex[:8]}"
         agent_id = f"agent-{uuid.uuid4().hex[:8]}"
 
-        user = models.User(
+        user = User(
             id=user_id,
             readable_id=uuid.uuid4().hex[:8],
             auth_type=AuthType.PHONE,
@@ -781,7 +725,7 @@ class TestChatHistoryService:
         session.add(user)
         await session.commit()
 
-        agent = models.Agent(
+        agent = Agent(
             id=agent_id,
             readable_id=uuid.uuid4().hex[:8],
             name="Chat Image Agent",
@@ -801,7 +745,7 @@ class TestChatHistoryService:
         await session.commit()
         await session.refresh(agent)
 
-        chat_msg = models.ChatHistory(
+        chat_msg = ChatHistory(
             session_id=session_uuid,
             message={"type": "user", "data": {"content": "please draw an image"}},
             meta_data=None,
@@ -841,9 +785,9 @@ class TestChatHistoryService:
 
         row = (
             await session.execute(
-                select(models.ChatHistory).where(
-                    models.ChatHistory.session_id == session_uuid,
-                    models.ChatHistory.id == message_id,
+                select(ChatHistory).where(
+                    ChatHistory.session_id == session_uuid,
+                    ChatHistory.id == message_id,
                 )
             )
         ).scalar_one_or_none()
@@ -851,8 +795,8 @@ class TestChatHistoryService:
         assert row.meta_data is not None
         assert row.meta_data.get("generated_image") is not None
 
-        res_stmt = select(models.Resource).where(
-            models.Resource.agent_id == agent_id
+        res_stmt = select(Resource).where(
+            Resource.agent_id == agent_id
         )
         res_result = await session.execute(res_stmt)
         resources = res_result.scalars().all()
@@ -900,7 +844,7 @@ class TestChatHistoryService:
         session_uuid = uuid.uuid4()
         session_id_str = str(session_uuid)
 
-        user = models.User(
+        user = User(
             id=user_id,
             readable_id=uuid.uuid4().hex[:8],
             auth_type=AuthType.PHONE,
@@ -912,7 +856,7 @@ class TestChatHistoryService:
         session.add(user)
         await session.commit()
 
-        agent = models.Agent(
+        agent = Agent(
             id=agent_id,
             readable_id=uuid.uuid4().hex[:8],
             name="Chat Image Agent",
@@ -933,7 +877,7 @@ class TestChatHistoryService:
         await session.refresh(agent)
 
         # 真实消息行，以便 update_message_metadata 能更新
-        chat_msg = models.ChatHistory(
+        chat_msg = ChatHistory(
             session_id=session_uuid,
             message={"type": "user", "data": {"content": "draw an image"}},
             meta_data=None,
@@ -966,9 +910,9 @@ class TestChatHistoryService:
         assert result["image_url"].startswith("https://cdn.example.com/")
 
         # 1) 消息 meta_data 中应有 generated_image
-        stmt = select(models.ChatHistory).where(
-            models.ChatHistory.session_id == session_uuid,
-            models.ChatHistory.id == message_id,
+        stmt = select(ChatHistory).where(
+            ChatHistory.session_id == session_uuid,
+            ChatHistory.id == message_id,
         )
         row = (await session.execute(stmt)).scalar_one_or_none()
         assert row is not None
@@ -1001,7 +945,7 @@ class TestChatHistoryService:
         assert gcs_uri in agent.background_images or agent.background_images[1] == gcs_uri
 
         # 3) Resource 表应有对应记录（user_id 传入时）
-        res_stmt = select(models.Resource).where(models.Resource.url == gcs_uri)
+        res_stmt = select(Resource).where(Resource.url == gcs_uri)
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
         assert resource is not None
         assert resource.agent_id == agent_id

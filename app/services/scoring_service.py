@@ -1,8 +1,11 @@
-"""智能体回复评分服务"""
+"""Scores agent responses with an external LLM and parses fallback results.
+
+This service builds scoring prompts, calls the configured evaluation model, and
+normalizes model output into score fields used by evaluation workflows.
+"""
 
 import asyncio
 import json
-import logging
 import re
 from typing import Any, Dict, List, Optional
 
@@ -18,8 +21,12 @@ class ScoringService:
 
     def __init__(self):
         # 从配置文件读取OpenRouter配置
-        self.openrouter_base_url = global_config_loaded_from_config_yaml.agent.base_url
-        self.openrouter_api_key = global_config_loaded_from_config_yaml.agent.api_key
+        self.openrouter_base_url = (
+            global_config_loaded_from_config_yaml.agent.base_url
+        )
+        self.openrouter_api_key = (
+            global_config_loaded_from_config_yaml.agent.api_key
+        )
 
     async def score_response(
         self,
@@ -112,7 +119,9 @@ class ScoringService:
 
         return prompt
 
-    async def _call_scoring_model(self, model: str, prompt: str) -> Optional[str]:
+    async def _call_scoring_model(
+        self, model: str, prompt: str
+    ) -> Optional[str]:
         """调用评分模型"""
 
         # 这里应该根据model参数选择不同的API
@@ -152,7 +161,9 @@ class ScoringService:
 
                 result = response.json()
                 content = (
-                    result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    result.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
                 )
 
                 return content
@@ -178,16 +189,16 @@ class ScoringService:
             "reason": "智能体能够很好地保持角色设定，回复自然流畅，对问题情境有适当的理解和回应，表现出一定的创意性。建议在情境适应性方面可以更加细致。",
         }
 
-        return (
-            f"```json\n{json.dumps(mock_response, ensure_ascii=False, indent=2)}\n```"
-        )
+        return f"```json\n{json.dumps(mock_response, ensure_ascii=False, indent=2)}\n```"
 
     def _parse_scoring_response(self, response: str) -> Dict[str, Any]:
         """解析评分响应"""
 
         try:
             # 提取JSON部分
-            json_match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
+            json_match = re.search(
+                r"```json\s*(.*?)\s*```", response, re.DOTALL
+            )
             if json_match:
                 json_str = json_match.group(1)
             else:
@@ -238,7 +249,7 @@ class ScoringService:
                     "detailed_scores": {},
                     "reason": "Scoring parse failed; using extracted numeric score",
                 }
-            except:
+            except (OverflowError, TypeError, ValueError):
                 pass
 
         # 完全失败时的默认分数
@@ -539,7 +550,9 @@ class ScoringService:
             )
 
         if "分" not in criteria and "评" not in criteria:
-            issues.append("Scoring criteria should explicitly mention scoring terms")
+            issues.append(
+                "Scoring criteria should explicitly mention scoring terms"
+            )
 
         if not re.search(r"\d+.*分", criteria):
             suggestions.append(
@@ -547,7 +560,9 @@ class ScoringService:
             )
 
         if "维度" not in criteria and "方面" not in criteria:
-            suggestions.append("Consider specifying scoring dimensions in the criteria")
+            suggestions.append(
+                "Consider specifying scoring dimensions in the criteria"
+            )
 
         return {
             "is_valid": len(issues) == 0,

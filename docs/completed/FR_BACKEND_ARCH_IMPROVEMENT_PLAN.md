@@ -65,10 +65,10 @@
 
 - 状态：DONE
 - 已交付：`backend/docs/ARCH_LAYER_BOUNDARY_RULES.md`
-- 已交付：`scripts/check_layer_dependencies.py`
+- 已交付：`tools/scripts/check_layer_dependencies.py`
 - 已接入：`.github/workflows/ci_backend.yaml` 新增 `Check architecture layer boundaries`
 - 验证：
-  - `.venv/bin/python scripts/check_layer_dependencies.py`（通过）
+  - `.venv/bin/python tools/scripts/check_layer_dependencies.py`（通过）
   - 人工注入违规样例后再次运行脚本（失败并输出违规）
 
 交付物：
@@ -269,7 +269,7 @@
 
 | Workstream | Owner | Status | Key Deliverable | Test Evidence |
 | --- | --- | --- | --- | --- |
-| Layer boundaries and CI rules | Cursor Agent | DONE | `backend/docs/ARCH_LAYER_BOUNDARY_RULES.md` + `scripts/check_layer_dependencies.py` + CI gate | `.venv/bin/python scripts/check_layer_dependencies.py` + injected violation check |
+| Layer boundaries and CI rules | Cursor Agent | DONE | `backend/docs/ARCH_LAYER_BOUNDARY_RULES.md` + `tools/scripts/check_layer_dependencies.py` + CI gate | `.venv/bin/python tools/scripts/check_layer_dependencies.py` + injected violation check |
 | DI unification | Cursor Agent | DONE (batch 1) | `app/api/deps.py` + `app/api/v1/endpoints/chat.py` + `app/api/v1/endpoints/chats.py` Depends 注入落地 | targeted `test_chat.py` + `test_chats.py` regression |
 | Error model unification | Cursor Agent | DONE (batch 1) | `APIErrorResponse` + global exception handlers + `HTTP_STATUS_ERROR_CODE_MAP` + error response contract doc | `test_error_handler_contract.py` + targeted chats regression |
 | Observability baseline | Cursor Agent | DONE (batch 1) | `app/middleware/observability.py` + `backend/inty/main.py` `/metrics` + request-id propagation | `test_observability.py` + curl `x-request-id` + `/metrics` |

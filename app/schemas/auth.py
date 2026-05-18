@@ -99,7 +99,12 @@ class UserCreate(BaseModel):
 
 
 class GoogleAuthRequest(BaseModel):
-    """Google认证请求"""
+    """
+    同一端点上的两种互斥登录方式（不要混在同一请求里）：
+
+    - Google 登录：仅 `id_token`（可选 `user_info` / `request_id`）
+    - 邮箱密码登录：仅 `email` + `password`（可选 `user_info` / `request_id`）
+    """
 
     id_token: Optional[str] = None
     email: Optional[str] = None
@@ -109,10 +114,22 @@ class GoogleAuthRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_credentials(self):
-        """验证：必须提供 id_token 或 email+password，且 email 和 password 必须同时提供"""
+        """
+        验证：必须提供 (仅 id_token) 或 (email+password) 二选一，且
+        `id_token` 不得与 `email` / `password` 同现。
+        """
         id_token = self.id_token
         email = self.email
         password = self.password
+
+        # Google OAuth 与 email+password 不能混用
+        if id_token and (email or password):
+            raise PydanticCustomError(
+                "incompatible_auth",
+                "id_token (Google) cannot be combined with email or password. "
+                "Use only id_token, or only email and password together.",
+                {},
+            )
 
         # 如果提供了 email，必须同时提供 password
         if email and not password:

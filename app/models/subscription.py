@@ -15,7 +15,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.models import Base
+from app.models.base import Base
 
 
 class SubscriptionPlanType(str, enum.Enum):
@@ -52,7 +52,7 @@ class TransactionType(str, enum.Enum):
 # DEPRECATED: 这个表的数据来自 Google Play，以及对应的文案信息，不会在数据库中存储
 class SubscriptionPlan(Base):
     """
-    直接用 scripts/init_subscription_plans_simple.py 内的静态数据即可。
+    直接用 tools/scripts/init_subscription_plans_simple.py 内的静态数据即可。
     """
 
     __tablename__ = "subscription_plans"
@@ -60,14 +60,19 @@ class SubscriptionPlan(Base):
     id = Column(String, primary_key=True, index=True, comment="计划ID")
     name = Column(String, nullable=False, comment="计划名称")
     description = Column(Text, comment="计划描述")
-    plan_type = Column(Enum(SubscriptionPlanType), nullable=False, comment="计划类型")
+    plan_type = Column(
+        Enum(SubscriptionPlanType), nullable=False, comment="计划类型"
+    )
     price = Column(Float, nullable=False, comment="价格")
     currency = Column(String, default="USD", comment="货币")
     google_play_product_id = Column(
         String, unique=True, nullable=False, comment="Google Play产品ID"
     )
     discount_rate = Column(
-        Float, default=1.0, nullable=False, comment="价格折扣率，范围0-1，1表示无折扣"
+        Float,
+        default=1.0,
+        nullable=False,
+        comment="价格折扣率，范围0-1，1表示无折扣",
     )
 
     # 权益配置
@@ -75,7 +80,9 @@ class SubscriptionPlan(Base):
     chat_limit_per_day = Column(
         Integer, default=-1, comment="每日聊天次数限制，-1为无限制"
     )
-    agent_creation_limit = Column(Integer, default=6, comment="Agent创建数量限制")
+    agent_creation_limit = Column(
+        Integer, default=6, comment="Agent创建数量限制"
+    )
     background_generation_limit_per_day = Column(
         Integer, default=3, comment="每日背景图生成次数限制，-1为无限制"
     )
@@ -86,7 +93,9 @@ class SubscriptionPlan(Base):
 
     # 时间戳
     created_at = Column(
-        DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
+        DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        comment="创建时间",
     )
     updated_at = Column(
         DateTime(timezone=True), onupdate=sa.text("now()"), comment="更新时间"
@@ -105,7 +114,9 @@ class UserSubscription(Base):
     __tablename__ = "user_subscriptions"
 
     id = Column(String, primary_key=True, index=True, comment="订阅记录ID")
-    user_id = Column(String, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    user_id = Column(
+        String, ForeignKey("users.id"), nullable=False, comment="用户ID"
+    )
     plan_id = Column(
         String,
         ForeignKey("subscription_plans.id"),
@@ -122,7 +133,9 @@ class UserSubscription(Base):
 
     # 订阅状态
     status = Column(
-        Enum(SubscriptionStatus), default=SubscriptionStatus.PENDING, comment="订阅状态"
+        Enum(SubscriptionStatus),
+        default=SubscriptionStatus.PENDING,
+        comment="订阅状态",
     )
 
     # 时间相关
@@ -138,7 +151,9 @@ class UserSubscription(Base):
 
     # 时间戳
     created_at = Column(
-        DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
+        DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        comment="创建时间",
     )
     updated_at = Column(
         DateTime(timezone=True), onupdate=sa.text("now()"), comment="更新时间"
@@ -164,10 +179,14 @@ class SubscriptionTransaction(Base):
         nullable=False,
         comment="订阅记录ID",
     )
-    user_id = Column(String, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    user_id = Column(
+        String, ForeignKey("users.id"), nullable=False, comment="用户ID"
+    )
 
     # 交易信息
-    transaction_type = Column(Enum(TransactionType), nullable=False, comment="交易类型")
+    transaction_type = Column(
+        Enum(TransactionType), nullable=False, comment="交易类型"
+    )
     amount = Column(Float, nullable=False, comment="交易金额")
     currency = Column(String, default="USD", comment="货币")
 
@@ -182,7 +201,9 @@ class SubscriptionTransaction(Base):
     # 时间戳
     transaction_time = Column(DateTime(timezone=True), comment="交易时间")
     created_at = Column(
-        DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
+        DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        comment="创建时间",
     )
     updated_at = Column(
         DateTime(timezone=True), onupdate=sa.text("now()"), comment="更新时间"
@@ -192,7 +213,9 @@ class SubscriptionTransaction(Base):
     extra_data = Column(JSON, default=dict, comment="额外元数据")
 
     # 关系
-    subscription = relationship("UserSubscription", back_populates="transactions")
+    subscription = relationship(
+        "UserSubscription", back_populates="transactions"
+    )
     user = relationship("User", back_populates="subscription_transactions")
 
 
@@ -210,7 +233,9 @@ class SubscriptionUsage(Base):
     __tablename__ = "subscription_usage"
 
     id = Column(String, primary_key=True, index=True, comment="使用记录ID")
-    user_id = Column(String, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    user_id = Column(
+        String, ForeignKey("users.id"), nullable=False, comment="用户ID"
+    )
     subscription_id = Column(
         String, ForeignKey("user_subscriptions.id"), comment="订阅记录ID"
     )
@@ -219,7 +244,9 @@ class SubscriptionUsage(Base):
     usage_type = Column(
         String, nullable=False, comment="使用类型（如chat、agent_creation等）"
     )
-    usage_date = Column(DateTime(timezone=True), nullable=False, comment="使用日期")
+    usage_date = Column(
+        DateTime(timezone=True), nullable=False, comment="使用日期"
+    )
     usage_count = Column(Integer, default=1, comment="使用次数")
 
     # 额外信息
@@ -227,7 +254,9 @@ class SubscriptionUsage(Base):
 
     # 时间戳
     created_at = Column(
-        DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
+        DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        comment="创建时间",
     )
 
     # 关系

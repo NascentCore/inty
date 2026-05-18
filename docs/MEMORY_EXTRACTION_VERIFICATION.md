@@ -6,8 +6,8 @@
 
 | 脚本 | 作用 |
 |------|------|
-| [scripts/dump_user_messages_for_memory.py](scripts/dump_user_messages_for_memory.py) | 导出指定用户在指定时间点之前的全部对话，以及记忆抽取使用的完整 prompt |
-| [scripts/run_extract_memory_from_dump.py](scripts/run_extract_memory_from_dump.py) | 从导出的 prompt/JSON 按当前代码逻辑调用 LLM 抽取，输出 full_analysis 与 Part1 |
+| [tools/scripts/dump_user_messages_for_memory.py](../tools/scripts/dump_user_messages_for_memory.py) | 导出指定用户在指定时间点之前的全部对话，以及记忆抽取使用的完整 prompt |
+| [tools/scripts/run_extract_memory_from_dump.py](../tools/scripts/run_extract_memory_from_dump.py) | 从导出的 prompt/JSON 按当前代码逻辑调用 LLM 抽取，输出 full_analysis 与 Part1 |
 
 与线上抽取逻辑的关系：
 
@@ -22,7 +22,7 @@
 export PYTHONPATH=.
 
 # 必填：用户 ID；可选：配置文件、提取时间点、输出目录
-python scripts/dump_user_messages_for_memory.py \
+python tools/scripts/dump_user_messages_for_memory.py \
   --user-id <USER_ID> \
   --config config.yaml \
   --before "2026-03-02T03:05:36" \
@@ -47,15 +47,15 @@ python scripts/dump_user_messages_for_memory.py \
 export PYTHONPATH=.
 
 # 方式 A：使用导出的完整 prompt 文件
-python scripts/run_extract_memory_from_dump.py \
+python tools/scripts/run_extract_memory_from_dump.py \
   --prompt-file output/user_messages_<short>_prompt.txt
 
 # 方式 B：使用导出的 JSON（脚本会从 formatted_chat_text 拼接 full_prompt）
-python scripts/run_extract_memory_from_dump.py \
+python tools/scripts/run_extract_memory_from_dump.py \
   --json-file output/user_messages_<short>.json
 
 # 将 Part1 摘要写入文件
-python scripts/run_extract_memory_from_dump.py \
+python tools/scripts/run_extract_memory_from_dump.py \
   --prompt-file output/user_messages_<short>_prompt.txt \
   --output output/part1.txt
 ```
@@ -72,19 +72,19 @@ python scripts/run_extract_memory_from_dump.py \
 2. **导出该时间点之前的对话**  
    使用 `--before` 设为该次抽取时间稍后（如 `extracted_at + 1s`），保证与当时线上读取的消息集合一致。
    ```bash
-   python scripts/dump_user_messages_for_memory.py --user-id <USER_ID> --before "2026-03-02T03:05:36" --output-dir output
+   python tools/scripts/dump_user_messages_for_memory.py --user-id <USER_ID> --before "2026-03-02T03:05:36" --output-dir output
    ```
 
 3. **用当前默认模型跑一次**  
    ```bash
-   python scripts/run_extract_memory_from_dump.py --prompt-file output/user_messages_<short>_prompt.txt
+   python tools/scripts/run_extract_memory_from_dump.py --prompt-file output/user_messages_<short>_prompt.txt
    ```  
    查看终端输出的 full_analysis 与 Part1：若 full_analysis 为 JSON 且含 `part1_summary` 则走结构化解析；否则若出现大量「**AI**: / **User**:」对话复述，Part1 会退化为前 2000 字（即异常记忆来源）。
 
 4. **换模型验证（可选）**  
    在 `config.yaml` 的 `memory_extraction` 下设置 `model: x-ai/grok-4`（或其它 OpenRouter 模型 id），保存后重新执行：
    ```bash
-   python scripts/run_extract_memory_from_dump.py --prompt-file output/user_messages_<short>_prompt.txt --output output/part1_grok4.txt
+   python tools/scripts/run_extract_memory_from_dump.py --prompt-file output/user_messages_<short>_prompt.txt --output output/part1_grok4.txt
    ```  
    对比 Part1 是否为「**About this user, you should know:**」等结构化摘要。若新模型输出符合预期，可考虑将线上默认模型改为该模型（改 `memory_extraction.model` 或 [DEFAULT_MEMORY_EXTRACTION_MODEL](app/utils/openrouter_memory.py)）。
 
@@ -108,7 +108,7 @@ python scripts/run_extract_memory_from_dump.py \
 - 抽取与解析逻辑：[app/services/memory_extraction_service.py](app/services/memory_extraction_service.py)
 - 抽取用 LLM 调用：[app/utils/openai_client.py](app/utils/openai_client.py)（`chat_completion_for_extraction`）
 - 默认模型常量：[app/utils/openrouter_memory.py](app/utils/openrouter_memory.py)
-- 手动对单用户执行抽取（写 DB）：[scripts/run_memory_extraction.py](scripts/run_memory_extraction.py)（`--user-id`，可选 `--dry-run`）
+- 手动对单用户执行抽取（写 DB）：[tools/scripts/run_memory_extraction.py](../tools/scripts/run_memory_extraction.py)（`--user-id`，可选 `--dry-run`）
 
 ## 7. 记忆抽取工作流模式（新增）
 

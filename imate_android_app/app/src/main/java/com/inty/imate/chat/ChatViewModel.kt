@@ -124,6 +124,16 @@ constructor(
         }
     }
 
+    fun sendImplicitUserSignedOnIfNeeded(agentId: String) {
+        viewModelScope.launch {
+            try {
+                chatMessageRepository.sendImplicitUserSignedOnIfNeeded(agentId)
+            } catch (e: Exception) {
+                LogUtils.d("sendImplicitUserSignedOnIfNeeded failed: ${e.message}")
+            }
+        }
+    }
+
     fun sendMessage() {
         val agentId = agent.value?.id?.takeIf { it.isNotBlank() } ?: return
         val raw = inputText.value
