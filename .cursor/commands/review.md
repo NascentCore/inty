@@ -1,37 +1,28 @@
 # Review change in the current conversation
 
-## Overview
+Review the pending changes in the current conversation.
 
-As a fellow team member, review and revise the pending changes in the current conversation, and commit in the end.
 
 ## Instructions
 
-- Respond with 1 sentence summary, do not list what you did.
+- Be extremely critical.
+- Ensure code correctness.
+- Focus on code quality.
+- List all found issues in bullet points.
+- Be extremely terse in wording.
 
 ## Steps
 
-1. **Review**
-   - Understand what the code does and its constraints (AGENTS.md, tests, existing patterns).
-   - Critique architecture soundness.
-   - Check for bugs.
-   - NO defensive programming.
+- Understand what the code does.
+- Critique architecture soundness.
+- Check for bugs.
+- NO defensive programming.
+- No repeated code.
+- Identify areas to simplify.
+- Tests are added for non-trivial changes.
+- Identify [code smells](/.agents/guidelines/CODE_SMELLS.md).
 
-2. **Enhance**
-   - Propose architecture improvement to improve structural clarity
-   - Simplify code
+## Output
 
-3. **Double check**
-   - After edits: re-read the diff, run relevant tests, and fix any new broken tests.
-
-4. **Commit (mandatory closure)**
-   - Skip only when the user said not to commit, or there is nothing to commit.
-   - Invoke `/commit` to commit changes
-
-## Checklist
-
-- [ ] Intention is understood
-- [ ] Confirm that changes match user intention, revise changes if needed
-- [ ] Confirm that implementation architecture is sound, revise changes if needed
-- [ ] Tests are added if needed
-- [ ] Changes passed tests, fix test failures if needed
-- [ ] **Changes committed and pushed to remote**
+- 1 sentence summary of what the changes do
+- Comments in bullet points format
