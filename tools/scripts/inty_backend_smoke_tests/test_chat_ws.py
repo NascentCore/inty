@@ -213,6 +213,33 @@ def _create_smoke_agent(
     return str(data["id"])
 
 
+async def _ping_ws(
+    *,
+    http_base: str,
+    bearer_token: str,
+    connect_timeout: float,
+    recv_timeout: float,
+) -> None:
+    _ensure_sys_path()
+    from tools.inty_v2_repl.backend_chat_ws import http_base_to_ws_chat_url
+
+    url = http_base_to_ws_chat_url(http_base, ws_conn_id=str(uuid.uuid4()))
+    headers = [("Authorization", f"Bearer {bearer_token.strip()}")]
+
+    async with websockets.connect(
+        url,
+        additional_headers=headers,
+        open_timeout=connect_timeout,
+        ping_interval=None,
+        proxy=None,
+    ) as ws:
+        await ws.send(json.dumps({"type": "ping"}))
+        raw = await asyncio.wait_for(ws.recv(), timeout=recv_timeout)
+        body = json.loads(raw)
+        if body.get("type") != "pong":
+            raise RuntimeError(f"expected pong, got: {body!r}")
+
+
 async def _turn_ws_chat_round(
     *,
     http_base: str,
@@ -334,6 +361,8 @@ async def _run(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
 
+    ping_only = bool(args.ping_only) or (_bool_opt(cfg, "ping_only") is True)
+
     user_message = (args.message or "").strip() or _str_opt(cfg, "user_message")
     if not user_message:
         user_message = "你好，简单回复即可。"
@@ -361,6 +390,44 @@ async def _run(args: argparse.Namespace) -> int:
     recv_timeout = rto if rto is not None else _default_recv_timeout()
     hto = _float_opt(cfg, "create_agent_http_timeout_sec")
     http_post_timeout = hto if hto is not None else max(60.0, connect_timeout)
+
+    if ping_only:
+        t0 = time.perf_counter()
+        try:
+            await _ping_ws(
+                http_base=api_base,
+                bearer_token=token,
+                connect_timeout=connect_timeout,
+                recv_timeout=min(recv_timeout, 30.0),
+            )
+        except ConnectionClosed as e:
+            if e.code == 4001:
+                print(
+                    "WebSocket closed: 4001 Unauthorized (check INTY_BEARER_TOKEN).",
+                    file=sys.stderr,
+                )
+                _emit_verify_result(
+                    ok=False, exit_code=1, detail="WebSocket 4001 Unauthorized"
+                )
+            else:
+                print(
+                    f"WebSocket closed: code={e.code} reason={e.reason!r}",
+                    file=sys.stderr,
+                )
+                _emit_verify_result(
+                    ok=False,
+                    exit_code=1,
+                    detail=f"WebSocket closed code={e.code}",
+                )
+            return 1
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            _emit_verify_result(ok=False, exit_code=1, detail=str(e))
+            return 1
+        elapsed = time.perf_counter() - t0
+        print(f"OK ping/pong ({elapsed:.2f}s)")
+        _emit_verify_result(ok=True, exit_code=0, elapsed_s=elapsed)
+        return 0
 
     agent_id: str
     if create_agent:
@@ -466,6 +533,11 @@ def main() -> None:
         "--create-agent",
         action="store_true",
         help="POST /api/v1/ai/agents to create a PRIVATE agent, then run this smoke test with returned id",
+    )
+    p.add_argument(
+        "--ping-only",
+        action="store_true",
+        help="Connect to /api/v1/chat/ws, send ping, expect pong (no agent or LLM turn)",
     )
     p.add_argument("--message", "-m", help="User message for one turn")
     args = p.parse_args()

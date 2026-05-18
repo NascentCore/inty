@@ -106,7 +106,7 @@ docker run -d \
   inty-ops:latest
 ```
 
-部署流程见 `.github/workflows/build_and_deploy_ops.yml`；dev/prod 同 VM，分别使用 host 端口 8001、8011，nginx 将 ops.inty.cc 反代到 8011、dev.ops.inty.cc 反代到 8001。
+部署流程见 `.github/workflows/build_and_deploy_ops.yml`；dev/prod 同 VM，分别使用 host 端口 8001、8101，nginx 将 ops.inty.cc 反代到 8101、dev.ops.inty.cc 反代到 8001。
 
 ## 构建上下文
 
