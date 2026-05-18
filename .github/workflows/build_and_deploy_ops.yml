@@ -174,18 +174,39 @@ jobs:
           curl --verbose --fail --retry 5 --retry-delay 5 "${base}/health"
 
       - name: Sanity check (WebSocket ping)
+        uses: appleboy/ssh-action@v1.2.5
+        timeout-minutes: 5
         env:
-          OPS_URL: ${{ vars.OPS_SERVICE_PUBLIC_URL }}
-          INTY_BEARER_TOKEN: ${{ secrets.OPS_DEPLOY_SMOKE_BEARER_TOKEN }}
-        run: |
-          base="$(printf '%s' "$OPS_URL" | tr -d '\r\n' | sed 's#/*$##')"
-          if [ -z "${INTY_BEARER_TOKEN}" ]; then
-            echo "::error::Set secret OPS_DEPLOY_SMOKE_BEARER_TOKEN on GitHub Environment '${{ steps.prep.outputs.environment }}' (long-lived JWT for /api/v1/chat/ws ping/pong deploy gate)."
-            exit 1
-          fi
-          python3 -m pip install -q -r tools/scripts/inty_backend_smoke_tests/requirements.txt
-          export INTY_API_BASE_URL="$base"
-          python3 tools/scripts/inty_backend_smoke_tests/test_chat_ws.py --ping-only
+          OPS_PUBLIC_URL: ${{ vars.OPS_SERVICE_PUBLIC_URL }}
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          envs: OPS_PUBLIC_URL
+          script: |
+            set -euo pipefail
+            CONTAINER=inty-ops-${{ steps.prep.outputs.environment }}
+            TOKEN_PATH=/tmp/inty_ops_deploy_smoke_bearer.txt
+            OPS_BASE="$(printf '%s' "$OPS_PUBLIC_URL" | tr -d '\r\n' | sed 's#/*$##')"
+            echo "Seeding deploy-smoke admin (tools/scripts/init_admin_user.py) ..."
+            sudo docker exec "$CONTAINER" python tools/scripts/init_admin_user.py \
+              --user-id user-testing \
+              --is-superuser=true \
+              --token-file "$TOKEN_PATH" >/dev/null
+            TOKEN="$(sudo docker exec "$CONTAINER" cat "$TOKEN_PATH")"
+            echo "WebSocket ping on container localhost:8001 ..."
+            sudo docker exec \
+              -e INTY_API_BASE_URL=http://127.0.0.1:8001 \
+              -e "INTY_BEARER_TOKEN=${TOKEN}" \
+              "$CONTAINER" \
+              python tools/scripts/inty_backend_smoke_tests/test_chat_ws.py --ping-only
+            echo "WebSocket ping on public URL ${OPS_BASE} (nginx + TLS) ..."
+            sudo docker exec \
+              -e "INTY_API_BASE_URL=${OPS_BASE}" \
+              -e "INTY_BEARER_TOKEN=${TOKEN}" \
+              "$CONTAINER" \
+              python tools/scripts/inty_backend_smoke_tests/test_chat_ws.py --ping-only
+            sudo docker exec "$CONTAINER" rm -f "$TOKEN_PATH"
 
       - name: Write summary
         run: |
