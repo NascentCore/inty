@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -23,6 +24,12 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import start_tool_background_job
 from app.core.companion_harness.companion.turn import run_turn
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
+
+
+def _idle_tool_bg() -> threading.Event:
+    ev = threading.Event()
+    ev.set()
+    return ev
 
 
 @patch(
@@ -405,6 +412,7 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
         llm_client=client,  # type: ignore[arg-type]
         defer_memory_update=True,
         memory_config=None,
+        tool_bg_idle_event=_idle_tool_bg(),
     )
 
     assert len(bg_jobs) == 1

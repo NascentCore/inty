@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -29,6 +30,12 @@ def _store(p: Path):
         scope=CompanionScope("adllm", "a", str(p.resolve())),
         repository=None,
     )
+
+
+def _idle_tool_bg() -> threading.Event:
+    ev = threading.Event()
+    ev.set()
+    return ev
 
 
 def _assert_no_adjacent_user_roles(messages: list[dict[str, Any]]) -> None:
@@ -110,6 +117,7 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
         llm_client=client,  # type: ignore[arg-type]
         defer_memory_update=True,
         memory_config=None,
+        tool_bg_idle_event=_idle_tool_bg(),
     )
 
     assert out.tool_background_started is True
@@ -284,6 +292,7 @@ async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_injec
         llm_client=client,  # type: ignore[arg-type]
         defer_memory_update=True,
         memory_config=None,
+        tool_bg_idle_event=_idle_tool_bg(),
     )
 
     assert len(bg_jobs) == 1
