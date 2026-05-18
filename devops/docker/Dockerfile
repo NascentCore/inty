@@ -47,6 +47,9 @@ fi
 # 复制应用代码
 COPY app/ app/
 COPY backend/ backend/
+# companion_harness 在 PYTHONPATH 根目录 import living_sphere / techno_core
+COPY living_sphere/ living_sphere/
+COPY techno_core/ techno_core/
 # Used for manipulate backend system with bundled configurations.
 COPY tools/scripts/ tools/scripts/
 # 方便操作后端数据库
