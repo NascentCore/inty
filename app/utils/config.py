@@ -194,14 +194,14 @@ class FeaturesConfig:
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
     companion_ws_session_system_text: Optional[str] = None
     # When True, ``/api/v1/chat/ws`` unified inner-tick worker may emit proactive companion turns
-    # (``InnerTickActivity.PROACTIVE_CHAT``) when ``next_heartbeat_wait_seconds`` says ready.
-    companion_ws_proactive_heartbeat_enabled: bool = True
+    # (``InnerTickActivity.PROACTIVE_CHAT``) when ``next_proactive_chat_wait_seconds`` says ready.
+    companion_ws_proactive_chat_enabled: bool = True
     # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
-    companion_ws_proactive_heartbeat_poll_seconds: float = 60.0
+    companion_ws_proactive_chat_poll_seconds: float = 60.0
     # When True, the same worker may emit maintenance inner-tick turns (``InnerTickActivity.MAINTENANCE``).
     companion_ws_maintenance_inner_tick_enabled: bool = True
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
-    companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
+    companion_ws_maintenance_inner_tick_min_gap_seconds: float = 360.0
     # Seconds to wait on ``CompanionSession.tool_bg_idle`` before LivingSphere jsonl compact
     # (memory worker after user turns with defer_memory_update).
     companion_tool_bg_idle_wait_timeout_sec: float = 120.0

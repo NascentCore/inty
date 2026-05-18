@@ -4,6 +4,7 @@ Known ``kind`` values include ``llm_inference_failure`` (every failed companion
 ``chat.completions`` via ``llm.chat_completions.create_chat_completion_sync`` plus structured-chat
 foreground timeouts when correlation ContextVar is bound), ``tool_background_failure`` (async tool
 loop thread in ``tool_background`` when the error is not already logged as an LLM inference failure),
+``user_signed_out`` and ``ws_conn_dropped`` (WebSocket control-frame audit from ``chat.py``),
 and ad-hoc operator/test entries such as ``tool_timeout``.
 
 Events are stored as JSON lines at workspace-relative path ``.companion_runtime_events.jsonl``
@@ -24,7 +25,54 @@ from loguru import logger
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
+from .utc import utc_iso_ts
+
 RUNTIME_EVENTS_REL_PATH = ".companion_runtime_events.jsonl"
+
+USER_SIGNED_OUT_RUNTIME_EVENT_KIND = "user_signed_out"
+WS_CONN_DROPPED_RUNTIME_EVENT_KIND = "ws_conn_dropped"
+
+
+def build_user_signed_out_runtime_event_record(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    received_message_uuid: str,
+) -> dict[str, Any]:
+    """JSONL record for ``user_signed_out`` (fields match former ``CHAT_LOGS.md`` line)."""
+    return {
+        "ts": utc_iso_ts(),
+        "kind": USER_SIGNED_OUT_RUNTIME_EVENT_KIND,
+        "user_id": user_id,
+        "agent_id": agent_id,
+        "chat_id": str(chat_id),
+        "received_message_uuid": received_message_uuid,
+    }
+
+
+def build_ws_conn_dropped_runtime_event_record(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    client_dropped_at_utc: str,
+    ws_close_code: str | int,
+    ws_close_reason: str,
+    received_message_uuid: str,
+) -> dict[str, Any]:
+    """JSONL record for ``ws_conn_dropped`` (fields match former ``CHAT_LOGS.md`` line)."""
+    return {
+        "ts": utc_iso_ts(),
+        "kind": WS_CONN_DROPPED_RUNTIME_EVENT_KIND,
+        "user_id": user_id,
+        "agent_id": agent_id,
+        "chat_id": str(chat_id),
+        "client_dropped_at_utc": client_dropped_at_utc,
+        "ws_close_code": ws_close_code,
+        "ws_close_reason": ws_close_reason,
+        "received_message_uuid": received_message_uuid,
+    }
 
 
 def append_runtime_event(store: MemoryStore, record: dict[str, Any]) -> None:

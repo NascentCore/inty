@@ -5,7 +5,11 @@ from __future__ import annotations
 from app.core.companion_harness.companion.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
-from app.core.companion_harness.companion.models import ContextMeta, InnerTickActivity, PromptBundle
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    ContextMeta,
+    PromptBundle,
+)
 from app.core.companion_harness.companion.turn_pipeline import resolve_turn_runtime_flags
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
@@ -32,27 +36,24 @@ def test_resolve_turn_runtime_flags_turn_type() -> None:
     sign_on = ImplicitSignalBundle(user_signed_on=True)
     assert (
         resolve_turn_runtime_flags(
+            track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
             user_text="",
-            inner_tick_turn=False,
-            inner_tick_activity=InnerTickActivity.MAINTENANCE,
             implicit_signal_bundle=sign_on,
         ).turn_type
         == "greeting"
     )
     assert (
         resolve_turn_runtime_flags(
+            track=CompanionTurnTrack.INNER_TICK_MAINTENANCE,
             user_text="",
-            inner_tick_turn=True,
-            inner_tick_activity=InnerTickActivity.MAINTENANCE,
             implicit_signal_bundle=sign_on,
         ).turn_type
         == "inner_tick"
     )
     assert (
         resolve_turn_runtime_flags(
+            track=CompanionTurnTrack.USER_CHAT,
             user_text="hi",
-            inner_tick_turn=False,
-            inner_tick_activity=InnerTickActivity.MAINTENANCE,
             implicit_signal_bundle=None,
         ).turn_type
         == "chat"

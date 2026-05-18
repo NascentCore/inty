@@ -196,10 +196,10 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
 
 
 @pytest.mark.asyncio
-async def test_proactive_inner_tick_heartbeat_sync_still_calls_llm(
+async def test_proactive_inner_tick_proactive_chat_sync_still_calls_llm(
     tmp_path: Path,
 ) -> None:
-    """PROACTIVE inner tick is HEARTBEAT_SYNC (no async dual branch); no foreground skip."""
+    """PROACTIVE inner tick is PROACTIVE_CHAT_SYNC (no async dual branch); no foreground skip."""
     store = _store(tmp_path)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")

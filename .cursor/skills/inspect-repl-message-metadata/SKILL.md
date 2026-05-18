@@ -13,7 +13,7 @@ description: >-
 # Inspect REPL message metadata
 
 - **何时用**
-  - 用户贴了助手 **metadata section** 行（`[墙钟] <label> <ms>ms …`），或问：来源、`inner-tick` 是否陪伴心跳、`proactive_chat` vs `maintenance`
+  - 用户贴了助手 **metadata section** 行（`[墙钟] <label> <ms>ms …`），或问：来源、`inner-tick` 是否 proactive chat、`proactive_chat` vs `maintenance`
   - **不要**用本技能单独解释「用户发了消息却没有 `chat` 行」——见 [`inty-backend-inspect`](../inty-backend-inspect/SKILL.md) 专项 **卡住的 tool_background**
 
 - **Metadata section 长什么样**
@@ -31,7 +31,7 @@ description: >-
     - 用户已有 `user-input` 却长时间只有 `[SILENT]` inner-tick、仍无 **`chat`** 行 → 用 [`inty-backend-inspect`](../inty-backend-inspect/SKILL.md) 查 **`tool_bg_idle` / `turn_lock` 排队**
 
 - **从 label 直接判定 inner-tick 模式（首选）**
-  - `inner-tick proactive-chat` → `InnerTickActivity.PROACTIVE_CHAT`（陪伴心跳）
+  - `inner-tick proactive-chat` → `InnerTickActivity.PROACTIVE_CHAT`（陪伴主动聊天）
   - `inner-tick maintenance` → `InnerTickActivity.MAINTENANCE`（运维内 tick）
   - **裸** `inner-tick`（无尾随活动名）→ 旧服务端，未带 `inner_tick_activity`；此时按下条用 LangSmith 定案
   - **枚举真源**

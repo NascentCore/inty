@@ -900,11 +900,16 @@ def _setup_companion_ws_chat_test_env(
     async def fake_try_trigger_surprise_snap(db, session_id, user_id, aid):
         return None
 
-    monkeypatch.setattr(
-        companion_chat_service,
+    for attr in (
+        "run_companion_user_chat_turn_for_api",
+        "run_companion_implicit_sign_on_greeting_turn_for_api",
         "run_companion_chat_turn_for_api",
-        run_companion_chat_turn_for_api,
-    )
+    ):
+        monkeypatch.setattr(
+            companion_chat_service,
+            attr,
+            run_companion_chat_turn_for_api,
+        )
     monkeypatch.setattr(
         chat_service,
         "get_or_create_chat_by_agent",
@@ -1247,11 +1252,16 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     async def fake_try_trigger_surprise_snap(db, session_id, user_id, agent_id):
         return None
 
-    monkeypatch.setattr(
-        companion_chat_service,
+    for attr in (
+        "run_companion_user_chat_turn_for_api",
+        "run_companion_implicit_sign_on_greeting_turn_for_api",
         "run_companion_chat_turn_for_api",
-        fake_run_companion_chat_turn_for_api,
-    )
+    ):
+        monkeypatch.setattr(
+            companion_chat_service,
+            attr,
+            fake_run_companion_chat_turn_for_api,
+        )
     monkeypatch.setattr(
         chat_service,
         "get_or_create_chat_by_agent",
@@ -1683,14 +1693,14 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
         run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
     )
 
-    # ``poll = max(floor, features.companion_ws_proactive_heartbeat_poll_seconds)``:
+    # ``poll = max(floor, features.companion_ws_proactive_chat_poll_seconds)``:
     # lowering only the floor is not enough when YAML sets a large poll interval.
     monkeypatch.setattr(
         chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05
     )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_proactive_heartbeat_poll_seconds",
+        "companion_ws_proactive_chat_poll_seconds",
         0.05,
     )
     monkeypatch.setattr(
@@ -1700,7 +1710,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     )
     monkeypatch.setattr(
         chat_v1,
-        "_try_fire_companion_ws_proactive_heartbeat",
+        "_try_fire_companion_ws_proactive_chat",
         spy_proactive,
     )
     monkeypatch.setattr(
@@ -1733,7 +1743,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
+def test_chat_websocket_companion_inner_tick_scheduled_when_proactive_chat_disabled(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     """Scheduled reminder path runs even when proactive and maintenance inner-tick are off."""
@@ -1765,12 +1775,12 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
     )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_proactive_heartbeat_poll_seconds",
+        "companion_ws_proactive_chat_poll_seconds",
         0.05,
     )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_proactive_heartbeat_enabled",
+        "companion_ws_proactive_chat_enabled",
         False,
     )
     monkeypatch.setattr(
@@ -1785,7 +1795,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
     )
     monkeypatch.setattr(
         chat_v1,
-        "_try_fire_companion_ws_proactive_heartbeat",
+        "_try_fire_companion_ws_proactive_chat",
         spy_proactive,
     )
     monkeypatch.setattr(
@@ -2085,7 +2095,7 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
         subscription_svc,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
-        companion_ws_heartbeat_ctx=None,
+        companion_ws_inner_tick_ctx=None,
         implicit_greeting_turn=False,
     ):
         return APIResponse.success(
@@ -2214,7 +2224,7 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
         subscription_svc,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
-        companion_ws_heartbeat_ctx=None,
+        companion_ws_inner_tick_ctx=None,
         implicit_greeting_turn=False,
     ):
         captured["effective_user_id"] = current_user.id
@@ -2268,7 +2278,7 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
         subscription_svc,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
-        companion_ws_heartbeat_ctx=None,
+        companion_ws_inner_tick_ctx=None,
         implicit_greeting_turn=False,
     ):
         captured["user_time_context"] = request.user_time_context
@@ -2322,7 +2332,7 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
     assert utc.utc_offset_minutes == 480
 
 
-def test_chat_websocket_user_signed_out_appends_chat_logs_line(
+def test_chat_websocket_user_signed_out_appends_ws_runtime_event(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     import time
@@ -2340,7 +2350,7 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
 
     monkeypatch.setattr(
         companion_chat_service,
-        "append_companion_chat_logs_line_for_ws_control",
+        "append_companion_ws_runtime_event",
         fake_append,
     )
     monkeypatch.setattr(
@@ -2377,17 +2387,20 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
     deadline = time.monotonic() + 2.0
     while "kwargs" not in captured and time.monotonic() < deadline:
         time.sleep(0.01)
-    assert "kwargs" in captured, "conclude_companion_scope should run after ack"
+    assert "kwargs" in captured, "append_companion_ws_runtime_event should run after ack"
     kw = captured["kwargs"]
     assert kw["user_id"] == "user-so-1"
     assert kw["agent_id"] == "agent-so-1"
     assert kw["chat_id"] == 42
     assert isinstance(kw["resolved_chat_model"], GenAIModel)
     assert kw["resolved_chat_model"].id_on_provider
-    line = kw["line"]
-    assert isinstance(line, str)
-    assert "**user_signed_out**" in line
-    assert f"`received_message_uuid={msg_uuid}`" in line
+    record = kw["record"]
+    assert isinstance(record, dict)
+    assert record["kind"] == "user_signed_out"
+    assert record["user_id"] == "user-so-1"
+    assert record["agent_id"] == "agent-so-1"
+    assert record["chat_id"] == "42"
+    assert record["received_message_uuid"] == msg_uuid
 
 
 def test_chat_websocket_verify_user_signed_out_not_supported(
@@ -2536,7 +2549,7 @@ def test_chat_websocket_invalid_ws_conn_id_query_logs_fallback(
     assert not any("not-a-valid-uuid" in m for m in session_open_msgs), session_open_msgs
 
 
-def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
+def test_chat_websocket_ws_conn_dropped_appends_ws_runtime_event(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     captured: dict[str, object] = {}
@@ -2552,7 +2565,7 @@ def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
 
     monkeypatch.setattr(
         companion_chat_service,
-        "append_companion_chat_logs_line_for_ws_control",
+        "append_companion_ws_runtime_event",
         fake_append,
     )
     monkeypatch.setattr(
@@ -2596,13 +2609,16 @@ def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
     assert kw["chat_id"] == 42
     assert isinstance(kw["resolved_chat_model"], GenAIModel)
     assert kw["resolved_chat_model"].id_on_provider
-    line = kw["line"]
-    assert isinstance(line, str)
-    assert "**ws_conn_dropped**" in line
-    assert f"`client_dropped_at_utc={dropped_at}`" in line
-    assert "`ws_close_code=1006`" in line
-    assert "`ws_close_reason=connection reset`" in line
-    assert f"`received_message_uuid={msg_uuid}`" in line
+    record = kw["record"]
+    assert isinstance(record, dict)
+    assert record["kind"] == "ws_conn_dropped"
+    assert record["user_id"] == "user-wd-1"
+    assert record["agent_id"] == "agent-wd-1"
+    assert record["chat_id"] == "42"
+    assert record["client_dropped_at_utc"] == dropped_at
+    assert record["ws_close_code"] == 1006
+    assert record["ws_close_reason"] == "connection reset"
+    assert record["received_message_uuid"] == msg_uuid
 
 
 def test_chat_websocket_verify_ws_conn_dropped_not_supported(

@@ -14,8 +14,8 @@ from app.core.companion_harness.companion.llm_client import (
     CompanionLLMConfig,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.heartbeat import (
-    HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
+from app.core.companion_harness.companion.proactive_chat import (
+    PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
 )
 from app.core.companion_harness.companion.models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
@@ -170,7 +170,7 @@ def test_run_turn_inner_tick_maintenance_injects_user_time_system_before_tail_us
     )
 
 
-def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
+def test_run_turn_inner_tick_proactive_chat_semantics(
     tmp_path: Path,
 ) -> None:
     scope = CompanionScope("turn-t", "a", f"it-pro-{tmp_path.name}")
@@ -195,12 +195,12 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     llm_msgs = client.calls[0]["messages"]
     assert llm_msgs[-1]["role"] == "user"
     user_tail = llm_msgs[-1]["content"] or ""
-    assert user_tail.startswith("[SYSTEM HEARTBEAT]")
+    assert user_tail.startswith("[SYSTEM PROACTIVE CHAT]")
     assert "Time since the user's last message:" in user_tail
     assert "Time since the assistant's last message:" in user_tail
     assert out.transcript_user_content == user_tail
     assert llm_msgs[-2]["role"] == "system"
-    assert llm_msgs[-2]["content"] == HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
+    assert llm_msgs[-2]["content"] == PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE
     assert not any(
         m.get("role") == "user"
         and (m.get("content") or "").strip() == INNER_TICK_SYNTHETIC_USER_TEXT.strip()
@@ -213,9 +213,9 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     ]
     assert rows[0]["role"] == "user"
     row0 = rows[0]["content"] or ""
-    assert row0.startswith("[SYSTEM HEARTBEAT]")
+    assert row0.startswith("[SYSTEM PROACTIVE CHAT]")
     assert "Time since the user's last message:" in row0
     assert "Time since the assistant's last message:" in row0
     assert row0 == out.transcript_user_content
     assert rows[0]["inner_tick"] is True
-    assert rows[0]["heartbeat"] is True
+    assert rows[0]["proactive_chat"] is True

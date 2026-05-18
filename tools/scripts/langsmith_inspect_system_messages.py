@@ -33,8 +33,8 @@ def _heuristic_label(content: str) -> str:
         return "security"
     if c.startswith("# Tools") or "TOOLS（工具说明" in c[:80]:
         return "tools_md"
-    if "## 本轮（陪伴心跳）" in c[:120]:
-        return "heartbeat_clause"
+    if "## 本轮（陪伴主动聊天）" in c[:120]:
+        return "proactive_chat_clause"
     if "## 本轮（内在节拍）" in c[:120]:
         return "inner_tick_clause"
     if "## 本轮（REPL 会话恢复）" in c[:120]:

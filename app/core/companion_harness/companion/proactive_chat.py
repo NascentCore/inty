@@ -1,67 +1,66 @@
-"""陪伴侧「安静多久可以主动开口」的调度与文案素材。
+"""Proactive chat scheduling and prompt copy for user-idle companion turns.
 
-- **调度**：依据 transcript 里用户消息间隔估计对话节奏，再结合配置（基准安静时长、两次心跳最短间隔、最少 transcript 行数等）计算 ``next_heartbeat_wait_seconds``；不满足前置条件时等价于「暂不开口」。
-- **文案常量**：为主动心跳回合提供 system 侧约束与 user 占位（满足多轮 chat 形态）；占位正文的主路径在 turn 管线里按时间与 transcript 生成，本模块内的字面常量仅作回退。
-- **与回合执行的关系**：真正触发 LLM 时使用内层 tick、``InnerTickActivity.PROACTIVE_CHAT``；transcript 对用户占位行打 ``heartbeat`` 标记，供 ``min_gap_sec``（锚上一次心跳 user）与占位文案（如 ``build_proactive_heartbeat_transcript_user_marker``）区分合成 user 与真人 user。具体注入顺序见 companion turn 管线实现。
+- **Scheduling**: ``next_proactive_chat_wait_seconds`` estimates rhythm from transcript gaps
+  and config (base idle, min gap between proactive chat rounds, min transcript lines).
+- **Copy**: system/user placeholders for ``InnerTickActivity.PROACTIVE_CHAT`` turns; main user
+  marker path is ``build_proactive_chat_transcript_user_marker`` in the turn pipeline.
+- **Transcript**: proactive rounds mark the synthetic user row with ``proactive_chat: true``
+  so schedulers can anchor ``min_gap_sec`` separately from real user messages.
 """
 
 from __future__ import annotations
 
 import statistics
 from datetime import datetime, timedelta, timezone
+
 from pydantic import BaseModel, Field
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import ChatMessage, load_transcript_from_store
 
-# 主动心跳回合里追加为 **system**：约束模型在用户未发新消息时如何接话（延续场景、禁工具、禁元话语）。
-HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE = (
-    "## Proactive Messaging (Heartbeat)\n"
+PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
+    "## Proactive Messaging\n"
     "- The user has not sent a new message for some time.\n"
     "- Based on the conversation context, your character's personality, and the time elapsed, decide whether to proactively send a message.\n"
     "- If you have something meaningful, respond appropriately.\n"
     "- If there is nothing appropriate to say right now, respond with exactly: [SILENT]\n"
 )
 
-# 主动心跳回退文案：当调用方拿不到 ``CompanionTurnResult.transcript_user_content`` 等内核结果时使用；主路径用 ``build_proactive_heartbeat_transcript_user_marker``。
-PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER = (
-    "[SYSTEM HEARTBEAT] The user has not sent a new message for some time."
+PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER = (
+    "[SYSTEM PROACTIVE CHAT] The user has not sent a new message for some time."
 )
 
 _NEVER = 86400.0 * 365.0
-_RHYTHM_CLAMP_SEC = (90.0, 900.0)
+_RHYTHM_CLAMP_SEC = (360.0, 900.0)
 
 
-class HeartbeatConfig(BaseModel):
-    """陪伴心跳调参：各字段 ``description`` 描述对用户侧体验的含义，不涉及调度实现。"""
+class ProactiveChatConfig(BaseModel):
+    """Tuning for when companion may speak on ``PROACTIVE_CHAT`` inner ticks."""
 
     enabled: bool = Field(
         default=True,
         description=(
-            "总开关。关则 companion 不会通过「心跳」这条路径在用户未发新消息时主动开口。"
+            "Master switch. When false, companion will not proactively chat while the user is idle."
         ),
     )
     base_idle_sec: float = Field(
-        default=30.0,
+        default=360.0,
         description=(
-            "以助手上一轮**非心跳**回复说完为参照的「安静多久再开口」基准，刻画正常对话节拍下 "
-            "companion 接话的松紧（对话还薄时更有感）；**不**针对「上一次是否已是心跳」单独计时。"
+            "Base quiet period after the assistant's last **non-proactive-chat** reply before "
+            "another proactive chat round may fire."
         ),
     )
     min_gap_sec: float = Field(
-        default=60.0,
+        default=360.0,
         description=(
-            "以**上一次心跳式主动开口**为参照的最短间隔，专治用户仍不回时 companion **连着**自言自语；"
-            "与 ``base_idle_sec`` **计时起点不同**（后者锚助手尾句，前者锚上一次心跳），"
-            "二者同时满足里**更晚**的那一刻才放行。"
+            "Minimum interval anchored on the **last proactive-chat synthetic user** row; "
+            "prevents back-to-back proactive chat while the user stays silent."
         ),
     )
-    # TODO(session): min_transcript_lines counts the full transcript; replace with session-scoped gating when modeled.
     min_transcript_lines: int = Field(
         default=0,
         description=(
-            "对话记录至少要有多少行（包含 AI 和用户的消息），才考虑允许心跳开口；越大越倾向「先有几轮真实互动再主动」，"
-            "越小（含 0）越不以此为门槛。"
+            "Minimum transcript lines before proactive chat scheduling is considered."
         ),
     )
 
@@ -121,50 +120,53 @@ def _format_elapsed_since(seconds: float) -> str:
     return f"{h}h {m}m" if m else f"{h}h"
 
 
-def _last_non_heartbeat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
+def _is_proactive_chat_user_row(m: ChatMessage) -> bool:
+    return m.proactive_chat is True
+
+
+def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     for m in reversed(msgs):
-        if m.role == "user" and m.heartbeat is not True:
+        if m.role == "user" and not _is_proactive_chat_user_row(m):
             return _parse_ts(m.ts)
     return None
 
 
-def build_proactive_heartbeat_transcript_user_marker(
+def build_proactive_chat_transcript_user_marker(
     msgs: list[ChatMessage],
     *,
     now: datetime | None = None,
 ) -> str:
-    """英文一行：前缀 + 距上次真人用户消息 + 距上次助手消息（供 proactive 末轮 user 占位与 transcript）。"""
+    """English one-liner for proactive-chat tail user placeholder and transcript."""
     t = now if now is not None else datetime.now(timezone.utc)
-    last_u = _last_non_heartbeat_user_ts(msgs)
+    last_u = _last_real_user_ts(msgs)
     last_a = _last_assistant_ts(msgs)
     if last_u is None:
-        u_seg = "Time since the user's last message: no prior non-heartbeat user message in transcript."
+        u_seg = (
+            "Time since the user's last message: no prior real user message in transcript."
+        )
     else:
         u_seg = f"Time since the user's last message: {_format_elapsed_since((t - last_u).total_seconds())}."
     if last_a is None:
         a_seg = "Time since the assistant's last message: no prior assistant message in transcript."
     else:
         a_seg = f"Time since the assistant's last message: {_format_elapsed_since((t - last_a).total_seconds())}."
-    return f"[SYSTEM HEARTBEAT] {u_seg} {a_seg}"
+    return f"[SYSTEM PROACTIVE CHAT] {u_seg} {a_seg}"
 
 
-def _last_heartbeat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
+def _last_proactive_chat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     for m in reversed(msgs):
-        if m.role == "user" and m.heartbeat is True:
+        if m.role == "user" and _is_proactive_chat_user_row(m):
             return _parse_ts(m.ts)
     return None
 
 
-def next_heartbeat_wait_seconds(
+def next_proactive_chat_wait_seconds(
     store: MemoryStore,
-    config: HeartbeatConfig,
+    config: ProactiveChatConfig,
     *,
     now: datetime | None = None,
 ) -> float:
-    """
-    返回距离「允许触发心跳」的剩余秒数；已可触发时返回 <= 0。
-    不满足前置条件时返回大值。
-    """
+    """Seconds until proactive chat may fire; <= 0 when due; large value when gated off."""
     if not config.enabled:
         return _NEVER
 
@@ -183,10 +185,10 @@ def next_heartbeat_wait_seconds(
     rhythm = _rhythm_idle_seconds(msgs, config.base_idle_sec)
     earliest = last_asst + timedelta(seconds=rhythm)
 
-    last_hb = _last_heartbeat_user_ts(msgs)
-    if last_hb is not None:
-        hb_earliest = last_hb + timedelta(seconds=config.min_gap_sec)
-        if hb_earliest > earliest:
-            earliest = hb_earliest
+    last_pc = _last_proactive_chat_user_ts(msgs)
+    if last_pc is not None:
+        pc_earliest = last_pc + timedelta(seconds=config.min_gap_sec)
+        if pc_earliest > earliest:
+            earliest = pc_earliest
 
     return (earliest - t).total_seconds()

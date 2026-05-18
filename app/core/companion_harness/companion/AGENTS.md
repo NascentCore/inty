@@ -14,6 +14,19 @@
 - **体验状态 `context.json`**：记录当前体验档位、引导是否完成等；**应由工具与会话流程改写**，而不是随手当普通 Markdown 文档写入。
 - **异步工具与双轨回复**：用户轮可能先返回「不含工具的薄回复」，再在后台跑工具并追加结果；维护性 inner tick 可走更短路径；前后台工具策略以 **契约与提示词栈** 为准，细节见 `docs/companion_harness/MEMORY_STORE.md` 与源码。
 
+## 活跃轨道（入口 API）
+
+同一 ``CompanionScope`` / ``MemoryStore`` 上，WebSocket 与调度器通过 **四条显式轨道** 进入内核，不再在边界传 ``inner_tick_turn`` / ``inner_tick_mode`` 组合：
+
+| 轨道 | Service / Manager | 内核 |
+|------|-------------------|------|
+| 用户聊天 | ``run_companion_user_chat_turn_for_api`` | ``CompanionTurnTrack.USER_CHAT`` |
+| 隐式上线问候 | ``run_companion_implicit_sign_on_greeting_turn_for_api`` | ``IMPLICIT_SIGN_ON_GREETING`` |
+| 陪伴主动聊天 | ``run_companion_inner_tick_proactive_chat_turn_for_api`` | ``INNER_TICK_PROACTIVE_CHAT`` |
+| 维护 inner tick | ``run_companion_inner_tick_maintenance_turn_for_api`` | ``INNER_TICK_MAINTENANCE`` |
+
+``turn_lock``（每 WebSocket 连接）与 ``tool_bg_idle``（每 session）串行化各轨道；``tool_background`` 线程是用户轮与维护 tick 上的第三条执行流。TechnoCore 事件轨道尚未实现。
+
 ## 深入阅读
 
 - 表结构、registry 键、路径与 `document_kind` 映射等 **机械细节**：[`/docs/companion_harness/MEMORY_STORE.md`](/docs/companion_harness/MEMORY_STORE.md)。
