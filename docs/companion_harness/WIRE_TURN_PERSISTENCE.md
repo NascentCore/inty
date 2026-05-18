@@ -71,11 +71,11 @@
 
 - **写入**：成功 ack 后 append `user_signed_on` / `user_signed_out` / `ws_conn_dropped`。**不写入**：`ping`、`client_context`、各 `ack`、校验失败的 lifecycle 帧。
 - **`kind`**：`user_signed_on` | `user_signed_out` | `ws_conn_dropped`。
-- **`ts`**：用户本地墙钟；优先 `client_context.local_time`；`ws_conn_dropped` 可无 `local_time` 时用 `dropped_at_utc` + 时区换算。
-- **其它字段**：`timezone`、`user_id`、`chat_id`、`agent_id`、`received_message_uuid`、`ws_conn_id`；drop 另有 `ws_close_code` / `ws_close_reason`。
-- **与 B**：B 在 `tc_box` 内存消费；lifecycle 行是跨连接 **结构化自我事件**，默认不进 LLM。
+- **`ts`**：该 lifecycle 帧必填 `time_context.local_time`（用户本地墙钟）；无 UTC fallback。
+- **其它字段**：`timezone`、`user_id`、`chat_id`、`agent_id`、`received_message_uuid`、`ws_conn_id`；drop 另有 `ws_close_code` / `ws_close_reason`（`dropped_at_utc` 仅排障，不作 `ts` 主路径）。
+- **与 B**：合法上行帧会 `stash` 到 `tc_box` 供后续 inner-tick；lifecycle `ts` 取自 **本事件帧** `time_context`，不依赖先发 `client_context`。
 - **与 D/G**：`user_signed_on` 仍触发问候 → D + G（分叉见 [D 与 G](#d-与-g)）。是否已问候看 transcript **`assistant.reply_to == sign-on message_id`**，不在 lifecycle 行重复。
-- **前置**：客户端宜在 lifecycle 帧前发 `client_context`；无本地 `ts` 时跳过 append，仍 ack。
+- **校验**：缺 `time_context` 或空 `local_time` → `invalid_payload`（lifecycle）或 chat **422**；**不** ack 后静默跳过 append。
 
 ---
 
@@ -98,8 +98,8 @@
 
 | WS 事件（A） | Turn 层（B/C） | 典型 Persistence |
 |--------------|----------------|------------------|
-| `ping` / `pong` / `*_ack` | 无 | 0 |
-| `client_context` | `tc_box` → 后续 turn 的 `UserTimeContext`（B） | 0（帧本身不落库）；**后续轮**可在 prompt/meta 用时间 |
+| `ping` / `pong` / `*_ack` | 无（`ping` 须带 `time_context` 才 `pong`） | 0 |
+| `client_context` | `stash` → `tc_box`（inner-tick 等） | 0（帧本身不落库） |
 | `user_signed_on` | RAM `heartbeat_context`；问候轮 `ImplicitSignalBundle.user_signed_on`（B） | E：1× lifecycle JSONL；D：synthetic user + assistant；**G：仅 assistant（无 user 行）** |
 | `user_signed_out` | 无 B | E：1× lifecycle JSONL；0×D |
 | `ws_conn_dropped` | 无 B | E：1× lifecycle JSONL；0×D |

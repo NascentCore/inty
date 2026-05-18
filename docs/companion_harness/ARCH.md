@@ -82,9 +82,9 @@ flowchart TD
 
 生产文本聊天把 WebSocket 视为一条可断可换的传输通道，而不是 companion scope 本身。客户端、REPL 和排障工具应按同一生命周期理解它：
 
-1. **建立连接**：握手携带鉴权；调试与日志排障可携带稳定的传输连接 id。若本次连接要绑定某个 companion，客户端应先发送 `client_context`（本地时间），再发送 `user_signed_on`。这个信令会刷新 inner-tick / scheduled reminder 的投递坐标、追加一条 lifecycle runtime JSONL（本地 `ts`），并可能排入一条隐式问候业务事件。
+1. **建立连接**：握手携带鉴权；调试与日志排障可携带稳定的传输连接 id。若本次连接要绑定某个 companion，发送 `user_signed_on`（帧内必填 `time_context`）即可：刷新 inner-tick / scheduled reminder 投递坐标、以本帧 `local_time` 追加 lifecycle runtime JSONL，并可能排入隐式问候。可选再发 `client_context` 刷新 `tc_box`。
 2. **发送用户轮**：每个用户轮都必须带独立的业务消息 UUID。服务端按连接序列化 companion turn；assistant 主回复、业务错误和可见后台工具补帧走业务 FIFO，下游 UI 不应把控制 ack 当成聊天消息展示。
-3. **非主动断线后重连**：客户端若观察到 socket 掉线，下一次成功连接后先发送 `ws_conn_dropped`（宜在已有 `client_context` 之后以便落库本地 `ts`），再恢复 `user_signed_on`。掉线声明只记录 lifecycle runtime 与排障事实，不代表用户登出，也不清空聊天历史。
+3. **非主动断线后重连**：客户端若观察到 socket 掉线，下一次成功连接后发送 `ws_conn_dropped`（必填 `time_context`），再 `user_signed_on`。掉线声明只记录 lifecycle runtime 与排障事实，不代表用户登出，也不清空聊天历史。
 4. **主动退出或登出**：客户端应在关闭前发送 `user_signed_out` 并等待 ack。ack 只表示服务端接受了 teardown 请求；之后服务端会取消本连接尚未完成的 companion turn，并收束当前聊天 scope、记忆文档和聊天历史。客户端不要把普通断线当作登出，也不要在未收到新状态前假设旧历史已完成清理。
 5. **服务端关闭或连接结束**：仍在运行的 companion turn 必须被取消，避免用户离开后继续产生孤儿回复、后台补帧或记忆写入。
 
@@ -93,9 +93,10 @@ flowchart TD
 最小控制帧形状示例：
 
 ```json
-{"type": "user_signed_on", "agent_id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", "message_id": "11111111-2222-4aaa-8bbb-333333333333"}
-{"type": "ws_conn_dropped", "agent_id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", "dropped_at_utc": "2026-05-17T02:22:25Z", "message_id": "44444444-5555-4aaa-8bbb-666666666666"}
-{"type": "user_signed_out", "agent_id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", "message_id": "77777777-8888-4aaa-8bbb-999999999999"}
+{"type": "user_signed_on", "agent_id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", "message_id": "11111111-2222-4aaa-8bbb-333333333333", "time_context": {"local_time": "2026-05-17T10:22:25+08:00", "timezone": "Asia/Shanghai", "utc_offset_minutes": 480}}
+{"type": "ws_conn_dropped", "agent_id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", "dropped_at_utc": "2026-05-17T02:22:25Z", "message_id": "44444444-5555-4aaa-8bbb-666666666666", "time_context": {"local_time": "2026-05-17T10:22:25+08:00", "timezone": "Asia/Shanghai", "utc_offset_minutes": 480}}
+{"type": "user_signed_out", "agent_id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", "message_id": "77777777-8888-4aaa-8bbb-999999999999", "time_context": {"local_time": "2026-05-17T10:22:25+08:00", "timezone": "Asia/Shanghai", "utc_offset_minutes": 480}}
+{"type": "ping", "time_context": {"local_time": "2026-05-17T10:22:25+08:00", "timezone": "Asia/Shanghai", "utc_offset_minutes": 480}}
 ```
 
 ## 实现索引

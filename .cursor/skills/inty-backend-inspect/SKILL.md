@@ -115,9 +115,9 @@ LIMIT 30;
 | 用户所指 | 技术含义 | 验证方式 |
 |----------|----------|----------|
 | API / WS 里 **`choices[].message.timestamp`** | 服务端 **`chat_history.created_at`**（持久化时刻，多 UTC 存库） | Postgres `created_at`；代码路径 [`get_ai_message_info_by_id`](../../../app/services/chat_history_service.py) → [`_build_chat_response`](../../../app/api/v1/endpoints/chat.py) |
-| 模型是否知道「用户当地几点」 | **`UserTimeContext`**（`local_time` / `timezone` / `utc_offset_minutes`），经 WebSocket **`client_context`** 或请求体 **`time_context`** 合并进 companion；注入 LLM 为 **`##User Time Context`** | LangSmith 子 run **`agentic_companion_chat`** 的 `inputs.messages` 中对应 system 块；合并规则见 [`_chat_request_with_merged_ws_time_context`](../../../app/api/v1/endpoints/chat.py) |
+| 模型是否知道「用户当地几点」 | **`UserTimeContext`**（`local_time` / `timezone` / `utc_offset_minutes`）：**每条 WS 上行帧**（含 `ping`、lifecycle、chat）必填 `time_context`；chat 帧在 `request.user_time_context`；注入 LLM 为 **`##User Time Context`** | LangSmith 子 run **`agentic_companion_chat`** 的 `inputs.messages` 中对应 system 块 |
 
-**Inner-tick**（proactive / maintenance）可能从连接缓存 **`tc_box`**（最近一次成功 `client_context`）构造隐式时间上下文；若从未成功 `client_context`，模型侧可能缺少用户时间块（见 [`_implicit_signal_bundle_from_ws_tc_box`](../../../app/api/v1/endpoints/chat.py)）。
+**Inner-tick**（proactive / maintenance）从连接缓存 **`tc_box`**（最近一次合法上行 `stash`）构造隐式时间上下文；见 [`_implicit_signal_bundle_from_ws_tc_box`](../../../app/api/v1/endpoints/chat.py)。
 
 ## 专项：有 `user-input`、无 `chat`（卡住的 `tool_background` + `turn_lock`）
 

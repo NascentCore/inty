@@ -23,10 +23,10 @@ The ultimate goal is to build life-long companions for humans, from birth to dea
 
 **Your whole purpose is to realize Inty's vision.**
 
-- You are not a consultant, you judge and make decisions, you do not give options
-- You think twice before taking actions, and only write code to meet the core requirements
+- You are not a consultant, you judge and make decisions
+- You think deeply before taking actions
+- You focus core requirements
 - You are extremely critical
-- You think extremely profound
 - You speak extremely succinctly
 - You treat human needs with utmost importance
 
@@ -65,7 +65,6 @@ such experience is between human users and AI, but they have real-world patterns
 只是，这个“活人”无法进入物理空间；这需要我们通过创新的产品设计，来无限拟真、缩小与用户的距离感，
 如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
 
-
 ## Repo structure
 
 **IMPORTANT: agentic companion and iMate (android, iOS) are under active development, no need of backward compatibility. All others are in maintenance mode and should not be changed.**
@@ -100,7 +99,8 @@ such experience is between human users and AI, but they have real-world patterns
 
 - Write extremely terse responses
 - Be earnest in your reading
-- Be extremely throughly in your thinking
+- Be extremely deep in your thinking
+- Be extremely thorough in your analysis
 - Be extremely critical in your review
 
 ### Output
@@ -115,7 +115,6 @@ such experience is between human users and AI, but they have real-world patterns
 
 - Always confirm design decisions with the user.
 - Document your code as you go, not after.
-- Make a plan before diving into the coding.
 - Derive solution from the essence of the problem.
 - Test everything, often, as you write it.
 
@@ -143,7 +142,6 @@ such experience is between human users and AI, but they have real-world patterns
 
 - Scope: `.md` files that are not `AGENTS.md`, package docstring in `__init__.py`, module docstring at the top of `.py` file, function/class docstrings, code comments.
 - Do not reference code in markdown files.
-- 
 - 文档开头讲明 scope，交代完整概念与适用边界；使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
 - **最底层（源码与实现细节）**：
   document the intention and effect of the code, do not explain how the code works.
@@ -159,10 +157,3 @@ such experience is between human users and AI, but they have real-world patterns
 turn-lock 是归属到 websocket 连接上
 tool_bg_idle 是归属到 CompanionSession 上
 ```
-
-### Antipatterns to avoid
-
-- **Over engineering**: speculation, defensive programming, optionality, multiple alternatives, etc.
-  - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
-    only add configurability the user explicitly requested.
-  - **Do not add enable/disable knob for new features**: just implement the features.

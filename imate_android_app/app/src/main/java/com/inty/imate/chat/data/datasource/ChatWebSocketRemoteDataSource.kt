@@ -5,6 +5,7 @@ import com.ai.core.utils.LogUtils
 import com.inty.imate.chat.data.ChatTextSendRequestFactory
 import com.inty.imate.chat.data.bean.ChatClientContextWsMessage
 import com.inty.imate.chat.data.bean.ChatUserSignedOnWsMessage
+import com.inty.imate.chat.data.bean.ChatWsPingMessage
 import com.inty.imate.chat.data.bean.ChatWebSocketReq
 import com.inty.imate.chat.data.bean.ChatWsControlFrame
 import com.inty.imate.chat.data.bean.SendMsgReq
@@ -74,6 +75,7 @@ constructor() {
                 currentSession.get()
                     ?: throw IllegalStateException("Chat WebSocket not connected")
             val implicitMsgId = UUID.randomUUID().toString()
+            val timeContext = buildUserTimeContext()
             session.send(
                 Frame.Text(
                     json.encodeToString(
@@ -81,6 +83,7 @@ constructor() {
                         ChatUserSignedOnWsMessage(
                             agentId = aid,
                             messageId = implicitMsgId,
+                            timeContext = timeContext,
                         ),
                     ),
                 ),
@@ -97,6 +100,7 @@ constructor() {
                 currentSession.get()
                     ?: throw IllegalStateException("Chat WebSocket not connected")
             if (userSignedOnAgentIdForConnection.get() != agentId) {
+                val timeContext = buildUserTimeContext()
                 session.send(
                     Frame.Text(
                         json.encodeToString(
@@ -104,6 +108,7 @@ constructor() {
                             ChatUserSignedOnWsMessage(
                                 agentId = agentId,
                                 messageId = UUID.randomUUID().toString(),
+                                timeContext = timeContext,
                             ),
                         ),
                     ),
@@ -142,7 +147,16 @@ constructor() {
                         coroutineScope {
                             launch {
                                 while (isActive) {
-                                    session.send(Frame.Text("""{"type":"ping"}"""))
+                                    session.send(
+                                        Frame.Text(
+                                            json.encodeToString(
+                                                ChatWsPingMessage.serializer(),
+                                                ChatWsPingMessage(
+                                                    timeContext = buildUserTimeContext(),
+                                                ),
+                                            ),
+                                        ),
+                                    )
                                     delay(PING_INTERVAL_MS)
                                 }
                             }
@@ -196,7 +210,7 @@ constructor() {
     }
 
     companion object {
-        fun buildUserTimeContextOrNull(): UserTimeContext? {
+        fun buildUserTimeContext(): UserTimeContext {
             val now = ZonedDateTime.now()
             val utcOffsetMinutes = now.offset.totalSeconds / 60
             return UserTimeContext(

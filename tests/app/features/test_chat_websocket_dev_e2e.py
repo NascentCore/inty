@@ -20,6 +20,7 @@ import pytest
 import yaml
 
 from tests.app.api.test_client import TestClient
+from tools.inty_v2_repl.backend_chat_ws import build_ws_user_time_context_now
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DEV_CONFIG = REPO_ROOT / "devops" / "config.yaml.dev"
@@ -85,7 +86,16 @@ async def test_chat_websocket_dev_ping_pong(integration_client: TestClient):
         open_timeout=30,
         ping_interval=None,
     ) as ws:
-        await ws.send(json.dumps({"type": "ping"}))
+        await ws.send(
+            json.dumps(
+                {
+                    "type": "ping",
+                    "time_context": build_ws_user_time_context_now().model_dump(
+                        by_alias=True, exclude_none=True
+                    ),
+                }
+            )
+        )
         raw = await asyncio.wait_for(ws.recv(), timeout=10)
         body = json.loads(raw)
         assert body.get("type") == "pong"

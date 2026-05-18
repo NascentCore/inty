@@ -2,54 +2,47 @@
 
 from __future__ import annotations
 
+import pytest
+from pydantic import ValidationError
+
 from app.core.companion_harness.companion.runtime_events import read_runtime_events
 from app.core.companion_harness.companion.ws_lifecycle_events import (
     CompanionWsLifecycleEventKind,
     normalize_received_message_uuid_for_lifecycle,
     record_user_signed_on,
-    resolve_client_local_ts_for_ws_lifecycle,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
+from app.schemas.chat import UserTimeContext
+from app.schemas.chat_websocket import (
+    ChatWsUserSignedOnFrame,
+    local_ts_and_timezone_from_ws_time_context,
+)
 
 
-def test_resolve_client_local_ts_prefers_local_time() -> None:
-    tc_box = [
-        {
-            "local_time": "2026-05-17T10:30:00+08:00",
-            "timezone": "Asia/Shanghai",
-            "utc_offset_minutes": 480,
-        }
-    ]
-    resolved = resolve_client_local_ts_for_ws_lifecycle(
-        tc_box=tc_box,
-        dropped_at_utc=None,
+def test_local_ts_and_timezone_from_ws_time_context() -> None:
+    utc = UserTimeContext(
+        local_time="2026-05-17T10:30:00+08:00",
+        timezone="Asia/Shanghai",
+        utc_offset_minutes=480,
     )
+    resolved = local_ts_and_timezone_from_ws_time_context(utc)
     assert resolved == ("2026-05-17T10:30:00+08:00", "Asia/Shanghai")
 
 
-def test_resolve_client_local_ts_drop_converts_dropped_at_utc() -> None:
-    tc_box = [
-        {
-            "timezone": "Asia/Shanghai",
-            "utc_offset_minutes": 480,
-        }
-    ]
-    resolved = resolve_client_local_ts_for_ws_lifecycle(
-        tc_box=tc_box,
-        dropped_at_utc="2026-05-17T02:30:00Z",
-    )
-    assert resolved is not None
-    ts, tz = resolved
-    assert tz == "Asia/Shanghai"
-    assert "10:30:00" in ts
-
-
-def test_resolve_client_local_ts_missing_returns_none() -> None:
-    assert (
-        resolve_client_local_ts_for_ws_lifecycle(tc_box=[None], dropped_at_utc=None)
-        is None
-    )
+def test_chat_ws_user_signed_on_frame_requires_non_empty_local_time() -> None:
+    with pytest.raises(ValidationError):
+        ChatWsUserSignedOnFrame.model_validate(
+            {
+                "type": "user_signed_on",
+                "agent_id": "agent-1",
+                "message_id": "11111111-2222-4333-8444-555555555555",
+                "time_context": {
+                    "local_time": "   ",
+                    "timezone": "Asia/Shanghai",
+                },
+            }
+        )
 
 
 def test_record_user_signed_on_appends_jsonl(tmp_path) -> None:

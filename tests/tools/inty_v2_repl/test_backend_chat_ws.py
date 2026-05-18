@@ -82,11 +82,12 @@ def test_build_ws_user_time_context_now_tz_utc(monkeypatch: pytest.MonkeyPatch) 
 def test_ws_user_signed_out_json_shape() -> None:
     mid = "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
     payload = json.loads(_ws_user_signed_out_json("agent-1", message_id=mid))
-    assert payload == {
-        "type": "user_signed_out",
-        "agent_id": "agent-1",
-        "message_id": mid,
-    }
+    assert payload["type"] == "user_signed_out"
+    assert payload["agent_id"] == "agent-1"
+    assert payload["message_id"] == mid
+    tc = payload["time_context"]
+    assert isinstance(tc["local_time"], str) and tc["local_time"]
+    assert isinstance(tc["utc_offset_minutes"], int)
 
 
 def test_ws_chat_turn_send_payload_includes_time_context() -> None:

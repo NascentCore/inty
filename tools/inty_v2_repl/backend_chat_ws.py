@@ -71,12 +71,21 @@ def _ws_close_reason_text(reason: object | None) -> str:
     return str(reason)
 
 
+def _ws_time_context_blob() -> dict[str, Any]:
+    return build_ws_user_time_context_now().model_dump(by_alias=True, exclude_none=True)
+
+
+def _ws_ping_json() -> str:
+    return json.dumps({"type": "ping", "time_context": _ws_time_context_blob()})
+
+
 def _ws_user_signed_on_json(agent_id: str, *, message_id: str) -> str:
     return json.dumps(
         {
             "type": "user_signed_on",
             "agent_id": agent_id.strip(),
             "message_id": message_id,
+            "time_context": _ws_time_context_blob(),
         }
     )
 
@@ -87,6 +96,7 @@ def _ws_user_signed_out_json(agent_id: str, *, message_id: str) -> str:
             "type": "user_signed_out",
             "agent_id": agent_id.strip(),
             "message_id": message_id,
+            "time_context": _ws_time_context_blob(),
         }
     )
 
@@ -104,6 +114,7 @@ def _ws_conn_dropped_json(
         "agent_id": agent_id.strip(),
         "dropped_at_utc": dropped_at_utc,
         "message_id": message_id,
+        "time_context": _ws_time_context_blob(),
     }
     if ws_close_code is not None:
         payload["ws_close_code"] = ws_close_code
@@ -214,9 +225,7 @@ def build_ws_user_time_context_now() -> UserTimeContext:
 
 
 def _ws_client_context_json() -> str:
-    tc = build_ws_user_time_context_now()
-    blob = tc.model_dump(by_alias=True, exclude_none=True)
-    return json.dumps({"type": "client_context", "time_context": blob})
+    return json.dumps({"type": "client_context", "time_context": _ws_time_context_blob()})
 
 
 def _ws_chat_turn_send_payload(
@@ -798,7 +807,7 @@ class BackendChatWsBridge:
                 if halt.is_set():
                     return
                 try:
-                    await ws.send(json.dumps({"type": "ping"}))
+                    await ws.send(_ws_ping_json())
                 except ConnectionClosed:
                     return
         except asyncio.CancelledError:

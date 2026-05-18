@@ -31,8 +31,8 @@ from app.core.companion_harness.companion.ws_lifecycle_events import (
     record_user_signed_on,
     record_user_signed_out,
     record_ws_conn_dropped,
-    resolve_client_local_ts_for_ws_lifecycle,
 )
+from app.schemas.chat_websocket import local_ts_and_timezone_from_ws_time_context
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
@@ -42,6 +42,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
 from app.core.config import global_config_loaded_from_config_yaml
+from app.schemas.chat import UserTimeContext
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
@@ -130,22 +131,9 @@ def _lifecycle_ts_timezone_and_store(
     scope: CompanionScope,
     *,
     resolved_chat_model: GenAIModel,
-    tc_box: list[object | None],
-    dropped_at_utc: str | None,
-) -> tuple[str, str, MemoryStore] | None:
-    resolved = resolve_client_local_ts_for_ws_lifecycle(
-        tc_box=tc_box,
-        dropped_at_utc=dropped_at_utc,
-    )
-    if resolved is None:
-        logger.warning(
-            "companion_ws_lifecycle skipped missing client local ts user={} agent={} chat_id={}",
-            scope.user_id,
-            scope.agent_id,
-            scope.chat_id,
-        )
-        return None
-    ts, timezone_label = resolved
+    time_context: UserTimeContext,
+) -> tuple[str, str, MemoryStore]:
+    ts, timezone_label = local_ts_and_timezone_from_ws_time_context(time_context)
     store = _companion_store_for_scope(scope, resolved_chat_model=resolved_chat_model)
     return ts, timezone_label, store
 
@@ -174,20 +162,16 @@ def record_companion_user_signed_on_ws_lifecycle(
     *,
     scope: CompanionScope,
     resolved_chat_model: GenAIModel,
-    tc_box: list[object | None],
+    time_context: UserTimeContext,
     received_message_uuid: str,
     ws_conn_id: str,
 ) -> None:
     def _do() -> None:
-        packed = _lifecycle_ts_timezone_and_store(
+        ts, timezone_label, store = _lifecycle_ts_timezone_and_store(
             scope,
             resolved_chat_model=resolved_chat_model,
-            tc_box=tc_box,
-            dropped_at_utc=None,
+            time_context=time_context,
         )
-        if packed is None:
-            return
-        ts, timezone_label, store = packed
         record_user_signed_on(
             store,
             ts=ts,
@@ -210,20 +194,16 @@ def record_companion_user_signed_out_ws_lifecycle(
     *,
     scope: CompanionScope,
     resolved_chat_model: GenAIModel,
-    tc_box: list[object | None],
+    time_context: UserTimeContext,
     received_message_uuid: str,
     ws_conn_id: str,
 ) -> None:
     def _do() -> None:
-        packed = _lifecycle_ts_timezone_and_store(
+        ts, timezone_label, store = _lifecycle_ts_timezone_and_store(
             scope,
             resolved_chat_model=resolved_chat_model,
-            tc_box=tc_box,
-            dropped_at_utc=None,
+            time_context=time_context,
         )
-        if packed is None:
-            return
-        ts, timezone_label, store = packed
         record_user_signed_out(
             store,
             ts=ts,
@@ -246,23 +226,18 @@ def record_companion_ws_conn_dropped_ws_lifecycle(
     *,
     scope: CompanionScope,
     resolved_chat_model: GenAIModel,
-    tc_box: list[object | None],
-    dropped_at_utc: str,
+    time_context: UserTimeContext,
     received_message_uuid: str,
     ws_conn_id: str,
     ws_close_code: int | str,
     ws_close_reason: str,
 ) -> None:
     def _do() -> None:
-        packed = _lifecycle_ts_timezone_and_store(
+        ts, timezone_label, store = _lifecycle_ts_timezone_and_store(
             scope,
             resolved_chat_model=resolved_chat_model,
-            tc_box=tc_box,
-            dropped_at_utc=dropped_at_utc,
+            time_context=time_context,
         )
-        if packed is None:
-            return
-        ts, timezone_label, store = packed
         record_ws_conn_dropped(
             store,
             ts=ts,

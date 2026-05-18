@@ -16,16 +16,50 @@ Direction tags in model docstrings:
 
 Chat message bodies reuse :class:`app.schemas.chat.ChatCompletionRequest` (shared with HTTP
 completions); time fields reuse :class:`app.schemas.chat.UserTimeContext``.
+
+Every **client → server** uplink JSON object must include ``time_context`` with a non-empty
+``local_time`` (see :class:`ChatWsUplinkWithTimeContext`).
 """
 
 from __future__ import annotations
 
 import uuid
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Self
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.chat import ChatCompletionRequest, UserTimeContext
+
+
+def local_ts_and_timezone_from_ws_time_context(
+    time_context: UserTimeContext,
+) -> tuple[str, str]:
+    """Return ``(ts, timezone_label)`` for lifecycle JSONL from a validated WS ``time_context``."""
+    local_time = (time_context.local_time or "").strip()
+    assert local_time
+    tz = (time_context.timezone or "").strip()
+    timezone_label = tz if tz else "-"
+    return local_time, timezone_label
+
+
+def stash_ws_time_context(
+    tc_box: list[Optional[dict]],
+    time_context: UserTimeContext,
+) -> None:
+    """Store the latest validated WS ``time_context`` on the connection (inner-tick reads ``tc_box[0]``)."""
+    dumped = time_context.model_dump(exclude_none=True)
+    tc_box[0] = dumped if dumped else None
+
+
+class ChatWsUplinkWithTimeContext(BaseModel):
+    """Mixin for client → server WS control frames: mandatory ``time_context`` with ``local_time``."""
+
+    time_context: UserTimeContext
+
+    @model_validator(mode="after")
+    def _local_time_non_empty(self) -> Self:
+        assert (self.time_context.local_time or "").strip()
+        return self
 
 
 def normalize_websocket_companion_message_id_uuid(raw: Optional[str]) -> str:
@@ -38,7 +72,7 @@ def normalize_websocket_companion_message_id_uuid(raw: Optional[str]) -> str:
         raise ValueError("message_id must be a valid UUID") from exc
 
 
-class ChatWsPingFrame(BaseModel):
+class ChatWsPingFrame(ChatWsUplinkWithTimeContext):
     """**Client → server** keepalive; resets idle timer (see chat WebSocket handler)."""
 
     type: Literal["ping"] = "ping"
@@ -50,11 +84,10 @@ class ChatWsPongFrame(BaseModel):
     type: Literal["pong"] = "pong"
 
 
-class ChatWsClientContextFrame(BaseModel):
-    """**Client → server** session time context; merged into later chat frames when omitted."""
+class ChatWsClientContextFrame(ChatWsUplinkWithTimeContext):
+    """**Client → server** session time context; refreshes connection ``tc_box`` cache."""
 
     type: Literal["client_context"] = "client_context"
-    time_context: UserTimeContext
 
 
 class ChatWsClientContextAckFrame(BaseModel):
@@ -64,11 +97,11 @@ class ChatWsClientContextAckFrame(BaseModel):
     ok: bool
 
 
-class ChatWsUserSignedOnFrame(BaseModel):
+class ChatWsUserSignedOnFrame(ChatWsUplinkWithTimeContext):
     """**Client → server** control frame: arms inner-tick coords, schedules greeting.
 
-    ``message_id`` (RFC4122 UUID) is required. Lifecycle JSONL (after successful ack) uses local
-    ``ts`` from prior ``client_context`` when present.
+    ``message_id`` (RFC4122 UUID) is required. Lifecycle JSONL ``ts`` uses this frame's
+    ``time_context.local_time`` (not an earlier ``client_context``).
     """
 
     type: Literal["user_signed_on"] = "user_signed_on"
@@ -80,7 +113,7 @@ class ChatWsUserSignedOnFrame(BaseModel):
     )
 
 
-class ChatWsUserSignedOutFrame(BaseModel):
+class ChatWsUserSignedOutFrame(ChatWsUplinkWithTimeContext):
     """**Client → server** control frame: records user leaving via companion lifecycle runtime JSONL."""
 
     type: Literal["user_signed_out"] = "user_signed_out"
@@ -119,7 +152,7 @@ class ChatWsUserSignedOutAckFrame(BaseModel):
     reason: Optional[str] = None
 
 
-class ChatWsWsConnDroppedFrame(BaseModel):
+class ChatWsWsConnDroppedFrame(ChatWsUplinkWithTimeContext):
     """**Client → server** control frame: prior transport disconnect for companion lifecycle runtime JSONL."""
 
     type: Literal["ws_conn_dropped"] = "ws_conn_dropped"
@@ -237,6 +270,13 @@ class ChatWebSocketRequest(BaseModel):
 
     agent_id: str
     request: ChatCompletionRequest
+
+    @model_validator(mode="after")
+    def _ws_chat_requires_time_context(self) -> Self:
+        utc = self.request.user_time_context
+        assert utc is not None
+        assert (utc.local_time or "").strip()
+        return self
 
 
 class ChatWebSocketQueuedPlainError(BaseModel):

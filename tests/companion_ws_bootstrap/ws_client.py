@@ -13,9 +13,16 @@ import websockets
 from tests.companion_ws_bootstrap.constants import WS_KEEPALIVE_PING_INTERVAL_SEC
 from tools.inty_v2_repl.backend_chat_ws import (
     BackendChatWsError,
+    build_ws_user_time_context_now,
     http_base_to_ws_chat_url,
     parse_chat_completion_ws_payload,
 )
+
+
+def _ws_time_context_dict() -> dict[str, object]:
+    return build_ws_user_time_context_now().model_dump(
+        by_alias=True, exclude_none=True
+    )
 
 
 async def recv_first_chat_completion_frame(
@@ -89,6 +96,7 @@ async def connect_send_implicit_sign_on_and_expect_assistant(
             "type": "user_signed_on",
             "agent_id": agent_id,
             "message_id": msg_uuid,
+            "time_context": _ws_time_context_dict(),
         }
     )
     async with websockets.connect(
@@ -110,7 +118,14 @@ async def connect_send_implicit_sign_on_and_expect_assistant(
                 except asyncio.TimeoutError:
                     pass
                 try:
-                    await ws.send(json.dumps({"type": "ping"}))
+                    await ws.send(
+                        json.dumps(
+                            {
+                                "type": "ping",
+                                "time_context": _ws_time_context_dict(),
+                            }
+                        )
+                    )
                 except Exception:
                     return
 

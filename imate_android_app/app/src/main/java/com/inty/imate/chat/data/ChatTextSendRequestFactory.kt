@@ -18,7 +18,7 @@ object ChatTextSendRequestFactory {
                         content = JsonPrimitive(trimmed),
                     )
                 ),
-            timeContext = ChatWebSocketRemoteDataSource.buildUserTimeContextOrNull(),
+            timeContext = ChatWebSocketRemoteDataSource.buildUserTimeContext(),
             targetImateId = agentId,
             messageId = UUID.randomUUID().toString(),
         )

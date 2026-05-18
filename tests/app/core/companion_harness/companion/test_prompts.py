@@ -77,8 +77,7 @@ def test_proactive_heartbeat_synthetic_system_message_merged() -> None:
         HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
     )
 
-    assert "## 本轮（陪伴心跳）" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
-    assert "用户尚未发送新消息" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
+    assert "## Proactive Messaging (Heartbeat)" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
     assert "[SILENT]" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
 
 

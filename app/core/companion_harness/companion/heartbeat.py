@@ -18,13 +18,12 @@ from .models import ChatMessage, load_transcript_from_store
 
 # 主动心跳：transcript 后单条 system（续语境、禁工具、[SILENT]）。
 HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE = (
-    "## 本轮（陪伴心跳）\n\n"
-    "用户尚未发送新消息。承接上文**同一语境**：延续当前场景、话题与表达风格，自然续一句或两句，"
-    "勿改换语气或像重新开始一段对话；仅输出自然语言短句，不要调用工具。\n\n"
     "## Proactive Messaging (Heartbeat)\n"
     "- The user has not sent a new message for some time.\n"
+    "- Continue the same conversation context, tone, and scene; do not restart or shift voice.\n"
     "- Based on the conversation context, your character's personality, and the time elapsed, "
     "decide whether to proactively send a message.\n"
+    "- Natural language only; do not call tools.\n"
     "- If you have something meaningful, respond appropriately.\n"
     "- If there is nothing appropriate to say right now, respond with exactly: [SILENT]\n"
 )

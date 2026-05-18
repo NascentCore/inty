@@ -88,16 +88,20 @@ from app.schemas.chat_websocket import (
     ChatWebSocketQueuedPlainError,
     ChatWebSocketRequest,
     ChatWsClientContextAckFrame,
+    ChatWsClientContextFrame,
     ChatWsCompanionWireMetaData,
+    ChatWsPingFrame,
     ChatWsPongFrame,
     ChatWsUserSignedOnAckFrame,
     ChatWsUserSignedOnFrame,
     ChatWsUserSignedOutAckFrame,
     ChatWsUserSignedOutFrame,
+    ChatWsWsConnDroppedAckFrame,
     ChatWsWsConnDroppedFrame,
     chat_ws_queued_error_dict,
     dump_chat_ws_companion_wire_meta,
     normalize_websocket_companion_message_id_uuid,
+    stash_ws_time_context,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.schemas.response import (
@@ -264,25 +268,6 @@ async def _verify_ws_simple_llm_reply(
     return await asyncio.to_thread(_sync_call)
 
 
-def _chat_request_with_merged_ws_time_context(
-    request: ChatCompletionRequest,
-    ws_session_time_context: Optional[dict],
-) -> ChatCompletionRequest:
-    """
-    单连接上先发送 client_context 时，后续 chat 帧可省略 time_context；
-    若请求体已带 user_time_context，以请求为准。
-    """
-    if not ws_session_time_context:
-        return request
-    if request.user_time_context is not None:
-        return request
-    try:
-        utc = UserTimeContext.model_validate(ws_session_time_context)
-    except ValidationError:
-        return request
-    return request.model_copy(update={"user_time_context": utc})
-
-
 def _implicit_signal_bundle_from_ws_tc_box(
     tc_box: list[Optional[dict]],
 ) -> Optional[ImplicitSignalBundle]:
@@ -311,28 +296,28 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
     *,
     agent_id: str,
     preset_message_id: str,
+    sign_on_time_context: UserTimeContext,
     current_user: UserSchema,
     app_version_code: Optional[int],
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService,
     companion_ws: CompanionWebSocketCoordinator,
-    tc_box: list[Optional[dict]],
     outbound_queue: asyncio.Queue[WsOutboundPayload],
 ) -> None:
     """Run one companion greeting turn scheduled from ``user_signed_on`` (with ``message_id``)."""
     try:
-        base = ChatCompletionRequest(
+        greeting_request = ChatCompletionRequest(
             messages=[ChatMessage(role="user", content="")],
             message_id=preset_message_id,
+            user_time_context=sign_on_time_context,
         )
-        merged = _chat_request_with_merged_ws_time_context(base, tc_box[0])
         async with AsyncSessionLocal() as db:
             try:
                 async with companion_ws.turn_lock:
                     response = await _agent_chat_completions_impl(
                         db=db,
                         agent_id=agent_id,
-                        request=merged,
+                        request=greeting_request,
                         current_user=current_user,
                         app_version_code=app_version_code,
                         subscription_svc=subscription_svc,
@@ -388,27 +373,27 @@ async def _handle_chat_websocket_control_json(
         return False
     msg_type = data.get("type")
     if msg_type == "ping":
+        try:
+            frame = ChatWsPingFrame.model_validate(data)
+        except ValidationError:
+            logger.debug("chat_ws ping invalid payload (missing time_context)")
+            return True
+        stash_ws_time_context(tc_box, frame.time_context)
         await websocket.send_json(ChatWsPongFrame().model_dump())
         return True
     if msg_type != "client_context":
         return False
-    tc_raw = data.get("time_context")
-    if not isinstance(tc_raw, dict):
-        await websocket.send_json(
-            ChatWsClientContextAckFrame(ok=False).model_dump()
-        )
-        return True
     try:
-        validated = UserTimeContext.model_validate(tc_raw)
-        dumped = validated.model_dump(exclude_none=True)
-        tc_box[0] = dumped if dumped else None
-        await websocket.send_json(
-            ChatWsClientContextAckFrame(ok=True).model_dump()
-        )
+        frame = ChatWsClientContextFrame.model_validate(data)
     except ValidationError:
         await websocket.send_json(
             ChatWsClientContextAckFrame(ok=False).model_dump()
         )
+        return True
+    stash_ws_time_context(tc_box, frame.time_context)
+    await websocket.send_json(
+        ChatWsClientContextAckFrame(ok=True).model_dump()
+    )
     return True
 
 
@@ -496,35 +481,43 @@ async def _try_handle_ws_user_signed_on_frame(
             agent_id=agent_id,
             chat_id=chat.id,
         )
-        greeting_scheduled = False
-        if (
-            outbound_queue is None
-            or tc_box is None
-            or subscription_svc is None
-            or voice_svc is None
-        ):
+        if tc_box is not None:
+            stash_ws_time_context(tc_box, frame.time_context)
+        greeting_deps_ok = (
+            outbound_queue is not None
+            and subscription_svc is not None
+            and voice_svc is not None
+            and inflight_turn_tracker is not None
+        )
+        if not greeting_deps_ok:
             logger.error(
                 "chat_ws user_signed_on greeting missing ws deps ws_conn_id={} agent_id={}",
                 ws_conn_id,
                 agent_id,
             )
-        else:
-            assert inflight_turn_tracker is not None
-            inflight_turn_tracker.spawn(
-                _enqueue_companion_greeting_ws_turn_after_user_signed_on(
-                    agent_id=agent_id,
-                    preset_message_id=preset_mid,
-                    current_user=current_user,
-                    app_version_code=app_version_code,
-                    subscription_svc=subscription_svc,
-                    voice_svc=voice_svc,
-                    companion_ws=companion_ws,
-                    tc_box=tc_box,
-                    outbound_queue=outbound_queue,
-                ),
-                name=f"chat_ws_user_signed_on_greeting_{ws_conn_id}",
+            await websocket.send_json(
+                ChatWsUserSignedOnAckFrame(
+                    ok=False,
+                    reason="server_error",
+                ).model_dump(exclude_none=True)
             )
-            greeting_scheduled = True
+            return True
+        assert inflight_turn_tracker is not None
+        inflight_turn_tracker.spawn(
+            _enqueue_companion_greeting_ws_turn_after_user_signed_on(
+                agent_id=agent_id,
+                preset_message_id=preset_mid,
+                sign_on_time_context=frame.time_context,
+                current_user=current_user,
+                app_version_code=app_version_code,
+                subscription_svc=subscription_svc,
+                voice_svc=voice_svc,
+                companion_ws=companion_ws,
+                outbound_queue=outbound_queue,
+            ),
+            name=f"chat_ws_user_signed_on_greeting_{ws_conn_id}",
+        )
+        greeting_scheduled = True
         if subscription_svc is not None:
             subscription = await subscription_svc.get_user_current_subscription(
                 db, current_user.id
@@ -535,16 +528,13 @@ async def _try_handle_ws_user_signed_on_frame(
         model_override = select_chat_model(
             user=current_user, is_subscribed=is_subscribed
         )
-        effective_tc_box: list[object | None] = (
-            tc_box if tc_box is not None else []
-        )
         await websocket.send_json(
             ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
         )
         companion_chat_service.record_companion_user_signed_on_ws_lifecycle(
             scope=CompanionScope(current_user.id, agent_id, str(chat.id)),
             resolved_chat_model=model_override,
-            tc_box=effective_tc_box,
+            time_context=frame.time_context,
             received_message_uuid=preset_mid,
             ws_conn_id=ws_conn_id,
         )
@@ -635,6 +625,7 @@ async def _try_handle_ws_user_signed_out_frame(
             user=current_user, is_subscribed=bool(subscription)
         )
         recv_msg_uuid = (frame.message_id or "").strip()
+        stash_ws_time_context(tc_box, frame.time_context)
         if inflight_turn_tracker is not None:
             # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
             await inflight_turn_tracker.cancel_all()
@@ -644,7 +635,7 @@ async def _try_handle_ws_user_signed_out_frame(
         companion_chat_service.record_companion_user_signed_out_ws_lifecycle(
             scope=CompanionScope(current_user.id, agent_id, str(chat.id)),
             resolved_chat_model=model_override,
-            tc_box=tc_box,
+            time_context=frame.time_context,
             received_message_uuid=recv_msg_uuid,
             ws_conn_id=ws_conn_id,
         )
@@ -696,22 +687,20 @@ async def _try_handle_ws_ws_conn_dropped_frame(
         return False
     if companion_ws is None:
         await websocket.send_json(
-            {
-                "type": "ws_conn_dropped_ack",
-                "ok": False,
-                "reason": "not_supported",
-            }
+            ChatWsWsConnDroppedAckFrame(
+                ok=False,
+                reason="not_supported",
+            ).model_dump(exclude_none=True)
         )
         return True
     try:
         frame = ChatWsWsConnDroppedFrame.model_validate(data)
     except ValidationError:
         await websocket.send_json(
-            {
-                "type": "ws_conn_dropped_ack",
-                "ok": False,
-                "reason": "invalid_payload",
-            }
+            ChatWsWsConnDroppedAckFrame(
+                ok=False,
+                reason="invalid_payload",
+            ).model_dump(exclude_none=True)
         )
         return True
     agent_id = frame.agent_id.strip()
@@ -721,11 +710,10 @@ async def _try_handle_ws_ws_conn_dropped_frame(
         )
         if chat.agent_id != agent_id:
             await websocket.send_json(
-                {
-                    "type": "ws_conn_dropped_ack",
-                    "ok": False,
-                    "reason": "agent_mismatch",
-                }
+                ChatWsWsConnDroppedAckFrame(
+                    ok=False,
+                    reason="agent_mismatch",
+                ).model_dump(exclude_none=True)
             )
             return True
         subscription = await subscription_svc.get_user_current_subscription(
@@ -738,12 +726,14 @@ async def _try_handle_ws_ws_conn_dropped_frame(
         code_part = frame.ws_close_code if frame.ws_close_code is not None else "-"
         reason_raw = (frame.ws_close_reason or "").strip()
         reason_part = reason_raw if reason_raw else "-"
-        await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
+        stash_ws_time_context(tc_box, frame.time_context)
+        await websocket.send_json(
+            ChatWsWsConnDroppedAckFrame(ok=True).model_dump(exclude_none=True)
+        )
         companion_chat_service.record_companion_ws_conn_dropped_ws_lifecycle(
             scope=CompanionScope(current_user.id, agent_id, str(chat.id)),
             resolved_chat_model=model_override,
-            tc_box=tc_box,
-            dropped_at_utc=frame.dropped_at_utc,
+            time_context=frame.time_context,
             received_message_uuid=recv_msg_uuid,
             ws_conn_id=ws_conn_id,
             ws_close_code=code_part,
@@ -766,11 +756,10 @@ async def _try_handle_ws_ws_conn_dropped_frame(
             agent_id,
         )
         await websocket.send_json(
-            {
-                "type": "ws_conn_dropped_ack",
-                "ok": False,
-                "reason": "server_error",
-            }
+            ChatWsWsConnDroppedAckFrame(
+                ok=False,
+                reason="server_error",
+            ).model_dump(exclude_none=True)
         )
     return True
 
@@ -3757,9 +3746,8 @@ async def chat_completions_websocket(
                     ).model_dump()
                 )
                 continue
-            merged_request = _chat_request_with_merged_ws_time_context(
-                websocket_request.request,
-                tc_box[0],
+            stash_ws_time_context(
+                tc_box, websocket_request.request.user_time_context
             )
             try:
                 async with companion_ws.turn_lock:
@@ -3767,7 +3755,7 @@ async def chat_completions_websocket(
                         _agent_chat_ws_completions_impl(
                             db=db,
                             agent_id=websocket_request.agent_id,
-                            request=merged_request,
+                            request=websocket_request.request,
                             current_user=current_user,
                             subscription_svc=subscription_svc,
                             companion_background_sink=companion_ws.background_sink,
@@ -3938,10 +3926,10 @@ async def chat_completions_websocket_verify(
                 )
                 continue
             agent_id = websocket_request.agent_id
-            request = _chat_request_with_merged_ws_time_context(
-                websocket_request.request,
-                tc_box[0],
+            stash_ws_time_context(
+                tc_box, websocket_request.request.user_time_context
             )
+            request = websocket_request.request
 
             user_messages = [
                 msg for msg in request.messages if msg.role == "user"

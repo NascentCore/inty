@@ -91,7 +91,7 @@ data class SendMsgReq(
     val messages: List<SendMsgReqMessage> = emptyList(),
     val model: String = "chatbot",
     val stream: Boolean = false,
-    @SerialName("time_context") val timeContext: UserTimeContext? = null,
+    @SerialName("time_context") val timeContext: UserTimeContext,
     @SerialName("target_imate_id") val targetImateId: String? = null,
     /** RFC4122; companion WebSocket uses as transcript user_msg_uuid when valid. */
     @SerialName("message_id") val messageId: String? = null,
@@ -116,6 +116,13 @@ data class ChatUserSignedOnWsMessage(
     val type: String = "user_signed_on",
     @SerialName("agent_id") val agentId: String,
     @SerialName("message_id") val messageId: String,
+    @SerialName("time_context") val timeContext: UserTimeContext,
+)
+
+@Serializable
+data class ChatWsPingMessage(
+    val type: String = "ping",
+    @SerialName("time_context") val timeContext: UserTimeContext,
 )
 
 @Serializable

@@ -74,6 +74,47 @@ def _decode_user_id_from_token(token: str) -> str:
     return str(payload["sub"])
 
 
+def _sample_ws_time_context_dict(
+    *,
+    local_time: str = "2026-05-17T12:00:00+08:00",
+    timezone: str = "Asia/Shanghai",
+    utc_offset_minutes: int = 480,
+) -> dict[str, object]:
+    return {
+        "local_time": local_time,
+        "timezone": timezone,
+        "utc_offset_minutes": utc_offset_minutes,
+    }
+
+
+def _ws_ping_frame() -> dict[str, object]:
+    return {"type": "ping", "time_context": _sample_ws_time_context_dict()}
+
+
+def _ws_chat_request(
+    *,
+    messages: list,
+    message_id: str | None = None,
+    time_context: dict[str, object] | None = None,
+    include_time_context: bool = True,
+    **extra: object,
+) -> dict[str, object]:
+    """Build ``request`` for a WS chat turn; default includes mandatory ``time_context``."""
+    req: dict[str, object] = {"messages": messages}
+    if include_time_context:
+        req["time_context"] = (
+            time_context if time_context is not None else _sample_ws_time_context_dict()
+        )
+    if message_id is not None:
+        req["message_id"] = message_id
+    req.update(extra)
+    return req
+
+
+def _ws_chat_turn_frame(agent_id: str, request: dict[str, object]) -> dict[str, object]:
+    return {"agent_id": agent_id, "request": request}
+
+
 @pytest.fixture(scope="function")
 def agent_ids_to_cleanup(integration_client: TestClient):
     agent_ids = []
@@ -1343,23 +1384,23 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
-                {
-                    "agent_id": "agent-companion-ws",
-                    "request": {
-                        "messages": [{"role": "user", "content": "hello ws kernel"}],
-                        "message_id": first_turn_uuid,
-                    },
-                }
+                _ws_chat_turn_frame(
+                    "agent-companion-ws",
+                    _ws_chat_request(
+                        messages=[{"role": "user", "content": "hello ws kernel"}],
+                        message_id=first_turn_uuid,
+                    ),
+                )
             )
             body = websocket.receive_json()
             websocket.send_json(
-                {
-                    "agent_id": "agent-companion-ws",
-                    "request": {
-                        "messages": [{"role": "user", "content": "second turn"}],
-                        "message_id": second_turn_uuid,
-                    },
-                }
+                _ws_chat_turn_frame(
+                    "agent-companion-ws",
+                    _ws_chat_request(
+                        messages=[{"role": "user", "content": "second turn"}],
+                        message_id=second_turn_uuid,
+                    ),
+                )
             )
             body2 = websocket.receive_json()
 
@@ -1416,13 +1457,13 @@ def test_chat_websocket_companion_foreground_tool_background_started_meta(
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
-                {
-                    "agent_id": "agent-companion-tbgs",
-                    "request": {
-                        "messages": [{"role": "user", "content": "paint"}],
-                        "message_id": msg_uuid,
-                    },
-                }
+                _ws_chat_turn_frame(
+                    "agent-companion-tbgs",
+                    _ws_chat_request(
+                        messages=[{"role": "user", "content": "paint"}],
+                        message_id=msg_uuid,
+                    ),
+                )
             )
             body = websocket.receive_json()
 
@@ -1463,13 +1504,13 @@ def test_chat_websocket_companion_llm_inference_backend_error_frame(
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
-                {
-                    "agent_id": "agent-companion-llm-err",
-                    "request": {
-                        "messages": [{"role": "user", "content": "hello"}],
-                        "message_id": msg_uuid,
-                    },
-                }
+                _ws_chat_turn_frame(
+                    "agent-companion-llm-err",
+                    _ws_chat_request(
+                        messages=[{"role": "user", "content": "hello"}],
+                        message_id=msg_uuid,
+                    ),
+                )
             )
             body = websocket.receive_json()
 
@@ -1555,14 +1596,14 @@ def test_chat_websocket_companion_rejects_implicit_user_signed_on_message_type(
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
-                {
-                    "agent_id": "agent-companion-signon-reject",
-                    "request": {
-                        "messages": [{"role": "user", "content": ""}],
-                        "message_id": msg_uuid,
-                        "messageType": "IMPLICIT_USER_SIGNED_ON",
-                    },
-                }
+                _ws_chat_turn_frame(
+                    "agent-companion-signon-reject",
+                    _ws_chat_request(
+                        messages=[{"role": "user", "content": ""}],
+                        message_id=msg_uuid,
+                        messageType="IMPLICIT_USER_SIGNED_ON",
+                    ),
+                )
             )
             body = websocket.receive_json()
 
@@ -1600,6 +1641,7 @@ def test_chat_websocket_companion_user_signed_on_greeting_sets_bundle(
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-cf",
                     "message_id": msg_uuid,
+                "time_context": _sample_ws_time_context_dict(),
                 }
             )
             body = websocket.receive_json()
@@ -1669,6 +1711,7 @@ def test_chat_websocket_user_signed_on_greeting_uses_own_async_session(
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-session",
                     "message_id": msg_uuid,
+                "time_context": _sample_ws_time_context_dict(),
                 }
             )
             ack = websocket.receive_json()
@@ -1709,24 +1752,15 @@ def test_chat_websocket_user_signed_on_records_ws_lifecycle_event(
 
     msg_uuid = "cccccccc-bbbb-4ccc-dddd-eeeeeeeeeeee"
     local_time = "2026-05-17T12:00:00+08:00"
+    sign_on_tc = _sample_ws_time_context_dict(local_time=local_time)
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
-            websocket.send_json(
-                {
-                    "type": "client_context",
-                    "time_context": {
-                        "local_time": local_time,
-                        "timezone": "Asia/Shanghai",
-                        "utc_offset_minutes": 480,
-                    },
-                }
-            )
-            assert websocket.receive_json()["type"] == "client_context_ack"
             websocket.send_json(
                 {
                     "type": "user_signed_on",
                     "agent_id": "agent-signon-lc",
                     "message_id": msg_uuid,
+                    "time_context": sign_on_tc,
                 }
             )
             body = websocket.receive_json()
@@ -1736,16 +1770,95 @@ def test_chat_websocket_user_signed_on_records_ws_lifecycle_event(
     assert body["code"] == 200
     kw = captured["kwargs"]
     assert kw["received_message_uuid"] == msg_uuid
-    assert kw["tc_box"][0]["local_time"] == local_time
+    assert kw["time_context"].local_time == local_time
 
     companion_chat_service.clear_companion_chat_service_caches()
 
 
 @pytest.mark.asyncio
-async def test_user_signed_on_records_lifecycle_when_subscription_svc_missing(
+async def test_user_signed_on_records_lifecycle_without_active_subscription(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """Lifecycle JSONL must not depend on subscription_svc (matches sign-out / drop)."""
+    """Lifecycle JSONL does not require an active subscription row (``is_subscribed=False``)."""
+    from app.core.companion_harness.companion.websocket_coordinator import (
+        ChatWsInflightTurnTracker,
+        CompanionWebSocketCoordinator,
+    )
+
+    captured: dict[str, object] = {}
+
+    def fake_record(**kwargs):
+        captured["kwargs"] = kwargs
+
+    monkeypatch.setattr(
+        companion_chat_service,
+        "record_companion_user_signed_on_ws_lifecycle",
+        fake_record,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "_enqueue_companion_greeting_ws_turn_after_user_signed_on",
+        AsyncMock(),
+    )
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id, **_kwargs):
+        return SimpleNamespace(id="chat-no-sub-svc", agent_id=agent_id)
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+
+    subscription_svc = AsyncMock()
+    subscription_svc.get_user_current_subscription = AsyncMock(return_value=None)
+
+    sent: list[dict] = []
+
+    class FakeWebSocket:
+        async def send_json(self, data):
+            sent.append(data)
+
+    msg_uuid = "dddddddd-bbbb-4ccc-dddd-ffffffffffff"
+    local_time = "2026-05-17T09:30:00+00:00"
+    sign_on_tc = _sample_ws_time_context_dict(
+        local_time=local_time, timezone="UTC", utc_offset_minutes=0
+    )
+    tc_box: list = [None]
+    companion_ws = CompanionWebSocketCoordinator.for_current_loop()
+    handled = await chat_v1._try_handle_ws_user_signed_on_frame(
+        FakeWebSocket(),
+        {
+            "type": "user_signed_on",
+            "agent_id": "agent-no-sub-svc",
+            "message_id": msg_uuid,
+            "time_context": sign_on_tc,
+        },
+        db=AsyncMock(),
+        current_user=_make_user(user_id="user-no-sub-svc"),
+        companion_ws=companion_ws,
+        inflight_turn_tracker=ChatWsInflightTurnTracker(),
+        ws_conn_id="ws-test-no-sub",
+        outbound_queue=asyncio.Queue(),
+        tc_box=tc_box,
+        subscription_svc=subscription_svc,
+        voice_svc=AsyncMock(),
+    )
+
+    assert handled is True
+    assert sent[0] == {"type": "user_signed_on_ack", "ok": True}
+    kw = captured["kwargs"]
+    assert kw["received_message_uuid"] == msg_uuid
+    assert kw["time_context"].local_time == local_time
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+@pytest.mark.asyncio
+async def test_user_signed_on_server_error_when_greeting_deps_missing(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Missing greeting WebSocket deps must not ack success (inner-tick coords still armed)."""
     from app.core.companion_harness.companion.websocket_coordinator import (
         CompanionWebSocketCoordinator,
     )
@@ -1762,7 +1875,7 @@ async def test_user_signed_on_records_lifecycle_when_subscription_svc_missing(
     )
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id, **_kwargs):
-        return SimpleNamespace(id="chat-no-sub-svc", agent_id=agent_id)
+        return SimpleNamespace(id="chat-missing-deps", agent_id=agent_id)
 
     monkeypatch.setattr(
         chat_service,
@@ -1776,38 +1889,33 @@ async def test_user_signed_on_records_lifecycle_when_subscription_svc_missing(
         async def send_json(self, data):
             sent.append(data)
 
-    msg_uuid = "dddddddd-bbbb-4ccc-dddd-ffffffffffff"
-    local_time = "2026-05-17T09:30:00+00:00"
-    tc_box: list = [
-        {
-            "local_time": local_time,
-            "timezone": "UTC",
-            "utc_offset_minutes": 0,
-        }
-    ]
+    msg_uuid = "cccccccc-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    sign_on_tc = _sample_ws_time_context_dict()
+    tc_box: list = [None]
     companion_ws = CompanionWebSocketCoordinator.for_current_loop()
     handled = await chat_v1._try_handle_ws_user_signed_on_frame(
         FakeWebSocket(),
         {
             "type": "user_signed_on",
-            "agent_id": "agent-no-sub-svc",
+            "agent_id": "agent-missing-deps",
             "message_id": msg_uuid,
+            "time_context": sign_on_tc,
         },
         db=AsyncMock(),
-        current_user=_make_user(user_id="user-no-sub-svc"),
+        current_user=_make_user(user_id="user-missing-deps"),
         companion_ws=companion_ws,
         inflight_turn_tracker=None,
-        ws_conn_id="ws-test-no-sub",
+        ws_conn_id="ws-test-missing-deps",
         outbound_queue=None,
         tc_box=tc_box,
         subscription_svc=None,
     )
 
     assert handled is True
-    assert sent[0] == {"type": "user_signed_on_ack", "ok": True}
-    kw = captured["kwargs"]
-    assert kw["received_message_uuid"] == msg_uuid
-    assert kw["tc_box"][0]["local_time"] == local_time
+    assert sent == [
+        {"type": "user_signed_on_ack", "ok": False, "reason": "server_error"}
+    ]
+    assert "kwargs" not in captured
 
     companion_chat_service.clear_companion_chat_service_caches()
 
@@ -1818,6 +1926,7 @@ async def test_user_signed_on_single_ack_when_lifecycle_record_raises(
 ):
     """Lifecycle failure after success ack must not emit a second error ack."""
     from app.core.companion_harness.companion.websocket_coordinator import (
+        ChatWsInflightTurnTracker,
         CompanionWebSocketCoordinator,
     )
 
@@ -1830,6 +1939,11 @@ async def test_user_signed_on_single_ack_when_lifecycle_record_raises(
         lambda **_kwargs: ("2026-05-17T12:00:00+08:00", "Asia/Shanghai", object()),
     )
     monkeypatch.setattr(companion_chat_service, "record_user_signed_on", boom)
+    monkeypatch.setattr(
+        chat_v1,
+        "_enqueue_companion_greeting_ws_turn_after_user_signed_on",
+        AsyncMock(),
+    )
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id, **_kwargs):
         return SimpleNamespace(id="chat-lc-fail", agent_id=agent_id)
@@ -1840,6 +1954,9 @@ async def test_user_signed_on_single_ack_when_lifecycle_record_raises(
         fake_get_or_create_chat_by_agent,
     )
 
+    subscription_svc = AsyncMock()
+    subscription_svc.get_user_current_subscription = AsyncMock(return_value=None)
+
     sent: list[dict] = []
 
     class FakeWebSocket:
@@ -1847,13 +1964,8 @@ async def test_user_signed_on_single_ack_when_lifecycle_record_raises(
             sent.append(data)
 
     msg_uuid = "eeeeeeee-bbbb-4ccc-dddd-000000000001"
-    tc_box: list = [
-        {
-            "local_time": "2026-05-17T12:00:00+08:00",
-            "timezone": "Asia/Shanghai",
-            "utc_offset_minutes": 480,
-        }
-    ]
+    sign_on_tc = _sample_ws_time_context_dict()
+    tc_box: list = [None]
     companion_ws = CompanionWebSocketCoordinator.for_current_loop()
     handled = await chat_v1._try_handle_ws_user_signed_on_frame(
         FakeWebSocket(),
@@ -1861,15 +1973,17 @@ async def test_user_signed_on_single_ack_when_lifecycle_record_raises(
             "type": "user_signed_on",
             "agent_id": "agent-lc-fail",
             "message_id": msg_uuid,
+            "time_context": sign_on_tc,
         },
         db=AsyncMock(),
         current_user=_make_user(user_id="user-lc-fail"),
         companion_ws=companion_ws,
-        inflight_turn_tracker=None,
+        inflight_turn_tracker=ChatWsInflightTurnTracker(),
         ws_conn_id="ws-test-lc-fail",
-        outbound_queue=None,
+        outbound_queue=asyncio.Queue(),
         tc_box=tc_box,
-        subscription_svc=None,
+        subscription_svc=subscription_svc,
+        voice_svc=AsyncMock(),
     )
 
     assert handled is True
@@ -1922,6 +2036,9 @@ async def test_user_signed_out_single_ack_when_lifecycle_record_raises(
             "type": "user_signed_out",
             "agent_id": "agent-so-fail",
             "message_id": "aaaaaaaa-bbbb-4ccc-dddd-000000000002",
+            "time_context": _sample_ws_time_context_dict(
+                local_time="2026-05-17T18:00:00+08:00"
+            ),
         },
         db=AsyncMock(),
         current_user=_make_user(user_id="user-so-fail"),
@@ -1929,13 +2046,7 @@ async def test_user_signed_out_single_ack_when_lifecycle_record_raises(
         inflight_turn_tracker=None,
         subscription_svc=subscription_svc,
         ws_conn_id="ws-test-so-fail",
-        tc_box=[
-            {
-                "local_time": "2026-05-17T18:00:00+08:00",
-                "timezone": "Asia/Shanghai",
-                "utc_offset_minutes": 480,
-            }
-        ],
+        tc_box=[None],
     )
 
     assert handled is True
@@ -1991,19 +2102,16 @@ async def test_ws_conn_dropped_single_ack_when_lifecycle_record_raises(
             "message_id": "bbbbbbbb-bbbb-4ccc-dddd-000000000003",
             "ws_close_code": 1006,
             "ws_close_reason": "connection reset",
+            "time_context": _sample_ws_time_context_dict(
+                local_time="2026-05-11T20:00:00+08:00"
+            ),
         },
         db=AsyncMock(),
         current_user=_make_user(user_id="user-wd-fail"),
         companion_ws=companion_ws,
         subscription_svc=subscription_svc,
         ws_conn_id="ws-test-wd-fail",
-        tc_box=[
-            {
-                "local_time": "2026-05-11T20:00:00+08:00",
-                "timezone": "Asia/Shanghai",
-                "utc_offset_minutes": 480,
-            }
-        ],
+        tc_box=[None],
     )
 
     assert handled is True
@@ -2042,6 +2150,7 @@ def test_chat_websocket_companion_user_signed_on_greeting_cancelled_on_disconnec
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-cancel",
                     "message_id": msg_uuid,
+                "time_context": _sample_ws_time_context_dict(),
                 }
             )
             ack = websocket.receive_json()
@@ -2115,6 +2224,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-inner-tick-stop",
                     "message_id": "cccccccc-cccc-4ccc-dddd-eeeeeeeeeeee",
+                "time_context": _sample_ws_time_context_dict(),
                 }
             )
             ack = websocket.receive_json()
@@ -2200,6 +2310,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-inner-tick-sched",
                     "message_id": "dddddddd-dddd-4ddd-eeee-ffffffffffff",
+                "time_context": _sample_ws_time_context_dict(),
                 }
             )
             ack = websocket.receive_json()
@@ -2232,6 +2343,7 @@ def test_chat_websocket_companion_user_signed_on_missing_message_id(
                 {
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-cf-mid",
+                "time_context": _sample_ws_time_context_dict(),
                 }
             )
             ack = websocket.receive_json()
@@ -2265,6 +2377,7 @@ def test_chat_websocket_companion_user_signed_on_invalid_message_id(
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-cf-badmid",
                     "message_id": "not-a-uuid",
+                "time_context": _sample_ws_time_context_dict(),
                 }
             )
             ack = websocket.receive_json()
@@ -2316,10 +2429,10 @@ def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
-                {
-                    "agent_id": "agent-companion-mm",
-                    "request": {
-                        "messages": [
+                _ws_chat_turn_frame(
+                    "agent-companion-mm",
+                    _ws_chat_request(
+                        messages=[
                             {
                                 "role": "user",
                                 "content": [
@@ -2333,8 +2446,9 @@ def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
                                 ],
                             }
                         ],
-                    },
-                }
+                        message_id="aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+                    ),
+                )
             )
             body = websocket.receive_json()
 
@@ -2366,12 +2480,10 @@ def test_chat_websocket_companion_rejects_missing_message_id(
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
-                {
-                    "agent_id": "agent-companion-mid",
-                    "request": {
-                        "messages": [{"role": "user", "content": "hi"}],
-                    },
-                }
+                _ws_chat_turn_frame(
+                    "agent-companion-mid",
+                    _ws_chat_request(messages=[{"role": "user", "content": "hi"}]),
+                )
             )
             body = websocket.receive_json()
 
@@ -2403,13 +2515,13 @@ def test_chat_websocket_companion_rejects_non_uuid_message_id(
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
-                {
-                    "agent_id": "agent-companion-mid2",
-                    "request": {
-                        "messages": [{"role": "user", "content": "hi"}],
-                        "message_id": "local-optimistic-123",
-                    },
-                }
+                _ws_chat_turn_frame(
+                    "agent-companion-mid2",
+                    _ws_chat_request(
+                        messages=[{"role": "user", "content": "hi"}],
+                        message_id="local-optimistic-123",
+                    ),
+                )
             )
             body = websocket.receive_json()
 
@@ -2442,10 +2554,10 @@ def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
-                {
-                    "agent_id": "agent-companion-txtparts",
-                    "request": {
-                        "messages": [
+                _ws_chat_turn_frame(
+                    "agent-companion-txtparts",
+                    _ws_chat_request(
+                        messages=[
                             {
                                 "role": "user",
                                 "content": [
@@ -2454,9 +2566,9 @@ def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
                                 ],
                             }
                         ],
-                        "message_id": "22222222-2222-4222-8222-222222222222",
-                    },
-                }
+                        message_id="22222222-2222-4222-8222-222222222222",
+                    ),
+                )
             )
             body = websocket.receive_json()
 
@@ -2465,80 +2577,6 @@ def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
     assert captured["companion_calls"] == 1
 
     companion_chat_service.clear_companion_chat_service_caches()
-
-
-def test_chat_websocket_reuses_connection_for_multiple_agents(
-    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
-):
-    user = _make_user(auth_type=AuthType.GOOGLE)
-
-    async def fake_ws_user(websocket, db):
-        return user
-
-    async def fake_agent_chat_ws_completions(
-        *,
-        db,
-        agent_id,
-        request,
-        current_user,
-        subscription_svc,
-        companion_background_sink=None,
-        companion_ws_foreground_pending=None,
-        companion_ws_heartbeat_ctx=None,
-        implicit_greeting_turn=False,
-    ):
-        return APIResponse.success(
-            data={
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {
-                            "role": "assistant",
-                            "content": f"reply:{agent_id}",
-                        },
-                        "finish_reason": "stop",
-                    }
-                ],
-                "source_imate_id": request.target_imate_id,
-            }
-        ).model_dump(exclude_none=True)
-
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
-    monkeypatch.setattr(
-        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
-    )
-
-    with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
-            websocket.send_json(
-                {
-                    "agent_id": "agent-a",
-                    "request": {
-                        "messages": [{"role": "user", "content": "hello a"}],
-                        "target_imate_id": "imate-a",
-                    },
-                }
-            )
-            first_response = websocket.receive_json()
-
-            websocket.send_json(
-                {
-                    "agent_id": "agent-b",
-                    "request": {
-                        "messages": [{"role": "user", "content": "hello b"}],
-                        "target_imate_id": "imate-b",
-                    },
-                }
-            )
-            second_response = websocket.receive_json()
-
-    assert first_response["code"] == 200
-    assert first_response["agent_id"] == "agent-a"
-    assert first_response["data"]["source_imate_id"] == "imate-a"
-
-    assert second_response["code"] == 200
-    assert second_response["agent_id"] == "agent-b"
-    assert second_response["data"]["source_imate_id"] == "imate-b"
 
 
 def test_chat_websocket_idle_timeout_reads_config(
@@ -2582,10 +2620,10 @@ def test_chat_websocket_idle_timeout_reads_config(
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
-                {
-                    "agent_id": "agent-a",
-                    "request": {"messages": [{"role": "user", "content": "hi"}]},
-                }
+                _ws_chat_turn_frame(
+                    "agent-a",
+                    _ws_chat_request(messages=[{"role": "user", "content": "hi"}]),
+                )
             )
             websocket.receive_json()
 
@@ -2639,49 +2677,26 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
             "/api/v1/chat/ws?assume_user_id=user-other"
         ) as websocket:
             websocket.send_json(
-                {
-                    "agent_id": "agent-a",
-                    "request": {"messages": [{"role": "user", "content": "hi"}]},
-                }
+                _ws_chat_turn_frame(
+                    "agent-a",
+                    _ws_chat_request(messages=[{"role": "user", "content": "hi"}]),
+                )
             )
             websocket.receive_json()
 
     assert captured.get("effective_user_id") == "user-1"
 
 
-def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
+def test_chat_websocket_chat_rejects_request_without_user_time_context(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     user = _make_user(auth_type=AuthType.GOOGLE)
-    captured: dict = {}
 
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_ws_completions(
-        *,
-        db,
-        agent_id,
-        request,
-        current_user,
-        subscription_svc,
-        companion_background_sink=None,
-        companion_ws_foreground_pending=None,
-        companion_ws_heartbeat_ctx=None,
-        implicit_greeting_turn=False,
-    ):
-        captured["user_time_context"] = request.user_time_context
-        return APIResponse.success(
-            data={
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {"role": "assistant", "content": "ok"},
-                        "finish_reason": "stop",
-                    }
-                ],
-            }
-        ).model_dump(exclude_none=True)
+    async def fake_agent_chat_ws_completions(**_kwargs):
+        raise AssertionError("chat must not run without user_time_context")
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
@@ -2691,34 +2706,17 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
-                {
-                    "type": "client_context",
-                    "time_context": {
-                        "local_time": "2026-04-07T08:00:00+08:00",
-                        "timezone": "Asia/Shanghai",
-                        "utc_offset_minutes": 480,
-                    },
-                }
-            )
-            assert websocket.receive_json() == {
-                "type": "client_context_ack",
-                "ok": True,
-            }
-            websocket.send_json(
-                {
-                    "agent_id": "agent-a",
-                    "request": {
-                        "messages": [{"role": "user", "content": "hello"}],
-                    },
-                }
+                _ws_chat_turn_frame(
+                    "agent-a",
+                    _ws_chat_request(
+                        messages=[{"role": "user", "content": "hello"}],
+                        include_time_context=False,
+                    ),
+                )
             )
             chat_response = websocket.receive_json()
 
-    assert chat_response["code"] == 200
-    utc = captured.get("user_time_context")
-    assert utc is not None
-    assert utc.timezone == "Asia/Shanghai"
-    assert utc.utc_offset_minutes == 480
+    assert chat_response["code"] == 422
 
 
 def test_chat_websocket_user_signed_out_records_ws_lifecycle_event(
@@ -2763,24 +2761,15 @@ def test_chat_websocket_user_signed_out_records_ws_lifecycle_event(
 
     msg_uuid = "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
     local_time = "2026-05-17T18:00:00+08:00"
+    sign_out_tc = _sample_ws_time_context_dict(local_time=local_time)
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
-            websocket.send_json(
-                {
-                    "type": "client_context",
-                    "time_context": {
-                        "local_time": local_time,
-                        "timezone": "Asia/Shanghai",
-                        "utc_offset_minutes": 480,
-                    },
-                }
-            )
-            assert websocket.receive_json()["type"] == "client_context_ack"
             websocket.send_json(
                 {
                     "type": "user_signed_out",
                     "agent_id": "agent-so-1",
                     "message_id": msg_uuid,
+                    "time_context": sign_out_tc,
                 }
             )
             ack = websocket.receive_json()
@@ -2794,9 +2783,7 @@ def test_chat_websocket_user_signed_out_records_ws_lifecycle_event(
     )
     assert isinstance(kw["resolved_chat_model"], GenAIModel)
     assert kw["received_message_uuid"] == msg_uuid
-    tc_box = kw["tc_box"]
-    assert isinstance(tc_box, list)
-    assert tc_box[0]["local_time"] == local_time
+    assert kw["time_context"].local_time == local_time
 
 
 def test_chat_websocket_verify_user_signed_out_not_supported(
@@ -2853,6 +2840,35 @@ def test_chat_websocket_verify_receive_text_not_connected_runtime_exits_cleanly(
             pass
 
 
+def test_chat_websocket_invalid_ping_missing_time_context_no_pong(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+) -> None:
+    """Invalid ping (no ``time_context``) is consumed silently: no pong, no error frame."""
+    user = _make_user(user_id="user-ws-ping-invalid", auth_type=AuthType.GOOGLE)
+    outbound_server_json: list[object] = []
+    orig_send_json = WebSocket.send_json
+
+    async def tracking_send_json(self, data, mode="text"):
+        outbound_server_json.append(data)
+        return await orig_send_json(self, data, mode=mode)
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(WebSocket, "send_json", tracking_send_json)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json({"type": "ping"})
+            assert not any(
+                isinstance(frame, dict) and frame.get("type") == "pong"
+                for frame in outbound_server_json
+            )
+            websocket.send_json(_ws_ping_frame())
+            assert websocket.receive_json() == {"type": "pong"}
+
+
 def test_chat_websocket_recv_not_connected_runtime_after_ping_exits_cleanly(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ) -> None:
@@ -2869,10 +2885,10 @@ def test_chat_websocket_recv_not_connected_runtime_after_ping_exits_cleanly(
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws?ws_conn_id=aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee") as websocket:
-            websocket.send_json({"type": "ping"})
+            websocket.send_json(_ws_ping_frame())
             assert websocket.receive_json() == {"type": "pong"}
             monkeypatch.setattr(WebSocket, "receive_text", boom_receive_text)
-            websocket.send_json({"type": "ping"})
+            websocket.send_json(_ws_ping_frame())
 
 
 def test_chat_websocket_session_open_uses_client_ws_conn_id_query(
@@ -2899,7 +2915,7 @@ def test_chat_websocket_session_open_uses_client_ws_conn_id_query(
         with FastAPITestClient(chat_business_error_app) as client:
             path = f"/api/v1/chat/ws?ws_conn_id={client_ws}"
             with client.websocket_connect(path) as websocket:
-                websocket.send_json({"type": "ping"})
+                websocket.send_json(_ws_ping_frame())
                 assert websocket.receive_json() == {"type": "pong"}
     finally:
         logger.remove(hid)
@@ -2934,7 +2950,7 @@ def test_chat_websocket_invalid_ws_conn_id_query_logs_fallback(
             with client.websocket_connect(
                 "/api/v1/chat/ws?ws_conn_id=not-a-valid-uuid"
             ) as websocket:
-                websocket.send_json({"type": "ping"})
+                websocket.send_json(_ws_ping_frame())
                 assert websocket.receive_json() == {"type": "pong"}
     finally:
         logger.remove(hid)
@@ -2988,19 +3004,9 @@ def test_chat_websocket_ws_conn_dropped_records_ws_lifecycle_event(
     msg_uuid = "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
     dropped_at = "2026-05-11T12:00:00+00:00"
     local_time = "2026-05-11T20:00:00+08:00"
+    drop_tc = _sample_ws_time_context_dict(local_time=local_time)
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
-            websocket.send_json(
-                {
-                    "type": "client_context",
-                    "time_context": {
-                        "local_time": local_time,
-                        "timezone": "Asia/Shanghai",
-                        "utc_offset_minutes": 480,
-                    },
-                }
-            )
-            assert websocket.receive_json()["type"] == "client_context_ack"
             websocket.send_json(
                 {
                     "type": "ws_conn_dropped",
@@ -3009,6 +3015,7 @@ def test_chat_websocket_ws_conn_dropped_records_ws_lifecycle_event(
                     "message_id": msg_uuid,
                     "ws_close_code": 1006,
                     "ws_close_reason": "connection reset",
+                    "time_context": drop_tc,
                 }
             )
             ack = websocket.receive_json()
@@ -3020,11 +3027,10 @@ def test_chat_websocket_ws_conn_dropped_records_ws_lifecycle_event(
         "agent-wd-1",
         "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee",
     )
-    assert kw["dropped_at_utc"] == dropped_at
     assert kw["ws_close_code"] == 1006
     assert kw["ws_close_reason"] == "connection reset"
     assert kw["received_message_uuid"] == msg_uuid
-    assert kw["tc_box"][0]["local_time"] == local_time
+    assert kw["time_context"].local_time == local_time
 
 
 def test_chat_websocket_verify_ws_conn_dropped_not_supported(

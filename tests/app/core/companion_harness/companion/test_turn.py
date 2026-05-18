@@ -214,8 +214,10 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
         for m in llm_msgs[:hb_idx]
         if m.get("role") == "system"
     ]
-    assert not any("## 本轮（陪伴心跳）" in (m.get("content") or "") for m in prefix_system)
-    assert "用户尚未发送新消息" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
+    assert not any(
+        "## Proactive Messaging (Heartbeat)" in (m.get("content") or "")
+        for m in prefix_system
+    )
     assert "[SILENT]" in HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
     assert not any(
         m.get("role") == "user"
