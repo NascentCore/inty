@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
@@ -373,12 +374,15 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
         turn_mod, "schedule_memory_update_after_turn", lambda *args, **kwargs: None
     )
 
+    idle = threading.Event()
+    idle.set()
     out = asyncio.run(
         run_turn(
             "user line",
             store=store,
             llm_client=client,
             langsmith_parent_run_enabled=False,
+            tool_bg_idle_event=idle,
         )
     )
     assert out.assistant_text == "final assistant"

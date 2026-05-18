@@ -29,7 +29,10 @@ from app.core.companion_harness.companion.langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
 from app.core.companion_harness.companion.models import InnerTickMode
-from app.utils.models_catalog import GenAIModel, genai_model_langsmith_meta_subset
+from app.utils.models_catalog import (
+    GenAIModel,
+    genai_model_langsmith_meta_subset,
+)
 
 _OPEN_LANGSMITH_PARENT_LOCK = threading.Lock()
 _OPEN_LANGSMITH_PARENT_RUNS: dict[int, Any] = {}
@@ -72,8 +75,10 @@ def _langsmith_parent_models_are_kernel_test_placeholders(
     chat_model: GenAIModel, tool_model: GenAIModel
 ) -> bool:
     return (
-        chat_model.id_on_provider == _LANGSMITH_PARENT_SKIP_PLACEHOLDER_CHAT_MODEL
-        and tool_model.id_on_provider == _LANGSMITH_PARENT_SKIP_PLACEHOLDER_TOOL_MODEL
+        chat_model.id_on_provider
+        == _LANGSMITH_PARENT_SKIP_PLACEHOLDER_CHAT_MODEL
+        and tool_model.id_on_provider
+        == _LANGSMITH_PARENT_SKIP_PLACEHOLDER_TOOL_MODEL
     )
 
 
@@ -96,8 +101,12 @@ def _langsmith_parent_run_extra_metadata(
         "inty_tool_model": tm,
         "inty_chat_model_nickname": chat_model.nickname,
         "inty_tool_model_nickname": tool_model.nickname,
-        "inty_chat_model_catalog": genai_model_langsmith_meta_subset(chat_model),
-        "inty_tool_model_catalog": genai_model_langsmith_meta_subset(tool_model),
+        "inty_chat_model_catalog": genai_model_langsmith_meta_subset(
+            chat_model
+        ),
+        "inty_tool_model_catalog": genai_model_langsmith_meta_subset(
+            tool_model
+        ),
         "inty_user_id": (user_id or "").strip(),
         "inty_companion_id": (companion_id or "").strip(),
     }
@@ -130,7 +139,9 @@ def _companion_turn_langsmith_root_descriptor(
         mode = inner_tick_mode or InnerTickMode.MAINTENANCE
         lane = "inner_tick"
         extra_in["inner_tick_mode"] = mode.value
-        name = f"agentic_companion_inner_tick {mode.value} user={uid} agent={cid}"
+        name = (
+            f"agentic_companion_inner_tick {mode.value} user={uid} agent={cid}"
+        )
         tags = ["agentic_companion", "inner_tick"]
         return name, tags, lane, extra_in
     if implicit_user_signed_on:
@@ -169,7 +180,9 @@ def create_companion_turn_root_run(
     )
     if not enabled:
         return None
-    if _langsmith_parent_models_are_kernel_test_placeholders(chat_model, tool_model):
+    if _langsmith_parent_models_are_kernel_test_placeholders(
+        chat_model, tool_model
+    ):
         logger.debug(
             "companion_turn_langsmith_parent skipped: kernel test placeholder models "
             "chat_model={!r} tool_model={!r}",

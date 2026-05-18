@@ -126,7 +126,9 @@ from app.services.surprise_snap_service import (
     get_unlocked_surprise_snap_message_ids,
     try_trigger_surprise_snap,
 )
-from app.services.push_notification_service import mark_user_push_notifications_as_read
+from app.services.push_notification_service import (
+    mark_user_push_notifications_as_read,
+)
 from app.services.voice_service import (
     VoiceService,
     voice_service as default_voice_service,
@@ -194,7 +196,8 @@ _WS_RECEIVE_TEXT_NOT_CONNECTED_MSG: str = (
 
 def _is_ws_receive_text_not_connected_runtime_error(exc: BaseException) -> bool:
     return (
-        isinstance(exc, RuntimeError) and str(exc) == _WS_RECEIVE_TEXT_NOT_CONNECTED_MSG
+        isinstance(exc, RuntimeError)
+        and str(exc) == _WS_RECEIVE_TEXT_NOT_CONNECTED_MSG
     )
 
 
@@ -232,7 +235,9 @@ async def _verify_ws_simple_llm_reply(
     Used by ``/ws/verify`` only.
     """
     name = (agent_row.get("name") or "Assistant").strip() or "Assistant"
-    snippet = (agent_row.get("personality") or agent_row.get("intro") or "").strip()
+    snippet = (
+        agent_row.get("personality") or agent_row.get("intro") or ""
+    ).strip()
     if snippet:
         system = f"You are {name}. Character notes: {snippet[:1200]}"
     else:
@@ -384,15 +389,21 @@ async def _handle_chat_websocket_control_json(
         return False
     tc_raw = data.get("time_context")
     if not isinstance(tc_raw, dict):
-        await websocket.send_json(ChatWsClientContextAckFrame(ok=False).model_dump())
+        await websocket.send_json(
+            ChatWsClientContextAckFrame(ok=False).model_dump()
+        )
         return True
     try:
         validated = UserTimeContext.model_validate(tc_raw)
         dumped = validated.model_dump(exclude_none=True)
         tc_box[0] = dumped if dumped else None
-        await websocket.send_json(ChatWsClientContextAckFrame(ok=True).model_dump())
+        await websocket.send_json(
+            ChatWsClientContextAckFrame(ok=True).model_dump()
+        )
     except ValidationError:
-        await websocket.send_json(ChatWsClientContextAckFrame(ok=False).model_dump())
+        await websocket.send_json(
+            ChatWsClientContextAckFrame(ok=False).model_dump()
+        )
     return True
 
 
@@ -451,7 +462,9 @@ async def _try_handle_ws_user_signed_on_frame(
         return True
     agent_id = frame.agent_id.strip()
     try:
-        preset_mid = normalize_websocket_companion_message_id_uuid(frame.message_id)
+        preset_mid = normalize_websocket_companion_message_id_uuid(
+            frame.message_id
+        )
     except ValueError:
         await websocket.send_json(
             ChatWsUserSignedOnAckFrame(
@@ -699,7 +712,9 @@ async def _try_handle_ws_ws_conn_dropped_frame(
         )
         recv_msg_uuid = (frame.message_id or "").strip()
         uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
-        code_part = frame.ws_close_code if frame.ws_close_code is not None else "-"
+        code_part = (
+            frame.ws_close_code if frame.ws_close_code is not None else "-"
+        )
         reason_raw = (frame.ws_close_reason or "").strip()
         reason_part = reason_raw if reason_raw else "-"
         log_line = (
@@ -734,7 +749,11 @@ async def _try_handle_ws_ws_conn_dropped_frame(
             agent_id,
         )
         await websocket.send_json(
-            {"type": "ws_conn_dropped_ack", "ok": False, "reason": "server_error"}
+            {
+                "type": "ws_conn_dropped_ack",
+                "ok": False,
+                "reason": "server_error",
+            }
         )
     return True
 
@@ -870,7 +889,9 @@ def _build_surprise_snap_choice_message(
     }
 
 
-def _build_festival_prompt_choice_message(item: dict, info: Optional[dict]) -> dict:
+def _build_festival_prompt_choice_message(
+    item: dict, info: Optional[dict]
+) -> dict:
     """构建单条节日提醒 choice 的 message 字典，与普通 AI 消息结构一致（含 id、meta_data、timestamp、audio_url）。
 
     同一条 message 中可能同时出现顶层的 festival_memory_id（snake_case）与 meta_data 内的
@@ -901,7 +922,9 @@ def _build_festival_prompt_choice_message(item: dict, info: Optional[dict]) -> d
     }
 
 
-def _build_daily_prompt_choice_message(item: dict, info: Optional[dict]) -> dict:
+def _build_daily_prompt_choice_message(
+    item: dict, info: Optional[dict]
+) -> dict:
     """构建单条日常记忆提醒 choice 的 message 字典。"""
     if info:
         return {
@@ -1043,7 +1066,9 @@ def _should_trigger_premium_preview(
 ) -> bool:
     if is_subscribed:
         return False
-    if not global_config_loaded_from_config_yaml.agent.enable_free_user_premium_preview:
+    if (
+        not global_config_loaded_from_config_yaml.agent.enable_free_user_premium_preview
+    ):
         return False
     preview_every = (
         global_config_loaded_from_config_yaml.agent.free_user_premium_preview_every_n_messages
@@ -1102,7 +1127,9 @@ async def _try_generate_premium_preview_choice(
         style_prompt=chat_settings.style_prompt,
         voice_enabled=False,
     )
-    premium_model_override = select_chat_model(user=current_user, is_subscribed=True)
+    premium_model_override = select_chat_model(
+        user=current_user, is_subscribed=True
+    )
     premium_preview_prompt = (
         "Generate one short premium-only sample reply for the user's latest message. "
         "Make it deeper, warmer, and more personalized than free mode. "
@@ -1131,11 +1158,15 @@ async def _try_generate_premium_preview_choice(
     return _build_premium_preview_choice(preview_content)
 
 
-def _companion_rejects_multimodal_user_turn(last_user_message: ChatMessage) -> bool:
+def _companion_rejects_multimodal_user_turn(
+    last_user_message: ChatMessage,
+) -> bool:
     return last_user_message.has_image_content_part()
 
 
-def _require_websocket_companion_message_id_uuid(request: ChatCompletionRequest) -> str:
+def _require_websocket_companion_message_id_uuid(
+    request: ChatCompletionRequest,
+) -> str:
     """WebSocket companion turns require a client ``message_id`` that parses as UUID."""
     try:
         return normalize_websocket_companion_message_id_uuid(request.message_id)
@@ -1162,7 +1193,9 @@ async def _build_companion_tool_background_ws_payload(
         is_voice_tb = True
         if _tb_script:
             voice_script_tb = _tb_script
-    gi = generated_image_meta_from_index_slice(ev.memory_store, ev.image_asset_baseline)
+    gi = generated_image_meta_from_index_slice(
+        ev.memory_store, ev.image_asset_baseline
+    )
     tb_paths: list[str] | None = (
         list(ev.local_image_paths) if ev.local_image_paths else None
     )
@@ -1200,7 +1233,9 @@ async def _build_companion_tool_background_ws_payload(
         uid = str(foreground_voice_ctx.get("user_id") or "").strip()
         if uid:
             try:
-                r_voice_user = await db.execute(select(User).where(User.id == uid))
+                r_voice_user = await db.execute(
+                    select(User).where(User.id == uid)
+                )
                 voice_user_row = r_voice_user.scalar_one_or_none()
             except Exception as e:
                 logger.warning(f"tool_bg load user for voice failed: {e}")
@@ -1226,16 +1261,20 @@ async def _build_companion_tool_background_ws_payload(
     latest_message_info = None
     try:
         if ai_message_id is not None:
-            latest_message_info = await chat_history_service.get_ai_message_info_by_id(
-                db, ai_message_id
+            latest_message_info = (
+                await chat_history_service.get_ai_message_info_by_id(
+                    db, ai_message_id
+                )
             )
     except Exception as e:
         logger.warning(f"tool_bg get_ai_message_info_by_id failed: {e}")
     user_message_id = foreground_user_message_id
     if user_message_id is None:
         try:
-            user_message_id = await chat_history_service.get_latest_user_message_id(
-                db, session_id
+            user_message_id = (
+                await chat_history_service.get_latest_user_message_id(
+                    db, session_id
+                )
             )
         except Exception as e:
             logger.warning(f"tool_bg get_latest_user_message_id failed: {e}")
@@ -1387,8 +1426,8 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
         if due_task is None:
             return
 
-        is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
-            pre_db, current_user
+        is_allowed, used_count, daily_limit = (
+            await subscription_svc.check_chat_limit(pre_db, current_user)
         )
         if not is_allowed:
             logger.info(
@@ -1576,7 +1615,8 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
                     response_text_content=response_text_content,
                     use_companion=True,
                     companion_reply_modality=companion_turn.reply_modality,
-                    companion_voice_script=companion_turn.voice_message_script or "",
+                    companion_voice_script=companion_turn.voice_message_script
+                    or "",
                 )
 
             latest_message_info = None
@@ -1602,8 +1642,10 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
 
             user_message_id = None
             try:
-                user_message_id = await chat_history_service.get_latest_user_message_id(
-                    post_db, session_id
+                user_message_id = (
+                    await chat_history_service.get_latest_user_message_id(
+                        post_db, session_id
+                    )
                 )
             except Exception as e:
                 logger.warning(
@@ -1702,8 +1744,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         if remain > 0:
             return
 
-        is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
-            pre_db, current_user
+        is_allowed, used_count, daily_limit = (
+            await subscription_svc.check_chat_limit(pre_db, current_user)
         )
         if not is_allowed:
             logger.info(
@@ -1731,19 +1773,21 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 agent_id,
             )
             return
-        companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
-            user_id=user_id,
-            agent_id=agent_id,
-            chat_id=chat_row_id,
-            user_text=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-            resolved_chat_model=model_override,
-            defer_memory_update=True,
-            session_id=session_id,
-            background_output_sink=None,
-            preset_user_msg_uuid=preset_uid,
-            inner_tick_turn=True,
-            inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
-            implicit_signal_bundle=ws_implicit,
+        companion_turn = (
+            await companion_chat_service.run_companion_chat_turn_for_api(
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_id=chat_row_id,
+                user_text=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                resolved_chat_model=model_override,
+                defer_memory_update=True,
+                session_id=session_id,
+                background_output_sink=None,
+                preset_user_msg_uuid=preset_uid,
+                inner_tick_turn=True,
+                inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+                implicit_signal_bundle=ws_implicit,
+            )
         )
         hb_user_text = (
             companion_turn.transcript_user_content
@@ -1856,7 +1900,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                     response_text_content=response_text_content,
                     use_companion=True,
                     companion_reply_modality=companion_turn.reply_modality,
-                    companion_voice_script=companion_turn.voice_message_script or "",
+                    companion_voice_script=companion_turn.voice_message_script
+                    or "",
                 )
 
             latest_message_info = None
@@ -1882,8 +1927,10 @@ async def _try_fire_companion_ws_proactive_heartbeat(
 
             user_message_id = None
             try:
-                user_message_id = await chat_history_service.get_latest_user_message_id(
-                    post_db, session_id
+                user_message_id = (
+                    await chat_history_service.get_latest_user_message_id(
+                        post_db, session_id
+                    )
                 )
             except Exception as e:
                 logger.warning(
@@ -1985,14 +2032,16 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                 min_gap_seconds=float(
                     feats.companion_ws_maintenance_inner_tick_min_gap_seconds
                 ),
-                poll_seconds=float(feats.companion_ws_proactive_heartbeat_poll_seconds),
+                poll_seconds=float(
+                    feats.companion_ws_proactive_heartbeat_poll_seconds
+                ),
             ),
         )
         if remain > 0:
             return
 
-        is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
-            pre_db, current_user
+        is_allowed, used_count, daily_limit = (
+            await subscription_svc.check_chat_limit(pre_db, current_user)
         )
         if not is_allowed:
             logger.info(
@@ -2105,13 +2154,17 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
 
         ai_message_id = None
         if reply_stripped:
-            companion_ai_meta = _companion_ai_meta_from_turn_result(companion_turn)
+            companion_ai_meta = _companion_ai_meta_from_turn_result(
+                companion_turn
+            )
 
-            ai_message_id = await chat_history_service.add_ai_message_sync_async(
-                session_id,
-                companion_reply,
-                agent_id=chat_row_agent_id,
-                meta_data=companion_ai_meta,
+            ai_message_id = (
+                await chat_history_service.add_ai_message_sync_async(
+                    session_id,
+                    companion_reply,
+                    agent_id=chat_row_agent_id,
+                    meta_data=companion_ai_meta,
+                )
             )
 
         async with AsyncSessionLocal() as post_db:
@@ -2143,16 +2196,12 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                 latest_message_info = None
                 try:
                     if ai_message_id is not None:
-                        latest_message_info = (
-                            await chat_history_service.get_ai_message_info_by_id(
-                                post_db, ai_message_id
-                            )
+                        latest_message_info = await chat_history_service.get_ai_message_info_by_id(
+                            post_db, ai_message_id
                         )
                     if latest_message_info is None:
-                        latest_message_info = (
-                            await chat_history_service.get_latest_ai_message_info(
-                                post_db, session_id
-                            )
+                        latest_message_info = await chat_history_service.get_latest_ai_message_info(
+                            post_db, session_id
                         )
                 except Exception as e:
                     logger.warning(
@@ -2265,7 +2314,9 @@ async def _agent_chat_ws_completions_impl(
             )
 
         if chat.agent_id != agent_id:
-            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            logger.error(
+                f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}"
+            )
             raise HTTPException(
                 status_code=500,
                 detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}",
@@ -2287,7 +2338,10 @@ async def _agent_chat_ws_completions_impl(
         ).strip() or None
 
         implicit_greeting_ws = implicit_greeting_turn
-        if implicit_greeting_ws and last_user_chat_message.has_image_content_part():
+        if (
+            implicit_greeting_ws
+            and last_user_chat_message.has_image_content_part()
+        ):
             raise HTTPException(
                 status_code=400,
                 detail=(
@@ -2313,8 +2367,10 @@ async def _agent_chat_ws_completions_impl(
                 )
 
             with log_time(f"AI聊天处理: session_id={session_id}"):
-                subscription = await subscription_svc.get_user_current_subscription(
-                    db, current_user.id
+                subscription = (
+                    await subscription_svc.get_user_current_subscription(
+                        db, current_user.id
+                    )
                 )
                 is_subscribed = bool(subscription)
                 model_override = select_chat_model(
@@ -2335,7 +2391,9 @@ async def _agent_chat_ws_completions_impl(
                 )
                 if (
                     not implicit_greeting_ws
-                    and _companion_rejects_multimodal_user_turn(user_messages[-1])
+                    and _companion_rejects_multimodal_user_turn(
+                        user_messages[-1]
+                    )
                 ):
                     raise HTTPException(
                         status_code=400,
@@ -2347,17 +2405,21 @@ async def _agent_chat_ws_completions_impl(
                 phone_call_trigger_number = (
                     None
                     if implicit_greeting_ws
-                    else phone_call_service.extract_call_me_at_number(last_user_text)
+                    else phone_call_service.extract_call_me_at_number(
+                        last_user_text
+                    )
                 )
                 if phone_call_trigger_number:
                     try:
-                        phone_result = await phone_call_service.start_outbound_call(
-                            db=db,
-                            current_user=current_user,
-                            agent_id=agent_id,
-                            phone_number=phone_call_trigger_number,
-                            subscription_svc=subscription_svc,
-                            reason="chat_message_call_me_at",
+                        phone_result = (
+                            await phone_call_service.start_outbound_call(
+                                db=db,
+                                current_user=current_user,
+                                agent_id=agent_id,
+                                phone_number=phone_call_trigger_number,
+                                subscription_svc=subscription_svc,
+                                reason="chat_message_call_me_at",
+                            )
                         )
                         response_text_content = (
                             "I'm calling you now at "
@@ -2405,7 +2467,9 @@ async def _agent_chat_ws_completions_impl(
                             response_text_content,
                             agent_id=chat.agent_id,
                             meta_data=dump_chat_ws_companion_wire_meta(
-                                ChatWsCompanionWireMetaData.model_validate(phone_meta)
+                                ChatWsCompanionWireMetaData.model_validate(
+                                    phone_meta
+                                )
                             ),
                         )
                     )
@@ -2421,9 +2485,13 @@ async def _agent_chat_ws_completions_impl(
                     companion_preset_uid: str | None = None
                     if companion_ws_foreground_pending is not None:
                         companion_preset_uid = (
-                            _require_websocket_companion_message_id_uuid(request)
+                            _require_websocket_companion_message_id_uuid(
+                                request
+                            )
                         )
-                        companion_ws_foreground_pending[companion_preset_uid] = {
+                        companion_ws_foreground_pending[
+                            companion_preset_uid
+                        ] = {
                             "session_id": session_id,
                             "agent_id": agent_id,
                             "request": request,
@@ -2463,7 +2531,9 @@ async def _agent_chat_ws_completions_impl(
                             )
                     except Exception as exc:
                         bg_started_on_exc = bool(
-                            getattr(exc, "companion_tool_background_started", False)
+                            getattr(
+                                exc, "companion_tool_background_started", False
+                            )
                         )
                         if (
                             companion_preset_uid is not None
@@ -2475,13 +2545,11 @@ async def _agent_chat_ws_completions_impl(
                             )
                         if bg_started_on_exc:
                             try:
-                                bg_user_row_id = (
-                                    await _persist_companion_user_message_for_bg(
-                                        session_id=session_id,
-                                        last_user_message=last_user_message,
-                                        effective_local_id=effective_local_id,
-                                        implicit_greeting_turn=implicit_greeting_ws,
-                                    )
+                                bg_user_row_id = await _persist_companion_user_message_for_bg(
+                                    session_id=session_id,
+                                    last_user_message=last_user_message,
+                                    effective_local_id=effective_local_id,
+                                    implicit_greeting_turn=implicit_greeting_ws,
                                 )
                             except Exception as persist_exc:
                                 logger.warning(
@@ -2495,9 +2563,9 @@ async def _agent_chat_ws_completions_impl(
                                 and companion_preset_uid
                                 in companion_ws_foreground_pending
                             ):
-                                companion_ws_foreground_pending[companion_preset_uid][
-                                    "foreground_user_message_id"
-                                ] = bg_user_row_id
+                                companion_ws_foreground_pending[
+                                    companion_preset_uid
+                                ]["foreground_user_message_id"] = bg_user_row_id
                         raise
                     companion_reply = companion_turn.assistant_text
                     companion_ai_meta = _companion_ai_meta_from_turn_result(
@@ -2514,7 +2582,8 @@ async def _agent_chat_ws_completions_impl(
                     if (
                         companion_preset_uid is not None
                         and companion_ws_foreground_pending is not None
-                        and companion_preset_uid in companion_ws_foreground_pending
+                        and companion_preset_uid
+                        in companion_ws_foreground_pending
                     ):
                         companion_ws_foreground_pending[companion_preset_uid][
                             "foreground_user_message_id"
@@ -2528,7 +2597,10 @@ async def _agent_chat_ws_completions_impl(
                         )
                     )
                     response_content = companion_reply
-                    if response_content is None or not str(response_content).strip():
+                    if (
+                        response_content is None
+                        or not str(response_content).strip()
+                    ):
                         logger.error(
                             f"Companion chat returned no content - agent_id={agent_id}, user_id={current_user.id}"
                         )
@@ -2584,8 +2656,10 @@ async def _agent_chat_ws_completions_impl(
         user_message_id = None
         try:
             with log_time(f"获取最新用户消息ID: session_id={session_id}"):
-                user_message_id = await chat_history_service.get_latest_user_message_id(
-                    db, session_id
+                user_message_id = (
+                    await chat_history_service.get_latest_user_message_id(
+                        db, session_id
+                    )
                 )
         except Exception as e:
             logger.warning(f"获取最新用户消息ID失败: {str(e)}")
@@ -2667,7 +2741,9 @@ async def _agent_chat_completions_impl(
 
         # 验证返回的chat中的agent_id是否与传入的一致
         if chat.agent_id != agent_id:
-            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            logger.error(
+                f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}"
+            )
             raise HTTPException(
                 status_code=500,
                 detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}",
@@ -2697,8 +2773,13 @@ async def _agent_chat_completions_impl(
             request.local_id or request.message_id or ""
         ).strip() or None
 
-        implicit_greeting_ws = chat_route == "websocket" and implicit_greeting_turn
-        if implicit_greeting_ws and last_user_chat_message.has_image_content_part():
+        implicit_greeting_ws = (
+            chat_route == "websocket" and implicit_greeting_turn
+        )
+        if (
+            implicit_greeting_ws
+            and last_user_chat_message.has_image_content_part()
+        ):
             raise HTTPException(
                 status_code=400,
                 detail=(
@@ -2747,8 +2828,10 @@ async def _agent_chat_completions_impl(
                 )
 
             with log_time(f"AI聊天处理: session_id={session_id}"):
-                subscription = await subscription_svc.get_user_current_subscription(
-                    db, current_user.id
+                subscription = (
+                    await subscription_svc.get_user_current_subscription(
+                        db, current_user.id
+                    )
                 )
                 is_subscribed = bool(subscription)
                 model_override = select_chat_model(
@@ -2774,7 +2857,9 @@ async def _agent_chat_completions_impl(
                 if (
                     use_companion
                     and (not implicit_greeting_ws)
-                    and _companion_rejects_multimodal_user_turn(user_messages[-1])
+                    and _companion_rejects_multimodal_user_turn(
+                        user_messages[-1]
+                    )
                 ):
                     raise HTTPException(
                         status_code=400,
@@ -2786,17 +2871,21 @@ async def _agent_chat_completions_impl(
                 phone_call_trigger_number = (
                     None
                     if implicit_greeting_ws
-                    else phone_call_service.extract_call_me_at_number(last_user_text)
+                    else phone_call_service.extract_call_me_at_number(
+                        last_user_text
+                    )
                 )
                 if phone_call_trigger_number:
                     try:
-                        phone_result = await phone_call_service.start_outbound_call(
-                            db=db,
-                            current_user=current_user,
-                            agent_id=agent_id,
-                            phone_number=phone_call_trigger_number,
-                            subscription_svc=subscription_svc,
-                            reason="chat_message_call_me_at",
+                        phone_result = (
+                            await phone_call_service.start_outbound_call(
+                                db=db,
+                                current_user=current_user,
+                                agent_id=agent_id,
+                                phone_number=phone_call_trigger_number,
+                                subscription_svc=subscription_svc,
+                                reason="chat_message_call_me_at",
+                            )
                         )
                         response_text_content = (
                             "I'm calling you now at "
@@ -2844,7 +2933,9 @@ async def _agent_chat_completions_impl(
                             response_text_content,
                             agent_id=chat.agent_id,
                             meta_data=dump_chat_ws_companion_wire_meta(
-                                ChatWsCompanionWireMetaData.model_validate(phone_meta)
+                                ChatWsCompanionWireMetaData.model_validate(
+                                    phone_meta
+                                )
                             ),
                         )
                     )
@@ -2867,9 +2958,13 @@ async def _agent_chat_completions_impl(
                         and companion_ws_foreground_pending is not None
                     ):
                         companion_preset_uid = (
-                            _require_websocket_companion_message_id_uuid(request)
+                            _require_websocket_companion_message_id_uuid(
+                                request
+                            )
                         )
-                        companion_ws_foreground_pending[companion_preset_uid] = {
+                        companion_ws_foreground_pending[
+                            companion_preset_uid
+                        ] = {
                             "session_id": session_id,
                             "agent_id": agent_id,
                             "request": request,
@@ -2913,7 +3008,9 @@ async def _agent_chat_completions_impl(
                             )
                     except Exception as exc:
                         bg_started_on_exc = bool(
-                            getattr(exc, "companion_tool_background_started", False)
+                            getattr(
+                                exc, "companion_tool_background_started", False
+                            )
                         )
                         if (
                             companion_preset_uid is not None
@@ -2925,13 +3022,11 @@ async def _agent_chat_completions_impl(
                             )
                         if bg_started_on_exc:
                             try:
-                                bg_user_row_id = (
-                                    await _persist_companion_user_message_for_bg(
-                                        session_id=session_id,
-                                        last_user_message=last_user_message,
-                                        effective_local_id=effective_local_id,
-                                        implicit_greeting_turn=implicit_greeting_ws,
-                                    )
+                                bg_user_row_id = await _persist_companion_user_message_for_bg(
+                                    session_id=session_id,
+                                    last_user_message=last_user_message,
+                                    effective_local_id=effective_local_id,
+                                    implicit_greeting_turn=implicit_greeting_ws,
                                 )
                             except Exception as persist_exc:
                                 logger.warning(
@@ -2945,9 +3040,9 @@ async def _agent_chat_completions_impl(
                                 and companion_preset_uid
                                 in companion_ws_foreground_pending
                             ):
-                                companion_ws_foreground_pending[companion_preset_uid][
-                                    "foreground_user_message_id"
-                                ] = bg_user_row_id
+                                companion_ws_foreground_pending[
+                                    companion_preset_uid
+                                ]["foreground_user_message_id"] = bg_user_row_id
                         raise
                     companion_reply = companion_turn.assistant_text
                     companion_ai_meta = _companion_ai_meta_from_turn_result(
@@ -2964,7 +3059,8 @@ async def _agent_chat_completions_impl(
                     if (
                         companion_preset_uid is not None
                         and companion_ws_foreground_pending is not None
-                        and companion_preset_uid in companion_ws_foreground_pending
+                        and companion_preset_uid
+                        in companion_ws_foreground_pending
                     ):
                         companion_ws_foreground_pending[companion_preset_uid][
                             "foreground_user_message_id"
@@ -2978,7 +3074,10 @@ async def _agent_chat_completions_impl(
                         )
                     )
                     response_content = companion_reply
-                    if response_content is None or not str(response_content).strip():
+                    if (
+                        response_content is None
+                        or not str(response_content).strip()
+                    ):
                         # TODO(companion-dual-envelope-reasoning-channel): Root cause is usually upstream:
                         # structured chat completion has empty ``message.content`` while LangSmith shows
                         # output under ``reasoning``. Compare trace vs ``deepseek-v4-pro`` vs ``v3.2``.
@@ -3163,8 +3262,10 @@ async def _agent_chat_completions_impl(
         user_message_id = None
         try:
             with log_time(f"获取最新用户消息ID: session_id={session_id}"):
-                user_message_id = await chat_history_service.get_latest_user_message_id(
-                    db, session_id
+                user_message_id = (
+                    await chat_history_service.get_latest_user_message_id(
+                        db, session_id
+                    )
                 )
         except Exception as e:
             logger.warning(f"获取最新用户消息ID失败: {str(e)}")
@@ -3176,8 +3277,10 @@ async def _agent_chat_completions_impl(
                 with log_time(
                     f"投递节日记忆提示: user_id={current_user.id}, agent_id={agent_id}"
                 ):
-                    delivered_prompts = await deliver_festival_memories_for_user_agent(
-                        db, current_user.id, agent_id
+                    delivered_prompts = (
+                        await deliver_festival_memories_for_user_agent(
+                            db, current_user.id, agent_id
+                        )
                     )
             except Exception as e:
                 await db.rollback()
@@ -3327,7 +3430,9 @@ async def agent_chat_completions(
     request: ChatCompletionRequest,
     current_user: UserSchema = Depends(deps.get_effective_user_for_eval),
     app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
-    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
+    subscription_svc: SubscriptionService = Depends(
+        deps.get_subscription_service
+    ),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
     """
@@ -3364,7 +3469,9 @@ async def agent_chat_completions(
 async def chat_completions_websocket(
     websocket: WebSocket,
     db: AsyncSession = Depends(deps.get_async_db),
-    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
+    subscription_svc: SubscriptionService = Depends(
+        deps.get_subscription_service
+    ),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
     await websocket.accept()
@@ -3383,7 +3490,8 @@ async def chat_completions_websocket(
     app_version_code_header = websocket.headers.get("appVersionCode")
     app_version_code = (
         int(app_version_code_header)
-        if app_version_code_header is not None and app_version_code_header.isdigit()
+        if app_version_code_header is not None
+        and app_version_code_header.isdigit()
         else None
     )
 
@@ -3484,7 +3592,9 @@ async def chat_completions_websocket(
             recv_task = asyncio.create_task(
                 asyncio.wait_for(websocket.receive_text(), timeout=idle)
             )
-            queue_task = asyncio.create_task(companion_ws.background_events.get())
+            queue_task = asyncio.create_task(
+                companion_ws.background_events.get()
+            )
             done, _pending = await asyncio.wait(
                 {recv_task, queue_task},
                 return_when=asyncio.FIRST_COMPLETED,
@@ -3511,7 +3621,9 @@ async def chat_completions_websocket(
                 try:
                     ev = queue_task.result()
                 except Exception as exc:
-                    logger.warning(f"companion tool_bg queue result failed: {exc}")
+                    logger.warning(
+                        f"companion tool_bg queue result failed: {exc}"
+                    )
                     continue
                 # TODO(observability): missing ctx often means stale user_msg_uuid or lifecycle bug;
                 # consider metrics and whether to drop vs dead-letter ToolOutputEvent.
@@ -3524,18 +3636,20 @@ async def chat_completions_websocket(
                     continue
                 try:
                     async with companion_ws.turn_lock:
-                        bg_payload = await _build_companion_tool_background_ws_payload(
-                            db=db,
-                            agent_id=str(ctx["agent_id"]),
-                            session_id=str(ctx["session_id"]),
-                            ev=ev,
-                            request=ctx["request"],
-                            effective_local_id=ctx["effective_local_id"],
-                            foreground_user_message_id=ctx.get(
-                                "foreground_user_message_id"
-                            ),
-                            foreground_voice_ctx=ctx,
-                            voice_svc=voice_svc,
+                        bg_payload = (
+                            await _build_companion_tool_background_ws_payload(
+                                db=db,
+                                agent_id=str(ctx["agent_id"]),
+                                session_id=str(ctx["session_id"]),
+                                ev=ev,
+                                request=ctx["request"],
+                                effective_local_id=ctx["effective_local_id"],
+                                foreground_user_message_id=ctx.get(
+                                    "foreground_user_message_id"
+                                ),
+                                foreground_voice_ctx=ctx,
+                                voice_svc=voice_svc,
+                            )
                         )
                         await outbound_queue.put(bg_payload)
                 except Exception:
@@ -3598,7 +3712,9 @@ async def chat_completions_websocket(
                 ws_conn_id=ws_conn_id,
             ):
                 continue
-            if await _handle_chat_websocket_control_json(websocket, data, tc_box):
+            if await _handle_chat_websocket_control_json(
+                websocket, data, tc_box
+            ):
                 continue
             if not isinstance(data, dict):
                 await outbound_queue.put(
@@ -3686,7 +3802,9 @@ async def chat_completions_websocket(
 async def chat_completions_websocket_verify(
     websocket: WebSocket,
     db: AsyncSession = Depends(deps.get_async_db),
-    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
+    subscription_svc: SubscriptionService = Depends(
+        deps.get_subscription_service
+    ),
 ):
     """
     Legacy smoke endpoint: same **outbound queue + pump** as ``/ws`` (FIFO business JSON).
@@ -3772,7 +3890,9 @@ async def chat_completions_websocket_verify(
                 ws_conn_id=ws_conn_id,
             ):
                 continue
-            if await _handle_chat_websocket_control_json(websocket, data, tc_box):
+            if await _handle_chat_websocket_control_json(
+                websocket, data, tc_box
+            ):
                 continue
             if not isinstance(data, dict):
                 await outbound_queue.put(
@@ -3802,7 +3922,9 @@ async def chat_completions_websocket_verify(
                 tc_box[0],
             )
 
-            user_messages = [msg for msg in request.messages if msg.role == "user"]
+            user_messages = [
+                msg for msg in request.messages if msg.role == "user"
+            ]
             if not user_messages:
                 await outbound_queue.put(
                     ChatWebSocketQueuedPlainError(
@@ -3816,7 +3938,9 @@ async def chat_completions_websocket_verify(
 
             last_user_text = user_messages[-1].extract_text_content()
 
-            agent_row = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+            agent_row = await agent_service.get_agent_for_chat(
+                db, agent_id=agent_id
+            )
             if not agent_row:
                 await outbound_queue.put(
                     ChatWebSocketQueuedPlainError(
@@ -3876,8 +4000,8 @@ async def chat_completions_websocket_verify(
             response = APIResponse.success(data=data)
             response_data = response.model_dump(exclude_none=True)
             response_data["agent_id"] = agent_id
-            response_data["status_line"] = await _agent_status_line_for_chat_header(
-                db, agent_id
+            response_data["status_line"] = (
+                await _agent_status_line_for_chat_header(db, agent_id)
             )
             await outbound_queue.put(response_data)
     except WebSocketDisconnect:
@@ -3929,7 +4053,9 @@ async def generate_chat_image(
     agent_id: str,
     request: ChatImageGenerationRequest,
     current_user: UserSchema = Depends(deps.get_current_active_user),
-    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
+    subscription_svc: SubscriptionService = Depends(
+        deps.get_subscription_service
+    ),
 ) -> ChatImageGenerationAPIResponse:
     """
     基于聊天上下文生成图片
@@ -3988,7 +4114,9 @@ async def generate_chat_image(
     except HTTPException as e:
         raise
     except Exception as e:
-        logger.error(f"生成聊天图片失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        logger.error(
+            f"生成聊天图片失败 - Agent ID: {agent_id}, Error: {str(e)}"
+        )
         raise HTTPException(
             status_code=500, detail=f"Failed to generate image: {str(e)}"
         )
@@ -4009,7 +4137,9 @@ async def generate_chat_music(
     agent_id: str,
     request: ChatMusicGenerationRequest,
     current_user: UserSchema = Depends(deps.get_current_active_user),
-    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
+    subscription_svc: SubscriptionService = Depends(
+        deps.get_subscription_service
+    ),
 ) -> ChatMusicGenerationAPIResponse:
     """基于聊天上下文生成音乐。"""
     try:
@@ -4032,7 +4162,9 @@ async def generate_chat_music(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"生成聊天音乐失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        logger.error(
+            f"生成聊天音乐失败 - Agent ID: {agent_id}, Error: {str(e)}"
+        )
         raise HTTPException(
             status_code=500, detail=f"Failed to generate music: {str(e)}"
         )

@@ -33,7 +33,9 @@ def _handle_api_response(
         content = (raw if isinstance(raw, str) else "").strip()
         messages.append({"role": "assistant", "content": content})
         display = content or EMPTY_RESPONSE
-        logger.info("第 %d 轮对话结束，assistant content 长度=%d", turn, len(content))
+        logger.info(
+            "第 %d 轮对话结束，assistant content 长度=%d", turn, len(content)
+        )
         print(f"{char_name}> {display}\n")
         return True, messages, None
 
@@ -125,7 +127,9 @@ def _execute_turn(
                 len(messages),
             )
             tool_msg_count = sum(1 for m in messages if m.get("role") == "tool")
-            logger.info("本次 API 请求 messages 中 tool 消息数量: %d", tool_msg_count)
+            logger.info(
+                "本次 API 请求 messages 中 tool 消息数量: %d", tool_msg_count
+            )
             logger.info("Current messages: %s", json.dumps(messages, indent=2))
             resp = client.chat.completions.create(
                 model=model,
@@ -133,14 +137,18 @@ def _execute_turn(
                 tools=tools,
                 parallel_tool_calls=False,
             )
-            _raw = resp.model_dump() if hasattr(resp, "model_dump") else repr(resp)
+            _raw = (
+                resp.model_dump() if hasattr(resp, "model_dump") else repr(resp)
+            )
             if isinstance(_raw, dict):
                 logger.info("API raw response: %s", json.dumps(_raw, indent=2))
             else:
                 logger.info("API raw response: %s", _raw)
             msg = resp.choices[0].message
             has_tc = bool(getattr(msg, "tool_calls", None))
-            logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tc)
+            logger.info(
+                "API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tc
+            )
 
             done, messages, _ = _handle_api_response(
                 messages,
@@ -178,7 +186,10 @@ def run_repl(
     memory_compactor=None,
 ) -> None:
     logger.info(
-        "REPL 启动 char_name=%s user_name=%s model=%s", char_name, user_name, model
+        "REPL 启动 char_name=%s user_name=%s model=%s",
+        char_name,
+        user_name,
+        model,
     )
     from . import tools as tools_module
 

@@ -123,13 +123,17 @@ def main() -> int:
         start = start.replace(tzinfo=timezone.utc)
 
     client = Client()
-    runs = list(client.list_runs(project_name=proj, start_time=start, limit=limit))
+    runs = list(
+        client.list_runs(project_name=proj, start_time=start, limit=limit)
+    )
     print("project", proj, "runs_fetched", len(runs))
 
     seen: set[str] = set()
     matches: list[Any] = []
     for r in runs:
-        blob = json.dumps(r.model_dump(mode="json"), ensure_ascii=False, default=str)
+        blob = json.dumps(
+            r.model_dump(mode="json"), ensure_ascii=False, default=str
+        )
         hit = uid in blob or (
             r.name
             and "agentic_companion_user_turn" in r.name
@@ -153,7 +157,14 @@ def main() -> int:
     for r in matches:
         print("---")
         print(
-            "id", r.id, "name", r.name, "status", r.status, "start_time", r.start_time
+            "id",
+            r.id,
+            "name",
+            r.name,
+            "status",
+            r.status,
+            "start_time",
+            r.start_time,
         )
         inp = r.inputs or {}
         if isinstance(inp, dict):
@@ -162,10 +173,20 @@ def main() -> int:
         try:
             root = client.read_run(str(r.id), load_child_runs=True)
         except Exception as exc:
-            print("  read_run(load_child_runs=True) failed:", exc, file=sys.stderr)
+            print(
+                "  read_run(load_child_runs=True) failed:", exc, file=sys.stderr
+            )
             continue
         for ch in root.child_runs or []:
-            print("  child", ch.name, ch.id, "status", ch.status, "error", ch.error)
+            print(
+                "  child",
+                ch.name,
+                ch.id,
+                "status",
+                ch.status,
+                "error",
+                ch.error,
+            )
     return 0
 
 

@@ -48,7 +48,9 @@ def path_from_file_uri(uri: str) -> Path:
 def _bucket_and_path_from_fake_local_file_uri(url: str) -> tuple[str, str]:
     cfg = global_config_loaded_from_config_yaml.gcs
     if not cfg.use_fake_gcs:
-        raise ValueError(f"file URI not supported when use_fake_gcs is false: {url}")
+        raise ValueError(
+            f"file URI not supported when use_fake_gcs is false: {url}"
+        )
     base = Path(cfg.fake_gcs_base_dir).resolve()
     full = path_from_file_uri(url).resolve()
     try:
@@ -59,7 +61,9 @@ def _bucket_and_path_from_fake_local_file_uri(url: str) -> tuple[str, str]:
         ) from e
     parts = rel.parts
     if len(parts) < 2:
-        raise ValueError(f"Invalid fake storage path (need bucket/object): {url}")
+        raise ValueError(
+            f"Invalid fake storage path (need bucket/object): {url}"
+        )
     return parts[0], "/".join(parts[1:])
 
 
@@ -71,7 +75,9 @@ def get_gcs_client():
             fake_gcs_base_dir = (
                 global_config_loaded_from_config_yaml.gcs.fake_gcs_base_dir
             )
-            logger.info(f"使用 GCS Fake 客户端，存储目录为: {fake_gcs_base_dir}")
+            logger.info(
+                f"使用 GCS Fake 客户端，存储目录为: {fake_gcs_base_dir}"
+            )
             gcs_client = FakeGCSClient(fake_gcs_base_dir)
         else:
             gcs_client = storage.Client.from_service_account_json(
@@ -128,7 +134,9 @@ def delete_from_gcs(bucket_name, path):
             raise e
 
 
-def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> str:
+def copy_gcs_file(
+    source_url: str, destination_path: str, bucket_name: str
+) -> str:
     """
     复制GCS文件到新位置
 
@@ -209,8 +217,9 @@ def is_valid_gcs_url(url: str) -> bool:
     if not url:
         return False
 
-    if global_config_loaded_from_config_yaml.gcs.use_fake_gcs and url.startswith(
-        "file:"
+    if (
+        global_config_loaded_from_config_yaml.gcs.use_fake_gcs
+        and url.startswith("file:")
     ):
         try:
             base = Path(

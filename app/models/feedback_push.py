@@ -20,15 +20,23 @@ class FeedbackPushHistory(Base):
 
     id = Column(String, primary_key=True, index=True, comment="推送记录ID")
     user_id = Column(
-        String, ForeignKey("users.id"), nullable=False, index=True, comment="用户ID"
+        String,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+        comment="用户ID",
     )
     chat_count_threshold = Column(
         Integer,
         nullable=False,
         comment="触发的聊天轮数阈值（20/30/40/50/60）",
     )
-    sent_at = Column(DateTime(timezone=True), nullable=False, comment="发送时间")
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    sent_at = Column(
+        DateTime(timezone=True), nullable=False, comment="发送时间"
+    )
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
 
     # 关系
     user = relationship("User")

@@ -43,7 +43,9 @@ class TelegramInbox:
     bot_api: TelegramBotApi
     poll_timeout_seconds: int
     bound_chat_id: str | None = None
-    next_get_updates_offset: int | None = field(default=None, init=False, repr=False)
+    next_get_updates_offset: int | None = field(
+        default=None, init=False, repr=False
+    )
     last_applied_update_id: int = field(default=0, init=False)
 
     def drain_into_llm_messages(
@@ -80,7 +82,9 @@ class TelegramInbox:
         for msg in incoming:
             if self.bound_chat_id is None:
                 self.bound_chat_id = msg.chat_id
-                logger.info("telegram_inbox bound chat_id=%s", self.bound_chat_id)
+                logger.info(
+                    "telegram_inbox bound chat_id=%s", self.bound_chat_id
+                )
             if msg.chat_id != self.bound_chat_id:
                 continue
             if msg.update_id <= self.last_applied_update_id:
@@ -106,7 +110,8 @@ class TelegramInbox:
                 {
                     "role": "user",
                     "content": (
-                        "New message(s) from the user on Telegram:\n" + "\n".join(lines)
+                        "New message(s) from the user on Telegram:\n"
+                        + "\n".join(lines)
                     ),
                 }
             )

@@ -13,7 +13,9 @@ from typing import Any
 from langsmith import traceable
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.runtime_events import read_runtime_events
+from app.core.companion_harness.companion.runtime_events import (
+    read_runtime_events,
+)
 from app.core.companion_harness.companion.utc import local_date_str
 from app.core.companion_harness.runtime_mode import inty_runtime_mode_is_debug
 
@@ -213,7 +215,9 @@ def build_runtime_inspect_payload(
             out["last_chat_completion_request"] = last
 
     eff_store = runtime_inspect_get_scoped_memory_store() or store
-    out["runtime_events"] = read_runtime_events(eff_store, limit=max_runtime_events)
+    out["runtime_events"] = read_runtime_events(
+        eff_store, limit=max_runtime_events
+    )
 
     if include_store_documents:
         day = local_date_str()

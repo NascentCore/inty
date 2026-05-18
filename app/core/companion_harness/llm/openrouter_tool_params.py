@@ -24,7 +24,9 @@ def tool_path_chat_completion_kwargs(model: GenAIModel) -> dict[str, Any]:
         return {}
 
     if is_deepseek_on_openrouter(model):
-        return {"extra_body": {"reasoning": {"effort": "high", "exclude": True}}}
+        return {
+            "extra_body": {"reasoning": {"effort": "high", "exclude": True}}
+        }
     if is_gemini_model(model):
         return {"reasoning_effort": "high"}
     return {}

@@ -29,7 +29,9 @@ class MusicGenerationService:
         """构建音乐生成提示词。"""
         agent_name = agent_data.get("name") or "the AI companion"
         agent_personality = agent_data.get("personality") or ""
-        agent_scenario = agent_data.get("scenario") or agent_data.get("intro") or ""
+        agent_scenario = (
+            agent_data.get("scenario") or agent_data.get("intro") or ""
+        )
 
         history_lines: list[str] = []
         for message in chat_history:
@@ -157,8 +159,12 @@ class MusicGenerationService:
         raw_result = await handler.get()
         audio_url = self._extract_audio_url_from_fal_result(raw_result)
         if not audio_url:
-            raise ValueError("Music generation succeeded but returned no audio URL")
-        duration_seconds = self._extract_duration_seconds_from_fal_result(raw_result)
+            raise ValueError(
+                "Music generation succeeded but returned no audio URL"
+            )
+        duration_seconds = self._extract_duration_seconds_from_fal_result(
+            raw_result
+        )
         audio_format = self._guess_audio_format(audio_url)
         return {
             "audio_url": audio_url,
@@ -207,7 +213,9 @@ class MusicGenerationService:
             user_message=message_content,
             user_info=user_info,
         )
-        fal_result = await self._generate_music_with_fal(model_id=model, prompt=prompt)
+        fal_result = await self._generate_music_with_fal(
+            model_id=model, prompt=prompt
+        )
         return {
             "message_id": message_id,
             "audio_url": fal_result["audio_url"],

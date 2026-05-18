@@ -188,7 +188,9 @@ class PushSchedulerService:
                     coalesce=True,
                     max_instances=1,
                 )
-                logger.info(f"已添加记忆抽取任务: 每日 UTC {mem_cfg.cron_hour}:00 执行")
+                logger.info(
+                    f"已添加记忆抽取任务: 每日 UTC {mem_cfg.cron_hour}:00 执行"
+                )
 
             # 节日记忆抽取：每 5 分钟扫描，仅执行 run_at 已到且未跑过的配置
             self.scheduler.add_job(
@@ -201,7 +203,9 @@ class PushSchedulerService:
                 max_instances=1,
                 next_run_time=datetime.datetime.now(),
             )
-            logger.info("已添加节日记忆抽取任务: 启动后立即执行，之后每 5 分钟扫描")
+            logger.info(
+                "已添加节日记忆抽取任务: 启动后立即执行，之后每 5 分钟扫描"
+            )
 
             # 节日记忆通知：每 15 分钟扫描未投递且未发过 system notification 的节日记忆并发送 FCM（可选）
             if getattr(config, "festival_memory_enabled", True):
@@ -233,7 +237,9 @@ class PushSchedulerService:
                 if daily_enabled:
                     self.scheduler.add_job(
                         self._run_user_analytics_daily_report,
-                        trigger=CronTrigger(hour=uar_cfg.daily_cron_hour, minute=0),
+                        trigger=CronTrigger(
+                            hour=uar_cfg.daily_cron_hour, minute=0
+                        ),
                         id="run_user_analytics_daily_report",
                         name="用户数据分析日报",
                         replace_existing=True,
@@ -286,7 +292,9 @@ class PushSchedulerService:
                             scope_parts.append("日报")
                         if weekly_enabled:
                             scope_parts.append("周报")
-                        backfill_scope = "与".join(scope_parts) if scope_parts else "无"
+                        backfill_scope = (
+                            "与".join(scope_parts) if scope_parts else "无"
+                        )
                         logger.info(
                             f"[用户数据分析补算] 开始检查并补算缺失的{backfill_scope}"
                         )
@@ -303,7 +311,9 @@ class PushSchedulerService:
                                     f"[用户数据分析补算] 完成: 日报 {daily_count} 条, 周报 {weekly_count} 条"
                                 )
                         except Exception as e:
-                            logger.error(f"[用户数据分析补算] 执行失败: {str(e)}")
+                            logger.error(
+                                f"[用户数据分析补算] 执行失败: {str(e)}"
+                            )
 
                     asyncio.create_task(backfill_user_analytics_reports())
 
@@ -453,7 +463,9 @@ class PushSchedulerService:
             read_source = (
                 "replica" if AsyncSessionLocalReplica is not None else "primary"
             )
-            logger.info(f"[记忆抽取] 用户筛选与历史读取将优先使用: {read_source}")
+            logger.info(
+                f"[记忆抽取] 用户筛选与历史读取将优先使用: {read_source}"
+            )
 
             async with read_session_factory() as read_db:
                 if workflow_mode == "daily_incremental_summarization":
@@ -515,7 +527,9 @@ class PushSchedulerService:
             read_source = (
                 "replica" if AsyncSessionLocalReplica is not None else "primary"
             )
-            logger.info(f"[节日记忆抽取] 配置与历史读取将优先使用: {read_source}")
+            logger.info(
+                f"[节日记忆抽取] 配置与历史读取将优先使用: {read_source}"
+            )
 
             async with read_session_factory() as db:
                 result = await db.execute(
@@ -538,7 +552,10 @@ class PushSchedulerService:
                 run_at_dt = run_at_local.astimezone(dt_timezone.utc)
                 if now < run_at_dt:
                     continue
-                if config.last_run_at is not None and config.last_run_at >= run_at_dt:
+                if (
+                    config.last_run_at is not None
+                    and config.last_run_at >= run_at_dt
+                ):
                     continue
                 due_configs.append(config)
             if not due_configs:
@@ -621,10 +638,14 @@ class PushSchedulerService:
             config = global_config_loaded_from_config_yaml.push_notification
             batch_size = getattr(config, "festival_memory_batch_size", 50)
             async with AsyncSessionLocal() as db:
-                success_count, fail_count = await process_festival_memory_push_batch(
-                    db, batch_size=batch_size
+                success_count, fail_count = (
+                    await process_festival_memory_push_batch(
+                        db, batch_size=batch_size
+                    )
                 )
-            logger.info(f"[节日记忆通知] 完成: 成功={success_count}, 失败={fail_count}")
+            logger.info(
+                f"[节日记忆通知] 完成: 成功={success_count}, 失败={fail_count}"
+            )
         except Exception as e:
             logger.error(f"[节日记忆通知] 执行失败: {str(e)}")
 

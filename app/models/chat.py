@@ -40,10 +40,14 @@ class Chat(Base):
     # 关系
     user = relationship("User", back_populates="chats")
     agent = relationship("Agent", back_populates="chats")
-    settings = relationship("ChatSettings", back_populates="chat", uselist=False)
+    settings = relationship(
+        "ChatSettings", back_populates="chat", uselist=False
+    )
 
     # 时间戳
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
     # 唯一约束：每个用户与每个Agent只能有一个活跃的聊天会话

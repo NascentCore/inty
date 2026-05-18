@@ -12,7 +12,9 @@ from app.schemas.version import VersionReminderAction
 class GooglePlayService:
     """Google Play Developer API服务"""
 
-    def __init__(self, android_publisher_service: Resource, config: GooglePlayConfig):
+    def __init__(
+        self, android_publisher_service: Resource, config: GooglePlayConfig
+    ):
         """初始化Google Play服务"""
         self.service = android_publisher_service
         self.config = config
@@ -122,7 +124,9 @@ class GooglePlayService:
             logger.error(f"产品购买验证失败: {str(e)}")
             return False, {"error": str(e)}
 
-    def acknowledge_subscription(self, product_id: str, purchase_token: str) -> bool:
+    def acknowledge_subscription(
+        self, product_id: str, purchase_token: str
+    ) -> bool:
         """
         确认订阅购买
 
@@ -198,7 +202,9 @@ class GooglePlayService:
         """
         try:
             body = {
-                "deferralInfo": {"expectedExpiryTimeMillis": str(expiry_time_millis)}
+                "deferralInfo": {
+                    "expectedExpiryTimeMillis": str(expiry_time_millis)
+                }
             }
 
             self.service.purchases().subscriptions().defer(
@@ -220,12 +226,18 @@ class GooglePlayService:
             logger.error(f"订阅延期失败: {str(e)}")
             return False
 
-    def _parse_subscription_purchase(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    def _parse_subscription_purchase(
+        self, result: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """解析订阅购买响应"""
         try:
             purchase_info = {
-                "start_time": self._millis_to_datetime(result.get("startTimeMillis")),
-                "expiry_time": self._millis_to_datetime(result.get("expiryTimeMillis")),
+                "start_time": self._millis_to_datetime(
+                    result.get("startTimeMillis")
+                ),
+                "expiry_time": self._millis_to_datetime(
+                    result.get("expiryTimeMillis")
+                ),
                 "auto_renewing": result.get("autoRenewing", False),
                 "price_amount_micros": result.get("priceAmountMicros", 0),
                 "price_currency_code": result.get("priceCurrencyCode", "USD"),
@@ -309,7 +321,9 @@ class GooglePlayService:
             cancel_reason = purchase_info.get("cancel_reason")
             if cancel_reason is not None:
                 # 如果有取消原因，检查是否在宽限期内
-                user_cancellation_time = purchase_info.get("user_cancellation_time")
+                user_cancellation_time = purchase_info.get(
+                    "user_cancellation_time"
+                )
                 if user_cancellation_time and expiry_time:
                     # 如果当前时间超过了取消时间但还在到期时间内，说明在宽限期
                     now = datetime.now(timezone.utc)
@@ -341,7 +355,9 @@ class GooglePlayService:
                 return False
 
             # 检查确认状态 (0: 未确认, 1: 已确认)
-            acknowledgement_state = purchase_info.get("acknowledgement_state", 0)
+            acknowledgement_state = purchase_info.get(
+                "acknowledgement_state", 0
+            )
             if acknowledgement_state != 1:
                 return False
 
@@ -432,10 +448,16 @@ class GooglePlayService:
                 tracks_to_try = [primary_track]
                 if fallback_tracks:
                     tracks_to_try.extend(
-                        [track for track in fallback_tracks if track != primary_track]
+                        [
+                            track
+                            for track in fallback_tracks
+                            if track != primary_track
+                        ]
                     )
 
-                logger.debug(f"尝试从轨道获取版本信息，轨道顺序: {tracks_to_try}")
+                logger.debug(
+                    f"尝试从轨道获取版本信息，轨道顺序: {tracks_to_try}"
+                )
 
                 for track_name in tracks_to_try:
                     try:
@@ -456,15 +478,17 @@ class GooglePlayService:
                             latest_release = track_result["releases"][0]
 
                             version_info = {
-                                "version_code": latest_release.get("versionCodes", [0])[
-                                    0
-                                ],
+                                "version_code": latest_release.get(
+                                    "versionCodes", [0]
+                                )[0],
                                 "version_name": latest_release.get("name", ""),
                                 "status": latest_release.get("status", ""),
                                 "release_notes": self._extract_release_notes(
                                     latest_release
                                 ),
-                                "user_fraction": latest_release.get("userFraction"),
+                                "user_fraction": latest_release.get(
+                                    "userFraction"
+                                ),
                                 "country_targeting": latest_release.get(
                                     "countryTargeting"
                                 ),
@@ -480,7 +504,9 @@ class GooglePlayService:
                             continue
 
                     except HttpError as track_error:
-                        logger.warning(f"查询轨道 {track_name} 失败: {track_error}")
+                        logger.warning(
+                            f"查询轨道 {track_name} 失败: {track_error}"
+                        )
                         continue
 
                 # 所有轨道都没有找到版本信息
@@ -521,7 +547,9 @@ class GooglePlayService:
             logger.warning(f"提取发布说明失败: {e}")
             return None
 
-    def check_version_requirement(self, client_version_code: int) -> Dict[str, Any]:
+    def check_version_requirement(
+        self, client_version_code: int
+    ) -> Dict[str, Any]:
         """
         检查版本更新要求
 
@@ -559,7 +587,9 @@ class GooglePlayService:
         logger.debug(f"获取版本信息: {version_info}")
 
         if "error" in version_info:
-            logger.warning(f"无法获取版本信息，跳过版本检查: {version_info['error']}")
+            logger.warning(
+                f"无法获取版本信息，跳过版本检查: {version_info['error']}"
+            )
             return result | {
                 "error": version_info["error"],
                 "message": "Unable to fetch version info",
@@ -572,7 +602,9 @@ class GooglePlayService:
         try:
             latest_version_code = int(latest_version_code_raw)
         except (ValueError, TypeError):
-            logger.warning(f"最新版本代码无效: {latest_version_code_raw}, 使用默认值 0")
+            logger.warning(
+                f"最新版本代码无效: {latest_version_code_raw}, 使用默认值 0"
+            )
             latest_version_code = 0
 
         version_code_gap = latest_version_code - client_version_code
@@ -605,7 +637,8 @@ class GooglePlayService:
             "latest_version_code": latest_version_code,
             "changelog": changelog_value,
             "update_required": reminder_action != VersionReminderAction.NONE,
-            "force_update": reminder_action == VersionReminderAction.BLOCK_ACCESS,
+            "force_update": reminder_action
+            == VersionReminderAction.BLOCK_ACCESS,
             "message": (
                 "New version available"
                 if reminder_action != VersionReminderAction.NONE

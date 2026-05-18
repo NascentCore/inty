@@ -35,7 +35,9 @@ def _load_agent_data(path: Path) -> dict[str, Any]:
         return agents[0]
     if isinstance(raw, dict) and "id" in raw:
         return raw
-    raise SystemExit('JSON must be a single agent object or { "agents": [ {...} ] }')
+    raise SystemExit(
+        'JSON must be a single agent object or { "agents": [ {...} ] }'
+    )
 
 
 def _json_to_orm_kwargs(
@@ -67,9 +69,13 @@ def _json_to_orm_kwargs(
         if key == "energy_points":
             kwargs["points"] = value if value is not None else 0
             continue
-        if key in ("created_at", "updated_at", "deleted_at") and isinstance(value, int):
+        if key in ("created_at", "updated_at", "deleted_at") and isinstance(
+            value, int
+        ):
             kwargs[key] = (
-                datetime.fromtimestamp(value, tz=timezone.utc) if value else None
+                datetime.fromtimestamp(value, tz=timezone.utc)
+                if value
+                else None
             )
             continue
         if key == "creator_id":
@@ -110,10 +116,14 @@ async def _import_agent(
 
     async with AsyncSessionLocal() as db:
         if not await _check_creator_exists(db, creator_id):
-            raise SystemExit(f"creator_id '{creator_id}' not found in users table")
+            raise SystemExit(
+                f"creator_id '{creator_id}' not found in users table"
+            )
 
         existing = await db.execute(
-            select(Agent.id).where(Agent.id == agent_id, Agent.deleted_at.is_(None))
+            select(Agent.id).where(
+                Agent.id == agent_id, Agent.deleted_at.is_(None)
+            )
         )
         if existing.scalar_one_or_none() is not None:
             raise SystemExit(
@@ -155,7 +165,9 @@ def main(
     ],
     creator_id: Annotated[
         str | None,
-        cyclopts.Parameter(name="--creator-id", help="Override creator_id from JSON"),
+        cyclopts.Parameter(
+            name="--creator-id", help="Override creator_id from JSON"
+        ),
     ] = None,
     dry_run: Annotated[
         bool,

@@ -10,7 +10,12 @@ from ..repositories.cursor_repo import CursorRepository
 from ..repositories.events_repo import EventsRepository
 from ..repositories.memory_repo import MemoryRepository
 from ..repositories.plan_repo import PlanRepository
-from ..services import memory_service, planner_service, reply_service, safety_policy
+from ..services import (
+    memory_service,
+    planner_service,
+    reply_service,
+    safety_policy,
+)
 from ..services.identity_resolver import resolve_user_id
 
 
@@ -47,7 +52,9 @@ class Orchestrator:
         self._planner_followup_delay_minutes = planner_followup_delay_minutes
         self._quiet_hours_start_hour_local = quiet_hours_start_hour_local
         self._quiet_hours_end_hour_local = quiet_hours_end_hour_local
-        self._scheduler_default_telegram_chat_id = scheduler_default_telegram_chat_id
+        self._scheduler_default_telegram_chat_id = (
+            scheduler_default_telegram_chat_id
+        )
         self._scheduler_default_sms_recipient = scheduler_default_sms_recipient
 
     def process_inbound_telegram(
@@ -82,14 +89,20 @@ class Orchestrator:
             )
 
         now = datetime.now(timezone.utc)
-        candidate_memory_item = memory_service.build_preference_memory_from_event(
-            user_id=user_id,
-            event_id=inbound_event.event_id,
-            event_content=inbound_event.content,
-            now=now,
+        candidate_memory_item = (
+            memory_service.build_preference_memory_from_event(
+                user_id=user_id,
+                event_id=inbound_event.event_id,
+                event_content=inbound_event.content,
+                now=now,
+            )
         )
-        preferred_channel = planner_service.pick_preferred_channel_from_memories(
-            self._memory_repo.list_memories_by_user(user_id=user_id, limit=20)
+        preferred_channel = (
+            planner_service.pick_preferred_channel_from_memories(
+                self._memory_repo.list_memories_by_user(
+                    user_id=user_id, limit=20
+                )
+            )
         )
         if (
             candidate_memory_item is not None
@@ -150,7 +163,9 @@ class Orchestrator:
         )
         executed = 0
         for action in due_actions:
-            claimed = self._plan_repo.claim_action_running(action_id=action.action_id)
+            claimed = self._plan_repo.claim_action_running(
+                action_id=action.action_id
+            )
             if not claimed:
                 continue
             is_quiet = safety_policy.is_quiet_hours(
@@ -204,7 +219,9 @@ class Orchestrator:
             return None
         return int(value)
 
-    def advance_applied_update_id(self, *, cursor_key: str, update_id: int) -> None:
+    def advance_applied_update_id(
+        self, *, cursor_key: str, update_id: int
+    ) -> None:
         self._cursor_repo.set_cursor(
             cursor_key=cursor_key,
             cursor_value=str(update_id),

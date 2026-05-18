@@ -25,7 +25,9 @@ class CharacterTheme(Base):
     id = Column(String, primary_key=True, index=True)
     name = Column(String(255), nullable=False, comment="专区名称")
     description = Column(Text, nullable=True, comment="专区描述")
-    background_image_url = Column(String, nullable=True, comment="背景图URL地址")
+    background_image_url = Column(
+        String, nullable=True, comment="背景图URL地址"
+    )
     visibility = Column(
         Enum(CharacterThemeVisibility, name="character_theme_visibility"),
         default=CharacterThemeVisibility.HIDDEN,
@@ -33,7 +35,9 @@ class CharacterTheme(Base):
         index=True,
         comment="可见性：第一展示、第二展示、不可见",
     )
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
     # 关系
@@ -51,7 +55,9 @@ class CharacterThemeAgent(Base):
     __tablename__ = "character_theme_agents"
 
     theme_id = Column(
-        String, ForeignKey("character_themes.id", ondelete="CASCADE"), primary_key=True
+        String,
+        ForeignKey("character_themes.id", ondelete="CASCADE"),
+        primary_key=True,
     )
     agent_id = Column(
         String, ForeignKey("agents.id", ondelete="CASCADE"), primary_key=True

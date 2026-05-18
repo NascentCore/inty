@@ -65,7 +65,9 @@ class AgentRuntimeSettings(BaseModel):
     """
 
     llm_config: Optional[LLMConfig] = None
-    legacy_llm_config: Optional[LLMConfig] = Field(default=None, alias="model_config")
+    legacy_llm_config: Optional[LLMConfig] = Field(
+        default=None, alias="model_config"
+    )
 
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
@@ -114,13 +116,15 @@ class AgentPromptContext(BaseModel):
             settings=settings,
             main_prompt=agent_data.get("main_prompt", "") or "",
             mode_prompt=agent_data.get("mode_prompt", "") or "",
-            output_format_prompt=agent_data.get("output_format_prompt", "") or "",
+            output_format_prompt=agent_data.get("output_format_prompt", "")
+            or "",
             personality=agent_data.get("personality", "") or "",
             scenario=agent_data.get("scenario", "") or "",
             message_example=agent_data.get("message_example", "") or "",
             creator_notes=agent_data.get("creator_notes", "") or "",
             tags=list(agent_data.get("tags", []) or []),
-            character_version=agent_data.get("character_version", "1.0") or "1.0",
+            character_version=agent_data.get("character_version", "1.0")
+            or "1.0",
             extensions=dict(agent_data.get("extensions", {}) or {}),
             intro=agent_data.get("intro", "") or "",
         )
@@ -158,7 +162,9 @@ class PromptAssemblyDeps:
         tmpl=tmpl, char=char, user=user
     )
     lookup_prompt_override: PromptOverrideLookupFn = get_agent_prompt_override
-    is_christmas_prompt_enabled: Callable[[], bool] = _is_christmas_prompt_enabled
+    is_christmas_prompt_enabled: Callable[[], bool] = (
+        _is_christmas_prompt_enabled
+    )
 
 
 DEFAULT_PROMPT_ASSEMBLY_DEPS = PromptAssemblyDeps()
@@ -285,7 +291,9 @@ OfficialAssistantSideEffect: TypeAlias = SaveUserMbtiSideEffect
 class OfficialAssistantToolExecutionResult(BaseModel):
     tool_result: str
     injected_system_message: Optional[str] = None
-    side_effects: list[OfficialAssistantSideEffect] = Field(default_factory=list)
+    side_effects: list[OfficialAssistantSideEffect] = Field(
+        default_factory=list
+    )
 
 
 class OfficialAssistantToolLoopInput(BaseModel):
@@ -348,7 +356,9 @@ def execute_official_assistant_tool_call(
         mbti_type = _parse_mbti_type_from_tool_arguments(raw_arguments)
         return OfficialAssistantToolExecutionResult(
             tool_result=f"Saved MBTI type: {mbti_type}",
-            side_effects=[SaveUserMbtiSideEffect(user_id=user_id, mbti_type=mbti_type)],
+            side_effects=[
+                SaveUserMbtiSideEffect(user_id=user_id, mbti_type=mbti_type)
+            ],
         )
     if tool_name == OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME:
         manual_content = deps.load_user_manual()
@@ -392,7 +402,9 @@ def _insert_system_message_into_messages(
         insertion_index += 1
     openai_messages.insert(
         insertion_index,
-        OpenAIChatMessageSnapshot(role="system", content=system_message_content),
+        OpenAIChatMessageSnapshot(
+            role="system", content=system_message_content
+        ),
     )
 
 
@@ -462,7 +474,8 @@ def chat_completion_snapshot_from_openai_response(
                 type=getattr(raw_tool_call, "type", "function"),
                 function=AssistantToolCallFunction(
                     name=getattr(raw_tool_call.function, "name"),
-                    arguments=getattr(raw_tool_call.function, "arguments", "") or "",
+                    arguments=getattr(raw_tool_call.function, "arguments", "")
+                    or "",
                 ),
             )
             for raw_tool_call in raw_tool_calls
@@ -470,7 +483,8 @@ def chat_completion_snapshot_from_openai_response(
         choices.append(
             ChatCompletionChoiceSnapshot(
                 message=AssistantMessageSnapshot(
-                    content=getattr(raw_message, "content", None), tool_calls=tool_calls
+                    content=getattr(raw_message, "content", None),
+                    tool_calls=tool_calls,
                 ),
                 finish_reason=getattr(raw_choice, "finish_reason", None),
             )

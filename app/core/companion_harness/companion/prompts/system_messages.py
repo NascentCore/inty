@@ -27,12 +27,14 @@ from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
 from app.core.companion_harness.runtime_mode import inty_runtime_mode_is_debug
+from living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 from ..models import ContextMeta, InnerTickMode, PromptBundle
 from .inner_tick_ls_tc import (
     INNER_TICK_LS_TC_AUTONOMY_SECTION,
     INNER_TICK_LS_TC_TOOL_BULLET,
 )
+
 
 def _inner_tick_proactive_chat(
     inner_tick_turn: bool, inner_tick_mode: InnerTickMode
@@ -355,6 +357,19 @@ def _inner_tick_turn_section() -> str:
     )
 
 
+def _living_sphere_persistence_clause() -> str:
+    return (
+        "## LivingSphere 与 TechnoCore 边界\n\n"
+        "上文 ``LIVING_SPHERE.md`` 是**可读快照**（最终一致）：用户明确要改小家布局、物件、锚点时，"
+        f"调用 ``{LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME}`` 记入更新日志，**不要**用 "
+        "``memory_store_write_document`` 覆盖 ``LIVING_SPHERE.md``。"
+        "系统在用户回合后的记忆管线里合并进快照（与 MEMORY 慢路径同类预期）；"
+        "若本回合走异步 tool_background，compact 会等待其收尾后再合并。\n"
+        "``TECHNO_CORE.md`` 描述 Inty 集体居留层，**用户不能改写**；勿用 "
+        "``techno_core_record_event`` 代替小家布局变更（该工具用于自主节拍/居留层事件日志）。"
+    )
+
+
 def _tool_side_compact_directive() -> str:
     if inty_runtime_mode_is_debug():
         return _read_contract(_TOOL_SIDE_COMPACT_DEBUG)
@@ -407,7 +422,9 @@ def build_system_messages(
     include_significance_perception_slice: bool = False,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
-    tick_proactive = _inner_tick_proactive_chat(inner_tick_turn, inner_tick_mode)
+    tick_proactive = _inner_tick_proactive_chat(
+        inner_tick_turn, inner_tick_mode
+    )
     tools_on = enable_tools or enable_user_profile_tool
     # Dual-LLM foreground completion: tools exist in product, but this request omits OpenAI ``tools=``.
     chat_branch_no_tool_api = (
@@ -426,7 +443,9 @@ def build_system_messages(
         out.append(_system_message(_heartbeat_clause()))
 
     if inner_tick_turn and not tick_proactive:
-        out.append(_system_message(_inner_tick_ai_private_section(ai_private_text)))
+        out.append(
+            _system_message(_inner_tick_ai_private_section(ai_private_text))
+        )
         out.append(_system_message(_inner_tick_turn_section()))
 
     if repl_online_ack_turn:
@@ -436,20 +455,28 @@ def build_system_messages(
         out.append(_system_message(_tool_side_compact_directive()))
         if tools_on:
             out.append(
-                _system_message(_tool_background_final_json_routing_contract_text())
+                _system_message(
+                    _tool_background_final_json_routing_contract_text()
+                )
             )
             out.append(
-                _system_message(_tool_background_first_round_skip_contract_text())
+                _system_message(
+                    _tool_background_first_round_skip_contract_text()
+                )
             )
 
     out.append(_system_message(bundle.identity.strip()))
     out.append(_system_message(bundle.soul.strip()))
     out.append(_system_message(bundle.style_md.strip()))
-    out.append(_system_message(experience_profile_system_clause(context.context_mode)))
+    out.append(
+        _system_message(experience_profile_system_clause(context.context_mode))
+    )
     if bundle.techno_core_md.strip():
         out.append(_system_message(bundle.techno_core_md.strip()))
     if bundle.living_sphere_md.strip():
         out.append(_system_message(bundle.living_sphere_md.strip()))
+    if not inner_tick_turn:
+        out.append(_system_message(_living_sphere_persistence_clause()))
     out.append(_system_message(bundle.user_md.strip()))
 
     if include_significance_perception_slice and not inner_tick_turn:
@@ -464,7 +491,10 @@ def build_system_messages(
                     + bundle.memory_raw_diary_today_md.strip()
                 )
             )
-        if not skip_memory_blocks and bundle.memory_day_summary_today_md.strip():
+        if (
+            not skip_memory_blocks
+            and bundle.memory_day_summary_today_md.strip()
+        ):
             out.append(
                 _system_message(
                     MEMORY_SYSTEM_HEADING_GIST
@@ -507,12 +537,16 @@ def build_system_messages(
                 )
         else:
             out.append(
-                _system_message(_output_contract_text_chat_branch_mirrored_tools())
+                _system_message(
+                    _output_contract_text_chat_branch_mirrored_tools()
+                )
             )
     else:
         out.append(_system_message(_output_contract_text()))
 
     if include_significance_perception_slice and chat_branch_no_tool_api:
-        out.append(_system_message(_dual_llm_chat_structured_output_contract_text()))
+        out.append(
+            _system_message(_dual_llm_chat_structured_output_contract_text())
+        )
 
     return out

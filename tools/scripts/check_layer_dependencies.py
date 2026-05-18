@@ -39,7 +39,10 @@ FORBIDDEN_LAYER_DEPENDENCIES: dict[tuple[str, str], str] = {
     ("schemas", "middleware"): "Schemas must not depend on middleware layer.",
     ("utils", "models"): "Utils must not depend on models layer.",
     ("utils", "middleware"): "Utils must not depend on middleware layer.",
-    ("external_services", "api"): "External services must not depend on API layer.",
+    (
+        "external_services",
+        "api",
+    ): "External services must not depend on API layer.",
     (
         "external_services",
         "services",
@@ -178,7 +181,9 @@ def _scan(app_root: Path) -> list[Violation]:
 def main(
     app_root: Annotated[
         str,
-        cyclopts.Parameter(name="--app-root", help="Path to app root directory."),
+        cyclopts.Parameter(
+            name="--app-root", help="Path to app root directory."
+        ),
     ] = "app",
     json_output: Annotated[
         str | None,
@@ -198,7 +203,9 @@ def main(
         output_path = Path(json_output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
-            json.dumps([asdict(v) for v in violations], ensure_ascii=False, indent=2),
+            json.dumps(
+                [asdict(v) for v in violations], ensure_ascii=False, indent=2
+            ),
             encoding="utf-8",
         )
         print(f"Wrote JSON report: {output_path}")

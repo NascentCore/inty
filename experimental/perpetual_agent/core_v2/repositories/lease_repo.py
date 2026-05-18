@@ -38,13 +38,22 @@ class LeaseRepository:
                         INSERT INTO consumer_leases(lease_key, owner_id, expires_at, updated_at)
                         VALUES (?, ?, ?, ?)
                         """,
-                        (lease_key, owner_id, to_iso(expires_at), to_iso(now_dt)),
+                        (
+                            lease_key,
+                            owner_id,
+                            to_iso(expires_at),
+                            to_iso(now_dt),
+                        ),
                     )
                     conn.execute("COMMIT")
                     return True
                 current_owner = str(row["owner_id"])
-                current_expires_at = datetime.fromisoformat(str(row["expires_at"]))
-                can_take = current_owner == owner_id or current_expires_at <= now_dt
+                current_expires_at = datetime.fromisoformat(
+                    str(row["expires_at"])
+                )
+                can_take = (
+                    current_owner == owner_id or current_expires_at <= now_dt
+                )
                 if not can_take:
                     conn.execute("COMMIT")
                     return False

@@ -8,7 +8,9 @@ import logging
 from typing import Dict, Any
 
 
-def clean_json_response(response_text: str, logger: logging.Logger = None) -> str:
+def clean_json_response(
+    response_text: str, logger: logging.Logger = None
+) -> str:
     """
     Clean a response text to extract valid JSON from markdown blocks or other formatting
 
@@ -49,7 +51,9 @@ def clean_json_response(response_text: str, logger: logging.Logger = None) -> st
     return cleaned
 
 
-def safe_json_loads(json_string: str, logger: logging.Logger = None) -> Dict[str, Any]:
+def safe_json_loads(
+    json_string: str, logger: logging.Logger = None
+) -> Dict[str, Any]:
     """
     Safely parse JSON string with error handling and logging
 

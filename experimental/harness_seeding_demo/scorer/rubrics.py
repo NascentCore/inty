@@ -47,7 +47,9 @@ def score_rubric_default(
         ),
     }
 
-    distress = bool(re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user))
+    distress = bool(
+        re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user)
+    )
     if distress:
         strain_terms = (
             "累",
@@ -97,7 +99,9 @@ def score_rubric_strict_emotional(
     checks = dict(base.checks)
     checks["substantive_length"] = len(text) >= min_chars
 
-    distress = bool(re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user))
+    distress = bool(
+        re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user)
+    )
     if distress:
         strain_terms = (
             "上司",
@@ -139,9 +143,15 @@ def score_rubric_premature_solution(
         "no_dismissive": _DISMISSIVE_RE.search(text) is None,
     }
 
-    distress = bool(re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user))
-    reflect_pat = re.compile(r"(听起来|理解|懂你的|懂那种|感受到|揪心|不容易|陪你)")
-    advice_pat = re.compile(r"(\d+\s*[\.)]|第一步|第二步|试试.{0,8}步骤|你可以照做)")
+    distress = bool(
+        re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user)
+    )
+    reflect_pat = re.compile(
+        r"(听起来|理解|懂你的|懂那种|感受到|揪心|不容易|陪你)"
+    )
+    advice_pat = re.compile(
+        r"(\d+\s*[\.)]|第一步|第二步|试试.{0,8}步骤|你可以照做)"
+    )
 
     if distress:
         head = text[:320]

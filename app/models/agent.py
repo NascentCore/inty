@@ -1,7 +1,16 @@
 from enum import StrEnum
 
 import sqlalchemy as sa
-from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -65,14 +74,18 @@ class Agent(Base):
         comment="运营上传的专属角色照：每项含 image_url, caption, credits_required",
     )
     category = Column(String)
-    status = Column(Enum(AgentStatus, name="agentstatus"), default=AgentStatus.PENDING)
+    status = Column(
+        Enum(AgentStatus, name="agentstatus"), default=AgentStatus.PENDING
+    )
     source = Column(
         Enum(AgentSource, name="agentsource"),
         nullable=True,
         default=AgentSource.USER_CREATED,
         comment="角色来源：用户创建或自动生成",
     )
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     version = Column(

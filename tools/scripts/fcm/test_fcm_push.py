@@ -195,7 +195,9 @@ async def test_fcm_by_user_id(
                 return result
 
             result["tokens_found"] = len(tokens)
-            logger.info(f"找到 {len(tokens)} 个 device token 用于用户 {user_id}")
+            logger.info(
+                f"找到 {len(tokens)} 个 device token 用于用户 {user_id}"
+            )
 
             # 测试每个 token
             for token in tokens:

@@ -34,9 +34,7 @@ class ColoredFormatter(logging.Formatter):
 
     def format(self, record):
         if COLORAMA_AVAILABLE and record.levelname in self.colors:
-            record.levelname = (
-                f"{self.colors[record.levelname]}{record.levelname}{Style.RESET_ALL}"
-            )
+            record.levelname = f"{self.colors[record.levelname]}{record.levelname}{Style.RESET_ALL}"
         return super().format(record)
 
 
@@ -119,9 +117,7 @@ class MigrationLogger:
         self._progress_count += increment
         if self._total_count > 0:
             percentage = (self._progress_count / self._total_count) * 100
-            progress_msg = (
-                f"[{self._progress_count}/{self._total_count}] ({percentage:.1f}%)"
-            )
+            progress_msg = f"[{self._progress_count}/{self._total_count}] ({percentage:.1f}%)"
             if message:
                 progress_msg += f" {message}"
             self.logger.info(progress_msg)
@@ -154,7 +150,9 @@ class MigrationLogger:
         for key, value in stats_dict.items():
             if isinstance(value, dict) and len(value) > 0:
                 self.logger.info(f"  {key}:")
-                for sub_key, sub_value in list(value.items())[:10]:  # 只显示前10个
+                for sub_key, sub_value in list(value.items())[
+                    :10
+                ]:  # 只显示前10个
                     self.logger.info(f"    {sub_key}: {sub_value}")
                 if len(value) > 10:
                     self.logger.info(f"    ... 还有 {len(value) - 10} 个")

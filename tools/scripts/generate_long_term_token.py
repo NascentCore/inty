@@ -66,7 +66,9 @@ async def generate_long_term_token(
             )
 
             expire_delta = timedelta(days=days)
-            token = create_access_token(subject=user.id, expires_delta=expire_delta)
+            token = create_access_token(
+                subject=user.id, expires_delta=expire_delta
+            )
             expire_time = datetime.utcnow() + expire_delta
 
             print("=" * 60)

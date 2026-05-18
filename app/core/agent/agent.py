@@ -11,7 +11,12 @@ from pathlib import Path
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+)
 from langchain_postgres import PostgresChatMessageHistory
 
 import langsmith as ls
@@ -53,14 +58,19 @@ from app.services.cache_service import cache_service
 from app.services.messages_compaction_service import (
     maybe_compact_and_save_overflow_history,
 )
-from app.utils.models_catalog import is_deepseek_on_openrouter, resolve_chat_model_to_id
+from app.utils.models_catalog import (
+    is_deepseek_on_openrouter,
+    resolve_chat_model_to_id,
+)
 from app.utils.openai_client import (
     get_chat_llm_provider,
     get_chat_openai_client,
     langchain_message_to_openai_message,
 )
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
-from app.core.user_time_context_prompt import suffix_user_text_with_time_context_lines
+from app.core.user_time_context_prompt import (
+    suffix_user_text_with_time_context_lines,
+)
 
 # 圣诞节季节性提示词：放在角色设定（personality/scenario/message_example）最后
 CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT = """##Seasonal Behavior (Christmas Week – Dec 20–26)
@@ -154,7 +164,9 @@ def _openai_messages_from_lc_messages_with_tail_user_time(
                     additional_kwargs=message.additional_kwargs,
                 )
         out.append(
-            langchain_message_to_openai_message(to_convert, user_name, agent_name)
+            langchain_message_to_openai_message(
+                to_convert, user_name, agent_name
+            )
         )
     return out
 
@@ -176,7 +188,9 @@ INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE = """##Official Assistant Tool
 # agent.py 位于 app/core/agent，向上 3 层到仓库根目录
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
-INTELLIMATE_CHANGE_LOGS_PATH = REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
+INTELLIMATE_CHANGE_LOGS_PATH = (
+    REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
+)
 OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME = "save_user_mbti_type"
 OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME = "read_user_manual"
 OFFICIAL_ASSISTANT_READ_CHANGE_LOGS_TOOL_NAME = "read_change_logs"
@@ -196,7 +210,8 @@ OFFICIAL_ASSISTANT_TOOL_DEFINITIONS: List[Dict[str, Any]] = [
                     "mbti_type": {
                         "type": "string",
                         "description": (
-                            "Final MBTI type, one of: " + ", ".join(sorted(MBTI_TYPES))
+                            "Final MBTI type, one of: "
+                            + ", ".join(sorted(MBTI_TYPES))
                         ),
                     }
                 },
@@ -332,7 +347,8 @@ def get_sync_engine():
 
         _sync_engine = create_engine(
             global_config.database.url,
-            pool_size=global_config.database.pool_size // 2,  # 同步引擎使用一半的连接池
+            pool_size=global_config.database.pool_size
+            // 2,  # 同步引擎使用一半的连接池
             max_overflow=global_config.database.max_overflow,
             pool_timeout=global_config.database.pool_timeout,
             pool_recycle=global_config.database.pool_recycle,
@@ -527,7 +543,9 @@ class Agent:
             return self.output_format_prompt
         if self.mode_prompt:
             try:
-                return prompts.get_mode_output_format_prompt_by_id(self.mode_prompt)
+                return prompts.get_mode_output_format_prompt_by_id(
+                    self.mode_prompt
+                )
             except ValueError:
                 return ""
         return prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
@@ -569,7 +587,9 @@ class Agent:
         if chat_settings is not None:
             chat_settings_snapshot = ChatSettingsSnapshot(
                 style_prompt=getattr(chat_settings, "style_prompt", None),
-                premium_mode=bool(getattr(chat_settings, "premium_mode", False)),
+                premium_mode=bool(
+                    getattr(chat_settings, "premium_mode", False)
+                ),
                 chat_mode=getattr(chat_settings, "chat_mode", None),
             )
 
@@ -635,10 +655,12 @@ class Agent:
         include_output_format_prompt: bool = True,
     ) -> List[SystemMessage]:
         if self._is_intellimate_official():
-            return self.build_system_messages_for_intellimate_official_assistant(
-                user_profile=user_profile,
-                chat_settings=chat_settings,
-                user_time_context=user_time_context,
+            return (
+                self.build_system_messages_for_intellimate_official_assistant(
+                    user_profile=user_profile,
+                    chat_settings=chat_settings,
+                    user_time_context=user_time_context,
+                )
             )
         return self.build_system_messages(
             user_profile=user_profile,
@@ -647,7 +669,9 @@ class Agent:
             include_output_format_prompt=include_output_format_prompt,
         )
 
-    def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
+    def _build_character_context(
+        self, user_name: str = None
+    ) -> List[SystemMessage]:
         """
         构建角色设定上下文信息，每个字段作为独立的 system message，支持模板渲染
         """
@@ -673,7 +697,9 @@ class Agent:
 
         if global_config.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT, char=self.name, user=user_name
+                tmpl=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT,
+                char=self.name,
+                user=user_name,
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
@@ -780,7 +806,9 @@ class Agent:
 
                     if not row:
                         logger.debug(f"用户 {user_id} 不存在")
-                        cache_service.set_user_info(user_id, user_info_text, ttl=60)
+                        cache_service.set_user_info(
+                            user_id, user_info_text, ttl=60
+                        )
                     else:
                         user_info_parts = []
                         (
@@ -805,9 +833,13 @@ class Agent:
                         if age_group:
                             user_info_parts.append(f"Age: {age_group}")
                         if description:
-                            user_info_parts.append(f"Description: {description}")
+                            user_info_parts.append(
+                                f"Description: {description}"
+                            )
                         if isinstance(meta_data, dict):
-                            user_metadata = UserMetadata.model_validate(meta_data)
+                            user_metadata = UserMetadata.model_validate(
+                                meta_data
+                            )
                             if user_metadata.mbti_type:
                                 user_info_parts.append(
                                     f"MBTI Type: {user_metadata.mbti_type}"
@@ -848,7 +880,9 @@ class Agent:
     def _get_relevant_history_for_user_tier(
         self, *, history_messages: List[BaseMessage], is_subscribed: bool
     ) -> List[BaseMessage]:
-        max_messages = self._get_chat_messages_limit(is_subscribed=is_subscribed)
+        max_messages = self._get_chat_messages_limit(
+            is_subscribed=is_subscribed
+        )
         return self._get_relevant_history(
             history_messages=history_messages,
             max_messages=max_messages,
@@ -906,8 +940,13 @@ class Agent:
         history_messages: List[BaseMessage],
         is_subscribed: bool,
     ) -> None:
-        max_messages_limit = self._get_chat_messages_limit(is_subscribed=is_subscribed)
-        if max_messages_limit <= 0 or len(history_messages) <= max_messages_limit:
+        max_messages_limit = self._get_chat_messages_limit(
+            is_subscribed=is_subscribed
+        )
+        if (
+            max_messages_limit <= 0
+            or len(history_messages) <= max_messages_limit
+        ):
             return
         compaction_future = get_compaction_executor().submit(
             self._run_messages_compaction_task,
@@ -925,7 +964,9 @@ class Agent:
         )
 
     def _get_relevant_history(
-        self, history_messages: List[BaseMessage], max_messages: int = MAX_MESSAGES_ALL
+        self,
+        history_messages: List[BaseMessage],
+        max_messages: int = MAX_MESSAGES_ALL,
     ) -> List[BaseMessage]:
         """
         获取相关的历史消息，进行智能截取和优化
@@ -959,7 +1000,9 @@ class Agent:
                 history_messages[start_index], HumanMessage
             ):
                 # 包含这条用户消息，但移除最后一条消息以保持总数
-                recent_messages = [history_messages[start_index]] + recent_messages[:-1]
+                recent_messages = [
+                    history_messages[start_index]
+                ] + recent_messages[:-1]
 
         return recent_messages
 
@@ -980,7 +1023,9 @@ class Agent:
 
         normalized_created_at = created_at_raw.strip().replace("Z", "+00:00")
         try:
-            return datetime.fromisoformat(normalized_created_at).date().isoformat()
+            return (
+                datetime.fromisoformat(normalized_created_at).date().isoformat()
+            )
         except ValueError:
             logger.warning(f"无法解析消息 created_at: {created_at_raw}")
             return None
@@ -1056,7 +1101,10 @@ class Agent:
         }
 
     def _insert_system_message_into_openai_messages(
-        self, *, openai_messages: List[Dict[str, Any]], system_message_content: str
+        self,
+        *,
+        openai_messages: List[Dict[str, Any]],
+        system_message_content: str,
     ) -> None:
         insertion_index = 0
         while (
@@ -1065,7 +1113,8 @@ class Agent:
         ):
             insertion_index += 1
         openai_messages.insert(
-            insertion_index, {"role": "system", "content": system_message_content}
+            insertion_index,
+            {"role": "system", "content": system_message_content},
         )
 
     def _parse_mbti_type_from_tool_arguments(self, raw_arguments: str) -> str:
@@ -1229,7 +1278,9 @@ class Agent:
             bool: 如果错误可重试返回True，否则返回False
         """
         # OpenAI SDK的错误类型
-        if isinstance(error, (RateLimitError, APIConnectionError, APITimeoutError)):
+        if isinstance(
+            error, (RateLimitError, APIConnectionError, APITimeoutError)
+        ):
             return True
 
         # 401错误可能是临时性的认证问题
@@ -1299,7 +1350,9 @@ class Agent:
         if trace_user_email is not None and "user_email" not in metadata_labels:
             metadata_labels["user_email"] = trace_user_email
         normalized_labels = (
-            normalize_langsmith_metadata(metadata_labels) if enable_tracing else {}
+            normalize_langsmith_metadata(metadata_labels)
+            if enable_tracing
+            else {}
         )
         trace_name = chat_name or f"{user_id}:{self.name}"
 
@@ -1337,10 +1390,15 @@ class Agent:
                             # for this ``model`` (non-harness path; does not use create_chat_completion_sync).
                             run.end(
                                 outputs={
-                                    "content": response.choices[0].message.content,
-                                    "finish_reason": response.choices[0].finish_reason,
+                                    "content": response.choices[
+                                        0
+                                    ].message.content,
+                                    "finish_reason": response.choices[
+                                        0
+                                    ].finish_reason,
                                     "tool_calls_count": len(
-                                        response.choices[0].message.tool_calls or []
+                                        response.choices[0].message.tool_calls
+                                        or []
                                     ),
                                     "model": response.model,
                                     "usage": (
@@ -1366,9 +1424,9 @@ class Agent:
                                     ),
                                 }
                             )
-                        trace_id_raw = getattr(run, "trace_id", None) or getattr(
-                            run, "id", None
-                        )
+                        trace_id_raw = getattr(
+                            run, "trace_id", None
+                        ) or getattr(run, "id", None)
                         trace_id = str(trace_id_raw) if trace_id_raw else None
                 else:
                     # 未采样或 tracing 关闭时，直接调用 API。
@@ -1403,7 +1461,9 @@ class Agent:
 
                 # 如果是APIError，记录状态码和错误体
                 if isinstance(e, APIError):
-                    error_details["status_code"] = getattr(e, "status_code", None)
+                    error_details["status_code"] = getattr(
+                        e, "status_code", None
+                    )
                     error_details["error_body"] = getattr(e, "body", None)
 
                 if is_retryable and attempt < max_retries - 1:
@@ -1459,14 +1519,18 @@ class Agent:
         pool_start = time.time()
         pool = get_connection_pool()
         pool_time = time.time() - pool_start
-        logger.debug(f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}")
+        logger.debug(
+            f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}"
+        )
 
         with pool.connection() as conn_local:
             try:
                 # 创建历史记录对象
                 history_start = time.time()
                 history = PostgresChatMessageHistory(
-                    chat_history.TABLE_NAME, session_id, sync_connection=conn_local
+                    chat_history.TABLE_NAME,
+                    session_id,
+                    sync_connection=conn_local,
                 )
                 history_init_time = time.time() - history_start
                 logger.debug(
@@ -1477,7 +1541,9 @@ class Agent:
                 get_history_start = time.time()
                 # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
                 # 待聊天记录过长才需要截取、记忆等复杂机制。
-                history_messages = chat_history_service.get_history_messages(session_id)
+                history_messages = chat_history_service.get_history_messages(
+                    session_id
+                )
                 self._maybe_compact_history_for_user_tier(
                     user_id=user_id,
                     session_id=session_id,
@@ -1535,11 +1601,13 @@ class Agent:
 
                 messages: list[BaseMessage] = system_messages + all_messages
 
-                openai_messages = _openai_messages_from_lc_messages_with_tail_user_time(
-                    messages,
-                    user_name=user_name,
-                    agent_name=self.name,
-                    user_time_context=user_time_context,
+                openai_messages = (
+                    _openai_messages_from_lc_messages_with_tail_user_time(
+                        messages,
+                        user_name=user_name,
+                        agent_name=self.name,
+                        user_time_context=user_time_context,
+                    )
                 )
                 logger.debug(f"openai_messages: {openai_messages}")
 
@@ -1569,15 +1637,21 @@ class Agent:
                         "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                     )
                 model_name = resolve_chat_model_to_id(model_name)
-                temperature = self.model_config.get("temperature", default_temperature)
-                max_tokens = self.model_config.get("max_tokens", default_max_tokens)
+                temperature = self.model_config.get(
+                    "temperature", default_temperature
+                )
+                max_tokens = self.model_config.get(
+                    "max_tokens", default_max_tokens
+                )
                 top_p = self.model_config.get("top_p", default_top_p)
                 model_source = "agent_config" if agent_model else "override"
                 logger.debug(
                     f"chat completion LLM config: agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
                 )
 
-                enable_official_assistant_tools = self._is_intellimate_official()
+                enable_official_assistant_tools = (
+                    self._is_intellimate_official()
+                )
                 trace_id: Optional[str] = None
                 try:
                     response, trace_id = self._call_openai_api_with_retry(
@@ -1599,7 +1673,9 @@ class Agent:
                             if enable_official_assistant_tools
                             else None
                         ),
-                        tool_choice="auto" if enable_official_assistant_tools else None,
+                        tool_choice=(
+                            "auto" if enable_official_assistant_tools else None
+                        ),
                     )
                     openai_messages_for_response = openai_messages
                     if enable_official_assistant_tools:
@@ -1612,7 +1688,9 @@ class Agent:
                                 temperature=temperature,
                                 max_tokens=max_tokens,
                                 top_p=top_p,
-                                extra_body=self._chat_extra_body(user_id, model_name),
+                                extra_body=self._chat_extra_body(
+                                    user_id, model_name
+                                ),
                                 user_id=user_id,
                                 chat_name=chat_name,
                                 labels=labels,
@@ -1640,8 +1718,12 @@ class Agent:
                         error_context["status_code"] = getattr(
                             api_error, "status_code", None
                         )
-                        error_context["error_body"] = getattr(api_error, "body", None)
-                        error_context["error_code"] = getattr(api_error, "code", None)
+                        error_context["error_body"] = getattr(
+                            api_error, "body", None
+                        )
+                        error_context["error_code"] = getattr(
+                            api_error, "code", None
+                        )
 
                     logger.error(
                         f"OpenRouter API调用最终失败 - "
@@ -1653,7 +1735,9 @@ class Agent:
                     raise
 
                 api_time = time.time() - api_start
-                logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
+                logger.debug(
+                    f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}"
+                )
 
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.debug(
@@ -1693,19 +1777,23 @@ class Agent:
                         "role": "user",
                         "content": "continue",
                     }
-                    retry_response, retry_trace_id = self._call_openai_api_with_retry(
-                        client=client,
-                        model=model_name,
-                        openai_messages=openai_messages_for_response,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        top_p=top_p,
-                        extra_body=self._chat_extra_body(user_id, model_name),
-                        user_id=user_id,
-                        max_retries=3,
-                        initial_delay=1.0,
-                        chat_name=chat_name,
-                        labels=labels,
+                    retry_response, retry_trace_id = (
+                        self._call_openai_api_with_retry(
+                            client=client,
+                            model=model_name,
+                            openai_messages=openai_messages_for_response,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            top_p=top_p,
+                            extra_body=self._chat_extra_body(
+                                user_id, model_name
+                            ),
+                            user_id=user_id,
+                            max_retries=3,
+                            initial_delay=1.0,
+                            chat_name=chat_name,
+                            labels=labels,
+                        )
                     )
                     if (
                         retry_response is None
@@ -1717,8 +1805,12 @@ class Agent:
                             f"Session: {session_id}, Model: {model_name}"
                         )
                         raise ValueError("LLM returned no choices on retry")
-                    retry_finish_reason = retry_response.choices[0].finish_reason
-                    retry_response_text = retry_response.choices[0].message.content
+                    retry_finish_reason = retry_response.choices[
+                        0
+                    ].finish_reason
+                    retry_response_text = retry_response.choices[
+                        0
+                    ].message.content
 
                     # 重试后仍被过滤则记录错误，但使用重试后的响应
                     if retry_finish_reason in content_filter_reasons:
@@ -1798,7 +1890,9 @@ class Agent:
                 ):
                     error_context["is_api_error"] = True
                     if isinstance(e, APIError):
-                        error_context["status_code"] = getattr(e, "status_code", None)
+                        error_context["status_code"] = getattr(
+                            e, "status_code", None
+                        )
                         error_context["error_body"] = getattr(e, "body", None)
 
                 logger.error(
@@ -1841,13 +1935,17 @@ class Agent:
         pool_start = time.time()
         pool = get_connection_pool()
         pool_time = time.time() - pool_start
-        logger.debug(f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}")
+        logger.debug(
+            f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}"
+        )
 
         with pool.connection() as conn_local:
             try:
                 # 获取相关的历史消息（排除已软删除的）
                 get_history_start = time.time()
-                history_messages = chat_history_service.get_history_messages(session_id)
+                history_messages = chat_history_service.get_history_messages(
+                    session_id
+                )
                 recent_history = self._get_relevant_history_for_user_tier(
                     history_messages=history_messages,
                     is_subscribed=is_subscribed,
@@ -1886,13 +1984,17 @@ class Agent:
                     user_time_context=user_time_context,
                 )
 
-                messages_list: list[BaseMessage] = system_messages + all_messages
+                messages_list: list[BaseMessage] = (
+                    system_messages + all_messages
+                )
 
-                openai_messages = _openai_messages_from_lc_messages_with_tail_user_time(
-                    messages_list,
-                    user_name=user_name,
-                    agent_name=self.name,
-                    user_time_context=user_time_context,
+                openai_messages = (
+                    _openai_messages_from_lc_messages_with_tail_user_time(
+                        messages_list,
+                        user_name=user_name,
+                        agent_name=self.name,
+                        user_time_context=user_time_context,
+                    )
                 )
                 logger.debug(f"openai_messages: {openai_messages}")
 
@@ -1903,7 +2005,9 @@ class Agent:
 
                 # 调用agent进行对话
                 agent_invoke_start = time.time()
-                logger.debug(f"开始Agent推理（推送消息） - Agent: {self.agent_id}")
+                logger.debug(
+                    f"开始Agent推理（推送消息） - Agent: {self.agent_id}"
+                )
 
                 chat_name = f"{user_name}:{self.name}"
                 default_temperature = global_config.agent.temperature
@@ -1922,8 +2026,12 @@ class Agent:
                         "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                     )
                 model_name = resolve_chat_model_to_id(model_name)
-                temperature = self.model_config.get("temperature", default_temperature)
-                max_tokens = self.model_config.get("max_tokens", default_max_tokens)
+                temperature = self.model_config.get(
+                    "temperature", default_temperature
+                )
+                max_tokens = self.model_config.get(
+                    "max_tokens", default_max_tokens
+                )
                 top_p = self.model_config.get("top_p", default_top_p)
                 model_source = "agent_config" if agent_model else "override"
                 logger.debug(
@@ -1946,7 +2054,9 @@ class Agent:
                     user_email=user_email,
                 )
                 api_time = time.time() - api_start
-                logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
+                logger.debug(
+                    f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}"
+                )
 
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.debug(
@@ -2051,14 +2161,18 @@ class Agent:
         成功时返回 (响应内容, 插入的 AI 消息 ID)；响应内容可能是文本或 OpenAI content parts。
         异常时抛出。
         """
-        logger.debug(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
+        logger.debug(
+            f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}"
+        )
 
         self._update_last_used()
 
         profile_start = time.time()
         user_profile = self._get_user_profile_sync(user_id)
         profile_time = time.time() - profile_start
-        logger.debug(f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}")
+        logger.debug(
+            f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}"
+        )
 
         # 在线程池中执行同步聊天逻辑
         loop = asyncio.get_event_loop()
@@ -2078,7 +2192,9 @@ class Agent:
             )
             return result
         except Exception as e:
-            logger.error(f"异步聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
+            logger.error(
+                f"异步聊天失败 - Agent: {self.agent_id}, Error: {str(e)}"
+            )
             raise
 
     def cleanup(self):
@@ -2164,7 +2280,9 @@ class AgentManager:
                         try:
                             agent.cleanup()
                         except Exception as e:
-                            logger.error(f"清理Agent资源失败 {agent_id}: {str(e)}")
+                            logger.error(
+                                f"清理Agent资源失败 {agent_id}: {str(e)}"
+                            )
 
                         del self.agents[agent_id]
                         logger.debug(f"清理空闲Agent: {agent_id}")
@@ -2217,13 +2335,16 @@ class AgentManager:
                 # 如果达到最大数量，清理最久未使用的Agent
                 if len(self.agents) >= self.max_agents:
                     oldest_agent_id = min(
-                        self.agents.keys(), key=lambda x: self.agents[x].last_used
+                        self.agents.keys(),
+                        key=lambda x: self.agents[x].last_used,
                     )
                     old_agent = self.agents[oldest_agent_id]
                     try:
                         old_agent.cleanup()
                     except Exception as e:
-                        logger.error(f"清理旧Agent失败 {oldest_agent_id}: {str(e)}")
+                        logger.error(
+                            f"清理旧Agent失败 {oldest_agent_id}: {str(e)}"
+                        )
 
                     del self.agents[oldest_agent_id]
                     logger.info(
@@ -2247,10 +2368,14 @@ class AgentManager:
                         logger.error(
                             f"错误：创建的Agent实例ID不匹配！期望: {agent_id}, 实际: {agent.agent_id}"
                         )
-                        raise ValueError("Agent instance creation failed: ID mismatch")
+                        raise ValueError(
+                            "Agent instance creation failed: ID mismatch"
+                        )
 
                     self.agents[agent_id] = agent
-                    logger.info(f"成功创建并缓存Agent实例 - Agent ID: {agent_id}")
+                    logger.info(
+                        f"成功创建并缓存Agent实例 - Agent ID: {agent_id}"
+                    )
                     return agent
 
                 except Exception as e:
@@ -2290,7 +2415,9 @@ class AgentManager:
                     "message_example": getattr(agent_db, "message_example", ""),
                     "creator_notes": getattr(agent_db, "creator_notes", ""),
                     "tags": getattr(agent_db, "tags", []),
-                    "character_version": getattr(agent_db, "character_version", "1.0"),
+                    "character_version": getattr(
+                        agent_db, "character_version", "1.0"
+                    ),
                     "extensions": getattr(agent_db, "extensions", {}),
                     "intro": getattr(agent_db, "intro", ""),
                 }
@@ -2352,7 +2479,9 @@ class AgentManager:
                     try:
                         agent.cleanup()
                     except Exception as e:
-                        logger.error(f"强制清理Agent资源失败 {agent_id}: {str(e)}")
+                        logger.error(
+                            f"强制清理Agent资源失败 {agent_id}: {str(e)}"
+                        )
 
                     del self.agents[agent_id]
                     logger.info(f"强制清理Agent: {agent_id}")
@@ -2389,7 +2518,9 @@ class AgentManager:
                         old_agent.cleanup()
                         logger.debug(f"已清理旧Agent实例: {agent_id}")
                     except Exception as e:
-                        logger.error(f"清理旧Agent实例失败 {agent_id}: {str(e)}")
+                        logger.error(
+                            f"清理旧Agent实例失败 {agent_id}: {str(e)}"
+                        )
 
                     del self.agents[agent_id]
 
@@ -2400,7 +2531,9 @@ class AgentManager:
                     return True
 
                 except Exception as e:
-                    logger.error(f"重新加载Agent失败 {agent_id}{reason_part}: {str(e)}")
+                    logger.error(
+                        f"重新加载Agent失败 {agent_id}{reason_part}: {str(e)}"
+                    )
                     return False
 
     def stop(self):

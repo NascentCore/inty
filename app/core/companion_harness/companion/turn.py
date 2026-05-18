@@ -293,7 +293,9 @@ async def run_turn(
             else float(llm_client.config.async_chat_front_timeout_sec)
         )
     except ValueError:
-        idle_wait_timeout_sec = float(llm_client.config.async_chat_front_timeout_sec)
+        idle_wait_timeout_sec = float(
+            llm_client.config.async_chat_front_timeout_sec
+        )
     await _await_tool_background_idle_if_configured(
         tool_bg_idle_event,
         idle_wait_timeout_sec=idle_wait_timeout_sec,
@@ -328,7 +330,9 @@ async def run_turn(
     route_mode = prompt_plan.route_mode
     messages = prompt_plan.messages
     use_dual_structured_chat = prompt_plan.use_dual_structured_chat
-    user_msg_uuid = preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
+    user_msg_uuid = (
+        preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
+    )
 
     ts_user = utc_iso_ts()
     trace_id = str(uuid.uuid4())
@@ -343,7 +347,9 @@ async def run_turn(
     t_loop = time.perf_counter()
 
     inspect_token = runtime_inspect_begin_turn()
-    llm_runtime_bind_token: contextvars.Token[LlmRuntimeEventBind | None] | None = None
+    llm_runtime_bind_token: (
+        contextvars.Token[LlmRuntimeEventBind | None] | None
+    ) = None
     try:
         _llm_ev_phase = "inner_tick" if inner_tick_turn else "foreground_chat"
         llm_runtime_bind_token = companion_llm_runtime_event_bind_ctx.set(
@@ -383,7 +389,9 @@ async def run_turn(
             inner_tick_mode=route_inner_mode if inner_tick_turn else None,
             implicit_user_signed_on=implicit_sign_on_turn,
         )
-        _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
+        _ls_tid = companion_turn_langsmith_parent_trace_id_str(
+            langsmith_parent_run
+        )
         if _ls_tid:
             langsmith_trace_acc = _ls_tid
         corr: dict[str, str] = {
@@ -401,7 +409,8 @@ async def run_turn(
                 user_msg_uuid,
                 _ls_tid,
                 route_mode.value,
-                route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
+                route_mode
+                == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
             )
 
         _langsmith_cm = nullcontext()
@@ -412,7 +421,10 @@ async def run_turn(
 
         with _langsmith_cm:
             try:
-                if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
+                if (
+                    route_mode
+                    == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+                ):
                     tool_system_msgs, chat_system_msgs = (
                         _async_dual_llm_system_message_variants(
                             store=store,
@@ -449,7 +461,9 @@ async def run_turn(
                         else:
                             push_output_event(ev)
 
-                    skip_foreground_envelope = inner_tick_turn and not tick_proactive
+                    skip_foreground_envelope = (
+                        inner_tick_turn and not tick_proactive
+                    )
                     if skip_foreground_envelope:
                         logger.info(
                             "run_turn inner_tick skip foreground envelope "
@@ -622,7 +636,8 @@ async def run_turn(
                         high_reasoning=tick_proactive,
                     )
                     langsmith_trace_acc = (
-                        langsmith_trace_id_from_completion(resp) or langsmith_trace_acc
+                        langsmith_trace_id_from_completion(resp)
+                        or langsmith_trace_acc
                     )
                     ls_lr = langsmith_llm_run_id_from_completion(resp)
                     if ls_lr:
@@ -773,44 +788,50 @@ async def run_turn(
             "run_turn memory_pipeline=skipped (inner_tick_turn) mode={}",
             inner_tick_mode.value,
         )
-    elif defer_memory_update:
-
-        def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:
-            return llm_client.complete_text(msgs, model_role=model_role)
-
-        schedule_memory_update_after_turn(
-            store,
-            user_text=memory_user_text,
-            assistant_text=last_text,
-            complete_fn=_complete_fn,
-            config=mem_cfg,
-            trace_id=trace_id,
-            user_msg_uuid=user_msg_uuid,
-        )
     else:
-        _mem_sync_tok = companion_llm_runtime_event_bind_ctx.set(
-            LlmRuntimeEventBind(
-                memory_store=store,
-                trace_id=trace_id,
-                user_msg_uuid=user_msg_uuid,
-                phase="memory_pipeline",
-                scene=None,
-            )
-        )
-        try:
+        assert tool_bg_idle_event is not None
+        if defer_memory_update:
 
-            def _complete_fn_sync(msgs: list[dict[str, Any]], model_role: str) -> str:
+            def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:
                 return llm_client.complete_text(msgs, model_role=model_role)
 
-            memory_update_after_turn(
+            schedule_memory_update_after_turn(
                 store,
                 user_text=memory_user_text,
                 assistant_text=last_text,
-                complete_fn=_complete_fn_sync,
+                complete_fn=_complete_fn,
                 config=mem_cfg,
+                trace_id=trace_id,
+                user_msg_uuid=user_msg_uuid,
+                tool_bg_idle_event=tool_bg_idle_event,
             )
-        finally:
-            companion_llm_runtime_event_bind_ctx.reset(_mem_sync_tok)
+        else:
+            _mem_sync_tok = companion_llm_runtime_event_bind_ctx.set(
+                LlmRuntimeEventBind(
+                    memory_store=store,
+                    trace_id=trace_id,
+                    user_msg_uuid=user_msg_uuid,
+                    phase="memory_pipeline",
+                    scene=None,
+                )
+            )
+            try:
+
+                def _complete_fn_sync(
+                    msgs: list[dict[str, Any]], model_role: str
+                ) -> str:
+                    return llm_client.complete_text(msgs, model_role=model_role)
+
+                memory_update_after_turn(
+                    store,
+                    user_text=memory_user_text,
+                    assistant_text=last_text,
+                    complete_fn=_complete_fn_sync,
+                    config=mem_cfg,
+                    tool_bg_idle_event=tool_bg_idle_event,
+                )
+            finally:
+                companion_llm_runtime_event_bind_ctx.reset(_mem_sync_tok)
 
     logger.info(
         "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "

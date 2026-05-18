@@ -12,10 +12,14 @@ def dispatch_memory_store_tool(
     arguments: dict[str, Any],
     write_allowlist: frozenset[str] | None,
     tool_memory_store_list_paths: Callable[[MemoryStore, str], str],
-    tool_memory_store_read_document: Callable[[MemoryStore, str, int | None], str],
+    tool_memory_store_read_document: Callable[
+        [MemoryStore, str, int | None], str
+    ],
     tool_memory_store_write_document: Callable[[MemoryStore, str, str], str],
     tool_memory_store_mkdir: Callable[[MemoryStore, str], str],
-    tool_user_profile_record: Callable[[MemoryStore, list[dict[str, Any]]], str],
+    tool_user_profile_record: Callable[
+        [MemoryStore, list[dict[str, Any]]], str
+    ],
     parse_optional_max_chars: Callable[[Any], int | None],
     write_document_allowlist_reject: Callable[
         [MemoryStore, str, frozenset[str]], str | None
@@ -39,7 +43,9 @@ def dispatch_memory_store_tool(
         rel = str(arguments.get("relative_path", ""))
         content = str(arguments.get("content", ""))
         if write_allowlist is not None:
-            blocked = write_document_allowlist_reject(store, rel, write_allowlist)
+            blocked = write_document_allowlist_reject(
+                store, rel, write_allowlist
+            )
             if blocked is not None:
                 return blocked
         return tool_memory_store_write_document(store, rel, content)

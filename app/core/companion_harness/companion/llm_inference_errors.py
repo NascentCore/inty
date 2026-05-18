@@ -31,21 +31,15 @@ class CompanionLLMInferenceBackendError(Exception):
         self.provider_http_status = provider_http_status
 
 
-_MSG_PROVIDER_GENERIC = (
-    "The AI inference request failed at the inference provider. Please try again later."
-)
+_MSG_PROVIDER_GENERIC = "The AI inference request failed at the inference provider. Please try again later."
 _MSG_PROVIDER_UNREACHABLE = (
     "Could not reach the AI inference provider. Please try again later."
 )
 _MSG_PROVIDER_TIMEOUT = (
     "The AI inference provider did not respond in time. Please try again later."
 )
-_MSG_RATE_LIMIT = (
-    "The AI inference provider rate limit was exceeded. Please try again in a moment."
-)
-_MSG_BAD_REQUEST = (
-    "The AI inference provider rejected the request parameters. Please try again later."
-)
+_MSG_RATE_LIMIT = "The AI inference provider rate limit was exceeded. Please try again in a moment."
+_MSG_BAD_REQUEST = "The AI inference provider rejected the request parameters. Please try again later."
 _MSG_AUTH = "The AI inference provider rejected the request due to authentication or permissions."
 _MSG_PAYMENT_OR_QUOTA = (
     "The AI inference provider rejected this request due to insufficient credits, quota, "
@@ -138,7 +132,9 @@ def companion_llm_inference_backend_error_from_openai(
     )
 
 
-def log_and_build_inference_error(exc: Exception) -> CompanionLLMInferenceBackendError:
+def log_and_build_inference_error(
+    exc: Exception,
+) -> CompanionLLMInferenceBackendError:
     """Normalize inference failures into ``CompanionLLMInferenceBackendError``."""
     if isinstance(exc, CompanionLLMInferenceBackendError):
         return exc

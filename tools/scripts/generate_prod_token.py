@@ -103,7 +103,9 @@ def main(
 
     token = generate_token(user_id, secret_key, algorithm, expire_days)
 
-    print(f"生成的 Token (环境: {env}, 用户ID: {user_id}, 过期天数: {expire_days}):")
+    print(
+        f"生成的 Token (环境: {env}, 用户ID: {user_id}, 过期天数: {expire_days}):"
+    )
     print(token)
     print()
     print("可以在 evaluation/start.sh 中使用:")

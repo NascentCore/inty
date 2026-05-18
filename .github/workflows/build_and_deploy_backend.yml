@@ -1,4 +1,9 @@
-name: Release - iMate 后端
+name: Release - Prod Inty 后端（dev 环境使用 Ops 后端版本）
+
+# TODO（调研）：Prod 环境应该不需要区分 iMate/IntelliMate 后端实例。
+# 风险：同一用户使用同样的 iOS/Google 账户登录会导致两份数据在不同 App 混淆。
+#      但是，这个风险是比较低，假设 iMate 成型，IntelliMate 可能就停止运营，自然就没有混淆的风险。
+# 已经确定 dev 环境不需要区分。开发中使用本地的 Inty 后端实例。
 
 on:
   push:

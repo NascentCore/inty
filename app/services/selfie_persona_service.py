@@ -100,7 +100,9 @@ Requirements:
         cache_service.invalidate_user_auth_snapshot(user_id)
         logger.debug("Selfie persona summary updated: user_id={}", user_id)
 
-    async def _infer_selfie_persona_summary(self, user_photo_url: str) -> Optional[str]:
+    async def _infer_selfie_persona_summary(
+        self, user_photo_url: str
+    ) -> Optional[str]:
         image_uri = self._normalize_image_uri(user_photo_url)
         if not image_uri:
             return None
@@ -142,7 +144,9 @@ Requirements:
         ):
             return user_photo_url
         if user_photo_url.startswith("gs://"):
-            return user_photo_url.replace("gs://", "https://storage.googleapis.com/", 1)
+            return user_photo_url.replace(
+                "gs://", "https://storage.googleapis.com/", 1
+            )
         return ""
 
     @staticmethod
@@ -165,7 +169,9 @@ Requirements:
             return None
         return " ".join(chunks).strip()
 
-    def _normalize_persona_summary(self, raw_text: Optional[str]) -> Optional[str]:
+    def _normalize_persona_summary(
+        self, raw_text: Optional[str]
+    ) -> Optional[str]:
         if raw_text is None:
             return None
 

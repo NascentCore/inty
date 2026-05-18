@@ -4,7 +4,12 @@ import uuid
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Set, Union
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+)
 from langchain_postgres import PostgresChatMessageHistory
 from loguru import logger
 from sqlalchemy import and_, desc, func, or_, select, update
@@ -69,7 +74,9 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
         content = ""
 
         if "data" in message_data and "content" in message_data["data"]:
-            content = _extract_text_from_content(message_data["data"]["content"])
+            content = _extract_text_from_content(
+                message_data["data"]["content"]
+            )
         elif "content" in message_data:
             content = _extract_text_from_content(message_data["content"])
 
@@ -85,7 +92,10 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
 
     except Exception as e:
         logger.warning(f"解析消息内容失败: {str(e)}")
-        return {"content": str(message_raw) if message_raw else "", "role": "unknown"}
+        return {
+            "content": str(message_raw) if message_raw else "",
+            "role": "unknown",
+        }
 
 
 # Keep the legacy connection function for PostgresChatMessageHistory compatibility
@@ -104,7 +114,8 @@ def get_chat_history_connection():
                 f"connecting to database: {global_config_loaded_from_config_yaml.database.url}"
             )
             _connection = psycopg.connect(
-                global_config_loaded_from_config_yaml.database.url, autocommit=True
+                global_config_loaded_from_config_yaml.database.url,
+                autocommit=True,
             )
             logger.info("chat_history 数据库连接已建立")
         except Exception as e:
@@ -113,11 +124,15 @@ def get_chat_history_connection():
     return _connection
 
 
-def _sync_url_from_async_replica(async_replica_url: Optional[str]) -> Optional[str]:
+def _sync_url_from_async_replica(
+    async_replica_url: Optional[str],
+) -> Optional[str]:
     """从 async_replica_url（postgresql+asyncpg://...）得到同步驱动用 URL（postgresql://...）。"""
     if not async_replica_url:
         return None
-    return async_replica_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    return async_replica_url.replace(
+        "postgresql+asyncpg://", "postgresql://", 1
+    )
 
 
 def get_chat_history_replica_connection():
@@ -126,7 +141,9 @@ def get_chat_history_replica_connection():
     当 config.database.async_replica_url 未配置时返回 None。
     """
     global _replica_connection
-    async_replica_url = global_config_loaded_from_config_yaml.database.async_replica_url
+    async_replica_url = (
+        global_config_loaded_from_config_yaml.database.async_replica_url
+    )
     sync_url = _sync_url_from_async_replica(async_replica_url)
     if not sync_url:
         return None
@@ -154,7 +171,9 @@ def get_chat_history_replica_connection():
 def get_chat_history(session_id: str) -> PostgresChatMessageHistory:
     """获取聊天历史"""
     conn = get_chat_history_connection()
-    return PostgresChatMessageHistory("chat_history", session_id, sync_connection=conn)
+    return PostgresChatMessageHistory(
+        "chat_history", session_id, sync_connection=conn
+    )
 
 
 async def add_agent_opening_message(
@@ -226,7 +245,9 @@ def get_last_message(session_id: str) -> Optional[str]:
         return None
 
 
-def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]:
+def get_last_message_with_timestamp(
+    session_id: str,
+) -> Optional[Dict[str, Any]]:
     """获取最近一条消息内容和时间戳（排除已软删除的）"""
     try:
         conn = get_chat_history_connection()
@@ -259,12 +280,17 @@ def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]
 
                     # 解析消息内容
                     content = ""
-                    if "data" in message_data and "content" in message_data["data"]:
+                    if (
+                        "data" in message_data
+                        and "content" in message_data["data"]
+                    ):
                         content = _extract_text_from_content(
                             message_data["data"]["content"]
                         )
                     elif "content" in message_data:
-                        content = _extract_text_from_content(message_data["content"])
+                        content = _extract_text_from_content(
+                            message_data["content"]
+                        )
 
                     return {"content": content, "timestamp": created_at}
 
@@ -591,7 +617,9 @@ def add_festival_memory_prompt_message_sync(
         )
         return message_id
     except Exception as e:
-        logger.error(f"添加节日记忆提示消息失败 session_id={session_id}: {str(e)}")
+        logger.error(
+            f"添加节日记忆提示消息失败 session_id={session_id}: {str(e)}"
+        )
         return None
 
 
@@ -606,7 +634,9 @@ def add_daily_memory_prompt_message_sync(
     按 (session_id, agent_id, local_date) 幂等：已存在则返回已有 id 不插入。
     """
     local_date_str = (
-        local_date.isoformat() if isinstance(local_date, date) else str(local_date)
+        local_date.isoformat()
+        if isinstance(local_date, date)
+        else str(local_date)
     )
     try:
         conn = get_chat_history_connection()
@@ -667,7 +697,9 @@ def add_daily_memory_prompt_message_sync(
         )
         return message_id
     except Exception as e:
-        logger.error(f"添加日常记忆提示消息失败 session_id={session_id}: {str(e)}")
+        logger.error(
+            f"添加日常记忆提示消息失败 session_id={session_id}: {str(e)}"
+        )
         return None
 
 
@@ -753,7 +785,9 @@ async def add_surprise_snap_message(
             "agentId": agent_id,
             "exclusive_photo_index": exclusive_photo_index,
         }
-        sid = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
+        sid = (
+            uuid.UUID(session_id) if isinstance(session_id, str) else session_id
+        )
         ch = ChatHistory(
             session_id=sid,
             message=message_data,
@@ -764,7 +798,9 @@ async def add_surprise_snap_message(
         await db.refresh(ch)
         return ch.id
     except Exception as e:
-        logger.error(f"添加 Surprise Snap 消息失败 session_id={session_id}: {e}")
+        logger.error(
+            f"添加 Surprise Snap 消息失败 session_id={session_id}: {e}"
+        )
         await db.rollback()
         raise
 
@@ -1009,7 +1045,9 @@ async def add_ai_image_message(
         raise
 
 
-async def get_latest_ai_message_id(db: AsyncSession, session_id: str) -> Optional[int]:
+async def get_latest_ai_message_id(
+    db: AsyncSession, session_id: str
+) -> Optional[int]:
     """获取会话中最新的AI消息ID（排除已软删除的）"""
     try:
         # 使用ORM查询最新的AI消息ID（排除已软删除的）
@@ -1046,7 +1084,9 @@ async def get_latest_user_message_id(
             .where(
                 and_(
                     ChatHistory.session_id == session_id,
-                    ChatHistory.message["type"].astext.in_(["human", "HumanMessage"]),
+                    ChatHistory.message["type"].astext.in_(
+                        ["human", "HumanMessage"]
+                    ),
                     ChatHistory.deleted_at.is_(None),
                 )
             )
@@ -1154,7 +1194,9 @@ async def get_latest_ai_message_info(
         try:
             message_data = chat_history.message
             if "data" in message_data and "content" in message_data["data"]:
-                content = _extract_text_from_content(message_data["data"]["content"])
+                content = _extract_text_from_content(
+                    message_data["data"]["content"]
+                )
             elif "content" in message_data:
                 content = _extract_text_from_content(message_data["content"])
 
@@ -1168,7 +1210,9 @@ async def get_latest_ai_message_info(
             "audio_url": chat_history.audio_url,
             "meta_data": chat_history.meta_data,
             "timestamp": (
-                chat_history.created_at.isoformat() if chat_history.created_at else None
+                chat_history.created_at.isoformat()
+                if chat_history.created_at
+                else None
             ),
         }
 
@@ -1200,7 +1244,9 @@ async def get_ai_message_info_by_id(
         try:
             message_data = chat_history.message
             if "data" in message_data and "content" in message_data["data"]:
-                content = _extract_text_from_content(message_data["data"]["content"])
+                content = _extract_text_from_content(
+                    message_data["data"]["content"]
+                )
             elif "content" in message_data:
                 content = _extract_text_from_content(message_data["content"])
         except (TypeError, KeyError) as e:
@@ -1213,11 +1259,15 @@ async def get_ai_message_info_by_id(
             "audio_url": chat_history.audio_url,
             "meta_data": chat_history.meta_data,
             "timestamp": (
-                chat_history.created_at.isoformat() if chat_history.created_at else None
+                chat_history.created_at.isoformat()
+                if chat_history.created_at
+                else None
             ),
         }
     except Exception as e:
-        logger.error(f"根据ID获取AI消息信息失败 message_id={message_id}: {str(e)}")
+        logger.error(
+            f"根据ID获取AI消息信息失败 message_id={message_id}: {str(e)}"
+        )
         return None
 
 
@@ -1248,10 +1298,14 @@ async def get_ai_message_infos_by_ids(
                         message_data["data"]["content"]
                     )
                 elif "content" in message_data:
-                    content = _extract_text_from_content(message_data["content"])
+                    content = _extract_text_from_content(
+                        message_data["content"]
+                    )
             except (TypeError, KeyError) as e:
                 logger.warning(f"解析AI消息内容失败: {str(e)}")
-                content = str(chat_history.message) if chat_history.message else ""
+                content = (
+                    str(chat_history.message) if chat_history.message else ""
+                )
             out[chat_history.id] = {
                 "id": chat_history.id,
                 "content": content,
@@ -1283,7 +1337,8 @@ async def get_surprise_snap_message_display_info(
             select(ChatHistory)
             .where(
                 ChatHistory.id == message_id,
-                ChatHistory.message["type"].astext == META_MESSAGE_TYPE_SURPRISE_SNAP,
+                ChatHistory.message["type"].astext
+                == META_MESSAGE_TYPE_SURPRISE_SNAP,
                 ChatHistory.deleted_at.is_(None),
             )
             .limit(1)
@@ -1310,7 +1365,9 @@ async def get_surprise_snap_message_display_info(
             media_url = image_transform_service.transform_desktop(image_url_raw)
         return {
             "id": row.id,
-            "timestamp": (row.created_at.isoformat() if row.created_at else None),
+            "timestamp": (
+                row.created_at.isoformat() if row.created_at else None
+            ),
             "meta_data": row.meta_data,
             "media_url": media_url,
             "caption": data.get("caption") or "",
@@ -1395,7 +1452,10 @@ def get_messages_paginated(
                     # 解析消息类型和内容
                     message_type = message_data.get("type", "human")
                     raw_content = ""
-                    if "data" in message_data and "content" in message_data["data"]:
+                    if (
+                        "data" in message_data
+                        and "content" in message_data["data"]
+                    ):
                         raw_content = message_data["data"]["content"]
                     elif "content" in message_data:
                         raw_content = message_data["content"]
@@ -1421,7 +1481,9 @@ def get_messages_paginated(
                             meta_data = meta_data_raw
 
                     # 构建基础消息对象
-                    timestamp_str = created_at.isoformat() if created_at else None
+                    timestamp_str = (
+                        created_at.isoformat() if created_at else None
+                    )
                     message_obj = {
                         "id": message_id,  # 添加消息ID
                         "role": role,
@@ -1455,7 +1517,9 @@ def get_messages_paginated(
                             )
 
                             message_obj["image_url"] = (
-                                image_transform_service.transform_desktop(gcs_uri)
+                                image_transform_service.transform_desktop(
+                                    gcs_uri
+                                )
                             )
                         else:
                             message_obj["image_url"] = None
@@ -1467,7 +1531,9 @@ def get_messages_paginated(
                         and meta_data.get("messageType")
                         == META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
                     ):
-                        message_obj["type"] = META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
+                        message_obj["type"] = (
+                            META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
+                        )
                         message_obj["role"] = None
                         message_obj["sender_type"] = None
                         raw_id = meta_data.get("festivalMemoryId")
@@ -1482,7 +1548,9 @@ def get_messages_paginated(
                         and meta_data.get("messageType")
                         == META_MESSAGE_TYPE_DAILY_MEMORY_PROMPT
                     ):
-                        message_obj["type"] = META_MESSAGE_TYPE_DAILY_MEMORY_PROMPT
+                        message_obj["type"] = (
+                            META_MESSAGE_TYPE_DAILY_MEMORY_PROMPT
+                        )
                         message_obj["role"] = None
                         message_obj["sender_type"] = None
                         raw_id = meta_data.get("dailyMemoryId")
@@ -1503,14 +1571,20 @@ def get_messages_paginated(
                             )
 
                             message_obj["media_url"] = (
-                                image_transform_service.transform_desktop(image_url_raw)
+                                image_transform_service.transform_desktop(
+                                    image_url_raw
+                                )
                             )
                         else:
                             message_obj["media_url"] = None
                         message_obj["caption"] = data.get("caption") or ""
                         message_obj["price"] = data.get("credits_required", 0)
-                        unlocked_ids = unlocked_surprise_snap_message_ids or set()
-                        message_obj["is_locked"] = not (message_id in unlocked_ids)
+                        unlocked_ids = (
+                            unlocked_surprise_snap_message_ids or set()
+                        )
+                        message_obj["is_locked"] = not (
+                            message_id in unlocked_ids
+                        )
                     else:
                         message_obj["type"] = "text"
 
@@ -1685,7 +1759,10 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
 
                     message_type = message_data.get("type", "human")
                     content: Any = ""
-                    if "data" in message_data and "content" in message_data["data"]:
+                    if (
+                        "data" in message_data
+                        and "content" in message_data["data"]
+                    ):
                         content = message_data["data"]["content"]
                     elif "content" in message_data:
                         content = message_data["content"]
@@ -1694,19 +1771,27 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
 
                     # 关键步骤：把 created_at 放入 additional_kwargs，供上层按自然日插入日期 system message。
                     message_kwargs = (
-                        {"additional_kwargs": {"created_at": created_at.isoformat()}}
+                        {
+                            "additional_kwargs": {
+                                "created_at": created_at.isoformat()
+                            }
+                        }
                         if created_at
                         else {}
                     )
 
                     if message_type in ["human", "HumanMessage"]:
-                        messages.append(HumanMessage(content=content, **message_kwargs))
+                        messages.append(
+                            HumanMessage(content=content, **message_kwargs)
+                        )
                     elif message_type == "system":
                         messages.append(
                             SystemMessage(content=content, **message_kwargs)
                         )
                     else:
-                        messages.append(AIMessage(content=content, **message_kwargs))
+                        messages.append(
+                            AIMessage(content=content, **message_kwargs)
+                        )
 
                 except Exception as e:
                     logger.warning(f"解析历史消息失败: {str(e)}")
@@ -1739,7 +1824,9 @@ def clear_session(session_id: str) -> None:
             cur.execute(delete_query, (session_id,))
             deleted_count = cur.rowcount
 
-        logger.info(f"已清除会话 {session_id} 的聊天历史，删除消息数: {deleted_count}")
+        logger.info(
+            f"已清除会话 {session_id} 的聊天历史，删除消息数: {deleted_count}"
+        )
 
     except Exception as e:
         logger.error(f"清除会话聊天历史失败 {session_id}: {str(e)}")
@@ -1764,7 +1851,9 @@ async def add_user_message_async(
     meta_data: Optional[dict] = None,
 ) -> Optional[int]:
     """在线程池中执行同步用户消息写入。"""
-    return await asyncio.to_thread(add_user_message, session_id, message, meta_data)
+    return await asyncio.to_thread(
+        add_user_message, session_id, message, meta_data
+    )
 
 
 async def add_ai_message_sync_async(
@@ -2014,7 +2103,9 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
                         "content": parsed_target["content"],
                         "role": parsed_target["role"],
                         "timestamp": (
-                            target_message[2].isoformat() if target_message[2] else None
+                            target_message[2].isoformat()
+                            if target_message[2]
+                            else None
                         ),
                     },
                 }
@@ -2044,15 +2135,23 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
                     "content": parsed_target["content"],
                     "role": parsed_target["role"],
                     "timestamp": (
-                        target_message[2].isoformat() if target_message[2] else None
+                        target_message[2].isoformat()
+                        if target_message[2]
+                        else None
                     ),
                 },
                 "deleted_time_range": (
                     {
                         "from": (
-                            count_result[1].isoformat() if count_result[1] else None
+                            count_result[1].isoformat()
+                            if count_result[1]
+                            else None
                         ),
-                        "to": count_result[2].isoformat() if count_result[2] else None,
+                        "to": (
+                            count_result[2].isoformat()
+                            if count_result[2]
+                            else None
+                        ),
                     }
                     if count_result[1]
                     else None
@@ -2071,7 +2170,9 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
         }
 
 
-def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str, Any]:
+def clear_messages_after_timestamp(
+    session_id: str, timestamp: str
+) -> Dict[str, Any]:
     """
     软删除指定时间戳之后的所有聊天记录
 
@@ -2088,7 +2189,9 @@ def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str,
 
         # 解析时间戳
         try:
-            target_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            target_time = datetime.fromisoformat(
+                timestamp.replace("Z", "+00:00")
+            )
         except ValueError as e:
             return {
                 "success": False,
@@ -2187,7 +2290,9 @@ def clear_all_messages(session_id: str) -> Dict[str, Any]:
             cur.execute(soft_delete_query, (session_id,))
             actual_deleted = cur.rowcount
 
-            logger.info(f"已软删除会话 {session_id} 中的全部 {actual_deleted} 条记录")
+            logger.info(
+                f"已软删除会话 {session_id} 中的全部 {actual_deleted} 条记录"
+            )
 
             return {
                 "success": True,

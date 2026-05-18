@@ -52,7 +52,9 @@ IMAGE_DATABASE = {
 }
 
 
-def get_gemini_response(message: str, conversation_history: List[ChatMessage]) -> str:
+def get_gemini_response(
+    message: str, conversation_history: List[ChatMessage]
+) -> str:
     """Get response from Gemini API"""
     model = genai.GenerativeModel("gemini-pro")
 
@@ -72,7 +74,9 @@ def get_gemini_response(message: str, conversation_history: List[ChatMessage]) -
         response = model.generate_content(context)
         return response.text
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gemini API error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Gemini API error: {str(e)}"
+        )
 
 
 def analyze_sentiment_with_gemini(message: str) -> str:

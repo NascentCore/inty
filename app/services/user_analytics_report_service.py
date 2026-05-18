@@ -38,7 +38,9 @@ async def _ensure_statement_timeout(db: AsyncSession) -> None:
         None,
     )
     timeout_sec = getattr(uar_cfg, "statement_timeout_sec", 600)
-    await db.execute(text(f"SET LOCAL statement_timeout = '{timeout_sec * 1000}'"))
+    await db.execute(
+        text(f"SET LOCAL statement_timeout = '{timeout_sec * 1000}'")
+    )
 
 
 ALL_USERS_REGISTER_START = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -94,14 +96,20 @@ def _build_daily_charts(
 ) -> dict:
     return {
         "new_users": [
-            {"date": d["date"], "auth_type": d["auth_type"], "count": d["count"]}
+            {
+                "date": d["date"],
+                "auth_type": d["auth_type"],
+                "count": d["count"],
+            }
             for d in new_users
         ],
         "conversation_rounds": [
             {
                 "chat_id": d["chat_id"],
                 "message_count": d["message_count"],
-                "message_count_excluding_opening": d["message_count_excluding_opening"],
+                "message_count_excluding_opening": d[
+                    "message_count_excluding_opening"
+                ],
             }
             for d in conversation_rounds
         ],
@@ -186,7 +194,9 @@ async def _read_daily_report_from_replica(
             popular_agents_ranked, DAILY_TOP_AGENTS_LIMIT
         )
         daily_most_discussed_agent = (
-            daily_top_agents_by_rounds[0] if daily_top_agents_by_rounds else None
+            daily_top_agents_by_rounds[0]
+            if daily_top_agents_by_rounds
+            else None
         )
         generated_images = await service.get_generated_images_on_date(
             act_start, act_end
@@ -243,7 +253,9 @@ async def _read_daily_report_from_primary(
         act_end,
         active_session_ids=active_session_ids,
     )
-    users_hitting_limit = await service.get_users_hitting_chat_limit(act_start, act_end)
+    users_hitting_limit = await service.get_users_hitting_chat_limit(
+        act_start, act_end
+    )
     popular_agents_ranked = await service.get_popular_agents(
         reg_start,
         reg_end,
@@ -259,7 +271,9 @@ async def _read_daily_report_from_primary(
     daily_most_discussed_agent = (
         daily_top_agents_by_rounds[0] if daily_top_agents_by_rounds else None
     )
-    generated_images = await service.get_generated_images_on_date(act_start, act_end)
+    generated_images = await service.get_generated_images_on_date(
+        act_start, act_end
+    )
     charts = _build_daily_charts(
         new_users,
         conversation_rounds,
@@ -290,9 +304,13 @@ async def compute_and_save_daily_report(
     """
     reg_start = ALL_USERS_REGISTER_START
     reg_end = datetime.combine(
-        report_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc
+        report_date + timedelta(days=1),
+        datetime.min.time(),
+        tzinfo=timezone.utc,
     )
-    act_start = datetime.combine(report_date, datetime.min.time(), tzinfo=timezone.utc)
+    act_start = datetime.combine(
+        report_date, datetime.min.time(), tzinfo=timezone.utc
+    )
     act_end = reg_end
 
     if AsyncSessionLocalReplica is not None:
@@ -358,14 +376,20 @@ def _build_weekly_charts(
 ) -> dict:
     return {
         "new_users": [
-            {"date": d["date"], "auth_type": d["auth_type"], "count": d["count"]}
+            {
+                "date": d["date"],
+                "auth_type": d["auth_type"],
+                "count": d["count"],
+            }
             for d in new_users
         ],
         "conversation_rounds": [
             {
                 "chat_id": d["chat_id"],
                 "message_count": d["message_count"],
-                "message_count_excluding_opening": d["message_count_excluding_opening"],
+                "message_count_excluding_opening": d[
+                    "message_count_excluding_opening"
+                ],
             }
             for d in conversation_rounds
         ],
@@ -401,7 +425,9 @@ async def compute_and_save_weekly_report(
     """
     reg_start = ALL_USERS_REGISTER_START
     week_end = week_start_date + timedelta(days=7)
-    reg_end = datetime.combine(week_end, datetime.min.time(), tzinfo=timezone.utc)
+    reg_end = datetime.combine(
+        week_end, datetime.min.time(), tzinfo=timezone.utc
+    )
     act_start = datetime.combine(
         week_start_date, datetime.min.time(), tzinfo=timezone.utc
     )
@@ -519,7 +545,9 @@ async def get_missing_daily_report_dates(
     today = datetime.now(timezone.utc).date()
     start = today - timedelta(days=days)
     end = today - timedelta(days=1)
-    expected_dates = [start + timedelta(days=i) for i in range((end - start).days + 1)]
+    expected_dates = [
+        start + timedelta(days=i) for i in range((end - start).days + 1)
+    ]
     if not expected_dates:
         return []
 
@@ -583,9 +611,13 @@ async def backfill_missing_reports(
     missing_weekly: list[date] = []
     if include_weekly:
         if year is not None:
-            missing_weekly = await get_missing_weekly_report_dates_first_half(db, year)
+            missing_weekly = await get_missing_weekly_report_dates_first_half(
+                db, year
+            )
         else:
-            missing_weekly = await get_missing_weekly_report_dates_past_weeks(db, weeks=7)
+            missing_weekly = await get_missing_weekly_report_dates_past_weeks(
+                db, weeks=7
+            )
     scope_parts: list[str] = []
     if include_daily:
         scope_parts.append(f"日报最近 {days} 天")
