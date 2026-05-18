@@ -150,36 +150,6 @@ class VoiceService:
             self.tts_api = ElevenLabsTTSAPI(api_key=self.config.api_key)
             self.gemini_tts_api = GeminiTTSAPI()
 
-    async def _resolve_model_and_source(
-        self,
-        *,
-        provider_selected: str,
-        requested_model: Optional[str],
-        db: Optional[AsyncSession],
-        user: Optional[Any],
-    ) -> Tuple[str, str]:
-        # 关键步骤：先按 provider 选择模型来源，再统一校验 provider/model 一致性。
-        if requested_model is not None:
-            return requested_model, TTS_MODEL_SOURCE_EXPLICIT
-
-        if provider_selected == TTS_PROVIDER_GEMINI:
-            if user and db:
-                subscription = await subscription_service.get_user_current_subscription(
-                    db, user.id
-                )
-                model_selected = select_chat_tts_model(
-                    user=user, is_subscribed=bool(subscription)
-                )
-                return model_selected, TTS_MODEL_SOURCE_SUBSCRIPTION
-
-            # 无 user/db 场景也必须使用 Gemini 模型，避免落到 ElevenLabs 默认模型。
-            return (
-                global_config_loaded_from_config_yaml.agent.free_user_chat_tts_model,
-                TTS_MODEL_SOURCE_CONFIG,
-            )
-
-        return self.config.model, TTS_MODEL_SOURCE_CONFIG
-
     def _validate_model_provider_match(
         self, *, provider_selected: str, model_selected: str
     ) -> None:
@@ -594,11 +564,11 @@ class VoiceService:
 
         Returns:
             语音文件 URL 结果（含 gs:// 与 https:// URL 及音频时长），失败返回 None
-        """
-        narration_mode = resolve_voice_message_narration_mode(
-            voice_message_narration_mode
-        )
 
+        Legacy 入口：委托 check_quota / resolve_generation_model / lookup_cached_voice /
+        generate_voice_no_quota_limit_check / record_voice_usage。带 user+db 的 C 端路径
+        优先使用 chat_assistant_voice.produce_voice_for_user。
+        """
         if not self.config.enabled:
             logger.warning("ElevenLabs语音生成已禁用")
             return self._trace_and_return_none("tts_disabled")
@@ -607,69 +577,25 @@ class VoiceService:
             logger.warning("文本内容为空，跳过语音生成")
             return self._trace_and_return_none("empty_input_text")
 
-        # TODO(followup): 新路径已用 check_quota + generate_voice_no_quota_limit_check；
-        # 待 chats REST / agent 开场白等迁移后，删除本块（原 L292–310）。
-        # 如果提供了用户信息，检查语音生成限制
         if user and db:
-            from app.services.global_services import subscription_service
-
-            (
-                is_allowed,
-                used_count,
-                limit,
-            ) = await subscription_service.check_voice_generation_limit(db, user)
-
+            is_allowed, used_count, limit = await self.check_quota(db=db, user=user)
             if not is_allowed:
-                logger.warning(
-                    f"用户 {user.id} 已达到语音生成限制: {used_count}/{limit}"
-                )
                 return self._trace_and_return_none(
                     "voice_generation_limit_reached",
                     used_count=used_count,
                     limit=limit,
                 )
 
-        # Resolve voice_id so we know whether to skip cleaning (prompted Gemini
-        # uses full text with parentheticals for delivery).
-        _voice_id_for_decision = voice_id
-        if not _voice_id_for_decision:
-            _voice_id_for_decision = (
-                GENDER_VOICE_MAPPING.get(agent_gender)
-                if agent_gender
-                else self.config.voice_id
-            )
-        use_prompted_gemini = (
-            is_gemini_voice(_voice_id_for_decision)
-            and global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
-        )
-        use_gemini_then_elevenlabs_voice_changer = (
-            (not is_gemini_voice(_voice_id_for_decision))
-            and global_config_loaded_from_config_yaml.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
-        )
-        voice_id = _voice_id_for_decision
-
-        # 清理文本内容，移除心理和动作描写。
-        # Gemini 提示词链路与 Gemini->ElevenLabs 变声链路都需要保留原文。
-        original_text = text
-        if not (use_prompted_gemini or use_gemini_then_elevenlabs_voice_changer):
-            logger.debug(f"清理文本: {text}")
-            text = self._clean_text_for_voice(text)
-
-        if not text.strip():
-            logger.warning("文本清理后为空（可能全部是心理/动作描写），跳过语音生成")
-            return self._trace_and_return_none("empty_text_after_cleaning")
-
-        if text != original_text:
-            logger.debug(
-                f"文本已清理，原长度: {len(original_text)}, 清理后长度: {len(text)}"
-            )
-
-        if len(text) > self.config.max_text_length:
-            logger.warning(f"文本长度超过限制 {self.config.max_text_length}，截断处理")
-            text = text[: self.config.max_text_length]
-
         try:
-            if not voice_id:
+            synthesis_voice_id, synthesis_text = (
+                self.prepare_synthesis_voice_id_and_text(
+                    text, voice_id, agent_gender
+                )
+            )
+            if not synthesis_text.strip():
+                logger.warning("文本清理后为空（可能全部是心理/动作描写），跳过语音生成")
+                return self._trace_and_return_none("empty_text_after_cleaning")
+            if not synthesis_voice_id:
                 logger.warning(
                     f"无法确定音色ID: agent_gender={agent_gender}, 配置文件voice_id={self.config.voice_id}"
                 )
@@ -677,10 +603,10 @@ class VoiceService:
 
             provider_selected = (
                 TTS_PROVIDER_GEMINI
-                if is_gemini_voice(voice_id)
+                if is_gemini_voice(synthesis_voice_id)
                 else TTS_PROVIDER_ELEVENLABS
             )
-            model, model_source = await self._resolve_model_and_source(
+            model_selected, model_source = await self.resolve_generation_model(
                 provider_selected=provider_selected,
                 requested_model=model,
                 db=db,
@@ -688,14 +614,14 @@ class VoiceService:
             )
             self._validate_model_provider_match(
                 provider_selected=provider_selected,
-                model_selected=model,
+                model_selected=model_selected,
             )
-            gemini_source_model = None
+            gemini_source_model: Optional[str] = None
             if (
                 provider_selected == TTS_PROVIDER_ELEVENLABS
                 and global_config_loaded_from_config_yaml.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
             ):
-                gemini_source_model, _ = await self._resolve_model_and_source(
+                gemini_source_model, _ = await self.resolve_generation_model(
                     provider_selected=TTS_PROVIDER_GEMINI,
                     requested_model=None,
                     db=db,
@@ -706,195 +632,51 @@ class VoiceService:
                     model_selected=gemini_source_model,
                 )
 
-            logger.debug(
-                f"开始语音生成: voice_id={voice_id}, provider_selected={provider_selected}, "
-                f"model_selected={model}, model_source={model_source}, language={language}, "
-                f"text_length={len(text)}"
-            )
-
-            # 并行检查缓存和预准备其他资源
-            cached_url = None
             if db:
-                logger.debug("检查语音缓存")
-                from app.services.voice_cache_service import voice_cache_service
-
-                cached_result = await voice_cache_service.get_cached_voice(
-                    db, text, voice_id, model, language
+                cached = await self.lookup_cached_voice(
+                    db=db,
+                    text=synthesis_text,
+                    voice_id=synthesis_voice_id,
+                    model=model_selected,
+                    language=language,
                 )
-                if cached_result:
-                    cached_url, cached_duration = cached_result
-                    logger.debug(f"使用缓存的语音文件: {cached_url}")
-                    # 访问统计已经在get_cached_voice中异步更新了，这里不需要重复更新
-
-                    # 记录语音生成用量（包括缓存命中）
+                if cached:
                     if user:
-                        try:
-                            from app.services.global_services import (
-                                subscription_service,
-                            )
-
-                            await subscription_service.record_usage(
-                                db,
-                                user.id,
-                                "voice_generation",
-                                1,
-                                extra_data={
-                                    "text_length": len(text),
-                                    "voice_id": voice_id,
-                                    "cached": True,
-                                },
-                            )
-                        except Exception as e:
-                            logger.warning(f"记录语音生成用量失败: {str(e)}")
-
-                    gcs_url, gcs_http_url = self._build_gcs_urls(cached_url)
+                        await self.record_voice_usage(
+                            db=db,
+                            user=user,
+                            text_length=len(synthesis_text),
+                            voice_id=synthesis_voice_id,
+                            cached=True,
+                        )
                     self._set_trace_metadata(
                         status="success",
                         cache_hit=True,
                         provider_selected=provider_selected,
-                        model_selected=model,
+                        model_selected=model_selected,
                         model_source=model_source,
                     )
-                    return VoiceGenerationResult(
-                        gcs_url=gcs_url,
-                        gcs_http_url=gcs_http_url,
-                        duration_seconds=cached_duration,
-                    )
-                logger.debug("未找到缓存，开始新的语音生成")
+                    return cached
 
-            # 生成语音文件
-            logger.debug("调用 TTS 生成接口（根据 voice_id 选择 Gemini 或 ElevenLabs）")
-            audio_result = await self._call_tts_api(
+            result = await self.generate_voice_no_quota_limit_check(
                 text=text,
                 voice_id=voice_id,
-                model=model,
                 language=language,
-                voice_message_narration_mode=narration_mode,
+                model=model_selected,
+                model_source=model_source,
                 agent_gender=agent_gender,
+                voice_message_narration_mode=voice_message_narration_mode,
                 gemini_source_model=gemini_source_model,
             )
-            if not audio_result:
-                logger.error(
-                    "TTS 生成返回空数据: provider_selected={}, model_selected={}, "
-                    "model_source={}, final_status={}",
-                    provider_selected,
-                    model,
-                    model_source,
-                    "failed",
+            if result and user and db:
+                await self.record_voice_usage(
+                    db=db,
+                    user=user,
+                    text_length=len(synthesis_text),
+                    voice_id=synthesis_voice_id,
+                    cached=False,
                 )
-                return self._trace_and_return_none(
-                    "tts_provider_returned_empty",
-                    provider_selected=provider_selected,
-                    model_selected=model,
-                    model_source=model_source,
-                )
-
-            audio_data, duration, mime_type, provider_used = audio_result
-            final_model_selected = model
-            if (
-                provider_selected == TTS_PROVIDER_GEMINI
-                and provider_used == TTS_PROVIDER_ELEVENLABS
-            ):
-                # Gemini -> ElevenLabs fallback 时 model 会重绑定到 ElevenLabs 默认模型。
-                final_model_selected = self.config.model
-
-            logger.debug(
-                f"TTS 生成成功，音频数据大小: {len(audio_data)} bytes, mime_type={mime_type}"
-            )
-
-            # 生成唯一文件名
-            file_name = self._generate_file_name(
-                text, voice_id, model, self._get_audio_extension(mime_type)
-            )
-            logger.debug(f"生成文件名: {file_name}")
-
-            # 并行上传到GCS和准备缓存保存
-            logger.debug("开始上传到GCS")
-
-            # 创建上传任务
-            upload_task = asyncio.create_task(
-                self.gcs_service.upload_voice_file(
-                    file_name,
-                    audio_data,
-                    content_type=mime_type or "application/octet-stream",
-                )
-            )
-
-            # 等待上传完成
-            audio_url = await upload_task
-
-            if not audio_url:
-                logger.error("GCS上传失败")
-                return self._trace_and_return_none(
-                    "gcs_upload_failed",
-                    provider_selected=provider_selected,
-                    model_selected=model,
-                )
-
-            gcs_url, gcs_http_url = self._build_gcs_urls(audio_url)
-            logger.debug(f"GCS上传成功: gcs_url={gcs_url}, gcs_http_url={gcs_http_url}")
-
-            # 异步保存到缓存，不阻塞返回
-            if audio_url:
-                logger.debug("异步保存到语音缓存")
-                from app.services.voice_cache_service import voice_cache_service
-
-                asyncio.create_task(
-                    voice_cache_service.save_voice_cache(
-                        None,
-                        text,
-                        voice_id,
-                        model,
-                        language,
-                        gcs_http_url,
-                        duration,
-                        len(audio_data),
-                    )
-                )
-                logger.debug("语音缓存保存任务已启动")
-
-            # 记录语音生成用量（新生成）
-            if user and db:
-                try:
-                    from app.services.global_services import subscription_service
-
-                    await subscription_service.record_usage(
-                        db,
-                        user.id,
-                        "voice_generation",
-                        1,
-                        extra_data={
-                            "text_length": len(text),
-                            "voice_id": voice_id,
-                            "cached": False,
-                        },
-                    )
-                except Exception as e:
-                    logger.warning(f"记录语音生成用量失败: {str(e)}")
-
-            logger.debug(f"语音生成成功: {file_name}, 时长: {duration:.2f}秒")
-            logger.info(
-                "TTS 生成完成: provider_selected={}, model_selected={}, "
-                "model_source={}, final_provider={}, final_status={}",
-                provider_selected,
-                final_model_selected,
-                model_source,
-                provider_used,
-                "success",
-            )
-            self._set_trace_metadata(
-                status="success",
-                cache_hit=False,
-                provider_selected=provider_selected,
-                model_selected=final_model_selected,
-                model_source=model_source,
-                final_provider=provider_used,
-            )
-            return VoiceGenerationResult(
-                gcs_url=gcs_url,
-                gcs_http_url=gcs_http_url,
-                duration_seconds=duration,
-            )
+            return result
 
         except ValueError:
             logger.error("语音生成参数校验失败（provider/model 不一致）")

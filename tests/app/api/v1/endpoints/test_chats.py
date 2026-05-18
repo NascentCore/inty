@@ -63,6 +63,8 @@ def chats_business_error_app() -> FastAPI:
 
 
 def _stub_voice_generation_dependencies(monkeypatch: pytest.MonkeyPatch):
+    from app.services import chat_assistant_voice
+
     async def fake_get_agent_for_chat(db, agent_id):
         return {"voice_id": "voice-1", "gender": "FEMALE"}
 
@@ -72,11 +74,8 @@ def _stub_voice_generation_dependencies(monkeypatch: pytest.MonkeyPatch):
     async def fake_get_message_content(db, session_id, message_id):
         return "hello"
 
-    async def fake_generate_voice(*args, **kwargs):  # pragma: no cover - stub
-        return None
-
-    async def fake_check_voice_limit(db, user):
-        return False, 2, 2
+    async def fake_produce_voice_for_user(*args, **kwargs):
+        return None, False, 2, 2
 
     def fake_add_user_message(session_id, message, meta_data=None):
         return None
@@ -92,11 +91,10 @@ def _stub_voice_generation_dependencies(monkeypatch: pytest.MonkeyPatch):
         "get_message_content",
         fake_get_message_content,
     )
-    monkeypatch.setattr(global_voice_service, "generate_voice", fake_generate_voice)
     monkeypatch.setattr(
-        global_subscription_service,
-        "check_voice_generation_limit",
-        fake_check_voice_limit,
+        chat_assistant_voice,
+        "produce_voice_for_user",
+        fake_produce_voice_for_user,
     )
     monkeypatch.setattr(
         chat_history_service,
@@ -169,14 +167,19 @@ def test_generate_message_voice_success_includes_gcs_urls(
     async def fake_get_message_content(db, session_id, message_id):
         return "hello"
 
-    async def fake_generate_voice(*args, **kwargs):
+    async def fake_produce_voice_for_user(*args, **kwargs):
         captured["voice_message_narration_mode"] = kwargs.get(
             "voice_message_narration_mode"
         )
-        return VoiceGenerationResult(
-            gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
-            gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
-            duration_seconds=1.23,
+        return (
+            VoiceGenerationResult(
+                gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
+                gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
+                duration_seconds=1.23,
+            ),
+            True,
+            0,
+            10,
         )
 
     async def fake_update_message_audio_url(
@@ -190,12 +193,18 @@ def test_generate_message_voice_success_includes_gcs_urls(
         "get_chat_by_user_and_agent",
         fake_get_chat_by_user_and_agent,
     )
+    from app.services import chat_assistant_voice
+
     monkeypatch.setattr(
         chat_history_service,
         "get_message_content",
         fake_get_message_content,
     )
-    monkeypatch.setattr(global_voice_service, "generate_voice", fake_generate_voice)
+    monkeypatch.setattr(
+        chat_assistant_voice,
+        "produce_voice_for_user",
+        fake_produce_voice_for_user,
+    )
     monkeypatch.setattr(
         chat_history_service,
         "update_message_audio_url",
@@ -254,21 +263,28 @@ def test_generate_message_voice_prefers_chat_settings_voice_id(
     async def fake_get_message_content(db, session_id, message_id):
         return "hello"
 
-    async def fake_generate_voice(*args, **kwargs):
+    async def fake_produce_voice_for_user(*args, **kwargs):
         captured["voice_id"] = kwargs.get("voice_id")
         captured["voice_message_narration_mode"] = kwargs.get(
             "voice_message_narration_mode"
         )
-        return VoiceGenerationResult(
-            gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
-            gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
-            duration_seconds=1.23,
+        return (
+            VoiceGenerationResult(
+                gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
+                gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
+                duration_seconds=1.23,
+            ),
+            True,
+            0,
+            10,
         )
 
     async def fake_update_message_audio_url(
         db, session_id, message_id, audio_url, audio_duration
     ):
         return True
+
+    from app.services import chat_assistant_voice
 
     monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
     monkeypatch.setattr(
@@ -281,7 +297,11 @@ def test_generate_message_voice_prefers_chat_settings_voice_id(
         "get_message_content",
         fake_get_message_content,
     )
-    monkeypatch.setattr(global_voice_service, "generate_voice", fake_generate_voice)
+    monkeypatch.setattr(
+        chat_assistant_voice,
+        "produce_voice_for_user",
+        fake_produce_voice_for_user,
+    )
     monkeypatch.setattr(
         chat_history_service,
         "update_message_audio_url",
