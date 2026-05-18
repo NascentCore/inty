@@ -193,11 +193,11 @@ class FeaturesConfig:
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
     companion_ws_session_system_text: Optional[str] = None
     # When True, ``/api/v1/chat/ws`` unified inner-tick worker may emit proactive companion turns
-    # (``InnerTickMode.PROACTIVE_CHAT``) when ``next_heartbeat_wait_seconds`` says ready.
+    # (``InnerTickActivity.PROACTIVE_CHAT``) when ``next_heartbeat_wait_seconds`` says ready.
     companion_ws_proactive_heartbeat_enabled: bool = True
     # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
     companion_ws_proactive_heartbeat_poll_seconds: float = 60.0
-    # When True, the same worker may emit maintenance inner-tick turns (``InnerTickMode.MAINTENANCE``).
+    # When True, the same worker may emit maintenance inner-tick turns (``InnerTickActivity.MAINTENANCE``).
     companion_ws_maintenance_inner_tick_enabled: bool = True
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0

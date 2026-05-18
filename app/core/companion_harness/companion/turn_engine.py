@@ -16,7 +16,7 @@ from .message_format import TRANSCRIPT_MSG_UUID_KEY
 from .models import (
     ChatMessage,
     ContextMeta,
-    InnerTickMode,
+    InnerTickActivity,
     PromptBundle,
     transcript_relative_path_for_turn_persistence,
 )
@@ -33,13 +33,13 @@ def build_repl_turn_base_messages(
     user_text: str,
     repl_online_ack_turn: bool = False,
     inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
     ai_private_text: str = "",
     include_significance_perception_slice: bool = False,
 ) -> tuple[list[dict[str, Any]], str]:
     effective_ai_private = ai_private_text
     tick_proactive = (
-        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if (
         inner_tick_turn
@@ -54,7 +54,7 @@ def build_repl_turn_base_messages(
         context,
         enable_user_profile_tool=True,
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
+        inner_tick_activity=inner_tick_activity,
         repl_online_ack_turn=repl_online_ack_turn,
         ai_private_text=effective_ai_private,
         include_significance_perception_slice=include_significance_perception_slice,
@@ -66,7 +66,7 @@ def build_repl_turn_base_messages(
             row[TRANSCRIPT_MSG_UUID_KEY] = m.uuid
         messages.append(row)
     user_msg_uuid = str(uuid.uuid4())
-    if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
+    if inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT:
         messages.append(
             {"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE}
         )
@@ -115,10 +115,10 @@ def persist_repl_turn_transcript_rows(
     """
     rel_tr = transcript_relative_path_for_turn_persistence(
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=(
-            InnerTickMode.PROACTIVE_CHAT
+        inner_tick_activity=(
+            InnerTickActivity.PROACTIVE_CHAT
             if inner_tick_proactive_chat
-            else InnerTickMode.MAINTENANCE
+            else InnerTickActivity.MAINTENANCE
         ),
     )
     store = memory_store

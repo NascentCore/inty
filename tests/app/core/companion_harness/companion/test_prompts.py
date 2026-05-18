@@ -4,7 +4,7 @@ from typing import Any
 
 from app.core.companion_harness.companion.models import (
     ContextMeta,
-    InnerTickMode,
+    InnerTickActivity,
     PromptBundle,
 )
 from app.core.companion_harness.memory.memory_taxonomy import (
@@ -66,7 +66,7 @@ def test_build_system_prompt_heartbeat() -> None:
         _minimal_bundle(),
         ContextMeta(),
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
     )
     assert "## 本轮（陪伴心跳）" in text
     assert "用户尚未发送新消息" in text

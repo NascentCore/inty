@@ -59,7 +59,7 @@ from app.core.companion_harness.tools.image_gate import (
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
-    InnerTickMode,
+    InnerTickActivity,
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
@@ -1483,7 +1483,7 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
                     background_output_sink=None,
                     preset_user_msg_uuid=preset_uid,
                     inner_tick_turn=True,
-                    inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+                    inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
                     implicit_signal_bundle=ws_implicit,
                 )
             )
@@ -1785,7 +1785,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 background_output_sink=None,
                 preset_user_msg_uuid=preset_uid,
                 inner_tick_turn=True,
-                inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+                inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
                 implicit_signal_bundle=ws_implicit,
             )
         )
@@ -2104,7 +2104,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     background_output_sink=companion_ws.background_sink,
                     preset_user_msg_uuid=preset_uid,
                     inner_tick_turn=True,
-                    inner_tick_mode=InnerTickMode.MAINTENANCE,
+                    inner_tick_activity=InnerTickActivity.MAINTENANCE,
                     implicit_signal_bundle=ws_implicit,
                 )
             )
