@@ -22,6 +22,7 @@ maintenance agents can fix the highest-impact item first.
   failures while still allowing cancellation to stop the background task.
   Fixed in `cursor/agent-maintenance-tasks-4b37`.
 - [ ] Google 2.4 "Exceptions": `/app/services/voice_cache_service.py`
+  Claimed by `cursor/agent-maintenance-tasks-96b3`.
   suppresses rollback failures with `except Exception: pass` in the save and
   access-stat update paths. Log rollback failure context so voice cache database
   errors remain diagnosable.

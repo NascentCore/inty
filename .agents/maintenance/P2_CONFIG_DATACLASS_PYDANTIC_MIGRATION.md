@@ -63,9 +63,9 @@ flowchart TB
 | CFG-PYD-03 | done | `DatabaseSettings` | — | `database` | 已迁移为 `BaseModel`；保留 `@property`：`url` / `async_url` / `async_replica_url` |
 | CFG-PYD-04 | done | `GoogleOAuthConfig` | — | `google_oauth` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-05 | done | `VerificationConfig` | — | `verification` | 已迁移为 `BaseModel`；纯字段 |
-| CFG-PYD-06 | todo | `APIEndpointsConfig` | — | `app.api_endpoints`（预处理 dict） | 被 `AppConfig` 引用；先迁移便于 `AppConfig` 一次到位 |
-| CFG-PYD-07 | todo | `EmbeddingConfig` | — | `embedding` | 纯字段 |
-| CFG-PYD-08 | todo | `GCSConfig` | — | `gcs` | 纯字段 |
+| CFG-PYD-06 | claimed by `cursor/agent-maintenance-tasks-96b3` | `APIEndpointsConfig` | — | `app.api_endpoints`（预处理 dict） | 被 `AppConfig` 引用；先迁移便于 `AppConfig` 一次到位 |
+| CFG-PYD-07 | claimed by `cursor/agent-maintenance-tasks-96b3` | `EmbeddingConfig` | — | `embedding` | 纯字段 |
+| CFG-PYD-08 | claimed by `cursor/agent-maintenance-tasks-96b3` | `GCSConfig` | — | `gcs` | 纯字段 |
 | CFG-PYD-09 | todo | `FirebaseConfig` | — | `firebase` | 纯字段 |
 | CFG-PYD-10 | todo | `GooglePlayConfig` | — | `google_play` | 修正 `fallback_tracks: list[str] = None` 等为 `Optional[...]` |
 | CFG-PYD-11 | todo | `CloudflareConfig` | — | `cloudflare` | 纯字段 |
