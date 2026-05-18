@@ -26,6 +26,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     TECHNO_CORE = "techno_core"
     TECHNO_CORE_EVENTS_JSONL = "techno_core_events_jsonl"
     LIVING_SPHERE = "living_sphere"
+    LIVING_SPHERE_UPDATES_JSONL = "living_sphere_updates_jsonl"
     HEARTBEAT = "heartbeat"
     TOOLS = "tools"
     # Package seed SIGNIFICANCE_PERCEPTION.md; scoring semantics consumed via PromptBundle, not ORM-only.
@@ -65,6 +66,10 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         None,
     ),
     "LIVING_SPHERE.md": (CompanionMemoryDocumentKind.LIVING_SPHERE, None),
+    "living_sphere_updates.jsonl": (
+        CompanionMemoryDocumentKind.LIVING_SPHERE_UPDATES_JSONL,
+        None,
+    ),
     "HEARTBEAT.md": (CompanionMemoryDocumentKind.HEARTBEAT, None),
     "TOOLS.md": (CompanionMemoryDocumentKind.TOOLS, None),
     "CHAT_LOGS.md": (CompanionMemoryDocumentKind.CHAT_LOGS_MD, None),

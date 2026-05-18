@@ -785,46 +785,50 @@ async def run_turn(
             "run_turn memory_pipeline=skipped (inner_tick_turn) mode={}",
             inner_tick_mode.value,
         )
-    elif defer_memory_update:
-
-        def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:
-            return llm_client.complete_text(msgs, model_role=model_role)
-
-        schedule_memory_update_after_turn(
-            store,
-            user_text=memory_user_text,
-            assistant_text=last_text,
-            complete_fn=_complete_fn,
-            config=mem_cfg,
-            trace_id=trace_id,
-            user_msg_uuid=user_msg_uuid,
-        )
     else:
-        _mem_sync_tok = companion_llm_runtime_event_bind_ctx.set(
-            LlmRuntimeEventBind(
-                memory_store=store,
-                trace_id=trace_id,
-                user_msg_uuid=user_msg_uuid,
-                phase="memory_pipeline",
-                scene=None,
-            )
-        )
-        try:
+        assert tool_bg_idle_event is not None
+        if defer_memory_update:
 
-            def _complete_fn_sync(
-                msgs: list[dict[str, Any]], model_role: str
-            ) -> str:
+            def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:
                 return llm_client.complete_text(msgs, model_role=model_role)
 
-            memory_update_after_turn(
+            schedule_memory_update_after_turn(
                 store,
                 user_text=memory_user_text,
                 assistant_text=last_text,
-                complete_fn=_complete_fn_sync,
+                complete_fn=_complete_fn,
                 config=mem_cfg,
+                trace_id=trace_id,
+                user_msg_uuid=user_msg_uuid,
+                tool_bg_idle_event=tool_bg_idle_event,
             )
-        finally:
-            companion_llm_runtime_event_bind_ctx.reset(_mem_sync_tok)
+        else:
+            _mem_sync_tok = companion_llm_runtime_event_bind_ctx.set(
+                LlmRuntimeEventBind(
+                    memory_store=store,
+                    trace_id=trace_id,
+                    user_msg_uuid=user_msg_uuid,
+                    phase="memory_pipeline",
+                    scene=None,
+                )
+            )
+            try:
+
+                def _complete_fn_sync(
+                    msgs: list[dict[str, Any]], model_role: str
+                ) -> str:
+                    return llm_client.complete_text(msgs, model_role=model_role)
+
+                memory_update_after_turn(
+                    store,
+                    user_text=memory_user_text,
+                    assistant_text=last_text,
+                    complete_fn=_complete_fn_sync,
+                    config=mem_cfg,
+                    tool_bg_idle_event=tool_bg_idle_event,
+                )
+            finally:
+                companion_llm_runtime_event_bind_ctx.reset(_mem_sync_tok)
 
     logger.info(
         "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "

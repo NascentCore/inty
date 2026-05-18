@@ -201,6 +201,9 @@ class FeaturesConfig:
     companion_ws_maintenance_inner_tick_enabled: bool = True
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
+    # Seconds to wait on ``CompanionSession.tool_bg_idle`` before LivingSphere jsonl compact
+    # (memory worker after user turns with defer_memory_update).
+    companion_tool_bg_idle_wait_timeout_sec: float = 120.0
 
     def __post_init__(self) -> None:
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()
@@ -906,4 +909,9 @@ def _validate_config(config: Config):
     if feats.companion_transcript_compaction is not None:
         CompanionTranscriptCompactionConfig.model_validate(
             feats.companion_transcript_compaction
+        )
+    tb_wait = feats.companion_tool_bg_idle_wait_timeout_sec
+    if tb_wait < 1.0 or tb_wait > 3600.0:
+        raise ValueError(
+            "app.features.companion_tool_bg_idle_wait_timeout_sec must be between 1 and 3600"
         )

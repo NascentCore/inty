@@ -24,6 +24,10 @@ from app.core.companion_harness.companion.prompt_slices import (
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
+from living_sphere.models import (
+    LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
+    LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
+)
 from techno_core.models import (
     TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
@@ -49,6 +53,7 @@ _PROMPT_SLICE_ENUM: tuple[str, ...] = tuple(
 )
 
 assert TECHNO_CORE_RECORD_EVENT_TOOL_NAME == "techno_core_record_event"
+assert LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME == "living_sphere_record_update"
 
 
 class CompanionToolName(StrEnum):
@@ -60,6 +65,7 @@ class CompanionToolName(StrEnum):
     COMPANION_UPDATE_PROMPT_SLICE = "companion_update_prompt_slice"
     GENERATE_IMAGE = "generate_image"
     GOOGLE_WEB_SEARCH = "google_web_search"
+    LIVING_SPHERE_RECORD_UPDATE = "living_sphere_record_update"
     MEMORY_STORE_LIST_PATHS = "memory_store_list_paths"
     MEMORY_STORE_MKDIR = "memory_store_mkdir"
     MEMORY_STORE_READ_DOCUMENT = "memory_store_read_document"
@@ -214,6 +220,34 @@ COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
             "additionalProperties": False,
         },
         tags=frozenset({TOOL_TAG_GENERATION}),
+        extra_function_keys={},
+    ),
+    LlmFunctionTool(
+        name=CompanionToolName.LIVING_SPHERE_RECORD_UPDATE,
+        description=(
+            "Record a user-directed change to the private LivingSphere home "
+            f"(append-only ``{LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH}``). "
+            "Call when the user **explicitly** asks to add, move, or re-layout "
+            "objects or anchors in the virtual home—not for TechnoCore collective "
+            "world edits. ``LIVING_SPHERE.md`` in context is a **snapshot** merged "
+            "after the turn; do not use ``memory_store_write_document`` on it. "
+            "Do not use ``techno_core_record_event`` for layout/setup changes."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "change_request": {
+                    "type": "string",
+                    "description": (
+                        "Concise natural-language summary of the user's "
+                        "LivingSphere change intent from chat."
+                    ),
+                },
+            },
+            "required": ["change_request"],
+            "additionalProperties": False,
+        },
+        tags=frozenset(),
         extra_function_keys={},
     ),
     LlmFunctionTool(
@@ -418,12 +452,13 @@ COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
         description=(
             "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
             f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH}`` (append-only). "
-            "Use on **maintenance inner-tick** when the user thread is idle: small in-world "
-            "actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``, not as a substitute "
-            "for chatting. ``sphere=living_sphere`` for anchors at home; ``techno_core`` for "
-            "channels / edges of the residency layer. Keep ``summary`` one tight sentence; "
-            "default ``visibility`` is ``private`` (``shareable`` only when it could later "
-            "justify a gentle user-facing hint without pressure)."
+            "Primary use: **maintenance inner-tick** when the user thread is idle (small "
+            "in-world actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``). "
+            "**Do not** use for user-directed home layout or object changes—use "
+            "``living_sphere_record_update`` instead. TechnoCore collective world settings "
+            "are not user-editable via any tool. ``sphere=living_sphere`` for anchors at "
+            "home; ``techno_core`` for residency-layer channels. Keep ``summary`` one tight "
+            "sentence; default ``visibility`` is ``private``."
         ),
         parameters={
             "type": "object",
@@ -544,6 +579,7 @@ REPL_TOOL_NAMES_SHARED_HEAD: tuple[CompanionToolName, ...] = (
 )
 
 REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[CompanionToolName, ...] = (
+    CompanionToolName.LIVING_SPHERE_RECORD_UPDATE,
     CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
     CompanionToolName.PHONE_CALL_USER,
 )
