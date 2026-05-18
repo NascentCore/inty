@@ -63,6 +63,7 @@ from app.core.companion_harness.companion.models import (
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
+from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
     mark_task_fired,
     mark_task_retry,
@@ -541,9 +542,7 @@ async def _try_handle_ws_user_signed_on_frame(
             ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
         )
         companion_chat_service.record_companion_user_signed_on_ws_lifecycle(
-            user_id=current_user.id,
-            agent_id=agent_id,
-            chat_id=chat.id,
+            scope=CompanionScope(current_user.id, agent_id, str(chat.id)),
             resolved_chat_model=model_override,
             tc_box=effective_tc_box,
             received_message_uuid=preset_mid,
@@ -643,9 +642,7 @@ async def _try_handle_ws_user_signed_out_frame(
             ChatWsUserSignedOutAckFrame(ok=True).model_dump(exclude_none=True)
         )
         companion_chat_service.record_companion_user_signed_out_ws_lifecycle(
-            user_id=current_user.id,
-            agent_id=agent_id,
-            chat_id=chat.id,
+            scope=CompanionScope(current_user.id, agent_id, str(chat.id)),
             resolved_chat_model=model_override,
             tc_box=tc_box,
             received_message_uuid=recv_msg_uuid,
@@ -743,9 +740,7 @@ async def _try_handle_ws_ws_conn_dropped_frame(
         reason_part = reason_raw if reason_raw else "-"
         await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
         companion_chat_service.record_companion_ws_conn_dropped_ws_lifecycle(
-            user_id=current_user.id,
-            agent_id=agent_id,
-            chat_id=chat.id,
+            scope=CompanionScope(current_user.id, agent_id, str(chat.id)),
             resolved_chat_model=model_override,
             tc_box=tc_box,
             dropped_at_utc=frame.dropped_at_utc,

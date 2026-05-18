@@ -25,6 +25,7 @@ from app.core.companion_harness.companion.manager import (
 from app.core.companion_harness.memory.memory_registry import (
     MEMORY_STORE_REGISTRY_REQUIRES_DSN,
 )
+from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.ws_lifecycle_events import (
     normalize_received_message_uuid_for_lifecycle,
     record_user_signed_on,
@@ -106,10 +107,8 @@ def companion_session_tool_bg_idle_event(
 
 
 def _companion_store_for_scope(
+    scope: CompanionScope,
     *,
-    user_id: str,
-    agent_id: str,
-    chat_id: str | int,
     resolved_chat_model: GenAIModel,
 ) -> MemoryStore:
     chat_api_id = resolved_chat_model.id_on_provider
@@ -119,15 +118,17 @@ def _companion_store_for_scope(
         tool_api_id,
         _companion_runtime_config_fingerprint(),
     )
-    session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
+    session = manager.get_or_create_session(
+        scope.user_id,
+        scope.agent_id,
+        scope.chat_id,
+    )
     return session.store
 
 
 def _lifecycle_ts_timezone_and_store(
+    scope: CompanionScope,
     *,
-    user_id: str,
-    agent_id: str,
-    chat_id: str | int,
     resolved_chat_model: GenAIModel,
     tc_box: list[object | None],
     dropped_at_utc: str | None,
@@ -139,27 +140,20 @@ def _lifecycle_ts_timezone_and_store(
     if resolved is None:
         logger.warning(
             "companion_ws_lifecycle skipped missing client local ts user={} agent={} chat_id={}",
-            user_id,
-            agent_id,
-            chat_id,
+            scope.user_id,
+            scope.agent_id,
+            scope.chat_id,
         )
         return None
     ts, timezone_label = resolved
-    store = _companion_store_for_scope(
-        user_id=user_id,
-        agent_id=agent_id,
-        chat_id=chat_id,
-        resolved_chat_model=resolved_chat_model,
-    )
+    store = _companion_store_for_scope(scope, resolved_chat_model=resolved_chat_model)
     return ts, timezone_label, store
 
 
 def _record_companion_ws_lifecycle_best_effort(
+    scope: CompanionScope,
     *,
     kind: str,
-    user_id: str,
-    agent_id: str,
-    chat_id: str,
     op: Callable[[], None],
 ) -> None:
     """Append WS lifecycle JSONL without failing the WebSocket ack path."""
@@ -169,18 +163,16 @@ def _record_companion_ws_lifecycle_best_effort(
         logger.warning(
             "companion_ws_lifecycle record failed kind={} user_id={} agent_id={} chat_id={}",
             kind,
-            user_id,
-            agent_id,
-            chat_id,
+            scope.user_id,
+            scope.agent_id,
+            scope.chat_id,
             exc_info=True,
         )
 
 
 def record_companion_user_signed_on_ws_lifecycle(
     *,
-    user_id: str,
-    agent_id: str,
-    chat_id: str,
+    scope: CompanionScope,
     resolved_chat_model: GenAIModel,
     tc_box: list[object | None],
     received_message_uuid: str,
@@ -188,9 +180,7 @@ def record_companion_user_signed_on_ws_lifecycle(
 ) -> None:
     def _do() -> None:
         packed = _lifecycle_ts_timezone_and_store(
-            user_id=user_id,
-            agent_id=agent_id,
-            chat_id=chat_id,
+            scope,
             resolved_chat_model=resolved_chat_model,
             tc_box=tc_box,
             dropped_at_utc=None,
@@ -202,9 +192,9 @@ def record_companion_user_signed_on_ws_lifecycle(
             store,
             ts=ts,
             timezone_label=timezone_label,
-            user_id=user_id,
-            agent_id=agent_id,
-            chat_id=chat_id,
+            user_id=scope.user_id,
+            agent_id=scope.agent_id,
+            chat_id=scope.chat_id,
             received_message_uuid=normalize_received_message_uuid_for_lifecycle(
                 received_message_uuid
             ),
@@ -212,19 +202,13 @@ def record_companion_user_signed_on_ws_lifecycle(
         )
 
     _record_companion_ws_lifecycle_best_effort(
-        kind="user_signed_on",
-        user_id=user_id,
-        agent_id=agent_id,
-        chat_id=chat_id,
-        op=_do,
+        scope, kind="user_signed_on", op=_do
     )
 
 
 def record_companion_user_signed_out_ws_lifecycle(
     *,
-    user_id: str,
-    agent_id: str,
-    chat_id: str,
+    scope: CompanionScope,
     resolved_chat_model: GenAIModel,
     tc_box: list[object | None],
     received_message_uuid: str,
@@ -232,9 +216,7 @@ def record_companion_user_signed_out_ws_lifecycle(
 ) -> None:
     def _do() -> None:
         packed = _lifecycle_ts_timezone_and_store(
-            user_id=user_id,
-            agent_id=agent_id,
-            chat_id=chat_id,
+            scope,
             resolved_chat_model=resolved_chat_model,
             tc_box=tc_box,
             dropped_at_utc=None,
@@ -246,9 +228,9 @@ def record_companion_user_signed_out_ws_lifecycle(
             store,
             ts=ts,
             timezone_label=timezone_label,
-            user_id=user_id,
-            agent_id=agent_id,
-            chat_id=chat_id,
+            user_id=scope.user_id,
+            agent_id=scope.agent_id,
+            chat_id=scope.chat_id,
             received_message_uuid=normalize_received_message_uuid_for_lifecycle(
                 received_message_uuid
             ),
@@ -256,19 +238,13 @@ def record_companion_user_signed_out_ws_lifecycle(
         )
 
     _record_companion_ws_lifecycle_best_effort(
-        kind="user_signed_out",
-        user_id=user_id,
-        agent_id=agent_id,
-        chat_id=chat_id,
-        op=_do,
+        scope, kind="user_signed_out", op=_do
     )
 
 
 def record_companion_ws_conn_dropped_ws_lifecycle(
     *,
-    user_id: str,
-    agent_id: str,
-    chat_id: str,
+    scope: CompanionScope,
     resolved_chat_model: GenAIModel,
     tc_box: list[object | None],
     dropped_at_utc: str,
@@ -279,9 +255,7 @@ def record_companion_ws_conn_dropped_ws_lifecycle(
 ) -> None:
     def _do() -> None:
         packed = _lifecycle_ts_timezone_and_store(
-            user_id=user_id,
-            agent_id=agent_id,
-            chat_id=chat_id,
+            scope,
             resolved_chat_model=resolved_chat_model,
             tc_box=tc_box,
             dropped_at_utc=dropped_at_utc,
@@ -293,9 +267,9 @@ def record_companion_ws_conn_dropped_ws_lifecycle(
             store,
             ts=ts,
             timezone_label=timezone_label,
-            user_id=user_id,
-            agent_id=agent_id,
-            chat_id=chat_id,
+            user_id=scope.user_id,
+            agent_id=scope.agent_id,
+            chat_id=scope.chat_id,
             received_message_uuid=normalize_received_message_uuid_for_lifecycle(
                 received_message_uuid
             ),
@@ -305,11 +279,7 @@ def record_companion_ws_conn_dropped_ws_lifecycle(
         )
 
     _record_companion_ws_lifecycle_best_effort(
-        kind="ws_conn_dropped",
-        user_id=user_id,
-        agent_id=agent_id,
-        chat_id=chat_id,
-        op=_do,
+        scope, kind="ws_conn_dropped", op=_do
     )
 
 

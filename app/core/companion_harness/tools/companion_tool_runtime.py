@@ -377,8 +377,8 @@ def tool_techno_core_record_event(
         except ValueError:
             return f"ERROR: invalid visibility {raw_vis!r}"
 
-    uid = store.scope.user_id.strip()
-    cid = store.scope.companion_id.strip()
+    uid = store.scope.user_id
+    cid = store.scope.agent_id
     if not cid:
         return f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}"
 

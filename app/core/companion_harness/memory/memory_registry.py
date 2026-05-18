@@ -28,7 +28,7 @@ def get_memory_store(scope: CompanionScope, *, dsn: str) -> MemoryStore:
 
         repository = SqlAlchemyMemoryRepository(
             user_id=scope.user_id,
-            companion_id=scope.companion_id,
+            companion_id=scope.agent_id,
             chat_id=scope.chat_id,
         )
 

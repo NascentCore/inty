@@ -32,11 +32,6 @@ def _tool_background_db_loop() -> asyncio.AbstractEventLoop | None:
     return getattr(_tls, "persist_bridge_loop", None)
 
 
-def agent_id_from_companion_memory_store(store: MemoryStore) -> str:
-    """Agent id is the companion id in ``CompanionScope``."""
-    return store.scope.companion_id
-
-
 async def _persist_agent_status_line_body(
     agent_id: str, payload: Optional[str]
 ) -> None:
@@ -110,7 +105,7 @@ async def tool_update_agent_status_line(
     store: MemoryStore, status_line: str
 ) -> str:
     """Companion tool: set short chat-header status line for this agent."""
-    agent_id = agent_id_from_companion_memory_store(store)
+    agent_id = store.scope.agent_id
     await persist_agent_status_line(agent_id, status_line)
     normalized = (status_line or "").strip()
     if not normalized:

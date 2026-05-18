@@ -144,7 +144,7 @@ class CompanionSession:
     ) -> None:
         self.scope = scope
         self.user_id = scope.user_id
-        self.companion_id = scope.companion_id
+        self.companion_id = scope.agent_id
         self.chat_id = scope.chat_id
         self.store = store
         self.llm_client = llm_client

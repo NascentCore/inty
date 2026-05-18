@@ -25,6 +25,7 @@ from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
 from app.models.user import AuthType
@@ -2786,9 +2787,11 @@ def test_chat_websocket_user_signed_out_records_ws_lifecycle_event(
 
     assert ack == {"type": "user_signed_out_ack", "ok": True}
     kw = captured["kwargs"]
-    assert kw["user_id"] == "user-so-1"
-    assert kw["agent_id"] == "agent-so-1"
-    assert kw["chat_id"] == "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    assert kw["scope"] == CompanionScope(
+        "user-so-1",
+        "agent-so-1",
+        "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+    )
     assert isinstance(kw["resolved_chat_model"], GenAIModel)
     assert kw["received_message_uuid"] == msg_uuid
     tc_box = kw["tc_box"]
@@ -3012,9 +3015,11 @@ def test_chat_websocket_ws_conn_dropped_records_ws_lifecycle_event(
 
     assert ack == {"type": "ws_conn_dropped_ack", "ok": True}
     kw = captured["kwargs"]
-    assert kw["user_id"] == "user-wd-1"
-    assert kw["agent_id"] == "agent-wd-1"
-    assert kw["chat_id"] == "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    assert kw["scope"] == CompanionScope(
+        "user-wd-1",
+        "agent-wd-1",
+        "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee",
+    )
     assert kw["dropped_at_utc"] == dropped_at
     assert kw["ws_close_code"] == 1006
     assert kw["ws_close_reason"] == "connection reset"
