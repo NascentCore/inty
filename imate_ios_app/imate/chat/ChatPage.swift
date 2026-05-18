@@ -37,17 +37,23 @@ struct ChatPage: View {
             
             // 遮罩 + 弹窗
             if vm.showSettings {
-                Color.black.opacity(0.4)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation {
-                            vm.showSettings = false
-                        }
-                    }
-
-                ChatSettingsSheet(show: $vm.showSettings)
-                    .transition(.move(edge: .bottom))
-                    .ignoresSafeArea(edges: .bottom)
+                IMSettingBottomSheet(
+                    isPresented: $vm.showSettings
+                  )
+                  .transition(.opacity)
+                  .zIndex(10)
+                
+//                Color.black.opacity(0.4)
+//                    .ignoresSafeArea()
+//                    .onTapGesture {
+//                        withAnimation {
+//                            vm.showSettings = false
+//                        }
+//                    }
+//
+//                ChatSettingsSheet(show: $vm.showSettings)
+//                    .transition(.move(edge: .bottom))
+//                    .ignoresSafeArea(edges: .bottom)
             }
         }
         .background(ChatPageWidgets.ChatColors.background.ignoresSafeArea())
