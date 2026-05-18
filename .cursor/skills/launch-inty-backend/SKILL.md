@@ -82,6 +82,7 @@ After ops instance is ready, respond to user with the following (always include 
    - **模拟器**连宿主机 Ops：**`http://10.0.2.2:8001/`**（`10.0.2.2` = 宿主机 loopback）
    - **真机**：**`http://<电脑局域网 IP>:8001/`**（与 Mac/PC 同一 Wi‑Fi）
    - Debug 默认是远程 dev URL；改 `API_BASE_URL` 后需 **重新编译** debug 包
+   - 本地 Ops 为 **HTTP**；连不上时检查 debug 是否允许明文流量（`networkSecurityConfig` / `usesCleartextTraffic`）
 <<<<<<< HEAD
    - 本地 Ops 为 **HTTP**；连不上时检查 debug 是否允许明文流量（`networkSecurityConfig` / `usesCleartextTraffic`）
 =======
