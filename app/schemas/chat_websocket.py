@@ -65,10 +65,10 @@ class ChatWsClientContextAckFrame(BaseModel):
 
 
 class ChatWsUserSignedOnFrame(BaseModel):
-    """**Client → server** control frame: arms inner-tick coords, appends lifecycle runtime JSONL, schedules greeting.
+    """**Client → server** control frame: arms inner-tick coords, schedules greeting.
 
-    ``message_id`` (RFC4122 UUID) is required. Local ``ts`` in runtime JSONL comes from prior
-    ``client_context`` when present.
+    ``message_id`` (RFC4122 UUID) is required. Lifecycle JSONL (after successful ack) uses local
+    ``ts`` from prior ``client_context`` when present.
     """
 
     type: Literal["user_signed_on"] = "user_signed_on"

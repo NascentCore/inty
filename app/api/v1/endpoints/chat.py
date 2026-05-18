@@ -431,7 +431,8 @@ async def _try_handle_ws_user_signed_on_frame(
 
     Product intent: arms inner-tick WebSocket coordinates (proactive heartbeat, maintenance inner-tick,
     and due ``schedule_queue`` reminders share this registration). Requires ``message_id`` (RFC4122);
-    missing/invalid ids fail before ack; greeting turn is scheduled before ``user_signed_on_ack``.
+    missing/invalid ids fail before ack; greeting turn is scheduled before ``user_signed_on_ack``;
+    lifecycle JSONL is appended only after a successful ``user_signed_on_ack``.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -536,6 +537,9 @@ async def _try_handle_ws_user_signed_on_frame(
         effective_tc_box: list[object | None] = (
             tc_box if tc_box is not None else []
         )
+        await websocket.send_json(
+            ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
+        )
         companion_chat_service.record_companion_user_signed_on_ws_lifecycle(
             user_id=current_user.id,
             agent_id=agent_id,
@@ -544,9 +548,6 @@ async def _try_handle_ws_user_signed_on_frame(
             tc_box=effective_tc_box,
             received_message_uuid=preset_mid,
             ws_conn_id=ws_conn_id,
-        )
-        await websocket.send_json(
-            ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
         )
         logger.info(
             "chat_ws user_signed_on armed inner_tick coords ws_conn_id={} user={} agent={} "
@@ -588,10 +589,10 @@ async def _try_handle_ws_user_signed_out_frame(
     """
     Consume ``{"type":"user_signed_out","agent_id":...}``.
 
-    Validates the frame, cancels detached companion turns on this connection, appends one
-    ``user_signed_out`` row to companion ``.companion_runtime_events.jsonl``, then sends
-    ``user_signed_out_ack``. Does not alter inner-tick coords, transcript, or companion scope
-    persistence.
+    Validates the frame, cancels detached companion turns on this connection, sends
+    ``user_signed_out_ack``, then appends one ``user_signed_out`` row to companion
+    ``.companion_runtime_events.jsonl`` on successful ack. Does not alter inner-tick coords,
+    transcript, or companion scope persistence.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -638,6 +639,9 @@ async def _try_handle_ws_user_signed_out_frame(
         if inflight_turn_tracker is not None:
             # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
             await inflight_turn_tracker.cancel_all()
+        await websocket.send_json(
+            ChatWsUserSignedOutAckFrame(ok=True).model_dump(exclude_none=True)
+        )
         companion_chat_service.record_companion_user_signed_out_ws_lifecycle(
             user_id=current_user.id,
             agent_id=agent_id,
@@ -646,9 +650,6 @@ async def _try_handle_ws_user_signed_out_frame(
             tc_box=tc_box,
             received_message_uuid=recv_msg_uuid,
             ws_conn_id=ws_conn_id,
-        )
-        await websocket.send_json(
-            ChatWsUserSignedOutAckFrame(ok=True).model_dump(exclude_none=True)
         )
         logger.info(
             "chat_ws user_signed_out runtime_event ws_conn_id={} user={} agent={} chat_id={} "
@@ -688,8 +689,9 @@ async def _try_handle_ws_ws_conn_dropped_frame(
     """
     Consume ``{"type":"ws_conn_dropped","agent_id":...,"dropped_at_utc":...}``.
 
-    Appends one ``ws_conn_dropped`` row to companion ``.companion_runtime_events.jsonl``. Does not
-    alter inner-tick coords or transcript.
+    Sends ``ws_conn_dropped_ack``, then appends one ``ws_conn_dropped`` row to companion
+    ``.companion_runtime_events.jsonl`` on successful ack. Does not alter inner-tick coords or
+    transcript.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -739,6 +741,7 @@ async def _try_handle_ws_ws_conn_dropped_frame(
         code_part = frame.ws_close_code if frame.ws_close_code is not None else "-"
         reason_raw = (frame.ws_close_reason or "").strip()
         reason_part = reason_raw if reason_raw else "-"
+        await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
         companion_chat_service.record_companion_ws_conn_dropped_ws_lifecycle(
             user_id=current_user.id,
             agent_id=agent_id,
@@ -751,7 +754,6 @@ async def _try_handle_ws_ws_conn_dropped_frame(
             ws_close_code=code_part,
             ws_close_reason=reason_part,
         )
-        await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
         logger.info(
             "chat_ws ws_conn_dropped runtime_event ws_conn_id={} user={} agent={} chat_id={} "
             "dropped_at_utc={} received_message_uuid={}",
