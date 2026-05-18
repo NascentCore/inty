@@ -1811,6 +1811,206 @@ async def test_user_signed_on_records_lifecycle_when_subscription_svc_missing(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+@pytest.mark.asyncio
+async def test_user_signed_on_single_ack_when_lifecycle_record_raises(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Lifecycle failure after success ack must not emit a second error ack."""
+    from app.core.companion_harness.companion.websocket_coordinator import (
+        CompanionWebSocketCoordinator,
+    )
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("lifecycle write failed")
+
+    monkeypatch.setattr(
+        companion_chat_service,
+        "_lifecycle_ts_timezone_and_store",
+        lambda **_kwargs: ("2026-05-17T12:00:00+08:00", "Asia/Shanghai", object()),
+    )
+    monkeypatch.setattr(companion_chat_service, "record_user_signed_on", boom)
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id, **_kwargs):
+        return SimpleNamespace(id="chat-lc-fail", agent_id=agent_id)
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+
+    sent: list[dict] = []
+
+    class FakeWebSocket:
+        async def send_json(self, data):
+            sent.append(data)
+
+    msg_uuid = "eeeeeeee-bbbb-4ccc-dddd-000000000001"
+    tc_box: list = [
+        {
+            "local_time": "2026-05-17T12:00:00+08:00",
+            "timezone": "Asia/Shanghai",
+            "utc_offset_minutes": 480,
+        }
+    ]
+    companion_ws = CompanionWebSocketCoordinator.for_current_loop()
+    handled = await chat_v1._try_handle_ws_user_signed_on_frame(
+        FakeWebSocket(),
+        {
+            "type": "user_signed_on",
+            "agent_id": "agent-lc-fail",
+            "message_id": msg_uuid,
+        },
+        db=AsyncMock(),
+        current_user=_make_user(user_id="user-lc-fail"),
+        companion_ws=companion_ws,
+        inflight_turn_tracker=None,
+        ws_conn_id="ws-test-lc-fail",
+        outbound_queue=None,
+        tc_box=tc_box,
+        subscription_svc=None,
+    )
+
+    assert handled is True
+    assert sent == [{"type": "user_signed_on_ack", "ok": True}]
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+@pytest.mark.asyncio
+async def test_user_signed_out_single_ack_when_lifecycle_record_raises(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Lifecycle failure after success ack must not emit a second error ack."""
+    from app.core.companion_harness.companion.websocket_coordinator import (
+        CompanionWebSocketCoordinator,
+    )
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("lifecycle write failed")
+
+    monkeypatch.setattr(
+        companion_chat_service,
+        "_lifecycle_ts_timezone_and_store",
+        lambda **_kwargs: ("2026-05-17T18:00:00+08:00", "Asia/Shanghai", object()),
+    )
+    monkeypatch.setattr(companion_chat_service, "record_user_signed_out", boom)
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id, **_kwargs):
+        return SimpleNamespace(id="chat-so-fail", agent_id=agent_id)
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+
+    subscription_svc = AsyncMock()
+    subscription_svc.get_user_current_subscription = AsyncMock(return_value=None)
+
+    sent: list[dict] = []
+
+    class FakeWebSocket:
+        async def send_json(self, data):
+            sent.append(data)
+
+    companion_ws = CompanionWebSocketCoordinator.for_current_loop()
+    handled = await chat_v1._try_handle_ws_user_signed_out_frame(
+        FakeWebSocket(),
+        {
+            "type": "user_signed_out",
+            "agent_id": "agent-so-fail",
+            "message_id": "aaaaaaaa-bbbb-4ccc-dddd-000000000002",
+        },
+        db=AsyncMock(),
+        current_user=_make_user(user_id="user-so-fail"),
+        companion_ws=companion_ws,
+        inflight_turn_tracker=None,
+        subscription_svc=subscription_svc,
+        ws_conn_id="ws-test-so-fail",
+        tc_box=[
+            {
+                "local_time": "2026-05-17T18:00:00+08:00",
+                "timezone": "Asia/Shanghai",
+                "utc_offset_minutes": 480,
+            }
+        ],
+    )
+
+    assert handled is True
+    assert sent == [{"type": "user_signed_out_ack", "ok": True}]
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+@pytest.mark.asyncio
+async def test_ws_conn_dropped_single_ack_when_lifecycle_record_raises(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Lifecycle failure after success ack must not emit a second error ack."""
+    from app.core.companion_harness.companion.websocket_coordinator import (
+        CompanionWebSocketCoordinator,
+    )
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("lifecycle write failed")
+
+    monkeypatch.setattr(
+        companion_chat_service,
+        "_lifecycle_ts_timezone_and_store",
+        lambda **_kwargs: ("2026-05-11T20:00:00+08:00", "Asia/Shanghai", object()),
+    )
+    monkeypatch.setattr(companion_chat_service, "record_ws_conn_dropped", boom)
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id, **_kwargs):
+        return SimpleNamespace(id="chat-wd-fail", agent_id=agent_id)
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+
+    subscription_svc = AsyncMock()
+    subscription_svc.get_user_current_subscription = AsyncMock(return_value=None)
+
+    sent: list[dict] = []
+
+    class FakeWebSocket:
+        async def send_json(self, data):
+            sent.append(data)
+
+    companion_ws = CompanionWebSocketCoordinator.for_current_loop()
+    handled = await chat_v1._try_handle_ws_ws_conn_dropped_frame(
+        FakeWebSocket(),
+        {
+            "type": "ws_conn_dropped",
+            "agent_id": "agent-wd-fail",
+            "dropped_at_utc": "2026-05-11T12:00:00+00:00",
+            "message_id": "bbbbbbbb-bbbb-4ccc-dddd-000000000003",
+            "ws_close_code": 1006,
+            "ws_close_reason": "connection reset",
+        },
+        db=AsyncMock(),
+        current_user=_make_user(user_id="user-wd-fail"),
+        companion_ws=companion_ws,
+        subscription_svc=subscription_svc,
+        ws_conn_id="ws-test-wd-fail",
+        tc_box=[
+            {
+                "local_time": "2026-05-11T20:00:00+08:00",
+                "timezone": "Asia/Shanghai",
+                "utc_offset_minutes": 480,
+            }
+        ],
+    )
+
+    assert handled is True
+    assert sent == [{"type": "ws_conn_dropped_ack", "ok": True}]
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_companion_user_signed_on_greeting_cancelled_on_disconnect(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):

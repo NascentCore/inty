@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import hashlib
 import json
 import os
@@ -153,6 +154,28 @@ def _lifecycle_ts_timezone_and_store(
     return ts, timezone_label, store
 
 
+def _record_companion_ws_lifecycle_best_effort(
+    *,
+    kind: str,
+    user_id: str,
+    agent_id: str,
+    chat_id: str,
+    op: Callable[[], None],
+) -> None:
+    """Append WS lifecycle JSONL without failing the WebSocket ack path."""
+    try:
+        op()
+    except Exception:
+        logger.warning(
+            "companion_ws_lifecycle record failed kind={} user_id={} agent_id={} chat_id={}",
+            kind,
+            user_id,
+            agent_id,
+            chat_id,
+            exc_info=True,
+        )
+
+
 def record_companion_user_signed_on_ws_lifecycle(
     *,
     user_id: str,
@@ -163,28 +186,37 @@ def record_companion_user_signed_on_ws_lifecycle(
     received_message_uuid: str,
     ws_conn_id: str,
 ) -> None:
-    packed = _lifecycle_ts_timezone_and_store(
+    def _do() -> None:
+        packed = _lifecycle_ts_timezone_and_store(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            resolved_chat_model=resolved_chat_model,
+            tc_box=tc_box,
+            dropped_at_utc=None,
+        )
+        if packed is None:
+            return
+        ts, timezone_label, store = packed
+        record_user_signed_on(
+            store,
+            ts=ts,
+            timezone_label=timezone_label,
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            received_message_uuid=normalize_received_message_uuid_for_lifecycle(
+                received_message_uuid
+            ),
+            ws_conn_id=ws_conn_id,
+        )
+
+    _record_companion_ws_lifecycle_best_effort(
+        kind="user_signed_on",
         user_id=user_id,
         agent_id=agent_id,
         chat_id=chat_id,
-        resolved_chat_model=resolved_chat_model,
-        tc_box=tc_box,
-        dropped_at_utc=None,
-    )
-    if packed is None:
-        return
-    ts, timezone_label, store = packed
-    record_user_signed_on(
-        store,
-        ts=ts,
-        timezone_label=timezone_label,
-        user_id=user_id,
-        agent_id=agent_id,
-        chat_id=chat_id,
-        received_message_uuid=normalize_received_message_uuid_for_lifecycle(
-            received_message_uuid
-        ),
-        ws_conn_id=ws_conn_id,
+        op=_do,
     )
 
 
@@ -198,28 +230,37 @@ def record_companion_user_signed_out_ws_lifecycle(
     received_message_uuid: str,
     ws_conn_id: str,
 ) -> None:
-    packed = _lifecycle_ts_timezone_and_store(
+    def _do() -> None:
+        packed = _lifecycle_ts_timezone_and_store(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            resolved_chat_model=resolved_chat_model,
+            tc_box=tc_box,
+            dropped_at_utc=None,
+        )
+        if packed is None:
+            return
+        ts, timezone_label, store = packed
+        record_user_signed_out(
+            store,
+            ts=ts,
+            timezone_label=timezone_label,
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            received_message_uuid=normalize_received_message_uuid_for_lifecycle(
+                received_message_uuid
+            ),
+            ws_conn_id=ws_conn_id,
+        )
+
+    _record_companion_ws_lifecycle_best_effort(
+        kind="user_signed_out",
         user_id=user_id,
         agent_id=agent_id,
         chat_id=chat_id,
-        resolved_chat_model=resolved_chat_model,
-        tc_box=tc_box,
-        dropped_at_utc=None,
-    )
-    if packed is None:
-        return
-    ts, timezone_label, store = packed
-    record_user_signed_out(
-        store,
-        ts=ts,
-        timezone_label=timezone_label,
-        user_id=user_id,
-        agent_id=agent_id,
-        chat_id=chat_id,
-        received_message_uuid=normalize_received_message_uuid_for_lifecycle(
-            received_message_uuid
-        ),
-        ws_conn_id=ws_conn_id,
+        op=_do,
     )
 
 
@@ -236,30 +277,39 @@ def record_companion_ws_conn_dropped_ws_lifecycle(
     ws_close_code: int | str,
     ws_close_reason: str,
 ) -> None:
-    packed = _lifecycle_ts_timezone_and_store(
+    def _do() -> None:
+        packed = _lifecycle_ts_timezone_and_store(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            resolved_chat_model=resolved_chat_model,
+            tc_box=tc_box,
+            dropped_at_utc=dropped_at_utc,
+        )
+        if packed is None:
+            return
+        ts, timezone_label, store = packed
+        record_ws_conn_dropped(
+            store,
+            ts=ts,
+            timezone_label=timezone_label,
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            received_message_uuid=normalize_received_message_uuid_for_lifecycle(
+                received_message_uuid
+            ),
+            ws_conn_id=ws_conn_id,
+            ws_close_code=ws_close_code,
+            ws_close_reason=ws_close_reason,
+        )
+
+    _record_companion_ws_lifecycle_best_effort(
+        kind="ws_conn_dropped",
         user_id=user_id,
         agent_id=agent_id,
         chat_id=chat_id,
-        resolved_chat_model=resolved_chat_model,
-        tc_box=tc_box,
-        dropped_at_utc=dropped_at_utc,
-    )
-    if packed is None:
-        return
-    ts, timezone_label, store = packed
-    record_ws_conn_dropped(
-        store,
-        ts=ts,
-        timezone_label=timezone_label,
-        user_id=user_id,
-        agent_id=agent_id,
-        chat_id=chat_id,
-        received_message_uuid=normalize_received_message_uuid_for_lifecycle(
-            received_message_uuid
-        ),
-        ws_conn_id=ws_conn_id,
-        ws_close_code=ws_close_code,
-        ws_close_reason=ws_close_reason,
+        op=_do,
     )
 
 
