@@ -390,7 +390,9 @@ async def run_turn(
             companion_id=context.companion_id,
             parent_run_enabled=langsmith_parent_run_enabled,
             inner_tick_turn=inner_tick_turn,
-            inner_tick_activity=route_inner_activity if inner_tick_turn else None,
+            inner_tick_activity=(
+                route_inner_activity if inner_tick_turn else None
+            ),
             implicit_user_signed_on=implicit_sign_on_turn,
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(
@@ -789,7 +791,9 @@ async def run_turn(
         assert tool_bg_idle_event is not None
         if defer_memory_update:
 
-            def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:
+            def _complete_fn(
+                msgs: list[dict[str, Any]], model_role: str
+            ) -> str:
                 return llm_client.complete_text(msgs, model_role=model_role)
 
             schedule_memory_update_after_turn(
@@ -855,7 +859,9 @@ async def run_turn(
         langsmith_run_id=langsmith_llm_run_acc,
         tool_background_started=tool_background_started,
         assistant_source=runtime_flags.turn_type,
-        inner_tick_activity=route_inner_activity.value if inner_tick_turn else None,
+        inner_tick_activity=(
+            route_inner_activity.value if inner_tick_turn else None
+        ),
         turn_start_context_mode=context.context_mode,
         transcript_compaction=prompt_plan.transcript_compaction,
         transcript_user_content=transcript_user_content,

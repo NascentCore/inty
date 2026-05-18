@@ -36,7 +36,10 @@ from .inner_tick_ls_tc import (
 def _inner_tick_proactive_chat(
     inner_tick_turn: bool, inner_tick_activity: InnerTickActivity
 ) -> bool:
-    return inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+    return (
+        inner_tick_turn
+        and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+    )
 
 
 # 与 memory_store_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。

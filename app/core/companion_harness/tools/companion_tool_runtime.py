@@ -438,9 +438,7 @@ def tool_living_sphere_record_update(
         return "ERROR: change_request must be a string"
     cid = store.scope.companion_id.strip()
     if not cid:
-        return (
-            f"ERROR: missing companion scope for {LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME}"
-        )
+        return f"ERROR: missing companion scope for {LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME}"
     ev_kwargs: dict[str, Any] = {
         "change_request": raw_change,
         "source": "chat_tool",

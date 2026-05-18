@@ -71,13 +71,16 @@ def companion_turn_tools_and_system_messages(
         meta=context,
     )
     tick_proactive = (
-        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+        inner_tick_turn
+        and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     ai_private_text = ""
     if inner_tick_turn and not tick_proactive:
         ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
     route_inner_activity = (
-        inner_tick_activity if inner_tick_turn else InnerTickActivity.MAINTENANCE
+        inner_tick_activity
+        if inner_tick_turn
+        else InnerTickActivity.MAINTENANCE
     )
     tools_for_turn: list[dict[str, Any]] = (
         []

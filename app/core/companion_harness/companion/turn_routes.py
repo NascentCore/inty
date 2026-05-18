@@ -43,7 +43,10 @@ def resolve_turn_route_mode(
     """Pick route label. Tools always use async foreground chat + background tool thread."""
     if tools_enabled:
         return TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-    if inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT:
+    if (
+        inner_tick_turn
+        and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+    ):
         return TurnRouteMode.HEARTBEAT_SYNC
     if inner_tick_turn:
         return TurnRouteMode.INNER_TICK_SYNC

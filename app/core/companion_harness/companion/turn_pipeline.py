@@ -106,10 +106,13 @@ def resolve_turn_runtime_flags(
 ) -> CompanionTurnRuntimeFlags:
     """Normalize user text and turn labels before MemoryStore reads."""
     tick_proactive = (
-        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+        inner_tick_turn
+        and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     route_inner_activity = (
-        inner_tick_activity if inner_tick_turn else InnerTickActivity.MAINTENANCE
+        inner_tick_activity
+        if inner_tick_turn
+        else InnerTickActivity.MAINTENANCE
     )
     implicit_sign_on_turn = implicit_user_signed_on_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
