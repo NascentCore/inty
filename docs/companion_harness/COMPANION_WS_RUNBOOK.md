@@ -86,6 +86,31 @@
 5. **检查后台工具补帧**：若主回复已发但补帧缺失，找 `tool_background_started`、`reply_to_user_msg_uuid`、`tool_bg_output_to_user` 和 “missing foreground ctx” 日志。
 6. **检查 inner-tick 坐标**：如果没有主动心跳或维护轮，确认是否已成功 `user_signed_on`，以及当前 chat 是否仍匹配连接保存的坐标。
 
+## `meta_data` 速查
+
+`meta_data` 挂在 chat history 的 user / assistant 行，以及 WebSocket 业务下行里的 completion message 上；字段真源是 `ChatWsCompanionWireMetaData`，下表只解释 Companion WebSocket 排障时最常用的组合。
+
+| 字段/组合 | 出现位置 | 含义 | 排障用途 |
+| --- | --- | --- | --- |
+| `localId` | 用户 chat 行 | 客户端乐观消息 id；只服务端侧镜像，不是 Companion 轮次 id。 | 排查端上去重或临时气泡时用；不要用它找 LangSmith。 |
+| `source = "chat"` | assistant 主回复 | 普通用户轮或可见主动轮的前台 assistant 回复。 | 结合 `user_msg_uuid`、`assistant_msg_uuid` 定位一次业务轮。 |
+| `source = "inner_tick"` | assistant 主回复 | 服务端 synthetic inner-tick 的前台 assistant 回复。 | 看到它先看 `inner_tick_activity`，再判断是否应展示给用户。 |
+| `source = "greeting"` | assistant 主回复 | `user_signed_on` 触发的隐式问候。 | 没有对应用户 chat_history 行是正常现象；上行控制帧不是用户正文。 |
+| `source = "tool_bg"` | tool background 补帧 | 后台工具线程完成后追加的业务下行。 | 用 `reply_to_user_msg_uuid` 指回前台轮；它不是新的用户输入。 |
+| `inner_tick_activity = "proactive_chat"` | inner-tick assistant / tool_bg | 主动心跳或 scheduled reminder 所属轮次。 | 与 `companion_proactive_heartbeat`、`companion_scheduled_reminder` 区分来源。 |
+| `inner_tick_activity = "maintenance"` | maintenance assistant / tool_bg | 维护型 inner-tick；可无前台正文，仅启动后台工具。 | 用户发消息无回复时，若前序 maintenance 仍有 tool_bg，优先查 `turn_lock` + `tool_bg_idle`。 |
+| `tool_background_started = true` | assistant 主回复 | 当前前台轮已启动后台工具线程，之后可能有 `source = "tool_bg"` 补帧。 | 主回复已到但后续缺失时，继续查 foreground pending 与工具事件队列。 |
+| `tool_bg_output_to_user` | tool_bg 补帧 | 该工具输出是否面向用户可见。 | 为假或缺失时，不要期待客户端展示新的气泡。 |
+| `tool_bg_generation_deliver`、`generated_image`、`tool_bg_local_image_paths` | tool_bg 补帧 | 后台生成类投递及生成图片元数据。 | 排查图片/生成物补投递，不用于普通文本轮判定。 |
+| `context_mode` | assistant 主回复 | 该轮开始时的体验档位。 | 只说明本轮 prompt 起点；若工具后续改 `context.json`，下一轮才体现。 |
+| `transcript_compaction` | assistant 主回复 | 本轮 transcript 截窗压实时的摘要信息。 | 排查长上下文行为；inner-tick 通常不跑用户轮式 memory pipeline。 |
+
+约束：
+
+- `message_id` / `user_msg_uuid` / `assistant_msg_uuid` / `langsmith_trace_id` 分别归属客户端请求、Companion 轮次、assistant 行、LangSmith trace；不要相互替代。
+- `inner_tick_activity` 的取值是 `proactive_chat` 或 `maintenance`；旧名 `InnerTickMode` 只应出现在历史讨论里。
+- `source = "tool_bg"` 的补帧进入同一业务 outbound FIFO，但组装补帧仍要拿到连接级 `turn_lock`。
+
 ## 常见症状
 
 ### 用户连发后第二条迟迟无回复
