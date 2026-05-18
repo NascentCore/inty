@@ -955,7 +955,13 @@ class LiveChatService:
                 async def _flush_after_prefill():
                     try:
                         await session.prefill_complete.wait()
-                    except Exception:
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:
+                        logger.warning(
+                            "等待 Live 预填充完成失败: "
+                            f"session_id={session.session_id}, error={e}"
+                        )
                         return
                     async with session.gemini_lock:
                         gs = session.gemini_session

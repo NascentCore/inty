@@ -1535,7 +1535,11 @@ async def get_agent_avatar_url(
         if avatar:
             try:
                 return image_transform_service.transform_mobile(avatar)
-            except Exception:
+            except Exception as transform_error:
+                logger.warning(
+                    "转换 Agent 备用头像 URL 失败，使用原始头像: "
+                    f"agent_id={agent_data.get('id')}, error={transform_error}"
+                )
                 return avatar
         return None
 

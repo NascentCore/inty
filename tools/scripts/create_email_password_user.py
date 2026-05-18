@@ -57,7 +57,7 @@ async def create_email_password_superuser(
 
         # 检查邮箱是否已存在
         stmt = select(User).where(
-            and_(User.email == email, User.deleted_at == None)
+            and_(User.email == email, User.deleted_at.is_(None))
         )
         result = await db.execute(stmt)
         existing_user = result.scalar_one_or_none()
