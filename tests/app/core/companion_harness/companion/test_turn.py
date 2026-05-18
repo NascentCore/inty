@@ -19,7 +19,7 @@ from app.core.companion_harness.companion.heartbeat import (
 )
 from app.core.companion_harness.companion.models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
-    InnerTickMode,
+    InnerTickActivity,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import run_turn
@@ -144,7 +144,7 @@ def test_run_turn_inner_tick_maintenance_injects_user_time_system_before_tail_us
             store=store,
             llm_client=client,  # type: ignore[arg-type]
             inner_tick_turn=True,
-            inner_tick_mode=InnerTickMode.MAINTENANCE,
+            inner_tick_activity=InnerTickActivity.MAINTENANCE,
             implicit_signal_bundle=bundle,
         )
     )
@@ -184,7 +184,7 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
             store=store,
             llm_client=client,  # type: ignore[arg-type]
             inner_tick_turn=True,
-            inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+            inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         )
     )
 

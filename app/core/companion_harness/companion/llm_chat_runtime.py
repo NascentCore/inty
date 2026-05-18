@@ -28,7 +28,7 @@ from app.core.companion_harness.companion.langsmith_parent_policy import (
     companion_langsmith_parent_run_allowed,
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
-from app.core.companion_harness.companion.models import InnerTickMode
+from app.core.companion_harness.companion.models import InnerTickActivity
 from app.utils.models_catalog import (
     GenAIModel,
     genai_model_langsmith_meta_subset,
@@ -124,7 +124,7 @@ def _companion_turn_langsmith_root_descriptor(
     user_id: str,
     companion_id: str,
     inner_tick_turn: bool,
-    inner_tick_mode: InnerTickMode | None,
+    inner_tick_activity: InnerTickActivity | None,
     implicit_user_signed_on: bool,
 ) -> tuple[str, list[str], str, dict[str, Any]]:
     """Return (run name, tags, inty_turn_lane, extra_inputs_for_run_tree).
@@ -136,9 +136,9 @@ def _companion_turn_langsmith_root_descriptor(
     cid = (companion_id or "").strip() or "unknown"
     extra_in: dict[str, Any] = {}
     if inner_tick_turn:
-        mode = inner_tick_mode or InnerTickMode.MAINTENANCE
+        mode = inner_tick_activity or InnerTickActivity.MAINTENANCE
         lane = "inner_tick"
-        extra_in["inner_tick_mode"] = mode.value
+        extra_in["inner_tick_activity"] = mode.value
         name = (
             f"agentic_companion_inner_tick {mode.value} user={uid} agent={cid}"
         )
@@ -170,7 +170,7 @@ def create_companion_turn_root_run(
     companion_id: str = "",
     parent_run_enabled: bool | None = None,
     inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode | None = None,
+    inner_tick_activity: InnerTickActivity | None = None,
     implicit_user_signed_on: bool = False,
 ) -> Any | None:
     enabled = (
@@ -200,7 +200,7 @@ def create_companion_turn_root_run(
                 user_id=uid,
                 companion_id=cid,
                 inner_tick_turn=inner_tick_turn,
-                inner_tick_mode=inner_tick_mode,
+                inner_tick_activity=inner_tick_activity,
                 implicit_user_signed_on=implicit_user_signed_on,
             )
         )
@@ -212,7 +212,7 @@ def create_companion_turn_root_run(
         )
         meta["inty_turn_lane"] = turn_lane
         if inner_tick_turn:
-            meta["inner_tick_mode"] = lane_inputs["inner_tick_mode"]
+            meta["inner_tick_activity"] = lane_inputs["inner_tick_activity"]
         if implicit_user_signed_on:
             meta["implicit_signal"] = lane_inputs["implicit_signal"]
         root_inputs: dict[str, Any] = {

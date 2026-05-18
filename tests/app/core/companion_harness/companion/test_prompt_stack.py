@@ -11,7 +11,7 @@ from app.core.companion_harness.companion.bootstrap_user_interactive import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import (
-    InnerTickMode,
+    InnerTickActivity,
     load_context_meta,
     load_prompt_bundle,
 )
@@ -101,7 +101,7 @@ def test_inner_tick_loads_ai_private_jsonl_into_system(tmp_path) -> None:
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         tool_side_compact_system_prompt=False,
     )
     joined = "\n".join(
@@ -141,7 +141,7 @@ def test_inner_tick_compact_tool_side_forwards_ai_private(tmp_path) -> None:
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         tool_side_compact_system_prompt=True,
     )
     joined = "\n".join(
@@ -185,7 +185,7 @@ def test_refresh_inner_tick_compact_keeps_inner_tick_tools(tmp_path) -> None:
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         tool_side_compact_system_prompt=True,
     )
     expected_names = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
@@ -197,7 +197,7 @@ def test_refresh_inner_tick_compact_keeps_inner_tick_tools(tmp_path) -> None:
         store=st,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         messages=messages,
         tool_side_compact_system_prompt=True,
     )
@@ -215,7 +215,7 @@ def test_async_foreground_chat_system_stack_mirrors_tools_contract(tmp_path) -> 
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         tool_side_compact_system_prompt=False,
         include_significance_perception_slice=True,
         implicit_user_signed_on_turn=False,
@@ -241,7 +241,7 @@ def test_implicit_user_signed_on_chat_turn_forces_chat_only_route_and_no_tools(
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         tool_side_compact_system_prompt=False,
         implicit_signal_bundle=bundle_sig,
         implicit_user_signed_on_turn=False,
@@ -252,7 +252,7 @@ def test_implicit_user_signed_on_chat_turn_forces_chat_only_route_and_no_tools(
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         tool_side_compact_system_prompt=False,
         implicit_signal_bundle=bundle_sig,
         implicit_user_signed_on_turn=True,
@@ -275,7 +275,7 @@ def test_implicit_user_signed_on_turn_does_not_strip_tools_for_inner_tick(
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         tool_side_compact_system_prompt=False,
         implicit_user_signed_on_turn=True,
     )
@@ -300,7 +300,7 @@ def test_refresh_implicit_user_signed_on_returns_empty_tools(tmp_path) -> None:
         store=st,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         messages=messages,
         tool_side_compact_system_prompt=False,
         implicit_signal_bundle=sig,
@@ -352,7 +352,7 @@ def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
         store=st,
         memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
         inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         messages=messages,
         tool_side_compact_system_prompt=False,
     )
@@ -390,7 +390,7 @@ def test_refresh_tool_side_compact_drops_bootstrap_after_complete(tmp_path) -> N
         store=st,
         memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
         inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         messages=messages,
         tool_side_compact_system_prompt=True,
     )

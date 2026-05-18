@@ -7,7 +7,7 @@ from typing import Any
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import (
-    InnerTickMode,
+    InnerTickActivity,
     transcript_relative_path_for_turn_persistence,
 )
 from .utc import utc_iso_ts
@@ -38,10 +38,10 @@ def persist_repl_turn_transcript_rows(
     """
     rel_tr = transcript_relative_path_for_turn_persistence(
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=(
-            InnerTickMode.PROACTIVE_CHAT
+        inner_tick_activity=(
+            InnerTickActivity.PROACTIVE_CHAT
             if inner_tick_proactive_chat
-            else InnerTickMode.MAINTENANCE
+            else InnerTickActivity.MAINTENANCE
         ),
     )
     store = memory_store

@@ -37,7 +37,7 @@ from app.core.companion_harness.memory.memory_registry import (
     shutdown_memory_store,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .models import CompanionTurnResult, InnerTickMode
+from .models import CompanionTurnResult, InnerTickActivity
 from .scope import CompanionScope
 from .turn import run_turn
 from .turn_routes import BackgroundToolEventSink
@@ -279,7 +279,7 @@ class CompanionManager:
         user_text: str,
         *,
         inner_tick_turn: bool = False,
-        inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+        inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
@@ -297,7 +297,7 @@ class CompanionManager:
             store=session.store,
             llm_client=session.llm_client,
             inner_tick_turn=inner_tick_turn,
-            inner_tick_mode=inner_tick_mode,
+            inner_tick_activity=inner_tick_activity,
             defer_memory_update=defer_memory_update,
             memory_config=session.config.memory,
             transcript_compaction=session.config.transcript_compaction,

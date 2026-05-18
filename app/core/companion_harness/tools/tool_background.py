@@ -60,7 +60,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     exc_chain_includes_llm_inference_failure_root_causes,
 )
 from app.core.companion_harness.companion.models import (
-    InnerTickMode,
+    InnerTickActivity,
     transcript_relative_path_for_turn_persistence,
 )
 from app.core.companion_harness.companion.prompt_stack import (
@@ -324,7 +324,7 @@ class ToolOutputEvent:
     local_image_paths: tuple[str, ...] = ()
     # Parsed from unified finish envelope; mirrors foreground significance_perception shape.
     significance_perception: dict[str, Any] | None = None
-    # InnerTickMode.value when this background round is an inner-tick turn; else None.
+    # InnerTickActivity.value when this background round is an inner-tick turn; else None.
     inner_tick_activity: str | None = None
 
 
@@ -575,7 +575,7 @@ async def _run_background_tool_loop(
     repository_only_store_text: bool = False,
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     force_tools_first_round: bool = True,
 ) -> None:
@@ -583,7 +583,7 @@ async def _run_background_tool_loop(
     image_asset_baseline = len(list_image_asset_records(memory_store))
     transcript_append_rel = transcript_relative_path_for_turn_persistence(
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
+        inner_tick_activity=inner_tick_activity,
     )
     tool_api_id = tool_model.id_on_provider
     try:
@@ -605,7 +605,7 @@ async def _run_background_tool_loop(
                     ),
                     "trace_id": trace_id,
                     "inner_tick_turn": inner_tick_turn,
-                    "inner_tick_mode": inner_tick_mode.value,
+                    "inner_tick_activity": inner_tick_activity.value,
                     "tools_summary": tools_summary_from_openai_tools(tools),
                     "force_tools_first_round": force_tools_first_round,
                     "llm_call_notes": (
@@ -795,7 +795,7 @@ async def _run_background_tool_loop(
                 store=memory_store,
                 memory_bootstrap_type=memory_bootstrap_type,
                 inner_tick_turn=inner_tick_turn,
-                inner_tick_mode=inner_tick_mode,
+                inner_tick_activity=inner_tick_activity,
                 messages=messages_with_tool_results,
                 tool_side_compact_system_prompt=True,
                 implicit_signal_bundle=implicit_signal_bundle,
@@ -855,7 +855,7 @@ async def _run_background_tool_loop(
             trace_id=trace_id,
         )
         output_to_user_flag = routing.output_to_user
-        # TODO(product): If InnerTickMode.MAINTENANCE must never deliver client-visible NL, gate
+        # TODO(product): If InnerTickActivity.MAINTENANCE must never deliver client-visible NL, gate
         # should_push here (and/or output_to_user interpretation) before emitting ToolOutputEvent;
         # document decision in docs/companion_harness/ARCH.md. Current: same should_push as chat.
         should_push = generation_deliver or output_to_user_flag
@@ -1001,7 +1001,7 @@ async def _run_background_tool_loop(
                 local_image_paths=tuple(image_paths),
                 significance_perception=significance_meta,
                 inner_tick_activity=(
-                    inner_tick_mode.value if inner_tick_turn else None
+                    inner_tick_activity.value if inner_tick_turn else None
                 ),
             )
         )
@@ -1029,7 +1029,7 @@ def start_tool_background_job(
     langsmith_parent_run: Any | None = None,
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     tool_bg_idle_event: threading.Event | None = None,
     force_tools_first_round: bool = True,
@@ -1076,7 +1076,7 @@ def start_tool_background_job(
                     repository_only_store_text=repository_only_store_text,
                     memory_bootstrap_type=memory_bootstrap_type,
                     inner_tick_turn=inner_tick_turn,
-                    inner_tick_mode=inner_tick_mode,
+                    inner_tick_activity=inner_tick_activity,
                     implicit_signal_bundle=implicit_signal_bundle,
                     force_tools_first_round=force_tools_first_round,
                 )
@@ -1106,7 +1106,7 @@ def start_tool_background_job(
                         "user_msg_uuid": user_msg_uuid,
                         "tool_model_name": tool_model.id_on_provider,
                         "inner_tick_turn": inner_tick_turn,
-                        "inner_tick_mode": inner_tick_mode.value,
+                        "inner_tick_activity": inner_tick_activity.value,
                         "error_type": type(exc).__name__,
                         "detail": str(exc),
                     }

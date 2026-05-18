@@ -26,7 +26,7 @@ from app.core.companion_harness.memory.memory_taxonomy import (
 )
 from living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
-from ..models import ContextMeta, InnerTickMode, PromptBundle
+from ..models import ContextMeta, InnerTickActivity, PromptBundle
 from .inner_tick_ls_tc import (
     INNER_TICK_LS_TC_AUTONOMY_SECTION,
     INNER_TICK_LS_TC_TOOL_BULLET,
@@ -34,9 +34,9 @@ from .inner_tick_ls_tc import (
 
 
 def _inner_tick_proactive_chat(
-    inner_tick_turn: bool, inner_tick_mode: InnerTickMode
+    inner_tick_turn: bool, inner_tick_activity: InnerTickActivity
 ) -> bool:
-    return inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    return inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
 
 
 # 与 memory_store_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
@@ -368,7 +368,7 @@ def build_system_messages(
     enable_tools: bool = False,
     enable_user_profile_tool: bool = False,
     inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
     repl_online_ack_turn: bool = False,
     ai_private_text: str = "",
     async_foreground_chat_stack: bool = False,
@@ -378,7 +378,7 @@ def build_system_messages(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(
-        inner_tick_turn, inner_tick_mode
+        inner_tick_turn, inner_tick_activity
     )
     tools_on = enable_tools or enable_user_profile_tool
     # Dual-LLM foreground completion: tools exist in product, but this request omits OpenAI ``tools=``.

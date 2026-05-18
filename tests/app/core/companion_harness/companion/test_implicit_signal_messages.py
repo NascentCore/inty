@@ -5,7 +5,7 @@ from __future__ import annotations
 from app.core.companion_harness.companion.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
-from app.core.companion_harness.companion.models import ContextMeta, InnerTickMode, PromptBundle
+from app.core.companion_harness.companion.models import ContextMeta, InnerTickActivity, PromptBundle
 from app.core.companion_harness.companion.turn_pipeline import resolve_turn_runtime_flags
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
@@ -34,7 +34,7 @@ def test_resolve_turn_runtime_flags_turn_type() -> None:
         resolve_turn_runtime_flags(
             user_text="",
             inner_tick_turn=False,
-            inner_tick_mode=InnerTickMode.MAINTENANCE,
+            inner_tick_activity=InnerTickActivity.MAINTENANCE,
             implicit_signal_bundle=sign_on,
         ).turn_type
         == "greeting"
@@ -43,7 +43,7 @@ def test_resolve_turn_runtime_flags_turn_type() -> None:
         resolve_turn_runtime_flags(
             user_text="",
             inner_tick_turn=True,
-            inner_tick_mode=InnerTickMode.MAINTENANCE,
+            inner_tick_activity=InnerTickActivity.MAINTENANCE,
             implicit_signal_bundle=sign_on,
         ).turn_type
         == "inner_tick"
@@ -52,7 +52,7 @@ def test_resolve_turn_runtime_flags_turn_type() -> None:
         resolve_turn_runtime_flags(
             user_text="hi",
             inner_tick_turn=False,
-            inner_tick_mode=InnerTickMode.MAINTENANCE,
+            inner_tick_activity=InnerTickActivity.MAINTENANCE,
             implicit_signal_bundle=None,
         ).turn_type
         == "chat"

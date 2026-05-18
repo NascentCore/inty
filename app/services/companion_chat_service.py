@@ -27,7 +27,7 @@ from app.core.companion_harness.memory.memory_registry import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
-    InnerTickMode,
+    InnerTickActivity,
 )
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
@@ -291,7 +291,7 @@ async def run_companion_chat_turn_for_api(
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
 ) -> CompanionTurnResult:
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
@@ -350,7 +350,7 @@ async def run_companion_chat_turn_for_api(
         session,
         user_text,
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
+        inner_tick_activity=inner_tick_activity,
         defer_memory_update=defer_memory_update,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,

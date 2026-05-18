@@ -69,7 +69,7 @@ from .heartbeat import build_proactive_heartbeat_transcript_user_marker
 from .models import (
     CompanionTurnResult,
     ContextMeta,
-    InnerTickMode,
+    InnerTickActivity,
     PromptBundle,
     transcript_relative_path_for_turn_persistence,
 )
@@ -151,7 +151,7 @@ def _async_dual_llm_system_message_variants(
     context: ContextMeta,
     memory_bootstrap_type: str,
     inner_tick_turn: bool,
-    route_inner_mode: InnerTickMode,
+    route_inner_activity: InnerTickActivity,
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Compact tool-path stack vs full chat-path stack; shares inner_tick routing with refresh/tool_bg.
@@ -169,7 +169,7 @@ def _async_dual_llm_system_message_variants(
         context=context,
         memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=route_inner_mode,
+        inner_tick_activity=route_inner_activity,
         tool_side_compact_system_prompt=True,
         include_significance_perception_slice=False,
         implicit_signal_bundle=implicit_signal_bundle,
@@ -181,7 +181,7 @@ def _async_dual_llm_system_message_variants(
         context=context,
         memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=route_inner_mode,
+        inner_tick_activity=route_inner_activity,
         tool_side_compact_system_prompt=False,
         include_significance_perception_slice=True,
         implicit_signal_bundle=implicit_signal_bundle,
@@ -224,7 +224,7 @@ async def run_turn(
     store: MemoryStore,
     llm_client: CompanionLLMClient,
     inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
     defer_memory_update: bool = True,
     memory_config: MemoryPipelineConfig | None = None,
     transcript_compaction: TranscriptCompactionConfig | None = None,
@@ -260,20 +260,20 @@ async def run_turn(
     runtime_flags = resolve_turn_runtime_flags(
         user_text=user_text,
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
+        inner_tick_activity=inner_tick_activity,
         implicit_signal_bundle=implicit_signal_bundle,
     )
     user_text = runtime_flags.effective_user_text
     tick_proactive = runtime_flags.tick_proactive
-    route_inner_mode = runtime_flags.route_inner_mode
+    route_inner_activity = runtime_flags.route_inner_activity
     implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
 
     logger.info(
-        "run_turn start scope={} user_chars={} inner_tick_turn={} inner_tick_mode={} defer_memory={}",
+        "run_turn start scope={} user_chars={} inner_tick_turn={} inner_tick_activity={} defer_memory={}",
         store.scope.registry_key(),
         len(user_text),
         inner_tick_turn,
-        inner_tick_mode.value if inner_tick_turn else "-",
+        inner_tick_activity.value if inner_tick_turn else "-",
         defer_memory_update,
     )
     logger.debug(
@@ -305,7 +305,7 @@ async def run_turn(
     loaded_state = load_companion_turn_state(
         store=store,
         inner_tick_turn=inner_tick_turn,
-        route_inner_mode=route_inner_mode,
+        route_inner_activity=route_inner_activity,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
     )
     if tick_proactive:
@@ -320,7 +320,7 @@ async def run_turn(
         user_text=user_text,
         memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
-        route_inner_mode=route_inner_mode,
+        route_inner_activity=route_inner_activity,
         tick_proactive=tick_proactive,
         implicit_signal_bundle=implicit_signal_bundle,
         implicit_sign_on_turn=implicit_sign_on_turn,
@@ -369,7 +369,7 @@ async def run_turn(
                 context=context,
                 transcript_llm_window_max_messages=loaded_state.window_cap,
                 inner_tick_turn=inner_tick_turn,
-                inner_tick_mode=route_inner_mode,
+                inner_tick_activity=route_inner_activity,
                 repository_only_store_text=repository_only_store_text,
                 transcript_compaction=transcript_compaction,
                 memory_store_read_document_max_chars_cap=(
@@ -390,7 +390,7 @@ async def run_turn(
             companion_id=context.companion_id,
             parent_run_enabled=langsmith_parent_run_enabled,
             inner_tick_turn=inner_tick_turn,
-            inner_tick_mode=route_inner_mode if inner_tick_turn else None,
+            inner_tick_activity=route_inner_activity if inner_tick_turn else None,
             implicit_user_signed_on=implicit_sign_on_turn,
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(
@@ -429,7 +429,7 @@ async def run_turn(
                             context=context,
                             memory_bootstrap_type=memory_bootstrap_type,
                             inner_tick_turn=inner_tick_turn,
-                            route_inner_mode=route_inner_mode,
+                            route_inner_activity=route_inner_activity,
                             implicit_signal_bundle=implicit_signal_bundle,
                         )
                     )
@@ -464,8 +464,8 @@ async def run_turn(
                     if skip_foreground_envelope:
                         logger.info(
                             "run_turn inner_tick skip foreground envelope "
-                            "inner_tick_mode={} model_chat={}",
-                            inner_tick_mode.value,
+                            "inner_tick_activity={} model_chat={}",
+                            inner_tick_activity.value,
                             chat_model,
                         )
                         last_text = ""
@@ -579,7 +579,7 @@ async def run_turn(
                         langsmith_parent_run=langsmith_parent_run,
                         memory_bootstrap_type=memory_bootstrap_type,
                         inner_tick_turn=inner_tick_turn,
-                        inner_tick_mode=route_inner_mode,
+                        inner_tick_activity=route_inner_activity,
                         implicit_signal_bundle=implicit_signal_bundle,
                         tool_bg_idle_event=tool_bg_idle_event,
                         force_tools_first_round=force_tools_first_round,
@@ -730,7 +730,7 @@ async def run_turn(
         if implicit_sign_on_turn
         else transcript_relative_path_for_turn_persistence(
             inner_tick_turn=inner_tick_turn,
-            inner_tick_mode=route_inner_mode,
+            inner_tick_activity=route_inner_activity,
         )
     )
     assistant_msg_uuid = str(uuid.uuid4())
@@ -783,7 +783,7 @@ async def run_turn(
     if inner_tick_turn:
         logger.debug(
             "run_turn memory_pipeline=skipped (inner_tick_turn) mode={}",
-            inner_tick_mode.value,
+            inner_tick_activity.value,
         )
     else:
         assert tool_bg_idle_event is not None
@@ -855,7 +855,7 @@ async def run_turn(
         langsmith_run_id=langsmith_llm_run_acc,
         tool_background_started=tool_background_started,
         assistant_source=runtime_flags.turn_type,
-        inner_tick_activity=route_inner_mode.value if inner_tick_turn else None,
+        inner_tick_activity=route_inner_activity.value if inner_tick_turn else None,
         turn_start_context_mode=context.context_mode,
         transcript_compaction=prompt_plan.transcript_compaction,
         transcript_user_content=transcript_user_content,

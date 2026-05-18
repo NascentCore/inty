@@ -31,22 +31,22 @@ description: >-
     - 用户已有 `user-input` 却长时间只有 `[SILENT]` inner-tick、仍无 **`chat`** 行 → 用 [`inty-backend-inspect`](../inty-backend-inspect/SKILL.md) 查 **`tool_bg_idle` / `turn_lock` 排队**
 
 - **从 label 直接判定 inner-tick 模式（首选）**
-  - `inner-tick proactive-chat` → `InnerTickMode.PROACTIVE_CHAT`（陪伴心跳）
-  - `inner-tick maintenance` → `InnerTickMode.MAINTENANCE`（运维内 tick）
+  - `inner-tick proactive-chat` → `InnerTickActivity.PROACTIVE_CHAT`（陪伴心跳）
+  - `inner-tick maintenance` → `InnerTickActivity.MAINTENANCE`（运维内 tick）
   - **裸** `inner-tick`（无尾随活动名）→ 旧服务端，未带 `inner_tick_activity`；此时按下条用 LangSmith 定案
   - **枚举真源**
-    - [`app/core/companion_harness/companion/models.py`](../../../app/core/companion_harness/companion/models.py) `InnerTickMode`
+    - [`app/core/companion_harness/companion/models.py`](../../../app/core/companion_harness/companion/models.py) `InnerTickActivity`
   - **服务端注入点**
     - 前台帧：[`app/api/v1/endpoints/chat.py`](../../../app/api/v1/endpoints/chat.py) `meta_data.inner_tick_activity = companion_turn.inner_tick_activity`
     - `tool_bg` 帧：同文件，`ChatWsCompanionWireMetaData(... inner_tick_activity=ev.inner_tick_activity ...)`
-    - 内核：[`turn.py`](../../../app/core/companion_harness/companion/turn.py) `inner_tick_activity = route_inner_mode.value if inner_tick_turn else None`
+    - 内核：[`turn.py`](../../../app/core/companion_harness/companion/turn.py) `inner_tick_activity = route_inner_activity.value if inner_tick_turn else None`
 
 - **LangSmith 兜底（仅旧帧或交叉验证）**
   - 从 metadata section 取 `langsmith_run_id=…`
   - 仓库根执行：
     - `python tools/scripts/download_run.py --run-id <RUN_ID>`（或位置参数 `RUN_ID`；见 `python tools/scripts/download_run.py --help`）
   - 打开 JSON，看 **`extra.metadata`**
-    - **`inner_tick_mode`**：`proactive_chat` | `maintenance`
+    - **`inner_tick_activity`**：`proactive_chat` | `maintenance`
     - **`inty_turn_lane`**：如 `inner_tick`
     - **不要**单靠 span 的 `name` 判断模式
   - **前置与排错**
