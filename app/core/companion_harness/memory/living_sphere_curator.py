@@ -203,7 +203,7 @@ def compact_living_sphere_if_pending(
     )
     any_ran = False
     scope = store.scope.registry_key()
-    for batch_idx in range(_MAX_COMPACT_BATCHES_PER_TURN):
+    for _ in range(_MAX_COMPACT_BATCHES_PER_TURN):
         rows = _read_all_updates(store)
         state = _load_pipeline_state(store)
         cursor = _pipeline_curated_through_update_id(state)
