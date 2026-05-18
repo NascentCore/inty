@@ -5,4 +5,5 @@
 ## 必读入口
 
 - **[用户列表及偏好](USERS.md)**：记录人类队友、纠正过你什么、明确喜欢什么；之后默认照做。
-- **[guidelines/](guidelines/)**：协作与工程共识短文（例如 [两步结构化桥接](guidelines/two-step-structured-bridge-for-llms.md)）；按需阅读，非每次会话必读。
+- **[guidelines/](guidelines/)**：协作与工程共识短文；按需阅读，非每次会话必读。
+- **两步结构化桥接**（IR + 物化器）：[`.cursor/skills/two-step-structured-bridge-for-llms/SKILL.md`](/.cursor/skills/two-step-structured-bridge-for-llms/SKILL.md)。
