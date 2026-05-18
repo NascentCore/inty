@@ -12,7 +12,9 @@ from experimental.perpetual_agent.living_companion import (
 )
 
 
-def _build_agent(*, now: float, clock_rate: float = 1.0) -> PerpetualCompanionAgent:
+def _build_agent(
+    *, now: float, clock_rate: float = 1.0
+) -> PerpetualCompanionAgent:
     state = CompanionState(
         companion_name="Ivy",
         user_name="Alex",
@@ -42,7 +44,9 @@ def test_tick_updates_virtual_age_by_clock_rate() -> None:
 
 def test_user_emotional_cue_updates_expression_and_sends_sms() -> None:
     agent = _build_agent(now=1000.0)
-    events = agent.tick(now=1010.0, user_message="I feel lonely and sad tonight.")
+    events = agent.tick(
+        now=1010.0, user_message="I feel lonely and sad tonight."
+    )
 
     assert len(events) == 1
     event = events[0]
@@ -51,9 +55,13 @@ def test_user_emotional_cue_updates_expression_and_sends_sms() -> None:
     assert event.metadata["expression"] == "gentle"
 
 
-def test_voice_request_routes_to_multimodal_model_and_voice_call_channel() -> None:
+def test_voice_request_routes_to_multimodal_model_and_voice_call_channel() -> (
+    None
+):
     agent = _build_agent(now=1000.0)
-    events = agent.tick(now=1010.0, user_message="Please call me and talk it through.")
+    events = agent.tick(
+        now=1010.0, user_message="Please call me and talk it through."
+    )
 
     assert len(events) == 1
     event = events[0]

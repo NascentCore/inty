@@ -31,7 +31,9 @@ import json as _dbg_json
 import time as _dbg_time
 import traceback as _dbg_tb
 
-_DBG_LOG_PATH = "/Users/yzhao/Workspace/NascentCore/inty/.cursor/debug-7eab40.log"
+_DBG_LOG_PATH = (
+    "/Users/yzhao/Workspace/NascentCore/inty/.cursor/debug-7eab40.log"
+)
 
 
 def _debug_loguru_sink(message):
@@ -169,7 +171,9 @@ TOOL_CONTEXT_TYPES = {d.name: d.context_type for d in TOOL_DEFINITIONS}
 
 
 def _build_system_messages(char_name: str, user_name: str):
-    return prompts.build_system_messages_openai(char_name, user_name, _logger=logger)
+    return prompts.build_system_messages_openai(
+        char_name, user_name, _logger=logger
+    )
 
 
 def _build_system_messages_heartbeat(char_name: str, user_name: str):
@@ -189,7 +193,8 @@ def main(
     debug: Annotated[
         bool,
         cyclopts.Parameter(
-            name="--debug", help="开启时输出 logger 日志，默认关闭以减少屏幕干扰"
+            name="--debug",
+            help="开启时输出 logger 日志，默认关闭以减少屏幕干扰",
         ),
     ] = False,
     enable_memory_compaction: Annotated[

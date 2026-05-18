@@ -80,7 +80,9 @@ class AgentChatCleanup:
 
             # 1. 删除用户通知记录（先删除，避免后续依赖问题）
             logger.info("删除所有通知记录...")
-            result = await self.session.execute(text("DELETE FROM user_notifications"))
+            result = await self.session.execute(
+                text("DELETE FROM user_notifications")
+            )
             logger.info(f"删除了 {result.rowcount} 条通知记录")
 
             # 2. 删除与agent相关的举报记录（使用正确的字段名target_id）
@@ -96,7 +98,9 @@ class AgentChatCleanup:
 
             # 4. 删除chat_settings表（依赖chat_id、agent_id、user_id）
             logger.info("删除所有对话设置...")
-            result = await self.session.execute(text("DELETE FROM chat_settings"))
+            result = await self.session.execute(
+                text("DELETE FROM chat_settings")
+            )
             logger.info(f"删除了 {result.rowcount} 条对话设置")
 
             # 5. 删除chats表（依赖user_id和agent_id）
@@ -131,7 +135,9 @@ class AgentChatCleanup:
                 logger.info(
                     f"✅ 保留用户订阅: {after_counts['user_subscriptions']} 个订阅"
                 )
-                logger.info(f"✅ 清理了举报记录: {before_counts.get('report', 0)} 条")
+                logger.info(
+                    f"✅ 清理了举报记录: {before_counts.get('report', 0)} 条"
+                )
                 logger.info(
                     f"✅ 清理了通知记录: {before_counts.get('user_notifications', 0)} 条"
                 )

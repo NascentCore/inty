@@ -18,14 +18,18 @@ def init_firebase() -> None:
             pass
 
         # 获取 Firebase 配置
-        if not global_config_loaded_from_config_yaml.firebase.service_account_path:
+        if (
+            not global_config_loaded_from_config_yaml.firebase.service_account_path
+        ):
             raise ValueError("Firebase service account path not configured")
 
         # 初始化 Firebase Admin SDK
         cred = credentials.Certificate(
             global_config_loaded_from_config_yaml.firebase.service_account_path
         )
-        firebase_admin.initialize_app(cred, {"projectId": "alien-paratext-461204-i9"})
+        firebase_admin.initialize_app(
+            cred, {"projectId": "alien-paratext-461204-i9"}
+        )
 
         logger.info("Firebase Admin SDK initialized successfully")
 

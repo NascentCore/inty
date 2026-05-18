@@ -6,7 +6,12 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, EVALUATION_APP_TAG, NOT_USED_TAG, WEB_APP_TAG
+from app.api.tags import (
+    ANDROID_APP_TAG,
+    EVALUATION_APP_TAG,
+    NOT_USED_TAG,
+    WEB_APP_TAG,
+)
 from app.api.utils.logger_route import LoggerRoute
 from app.db.session import get_async_db
 from app.schemas.response import APIResponse
@@ -38,7 +43,9 @@ async def get_profile(
     Get current user profile.
     """
     # 计算connector_count
-    connector_count = await user_service.get_user_connector_count(db, current_user.id)
+    connector_count = await user_service.get_user_connector_count(
+        db, current_user.id
+    )
 
     # 创建用户响应对象，包含connector_count
     user_dict = {
@@ -80,7 +87,9 @@ async def get_me(
     """
     Get current user profile.
     """
-    connector_count = await user_service.get_user_connector_count(db, current_user.id)
+    connector_count = await user_service.get_user_connector_count(
+        db, current_user.id
+    )
     actions = await user_action_service.get_user_actions(db, current_user.id)
 
     user_dict = {
@@ -162,7 +171,9 @@ async def register_device_token(
         device_token = await user_service.register_device_token(
             db=db, token=device_in.token, user_id=current_user.id
         )
-        return APIResponse.success(message="Device token registered successfully")
+        return APIResponse.success(
+            message="Device token registered successfully"
+        )
     except Exception as e:
         logger.error(f"注册设备token失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
@@ -188,14 +199,17 @@ async def check_deletion_eligibility(
         删除账户时会自动执行相同的检查。
     """
     try:
-        can_delete, error_message = await user_service.check_user_can_delete_account(
-            db, current_user.id
+        can_delete, error_message = (
+            await user_service.check_user_can_delete_account(
+                db, current_user.id
+            )
         )
 
         response_data = DeletionCheckResponse(
             can_delete=can_delete,
             error_message=error_message if not can_delete else None,
-            active_subscription=not can_delete and "订阅" in (error_message or ""),
+            active_subscription=not can_delete
+            and "订阅" in (error_message or ""),
         )
 
         return APIResponse.success(data=response_data)
@@ -271,7 +285,9 @@ async def get_all_users(
     获取所有用户信息，支持分页和关键字搜索
     """
     try:
-        logger.debug(f"获取所有用户 - skip: {skip}, limit: {limit}, search: {search}")
+        logger.debug(
+            f"获取所有用户 - skip: {skip}, limit: {limit}, search: {search}"
+        )
 
         # 调用service层方法获取所有用户
         result = await user_service.get_all_users(

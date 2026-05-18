@@ -17,7 +17,9 @@ class MessagesCompaction(Base):
     user_id = Column(String, nullable=False, index=True)
     agent_id = Column(String, nullable=False, index=True)
     compacted_payload = Column(JSONB, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
     __table_args__ = (

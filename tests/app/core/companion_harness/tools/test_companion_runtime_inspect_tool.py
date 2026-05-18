@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
@@ -17,7 +18,7 @@ from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConf
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import (
     ContextMeta,
-    InnerTickMode,
+    InnerTickActivity,
     PromptBundle,
 )
 from app.core.companion_harness.tools.runtime_inspect_context import (
@@ -139,7 +140,7 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 context=ContextMeta(context_mode="intimate"),
                 transcript_llm_window_max_messages=12,
                 inner_tick_turn=False,
-                inner_tick_mode=InnerTickMode.MAINTENANCE,
+                inner_tick_activity=InnerTickActivity.MAINTENANCE,
                 repository_only_store_text=True,
                 transcript_compaction=None,
                 memory_store_read_document_max_chars_cap=(
@@ -317,12 +318,15 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
         turn_mod, "schedule_memory_update_after_turn", lambda *args, **kwargs: None
     )
 
+    idle = threading.Event()
+    idle.set()
     out = asyncio.run(
         run_turn(
             "user line",
             store=store,
             llm_client=client,
             langsmith_parent_run_enabled=False,
+            tool_bg_idle_event=idle,
         )
     )
     assert out.assistant_text == "final assistant"

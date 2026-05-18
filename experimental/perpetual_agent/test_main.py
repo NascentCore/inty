@@ -23,14 +23,20 @@ def _tool_call(
 def _tool_response(call: SimpleNamespace) -> SimpleNamespace:
     return SimpleNamespace(
         choices=[
-            SimpleNamespace(message=SimpleNamespace(content="", tool_calls=[call]))
+            SimpleNamespace(
+                message=SimpleNamespace(content="", tool_calls=[call])
+            )
         ]
     )
 
 
 def _tool_response_with_calls(calls: list[SimpleNamespace]) -> SimpleNamespace:
     return SimpleNamespace(
-        choices=[SimpleNamespace(message=SimpleNamespace(content="", tool_calls=calls))]
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="", tool_calls=calls)
+            )
+        ]
     )
 
 
@@ -79,12 +85,16 @@ class _FakeClient:
 def _assistant_response(content: str) -> SimpleNamespace:
     return SimpleNamespace(
         choices=[
-            SimpleNamespace(message=SimpleNamespace(content=content, tool_calls=[]))
+            SimpleNamespace(
+                message=SimpleNamespace(content=content, tool_calls=[])
+            )
         ]
     )
 
 
-def test_named_layer_compaction_guidance_mentions_contiguous_constraint() -> None:
+def test_named_layer_compaction_guidance_mentions_contiguous_constraint() -> (
+    None
+):
     system_prompt = main.SYSTEM_PROMPT_TEMPLATE
     tool_description = str(
         main.COMPACT_NAMED_LAYERS_TOOL_DEFINITION["function"]["description"]
@@ -114,7 +124,9 @@ def _layer_names_for_call(messages: list[dict[str, object]]) -> list[str]:
     return layer_names
 
 
-def _layer_nesting_levels_for_call(messages: list[dict[str, object]]) -> dict[str, int]:
+def _layer_nesting_levels_for_call(
+    messages: list[dict[str, object]],
+) -> dict[str, int]:
     nesting_levels: dict[str, int] = {}
     for message in messages:
         if message.get("role") != "system":
@@ -137,14 +149,18 @@ def _tool_messages_for_call(
     return [message for message in messages if message.get("role") == "tool"]
 
 
-def _emotional_state_layer_message_for_call(messages: list[dict[str, object]]) -> str:
+def _emotional_state_layer_message_for_call(
+    messages: list[dict[str, object]],
+) -> str:
     for message in messages:
         if message.get("role") != "system":
             continue
         content = str(message.get("content", ""))
         if content.startswith("[emotional_state_layer]"):
             return content
-    raise AssertionError("Expected [emotional_state_layer] system message in call.")
+    raise AssertionError(
+        "Expected [emotional_state_layer] system message in call."
+    )
 
 
 def test_pulse_sleeps_and_counter_updates_system_message(monkeypatch):
@@ -155,7 +171,9 @@ def test_pulse_sleeps_and_counter_updates_system_message(monkeypatch):
     fake_client = _FakeClient(responses=responses)
     sleep_calls: list[int] = []
 
-    monkeypatch.setattr(main.time, "sleep", lambda seconds: sleep_calls.append(seconds))
+    monkeypatch.setattr(
+        main.time, "sleep", lambda seconds: sleep_calls.append(seconds)
+    )
 
     main.run_perpetual_agent(
         user_prompt="Run forever and use pulse.",
@@ -251,7 +269,9 @@ def test_create_twilio_call_posts_expected_form_data():
             return False
 
         def read(self):
-            return json.dumps({"sid": "CA111", "status": "queued"}).encode("utf-8")
+            return json.dumps({"sid": "CA111", "status": "queued"}).encode(
+                "utf-8"
+            )
 
     def _fake_urlopen(request, timeout):  # noqa: ANN001
         captured["url"] = request.full_url
@@ -321,7 +341,9 @@ def test_layer_tool_name_changes_when_layer_renamed() -> None:
     assert "update_layer_conversation" not in second_call_tools
 
 
-def test_compacting_recent_conversation_inserts_new_layer_before_conversation() -> None:
+def test_compacting_recent_conversation_inserts_new_layer_before_conversation() -> (
+    None
+):
     fake_client = _FakeClient(
         responses=[
             _assistant_response("Prelude turn before compaction."),
@@ -381,7 +403,9 @@ def test_compacting_recent_conversation_inserts_new_layer_before_conversation() 
     assert "update_layer_conversation" not in third_call_tools
     compact_tool_message = next(
         message
-        for message in _tool_messages_for_call(fake_client.seen_messages_per_call[2])
+        for message in _tool_messages_for_call(
+            fake_client.seen_messages_per_call[2]
+        )
         if str(message.get("name")) == "compact_recent_conversation_into_layer"
     )
     compact_tool_payload = json.loads(str(compact_tool_message["content"]))
@@ -442,7 +466,9 @@ def test_direct_conversation_compaction_records_raw_messages() -> None:
 
     assert output["created_layer_nesting_level"] == 1
     assert len(output["raw_compacted_messages"]) == 2
-    created_layer = next(layer for layer in layers if layer.name == "support_memory")
+    created_layer = next(
+        layer for layer in layers if layer.name == "support_memory"
+    )
     assert created_layer.raw_messages == [
         {"role": "user", "content": "I need support."},
         {"role": "assistant", "content": "I am here with you."},
@@ -614,7 +640,9 @@ def test_named_layer_compaction_increases_nesting_level_and_preserves_raw_messag
     assert output["compacted_source_nesting_level"] == 1
     assert output["compacted_layer_names"] == ["memory_a", "memory_b"]
     assert output["raw_source_message_count"] == 3
-    merged_layer = next(layer for layer in layers if layer.name == "merged_memory")
+    merged_layer = next(
+        layer for layer in layers if layer.name == "merged_memory"
+    )
     assert merged_layer.nesting_level == 2
     assert merged_layer.raw_messages == [
         {"role": "user", "content": "raw-a"},
@@ -751,10 +779,14 @@ def test_run_perpetual_agent_dispatches_named_layer_compaction() -> None:
     assert "update_layer_merged_base" in second_call_tools
     compact_named_tool_message = next(
         message
-        for message in _tool_messages_for_call(fake_client.seen_messages_per_call[1])
+        for message in _tool_messages_for_call(
+            fake_client.seen_messages_per_call[1]
+        )
         if str(message.get("name")) == "compact_named_layers_into_layer"
     )
-    compact_named_payload = json.loads(str(compact_named_tool_message["content"]))
+    compact_named_payload = json.loads(
+        str(compact_named_tool_message["content"])
+    )
     assert compact_named_payload["created_layer_nesting_level"] == 1
     assert compact_named_payload["raw_source_message_count"] == 2
     assert compact_named_payload["raw_source_messages_omitted"] is True
@@ -811,10 +843,18 @@ def test_e2e_hierarchical_compaction_pipeline_in_run_loop() -> None:
         base_url="https://openrouter.ai/api/v1",
     )
 
-    first_call_layers = _layer_names_for_call(fake_client.seen_messages_per_call[0])
-    third_call_layers = _layer_names_for_call(fake_client.seen_messages_per_call[2])
-    fourth_call_layers = _layer_names_for_call(fake_client.seen_messages_per_call[3])
-    fifth_call_layers = _layer_names_for_call(fake_client.seen_messages_per_call[4])
+    first_call_layers = _layer_names_for_call(
+        fake_client.seen_messages_per_call[0]
+    )
+    third_call_layers = _layer_names_for_call(
+        fake_client.seen_messages_per_call[2]
+    )
+    fourth_call_layers = _layer_names_for_call(
+        fake_client.seen_messages_per_call[3]
+    )
+    fifth_call_layers = _layer_names_for_call(
+        fake_client.seen_messages_per_call[4]
+    )
 
     assert first_call_layers == [
         "fundamental_identity",
@@ -835,10 +875,14 @@ def test_e2e_hierarchical_compaction_pipeline_in_run_loop() -> None:
 
     compact_named_tool_message = next(
         message
-        for message in _tool_messages_for_call(fake_client.seen_messages_per_call[4])
+        for message in _tool_messages_for_call(
+            fake_client.seen_messages_per_call[4]
+        )
         if str(message.get("name")) == "compact_named_layers_into_layer"
     )
-    compact_named_payload = json.loads(str(compact_named_tool_message["content"]))
+    compact_named_payload = json.loads(
+        str(compact_named_tool_message["content"])
+    )
     assert compact_named_payload["created_layer_nesting_level"] == 2
     assert compact_named_payload["raw_source_message_count"] == 2
     assert compact_named_payload["raw_source_messages_omitted"] is True
@@ -887,7 +931,9 @@ def test_user_message_classifier_updates_emotional_state_layer_in_following_turn
     )
     assert "Current emotion: sad" in second_call_emotional_layer
     assert "Current expression: gentle" in second_call_emotional_layer
-    assert "Update source: user_message_classifier:" in second_call_emotional_layer
+    assert (
+        "Update source: user_message_classifier:" in second_call_emotional_layer
+    )
 
 
 def test_emotions_tool_updates_layer_and_persists_to_next_turn() -> None:

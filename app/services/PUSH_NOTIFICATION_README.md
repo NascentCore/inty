@@ -97,6 +97,10 @@ push_notification_service.py (核心逻辑)
 4. **发送推送**：通过 Firebase FCM 发送推送通知
 5. **记录历史**：将推送记录保存到数据库，避免重复发送
 
+## 用户分析日报/周报
+
+push worker 内可选调度（`user_analytics_report`），**默认四项开关均为 false**，不跑日报/周报 cron 与启动补算。生产日报见 `docs/FR_USER_ANALYTICS_REPORTS.md` 与 GitHub Actions `daily_intellimate_user_activity_report.yaml`。
+
 ## 推送阶段
 
 - **10 分钟推送**：每 5 分钟检查一次，推送距离最后消息 10 分钟的聊天

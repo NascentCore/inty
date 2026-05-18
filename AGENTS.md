@@ -140,6 +140,7 @@ that means the code lacks hierarchy.
 - Do not use string literals, use `StrEnum` instead
 - Use `match ... case` for options, never use multiple `if ... elif ... else`
 - Do not write wrapper functions
+- Data files: repo-root-relative paths (`contracts/{stem}.md`), not `Path(__file__).parent / ...`.
 
 ### Documentation
 

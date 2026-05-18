@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -51,12 +52,15 @@ def test_memory_pipeline_style_curator_interval(
         return "noop\n"
 
     cfg = MemoryPipelineConfig(memory_update_every_n_turns=memory_update_every_n)
+    idle = threading.Event()
+    idle.set()
     memory_update_after_turn(
         store,
         "hello",
         "hi there",
         fake_complete,
         cfg,
+        tool_bg_idle_event=idle,
     )
     if expect_style_call:
         assert "style" in roles

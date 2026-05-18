@@ -133,14 +133,18 @@ def draw(data: dict, out_path: Path) -> None:
         )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, facecolor=fig_face, edgecolor="none", bbox_inches="tight")
+    fig.savefig(
+        out_path, facecolor=fig_face, edgecolor="none", bbox_inches="tight"
+    )
     plt.close(fig)
 
 
 def main() -> int:
     p = argparse.ArgumentParser(description="Draw labeled grid from YAML.")
     p.add_argument("config", type=Path, help="Path to YAML config")
-    p.add_argument("-o", "--output", type=Path, required=True, help="Output PNG path")
+    p.add_argument(
+        "-o", "--output", type=Path, required=True, help="Output PNG path"
+    )
     args = p.parse_args()
     try:
         data = load_config(args.config)

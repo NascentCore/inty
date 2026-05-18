@@ -10,5 +10,9 @@ from __future__ import annotations
 MEMORY_SYSTEM_HEADING_EPISODIC = (
     "MEMORY — episodic memory / 情景记忆（memory/daily/{date}.md）\n\n"
 )
-MEMORY_SYSTEM_HEADING_GIST = "MEMORY — gist memory / 单日摘要（memory/{date}.md）\n\n"
-MEMORY_SYSTEM_HEADING_SEMANTIC = "MEMORY — semantic memory / 语义记忆（MEMORY.md）\n\n"
+MEMORY_SYSTEM_HEADING_GIST = (
+    "MEMORY — gist memory / 单日摘要（memory/{date}.md）\n\n"
+)
+MEMORY_SYSTEM_HEADING_SEMANTIC = (
+    "MEMORY — semantic memory / 语义记忆（MEMORY.md）\n\n"
+)

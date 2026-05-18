@@ -98,7 +98,9 @@ def main(
                 duration,
                 model=model,
                 output_dir=output_dir,
-                prompt_preview=prompt[:PROMPT_PREVIEW_MAX_CHARS] if prompt else None,
+                prompt_preview=(
+                    prompt[:PROMPT_PREVIEW_MAX_CHARS] if prompt else None
+                ),
             )
             print(f"Saved image and JSON for {files_prefix}")
         except (APIError, APIConnectionError, APITimeoutError, ValueError) as e:
@@ -111,7 +113,9 @@ def main(
                 "prompt_file": prompt_file,
                 "files_prefix": files_prefix,
                 "duration_seconds": duration.total_seconds(),
-                "prompt_preview": prompt[:PROMPT_PREVIEW_MAX_CHARS] if prompt else None,
+                "prompt_preview": (
+                    prompt[:PROMPT_PREVIEW_MAX_CHARS] if prompt else None
+                ),
             }
             if hasattr(e, "response") and e.response is not None:
                 try:
@@ -125,8 +129,12 @@ def main(
             if hasattr(e, "body"):
                 error_payload["body"] = e.body
             print(repr(e))
-            out_path = _save_error_json(output_dir, model, files_prefix, error_payload)
-            print(f"Saved error JSON to {out_path} for {files_prefix}, continuing.")
+            out_path = _save_error_json(
+                output_dir, model, files_prefix, error_payload
+            )
+            print(
+                f"Saved error JSON to {out_path} for {files_prefix}, continuing."
+            )
 
 
 if __name__ == "__main__":

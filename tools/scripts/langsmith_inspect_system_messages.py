@@ -78,7 +78,9 @@ def _heuristic_label(content: str) -> str:
     return "other"
 
 
-def _pick_runs(data: dict[str, Any], run_name: str | None, run_id: str | None) -> list[dict[str, Any]]:
+def _pick_runs(
+    data: dict[str, Any], run_name: str | None, run_id: str | None
+) -> list[dict[str, Any]]:
     if data.get("download_kind") == "langsmith_trace":
         runs = list(data.get("runs") or [])
     else:
@@ -112,7 +114,8 @@ def _pick_runs(data: dict[str, Any], run_name: str | None, run_id: str | None) -
         return runs
     names = [str(r.get("name") or "") for r in runs]
     raise SystemExit(
-        "ambiguous trace: pass --run-name or --run-id; runs: " + ", ".join(names)
+        "ambiguous trace: pass --run-name or --run-id; runs: "
+        + ", ".join(names)
     )
 
 
@@ -154,7 +157,10 @@ def _inspect_run(run: dict[str, Any], *, show_body: bool) -> int:
     if dup_groups:
         print("DUPLICATE_BODIES:")
         for idxs in dup_groups:
-            labels = [_heuristic_label(str(blocks[j].get("content") or "")) for j in idxs]
+            labels = [
+                _heuristic_label(str(blocks[j].get("content") or ""))
+                for j in idxs
+            ]
             print(f"  indices {idxs} labels={labels}")
         return 1
     soul_idxs = [

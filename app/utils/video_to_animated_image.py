@@ -53,7 +53,10 @@ def convert_video_to_animated_image(
 
         try:
             # 下载视频
-            if video_url.startswith("gs://") or "storage.googleapis.com" in video_url:
+            if (
+                video_url.startswith("gs://")
+                or "storage.googleapis.com" in video_url
+            ):
                 video_data = download_from_gcs(video_url)
                 temp_video.write(video_data)
             else:
@@ -187,7 +190,9 @@ def convert_video_to_animated_image(
 
                     if result.returncode != 0:
                         logger.error(f"ffmpeg 转换失败: {result.stderr}")
-                        raise RuntimeError(f"Video conversion failed: {result.stderr}")
+                        raise RuntimeError(
+                            f"Video conversion failed: {result.stderr}"
+                        )
 
                     # 读取生成的动图文件
                     with open(output_path, "rb") as f:
@@ -256,7 +261,9 @@ async def convert_video_to_animated_image_and_upload(
     # 生成唯一文件名（使用实际格式）
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
-    file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}.{actual_format}"
+    file_gcs_path = (
+        f"{base_path}/{user_id}/{timestamp}-{unique_id}.{actual_format}"
+    )
 
     # 上传到 GCS
     bucket = global_config_loaded_from_config_yaml.gcs.bucket

@@ -70,7 +70,9 @@ def _normalize_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         # Content can be list (multimodal), allow pass-through but stringify for keying
         if isinstance(content, list):
             # Ensure deterministic order/stringification
-            content_str = json.dumps(content, ensure_ascii=False, sort_keys=True)
+            content_str = json.dumps(
+                content, ensure_ascii=False, sort_keys=True
+            )
         else:
             content_str = (content or "").strip()
         name = m.get("name")
@@ -80,7 +82,9 @@ def _normalize_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return normalized
 
 
-def _make_request_key(messages: List[Dict[str, Any]], model: Optional[str]) -> str:
+def _make_request_key(
+    messages: List[Dict[str, Any]], model: Optional[str]
+) -> str:
     normalized = _normalize_messages(messages)
     key = {
         "model": model or DEFAULT_MODEL_NAME,
@@ -174,7 +178,9 @@ class _FakeImagesAPI:
                 size=(width, height),
             )
             items.append(
-                FakeImageData(b64_json=base64.b64encode(img_bytes).decode("ascii"))
+                FakeImageData(
+                    b64_json=base64.b64encode(img_bytes).decode("ascii")
+                )
             )
 
         self._client._image_call_index += count

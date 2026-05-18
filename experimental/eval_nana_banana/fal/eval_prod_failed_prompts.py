@@ -97,7 +97,11 @@ def main(
             )
             duration = datetime.datetime.now() - start_time
             save_result_to_files(
-                result, files_prefix, duration, model=model, output_dir=output_dir
+                result,
+                files_prefix,
+                duration,
+                model=model,
+                output_dir=output_dir,
             )
         except (FalClientHTTPError, ValueError) as e:
             duration = datetime.datetime.now() - start_time
@@ -109,7 +113,9 @@ def main(
                 "prompt_file": prompt_file,
                 "files_prefix": files_prefix,
                 "duration_seconds": duration.total_seconds(),
-                "prompt_preview": prompt[:PROMPT_PREVIEW_MAX_CHARS] if prompt else None,
+                "prompt_preview": (
+                    prompt[:PROMPT_PREVIEW_MAX_CHARS] if prompt else None
+                ),
             }
             if hasattr(e, "body"):
                 error_payload["body"] = e.body
@@ -123,8 +129,12 @@ def main(
                 except (ValueError, TypeError, AttributeError, OSError):
                     error_payload["response_raw"] = str(e.response)
             print(repr(e))
-            out_path = _save_error_json(output_dir, model, files_prefix, error_payload)
-            print(f"Saved error JSON to {out_path} for {files_prefix}, continuing.")
+            out_path = _save_error_json(
+                output_dir, model, files_prefix, error_payload
+            )
+            print(
+                f"Saved error JSON to {out_path} for {files_prefix}, continuing."
+            )
             continue
 
 

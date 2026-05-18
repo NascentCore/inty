@@ -33,7 +33,11 @@ class RetryPolicy:
                 return func()
             except TerminalError:
                 raise
-            except (TimeoutError, ConnectionError, urllib.error.URLError) as exc:
+            except (
+                TimeoutError,
+                ConnectionError,
+                urllib.error.URLError,
+            ) as exc:
                 attempt += 1
                 if attempt >= self.max_attempts:
                     raise RetryableError(

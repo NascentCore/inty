@@ -37,7 +37,9 @@ def get_memory_store(scope: CompanionScope, *, dsn: str) -> MemoryStore:
         return store
 
 
-def shutdown_memory_store(scope: CompanionScope, *, timeout_s: float = 5.0) -> None:
+def shutdown_memory_store(
+    scope: CompanionScope, *, timeout_s: float = 5.0
+) -> None:
     key = scope.registry_key()
     store: MemoryStore | None = None
     with _REGISTRY_LOCK:

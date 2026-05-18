@@ -25,15 +25,19 @@ from .langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
-from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
-from app.core.companion_harness.memory.transcript_compaction import CompactionConfig
+from app.core.companion_harness.memory.memory_pipeline import (
+    MemoryPipelineConfig,
+)
+from app.core.companion_harness.memory.transcript_compaction import (
+    CompactionConfig,
+)
 from app.core.companion_harness.memory.memory_registry import (
     MEMORY_STORE_REGISTRY_REQUIRES_DSN,
     get_memory_store,
     shutdown_memory_store,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .models import CompanionTurnResult, InnerTickMode
+from .models import CompanionTurnResult, InnerTickActivity
 from .scope import CompanionScope
 from .turn import run_turn
 from .turn_routes import BackgroundToolEventSink
@@ -50,7 +54,10 @@ def _migrate_interactive_bootstrap_context_if_needed(
     *,
     default_context_mode: str,
 ) -> None:
-    if parsed_ctx.get("workspace_bootstrap_user_interactive_completed") is not False:
+    if (
+        parsed_ctx.get("workspace_bootstrap_user_interactive_completed")
+        is not False
+    ):
         return
     fixed = dict(parsed_ctx)
     bootstrap_id = ExperienceContextMode.BOOTSTRAP.value
@@ -73,7 +80,9 @@ def _migrate_interactive_bootstrap_context_if_needed(
                 fixed["post_bootstrap_context_mode"] = default_context_mode
             else:
                 fixed["post_bootstrap_context_mode"] = pbn
-    if json.dumps(fixed, sort_keys=True) != json.dumps(parsed_ctx, sort_keys=True):
+    if json.dumps(fixed, sort_keys=True) != json.dumps(
+        parsed_ctx, sort_keys=True
+    ):
         store.write_document(
             "context.json",
             json.dumps(fixed, indent=2, ensure_ascii=False) + "\n",
@@ -218,18 +227,23 @@ class CompanionManager:
                     "chat_id": chat_id,
                 }
                 if user_interactive:
-                    context_data["context_mode"] = ExperienceContextMode.BOOTSTRAP.value
+                    context_data["context_mode"] = (
+                        ExperienceContextMode.BOOTSTRAP.value
+                    )
                     context_data["post_bootstrap_context_mode"] = (
                         self._config.default_context_mode
                     )
-                    context_data["workspace_bootstrap_user_interactive_completed"] = (
-                        False
-                    )
+                    context_data[
+                        "workspace_bootstrap_user_interactive_completed"
+                    ] = False
                     context_data["companion_ws_session_system_written"] = False
                 else:
-                    context_data["context_mode"] = self._config.default_context_mode
+                    context_data["context_mode"] = (
+                        self._config.default_context_mode
+                    )
                 context_json = (
-                    json.dumps(context_data, indent=2, ensure_ascii=False) + "\n"
+                    json.dumps(context_data, indent=2, ensure_ascii=False)
+                    + "\n"
                 )
                 store.write_document("context.json", context_json)
             elif user_interactive and isinstance(parsed_ctx, dict):
@@ -265,7 +279,7 @@ class CompanionManager:
         user_text: str,
         *,
         inner_tick_turn: bool = False,
-        inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+        inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
@@ -283,7 +297,7 @@ class CompanionManager:
             store=session.store,
             llm_client=session.llm_client,
             inner_tick_turn=inner_tick_turn,
-            inner_tick_mode=inner_tick_mode,
+            inner_tick_activity=inner_tick_activity,
             defer_memory_update=defer_memory_update,
             memory_config=session.config.memory,
             transcript_compaction=session.config.transcript_compaction,
@@ -322,4 +336,6 @@ class CompanionManager:
             self._sessions.clear()
         for session in sessions:
             shutdown_memory_store(session.scope)
-        logger.info("companion_manager all_sessions_shutdown count={}", len(sessions))
+        logger.info(
+            "companion_manager all_sessions_shutdown count={}", len(sessions)
+        )

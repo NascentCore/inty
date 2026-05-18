@@ -37,7 +37,9 @@ class UserAnalytics:
     def __init__(self, conn: psycopg2.extensions.connection):
         self.conn = conn
 
-    def get_new_users(self, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+    def get_new_users(
+        self, start_date: datetime, end_date: datetime
+    ) -> pd.DataFrame:
         """查询新用户统计"""
         query = """
             SELECT 
@@ -154,7 +156,9 @@ class UserAnalytics:
             """
             cursor.execute(history_ids_query)
             history_ids = [row[0] for row in cursor.fetchall()]
-            logger.info(f"chat_history 表样本 session_id (前3个): {history_ids}")
+            logger.info(
+                f"chat_history 表样本 session_id (前3个): {history_ids}"
+            )
             logger.info(
                 f"chat_history session_id 类型: {type(history_ids[0]) if history_ids else 'N/A'}"
             )
@@ -233,7 +237,11 @@ class UserAnalytics:
 
             return pd.DataFrame(
                 data,
-                columns=["chat_id", "message_count", "message_count_excluding_opening"],
+                columns=[
+                    "chat_id",
+                    "message_count",
+                    "message_count_excluding_opening",
+                ],
             )
         finally:
             cursor.close()
@@ -298,7 +306,9 @@ class UserAnalytics:
                 f"非开场白语音={test_result[2]}"
             )
 
-            logger.info(f"查询语音使用: 准备查询 {len(session_ids)} 个 session_id")
+            logger.info(
+                f"查询语音使用: 准备查询 {len(session_ids)} 个 session_id"
+            )
 
             # 额外诊断：检查这些session_id中是否有匹配的记录
             sample_session_ids = (
@@ -339,10 +349,14 @@ class UserAnalytics:
                 voice_count = session_to_voice_count.get(session_id, 0)
                 if voice_count > 0:
                     data.append((chat_id, voice_count))
-                    logger.debug(f"会话 {chat_id[:20]}... 有 {voice_count} 条语音消息")
+                    logger.debug(
+                        f"会话 {chat_id[:20]}... 有 {voice_count} 条语音消息"
+                    )
 
             logger.info(f"语音使用统计: 返回 {len(data)} 个有语音的会话")
-            return pd.DataFrame(data, columns=["chat_id", "voice_message_count"])
+            return pd.DataFrame(
+                data, columns=["chat_id", "voice_message_count"]
+            )
         finally:
             cursor.close()
 
@@ -389,7 +403,9 @@ class UserAnalytics:
                 session_id_str = row[0]
                 chat_id = session_to_chat.get(session_id_str)
                 if chat_id:
-                    result_data.append((chat_id, row[1], row[2], row[3], row[4]))
+                    result_data.append(
+                        (chat_id, row[1], row[2], row[3], row[4])
+                    )
 
             return pd.DataFrame(
                 result_data,
@@ -640,7 +656,9 @@ class UserAnalytics:
                         "sessions_ge_5_rounds": stats["sessions_ge_5_rounds"],
                         "sessions_ge_10_rounds": stats["sessions_ge_10_rounds"],
                         "ge_5_rounds_ratio": round(ge_5_rounds_ratio * 100, 2),
-                        "ge_10_rounds_ratio": round(ge_10_rounds_ratio * 100, 2),
+                        "ge_10_rounds_ratio": round(
+                            ge_10_rounds_ratio * 100, 2
+                        ),
                     }
                 )
 
@@ -808,7 +826,9 @@ class ReportGenerator:
                             y=data["count"],
                             name=f"{auth_type} 达到限制",
                             legendgroup="limit",
-                            marker_color="orange" if auth_type == "GUEST" else "red",
+                            marker_color=(
+                                "orange" if auth_type == "GUEST" else "red"
+                            ),
                         ),
                         row=6,
                         col=1,
@@ -827,9 +847,13 @@ class ReportGenerator:
 
             # 截断过长的ID
             if "user_id" in display_df.columns:
-                display_df["user_id_short"] = display_df["user_id"].str[:20] + "..."
+                display_df["user_id_short"] = (
+                    display_df["user_id"].str[:20] + "..."
+                )
             if "chat_id" in display_df.columns:
-                display_df["chat_id_short"] = display_df["chat_id"].str[:20] + "..."
+                display_df["chat_id_short"] = (
+                    display_df["chat_id"].str[:20] + "..."
+                )
 
             # 创建交互式表格
             table_data = [
@@ -1250,7 +1274,9 @@ class ReportGenerator:
                 messages_excluding_opening = messages_df
 
             # 计算有用户消息的chat_id列表（用于后续判断）
-            user_messages_df = messages_df[messages_df["message_type"] == "human"]
+            user_messages_df = messages_df[
+                messages_df["message_type"] == "human"
+            ]
             chat_ids_with_user_msgs = user_messages_df["chat_id"].unique()
 
             # 使用传入的stats数据，如果没有则计算
@@ -1258,10 +1284,14 @@ class ReportGenerator:
                 # 计算基础统计（兼容旧代码）
                 total_browse_sessions = len(user_sessions_detail_df)
                 total_real_sessions = user_sessions_detail_df[
-                    user_sessions_detail_df["chat_id"].isin(chat_ids_with_user_msgs)
+                    user_sessions_detail_df["chat_id"].isin(
+                        chat_ids_with_user_msgs
+                    )
                 ].shape[0]
                 stats = {
-                    "total_new_users": user_sessions_detail_df["user_id"].nunique(),
+                    "total_new_users": user_sessions_detail_df[
+                        "user_id"
+                    ].nunique(),
                     "total_chat_initiators": len(
                         user_sessions_detail_df[
                             user_sessions_detail_df["chat_id"].isin(
@@ -1277,7 +1307,9 @@ class ReportGenerator:
                     "avg_rounds_per_session": 0,
                 }
 
-            total_browse_sessions = len(user_sessions_detail_df)  # 总浏览数（用于显示）
+            total_browse_sessions = len(
+                user_sessions_detail_df
+            )  # 总浏览数（用于显示）
 
             # 计算总语音请求数
             total_voice_requests = 0
@@ -1394,7 +1426,9 @@ class ReportGenerator:
                     auth_type = row.get("auth_type", "")
                     agent_name = row.get("agent_name", "")
                     rounds = int(row.get("rounds", 0))
-                    message_count = int(row.get("message_count_excluding_opening", 0))
+                    message_count = int(
+                        row.get("message_count_excluding_opening", 0)
+                    )
                     voice_count = int(row.get("voice_message_count", 0))
 
                     # 前10名高亮
@@ -1403,7 +1437,9 @@ class ReportGenerator:
                     # 认证类型标签
                     auth_badge = ""
                     if auth_type == "GOOGLE":
-                        auth_badge = '<span class="badge google">🔐 Google</span>'
+                        auth_badge = (
+                            '<span class="badge google">🔐 Google</span>'
+                        )
                     elif auth_type == "GUEST":
                         auth_badge = '<span class="badge guest">🏷️ 游客</span>'
 
@@ -1462,7 +1498,9 @@ class ReportGenerator:
 
             # 先计算每个用户的总消息数（排除开场白），用于排序
             user_message_counts = {}
-            for user_id, user_sessions in user_sessions_detail_df.groupby("user_id"):
+            for user_id, user_sessions in user_sessions_detail_df.groupby(
+                "user_id"
+            ):
                 user_chat_ids = user_sessions["chat_id"].tolist()
                 user_messages = messages_excluding_opening[
                     messages_excluding_opening["chat_id"].isin(user_chat_ids)
@@ -1483,16 +1521,17 @@ class ReportGenerator:
                 ]
                 user_info = user_sessions.iloc[0]
                 auth_type = user_info["auth_type"]
-                user_created_at = pd.to_datetime(user_info["user_created_at"]).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                user_created_at = pd.to_datetime(
+                    user_info["user_created_at"]
+                ).strftime("%Y-%m-%d %H:%M:%S")
                 session_count = len(user_sessions)
                 total_user_messages = user_message_counts[user_id]
 
                 # 检查用户是否有包含用户消息的会话
                 user_chat_ids = user_sessions["chat_id"].tolist()
                 has_user_messages = any(
-                    chat_id in chat_ids_with_user_msgs for chat_id in user_chat_ids
+                    chat_id in chat_ids_with_user_msgs
+                    for chat_id in user_chat_ids
                 )
                 has_user_messages_str = "true" if has_user_messages else "false"
 
@@ -1502,7 +1541,9 @@ class ReportGenerator:
 
                 # HTML转义
                 nickname_escaped = (
-                    html.escape(nickname) if nickname and pd.notna(nickname) else None
+                    html.escape(nickname)
+                    if nickname and pd.notna(nickname)
+                    else None
                 )
                 email_escaped = (
                     html.escape(email) if email and pd.notna(email) else None
@@ -1511,9 +1552,7 @@ class ReportGenerator:
                 # 构建用户显示名称
                 user_display = user_id[:30] + "..."
                 if nickname_escaped:
-                    user_display += (
-                        f' <span class="user-nickname">({nickname_escaped})</span>'
-                    )
+                    user_display += f' <span class="user-nickname">({nickname_escaped})</span>'
 
                 html_content += f"""
         <div class="user-card" data-user-id="{user_id}" data-auth-type="{auth_type}" data-nickname="{nickname_escaped or ''}" data-email="{email_escaped or ''}" data-has-user-messages="{has_user_messages_str}">
@@ -1579,11 +1618,13 @@ class ReportGenerator:
                         for _, msg in session_messages.iterrows():
                             msg_type = msg["message_type"]
                             content = msg["content"]
-                            timestamp = pd.to_datetime(msg["created_at"]).strftime(
-                                "%Y-%m-%d %H:%M:%S"
-                            )
+                            timestamp = pd.to_datetime(
+                                msg["created_at"]
+                            ).strftime("%Y-%m-%d %H:%M:%S")
 
-                            role = "user" if msg_type == "human" else "assistant"
+                            role = (
+                                "user" if msg_type == "human" else "assistant"
+                            )
                             role_text = "👤 用户" if role == "user" else "🤖 AI"
 
                             # 限制内容长度
@@ -1928,7 +1969,9 @@ def process_data(
 
     # 1.5. 新用户邮箱列表
     logger.info("查询新用户邮箱列表...")
-    new_users_email_df = analytics.get_new_users_email_list(start_date, end_date)
+    new_users_email_df = analytics.get_new_users_email_list(
+        start_date, end_date
+    )
     results["new_users_email_list"] = new_users_email_df
     if not new_users_email_df.empty:
         logger.info(f"找到 {len(new_users_email_df)} 个有邮箱的新用户")
@@ -1949,7 +1992,9 @@ def process_data(
             chat_ids = group[group["chat_id"].notna()]["chat_id"].tolist()
             chat_count = len(chat_ids)
             agent_names = (
-                group[group["agent_name"].notna()]["agent_name"].unique().tolist()
+                group[group["agent_name"].notna()]["agent_name"]
+                .unique()
+                .tolist()
             )
 
             user_activity.append(
@@ -1958,7 +2003,9 @@ def process_data(
                     "auth_type": group.iloc[0]["auth_type"],
                     "created_at": group.iloc[0]["created_at"],
                     "session_count": chat_count,  # Session 数量
-                    "agent_names": ", ".join(agent_names) if agent_names else "",
+                    "agent_names": (
+                        ", ".join(agent_names) if agent_names else ""
+                    ),
                 }
             )
 
@@ -1980,7 +2027,9 @@ def process_data(
         results["user_activity"] = user_activity_df
         results["user_sessions_detail"] = pd.DataFrame(user_sessions_detail)
 
-        active_users = len(user_activity_df[user_activity_df["session_count"] > 0])
+        active_users = len(
+            user_activity_df[user_activity_df["session_count"] > 0]
+        )
         logger.info(f"找到 {active_users} 个活跃聊天用户")
     else:
         logger.warning("未找到用户聊天活动数据")
@@ -1996,16 +2045,23 @@ def process_data(
 
         # 合并到用户聊天活动中
         if not user_chat_df.empty:
-            chat_rounds = rounds_df.set_index("chat_id")["message_count"].to_dict()
+            chat_rounds = rounds_df.set_index("chat_id")[
+                "message_count"
+            ].to_dict()
             chat_rounds_excluding_opening = rounds_df.set_index("chat_id")[
                 "message_count_excluding_opening"
             ].to_dict()
 
             # 为每个用户计算总对话轮数（排除开场白）
-            if "user_activity" in results and not results["user_activity"].empty:
+            if (
+                "user_activity" in results
+                and not results["user_activity"].empty
+            ):
                 user_rounds = []
                 for _, row in results["user_activity"].iterrows():
-                    user_chats = user_chat_df[user_chat_df["user_id"] == row["user_id"]]
+                    user_chats = user_chat_df[
+                        user_chat_df["user_id"] == row["user_id"]
+                    ]
                     total_rounds = sum(
                         chat_rounds_excluding_opening.get(chat_id, 0)
                         for chat_id in user_chats["chat_id"].dropna()
@@ -2024,7 +2080,9 @@ def process_data(
                     .fillna(0)
                     .astype(int)
                 )
-                results["user_sessions_detail"]["message_count_excluding_opening"] = (
+                results["user_sessions_detail"][
+                    "message_count_excluding_opening"
+                ] = (
                     results["user_sessions_detail"]["chat_id"]
                     .map(chat_rounds_excluding_opening)
                     .fillna(0)
@@ -2105,10 +2163,12 @@ def process_data(
         ):
             # 计算每个用户的总轮数
             user_total_rounds = {}
-            for user_id, user_sessions in results["user_sessions_detail"].groupby(
-                "user_id"
-            ):
-                total_rounds = user_sessions["message_count_excluding_opening"].sum()
+            for user_id, user_sessions in results[
+                "user_sessions_detail"
+            ].groupby("user_id"):
+                total_rounds = user_sessions[
+                    "message_count_excluding_opening"
+                ].sum()
                 user_total_rounds[user_id] = total_rounds
 
             # 按10条消息区间分组统计用户数
@@ -2137,9 +2197,14 @@ def process_data(
         results["user_rounds_distribution"] = pd.DataFrame()
 
     # 4. 语音使用统计
-    if "user_sessions_detail" in results and not results["user_sessions_detail"].empty:
+    if (
+        "user_sessions_detail" in results
+        and not results["user_sessions_detail"].empty
+    ):
         logger.info("查询语音使用数据...")
-        all_chat_ids = results["user_sessions_detail"]["chat_id"].unique().tolist()
+        all_chat_ids = (
+            results["user_sessions_detail"]["chat_id"].unique().tolist()
+        )
         if all_chat_ids:
             voice_usage_df = analytics.get_voice_usage(all_chat_ids)
             if not voice_usage_df.empty:
@@ -2156,9 +2221,9 @@ def process_data(
 
                 # 按用户汇总语音使用
                 user_voice_usage = []
-                for user_id, user_sessions in results["user_sessions_detail"].groupby(
-                    "user_id"
-                ):
+                for user_id, user_sessions in results[
+                    "user_sessions_detail"
+                ].groupby("user_id"):
                     total_voice = user_sessions["voice_message_count"].sum()
                     if total_voice > 0:
                         user_voice_usage.append(
@@ -2169,7 +2234,9 @@ def process_data(
                             }
                         )
                 results["user_voice_usage"] = pd.DataFrame(user_voice_usage)
-                logger.info(f"找到 {len(user_voice_usage)} 个用户使用了语音功能")
+                logger.info(
+                    f"找到 {len(user_voice_usage)} 个用户使用了语音功能"
+                )
             else:
                 results["user_voice_usage"] = pd.DataFrame()
                 results["user_sessions_detail"]["voice_message_count"] = 0
@@ -2179,9 +2246,14 @@ def process_data(
         results["user_voice_usage"] = pd.DataFrame()
 
     # 5. 获取对话详情
-    if "user_sessions_detail" in results and not results["user_sessions_detail"].empty:
+    if (
+        "user_sessions_detail" in results
+        and not results["user_sessions_detail"].empty
+    ):
         logger.info("查询对话详情...")
-        all_chat_ids = results["user_sessions_detail"]["chat_id"].unique().tolist()
+        all_chat_ids = (
+            results["user_sessions_detail"]["chat_id"].unique().tolist()
+        )
         if all_chat_ids:
             logger.info(f"准备查询 {len(all_chat_ids)} 个会话的对话消息...")
 
@@ -2210,7 +2282,10 @@ def process_data(
         results["messages"] = pd.DataFrame()
 
     # 6. 计算统计指标
-    if "user_sessions_detail" in results and not results["user_sessions_detail"].empty:
+    if (
+        "user_sessions_detail" in results
+        and not results["user_sessions_detail"].empty
+    ):
         # 计算有用户消息的session（排除仅浏览开场白）
         if "messages" in results and not results["messages"].empty:
             user_messages_df = results["messages"][
@@ -2223,7 +2298,9 @@ def process_data(
 
             if not active_sessions.empty:
                 # 第一部分：统计类型
-                total_active_sessions = len(active_sessions)  # 包含用户消息的会话数
+                total_active_sessions = len(
+                    active_sessions
+                )  # 包含用户消息的会话数
                 total_active_users = active_sessions[
                     "user_id"
                 ].nunique()  # 发起聊天的人数
@@ -2243,9 +2320,14 @@ def process_data(
 
                 # 计算总语音请求数（排除开场白）
                 total_voice_requests = 0
-                if "voice_message_count" in results["user_sessions_detail"].columns:
+                if (
+                    "voice_message_count"
+                    in results["user_sessions_detail"].columns
+                ):
                     total_voice_requests = results["user_sessions_detail"][
-                        results["user_sessions_detail"]["chat_id"].isin(active_chat_ids)
+                        results["user_sessions_detail"]["chat_id"].isin(
+                            active_chat_ids
+                        )
                     ]["voice_message_count"].sum()
 
                 avg_voice_requests_per_user = (
@@ -2263,9 +2345,15 @@ def process_data(
                     "message_count_excluding_opening"
                     in results["user_sessions_detail"].columns
                 ):
-                    total_messages_excluding_opening = results["user_sessions_detail"][
-                        results["user_sessions_detail"]["chat_id"].isin(active_chat_ids)
-                    ]["message_count_excluding_opening"].sum()
+                    total_messages_excluding_opening = results[
+                        "user_sessions_detail"
+                    ][
+                        results["user_sessions_detail"]["chat_id"].isin(
+                            active_chat_ids
+                        )
+                    ][
+                        "message_count_excluding_opening"
+                    ].sum()
 
                 # 每个会话平均轮数 = 总用户消息数 / 会话数（因为每轮包含1条用户消息）
                 avg_rounds_per_session = (
@@ -2277,8 +2365,11 @@ def process_data(
                 results["stats"] = {
                     # 统计类型
                     "total_new_users": (
-                        results.get("daily_users", pd.DataFrame())["count"].sum()
-                        if "daily_users" in results and not results["daily_users"].empty
+                        results.get("daily_users", pd.DataFrame())[
+                            "count"
+                        ].sum()
+                        if "daily_users" in results
+                        and not results["daily_users"].empty
                         else 0
                     ),
                     "total_chat_initiators": total_active_users,  # 发起聊天的人数
@@ -2309,7 +2400,8 @@ def process_data(
             else:
                 total_new_users = (
                     results.get("daily_users", pd.DataFrame())["count"].sum()
-                    if "daily_users" in results and not results["daily_users"].empty
+                    if "daily_users" in results
+                    and not results["daily_users"].empty
                     else 0
                 )
                 results["stats"] = {
@@ -2367,10 +2459,14 @@ def process_data(
     if not users_hitting_limit_df.empty:
         total_hitting = len(users_hitting_limit_df)
         guest_hitting = len(
-            users_hitting_limit_df[users_hitting_limit_df["auth_type"] == "GUEST"]
+            users_hitting_limit_df[
+                users_hitting_limit_df["auth_type"] == "GUEST"
+            ]
         )
         google_hitting = len(
-            users_hitting_limit_df[users_hitting_limit_df["auth_type"] == "GOOGLE"]
+            users_hitting_limit_df[
+                users_hitting_limit_df["auth_type"] == "GOOGLE"
+            ]
         )
         unique_users = users_hitting_limit_df["user_id"].nunique()
         logger.info(
@@ -2381,7 +2477,10 @@ def process_data(
         logger.info("未找到达到聊天限制的用户")
 
     # 8. 长对话会话列表（按轮数降序）
-    if "user_sessions_detail" in results and not results["user_sessions_detail"].empty:
+    if (
+        "user_sessions_detail" in results
+        and not results["user_sessions_detail"].empty
+    ):
         if "messages" in results and not results["messages"].empty:
             user_messages_df = results["messages"][
                 results["messages"]["message_type"] == "human"
@@ -2390,7 +2489,9 @@ def process_data(
 
             # 筛选有用户消息的会话
             active_sessions = results["user_sessions_detail"][
-                results["user_sessions_detail"]["chat_id"].isin(chat_ids_with_user_msgs)
+                results["user_sessions_detail"]["chat_id"].isin(
+                    chat_ids_with_user_msgs
+                )
             ].copy()
 
             if not active_sessions.empty:
@@ -2414,7 +2515,9 @@ def process_data(
                 long_conversations["rank"] = long_conversations.index + 1
 
                 results["long_conversations"] = long_conversations
-                logger.info(f"生成长对话会话列表: {len(long_conversations)} 条记录")
+                logger.info(
+                    f"生成长对话会话列表: {len(long_conversations)} 条记录"
+                )
             else:
                 results["long_conversations"] = pd.DataFrame()
         else:
@@ -2462,7 +2565,9 @@ def load_database_config(config_file: Optional[str] = None) -> Dict[str, Any]:
     db_config["host"] = os.getenv("DB_HOST", db_config.get("host", "localhost"))
     db_config["port"] = int(os.getenv("DB_PORT", db_config.get("port", 5432)))
     db_config["user"] = os.getenv("DB_USER", db_config.get("user", "postgres"))
-    db_config["password"] = os.getenv("DB_PASSWORD", db_config.get("password", ""))
+    db_config["password"] = os.getenv(
+        "DB_PASSWORD", db_config.get("password", "")
+    )
     db_config["dbname"] = os.getenv("DB_NAME", db_config.get("dbname", "inty"))
 
     return db_config
@@ -2522,7 +2627,9 @@ def parse_arguments() -> argparse.Namespace:
     # 时间范围参数
     time_group = parser.add_mutually_exclusive_group(required=True)
     time_group.add_argument("--last-days", type=int, help="分析最近 N 天的数据")
-    time_group.add_argument("--start-date", type=str, help="开始日期 (YYYY-MM-DD)")
+    time_group.add_argument(
+        "--start-date", type=str, help="开始日期 (YYYY-MM-DD)"
+    )
 
     parser.add_argument("--end-date", type=str, help="结束日期 (YYYY-MM-DD)")
     parser.add_argument(
@@ -2593,7 +2700,9 @@ def generate_conversation_report(
 
             if not session_messages.empty:
                 report_lines.append(f"  对话内容:")
-                for msg_idx, (_, msg) in enumerate(session_messages.iterrows(), 1):
+                for msg_idx, (_, msg) in enumerate(
+                    session_messages.iterrows(), 1
+                ):
                     msg_type = msg["message_type"]
                     content = msg["content"]
                     timestamp = msg["created_at"]
@@ -2603,7 +2712,9 @@ def generate_conversation_report(
                         content = content[:200] + "..."
 
                     speaker = "用户" if msg_type == "human" else "AI"
-                    report_lines.append(f"    [{msg_idx}] {speaker} ({timestamp}):")
+                    report_lines.append(
+                        f"    [{msg_idx}] {speaker} ({timestamp}):"
+                    )
                     report_lines.append(f"        {content}")
                     report_lines.append("")
             else:
@@ -2701,7 +2812,9 @@ def main():
             generator.save_csv(results["daily_users"], "daily_new_users.csv")
 
         if "user_activity" in results and not results["user_activity"].empty:
-            generator.save_csv(results["user_activity"], "user_chat_activity.csv")
+            generator.save_csv(
+                results["user_activity"], "user_chat_activity.csv"
+            )
 
         if (
             "user_sessions_detail" in results
@@ -2719,7 +2832,8 @@ def main():
             and not results["rounds_distribution"].empty
         ):
             generator.save_csv(
-                results["rounds_distribution"], "conversation_rounds_distribution.csv"
+                results["rounds_distribution"],
+                "conversation_rounds_distribution.csv",
             )
 
         if (
@@ -2727,18 +2841,25 @@ def main():
             and not results["user_rounds_distribution"].empty
         ):
             generator.save_csv(
-                results["user_rounds_distribution"], "user_rounds_distribution.csv"
+                results["user_rounds_distribution"],
+                "user_rounds_distribution.csv",
             )
 
-        if "user_voice_usage" in results and not results["user_voice_usage"].empty:
-            generator.save_csv(results["user_voice_usage"], "user_voice_usage.csv")
+        if (
+            "user_voice_usage" in results
+            and not results["user_voice_usage"].empty
+        ):
+            generator.save_csv(
+                results["user_voice_usage"], "user_voice_usage.csv"
+            )
 
         if (
             "users_hitting_chat_limit" in results
             and not results["users_hitting_chat_limit"].empty
         ):
             generator.save_csv(
-                results["users_hitting_chat_limit"], "users_hitting_chat_limit.csv"
+                results["users_hitting_chat_limit"],
+                "users_hitting_chat_limit.csv",
             )
 
         if (
@@ -2759,7 +2880,9 @@ def main():
             conversation_report = generate_conversation_report(
                 results["user_sessions_detail"], results["messages"]
             )
-            generator.save_text_report(conversation_report, "conversations_detail.txt")
+            generator.save_text_report(
+                conversation_report, "conversations_detail.txt"
+            )
 
         # 生成 HTML 报告（图表）
         generator.generate_html_report(
@@ -2790,7 +2913,10 @@ def main():
             )
 
         # 生成角色数据分析HTML报告
-        if "agent_analytics" in results and not results["agent_analytics"].empty:
+        if (
+            "agent_analytics" in results
+            and not results["agent_analytics"].empty
+        ):
             logger.info("生成角色数据分析HTML报告...")
             generator.generate_agent_analytics_html_report(
                 results["agent_analytics"],

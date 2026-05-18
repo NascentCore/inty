@@ -46,7 +46,9 @@ def _emit_verify_result(
     """Print one explicit PASS/FAIL line as the conclusion (stderr for failures)."""
     if ok:
         timing = f", elapsed={elapsed_s:.2f}s" if elapsed_s is not None else ""
-        print(f"{_VERIFY_TAG} RESULT: PASS (exit={exit_code}{timing})", flush=True)
+        print(
+            f"{_VERIFY_TAG} RESULT: PASS (exit={exit_code}{timing})", flush=True
+        )
     else:
         suffix = f" — {detail}" if detail else ""
         print(
@@ -89,7 +91,9 @@ def _load_yaml_config(path: Path) -> dict[str, Any]:
     try:
         import yaml  # type: ignore[import-not-found]
     except ImportError as e:
-        raise SystemExit("PyYAML is required for --config. pip install pyyaml") from e
+        raise SystemExit(
+            "PyYAML is required for --config. pip install pyyaml"
+        ) from e
     with path.open("r", encoding="utf-8") as f:
         raw = yaml.safe_load(f)
     if raw is None:
@@ -294,7 +298,9 @@ async def _run(args: argparse.Namespace) -> int:
         p = Path(args.config).expanduser().resolve()
         if not p.is_file():
             print(f"config not found: {p}", file=sys.stderr)
-            _emit_verify_result(ok=False, exit_code=2, detail=f"config not found: {p}")
+            _emit_verify_result(
+                ok=False, exit_code=2, detail=f"config not found: {p}"
+            )
             return 2
         cfg = _load_yaml_config(p)
 
@@ -315,7 +321,9 @@ async def _run(args: argparse.Namespace) -> int:
         )
         return 2
 
-    create_agent = bool(args.create_agent) or (_bool_opt(cfg, "create_agent") is True)
+    create_agent = bool(args.create_agent) or (
+        _bool_opt(cfg, "create_agent") is True
+    )
 
     agent_id_cli = (args.agent_id or "").strip() or (
         _str_opt(cfg, "agent_id") or ""
@@ -342,7 +350,9 @@ async def _run(args: argparse.Namespace) -> int:
             "or run backend/ops/start.sh --local to create repo-root .inty_ops_bearer_token.",
             file=sys.stderr,
         )
-        _emit_verify_result(ok=False, exit_code=2, detail="missing bearer token")
+        _emit_verify_result(
+            ok=False, exit_code=2, detail="missing bearer token"
+        )
         return 2
 
     cto = _float_opt(cfg, "connect_timeout_sec")
@@ -372,7 +382,9 @@ async def _run(args: argparse.Namespace) -> int:
                 "Missing --agent-id or config agent_id (or use --create-agent / create_agent: true)",
                 file=sys.stderr,
             )
-            _emit_verify_result(ok=False, exit_code=2, detail="missing agent_id")
+            _emit_verify_result(
+                ok=False, exit_code=2, detail="missing agent_id"
+            )
             return 2
 
     t0 = time.perf_counter()
@@ -396,7 +408,8 @@ async def _run(args: argparse.Namespace) -> int:
             )
         else:
             print(
-                f"WebSocket closed: code={e.code} reason={e.reason!r}", file=sys.stderr
+                f"WebSocket closed: code={e.code} reason={e.reason!r}",
+                file=sys.stderr,
             )
             _emit_verify_result(
                 ok=False,
@@ -406,7 +419,9 @@ async def _run(args: argparse.Namespace) -> int:
         return 1
     except ConnectionClosedError as e:
         print(f"WebSocket error: {e}", file=sys.stderr)
-        _emit_verify_result(ok=False, exit_code=1, detail="WebSocket connection error")
+        _emit_verify_result(
+            ok=False, exit_code=1, detail="WebSocket connection error"
+        )
         return 1
     except BackendChatWsError as e:
         print(
@@ -444,7 +459,9 @@ def main() -> None:
         help="e.g. http://127.0.0.1:8001 (Ops --local) or :8000 Inty-only; or INTY_API_BASE_URL",
     )
     p.add_argument("--token", help="Bearer token; prefer INTY_BEARER_TOKEN")
-    p.add_argument("--agent-id", help="Agent id (not required when --create-agent)")
+    p.add_argument(
+        "--agent-id", help="Agent id (not required when --create-agent)"
+    )
     p.add_argument(
         "--create-agent",
         action="store_true",

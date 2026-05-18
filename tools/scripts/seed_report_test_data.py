@@ -35,7 +35,9 @@ def _random_sentence(word_count: int = 10) -> str:
 
 
 async def seed_report_test_data(db: AsyncSession) -> None:
-    reporter_id = (await db.execute(select(User.id).limit(1))).scalar_one_or_none()
+    reporter_id = (
+        await db.execute(select(User.id).limit(1))
+    ).scalar_one_or_none()
     if not reporter_id:
         print(
             "未找到任何用户，无法创建举报测试数据。请先运行 init_admin_user（例如 ./backend/inty/start.sh --dev 已包含）。"

@@ -66,7 +66,9 @@ async def log_requests(request: Request, call_next):
     # Log request details
     logger.info(f"📥 {request.method} {request.url.path}")
     logger.debug(f"Request headers: {dict(request.headers)}")
-    logger.debug(f"Client IP: {request.client.host if request.client else 'Unknown'}")
+    logger.debug(
+        f"Client IP: {request.client.host if request.client else 'Unknown'}"
+    )
 
     # Process request
     response = await call_next(request)
@@ -122,12 +124,15 @@ async def generate_character_multistage(request: CharacterGenerationRequest):
     result = multistage_generator.generate(request)
     if result.success:
         logger.info(
-            "✅ Multistage character payload ready in %.2fs", result.generation_time
+            "✅ Multistage character payload ready in %.2fs",
+            result.generation_time,
         )
         return result
 
     logger.error(f"❌ Multistage generation failed: {result.error}")
-    raise HTTPException(status_code=500, detail=result.error or "Multistage failure")
+    raise HTTPException(
+        status_code=500, detail=result.error or "Multistage failure"
+    )
 
 
 @app.get("/ui", response_class=HTMLResponse)

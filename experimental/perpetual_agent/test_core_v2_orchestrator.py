@@ -18,10 +18,18 @@ from experimental.perpetual_agent.core_v2.repositories.events_repo import (
 from experimental.perpetual_agent.core_v2.repositories.memory_repo import (
     MemoryRepository,
 )
-from experimental.perpetual_agent.core_v2.repositories.plan_repo import PlanRepository
-from experimental.perpetual_agent.core_v2.repositories.sqlite_db import SQLiteDatabase
-from experimental.perpetual_agent.core_v2.repositories.sqlite_schema import init_schema
-from experimental.perpetual_agent.core_v2.runtime.orchestrator import Orchestrator
+from experimental.perpetual_agent.core_v2.repositories.plan_repo import (
+    PlanRepository,
+)
+from experimental.perpetual_agent.core_v2.repositories.sqlite_db import (
+    SQLiteDatabase,
+)
+from experimental.perpetual_agent.core_v2.repositories.sqlite_schema import (
+    init_schema,
+)
+from experimental.perpetual_agent.core_v2.runtime.orchestrator import (
+    Orchestrator,
+)
 
 
 def _build_orchestrator(
@@ -172,4 +180,7 @@ def test_inbound_failure_rolls_back_event_and_plans(tmp_path: Path) -> None:
         )
         == []
     )
-    assert memory_repo.list_memories_by_user(user_id="telegram:chat_4", limit=10) == []
+    assert (
+        memory_repo.list_memories_by_user(user_id="telegram:chat_4", limit=10)
+        == []
+    )

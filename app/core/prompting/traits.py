@@ -491,7 +491,9 @@ CYNICAL = Trait(
     category=[TraitCategory.NEGATIVE],
 )
 SARCASTIC = Trait(
-    name="sarcastic", description="using sarcasm.", category=[TraitCategory.NEGATIVE]
+    name="sarcastic",
+    description="using sarcasm.",
+    category=[TraitCategory.NEGATIVE],
 )
 LAZY = Trait(
     name="lazy",
@@ -564,7 +566,9 @@ INSECURE = Trait(
     category=[TraitCategory.NEGATIVE],
 )
 COWARDLY = Trait(
-    name="cowardly", description="lacking courage.", category=[TraitCategory.NEGATIVE]
+    name="cowardly",
+    description="lacking courage.",
+    category=[TraitCategory.NEGATIVE],
 )
 TIMID = Trait(
     name="timid",

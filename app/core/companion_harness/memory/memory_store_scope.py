@@ -27,7 +27,11 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
 
 
 def load_template_seed_text(filename: str) -> str:
-    base = _PROMPTS_DIR if filename in _PACKAGE_PROMPT_SEED_FILES else _TEMPLATES_DIR
+    base = (
+        _PROMPTS_DIR
+        if filename in _PACKAGE_PROMPT_SEED_FILES
+        else _TEMPLATES_DIR
+    )
     path = base / filename
     if not path.is_file():
         raise FileNotFoundError(f"missing memory template seed file: {path}")
@@ -141,10 +145,18 @@ class MemoryStoreScopePaths:
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()
 
-_REQUIRED_FILES_ATTR = ("identity", "soul", "user_md", "memory_md", "transcript")
+_REQUIRED_FILES_ATTR = (
+    "identity",
+    "soul",
+    "user_md",
+    "memory_md",
+    "transcript",
+)
 
 
-def _required_scope_file_relpaths(paths: MemoryStoreScopePaths) -> tuple[str, ...]:
+def _required_scope_file_relpaths(
+    paths: MemoryStoreScopePaths,
+) -> tuple[str, ...]:
     return tuple(getattr(paths, attr) for attr in _REQUIRED_FILES_ATTR)
 
 

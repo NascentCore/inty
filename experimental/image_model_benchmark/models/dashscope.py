@@ -64,7 +64,9 @@ class DashScopeModel(ImageModel):
             # 添加参考图片
             if reference_images:
                 for img_data in reference_images:
-                    content.append({"image": self._encode_image_to_data_url(img_data)})
+                    content.append(
+                        {"image": self._encode_image_to_data_url(img_data)}
+                    )
 
             # 添加文本提示
             content.append({"text": prompt})
@@ -104,7 +106,9 @@ class DashScopeModel(ImageModel):
 
             if response.status_code != 200:
                 error_text = response.text[:500]
-                raise ValueError(f"API 错误 ({response.status_code}): {error_text}")
+                raise ValueError(
+                    f"API 错误 ({response.status_code}): {error_text}"
+                )
 
             result = response.json()
 

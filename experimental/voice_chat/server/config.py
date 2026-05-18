@@ -44,7 +44,9 @@ def load_config(path: Optional[str] = None) -> Config:
     gemini_data = data.get("gemini", {})
     if isinstance(gemini_data.get("api_key"), str):
         # Expand env vars like ${GOOGLE_API_KEY}
-        gemini_data["api_key"] = os.path.expandvars(gemini_data["api_key"]) or None
+        gemini_data["api_key"] = (
+            os.path.expandvars(gemini_data["api_key"]) or None
+        )
 
     cfg = Config(
         server=ServerSettings(**server_data), gemini=GeminiConfig(**gemini_data)

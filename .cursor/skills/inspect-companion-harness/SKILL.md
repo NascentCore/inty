@@ -1,17 +1,33 @@
 ---
 name: inspect-companion-harness
 description: >-
-  For humans to understand the companion runtime's foundational working conditions. Inspect companion harness persistence in Postgres (MemoryStore document versions).
+  For humans to understand the companion harness' working conditions.
+  Currently, inspect MemoryDoc in Postgres (MemoryStore document versions).
   Covers companion_memory_document_versions, scope triples, and SQL templates for
-  identity/transcript/context, etc. Load DB credentials from repo config.yaml. Sub-skill
-  for reading context_mode only: context-mode-in-db/SKILL.md.
+  identity/transcript/context, etc. Load DB credentials from repo config.yaml.
+  
+  Sub-skills:
+  show-memory-document (print STYLE.md etc. via Python script)
+  context-mode-in-db.
 ---
 
 # Inty companion：核对 MemoryStore 与 Postgres 落库
 
 ## Sub-skills
 
+- **`show-memory-document/SKILL.md`**：用 **`tools/scripts/companion_memory_show_document.py`** 打印指定逻辑文档（如 **`STYLE.md`**）的最新正文或版本元数据。
 - **`context-mode-in-db/SKILL.md`**：只查 **`context.json`** 落库里的 **`context_mode`** / **`post_bootstrap_context_mode`**（`document_kind = context_json`），按 **`agent_id`（`companion_id`）** 排查体验配置。
+
+## 打印指定 MemoryStore 文档（推荐）
+
+读库走 Python，避免手写 SQL 占位符：
+
+```bash
+PYTHONPATH=. python tools/scripts/companion_memory_show_document.py STYLE.md \
+  --companion-id <agent_id>
+```
+
+多 scope 时加 `--user-id` / `--chat-id`，或先 `--list-scopes`。详见 **`show-memory-document/SKILL.md`**。
 
 ## 何时使用
 

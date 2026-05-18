@@ -39,14 +39,19 @@ async def _export_agent(agent_id: str, output_path: Path) -> None:
         if data.get("readable_id") is None:
             data["readable_id"] = ""
 
-        payload = schemas_agent.AgentInDB.model_validate(data).model_dump(mode="json")
+        payload = schemas_agent.AgentInDB.model_validate(data).model_dump(
+            mode="json"
+        )
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
 
         logger.info(
-            "Exported agent id={} name={} -> {}", agent_id, agent_orm.name, output_path
+            "Exported agent id={} name={} -> {}",
+            agent_id,
+            agent_orm.name,
+            output_path,
         )
 
 

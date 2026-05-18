@@ -21,7 +21,9 @@ class AgentPromptOverride:
 AGENT_PROMPT_OVERRIDES: Dict[str, AgentPromptOverride] = {
     INTELLIMATE_AGENT_ID: AgentPromptOverride(main_prompt="", mode_prompt=""),
     INTELLIMATE_AGENT_NAME: AgentPromptOverride(main_prompt="", mode_prompt=""),
-    INTELLIMATE_AGENT_NAME_LEGACY: AgentPromptOverride(main_prompt="", mode_prompt=""),
+    INTELLIMATE_AGENT_NAME_LEGACY: AgentPromptOverride(
+        main_prompt="", mode_prompt=""
+    ),
 }
 
 

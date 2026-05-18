@@ -61,7 +61,9 @@ class TelegramBotService:
         if not isinstance(bot_id_raw, int):
             raise RuntimeError(f"Telegram bot id missing or invalid: {me}")
         if not isinstance(username_raw, str) or not username_raw.strip():
-            raise RuntimeError(f"Telegram bot username missing or invalid: {me}")
+            raise RuntimeError(
+                f"Telegram bot username missing or invalid: {me}"
+            )
 
         start_parameter = f"agent_{agent_id}"
         deep_link = (
