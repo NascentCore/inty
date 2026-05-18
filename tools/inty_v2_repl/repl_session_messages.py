@@ -23,4 +23,11 @@ class ReplDownlinkWsError(TypedDict):
     raw: dict[str, Any]
 
 
-ReplDownlinkItem = ReplDownlinkAssistant | ReplDownlinkWsError
+class ReplDownlinkSetBgm(TypedDict):
+    """Server pushed a set_bgm control frame (not a chat bubble)."""
+
+    kind: Literal["set_bgm"]
+    frame: dict[str, Any]
+
+
+ReplDownlinkItem = ReplDownlinkAssistant | ReplDownlinkWsError | ReplDownlinkSetBgm

@@ -437,6 +437,8 @@ class BackendChatWsBridge:
             return None, None, {}
         if raw is None:
             return None, None, {}
+        if raw.get("type") == "set_bgm":
+            return None, None, {"__repl_set_bgm_frame__": raw}
         try:
             text, meta = _parse_chat_response_payload(raw)
             return text, None, meta

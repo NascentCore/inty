@@ -1,0 +1,3 @@
+{"track_id": "calm_evening_01", "title": "Calm Evening", "audio_url": "https://cdn.example.com/bgm/calm_evening_01.mp3", "duration_sec": 180.0, "tags": ["calm", "evening", "soft"]}
+{"track_id": "warm_chat_02", "title": "Warm Chat", "audio_url": "https://cdn.example.com/bgm/warm_chat_02.mp3", "duration_sec": 210.0, "tags": ["warm", "friendly", "acoustic"]}
+{"track_id": "night_rain_03", "title": "Night Rain", "audio_url": "https://cdn.example.com/bgm/night_rain_03.mp3", "duration_sec": 240.0, "tags": ["rain", "night", "ambient"]}

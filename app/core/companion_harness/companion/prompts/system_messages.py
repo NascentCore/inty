@@ -29,6 +29,7 @@ from .inner_tick_ls_tc import (
     INNER_TICK_LS_TC_AUTONOMY_SECTION,
     INNER_TICK_LS_TC_TOOL_BULLET,
 )
+from .bgm_system import build_bgm_system_message
 
 def _inner_tick_proactive_chat(
     inner_tick_turn: bool, inner_tick_mode: InnerTickMode
@@ -360,6 +361,7 @@ def build_system_messages(
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    include_bgm_system_message: bool = False,
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(inner_tick_turn, inner_tick_mode)
     tools_on = enable_tools or enable_user_profile_tool
@@ -395,6 +397,8 @@ def build_system_messages(
             out.append(
                 _system_message(_tool_background_first_round_skip_contract_text())
             )
+        if include_bgm_system_message and tools_on:
+            out.append(build_bgm_system_message())
 
     out.append(_system_message(bundle.identity.strip()))
     out.append(_system_message(bundle.soul.strip()))

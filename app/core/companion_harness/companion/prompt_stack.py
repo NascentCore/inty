@@ -19,6 +19,7 @@ from .models import (
 )
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .prompts.system_messages import build_system_messages
+from app.core.companion_harness.companion.bgm_library import tools_include_set_bgm
 from app.core.companion_harness.tools.companion_tools import (
     build_companion_tools,
     build_openai_repl_tools_inner_tick,
@@ -114,10 +115,11 @@ def companion_turn_tools_and_system_messages(
         else use_dual_structured_chat
     )
     if tool_side_compact_system_prompt:
+        tools_enabled = (not tick_proactive) and not chat_only_implicit_sign_on
         system_messages = build_system_messages(
             bundle,
             context,
-            enable_tools=(not tick_proactive) and not chat_only_implicit_sign_on,
+            enable_tools=tools_enabled,
             enable_user_profile_tool=False,
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=route_inner_mode,
@@ -126,6 +128,9 @@ def companion_turn_tools_and_system_messages(
             interactive_bootstrap_active=system_prompt_interactive_bootstrap,
             include_significance_perception_slice=False,
             implicit_signal_bundle=implicit_signal_bundle,
+            include_bgm_system_message=(
+                tools_enabled and tools_include_set_bgm(tools_for_turn)
+            ),
         )
     else:
         # Foreground chat completion uses tools=None; mirrored contract + envelope slice

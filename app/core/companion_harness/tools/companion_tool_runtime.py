@@ -66,6 +66,10 @@ from .image_gate import (
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
 from .runtime_inspect_tool import tool_companion_runtime_inspect
+from app.core.companion_harness.companion.bgm_library import (
+    SET_BGM_TOOL_NAME,
+    tool_set_bgm,
+)
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.global_services import subscription_service
@@ -162,6 +166,7 @@ _REPL_TOOL_NAMES_SHARED_HEAD: tuple[str, ...] = (
     "user_profile_record",
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
     "schedule_task",
+    SET_BGM_TOOL_NAME,
     "tool_update_agent_status_line",
     "memory_store_list_paths",
     "memory_store_read_document",
@@ -182,6 +187,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "user_profile_record",
         TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
         "schedule_task",
+        SET_BGM_TOOL_NAME,
         "google_web_search",
         "read_web_page",
         "phone_call_user",
@@ -680,6 +686,31 @@ def build_openai_tools() -> list[dict[str, Any]]:
                         },
                     },
                     "required": ["sphere", "summary"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": SET_BGM_TOOL_NAME,
+                "description": (
+                    "Apply conversation background music from the BGM catalog in system context. "
+                    "Use only when mood clearly warrants a change."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "track_id": {
+                            "type": "string",
+                            "description": "track_id from the BGM catalog system message.",
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Short internal reason for this pick (not shown to user).",
+                        },
+                    },
+                    "required": ["track_id", "reason"],
                     "additionalProperties": False,
                 },
             },
@@ -1271,6 +1302,14 @@ async def _dispatch(
         if not isinstance(raw_sl, str):
             return "ERROR: status_line must be a string"
         return await tool_update_agent_status_line(store, raw_sl)
+    if name == SET_BGM_TOOL_NAME:
+        raw_track_id = arguments.get("track_id")
+        raw_reason = arguments.get("reason")
+        if not isinstance(raw_track_id, str):
+            return "ERROR: track_id must be a string"
+        if not isinstance(raw_reason, str):
+            return "ERROR: reason must be a string"
+        return tool_set_bgm(store, raw_track_id, raw_reason)
     if name == "schedule_task":
         raw_exec_time = arguments.get("exec_time_utc")
         raw_task_text = arguments.get("task_text")

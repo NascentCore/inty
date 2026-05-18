@@ -400,10 +400,24 @@ def _print_transcript_compaction_banner(meta: Mapping[str, Any]) -> None:
     )
 
 
+def _print_set_bgm_frame_banner(frame: Mapping[str, Any]) -> None:
+    user_uuid = frame.get("user_msg_uuid", "")
+    track_id = frame.get("track_id", "")
+    audio_url = frame.get("audio_url", "")
+    reason = frame.get("reason", "")
+    print(
+        f"set-bgm: track_id={track_id!r} audio_url={audio_url!r} "
+        f"user_msg_uuid={user_uuid!r} reason={reason!r}"
+    )
+
+
 def _emit_downlink_item(
     item: Mapping[str, Any],
     outbound_t0: dict[str, float],
 ) -> None:
+    if item["kind"] == "set_bgm":
+        _print_set_bgm_frame_banner(item["frame"])
+        return
     if item["kind"] == "assistant":
         meta = item.get("meta_data") or {}
         elapsed = _elapsed_for_downlink_assistant(meta, outbound_t0)

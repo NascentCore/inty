@@ -84,6 +84,9 @@ from .runtime_inspect_context import (
     tools_summary_from_openai_tools,
 )
 from .tool_bg_routing import resolve_tool_bg_routing_sync
+from app.core.companion_harness.companion.bgm_library import (
+    extract_set_bgm_deliver_payload,
+)
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
 _OUTPUT_QUEUE_LOCK = threading.Lock()
@@ -315,6 +318,8 @@ class ToolOutputEvent:
     significance_perception: dict[str, Any] | None = None
     # InnerTickMode.value when this background round is an inner-tick turn; else None.
     inner_tick_activity: str | None = None
+    # Parsed OK payload from set_bgm tool; drives ChatWsSetBgmFrame on WS (not GENERATION).
+    set_bgm: dict[str, Any] | None = None
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -815,6 +820,8 @@ async def _run_background_tool_loop(
         generation_deliver = _generation_tool_execution_deliver(
             appended_turn_msgs, tool_call_names, image_paths
         )
+        set_bgm_payload = extract_set_bgm_deliver_payload(appended_turn_msgs)
+        set_bgm_deliver = set_bgm_payload is not None
         routing = resolve_tool_bg_routing_sync(
             client=resolved_client,
             model=tool_api_id,
@@ -827,7 +834,7 @@ async def _run_background_tool_loop(
         # TODO(product): If InnerTickMode.MAINTENANCE must never deliver client-visible NL, gate
         # should_push here (and/or output_to_user interpretation) before emitting ToolOutputEvent;
         # document decision in docs/companion_harness/ARCH.md. Current: same should_push as chat.
-        should_push = generation_deliver or output_to_user_flag
+        should_push = generation_deliver or output_to_user_flag or set_bgm_deliver
         base_nl = (routing.user_facing_reply or "").strip()
         significance_meta = envelope_to_assistant_metadata_dict(routing)
         if output_to_user_flag and not base_nl:
@@ -906,13 +913,18 @@ async def _run_background_tool_loop(
                 )
             return
 
-        if not transcript_body.strip() and not generation_deliver:
+        if (
+            not transcript_body.strip()
+            and not generation_deliver
+            and not set_bgm_deliver
+        ):
             logger.debug(
                 "repl.turn.bg suppress_user_visible_output empty_transcript trace_id={} "
-                "user_msg_uuid={} generation_deliver={} output_to_user={} tools={}",
+                "user_msg_uuid={} generation_deliver={} set_bgm_deliver={} output_to_user={} tools={}",
                 trace_id,
                 user_msg_uuid,
                 generation_deliver,
+                set_bgm_deliver,
                 output_to_user_flag,
                 ",".join(tool_call_names),
             )
@@ -970,6 +982,7 @@ async def _run_background_tool_loop(
                 inner_tick_activity=(
                     inner_tick_mode.value if inner_tick_turn else None
                 ),
+                set_bgm=set_bgm_payload,
             )
         )
     finally:

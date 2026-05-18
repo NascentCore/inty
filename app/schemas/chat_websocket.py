@@ -38,6 +38,26 @@ def normalize_websocket_companion_message_id_uuid(raw: Optional[str]) -> str:
         raise ValueError("message_id must be a valid UUID") from exc
 
 
+class ChatWsSetBgmFrame(BaseModel):
+    """**Server → client (queued)** apply conversation BGM; not a chat list row."""
+
+    type: Literal["set_bgm"] = "set_bgm"
+    agent_id: str = Field(..., min_length=1)
+    user_msg_uuid: str = Field(..., min_length=1)
+    trace_id: Optional[str] = None
+    track_id: str = Field(..., min_length=1)
+    title: str = Field(..., min_length=1)
+    audio_url: str = Field(..., min_length=1)
+    duration_sec: float = Field(..., gt=0.0)
+    tags: list[str] = Field(default_factory=list)
+    reason: str = Field(..., min_length=1)
+    user_message_id: Optional[int] = None
+
+
+def dump_chat_ws_set_bgm_frame(frame: ChatWsSetBgmFrame) -> dict[str, Any]:
+    return frame.model_dump(exclude_none=True)
+
+
 class ChatWsPingFrame(BaseModel):
     """**Client → server** keepalive; resets idle timer (see chat WebSocket handler)."""
 

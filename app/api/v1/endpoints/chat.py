@@ -93,9 +93,11 @@ from app.schemas.chat_websocket import (
     ChatWsUserSignedOnFrame,
     ChatWsUserSignedOutAckFrame,
     ChatWsUserSignedOutFrame,
+    ChatWsSetBgmFrame,
     ChatWsWsConnDroppedFrame,
     chat_ws_queued_error_dict,
     dump_chat_ws_companion_wire_meta,
+    dump_chat_ws_set_bgm_frame,
     normalize_websocket_companion_message_id_uuid,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -1144,6 +1146,25 @@ def _require_websocket_companion_message_id_uuid(request: ChatCompletionRequest)
         return normalize_websocket_companion_message_id_uuid(request.message_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _build_chat_ws_set_bgm_frame_payload(
+    *,
+    agent_id: str,
+    ev: ToolOutputEvent,
+    user_message_id: int | None,
+) -> WsOutboundPayload:
+    assert ev.set_bgm is not None
+    frame = ChatWsSetBgmFrame.model_validate(
+        {
+            "agent_id": agent_id.strip(),
+            "user_msg_uuid": ev.user_msg_uuid,
+            "trace_id": (ev.trace_id or None),
+            "user_message_id": user_message_id,
+            **ev.set_bgm,
+        }
+    )
+    return dump_chat_ws_set_bgm_frame(frame)
 
 
 async def _build_companion_tool_background_ws_payload(
@@ -3118,20 +3139,35 @@ async def chat_completions_websocket(
                     continue
                 try:
                     async with companion_ws.turn_lock:
-                        bg_payload = await _build_companion_tool_background_ws_payload(
-                            db=db,
-                            agent_id=str(ctx["agent_id"]),
-                            session_id=str(ctx["session_id"]),
-                            ev=ev,
-                            request=ctx["request"],
-                            effective_local_id=ctx["effective_local_id"],
-                            foreground_user_message_id=ctx.get(
-                                "foreground_user_message_id"
-                            ),
-                            foreground_voice_ctx=ctx,
-                            voice_svc=voice_svc,
-                        )
-                        await outbound_queue.put(bg_payload)
+                        agent_id_str = str(ctx["agent_id"])
+                        fg_user_msg_id = ctx.get("foreground_user_message_id")
+                        if ev.output_to_user or ev.generation_deliver:
+                            bg_payload = (
+                                await _build_companion_tool_background_ws_payload(
+                                    db=db,
+                                    agent_id=agent_id_str,
+                                    session_id=str(ctx["session_id"]),
+                                    ev=ev,
+                                    request=ctx["request"],
+                                    effective_local_id=ctx["effective_local_id"],
+                                    foreground_user_message_id=fg_user_msg_id,
+                                    foreground_voice_ctx=ctx,
+                                    voice_svc=voice_svc,
+                                )
+                            )
+                            await outbound_queue.put(bg_payload)
+                        if ev.set_bgm is not None:
+                            await outbound_queue.put(
+                                _build_chat_ws_set_bgm_frame_payload(
+                                    agent_id=agent_id_str,
+                                    ev=ev,
+                                    user_message_id=(
+                                        int(fg_user_msg_id)
+                                        if fg_user_msg_id is not None
+                                        else None
+                                    ),
+                                )
+                            )
                 except Exception:
                     logger.exception("companion tool_bg ws completion failed")
                 continue

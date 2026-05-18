@@ -21,6 +21,7 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
         ("read_web_page", False),
         ("tool_update_agent_status_line", False),
         ("user_profile_record", False),
+        ("set_bgm", False),
     ],
 )
 def test_tool_requires_client_delivery_on_success(name: str, expected: bool) -> None:
