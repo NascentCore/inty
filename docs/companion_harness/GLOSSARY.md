@@ -55,6 +55,15 @@
 - **「智能体」边界**与「编排入口」是否在 WebSocket 处理层内：团队需在架构文档中单点约定，避免「上行」与「内核输入」混用。
 - **「前台」** ≠ **当轮上下文表** ≠ Android 前台进程。
 
+## Wire / Turn / Persistence（分层用语）
+
+与 [WIRE_TURN_PERSISTENCE.md](WIRE_TURN_PERSISTENCE.md) 中 A–G 及「四类用语」对齐。
+
+| 术语 | 英文别名 | 定义 |
+|------|----------|------|
+| **自我轨迹** | self-trajectory（**E**） | Inty 侧、**用户不可见**的持久化记录总类：`ai_private*`、`.companion_runtime_events.jsonl` 等；与 **D**（供 LLM 的对话 JSONL）和 **F**（人设/控制面文档）区分。 |
+| **结构化自我事件** | structured self-events | **E** 的常见落盘形态：JSONL **一行一事**（`kind`+`ts` 等）。语义为智能体侧「经历/痕迹」，**不是**运维结构化日志（loguru、LangSmith trace 等另论）。 |
+
 ## See also
 
-- [Wire → Turn → Persistence](WIRE_TURN_PERSISTENCE.md)：控制帧、回合元数据、`transcript` / runtime lifecycle / `chat_history` 分层与落库对照。
+- [Wire → Turn → Persistence](WIRE_TURN_PERSISTENCE.md)：控制帧、回合元数据、**结构化自我事件**、`transcript` / runtime lifecycle / `chat_history` 分层与落库对照。

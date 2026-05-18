@@ -88,6 +88,8 @@ flowchart TD
 4. **主动退出或登出**：客户端应在关闭前发送 `user_signed_out` 并等待 ack。ack 只表示服务端接受了 teardown 请求；之后服务端会取消本连接尚未完成的 companion turn，并收束当前聊天 scope、记忆文档和聊天历史。客户端不要把普通断线当作登出，也不要在未收到新状态前假设旧历史已完成清理。
 5. **服务端关闭或连接结束**：仍在运行的 companion turn 必须被取消，避免用户离开后继续产生孤儿回复、后台补帧或记忆写入。
 
+落点对照（Wire / Turn / Persistence 与 A–G）：[WIRE_TURN_PERSISTENCE.md](WIRE_TURN_PERSISTENCE.md)。
+
 最小控制帧形状示例：
 
 ```json
@@ -119,6 +121,7 @@ flowchart TD
 | MemoryStore 目标说明 | `/docs/companion_harness/MEMORY_STORE.md` |
 | 记忆管线说明 | `/docs/companion_harness/MEMORY_PIPELINE.md` |
 | 消息流术语（上行/下行/客户侧） | `/docs/companion_harness/GLOSSARY.md` |
+| 会话数据分层（Wire / Turn / Persistence） | `/docs/companion_harness/WIRE_TURN_PERSISTENCE.md` |
 
 ## 维护规则
 
