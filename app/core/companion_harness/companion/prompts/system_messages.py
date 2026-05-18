@@ -32,6 +32,7 @@ from .inner_tick_ls_tc import (
     INNER_TICK_LS_TC_TOOL_BULLET,
 )
 
+
 def _inner_tick_proactive_chat(
     inner_tick_turn: bool, inner_tick_mode: InnerTickMode
 ) -> bool:
@@ -376,7 +377,9 @@ def build_system_messages(
     include_significance_perception_slice: bool = False,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
-    tick_proactive = _inner_tick_proactive_chat(inner_tick_turn, inner_tick_mode)
+    tick_proactive = _inner_tick_proactive_chat(
+        inner_tick_turn, inner_tick_mode
+    )
     tools_on = enable_tools or enable_user_profile_tool
     # Dual-LLM foreground completion: tools exist in product, but this request omits OpenAI ``tools=``.
     chat_branch_no_tool_api = (
@@ -395,7 +398,9 @@ def build_system_messages(
         out.append(_system_message(_heartbeat_clause()))
 
     if inner_tick_turn and not tick_proactive:
-        out.append(_system_message(_inner_tick_ai_private_section(ai_private_text)))
+        out.append(
+            _system_message(_inner_tick_ai_private_section(ai_private_text))
+        )
         out.append(_system_message(_inner_tick_turn_section()))
 
     if repl_online_ack_turn:
@@ -405,16 +410,22 @@ def build_system_messages(
         out.append(_system_message(_tool_side_compact_directive()))
         if tools_on:
             out.append(
-                _system_message(_tool_background_final_json_routing_contract_text())
+                _system_message(
+                    _tool_background_final_json_routing_contract_text()
+                )
             )
             out.append(
-                _system_message(_tool_background_first_round_skip_contract_text())
+                _system_message(
+                    _tool_background_first_round_skip_contract_text()
+                )
             )
 
     out.append(_system_message(bundle.identity.strip()))
     out.append(_system_message(bundle.soul.strip()))
     out.append(_system_message(bundle.style_md.strip()))
-    out.append(_system_message(experience_profile_system_clause(context.context_mode)))
+    out.append(
+        _system_message(experience_profile_system_clause(context.context_mode))
+    )
     if bundle.techno_core_md.strip():
         out.append(_system_message(bundle.techno_core_md.strip()))
     if bundle.living_sphere_md.strip():
@@ -435,7 +446,10 @@ def build_system_messages(
                     + bundle.memory_raw_diary_today_md.strip()
                 )
             )
-        if not skip_memory_blocks and bundle.memory_day_summary_today_md.strip():
+        if (
+            not skip_memory_blocks
+            and bundle.memory_day_summary_today_md.strip()
+        ):
             out.append(
                 _system_message(
                     MEMORY_SYSTEM_HEADING_GIST
@@ -478,12 +492,16 @@ def build_system_messages(
                 )
         else:
             out.append(
-                _system_message(_output_contract_text_chat_branch_mirrored_tools())
+                _system_message(
+                    _output_contract_text_chat_branch_mirrored_tools()
+                )
             )
     else:
         out.append(_system_message(_output_contract_text()))
 
     if include_significance_perception_slice and chat_branch_no_tool_api:
-        out.append(_system_message(_dual_llm_chat_structured_output_contract_text()))
+        out.append(
+            _system_message(_dual_llm_chat_structured_output_contract_text())
+        )
 
     return out

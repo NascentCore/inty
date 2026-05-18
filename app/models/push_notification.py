@@ -19,7 +19,9 @@ class PushNotificationHistory(Base):
         comment="聊天ID（可选，无聊天推送时为空）",
     )
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    agent_id = Column(String, ForeignKey("agents.id"), nullable=False, index=True)
+    agent_id = Column(
+        String, ForeignKey("agents.id"), nullable=False, index=True
+    )
     push_type = Column(
         String,
         nullable=False,
@@ -31,13 +33,17 @@ class PushNotificationHistory(Base):
         comment="推送阶段: 10min, 30min, 2h, 24h, 48h",
     )
     message_content = Column(Text, nullable=True, comment="生成的Agent消息内容")
-    sent_at = Column(DateTime(timezone=True), nullable=False, comment="发送时间")
+    sent_at = Column(
+        DateTime(timezone=True), nullable=False, comment="发送时间"
+    )
     read_at = Column(
         DateTime(timezone=True),
         nullable=True,
         comment="已读时间（用户发送新消息时标记为已读）",
     )
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
 
     # 关系
     chat = relationship("Chat")

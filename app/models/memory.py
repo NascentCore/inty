@@ -61,7 +61,9 @@ class FestivalMemoryMetadata(BaseModel):
     festival_date: Optional[str] = Field(
         None, description="节日日期（DB 存为 festival_date）"
     )
-    llm_config: Optional[LLMConfig] = Field(None, description="抽取时使用的 LLM 配置")
+    llm_config: Optional[LLMConfig] = Field(
+        None, description="抽取时使用的 LLM 配置"
+    )
 
     @field_validator("festival_name", "festival_date", mode="before")
     @classmethod
@@ -79,11 +81,19 @@ class DailyBondingMemoryMetadata(BaseModel):
     日常记忆扩展字段（Memory.meta_data）的 Pydantic 类型。
     """
 
-    local_date: Optional[str] = Field(None, description="本地日期（YYYY-MM-DD）")
+    local_date: Optional[str] = Field(
+        None, description="本地日期（YYYY-MM-DD）"
+    )
     timezone: Optional[str] = Field(None, description="IANA 时区")
-    emotional_salience: Optional[float] = Field(None, description="情绪显著性分数，0~1")
-    source_message_count: Optional[int] = Field(None, description="来源消息数量")
-    risk_tier: Optional[str] = Field(None, description="风险等级：low|medium|high")
+    emotional_salience: Optional[float] = Field(
+        None, description="情绪显著性分数，0~1"
+    )
+    source_message_count: Optional[int] = Field(
+        None, description="来源消息数量"
+    )
+    risk_tier: Optional[str] = Field(
+        None, description="风险等级：low|medium|high"
+    )
 
     @field_validator("local_date", "timezone", "risk_tier", mode="before")
     @classmethod
@@ -104,7 +114,10 @@ class Memory(Base):
         comment="user_common | user_agent | festival | daily_bonding",
     )
     agent_id = Column(
-        String, ForeignKey("agents.id"), nullable=True, comment="user_common 为 NULL"
+        String,
+        ForeignKey("agents.id"),
+        nullable=True,
+        comment="user_common 为 NULL",
     )
     content = Column(
         Text, nullable=False, comment="单条记忆内容，当前 Part1 整段存为一条"
@@ -139,7 +152,9 @@ class Memory(Base):
 
     __table_args__ = (
         Index("ix_memory_user_type", "user_id", "memory_type"),
-        Index("ix_memory_user_type_agent", "user_id", "memory_type", "agent_id"),
+        Index(
+            "ix_memory_user_type_agent", "user_id", "memory_type", "agent_id"
+        ),
     )
 
 
@@ -154,10 +169,14 @@ class MemoryExtractionLog(Base):
     extracted_at = Column(DateTime(timezone=True), nullable=False)
     messages_processed_count = Column(Integer, nullable=False)
     memory_items_count = Column(Integer, nullable=False)
-    status = Column(String, nullable=False, comment="success | partial | failed")
+    status = Column(
+        String, nullable=False, comment="success | partial | failed"
+    )
     duration_seconds = Column(Float, nullable=True, comment="当次抽取总耗时秒")
     prompt_tokens = Column(Integer, nullable=True, comment="LLM 输入 token 数")
-    completion_tokens = Column(Integer, nullable=True, comment="LLM 输出 token 数")
+    completion_tokens = Column(
+        Integer, nullable=True, comment="LLM 输出 token 数"
+    )
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -174,7 +193,9 @@ class FestivalMemoryConfig(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     festival_name = Column(String, nullable=False, comment="节日名称")
-    festival_date = Column(Date, nullable=False, comment="节日日期（该时区下的自然日）")
+    festival_date = Column(
+        Date, nullable=False, comment="节日日期（该时区下的自然日）"
+    )
     prompt = Column(Text, nullable=False, comment="抽取提示词")
     enabled = Column(Boolean, nullable=False, default=True, comment="是否启用")
     timezone = Column(

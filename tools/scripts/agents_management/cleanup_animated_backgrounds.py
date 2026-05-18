@@ -155,7 +155,9 @@ async def cleanup_animated_backgrounds(
 
     # 提交事务
     await session.commit()
-    logger.info(f"清理完成：成功 {stats['cleaned']} 个，错误 {stats['errors']} 个")
+    logger.info(
+        f"清理完成：成功 {stats['cleaned']} 个，错误 {stats['errors']} 个"
+    )
 
     return stats
 
@@ -166,7 +168,9 @@ async def main():
     print("清理脚本：清理存储动图而不是视频的agent")
     print("=" * 60)
     print("\n此脚本会：")
-    print("  • 查找所有 background_animated 字段包含动图URL（.gif 或 .avif）的agent")
+    print(
+        "  • 查找所有 background_animated 字段包含动图URL（.gif 或 .avif）的agent"
+    )
     print("  • 将这些字段清空（设置为 NULL）")
     print("\n识别规则：")
     print("  • URL 以 .gif 或 .avif 结尾")
@@ -177,7 +181,9 @@ async def main():
     # 先执行 dry run
     async with AsyncSessionLocal() as session:
         logger.info("\n执行 DRY RUN（预览模式）...")
-        dry_run_stats = await cleanup_animated_backgrounds(session, dry_run=True)
+        dry_run_stats = await cleanup_animated_backgrounds(
+            session, dry_run=True
+        )
 
         if dry_run_stats["total_found"] == 0:
             print("\n✅ 未找到需要清理的agent，脚本结束")
@@ -190,7 +196,9 @@ async def main():
 
     # 确认操作
     print("\n" + "=" * 60)
-    confirmation = input("请输入 'CLEANUP' 来确认清理操作（其他任何输入都会取消）: ")
+    confirmation = input(
+        "请输入 'CLEANUP' 来确认清理操作（其他任何输入都会取消）: "
+    )
 
     if confirmation != "CLEANUP":
         logger.info("操作已取消")

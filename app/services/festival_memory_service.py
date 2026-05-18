@@ -43,16 +43,22 @@ DEFAULT_MIN_ROUNDS_IN_WINDOW = 15
 INTELLIMATE_OFFICIAL_AGENT_ID = INTELLIMATE_AGENT_ID
 
 
-def _should_skip_agent_for_festival_memory_extraction(agent_id: Optional[str]) -> bool:
+def _should_skip_agent_for_festival_memory_extraction(
+    agent_id: Optional[str],
+) -> bool:
     """节日记忆提取中跳过官方助手角色。"""
     return bool(agent_id) and agent_id == INTELLIMATE_OFFICIAL_AGENT_ID
 
 
 def _get_sync_replica_db_url() -> Optional[str]:
-    async_replica_url = global_config_loaded_from_config_yaml.database.async_replica_url
+    async_replica_url = (
+        global_config_loaded_from_config_yaml.database.async_replica_url
+    )
     if not async_replica_url:
         return None
-    return async_replica_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    return async_replica_url.replace(
+        "postgresql+asyncpg://", "postgresql://", 1
+    )
 
 
 def resolve_sync_read_db_url(prefer_replica_read: bool = False) -> str:
@@ -94,14 +100,18 @@ def get_pairs_with_min_rounds_in_window_sync(
     （换算为 UTC）内，该会话用户消息数（排除开场白）>= min_rounds 的组合。
     db_url：用于 psycopg 连接的数据库 URL（主库或只读副本）。
     """
-    window_start, window_end = _window_for_festival_date(festival_date, timezone_str)
+    window_start, window_end = _window_for_festival_date(
+        festival_date, timezone_str
+    )
     logger.debug(f"connecting to database: {db_url}")
     primary_db_url = global_config_loaded_from_config_yaml.database.url
     try:
         conn = psycopg.connect(db_url, autocommit=True)
     except psycopg.Error as e:
         if db_url != primary_db_url:
-            logger.warning(f"[节日记忆抽取] 副本连接失败，回退主库继续筛选 pairs: {e}")
+            logger.warning(
+                f"[节日记忆抽取] 副本连接失败，回退主库继续筛选 pairs: {e}"
+            )
             conn = psycopg.connect(primary_db_url, autocommit=True)
         else:
             raise
@@ -203,7 +213,9 @@ def get_messages_for_user_agent_sync(
                 data = (
                     json.loads(raw)
                     if isinstance(raw, str)
-                    else (raw if isinstance(raw, dict) else json.loads(str(raw)))
+                    else (
+                        raw if isinstance(raw, dict) else json.loads(str(raw))
+                    )
                 )
             except Exception:
                 continue
@@ -217,7 +229,9 @@ def get_messages_for_user_agent_sync(
                 content = data["data"].get("content") or ""
             elif "content" in data:
                 content = data["content"] or ""
-            role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
+            role = (
+                "user" if msg_type in ("human", "HumanMessage") else "assistant"
+            )
             out.append((role, str(content)))
     return out
 
@@ -273,7 +287,9 @@ Festival date: {date_str}
 """
     if llm_config and (llm_config.model or "").strip():
         return (full_prompt, llm_config)
-    cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
+    cfg = getattr(
+        global_config_loaded_from_config_yaml, "memory_extraction", None
+    )
     model_name = (
         cfg.model.strip() if cfg and cfg.model else None
     ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
@@ -311,7 +327,9 @@ async def summarize_memory_from_messages_between_user_and_agent(
             prefer_replica_read,
         )
     if not messages:
-        logger.debug(f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息")
+        logger.debug(
+            f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息"
+        )
         return None
     logger.debug(
         f"节日记忆抽取：user_id={user_id} agent_id={agent_id} 消息数={len(messages)}"
@@ -425,7 +443,9 @@ async def _get_user_agent_names(
     user_name, agent_name = None, None
     try:
         r = await db.execute(
-            select(User.nickname).where(User.id == user_id, User.deleted_at.is_(None))
+            select(User.nickname).where(
+                User.id == user_id, User.deleted_at.is_(None)
+            )
         )
         row = r.scalar_one_or_none()
         if row is not None:
@@ -434,7 +454,9 @@ async def _get_user_agent_names(
         logger.debug(f"resolve user name for {user_id}: {e}")
     try:
         r = await db.execute(
-            select(Agent.name).where(Agent.id == agent_id, Agent.deleted_at.is_(None))
+            select(Agent.name).where(
+                Agent.id == agent_id, Agent.deleted_at.is_(None)
+            )
         )
         row = r.scalar_one_or_none()
         if row is not None:
@@ -496,8 +518,8 @@ async def extract_festival_to_dict(
     )
     if memory_row is None:
         return None
-    festival_name_resolved, festival_date_resolved = resolve_festival_name_and_date(
-        memory_row.meta_data
+    festival_name_resolved, festival_date_resolved = (
+        resolve_festival_name_and_date(memory_row.meta_data)
     )
     if festival_name_resolved is None or festival_date_resolved is None:
         return None
@@ -514,7 +536,9 @@ async def extract_festival_to_dict(
         "metadata": meta_dict,
     }
     if db is not None:
-        user_name, agent_name = await _get_user_agent_names(db, user_id, agent_id)
+        user_name, agent_name = await _get_user_agent_names(
+            db, user_id, agent_id
+        )
         out["user_name"] = user_name or user_id
         out["agent_name"] = agent_name or agent_id
     return out
@@ -533,7 +557,9 @@ async def query_festival_memories_from_db(
     rows = r.scalars().all()
     out: List[dict] = []
     for row in rows:
-        resolved_name, resolved_date = resolve_festival_name_and_date(row.meta_data)
+        resolved_name, resolved_date = resolve_festival_name_and_date(
+            row.meta_data
+        )
         if resolved_name != festival_name or resolved_date != festival_date:
             continue
         meta_dict_row = _memory_row_meta_to_output_metadata(

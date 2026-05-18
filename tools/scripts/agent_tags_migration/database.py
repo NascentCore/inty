@@ -33,7 +33,8 @@ class DatabaseManager:
                 database=self.config.db,
                 min_size=1,
                 max_size=self.config.pool_size or 10,
-                max_inactive_connection_lifetime=self.config.pool_recycle or 3600,
+                max_inactive_connection_lifetime=self.config.pool_recycle
+                or 3600,
                 command_timeout=self.config.command_timeout or 30,
             )
         except Exception as e:
@@ -191,7 +192,9 @@ class DatabaseManager:
 
         return success_count, failure_count
 
-    async def backup_agents_data(self, agent_ids: List[str]) -> List[Dict[str, Any]]:
+    async def backup_agents_data(
+        self, agent_ids: List[str]
+    ) -> List[Dict[str, Any]]:
         """
         备份智能体数据
 
@@ -244,9 +247,11 @@ class DatabaseManager:
             )
 
             # 最近创建的智能体数量（过去30天）
-            stats["recent_agents"] = await conn.fetchval("""SELECT COUNT(*) FROM agents 
+            stats["recent_agents"] = await conn.fetchval(
+                """SELECT COUNT(*) FROM agents 
                    WHERE created_at > NOW() - INTERVAL '30 days' 
-                   AND deleted_at IS NULL""")
+                   AND deleted_at IS NULL"""
+            )
 
         return stats
 

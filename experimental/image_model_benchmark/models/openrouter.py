@@ -144,7 +144,9 @@ class OpenRouterModel(ImageModel):
 
             if response.status_code != 200:
                 error_text = response.text[:500]
-                raise ValueError(f"API 错误 ({response.status_code}): {error_text}")
+                raise ValueError(
+                    f"API 错误 ({response.status_code}): {error_text}"
+                )
 
             result = response.json()
 
@@ -164,7 +166,9 @@ class OpenRouterModel(ImageModel):
                     if isinstance(img, dict):
                         img_url = img.get("image_url", {}).get("url", "")
                         if img_url.startswith("data:image"):
-                            match = re.search(r"base64,([A-Za-z0-9+/=]+)", img_url)
+                            match = re.search(
+                                r"base64,([A-Za-z0-9+/=]+)", img_url
+                            )
                             if match:
                                 image_data = base64.b64decode(match.group(1))
                                 break

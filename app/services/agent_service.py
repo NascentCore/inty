@@ -101,7 +101,9 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: Agent) -> None:
         )
 
 
-async def generate_agent_opening_voice(agent: Agent, db: AsyncSession) -> Optional[str]:
+async def generate_agent_opening_voice(
+    agent: Agent, db: AsyncSession
+) -> Optional[str]:
     """
     为Agent生成开场白语音并返回音频URL
     """
@@ -262,7 +264,9 @@ async def get_agent(
         query = (
             select(
                 Agent,
-                func.count(func.distinct(Chat.user_id)).label("connector_count"),
+                func.count(func.distinct(Chat.user_id)).label(
+                    "connector_count"
+                ),
             )
             .outerjoin(
                 Chat,
@@ -296,7 +300,9 @@ async def get_agent(
         # Get creator's statistics
         if agent.creator_id and agent.creator:
             creator_stats = await get_creator_agent_stats(db, agent.creator_id)
-            agent.creator.public_agents_count = creator_stats.public_agents_count
+            agent.creator.public_agents_count = (
+                creator_stats.public_agents_count
+            )
             agent.creator.total_public_agents_follows = (
                 creator_stats.total_public_agents_follows
             )
@@ -394,7 +400,9 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
         }
 
         # 4. 缓存完整的Agent数据；TTL 由配置项控制（默认 10 分钟），以兼容 ops 与后端分离部署、ops 直写 DB 的场景
-        ttl = global_config_loaded_from_config_yaml.agent.agent_config_cache_ttl_seconds
+        ttl = (
+            global_config_loaded_from_config_yaml.agent.agent_config_cache_ttl_seconds
+        )
         cache_service.set_agent_config(agent_id, agent_data, ttl=ttl)
 
         logger.debug(f"获取并缓存Agent聊天数据: {agent_data['name']}")
@@ -447,7 +455,9 @@ async def get_user_agents(
 
         for agent in agents:
             # 设置用户名字，用于模板变量替换
-            agent.user = current_user.nickname if current_user.nickname else "you"
+            agent.user = (
+                current_user.nickname if current_user.nickname else "you"
+            )
 
         # 批量填充图片尺寸信息
         for agent in agents:
@@ -512,7 +522,9 @@ async def get_all_agents_for_admin(
     except HTTPException:
         raise
     except SQLAlchemyError as e:
-        logger.error(f"Database query error - get all agents for admin: {str(e)}")
+        logger.error(
+            f"Database query error - get all agents for admin: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
         logger.error(f"Unknown error - get all agents for admin: {str(e)}")
@@ -573,7 +585,9 @@ async def get_recommended_agents(
     except HTTPException:
         raise
     except SQLAlchemyError as e:
-        logger.error(f"Database query error - get recommended agents list: {str(e)}")
+        logger.error(
+            f"Database query error - get recommended agents list: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
         logger.error(f"Unknown error - get recommended agents list: {str(e)}")
@@ -603,7 +617,9 @@ def _select_agents_with_sizes() -> select:
         select(
             Agent,
             avatar_resource.c.resource_metadata.label("avatar_metadata"),
-            background_resource.c.resource_metadata.label("background_metadata"),
+            background_resource.c.resource_metadata.label(
+                "background_metadata"
+            ),
         )
         # eager loading optimization that tells SQLAlchemy to load the related creator data in a separate, efficient query.
         # 1. Prevents N+1 queries: Without this, if you access agent.creator for each agent,
@@ -656,7 +672,9 @@ def _image_url_resource_lookup_keys(url: str) -> List[str]:
     return keys
 
 
-def _register_prompt_keys(out: dict[str, str], keys: List[str], prompt: str) -> None:
+def _register_prompt_keys(
+    out: dict[str, str], keys: List[str], prompt: str
+) -> None:
     p = prompt.strip()
     if not p:
         return
@@ -725,7 +743,9 @@ async def _resource_url_to_generation_prompt(
             gp = meta.get("generation_prompt")
             if not isinstance(gp, str) or not gp.strip():
                 continue
-            _register_prompt_keys(out, _prompt_keys_from_resource_row(url, meta), gp)
+            _register_prompt_keys(
+                out, _prompt_keys_from_resource_row(url, meta), gp
+            )
 
     for i in range(0, len(gcs_for_metadata_match), chunk_size):
         chunk = gcs_for_metadata_match[i : i + chunk_size]
@@ -740,12 +760,16 @@ async def _resource_url_to_generation_prompt(
             gp = meta.get("generation_prompt")
             if not isinstance(gp, str) or not gp.strip():
                 continue
-            _register_prompt_keys(out, _prompt_keys_from_resource_row(url, meta), gp)
+            _register_prompt_keys(
+                out, _prompt_keys_from_resource_row(url, meta), gp
+            )
 
     return out
 
 
-def _generation_prompt_for_url(url: str, prompt_by_resource_url: dict[str, str]) -> str:
+def _generation_prompt_for_url(
+    url: str, prompt_by_resource_url: dict[str, str]
+) -> str:
     for k in _image_url_resource_lookup_keys(url):
         p = prompt_by_resource_url.get(k)
         if p:
@@ -809,7 +833,11 @@ async def _paginate_agents_by_text_image_match(
                 if not u:
                     continue
                 cap = item.get("caption")
-                explicit = cap.strip() if isinstance(cap, str) and cap.strip() else None
+                explicit = (
+                    cap.strip()
+                    if isinstance(cap, str) and cap.strip()
+                    else None
+                )
                 resource_urls.append(u)
                 canon = _canonical_agent_image_url(u)
                 if not canon:
@@ -877,7 +905,12 @@ async def _paginate_agents_by_text_image_match(
             agent_ids_ordered.append(agent_id)
 
     if not agent_ids_ordered:
-        return [], matched_items, total, math.ceil(total / page_size) if total else 1
+        return (
+            [],
+            matched_items,
+            total,
+            math.ceil(total / page_size) if total else 1,
+        )
 
     data_result = await db.execute(
         _select_agents_with_sizes().where(Agent.id.in_(agent_ids_ordered))
@@ -909,7 +942,10 @@ async def get_balanced_score_based_agents(
     offset = (page - 1) * page_size
 
     base_score = (
-        func.coalesce(Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0) * 2
+        func.coalesce(
+            Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0
+        )
+        * 2
         + func.abs(func.hashtext(func.concat(Agent.id, sort_seed))) % 100
     )
     order_by_clauses = []
@@ -941,7 +977,9 @@ async def get_balanced_score_based_agents(
     query_results = result.all()
 
     # 处理查询结果，提取agent和metadata信息
-    return [_fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results]
+    return [
+        _fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results
+    ]
 
 
 async def get_recommended_agents_paginated(
@@ -968,7 +1006,8 @@ async def get_recommended_agents_paginated(
             )
         if page_size <= 0 or page_size > 100:
             raise HTTPException(
-                status_code=400, detail="Page size parameter must be between 1-100"
+                status_code=400,
+                detail="Page size parameter must be between 1-100",
             )
 
         if sort_by == AgentSortOption.TEXT_MATCH_IMAGE_DESCRIPTION:
@@ -994,7 +1033,9 @@ async def get_recommended_agents_paginated(
             for agent in agents_list:
                 agent.follower_count = 0
                 agent.is_followed = False
-                agent.user = current_user.nickname if current_user.nickname else "you"
+                agent.user = (
+                    current_user.nickname if current_user.nickname else "you"
+                )
             return PaginationData[AgentSchema](
                 list=agents_list,
                 total=total,
@@ -1048,7 +1089,9 @@ async def get_recommended_agents_paginated(
                 )
             ):
                 opposite_gender = (
-                    Gender.FEMALE if current_user.gender == Gender.MALE else Gender.MALE
+                    Gender.FEMALE
+                    if current_user.gender == Gender.MALE
+                    else Gender.MALE
                 )
 
             if opposite_gender is not None:
@@ -1077,13 +1120,17 @@ async def get_recommended_agents_paginated(
                 if sort_by == AgentSortOption.CREATED_ASC:
                     order_by_clauses = [Agent.created_at.asc()]
                 elif sort_by == AgentSortOption.RANDOM:
-                    order_by_clauses = [get_deterministic_random_order(sort_seed)]
+                    order_by_clauses = [
+                        get_deterministic_random_order(sort_seed)
+                    ]
                 elif sort_by == AgentSortOption.ENERGY_POINTS:
                     order_by_clauses = [
                         desc(func.coalesce(Agent.points, 0)),
                         desc(Agent.created_at),
                     ]
-                elif sort_by == AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER:
+                elif (
+                    sort_by == AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER
+                ):
                     order_by_clauses = [desc(Agent.created_at)]
                 else:  # 默认为 CREATED_DESC
                     order_by_clauses = [desc(Agent.created_at)]
@@ -1112,7 +1159,9 @@ async def get_recommended_agents_paginated(
             agent.follower_count = 0
             agent.is_followed = False  # 默认值
             # 设置用户名字，用于模板变量替换
-            agent.user = current_user.nickname if current_user.nickname else "you"
+            agent.user = (
+                current_user.nickname if current_user.nickname else "you"
+            )
             agents.append(agent)
 
         # 计算总页数
@@ -1136,7 +1185,9 @@ async def get_recommended_agents_paginated(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def create_agent(db: AsyncSession, agent_in: AgentCreate, user_id: str) -> Agent:
+async def create_agent(
+    db: AsyncSession, agent_in: AgentCreate, user_id: str
+) -> Agent:
     """
     创建新的AI角色
     如果 agent_in 没有 avatar，则自动为用户扣一个 avatar，crop_avatar()
@@ -1144,7 +1195,9 @@ async def create_agent(db: AsyncSession, agent_in: AgentCreate, user_id: str) ->
     try:
         # 验证必填字段
         if not agent_in.name or not agent_in.name.strip():
-            raise HTTPException(status_code=400, detail="Agent name cannot be empty")
+            raise HTTPException(
+                status_code=400, detail="Agent name cannot be empty"
+            )
 
         # 处理prompt到personality的转换（向后兼容）
         if (
@@ -1197,7 +1250,9 @@ async def create_agent(db: AsyncSession, agent_in: AgentCreate, user_id: str) ->
                 f"Agent avatar为空，尝试从background裁剪avatar - Agent ID: {agent_id}"
             )
             background_url = processed_agent_data["background"]
-            crop_avatar_result = await _crop_avatar_from_background(background_url)
+            crop_avatar_result = await _crop_avatar_from_background(
+                background_url
+            )
             cropped_avatar_url = crop_avatar_result.avatar_url
             processed_agent_data["avatar"] = cropped_avatar_url
             logger.debug(
@@ -1285,19 +1340,25 @@ async def _crop_avatar_from_background(
     background_data = download_from_gcs(background_url)
     if not background_data:
         logger.warning(f"无法下载background图片: {background_url}")
-        raise RuntimeError(f"Failed to download background image: {background_url}")
+        raise RuntimeError(
+            f"Failed to download background image: {background_url}"
+        )
 
     crop_avatar_result = crop_avatar(background_data)
     cropped_avatar = crop_avatar_result.image
     avatar_data = get_jpg_bytes_from_pil_image(cropped_avatar)
     avatar_byte_size = len(avatar_data)
 
-    bucket, background_gcs_path = get_bucket_and_path_from_gcs_url(background_url)
+    bucket, background_gcs_path = get_bucket_and_path_from_gcs_url(
+        background_url
+    )
     avatar_gcs_path = append_filename_suffix(
         background_gcs_path, CROPPED_AVATAR_FILENAME_SUFFIX
     )
 
-    avatar_url = upload_to_gcs(avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path)
+    avatar_url = upload_to_gcs(
+        avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path
+    )
     return CropAvatarFromGCSUrlResult(
         avatar_url, crop_avatar_result.size, ImageFormat.JPEG, avatar_byte_size
     )
@@ -1335,7 +1396,9 @@ def _update_agent_in_db(update_data: dict, db_agent: Agent):
     if "name" in update_data and (
         not update_data["name"] or not update_data["name"].strip()
     ):
-        raise HTTPException(status_code=400, detail="Agent name cannot be empty")
+        raise HTTPException(
+            status_code=400, detail="Agent name cannot be empty"
+        )
 
     # 处理prompt到personality的转换（向后兼容）
     if (
@@ -1345,7 +1408,8 @@ def _update_agent_in_db(update_data: dict, db_agent: Agent):
     ):
         # 如果没有提供personality或personality为空，则使用prompt的值
         if "personality" not in update_data or not (
-            update_data.get("personality") and update_data["personality"].strip()
+            update_data.get("personality")
+            and update_data["personality"].strip()
         ):
             logger.debug(f"将prompt转换为personality以保持向后兼容")
             update_data["personality"] = update_data["prompt"]
@@ -1422,9 +1486,12 @@ async def update_agent(
         energy_points_delta = update_data.pop("energy_points", None)
         if energy_points_delta is not None and energy_points_delta <= 0:
             raise HTTPException(
-                status_code=400, detail="energy_points must be a positive integer"
+                status_code=400,
+                detail="energy_points must be a positive integer",
             )
-        should_regenerate_voice = "opening" in update_data or "voice_id" in update_data
+        should_regenerate_voice = (
+            "opening" in update_data or "voice_id" in update_data
+        )
 
         update_data = process_agent_image_urls(update_data)
         # 与写入 DB 的 update_data 对齐：不含 energy_points；图片 URL 已规范化/校验
@@ -1514,7 +1581,9 @@ async def update_agent(
             # 这里我们无法直接清除特定 agent 的会话缓存，但会话缓存 TTL 较短（5分钟），影响有限
 
         except Exception as e:
-            logger.error(f"清除Agent缓存时发生错误 {updated_agent.id}: {str(e)}")
+            logger.error(
+                f"清除Agent缓存时发生错误 {updated_agent.id}: {str(e)}"
+            )
             # 注意：这里不抛出异常，因为数据库更新已经成功了
 
         # 重新加载Agent实例到AgentManager缓存中，AgentManager 仅用于提供聊天所需的提示词，
@@ -1547,7 +1616,9 @@ async def update_agent(
                 logger.warning(f"Agent {updated_agent.id} 缓存重载失败")
 
         except Exception as e:
-            logger.error(f"重载Agent缓存时发生错误 {updated_agent.id}: {str(e)}")
+            logger.error(
+                f"重载Agent缓存时发生错误 {updated_agent.id}: {str(e)}"
+            )
             # 注意：这里不抛出异常，因为数据库更新已经成功了
 
         return updated_agent
@@ -1587,7 +1658,9 @@ async def delete_agent(db: AsyncSession, db_agent: Agent) -> Agent:
 
         # 检查是否已经被删除
         if db_agent.deleted_at:
-            raise HTTPException(status_code=400, detail="Agent has been deleted")
+            raise HTTPException(
+                status_code=400, detail="Agent has been deleted"
+            )
 
         agent_id = db_agent.id
         logger.info(f"开始逻辑删除agent {agent_id}")
@@ -1690,7 +1763,9 @@ def process_agent_image_urls(agent_data: dict) -> dict:
 
     # 构建最终的background_images列表，顺序：avatar -> background -> background_images
     final_images = []
-    for url in images_urls:  # images_urls已经包含了avatar和background（按添加顺序）
+    for (
+        url
+    ) in images_urls:  # images_urls已经包含了avatar和background（按添加顺序）
         final_images.append(url)
     for url in valid_bg_images:  # 添加原始的background_images
         if url not in final_images:  # 避免重复
@@ -1713,7 +1788,9 @@ async def append_agent_background_image(
         )
         return False
 
-    normalized_url = image_transform_service.normalize_image_url_for_storage(image_url)
+    normalized_url = image_transform_service.normalize_image_url_for_storage(
+        image_url
+    )
     if not is_valid_gcs_url(normalized_url):
         logger.warning(f"无效的背景图URL，无法追加: {normalized_url}")
         return False
@@ -1798,7 +1875,9 @@ async def search_agents(
     try:
         # 验证参数
         if page <= 0:
-            raise HTTPException(status_code=400, detail="page must be greater than 0")
+            raise HTTPException(
+                status_code=400, detail="page must be greater than 0"
+            )
         if page_size <= 0 or page_size > 100:
             raise HTTPException(
                 status_code=400, detail="page_size must be between 1 and 100"
@@ -1860,7 +1939,9 @@ async def search_agents(
             agent.follower_count = 0
             agent.is_followed = False  # 默认值
             # 设置用户名字，用于模板变量替换
-            agent.user = current_user.nickname if current_user.nickname else "you"
+            agent.user = (
+                current_user.nickname if current_user.nickname else "you"
+            )
             agents.append(agent)
 
         # 计算总页数

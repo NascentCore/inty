@@ -21,9 +21,16 @@ def _minimal_png_bytes(width: int = 32, height: int = 24) -> bytes:
     # 仅用于单元测试，构造一个最小可识别 PNG 头。
     signature = b"\x89PNG\r\n\x1a\n"
     ihdr_data = (
-        width.to_bytes(4, "big") + height.to_bytes(4, "big") + b"\x08\x02\x00\x00\x00"
+        width.to_bytes(4, "big")
+        + height.to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
     )
-    ihdr = len(ihdr_data).to_bytes(4, "big") + b"IHDR" + ihdr_data + b"\x00\x00\x00\x00"
+    ihdr = (
+        len(ihdr_data).to_bytes(4, "big")
+        + b"IHDR"
+        + ihdr_data
+        + b"\x00\x00\x00\x00"
+    )
     iend = b"\x00\x00\x00\x00IEND\xaeB`\x82"
     return signature + ihdr + iend
 
@@ -151,7 +158,9 @@ def test_generate_image_raises_on_429_without_model_fallback(tmp_path: Path):
             client=fake_client,
             input_data=GenerateImageToolInput(
                 scene_description="romantic role-play scene",
-                messages=[{"role": "user", "content": "Show us in a warm embrace."}],
+                messages=[
+                    {"role": "user", "content": "Show us in a warm embrace."}
+                ],
                 runtime_paths=runtime_paths,
                 model="gemini-3-pro-image-preview",
             ),
@@ -179,7 +188,9 @@ def test_generate_image_raises_when_generation_fails_without_similarity_fallback
             client=fake_client,
             input_data=GenerateImageToolInput(
                 scene_description="Create a romantic embrace in a candle-lit room.",
-                messages=[{"role": "user", "content": "Please make it romantic."}],
+                messages=[
+                    {"role": "user", "content": "Please make it romantic."}
+                ],
                 runtime_paths=runtime_paths,
             ),
         )
@@ -201,9 +212,13 @@ def test_execute_generate_image_returns_tool_message_and_path(tmp_path: Path):
         encoding="utf-8",
     )
 
-    fake_client = _FakeClient(outcomes=[_FakeResponse(_minimal_png_bytes(50, 40))])
+    fake_client = _FakeClient(
+        outcomes=[_FakeResponse(_minimal_png_bytes(50, 40))]
+    )
     message, image_path = execute_generate_image(
-        messages=[{"role": "user", "content": "Generate a romantic image for us."}],
+        messages=[
+            {"role": "user", "content": "Generate a romantic image for us."}
+        ],
         client=fake_client,
         input="romantic role-play in a warm room",
         ai_reference_image=str((companion_dir / "avatar.png").resolve()),

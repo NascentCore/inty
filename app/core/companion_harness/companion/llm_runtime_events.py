@@ -22,7 +22,9 @@ from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.runtime_events import append_runtime_event
+from app.core.companion_harness.companion.runtime_events import (
+    append_runtime_event,
+)
 from app.core.companion_harness.companion.utc import utc_iso_ts
 
 LLM_INFERENCE_FAILURE_KIND = "llm_inference_failure"
@@ -50,7 +52,9 @@ def _is_openrouter_invalid_json_error(exc: BaseException) -> bool:
     )
 
 
-def exc_chain_includes_llm_inference_failure_root_causes(exc: BaseException) -> bool:
+def exc_chain_includes_llm_inference_failure_root_causes(
+    exc: BaseException,
+) -> bool:
     """True if ``exc`` or ``__cause__`` / ``__context__`` chain carries kernel inference errors."""
     seen: set[int] = set()
     stack: list[BaseException] = [exc]

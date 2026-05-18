@@ -202,7 +202,9 @@ class AgentMigrator:
                 params.append(visibility_filter)
 
             where_clause = (
-                " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+                " WHERE " + " AND ".join(where_conditions)
+                if where_conditions
+                else ""
             )
 
             # 基础查询
@@ -239,7 +241,9 @@ class AgentMigrator:
                         k: v for k, v in creator_info.items() if v is not None
                     }
 
-                agent_dict["creator_info"] = creator_info if creator_info else None
+                agent_dict["creator_info"] = (
+                    creator_info if creator_info else None
+                )
 
                 # 处理JSON字段
                 self._parse_json_fields(agent_dict)
@@ -265,9 +269,13 @@ class AgentMigrator:
             }
 
             with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(export_data, f, ensure_ascii=False, indent=2, default=str)
+                json.dump(
+                    export_data, f, ensure_ascii=False, indent=2, default=str
+                )
 
-            logger.info(f"成功导出 {len(agents_data)} 个AI角色到文件: {output_file}")
+            logger.info(
+                f"成功导出 {len(agents_data)} 个AI角色到文件: {output_file}"
+            )
             return output_file
 
         finally:
@@ -304,9 +312,13 @@ class AgentMigrator:
 
             for agent_data in agents_data:
                 try:
-                    await self._import_single_agent(conn, agent_data, import_config)
+                    await self._import_single_agent(
+                        conn, agent_data, import_config
+                    )
                     imported_count += 1
-                    logger.debug(f"成功导入角色: {agent_data.get('name', 'unknown')}")
+                    logger.debug(
+                        f"成功导入角色: {agent_data.get('name', 'unknown')}"
+                    )
                 except Exception as e:
                     error_count += 1
                     logger.error(
@@ -346,7 +358,9 @@ class AgentMigrator:
 
         if existing:
             if import_config.get("update_existing", False):
-                await self._update_agent(conn, agent_data, import_config, new_id)
+                await self._update_agent(
+                    conn, agent_data, import_config, new_id
+                )
             else:
                 logger.info(f"跳过已存在的角色: {agent_data['name']}")
                 return
@@ -401,7 +415,10 @@ class AgentMigrator:
         return None
 
     async def _create_user(
-        self, conn: asyncpg.Connection, user_id: str, creator_info: Dict[str, Any]
+        self,
+        conn: asyncpg.Connection,
+        user_id: str,
+        creator_info: Dict[str, Any],
     ):
         """创建用户"""
         email = creator_info.get("email")
@@ -533,7 +550,9 @@ class AgentMigrator:
                 "tags",
                 "extensions",
             ]:
-                value = json.dumps(value) if not isinstance(value, str) else value
+                value = (
+                    json.dumps(value) if not isinstance(value, str) else value
+                )
 
             values.append(value)
 
@@ -560,10 +579,17 @@ async def main():
     parser = argparse.ArgumentParser(description="AI角色迁移工具")
     parser.add_argument("action", choices=["export", "import"], help="操作类型")
     parser.add_argument(
-        "--config", "-c", default="agent_migration_config.yaml", help="配置文件路径"
+        "--config",
+        "-c",
+        default="agent_migration_config.yaml",
+        help="配置文件路径",
     )
-    parser.add_argument("--from", dest="from_env", help="源环境名称 (export时使用)")
-    parser.add_argument("--to", dest="to_env", help="目标环境名称 (import时使用)")
+    parser.add_argument(
+        "--from", dest="from_env", help="源环境名称 (export时使用)"
+    )
+    parser.add_argument(
+        "--to", dest="to_env", help="目标环境名称 (import时使用)"
+    )
     parser.add_argument("--file", "-f", help="导入/导出文件路径")
 
     args = parser.parse_args()

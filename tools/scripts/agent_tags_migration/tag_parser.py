@@ -103,7 +103,9 @@ class TagParser:
 
         return None, None
 
-    def _parse_character_info_json(self, json_str: str) -> Optional[CharacterInfo]:
+    def _parse_character_info_json(
+        self, json_str: str
+    ) -> Optional[CharacterInfo]:
         """
         解析Character info的JSON字符串
 
@@ -152,7 +154,9 @@ class TagParser:
             return None
         return None
 
-    def _parse_with_safe_literal_ast(self, json_str: str) -> Optional[CharacterInfo]:
+    def _parse_with_safe_literal_ast(
+        self, json_str: str
+    ) -> Optional[CharacterInfo]:
         """使用安全AST解析兼容JSON常量的Python字面量"""
         try:
             parsed = ast.parse(json_str, mode="eval")
@@ -175,14 +179,18 @@ class TagParser:
 
         if isinstance(node, ast.Dict):
             return {
-                self._convert_literal_node(key): self._convert_literal_node(value)
+                self._convert_literal_node(key): self._convert_literal_node(
+                    value
+                )
                 for key, value in zip(node.keys, node.values)
             }
 
         if isinstance(node, (ast.List, ast.Tuple)):
             return [self._convert_literal_node(item) for item in node.elts]
 
-        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        if isinstance(node, ast.UnaryOp) and isinstance(
+            node.op, (ast.UAdd, ast.USub)
+        ):
             value = self._convert_literal_node(node.operand)
             if isinstance(value, (int, float)):
                 return value if isinstance(node.op, ast.UAdd) else -value
@@ -359,8 +367,12 @@ class TagParser:
         """
         stats = {
             "total_processed": len(results),
-            "successful_extractions": sum(1 for r in results if r.extraction_success),
-            "failed_extractions": sum(1 for r in results if not r.extraction_success),
+            "successful_extractions": sum(
+                1 for r in results if r.extraction_success
+            ),
+            "failed_extractions": sum(
+                1 for r in results if not r.extraction_success
+            ),
             "total_unique_tags": 0,
             "most_common_tags": {},
             "extraction_methods": {},
@@ -381,7 +393,9 @@ class TagParser:
             else:
                 # 统计错误类型
                 error = result.error_message or "unknown_error"
-                stats["error_types"][error] = stats["error_types"].get(error, 0) + 1
+                stats["error_types"][error] = (
+                    stats["error_types"].get(error, 0) + 1
+                )
 
         # 标签频率统计
         from collections import Counter

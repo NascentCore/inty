@@ -28,7 +28,10 @@ class EmotionalState(EmotionalStateItem, Enum):
         "Eager, energized; looking forward to something or stirred by the moment.",
     )
     TENDER = ("tender", "Gentle, soft, caring; emotionally warm and delicate.")
-    AFFECTIONATE = ("affectionate", "Showing fondness or love; warm and loving.")
+    AFFECTIONATE = (
+        "affectionate",
+        "Showing fondness or love; warm and loving.",
+    )
     PLAYFUL = ("playful", "Light-hearted, teasing, or fun; not serious.")
     FLIRTATIOUS = (
         "flirtatious",
@@ -56,10 +59,16 @@ class EmotionalState(EmotionalStateItem, Enum):
         "Freed from worry or tension; at ease after a concern is resolved.",
     )
     GUILTY = ("guilty", "Feeling responsible for a wrong or mistake.")
-    ASHAMED = ("ashamed", "Embarrassed or disgraced by one's own actions or situation.")
+    ASHAMED = (
+        "ashamed",
+        "Embarrassed or disgraced by one's own actions or situation.",
+    )
     DISGUSTED = ("disgusted", "Strong revulsion or distaste.")
     FEARFUL = ("fearful", "Afraid or scared; feeling threat or danger.")
-    JEALOUS = ("jealous", "Resentful of someone else's advantage or relationship.")
+    JEALOUS = (
+        "jealous",
+        "Resentful of someone else's advantage or relationship.",
+    )
     LONELY = ("lonely", "Feeling alone or lacking connection.")
     STRESSED = ("stressed", "Under mental or emotional pressure; strained.")
     PEACEFUL = ("peaceful", "Calm and free from disturbance; serene.")

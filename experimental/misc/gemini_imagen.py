@@ -47,7 +47,9 @@ data = {
 compression_quality_options = [20, 30, 50, 70, 90]
 
 for compression_quality in compression_quality_options:
-    data["parameters"]["outputOptions"]["compressionQuality"] = compression_quality
+    data["parameters"]["outputOptions"][
+        "compressionQuality"
+    ] = compression_quality
     response = requests.post(url, headers=headers, json=data)
     response_data = response.json()
 
@@ -58,7 +60,9 @@ for compression_quality in compression_quality_options:
         img = Image.open(BytesIO(base64.b64decode(image_base64_data)))
         img.show()
         # img.save(f"image_{prediction['id']}.png")
-        rand_str = "".join(random.choices(string.ascii_letters + string.digits, k=5))
+        rand_str = "".join(
+            random.choices(string.ascii_letters + string.digits, k=5)
+        )
         filename = f"image_{rand_str}.jpeg"
         img.save(filename)
         print(

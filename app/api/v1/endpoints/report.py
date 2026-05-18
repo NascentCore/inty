@@ -80,7 +80,9 @@ async def get_report_conversation_groups(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    items = await report_service.get_report_conversation_groups(db, report.reporter_id)
+    items = await report_service.get_report_conversation_groups(
+        db, report.reporter_id
+    )
     return ReportConversationGroups(items=items, total=len(items))
 
 
@@ -120,7 +122,9 @@ async def get_report_conversation_messages(
     return ReportConversationMessages.model_validate(data)
 
 
-@router.put("/{report_id}/github-issue", response_model=ReportOut, tags=[WEB_APP_TAG])
+@router.put(
+    "/{report_id}/github-issue", response_model=ReportOut, tags=[WEB_APP_TAG]
+)
 async def update_report_github_issue(
     report_id: str,
     payload: ReportGithubIssueUpdate,
@@ -148,7 +152,9 @@ async def create_report(
 ):
     """提交举报或反馈，任意已登录用户可调用"""
     try:
-        report = await report_service.create_report(db, report_in, current_user.id)
+        report = await report_service.create_report(
+            db, report_in, current_user.id
+        )
         return APIResponse.success()
     except Exception as e:
         logger.error(f"Failed to create report: {str(e)}")

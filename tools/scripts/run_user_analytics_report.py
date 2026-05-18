@@ -58,7 +58,9 @@ async def main() -> int:
         return 1
 
     if args.type == "weekly" and report_date.weekday() != 0:
-        logger.warning(f"周报日期 {args.date} 不是周一（weekday=0），将按该周周一计算")
+        logger.warning(
+            f"周报日期 {args.date} 不是周一（weekday=0），将按该周周一计算"
+        )
         report_date = report_date - timedelta(days=report_date.weekday())
 
     init_logger()

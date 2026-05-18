@@ -150,7 +150,10 @@ async def run_async_repl(
             agent_id=char_name,
             user_text=line,
             history=msgs,
-            metadata={"turn": t, "source": "agentic_ai_companion_async_repl_user"},
+            metadata={
+                "turn": t,
+                "source": "agentic_ai_companion_async_repl_user",
+            },
         )
 
         async def _prepare(turn_input: TurnInput) -> TurnInput:
@@ -190,7 +193,9 @@ async def run_async_repl(
         )
         return result.output.metadata["messages"]
 
-    async def do_heartbeat_turn(msgs: list, signal: str, t: int) -> tuple[list, bool]:
+    async def do_heartbeat_turn(
+        msgs: list, signal: str, t: int
+    ) -> tuple[list, bool]:
         payload = ExperimentalTurnBridgeInput(
             user_id=user_name,
             session_id=f"agentic_ai_companion:{char_name}:{user_name}",
@@ -226,7 +231,9 @@ async def run_async_repl(
                 user_name=user_name,
             )
 
-        def _handle(_: TurnInput, heartbeat_result: tuple[list, bool]) -> TurnOutput:
+        def _handle(
+            _: TurnInput, heartbeat_result: tuple[list, bool]
+        ) -> TurnOutput:
             updated_messages, was_silent = heartbeat_result
             return TurnOutput(
                 assistant_text="",
@@ -246,7 +253,9 @@ async def run_async_repl(
         return metadata["messages"], metadata["was_silent"]
 
     print(f"角色: {char_name} | 用户: {user_name} | 模型: {model}")
-    print(f"Heartbeat 模式已开启，间隔: {heartbeat_config.interval_seconds:.0f}s")
+    print(
+        f"Heartbeat 模式已开启，间隔: {heartbeat_config.interval_seconds:.0f}s"
+    )
     print("输入内容后回车发送，空行跳过，Ctrl+C 退出。\n")
 
     with trace(
@@ -260,7 +269,9 @@ async def run_async_repl(
         },
     ):
         while True:
-            interval = state.compute_next_interval(heartbeat_config.interval_seconds)
+            interval = state.compute_next_interval(
+                heartbeat_config.interval_seconds
+            )
 
             # 同时等待用户输入和心跳超时
             input_task = asyncio.ensure_future(ainput(f"{user_name}> "))
@@ -311,7 +322,9 @@ async def run_async_repl(
                     interval,
                 )
                 signal = build_heartbeat_signal(state, messages)
-                messages, was_silent = await do_heartbeat_turn(messages, signal, turn)
+                messages, was_silent = await do_heartbeat_turn(
+                    messages, signal, turn
+                )
                 state.record_heartbeat(was_silent)
 
                 if (

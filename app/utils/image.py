@@ -120,11 +120,15 @@ def compress_png_to_jpeg(image_data: bytes, quality: int = 80) -> bytes:
     image.save(output_buffer, format="JPEG", quality=quality, optimize=True)
     jpeg_data = output_buffer.getvalue()
 
-    logger.debug(f"Compressed PNG to JPEG: {len(image_data)} -> {len(jpeg_data)} bytes")
+    logger.debug(
+        f"Compressed PNG to JPEG: {len(image_data)} -> {len(jpeg_data)} bytes"
+    )
     return jpeg_data
 
 
-def get_jpg_bytes_from_pil_image(pil_image: Image.Image, quality: int = 80) -> bytes:
+def get_jpg_bytes_from_pil_image(
+    pil_image: Image.Image, quality: int = 80
+) -> bytes:
     """Get JPEG bytes from PIL image"""
     output_buffer = io.BytesIO()
     pil_image.save(output_buffer, format="JPEG", quality=quality, optimize=True)

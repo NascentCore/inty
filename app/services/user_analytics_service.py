@@ -18,7 +18,9 @@ def generate_session_id(chat_id: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
 
 
-def _batch_list(items: List[Any], batch_size: int = BATCH_SIZE) -> List[List[Any]]:
+def _batch_list(
+    items: List[Any], batch_size: int = BATCH_SIZE
+) -> List[List[Any]]:
     """将列表分批"""
     return [items[i : i + batch_size] for i in range(0, len(items), batch_size)]
 
@@ -62,7 +64,9 @@ class UserAnalyticsService:
         return [
             {
                 "date": (
-                    row[0].isoformat() if isinstance(row[0], datetime) else str(row[0])
+                    row[0].isoformat()
+                    if isinstance(row[0], datetime)
+                    else str(row[0])
                 ),
                 "auth_type": row[1],
                 "count": row[2],
@@ -116,13 +120,17 @@ class UserAnalyticsService:
             for row in rows
         ]
 
-    async def get_chat_agent_info(self, chat_ids: List[str]) -> List[Dict[str, Any]]:
+    async def get_chat_agent_info(
+        self, chat_ids: List[str]
+    ) -> List[Dict[str, Any]]:
         """按 chat_id 批量查询 chat 对应的 user_id、agent_name，用于热门角色等仅需有活动 chat 的场景。"""
         if not chat_ids:
             return []
         out: List[Dict[str, Any]] = []
         for batch in _batch_list(chat_ids, self._batch_size):
-            placeholders = ",".join([f":chat_id_{i}" for i in range(len(batch))])
+            placeholders = ",".join(
+                [f":chat_id_{i}" for i in range(len(batch))]
+            )
             query = text(f"""
                 SELECT c.id as chat_id, c.user_id, a.name as agent_name
                 FROM chats c
@@ -227,7 +235,9 @@ class UserAnalyticsService:
         """
         from collections import defaultdict
 
-        reg_start = register_start_date or datetime(2020, 1, 1, tzinfo=timezone.utc)
+        reg_start = register_start_date or datetime(
+            2020, 1, 1, tzinfo=timezone.utc
+        )
         reg_end = register_end_date or activity_end_date
 
         active_session_ids = await self.get_active_session_ids_on_date(
@@ -259,7 +269,9 @@ class UserAnalyticsService:
                     agent_name or "",
                 )
 
-        session_ids = [s for s in active_session_ids if s in session_to_user_agent]
+        session_ids = [
+            s for s in active_session_ids if s in session_to_user_agent
+        ]
         if not session_ids:
             return [], []
 
@@ -287,8 +299,8 @@ class UserAnalyticsService:
                 return float(d)
             return None
 
-        voice_message_key_to_audios: Dict[tuple, List[Dict[str, Any]]] = defaultdict(
-            list
+        voice_message_key_to_audios: Dict[tuple, List[Dict[str, Any]]] = (
+            defaultdict(list)
         )
         voice_call_key_to_seen_url: Dict[tuple, Dict[str, Dict[str, Any]]] = (
             defaultdict(dict)
@@ -320,7 +332,8 @@ class UserAnalyticsService:
                     existing = voice_call_key_to_seen_url[key][audio_url]
                     if created_at and (
                         existing.get("created_at") is None
-                        or (existing["created_at"] or "") > (created_at_str or "")
+                        or (existing["created_at"] or "")
+                        > (created_at_str or "")
                     ):
                         voice_call_key_to_seen_url[key][audio_url] = entry
             else:
@@ -332,12 +345,16 @@ class UserAnalyticsService:
         ) -> List[Dict[str, Any]]:
             out = []
             for (user_id, agent_id), audios in key_to_audios.items():
-                audios_list = audios if values_are_list else list(audios.values())
+                audios_list = (
+                    audios if values_are_list else list(audios.values())
+                )
                 out.append(
                     {
                         "user_id": user_id,
                         "agent_id": agent_id,
-                        "agent_name": key_to_agent_name.get((user_id, agent_id), ""),
+                        "agent_name": key_to_agent_name.get(
+                            (user_id, agent_id), ""
+                        ),
                         "audios": audios_list,
                     }
                 )
@@ -367,7 +384,9 @@ class UserAnalyticsService:
         session_to_counts: Dict[str, tuple] = {}
 
         for batch in _batch_list(session_ids, self._batch_size):
-            placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
+            placeholders = ",".join(
+                [f":session_id_{i}" for i in range(len(batch))]
+            )
 
             if activity_start_date and activity_end_date:
                 history_query = text(f"""
@@ -441,7 +460,9 @@ class UserAnalyticsService:
         )
         chat_ids = [row[0] for row in result.fetchall()]
 
-        logger.info(f"get_conversation_rounds: 找到 {len(chat_ids)} 个用户的会话")
+        logger.info(
+            f"get_conversation_rounds: 找到 {len(chat_ids)} 个用户的会话"
+        )
 
         if not chat_ids:
             logger.info("get_conversation_rounds: 没有找到用户的会话")
@@ -514,7 +535,9 @@ class UserAnalyticsService:
         session_to_count: Dict[str, int] = {}
 
         for batch in _batch_list(session_ids, self._batch_size):
-            placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
+            placeholders = ",".join(
+                [f":session_id_{i}" for i in range(len(batch))]
+            )
 
             if activity_start_date and activity_end_date:
                 messages_query = text(f"""
@@ -621,8 +644,10 @@ class UserAnalyticsService:
         if not session_ids:
             return []
 
-        session_to_user_msg_count = await self._query_session_user_message_counts(
-            session_ids, activity_start_date, activity_end_date
+        session_to_user_msg_count = (
+            await self._query_session_user_message_counts(
+                session_ids, activity_start_date, activity_end_date
+            )
         )
 
         user_to_total_rounds: Dict[str, int] = {}
@@ -705,17 +730,25 @@ class UserAnalyticsService:
             active_sessions = len(sessions)
             total_sessions = len(stats["total_chats"])
 
-            avg_rounds_per_user = total_rounds / user_count if user_count > 0 else 0.0
+            avg_rounds_per_user = (
+                total_rounds / user_count if user_count > 0 else 0.0
+            )
             sessions_ge_5 = sum(1 for r in sessions if r >= 5)
             sessions_ge_10 = sum(1 for r in sessions if r >= 10)
             pct_sessions_ge_5 = (
-                (sessions_ge_5 / active_sessions * 100) if active_sessions > 0 else 0.0
+                (sessions_ge_5 / active_sessions * 100)
+                if active_sessions > 0
+                else 0.0
             )
             pct_sessions_ge_10 = (
-                (sessions_ge_10 / active_sessions * 100) if active_sessions > 0 else 0.0
+                (sessions_ge_10 / active_sessions * 100)
+                if active_sessions > 0
+                else 0.0
             )
             open_rate = (
-                (active_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
+                (active_sessions / total_sessions * 100)
+                if total_sessions > 0
+                else 0.0
             )
 
             result.append(
@@ -735,7 +768,9 @@ class UserAnalyticsService:
         result.sort(key=lambda x: x["user_count"], reverse=True)
         return result[:limit]
 
-    async def get_voice_usage(self, chat_ids: List[str]) -> List[Dict[str, Any]]:
+    async def get_voice_usage(
+        self, chat_ids: List[str]
+    ) -> List[Dict[str, Any]]:
         """查询语音使用统计"""
         if not chat_ids:
             return []
@@ -748,13 +783,17 @@ class UserAnalyticsService:
         if not session_ids:
             return []
 
-        session_to_voice_count = await self._query_session_voice_counts(session_ids)
+        session_to_voice_count = await self._query_session_voice_counts(
+            session_ids
+        )
 
         data = []
         for chat_id, session_id in chat_to_session.items():
             voice_count = session_to_voice_count.get(session_id, 0)
             if voice_count > 0:
-                data.append({"chat_id": chat_id, "voice_message_count": voice_count})
+                data.append(
+                    {"chat_id": chat_id, "voice_message_count": voice_count}
+                )
 
         return data
 
@@ -771,7 +810,9 @@ class UserAnalyticsService:
         session_to_voice_count: Dict[str, int] = {}
 
         for batch in _batch_list(session_ids, self._batch_size):
-            placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
+            placeholders = ",".join(
+                [f":session_id_{i}" for i in range(len(batch))]
+            )
             query = text(f"""
                 SELECT 
                     ch.session_id::text as session_id,
@@ -874,8 +915,12 @@ class UserAnalyticsService:
                 "total_live_chat_users": user_count,
                 "total_live_chat_sessions": session_count,
                 "total_live_chat_duration": total_duration,
-                "avg_live_chat_sessions_per_user": round(avg_sessions_per_user, 2),
-                "avg_live_chat_duration_per_user": round(avg_duration_per_user, 2),
+                "avg_live_chat_sessions_per_user": round(
+                    avg_sessions_per_user, 2
+                ),
+                "avg_live_chat_duration_per_user": round(
+                    avg_duration_per_user, 2
+                ),
                 "avg_live_chat_duration_per_session": round(
                     avg_duration_per_session, 2
                 ),
@@ -912,7 +957,9 @@ class UserAnalyticsService:
             new_generation = image_gen_row[3] if image_gen_row else 0
             fallback_used = image_gen_row[4] if image_gen_row else 0
             success_rate = (
-                (total_success / total_requests * 100) if total_requests > 0 else 0.0
+                (total_success / total_requests * 100)
+                if total_requests > 0
+                else 0.0
             )
             return {
                 "total_image_generation_requests": total_requests,
@@ -945,10 +992,14 @@ class UserAnalyticsService:
 
         # 3. 获取有用户消息的会话（排除仅浏览开场白的）
         active_chat_ids = [
-            item["chat_id"] for item in sessions_detail if item["message_count"] > 0
+            item["chat_id"]
+            for item in sessions_detail
+            if item["message_count"] > 0
         ]
         active_sessions = [
-            item for item in sessions_detail if item["chat_id"] in active_chat_ids
+            item
+            for item in sessions_detail
+            if item["chat_id"] in active_chat_ids
         ]
 
         if not active_sessions:
@@ -973,16 +1024,24 @@ class UserAnalyticsService:
 
         # 4. 计算统计指标
         total_active_sessions = len(active_sessions)
-        total_active_users = len(set(item["user_id"] for item in active_sessions))
-        total_user_messages = sum(item["message_count"] for item in active_sessions)
-        total_ai_messages = sum(item["ai_message_count"] for item in active_sessions)
+        total_active_users = len(
+            set(item["user_id"] for item in active_sessions)
+        )
+        total_user_messages = sum(
+            item["message_count"] for item in active_sessions
+        )
+        total_ai_messages = sum(
+            item["ai_message_count"] for item in active_sessions
+        )
         total_voice_requests = sum(
             item["voice_message_count"] for item in active_sessions
         )
 
         # 5. 计算平均值
         avg_messages_per_user = (
-            total_user_messages / total_active_users if total_active_users > 0 else 0.0
+            total_user_messages / total_active_users
+            if total_active_users > 0
+            else 0.0
         )
         avg_sessions_per_user = (
             total_active_sessions / total_active_users
@@ -990,7 +1049,9 @@ class UserAnalyticsService:
             else 0.0
         )
         avg_voice_requests_per_user = (
-            total_voice_requests / total_active_users if total_active_users > 0 else 0.0
+            total_voice_requests / total_active_users
+            if total_active_users > 0
+            else 0.0
         )
         avg_rounds_per_session = (
             total_user_messages / total_active_sessions
@@ -1000,7 +1061,9 @@ class UserAnalyticsService:
 
         # 计算开口率
         new_user_open_rate = (
-            (total_active_users / total_new_users * 100) if total_new_users > 0 else 0.0
+            (total_active_users / total_new_users * 100)
+            if total_new_users > 0
+            else 0.0
         )
 
         # 6. 查询生图统计
@@ -1018,7 +1081,9 @@ class UserAnalyticsService:
             "total_voice_requests": total_voice_requests,
             "avg_messages_per_user": round(avg_messages_per_user, 2),
             "avg_sessions_per_user": round(avg_sessions_per_user, 2),
-            "avg_voice_requests_per_user": round(avg_voice_requests_per_user, 2),
+            "avg_voice_requests_per_user": round(
+                avg_voice_requests_per_user, 2
+            ),
             "avg_rounds_per_session": round(avg_rounds_per_session, 2),
             "new_user_open_rate": round(new_user_open_rate, 2),
             **img_stats,
@@ -1047,7 +1112,9 @@ class UserAnalyticsService:
         data = []
 
         for batch in _batch_list(session_ids, self._batch_size):
-            placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
+            placeholders = ",".join(
+                [f":session_id_{i}" for i in range(len(batch))]
+            )
             if activity_start_date and activity_end_date:
                 query = text(f"""
                     SELECT
@@ -1095,7 +1162,9 @@ class UserAnalyticsService:
                             "chat_id": chat_id,
                             "message_type": row[1],
                             "content": row[2],
-                            "created_at": row[3].isoformat() if row[3] else None,
+                            "created_at": (
+                                row[3].isoformat() if row[3] else None
+                            ),
                             "audio_url": row[4],
                         }
                     )
@@ -1176,7 +1245,9 @@ class UserAnalyticsService:
                 }
             )
 
-        sorted_group_keys = sorted(grouped.keys(), key=lambda key: (key[0], key[1]))
+        sorted_group_keys = sorted(
+            grouped.keys(), key=lambda key: (key[0], key[1])
+        )
         grouped_items = [grouped[key] for key in sorted_group_keys]
 
         total = len(grouped_items)
@@ -1193,7 +1264,9 @@ class UserAnalyticsService:
 
         chat_ids: List[str] = []
         for item in paged_items:
-            chat_ids.extend([session["chat_id"] for session in item["sessions"]])
+            chat_ids.extend(
+                [session["chat_id"] for session in item["sessions"]]
+            )
 
         messages = await self.get_chat_messages(
             chat_ids, activity_start_date, activity_end_date
@@ -1315,7 +1388,9 @@ class UserAnalyticsService:
         return [
             {
                 "date": (
-                    row[0].isoformat() if isinstance(row[0], datetime) else str(row[0])
+                    row[0].isoformat()
+                    if isinstance(row[0], datetime)
+                    else str(row[0])
                 ),
                 "user_id": row[1],
                 "auth_type": row[2],
@@ -1375,8 +1450,10 @@ class UserAnalyticsService:
             day_start = activity_start_date + timedelta(days=i)
             day_end = day_start + timedelta(days=1)
             try:
-                day_results = await self._get_users_hitting_chat_limit_single_day(
-                    day_start, day_end, guest_limit, google_limit
+                day_results = (
+                    await self._get_users_hitting_chat_limit_single_day(
+                        day_start, day_end, guest_limit, google_limit
+                    )
                 )
                 all_results.extend(day_results)
             except Exception:
@@ -1451,8 +1528,10 @@ class UserAnalyticsService:
         if not session_ids:
             return []
 
-        session_to_user_msg_count = await self._query_session_user_message_counts(
-            session_ids, activity_start_date, activity_end_date
+        session_to_user_msg_count = (
+            await self._query_session_user_message_counts(
+                session_ids, activity_start_date, activity_end_date
+            )
         )
 
         agent_stats = {}
@@ -1588,10 +1667,12 @@ class UserAnalyticsService:
         if not session_ids:
             return []
 
-        session_to_msg_count, session_to_voice_count, session_to_ai_msg_count = (
-            await self._query_session_detail_counts(
-                session_ids, activity_start_date, activity_end_date
-            )
+        (
+            session_to_msg_count,
+            session_to_voice_count,
+            session_to_ai_msg_count,
+        ) = await self._query_session_detail_counts(
+            session_ids, activity_start_date, activity_end_date
         )
 
         data = []
@@ -1639,7 +1720,9 @@ class UserAnalyticsService:
 
         for batch in _batch_list(session_ids, self._batch_size):
             uuid_batch = [uuid.UUID(sid) for sid in batch]
-            placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
+            placeholders = ",".join(
+                [f":session_id_{i}" for i in range(len(batch))]
+            )
 
             if activity_start_date and activity_end_date:
                 messages_query = text(f"""
@@ -1675,7 +1758,9 @@ class UserAnalyticsService:
                       AND ch.created_at < :activity_end_date
                     GROUP BY ch.session_id
                 """)
-                params = {f"session_id_{i}": sid for i, sid in enumerate(uuid_batch)}
+                params = {
+                    f"session_id_{i}": sid for i, sid in enumerate(uuid_batch)
+                }
                 params["activity_start_date"] = activity_start_date
                 params["activity_end_date"] = activity_end_date
             else:
@@ -1710,7 +1795,9 @@ class UserAnalyticsService:
                     WHERE ch.session_id IN ({placeholders})
                     GROUP BY ch.session_id
                 """)
-                params = {f"session_id_{i}": sid for i, sid in enumerate(uuid_batch)}
+                params = {
+                    f"session_id_{i}": sid for i, sid in enumerate(uuid_batch)
+                }
 
             result = await self.db.execute(messages_query, params)
             for row in result.fetchall():
@@ -1719,7 +1806,11 @@ class UserAnalyticsService:
                 session_to_voice_count[session_key] = row[2]
                 session_to_ai_msg_count[session_key] = row[3]
 
-        return session_to_msg_count, session_to_voice_count, session_to_ai_msg_count
+        return (
+            session_to_msg_count,
+            session_to_voice_count,
+            session_to_ai_msg_count,
+        )
 
     async def find_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """通过邮箱查找用户"""
@@ -1788,7 +1879,9 @@ class UserAnalyticsService:
 
         session_ids = [generate_session_id(chat_id) for chat_id in chat_ids]
 
-        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
+        placeholders = ",".join(
+            [f":session_id_{i}" for i in range(len(session_ids))]
+        )
         query = f"""
             SELECT 
                 DATE(ch.created_at AT TIME ZONE 'UTC') as date,
@@ -1819,7 +1912,9 @@ class UserAnalyticsService:
         return [
             {
                 "date": (
-                    row[0].isoformat() if isinstance(row[0], datetime) else str(row[0])
+                    row[0].isoformat()
+                    if isinstance(row[0], datetime)
+                    else str(row[0])
                 ),
                 "message_count": row[1],
                 "session_count": row[2],
@@ -1855,7 +1950,9 @@ class UserAnalyticsService:
         return [
             {
                 "date": (
-                    row[0].isoformat() if isinstance(row[0], datetime) else str(row[0])
+                    row[0].isoformat()
+                    if isinstance(row[0], datetime)
+                    else str(row[0])
                 ),
                 "message_count": row[1],
                 "session_count": row[2],
@@ -1903,7 +2000,9 @@ class UserAnalyticsService:
 
         chat_ids = await self.get_user_chat_ids(user_id)
         if not chat_ids:
-            total_generated_images = await self.get_user_generated_images_count(user_id)
+            total_generated_images = await self.get_user_generated_images_count(
+                user_id
+            )
             return {
                 "today_message_count": 0,
                 "today_session_count": 0,
@@ -1912,7 +2011,9 @@ class UserAnalyticsService:
 
         session_ids = [generate_session_id(chat_id) for chat_id in chat_ids]
 
-        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
+        placeholders = ",".join(
+            [f":session_id_{i}" for i in range(len(session_ids))]
+        )
         query = text(f"""
             SELECT 
                 COUNT(DISTINCT ch.session_id) as session_count,
@@ -1932,7 +2033,9 @@ class UserAnalyticsService:
         result = await self.db.execute(query, params)
         row = result.fetchone()
 
-        total_generated_images = await self.get_user_generated_images_count(user_id)
+        total_generated_images = await self.get_user_generated_images_count(
+            user_id
+        )
 
         return {
             "today_message_count": row[1] if row else 0,
@@ -1969,7 +2072,9 @@ class UserAnalyticsService:
         }
         session_ids = list(chat_to_session.values())
 
-        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
+        placeholders = ",".join(
+            [f":session_id_{i}" for i in range(len(session_ids))]
+        )
         messages_query = text(f"""
             SELECT
                 ch.session_id::text as session_id,
@@ -2015,11 +2120,15 @@ class UserAnalyticsService:
             session_id = chat_to_session[chat_id]
             message_count = session_to_msg_count.get(session_id, 0)
             # 优先使用最后一条用户消息时间，如果没有则使用最后一条消息时间（包括AI消息）
-            last_user_message_time = session_to_last_user_message_time.get(session_id)
+            last_user_message_time = session_to_last_user_message_time.get(
+                session_id
+            )
             last_message_time = session_to_last_message_time.get(session_id)
             updated_at = last_user_message_time or last_message_time
             agent_avatar_url = (
-                image_transform_service.transform_desktop(row[3]) if row[3] else None
+                image_transform_service.transform_desktop(row[3])
+                if row[3]
+                else None
             )
 
             data.append(
@@ -2029,7 +2138,9 @@ class UserAnalyticsService:
                     "agent_name": row[2],
                     "agent_avatar_url": agent_avatar_url,
                     "created_at": row[4].isoformat() if row[4] else None,
-                    "updated_at": (updated_at.isoformat() if updated_at else None),
+                    "updated_at": (
+                        updated_at.isoformat() if updated_at else None
+                    ),
                     "message_count": message_count,
                 }
             )
@@ -2049,7 +2160,9 @@ class UserAnalyticsService:
             WHERE session_id::text = :session_id
               AND (meta_data->>'messageType' IS NULL OR (meta_data->>'messageType' != 'festival_memory_prompt' AND meta_data->>'messageType' != 'daily_memory_prompt'))
         """)
-        count_result = await self.db.execute(count_query, {"session_id": session_id})
+        count_result = await self.db.execute(
+            count_query, {"session_id": session_id}
+        )
         total = count_result.scalar() or 0
 
         # 获取分页数据
@@ -2083,16 +2196,22 @@ class UserAnalyticsService:
             message_type = row[1] or "human"
             content = row[2] or ""
             image_url_from_message = row[3]  # 独立图片消息的 URL
-            meta_data = row[6]  # 索引从 0 开始，所以 meta_data 是第 7 个字段（索引 6）
+            meta_data = row[
+                6
+            ]  # 索引从 0 开始，所以 meta_data 是第 7 个字段（索引 6）
 
             # 处理图片 URL 转换
             try:
-                from app.services.image_transform_service import image_transform_service
+                from app.services.image_transform_service import (
+                    image_transform_service,
+                )
 
                 # 处理独立图片消息（type="image"）
                 if message_type == "image" and image_url_from_message:
-                    image_url_from_message = image_transform_service.transform_desktop(
-                        image_url_from_message
+                    image_url_from_message = (
+                        image_transform_service.transform_desktop(
+                            image_url_from_message
+                        )
                     )
 
                 # 处理 meta_data 中的 generated_image（文本消息中包含的生成图片）
@@ -2106,7 +2225,9 @@ class UserAnalyticsService:
 
                     if image_url:
                         # 转换 GCS URI 为 CDN URL
-                        cdn_url = image_transform_service.transform_desktop(image_url)
+                        cdn_url = image_transform_service.transform_desktop(
+                            image_url
+                        )
 
                         # 更新 meta_data 中的图片 URL
                         meta_data = dict(meta_data)  # 创建副本避免修改原始数据
@@ -2295,7 +2416,9 @@ class UserAnalyticsService:
             round(total_duration / user_count, 2) if user_count > 0 else 0.0
         )
         avg_duration_per_session = (
-            round(total_duration / session_count, 2) if session_count > 0 else 0.0
+            round(total_duration / session_count, 2)
+            if session_count > 0
+            else 0.0
         )
 
         return {
@@ -2346,13 +2469,17 @@ class UserAnalyticsService:
         new_generation = row[4] or 0
         fallback_used = row[5] or 0
         success_rate = (
-            (total_success / total_requests * 100) if total_requests > 0 else 0.0
+            (total_success / total_requests * 100)
+            if total_requests > 0
+            else 0.0
         )
         fallback_ratio_success = (
             (fallback_used / total_success * 100) if total_success > 0 else 0.0
         )
         fallback_ratio_requests = (
-            (fallback_used / total_requests * 100) if total_requests > 0 else 0.0
+            (fallback_used / total_requests * 100)
+            if total_requests > 0
+            else 0.0
         )
 
         summary = {
@@ -2452,7 +2579,9 @@ class UserAnalyticsService:
                     "new_generation": row[4] or 0,
                     "fallback_used": row[5] or 0,
                     "success_rate": (
-                        round((row[2] or 0) / total * 100, 2) if total > 0 else 0.0
+                        round((row[2] or 0) / total * 100, 2)
+                        if total > 0
+                        else 0.0
                     ),
                 }
             )
@@ -2487,7 +2616,9 @@ class UserAnalyticsService:
                     "total_success": row[3] or 0,
                     "total_failures": row[4] or 0,
                     "failure_rate": (
-                        round((row[4] or 0) / total * 100, 2) if total > 0 else 0.0
+                        round((row[4] or 0) / total * 100, 2)
+                        if total > 0
+                        else 0.0
                     ),
                 }
             )

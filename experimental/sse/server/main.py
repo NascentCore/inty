@@ -35,7 +35,9 @@ class MessageBroker:
             self._subscribers_by_client[client_id].add(queue)
         return queue
 
-    async def unsubscribe(self, client_id: str, queue: asyncio.Queue[str]) -> None:
+    async def unsubscribe(
+        self, client_id: str, queue: asyncio.Queue[str]
+    ) -> None:
         async with self._lock:
             queues = self._subscribers_by_client.get(client_id)
             if queues is not None:
@@ -53,7 +55,9 @@ class MessageBroker:
         for q in targets:
             await q.put(payload)
 
-    async def publish_broadcast(self, data: str, event: Optional[str] = None) -> None:
+    async def publish_broadcast(
+        self, data: str, event: Optional[str] = None
+    ) -> None:
         event_name = event or DEFAULT_EVENT_NAME
         payload = f"event: {event_name}\ndata: {data}\n\n"
         async with self._lock:
@@ -115,7 +119,9 @@ async def publish(req: PublishRequest) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
-async def _long_running_task(client_id: str, task_id: str, seconds: float) -> None:
+async def _long_running_task(
+    client_id: str, task_id: str, seconds: float
+) -> None:
     await asyncio.sleep(max(0.0, seconds))
     payload = json.dumps({"task_id": task_id, "status": "completed"})
     await broker.publish_to_client(client_id, payload, event="task_complete")

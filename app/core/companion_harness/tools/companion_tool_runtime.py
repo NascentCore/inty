@@ -33,8 +33,13 @@ from app.core.companion_harness.companion.bootstrap_user_interactive import (
 from app.core.companion_harness.companion.message_format import (
     openai_assistant_message_dict,
 )
-from app.core.companion_harness.companion.models import ChatMessage, load_context_meta
-from app.core.companion_harness.companion.schedule_queue import add_schedule_task
+from app.core.companion_harness.companion.models import (
+    ChatMessage,
+    load_context_meta,
+)
+from app.core.companion_harness.companion.schedule_queue import (
+    add_schedule_task,
+)
 from app.core.companion_harness.memory.memory_store import (
     MemoryStore,
     normalize_memory_store_relative_path,
@@ -110,7 +115,9 @@ _USER_PROFILE_SECTION = "## 身份信息"
 
 # TODO(product): ai_private.jsonl is ORM-mapped but not in MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST; model
 # cannot memory_store_write_document it until allowlist or a dedicated append tool exists.
-def _latest_generated_image_http_url_from_index(store: MemoryStore) -> str | None:
+def _latest_generated_image_http_url_from_index(
+    store: MemoryStore,
+) -> str | None:
     for row in reversed(list_image_asset_records(store)):
         u = str(row.get("gcs_http_url") or "").strip()
         if u.startswith("http://") or u.startswith("https://"):
@@ -142,7 +149,9 @@ def _tool_rel_posix_from_arg(relative_path: str) -> str:
     return normalize_memory_store_relative_path(s)
 
 
-def _list_dir_extra_names_from_store(store: MemoryStore, rel_dir: str) -> set[str]:
+def _list_dir_extra_names_from_store(
+    store: MemoryStore, rel_dir: str
+) -> set[str]:
     paths = store.iter_stored_relative_paths()
     prefix = _list_dir_prefix_for_store_query(rel_dir)
     pfx = f"{prefix}/" if prefix else ""
@@ -190,7 +199,9 @@ def round_includes_generation_tool(tool_names: Iterable[str]) -> bool:
     return any(tool_requires_client_delivery_on_success(n) for n in tool_names)
 
 
-def append_user_profile_facts_to_user_md(text: str, new_bullets: list[str]) -> str:
+def append_user_profile_facts_to_user_md(
+    text: str, new_bullets: list[str]
+) -> str:
     """
     在 USER.md 的「身份信息」小节追加条目；若尚无该小节则在文末追加。
     new_bullets 每项应为完整一行（含前导 `- `）。
@@ -211,7 +222,9 @@ def append_user_profile_facts_to_user_md(text: str, new_bullets: list[str]) -> s
     return "\n".join(lines) + "\n"
 
 
-def tool_user_profile_record(store: MemoryStore, items: list[dict[str, Any]]) -> str:
+def tool_user_profile_record(
+    store: MemoryStore, items: list[dict[str, Any]]
+) -> str:
     """
     将用户自愿透露的基本信息追加写入 USER.md 的「身份信息」小节。
     items：每项含 label、value（均为非空短文本）。
@@ -293,7 +306,8 @@ def tool_memory_store_read_document(
     if len(body) <= max_chars:
         return body
     return (
-        body[:max_chars] + "\n…[truncated: prefix only; file is longer than max_chars]"
+        body[:max_chars]
+        + "\n…[truncated: prefix only; file is longer than max_chars]"
     )
 
 
@@ -346,7 +360,9 @@ def tool_memory_store_mkdir(store: MemoryStore, relative_path: str) -> str:
     return "OK mkdir (logical prefix only; companion MemoryStore has no host filesystem dirs)"
 
 
-def tool_techno_core_record_event(store: MemoryStore, arguments: dict[str, Any]) -> str:
+def tool_techno_core_record_event(
+    store: MemoryStore, arguments: dict[str, Any]
+) -> str:
     """Append one ``TechnoCoreEvent`` line to ``techno_core_events.jsonl`` (LivingSphere / TechnoCore autonomy)."""
     raw_sphere = arguments.get("sphere")
     raw_summary = arguments.get("summary")
@@ -372,9 +388,7 @@ def tool_techno_core_record_event(store: MemoryStore, arguments: dict[str, Any])
     uid = store.scope.user_id.strip()
     cid = store.scope.companion_id.strip()
     if not cid:
-        return (
-            f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}"
-        )
+        return f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}"
 
     ev_kwargs: dict[str, Any] = {
         "sphere": sphere,
@@ -450,7 +464,9 @@ def tool_living_sphere_record_update(
     return f"OK recorded update_id={update.update_id}"
 
 
-def tool_schedule_task(store: MemoryStore, exec_time_utc: str, task_text: str) -> str:
+def tool_schedule_task(
+    store: MemoryStore, exec_time_utc: str, task_text: str
+) -> str:
     task_id = add_schedule_task(
         store,
         exec_time_utc=exec_time_utc,
@@ -683,11 +699,14 @@ async def _dispatch(
         image_size = arguments.get("image_size")
         if image_size is not None and not isinstance(image_size, str):
             return "ERROR: image_size must be a string or omitted"
-        image_size_s = image_size.strip() if isinstance(image_size, str) else None
+        image_size_s = (
+            image_size.strip() if isinstance(image_size, str) else None
+        )
         if image_size_s == "":
             image_size_s = None
         n_steps, err = parse_optional_positive_int(
-            arguments.get("num_inference_steps"), field_name="num_inference_steps"
+            arguments.get("num_inference_steps"),
+            field_name="num_inference_steps",
         )
         if err:
             return f"ERROR: {err}"
@@ -728,7 +747,9 @@ async def _dispatch(
         raw_path = arguments.get("source_image_relative_path")
         raw_url = arguments.get("source_image_url")
         if raw_path is not None and not isinstance(raw_path, str):
-            return "ERROR: source_image_relative_path must be a string or omitted"
+            return (
+                "ERROR: source_image_relative_path must be a string or omitted"
+            )
         if raw_url is not None and not isinstance(raw_url, str):
             return "ERROR: source_image_url must be a string or omitted"
         path_s = raw_path.strip() if isinstance(raw_path, str) else ""
@@ -761,11 +782,14 @@ async def _dispatch(
         image_size = arguments.get("image_size")
         if image_size is not None and not isinstance(image_size, str):
             return "ERROR: image_size must be a string or omitted"
-        image_size_s = image_size.strip() if isinstance(image_size, str) else None
+        image_size_s = (
+            image_size.strip() if isinstance(image_size, str) else None
+        )
         if image_size_s == "":
             image_size_s = None
         n_steps, err = parse_optional_positive_int(
-            arguments.get("num_inference_steps"), field_name="num_inference_steps"
+            arguments.get("num_inference_steps"),
+            field_name="num_inference_steps",
         )
         if err:
             return f"ERROR: {err}"
@@ -804,7 +828,9 @@ async def _dispatch(
         raw_note = arguments.get("note")
         if raw_note is not None and not isinstance(raw_note, str):
             return "ERROR: note must be a string or omitted"
-        return tool_companion_bootstrap_user_interactive_complete(store, raw_note)
+        return tool_companion_bootstrap_user_interactive_complete(
+            store, raw_note
+        )
     return f"ERROR: unknown tool {name!r}"
 
 

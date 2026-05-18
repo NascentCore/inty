@@ -38,7 +38,10 @@ def test_get_text_messages_filters_non_text_and_returns_next_offset() -> None:
                                 "chat": {"id": 12345},
                             },
                         },
-                        {"update_id": 13, "edited_message": {"chat": {"id": 12345}}},
+                        {
+                            "update_id": 13,
+                            "edited_message": {"chat": {"id": 12345}},
+                        },
                     ],
                 }
             ).encode("utf-8")
@@ -116,7 +119,9 @@ def test_get_text_messages_one_local_received_at_per_payload(
     messages, _next = api.get_text_messages(offset=None, timeout_seconds=1)
 
     assert len(messages) == 2
-    assert messages[0].local_received_at == messages[1].local_received_at == 1000.0
+    assert (
+        messages[0].local_received_at == messages[1].local_received_at == 1000.0
+    )
     assert len(time_calls) == 1
 
 
@@ -156,9 +161,9 @@ def test_send_message_posts_expected_payload() -> None:
             return False
 
         def read(self):
-            return json.dumps({"ok": True, "result": {"message_id": 99}}).encode(
-                "utf-8"
-            )
+            return json.dumps(
+                {"ok": True, "result": {"message_id": 99}}
+            ).encode("utf-8")
 
     captured: dict[str, object] = {}
 

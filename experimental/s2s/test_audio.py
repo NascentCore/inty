@@ -20,7 +20,9 @@ def test_audio_devices():
         print(f"\n{i}: {device['name']}")
         print(f"   Inputs: {device.get('max_inputs', 0)}")
         print(f"   Outputs: {device.get('max_outputs', 0)}")
-        print(f"   Default Sample Rate: {device.get('default_samplerate', 'N/A')}")
+        print(
+            f"   Default Sample Rate: {device.get('default_samplerate', 'N/A')}"
+        )
 
     # Find default devices
     default_input = sd.query_devices(kind="input")

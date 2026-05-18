@@ -21,7 +21,9 @@ class Settings(Base):
     user = relationship("User", back_populates="settings")
 
     # 时间戳
-    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    created_at = Column(
+        DateTime(timezone=True), server_default=sa.text("now()")
+    )
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
     # 外键

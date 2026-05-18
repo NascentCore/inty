@@ -44,7 +44,9 @@ from app.core.agent.prompt_template import (
 class OpeningAudioGenerator:
     """开场白语音生成器"""
 
-    def __init__(self, config_path: str, dry_run: bool = False, batch_size: int = 10):
+    def __init__(
+        self, config_path: str, dry_run: bool = False, batch_size: int = 10
+    ):
         self.config_path = config_path
         self.dry_run = dry_run
         self.batch_size = batch_size
@@ -159,7 +161,9 @@ class OpeningAudioGenerator:
         """为单个 agent 生成开场白语音"""
         try:
             if not agent.opening or not agent.opening.strip():
-                logger.debug(f"Agent {agent.id} ({agent.name}) 没有开场白文本，跳过")
+                logger.debug(
+                    f"Agent {agent.id} ({agent.name}) 没有开场白文本，跳过"
+                )
                 self.stats["skipped"] += 1
                 return False
 
@@ -232,11 +236,15 @@ class OpeningAudioGenerator:
         """批量处理 agents"""
         async with self.async_session() as session:
             for i, agent in enumerate(agents, 1):
-                logger.info(f"[{i}/{len(agents)}] 处理 Agent {agent.id} ({agent.name})")
+                logger.info(
+                    f"[{i}/{len(agents)}] 处理 Agent {agent.id} ({agent.name})"
+                )
                 self.stats["processed"] += 1
                 await self.generate_opening_voice_for_agent(agent, session)
 
-    async def run(self, limit: Optional[int] = None, agent_id: Optional[str] = None):
+    async def run(
+        self, limit: Optional[int] = None, agent_id: Optional[str] = None
+    ):
         """运行主逻辑"""
         start_time = datetime.now()
 
@@ -272,7 +280,9 @@ class OpeningAudioGenerator:
                 logger.info(f"限制处理数量: {limit}")
 
         # 查询需要处理的 agents
-        agents = await self.get_agents_without_audio(limit=limit, agent_id=agent_id)
+        agents = await self.get_agents_without_audio(
+            limit=limit, agent_id=agent_id
+        )
 
         if not agents:
             logger.info("没有找到需要处理的 Agents")
@@ -379,7 +389,9 @@ async def main():
 
     # 创建生成器并运行
     generator = OpeningAudioGenerator(
-        config_path=str(config_path), dry_run=args.dry_run, batch_size=args.batch_size
+        config_path=str(config_path),
+        dry_run=args.dry_run,
+        batch_size=args.batch_size,
     )
 
     try:

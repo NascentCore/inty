@@ -43,7 +43,9 @@ def list_report_reasons() -> List[ReportReason]:
     ]
 
 
-async def _get_users_by_ids(db: AsyncSession, user_ids: List[str]) -> dict[str, User]:
+async def _get_users_by_ids(
+    db: AsyncSession, user_ids: List[str]
+) -> dict[str, User]:
     unique_user_ids = list({user_id for user_id in user_ids if user_id})
     if not unique_user_ids:
         return {}
@@ -111,7 +113,8 @@ async def create_report(
     # 用于存储到数据库（数据库字段是 ARRAY(String)）
     if reason_codes:
         reason_codes_str = [
-            code.value if hasattr(code, "value") else str(code) for code in reason_codes
+            code.value if hasattr(code, "value") else str(code)
+            for code in reason_codes
         ]
     else:
         reason_codes_str = []
@@ -122,7 +125,8 @@ async def create_report(
         target_id=report_in.target_id,
         target_type=report_in.target_type,
         reporter_id=reporter_id,
-        reason_ids=reason_ids or [],  # 向后兼容，如果只有 reason_codes 则为空列表
+        reason_ids=reason_ids
+        or [],  # 向后兼容，如果只有 reason_codes 则为空列表
         reason_codes=reason_codes_str,
         image_urls=report_in.image_urls or [],
         description=report_in.description,
@@ -197,7 +201,9 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
             )
             # 使用硬编码的映射关系转换，只转换存在的 ID
             converted_codes = [
-                id_to_code_map[rid] for rid in item.reason_ids if rid in id_to_code_map
+                id_to_code_map[rid]
+                for rid in item.reason_ids
+                if rid in id_to_code_map
             ]
             item.reason_codes = converted_codes if converted_codes else []
 
@@ -235,7 +241,9 @@ async def get_report(db: AsyncSession, report_id: str) -> Report:
             FEEDBACK_REASON_ID_TO_CODE if is_feedback else REASON_ID_TO_CODE
         )
         report.reason_codes = [
-            id_to_code_map[rid] for rid in report.reason_ids if rid in id_to_code_map
+            id_to_code_map[rid]
+            for rid in report.reason_ids
+            if rid in id_to_code_map
         ] or []
     if report.reason_ids is None:
         report.reason_ids = []
@@ -299,7 +307,9 @@ async def get_report_conversation_groups(
         return []
 
     chat_ids = [row[0] for row in chat_rows]
-    chat_to_session = {chat_id: _generate_session_id(chat_id) for chat_id in chat_ids}
+    chat_to_session = {
+        chat_id: _generate_session_id(chat_id) for chat_id in chat_ids
+    }
     session_ids = list(chat_to_session.values())
 
     stats_stmt = text(f"""
@@ -332,7 +342,9 @@ async def get_report_conversation_groups(
         current_stats = session_stats.get(
             session_id, {"round_count": 0, "latest_message_at": None}
         )
-        latest_message_at = current_stats["latest_message_at"] or chat_created_at
+        latest_message_at = (
+            current_stats["latest_message_at"] or chat_created_at
+        )
         group_key = (current_user_id, agent_id)
 
         if group_key not in grouped:
@@ -396,7 +408,9 @@ async def get_report_conversation_messages(
             "messages": [],
         }
 
-    chat_to_session = {chat_id: _generate_session_id(chat_id) for chat_id in chat_ids}
+    chat_to_session = {
+        chat_id: _generate_session_id(chat_id) for chat_id in chat_ids
+    }
     session_to_chat = {
         session_id: chat_id for chat_id, session_id in chat_to_session.items()
     }
@@ -519,8 +533,10 @@ async def get_report_conversation_messages(
             and meta_data["generated_image"].get("image_url")
         ):
             generated_image = dict(meta_data["generated_image"])
-            generated_image["image_url"] = image_transform_service.transform_desktop(
-                generated_image["image_url"]
+            generated_image["image_url"] = (
+                image_transform_service.transform_desktop(
+                    generated_image["image_url"]
+                )
             )
             meta_data = dict(meta_data)
             meta_data["generated_image"] = generated_image

@@ -27,7 +27,9 @@ class TestTagParser(unittest.TestCase):
         )
 
         self.assertTrue(result.extraction_success)
-        self.assertEqual(result.extracted_tags, ["Dancer", "Sexy", "Exotic", "Singer"])
+        self.assertEqual(
+            result.extracted_tags, ["Dancer", "Sexy", "Exotic", "Singer"]
+        )
         self.assertIsNotNone(result.character_info)
         self.assertEqual(result.character_info.name, "Layla")
 
@@ -39,7 +41,8 @@ class TestTagParser(unittest.TestCase):
 
         self.assertTrue(result.extraction_success)
         self.assertEqual(
-            result.extracted_tags, ["Creative", "Artistic", "Passionate", "Talented"]
+            result.extracted_tags,
+            ["Creative", "Artistic", "Passionate", "Talented"],
         )
 
     def test_extract_tags_mixed_quotes(self):
@@ -127,7 +130,9 @@ class TestTagParser(unittest.TestCase):
         self.assertEqual(tags, ["Dancer", "Sexy", "Exotic", "Singer"])
 
         # 测试去除空格
-        tags = self.parser._parse_tags_string(" Artist , Creative , Passionate ")
+        tags = self.parser._parse_tags_string(
+            " Artist , Creative , Passionate "
+        )
         self.assertEqual(tags, ["Artist", "Creative", "Passionate"])
 
         # 测试去重
@@ -139,7 +144,9 @@ class TestTagParser(unittest.TestCase):
         self.assertEqual(tags, [])
 
         # 测试包含引号的标签
-        tags = self.parser._parse_tags_string("'Artist', \"Creative\", Passionate")
+        tags = self.parser._parse_tags_string(
+            "'Artist', \"Creative\", Passionate"
+        )
         self.assertEqual(tags, ["Artist", "Creative", "Passionate"])
 
     def test_clean_tag(self):
@@ -205,9 +212,13 @@ class TestTagParser(unittest.TestCase):
                 )
 
                 if expected:  # 如果预期有结果
-                    self.assertTrue(result.extraction_success, f"样本 {i} 应该提取成功")
+                    self.assertTrue(
+                        result.extraction_success, f"样本 {i} 应该提取成功"
+                    )
                     # 比较标签（忽略大小写和顺序）
-                    result_tags_lower = [tag.lower() for tag in result.extracted_tags]
+                    result_tags_lower = [
+                        tag.lower() for tag in result.extracted_tags
+                    ]
                     expected_tags_lower = [tag.lower() for tag in expected]
                     self.assertEqual(
                         set(result_tags_lower),

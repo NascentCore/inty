@@ -66,7 +66,9 @@ class SessionLog:
     ai_audio_bytes: int = 0
     session_info: dict = field(default_factory=dict)
 
-    def add_transcript(self, role: str, text: str, message_id: Optional[int] = None):
+    def add_transcript(
+        self, role: str, text: str, message_id: Optional[int] = None
+    ):
         self.transcripts.append(
             TranscriptEvent(
                 timestamp=time.time(),
@@ -111,14 +113,21 @@ def wav_info(wav_path: Path) -> dict:
             "sample_rate": wf.getframerate(),
             "channels": wf.getnchannels(),
             "sample_width": wf.getsampwidth(),
-            "duration_ms": len(pcm) / (wf.getframerate() * wf.getsampwidth()) * 1000,
+            "duration_ms": len(pcm)
+            / (wf.getframerate() * wf.getsampwidth())
+            * 1000,
             "frames": wf.getnframes(),
         }
 
 
-def chunk_pcm(pcm_data: bytes, chunk_size: int = SEND_CHUNK_SIZE) -> list[bytes]:
+def chunk_pcm(
+    pcm_data: bytes, chunk_size: int = SEND_CHUNK_SIZE
+) -> list[bytes]:
     """将 PCM 数据按固定大小分块"""
-    return [pcm_data[i : i + chunk_size] for i in range(0, len(pcm_data), chunk_size)]
+    return [
+        pcm_data[i : i + chunk_size]
+        for i in range(0, len(pcm_data), chunk_size)
+    ]
 
 
 class IntyLiveChatClient:
@@ -236,7 +245,9 @@ class IntyLiveChatClient:
         if use_explicit_activity:
             await self.send_activity_end()
             if trailing_silence_ms > 0:
-                await self.send_silence_pcm(trailing_silence_ms, chunk_ms=chunk_ms)
+                await self.send_silence_pcm(
+                    trailing_silence_ms, chunk_ms=chunk_ms
+                )
         else:
             # 纯 VAD：发完音频后等待静音让服务端检测 end_of_speech（silence_duration_ms=800 + buffer）
             await asyncio.sleep(1.2)
@@ -251,7 +262,9 @@ class IntyLiveChatClient:
         """发送结束信号"""
         await self._send_json({"type": "end"})
 
-    async def wait_for_turn_complete(self, timeout: float = 30.0) -> Optional[str]:
+    async def wait_for_turn_complete(
+        self, timeout: float = 30.0
+    ) -> Optional[str]:
         """等待一轮对话完成，返回 AI 转录文本"""
         deadline = time.time() + timeout
         last_ai_text = None
@@ -267,7 +280,9 @@ class IntyLiveChatClient:
 
             if msg.get("type") == "transcript":
                 text = msg.get("text", "")
-                self._log.add_transcript("assistant", text, msg.get("message_id"))
+                self._log.add_transcript(
+                    "assistant", text, msg.get("message_id")
+                )
                 last_ai_text = text
                 print(f"  [AI] {text}")
 
@@ -337,7 +352,8 @@ def save_test_report(name: str, log: SessionLog, extra: Optional[dict] = None):
         "duration_s": round(time.time() - log.session_start, 2),
         "session_info": log.session_info,
         "transcripts": [
-            {"role": t.role, "text": t.text, "ts": t.timestamp} for t in log.transcripts
+            {"role": t.role, "text": t.text, "ts": t.timestamp}
+            for t in log.transcripts
         ],
         "status_sequence": [
             {"status": s.status, "message": s.message, "ts": s.timestamp}
@@ -355,7 +371,9 @@ def save_test_report(name: str, log: SessionLog, extra: Optional[dict] = None):
     if extra:
         report["extra"] = extra
 
-    path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print(f"\n测试报告已保存: {path}")
     return path
 

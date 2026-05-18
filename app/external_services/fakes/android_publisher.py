@@ -58,7 +58,9 @@ class FakeAndroidPublisher:
         self._purchases.products.return_value = self._products
 
         self._subscriptions.get = self._create_subscription_get()
-        self._subscriptions.acknowledge = self._create_subscription_acknowledge()
+        self._subscriptions.acknowledge = (
+            self._create_subscription_acknowledge()
+        )
         self._subscriptions.cancel = self._create_subscription_cancel()
         self._subscriptions.defer = self._create_subscription_defer()
 
@@ -115,7 +117,10 @@ class FakeAndroidPublisher:
         def get(packageName: str, productId: str, token: str):
             key = f"{packageName}:{productId}:{token}"
 
-            if key in self._product_errors and self._product_errors[key] is not None:
+            if (
+                key in self._product_errors
+                and self._product_errors[key] is not None
+            ):
                 raise self._product_errors[key]
 
             if key in self._product_responses:
@@ -146,7 +151,10 @@ class FakeAndroidPublisher:
             ):
                 raise self._acknowledge_errors[key]
 
-            if key in self._acknowledge_success and not self._acknowledge_success[key]:
+            if (
+                key in self._acknowledge_success
+                and not self._acknowledge_success[key]
+            ):
                 raise HttpError(MagicMock(status=500), b"{}")
 
             mock_request = MagicMock()
@@ -161,7 +169,10 @@ class FakeAndroidPublisher:
         def cancel(packageName: str, subscriptionId: str, token: str):
             key = f"{packageName}:{subscriptionId}:{token}"
 
-            if key in self._cancel_errors and self._cancel_errors[key] is not None:
+            if (
+                key in self._cancel_errors
+                and self._cancel_errors[key] is not None
+            ):
                 raise self._cancel_errors[key]
 
             if key in self._cancel_success and not self._cancel_success[key]:
@@ -177,11 +188,17 @@ class FakeAndroidPublisher:
         """创建订阅延期方法"""
 
         def defer(
-            packageName: str, subscriptionId: str, token: str, body: Dict[str, Any]
+            packageName: str,
+            subscriptionId: str,
+            token: str,
+            body: Dict[str, Any],
         ):
             key = f"{packageName}:{subscriptionId}:{token}"
 
-            if key in self._defer_errors and self._defer_errors[key] is not None:
+            if (
+                key in self._defer_errors
+                and self._defer_errors[key] is not None
+            ):
                 raise self._defer_errors[key]
 
             if key in self._defer_success and not self._defer_success[key]:
@@ -232,7 +249,10 @@ class FakeAndroidPublisher:
         def get(packageName: str, editId: str, track: str):
             key = f"{packageName}:{editId}:{track}"
 
-            if key in self._track_errors and self._track_errors[key] is not None:
+            if (
+                key in self._track_errors
+                and self._track_errors[key] is not None
+            ):
                 raise self._track_errors[key]
 
             if key in self._track_responses:
@@ -257,7 +277,10 @@ class FakeAndroidPublisher:
                                 "name": "1.0.0",
                                 "status": "completed",
                                 "releaseNotes": [
-                                    {"language": "en-US", "text": "Release notes"}
+                                    {
+                                        "language": "en-US",
+                                        "text": "Release notes",
+                                    }
                                 ],
                             }
                         ]
@@ -270,42 +293,66 @@ class FakeAndroidPublisher:
         return get
 
     def set_subscription_response(
-        self, package_name: str, product_id: str, token: str, response: Dict[str, Any]
+        self,
+        package_name: str,
+        product_id: str,
+        token: str,
+        response: Dict[str, Any],
     ):
         """设置订阅响应"""
         key = f"{package_name}:{product_id}:{token}"
         self._subscription_responses[key] = response
 
     def set_product_response(
-        self, package_name: str, product_id: str, token: str, response: Dict[str, Any]
+        self,
+        package_name: str,
+        product_id: str,
+        token: str,
+        response: Dict[str, Any],
     ):
         """设置产品响应"""
         key = f"{package_name}:{product_id}:{token}"
         self._product_responses[key] = response
 
     def set_subscription_error(
-        self, package_name: str, product_id: str, token: str, error: Optional[HttpError]
+        self,
+        package_name: str,
+        product_id: str,
+        token: str,
+        error: Optional[HttpError],
     ):
         """设置订阅错误"""
         key = f"{package_name}:{product_id}:{token}"
         self._subscription_errors[key] = error
 
     def set_product_error(
-        self, package_name: str, product_id: str, token: str, error: Optional[HttpError]
+        self,
+        package_name: str,
+        product_id: str,
+        token: str,
+        error: Optional[HttpError],
     ):
         """设置产品错误"""
         key = f"{package_name}:{product_id}:{token}"
         self._product_errors[key] = error
 
     def set_track_response(
-        self, package_name: str, edit_id: str, track: str, response: Dict[str, Any]
+        self,
+        package_name: str,
+        edit_id: str,
+        track: str,
+        response: Dict[str, Any],
     ):
         """设置轨道响应"""
         key = f"{package_name}:{edit_id}:{track}"
         self._track_responses[key] = response
 
     def set_track_error(
-        self, package_name: str, edit_id: str, track: str, error: Optional[HttpError]
+        self,
+        package_name: str,
+        edit_id: str,
+        track: str,
+        error: Optional[HttpError],
     ):
         """设置轨道错误"""
         key = f"{package_name}:{edit_id}:{track}"
@@ -323,7 +370,11 @@ class FakeAndroidPublisher:
         self._acknowledge_success[key] = success
 
     def set_acknowledge_error(
-        self, package_name: str, product_id: str, token: str, error: Optional[HttpError]
+        self,
+        package_name: str,
+        product_id: str,
+        token: str,
+        error: Optional[HttpError],
     ):
         """设置确认订阅错误"""
         key = f"{package_name}:{product_id}:{token}"
@@ -337,7 +388,11 @@ class FakeAndroidPublisher:
         self._cancel_success[key] = success
 
     def set_cancel_error(
-        self, package_name: str, product_id: str, token: str, error: Optional[HttpError]
+        self,
+        package_name: str,
+        product_id: str,
+        token: str,
+        error: Optional[HttpError],
     ):
         """设置取消订阅错误"""
         key = f"{package_name}:{product_id}:{token}"
@@ -351,7 +406,11 @@ class FakeAndroidPublisher:
         self._defer_success[key] = success
 
     def set_defer_error(
-        self, package_name: str, product_id: str, token: str, error: Optional[HttpError]
+        self,
+        package_name: str,
+        product_id: str,
+        token: str,
+        error: Optional[HttpError],
     ):
         """设置延期订阅错误"""
         key = f"{package_name}:{product_id}:{token}"

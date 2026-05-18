@@ -8,7 +8,11 @@ from sqlalchemy.orm import Session
 from app.api import deps
 from app.api.tags import WEB_APP_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
-from app.services.settings_service import create_settings, get_settings, update_settings
+from app.services.settings_service import (
+    create_settings,
+    get_settings,
+    update_settings,
+)
 
 from loguru import logger
 from app.schemas.settings import Settings as SettingsSchema
@@ -19,7 +23,9 @@ from app.schemas.user import User as UserSchema
 router = APIRouter(prefix="/settings", route_class=LoggerRoute)
 
 
-@router.get("/", response_model=SettingsSchema, tags=[WEB_APP_TAG, NOT_USED_TAG])
+@router.get(
+    "/", response_model=SettingsSchema, tags=[WEB_APP_TAG, NOT_USED_TAG]
+)
 def get_settings_endpoint(
     db: Session = Depends(deps.get_db),
     current_user: UserSchema = Depends(deps.get_current_active_user),
@@ -33,7 +39,9 @@ def get_settings_endpoint(
         if not settings:
             logger.debug(f"User settings not found: user_id={current_user.id}")
             raise HTTPException(status_code=404, detail="Settings not found")
-        logger.debug(f"Successfully retrieved user settings: user_id={current_user.id}")
+        logger.debug(
+            f"Successfully retrieved user settings: user_id={current_user.id}"
+        )
         return settings
     except SQLAlchemyError as e:
         logger.error(
@@ -49,7 +57,9 @@ def get_settings_endpoint(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.put("/", response_model=SettingsSchema, tags=[WEB_APP_TAG, NOT_USED_TAG])
+@router.put(
+    "/", response_model=SettingsSchema, tags=[WEB_APP_TAG, NOT_USED_TAG]
+)
 def update_settings_endpoint(
     *,
     db: Session = Depends(deps.get_db),
@@ -87,7 +97,9 @@ def update_settings_endpoint(
             settings = update_settings(
                 db, db_settings=settings, settings_in=settings_in
             )
-        logger.debug(f"Successfully updated user settings: user_id={current_user.id}")
+        logger.debug(
+            f"Successfully updated user settings: user_id={current_user.id}"
+        )
         return settings
     except SQLAlchemyError as e:
         logger.error(

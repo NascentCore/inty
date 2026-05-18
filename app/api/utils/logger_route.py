@@ -67,7 +67,9 @@ class LoggerRoute(APIRoute):
                             except json.JSONDecodeError:
                                 request_body = decoded_body
                     except UnicodeDecodeError as e:
-                        request_body = f"<non-utf8 request body: {len(body)} bytes>"
+                        request_body = (
+                            f"<non-utf8 request body: {len(body)} bytes>"
+                        )
                         logger.warning(
                             "[{}] Failed to decode request body: {}, method={}, path={}",
                             request_id,
@@ -95,7 +97,9 @@ class LoggerRoute(APIRoute):
                         body=request_body,
                     )
                 else:
-                    filtered_headers = self._filter_headers(dict(request.headers))
+                    filtered_headers = self._filter_headers(
+                        dict(request.headers)
+                    )
                     self._log_request_readable(
                         request_id=request_id,
                         method=request.method,
@@ -162,7 +166,9 @@ class LoggerRoute(APIRoute):
                                 json.dumps(error_log_data, ensure_ascii=False)
                             )
                         else:
-                            logger.error(json.dumps(error_log_data, ensure_ascii=False))
+                            logger.error(
+                                json.dumps(error_log_data, ensure_ascii=False)
+                            )
                     else:
                         if is_client_error:
                             logger.warning(
@@ -230,7 +236,9 @@ class LoggerRoute(APIRoute):
 
                     # Fall through to try body attribute
                 except Exception as e:
-                    extraction_error = f"Failed to access JSONResponse attributes: {e}"
+                    extraction_error = (
+                        f"Failed to access JSONResponse attributes: {e}"
+                    )
 
             # Try method 2: Direct body access (for responses that are already serialized)
             if hasattr(response, "body") and response.body is not None:
@@ -283,7 +291,9 @@ class LoggerRoute(APIRoute):
                     pass
                 except Exception as e:
                     if not extraction_error:
-                        extraction_error = f"Failed to read from body_iterator: {e}"
+                        extraction_error = (
+                            f"Failed to read from body_iterator: {e}"
+                        )
 
         except Exception as e:
             extraction_error = f"Unexpected error: {e}"
@@ -406,7 +416,12 @@ class LoggerRoute(APIRoute):
         )
 
     def _log_error_readable(
-        self, request_id: str, method: str, path: str, error: str, duration: float
+        self,
+        request_id: str,
+        method: str,
+        path: str,
+        error: str,
+        duration: float,
     ):
         """Readable format logging for error (development)"""
         logger.error(
@@ -426,7 +441,12 @@ class LoggerRoute(APIRoute):
         for key, value in headers.items():
             if key.lower() in cls.SENSITIVE_HEADERS:
                 filtered[key] = "***REDACTED***"
-            elif key.lower() in ["host", "content-type", "content-length", "accept"]:
+            elif key.lower() in [
+                "host",
+                "content-type",
+                "content-length",
+                "accept",
+            ]:
                 filtered[key] = value
         return filtered
 

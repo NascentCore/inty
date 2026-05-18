@@ -7,7 +7,13 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal
 
 from loguru import logger
-from pydantic import AliasChoices, BaseModel, Field, ValidationError, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    Field,
+    ValidationError,
+    field_validator,
+)
 
 from app.core.companion_harness.experience_profile import (
     ExperienceContextMode,
@@ -166,7 +172,9 @@ def _read_memory_document_optional(
     return text
 
 
-def _read_memory_document_required(store: MemoryStore, relative_path: str) -> str:
+def _read_memory_document_required(
+    store: MemoryStore, relative_path: str
+) -> str:
     return store.read_document(relative_path)
 
 
@@ -243,7 +251,9 @@ class ContextMeta(BaseModel):
             return None
         n = normalize_experience_profile_id(v)
         if n == ExperienceContextMode.BOOTSTRAP:
-            raise ValueError("post_bootstrap_context_mode cannot be 'bootstrap'")
+            raise ValueError(
+                "post_bootstrap_context_mode cannot be 'bootstrap'"
+            )
         return n
 
 
@@ -286,8 +296,12 @@ def load_prompt_bundle(
         user_md=_read_memory_document_required(store, "USER.md"),
         memory_md=memory_long,
         techno_core_md=_read_memory_document_optional(store, "TECHNO_CORE.md"),
-        living_sphere_md=_read_memory_document_optional(store, "LIVING_SPHERE.md"),
-        tools_md=_template_doc_truncated("TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS),
+        living_sphere_md=_read_memory_document_optional(
+            store, "LIVING_SPHERE.md"
+        ),
+        tools_md=_template_doc_truncated(
+            "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
+        ),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
@@ -302,7 +316,9 @@ def load_context_meta(*, store: MemoryStore) -> ContextMeta:
         try:
             raw = json.loads(body)
         except json.JSONDecodeError as e:
-            raise ValueError("context.json: invalid JSON in memory store") from e
+            raise ValueError(
+                "context.json: invalid JSON in memory store"
+            ) from e
         return ContextMeta.model_validate(raw)
     return ContextMeta()
 
@@ -321,7 +337,9 @@ def load_transcript_text(
             logger.warning("{}: transcript skipped non-json line", log_label)
             continue
         if not isinstance(raw, dict):
-            logger.warning("{}: transcript skipped non-object json line", log_label)
+            logger.warning(
+                "{}: transcript skipped non-object json line", log_label
+            )
             continue
         try:
             out.append(ChatMessage.model_validate(raw))
@@ -339,7 +357,11 @@ def transcript_without_trailing_presence_signals(
     msgs: list[ChatMessage],
 ) -> list[ChatMessage]:
     i = len(msgs)
-    while i > 0 and msgs[i - 1].role == "user" and msgs[i - 1].presence is not None:
+    while (
+        i > 0
+        and msgs[i - 1].role == "user"
+        and msgs[i - 1].presence is not None
+    ):
         i -= 1
     return msgs[:i]
 
@@ -361,7 +383,11 @@ def transcript_for_llm_turn(
     loaded: list[ChatMessage], *, max_messages: int | None = None
 ) -> list[ChatMessage]:
     """组装送入本轮 chat.completions 的历史消息尾部窗口。"""
-    cap = max_messages if max_messages is not None else TRANSCRIPT_WINDOW_MAX_MESSAGES
+    cap = (
+        max_messages
+        if max_messages is not None
+        else TRANSCRIPT_WINDOW_MAX_MESSAGES
+    )
     if cap < 1:
         cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
     if len(loaded) <= cap:
@@ -369,19 +395,33 @@ def transcript_for_llm_turn(
     return loaded[-cap:]
 
 
-def transcript_rows_for_public_chat_llm(rows: list[ChatMessage]) -> list[ChatMessage]:
+def transcript_rows_for_public_chat_llm(
+    rows: list[ChatMessage],
+) -> list[ChatMessage]:
     """Strip maintenance inner-tick turns from the stream fed to user-facing chat/tool LLM calls."""
     excluded_user_uuids: set[str] = set()
     for m in rows:
-        if m.role == "user" and m.inner_tick is True and m.heartbeat is not True:
+        if (
+            m.role == "user"
+            and m.inner_tick is True
+            and m.heartbeat is not True
+        ):
             uid = m.uuid
             if uid:
                 excluded_user_uuids.add(uid)
     out: list[ChatMessage] = []
     for m in rows:
-        if m.role == "user" and m.inner_tick is True and m.heartbeat is not True:
+        if (
+            m.role == "user"
+            and m.inner_tick is True
+            and m.heartbeat is not True
+        ):
             continue
-        if m.role == "assistant" and m.reply_to and m.reply_to in excluded_user_uuids:
+        if (
+            m.role == "assistant"
+            and m.reply_to
+            and m.reply_to in excluded_user_uuids
+        ):
             continue
         out.append(m)
     return out
@@ -412,7 +452,9 @@ def companion_turn_transcript_loaded_messages(
     raw_main = load_transcript_from_store(store, rel_main_transcript)
     raw_inner = load_transcript_from_store(store, rel_inner_tick_transcript)
     public_main = transcript_rows_for_public_chat_llm(raw_main)
-    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    tick_proactive = (
+        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    )
     if inner_tick_turn and not tick_proactive:
         return merge_transcripts_by_ts(public_main, raw_inner)
     return public_main
@@ -424,7 +466,9 @@ def transcript_relative_path_for_turn_persistence(
     inner_tick_mode: InnerTickMode,
 ) -> str:
     """Scope-relative JSONL path for run_turn user/assistant transcript appends."""
-    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    tick_proactive = (
+        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    )
     if inner_tick_turn and not tick_proactive:
         return "transcript_inner_tick.jsonl"
     return "transcript.jsonl"

@@ -2,7 +2,13 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import AliasChoices, BaseModel, Field, field_serializer, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    Field,
+    field_serializer,
+    field_validator,
+)
 
 from app.api.types.llm_config import LLMConfig
 from app.models.agent import AgentSource, AgentStatus, AgentVisibility
@@ -18,7 +24,9 @@ class AgentMetaData(BaseModel):
 
     score: Optional[int] = Field(None, description="Agent 评分")
 
-    comment: Optional[str] = Field(None, max_length=1000, description="Agent 备注信息")
+    comment: Optional[str] = Field(
+        None, max_length=1000, description="Agent 备注信息"
+    )
 
     @field_validator("comment")
     @classmethod
@@ -116,7 +124,9 @@ class ExclusivePhotoItem(BaseModel):
 class AgentBase(BaseModel):
     """AI角色基础模型"""
 
-    name: str = Field(..., max_length=256, description="角色名称，最长 256 字符")
+    name: str = Field(
+        ..., max_length=256, description="角色名称，最长 256 字符"
+    )
     gender: str
     avatar: Optional[str] = None
     background: Optional[str] = None
@@ -212,7 +222,8 @@ class GenerateBackgroundAnimatedRequest(BaseModel):
     """
 
     prompt: Optional[str] = Field(
-        default=None, description="视频生成提示词（可选，如果为空则从背景图自动生成）"
+        default=None,
+        description="视频生成提示词（可选，如果为空则从背景图自动生成）",
     )
 
 
@@ -306,14 +317,18 @@ class AgentInDB(AgentBase):
         return int(created_at.timestamp())
 
     @field_serializer("updated_at")
-    def serialize_updated_at(self, updated_at: Optional[datetime]) -> Optional[int]:
+    def serialize_updated_at(
+        self, updated_at: Optional[datetime]
+    ) -> Optional[int]:
         """序列化更新时间为时间戳"""
         if updated_at is None:
             return None
         return int(updated_at.timestamp())
 
     @field_serializer("deleted_at")
-    def serialize_deleted_at(self, deleted_at: Optional[datetime]) -> Optional[int]:
+    def serialize_deleted_at(
+        self, deleted_at: Optional[datetime]
+    ) -> Optional[int]:
         """序列化删除时间为时间戳"""
         if deleted_at is None:
             return None
@@ -397,7 +412,9 @@ class Agent(AgentInDB):
     def serialize_avatar(self, avatar: Optional[str]) -> Optional[str]:
         """转换avatar URL为CDN URL，支持基于extension裁切数据的avatar生成"""
         try:
-            from app.services.image_transform_service import image_transform_service
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
 
             # 优先检查是否存在裁切数据，如果存在则使用裁切数据而不是独立的avatar
             if (
@@ -478,7 +495,9 @@ class Agent(AgentInDB):
         if not background:
             return background
         try:
-            from app.services.image_transform_service import image_transform_service
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
 
             return image_transform_service.transform_desktop(background)
         except Exception:
@@ -492,7 +511,9 @@ class Agent(AgentInDB):
         if not background_images:
             return background_images
         try:
-            from app.services.image_transform_service import image_transform_service
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
 
             return image_transform_service.transform_url_list(
                 background_images, "desktop"
@@ -508,19 +529,27 @@ class Agent(AgentInDB):
         if not background_animated:
             return background_animated
         try:
-            from app.services.image_transform_service import image_transform_service
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
 
-            return image_transform_service.transform_desktop(background_animated)
+            return image_transform_service.transform_desktop(
+                background_animated
+            )
         except Exception:
             return background_animated
 
     @field_serializer("photos")
-    def serialize_photos(self, photos: Optional[List[str]]) -> Optional[List[str]]:
+    def serialize_photos(
+        self, photos: Optional[List[str]]
+    ) -> Optional[List[str]]:
         """转换photos URL列表为CDN URL"""
         if not photos:
             return photos
         try:
-            from app.services.image_transform_service import image_transform_service
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
 
             return image_transform_service.transform_url_list(photos, "mobile")
         except Exception:

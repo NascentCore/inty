@@ -34,8 +34,12 @@ class ModelCatalog:
     def default(cls) -> "ModelCatalog":
         return cls(
             fast=ModelProfile(tier=ModelTier.FAST, name="fast-text-1"),
-            reasoning=ModelProfile(tier=ModelTier.REASONING, name="reasoning-1"),
-            multimodal=ModelProfile(tier=ModelTier.MULTIMODAL, name="multimodal-1"),
+            reasoning=ModelProfile(
+                tier=ModelTier.REASONING, name="reasoning-1"
+            ),
+            multimodal=ModelProfile(
+                tier=ModelTier.MULTIMODAL, name="multimodal-1"
+            ),
         )
 
 
@@ -159,7 +163,9 @@ def classify_emotion(user_message: str) -> EmotionClassification:
         return EmotionClassification(emotion="sad", expression="gentle")
     if any(word in normalized for word in ("angry", "mad", "upset", "furious")):
         return EmotionClassification(emotion="angry", expression="calm")
-    if any(word in normalized for word in ("excited", "thrilled", "joy", "happy")):
+    if any(
+        word in normalized for word in ("excited", "thrilled", "joy", "happy")
+    ):
         return EmotionClassification(emotion="joyful", expression="playful")
     return EmotionClassification(emotion="neutral", expression="warm")
 
@@ -183,7 +189,9 @@ def select_channel(
     return default_channel
 
 
-def select_model_tier(*, user_message: str | None, channel: ChannelType) -> ModelTier:
+def select_model_tier(
+    *, user_message: str | None, channel: ChannelType
+) -> ModelTier:
     if channel == ChannelType.VOICE_CALL:
         return ModelTier.MULTIMODAL
     if not user_message:
@@ -203,7 +211,9 @@ def select_model_tier(*, user_message: str | None, channel: ChannelType) -> Mode
     return ModelTier.FAST
 
 
-def pick_model_from_tier(model_catalog: ModelCatalog, tier: ModelTier) -> ModelProfile:
+def pick_model_from_tier(
+    model_catalog: ModelCatalog, tier: ModelTier
+) -> ModelProfile:
     if tier == ModelTier.MULTIMODAL:
         return model_catalog.multimodal
     if tier == ModelTier.REASONING:
@@ -227,7 +237,9 @@ class PerpetualCompanionAgent:
             return [self._handle_user_turn(now=now, user_message=user_message)]
         return self._handle_heartbeat(now=now)
 
-    def _handle_user_turn(self, *, now: float, user_message: str) -> OutboundEvent:
+    def _handle_user_turn(
+        self, *, now: float, user_message: str
+    ) -> OutboundEvent:
         classification = classify_emotion(user_message)
         self.state.emotion = classification.emotion
         self.state.expression = classification.expression
@@ -264,11 +276,15 @@ class PerpetualCompanionAgent:
         )
 
     def _handle_heartbeat(self, *, now: float) -> list[OutboundEvent]:
-        if (now - self.state.last_outreach_timestamp) < self.proactive_interval_seconds:
+        if (
+            now - self.state.last_outreach_timestamp
+        ) < self.proactive_interval_seconds:
             return []
         channel = self.state.default_channel
         tier = (
-            ModelTier.MULTIMODAL if self.state.emotion == "joyful" else ModelTier.FAST
+            ModelTier.MULTIMODAL
+            if self.state.emotion == "joyful"
+            else ModelTier.FAST
         )
         model = pick_model_from_tier(self.model_catalog, tier)
         content = self.model_executor.generate(

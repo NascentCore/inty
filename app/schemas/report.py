@@ -77,7 +77,9 @@ class ReportCreate(BaseModel):
     description: Optional[str] = Field(
         None, description="The description of the report."
     )
-    request_id: Optional[str] = Field(None, description="The ID of the request.")
+    request_id: Optional[str] = Field(
+        None, description="The ID of the request."
+    )
     report_type: Optional[ReportType] = Field(
         None, description="举报或者反馈的类型，为空时默认为 REPORT"
     )
@@ -91,7 +93,9 @@ class ReportQuery(BaseModel):
     status: Optional[ReportStatus] = None
     reporter_id: Optional[str] = None
     report_type: Optional[ReportType] = None
-    order_by: Optional[str] = "created_at_desc"  # created_at_desc 或 created_at_asc
+    order_by: Optional[str] = (
+        "created_at_desc"  # created_at_desc 或 created_at_asc
+    )
     skip: int = 0
     limit: int = 100
 

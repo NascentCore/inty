@@ -14,7 +14,9 @@ def build_preference_memory_from_event(
     now: datetime,
 ) -> MemoryItem | None:
     normalized = event_content.lower()
-    if "sms" in normalized and ("prefer" in normalized or "priority" in normalized):
+    if "sms" in normalized and (
+        "prefer" in normalized or "priority" in normalized
+    ):
         key = "preferred_channel"
         value = ChannelType.SMS.value
     elif "telegram" in normalized and (
@@ -25,7 +27,9 @@ def build_preference_memory_from_event(
     else:
         return None
 
-    memory_hash = sha256(f"{user_id}:{key}:{value}".encode("utf-8")).hexdigest()[:24]
+    memory_hash = sha256(
+        f"{user_id}:{key}:{value}".encode("utf-8")
+    ).hexdigest()[:24]
     return MemoryItem(
         memory_id=f"mem_{memory_hash}",
         user_id=user_id,

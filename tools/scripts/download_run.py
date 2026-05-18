@@ -58,7 +58,9 @@ def _tracing_v2_from_agent_yaml(agent_data: dict[str, Any]) -> bool:
 
 def _apply_langsmith_from_config_yaml(data: dict[str, Any]) -> None:
     app_data = data.get("app") if isinstance(data.get("app"), dict) else {}
-    agent_data = data.get("agent") if isinstance(data.get("agent"), dict) else {}
+    agent_data = (
+        data.get("agent") if isinstance(data.get("agent"), dict) else {}
+    )
     os.environ["LANGSMITH_PROJECT"] = _langsmith_project_from_app_yaml(app_data)
     os.environ["LANGSMITH_TRACING_V2"] = (
         "true" if _tracing_v2_from_agent_yaml(agent_data) else "false"
@@ -122,7 +124,9 @@ def _iter_trace_runs(
     if max_runs is not None:
         kwargs["limit"] = max_runs
 
-    filtered_kwargs, dropped = _filter_supported_kwargs(client.list_runs, kwargs)
+    filtered_kwargs, dropped = _filter_supported_kwargs(
+        client.list_runs, kwargs
+    )
     if dropped:
         sys.stderr.write(
             f"list_runs() dropped unsupported kwargs (ignored): {dropped}\n"
@@ -282,7 +286,9 @@ def _main_impl(
                 return 1
             tid = getattr(seed_run_obj, "trace_id", None)
             if tid is None:
-                sys.stderr.write(f"Run {run_id!r} has no trace_id in LangSmith.\n")
+                sys.stderr.write(
+                    f"Run {run_id!r} has no trace_id in LangSmith.\n"
+                )
                 return 1
             trace_id_final = str(tid)
 
@@ -317,18 +323,23 @@ def _main_impl(
         try:
             run = client.read_run(run_id, load_child_runs=load_child_runs)
         except Exception as exc:
-            sys.stderr.write(f"LangSmith read_run failed for {run_id!r}: {exc}\n")
+            sys.stderr.write(
+                f"LangSmith read_run failed for {run_id!r}: {exc}\n"
+            )
             return 1
         payload = run.model_dump(mode="json")
 
     if output is not None:
         out_target = output
     elif trace_id_arg:
-        out_target = str(Path(".inty/langsmith_traces") / f"{trace_id_arg}.json")
+        out_target = str(
+            Path(".inty/langsmith_traces") / f"{trace_id_arg}.json"
+        )
     elif entire_trace:
         assert trace_resolved_for_default_path is not None
         out_target = str(
-            Path(".inty/langsmith_traces") / f"{trace_resolved_for_default_path}.json"
+            Path(".inty/langsmith_traces")
+            / f"{trace_resolved_for_default_path}.json"
         )
     else:
         out_target = str(Path(".inty/langsmith_runs") / f"{run_id}.json")
