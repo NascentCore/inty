@@ -1,32 +1,17 @@
 name: Release - iMate 后端
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      # 后端代码（与 IntelliMate 共用 monorepo 源码）
-      - "app/**/*.py"
-      - "backend/alembic/**/*.py"
-      - "backend/inty/*.py"
-      - "backend/inty/start.sh"
-      # iMate 开发环境配置（push main 默认部署到 GitHub Environment imate-dev）
-      - "devops/config.yaml.imate_dev"
-      # - "devops/config.yaml.prod"
-      # 评测系统；已经迁移到 ops.inty.cc/evaluation dev.ops.inty.cc/evaluation backend/ops/
-      # - "evaluation/**/*.tsx"
-      # - "evaluation/tsconfig.json"
-      # - "evaluation/tsconfig.node.json"
-      # - "evaluation/package.json"
-      # - "evaluation/package-lock.json"
-      # - "evaluation/vite.config.ts"
-      # - "evaluation/vitest.config.ts"
-      # - "evaluation/index.html"
-      # - "evaluation/build.sh"
-      # 容器
-      - "devops/docker/Dockerfile"
-      # 工作流文件暂时取消掉，减少运行频率
-      # - ".github/workflows/build_and_deploy_backend.yml"
+  # push 已关闭：不再在 merge main 时自动部署 imate-dev；请用 workflow_dispatch 选 imate-dev
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - "app/**/*.py"
+  #     - "backend/alembic/**/*.py"
+  #     - "backend/inty/*.py"
+  #     - "backend/inty/start.sh"
+  #     - "devops/config.yaml.imate_dev"
+  #     - "devops/docker/Dockerfile"
 
   workflow_dispatch:
     inputs:
@@ -45,7 +30,7 @@ on:
 #   concurrency.group
 #   jobs.build-and-deploy.environment
 #   jobs.build-and-deploy.env.DEPLOY_ENV
-# 语义：workflow_dispatch -> inputs.environment；schedule -> imate-prod；其余（如 push main）-> imate-dev
+# 语义：workflow_dispatch -> inputs.environment；schedule -> imate-prod
 #
 # iMate Android（imate_android_app core BuildConfig.API_BASE_URL）与 GitHub Environment vars.SERVICE_PUBLIC_URL 对齐：
 #   imate-dev  -> https://dev.imate.inty.cc/（对应 app debug）
