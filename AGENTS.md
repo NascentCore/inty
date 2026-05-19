@@ -64,7 +64,9 @@ such experience is between human users and AI, but they have real-world patterns
 
 ## Repo structure
 
-**IMPORTANT: agentic companion and iMate (android, iOS) are under active development, no need of backward compatibility. All others are in maintenance mode and should not be changed.**
+**IMPORTANT: `/api/v1/chat/ws` should only use companion harness, technocore, livingsphere. All others are in maintenance mode and should not be changed.**
+
+**DO NOT BOTHER WITH /experimental/**
 
 - Agentic companion core modules
   - [companion_harness](/app/core/companion_harness/): Inty's core agentic scaffolding.
@@ -88,8 +90,6 @@ such experience is between human users and AI, but they have real-world patterns
     - **DO NOT EDIT**: [Guidelines](/.agents/guidelines/) are guidelines in different scenarios
     - Diagramming for docs: [TOOLS.md](/.agents/guidelines/TOOLS.md)
   - [.cursor](/.cursor/) Cursor-specific harness
-
-**Everything that is outside of companion harness by default should not be used in iMate & websocket chat** `/api/v1/chat/ws`.
 
 ## General instructions
 
