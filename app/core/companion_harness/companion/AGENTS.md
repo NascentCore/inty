@@ -30,6 +30,12 @@
 
 ``turn_lock``（每 WebSocket 连接）与 ``tool_bg_idle``（每 session）串行化各轨道；``tool_background`` 线程是用户轮与维护 tick 上的第三条执行流。TechnoCore 事件轨道尚未实现。
 
+### 隐式上线问候（LLM 超时 / 重试 / 抢占）
+
+- **配置**（``app.features``）：``companion_implicit_sign_on_greeting_llm_timeout_sec``（单次 LLM 上限，默认 6s）、``companion_implicit_sign_on_greeting_llm_max_attempts``（含首次，默认 2）。校验范围 timeout ∈ [1, 60]、attempts ∈ [1, 5]。
+- **重试**：仅 ``IMPLICIT_SIGN_ON_GREETING`` 的 single-shot ``CHAT_ONLY_SYNC`` 路径对 ``chat_completion`` 做 ``asyncio.wait_for`` + 失败重试；``asyncio.CancelledError`` 立即抛出、不计入失败次数。
+- **抢占**：``user_signed_on`` 后 spawn 的问候 task 登记在 ``CompanionWebSocketCoordinator``；任意真实用户 WS 聊天 completion 在抢 ``turn_lock`` **之前** 调用 ``cancel_implicit_greeting_turn_if_running()``——对方已开口则不再补发寒暄，取消后不向 outbound 推 greeting 帧。
+
 ## 深入阅读
 
 - 表结构、registry 键、路径与 `document_kind` 映射等 **机械细节**：[`/docs/companion_harness/MEMORY_STORE.md`](/docs/companion_harness/MEMORY_STORE.md)。

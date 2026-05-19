@@ -140,6 +140,9 @@ class CompanionWebSocketCoordinator:
     _ws_inner_tick_proactive_tool_bg_idle: threading.Event | None = field(
         default=None, repr=False
     )
+    _implicit_greeting_turn_task: asyncio.Task[Any] | None = field(
+        default=None, repr=False
+    )
 
     @classmethod
     def for_current_loop(cls) -> "CompanionWebSocketCoordinator":
@@ -223,3 +226,22 @@ class CompanionWebSocketCoordinator:
             bool(ctx.get("ws_inner_tick_maintenance"))
             for ctx in self.foreground_pending.values()
         )
+
+    def register_implicit_greeting_turn(self, task: asyncio.Task[Any]) -> None:
+        """Track the detached ``user_signed_on`` greeting task for user-chat preemption."""
+        self._implicit_greeting_turn_task = task
+
+        def _on_done(done_task: asyncio.Task[Any]) -> None:
+            if self._implicit_greeting_turn_task is done_task:
+                self._implicit_greeting_turn_task = None
+
+        task.add_done_callback(_on_done)
+
+    async def cancel_implicit_greeting_turn_if_running(self) -> bool:
+        """Cancel in-flight implicit greeting so user chat can take ``turn_lock``."""
+        task = self._implicit_greeting_turn_task
+        if task is None or task.done():
+            return False
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        return True

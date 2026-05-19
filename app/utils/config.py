@@ -205,6 +205,10 @@ class FeaturesConfig:
     # Seconds to wait on ``CompanionSession.tool_bg_idle`` before LivingSphere jsonl compact
     # (memory worker after user turns with defer_memory_update).
     companion_tool_bg_idle_wait_timeout_sec: float = 120.0
+    # Implicit ``user_signed_on`` greeting: per-attempt LLM wait (``CHAT_ONLY_SYNC`` path).
+    companion_implicit_sign_on_greeting_llm_timeout_sec: float = 6.0
+    # Max LLM attempts for that greeting (includes the first call; 2 = one retry).
+    companion_implicit_sign_on_greeting_llm_max_attempts: int = 2
 
     def __post_init__(self) -> None:
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()
@@ -918,4 +922,16 @@ def _validate_config(config: Config):
     if tb_wait < 1.0 or tb_wait > 3600.0:
         raise ValueError(
             "app.features.companion_tool_bg_idle_wait_timeout_sec must be between 1 and 3600"
+        )
+    greet_timeout = feats.companion_implicit_sign_on_greeting_llm_timeout_sec
+    if greet_timeout < 1.0 or greet_timeout > 60.0:
+        raise ValueError(
+            "app.features.companion_implicit_sign_on_greeting_llm_timeout_sec "
+            "must be between 1 and 60"
+        )
+    greet_attempts = feats.companion_implicit_sign_on_greeting_llm_max_attempts
+    if greet_attempts < 1 or greet_attempts > 5:
+        raise ValueError(
+            "app.features.companion_implicit_sign_on_greeting_llm_max_attempts "
+            "must be between 1 and 5"
         )

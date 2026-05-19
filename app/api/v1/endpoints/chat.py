@@ -513,7 +513,7 @@ async def _try_handle_ws_user_signed_on_frame(
             )
         else:
             assert inflight_turn_tracker is not None
-            inflight_turn_tracker.spawn(
+            greeting_task = inflight_turn_tracker.spawn(
                 _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                     db=db,
                     agent_id=agent_id,
@@ -528,6 +528,7 @@ async def _try_handle_ws_user_signed_on_frame(
                 ),
                 name=f"chat_ws_user_signed_on_greeting_{ws_conn_id}",
             )
+            companion_ws.register_implicit_greeting_turn(greeting_task)
             greeting_scheduled = True
         await websocket.send_json(
             ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
@@ -3842,6 +3843,7 @@ async def chat_completions_websocket(
                 # the frame is accepted but no chat response is sent (REPL: user-input only).
                 # https://github.com/NascentCore/inty/issues/3113
                 # https://github.com/NascentCore/inty/issues/3123
+                await companion_ws.cancel_implicit_greeting_turn_if_running()
                 async with companion_ws.turn_lock:
                     turn_task = inflight_turn_tracker.spawn(
                         _agent_chat_ws_completions_impl(
