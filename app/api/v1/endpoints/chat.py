@@ -1375,7 +1375,9 @@ async def _chat_ws_voice_message_audio_url(
 ) -> Optional[str]:
     if str(reply_modality or "") != "voice_message":
         return None
-    transcript = (voice_message_script or "").strip() or (assistant_text or "").strip()
+    transcript = (voice_message_script or "").strip() or (
+        assistant_text or ""
+    ).strip()
     if not transcript:
         return None
     voice_id = _resolve_chat_ws_voice_id(
@@ -1544,19 +1546,17 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
             )
             return
         try:
-            companion_turn = (
-                await companion_chat_service.run_companion_inner_tick_scheduled_turn_for_api(
-                    scheduled_user_text=synthetic_user_text,
-                    user_id=user_id,
-                    agent_id=agent_id,
-                    chat_id=chat_row_id,
-                    resolved_chat_model=model_override,
-                    defer_memory_update=True,
-                    session_id=session_id,
-                    background_output_sink=None,
-                    preset_user_msg_uuid=preset_uid,
-                    implicit_signal_bundle=ws_implicit,
-                )
+            companion_turn = await companion_chat_service.run_companion_inner_tick_scheduled_turn_for_api(
+                scheduled_user_text=synthetic_user_text,
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_id=chat_row_id,
+                resolved_chat_model=model_override,
+                defer_memory_update=True,
+                session_id=session_id,
+                background_output_sink=None,
+                preset_user_msg_uuid=preset_uid,
+                implicit_signal_bundle=ws_implicit,
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):
@@ -1834,18 +1834,16 @@ async def _try_fire_companion_ws_proactive_chat(
                 agent_id,
             )
             return
-        companion_turn = (
-            await companion_chat_service.run_companion_inner_tick_proactive_chat_turn_for_api(
-                user_id=user_id,
-                agent_id=agent_id,
-                chat_id=chat_row_id,
-                resolved_chat_model=model_override,
-                defer_memory_update=True,
-                session_id=session_id,
-                background_output_sink=None,
-                preset_user_msg_uuid=preset_uid,
-                implicit_signal_bundle=ws_implicit,
-            )
+        companion_turn = await companion_chat_service.run_companion_inner_tick_proactive_chat_turn_for_api(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_row_id,
+            resolved_chat_model=model_override,
+            defer_memory_update=True,
+            session_id=session_id,
+            background_output_sink=None,
+            preset_user_msg_uuid=preset_uid,
+            implicit_signal_bundle=ws_implicit,
         )
         hb_user_text = (
             companion_turn.transcript_user_content
@@ -2144,18 +2142,16 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             },
         )
         try:
-            companion_turn = (
-                await companion_chat_service.run_companion_inner_tick_maintenance_turn_for_api(
-                    user_id=user_id,
-                    agent_id=agent_id,
-                    chat_id=chat_row_id,
-                    resolved_chat_model=model_override,
-                    defer_memory_update=True,
-                    session_id=session_id,
-                    background_output_sink=companion_ws.background_sink,
-                    preset_user_msg_uuid=preset_uid,
-                    implicit_signal_bundle=ws_implicit,
-                )
+            companion_turn = await companion_chat_service.run_companion_inner_tick_maintenance_turn_for_api(
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_id=chat_row_id,
+                resolved_chat_model=model_override,
+                defer_memory_update=True,
+                session_id=session_id,
+                background_output_sink=companion_ws.background_sink,
+                preset_user_msg_uuid=preset_uid,
+                implicit_signal_bundle=ws_implicit,
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):

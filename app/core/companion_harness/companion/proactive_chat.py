@@ -141,9 +141,7 @@ def build_proactive_chat_transcript_user_marker(
     last_u = _last_real_user_ts(msgs)
     last_a = _last_assistant_ts(msgs)
     if last_u is None:
-        u_seg = (
-            "Time since the user's last message: no prior real user message in transcript."
-        )
+        u_seg = "Time since the user's last message: no prior real user message in transcript."
     else:
         u_seg = f"Time since the user's last message: {_format_elapsed_since((t - last_u).total_seconds())}."
     if last_a is None:

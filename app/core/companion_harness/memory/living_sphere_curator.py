@@ -22,7 +22,10 @@ from living_sphere.models import (
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
     LivingSphereUpdate,
 )
-from living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, ensure_living_sphere_seeded
+from living_sphere.seeding import (
+    LIVING_SPHERE_RELATIVE_PATH,
+    ensure_living_sphere_seeded,
+)
 
 # TODO(offline-batch): Large-scale LivingSphere compact (cross-scope backfill / backlog) must be a
 # separate deployable + managed cloud offline executor (cf. backend/push_worker)—NOT a longer cron
@@ -58,7 +61,9 @@ def living_sphere_curator_output_rejection_reason(body: str) -> str | None:
     """Return a short reason when ``body`` must not replace LIVING_SPHERE.md, else None."""
     text = body.strip()
     if len(text) < _MIN_SUBSTANTIVE_CHARS:
-        return f"substantive content shorter than {_MIN_SUBSTANTIVE_CHARS} chars"
+        return (
+            f"substantive content shorter than {_MIN_SUBSTANTIVE_CHARS} chars"
+        )
     if _USER_EXPRESSION_MARKER not in text:
         return f"missing {_USER_EXPRESSION_MARKER!r} line"
     if not any(marker in text for marker in _LIVING_SPHERE_TITLE_MARKERS):
@@ -107,7 +112,9 @@ def _load_pipeline_state(store: MemoryStore) -> dict[str, object]:
 
 def _write_pipeline_state(store: MemoryStore, data: dict[str, object]) -> None:
     rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_pipeline_state_json
-    store.write_document(rel, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    store.write_document(
+        rel, json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    )
 
 
 def _pipeline_curated_through_update_id(state: dict[str, object]) -> str:
@@ -119,7 +126,9 @@ def _pipeline_curated_through_update_id(state: dict[str, object]) -> str:
 
 
 def _read_all_updates(store: MemoryStore) -> list[LivingSphereUpdate]:
-    raw = store.read_document_if_exists(LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH)
+    raw = store.read_document_if_exists(
+        LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH
+    )
     if raw is None or not raw.strip():
         return []
     out: list[LivingSphereUpdate] = []
@@ -241,6 +250,10 @@ def compact_living_sphere_if_pending(
     return any_ran
 
 
-def document_kind_for_living_sphere_updates_jsonl() -> CompanionMemoryDocumentKind:
-    kind, _ = parse_memory_store_relative_path(LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH)
+def document_kind_for_living_sphere_updates_jsonl() -> (
+    CompanionMemoryDocumentKind
+):
+    kind, _ = parse_memory_store_relative_path(
+        LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH
+    )
     return kind

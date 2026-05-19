@@ -53,7 +53,8 @@ def companion_tools_for_turn(
 ) -> list[dict[str, Any]]:
     """OpenAI tool schemas for this turn (independent of which system-message wrapper runs)."""
     tick_proactive = (
-        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+        inner_tick_turn
+        and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     interactive_bootstrap = interactive_bootstrap_active(
         feature_enabled=(
@@ -102,7 +103,10 @@ def companion_system_messages_for_track(
                 bundle, context
             )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
-            if route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
+            if (
+                route_mode
+                != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+            ):
                 raise RuntimeError(
                     "inner_tick_maintenance track requires ASYNC route, got "
                     f"{route_mode.value}"
@@ -111,7 +115,10 @@ def companion_system_messages_for_track(
                 bundle, context, store
             )
         case CompanionTurnTrack.USER_CHAT:
-            if route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
+            if (
+                route_mode
+                != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+            ):
                 raise RuntimeError(
                     "user_chat track requires ASYNC route, got "
                     f"{route_mode.value}"
@@ -134,7 +141,8 @@ def companion_system_messages_for_turn(
 ) -> list[dict[str, Any]]:
     """Legacy bool-based selector; prefer ``companion_system_messages_for_track``."""
     tick_proactive = (
-        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+        inner_tick_turn
+        and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if implicit_user_signed_on_turn and not inner_tick_turn:
         track = CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
@@ -231,7 +239,8 @@ def refresh_companion_turn_prompt_stack(
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,
     )
     tick_proactive = (
-        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+        inner_tick_turn
+        and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
         refreshed = build_system_messages_for_inner_tick_maintenance(
