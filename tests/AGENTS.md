@@ -16,3 +16,12 @@
   ```python
   assert "line1" in text
   ```
+- Do not add trivial tests like
+  ```
+  def test_build_bgm_system_message_contains_catalog() -> None:
+    msg = build_bgm_system_message()
+    assert msg["role"] == "system"
+    content = msg["content"]
+    assert "calm_evening_01" in content
+    assert "set_bgm" in content
+  ```
