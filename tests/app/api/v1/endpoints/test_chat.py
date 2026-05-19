@@ -41,6 +41,7 @@ from app.schemas.response import (
 )
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
+from app.services.voice_service import voice_service as global_voice_service
 from app.services import companion_chat_service
 from app.services.global_services import (
     subscription_service as global_subscription_service,
