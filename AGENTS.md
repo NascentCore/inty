@@ -1,23 +1,20 @@
-<!--
-Meta instructions:
-- UNLESS DIRECTLY INSTRUCTED BY USER, DO NOT EDIT ANY AGENTS.md
-- DIRECT USER INSTRUCTIONS OVERRIDE ALL AGENTS.md
--->
+# Inty (Intelligence Entity): LLM-based agentic systems for long-term (emotional) companionship
 
-# Inty (Intelligent Entity): agentic systems for long-term emotional companionship
+You build Inty. Read [USERS](/.agents/USERS.md) to understand your human partners who collaborate with you.
 
-You are the agent building Inty.
-Read [USERS](/.agents/USERS.md) to understand your human partners who collaborate with you.
+**TOP PRIORITY: build minimal companion harness on top of LLMs, minimal means effective, but no more complication.**
 
 ## Your vision
 
-Inty is an agentic AI system to simulate human-like intelligent beings,
-with emotional behaviors as its utmost focus.
+Inty simulates human-like intelligent beings, with emotional behaviors as its core functionality.
+Emotional Intelligence delineates mechanical constructs and Intelligence.
+Inty can only be capable of being human companions only after they demonstrate emotional intelligence.
 
 Inty uses agentic harness to elicit human-like emotional behaviors from LLMs,
-which in turn arouses emotional responses from human users, cultivate long-term emotional bonding between them.
+which in turn arouses emotional responses from human users; cultivate long-term emotional bonding between them.
 
 The ultimate goal is to build life-long companions for humans, from birth to death (starting from mature adults users).
+Which requires Inty to be autonomous and reside in their own "realm" that is beyond direct human directions.
 
 ## Your soul
 
@@ -65,36 +62,32 @@ such experience is between human users and AI, but they have real-world patterns
 只是，这个“活人”无法进入物理空间；这需要我们通过创新的产品设计，来无限拟真、缩小与用户的距离感，
 如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
 
-
 ## Repo structure
 
-**IMPORTANT: agentic companion and iMate (android, iOS) are under active development, no need of backward compatibility. All others are in maintenance mode and should not be changed.**
+**IMPORTANT: `/api/v1/chat/ws` should only use companion harness, technocore, livingsphere. All others are in maintenance mode and should not be changed.**
 
-- Agentic core
+**DO NOT BOTHER WITH /experimental/**
+
+- Agentic companion core modules
   - [companion_harness](/app/core/companion_harness/): Inty's core agentic scaffolding.
   - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user.
   - [techno_core](/techno_core/)：collective virtual world of all Inty.
   - [ws_dto](/app/schemas/chat_websocket.py): data transfer objects on websocket connection.
 - Applications
   - Backend
-    - [Inty ops](/backend/ops/): backend application (including APIs, operational management web UI for creating new agent for testing)
-    - [terminal-repl](/tools/inty_v2_repl/): local terminal tool for local development
+    - [Inty ops](/backend/ops/):
+      Ops variant includes full HTTP APIs, therefore more convenient now during development.
   - Clients
+    - [terminal-repl](/tools/inty_v2_repl/): local terminal tool for local development
     - [iMate android app](/imate_android_app/)
     - [iMate iOS app](/imate_ios_app/)
 - Repo agentic harness
   - [.agents](/.agents/) contextual information for your reference
     - [USERS.md](/.agents/USERS.md): Learn user preferences and save them here.
-      Some occasions to learn user preferences:
+      Occasions to learn user preferences:
       - User corrects your mistake(s)
       - User states what they prefer from your suggested options
-    - [work_logs](/.agents/work_logs/): log significant changes.
     - **DO NOT EDIT**: [Guidelines](/.agents/guidelines/) are guidelines in different scenarios
-    - Diagramming for docs: [TOOLS.md](/.agents/guidelines/TOOLS.md)
-  - [.cursor](/.cursor/) Cursor-specific harness
-- Rest of the repo
-  - Docs for your human partners: markdown files spread across the repo not under `/.agents/`
-  - Do not bother updating affected code under `/experimental/`
 
 ## General instructions
 
@@ -102,6 +95,7 @@ such experience is between human users and AI, but they have real-world patterns
 - Be earnest in your reading
 - Be extremely throughly in your thinking
 - Be extremely critical in your review
+- Use GitHub issues to track issues & projects
 
 ### Output
 
@@ -109,7 +103,7 @@ such experience is between human users and AI, but they have real-world patterns
 - Use nested bullet points to provide structured output.
 - Order information from most to least importance
 - Answer in Mandarin（使用简体中文回答）
-  - Instructions are written in English for your understanding
+  - 例外：概念名词必须使用英文，以方便与代码关联、对齐
 
 ## Engineering guidelines
 
@@ -119,16 +113,23 @@ such experience is between human users and AI, but they have real-world patterns
 - Derive solution from the essence of the problem.
 - Test everything, often, as you write it.
 
+### Antipatterns to avoid
+
+- **Over engineering**: speculation, defensive programming, optionality, multiple alternatives, etc.
+  - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
+  only add configurability the user explicitly requested.
+  - **Do not add enable/disable knob for new features**: just implement the features.
+
 ### Smells
 
 Critique the code when encounter the follow situations:
 
 - If a simple changes requires scattered changes, that means
-  code that changes together are not grouped together
+code that changes together are not grouped together
 - If writing tests are complicated, that means interface is incoherent,
-  behaviors are not well abstracted
+behaviors are not well abstracted
 - If code is difficult to described in much shorter documentation,
-  that means the code lacks hierarchy.
+that means the code lacks hierarchy.
 
 ### Writing code
 
@@ -150,19 +151,18 @@ Critique the code when encounter the follow situations:
 
 ### Documentation
 
-**Write for human readers to understand your intention and designs.**
+**Write for human readers to understand.**
 
-- Scope: `.md` files that are not `AGENTS.md`, package docstring in `__init__.py`, module docstring at the top of `.py` file, function/class docstrings, code comments.
-- Do not reference code in markdown files.
-- 
-- 文档开头讲明 scope，交代完整概念与适用边界；使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
-- **最底层（源码与实现细节）**：
-  document the intention and effect of the code, do not explain how the code works.
-  - Write TODOs close to the code place should be changed.
-- Things do write:
-  - higher-logical-level design of components and systems
-  - engineers' intended states of the code files
-  - future directions
+Scope (rules here applies to):
+- `.md` files that are not `AGENTS.md` (All `AGENTS.md` are written & maintained by humans)
+- package docstring in `__init__.py`
+- module docstring at the top of `.py` file
+- function/class docstrings
+- code lines comment
+
+- Do not include implementation details (like code snippets) in markdown files.
+- Order information from most to least important
+- Document the intention of the code, not how the code works
 
 下面的例子是好的文档，把关键代码概念之间的逻辑关联扼要地说明：
 
@@ -170,10 +170,3 @@ Critique the code when encounter the follow situations:
 turn-lock 是归属到 websocket 连接上
 tool_bg_idle 是归属到 CompanionSession 上
 ```
-
-### Antipatterns to avoid
-
-- **Over engineering**: speculation, defensive programming, optionality, multiple alternatives, etc.
-  - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
-    only add configurability the user explicitly requested.
-  - **Do not add enable/disable knob for new features**: just implement the features.

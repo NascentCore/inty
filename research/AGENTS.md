@@ -15,6 +15,6 @@
 - 虚拟环境：使用 `requirements.txt` `uv venv` `uv pip install -r ...`
 - 使用：`python-dotenv` `Cyclopts`
 
-## Additional instructions
+## Pending things to explore
 
-- Record interesting ideas and general inspirations to [THINGS_TO_EXPLORE.md](/research/THINGS_TO_EXPLORE.md)
+- [Agora-1: multi-agents world models](https://news.ycombinator.com/item?id=48183748)

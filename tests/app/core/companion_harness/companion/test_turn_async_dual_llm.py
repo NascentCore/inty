@@ -15,7 +15,7 @@ import pytest
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.models import InnerTickMode
+from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
 from app.core.companion_harness.companion.turn import (
@@ -175,14 +175,14 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
         defer_memory_update=True,
         memory_config=None,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
     )
 
     assert len(client.chat_calls) == 0
     assert len(bg_jobs) == 1
     job = bg_jobs[0]
     assert job["inner_tick_turn"] is True
-    assert job["inner_tick_mode"] == InnerTickMode.MAINTENANCE
+    assert job["inner_tick_activity"] == InnerTickActivity.MAINTENANCE
     assert job["implicit_signal_bundle"] is None
     assert job["main_event_loop"] is loop
     expected = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
@@ -196,10 +196,10 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
 
 
 @pytest.mark.asyncio
-async def test_proactive_inner_tick_heartbeat_sync_still_calls_llm(
+async def test_proactive_inner_tick_proactive_chat_sync_still_calls_llm(
     tmp_path: Path,
 ) -> None:
-    """PROACTIVE inner tick is HEARTBEAT_SYNC (no async dual branch); no foreground skip."""
+    """PROACTIVE inner tick is PROACTIVE_CHAT_SYNC (no async dual branch); no foreground skip."""
     store = _store(tmp_path)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
@@ -216,7 +216,7 @@ async def test_proactive_inner_tick_heartbeat_sync_still_calls_llm(
         defer_memory_update=True,
         memory_config=None,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
     )
 
     assert len(client.chat_calls) == 1

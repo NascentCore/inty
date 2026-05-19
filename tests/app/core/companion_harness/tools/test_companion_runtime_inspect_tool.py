@@ -18,7 +18,7 @@ from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConf
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import (
     ContextMeta,
-    InnerTickMode,
+    InnerTickActivity,
     PromptBundle,
 )
 from app.core.companion_harness.tools.runtime_inspect_context import (
@@ -140,7 +140,7 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 context=ContextMeta(context_mode="intimate"),
                 transcript_llm_window_max_messages=12,
                 inner_tick_turn=False,
-                inner_tick_mode=InnerTickMode.MAINTENANCE,
+                inner_tick_activity=InnerTickActivity.MAINTENANCE,
                 repository_only_store_text=True,
                 transcript_compaction=None,
                 memory_store_read_document_max_chars_cap=(

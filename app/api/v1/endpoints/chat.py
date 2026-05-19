@@ -42,10 +42,10 @@ from app.api.utils.feature_gating import (
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.companion_harness.companion.heartbeat import (
-    HeartbeatConfig,
-    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-    next_heartbeat_wait_seconds,
+from app.core.companion_harness.companion.proactive_chat import (
+    PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
+    ProactiveChatConfig,
+    next_proactive_chat_wait_seconds,
 )
 from app.core.companion_harness.companion.inner_tick_schedule import (
     InnerTickScheduleOverrides,
@@ -59,7 +59,6 @@ from app.core.companion_harness.tools.image_gate import (
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
-    InnerTickMode,
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
@@ -69,12 +68,15 @@ from app.core.companion_harness.companion.schedule_queue import (
     next_due_task_for_execution,
     scheduled_task_synthetic_user_text,
 )
-from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.companion.runtime_events import (
+    build_user_signed_out_runtime_event_record,
+    build_ws_conn_dropped_runtime_event_record,
+)
 from app.core.companion_harness.companion.websocket_coordinator import (
     ChatWsInflightShutdownRegistry,
     ChatWsInflightTurnTracker,
     CompanionWebSocketCoordinator,
-    apply_companion_ws_heartbeat_coords,
+    apply_companion_ws_inner_tick_coords,
 )
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
@@ -150,7 +152,7 @@ from app.schemas.user import User as UserSchema
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
-# Floors ``companion_ws_proactive_heartbeat_poll_seconds`` inside ``companion_ws_inner_tick_worker``.
+# Floors ``companion_ws_proactive_chat_poll_seconds`` inside ``companion_ws_inner_tick_worker``.
 # Tests may monkeypatch this module attribute to shorten poll intervals.
 _COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS: float = 5.0
 
@@ -342,7 +344,7 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                     voice_svc=voice_svc,
                     companion_background_sink=companion_ws.background_sink,
                     companion_ws_foreground_pending=companion_ws.foreground_pending,
-                    companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
+                    companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
                     implicit_greeting_turn=True,
                 )
         except HTTPException as e:
@@ -379,7 +381,7 @@ async def _handle_chat_websocket_control_json(
     session's last validated time_context dict (or None). Returns True if the frame was consumed.
 
     **Transport vs logical channel:** control frames (ping/pong, client_context_ack) are answered
-    directly on the WebSocket. Proactive heartbeat coords are set by ``user_signed_on`` (see
+    directly on the WebSocket. Proactive chat inner-tick coords are set by ``user_signed_on`` (see
     ``_try_handle_ws_user_signed_on_frame``) and refreshed on each successful WebSocket companion
     chat turn (``_agent_chat_ws_completions_impl``). They are independent of the connection-level outbound queue used
     for assistant/business JSON. Intentionally so: the WebSocket sits *below* the repl/client
@@ -432,7 +434,7 @@ async def _try_handle_ws_user_signed_on_frame(
     """
     Consume ``{"type":"user_signed_on","agent_id":...}``.
 
-    Product intent: arms inner-tick WebSocket coordinates (proactive heartbeat, maintenance inner-tick,
+    Product intent: arms inner-tick WebSocket coordinates (proactive chat, maintenance inner-tick,
     and due ``schedule_queue`` reminders share this registration). Requires ``message_id`` (RFC4122);
     missing/invalid ids fail before ack; greeting turn is scheduled before ``user_signed_on_ack``.
 
@@ -492,7 +494,7 @@ async def _try_handle_ws_user_signed_on_frame(
                 ).model_dump(exclude_none=True)
             )
             return True
-        companion_ws.store_heartbeat_coords(
+        companion_ws.store_inner_tick_coords(
             user_id=current_user.id,
             agent_id=agent_id,
             chat_id=chat.id,
@@ -569,9 +571,10 @@ async def _try_handle_ws_user_signed_out_frame(
     """
     Consume ``{"type":"user_signed_out","agent_id":...}``.
 
-    Validates the frame, cancels detached companion turns on this connection, appends one English
-    markdown line to companion ``CHAT_LOGS.md`` (MemoryStore), then sends ``user_signed_out_ack``.
-    Does not alter inner-tick coords, transcript, or companion scope persistence.
+    Validates the frame, cancels detached companion turns on this connection, appends a
+    ``user_signed_out`` row to companion ``.companion_runtime_events.jsonl`` (MemoryStore), then
+    sends ``user_signed_out_ack``. Does not alter inner-tick coords, transcript, or companion scope
+    persistence.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -616,25 +619,26 @@ async def _try_handle_ws_user_signed_out_frame(
         )
         recv_msg_uuid = (frame.message_id or "").strip()
         uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
-        log_line = (
-            f"- **user_signed_out** `utc_ts={utc_iso_ts()}` `user_id={current_user.id}` "
-            f"`chat_id={chat.id}` `agent_id={agent_id}` `received_message_uuid={uuid_part}`"
-        )
         if inflight_turn_tracker is not None:
             # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
             await inflight_turn_tracker.cancel_all()
-        companion_chat_service.append_companion_chat_logs_line_for_ws_control(
+        companion_chat_service.append_companion_ws_runtime_event(
             user_id=current_user.id,
             agent_id=agent_id,
             chat_id=chat.id,
             resolved_chat_model=model_override,
-            line=log_line,
+            record=build_user_signed_out_runtime_event_record(
+                user_id=current_user.id,
+                agent_id=agent_id,
+                chat_id=chat.id,
+                received_message_uuid=uuid_part,
+            ),
         )
         await websocket.send_json(
             ChatWsUserSignedOutAckFrame(ok=True).model_dump(exclude_none=True)
         )
         logger.info(
-            "chat_ws user_signed_out logged CHAT_LOGS.md ws_conn_id={} user={} agent={} chat_id={} "
+            "chat_ws user_signed_out logged companion_runtime_event ws_conn_id={} user={} agent={} chat_id={} "
             "received_message_uuid={}",
             ws_conn_id,
             current_user.id,
@@ -670,8 +674,8 @@ async def _try_handle_ws_ws_conn_dropped_frame(
     """
     Consume ``{"type":"ws_conn_dropped","agent_id":...,"dropped_at_utc":...}``.
 
-    Appends one English markdown line to companion ``CHAT_LOGS.md`` (MemoryStore). Does not alter
-    inner-tick coords or transcript.
+    Appends a ``ws_conn_dropped`` row to companion ``.companion_runtime_events.jsonl`` (MemoryStore).
+    Does not alter inner-tick coords or transcript.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -724,23 +728,24 @@ async def _try_handle_ws_ws_conn_dropped_frame(
         )
         reason_raw = (frame.ws_close_reason or "").strip()
         reason_part = reason_raw if reason_raw else "-"
-        log_line = (
-            f"- **ws_conn_dropped** `utc_ts={utc_iso_ts()}` `user_id={current_user.id}` "
-            f"`chat_id={chat.id}` `agent_id={agent_id}` "
-            f"`client_dropped_at_utc={frame.dropped_at_utc}` "
-            f"`ws_close_code={code_part}` `ws_close_reason={reason_part}` "
-            f"`received_message_uuid={uuid_part}`"
-        )
-        companion_chat_service.append_companion_chat_logs_line_for_ws_control(
+        companion_chat_service.append_companion_ws_runtime_event(
             user_id=current_user.id,
             agent_id=agent_id,
             chat_id=chat.id,
             resolved_chat_model=model_override,
-            line=log_line,
+            record=build_ws_conn_dropped_runtime_event_record(
+                user_id=current_user.id,
+                agent_id=agent_id,
+                chat_id=chat.id,
+                client_dropped_at_utc=frame.dropped_at_utc,
+                ws_close_code=code_part,
+                ws_close_reason=reason_part,
+                received_message_uuid=uuid_part,
+            ),
         )
         await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
         logger.info(
-            "chat_ws ws_conn_dropped logged CHAT_LOGS.md ws_conn_id={} user={} agent={} chat_id={} "
+            "chat_ws ws_conn_dropped logged companion_runtime_event ws_conn_id={} user={} agent={} chat_id={} "
             "client_dropped_at_utc={} received_message_uuid={}",
             ws_conn_id,
             current_user.id,
@@ -1540,18 +1545,16 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
             return
         try:
             companion_turn = (
-                await companion_chat_service.run_companion_chat_turn_for_api(
+                await companion_chat_service.run_companion_inner_tick_scheduled_turn_for_api(
+                    scheduled_user_text=synthetic_user_text,
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_row_id,
-                    user_text=synthetic_user_text,
                     resolved_chat_model=model_override,
                     defer_memory_update=True,
                     session_id=session_id,
                     background_output_sink=None,
                     preset_user_msg_uuid=preset_uid,
-                    inner_tick_turn=True,
-                    inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
                     implicit_signal_bundle=ws_implicit,
                 )
             )
@@ -1744,7 +1747,7 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
     )
 
 
-async def _try_fire_companion_ws_proactive_heartbeat(
+async def _try_fire_companion_ws_proactive_chat(
     *,
     outbound_queue: asyncio.Queue,
     ctx: dict[str, Any],
@@ -1753,7 +1756,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
     ws_conn_id: str,
     tc_box: list[Optional[dict]],
 ) -> None:
-    """If companion transcript says proactive heartbeat is due, run one turn and queue WS payload."""
+    """If companion transcript says proactive chat is due, run one turn and queue WS payload."""
     user_id = str(ctx.get("user_id") or "").strip()
     agent_id = str(ctx.get("agent_id") or "").strip()
     chat_id_raw = ctx.get("chat_id")
@@ -1771,7 +1774,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         )
         if str(chat.id) != str(chat_id_raw):
             logger.debug(
-                "companion_ws_proactive_hb chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
+                "companion_ws_proactive_chat chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
                 ws_conn_id,
                 chat_id_raw,
                 chat.id,
@@ -1795,9 +1798,9 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         if mem_store is None:
             return
 
-        remain = next_heartbeat_wait_seconds(
+        remain = next_proactive_chat_wait_seconds(
             mem_store,
-            HeartbeatConfig(enabled=True),
+            ProactiveChatConfig(enabled=True),
         )
         if remain > 0:
             return
@@ -1807,7 +1810,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         )
         if not is_allowed:
             logger.info(
-                "companion_ws_proactive_hb skipped subscription ws_conn_id={} user={} used={} limit={}",
+                "companion_ws_proactive_chat skipped subscription ws_conn_id={} user={} used={} limit={}",
                 ws_conn_id,
                 user_id,
                 used_count,
@@ -1825,31 +1828,28 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         companion_ws.clear_ws_inner_tick_proactive_tool_bg_idle_if_idle()
         if companion_ws.ws_inner_tick_proactive_tool_bg_still_running():
             logger.debug(
-                "companion_ws_proactive_hb skipped prev_inner_tick_tool_bg ws_conn_id={} user={} agent={}",
+                "companion_ws_proactive_chat skipped prev_inner_tick_tool_bg ws_conn_id={} user={} agent={}",
                 ws_conn_id,
                 user_id,
                 agent_id,
             )
             return
         companion_turn = (
-            await companion_chat_service.run_companion_chat_turn_for_api(
+            await companion_chat_service.run_companion_inner_tick_proactive_chat_turn_for_api(
                 user_id=user_id,
                 agent_id=agent_id,
                 chat_id=chat_row_id,
-                user_text=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
                 resolved_chat_model=model_override,
                 defer_memory_update=True,
                 session_id=session_id,
                 background_output_sink=None,
                 preset_user_msg_uuid=preset_uid,
-                inner_tick_turn=True,
-                inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
                 implicit_signal_bundle=ws_implicit,
             )
         )
         hb_user_text = (
             companion_turn.transcript_user_content
-            or PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
+            or PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER
         )
         if companion_turn.tool_background_started:
             companion_ws.bind_ws_inner_tick_proactive_tool_bg_idle(
@@ -1866,7 +1866,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         companion_reply = companion_turn.assistant_text
         if companion_reply is None or not str(companion_reply).strip():
             logger.warning(
-                "companion_ws_proactive_hb empty reply ws_conn_id={} user={} agent={}",
+                "companion_ws_proactive_chat empty reply ws_conn_id={} user={} agent={}",
                 ws_conn_id,
                 user_id,
                 agent_id,
@@ -1875,9 +1875,9 @@ async def _try_fire_companion_ws_proactive_heartbeat(
 
         user_meta = dump_chat_ws_companion_wire_meta(
             ChatWsCompanionWireMetaData(
-                companion_proactive_heartbeat=True,
+                companion_proactive_chat=True,
                 inner_tick=True,
-                heartbeat=True,
+                proactive_chat=True,
             )
         )
         await chat_history_service.add_user_message_async(
@@ -1905,12 +1905,12 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                     extra_data={
                         "agent_id": agent_id,
                         "message_length": 0,
-                        "companion_ws_proactive_heartbeat": True,
+                        "companion_ws_proactive_chat": True,
                     },
                 )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_proactive_hb record_usage failed ws_conn_id={}: {}",
+                    "companion_ws_proactive_chat record_usage failed ws_conn_id={}: {}",
                     ws_conn_id,
                     str(e),
                 )
@@ -1968,7 +1968,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                     )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_proactive_hb latest_message_info failed ws_conn_id={}: {}",
+                    "companion_ws_proactive_chat latest_message_info failed ws_conn_id={}: {}",
                     ws_conn_id,
                     e,
                 )
@@ -1982,7 +1982,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_proactive_hb get_latest_user_message_id failed ws_conn_id={}: {}",
+                    "companion_ws_proactive_chat get_latest_user_message_id failed ws_conn_id={}: {}",
                     ws_conn_id,
                     e,
                 )
@@ -2010,7 +2010,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             )
             await outbound_queue.put(out)
     logger.info(
-        "companion_ws_proactive_hb pushed assistant ws_conn_id={} user={} agent={} chat_id={}",
+        "companion_ws_proactive_chat pushed assistant ws_conn_id={} user={} agent={} chat_id={}",
         ws_conn_id,
         user_id,
         agent_id,
@@ -2028,6 +2028,10 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
     tc_box: list[Optional[dict]],
 ) -> None:
     """If companion transcript says maintenance inner-tick is due, run one MAINTENANCE turn and queue WS."""
+    # TODO(tool-bg-idle-starves-user-chat): Foreground often returns tool_bg_only while session
+    # tool_bg_idle stays cleared until the bg thread finishes; proactive then holds turn_lock
+    # inside run_turn idle wait and queues USER_MESSAGE with no chat reply.
+    # https://github.com/NascentCore/inty/issues/3123
     feats = global_config_loaded_from_config_yaml.app.features
     user_id = str(ctx.get("user_id") or "").strip()
     agent_id = str(ctx.get("agent_id") or "").strip()
@@ -2081,7 +2085,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     feats.companion_ws_maintenance_inner_tick_min_gap_seconds
                 ),
                 poll_seconds=float(
-                    feats.companion_ws_proactive_heartbeat_poll_seconds
+                    feats.companion_ws_proactive_chat_poll_seconds
                 ),
             ),
         )
@@ -2141,18 +2145,15 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         )
         try:
             companion_turn = (
-                await companion_chat_service.run_companion_chat_turn_for_api(
+                await companion_chat_service.run_companion_inner_tick_maintenance_turn_for_api(
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_row_id,
-                    user_text="",
                     resolved_chat_model=model_override,
                     defer_memory_update=True,
                     session_id=session_id,
                     background_output_sink=companion_ws.background_sink,
                     preset_user_msg_uuid=preset_uid,
-                    inner_tick_turn=True,
-                    inner_tick_mode=InnerTickMode.MAINTENANCE,
                     implicit_signal_bundle=ws_implicit,
                 )
             )
@@ -2339,7 +2340,7 @@ async def _agent_chat_ws_completions_impl(
     voice_svc: VoiceService = default_voice_service,
     companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
-    companion_ws_heartbeat_ctx: dict[str, Any] | None = None,
+    companion_ws_inner_tick_ctx: dict[str, Any] | None = None,
     implicit_greeting_turn: bool = False,
 ) -> dict:
     """One companion chat turn for ``/api/v1/chat/ws`` (production WebSocket path).
@@ -2524,9 +2525,9 @@ async def _agent_chat_ws_completions_impl(
                             ),
                         )
                     )
-                    if companion_ws_heartbeat_ctx is not None:
-                        apply_companion_ws_heartbeat_coords(
-                            companion_ws_heartbeat_ctx,
+                    if companion_ws_inner_tick_ctx is not None:
+                        apply_companion_ws_inner_tick_coords(
+                            companion_ws_inner_tick_ctx,
                             user_id=current_user.id,
                             agent_id=agent_id,
                             chat_id=chat.id,
@@ -2559,18 +2560,32 @@ async def _agent_chat_ws_completions_impl(
                             user_signed_on=implicit_greeting_ws,
                             server_received_at_utc=datetime.now(timezone.utc),
                         )
-                        companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
-                            user_id=current_user.id,
-                            agent_id=agent_id,
-                            chat_id=chat.id,
-                            user_text=last_user_text,
-                            resolved_chat_model=model_override,
-                            defer_memory_update=True,
-                            session_id=session_id,
-                            background_output_sink=companion_background_sink,
-                            preset_user_msg_uuid=companion_preset_uid,
-                            implicit_signal_bundle=companion_implicit_bundle,
-                        )
+                        if implicit_greeting_ws:
+                            companion_turn = await companion_chat_service.run_companion_implicit_sign_on_greeting_turn_for_api(
+                                user_id=current_user.id,
+                                agent_id=agent_id,
+                                chat_id=chat.id,
+                                user_text=last_user_text,
+                                resolved_chat_model=model_override,
+                                implicit_signal_bundle=companion_implicit_bundle,
+                                defer_memory_update=True,
+                                session_id=session_id,
+                                background_output_sink=companion_background_sink,
+                                preset_user_msg_uuid=companion_preset_uid,
+                            )
+                        else:
+                            companion_turn = await companion_chat_service.run_companion_user_chat_turn_for_api(
+                                user_id=current_user.id,
+                                agent_id=agent_id,
+                                chat_id=chat.id,
+                                user_text=last_user_text,
+                                resolved_chat_model=model_override,
+                                defer_memory_update=True,
+                                session_id=session_id,
+                                background_output_sink=companion_background_sink,
+                                preset_user_msg_uuid=companion_preset_uid,
+                                implicit_signal_bundle=companion_implicit_bundle,
+                            )
                         if (
                             companion_preset_uid is not None
                             and companion_ws_foreground_pending is not None
@@ -2676,9 +2691,9 @@ async def _agent_chat_ws_completions_impl(
                         agent_settings=agent_data.get("settings"),
                         language=request.language,
                     )
-                    if companion_ws_heartbeat_ctx is not None:
-                        apply_companion_ws_heartbeat_coords(
-                            companion_ws_heartbeat_ctx,
+                    if companion_ws_inner_tick_ctx is not None:
+                        apply_companion_ws_inner_tick_coords(
+                            companion_ws_inner_tick_ctx,
                             user_id=current_user.id,
                             agent_id=agent_id,
                             chat_id=chat.id,
@@ -2785,7 +2800,7 @@ async def _agent_chat_completions_impl(
     chat_route: Literal["http", "websocket"],
     companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
-    companion_ws_heartbeat_ctx: dict[str, Any] | None = None,
+    companion_ws_inner_tick_ctx: dict[str, Any] | None = None,
     implicit_greeting_turn: bool = False,
 ) -> Union[APIResponse[dict], dict]:
     # TODO(cleanup-ws-http-chat-impl): WS callers use _agent_chat_ws_completions_impl;
@@ -3005,11 +3020,11 @@ async def _agent_chat_completions_impl(
                         )
                     )
                     if (
-                        companion_ws_heartbeat_ctx is not None
+                        companion_ws_inner_tick_ctx is not None
                         and chat_route == "websocket"
                     ):
-                        apply_companion_ws_heartbeat_coords(
-                            companion_ws_heartbeat_ctx,
+                        apply_companion_ws_inner_tick_coords(
+                            companion_ws_inner_tick_ctx,
                             user_id=current_user.id,
                             agent_id=agent_id,
                             chat_id=chat.id,
@@ -3047,18 +3062,32 @@ async def _agent_chat_completions_impl(
                             user_signed_on=implicit_greeting_ws,
                             server_received_at_utc=datetime.now(timezone.utc),
                         )
-                        companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
-                            user_id=current_user.id,
-                            agent_id=agent_id,
-                            chat_id=chat.id,
-                            user_text=last_user_text,
-                            resolved_chat_model=model_override,
-                            defer_memory_update=True,
-                            session_id=session_id,
-                            background_output_sink=companion_background_sink,
-                            preset_user_msg_uuid=companion_preset_uid,
-                            implicit_signal_bundle=companion_implicit_bundle,
-                        )
+                        if implicit_greeting_ws:
+                            companion_turn = await companion_chat_service.run_companion_implicit_sign_on_greeting_turn_for_api(
+                                user_id=current_user.id,
+                                agent_id=agent_id,
+                                chat_id=chat.id,
+                                user_text=last_user_text,
+                                resolved_chat_model=model_override,
+                                implicit_signal_bundle=companion_implicit_bundle,
+                                defer_memory_update=True,
+                                session_id=session_id,
+                                background_output_sink=companion_background_sink,
+                                preset_user_msg_uuid=companion_preset_uid,
+                            )
+                        else:
+                            companion_turn = await companion_chat_service.run_companion_user_chat_turn_for_api(
+                                user_id=current_user.id,
+                                agent_id=agent_id,
+                                chat_id=chat.id,
+                                user_text=last_user_text,
+                                resolved_chat_model=model_override,
+                                defer_memory_update=True,
+                                session_id=session_id,
+                                background_output_sink=companion_background_sink,
+                                preset_user_msg_uuid=companion_preset_uid,
+                                implicit_signal_bundle=companion_implicit_bundle,
+                            )
                         companion_reply_modality = companion_turn.reply_modality
                         companion_voice_script = (
                             companion_turn.voice_message_script or ""
@@ -3157,11 +3186,11 @@ async def _agent_chat_completions_impl(
                         response_content_parts,
                     ) = _normalize_chat_response_content(response_content)
                     if (
-                        companion_ws_heartbeat_ctx is not None
+                        companion_ws_inner_tick_ctx is not None
                         and chat_route == "websocket"
                     ):
-                        apply_companion_ws_heartbeat_coords(
-                            companion_ws_heartbeat_ctx,
+                        apply_companion_ws_inner_tick_coords(
+                            companion_ws_inner_tick_ctx,
                             user_id=current_user.id,
                             agent_id=agent_id,
                             chat_id=chat.id,
@@ -3586,45 +3615,45 @@ async def chat_completions_websocket(
             feats = global_config_loaded_from_config_yaml.app.features
             poll = max(
                 _COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS,
-                float(feats.companion_ws_proactive_heartbeat_poll_seconds),
+                float(feats.companion_ws_proactive_chat_poll_seconds),
             )
             try:
                 await asyncio.wait_for(hb_worker_stop.wait(), timeout=poll)
                 break
             except asyncio.TimeoutError:
                 pass
-            hb_snapshot: dict[str, Any] | None = None
+            inner_tick_snapshot: dict[str, Any] | None = None
             async with companion_ws.turn_lock:
-                hb_snapshot = companion_ws.snapshot_heartbeat_coords()
-                if hb_snapshot is not None:
+                inner_tick_snapshot = companion_ws.snapshot_inner_tick_coords()
+                if inner_tick_snapshot is not None:
                     companion_ws.clear_ws_inner_tick_proactive_tool_bg_idle_if_idle()
-            if hb_snapshot is None:
+            if inner_tick_snapshot is None:
                 logger.debug(
-                    "companion_ws_inner_tick_poll no_heartbeat_coords ws_conn_id={}",
+                    "companion_ws_inner_tick_poll no_inner_tick_coords ws_conn_id={}",
                     ws_conn_id,
                 )
                 continue
             logger.debug(
-                "companion_ws_inner_tick_poll heartbeat_coords ws_conn_id={} user={} agent={} chat_id={}",
+                "companion_ws_inner_tick_poll inner_tick_coords ws_conn_id={} user={} agent={} chat_id={}",
                 ws_conn_id,
-                hb_snapshot.get("user_id"),
-                hb_snapshot.get("agent_id"),
-                hb_snapshot.get("chat_id"),
+                inner_tick_snapshot.get("user_id"),
+                inner_tick_snapshot.get("agent_id"),
+                inner_tick_snapshot.get("chat_id"),
             )
-            hb_user_for_log = hb_snapshot["user_id"]
+            inner_tick_user_for_log = inner_tick_snapshot["user_id"]
             try:
                 await _try_fire_companion_ws_scheduled_task_inner_tick(
                     outbound_queue=outbound_queue,
-                    ctx=hb_snapshot,
+                    ctx=inner_tick_snapshot,
                     subscription_svc=subscription_svc,
                     companion_ws=companion_ws,
                     ws_conn_id=ws_conn_id,
                     tc_box=tc_box,
                 )
-                if feats.companion_ws_proactive_heartbeat_enabled:
-                    await _try_fire_companion_ws_proactive_heartbeat(
+                if feats.companion_ws_proactive_chat_enabled:
+                    await _try_fire_companion_ws_proactive_chat(
                         outbound_queue=outbound_queue,
-                        ctx=hb_snapshot,
+                        ctx=inner_tick_snapshot,
                         subscription_svc=subscription_svc,
                         companion_ws=companion_ws,
                         ws_conn_id=ws_conn_id,
@@ -3633,7 +3662,7 @@ async def chat_completions_websocket(
                 if feats.companion_ws_maintenance_inner_tick_enabled:
                     await _try_fire_companion_ws_maintenance_inner_tick(
                         outbound_queue=outbound_queue,
-                        ctx=hb_snapshot,
+                        ctx=inner_tick_snapshot,
                         subscription_svc=subscription_svc,
                         companion_ws=companion_ws,
                         ws_conn_id=ws_conn_id,
@@ -3643,7 +3672,7 @@ async def chat_completions_websocket(
                 logger.exception(
                     "companion_ws_inner_tick worker failed ws_conn_id={} user_id={}",
                     ws_conn_id,
-                    hb_user_for_log,
+                    inner_tick_user_for_log,
                 )
 
     hb_worker_task = asyncio.create_task(
@@ -3808,6 +3837,11 @@ async def chat_completions_websocket(
                 tc_box[0],
             )
             try:
+                # TODO(tool-bg-idle-starves-user-chat): USER_MESSAGE waits on turn_lock after
+                # inner-tick workers; if proactive/maintenance holds the lock on tool_bg_idle,
+                # the frame is accepted but no chat response is sent (REPL: user-input only).
+                # https://github.com/NascentCore/inty/issues/3113
+                # https://github.com/NascentCore/inty/issues/3123
                 async with companion_ws.turn_lock:
                     turn_task = inflight_turn_tracker.spawn(
                         _agent_chat_ws_completions_impl(
@@ -3819,7 +3853,7 @@ async def chat_completions_websocket(
                             voice_svc=voice_svc,
                             companion_background_sink=companion_ws.background_sink,
                             companion_ws_foreground_pending=companion_ws.foreground_pending,
-                            companion_ws_heartbeat_ctx=companion_ws.heartbeat_context,
+                            companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
                         ),
                         name=f"chat_ws_turn_{ws_conn_id}",
                     )

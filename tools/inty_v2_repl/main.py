@@ -534,12 +534,13 @@ def _readline_backend_ws_with_sideband(
                         _emit_repl_notice_over_prompt(prompt=prompt, buf=buf, text=n)
                 continue
             while True:
-                chunk = os.read(fd, 1)
+                chunk = os.read(fd, 4096)
                 if not chunk:
                     raise EOFError
                 text = dec.decode(chunk, final=False)
                 if not text:
                     continue
+                edit_dirty = False
                 for ch in text:
                     if ch in ("\r", "\n"):
                         sys.stdout.write("\r\033[2K")
@@ -553,11 +554,13 @@ def _readline_backend_ws_with_sideband(
                     if ch in ("\x7f", "\x08"):
                         if buf:
                             buf = buf[:-1]
-                            redraw_edit_line()
+                            edit_dirty = True
                         continue
                     if ord(ch) < 32 and ch != "\t":
                         continue
                     buf += ch
+                    edit_dirty = True
+                if edit_dirty:
                     redraw_edit_line()
                 r2, _, _ = sel.select([sys.stdin], [], [], 0)
                 if not r2:

@@ -10,6 +10,7 @@ import SwiftUI
 struct Entrance: View {
     // 初始化 Router
     @StateObject private var router = Router()
+    @StateObject var userManager = UserManager.shared
     
     var body: some View {
         // 将 path 绑定到 NavigationStack
@@ -18,14 +19,26 @@ struct Entrance: View {
             // 统一配置跳转逻辑
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {
+                    
                 case .login:
                     LoginView()
-                case .home:
-                    HomeView()
+                case .loginEmail:
+                    LoginEmail()
+                case .loginEmailPassword:
+                    LoginEmailPassword()
+                case .loginAuth:
+                    LoginAuth()
+                case .loginInitChat:
+                    LoginInitChat()
+                    
+                case .chatPage:
+                    ChatPage()
                 }
             }
         }
         // 注入环境对象，子页面通过 @EnvironmentObject 获取
         .environmentObject(router)
+        .environmentObject(userManager)
+   
     }
 }

@@ -1,5 +1,7 @@
 # Companion Harness：伴侣智能体的运行时
 
+**DO NOT MAINTAIN BACKWARD COMPATIBILITY**
+
 **一句话**：把 Inty 变成「会对用户说话、也会自己琢磨」的 **单一逻辑主体**——负责多通道响应、记忆持久化，以及来自 LivingSphere / TechnoCore 的合成刺激。
 
 ## 读者与边界

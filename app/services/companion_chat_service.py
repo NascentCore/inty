@@ -9,9 +9,11 @@ import threading
 import time
 import uuid
 from functools import lru_cache
+from typing import Any
 
 from loguru import logger
 
+from app.core.companion_harness.companion.runtime_events import append_runtime_event
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
@@ -25,9 +27,12 @@ from app.core.companion_harness.memory.memory_registry import (
     MEMORY_STORE_REGISTRY_REQUIRES_DSN,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.companion.implicit_signal_messages import (
+    implicit_user_signed_on_chat_turn,
+)
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
-    InnerTickMode,
+    InnerTickActivity,
 )
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
@@ -36,8 +41,6 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
-
-COMPANION_CHAT_LOGS_RELATIVE_PATH = "CHAT_LOGS.md"
 
 DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
     "（会话入线，内部指令）用户已进入本聊天。请在本轮及之后延续自然陪伴：可先简短问候，"
@@ -99,15 +102,15 @@ def companion_session_tool_bg_idle_event(
     return session.tool_bg_idle
 
 
-def append_companion_chat_logs_line_for_ws_control(
+def append_companion_ws_runtime_event(
     *,
     user_id: str,
     agent_id: str,
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
-    line: str,
+    record: dict[str, Any],
 ) -> None:
-    """Append one line to ``CHAT_LOGS.md`` for the companion MemoryStore scope (DB-backed)."""
+    """Append one WS control-frame audit record to ``.companion_runtime_events.jsonl``."""
     chat_api_id = resolved_chat_model.id_on_provider
     tool_api_id = _companion_tool_model_api_id(chat_api_id)
     manager = _companion_manager_for_resolved_model(
@@ -116,7 +119,7 @@ def append_companion_chat_logs_line_for_ws_control(
         _companion_runtime_config_fingerprint(),
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
-    session.store.append_line(COMPANION_CHAT_LOGS_RELATIVE_PATH, line)
+    append_runtime_event(session.store, record)
 
 
 def clear_companion_chat_service_caches() -> None:
@@ -278,55 +281,21 @@ async def _maybe_append_companion_ws_session_system(
     )
 
 
-async def run_companion_chat_turn_for_api(
+async def _companion_session_for_api_turn(
     *,
     user_id: str,
     agent_id: str,
     chat_id: str | int,
-    user_text: str,
     resolved_chat_model: GenAIModel,
-    defer_memory_update: bool = True,
-    session_id: str | None = None,
-    background_output_sink: BackgroundToolEventSink | None = None,
-    preset_user_msg_uuid: str | None = None,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
-) -> CompanionTurnResult:
-    """
-    Run one companion kernel turn for (user_id, agent_id, chat_id).
-
-    ``app.features.companion_memory_bootstrap_type`` (default ``USER_INTERACTIVE``) controls
-    companion bootstrap: ``NONE`` seeds minimal documents at session create and every message uses
-    ``run_turn`` only; ``USER_INTERACTIVE`` seeds minimal docs and every message uses ``run_turn`` with
-    interactive bootstrap tools until the model calls ``companion_bootstrap_user_interactive_complete``.
-
-    ``resolved_chat_model`` must match ``select_chat_model`` for the same user and subscription
-    (caller typically passes ``model_override`` from the chat completion path, e.g. WebSocket handler).
-    """
-    cfg = global_config_loaded_from_config_yaml
-    agent_cfg = cfg.agent
-    api_base = (
-        agent_cfg.chat_llm_base_url or agent_cfg.base_url or ""
-    ).strip() or "https://openrouter.ai/api/v1"
-    t0 = time.perf_counter()
+    session_id: str | None,
+) -> tuple[CompanionManager, CompanionSession, str, float, float]:
     chat_api_id = resolved_chat_model.id_on_provider
     tool_api_id = _companion_tool_model_api_id(chat_api_id)
-    logger.debug(
-        "companion_chat_turn start user={} agent={} chat={} model={} api_base={} defer_memory={}",
-        user_id,
-        agent_id,
-        chat_id,
-        chat_api_id,
-        api_base,
-        defer_memory_update,
-    )
     t_mgr0 = time.perf_counter()
     manager = _companion_manager_for_resolved_model(
         chat_api_id, tool_api_id, _companion_runtime_config_fingerprint()
     )
-    chat_key = str(chat_id)
-    session = manager.get_or_create_session(user_id, agent_id, chat_key)
+    session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     manager_session_ms = (time.perf_counter() - t_mgr0) * 1000.0
     if not session.is_initialized:
         if (
@@ -345,23 +314,30 @@ async def run_companion_chat_turn_for_api(
         session_id=session_id,
     )
     ws_system_ms = (time.perf_counter() - t_ws0) * 1000.0
-    t_rt0 = time.perf_counter()
-    out = await manager.run_turn(
-        session,
-        user_text,
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
-        defer_memory_update=defer_memory_update,
-        background_output_sink=background_output_sink,
-        preset_user_msg_uuid=preset_user_msg_uuid,
-        implicit_signal_bundle=implicit_signal_bundle,
-    )
-    run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
+    return manager, session, chat_api_id, manager_session_ms, ws_system_ms
+
+
+def _log_companion_api_turn_finished(
+    *,
+    track_path: str,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    chat_api_id: str,
+    t0: float,
+    manager_session_ms: float,
+    ws_system_ms: float,
+    run_turn_ms: float,
+    user_chars: int,
+    defer_memory_update: bool,
+    out: CompanionTurnResult,
+) -> None:
     logger.info(
-        "companion_chat_turn finished path=kernel user={} agent={} chat={} model={} "
+        "companion_chat_turn finished path={} user={} agent={} chat={} model={} "
         "total_ms={:.0f} manager_session_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f} "
         "user_chars={} defer_memory={} inty_trace_id={} user_msg_uuid={} "
         "langsmith_trace_id={} langsmith_run_id={}",
+        track_path,
         user_id,
         agent_id,
         chat_id,
@@ -370,11 +346,284 @@ async def run_companion_chat_turn_for_api(
         manager_session_ms,
         ws_system_ms,
         run_turn_ms,
-        len(user_text),
+        user_chars,
         defer_memory_update,
         out.trace_id,
         out.user_msg_uuid,
         out.langsmith_trace_id or "",
         out.langsmith_run_id or "",
     )
+
+
+async def _run_companion_api_track_turn(
+    *,
+    track_path: str,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    user_chars: int,
+    defer_memory_update: bool,
+    session_id: str | None,
+    run_track,
+) -> CompanionTurnResult:
+    cfg = global_config_loaded_from_config_yaml
+    agent_cfg = cfg.agent
+    api_base = (
+        agent_cfg.chat_llm_base_url or agent_cfg.base_url or ""
+    ).strip() or "https://openrouter.ai/api/v1"
+    chat_api_id = resolved_chat_model.id_on_provider
+    t0 = time.perf_counter()
+    logger.debug(
+        "companion_chat_turn start path={} user={} agent={} chat={} model={} api_base={} defer_memory={}",
+        track_path,
+        user_id,
+        agent_id,
+        chat_id,
+        chat_api_id,
+        api_base,
+        defer_memory_update,
+    )
+    manager, session, chat_api_id, manager_session_ms, ws_system_ms = (
+        await _companion_session_for_api_turn(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            resolved_chat_model=resolved_chat_model,
+            session_id=session_id,
+        )
+    )
+    t_rt0 = time.perf_counter()
+    out = await run_track(manager, session)
+    run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
+    _log_companion_api_turn_finished(
+        track_path=track_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        chat_api_id=chat_api_id,
+        t0=t0,
+        manager_session_ms=manager_session_ms,
+        ws_system_ms=ws_system_ms,
+        run_turn_ms=run_turn_ms,
+        user_chars=user_chars,
+        defer_memory_update=defer_memory_update,
+        out=out,
+    )
     return out
+
+
+async def run_companion_user_chat_turn_for_api(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    user_text: str,
+    resolved_chat_model: GenAIModel,
+    defer_memory_update: bool = True,
+    session_id: str | None = None,
+    background_output_sink: BackgroundToolEventSink | None = None,
+    preset_user_msg_uuid: str | None = None,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+) -> CompanionTurnResult:
+    return await _run_companion_api_track_turn(
+        track_path="user_chat",
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+        user_chars=len(user_text),
+        defer_memory_update=defer_memory_update,
+        session_id=session_id,
+        run_track=lambda manager, session: manager.run_user_chat_turn(
+            session,
+            user_text,
+            defer_memory_update=defer_memory_update,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
+            implicit_signal_bundle=implicit_signal_bundle,
+        ),
+    )
+
+
+async def run_companion_implicit_sign_on_greeting_turn_for_api(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    user_text: str,
+    resolved_chat_model: GenAIModel,
+    implicit_signal_bundle: ImplicitSignalBundle,
+    defer_memory_update: bool = True,
+    session_id: str | None = None,
+    background_output_sink: BackgroundToolEventSink | None = None,
+    preset_user_msg_uuid: str | None = None,
+) -> CompanionTurnResult:
+    return await _run_companion_api_track_turn(
+        track_path="implicit_sign_on_greeting",
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+        user_chars=len(user_text),
+        defer_memory_update=defer_memory_update,
+        session_id=session_id,
+        run_track=lambda manager, session: manager.run_implicit_sign_on_greeting_turn(
+            session,
+            user_text,
+            implicit_signal_bundle=implicit_signal_bundle,
+            defer_memory_update=defer_memory_update,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
+        ),
+    )
+
+
+async def run_companion_inner_tick_proactive_chat_turn_for_api(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    defer_memory_update: bool = True,
+    session_id: str | None = None,
+    background_output_sink: BackgroundToolEventSink | None = None,
+    preset_user_msg_uuid: str | None = None,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+) -> CompanionTurnResult:
+    return await _run_companion_api_track_turn(
+        track_path="inner_tick_proactive_chat",
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+        user_chars=0,
+        defer_memory_update=defer_memory_update,
+        session_id=session_id,
+        run_track=lambda manager, session: manager.run_inner_tick_proactive_chat_turn(
+            session,
+            defer_memory_update=defer_memory_update,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
+            implicit_signal_bundle=implicit_signal_bundle,
+        ),
+    )
+
+
+async def run_companion_inner_tick_scheduled_turn_for_api(
+    *,
+    scheduled_user_text: str,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    defer_memory_update: bool = True,
+    session_id: str | None = None,
+    background_output_sink: BackgroundToolEventSink | None = None,
+    preset_user_msg_uuid: str | None = None,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+) -> CompanionTurnResult:
+    assert scheduled_user_text.strip(), (
+        "run_companion_inner_tick_scheduled_turn_for_api requires non-empty scheduled_user_text"
+    )
+    return await _run_companion_api_track_turn(
+        track_path="inner_tick_scheduled",
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+        user_chars=len(scheduled_user_text),
+        defer_memory_update=defer_memory_update,
+        session_id=session_id,
+        run_track=lambda manager, session: manager.run_inner_tick_scheduled_turn(
+            session,
+            scheduled_user_text,
+            defer_memory_update=defer_memory_update,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
+            implicit_signal_bundle=implicit_signal_bundle,
+        ),
+    )
+
+
+async def run_companion_inner_tick_maintenance_turn_for_api(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    defer_memory_update: bool = True,
+    session_id: str | None = None,
+    background_output_sink: BackgroundToolEventSink | None = None,
+    preset_user_msg_uuid: str | None = None,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+) -> CompanionTurnResult:
+    return await _run_companion_api_track_turn(
+        track_path="inner_tick_maintenance",
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+        user_chars=0,
+        defer_memory_update=defer_memory_update,
+        session_id=session_id,
+        run_track=lambda manager, session: manager.run_inner_tick_maintenance_turn(
+            session,
+            defer_memory_update=defer_memory_update,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
+            implicit_signal_bundle=implicit_signal_bundle,
+        ),
+    )
+
+
+async def run_companion_chat_turn_for_api(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    user_text: str,
+    resolved_chat_model: GenAIModel,
+    defer_memory_update: bool = True,
+    session_id: str | None = None,
+    background_output_sink: BackgroundToolEventSink | None = None,
+    preset_user_msg_uuid: str | None = None,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    inner_tick_turn: bool = False,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
+) -> CompanionTurnResult:
+    """Legacy delegator; WebSocket handlers should call track-specific APIs."""
+    common = {
+        "user_id": user_id,
+        "agent_id": agent_id,
+        "chat_id": chat_id,
+        "resolved_chat_model": resolved_chat_model,
+        "defer_memory_update": defer_memory_update,
+        "session_id": session_id,
+        "background_output_sink": background_output_sink,
+        "preset_user_msg_uuid": preset_user_msg_uuid,
+        "implicit_signal_bundle": implicit_signal_bundle,
+    }
+    if inner_tick_turn:
+        match inner_tick_activity:
+            case InnerTickActivity.PROACTIVE_CHAT:
+                return await run_companion_inner_tick_proactive_chat_turn_for_api(
+                    **common,
+                )
+            case InnerTickActivity.MAINTENANCE:
+                return await run_companion_inner_tick_maintenance_turn_for_api(
+                    **common,
+                )
+    if implicit_user_signed_on_chat_turn(
+        implicit_signal_bundle=implicit_signal_bundle,
+        inner_tick_turn=False,
+    ):
+        return await run_companion_implicit_sign_on_greeting_turn_for_api(
+            user_text=user_text,
+            implicit_signal_bundle=implicit_signal_bundle,
+            **common,
+        )
+    return await run_companion_user_chat_turn_for_api(
+        user_text=user_text,
+        **common,
+    )

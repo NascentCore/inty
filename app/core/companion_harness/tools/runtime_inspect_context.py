@@ -24,7 +24,7 @@ from app.core.companion_harness.companion.models import (
     AI_PRIVATE_INJECT_MAX_CHARS,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ContextMeta,
-    InnerTickMode,
+    InnerTickActivity,
     _MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS,
     _MEMORY_RAW_INJECT_MAX_CHARS,
     _OPTIONAL_DOC_MAX_CHARS,
@@ -206,7 +206,7 @@ def build_turn_runtime_config_dict(
     context: ContextMeta,
     transcript_llm_window_max_messages: int,
     inner_tick_turn: bool,
-    inner_tick_mode: InnerTickMode,
+    inner_tick_activity: InnerTickActivity,
     repository_only_store_text: bool,
     transcript_compaction: TranscriptCompactionConfig | None,
     memory_store_read_document_max_chars_cap: int,
@@ -243,7 +243,7 @@ def build_turn_runtime_config_dict(
         ),
         "memory_pipeline": mem_cfg.model_dump(),
         "inner_tick_turn": inner_tick_turn,
-        "inner_tick_mode": inner_tick_mode.value,
+        "inner_tick_activity": inner_tick_activity.value,
         "repository_only_store_text": repository_only_store_text,
         "transcript_compaction": (
             transcript_compaction.model_dump()

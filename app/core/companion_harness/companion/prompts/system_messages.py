@@ -1,5 +1,20 @@
-"""Companion **system context** assembly: one place to turn ``PromptBundle`` + turn
-flags into what the model sees as system role(s) before user/assistant messages.
+"""Companion **system context** assembly for leading ``role: system`` messages.
+
+**Stack order (fixed):** Doctrine → Tools → Persona → Output → Contextual.
+
+**Scenario → entrypoint** (production; call from ``prompt_stack`` / ``turn`` / ``tool_background``):
+
+| Scenario | Function |
+|----------|----------|
+| ASYNC user-round foreground + plan prefix | ``build_system_messages_for_chat_track`` |
+| ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
+| ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
+| Proactive inner tick (``PROACTIVE_CHAT``) | ``build_system_messages_for_inner_tick_proactive_chat`` |
+| Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` |
+
+``build_system_messages`` is the internal combiner; tests may call it directly.
+
+Post-transcript slices (e.g. ``## user-time-context`` in ``turn_pipeline``) are not built here.
 """
 
 from __future__ import annotations
@@ -10,10 +25,14 @@ from app.core.companion_harness.experience_profile import (
     experience_profile_injects_private_memory,
     experience_profile_system_clause,
 )
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.utils.config import CompanionMemoryBootstrapType
 
+from ..ai_private_prompt import get_ai_private_jsonl_text_for_prompt
 from ..bootstrap_user_interactive import (
     build_interactive_bootstrap_system_message_parts,
+    interactive_bootstrap_active,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
@@ -26,7 +45,7 @@ from app.core.companion_harness.memory.memory_taxonomy import (
 )
 from living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
-from ..models import ContextMeta, InnerTickMode, PromptBundle
+from ..models import ContextMeta, InnerTickActivity, PromptBundle
 from .inner_tick_ls_tc import (
     INNER_TICK_LS_TC_AUTONOMY_SECTION,
     INNER_TICK_LS_TC_TOOL_BULLET,
@@ -34,9 +53,9 @@ from .inner_tick_ls_tc import (
 
 
 def _inner_tick_proactive_chat(
-    inner_tick_turn: bool, inner_tick_mode: InnerTickMode
+    inner_tick_turn: bool, inner_tick_activity: InnerTickActivity
 ) -> bool:
-    return inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    return inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
 
 
 # 与 memory_store_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
@@ -235,9 +254,9 @@ def _output_contract_text_interactive_bootstrap_tools(
     return base
 
 
-def _heartbeat_clause() -> str:
+def _proactive_chat_clause() -> str:
     return (
-        "## 本轮（陪伴心跳）\n\n"
+        "## 本轮（陪伴主动聊天）\n\n"
         "用户尚未发送新消息。承接上文**同一语境**：延续当前场景、话题与表达风格，自然续一句或两句，"
         "勿改换语气或像重新开始一段对话；仅输出自然语言短句，不要调用工具。"
     )
@@ -247,7 +266,7 @@ def _repl_online_ack_clause() -> str:
     return (
         "## 本轮（REPL 会话恢复）\n\n"
         "用户刚回到本对话窗口。请结合上文**承接**同一语境；若尚无比拼的上下文则简短自然问候；"
-        "可正常调用工具。勿提系统、上线或心跳。"
+        "可正常调用工具。勿提系统、上线或主动聊天机制。"
     )
 
 
@@ -361,51 +380,25 @@ def _tool_background_final_json_routing_contract_text() -> str:
     )
 
 
-def build_system_messages(
-    bundle: PromptBundle,
-    context: ContextMeta,
+def _doctrine_system_messages() -> list[dict[str, Any]]:
+    return [
+        _system_message(get_imate_axiom_system_text()),
+        _system_message(get_inty_facts_system_text()),
+        _system_message(_security_base()),
+    ]
+
+
+def _tools_system_messages(
     *,
-    enable_tools: bool = False,
-    enable_user_profile_tool: bool = False,
-    inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
-    repl_online_ack_turn: bool = False,
-    ai_private_text: str = "",
-    async_foreground_chat_stack: bool = False,
-    tool_side_compact: bool = False,
-    interactive_bootstrap_active: bool = False,
-    include_significance_perception_slice: bool = False,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    bundle: PromptBundle,
+    tools_on: bool,
+    chat_branch_no_tool_api: bool,
+    tool_side_compact: bool,
+    inner_tick_turn: bool,
 ) -> list[dict[str, Any]]:
-    tick_proactive = _inner_tick_proactive_chat(
-        inner_tick_turn, inner_tick_mode
-    )
-    tools_on = enable_tools or enable_user_profile_tool
-    # Dual-LLM foreground completion: tools exist in product, but this request omits OpenAI ``tools=``.
-    chat_branch_no_tool_api = (
-        tools_on and not inner_tick_turn and async_foreground_chat_stack
-    )
-
     out: list[dict[str, Any]] = []
-    out.append(_system_message(get_imate_axiom_system_text()))
-    out.append(_system_message(get_inty_facts_system_text()))
-    out.append(_system_message(_security_base()))
-
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
         out.append(_system_message(bundle.tools_md.strip()))
-
-    if tick_proactive:
-        out.append(_system_message(_heartbeat_clause()))
-
-    if inner_tick_turn and not tick_proactive:
-        out.append(
-            _system_message(_inner_tick_ai_private_section(ai_private_text))
-        )
-        out.append(_system_message(_inner_tick_turn_section()))
-
-    if repl_online_ack_turn:
-        out.append(_system_message(_repl_online_ack_clause()))
-
     if tool_side_compact and not inner_tick_turn:
         out.append(_system_message(_tool_side_compact_directive()))
         if tools_on:
@@ -419,13 +412,24 @@ def build_system_messages(
                     _tool_background_first_round_skip_contract_text()
                 )
             )
+    return out
 
-    out.append(_system_message(bundle.identity.strip()))
-    out.append(_system_message(bundle.soul.strip()))
-    out.append(_system_message(bundle.style_md.strip()))
-    out.append(
-        _system_message(experience_profile_system_clause(context.context_mode))
-    )
+
+def _persona_system_messages(
+    *,
+    bundle: PromptBundle,
+    context: ContextMeta,
+    inner_tick_turn: bool,
+    skip_memory_blocks: bool,
+    include_significance_perception_slice: bool,
+    interactive_bootstrap_active: bool,
+    tools_on: bool,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = [
+        _system_message(bundle.identity.strip()),
+        _system_message(bundle.soul.strip()),
+        _system_message(bundle.style_md.strip()),
+    ]
     if bundle.techno_core_md.strip():
         out.append(_system_message(bundle.techno_core_md.strip()))
     if bundle.living_sphere_md.strip():
@@ -433,11 +437,8 @@ def build_system_messages(
     if not inner_tick_turn:
         out.append(_system_message(_living_sphere_persistence_clause()))
     out.append(_system_message(bundle.user_md.strip()))
-
     if include_significance_perception_slice and not inner_tick_turn:
         out.append(_system_message(bundle.significance_perception_md.strip()))
-
-    skip_memory_blocks = tool_side_compact and not inner_tick_turn
     if experience_profile_injects_private_memory(context.context_mode):
         if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():
             out.append(
@@ -462,11 +463,24 @@ def build_system_messages(
                     MEMORY_SYSTEM_HEADING_SEMANTIC + bundle.memory_md.strip()
                 )
             )
-
     if interactive_bootstrap_active and tools_on and not inner_tick_turn:
         for block in build_interactive_bootstrap_system_message_parts():
             out.append(_system_message(block))
+    return out
 
+
+def _output_system_messages(
+    *,
+    inner_tick_turn: bool,
+    tick_proactive: bool,
+    tools_on: bool,
+    tool_side_compact: bool,
+    async_foreground_chat_stack: bool,
+    interactive_bootstrap_active: bool,
+    include_significance_perception_slice: bool,
+    chat_branch_no_tool_api: bool,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
     if inner_tick_turn:
         if tick_proactive:
             out.append(_system_message(_output_contract_text()))
@@ -498,10 +512,199 @@ def build_system_messages(
             )
     else:
         out.append(_system_message(_output_contract_text()))
-
     if include_significance_perception_slice and chat_branch_no_tool_api:
         out.append(
             _system_message(_dual_llm_chat_structured_output_contract_text())
         )
-
     return out
+
+
+def _contextual_system_messages(
+    *,
+    context: ContextMeta,
+    inner_tick_turn: bool,
+    tick_proactive: bool,
+    repl_online_ack_turn: bool,
+    ai_private_text: str,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = [
+        _system_message(experience_profile_system_clause(context.context_mode)),
+    ]
+    if repl_online_ack_turn:
+        out.append(_system_message(_repl_online_ack_clause()))
+    if tick_proactive:
+        out.append(_system_message(_proactive_chat_clause()))
+    if inner_tick_turn and not tick_proactive:
+        out.append(
+            _system_message(_inner_tick_ai_private_section(ai_private_text))
+        )
+        out.append(_system_message(_inner_tick_turn_section()))
+    return out
+
+
+def build_system_messages(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    *,
+    enable_tools: bool = False,
+    enable_user_profile_tool: bool = False,
+    inner_tick_turn: bool = False,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
+    repl_online_ack_turn: bool = False,
+    ai_private_text: str = "",
+    async_foreground_chat_stack: bool = False,
+    tool_side_compact: bool = False,
+    interactive_bootstrap_active: bool = False,
+    include_significance_perception_slice: bool = False,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+) -> list[dict[str, Any]]:
+    tick_proactive = _inner_tick_proactive_chat(
+        inner_tick_turn, inner_tick_activity
+    )
+    tools_on = enable_tools or enable_user_profile_tool
+    # Dual-LLM foreground completion: tools exist in product, but this request omits OpenAI ``tools=``.
+    chat_branch_no_tool_api = (
+        tools_on and not inner_tick_turn and async_foreground_chat_stack
+    )
+    skip_memory_blocks = tool_side_compact and not inner_tick_turn
+
+    out: list[dict[str, Any]] = []
+    out.extend(_doctrine_system_messages())
+    out.extend(
+        _tools_system_messages(
+            bundle=bundle,
+            tools_on=tools_on,
+            chat_branch_no_tool_api=chat_branch_no_tool_api,
+            tool_side_compact=tool_side_compact,
+            inner_tick_turn=inner_tick_turn,
+        )
+    )
+    out.extend(
+        _persona_system_messages(
+            bundle=bundle,
+            context=context,
+            inner_tick_turn=inner_tick_turn,
+            skip_memory_blocks=skip_memory_blocks,
+            include_significance_perception_slice=include_significance_perception_slice,
+            interactive_bootstrap_active=interactive_bootstrap_active,
+            tools_on=tools_on,
+        )
+    )
+    out.extend(
+        _output_system_messages(
+            inner_tick_turn=inner_tick_turn,
+            tick_proactive=tick_proactive,
+            tools_on=tools_on,
+            tool_side_compact=tool_side_compact,
+            async_foreground_chat_stack=async_foreground_chat_stack,
+            interactive_bootstrap_active=interactive_bootstrap_active,
+            include_significance_perception_slice=include_significance_perception_slice,
+            chat_branch_no_tool_api=chat_branch_no_tool_api,
+        )
+    )
+    out.extend(
+        _contextual_system_messages(
+            context=context,
+            inner_tick_turn=inner_tick_turn,
+            tick_proactive=tick_proactive,
+            repl_online_ack_turn=repl_online_ack_turn,
+            ai_private_text=ai_private_text,
+        )
+    )
+    return out
+
+
+def build_system_messages_for_chat_track(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    memory_bootstrap_type: str,
+) -> list[dict[str, Any]]:
+    """ASYNC user round: foreground chat (``tools=None``) and ``prompt_plan`` prefix."""
+    bootstrap_on = interactive_bootstrap_active(
+        feature_enabled=(
+            memory_bootstrap_type
+            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+        ),
+        meta=context,
+    )
+    return build_system_messages(
+        bundle,
+        context,
+        enable_tools=True,
+        inner_tick_turn=False,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        ai_private_text="",
+        async_foreground_chat_stack=True,
+        tool_side_compact=False,
+        interactive_bootstrap_active=bootstrap_on,
+        include_significance_perception_slice=True,
+    )
+
+
+def build_system_messages_for_tool_track(
+    bundle: PromptBundle,
+    context: ContextMeta,
+) -> list[dict[str, Any]]:
+    """ASYNC user round: ``tool_background`` and refresh on the tool-model path."""
+    return build_system_messages(
+        bundle,
+        context,
+        enable_tools=True,
+        inner_tick_turn=False,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        ai_private_text="",
+        tool_side_compact=True,
+        interactive_bootstrap_active=False,
+        include_significance_perception_slice=False,
+    )
+
+
+def build_system_messages_for_inner_tick_maintenance(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    store: MemoryStore,
+) -> list[dict[str, Any]]:
+    """ASYNC maintenance inner tick: plan prefix and tool leg (no foreground envelope)."""
+    ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
+    return build_system_messages(
+        bundle,
+        context,
+        enable_tools=True,
+        inner_tick_turn=True,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        ai_private_text=ai_private_text,
+        tool_side_compact=True,
+        interactive_bootstrap_active=False,
+        include_significance_perception_slice=False,
+    )
+
+
+def build_system_messages_for_inner_tick_proactive_chat(
+    bundle: PromptBundle,
+    context: ContextMeta,
+) -> list[dict[str, Any]]:
+    """``PROACTIVE_CHAT_SYNC``: proactive chat inner tick while user is idle."""
+    return build_system_messages(
+        bundle,
+        context,
+        enable_tools=False,
+        inner_tick_turn=True,
+        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
+        ai_private_text="",
+        include_significance_perception_slice=False,
+    )
+
+
+def build_system_messages_for_implicit_sign_on_greeting(
+    bundle: PromptBundle,
+    context: ContextMeta,
+) -> list[dict[str, Any]]:
+    """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no tool contracts)."""
+    return build_system_messages(
+        bundle,
+        context,
+        enable_tools=False,
+        inner_tick_turn=False,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        include_significance_perception_slice=True,
+    )

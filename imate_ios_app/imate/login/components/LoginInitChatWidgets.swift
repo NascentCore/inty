@@ -1,0 +1,345 @@
+//
+//  LoginInitChatWidgets.swift
+//  imate
+//
+//  Created by 天之行 on 2026/4/23.
+//
+
+import SwiftUI
+
+enum LoginInitChatWidgets {
+    
+    // 聊天起泡
+    struct InitChatBubble: View {
+        let message: String
+        let isAgent: Bool
+        @State private var revealed = false
+
+        var body: some View {
+            HStack {
+                if !isAgent { Spacer() }
+                
+                Text(message)
+                    .font(.system(size: 14))
+                    .lineSpacing(4)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 17)
+                    .padding(.vertical, 13)
+                    .background(bubbleBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .opacity(revealed ? 1 : 0)
+                    .offset(y: revealed ? 0 : 14)
+                
+                if isAgent { Spacer() }
+            }
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.32)) {
+                    revealed = true
+                }
+            }
+        }
+
+        @ViewBuilder
+        private var bubbleBackground: some View {
+            if isAgent {
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(InitChatColors.agentBubbleBg)
+                    .overlay(RoundedRectangle(cornerRadius: 18).stroke(InitChatColors.agentBubbleBorder, lineWidth: 1))
+            } else {
+                LinearGradient(
+                    colors: [InitChatColors.userBubbleStart, InitChatColors.userBubbleEnd],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            }
+        }
+    }
+    
+    // 顶部Header 与进度条
+    struct InitChatHeader: View {
+        let progress: Double
+        let title: String
+        let subtitle: String
+        let avatarUrl: String?
+
+        var body: some View {
+            VStack(spacing: 12) {
+                // 用户信息行
+                HStack(spacing: 12) {
+                    Circle() // 简化版头像
+                        .fill(InitChatColors.userBubbleStart)
+                        .frame(width: 44, height: 44)
+                        .overlay(Circle().stroke(InitChatColors.userBubbleStart.opacity(0.5), lineWidth: 2))
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title).font(.system(size: 16, weight: .bold)).foregroundColor(.white)
+                        Text(subtitle).font(.system(size: 11)).foregroundColor(.white.opacity(0.5))
+                    }
+                    Spacer()
+                }
+
+                // 完成度标签
+                HStack {
+                    Text("PROFILE COMPLETION").font(.system(size: 11)).foregroundColor(.white.opacity(0.5))
+                    Spacer()
+                    Text("\(Int(progress * 100))%").font(.system(size: 12, weight: .semibold)).foregroundColor(InitChatColors.userBubbleEnd)
+                }
+
+                // 进度条
+                ZStack(alignment: .leading) {
+                    Capsule().fill(InitChatColors.progressTrack).frame(height: 4)
+                    Capsule()
+                        .fill(LinearGradient(colors: [InitChatColors.userBubbleStart, InitChatColors.userBubbleEnd, Color(hex: 0xC3F0FD)], startPoint: .leading, endPoint: .trailing))
+                        .frame(width: UIScreen.main.bounds.width * CGFloat(progress), height: 4)
+                        .animation(.spring(), value: progress)
+                }
+            }
+            .padding()
+            .background(InitChatColors.headerBg)
+        }
+    }
+    
+    // 背景渐变色
+    static var background: some View {
+        LinearGradient(
+            colors: [
+//                Color.black,
+//                Color.purple.opacity(0.8),
+//                Color.blue.opacity(0.6)
+                Color(hex: 0xFF1C1523),
+                Color(hex: 0xFF1C1523)
+            ],
+            startPoint: .bottom,
+            endPoint: .top
+        )
+        .ignoresSafeArea()
+    }
+    
+    struct Header: View {
+        let progress: Double
+        let bgColor: Color
+        let name: String
+        let avatar: String?
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 12) {
+
+                HStack {
+                    SLImage(
+                        source: .network(avatar ?? ""),
+                        width: 40,
+                        height: 40,
+                    )
+                    .cornerRadius(20)
+
+                    VStack(alignment: .leading) {
+                        Text(name)
+                            .foregroundColor(.white)
+                            .bold()
+
+                        Text("Getting to know you")
+                            .foregroundColor(.white.opacity(0.7))
+                            .font(.caption)
+                    }
+
+                    Spacer()
+                }
+
+                ProgressView(value: progress)
+                    .tint(.purple)
+            }
+            .padding()
+            .background(bgColor)
+        }
+    }
+    
+    
+    // 聊天列表
+    struct ChatList: View {
+        let messages: [ChatMessage]
+        
+        var body: some View {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 12) {
+                        ForEach(messages) { msg in
+                            ChatBubble(message: msg)
+                                .transition(.chatBubble)
+                                .id(msg.id)
+                        }
+                        
+                        Color.clear
+                           .frame(height: 1)
+                           .id("BOTTOM") // 👈 底部锚点
+                    }
+                    .padding()
+                }
+                .onChange(of: messages.count) { _ in
+//                    if let last = messages.last {
+//                        proxy.scrollTo(last.id, anchor: .bottom)
+//                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            proxy.scrollTo("BOTTOM", anchor: .bottom)
+                        }
+                    }
+//                    withAnimation{
+//                        proxy.scrollTo("BOTTOM", anchor: .bottom)
+//                    }
+                }
+            }
+        }
+    }
+    
+    
+    // 聊天气泡
+    struct ChatBubble: View {
+        let message: ChatMessage
+        
+        var body: some View {
+            HStack {
+                if message.isUser { Spacer() }
+
+                Text(message.text)
+                    .padding()
+                    .background(message.isUser ? Color.purple : Color.gray.opacity(0.3))
+                    .foregroundColor(.white)
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color(hex: 0x26C567F5), lineWidth: 2)
+                    )
+
+                if !message.isUser { Spacer() }
+            }
+        }
+    }
+    
+    
+    // 输入框
+    struct InputBar: View {
+        @Binding var inputText: String
+        let onSend: () -> Void
+        let hint: String
+        
+        var body: some View {
+            HStack {
+                TextField(hint, text: $inputText, prompt: Text(hint).foregroundColor(.white.opacity(0.5)))
+                    .padding()
+                    .background(Color.white.opacity(0.1))
+                    .frame(height: 46)
+                    .cornerRadius(23)
+                    .foregroundColor(.white)
+                
+                Button(action: onSend) {
+                    Image(systemName: "paperplane.fill")
+                        .foregroundColor(.white)
+                        .frame(width: 46, height: 46)
+                        .background(InitChatColors.textFieldBg)
+                        .clipShape(Circle())
+                }
+            }
+            .padding()
+        }
+    }
+    
+    // 性别选择框
+    struct GenderSelectBottom: View {
+        let onSelect: (Int) -> Void
+        
+        var body: some View {
+            HStack {
+                Button("Female ❤️") {
+                    onSelect(0)
+                }
+                .padding()
+                .background(Color.purple)
+                .cornerRadius(20)
+                .foregroundColor(.white)
+
+                Button("Male 💙") {
+                    onSelect(1)
+                }
+                .padding()
+                .background(Color.blue)
+                .cornerRadius(20)
+                .foregroundColor(.white)
+                
+                Button("No Pref 💙") {
+                    onSelect(2)
+                }
+                .padding()
+                .background(Color.blue)
+                .cornerRadius(20)
+                .foregroundColor(.white)
+            }
+            .padding()
+        }
+    }
+    
+    // 按钮 - Begin Our Journey
+    struct ButtonFinish: View {
+        let onFinish: () -> Void
+        
+        var body: some View {
+            Button(action: onFinish) {
+                Text("✨ Begin Our Journey")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(
+                        LinearGradient(
+                            colors: [Color.purple, Color.blue],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(30)
+                    .foregroundColor(.white)
+            }
+            .padding()
+        }
+    }
+    
+    // 生成图片等待页面
+    struct GenerateAvatarLoading: View {
+        @State private var animate = false
+        
+        var body: some View {
+            ZStack {
+                HStack(spacing: 14) {
+                    // 左侧圆点
+                    Circle()
+                        .fill(Color.purple)
+                        .frame(width: 10, height: 10)
+                        .scaleEffect(animate ? 1.2 : 0.8)
+                        .opacity(animate ? 1 : 0.5)
+
+                    // 中间文字
+                    Text("Generating your companion...")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(Color.purple.opacity(0.9))
+
+                    // 右侧圆点
+                    Circle()
+                        .fill(Color(red: 125/255, green: 118/255, blue: 214/255))
+                        .frame(width: 10, height: 10)
+                        .scaleEffect(animate ? 0.8 : 1.2)
+                        .opacity(animate ? 0.5 : 1)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 20)
+                .frame(height: 80)
+            }
+            .onAppear {
+                withAnimation(
+                    .easeInOut(duration: 1.0)
+                    .repeatForever(autoreverses: true)
+                ) {
+                    animate.toggle()
+                }
+            }
+        }
+    }
+    
+    
+}

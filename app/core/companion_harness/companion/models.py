@@ -34,11 +34,21 @@ AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 CompanionReplyModality = Literal["text", "voice_message"]
 
 
-class InnerTickMode(StrEnum):
+class InnerTickActivity(StrEnum):
     """Synthetic user-idle turns: maintenance uses restricted tools; proactive_chat is no-tools."""
 
     MAINTENANCE = "maintenance"
     PROACTIVE_CHAT = "proactive_chat"
+
+
+class CompanionTurnTrack(StrEnum):
+    """Active production turn entry tracks (1:1 with ``build_system_messages_for_*``)."""
+
+    USER_CHAT = "user_chat"
+    IMPLICIT_SIGN_ON_GREETING = "implicit_sign_on_greeting"
+    INNER_TICK_PROACTIVE_CHAT = "inner_tick_proactive_chat"
+    INNER_TICK_SCHEDULED = "inner_tick_scheduled"
+    INNER_TICK_MAINTENANCE = "inner_tick_maintenance"
 
 
 PresenceSignal = Literal["repl_online", "repl_offline"]
@@ -110,7 +120,7 @@ class CompanionTurnResult(BaseModel):
     inner_tick_activity: str | None = Field(
         default=None,
         description=(
-            "When this turn is an inner-tick synthetic round, ``InnerTickMode`` value "
+            "When this turn is an inner-tick synthetic round, ``InnerTickActivity`` value "
             "(``proactive_chat`` / ``maintenance``); mirrored to API/WS "
             "``meta_data.inner_tick_activity``. ``None`` for normal user-driven chat turns."
         ),
@@ -134,7 +144,7 @@ class CompanionTurnResult(BaseModel):
         default="",
         description=(
             "Exact ``content`` written to the user transcript row for this turn (API/chat_history "
-            "should mirror this for proactive heartbeat parity)."
+            "should mirror this for proactive chat parity)."
         ),
     )
 
@@ -146,7 +156,12 @@ class ChatMessage(BaseModel):
     uuid: str | None = None
     trace_id: str | None = None
     reply_to: str | None = None
-    heartbeat: bool | None = None
+    # TODO: remove validation_alias for heartbeat; no backward compat needed
+    proactive_chat: bool | None = Field(
+        default=None,
+        validation_alias=AliasChoices("proactive_chat", "heartbeat"),
+    )
+    scheduled: bool | None = None
     presence: PresenceSignal | None = None
     repl_online_ack: bool | None = None
     inner_tick: bool | None = None
@@ -404,7 +419,8 @@ def transcript_rows_for_public_chat_llm(
         if (
             m.role == "user"
             and m.inner_tick is True
-            and m.heartbeat is not True
+            and m.proactive_chat is not True
+            and m.scheduled is not True
         ):
             uid = m.uuid
             if uid:
@@ -414,7 +430,8 @@ def transcript_rows_for_public_chat_llm(
         if (
             m.role == "user"
             and m.inner_tick is True
-            and m.heartbeat is not True
+            and m.proactive_chat is not True
+            and m.scheduled is not True
         ):
             continue
         if (
@@ -446,14 +463,14 @@ def companion_turn_transcript_loaded_messages(
     rel_main_transcript: str,
     rel_inner_tick_transcript: str,
     inner_tick_turn: bool,
-    inner_tick_mode: InnerTickMode,
+    inner_tick_activity: InnerTickActivity,
 ) -> list[ChatMessage]:
     """Transcript rows for assembling this turn's ``messages`` (public filter + inner file merge)."""
     raw_main = load_transcript_from_store(store, rel_main_transcript)
     raw_inner = load_transcript_from_store(store, rel_inner_tick_transcript)
     public_main = transcript_rows_for_public_chat_llm(raw_main)
     tick_proactive = (
-        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
         return merge_transcripts_by_ts(public_main, raw_inner)
@@ -463,11 +480,11 @@ def companion_turn_transcript_loaded_messages(
 def transcript_relative_path_for_turn_persistence(
     *,
     inner_tick_turn: bool,
-    inner_tick_mode: InnerTickMode,
+    inner_tick_activity: InnerTickActivity,
 ) -> str:
     """Scope-relative JSONL path for run_turn user/assistant transcript appends."""
     tick_proactive = (
-        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
         return "transcript_inner_tick.jsonl"

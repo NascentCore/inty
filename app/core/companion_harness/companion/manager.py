@@ -37,10 +37,17 @@ from app.core.companion_harness.memory.memory_registry import (
     shutdown_memory_store,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .models import CompanionTurnResult, InnerTickMode
+from .implicit_signal_messages import implicit_user_signed_on_chat_turn
+from .models import CompanionTurnResult, InnerTickActivity
 from .scope import CompanionScope
-from .turn import run_turn
 from .turn_routes import BackgroundToolEventSink
+from .turn_tracks import (
+    run_companion_implicit_sign_on_greeting_turn,
+    run_companion_inner_tick_maintenance_turn,
+    run_companion_inner_tick_proactive_chat_turn,
+    run_companion_inner_tick_scheduled_turn,
+    run_companion_user_chat_turn,
+)
 from app.core.companion_harness.memory.memory_store_scope import (
     ensure_minimal_documents_in_store,
     is_scope_initialized_in_store,
@@ -149,6 +156,9 @@ class CompanionSession:
         self.store = store
         self.llm_client = llm_client
         self.config = config
+        # TODO(tool-bg-idle-starves-user-chat): Cleared by tool_background start; run_turn
+        # awaits this before loading transcript. Wedged maintenance bg blocks user chat.
+        # https://github.com/NascentCore/inty/issues/3123
         self.tool_bg_idle = threading.Event()
         self.tool_bg_idle.set()
 
@@ -273,42 +283,188 @@ class CompanionManager:
             )
             return session
 
+    def _langsmith_parent_run_enabled(self, session: CompanionSession) -> bool:
+        override = session.config.langsmith_companion_parent_run_enabled
+        return (
+            companion_turn_langsmith_parent_enabled_from_app_config()
+            if override is None
+            else override
+        )
+
+    def _track_turn_kwargs(
+        self,
+        session: CompanionSession,
+        *,
+        defer_memory_update: bool,
+        background_output_sink: BackgroundToolEventSink | None,
+        preset_user_msg_uuid: str | None,
+        implicit_signal_bundle: ImplicitSignalBundle | None,
+    ) -> dict[str, object]:
+        return {
+            "store": session.store,
+            "llm_client": session.llm_client,
+            "defer_memory_update": defer_memory_update,
+            "memory_config": session.config.memory,
+            "transcript_compaction": session.config.transcript_compaction,
+            "transcript_llm_window_max_messages": session.config.transcript_llm_window_max_messages,
+            "repository_only_store_text": session.config.repository_only_store_text,
+            "memory_bootstrap_type": session.config.memory_bootstrap_type,
+            "background_output_sink": background_output_sink,
+            "preset_user_msg_uuid": preset_user_msg_uuid,
+            "implicit_signal_bundle": implicit_signal_bundle,
+            "langsmith_parent_run_enabled": self._langsmith_parent_run_enabled(
+                session
+            ),
+            "tool_bg_idle_event": session.tool_bg_idle,
+        }
+
+    async def run_user_chat_turn(
+        self,
+        session: CompanionSession,
+        user_text: str,
+        *,
+        defer_memory_update: bool = True,
+        background_output_sink: BackgroundToolEventSink | None = None,
+        preset_user_msg_uuid: str | None = None,
+        implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    ) -> CompanionTurnResult:
+        return await run_companion_user_chat_turn(
+            user_text,
+            **self._track_turn_kwargs(
+                session,
+                defer_memory_update=defer_memory_update,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
+        )
+
+    async def run_implicit_sign_on_greeting_turn(
+        self,
+        session: CompanionSession,
+        user_text: str,
+        *,
+        implicit_signal_bundle: ImplicitSignalBundle,
+        defer_memory_update: bool = True,
+        background_output_sink: BackgroundToolEventSink | None = None,
+        preset_user_msg_uuid: str | None = None,
+    ) -> CompanionTurnResult:
+        return await run_companion_implicit_sign_on_greeting_turn(
+            user_text,
+            **self._track_turn_kwargs(
+                session,
+                defer_memory_update=defer_memory_update,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
+        )
+
+    async def run_inner_tick_proactive_chat_turn(
+        self,
+        session: CompanionSession,
+        *,
+        defer_memory_update: bool = True,
+        background_output_sink: BackgroundToolEventSink | None = None,
+        preset_user_msg_uuid: str | None = None,
+        implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    ) -> CompanionTurnResult:
+        return await run_companion_inner_tick_proactive_chat_turn(
+            **self._track_turn_kwargs(
+                session,
+                defer_memory_update=defer_memory_update,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
+        )
+
+    async def run_inner_tick_scheduled_turn(
+        self,
+        session: CompanionSession,
+        scheduled_user_text: str,
+        *,
+        defer_memory_update: bool = True,
+        background_output_sink: BackgroundToolEventSink | None = None,
+        preset_user_msg_uuid: str | None = None,
+        implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    ) -> CompanionTurnResult:
+        return await run_companion_inner_tick_scheduled_turn(
+            scheduled_user_text,
+            **self._track_turn_kwargs(
+                session,
+                defer_memory_update=defer_memory_update,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
+        )
+
+    async def run_inner_tick_maintenance_turn(
+        self,
+        session: CompanionSession,
+        *,
+        defer_memory_update: bool = True,
+        background_output_sink: BackgroundToolEventSink | None = None,
+        preset_user_msg_uuid: str | None = None,
+        implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    ) -> CompanionTurnResult:
+        return await run_companion_inner_tick_maintenance_turn(
+            **self._track_turn_kwargs(
+                session,
+                defer_memory_update=defer_memory_update,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
+        )
+
     async def run_turn(
         self,
         session: CompanionSession,
         user_text: str,
         *,
         inner_tick_turn: bool = False,
-        inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+        inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         implicit_signal_bundle: ImplicitSignalBundle | None = None,
     ) -> CompanionTurnResult:
-        """执行一轮对话。"""
-        override = session.config.langsmith_companion_parent_run_enabled
-        ls_parent_enabled = (
-            companion_turn_langsmith_parent_enabled_from_app_config()
-            if override is None
-            else override
-        )
-        return await run_turn(
-            user_text,
-            store=session.store,
-            llm_client=session.llm_client,
-            inner_tick_turn=inner_tick_turn,
-            inner_tick_mode=inner_tick_mode,
-            defer_memory_update=defer_memory_update,
-            memory_config=session.config.memory,
-            transcript_compaction=session.config.transcript_compaction,
-            transcript_llm_window_max_messages=session.config.transcript_llm_window_max_messages,
-            repository_only_store_text=session.config.repository_only_store_text,
-            memory_bootstrap_type=session.config.memory_bootstrap_type,
-            background_output_sink=background_output_sink,
-            preset_user_msg_uuid=preset_user_msg_uuid,
+        """Legacy delegator; prefer track methods at call sites."""
+        track_kwargs = {
+            "defer_memory_update": defer_memory_update,
+            "background_output_sink": background_output_sink,
+            "preset_user_msg_uuid": preset_user_msg_uuid,
+            "implicit_signal_bundle": implicit_signal_bundle,
+        }
+        if inner_tick_turn:
+            match inner_tick_activity:
+                case InnerTickActivity.PROACTIVE_CHAT:
+                    return await self.run_inner_tick_proactive_chat_turn(
+                        session,
+                        **track_kwargs,
+                    )
+                case InnerTickActivity.MAINTENANCE:
+                    return await self.run_inner_tick_maintenance_turn(
+                        session,
+                        **track_kwargs,
+                    )
+        if implicit_user_signed_on_chat_turn(
             implicit_signal_bundle=implicit_signal_bundle,
-            langsmith_parent_run_enabled=ls_parent_enabled,
-            tool_bg_idle_event=session.tool_bg_idle,
+            inner_tick_turn=False,
+        ):
+            assert implicit_signal_bundle is not None
+            return await self.run_implicit_sign_on_greeting_turn(
+                session,
+                user_text,
+                implicit_signal_bundle=implicit_signal_bundle,
+                **track_kwargs,
+            )
+        return await self.run_user_chat_turn(
+            session,
+            user_text,
+            **track_kwargs,
         )
 
     def shutdown_session(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.core.companion_harness.companion.models import (
     ChatMessage,
-    InnerTickMode,
+    InnerTickActivity,
     merge_transcripts_by_ts,
     transcript_relative_path_for_turn_persistence,
     transcript_rows_for_public_chat_llm,
@@ -36,22 +36,22 @@ def test_transcript_rows_for_public_chat_llm_drops_maintenance_inner_tick() -> N
     assert pub[1].reply_to == uid_real
 
 
-def test_transcript_rows_for_public_chat_llm_keeps_proactive_heartbeat_inner_tick() -> None:
-    uid_h = "hb-user-1"
+def test_transcript_rows_for_public_chat_llm_keeps_proactive_chat_inner_tick() -> None:
+    uid_pc = "pc-user-1"
     rows = [
         ChatMessage(
             role="user",
-            content="（陪伴心跳）",
+            content="（陪伴主动聊天）",
             ts="2026-05-01T00:00:01Z",
-            uuid=uid_h,
+            uuid=uid_pc,
             inner_tick=True,
-            heartbeat=True,
+            proactive_chat=True,
         ),
         ChatMessage(
             role="assistant",
             content="hey",
             ts="2026-05-01T00:00:02Z",
-            reply_to=uid_h,
+            reply_to=uid_pc,
             source="inner_tick",
         ),
     ]
@@ -74,21 +74,21 @@ def test_transcript_relative_path_for_turn_persistence() -> None:
     assert (
         transcript_relative_path_for_turn_persistence(
             inner_tick_turn=False,
-            inner_tick_mode=InnerTickMode.MAINTENANCE,
+            inner_tick_activity=InnerTickActivity.MAINTENANCE,
         )
         == "transcript.jsonl"
     )
     assert (
         transcript_relative_path_for_turn_persistence(
             inner_tick_turn=True,
-            inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+            inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         )
         == "transcript.jsonl"
     )
     assert (
         transcript_relative_path_for_turn_persistence(
             inner_tick_turn=True,
-            inner_tick_mode=InnerTickMode.MAINTENANCE,
+            inner_tick_activity=InnerTickActivity.MAINTENANCE,
         )
         == "transcript_inner_tick.jsonl"
     )
