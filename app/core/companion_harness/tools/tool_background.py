@@ -92,7 +92,8 @@ from .runtime_inspect_context import (
 )
 from .tool_bg_routing import resolve_tool_bg_routing_sync
 from app.core.companion_harness.companion.bgm_library import (
-    extract_set_bgm_deliver_payload,
+    SetBgmDeliverPayload,
+    set_bgm_deliver_from_appended_turn,
 )
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
@@ -330,7 +331,7 @@ class ToolOutputEvent:
     # InnerTickMode.value when this background round is an inner-tick turn; else None.
     inner_tick_activity: str | None = None
     # Parsed OK payload from set_bgm tool; drives ChatWsSetBgmFrame on WS (not GENERATION).
-    set_bgm: dict[str, Any] | None = None
+    set_bgm: SetBgmDeliverPayload | None = None
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -851,7 +852,7 @@ async def _run_background_tool_loop(
         generation_deliver = _generation_tool_execution_deliver(
             appended_turn_msgs, tool_call_names, image_paths
         )
-        set_bgm_payload = extract_set_bgm_deliver_payload(appended_turn_msgs)
+        set_bgm_payload = set_bgm_deliver_from_appended_turn(appended_turn_msgs)
         set_bgm_deliver = set_bgm_payload is not None
         routing = resolve_tool_bg_routing_sync(
             client=resolved_client,

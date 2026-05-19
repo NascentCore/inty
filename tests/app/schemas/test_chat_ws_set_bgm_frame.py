@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.chat_websocket import ChatWsSetBgmFrame, dump_chat_ws_set_bgm_frame
+from app.schemas.chat_websocket import ChatWsSetBgmFrame
 
 
 def test_chat_ws_set_bgm_frame_roundtrip() -> None:
@@ -19,7 +19,7 @@ def test_chat_ws_set_bgm_frame_roundtrip() -> None:
         reason="mood",
         user_message_id=42,
     )
-    dumped = dump_chat_ws_set_bgm_frame(frame)
+    dumped = frame.model_dump(exclude_none=True)
     assert dumped["type"] == "set_bgm"
     assert dumped["user_msg_uuid"] == "550e8400-e29b-41d4-a716-446655440000"
     assert dumped["user_message_id"] == 42

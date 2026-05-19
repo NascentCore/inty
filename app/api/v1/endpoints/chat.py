@@ -97,7 +97,6 @@ from app.schemas.chat_websocket import (
     ChatWsWsConnDroppedFrame,
     chat_ws_queued_error_dict,
     dump_chat_ws_companion_wire_meta,
-    dump_chat_ws_set_bgm_frame,
     normalize_websocket_companion_message_id_uuid,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -1189,10 +1188,10 @@ def _build_chat_ws_set_bgm_frame_payload(
             "user_msg_uuid": ev.user_msg_uuid,
             "trace_id": (ev.trace_id or None),
             "user_message_id": user_message_id,
-            **ev.set_bgm,
+            **ev.set_bgm.model_dump(),
         }
     )
-    return dump_chat_ws_set_bgm_frame(frame)
+    return frame.model_dump(exclude_none=True)
 
 
 async def _build_companion_tool_background_ws_payload(

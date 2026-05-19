@@ -41,21 +41,57 @@ def normalize_websocket_companion_message_id_uuid(raw: Optional[str]) -> str:
 class ChatWsSetBgmFrame(BaseModel):
     """**Server → client (queued)** apply conversation BGM; not a chat list row."""
 
-    type: Literal["set_bgm"] = "set_bgm"
-    agent_id: str = Field(..., min_length=1)
-    user_msg_uuid: str = Field(..., min_length=1)
-    trace_id: Optional[str] = None
-    track_id: str = Field(..., min_length=1)
-    title: str = Field(..., min_length=1)
-    audio_url: str = Field(..., min_length=1)
-    duration_sec: float = Field(..., gt=0.0)
-    tags: list[str] = Field(default_factory=list)
-    reason: str = Field(..., min_length=1)
-    user_message_id: Optional[int] = None
-
-
-def dump_chat_ws_set_bgm_frame(frame: ChatWsSetBgmFrame) -> dict[str, Any]:
-    return frame.model_dump(exclude_none=True)
+    type: Literal["set_bgm"] = Field(
+        default="set_bgm",
+        description="Wire discriminator; clients branch on this instead of chat choices.",
+    )
+    agent_id: str = Field(
+        ...,
+        min_length=1,
+        description="Companion agent id for the active WebSocket session.",
+    )
+    user_msg_uuid: str = Field(
+        ...,
+        min_length=1,
+        description="Client UUID of the user message that triggered this background tool round.",
+    )
+    trace_id: Optional[str] = Field(
+        default=None,
+        description="Optional server turn trace id for log correlation with LangSmith.",
+    )
+    track_id: str = Field(
+        ...,
+        min_length=1,
+        description="Catalog track id the model chose via set_bgm.",
+    )
+    title: str = Field(
+        ...,
+        min_length=1,
+        description="Human-readable track title for client UI.",
+    )
+    audio_url: str = Field(
+        ...,
+        min_length=1,
+        description="HTTPS URL the client should pass to the BGM player.",
+    )
+    duration_sec: float = Field(
+        ...,
+        gt=0.0,
+        description="Track length in seconds for UI progress and looping hints.",
+    )
+    tags: list[str] = Field(
+        default_factory=list,
+        description="Optional mood or genre tags from the static catalog row.",
+    )
+    reason: str = Field(
+        ...,
+        min_length=1,
+        description="Short internal reason from the tool call; not shown as chat text.",
+    )
+    user_message_id: Optional[int] = Field(
+        default=None,
+        description="Optional persisted chat_history row id for the triggering user message.",
+    )
 
 
 class ChatWsPingFrame(BaseModel):

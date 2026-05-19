@@ -7,7 +7,7 @@ import json
 from app.core.companion_harness.companion.bgm_library import (
     SET_BGM_OK_PREFIX,
     SET_BGM_TOOL_NAME,
-    extract_set_bgm_deliver_payload,
+    set_bgm_deliver_from_appended_turn,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -52,7 +52,7 @@ def test_bgm_only_round_sets_should_push_and_avoids_909_suppress(
         scope=CompanionScope("u", "a", "bgm-push"), repository=None
     )
     appended = _bgm_only_appended_turn_msgs(memory_store)
-    set_bgm_payload = extract_set_bgm_deliver_payload(appended)
+    set_bgm_payload = set_bgm_deliver_from_appended_turn(appended)
     assert set_bgm_payload is not None
     set_bgm_deliver = set_bgm_payload is not None
     generation_deliver = False

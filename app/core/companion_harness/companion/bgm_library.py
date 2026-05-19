@@ -1,4 +1,8 @@
-"""Static BGM catalog (BGM_LIBRARY.jsonl) and tool-background delivery helpers."""
+"""Static BGM catalog (BGM_LIBRARY.jsonl) and set_bgm tool helpers.
+
+TODO(product): Replace placeholder rows in BGM_LIBRARY.jsonl with licensed production
+tracks (real audio_url, duration_sec, tags).
+"""
 
 from __future__ import annotations
 
@@ -11,7 +15,8 @@ from pydantic import BaseModel, Field, ValidationError
 SET_BGM_TOOL_NAME = "set_bgm"
 SET_BGM_OK_PREFIX = "OK "
 
-_BGM_LIBRARY_REL = Path(__file__).resolve().parent.parent / "data" / "BGM_LIBRARY.jsonl"
+BGM_LIBRARY_REPO_REL = Path("app/core/companion_harness/data/BGM_LIBRARY.jsonl")
+_INTY_REPO_ROOT = Path(__file__).resolve().parents[4]
 _cached_mtime_ns: int | None = None
 _cached_tracks_by_id: dict[str, BgmLibraryTrack] = {}
 
@@ -26,8 +31,19 @@ class BgmLibraryTrack(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
 
+class SetBgmDeliverPayload(BaseModel):
+    """Successful ``set_bgm`` tool result body (tool transcript and WS frame)."""
+
+    track_id: str = Field(..., min_length=1)
+    title: str = Field(..., min_length=1)
+    audio_url: str = Field(..., min_length=1)
+    duration_sec: float = Field(..., gt=0.0)
+    tags: list[str] = Field(default_factory=list)
+    reason: str = Field(..., min_length=1)
+
+
 def bgm_library_path() -> Path:
-    return _BGM_LIBRARY_REL
+    return _INTY_REPO_ROOT / BGM_LIBRARY_REPO_REL
 
 
 def load_bgm_library() -> dict[str, BgmLibraryTrack]:
@@ -80,15 +96,15 @@ def format_bgm_catalog_for_system_message() -> str:
     return "\n".join(lines)
 
 
-def tool_set_bgm_payload(track: BgmLibraryTrack, reason: str) -> dict[str, Any]:
-    return {
-        "track_id": track.track_id,
-        "title": track.title,
-        "audio_url": track.audio_url,
-        "duration_sec": track.duration_sec,
-        "tags": list(track.tags),
-        "reason": reason.strip(),
-    }
+def tool_set_bgm_payload(track: BgmLibraryTrack, reason: str) -> SetBgmDeliverPayload:
+    return SetBgmDeliverPayload(
+        track_id=track.track_id,
+        title=track.title,
+        audio_url=track.audio_url,
+        duration_sec=track.duration_sec,
+        tags=list(track.tags),
+        reason=reason.strip(),
+    )
 
 
 def tool_set_bgm(_store: object, track_id: str, reason: str) -> str:
@@ -96,7 +112,35 @@ def tool_set_bgm(_store: object, track_id: str, reason: str) -> str:
     if track is None:
         return f"ERROR: unknown track_id={track_id.strip()!r}"
     payload = tool_set_bgm_payload(track, reason)
-    return SET_BGM_OK_PREFIX + json.dumps(payload, ensure_ascii=False)
+    return SET_BGM_OK_PREFIX + payload.model_dump_json()
+
+
+def parse_set_bgm_ok_tool_content(content: str) -> SetBgmDeliverPayload | None:
+    """Parse ``OK {json}`` from a set_bgm tool result string."""
+    piece = content.strip()
+    if not piece.startswith(SET_BGM_OK_PREFIX):
+        return None
+    json_part = piece[len(SET_BGM_OK_PREFIX) :].strip()
+    try:
+        return SetBgmDeliverPayload.model_validate_json(json_part)
+    except ValidationError:
+        return None
+
+
+def set_bgm_deliver_from_appended_turn(
+    appended_turn_msgs: list[dict[str, Any]],
+) -> SetBgmDeliverPayload | None:
+    """First successful set_bgm tool row in this background round (for WS delivery)."""
+    for m in appended_turn_msgs:
+        if m.get("role") != "tool":
+            continue
+        raw = m.get("content")
+        if not isinstance(raw, str):
+            continue
+        parsed = parse_set_bgm_ok_tool_content(raw)
+        if parsed is not None:
+            return parsed
+    return None
 
 
 def tools_include_set_bgm(openai_tools: list[dict[str, Any]]) -> bool:
@@ -110,49 +154,3 @@ def tools_include_set_bgm(openai_tools: list[dict[str, Any]]) -> bool:
         if isinstance(name, str) and name.strip() == SET_BGM_TOOL_NAME:
             return True
     return False
-
-
-def extract_set_bgm_deliver_payload(
-    appended_turn_msgs: list[dict[str, Any]],
-) -> dict[str, Any] | None:
-    """Parse successful set_bgm tool result from one background tool round."""
-    pending: dict[str, str] = {}
-    for m in appended_turn_msgs:
-        if m.get("role") == "assistant":
-            pending.clear()
-            for tc in m.get("tool_calls") or []:
-                if not isinstance(tc, dict):
-                    continue
-                tid = tc.get("id")
-                fn = tc.get("function")
-                if not isinstance(fn, dict):
-                    continue
-                raw_name = fn.get("name")
-                if isinstance(tid, str) and isinstance(raw_name, str):
-                    n = raw_name.strip()
-                    if n:
-                        pending[tid] = n
-            continue
-        if m.get("role") != "tool":
-            continue
-        tid = m.get("tool_call_id")
-        if not isinstance(tid, str):
-            continue
-        name = pending.get(tid)
-        if name != SET_BGM_TOOL_NAME:
-            continue
-        content = m.get("content")
-        if not isinstance(content, str):
-            continue
-        piece = content.strip()
-        if not piece.startswith(SET_BGM_OK_PREFIX):
-            continue
-        json_part = piece[len(SET_BGM_OK_PREFIX) :].strip()
-        try:
-            parsed = json.loads(json_part)
-        except json.JSONDecodeError:
-            return None
-        if not isinstance(parsed, dict):
-            return None
-        return parsed
-    return None
