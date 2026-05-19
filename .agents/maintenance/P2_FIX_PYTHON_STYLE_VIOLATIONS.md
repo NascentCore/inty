@@ -29,10 +29,10 @@ maintenance agents can fix the highest-impact item first.
   silently returns the original avatar URL when mobile image transformation
   fails. Log the transformation failure so push image delivery regressions are
   observable. Fixed in `cursor/agent-maintenance-tasks-4b37`.
-- [ ] Google 2.4 "Exceptions": `/app/services/memory_extraction_service.py`
+- [x] Google 2.4 "Exceptions": `/app/services/memory_extraction_service.py`
   silently drops malformed metadata and messages with broad `Exception`
   fallbacks while reading chat history. Narrow expected JSON/data errors or log
-  skipped rows so memory extraction loss is traceable. Claimed by
+  skipped rows so memory extraction loss is traceable. Fixed in
   `cursor/agent-maintenance-tasks-5251`.
 - [ ] Google 2.4 "Exceptions": `/app/services/festival_memory_service.py`
   silently skips rows that fail chat-message JSON parsing. Log skipped rows or
