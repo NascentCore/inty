@@ -2,7 +2,7 @@
 
 **一句话**：LivingSphere 是单个 Inty 与用户共享的**私密虚拟居所**；聊天里用户对小家的明确指令经快路径记入日志，再由策展慢路径合并进 `LIVING_SPHERE.md` 快照并注入 system prompt。TechnoCore 是集体居留层，用户不可改写。
 
-**计划中**：[World Capsule](./WORLD_CAPSULES.md) 巩固小家摆设；下文为**已实现**路径。
+未来或经 [World Capsule](./WORLD_CAPSULES.md) 自动巩固共同想象；**下文为今日已上线路径**。
 
 ## TechnoCore vs LivingSphere
 

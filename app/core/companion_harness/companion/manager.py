@@ -351,7 +351,6 @@ class CompanionManager:
     ) -> CompanionTurnResult:
         return await run_companion_implicit_sign_on_greeting_turn(
             user_text,
-            implicit_signal_bundle=implicit_signal_bundle,
             **self._track_turn_kwargs(
                 session,
                 defer_memory_update=defer_memory_update,

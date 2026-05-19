@@ -5,7 +5,7 @@
 ## 1. 文档目的与执行定位
 
 本文档定义“统一个人伴侣系统（Unified Companion System）”的高层意图、系统架构、代码级技术选型，以及模块与技术的对应关系。  
-该文档是后续实现与评审的执行依据（source of truth）。
+该文档是**多通道远景**的评审依据；**当前 iMate WebSocket 生产真源**见 [ARCH.md](./ARCH.md)。
 
 执行约束：
 

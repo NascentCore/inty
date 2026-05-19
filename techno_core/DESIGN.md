@@ -160,7 +160,7 @@ because the change is a package/kernel prompt behavior, not a public API.
 
 ## World Capsule（计划中）
 
-世界观细节（器物、习俗）与 `TECHNO_CORE.md` 宪法分离；巩固见 [WORLD_CAPSULES.md](../docs/companion_harness/WORLD_CAPSULES.md)。共享 Lore：**计划中**，独立服务。
+见 [WORLD_CAPSULES.md](../docs/companion_harness/WORLD_CAPSULES.md)。世界观细节与 `TECHNO_CORE.md` 宪法分离；非 lore 生成器。
 
 ## Final Review Checklist
 
