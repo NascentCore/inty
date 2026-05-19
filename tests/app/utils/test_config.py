@@ -8,6 +8,7 @@ from app.utils.companion_feature_defaults import (
 )
 from app.utils.config import (
     AgentConfig,
+    APIEndpointsConfig,
     AppConfig,
     CompanionMemoryBootstrapType,
     FeaturesConfig,
@@ -420,6 +421,49 @@ def test_verification_config_model_validate_ignores_unknown_keys():
     assert settings.code_expire_minutes == 11
 
 
+def test_api_endpoints_config_model_validate_ignores_unknown_keys():
+    settings = APIEndpointsConfig.model_validate(
+        {
+            "disable_api_v1_chat_completions": True,
+            "use_dummy_api_v1_auth_google_login": True,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.disable_api_v1_chat_completions is True
+    assert settings.use_dummy_api_v1_auth_google_login is True
+
+
+def test_embedding_config_model_validate_ignores_unknown_keys():
+    settings = EmbeddingConfig.model_validate(
+        {
+            "base_url": "https://embedding.example/v1",
+            "api_key": "embedding-key",
+            "model": "embedding-model",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.base_url == "https://embedding.example/v1"
+    assert settings.api_key == "embedding-key"
+    assert settings.model == "embedding-model"
+
+
+def test_gcs_config_model_validate_ignores_unknown_keys():
+    settings = GCSConfig.model_validate(
+        {
+            "bucket": "inty-test-bucket",
+            "use_fake_gcs": True,
+            "fake_gcs_base_dir": "/tmp/test-gcs",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.bucket == "inty-test-bucket"
+    assert settings.use_fake_gcs is True
+    assert settings.fake_gcs_base_dir == "/tmp/test-gcs"
+
+
 def test_agent_config_langsmith_always_trace_user_emails_defaults_to_empty_list():
     agent_config = AgentConfig(api_key="test", langchain_api_key="test")
 
@@ -573,3 +617,75 @@ def test_load_config_verification_uses_pydantic_validation():
         cfg = load_config(str(path))
 
     assert cfg.verification.code_expire_minutes == 13
+
+
+def test_load_config_api_endpoints_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "\n".join(
+            [
+                "    companion_memory_bootstrap_type: USER_INTERACTIVE",
+                "  api_endpoints:",
+                "    disable_api_v1_chat_completions: true",
+                "    unknown_key: ignored",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.app.api_endpoints.disable_api_v1_chat_completions is True
+
+
+def test_load_config_embedding_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "agent:\n",
+        "\n".join(
+            [
+                "embedding:",
+                "  base_url: https://embedding.example/v1",
+                "  api_key: embedding-key",
+                "  model: embedding-model",
+                "  unknown_key: ignored",
+                "agent:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.embedding.base_url == "https://embedding.example/v1"
+    assert cfg.embedding.api_key == "embedding-key"
+    assert cfg.embedding.model == "embedding-model"
+
+
+def test_load_config_gcs_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "gcs:\n  bucket: \"test-bucket\"\n",
+        "\n".join(
+            [
+                "gcs:",
+                "  bucket: inty-test-bucket",
+                "  use_fake_gcs: true",
+                "  fake_gcs_base_dir: /tmp/test-gcs",
+                "  unknown_key: ignored",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.gcs.bucket == "inty-test-bucket"
+    assert cfg.gcs.use_fake_gcs is True
+    assert cfg.gcs.fake_gcs_base_dir == "/tmp/test-gcs"

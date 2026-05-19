@@ -218,8 +218,11 @@ class VoiceCacheService:
             logger.error(f"保存语音缓存失败: {str(e)}")
             try:
                 await db.rollback()
-            except Exception:
-                pass  # 如果rollback也失败，忽略
+            except Exception as rollback_error:
+                logger.error(
+                    f"保存语音缓存失败后回滚失败: voice_id={voice_id}, model={model}, language={language}, "
+                    f"original_error={str(e)}, rollback_error={str(rollback_error)}"
+                )
             return False
 
     async def update_access_stats(
@@ -279,8 +282,11 @@ class VoiceCacheService:
             logger.error(f"更新缓存访问统计失败: {str(e)}")
             try:
                 await db.rollback()
-            except Exception:
-                pass  # 如果rollback也失败，忽略
+            except Exception as rollback_error:
+                logger.error(
+                    f"更新缓存访问统计失败后回滚失败: voice_id={voice_id}, model={model}, language={language}, "
+                    f"original_error={str(e)}, rollback_error={str(rollback_error)}"
+                )
 
     async def _update_cache_hit_async(
         self,

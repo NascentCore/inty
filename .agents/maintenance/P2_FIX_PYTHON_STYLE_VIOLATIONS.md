@@ -21,10 +21,10 @@ maintenance agents can fix the highest-impact item first.
   `_flush_after_prefill`, then returns without logging. Log unexpected wait
   failures while still allowing cancellation to stop the background task.
   Fixed in `cursor/agent-maintenance-tasks-4b37`.
-- [ ] Google 2.4 "Exceptions": `/app/services/voice_cache_service.py`
+- [x] Google 2.4 "Exceptions": `/app/services/voice_cache_service.py`
   suppresses rollback failures with `except Exception: pass` in the save and
   access-stat update paths. Log rollback failure context so voice cache database
-  errors remain diagnosable.
+  errors remain diagnosable. Fixed in `cursor/agent-maintenance-tasks-96b3`.
 - [x] Google 2.4 "Exceptions": `/app/services/push_notification_service.py`
   silently returns the original avatar URL when mobile image transformation
   fails. Log the transformation failure so push image delivery regressions are
