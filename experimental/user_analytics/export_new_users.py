@@ -56,7 +56,9 @@ def load_database_config(config_file: Optional[str] = None) -> Dict[str, Any]:
     db_config["host"] = os.getenv("DB_HOST", db_config.get("host", "localhost"))
     db_config["port"] = int(os.getenv("DB_PORT", db_config.get("port", 5432)))
     db_config["user"] = os.getenv("DB_USER", db_config.get("user", "postgres"))
-    db_config["password"] = os.getenv("DB_PASSWORD", db_config.get("password", ""))
+    db_config["password"] = os.getenv(
+        "DB_PASSWORD", db_config.get("password", "")
+    )
     db_config["dbname"] = os.getenv("DB_NAME", db_config.get("dbname", "inty"))
 
     return db_config
@@ -155,14 +157,20 @@ def parse_arguments() -> argparse.Namespace:
 
     # 时间范围参数（互斥）
     time_group = parser.add_mutually_exclusive_group(required=True)
-    time_group.add_argument("--last-days", type=int, help="导出最近 N 天注册的新用户")
-    time_group.add_argument("--start-date", type=str, help="开始日期 (YYYY-MM-DD)")
+    time_group.add_argument(
+        "--last-days", type=int, help="导出最近 N 天注册的新用户"
+    )
+    time_group.add_argument(
+        "--start-date", type=str, help="开始日期 (YYYY-MM-DD)"
+    )
     time_group.add_argument(
         "--all", action="store_true", help="导出所有用户（忽略时间范围）"
     )
 
     parser.add_argument(
-        "--end-date", type=str, help="结束日期 (YYYY-MM-DD)，与 --start-date 配合使用"
+        "--end-date",
+        type=str,
+        help="结束日期 (YYYY-MM-DD)，与 --start-date 配合使用",
     )
 
     parser.add_argument(
@@ -260,9 +268,9 @@ def main():
 
         # 格式化日期列
         if not users_df.empty and "created_at" in users_df.columns:
-            users_df["created_at"] = pd.to_datetime(users_df["created_at"]).dt.strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            users_df["created_at"] = pd.to_datetime(
+                users_df["created_at"]
+            ).dt.strftime("%Y-%m-%d %H:%M:%S")
 
         # 确定输出文件路径
         if args.output:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -17,12 +18,18 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
     end_companion_turn_root_run_safe,
 )
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.models import InnerTickMode
+from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import start_tool_background_job
 from app.core.companion_harness.companion.turn import run_turn
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
+
+
+def _idle_tool_bg() -> threading.Event:
+    ev = threading.Event()
+    ev.set()
+    return ev
 
 
 @patch(
@@ -95,12 +102,12 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
     assert kwargs["inputs"]["user_id"] == "u-42"
     assert kwargs["inputs"]["companion_id"] == "c-7"
     assert kwargs["inputs"]["inty_turn_lane"] == "explicit_user_message"
-    assert "inner_tick_mode" not in kwargs["inputs"]
+    assert "inner_tick_activity" not in kwargs["inputs"]
     assert kwargs["extra"]["metadata"]["ls_model_name"] == "stub/chat-route | stub/tool-route"
     assert kwargs["extra"]["metadata"]["inty_user_id"] == "u-42"
     assert kwargs["extra"]["metadata"]["inty_companion_id"] == "c-7"
     assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "explicit_user_message"
-    assert "inner_tick_mode" not in kwargs["extra"]["metadata"]
+    assert "inner_tick_activity" not in kwargs["extra"]["metadata"]
     mock_root.post.assert_called_once()
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
@@ -180,15 +187,15 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
         user_id="u1",
         companion_id="a1",
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_inner_tick maintenance user=u1 agent=a1"
     assert kwargs["tags"] == ["agentic_companion", "inner_tick"]
     assert kwargs["inputs"]["inty_turn_lane"] == "inner_tick"
-    assert kwargs["inputs"]["inner_tick_mode"] == "maintenance"
+    assert kwargs["inputs"]["inner_tick_activity"] == "maintenance"
     assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "inner_tick"
-    assert kwargs["extra"]["metadata"]["inner_tick_mode"] == "maintenance"
+    assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "maintenance"
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
@@ -210,12 +217,12 @@ def test_create_companion_turn_root_run_inner_tick_proactive_lane(
         user_id="u1",
         companion_id="a1",
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_inner_tick proactive_chat user=u1 agent=a1"
-    assert kwargs["inputs"]["inner_tick_mode"] == "proactive_chat"
-    assert kwargs["extra"]["metadata"]["inner_tick_mode"] == "proactive_chat"
+    assert kwargs["inputs"]["inner_tick_activity"] == "proactive_chat"
+    assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "proactive_chat"
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
@@ -405,6 +412,7 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
         llm_client=client,  # type: ignore[arg-type]
         defer_memory_update=True,
         memory_config=None,
+        tool_bg_idle_event=_idle_tool_bg(),
     )
 
     assert len(bg_jobs) == 1

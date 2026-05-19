@@ -57,6 +57,7 @@ def test_build_openai_repl_tools_name_set_non_bootstrap():
         "companion_set_experience_profile",
         "generate_image",
         "google_web_search",
+        "living_sphere_record_update",
         "memory_store_list_paths",
         "memory_store_read_document",
         "memory_store_write_document",

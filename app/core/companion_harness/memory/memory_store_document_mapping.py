@@ -26,6 +26,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     TECHNO_CORE = "techno_core"
     TECHNO_CORE_EVENTS_JSONL = "techno_core_events_jsonl"
     LIVING_SPHERE = "living_sphere"
+    LIVING_SPHERE_UPDATES_JSONL = "living_sphere_updates_jsonl"
     HEARTBEAT = "heartbeat"
     TOOLS = "tools"
     # Package seed SIGNIFICANCE_PERCEPTION.md; scoring semantics consumed via PromptBundle, not ORM-only.
@@ -40,11 +41,15 @@ class CompanionMemoryDocumentKind(str, Enum):
     MEMORY_DAILY_RAW = "memory_daily_raw"  # episodic: memory/daily/<date>.md
     MEMORY_DAY_SUMMARY = "memory_day_summary"  # gist: memory/<date>.md
     COMPANION_MEMORY_PIPELINE_JSON = "companion_memory_pipeline_json"
-    COMPANION_CONTEXT_COMPACTION_STATE_JSON = "companion_context_compaction_state_json"
+    COMPANION_CONTEXT_COMPACTION_STATE_JSON = (
+        "companion_context_compaction_state_json"
+    )
     COMPANION_SCHEDULE_TASKS_JSON = "companion_schedule_tasks_json"
     COMPANION_RUNTIME_EVENTS_JSONL = "companion_runtime_events_jsonl"
     INTY_V2_MEMORY_PIPELINE_JSON = "inty_v2_memory_pipeline_json"
-    INTY_V2_CONTEXT_COMPACTION_STATE_JSON = "inty_v2_context_compaction_state_json"
+    INTY_V2_CONTEXT_COMPACTION_STATE_JSON = (
+        "inty_v2_context_compaction_state_json"
+    )
     INTY_V2_SCHEDULE_TASKS_JSON = "inty_v2_schedule_tasks_json"
     CHAT_LOGS_MD = "chat_logs_md"
 
@@ -61,6 +66,10 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         None,
     ),
     "LIVING_SPHERE.md": (CompanionMemoryDocumentKind.LIVING_SPHERE, None),
+    "living_sphere_updates.jsonl": (
+        CompanionMemoryDocumentKind.LIVING_SPHERE_UPDATES_JSONL,
+        None,
+    ),
     "HEARTBEAT.md": (CompanionMemoryDocumentKind.HEARTBEAT, None),
     "TOOLS.md": (CompanionMemoryDocumentKind.TOOLS, None),
     "CHAT_LOGS.md": (CompanionMemoryDocumentKind.CHAT_LOGS_MD, None),
@@ -76,7 +85,10 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "context.json": (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
     "ai_private.md": (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
     "ai_private.jsonl": (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
-    "tool_background.jsonl": (CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL, None),
+    "tool_background.jsonl": (
+        CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL,
+        None,
+    ),
     "generated_images/index.jsonl": (
         CompanionMemoryDocumentKind.GENERATED_IMAGES_INDEX_JSONL,
         None,

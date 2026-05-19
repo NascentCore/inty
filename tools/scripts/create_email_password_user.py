@@ -56,7 +56,9 @@ async def create_email_password_superuser(
         logger.debug(f"Checking if user with email {email} already exists")
 
         # 检查邮箱是否已存在
-        stmt = select(User).where(and_(User.email == email, User.deleted_at == None))
+        stmt = select(User).where(
+            and_(User.email == email, User.deleted_at.is_(None))
+        )
         result = await db.execute(stmt)
         existing_user = result.scalar_one_or_none()
 
@@ -92,7 +94,9 @@ async def create_email_password_superuser(
 
                 # 验证现有密码是否匹配
                 if existing_user.password:
-                    password_matches = verify_password(password, existing_user.password)
+                    password_matches = verify_password(
+                        password, existing_user.password
+                    )
                     if password_matches:
                         logger.info(
                             f"User already exists with matching password: {existing_user.id}"
@@ -140,7 +144,9 @@ async def create_email_password_superuser(
                         else:
                             logger.info("Password setting cancelled by user")
                     else:
-                        logger.info("DRY-RUN: Would set password for existing user")
+                        logger.info(
+                            "DRY-RUN: Would set password for existing user"
+                        )
 
                 return existing_user
 
@@ -166,7 +172,9 @@ async def create_email_password_superuser(
         )
 
         if dry_run:
-            logger.info("DRY-RUN: Would create user with the following details:")
+            logger.info(
+                "DRY-RUN: Would create user with the following details:"
+            )
             logger.info(f"  User ID: {user.id}")
             logger.info(f"  Readable ID: {user.readable_id}")
             logger.info(f"  Email: {user.email}")

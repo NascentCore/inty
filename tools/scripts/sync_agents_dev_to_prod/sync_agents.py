@@ -127,7 +127,9 @@ async def get_next_readable_id(session: AsyncSession) -> str:
             next_id += 1
 
         # 如果循环了 1000 次还没找到，抛出异常
-        raise RuntimeError(f"无法生成唯一的 readable_id，已尝试 {max_attempts} 次")
+        raise RuntimeError(
+            f"无法生成唯一的 readable_id，已尝试 {max_attempts} 次"
+        )
 
 
 async def ensure_unique_readable_id(
@@ -171,7 +173,9 @@ async def ensure_unique_readable_id(
     return readable_id
 
 
-async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User:
+async def ensure_operator_user(
+    session: AsyncSession, user_config: dict
+) -> User:
     """确保运营用户存在，不存在则创建"""
     user_id = user_config["id"]
 
@@ -240,7 +244,9 @@ async def check_alembic_versions(
 async def fetch_agents(session: AsyncSession, user_id: str) -> list[Agent]:
     """获取指定用户的未删除角色"""
     result = await session.execute(
-        select(Agent).where(Agent.creator_id == user_id, Agent.deleted_at.is_(None))
+        select(Agent).where(
+            Agent.creator_id == user_id, Agent.deleted_at.is_(None)
+        )
     )
     agents = result.scalars().all()
     return list(agents)
@@ -381,7 +387,9 @@ async def sync_agents(
     logger.info("同步计划:")
     logger.info(f"  需要创建: {len(to_create_ids)} 个角色")
     logger.info(f"  需要更新: {len(to_update_ids)} 个角色")
-    logger.info(f"  无需变更: {len(to_check_update_ids) - len(to_update_ids)} 个角色")
+    logger.info(
+        f"  无需变更: {len(to_check_update_ids) - len(to_update_ids)} 个角色"
+    )
 
     if dry_run:
         logger.info("")
@@ -402,7 +410,9 @@ async def sync_agents(
                     if custom_prompts
                     else ""
                 )
-                logger.info(f"  ✨ 创建: {agent.name} (ID: {agent_id}){prompt_note}")
+                logger.info(
+                    f"  ✨ 创建: {agent.name} (ID: {agent_id}){prompt_note}"
+                )
 
         if to_update_ids:
             logger.info("")
@@ -419,7 +429,9 @@ async def sync_agents(
                     if custom_prompts
                     else ""
                 )
-                logger.info(f"  🔄 更新: {agent.name} (ID: {agent_id}){prompt_note}")
+                logger.info(
+                    f"  🔄 更新: {agent.name} (ID: {agent_id}){prompt_note}"
+                )
 
         logger.info("")
         logger.info("=" * 60)
@@ -450,12 +462,16 @@ async def sync_agents(
                 copy_agent_fields(source_agent, target_agent)
                 target_agent.deleted_at = None
                 target_agent.readable_id = await ensure_unique_readable_id(
-                    target_session, target_agent.readable_id, exclude_agent_id=agent_id
+                    target_session,
+                    target_agent.readable_id,
+                    exclude_agent_id=agent_id,
                 )
 
                 await target_session.flush()
                 updated_count += 1
-                logger.info(f"🔄 更新成功: {target_agent.name} (ID: {agent_id})")
+                logger.info(
+                    f"🔄 更新成功: {target_agent.name} (ID: {agent_id})"
+                )
             logger.info("")
 
         if to_create_ids:
@@ -488,14 +504,18 @@ async def sync_agents(
         logger.error("")
         logger.error("=" * 60)
         logger.error("同步失败，已回滚所有操作")
-        logger.error(f"  已完成: 创建 {created_count} 个，更新 {updated_count} 个")
+        logger.error(
+            f"  已完成: 创建 {created_count} 个，更新 {updated_count} 个"
+        )
         logger.error(f"  错误: {e}")
         logger.error("=" * 60)
         raise
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="同步角色数据在 dev 与 prod 环境之间")
+    parser = argparse.ArgumentParser(
+        description="同步角色数据在 dev 与 prod 环境之间"
+    )
     parser.add_argument(
         "--config",
         default="config.yaml",
@@ -545,7 +565,9 @@ async def main():
     logger.info(
         f"正在连接 Prod 数据库: {prod_db_config['host']}:{prod_db_config['port']}/{prod_db_config['db']}"
     )
-    prod_engine = create_async_engine(prod_url, echo=False, **prod_engine_kwargs)
+    prod_engine = create_async_engine(
+        prod_url, echo=False, **prod_engine_kwargs
+    )
 
     DevSession = sessionmaker(
         bind=dev_engine, class_=AsyncSession, expire_on_commit=False
@@ -560,10 +582,14 @@ async def main():
         prod_ok = await test_connection(prod_engine, "Prod")
 
         if not dev_ok:
-            logger.error("Dev 数据库连接失败，请检查配置和网络连接，需要运行在 GCP 上")
+            logger.error(
+                "Dev 数据库连接失败，请检查配置和网络连接，需要运行在 GCP 上"
+            )
             sys.exit(1)
         if not prod_ok:
-            logger.error("Prod 数据库连接失败，请检查配置和网络连接，需要运行在 GCP 上")
+            logger.error(
+                "Prod 数据库连接失败，请检查配置和网络连接，需要运行在 GCP 上"
+            )
             sys.exit(1)
 
         logger.info("")
@@ -585,7 +611,9 @@ async def main():
 
                 source_list = await fetch_agents(dev_session, user_id)
                 if args.agent_name:
-                    source_list = [a for a in source_list if a.name == args.agent_name]
+                    source_list = [
+                        a for a in source_list if a.name == args.agent_name
+                    ]
                 source_agents = {a.id: a for a in source_list}
 
                 source_ids = list(source_agents.keys())
@@ -614,9 +642,13 @@ async def main():
                 source_label = "Prod"
                 target_label = "Dev"
 
-                source_list = await fetch_agents_by_name(prod_session, args.agent_name)
+                source_list = await fetch_agents_by_name(
+                    prod_session, args.agent_name
+                )
                 if not source_list:
-                    logger.error(f"Prod 中不存在名为 {args.agent_name!r} 的未删除角色")
+                    logger.error(
+                        f"Prod 中不存在名为 {args.agent_name!r} 的未删除角色"
+                    )
                     sys.exit(1)
                 source_agents = {a.id: a for a in source_list}
 

@@ -18,7 +18,11 @@ def select_chat_model(*, user: object, is_subscribed: bool) -> GenAIModel:
     (use ``.id_on_provider`` for OpenAI-compatible API calls outside the companion harness).
     """
     config = global_config_loaded_from_config_yaml.agent
-    raw = config.sub_user_chat_model if is_subscribed else config.free_user_chat_model
+    raw = (
+        config.sub_user_chat_model
+        if is_subscribed
+        else config.free_user_chat_model
+    )
     return resolve_chat_text_model(raw)
 
 

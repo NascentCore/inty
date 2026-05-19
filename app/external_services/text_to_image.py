@@ -103,11 +103,17 @@ def generate_text_to_image(
 ) -> TextToImageGenerationResult:
     provider, provider_model = _resolve_provider_and_model(request.model)
     if provider == TextToImageProvider.GOOGLE:
-        return _generate_google_imagen(provider_model=provider_model, request=request)
+        return _generate_google_imagen(
+            provider_model=provider_model, request=request
+        )
     if provider == TextToImageProvider.OPENAI:
-        return _generate_openai_image(provider_model=provider_model, request=request)
+        return _generate_openai_image(
+            provider_model=provider_model, request=request
+        )
     if provider == TextToImageProvider.FALAI:
-        return _generate_falai_image(provider_model=provider_model, request=request)
+        return _generate_falai_image(
+            provider_model=provider_model, request=request
+        )
     raise ValueError(f"Unsupported provider: {provider}")
 
 
@@ -181,7 +187,8 @@ def _generate_google_imagen(
     aspect_ratio = request.provider_args.get("aspect_ratio")
     output_gcs_uri = request.provider_args.get("output_gcs_uri")
     output_mime_type = (
-        request.provider_args.get("output_mime_type") or DEFAULT_GOOGLE_MIME_TYPE
+        request.provider_args.get("output_mime_type")
+        or DEFAULT_GOOGLE_MIME_TYPE
     )
     enhance_prompt = bool(request.provider_args.get("enhance_prompt", False))
 
@@ -206,10 +213,14 @@ def _generate_google_imagen(
     for generated in getattr(response, "generated_images", []) or []:
         image_obj = getattr(generated, "image", None)
         gcs_uri = getattr(image_obj, "gcs_uri", None) if image_obj else None
-        image_bytes = getattr(image_obj, "image_bytes", None) if image_obj else None
+        image_bytes = (
+            getattr(image_obj, "image_bytes", None) if image_obj else None
+        )
 
         public_url = (
-            _gcs_uri_to_public_url(gcs_uri) if isinstance(gcs_uri, str) else None
+            _gcs_uri_to_public_url(gcs_uri)
+            if isinstance(gcs_uri, str)
+            else None
         )
         images.append(
             TextToImageGeneratedImage(
@@ -219,12 +230,18 @@ def _generate_google_imagen(
                 gcs_uri=gcs_uri,
                 public_url=public_url,
                 image_bytes=(
-                    image_bytes if isinstance(image_bytes, (bytes, bytearray)) else None
+                    image_bytes
+                    if isinstance(image_bytes, (bytes, bytearray))
+                    else None
                 ),
                 mime_type=(
-                    output_mime_type if isinstance(output_mime_type, str) else None
+                    output_mime_type
+                    if isinstance(output_mime_type, str)
+                    else None
                 ),
-                rai_filtered_reason=getattr(generated, "rai_filtered_reason", None),
+                rai_filtered_reason=getattr(
+                    generated, "rai_filtered_reason", None
+                ),
                 enhanced_prompt=getattr(generated, "enhanced_prompt", None),
             )
         )
@@ -252,7 +269,9 @@ def _generate_openai_image(
 
     # OpenAI image generation does not have a single universal negative prompt field.
     # We append it to prompt for now; real integration can refine this mapping.
-    full_prompt = _merge_negative_prompt(request.prompt, request.negative_prompt)
+    full_prompt = _merge_negative_prompt(
+        request.prompt, request.negative_prompt
+    )
 
     output = request.provider_args.get("output", "bytes")
     gcs_uri_base = request.provider_args.get("gcs_uri_base")
@@ -284,7 +303,9 @@ def _generate_openai_image(
                 model=provider_model,
                 prompt=request.prompt,
                 format=FORMAT_PNG,
-                image_bytes=image_bytes if output in ("bytes", "both") else None,
+                image_bytes=(
+                    image_bytes if output in ("bytes", "both") else None
+                ),
                 gcs_uri=gcs_uri,
                 mime_type="image/png",
                 width=size["width"] if size else None,
@@ -313,16 +334,22 @@ def _generate_falai_image(
     if isinstance(api_key, str) and api_key:
         os.environ["FAL_KEY"] = api_key
 
-    arguments = _build_falai_arguments(provider_model=provider_model, request=request)
+    arguments = _build_falai_arguments(
+        provider_model=provider_model, request=request
+    )
     with_logs = bool(request.provider_args.get("with_logs", False))
     response = fal_image_client.subscribe(
         provider_model, arguments=arguments, with_logs=with_logs
     )
     if not isinstance(response, dict):
-        raise TypeError(f"fal_client.subscribe returned non-dict: {type(response)}")
+        raise TypeError(
+            f"fal_client.subscribe returned non-dict: {type(response)}"
+        )
 
     output_format = request.provider_args.get("output_format")
-    normalized_format = output_format if isinstance(output_format, str) else None
+    normalized_format = (
+        output_format if isinstance(output_format, str) else None
+    )
 
     images: list[TextToImageGeneratedImage] = []
     for item in response.get("images", []) or []:
@@ -386,7 +413,9 @@ def _build_falai_arguments(
     if request.seed is not None:
         arguments["seed"] = int(request.seed)
 
-    if request.negative_prompt and not _is_fal_z_image_turbo_model(provider_model):
+    if request.negative_prompt and not _is_fal_z_image_turbo_model(
+        provider_model
+    ):
         arguments["negative_prompt"] = request.negative_prompt
 
     passthrough_keys = (

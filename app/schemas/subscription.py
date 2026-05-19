@@ -19,11 +19,15 @@ class SubscriptionPlanBase(BaseModel):
     price: float = Field(..., description="价格")
     currency: str = Field("USD", description="货币")
     google_play_product_id: str = Field(..., description="Google Play产品ID")
-    discount_rate: float = Field(1.0, description="价格折扣率，范围0-1，1表示无折扣")
+    discount_rate: float = Field(
+        1.0, description="价格折扣率，范围0-1，1表示无折扣"
+    )
     features: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="功能权益配置"
     )
-    chat_limit_per_day: int = Field(-1, description="每日聊天次数限制，-1为无限制")
+    chat_limit_per_day: int = Field(
+        -1, description="每日聊天次数限制，-1为无限制"
+    )
     agent_creation_limit: int = Field(6, description="Agent创建数量限制")
     background_generation_limit_per_day: int = Field(
         3, description="每日背景图生成次数限制，-1为无限制"
@@ -72,7 +76,9 @@ class UserSubscriptionBase(BaseModel):
     google_play_purchase_token: Optional[str] = Field(
         None, description="Google Play购买令牌"
     )
-    google_play_order_id: Optional[str] = Field(None, description="Google Play订单ID")
+    google_play_order_id: Optional[str] = Field(
+        None, description="Google Play订单ID"
+    )
     google_play_subscription_id: Optional[str] = Field(
         None, description="Google Play订阅ID"
     )
@@ -128,7 +134,9 @@ class SubscriptionTransactionBase(BaseModel):
     google_play_purchase_token: Optional[str] = Field(
         None, description="Google Play购买令牌"
     )
-    google_play_order_id: Optional[str] = Field(None, description="Google Play订单ID")
+    google_play_order_id: Optional[str] = Field(
+        None, description="Google Play订单ID"
+    )
     google_play_transaction_id: Optional[str] = Field(
         None, description="Google Play交易ID"
     )
@@ -214,7 +222,9 @@ class GooglePlayWebhookRequest(BaseModel):
     oneTimeProductNotification: Optional[Dict[str, Any]] = Field(
         None, description="一次性产品通知"
     )
-    testNotification: Optional[Dict[str, Any]] = Field(None, description="测试通知")
+    testNotification: Optional[Dict[str, Any]] = Field(
+        None, description="测试通知"
+    )
     request_id: Optional[str] = None
 
 
@@ -236,10 +246,13 @@ class SubscriptionStatusResponse(BaseModel):
 
     is_subscribed: bool = Field(..., description="是否订阅")
     subscription_status: str = Field(
-        ..., description="订阅详细状态：subscribed/subscribed_expiring/unsubscribed"
+        ...,
+        description="订阅详细状态：subscribed/subscribed_expiring/unsubscribed",
     )
     has_ever_subscribed: bool = Field(False, description="是否曾经有过订阅记录")
-    subscription: Optional[UserSubscription] = Field(None, description="订阅信息")
+    subscription: Optional[UserSubscription] = Field(
+        None, description="订阅信息"
+    )
     plan: Optional[SubscriptionPlan] = Field(None, description="计划信息")
     remaining_days: Optional[int] = Field(None, description="剩余天数")
     will_auto_renew: bool = Field(False, description="是否会自动续费")
@@ -253,7 +266,9 @@ class SubscriptionStatusResponse(BaseModel):
     guest_chat_24h_limit: Optional[int] = Field(
         None, description="24小时内聊天次数限制（游客用户）"
     )
-    voice_24h_limit: Optional[int] = Field(None, description="24小时内语音生成次数限制")
+    voice_24h_limit: Optional[int] = Field(
+        None, description="24小时内语音生成次数限制"
+    )
     guest_voice_24h_limit: Optional[int] = Field(
         None, description="24小时内语音生成次数限制（游客用户）"
     )
@@ -264,12 +279,16 @@ class SubscriptionStatusResponse(BaseModel):
         None, description="24小时内Agent创建数量限制"
     )
     agent_creation_limit: int = Field(
-        6, description="Agent创建数量限制（已废弃，使用agent_creation_24h_limit）"
+        6,
+        description="Agent创建数量限制（已废弃，使用agent_creation_24h_limit）",
     )
     background_generation_limit_per_day: int = Field(
-        3, description="每日背景图生成次数限制（已废弃，使用image_gen_24h_limit）"
+        3,
+        description="每日背景图生成次数限制（已废弃，使用image_gen_24h_limit）",
     )
-    features: Dict[str, Any] = Field(default_factory=dict, description="功能权益")
+    features: Dict[str, Any] = Field(
+        default_factory=dict, description="功能权益"
+    )
     feature_list: List[FeatureInfo] = Field(
         default_factory=list, description="权益功能列表"
     )
@@ -280,7 +299,9 @@ class UsageStatisticsResponse(BaseModel):
 
     today_chat_count: int = Field(0, description="今日聊天次数")
     today_limit: int = Field(-1, description="今日限制")
-    total_chat_count: Optional[int] = Field(None, description="总聊天次数（免费用户）")
+    total_chat_count: Optional[int] = Field(
+        None, description="总聊天次数（免费用户）"
+    )
     total_chat_limit: Optional[int] = Field(
         None, description="总聊天次数限制（免费用户）"
     )
@@ -306,7 +327,9 @@ class SubscriptionPlansResponse(BaseModel):
         None, description="当前订阅"
     )
     has_ever_subscribed: bool = Field(False, description="是否曾经有过订阅记录")
-    previous_plan_id: Optional[str] = Field(None, description="最新的订阅计划ID")
+    previous_plan_id: Optional[str] = Field(
+        None, description="最新的订阅计划ID"
+    )
 
 
 # 购买验证相关
@@ -325,7 +348,9 @@ class PurchaseVerificationResponse(BaseModel):
     # is_valid 这个名字不能用，因为 kotlin sdk 生成的 sdk 包含了这个预置名字
     # 使用 is_valid 会与其冲突。
     is_verified: bool = Field(..., description="是否有效")
-    subscription: Optional[UserSubscription] = Field(None, description="订阅信息")
+    subscription: Optional[UserSubscription] = Field(
+        None, description="订阅信息"
+    )
     message: str = Field(..., description="验证消息")
     error_code: Optional[str] = Field(None, description="错误代码")
 
@@ -334,7 +359,9 @@ class RefundRequest(BaseModel):
     """退款请求"""
 
     subscription_id: str = Field(..., description="订阅ID")
-    refund_amount: Optional[float] = Field(None, description="退款金额，不填写则退全款")
+    refund_amount: Optional[float] = Field(
+        None, description="退款金额，不填写则退全款"
+    )
     reason: str = Field("manual_refund", description="退款原因")
     request_id: Optional[str] = None
 

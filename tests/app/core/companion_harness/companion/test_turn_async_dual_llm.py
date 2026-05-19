@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -14,7 +15,7 @@ import pytest
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.models import InnerTickMode
+from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
 from app.core.companion_harness.companion.turn import (
@@ -29,6 +30,12 @@ def _store(p: Path):
         scope=CompanionScope("adllm", "a", str(p.resolve())),
         repository=None,
     )
+
+
+def _idle_tool_bg() -> threading.Event:
+    ev = threading.Event()
+    ev.set()
+    return ev
 
 
 def _assert_no_adjacent_user_roles(messages: list[dict[str, Any]]) -> None:
@@ -110,6 +117,7 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
         llm_client=client,  # type: ignore[arg-type]
         defer_memory_update=True,
         memory_config=None,
+        tool_bg_idle_event=_idle_tool_bg(),
     )
 
     assert out.tool_background_started is True
@@ -167,14 +175,14 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
         defer_memory_update=True,
         memory_config=None,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
     )
 
     assert len(client.chat_calls) == 0
     assert len(bg_jobs) == 1
     job = bg_jobs[0]
     assert job["inner_tick_turn"] is True
-    assert job["inner_tick_mode"] == InnerTickMode.MAINTENANCE
+    assert job["inner_tick_activity"] == InnerTickActivity.MAINTENANCE
     assert job["implicit_signal_bundle"] is None
     assert job["main_event_loop"] is loop
     expected = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
@@ -208,7 +216,7 @@ async def test_proactive_inner_tick_heartbeat_sync_still_calls_llm(
         defer_memory_update=True,
         memory_config=None,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
     )
 
     assert len(client.chat_calls) == 1
@@ -284,6 +292,7 @@ async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_injec
         llm_client=client,  # type: ignore[arg-type]
         defer_memory_update=True,
         memory_config=None,
+        tool_bg_idle_event=_idle_tool_bg(),
     )
 
     assert len(bg_jobs) == 1

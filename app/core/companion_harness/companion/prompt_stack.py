@@ -12,7 +12,7 @@ from .bootstrap_user_interactive import interactive_bootstrap_active
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import (
     ContextMeta,
-    InnerTickMode,
+    InnerTickActivity,
     PromptBundle,
     load_context_meta,
     load_prompt_bundle,
@@ -43,7 +43,7 @@ def companion_turn_tools_and_system_messages(
     context: ContextMeta,
     memory_bootstrap_type: str,
     inner_tick_turn: bool,
-    inner_tick_mode: InnerTickMode,
+    inner_tick_activity: InnerTickActivity,
     tool_side_compact_system_prompt: bool,
     include_significance_perception_slice: bool | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -65,15 +65,20 @@ def companion_turn_tools_and_system_messages(
     """
     interactive_bootstrap = interactive_bootstrap_active(
         feature_enabled=(
-            memory_bootstrap_type == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+            memory_bootstrap_type
+            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
         ),
         meta=context,
     )
-    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    tick_proactive = (
+        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+    )
     ai_private_text = ""
     if inner_tick_turn and not tick_proactive:
         ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
-    route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
+    route_inner_activity = (
+        inner_tick_activity if inner_tick_turn else InnerTickActivity.MAINTENANCE
+    )
     tools_for_turn: list[dict[str, Any]] = (
         []
         if tick_proactive
@@ -85,7 +90,9 @@ def companion_turn_tools_and_system_messages(
             )
         )
     )
-    chat_only_implicit_sign_on = implicit_user_signed_on_turn and not inner_tick_turn
+    chat_only_implicit_sign_on = (
+        implicit_user_signed_on_turn and not inner_tick_turn
+    )
     if chat_only_implicit_sign_on:
         tools_for_turn = []
     # Compact system stack is only for the background tool LLM path; skip interactive-bootstrap
@@ -95,7 +102,7 @@ def companion_turn_tools_and_system_messages(
     )
     route_mode = resolve_turn_route_mode(
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=route_inner_mode,
+        inner_tick_activity=route_inner_activity,
         tools_enabled=bool(tools_for_turn),
     )
     use_dual_structured_chat = (
@@ -117,10 +124,11 @@ def companion_turn_tools_and_system_messages(
         system_messages = build_system_messages(
             bundle,
             context,
-            enable_tools=(not tick_proactive) and not chat_only_implicit_sign_on,
+            enable_tools=(not tick_proactive)
+            and not chat_only_implicit_sign_on,
             enable_user_profile_tool=False,
             inner_tick_turn=inner_tick_turn,
-            inner_tick_mode=route_inner_mode,
+            inner_tick_activity=route_inner_activity,
             ai_private_text=ai_private_text,
             tool_side_compact=True,
             interactive_bootstrap_active=system_prompt_interactive_bootstrap,
@@ -136,9 +144,10 @@ def companion_turn_tools_and_system_messages(
         system_messages = build_system_messages(
             bundle,
             context,
-            enable_tools=(not tick_proactive) and not chat_only_implicit_sign_on,
+            enable_tools=(not tick_proactive)
+            and not chat_only_implicit_sign_on,
             inner_tick_turn=inner_tick_turn,
-            inner_tick_mode=route_inner_mode,
+            inner_tick_activity=route_inner_activity,
             ai_private_text=ai_private_text,
             async_foreground_chat_stack=async_fg_chat,
             interactive_bootstrap_active=system_prompt_interactive_bootstrap,
@@ -153,7 +162,7 @@ def refresh_companion_turn_prompt_stack(
     store: MemoryStore,
     memory_bootstrap_type: str,
     inner_tick_turn: bool,
-    inner_tick_mode: InnerTickMode,
+    inner_tick_activity: InnerTickActivity,
     messages: list[dict[str, Any]],
     tool_side_compact_system_prompt: bool,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -167,17 +176,19 @@ def refresh_companion_turn_prompt_stack(
         implicit_signal_bundle=implicit_signal_bundle,
         inner_tick_turn=inner_tick_turn,
     )
-    tools_for_turn, refreshed, _route_mode = companion_turn_tools_and_system_messages(
-        store=store,
-        bundle=bundle,
-        context=context,
-        memory_bootstrap_type=memory_bootstrap_type,
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
-        tool_side_compact_system_prompt=tool_side_compact_system_prompt,
-        include_significance_perception_slice=None,
-        implicit_signal_bundle=implicit_signal_bundle,
-        implicit_user_signed_on_turn=implicit_user_signed_on_turn,
+    tools_for_turn, refreshed, _route_mode = (
+        companion_turn_tools_and_system_messages(
+            store=store,
+            bundle=bundle,
+            context=context,
+            memory_bootstrap_type=memory_bootstrap_type,
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_activity=inner_tick_activity,
+            tool_side_compact_system_prompt=tool_side_compact_system_prompt,
+            include_significance_perception_slice=None,
+            implicit_signal_bundle=implicit_signal_bundle,
+            implicit_user_signed_on_turn=implicit_user_signed_on_turn,
+        )
     )
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn

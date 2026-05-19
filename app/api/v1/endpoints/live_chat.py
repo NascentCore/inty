@@ -166,7 +166,9 @@ async def live_chat_session(
         from sqlalchemy import select
         from app.models.user import User
 
-        row = await db.execute(select(User).where(User.id == assume_user_id.strip()))
+        row = await db.execute(
+            select(User).where(User.id == assume_user_id.strip())
+        )
         assumed_user = row.scalar_one_or_none()
         if assumed_user and not assumed_user.deleted_at:
             logger.info(
@@ -174,7 +176,9 @@ async def live_chat_session(
             )
             current_user = assumed_user
         else:
-            logger.warning(f"assume_user_id not found or deleted: {assume_user_id}")
+            logger.warning(
+                f"assume_user_id not found or deleted: {assume_user_id}"
+            )
 
     if not live_chat_service.is_enabled():
         logger.warning("Live chat 功能未启用，拒绝连接")
@@ -182,7 +186,9 @@ async def live_chat_session(
         return
 
     is_allowed, reject_reason, limit_info = (
-        await subscription_service.check_live_chat_limit(db, current_user, agent_id)
+        await subscription_service.check_live_chat_limit(
+            db, current_user, agent_id
+        )
     )
 
     if not is_allowed:
@@ -211,7 +217,9 @@ async def live_chat_session(
     speech_q = websocket.query_params.get("speech_language_code")
     response_q = websocket.query_params.get("response_language_name")
     starts_q = (
-        (websocket.query_params.get("agent_starts_conversation") or "").strip().lower()
+        (websocket.query_params.get("agent_starts_conversation") or "")
+        .strip()
+        .lower()
     )
     live_cfg_kwargs = {}
     if speech_q is not None and speech_q.strip():
@@ -221,7 +229,9 @@ async def live_chat_session(
     if starts_q in ("1", "true", "yes"):
         live_cfg_kwargs["agent_starts_conversation"] = True
     try:
-        live_overrides = LiveChatConfig(**live_cfg_kwargs) if live_cfg_kwargs else None
+        live_overrides = (
+            LiveChatConfig(**live_cfg_kwargs) if live_cfg_kwargs else None
+        )
     except ValidationError as e:
         logger.warning(f"Live chat invalid language query: {e}")
         await websocket.close(code=4000, reason="Invalid language parameters")
@@ -292,7 +302,9 @@ async def live_chat_session(
                     async with audio_downlink_lock:
                         if len(audio_downlink_buf) < _DOWNLINK_BATCH_BYTES:
                             break
-                        batch = bytes(audio_downlink_buf[:_DOWNLINK_BATCH_BYTES])
+                        batch = bytes(
+                            audio_downlink_buf[:_DOWNLINK_BATCH_BYTES]
+                        )
                         del audio_downlink_buf[:_DOWNLINK_BATCH_BYTES]
                     try:
                         msg = LiveChatAudioResponseMessage(
@@ -301,7 +313,9 @@ async def live_chat_session(
                         )
                         await websocket.send_json(msg.model_dump())
                     except Exception as send_e:
-                        logger.debug(f"发送音频失败（连接可能已关闭）: {str(send_e)}")
+                        logger.debug(
+                            f"发送音频失败（连接可能已关闭）: {str(send_e)}"
+                        )
                         async with audio_downlink_lock:
                             audio_downlink_buf[:0] = batch
                         break
@@ -353,7 +367,9 @@ async def live_chat_session(
             except Exception as e:
                 logger.debug(f"发送状态失败（连接可能已关闭）: {str(e)}")
 
-        async def on_error(error_code: str, message: str, code: Optional[int] = None):
+        async def on_error(
+            error_code: str, message: str, code: Optional[int] = None
+        ):
             """处理错误"""
             try:
                 msg = LiveChatErrorMessage(
@@ -392,7 +408,9 @@ async def live_chat_session(
                     )
                 )
                 if subscription_status.is_subscribed:
-                    error_info = BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                    error_info = (
+                        BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                    )
                 else:
                     error_info = BusinessErrorCode.SUBSCRIPTION_REQUIRED
                 await on_error(
@@ -456,12 +474,16 @@ async def live_chat_session(
 
                     if msg_type == "audio":
                         audio_bytes = base64.b64decode(data.get("data", ""))
-                        await input_queue.put({"type": "audio", "data": audio_bytes})
+                        await input_queue.put(
+                            {"type": "audio", "data": audio_bytes}
+                        )
 
                     elif msg_type == "text":
                         text = data.get("data", "")
                         if text and session:
-                            await live_chat_service.send_text(session.session_id, text)
+                            await live_chat_service.send_text(
+                                session.session_id, text
+                            )
 
                     elif msg_type == "activity_start":
                         await input_queue.put({"type": "activity_start"})

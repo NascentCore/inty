@@ -13,7 +13,9 @@ from functools import lru_cache
 from loguru import logger
 
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.turn_routes import BackgroundToolEventSink
+from app.core.companion_harness.companion.turn_routes import (
+    BackgroundToolEventSink,
+)
 from app.core.companion_harness.companion.manager import (
     CompanionConfig,
     CompanionManager,
@@ -25,7 +27,7 @@ from app.core.companion_harness.memory.memory_registry import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
-    InnerTickMode,
+    InnerTickActivity,
 )
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
@@ -153,7 +155,9 @@ def _companion_manager_for_resolved_model(
     cfg = global_config_loaded_from_config_yaml
     feats = cfg.app.features
     api_key = (cfg.agent.chat_llm_api_key or "").strip() or cfg.agent.api_key
-    timeout_raw = os.getenv("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600").strip()
+    timeout_raw = os.getenv(
+        "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600"
+    ).strip()
     try:
         async_chat_timeout = float(timeout_raw) if timeout_raw else 600.0
     except ValueError:
@@ -162,7 +166,9 @@ def _companion_manager_for_resolved_model(
     tool_m = resolve_chat_text_model(tool_model_api_id)
     llm = CompanionLLMConfig(
         api_key=api_key,
-        api_base=(cfg.agent.chat_llm_base_url or cfg.agent.base_url or "").strip()
+        api_base=(
+            cfg.agent.chat_llm_base_url or cfg.agent.base_url or ""
+        ).strip()
         or "https://openrouter.ai/api/v1",
         default_model=chat_m,
         chat_model=chat_m,
@@ -285,7 +291,7 @@ async def run_companion_chat_turn_for_api(
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     inner_tick_turn: bool = False,
-    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
 ) -> CompanionTurnResult:
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
@@ -344,7 +350,7 @@ async def run_companion_chat_turn_for_api(
         session,
         user_text,
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
+        inner_tick_activity=inner_tick_activity,
         defer_memory_update=defer_memory_update,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,

@@ -86,23 +86,30 @@ class SqlAlchemyMemoryRepository:
         from sqlalchemy import select as sql_select
 
         from app.db.base import SessionLocal
-        from app.models.companion_memory_documents import CompanionMemoryDocumentVersion
+        from app.models.companion_memory_documents import (
+            CompanionMemoryDocumentVersion,
+        )
 
         return sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion
 
     def read_document(self, *, relative_path: str) -> MemoryRecord | None:
-        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = self._orm()
+        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = (
+            self._orm()
+        )
         kind, cal = parse_memory_store_relative_path(relative_path)
         filters = [
             sql_and(
                 CompanionMemoryDocumentVersion.user_id == self._user_id,
-                CompanionMemoryDocumentVersion.companion_id == self._companion_id,
+                CompanionMemoryDocumentVersion.companion_id
+                == self._companion_id,
                 CompanionMemoryDocumentVersion.chat_id == self._chat_id,
             ),
             CompanionMemoryDocumentVersion.document_kind == kind.value,
         ]
         if cal is None:
-            filters.append(CompanionMemoryDocumentVersion.calendar_date.is_(None))
+            filters.append(
+                CompanionMemoryDocumentVersion.calendar_date.is_(None)
+            )
         else:
             filters.append(CompanionMemoryDocumentVersion.calendar_date == cal)
         stmt = (
@@ -125,7 +132,9 @@ class SqlAlchemyMemoryRepository:
         )
 
     def list_all_relative_paths(self) -> list[str]:
-        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = self._orm()
+        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = (
+            self._orm()
+        )
         stmt = (
             sql_select(
                 CompanionMemoryDocumentVersion.document_kind,
@@ -134,7 +143,8 @@ class SqlAlchemyMemoryRepository:
             .where(
                 sql_and(
                     CompanionMemoryDocumentVersion.user_id == self._user_id,
-                    CompanionMemoryDocumentVersion.companion_id == self._companion_id,
+                    CompanionMemoryDocumentVersion.companion_id
+                    == self._companion_id,
                     CompanionMemoryDocumentVersion.chat_id == self._chat_id,
                 )
             )
@@ -304,7 +314,9 @@ class MemoryStore:
             merged += "\n"
         self.write_document(rel, merged)
 
-    def append_jsonl_record(self, relative_path: str, record: dict[str, Any]) -> None:
+    def append_jsonl_record(
+        self, relative_path: str, record: dict[str, Any]
+    ) -> None:
         rel = self._normalize_relative_path(relative_path)
         line = json.dumps(record, ensure_ascii=False)
         cur = self.read_document_if_exists(rel)

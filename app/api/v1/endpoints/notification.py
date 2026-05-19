@@ -40,7 +40,9 @@ async def send_notification(
     - 支持动态参数替换模板内容
     """
     try:
-        await notification_service.send_notification(db, background_tasks, request)
+        await notification_service.send_notification(
+            db, background_tasks, request
+        )
         return APIResponse.success(message="Notification sent successfully")
     except ValueError as e:
         logger.error(f"发送通知参数错误: {str(e)}")
@@ -62,7 +64,9 @@ async def list_notifications(
     current_user=Depends(deps.get_current_active_user),
     page: int = 1,
     page_size: int = 20,
-    is_read: Optional[bool] = Query(None, description="是否已读，不传则查询全部"),
+    is_read: Optional[bool] = Query(
+        None, description="是否已读，不传则查询全部"
+    ),
 ) -> APIResponse[NotificationList]:
     """
     分页查询用户的消息列表；返回用户收到的通知。
@@ -81,7 +85,8 @@ async def list_notifications(
 
         # 转换为响应格式
         items = [
-            NotificationItem.model_validate(obj, from_attributes=True) for obj in items
+            NotificationItem.model_validate(obj, from_attributes=True)
+            for obj in items
         ]
 
         # 计算总页数
@@ -143,7 +148,9 @@ async def create_notification_template(
             db, template_data
         )
         return APIResponse.success(
-            data=NotificationTemplateItem.model_validate(template, from_attributes=True)
+            data=NotificationTemplateItem.model_validate(
+                template, from_attributes=True
+            )
         )
     except ValueError as e:
         logger.error(f"创建通知模板参数错误: {str(e)}")
@@ -166,7 +173,9 @@ async def list_templates(
     current_user=Depends(deps.get_current_superuser),
     page: int = 1,
     page_size: int = 20,
-    is_active: Optional[bool] = Query(None, description="是否激活，不传则查询全部"),
+    is_active: Optional[bool] = Query(
+        None, description="是否激活，不传则查询全部"
+    ),
 ) -> APIResponse[PaginationData[NotificationTemplateItem]]:
     """
     分页查询通知模板列表
@@ -174,7 +183,10 @@ async def list_templates(
     try:
         # 查询数据
         items, total = await notification_service.query_templates(
-            db, skip=(page - 1) * page_size, limit=page_size, is_active=is_active
+            db,
+            skip=(page - 1) * page_size,
+            limit=page_size,
+            is_active=is_active,
         )
 
         # 转换为响应格式
@@ -198,4 +210,6 @@ async def list_templates(
         return APIResponse.success(data=pagination)
     except Exception as e:
         logger.error(f"查询通知模板列表失败: {str(e)}")
-        return APIResponse.error(message="Failed to query notification template list")
+        return APIResponse.error(
+            message="Failed to query notification template list"
+        )

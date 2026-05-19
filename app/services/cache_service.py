@@ -129,7 +129,9 @@ class CacheService:
                     total_cleaned += self.agent_cache.cleanup_expired()
 
                     if total_cleaned > 0:
-                        logger.debug(f"定时清理过期缓存，共清理 {total_cleaned} 个条目")
+                        logger.debug(
+                            f"定时清理过期缓存，共清理 {total_cleaned} 个条目"
+                        )
 
                 except asyncio.CancelledError:
                     break
@@ -179,7 +181,10 @@ class CacheService:
         return self.session_cache.get(f"session:{session_key}")
 
     def set_session_info(
-        self, session_key: str, session_info: Dict[str, Any], ttl: Optional[int] = None
+        self,
+        session_key: str,
+        session_info: Dict[str, Any],
+        ttl: Optional[int] = None,
     ) -> None:
         """设置会话信息缓存"""
         self.session_cache.set(f"session:{session_key}", session_info, ttl)

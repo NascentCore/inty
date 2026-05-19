@@ -60,7 +60,9 @@ class VideoGenerationService:
             # 如果没有提供 GCS URI 基础路径，生成一个
             if not output_gcs_uri_base:
                 # 安全访问 GCS 配置
-                gcs_config = getattr(global_config_loaded_from_config_yaml, "gcs", None)
+                gcs_config = getattr(
+                    global_config_loaded_from_config_yaml, "gcs", None
+                )
                 bucket = (
                     getattr(gcs_config, "bucket", "inty-storage")
                     if gcs_config
@@ -68,7 +70,9 @@ class VideoGenerationService:
                 )
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 unique_id = uuid.uuid4().hex[:8]
-                output_gcs_uri_base = f"gs://{bucket}/videos/{timestamp}_{unique_id}"
+                output_gcs_uri_base = (
+                    f"gs://{bucket}/videos/{timestamp}_{unique_id}"
+                )
 
             # 准备 source 参数（包含 prompt 和 image）
             source_image = None
@@ -79,7 +83,9 @@ class VideoGenerationService:
                     # 如果是 HTTPS URL，尝试转换为 GCS URI
                     if "storage.googleapis.com" in gcs_uri:
                         # 从 https://storage.googleapis.com/bucket/path 提取路径
-                        path = gcs_uri.replace("https://storage.googleapis.com/", "")
+                        path = gcs_uri.replace(
+                            "https://storage.googleapis.com/", ""
+                        )
                         gcs_uri = f"gs://{path}"
                     else:
                         logger.warning(
@@ -147,7 +153,9 @@ class VideoGenerationService:
                         f"Video generation timed out (exceeded {max_wait_time} seconds)"
                     )
 
-                logger.debug(f"等待视频生成完成... (已等待 {elapsed_time:.0f} 秒)")
+                logger.debug(
+                    f"等待视频生成完成... (已等待 {elapsed_time:.0f} 秒)"
+                )
                 await asyncio.sleep(poll_interval)
 
                 # 获取最新操作状态
@@ -155,7 +163,9 @@ class VideoGenerationService:
 
             # 检查操作是否成功
             if not operation.done:
-                raise RuntimeError("Video generation operation did not complete")
+                raise RuntimeError(
+                    "Video generation operation did not complete"
+                )
 
             # 提取生成的视频 URL
             if hasattr(operation, "response") and operation.response:
@@ -164,7 +174,10 @@ class VideoGenerationService:
                     and operation.response.generated_videos
                 ):
                     generated_video = operation.response.generated_videos[0]
-                    if hasattr(generated_video, "video") and generated_video.video:
+                    if (
+                        hasattr(generated_video, "video")
+                        and generated_video.video
+                    ):
                         video_uri = (
                             generated_video.video.uri
                             if hasattr(generated_video.video, "uri")

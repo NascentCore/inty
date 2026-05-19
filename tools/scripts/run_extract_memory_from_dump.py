@@ -94,7 +94,9 @@ async def run(
         except Exception as format_err:
             logger.debug(f"structured output 失败，回退自由文本: {format_err}")
             full_analysis, prompt_tokens, completion_tokens = (
-                await chat_completion_for_extraction(full_prompt, llm_config=llm_config)
+                await chat_completion_for_extraction(
+                    full_prompt, llm_config=llm_config
+                )
             )
     except Exception as e:
         logger.error(f"LLM 调用失败: {e}")

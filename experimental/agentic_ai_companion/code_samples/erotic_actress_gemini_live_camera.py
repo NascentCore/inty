@@ -120,7 +120,10 @@ class AudioLoop:
 
         mime_type = "image/jpeg"
         image_bytes = image_io.read()
-        return {"mime_type": mime_type, "data": base64.b64encode(image_bytes).decode()}
+        return {
+            "mime_type": mime_type,
+            "data": base64.b64encode(image_bytes).decode(),
+        }
 
     async def get_frames(self):
         # This takes about a second, and will block the whole program
@@ -157,7 +160,10 @@ class AudioLoop:
         image_io.seek(0)
 
         image_bytes = image_io.read()
-        return {"mime_type": mime_type, "data": base64.b64encode(image_bytes).decode()}
+        return {
+            "mime_type": mime_type,
+            "data": base64.b64encode(image_bytes).decode(),
+        }
 
     async def get_screen(self):
 
@@ -194,9 +200,13 @@ class AudioLoop:
         else:
             kwargs = {}
         while True:
-            data = await asyncio.to_thread(self.audio_stream.read, CHUNK_SIZE, **kwargs)
+            data = await asyncio.to_thread(
+                self.audio_stream.read, CHUNK_SIZE, **kwargs
+            )
             if self.out_queue is not None:
-                await self.out_queue.put({"data": data, "mime_type": "audio/pcm"})
+                await self.out_queue.put(
+                    {"data": data, "mime_type": "audio/pcm"}
+                )
 
     async def receive_audio(self):
         "Background task to reads from the websocket and write pcm chunks to the output queue"

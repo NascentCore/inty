@@ -12,7 +12,9 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.config import global_config_loaded_from_config_yaml as _global_config
+from app.core.config import (
+    global_config_loaded_from_config_yaml as _global_config,
+)
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 from .heartbeat import (
@@ -23,7 +25,9 @@ from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )
-from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
+from app.core.companion_harness.memory.memory_pipeline import (
+    MemoryPipelineConfig,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
@@ -34,7 +38,7 @@ from .models import (
     AssistantTurnSource,
     ChatMessage,
     ContextMeta,
-    InnerTickMode,
+    InnerTickActivity,
     PromptBundle,
     companion_turn_transcript_loaded_messages,
     load_context_meta,
@@ -62,7 +66,7 @@ class CompanionTurnRuntimeFlags:
 
     effective_user_text: str
     tick_proactive: bool
-    route_inner_mode: InnerTickMode
+    route_inner_activity: InnerTickActivity
     implicit_sign_on_turn: bool
     turn_type: AssistantTurnSource
 
@@ -97,12 +101,16 @@ def resolve_turn_runtime_flags(
     *,
     user_text: str,
     inner_tick_turn: bool,
-    inner_tick_mode: InnerTickMode,
+    inner_tick_activity: InnerTickActivity,
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> CompanionTurnRuntimeFlags:
     """Normalize user text and turn labels before MemoryStore reads."""
-    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
-    route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
+    tick_proactive = (
+        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+    )
+    route_inner_activity = (
+        inner_tick_activity if inner_tick_turn else InnerTickActivity.MAINTENANCE
+    )
     implicit_sign_on_turn = implicit_user_signed_on_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         inner_tick_turn=inner_tick_turn,
@@ -124,7 +132,7 @@ def resolve_turn_runtime_flags(
     return CompanionTurnRuntimeFlags(
         effective_user_text=effective_user_text,
         tick_proactive=tick_proactive,
-        route_inner_mode=route_inner_mode,
+        route_inner_activity=route_inner_activity,
         implicit_sign_on_turn=implicit_sign_on_turn,
         turn_type=turn_type,
     )
@@ -136,7 +144,9 @@ def _companion_tail_user_body_for_llm(
     implicit_sign_on_turn: bool,
 ) -> str:
     """Tail **user** message body only (no wall-clock lines; those go in a separate system slice)."""
-    return USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
+    return (
+        USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
+    )
 
 
 def _companion_user_time_context_system_for_llm(
@@ -150,14 +160,16 @@ def _companion_user_time_context_system_for_llm(
     ctx = None
     if implicit_signal_bundle and implicit_signal_bundle.client_time:
         ctx = implicit_signal_bundle.client_time.model_dump(exclude_none=True)
-    return build_companion_user_time_context_system_content(ctx, enabled=enabled)
+    return build_companion_user_time_context_system_content(
+        ctx, enabled=enabled
+    )
 
 
 def load_companion_turn_state(
     *,
     store: MemoryStore,
     inner_tick_turn: bool,
-    route_inner_mode: InnerTickMode,
+    route_inner_activity: InnerTickActivity,
     transcript_llm_window_max_messages: int | None,
 ) -> CompanionTurnLoadedState:
     """Load context, prompt bundle, and transcript head for one turn."""
@@ -171,7 +183,7 @@ def load_companion_turn_state(
         rel_main_transcript=rel_main_tr,
         rel_inner_tick_transcript=rel_inner_tr,
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=route_inner_mode,
+        inner_tick_activity=route_inner_activity,
     )
     window_cap = (
         transcript_llm_window_max_messages
@@ -199,7 +211,7 @@ def build_companion_turn_prompt_plan(
     user_text: str,
     memory_bootstrap_type: str,
     inner_tick_turn: bool,
-    route_inner_mode: InnerTickMode,
+    route_inner_activity: InnerTickActivity,
     tick_proactive: bool,
     implicit_signal_bundle: ImplicitSignalBundle | None,
     implicit_sign_on_turn: bool,
@@ -214,7 +226,7 @@ def build_companion_turn_prompt_plan(
             context=loaded_state.context,
             memory_bootstrap_type=memory_bootstrap_type,
             inner_tick_turn=inner_tick_turn,
-            inner_tick_mode=route_inner_mode,
+            inner_tick_activity=route_inner_activity,
             tool_side_compact_system_prompt=False,
             include_significance_perception_slice=None,
             implicit_signal_bundle=implicit_signal_bundle,

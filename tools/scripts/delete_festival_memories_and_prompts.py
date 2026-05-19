@@ -50,7 +50,9 @@ async def _count_and_delete(
 
     # 执行删除：先 chat_history 再 memory
     del_ch = await session.execute(
-        text("DELETE FROM chat_history WHERE meta_data->>'messageType' = :msg_type"),
+        text(
+            "DELETE FROM chat_history WHERE meta_data->>'messageType' = :msg_type"
+        ),
         {"msg_type": MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT},
     )
     del_mem = await session.execute(

@@ -389,12 +389,16 @@ class VoiceService:
         voice_id = _voice_id_for_decision
 
         original_text = text
-        if not (use_prompted_gemini or use_gemini_then_elevenlabs_voice_changer):
+        if not (
+            use_prompted_gemini or use_gemini_then_elevenlabs_voice_changer
+        ):
             logger.debug(f"清理文本: {text}")
             text = self._clean_text_for_voice(text)
 
         if not text.strip():
-            logger.warning("文本清理后为空（可能全部是心理/动作描写），跳过语音生成")
+            logger.warning(
+                "文本清理后为空（可能全部是心理/动作描写），跳过语音生成"
+            )
             return self._trace_and_return_none("empty_text_after_cleaning")
 
         if text != original_text:
@@ -403,7 +407,9 @@ class VoiceService:
             )
 
         if len(text) > self.config.max_text_length:
-            logger.warning(f"文本长度超过限制 {self.config.max_text_length}，截断处理")
+            logger.warning(
+                f"文本长度超过限制 {self.config.max_text_length}，截断处理"
+            )
             text = text[: self.config.max_text_length]
 
         try:
@@ -696,7 +702,9 @@ class VoiceService:
 
     def _get_audio_extension(self, mime_type: str) -> str:
         normalized = (mime_type or "").lower()
-        if normalized.startswith("audio/wav") or normalized.startswith("audio/x-wav"):
+        if normalized.startswith("audio/wav") or normalized.startswith(
+            "audio/x-wav"
+        ):
             return ".wav"
         if normalized in {"audio/mpeg", "audio/mp3"}:
             return ".mp3"
@@ -800,15 +808,19 @@ class VoiceService:
                     global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
                 )
                 if use_prompted:
-                    tts_result = (
-                        await self.gemini_tts_api.synthesize_with_roleplay_prompt(req)
+                    tts_result = await self.gemini_tts_api.synthesize_with_roleplay_prompt(
+                        req
                     )
                 else:
                     tts_result = await self.gemini_tts_api.synthesize(req)
-                logger.debug(f"Gemini TTS 路径: use_gemini_prompted_tts={use_prompted}")
+                logger.debug(
+                    f"Gemini TTS 路径: use_gemini_prompted_tts={use_prompted}"
+                )
                 if not tts_result:
                     # Gemini TTS 失败（如未配置凭据），回退到 ElevenLabs
-                    logger.warning("Gemini TTS 失败，回退到 ElevenLabs（使用默认音色）")
+                    logger.warning(
+                        "Gemini TTS 失败，回退到 ElevenLabs（使用默认音色）"
+                    )
                     self._set_trace_metadata(
                         fallback_used=True,
                         fallback_provider=TTS_PROVIDER_ELEVENLABS,
@@ -818,11 +830,13 @@ class VoiceService:
                         model_selected=self.config.model,
                     )
                     # 使用 ElevenLabs 默认音色，因为 Gemini 音色名无法在 ElevenLabs 中使用
-                    fallback_result = await self._synthesize_elevenlabs_fallback(
-                        text=text,
-                        voice_id=self.config.voice_id,
-                        model_id=self.config.model,
-                        language=language,
+                    fallback_result = (
+                        await self._synthesize_elevenlabs_fallback(
+                            text=text,
+                            voice_id=self.config.voice_id,
+                            model_id=self.config.model,
+                            language=language,
+                        )
                     )
                     if fallback_result is None:
                         logger.error("ElevenLabs TTS 回退也失败")
@@ -838,8 +852,8 @@ class VoiceService:
                     provider_used = TTS_PROVIDER_ELEVENLABS
             elif use_voice_changer:
                 provider_used = TTS_PROVIDER_ELEVENLABS
-                source_voice_name = select_default_gemini_voice_for_imate_gender(
-                    agent_gender
+                source_voice_name = (
+                    select_default_gemini_voice_for_imate_gender(agent_gender)
                 )
                 source_model = (
                     gemini_source_model
@@ -852,10 +866,8 @@ class VoiceService:
                     output_format=self.config.output_format,
                     language_code=language,
                 )
-                source_audio = (
-                    await self.gemini_tts_api.synthesize_with_full_dialogue_prompt(
-                        gemini_source_req
-                    )
+                source_audio = await self.gemini_tts_api.synthesize_with_full_dialogue_prompt(
+                    gemini_source_req
                 )
                 if source_audio is None:
                     logger.error(
@@ -896,7 +908,9 @@ class VoiceService:
             mime_type = tts_result.mime_type
 
             # 计算音频时长
-            duration = self._calculate_audio_duration(audio_data, mime_type=mime_type)
+            duration = self._calculate_audio_duration(
+                audio_data, mime_type=mime_type
+            )
 
             logger.debug(
                 f"TTS 调用成功 (provider={provider_used})，音频大小: {len(audio_data)} bytes, "
@@ -951,14 +965,18 @@ class VoiceService:
         使用文本内容的哈希值确保相同内容生成相同文件名（用于缓存）
         """
         # 创建内容哈希
-        content_hash = hashlib.md5(f"{text}_{voice_id}_{model}".encode()).hexdigest()
+        content_hash = hashlib.md5(
+            f"{text}_{voice_id}_{model}".encode()
+        ).hexdigest()
 
         # 生成文件名：voice_<hash>.<ext>
         file_name = f"voice_{content_hash}{extension}"
 
         return file_name
 
-    def _calculate_audio_duration(self, audio_data: bytes, *, mime_type: str) -> float:
+    def _calculate_audio_duration(
+        self, audio_data: bytes, *, mime_type: str
+    ) -> float:
         """
         计算音频数据的时长
 
@@ -969,7 +987,9 @@ class VoiceService:
             音频时长（秒）
         """
         normalized = (mime_type or "").lower()
-        if normalized.startswith("audio/wav") or normalized.startswith("audio/x-wav"):
+        if normalized.startswith("audio/wav") or normalized.startswith(
+            "audio/x-wav"
+        ):
             return self._calculate_wav_duration(audio_data)
         if normalized in {"audio/mpeg", "audio/mp3"}:
             return self._calculate_mp3_duration(audio_data)
@@ -1035,7 +1055,10 @@ class VoiceService:
                 voice_name = voice.get("name", "").lower()
                 voice_id = voice.get("voice_id", "").lower()
                 search_term = search.lower()
-                if search_term not in voice_name and search_term not in voice_id:
+                if (
+                    search_term not in voice_name
+                    and search_term not in voice_id
+                ):
                     continue
 
             filtered.append(voice)
@@ -1144,7 +1167,9 @@ class VoiceService:
             )
 
             # 1. 获取所有基础语音，包括legacy音色
-            voices_response = await self.tts_api.get_all_voices(show_legacy=True)
+            voices_response = await self.tts_api.get_all_voices(
+                show_legacy=True
+            )
             logger.info(f"get_all API返回 {len(voices_response.voices)} 个音色")
 
             # 转换为字典格式并添加来源标识
@@ -1159,14 +1184,18 @@ class VoiceService:
                 # 添加 provider 字段，标识音色来源；voice_id 带 11labs/ 前缀
                 voice_dict["provider"] = TTS_PROVIDER_ELEVENLABS
                 raw_id = voice_dict.get("voice_id", "")
-                voice_dict["voice_id"] = f"{VOICE_ID_PREFIX_ELEVENLABS}/{raw_id}"
+                voice_dict["voice_id"] = (
+                    f"{VOICE_ID_PREFIX_ELEVENLABS}/{raw_id}"
+                )
 
                 # 根据category和is_owner确定source和voice_type
                 voice_category = voice_dict.get("category", "unknown")
                 is_owner = voice_dict.get("is_owner", False)
 
                 if voice_category == "professional":
-                    voice_dict["source"] = "professional"  # 标记为professional音色
+                    voice_dict["source"] = (
+                        "professional"  # 标记为professional音色
+                    )
                     professional_count += 1
                 else:
                     voice_dict["source"] = "regular"  # 标记为常规音色
@@ -1193,7 +1222,10 @@ class VoiceService:
                     voice_name = voice_dict.get("name", "").lower()
                     voice_id = voice_dict.get("voice_id", "").lower()
                     search_term = search.lower()
-                    if search_term not in voice_name and search_term not in voice_id:
+                    if (
+                        search_term not in voice_name
+                        and search_term not in voice_id
+                    ):
                         continue
 
                 voices_list.append(voice_dict)
@@ -1237,21 +1269,29 @@ class VoiceService:
                 search_params["category"] = kwargs["category"]
 
             # 移除None值
-            search_params = {k: v for k, v in search_params.items() if v is not None}
+            search_params = {
+                k: v for k, v in search_params.items() if v is not None
+            }
 
             logger.debug(f"搜索共享音色，参数: {search_params}")
 
             # 调用 ElevenLabs get_shared API
-            voices_response = await self.tts_api.get_shared_voices(**search_params)
+            voices_response = await self.tts_api.get_shared_voices(
+                **search_params
+            )
 
             # 转换为字典格式并添加来源标识
             voices_list = []
             for voice in voices_response.voices:
                 voice_dict = voice.model_dump()
                 voice_dict["source"] = "shared"  # 标记为共享音色
-                voice_dict["provider"] = TTS_PROVIDER_ELEVENLABS  # 添加 provider 字段
+                voice_dict["provider"] = (
+                    TTS_PROVIDER_ELEVENLABS  # 添加 provider 字段
+                )
                 raw_id = voice_dict.get("voice_id", "")
-                voice_dict["voice_id"] = f"{VOICE_ID_PREFIX_ELEVENLABS}/{raw_id}"
+                voice_dict["voice_id"] = (
+                    f"{VOICE_ID_PREFIX_ELEVENLABS}/{raw_id}"
+                )
                 voices_list.append(voice_dict)
 
             logger.debug(f"获取到 {len(voices_list)} 个共享音色")
@@ -1282,9 +1322,13 @@ class VoiceService:
             )
             for voice in gemini_voices:
                 if voice["voice_id"] == lookup_id:
-                    logger.debug(f"从 Gemini 预置音色中找到 voice_id: {voice_id}")
+                    logger.debug(
+                        f"从 Gemini 预置音色中找到 voice_id: {voice_id}"
+                    )
                     return voice
-            logger.debug(f"voice_id {voice_id} 匹配 Gemini 格式但未在预置列表中找到")
+            logger.debug(
+                f"voice_id {voice_id} 匹配 Gemini 格式但未在预置列表中找到"
+            )
 
         try:
             # 1. ElevenLabs 常规音色（用 raw 调 API，返回时统一为 11labs/ 前缀）
@@ -1301,7 +1345,9 @@ class VoiceService:
         try:
             # 2. 共享音色：用 raw 搜索，匹配带前缀的 voice_id
             logger.debug(f"尝试从共享音色中搜索 voice_id: {voice_id}")
-            shared_voices = await self._search_shared_voices(search=raw, page_size=50)
+            shared_voices = await self._search_shared_voices(
+                search=raw, page_size=50
+            )
             prefixed_id = f"{VOICE_ID_PREFIX_ELEVENLABS}/{raw}"
             for voice in shared_voices:
                 if (

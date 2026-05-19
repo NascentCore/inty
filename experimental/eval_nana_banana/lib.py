@@ -69,8 +69,12 @@ ZUNLONG_USER_AVATAR_PATH = "tests/files/zunlong.jpg"
 
 LOWEST_SAFETY_SETTINGS = [
     types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
-    types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
-    types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
+    types.SafetySetting(
+        category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"
+    ),
+    types.SafetySetting(
+        category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"
+    ),
     types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF"),
     types.SafetySetting(
         category="HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT",
@@ -217,7 +221,9 @@ def _omit_inline_data_blobs(obj):
     if obj is None:
         return None
     if isinstance(obj, dict):
-        if set(obj.keys()) == {"_base64"} and isinstance(obj.get("_base64"), str):
+        if set(obj.keys()) == {"_base64"} and isinstance(
+            obj.get("_base64"), str
+        ):
             return {"_omit": "inline image saved to jpeg file"}
         return {k: _omit_inline_data_blobs(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
@@ -278,7 +284,9 @@ def save_result_to_files(
     if payload is not None:
         with open(out_json, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
-        print(f"Saved response JSON to {out_json} for files_prefix: {files_prefix}")
+        print(
+            f"Saved response JSON to {out_json} for files_prefix: {files_prefix}"
+        )
     else:
         print("Could not serialize response to JSON")
 

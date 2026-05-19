@@ -15,7 +15,9 @@ def run_inbound_server(*, ctx: AppContext, once: bool) -> None:
         ttl_seconds=ctx.settings.lease_ttl_seconds,
     )
     if not acquired:
-        raise RuntimeError("telegram inbound consumer lease is held by another owner")
+        raise RuntimeError(
+            "telegram inbound consumer lease is held by another owner"
+        )
 
     retry = RetryPolicy(
         max_attempts=ctx.settings.retry_max_attempts,
@@ -26,13 +28,17 @@ def run_inbound_server(*, ctx: AppContext, once: bool) -> None:
             applied_update_id = ctx.orchestrator.get_last_applied_update_id(
                 cursor_key=ctx.settings.cursor_key_telegram_update
             )
-            poll_offset = None if applied_update_id is None else (applied_update_id + 1)
+            poll_offset = (
+                None if applied_update_id is None else (applied_update_id + 1)
+            )
             envelopes, _next_offset = retry.execute(
                 lambda: ctx.telegram_adapter.poll_updates(offset=poll_offset)
             )
             processed_any = False
             for envelope in envelopes:
-                result = ctx.orchestrator.process_inbound_telegram(envelope=envelope)
+                result = ctx.orchestrator.process_inbound_telegram(
+                    envelope=envelope
+                )
                 if result.should_advance_cursor:
                     ctx.orchestrator.advance_applied_update_id(
                         cursor_key=ctx.settings.cursor_key_telegram_update,

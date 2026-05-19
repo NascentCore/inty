@@ -173,7 +173,9 @@ class TagMigrator:
 
         return stats
 
-    async def _process_batch_analysis(self, agents) -> List[TagExtractionResult]:
+    async def _process_batch_analysis(
+        self, agents
+    ) -> List[TagExtractionResult]:
         """处理一批智能体的分析"""
         results = []
 
@@ -205,7 +207,9 @@ class TagMigrator:
                     result.extracted_tags
                 )
                 if invalid_tags:
-                    self.logger.warning(f"{agent.name}: 发现无效标签: {invalid_tags}")
+                    self.logger.warning(
+                        f"{agent.name}: 发现无效标签: {invalid_tags}"
+                    )
 
                 result.extracted_tags = valid_tags
                 result.original_tags = agent.tags
@@ -226,7 +230,9 @@ class TagMigrator:
 
         return results
 
-    async def _process_batch_migration(self, agents) -> List[TagExtractionResult]:
+    async def _process_batch_migration(
+        self, agents
+    ) -> List[TagExtractionResult]:
         """处理一批智能体的迁移"""
         results = await self._process_batch_analysis(agents)
 
@@ -245,7 +251,9 @@ class TagMigrator:
 
         # 批量更新数据库
         if updates:
-            success_count, _ = await self.db_manager.batch_update_agent_tags(updates)
+            success_count, _ = await self.db_manager.batch_update_agent_tags(
+                updates
+            )
 
             # 更新统计信息
             for i, (agent_id, tags) in enumerate(updates):
@@ -263,7 +271,9 @@ class TagMigrator:
 
         return results
 
-    def _generate_stats(self, results: List[TagExtractionResult]) -> MigrationStats:
+    def _generate_stats(
+        self, results: List[TagExtractionResult]
+    ) -> MigrationStats:
         """生成迁移统计信息"""
         stats = MigrationStats()
 
@@ -276,7 +286,9 @@ class TagMigrator:
         stats.failed_extractions = len(results) - len(successful_results)
 
         # 统计有Character info的智能体
-        stats.agents_with_character_info = len([r for r in results if r.character_info])
+        stats.agents_with_character_info = len(
+            [r for r in results if r.character_info]
+        )
 
         # 统计可提取标签的智能体
         stats.agents_with_extractable_tags = len(
@@ -284,11 +296,17 @@ class TagMigrator:
         )
 
         # 统计更新成功的智能体
-        stats.updated_agents = len([r for r in successful_results if r.extracted_tags])
+        stats.updated_agents = len(
+            [r for r in successful_results if r.extracted_tags]
+        )
 
         # 统计跳过的智能体
         stats.skipped_agents = len(
-            [r for r in results if r.error_message and "跳过" in r.error_message]
+            [
+                r
+                for r in results
+                if r.error_message and "跳过" in r.error_message
+            ]
         )
 
         # 统计最常见的标签
@@ -303,7 +321,9 @@ class TagMigrator:
 
         return stats
 
-    async def _save_backup(self, backup_data: List[Dict[str, Any]], batch_number: int):
+    async def _save_backup(
+        self, backup_data: List[Dict[str, Any]], batch_number: int
+    ):
         """保存备份数据"""
         if not backup_data:
             return
@@ -314,7 +334,9 @@ class TagMigrator:
 
         try:
             with open(backup_path, "w", encoding="utf-8") as f:
-                json.dump(backup_data, f, ensure_ascii=False, indent=2, default=str)
+                json.dump(
+                    backup_data, f, ensure_ascii=False, indent=2, default=str
+                )
 
             self.logger.info(f"备份数据已保存: {backup_path}")
         except Exception as e:
@@ -330,7 +352,9 @@ class TagMigrator:
     help="配置文件路径",
     type=click.Path(exists=True),
 )
-@click.option("--analyze", is_flag=True, help="分析模式：只分析数据，不进行更新")
+@click.option(
+    "--analyze", is_flag=True, help="分析模式：只分析数据，不进行更新"
+)
 @click.option("--update", is_flag=True, help="更新模式：执行实际的标签迁移")
 @click.option("--batch-size", default=100, help="批处理大小", type=int)
 @click.option(
@@ -345,7 +369,14 @@ class TagMigrator:
 )
 @click.option("--log-file", help="日志文件路径")
 def main(
-    config, analyze, update, batch_size, skip_existing, normalize, log_level, log_file
+    config,
+    analyze,
+    update,
+    batch_size,
+    skip_existing,
+    normalize,
+    log_level,
+    log_file,
 ):
     """
     从personality字段提取tags的迁移工具

@@ -29,37 +29,15 @@ enum LoginWidgets {
             
             VStack(spacing: 20) {
                 // 这里模拟图标，实际开发中请替换为您的 Image("logo_name")
-                ZStack {
-                    Circle()
-                        .stroke(Color.blue.opacity(0.3), lineWidth: 1)
-                        .frame(width: 120, height: 120)
-                    
-                    // 内部发光球体
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.blue.opacity(0.2)]),
-                                center: .center,
-                                startRadius: 5,
-                                endRadius: 40
-                            )
-                        )
-                        .frame(width: 80, height: 80)
-                        .shadow(color: .blue.opacity(0.5), radius: 20)
-                    
-                    // 模拟装饰线条
-                    Image(systemName: "scope")
-                        .resizable()
-                        .foregroundColor(.white.opacity(0.6))
-                        .frame(width: 120, height: 120)
-                }
+                Image("logo")
+                    .resizable()
+                    .frame(width: 120, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 60))
                 
-//                Spacer().frame(height: 20)
                 Text("iMate")
                     .font(.system(size: 36, weight: .bold))
                     .foregroundColor(.white)
                 
-//                Spacer().frame(height: 10)
                 Text("Your AI, your way")
                     .font(.subheadline)
                     .foregroundColor(.gray)
@@ -97,13 +75,15 @@ enum LoginWidgets {
     
     // 按钮部分
     struct ButtonView: View {
+        var onAppleAction: () -> Void
+        var onEmailAction: () -> Void
+        
         var body: some View {
             // --- 按钮区域 ---
             VStack(spacing: 20) {
                 // Google 登录按钮
                 Button(action: {
-//                        print("Continue with Google")
-//                    router.push(.home)
+                    onAppleAction()
                 }) {
                     HStack {
                         Image(systemName: "g.circle.fill") // 模拟 Google 图标
@@ -120,10 +100,11 @@ enum LoginWidgets {
 
                 // 邮箱登录链接
                 Button("Continue with Email") {
-                    print("Continue with Email")
+                    onEmailAction()
                 }
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(Color.white.opacity(0.35))
+                .underline()
             }
             .padding(.horizontal, 30)
         }

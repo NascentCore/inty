@@ -78,7 +78,8 @@ _warn_env_var("LANGSMITH_PROJECT")
 def _create_openai_client():
     """创建基础OpenAI客户端实例（不含LangSmith包装）"""
     use_fake_openai = (
-        global_config_loaded_from_config_yaml.app.environment == Environment.TEST
+        global_config_loaded_from_config_yaml.app.environment
+        == Environment.TEST
     )
     return get_openai_compatible_sync_client(
         OpenAICompatibleClientOptions(
@@ -110,7 +111,8 @@ def _create_chat_openai_client() -> OpenAI:
     base_url = cfg.chat_llm_base_url or cfg.base_url
     api_key = cfg.chat_llm_api_key or cfg.api_key
     use_fake_openai = (
-        global_config_loaded_from_config_yaml.app.environment == Environment.TEST
+        global_config_loaded_from_config_yaml.app.environment
+        == Environment.TEST
     )
     return get_openai_compatible_sync_client(
         OpenAICompatibleClientOptions(
@@ -204,7 +206,11 @@ async def chat_completion_for_extraction(
     llm_config 为 None 时使用默认配置（DEFAULT_MEMORY_EXTRACTION_MODEL、max_tokens=4000、temperature=0.3）。
     response_format 非空时传入 create（OpenRouter/OpenAI 结构化输出），content 为 JSON 字符串，由调用方解析。
     """
-    cfg = llm_config if llm_config is not None else _default_extraction_llm_config()
+    cfg = (
+        llm_config
+        if llm_config is not None
+        else _default_extraction_llm_config()
+    )
     client = get_async_openai_client()
     create_kwargs = _llm_config_to_create_kwargs(cfg)
     if response_format is not None:
@@ -214,7 +220,9 @@ async def chat_completion_for_extraction(
         messages=[{"role": "user", "content": prompt}],
         **create_kwargs,
     )
-    content = (response.choices[0].message.content or "") if response.choices else ""
+    content = (
+        (response.choices[0].message.content or "") if response.choices else ""
+    )
     usage = response.usage
     prompt_tokens = usage.prompt_tokens if usage else None
     completion_tokens = usage.completion_tokens if usage else None

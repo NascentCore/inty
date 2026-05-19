@@ -10,7 +10,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Callable
 
-from .models import InnerTickMode
+from .models import InnerTickActivity
 
 if TYPE_CHECKING:
     from app.core.companion_harness.tools.tool_background import ToolOutputEvent
@@ -29,19 +29,21 @@ class TurnRouteMode(str, Enum):
     HEARTBEAT_SYNC = "heartbeat_sync"
     INNER_TICK_SYNC = "inner_tick_sync"
     CHAT_ONLY_SYNC = "chat_only_sync"
-    ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL = "async_foreground_chat_background_tool"
+    ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL = (
+        "async_foreground_chat_background_tool"
+    )
 
 
 def resolve_turn_route_mode(
     *,
     inner_tick_turn: bool,
-    inner_tick_mode: InnerTickMode,
+    inner_tick_activity: InnerTickActivity,
     tools_enabled: bool,
 ) -> TurnRouteMode:
     """Pick route label. Tools always use async foreground chat + background tool thread."""
     if tools_enabled:
         return TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-    if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
+    if inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT:
         return TurnRouteMode.HEARTBEAT_SYNC
     if inner_tick_turn:
         return TurnRouteMode.INNER_TICK_SYNC

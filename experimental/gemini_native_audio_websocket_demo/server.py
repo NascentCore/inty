@@ -174,13 +174,18 @@ class LiveBridge:
                             run_id=self.run_id,
                             location="demo_server.py:turn_complete",
                             message="turn_complete",
-                            data={"count": turn_complete_count, "mode": self.mode},
+                            data={
+                                "count": turn_complete_count,
+                                "mode": self.mode,
+                            },
                             hypothesis_id="DEMO",
                         )
                         # #endregion
 
                         await websocket.send_text(
-                            json.dumps({"type": "status", "status": "turn_complete"})
+                            json.dumps(
+                                {"type": "status", "status": "turn_complete"}
+                            )
                         )
 
                         if self.mode == "reconnect":
@@ -218,7 +223,9 @@ def _build_live_config(*, silence_ms: int) -> types.LiveConnectConfig:
         response_modalities=["AUDIO"],
         speech_config=types.SpeechConfig(
             voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=VOICE)
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name=VOICE
+                )
             )
         ),
         system_instruction="You are a helpful assistant. Keep your responses very short.",
@@ -279,7 +286,9 @@ async def ws_endpoint(websocket: WebSocket):
     try:
         await bridge.open()
         await bridge.ensure_receive_loop(websocket)
-        await websocket.send_text(json.dumps({"type": "status", "status": "connected"}))
+        await websocket.send_text(
+            json.dumps({"type": "status", "status": "connected"})
+        )
 
         while True:
             raw = await websocket.receive_text()

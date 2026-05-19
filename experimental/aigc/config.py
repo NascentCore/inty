@@ -49,7 +49,9 @@ class Config:
         cls.logger.debug(f"Debug mode: {cls.DEBUG}")
         cls.logger.debug(f"Host: {cls.HOST}")
         cls.logger.debug(f"Port: {cls.PORT}")
-        cls.logger.debug(f"Max images per character: {cls.MAX_IMAGES_PER_CHARACTER}")
+        cls.logger.debug(
+            f"Max images per character: {cls.MAX_IMAGES_PER_CHARACTER}"
+        )
         cls.logger.debug(f"Character model: {cls.CHARACTER_GENERATION_MODEL}")
         cls.logger.debug(f"Image model: {cls.IMAGE_GENERATION_MODEL}")
 

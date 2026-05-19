@@ -11,8 +11,15 @@ import Combine
 
 enum AppRoute: Hashable {
     case login
-    case home
+    
+    case loginEmail
+    case loginEmailPassword
+    case loginAuth
+    case loginInitChat
+    
+    case chatPage
 }
+
 
 class Router: ObservableObject {
     @Published var path = NavigationPath() // 存储导航栈数据

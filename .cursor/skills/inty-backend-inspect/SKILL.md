@@ -15,7 +15,7 @@ description: >-
 
 | 数据源 | 典型用途 | 如何接入 |
 |--------|----------|----------|
-| **本地文件日志**（Ops / uvicorn） | 进程内时间顺序、是否 crash/reload、companion 各阶段、`ws_conn_id` 前缀行 | `backend/ops/start.sh` 默认把 Loguru 文件日志写到 **cwd 下** `.inty/inty.log`（可用 `--workspace DIR` 改为 `DIR/inty.log`）；见 [`inty-local-backend-repl`](../inty-local-backend-repl/SKILL.md)；先 `stat`/`tail` 确认**覆盖事发时段** |
+| **本地文件日志**（Ops / uvicorn） | 进程内时间顺序、是否 crash/reload、companion 各阶段、`ws_conn_id` 前缀行 | `backend/ops/start.sh` 默认把 Loguru 文件日志写到 **cwd 下** `.inty/inty.log`（可用 `--workspace DIR` 改为 `DIR/inty.log`）；见 [`launch-inty-backend`](../launch-inty-backend/SKILL.md)；先 `stat`/`tail` 确认**覆盖事发时段** |
 | **LangSmith** | 上游 LLM 输入输出、span 是否 `pending`、父子 trace | 项目名与 API key 与后端进程一致：见 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)「What `config.yaml` drives」；与 [`app/core/config.py`](../../../app/core/config.py) `set_langsmith_environment_variables` 同源 |
 | **本地 Postgres** | 落库消息、`created_at`、meta 里的回合键 | 连接信息在仓库根 **`config.yaml`** 的 **`database`** 段（`host` / `port` / `user` / `password` / `db`），与 [`app/utils/config.py`](../../../app/utils/config.py) `DatabaseSettings` 一致；**勿**把密码写进技能或 git |
 
@@ -161,7 +161,7 @@ python3 tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py \
 
 ## See also
 
-- [`inty-local-backend-repl`](../inty-local-backend-repl/SKILL.md)
+- [`launch-inty-backend`](../launch-inty-backend/SKILL.md)
 - [`langsmith-download-run`](../langsmith-download-run/SKILL.md)
 - [`inty-server-module-verify`](../inty-server-module-verify/SKILL.md)
 - [`docs/companion_harness/ARCH.md`](../../../docs/companion_harness/ARCH.md)

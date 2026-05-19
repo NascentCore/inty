@@ -20,10 +20,18 @@ from experimental.perpetual_agent.core_v2.repositories.events_repo import (
 from experimental.perpetual_agent.core_v2.repositories.memory_repo import (
     MemoryRepository,
 )
-from experimental.perpetual_agent.core_v2.repositories.plan_repo import PlanRepository
-from experimental.perpetual_agent.core_v2.repositories.sqlite_db import SQLiteDatabase
-from experimental.perpetual_agent.core_v2.repositories.sqlite_schema import init_schema
-from experimental.perpetual_agent.core_v2.runtime.orchestrator import Orchestrator
+from experimental.perpetual_agent.core_v2.repositories.plan_repo import (
+    PlanRepository,
+)
+from experimental.perpetual_agent.core_v2.repositories.sqlite_db import (
+    SQLiteDatabase,
+)
+from experimental.perpetual_agent.core_v2.repositories.sqlite_schema import (
+    init_schema,
+)
+from experimental.perpetual_agent.core_v2.runtime.orchestrator import (
+    Orchestrator,
+)
 
 
 def _build_orchestrator(
@@ -75,7 +83,9 @@ def test_scheduler_dispatches_sms_and_marks_done(tmp_path: Path) -> None:
         lambda *, chat_id, text: None,
     )
     now = datetime(2026, 3, 24, 13, 0, tzinfo=timezone.utc)
-    action = _build_due_action(action_id="act_sms_1", channel=ChannelType.SMS, now=now)
+    action = _build_due_action(
+        action_id="act_sms_1", channel=ChannelType.SMS, now=now
+    )
     plan_repo.save_action_idempotent(action)
 
     executed = orchestrator.run_scheduler_once(now=now)
@@ -84,11 +94,18 @@ def test_scheduler_dispatches_sms_and_marks_done(tmp_path: Path) -> None:
     assert len(sms_adapter.sent_messages) == 1
     assert sms_adapter.sent_messages[0]["recipient"] == "+19999999999"
     assert events_repo.event_exists("action_act_sms_1_result")
-    assert plan_repo.list_due_actions(now=now + timedelta(minutes=5), limit=10) == []
+    assert (
+        plan_repo.list_due_actions(now=now + timedelta(minutes=5), limit=10)
+        == []
+    )
 
 
-def test_scheduler_marks_failed_when_telegram_chat_id_missing(tmp_path: Path) -> None:
-    db = SQLiteDatabase(str(tmp_path / "core_v2_scheduler_missing_chat.sqlite3"))
+def test_scheduler_marks_failed_when_telegram_chat_id_missing(
+    tmp_path: Path,
+) -> None:
+    db = SQLiteDatabase(
+        str(tmp_path / "core_v2_scheduler_missing_chat.sqlite3")
+    )
     init_schema(db)
     events_repo = EventsRepository(db)
     memory_repo = MemoryRepository(db)
@@ -121,5 +138,8 @@ def test_scheduler_marks_failed_when_telegram_chat_id_missing(tmp_path: Path) ->
     ):
         orchestrator.run_scheduler_once(now=now)
 
-    assert plan_repo.list_due_actions(now=now + timedelta(minutes=5), limit=10) == []
+    assert (
+        plan_repo.list_due_actions(now=now + timedelta(minutes=5), limit=10)
+        == []
+    )
     assert not events_repo.event_exists("action_act_tg_missing_chat_result")

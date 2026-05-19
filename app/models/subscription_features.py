@@ -76,12 +76,20 @@ class SubscriptionFeatures:
     @classmethod
     def get_real_features(cls) -> Dict[str, Dict[str, Any]]:
         """获取真实权益功能"""
-        return {k: v for k, v in cls.FEATURES.items() if v["type"] == FeatureType.REAL}
+        return {
+            k: v
+            for k, v in cls.FEATURES.items()
+            if v["type"] == FeatureType.REAL
+        }
 
     @classmethod
     def get_fake_features(cls) -> Dict[str, Dict[str, Any]]:
         """获取虚假权益功能"""
-        return {k: v for k, v in cls.FEATURES.items() if v["type"] == FeatureType.FAKE}
+        return {
+            k: v
+            for k, v in cls.FEATURES.items()
+            if v["type"] == FeatureType.FAKE
+        }
 
     @classmethod
     def get_feature_by_key(cls, key: str) -> Dict[str, Any]:

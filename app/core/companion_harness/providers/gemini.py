@@ -12,7 +12,9 @@ from typing import Any
 from google import genai
 from google.genai import types
 
-from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
+from app.utils.google_genai_client import (
+    wrap_google_genai_client_with_langsmith,
+)
 
 
 @dataclass(frozen=True)
@@ -59,7 +61,9 @@ _GOOGLE_ENV_POP = (
 
 @contextmanager
 def _without_google_env() -> Iterator[None]:
-    saved = {key: os.environ[key] for key in _GOOGLE_ENV_POP if key in os.environ}
+    saved = {
+        key: os.environ[key] for key in _GOOGLE_ENV_POP if key in os.environ
+    }
     try:
         for key in _GOOGLE_ENV_POP:
             os.environ.pop(key, None)
@@ -72,7 +76,9 @@ def _without_google_env() -> Iterator[None]:
 
 def _to_hashable(value: Any) -> Any:
     if isinstance(value, dict):
-        return tuple(sorted((str(k), _to_hashable(v)) for k, v in value.items()))
+        return tuple(
+            sorted((str(k), _to_hashable(v)) for k, v in value.items())
+        )
     if isinstance(value, (list, tuple, set)):
         return tuple(_to_hashable(v) for v in value)
     return value
@@ -89,7 +95,9 @@ def _build_cache_key(options: GeminiClientOptions) -> _GeminiClientCacheKey:
         ),
         wrap_langsmith=options.wrap_langsmith,
         tags=tuple(options.tags),
-        metadata_items=_to_hashable(options.metadata) if options.metadata else (),
+        metadata_items=(
+            _to_hashable(options.metadata) if options.metadata else ()
+        ),
         chat_name=options.chat_name,
         credentials_path=options.credentials_path,
         clear_google_env=options.clear_google_env,

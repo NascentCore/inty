@@ -15,7 +15,9 @@ RECENT_MESSAGES_LIMIT = 10
 from loguru import logger
 
 
-def _format_messages_as_context(messages: list[dict[str, Any]], recent_n: int) -> str:
+def _format_messages_as_context(
+    messages: list[dict[str, Any]], recent_n: int
+) -> str:
     """将最近 N 条 user/assistant 消息格式化为对话上下文字符串（不含 tool 消息）。"""
     lines: list[str] = []
     for m in messages[-recent_n:]:

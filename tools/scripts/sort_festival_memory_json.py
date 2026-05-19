@@ -42,7 +42,9 @@ def main(
     payload["memories"] = sorted(memories, key=_sort_key)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
-    print(f"Sorted {len(memories)} memory(ies) by (user_name, agent_name) in {path}")
+    print(
+        f"Sorted {len(memories)} memory(ies) by (user_name, agent_name) in {path}"
+    )
 
 
 if __name__ == "__main__":

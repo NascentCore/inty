@@ -167,7 +167,9 @@ def load_user_profile(runtime_paths: RuntimePaths) -> UserProfile:
     return UserProfile.model_validate(raw)
 
 
-def _render_char_user_template(text: str, *, char_name: str, user_name: str) -> str:
+def _render_char_user_template(
+    text: str, *, char_name: str, user_name: str
+) -> str:
     rendered = re.sub(r"\{\{\s*char\s*\}\}", char_name, text)
     rendered = re.sub(r"\{\{\s*user\s*\}\}", user_name, rendered)
     return rendered
@@ -337,7 +339,9 @@ def _image_part_from_file(path: str):
 
     p = Path(path)
     data = p.read_bytes()
-    return types.Part.from_bytes(data=data, mime_type=_guess_mime_from_path(path))
+    return types.Part.from_bytes(
+        data=data, mime_type=_guess_mime_from_path(path)
+    )
 
 
 def _extract_inline_image_bytes(response: Any) -> bytes:

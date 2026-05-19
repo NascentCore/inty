@@ -13,7 +13,9 @@ from experimental.perpetual_agent.telegram_agentic_loop import (
     run_telegram_agentic_completion_loop,
     run_telegram_llm_session,
 )
-from experimental.perpetual_agent.telegram_channel import TelegramIncomingMessage
+from experimental.perpetual_agent.telegram_channel import (
+    TelegramIncomingMessage,
+)
 
 
 def _incoming(
@@ -109,7 +111,9 @@ def test_completion_loop_drains_before_each_api_call() -> None:
     assert bot.get_text_calls == [(None, 0)]
 
 
-def test_completion_loop_second_round_includes_telegram_during_tool_gap() -> None:
+def test_completion_loop_second_round_includes_telegram_during_tool_gap() -> (
+    None
+):
     """After first drain, a second poll (before next completion) pulls new user text."""
     bot = _FakeBotApi(
         batches=[
@@ -126,14 +130,22 @@ def test_completion_loop_second_round_includes_telegram_during_tool_gap() -> Non
     tc = SimpleNamespace(
         id="c1",
         type="function",
-        function=SimpleNamespace(name="pulse", arguments=json.dumps({"seconds": 0})),
+        function=SimpleNamespace(
+            name="pulse", arguments=json.dumps({"seconds": 0})
+        ),
     )
     resp_tool = SimpleNamespace(
-        choices=[SimpleNamespace(message=SimpleNamespace(content="", tool_calls=[tc]))]
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="", tool_calls=[tc])
+            )
+        ]
     )
     resp_final = SimpleNamespace(
         choices=[
-            SimpleNamespace(message=SimpleNamespace(content="done", tool_calls=None))
+            SimpleNamespace(
+                message=SimpleNamespace(content="done", tool_calls=None)
+            )
         ]
     )
     client = _FakeClient([resp_tool, resp_final])
@@ -169,18 +181,24 @@ def test_run_telegram_llm_session_processes_two_inbound_batches() -> None:
     )
     r1 = SimpleNamespace(
         choices=[
-            SimpleNamespace(message=SimpleNamespace(content="R1", tool_calls=None))
+            SimpleNamespace(
+                message=SimpleNamespace(content="R1", tool_calls=None)
+            )
         ]
     )
     r2 = SimpleNamespace(
         choices=[
-            SimpleNamespace(message=SimpleNamespace(content="R2", tool_calls=None))
+            SimpleNamespace(
+                message=SimpleNamespace(content="R2", tool_calls=None)
+            )
         ]
     )
     client = _FakeClient([r1, r2])
 
     def factory(api):  # noqa: ANN001
-        return TelegramInbox(bot_api=api, poll_timeout_seconds=1, bound_chat_id="9")
+        return TelegramInbox(
+            bot_api=api, poll_timeout_seconds=1, bound_chat_id="9"
+        )
 
     run_telegram_llm_session(
         model="m",
@@ -201,9 +219,12 @@ def test_run_telegram_llm_session_processes_two_inbound_batches() -> None:
 
 
 @pytest.fixture
-def caplog_telegram_llm(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
+def caplog_telegram_llm(
+    caplog: pytest.LogCaptureFixture,
+) -> pytest.LogCaptureFixture:
     caplog.set_level(
-        logging.INFO, logger="experimental.perpetual_agent.telegram_agentic_loop"
+        logging.INFO,
+        logger="experimental.perpetual_agent.telegram_agentic_loop",
     )
     return caplog
 

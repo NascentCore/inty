@@ -29,7 +29,9 @@ class ChatAPIUser(HttpUser):
         super().__init__(*args, **kwargs)
         self.auth_token: Optional[str] = None
         self.user_id: Optional[str] = None
-        self.agent_id: str = "e27c11d0-7a23-4c54-a109-66623af62d63"  # Nora Agent ID
+        self.agent_id: str = (
+            "e27c11d0-7a23-4c54-a109-66623af62d63"  # Nora Agent ID
+        )
         self.chat_messages = [
             "你好Nora，今天过得怎么样？",
             "农场里最近有什么新鲜事吗？",
@@ -73,7 +75,9 @@ class ChatAPIUser(HttpUser):
                         # 根据实际API响应结构解析字段
                         response_data = data["data"]
                         self.auth_token = response_data.get("token")
-                        self.user_id = response_data.get("guest_id")  # 修正字段名
+                        self.user_id = response_data.get(
+                            "guest_id"
+                        )  # 修正字段名
 
                         if self.auth_token and self.user_id:
                             response.success()
@@ -93,7 +97,9 @@ class ChatAPIUser(HttpUser):
                     )
                     return False
             else:
-                response.failure(f"HTTP {response.status_code}: {response.text}")
+                response.failure(
+                    f"HTTP {response.status_code}: {response.text}"
+                )
                 return False
 
     def get_auth_headers(self) -> Dict[str, str]:
@@ -136,7 +142,9 @@ class ChatAPIUser(HttpUser):
                         # 成功收到回复
                         response.success()
                     else:
-                        response.failure(f"业务错误: {data.get('message', 'Unknown')}")
+                        response.failure(
+                            f"业务错误: {data.get('message', 'Unknown')}"
+                        )
                 except Exception as e:
                     response.failure(f"解析响应失败: {e}")
             elif response.status_code == 401:
@@ -144,7 +152,9 @@ class ChatAPIUser(HttpUser):
                 self.register_guest()
                 response.failure("认证失败，已重新注册")
             else:
-                response.failure(f"HTTP {response.status_code}: {response.text}")
+                response.failure(
+                    f"HTTP {response.status_code}: {response.text}"
+                )
 
 
 if __name__ == "__main__":

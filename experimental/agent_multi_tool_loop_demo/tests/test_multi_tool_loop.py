@@ -51,7 +51,9 @@ class _FakeCompletions:
                                     function=SimpleNamespace(
                                         name="update_profile_picture",
                                         arguments=json.dumps(
-                                            {"image_url": self._generated_image_url}
+                                            {
+                                                "image_url": self._generated_image_url
+                                            }
                                         ),
                                     ),
                                 )
@@ -95,5 +97,6 @@ def test_llm_driven_tool_calls_update_profile_image_sequentially() -> None:
         == result.executed_tools[0].output["image_url"]
     )
     assert (
-        result.final_profile_image_url == result.executed_tools[0].output["image_url"]
+        result.final_profile_image_url
+        == result.executed_tools[0].output["image_url"]
     )

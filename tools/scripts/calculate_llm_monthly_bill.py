@@ -99,7 +99,9 @@ def parse_model_pricing(pricing_line: str) -> ModelPricing:
     if not model_id:
         raise ValueError("model_id 不能为空")
 
-    input_price = _require_non_negative_float(float(parts[1]), "input_per_million_usd")
+    input_price = _require_non_negative_float(
+        float(parts[1]), "input_per_million_usd"
+    )
     output_price = _require_non_negative_float(
         float(parts[2]), "output_per_million_usd"
     )
@@ -133,12 +135,18 @@ def parse_model_pricings(pricing_lines: list[str]) -> dict[str, ModelPricing]:
     return model_pricings
 
 
-def calculate_bill_for_model(usage: UsageData, pricing: ModelPricing) -> ModelBill:
+def calculate_bill_for_model(
+    usage: UsageData, pricing: ModelPricing
+) -> ModelBill:
     input_cost = round(
-        usage.input_tokens / TOKENS_PER_MILLION * pricing.input_per_million_usd, 6
+        usage.input_tokens / TOKENS_PER_MILLION * pricing.input_per_million_usd,
+        6,
     )
     output_cost = round(
-        usage.output_tokens / TOKENS_PER_MILLION * pricing.output_per_million_usd, 6
+        usage.output_tokens
+        / TOKENS_PER_MILLION
+        * pricing.output_per_million_usd,
+        6,
     )
     cache_read_cost = round(
         usage.cache_read_tokens
@@ -152,7 +160,9 @@ def calculate_bill_for_model(usage: UsageData, pricing: ModelPricing) -> ModelBi
         * pricing.cache_write_per_million_usd,
         6,
     )
-    total_cost = round(input_cost + output_cost + cache_read_cost + cache_write_cost, 6)
+    total_cost = round(
+        input_cost + output_cost + cache_read_cost + cache_write_cost, 6
+    )
     return ModelBill(
         model_id=pricing.model_id,
         input_cost_usd=input_cost,
@@ -207,7 +217,9 @@ def _prompt_non_negative_int(prompt: str) -> int:
 
 def _collect_pricing_interactively() -> dict[str, ModelPricing]:
     print("请输入模型定价（支持多条），格式：")
-    print("  model_id,input,output 或 model_id,input,output,cache_read,cache_write")
+    print(
+        "  model_id,input,output 或 model_id,input,output,cache_read,cache_write"
+    )
     print("示例：gpt-4o-mini,0.15,0.60,0.075,0.30")
     print("输入空行结束。")
     model_pricings: dict[str, ModelPricing] = {}
@@ -235,8 +247,12 @@ def _collect_usage_interactively() -> UsageData:
     print("\n步骤 1/2：输入月度用量数据（token）")
     input_tokens = _prompt_non_negative_int("输入 token 用量: ")
     output_tokens = _prompt_non_negative_int("输出 token 用量: ")
-    cache_read_tokens = _prompt_non_negative_int("缓存读 token 用量（无则填 0）: ")
-    cache_write_tokens = _prompt_non_negative_int("缓存写 token 用量（无则填 0）: ")
+    cache_read_tokens = _prompt_non_negative_int(
+        "缓存读 token 用量（无则填 0）: "
+    )
+    cache_write_tokens = _prompt_non_negative_int(
+        "缓存写 token 用量（无则填 0）: "
+    )
     usage = UsageData(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
@@ -247,7 +263,9 @@ def _collect_usage_interactively() -> UsageData:
     return usage
 
 
-def _collect_models_interactively(model_pricings: dict[str, ModelPricing]) -> list[str]:
+def _collect_models_interactively(
+    model_pricings: dict[str, ModelPricing],
+) -> list[str]:
     print("\n步骤 2/2：选择参与计算的模型（可多选）")
     print("可选模型：")
     for model_id in sorted(model_pricings.keys()):
@@ -258,7 +276,9 @@ def _collect_models_interactively(model_pricings: dict[str, ModelPricing]) -> li
         try:
             selected = _normalize_selected_models([raw])
             missing = [
-                model_id for model_id in selected if model_id not in model_pricings
+                model_id
+                for model_id in selected
+                if model_id not in model_pricings
             ]
             if missing:
                 print(f"以下模型不存在: {', '.join(missing)}")
@@ -312,12 +332,16 @@ def _usage_from_args_or_prompt(
         else _prompt_non_negative_int("输出 token 用量: ")
     )
     cache_read_tokens = (
-        _require_non_negative_int(usage_cache_read_tokens, "usage_cache_read_tokens")
+        _require_non_negative_int(
+            usage_cache_read_tokens, "usage_cache_read_tokens"
+        )
         if usage_cache_read_tokens is not None
         else _prompt_non_negative_int("缓存读 token 用量（无则填 0）: ")
     )
     cache_write_tokens = (
-        _require_non_negative_int(usage_cache_write_tokens, "usage_cache_write_tokens")
+        _require_non_negative_int(
+            usage_cache_write_tokens, "usage_cache_write_tokens"
+        )
         if usage_cache_write_tokens is not None
         else _prompt_non_negative_int("缓存写 token 用量（无则填 0）: ")
     )
@@ -334,7 +358,9 @@ def _selected_models_from_args_or_prompt(
 ) -> list[str]:
     if select_model:
         selected = _normalize_selected_models(select_model)
-        missing = [model_id for model_id in selected if model_id not in model_pricings]
+        missing = [
+            model_id for model_id in selected if model_id not in model_pricings
+        ]
         if missing:
             raise ValueError(f"以下模型不存在: {', '.join(missing)}")
         return selected
@@ -380,11 +406,15 @@ def main(
     ] = None,
     usage_input_tokens: Annotated[
         int | None,
-        cyclopts.Parameter(name="--usage-input-tokens", help="月输入 token 用量"),
+        cyclopts.Parameter(
+            name="--usage-input-tokens", help="月输入 token 用量"
+        ),
     ] = None,
     usage_output_tokens: Annotated[
         int | None,
-        cyclopts.Parameter(name="--usage-output-tokens", help="月输出 token 用量"),
+        cyclopts.Parameter(
+            name="--usage-output-tokens", help="月输出 token 用量"
+        ),
     ] = None,
     usage_cache_read_tokens: Annotated[
         int | None,
@@ -408,7 +438,9 @@ def main(
     ] = None,
     output_json: Annotated[
         str | None,
-        cyclopts.Parameter(name="--output-json", help="将计算结果写入 JSON 文件"),
+        cyclopts.Parameter(
+            name="--output-json", help="将计算结果写入 JSON 文件"
+        ),
     ] = None,
 ) -> None:
     logger.debug("开始执行月度账单计算")
