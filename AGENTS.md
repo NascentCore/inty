@@ -112,6 +112,13 @@ such experience is between human users and AI, but they have real-world patterns
 - Derive solution from the essence of the problem.
 - Test everything, often, as you write it.
 
+### Antipatterns to avoid
+
+- **Over engineering**: speculation, defensive programming, optionality, multiple alternatives, etc.
+  - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
+  only add configurability the user explicitly requested.
+  - **Do not add enable/disable knob for new features**: just implement the features.
+
 ### Smells
 
 Critique the code when encounter the follow situations:
@@ -143,19 +150,18 @@ that means the code lacks hierarchy.
 
 ### Documentation
 
-**Write for human readers to understand your intention and designs.**
+**Write for human readers to understand.**
 
-- Scope: `.md` files that are not `AGENTS.md`, package docstring in `__init__.py`, module docstring at the top of `.py` file, function/class docstrings, code comments.
-- Do not reference code in markdown files.
-- 
-- 文档开头讲明 scope，交代完整概念与适用边界；使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
-- **最底层（源码与实现细节）**：
-document the intention and effect of the code, do not explain how the code works.
-  - Write TODOs close to the code place should be changed.
-- Things do write:
-  - higher-logical-level design of components and systems
-  - engineers' intended states of the code files
-  - future directions
+Scope (rules here applies to):
+- `.md` files that are not `AGENTS.md` (All `AGENTS.md` are written & maintained by humans)
+- package docstring in `__init__.py`
+- module docstring at the top of `.py` file
+- function/class docstrings
+- code lines comment
+
+- Do not include implementation details (like code snippets) in markdown files.
+- Order information from most to least important
+- Document the intention of the code, not how the code works
 
 下面的例子是好的文档，把关键代码概念之间的逻辑关联扼要地说明：
 
@@ -163,11 +169,3 @@ document the intention and effect of the code, do not explain how the code works
 turn-lock 是归属到 websocket 连接上
 tool_bg_idle 是归属到 CompanionSession 上
 ```
-
-### Antipatterns to avoid
-
-- **Over engineering**: speculation, defensive programming, optionality, multiple alternatives, etc.
-  - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
-  only add configurability the user explicitly requested.
-  - **Do not add enable/disable knob for new features**: just implement the features.
-
