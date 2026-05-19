@@ -1,5 +1,7 @@
 # `inty_v2_repl`：终端里的 `/api/v1/chat/ws` WebSocket 客户端
 
+**DO NOT MAINTAIN BACKWARD COMPATIBILITY**
+
 这是一个 **只负责传输与交互** 的 REPL——把你在终端输入的每一行变成 **合法的聊天 WebSocket 上行**，并把下行业务帧打印出来。
 用来测试 Inty 后端的真实表现。
 
