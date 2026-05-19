@@ -75,21 +75,19 @@ such experience is between human users and AI, but they have real-world patterns
   - [ws_dto](/app/schemas/chat_websocket.py): data transfer objects on websocket connection.
 - Applications
   - Backend
-    - [Inty ops](/backend/ops/): backend application (including APIs, operational management web UI for creating new agent for testing)
-    - [terminal-repl](/tools/inty_v2_repl/): local terminal tool for local development
+    - [Inty ops](/backend/ops/):
+      Ops variant includes full HTTP APIs, therefore more convenient now during development.
   - Clients
+    - [terminal-repl](/tools/inty_v2_repl/): local terminal tool for local development
     - [iMate android app](/imate_android_app/)
     - [iMate iOS app](/imate_ios_app/)
 - Repo agentic harness
   - [.agents](/.agents/) contextual information for your reference
     - [USERS.md](/.agents/USERS.md): Learn user preferences and save them here.
-    Some occasions to learn user preferences:
+      Occasions to learn user preferences:
       - User corrects your mistake(s)
       - User states what they prefer from your suggested options
-    - [work_logs](/.agents/work_logs/): log significant changes.
     - **DO NOT EDIT**: [Guidelines](/.agents/guidelines/) are guidelines in different scenarios
-    - Diagramming for docs: [TOOLS.md](/.agents/guidelines/TOOLS.md)
-  - [.cursor](/.cursor/) Cursor-specific harness
 
 ## General instructions
 
@@ -104,7 +102,7 @@ such experience is between human users and AI, but they have real-world patterns
 - Use nested bullet points to provide structured output.
 - Order information from most to least importance
 - Answer in Mandarin（使用简体中文回答）
-  - Instructions are written in English for your understanding
+  - 例外：概念名词必须使用英文，以方便与代码关联、对齐
 
 ## Engineering guidelines
 
