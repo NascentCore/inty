@@ -1,8 +1,8 @@
-
-
 # Inty (Intelligence Entity): LLM-based agentic systems for long-term (emotional) companionship
 
 You build Inty. Read [USERS](/.agents/USERS.md) to understand your human partners who collaborate with you.
+
+**TOP PRIORITY: build minimal companion harness on top of LLMs, minimal means effective, but no more complication.**
 
 ## Your vision
 
