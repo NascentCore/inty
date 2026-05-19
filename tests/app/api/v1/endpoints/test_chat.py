@@ -115,8 +115,10 @@ def chat_app_with_postgres_db(db_session):
         yield app, user_id, db_session
     finally:
         app.dependency_overrides.clear()
-        db_session.delete(db_session.get(UserModel, user_id))
-        db_session.commit()
+        user_row = db_session.get(UserModel, user_id)
+        if user_row is not None:
+            db_session.delete(user_row)
+            db_session.commit()
 
 
 def _decode_user_id_from_token(token: str) -> str:
@@ -1062,13 +1064,19 @@ def _setup_companion_ws_chat_test_env_with_postgres(
     companion_chat_service.clear_companion_chat_service_caches()
     session_id = generate_session_id(chat_id)
 
-    async def fake_get_or_create_chat_by_agent(db, uid, aid, **_kwargs):
-        return SimpleNamespace(id=chat_id, agent_id=aid)
+    async def fake_get_or_create_chat_by_agent(
+        db, user_id=None, agent_id=None, **_kwargs
+    ):
+        _ = user_id
+        return SimpleNamespace(id=chat_id, agent_id=agent_id)
 
     async def fake_get_agent_for_chat(db, agent_id=None, **_kwargs):
         return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
 
-    async def fake_get_or_create_chat_settings(db, cid, uid, aid):
+    async def fake_get_or_create_chat_settings(
+        db, chat_id_arg, user_id=None, agent_id=None, **_kwargs
+    ):
+        _ = (chat_id_arg, user_id, agent_id)
         return SimpleNamespace(
             voice_enabled=False,
             voice_id=None,
@@ -1077,7 +1085,8 @@ def _setup_companion_ws_chat_test_env_with_postgres(
             language="en",
         )
 
-    async def fake_get_user_current_subscription(db, uid):
+    async def fake_get_user_current_subscription(db, user_id, **_kwargs):
+        _ = user_id
         return None
 
     async def fake_record_usage(*args, **kwargs):
