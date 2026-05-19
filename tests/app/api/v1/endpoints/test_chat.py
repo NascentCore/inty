@@ -41,7 +41,10 @@ from app.schemas.response import (
 )
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
-from app.services.voice_service import voice_service as global_voice_service
+from app.services.voice_service import (
+    VoiceGenerationResult,
+    voice_service as global_voice_service,
+)
 from app.services import companion_chat_service
 from app.services.global_services import (
     subscription_service as global_subscription_service,
@@ -2917,6 +2920,72 @@ def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(
     assert response.status_code == 200
     assert body["code"] == 200
     assert captured_voice_id["value"] == "google/Zephyr"
+
+
+def test_v1_chat_completions_http_uses_legacy_assistant_voice_not_ws_tts(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """HTTP /api/v1/chat/completions must keep synthesize_chat_assistant_audio; WS TTS is separate."""
+    legacy_called: dict[str, bool] = {"value": False}
+
+    _stub_success_chat_completion_with_multimodal_response(
+        monkeypatch,
+        response_content="voice me",
+    )
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(
+            voice_enabled=True,
+            voice_id="google/Zephyr",
+            style_prompt=None,
+            premium_mode=False,
+            language="en",
+        )
+
+    async def tracking_legacy_synthesize(**kwargs):
+        legacy_called["value"] = True
+        assert kwargs["voice_enabled"] is True
+        return (
+            "https://storage.googleapis.com/test-bucket/voice/legacy.wav",
+            1.23,
+        )
+
+    async def forbidden_ws_synthesize(*args, **kwargs):
+        raise AssertionError(
+            "HTTP completions must not call synthesize_chat_ws_voice_message"
+        )
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "synthesize_chat_assistant_audio",
+        tracking_legacy_synthesize,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "synthesize_chat_ws_voice_message",
+        forbidden_ws_synthesize,
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "en",
+    }
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["code"] == 200
+    assert legacy_called["value"] is True
 
 
 def test_v1_chat_completions_returns_text_and_image_content_parts(
