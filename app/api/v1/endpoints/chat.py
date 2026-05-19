@@ -110,6 +110,10 @@ from app.schemas.response import (
 from app.services import agent_service, chat_history_service, chat_service
 from app.services import companion_chat_service
 from app.services.chat_assistant_voice import synthesize_chat_assistant_audio
+from app.services.chat_ws_voice_message import (
+    ChatWsVoiceMessageTtsInput,
+    synthesize_chat_ws_voice_message,
+)
 from app.services.chat_websocket_session import chat_ws_outbound_pump
 from app.services.ws_session_messages import WsOutboundPayload
 from app.services.memory_service import (
@@ -132,7 +136,9 @@ from app.services.push_notification_service import (
     mark_user_push_notifications_as_read,
 )
 from app.services.voice_service import (
+    GENDER_VOICE_MAPPING,
     VoiceService,
+    get_voice_message_narration_mode_from_agent_settings,
     voice_service as default_voice_service,
 )
 from app.utils.openai_client import get_chat_openai_client
@@ -335,6 +341,7 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                     request=merged,
                     current_user=current_user,
                     subscription_svc=subscription_svc,
+                    voice_svc=voice_svc,
                     companion_background_sink=companion_ws.background_sink,
                     companion_ws_foreground_pending=companion_ws.foreground_pending,
                     companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
@@ -1230,39 +1237,21 @@ async def _build_companion_tool_background_ws_payload(
         meta_data=meta_data,
     )
     audio_url: Optional[str] = None
-    if (
-        voice_svc is not None
-        and foreground_voice_ctx is not None
-        and foreground_voice_ctx.get("voice_enabled")
-    ):
-        uid = str(foreground_voice_ctx.get("user_id") or "").strip()
-        if uid:
-            try:
-                r_voice_user = await db.execute(
-                    select(User).where(User.id == uid)
-                )
-                voice_user_row = r_voice_user.scalar_one_or_none()
-            except Exception as e:
-                logger.warning(f"tool_bg load user for voice failed: {e}")
-                voice_user_row = None
-            if voice_user_row is not None:
-                audio_url, _ = await synthesize_chat_assistant_audio(
-                    db=db,
-                    session_id=session_id,
-                    ai_message_id=ai_message_id,
-                    voice_enabled=True,
-                    chat_voice_id=foreground_voice_ctx.get("chat_voice_id"),
-                    agent_voice_id=foreground_voice_ctx.get("agent_voice_id"),
-                    agent_gender=foreground_voice_ctx.get("agent_gender"),
-                    agent_settings=foreground_voice_ctx.get("agent_settings"),
-                    language=request.language,
-                    current_user=voice_user_row,
-                    voice_svc=voice_svc,
-                    response_text_content=ev.text,
-                    use_companion=True,
-                    companion_reply_modality=str(ev.reply_modality or "text"),
-                    companion_voice_script=ev.voice_message_script or "",
-                )
+    if voice_svc is not None and foreground_voice_ctx is not None:
+        audio_url = await _chat_ws_voice_message_audio_url(
+            reply_modality=str(ev.reply_modality or "text"),
+            voice_message_script=ev.voice_message_script or "",
+            assistant_text=ev.text,
+            db=db,
+            voice_svc=voice_svc,
+            session_id=session_id,
+            ai_message_id=ai_message_id,
+            chat_voice_id=foreground_voice_ctx.get("chat_voice_id"),
+            agent_voice_id=foreground_voice_ctx.get("agent_voice_id"),
+            agent_gender=foreground_voice_ctx.get("agent_gender"),
+            agent_settings=foreground_voice_ctx.get("agent_settings"),
+            language=request.language,
+        )
     latest_message_info = None
     try:
         if ai_message_id is not None:
@@ -1342,6 +1331,85 @@ def _companion_ai_meta_from_turn_result(
         scheduled_task_id=scheduled_task_id,
     )
     return dump_chat_ws_companion_wire_meta(meta)
+
+
+def _resolve_chat_ws_voice_id(
+    *,
+    chat_voice_id: Optional[str],
+    agent_voice_id: Optional[str],
+    agent_gender: Optional[str],
+) -> Optional[str]:
+    for raw in (chat_voice_id, agent_voice_id):
+        if raw is not None:
+            resolved = str(raw).strip()
+            if resolved:
+                return resolved
+    if agent_gender is not None:
+        gender_key = str(agent_gender).strip()
+        if gender_key:
+            mapped = GENDER_VOICE_MAPPING.get(gender_key)
+            if mapped:
+                return mapped
+    cfg_voice = global_config_loaded_from_config_yaml.elevenlabs.voice_id
+    if cfg_voice is not None:
+        cfg_resolved = str(cfg_voice).strip()
+        if cfg_resolved:
+            return cfg_resolved
+    return None
+
+
+async def _chat_ws_voice_message_audio_url(
+    *,
+    reply_modality: str,
+    voice_message_script: str,
+    assistant_text: str,
+    db: AsyncSession,
+    voice_svc: VoiceService,
+    session_id: str,
+    ai_message_id: Optional[int],
+    chat_voice_id: Optional[str],
+    agent_voice_id: Optional[str],
+    agent_gender: Optional[str],
+    agent_settings: Any,
+    language: str,
+) -> Optional[str]:
+    if str(reply_modality or "") != "voice_message":
+        return None
+    transcript = (voice_message_script or "").strip() or (assistant_text or "").strip()
+    if not transcript:
+        return None
+    voice_id = _resolve_chat_ws_voice_id(
+        chat_voice_id=chat_voice_id,
+        agent_voice_id=agent_voice_id,
+        agent_gender=agent_gender,
+    )
+    if voice_id is None:
+        return None
+    narration_mode = get_voice_message_narration_mode_from_agent_settings(
+        agent_settings
+    )
+    voice_result = await synthesize_chat_ws_voice_message(
+        ChatWsVoiceMessageTtsInput(transcript=transcript),
+        db=db,
+        voice_svc=voice_svc,
+        voice_id=voice_id,
+        language=language,
+        voice_message_narration_mode=narration_mode,
+    )
+    if voice_result is None or ai_message_id is None:
+        return None
+    audio_url = voice_result.gcs_http_url
+    try:
+        await chat_history_service.update_message_audio_url(
+            db,
+            session_id,
+            str(ai_message_id),
+            audio_url,
+            voice_result.duration_seconds,
+        )
+    except Exception as e:
+        logger.warning(f"chat_ws voice_message persist audio_url failed: {e}")
+    return audio_url
 
 
 async def _persist_companion_user_message_for_bg(
@@ -1597,30 +1665,20 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
             agent_for_voice = await agent_service.get_agent_for_chat(
                 post_db, agent_id=agent_id
             )
-            r_hb_voice_user = await post_db.execute(
-                select(User).where(User.id == user_id)
+            proactive_audio_url = await _chat_ws_voice_message_audio_url(
+                reply_modality=companion_turn.reply_modality,
+                voice_message_script=companion_turn.voice_message_script or "",
+                assistant_text=response_text_content,
+                db=post_db,
+                voice_svc=default_voice_service,
+                session_id=session_id,
+                ai_message_id=ai_message_id,
+                chat_voice_id=chat_settings_hb.voice_id,
+                agent_voice_id=(agent_for_voice or {}).get("voice_id"),
+                agent_gender=(agent_for_voice or {}).get("gender"),
+                agent_settings=(agent_for_voice or {}).get("settings"),
+                language=stub_request.language,
             )
-            hb_voice_user = r_hb_voice_user.scalar_one_or_none()
-            proactive_audio_url: Optional[str] = None
-            if hb_voice_user is not None:
-                proactive_audio_url, _ = await synthesize_chat_assistant_audio(
-                    db=post_db,
-                    session_id=session_id,
-                    ai_message_id=ai_message_id,
-                    voice_enabled=chat_settings_hb.voice_enabled,
-                    chat_voice_id=chat_settings_hb.voice_id,
-                    agent_voice_id=(agent_for_voice or {}).get("voice_id"),
-                    agent_gender=(agent_for_voice or {}).get("gender"),
-                    agent_settings=(agent_for_voice or {}).get("settings"),
-                    language=stub_request.language,
-                    current_user=hb_voice_user,
-                    voice_svc=default_voice_service,
-                    response_text_content=response_text_content,
-                    use_companion=True,
-                    companion_reply_modality=companion_turn.reply_modality,
-                    companion_voice_script=companion_turn.voice_message_script
-                    or "",
-                )
 
             latest_message_info = None
             try:
@@ -1879,30 +1937,20 @@ async def _try_fire_companion_ws_proactive_chat(
             agent_for_voice = await agent_service.get_agent_for_chat(
                 post_db, agent_id=agent_id
             )
-            r_hb_voice_user = await post_db.execute(
-                select(User).where(User.id == user_id)
+            proactive_audio_url = await _chat_ws_voice_message_audio_url(
+                reply_modality=companion_turn.reply_modality,
+                voice_message_script=companion_turn.voice_message_script or "",
+                assistant_text=response_text_content,
+                db=post_db,
+                voice_svc=default_voice_service,
+                session_id=session_id,
+                ai_message_id=ai_message_id,
+                chat_voice_id=chat_settings_hb.voice_id,
+                agent_voice_id=(agent_for_voice or {}).get("voice_id"),
+                agent_gender=(agent_for_voice or {}).get("gender"),
+                agent_settings=(agent_for_voice or {}).get("settings"),
+                language=stub_request.language,
             )
-            hb_voice_user = r_hb_voice_user.scalar_one_or_none()
-            proactive_audio_url: Optional[str] = None
-            if hb_voice_user is not None:
-                proactive_audio_url, _ = await synthesize_chat_assistant_audio(
-                    db=post_db,
-                    session_id=session_id,
-                    ai_message_id=ai_message_id,
-                    voice_enabled=chat_settings_hb.voice_enabled,
-                    chat_voice_id=chat_settings_hb.voice_id,
-                    agent_voice_id=(agent_for_voice or {}).get("voice_id"),
-                    agent_gender=(agent_for_voice or {}).get("gender"),
-                    agent_settings=(agent_for_voice or {}).get("settings"),
-                    language=stub_request.language,
-                    current_user=hb_voice_user,
-                    voice_svc=default_voice_service,
-                    response_text_content=response_text_content,
-                    use_companion=True,
-                    companion_reply_modality=companion_turn.reply_modality,
-                    companion_voice_script=companion_turn.voice_message_script
-                    or "",
-                )
 
             latest_message_info = None
             try:
@@ -2289,6 +2337,7 @@ async def _agent_chat_ws_completions_impl(
     request: ChatCompletionRequest,
     current_user: UserSchema,
     subscription_svc: SubscriptionService,
+    voice_svc: VoiceService = default_voice_service,
     companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
     companion_ws_inner_tick_ctx: dict[str, Any] | None = None,
@@ -2296,11 +2345,12 @@ async def _agent_chat_ws_completions_impl(
 ) -> dict:
     """One companion chat turn for ``/api/v1/chat/ws`` (production WebSocket path).
 
-    Companion kernel + wire envelope only. HTTP-era extras (chat limit gate, TTS,
-    usage accounting, push read side-effects, surprise snap, in-frame memory prompts)
-    stay on ``_agent_chat_completions_impl`` or other routes.
+    Companion kernel + wire envelope; ``voice_message`` modality triggers WS-only TTS.
+    HTTP-era extras (chat limit gate, legacy TTS, usage accounting, push read side-effects,
+    surprise snap, in-frame memory prompts) stay on ``_agent_chat_completions_impl`` or other routes.
     """
     # TODO(cleanup-ws-http-chat-impl): Deduplicate post-turn finalize with HTTP impl where shared.
+    assert voice_svc is not None
     try:
         request_handling_timer = Timer("请求处理")
         logger.debug(
@@ -2360,6 +2410,7 @@ async def _agent_chat_ws_completions_impl(
             raise HTTPException(status_code=404, detail="Agent not found")
 
         session_id = generate_session_id(str(chat.id))
+        ws_audio_url: Optional[str] = None
 
         try:
             with log_time(f"获取聊天设置: chat_id={chat.id}"):
@@ -2498,7 +2549,6 @@ async def _agent_chat_ws_completions_impl(
                             "request": request,
                             "effective_local_id": effective_local_id,
                             "user_id": str(current_user.id),
-                            "voice_enabled": chat_settings.voice_enabled,
                             "chat_voice_id": chat_settings.voice_id,
                             "agent_voice_id": agent_data.get("voice_id"),
                             "agent_gender": agent_data.get("gender"),
@@ -2626,6 +2676,21 @@ async def _agent_chat_ws_completions_impl(
                         response_text_content,
                         response_content_parts,
                     ) = _normalize_chat_response_content(response_content)
+                    ws_audio_url = await _chat_ws_voice_message_audio_url(
+                        reply_modality=companion_turn.reply_modality,
+                        voice_message_script=companion_turn.voice_message_script
+                        or "",
+                        assistant_text=response_text_content,
+                        db=db,
+                        voice_svc=voice_svc,
+                        session_id=session_id,
+                        ai_message_id=ai_message_id,
+                        chat_voice_id=chat_settings.voice_id,
+                        agent_voice_id=agent_data.get("voice_id"),
+                        agent_gender=agent_data.get("gender"),
+                        agent_settings=agent_data.get("settings"),
+                        language=request.language,
+                    )
                     if companion_ws_inner_tick_ctx is not None:
                         apply_companion_ws_inner_tick_coords(
                             companion_ws_inner_tick_ctx,
@@ -2684,7 +2749,7 @@ async def _agent_chat_ws_completions_impl(
             response_content_parts,
             last_user_text,
             latest_message_info,
-            None,
+            ws_audio_url,
             request,
             source_imate_id=request.target_imate_id,
             user_message_id=user_message_id,
@@ -3785,6 +3850,7 @@ async def chat_completions_websocket(
                             request=merged_request,
                             current_user=current_user,
                             subscription_svc=subscription_svc,
+                            voice_svc=voice_svc,
                             companion_background_sink=companion_ws.background_sink,
                             companion_ws_foreground_pending=companion_ws.foreground_pending,
                             companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
