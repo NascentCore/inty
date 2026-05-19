@@ -81,7 +81,7 @@ class ChatWsUserSignedOnFrame(BaseModel):
 
 
 class ChatWsUserSignedOutFrame(BaseModel):
-    """**Client → server** control frame: records user leaving the chat channel for companion CHAT_LOGS.md."""
+    """**Client → server** control frame: records user leaving the chat channel in companion runtime events JSONL."""
 
     type: Literal["user_signed_out"] = "user_signed_out"
     agent_id: str = Field(..., min_length=1)
@@ -120,7 +120,7 @@ class ChatWsUserSignedOutAckFrame(BaseModel):
 
 
 class ChatWsWsConnDroppedFrame(BaseModel):
-    """**Client → server** control frame: prior transport disconnect context for companion CHAT_LOGS.md."""
+    """**Client → server** control frame: prior transport disconnect context for companion runtime events JSONL."""
 
     type: Literal["ws_conn_dropped"] = "ws_conn_dropped"
     agent_id: str = Field(..., min_length=1)
@@ -174,8 +174,18 @@ class ChatWsCompanionWireMetaData(BaseModel):
         description="Client optimistic id; stored under ``localId`` on wire / DB JSON.",
     )
     inner_tick: Optional[bool] = None
-    heartbeat: Optional[bool] = None
-    companion_proactive_heartbeat: Optional[bool] = None
+    # TODO: remove validation_alias for heartbeat; no backward compat needed
+    proactive_chat: Optional[bool] = Field(
+        default=None,
+        validation_alias=AliasChoices("proactive_chat", "heartbeat"),
+    )
+    # TODO: remove validation_alias for companion_proactive_heartbeat; no backward compat needed
+    companion_proactive_chat: Optional[bool] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "companion_proactive_chat", "companion_proactive_heartbeat"
+        ),
+    )
     companion_maintenance_inner_tick: Optional[bool] = None
     companion_scheduled_reminder: Optional[bool] = None
     scheduled_task_id: Optional[str] = Field(

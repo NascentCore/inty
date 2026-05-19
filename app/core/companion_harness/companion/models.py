@@ -41,6 +41,16 @@ class InnerTickActivity(StrEnum):
     PROACTIVE_CHAT = "proactive_chat"
 
 
+class CompanionTurnTrack(StrEnum):
+    """Active production turn entry tracks (1:1 with ``build_system_messages_for_*``)."""
+
+    USER_CHAT = "user_chat"
+    IMPLICIT_SIGN_ON_GREETING = "implicit_sign_on_greeting"
+    INNER_TICK_PROACTIVE_CHAT = "inner_tick_proactive_chat"
+    INNER_TICK_SCHEDULED = "inner_tick_scheduled"
+    INNER_TICK_MAINTENANCE = "inner_tick_maintenance"
+
+
 PresenceSignal = Literal["repl_online", "repl_offline"]
 
 INNER_TICK_SYNTHETIC_USER_TEXT = (
@@ -134,7 +144,7 @@ class CompanionTurnResult(BaseModel):
         default="",
         description=(
             "Exact ``content`` written to the user transcript row for this turn (API/chat_history "
-            "should mirror this for proactive heartbeat parity)."
+            "should mirror this for proactive chat parity)."
         ),
     )
 
@@ -146,7 +156,12 @@ class ChatMessage(BaseModel):
     uuid: str | None = None
     trace_id: str | None = None
     reply_to: str | None = None
-    heartbeat: bool | None = None
+    # TODO: remove validation_alias for heartbeat; no backward compat needed
+    proactive_chat: bool | None = Field(
+        default=None,
+        validation_alias=AliasChoices("proactive_chat", "heartbeat"),
+    )
+    scheduled: bool | None = None
     presence: PresenceSignal | None = None
     repl_online_ack: bool | None = None
     inner_tick: bool | None = None
@@ -404,7 +419,8 @@ def transcript_rows_for_public_chat_llm(
         if (
             m.role == "user"
             and m.inner_tick is True
-            and m.heartbeat is not True
+            and m.proactive_chat is not True
+            and m.scheduled is not True
         ):
             uid = m.uuid
             if uid:
@@ -414,7 +430,8 @@ def transcript_rows_for_public_chat_llm(
         if (
             m.role == "user"
             and m.inner_tick is True
-            and m.heartbeat is not True
+            and m.proactive_chat is not True
+            and m.scheduled is not True
         ):
             continue
         if (

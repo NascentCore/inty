@@ -1,4 +1,8 @@
-"""Turn routing for companion kernel: sync dialogue vs async foreground chat + background tools.
+"""Turn routing for companion kernel: in-turn LLM strategy labels.
+
+``*_SYNC`` members mean a **single in-turn** ``chat_completion`` path (no async foreground chat +
+``tool_background`` split). They do **not** describe WebSocket blocking or whether the HTTP handler
+awaits the full turn.
 
 When tools are enabled, ``run_turn`` resolves the user-visible assistant string from the **foreground**
 envelope chat before spawning ``tool_background``; the latter's tool-model rounds are not awaited for
@@ -19,14 +23,17 @@ BackgroundToolEventSink = Callable[["ToolOutputEvent"], None]
 
 
 class TurnRouteMode(str, Enum):
-    """Which execution strategy run_turn uses for this round.
+    """Which in-turn LLM execution strategy ``run_turn`` uses for this round.
 
+    ``*_SYNC``: one ``chat_completion`` in the turn thread (not WS sync/async semantics).
     When ``tools_enabled``, routing is always ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``
-    (tools run only in ``tool_background``). Otherwise synchronous chat completion
-    uses ``HEARTBEAT_SYNC``, ``INNER_TICK_SYNC``, or ``CHAT_ONLY_SYNC``.
+    (tools run only in ``tool_background``). Otherwise in-turn sync chat uses
+    ``PROACTIVE_CHAT_SYNC``, ``INNER_TICK_SYNC``, or ``CHAT_ONLY_SYNC``.
     """
 
-    HEARTBEAT_SYNC = "heartbeat_sync"
+    # TODO: rename members to drop ``_SYNC`` / avoid leaking execution-strategy names;
+    # prefer track-aligned or product semantics (e.g. inner-tick mode labels).
+    PROACTIVE_CHAT_SYNC = "proactive_chat_sync"
     INNER_TICK_SYNC = "inner_tick_sync"
     CHAT_ONLY_SYNC = "chat_only_sync"
     ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL = (
@@ -44,7 +51,7 @@ def resolve_turn_route_mode(
     if tools_enabled:
         return TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     if inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT:
-        return TurnRouteMode.HEARTBEAT_SYNC
+        return TurnRouteMode.PROACTIVE_CHAT_SYNC
     if inner_tick_turn:
         return TurnRouteMode.INNER_TICK_SYNC
     return TurnRouteMode.CHAT_ONLY_SYNC

@@ -482,6 +482,7 @@ def add_system_message_sync(
         raise
 
 
+# Legacy IntelliMate role-play stack (festival_memory_prompt); not companion harness proactive chat.
 FESTIVAL_MEMORY_PROMPT_CONTENT = (
     "{char} wrote you a secret heartbeat diary. Take a quiet look."
 )

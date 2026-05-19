@@ -54,7 +54,8 @@ def persist_repl_turn_transcript_rows(
     if inner_tick_turn:
         user_row["inner_tick"] = True
     if inner_tick_proactive_chat:
-        user_row["heartbeat"] = True
+        # TODO: use enum for message type, not bool proactive_chat
+        user_row["proactive_chat"] = True
     if repl_online_ack:
         user_row["repl_online_ack"] = True
     if trace_id is not None and trace_id.strip():

@@ -2,6 +2,10 @@
 
 CREATED_BY_AGENT
 
+## 范围与边界
+
+本功能属于 **IntelliMate Android 旧版角色扮演聊天栈**（`chat_history` / `chat_history_service`、节日 `memory` 表投递），**不是** agentic **companion harness** 的 proactive chat（`proactive_chat` inner tick、`turn_routes` 等）。提示文案里的 “secret heartbeat diary” 仅为节日记忆 UI 模板用语，与 harness 调度或 `HEARTBEAT.md` MemoryStore 文档无关。
+
 ## 概述
 
 管理员在 evaluation 中配置节日（名称、日期）、时区和提示词，定时任务或立即执行对「在配置时区下节日自然日 00:00 至次日 04:00 共 28 小时（换算为 UTC）内，该 (用户, 角色) 用户消息数（排除开场白）≥ 配置的 `min_rounds_in_window`（可选，默认 15）」的组合抽取节日回忆，并写入 `memory` 表。节日记忆通过角色详情接口的 `features.festival_memories` 返回给客户端。

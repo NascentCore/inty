@@ -12,7 +12,7 @@ from app.api.v1.endpoints import agents as agents_endpoint
 from app.api.v1.endpoints.agents import generate_background
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.images.types import GeneratedImageProcessResult
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, async_engine
 from app.external_services.fakes.gemini import FakeGeminiClient
 from app.services.global_services import subscription_service
 from app.utils import gemini as gemini_utils
@@ -42,6 +42,9 @@ _SUPPORTED_TEXT_TO_IMAGE_MODELS = sorted(
 
 @pytest.mark.asyncio
 async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pytest.MonkeyPatch):
+    # Reset pool after sync TestClient WebSocket tests may close the prior event loop.
+    await async_engine.dispose()
+
     user_id = f"user-text-image-{uuid.uuid4().hex}"
     readable_id = uuid.uuid4().hex[:8]
     urls: list[str] = []

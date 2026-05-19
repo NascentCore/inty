@@ -3,6 +3,13 @@
 Persists tool return strings under a ``--- Tool results ---`` section on ``source=tool_bg``
 transcript rows so the following ``run_turn`` sees them in chat/tool message assembly.
 Optional ``tool_bg_idle_event`` coordinates per-session ordering with ``turn.run_turn``.
+
+TODO(tool-bg-idle-starves-user-chat): If the background thread never reaches ``finally``
+below, ``tool_bg_idle`` stays cleared and ``run_turn`` on user/proactive turns blocks
+behind ``turn_lock`` (maintenance inner-tick is the common trigger). Intended: watchdog,
+cancel, or always release idle on thread exit.
+Issues: https://github.com/NascentCore/inty/issues/3123,
+https://github.com/NascentCore/inty/issues/3113.
 """
 
 from __future__ import annotations
@@ -797,7 +804,6 @@ async def _run_background_tool_loop(
                 inner_tick_turn=inner_tick_turn,
                 inner_tick_activity=inner_tick_activity,
                 messages=messages_with_tool_results,
-                tool_side_compact_system_prompt=True,
                 implicit_signal_bundle=implicit_signal_bundle,
             )
 
@@ -1130,6 +1136,9 @@ def start_tool_background_job(
                 clear_tool_background_db_loop()
         finally:
             companion_llm_runtime_event_bind_ctx.reset(llm_bg_bind_token)
+            # TODO(tool-bg-idle-starves-user-chat): Sole normal path that sets idle after
+            # clear() below; hung LLM/tool loop here starves user chat on the same session.
+            # https://github.com/NascentCore/inty/issues/3123
             if tool_bg_idle_event is not None:
                 tool_bg_idle_event.set()
             _unregister_thread(threading.current_thread())

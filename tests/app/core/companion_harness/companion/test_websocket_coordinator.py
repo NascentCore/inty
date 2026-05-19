@@ -50,22 +50,22 @@ async def test_companion_websocket_coordinator_foreground_pending_lifecycle() ->
 
 
 @pytest.mark.asyncio
-async def test_companion_websocket_coordinator_heartbeat_refresh_preserves_same_coords_throttle() -> None:
+async def test_companion_websocket_coordinator_inner_tick_refresh_preserves_same_coords_throttle() -> None:
     coordinator = CompanionWebSocketCoordinator.for_current_loop()
 
-    coordinator.store_heartbeat_coords(user_id="u1", agent_id="a1", chat_id=10)
+    coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
     coordinator.mark_maintenance_inner_tick_fired(123.5)
-    coordinator.store_heartbeat_coords(user_id="u1", agent_id="a1", chat_id=10)
+    coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
 
-    assert coordinator.snapshot_heartbeat_coords() == {
+    assert coordinator.snapshot_inner_tick_coords() == {
         "user_id": "u1",
         "agent_id": "a1",
         "chat_id": 10,
     }
     assert coordinator.last_maintenance_inner_tick_monotonic() == 123.5
 
-    coordinator.store_heartbeat_coords(user_id="u1", agent_id="a2", chat_id=10)
-    assert coordinator.snapshot_heartbeat_coords() == {
+    coordinator.store_inner_tick_coords(user_id="u1", agent_id="a2", chat_id=10)
+    assert coordinator.snapshot_inner_tick_coords() == {
         "user_id": "u1",
         "agent_id": "a2",
         "chat_id": 10,

@@ -158,6 +158,10 @@ because the change is a package/kernel prompt behavior, not a public API.
 - No rich lore generator.
 - No unsupported claim that Inty occupies physical space.
 
+## World Capsule（计划中）
+
+见 [WORLD_CAPSULES.md](../docs/companion_harness/WORLD_CAPSULES.md)。世界观细节与 `TECHNO_CORE.md` 宪法分离；非 lore 生成器。
+
 ## Final Review Checklist
 
 - The final diff remains minimal and focused.

@@ -1,6 +1,6 @@
 """Stage contracts for preparing one production companion turn.
 
-The runtime behavior still lives in ``turn.run_turn``. This module names the
+The runtime behavior still lives in ``turn._run_companion_turn_core``. This module names the
 front half of that function as explicit stages so the production pipeline can
 be split without changing WebSocket, MemoryStore, or tool-background behavior.
 """
@@ -17,9 +17,9 @@ from app.core.config import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
-from .heartbeat import (
-    HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
-    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+from .proactive_chat import (
+    PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
+    PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
 )
 from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
@@ -37,6 +37,7 @@ from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     AssistantTurnSource,
     ChatMessage,
+    CompanionTurnTrack,
     ContextMeta,
     InnerTickActivity,
     PromptBundle,
@@ -45,6 +46,7 @@ from .models import (
     load_prompt_bundle,
     transcript_for_llm_turn,
 )
+from .turn_track import turn_flags_for_track
 from .prompt_stack import companion_turn_tools_and_system_messages
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
@@ -99,26 +101,22 @@ class CompanionTurnPromptPlan:
 
 def resolve_turn_runtime_flags(
     *,
+    track: CompanionTurnTrack,
     user_text: str,
-    inner_tick_turn: bool,
-    inner_tick_activity: InnerTickActivity,
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> CompanionTurnRuntimeFlags:
     """Normalize user text and turn labels before MemoryStore reads."""
-    tick_proactive = (
-        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
-    )
-    route_inner_activity = (
-        inner_tick_activity if inner_tick_turn else InnerTickActivity.MAINTENANCE
-    )
-    implicit_sign_on_turn = implicit_user_signed_on_chat_turn(
-        implicit_signal_bundle=implicit_signal_bundle,
-        inner_tick_turn=inner_tick_turn,
-    )
+    inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
+    tick_proactive = track == CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+    tick_scheduled = track == CompanionTurnTrack.INNER_TICK_SCHEDULED
+    implicit_sign_on_turn = track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
     effective_user_text = user_text
-    if inner_tick_turn:
+    if tick_scheduled:
+        assert user_text.strip(), "inner_tick_scheduled requires non-empty scheduled_user_text"
+        effective_user_text = user_text
+    elif inner_tick_turn:
         effective_user_text = (
-            PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
+            PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER
             if tick_proactive
             else INNER_TICK_SYNTHETIC_USER_TEXT
         )
@@ -210,14 +208,14 @@ def build_companion_turn_prompt_plan(
     loaded_state: CompanionTurnLoadedState,
     user_text: str,
     memory_bootstrap_type: str,
-    inner_tick_turn: bool,
-    route_inner_activity: InnerTickActivity,
+    track: CompanionTurnTrack,
     tick_proactive: bool,
     implicit_signal_bundle: ImplicitSignalBundle | None,
     implicit_sign_on_turn: bool,
     transcript_compaction: TranscriptCompactionConfig | None,
 ) -> CompanionTurnPromptPlan:
     """Assemble system messages, route, and final request messages."""
+    inner_tick_turn, _route_inner_activity = turn_flags_for_track(track)
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     tools_for_turn, system_messages, route_mode = (
         companion_turn_tools_and_system_messages(
@@ -225,11 +223,7 @@ def build_companion_turn_prompt_plan(
             bundle=loaded_state.bundle,
             context=loaded_state.context,
             memory_bootstrap_type=memory_bootstrap_type,
-            inner_tick_turn=inner_tick_turn,
-            inner_tick_activity=route_inner_activity,
-            tool_side_compact_system_prompt=False,
-            include_significance_perception_slice=None,
-            implicit_signal_bundle=implicit_signal_bundle,
+            track=track,
             implicit_user_signed_on_turn=implicit_sign_on_turn,
         )
     )
@@ -287,7 +281,7 @@ def build_companion_turn_prompt_plan(
 
     if tick_proactive:
         messages.append(
-            {"role": "system", "content": HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE}
+            {"role": "system", "content": PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE}
         )
     time_ctx_system = _companion_user_time_context_system_for_llm(
         implicit_signal_bundle=implicit_signal_bundle,
