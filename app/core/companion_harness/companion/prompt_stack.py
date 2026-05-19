@@ -97,6 +97,10 @@ def companion_system_messages_for_track(
             return build_system_messages_for_inner_tick_proactive_chat(
                 bundle, context
             )
+        case CompanionTurnTrack.INNER_TICK_SCHEDULED:
+            return build_system_messages_for_inner_tick_proactive_chat(
+                bundle, context
+            )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             if route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
                 raise RuntimeError(

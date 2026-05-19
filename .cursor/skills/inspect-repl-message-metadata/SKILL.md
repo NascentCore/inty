@@ -19,6 +19,7 @@ description: >-
 - **Metadata section 长什么样**
   - `[墙钟] <label> <ms>ms` + 可选 `user_msg_uuid=` / `asst=` / `langsmith_trace_id=` / `langsmith_run_id=` + 可选 `langsmith_trace_url=` / `langsmith_run_url=` + 可选 `tool_background_started=true`
   - **label 取值与判定顺序**（实现：[`tools/inty_v2_repl/main.py`](../../../tools/inty_v2_repl/main.py) `_repl_assistant_banner_label`）
+    - `meta_data.companion_scheduled_reminder is True` → `inner-tick scheduled-reminder`（优先于 `inner_tick_activity`）
     - `meta_data.inner_tick_activity` 非空 → `inner-tick {activity}`，其中 `proactive_chat` 显示为 `proactive-chat`，`maintenance` 原样
       - **优先级最高**：即便同帧 `source=tool_bg`，只要 `inner_tick_activity` 在，label 仍是 `inner-tick …`
     - 否则按 `meta_data.source`：`tool_bg` → `toolcall`；`inner_tick` → `inner-tick`；`greeting` → `greeting`；`chat` → `chat`
@@ -31,6 +32,7 @@ description: >-
     - 用户已有 `user-input` 却长时间只有 `[SILENT]` inner-tick、仍无 **`chat`** 行 → 用 [`inty-backend-inspect`](../inty-backend-inspect/SKILL.md) 查 **`tool_bg_idle` / `turn_lock` 排队**
 
 - **从 label 直接判定 inner-tick 模式（首选）**
+  - `inner-tick scheduled-reminder` → `CompanionTurnTrack.INNER_TICK_SCHEDULED`（`schedule_queue` 到期；transcript `scheduled: true`，非 `proactive_chat`）
   - `inner-tick proactive-chat` → `InnerTickActivity.PROACTIVE_CHAT`（陪伴主动聊天）
   - `inner-tick maintenance` → `InnerTickActivity.MAINTENANCE`（运维内 tick）
   - **裸** `inner-tick`（无尾随活动名）→ 旧服务端，未带 `inner_tick_activity`；此时按下条用 LangSmith 定案

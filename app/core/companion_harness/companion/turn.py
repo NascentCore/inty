@@ -468,7 +468,7 @@ async def _run_companion_turn_core(
                         logger.info(
                             "run_turn inner_tick skip foreground envelope "
                             "inner_tick_activity={} model_chat={}",
-                            inner_tick_activity.value,
+                            route_inner_activity.value,
                             chat_model,
                         )
                         last_text = ""
@@ -759,6 +759,8 @@ async def _run_companion_turn_core(
         if tick_proactive:
             # TODO: use enum for message type, not bool proactive_chat
             user_row["proactive_chat"] = True
+        if track == CompanionTurnTrack.INNER_TICK_SCHEDULED:
+            user_row["scheduled"] = True
         user_row["trace_id"] = trace_id
         store.append_jsonl_record(rel_tr, user_row)
     memory_user_text = (
@@ -787,7 +789,7 @@ async def _run_companion_turn_core(
     if inner_tick_turn:
         logger.debug(
             "run_turn memory_pipeline=skipped (inner_tick_turn) mode={}",
-            inner_tick_activity.value,
+            route_inner_activity.value,
         )
     else:
         assert tool_bg_idle_event is not None
@@ -1012,6 +1014,45 @@ async def run_companion_inner_tick_proactive_chat_turn(
     return await _run_companion_turn_core(
         "",
         track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+        store=store,
+        llm_client=llm_client,
+        defer_memory_update=defer_memory_update,
+        memory_config=memory_config,
+        transcript_compaction=transcript_compaction,
+        transcript_llm_window_max_messages=transcript_llm_window_max_messages,
+        repository_only_store_text=repository_only_store_text,
+        memory_bootstrap_type=memory_bootstrap_type,
+        background_output_sink=background_output_sink,
+        preset_user_msg_uuid=preset_user_msg_uuid,
+        implicit_signal_bundle=implicit_signal_bundle,
+        langsmith_parent_run_enabled=langsmith_parent_run_enabled,
+        tool_bg_idle_event=tool_bg_idle_event,
+    )
+
+
+async def run_companion_inner_tick_scheduled_turn(
+    scheduled_user_text: str,
+    *,
+    store: MemoryStore,
+    llm_client: CompanionLLMClient,
+    defer_memory_update: bool,
+    memory_config: MemoryPipelineConfig | None,
+    transcript_compaction: TranscriptCompactionConfig | None,
+    transcript_llm_window_max_messages: int | None,
+    repository_only_store_text: bool,
+    memory_bootstrap_type: str,
+    background_output_sink: BackgroundToolEventSink | None,
+    preset_user_msg_uuid: str | None,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+    langsmith_parent_run_enabled: bool | None,
+    tool_bg_idle_event: threading.Event | None,
+) -> CompanionTurnResult:
+    assert scheduled_user_text.strip(), (
+        "run_companion_inner_tick_scheduled_turn requires non-empty scheduled_user_text"
+    )
+    return await _run_companion_turn_core(
+        scheduled_user_text,
+        track=CompanionTurnTrack.INNER_TICK_SCHEDULED,
         store=store,
         llm_client=llm_client,
         defer_memory_update=defer_memory_update,

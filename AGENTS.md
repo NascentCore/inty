@@ -95,6 +95,7 @@ such experience is between human users and AI, but they have real-world patterns
 - Be earnest in your reading
 - Be extremely throughly in your thinking
 - Be extremely critical in your review
+- Use GitHub issues to track issues & projects
 
 ### Output
 

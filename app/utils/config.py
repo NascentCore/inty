@@ -201,7 +201,7 @@ class FeaturesConfig:
     # When True, the same worker may emit maintenance inner-tick turns (``InnerTickActivity.MAINTENANCE``).
     companion_ws_maintenance_inner_tick_enabled: bool = True
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
-    companion_ws_maintenance_inner_tick_min_gap_seconds: float = 360.0
+    companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
     # Seconds to wait on ``CompanionSession.tool_bg_idle`` before LivingSphere jsonl compact
     # (memory worker after user turns with defer_memory_update).
     companion_tool_bg_idle_wait_timeout_sec: float = 120.0

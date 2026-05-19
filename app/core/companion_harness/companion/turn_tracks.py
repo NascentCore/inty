@@ -7,6 +7,7 @@ from .turn import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,
+    run_companion_inner_tick_scheduled_turn,
     run_companion_user_chat_turn,
 )
 
@@ -15,5 +16,6 @@ __all__ = [
     "run_companion_implicit_sign_on_greeting_turn",
     "run_companion_inner_tick_maintenance_turn",
     "run_companion_inner_tick_proactive_chat_turn",
+    "run_companion_inner_tick_scheduled_turn",
     "run_companion_user_chat_turn",
 ]

@@ -45,6 +45,7 @@ from .turn_tracks import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,
+    run_companion_inner_tick_scheduled_turn,
     run_companion_user_chat_turn,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
@@ -370,6 +371,27 @@ class CompanionManager:
         implicit_signal_bundle: ImplicitSignalBundle | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_proactive_chat_turn(
+            **self._track_turn_kwargs(
+                session,
+                defer_memory_update=defer_memory_update,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
+        )
+
+    async def run_inner_tick_scheduled_turn(
+        self,
+        session: CompanionSession,
+        scheduled_user_text: str,
+        *,
+        defer_memory_update: bool = True,
+        background_output_sink: BackgroundToolEventSink | None = None,
+        preset_user_msg_uuid: str | None = None,
+        implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    ) -> CompanionTurnResult:
+        return await run_companion_inner_tick_scheduled_turn(
+            scheduled_user_text,
             **self._track_turn_kwargs(
                 session,
                 defer_memory_update=defer_memory_update,

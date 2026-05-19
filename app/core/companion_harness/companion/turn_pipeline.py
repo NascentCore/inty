@@ -108,9 +108,13 @@ def resolve_turn_runtime_flags(
     """Normalize user text and turn labels before MemoryStore reads."""
     inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
     tick_proactive = track == CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+    tick_scheduled = track == CompanionTurnTrack.INNER_TICK_SCHEDULED
     implicit_sign_on_turn = track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
     effective_user_text = user_text
-    if inner_tick_turn:
+    if tick_scheduled:
+        assert user_text.strip(), "inner_tick_scheduled requires non-empty scheduled_user_text"
+        effective_user_text = user_text
+    elif inner_tick_turn:
         effective_user_text = (
             PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER
             if tick_proactive

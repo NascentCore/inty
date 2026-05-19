@@ -14,6 +14,8 @@ def turn_flags_for_track(track: CompanionTurnTrack) -> tuple[bool, InnerTickActi
             return False, InnerTickActivity.MAINTENANCE
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             return True, InnerTickActivity.PROACTIVE_CHAT
+        case CompanionTurnTrack.INNER_TICK_SCHEDULED:
+            return True, InnerTickActivity.PROACTIVE_CHAT
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             return True, InnerTickActivity.MAINTENANCE
 
@@ -46,6 +48,7 @@ def langsmith_inty_turn_lane_for_companion_track(track: CompanionTurnTrack) -> s
             return "implicit_turn"
         case (
             CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
             | CompanionTurnTrack.INNER_TICK_MAINTENANCE
         ):
             return "inner_tick"

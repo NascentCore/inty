@@ -510,6 +510,42 @@ async def run_companion_inner_tick_proactive_chat_turn_for_api(
     )
 
 
+async def run_companion_inner_tick_scheduled_turn_for_api(
+    *,
+    scheduled_user_text: str,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    defer_memory_update: bool = True,
+    session_id: str | None = None,
+    background_output_sink: BackgroundToolEventSink | None = None,
+    preset_user_msg_uuid: str | None = None,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+) -> CompanionTurnResult:
+    assert scheduled_user_text.strip(), (
+        "run_companion_inner_tick_scheduled_turn_for_api requires non-empty scheduled_user_text"
+    )
+    return await _run_companion_api_track_turn(
+        track_path="inner_tick_scheduled",
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+        user_chars=len(scheduled_user_text),
+        defer_memory_update=defer_memory_update,
+        session_id=session_id,
+        run_track=lambda manager, session: manager.run_inner_tick_scheduled_turn(
+            session,
+            scheduled_user_text,
+            defer_memory_update=defer_memory_update,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
+            implicit_signal_bundle=implicit_signal_bundle,
+        ),
+    )
+
+
 async def run_companion_inner_tick_maintenance_turn_for_api(
     *,
     user_id: str,

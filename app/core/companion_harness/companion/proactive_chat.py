@@ -31,7 +31,7 @@ PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER = (
 )
 
 _NEVER = 86400.0 * 365.0
-_RHYTHM_CLAMP_SEC = (360.0, 900.0)
+_RHYTHM_CLAMP_SEC = (90.0, 900.0)
 
 
 class ProactiveChatConfig(BaseModel):
@@ -44,14 +44,14 @@ class ProactiveChatConfig(BaseModel):
         ),
     )
     base_idle_sec: float = Field(
-        default=360.0,
+        default=30.0,
         description=(
             "Base quiet period after the assistant's last **non-proactive-chat** reply before "
             "another proactive chat round may fire."
         ),
     )
     min_gap_sec: float = Field(
-        default=360.0,
+        default=60.0,
         description=(
             "Minimum interval anchored on the **last proactive-chat synthetic user** row; "
             "prevents back-to-back proactive chat while the user stays silent."

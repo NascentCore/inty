@@ -1477,7 +1477,8 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
             return
         try:
             companion_turn = (
-                await companion_chat_service.run_companion_inner_tick_proactive_chat_turn_for_api(
+                await companion_chat_service.run_companion_inner_tick_scheduled_turn_for_api(
+                    scheduled_user_text=synthetic_user_text,
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_row_id,

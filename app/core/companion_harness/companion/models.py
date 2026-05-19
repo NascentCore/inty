@@ -47,6 +47,7 @@ class CompanionTurnTrack(StrEnum):
     USER_CHAT = "user_chat"
     IMPLICIT_SIGN_ON_GREETING = "implicit_sign_on_greeting"
     INNER_TICK_PROACTIVE_CHAT = "inner_tick_proactive_chat"
+    INNER_TICK_SCHEDULED = "inner_tick_scheduled"
     INNER_TICK_MAINTENANCE = "inner_tick_maintenance"
 
 
@@ -160,6 +161,7 @@ class ChatMessage(BaseModel):
         default=None,
         validation_alias=AliasChoices("proactive_chat", "heartbeat"),
     )
+    scheduled: bool | None = None
     presence: PresenceSignal | None = None
     repl_online_ack: bool | None = None
     inner_tick: bool | None = None
@@ -418,6 +420,7 @@ def transcript_rows_for_public_chat_llm(
             m.role == "user"
             and m.inner_tick is True
             and m.proactive_chat is not True
+            and m.scheduled is not True
         ):
             uid = m.uuid
             if uid:
@@ -428,6 +431,7 @@ def transcript_rows_for_public_chat_llm(
             m.role == "user"
             and m.inner_tick is True
             and m.proactive_chat is not True
+            and m.scheduled is not True
         ):
             continue
         if (

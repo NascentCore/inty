@@ -14,6 +14,7 @@ from app.core.companion_harness.companion.turn_tracks import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,
+    run_companion_inner_tick_scheduled_turn,
     run_companion_user_chat_turn,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -109,6 +110,31 @@ async def test_proactive_inner_tick_track() -> None:
     assert (
         run_turn_mock.await_args.kwargs["track"]
         == CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+    )
+
+
+@pytest.mark.asyncio
+async def test_scheduled_inner_tick_track() -> None:
+    stub = CompanionTurnResult(
+        trace_id="t",
+        user_msg_uuid="u",
+        assistant_text="",
+    )
+    scheduled_text = "（定时提醒触发）提醒事项：喝水"
+    with patch(
+        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        new_callable=AsyncMock,
+        return_value=stub,
+    ) as run_turn_mock:
+        await run_companion_inner_tick_scheduled_turn(
+            scheduled_text,
+            **_minimal_turn_kwargs(),
+        )
+    assert run_turn_mock.await_args is not None
+    assert run_turn_mock.await_args.args[0] == scheduled_text
+    assert (
+        run_turn_mock.await_args.kwargs["track"]
+        == CompanionTurnTrack.INNER_TICK_SCHEDULED
     )
 
 

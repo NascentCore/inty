@@ -16,14 +16,17 @@
 
 ## 活跃轨道（入口 API）
 
-同一 ``CompanionScope`` / ``MemoryStore`` 上，WebSocket 与调度器通过 **四条显式轨道** 进入内核，不再在边界传 ``inner_tick_turn`` / ``inner_tick_mode`` 组合：
+同一 ``CompanionScope`` / ``MemoryStore`` 上，WebSocket 与调度器通过 **五条显式轨道** 进入内核，不再在边界传 ``inner_tick_turn`` / ``inner_tick_mode`` 组合：
 
 | 轨道 | Service / Manager | 内核 |
 |------|-------------------|------|
 | 用户聊天 | ``run_companion_user_chat_turn_for_api`` | ``CompanionTurnTrack.USER_CHAT`` |
 | 隐式上线问候 | ``run_companion_implicit_sign_on_greeting_turn_for_api`` | ``IMPLICIT_SIGN_ON_GREETING`` |
 | 陪伴主动聊天 | ``run_companion_inner_tick_proactive_chat_turn_for_api`` | ``INNER_TICK_PROACTIVE_CHAT`` |
+| 定时提醒 inner tick | ``run_companion_inner_tick_scheduled_turn_for_api`` | ``INNER_TICK_SCHEDULED`` |
 | 维护 inner tick | ``run_companion_inner_tick_maintenance_turn_for_api`` | ``INNER_TICK_MAINTENANCE`` |
+
+``INNER_TICK_SCHEDULED`` 将 ``schedule_queue`` 合成用户行原样进 LLM/transcript（``scheduled: true``，无 ``proactive_chat``）；工具面与 proactive 同轨（``InnerTickActivity.PROACTIVE_CHAT``）。
 
 ``turn_lock``（每 WebSocket 连接）与 ``tool_bg_idle``（每 session）串行化各轨道；``tool_background`` 线程是用户轮与维护 tick 上的第三条执行流。TechnoCore 事件轨道尚未实现。
 

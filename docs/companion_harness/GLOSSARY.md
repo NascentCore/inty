@@ -47,6 +47,7 @@
 |------|------|
 | **Inner-tick** | 用户空闲时的**合成轮次**；模式上分为 **主动搭话**、**维护整理** 等。**当前实现**：维护轮在启用工具时常跳过前台，对客户侧若出现可见正文，多经 **后台工具对话下行**（与主动搭话的前台助手路径不同）；见 [ARCH.md](/docs/companion_harness/ARCH.md)。 |
 | **ai_private** | **非独立运行时循环**；工作记忆中「AI 私密活动」类材料，供内在节拍等注入提示时使用。 |
+| **World Capsule（世界胶囊）** | **计划中**：对话设定单元 → LLM 晋升进 LivingSphere / TechnoCore。见 [WORLD_CAPSULES.md](./WORLD_CAPSULES.md)。 |
 
 ## 使用约定（避免歧义）
 

@@ -1,4 +1,6 @@
-# Design
+# Design - Directional Plan
+
+面向未来的方向性设计
 
 ## 1. 文档目的与执行定位
 
