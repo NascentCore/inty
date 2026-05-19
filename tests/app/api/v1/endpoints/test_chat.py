@@ -1389,6 +1389,66 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_chat_websocket_companion_voice_message_returns_audio_url(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """WS foreground turn: voice_message modality synthesizes TTS and returns audio_url."""
+    fake_audio_url = "https://storage.googleapis.com/bucket/ws-voice.mp3"
+    ai_metas: list = []
+
+    async def fake_run_companion_chat_turn_for_api(**_kwargs):
+        return CompanionTurnResult(
+            assistant_text="visible bubble text",
+            reply_modality="voice_message",
+            voice_message_script="spoken script line",
+        )
+
+    async def fake_generate_voice(**_kwargs):
+        return VoiceGenerationResult(
+            gcs_url="gs://bucket/ws-voice.mp3",
+            gcs_http_url=fake_audio_url,
+            duration_seconds=2.0,
+        )
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-ws-voice",
+        chat_id="chat-ws-voice-1",
+        latest_user_message_db_id=77,
+        ai_message_id=904,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+        ai_message_meta_captures=ai_metas,
+    )
+    monkeypatch.setattr(
+        global_voice_service,
+        "generate_voice",
+        fake_generate_voice,
+    )
+
+    turn_uuid = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-ws-voice",
+                    "request": {
+                        "messages": [{"role": "user", "content": "voice please"}],
+                        "message_id": turn_uuid,
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 200
+    message = body["data"]["choices"][0]["message"]
+    assert message["content"] == "visible bubble text"
+    assert message["audio_url"] == fake_audio_url
+    assert message["meta_data"]["reply_modality"] == "voice_message"
+    assert message["meta_data"]["is_voice"] is True
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_companion_foreground_tool_background_started_meta(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
