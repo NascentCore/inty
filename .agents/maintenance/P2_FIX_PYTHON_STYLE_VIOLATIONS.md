@@ -32,7 +32,8 @@ maintenance agents can fix the highest-impact item first.
 - [ ] Google 2.4 "Exceptions": `/app/services/memory_extraction_service.py`
   silently drops malformed metadata and messages with broad `Exception`
   fallbacks while reading chat history. Narrow expected JSON/data errors or log
-  skipped rows so memory extraction loss is traceable.
+  skipped rows so memory extraction loss is traceable. Claimed by
+  `cursor/agent-maintenance-tasks-5251`.
 - [ ] Google 2.4 "Exceptions": `/app/services/festival_memory_service.py`
   silently skips rows that fail chat-message JSON parsing. Log skipped rows or
   narrow the parser exceptions so festival memory inputs do not disappear
