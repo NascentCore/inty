@@ -503,7 +503,6 @@ async def generate_message_voice(
             language=language,
             agent_gender=agent_data.get("gender"),
             voice_message_narration_mode=voice_message_narration_mode,
-            requested_model=None,
         )
 
         if not is_allowed:

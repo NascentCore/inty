@@ -1,10 +1,11 @@
-"""Tests for split VoiceService APIs (quota, model resolve, cache, no-quota generate)."""
+"""Tests for split VoiceService APIs (model resolve, cache, no-quota generate)."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.core.voice.tts_api import TTS_PROVIDER_GEMINI
+from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_service import VoiceGenerationResult, VoiceService
 
 
@@ -16,33 +17,13 @@ def voice_service() -> VoiceService:
 
 
 @pytest.mark.asyncio
-async def test_check_quota_delegates_and_logs_when_denied(voice_service: VoiceService):
-    user = MagicMock()
-    user.id = "user-1"
-    db = MagicMock()
-
-    with patch(
-        "app.services.voice_service.subscription_service.check_voice_generation_limit",
-        new_callable=AsyncMock,
-        return_value=(False, 2, 2),
-    ) as mock_limit:
-        is_allowed, used_count, limit = await voice_service.check_quota(db=db, user=user)
-
-    mock_limit.assert_awaited_once_with(db, user)
-    assert is_allowed is False
-    assert used_count == 2
-    assert limit == 2
-
-
-@pytest.mark.asyncio
-async def test_resolve_generation_model_gemini_without_user_uses_config(
+async def test_resolve_tts_model_gemini_without_user_uses_config(
     voice_service: VoiceService,
 ):
     from app.core.config import global_config_loaded_from_config_yaml
 
-    model, source = await voice_service.resolve_generation_model(
+    model, source = await voice_service.resolve_tts_model(
         provider_selected=TTS_PROVIDER_GEMINI,
-        requested_model=None,
         db=None,
         user=None,
     )
@@ -51,21 +32,32 @@ async def test_resolve_generation_model_gemini_without_user_uses_config(
 
 
 @pytest.mark.asyncio
-async def test_lookup_cached_voice_returns_result_when_hit(voice_service: VoiceService):
-    with patch(
-        "app.services.voice_cache_service.voice_cache_service.get_cached_voice",
+async def test_voice_cache_get_cached_voice_returns_voice_generation_result():
+    with patch.object(
+        voice_cache_service.gcs_service,
+        "check_voice_file_exists",
+        return_value=True,
+    ), patch(
+        "app.services.voice_cache_service.VoiceCacheService._update_cache_hit_async",
         new_callable=AsyncMock,
-        return_value=(
-            "https://storage.googleapis.com/test-bucket/voice/cached.wav",
-            1.5,
-        ),
     ):
-        result = await voice_service.lookup_cached_voice(
-            db=MagicMock(),
-            text="hello",
-            voice_id="google/Zephyr",
-            model="gemini-2.5-flash-tts",
-            language="en",
+        db = MagicMock()
+        db.execute = AsyncMock(
+            return_value=MagicMock(
+                one_or_none=MagicMock(
+                    return_value=MagicMock(
+                        audio_url="https://storage.googleapis.com/test-bucket/voice/cached.wav",
+                        duration=1.5,
+                    )
+                )
+            )
+        )
+        result = await voice_cache_service.get_cached_voice(
+            db,
+            "hello",
+            "google/Zephyr",
+            "gemini-2.5-flash-tts",
+            "en",
         )
 
     assert isinstance(result, VoiceGenerationResult)

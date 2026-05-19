@@ -5,7 +5,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.core.voice.tts_api import TTS_PROVIDER_ELEVENLABS, TTS_PROVIDER_GEMINI
-from app.services.voice_service import VoiceGenerationResult, VoiceService
+from app.services.voice_service import (
+    VoiceGenerationResult,
+    VoiceService,
+    build_voice_gcs_urls,
+)
 
 
 @pytest.fixture
@@ -15,10 +19,8 @@ def voice_service() -> VoiceService:
     return service
 
 
-def test_build_gcs_urls_accepts_gs_url(voice_service: VoiceService):
-    gcs_url, gcs_http_url = voice_service._build_gcs_urls(
-        "gs://test-bucket/voice/x.wav"
-    )
+def test_build_gcs_urls_accepts_gs_url():
+    gcs_url, gcs_http_url = build_voice_gcs_urls("gs://test-bucket/voice/x.wav")
     assert gcs_url == "gs://test-bucket/voice/x.wav"
     assert gcs_http_url == "https://storage.googleapis.com/test-bucket/voice/x.wav"
 

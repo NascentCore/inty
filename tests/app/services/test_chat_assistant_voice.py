@@ -14,19 +14,22 @@ from app.services.voice_service import VoiceGenerationResult, VoiceService
 @pytest.mark.asyncio
 async def test_produce_voice_for_user_denied_returns_quota_tuple():
     voice_svc = MagicMock(spec=VoiceService)
-    voice_svc.check_quota = AsyncMock(return_value=(False, 2, 2))
 
-    result, is_allowed, used_count, limit = await produce_voice_for_user(
-        voice_svc=voice_svc,
-        db=MagicMock(),
-        user=MagicMock(id="u1"),
-        text="hello",
-        voice_id="google/Zephyr",
-        language="en",
-        agent_gender="FEMALE",
-        voice_message_narration_mode=None,
-        requested_model=None,
-    )
+    with patch(
+        "app.services.chat_assistant_voice.subscription_service.check_voice_generation_limit",
+        new_callable=AsyncMock,
+        return_value=(False, 2, 2),
+    ):
+        result, is_allowed, used_count, limit = await produce_voice_for_user(
+            voice_svc=voice_svc,
+            db=MagicMock(),
+            user=MagicMock(id="u1"),
+            text="hello",
+            voice_id="google/Zephyr",
+            language="en",
+            agent_gender="FEMALE",
+            voice_message_narration_mode=None,
+        )
 
     assert result is None
     assert is_allowed is False

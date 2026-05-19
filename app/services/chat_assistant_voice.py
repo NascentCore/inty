@@ -12,6 +12,8 @@ from app.core.voice.tts_api import (
     is_gemini_voice,
 )
 from app.services import chat_history_service
+from app.services.global_services import subscription_service
+from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_service import (
     VoiceGenerationResult,
     VoiceService,
@@ -30,7 +32,6 @@ async def produce_voice_for_user(
     language: str,
     agent_gender: Optional[str],
     voice_message_narration_mode: Optional[Any],
-    requested_model: Optional[str],
 ) -> tuple[Optional[VoiceGenerationResult], bool, int, int]:
     """
     用户上下文下的语音生成编排：配额 → 模型 → 缓存 → TTS → 记用量。
@@ -38,8 +39,18 @@ async def produce_voice_for_user(
     Returns:
         (result, is_allowed, used_count, limit)
     """
-    is_allowed, used_count, limit = await voice_svc.check_quota(db=db, user=user)
+    (
+        is_allowed,
+        used_count,
+        limit,
+    ) = await subscription_service.check_voice_generation_limit(db, user)
     if not is_allowed:
+        logger.warning(
+            "用户 {} 已达到语音生成限制: {}/{}",
+            user.id,
+            used_count,
+            limit,
+        )
         return None, is_allowed, used_count, limit
 
     synthesis_voice_id, synthesis_text = voice_svc.prepare_synthesis_voice_id_and_text(
@@ -55,9 +66,8 @@ async def produce_voice_for_user(
         if is_gemini_voice(synthesis_voice_id)
         else TTS_PROVIDER_ELEVENLABS
     )
-    model, model_source = await voice_svc.resolve_generation_model(
+    model, model_source = await voice_svc.resolve_tts_model(
         provider_selected=provider_selected,
-        requested_model=requested_model,
         db=db,
         user=user,
     )
@@ -66,19 +76,18 @@ async def produce_voice_for_user(
         provider_selected != TTS_PROVIDER_GEMINI
         and global_config_loaded_from_config_yaml.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
     ):
-        gemini_source_model, _ = await voice_svc.resolve_generation_model(
+        gemini_source_model, _ = await voice_svc.resolve_tts_model(
             provider_selected=TTS_PROVIDER_GEMINI,
-            requested_model=None,
             db=db,
             user=user,
         )
 
-    cached = await voice_svc.lookup_cached_voice(
-        db=db,
-        text=synthesis_text,
-        voice_id=synthesis_voice_id,
-        model=model,
-        language=language,
+    cached = await voice_cache_service.get_cached_voice(
+        db,
+        synthesis_text,
+        synthesis_voice_id,
+        model,
+        language,
     )
     if cached:
         await voice_svc.record_voice_usage(
@@ -162,7 +171,6 @@ async def synthesize_chat_assistant_audio(
                 language=language,
                 agent_gender=agent_gender,
                 voice_message_narration_mode=voice_message_narration_mode,
-                requested_model=None,
             )
             if not is_allowed:
                 logger.warning(

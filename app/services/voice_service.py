@@ -94,6 +94,21 @@ class VoiceGenerationResult:
         yield self.duration_seconds
 
 
+def build_voice_gcs_urls(storage_url: str) -> Tuple[str, str]:
+    if storage_url.startswith(GCS_GS_PREFIX):
+        bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+        return storage_url, f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}"
+    if storage_url.startswith(GCS_PUBLIC_HTTPS_PREFIX):
+        bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+        return f"{GCS_GS_PREFIX}{bucket}/{path}", storage_url
+
+    bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+    return (
+        f"{GCS_GS_PREFIX}{bucket}/{path}",
+        f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}",
+    )
+
+
 def _process_outputs_generate_voice(
     output: Optional[VoiceGenerationResult],
 ) -> Dict[str, Any]:
@@ -216,36 +231,14 @@ class VoiceService:
         )
         return None
 
-    async def check_quota(
-        self,
-        *,
-        db: AsyncSession,
-        user: Any,
-    ) -> Tuple[bool, int, int]:
-        """订阅语音配额：过去 24h 用量是否低于 voice_24h_limit。"""
-        (
-            is_allowed,
-            used_count,
-            limit,
-        ) = await subscription_service.check_voice_generation_limit(db, user)
-        if not is_allowed:
-            logger.warning(
-                f"用户 {user.id} 已达到语音生成限制: {used_count}/{limit}"
-            )
-        return is_allowed, used_count, limit
-
-    async def resolve_generation_model(
+    async def resolve_tts_model(
         self,
         *,
         provider_selected: str,
-        requested_model: Optional[str],
         db: Optional[AsyncSession],
         user: Optional[Any],
     ) -> Tuple[str, str]:
         """按 provider / 订阅 / 配置解析 TTS model id（与 tts_catalog 查表无关）。"""
-        if requested_model is not None:
-            return requested_model, TTS_MODEL_SOURCE_EXPLICIT
-
         if provider_selected == TTS_PROVIDER_GEMINI:
             if user and db:
                 subscription = await subscription_service.get_user_current_subscription(
@@ -291,30 +284,6 @@ class VoiceService:
             text = text[: self.config.max_text_length]
         return _voice_id_for_decision, text
 
-    async def lookup_cached_voice(
-        self,
-        *,
-        db: AsyncSession,
-        text: str,
-        voice_id: str,
-        model: str,
-        language: str,
-    ) -> Optional[VoiceGenerationResult]:
-        from app.services.voice_cache_service import voice_cache_service
-
-        cached_result = await voice_cache_service.get_cached_voice(
-            db, text, voice_id, model, language
-        )
-        if not cached_result:
-            return None
-        cached_url, cached_duration = cached_result
-        gcs_url, gcs_http_url = self._build_gcs_urls(cached_url)
-        return VoiceGenerationResult(
-            gcs_url=gcs_url,
-            gcs_http_url=gcs_http_url,
-            duration_seconds=cached_duration,
-        )
-
     async def record_voice_usage(
         self,
         *,
@@ -357,7 +326,7 @@ class VoiceService:
     ) -> Optional[VoiceGenerationResult]:
         """
         仅 TTS + GCS + 异步写缓存；不含配额检查、DB 缓存读、用量记录。
-        调用方须先 check_quota / lookup_cached_voice / record_voice_usage。
+        调用方须先配额检查 / voice_cache_service.get_cached_voice / record_voice_usage。
         """
         narration_mode = resolve_voice_message_narration_mode(
             voice_message_narration_mode
@@ -493,7 +462,7 @@ class VoiceService:
                     model_selected=model,
                 )
 
-            gcs_url, gcs_http_url = self._build_gcs_urls(audio_url)
+            gcs_url, gcs_http_url = build_voice_gcs_urls(audio_url)
 
             from app.services.voice_cache_service import voice_cache_service
 
@@ -571,7 +540,7 @@ class VoiceService:
         Returns:
             语音文件 URL 结果（含 gs:// 与 https:// URL 及音频时长），失败返回 None
 
-        Legacy 入口：委托 check_quota / resolve_generation_model / lookup_cached_voice /
+        Legacy 入口：委托 resolve_tts_model / voice_cache_service.get_cached_voice /
         generate_voice_no_quota_limit_check / record_voice_usage。带 user+db 的 C 端路径
         优先使用 chat_assistant_voice.produce_voice_for_user。
         """
@@ -584,8 +553,15 @@ class VoiceService:
             return self._trace_and_return_none("empty_input_text")
 
         if user and db:
-            is_allowed, used_count, limit = await self.check_quota(db=db, user=user)
+            (
+                is_allowed,
+                used_count,
+                limit,
+            ) = await subscription_service.check_voice_generation_limit(db, user)
             if not is_allowed:
+                logger.warning(
+                    f"用户 {user.id} 已达到语音生成限制: {used_count}/{limit}"
+                )
                 return self._trace_and_return_none(
                     "voice_generation_limit_reached",
                     used_count=used_count,
@@ -612,12 +588,15 @@ class VoiceService:
                 if is_gemini_voice(synthesis_voice_id)
                 else TTS_PROVIDER_ELEVENLABS
             )
-            model_selected, model_source = await self.resolve_generation_model(
-                provider_selected=provider_selected,
-                requested_model=model,
-                db=db,
-                user=user,
-            )
+            if model is not None:
+                model_selected = model
+                model_source = TTS_MODEL_SOURCE_EXPLICIT
+            else:
+                model_selected, model_source = await self.resolve_tts_model(
+                    provider_selected=provider_selected,
+                    db=db,
+                    user=user,
+                )
             self._validate_model_provider_match(
                 provider_selected=provider_selected,
                 model_selected=model_selected,
@@ -627,9 +606,8 @@ class VoiceService:
                 provider_selected == TTS_PROVIDER_ELEVENLABS
                 and global_config_loaded_from_config_yaml.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
             ):
-                gemini_source_model, _ = await self.resolve_generation_model(
+                gemini_source_model, _ = await self.resolve_tts_model(
                     provider_selected=TTS_PROVIDER_GEMINI,
-                    requested_model=None,
                     db=db,
                     user=user,
                 )
@@ -639,12 +617,14 @@ class VoiceService:
                 )
 
             if db:
-                cached = await self.lookup_cached_voice(
-                    db=db,
-                    text=synthesis_text,
-                    voice_id=synthesis_voice_id,
-                    model=model_selected,
-                    language=language,
+                from app.services.voice_cache_service import voice_cache_service
+
+                cached = await voice_cache_service.get_cached_voice(
+                    db,
+                    synthesis_text,
+                    synthesis_voice_id,
+                    model_selected,
+                    language,
                 )
                 if cached:
                     if user:
@@ -944,18 +924,7 @@ class VoiceService:
             return None
 
     def _build_gcs_urls(self, storage_url: str) -> Tuple[str, str]:
-        if storage_url.startswith(GCS_GS_PREFIX):
-            bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
-            return storage_url, f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}"
-        if storage_url.startswith(GCS_PUBLIC_HTTPS_PREFIX):
-            bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
-            return f"{GCS_GS_PREFIX}{bucket}/{path}", storage_url
-
-        bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
-        return (
-            f"{GCS_GS_PREFIX}{bucket}/{path}",
-            f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}",
-        )
+        return build_voice_gcs_urls(storage_url)
 
     def _generate_file_name(
         self, text: str, voice_id: str, model: str, extension: str
