@@ -22,6 +22,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
+from app.api.v1.endpoints import chat_ws as chat_ws_v1
 from app.core.agent import agent as agent_module
 from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
@@ -113,6 +114,7 @@ def chat_app_with_postgres_db(db_session):
 
     app = FastAPI()
     app.include_router(chat_v1.router, prefix="/api/v1")
+    app.include_router(chat_ws_v1.router, prefix="/api/v1/chat")
     app.dependency_overrides[deps.get_async_db] = override_get_async_db
 
     try:
@@ -149,6 +151,7 @@ def agent_ids_to_cleanup(integration_client: TestClient):
 def chat_business_error_app() -> FastAPI:
     app = FastAPI()
     app.include_router(chat_v1.router, prefix="/api/v1")
+    app.include_router(chat_ws_v1.router, prefix="/api/v1/chat")
 
     async def override_db():
         mock_db = _create_mock_db_session()
@@ -1045,13 +1048,13 @@ def _setup_companion_ws_chat_test_env(
     async def fake_ws_user(websocket, db):
         return user
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
 
     async def fake_agent_status_line(db, agent_id):
         return None
 
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_v1,
         "_agent_status_line_for_chat_header",
         fake_agent_status_line,
     )
@@ -1154,13 +1157,13 @@ def _setup_companion_ws_chat_test_env_with_postgres(
     async def fake_ws_user(websocket, db):
         return test_user
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
 
     async def fake_agent_status_line(db, aid):
         return None
 
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_v1,
         "_agent_status_line_for_chat_header",
         fake_agent_status_line,
     )
@@ -1507,13 +1510,13 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     async def fake_ws_user(websocket, db):
         return user
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
 
     async def fake_agent_status_line(db, agent_id):
         return None
 
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_v1,
         "_agent_status_line_for_chat_header",
         fake_agent_status_line,
     )
@@ -1693,7 +1696,7 @@ async def test_tool_background_ws_payload_precomputed_audio_skips_synthesize(
     factory = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
     try:
         async with factory() as db:
-            out = await chat_v1._build_companion_tool_background_ws_payload(
+            out = await chat_ws_v1._build_companion_tool_background_ws_payload(
                 db=db,
                 agent_id=agent_id,
                 session_id=session_id,
@@ -2094,17 +2097,17 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
         0.05,
     )
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_v1,
         "_try_fire_companion_ws_scheduled_task_inner_tick",
         spy_scheduled,
     )
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_v1,
         "_try_fire_companion_ws_proactive_chat",
         spy_proactive,
     )
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_v1,
         "_try_fire_companion_ws_maintenance_inner_tick",
         spy_maintenance,
     )
@@ -2171,17 +2174,17 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
         False,
     )
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_v1,
         "_try_fire_companion_ws_scheduled_task_inner_tick",
         spy_scheduled,
     )
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_v1,
         "_try_fire_companion_ws_proactive_chat",
         spy_proactive,
     )
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_v1,
         "_try_fire_companion_ws_maintenance_inner_tick",
         spy_maintenance,
     )
@@ -2517,9 +2520,9 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
             }
         ).model_dump(exclude_none=True)
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
+        chat_ws_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
@@ -2571,7 +2574,7 @@ def test_chat_websocket_idle_timeout_reads_config(
     expected_idle = float(
         global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds
     )
-    real_wait_for = chat_v1.asyncio.wait_for
+    real_wait_for = chat_ws_v1.asyncio.wait_for
 
     async def fake_wait_for(aw, timeout):
         if float(timeout) != expected_idle:
@@ -2587,11 +2590,11 @@ def test_chat_websocket_idle_timeout_reads_config(
             return await aw
         raise asyncio.TimeoutError()
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
+        chat_ws_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
-    monkeypatch.setattr(chat_v1.asyncio, "wait_for", fake_wait_for)
+    monkeypatch.setattr(chat_ws_v1.asyncio, "wait_for", fake_wait_for)
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
@@ -2644,9 +2647,9 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
             }
         ).model_dump(exclude_none=True)
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
+        chat_ws_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
@@ -2699,9 +2702,9 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
             }
         ).model_dump(exclude_none=True)
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
+        chat_ws_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
@@ -2774,7 +2777,7 @@ def test_chat_websocket_user_signed_out_appends_ws_runtime_event(
     async def fake_ws_user(websocket, db):
         return user
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
 
     msg_uuid = "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
     with FastAPITestClient(chat_business_error_app) as client:
@@ -2816,7 +2819,7 @@ def test_chat_websocket_verify_user_signed_out_not_supported(
     async def fake_ws_user(websocket, db):
         return user
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws/verify") as websocket:
@@ -2831,13 +2834,13 @@ def test_chat_websocket_verify_user_signed_out_not_supported(
 
 
 def test_is_ws_receive_text_not_connected_runtime_error() -> None:
-    assert chat_v1._is_ws_receive_text_not_connected_runtime_error(
-        RuntimeError(chat_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
+    assert chat_ws_v1._is_ws_receive_text_not_connected_runtime_error(
+        RuntimeError(chat_ws_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
     )
-    assert not chat_v1._is_ws_receive_text_not_connected_runtime_error(
+    assert not chat_ws_v1._is_ws_receive_text_not_connected_runtime_error(
         RuntimeError("other")
     )
-    assert not chat_v1._is_ws_receive_text_not_connected_runtime_error(
+    assert not chat_ws_v1._is_ws_receive_text_not_connected_runtime_error(
         WebSocketDisconnect()
     )
 
@@ -2850,10 +2853,10 @@ def test_chat_websocket_verify_receive_text_not_connected_runtime_exits_cleanly(
     async def fake_ws_user(websocket, db):
         return user
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
 
     async def boom_receive_text(self):
-        raise RuntimeError(chat_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
+        raise RuntimeError(chat_ws_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
 
     monkeypatch.setattr(WebSocket, "receive_text", boom_receive_text)
 
@@ -2871,10 +2874,10 @@ def test_chat_websocket_recv_not_connected_runtime_after_ping_exits_cleanly(
     async def fake_ws_user(websocket, db):
         return user
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
 
     async def boom_receive_text(self):
-        raise RuntimeError(chat_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
+        raise RuntimeError(chat_ws_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws?ws_conn_id=aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee") as websocket:
@@ -2904,7 +2907,7 @@ def test_chat_websocket_session_open_uses_client_ws_conn_id_query(
         async def fake_ws_user(websocket, db):
             return user
 
-        monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+        monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
         with FastAPITestClient(chat_business_error_app) as client:
             path = f"/api/v1/chat/ws?ws_conn_id={client_ws}"
             with client.websocket_connect(path) as websocket:
@@ -2938,7 +2941,7 @@ def test_chat_websocket_invalid_ws_conn_id_query_logs_fallback(
         async def fake_ws_user(websocket, db):
             return user
 
-        monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+        monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
         with FastAPITestClient(chat_business_error_app) as client:
             with client.websocket_connect(
                 "/api/v1/chat/ws?ws_conn_id=not-a-valid-uuid"
@@ -2989,7 +2992,7 @@ def test_chat_websocket_ws_conn_dropped_appends_ws_runtime_event(
     async def fake_ws_user(websocket, db):
         return user
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
 
     msg_uuid = "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
     dropped_at = "2026-05-11T12:00:00+00:00"
@@ -3034,7 +3037,7 @@ def test_chat_websocket_verify_ws_conn_dropped_not_supported(
     async def fake_ws_user(websocket, db):
         return user
 
-    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws/verify") as websocket:

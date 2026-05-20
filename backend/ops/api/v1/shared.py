@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     auth,
     character_themes,
     chat,
+    chat_ws,
     chats,
     images,
     live_chat,
@@ -28,6 +29,7 @@ shared_router.include_router(report.router, tags=["report"])
 shared_router.include_router(agents.router, tags=["agents", "characters"])
 shared_router.include_router(chats.router, tags=["chats"])
 shared_router.include_router(chat.router, tags=["chat"])
+shared_router.include_router(chat_ws.router, prefix="/chat", tags=["chat"])
 shared_router.include_router(images.router, tags=["images"])
 shared_router.include_router(settings.router, tags=["settings"])
 shared_router.include_router(subscription.router, tags=["subscription"])
