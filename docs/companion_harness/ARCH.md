@@ -98,29 +98,7 @@ flowchart TD
 
 ## 实现索引
 
-| 主题 | 路径 |
-| --- | --- |
-| 生产 companion 内核 | `/app/core/companion_harness/companion/` |
-| WebSocket API shell | `/app/api/v1/endpoints/chat.py` |
-| WebSocket session pump | `/app/services/chat_websocket_session.py` |
-| API 到 companion 的服务边界 | `/app/services/companion_chat_service.py` |
-| WebSocket 协调状态 | `/app/core/companion_harness/companion/websocket_coordinator.py` |
-| session 与 MemoryStore 绑定 | `/app/core/companion_harness/companion/manager.py` |
-| 生产 turn 执行 | `/app/core/companion_harness/companion/turn.py` |
-| route mode | `/app/core/companion_harness/companion/turn_routes.py` |
-| prompt stack | `/app/core/companion_harness/companion/prompt_stack.py` |
-| MemoryStore | `/app/core/companion_harness/memory/memory_store.py` |
-| 记忆管线 | `/app/core/companion_harness/memory/memory_pipeline.py` |
-| async tool background | `/app/core/companion_harness/tools/tool_background.py` |
-| dual-LLM envelope（schema / parse / split / 契约说明） | `/app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py` |
-| 通用 turn 合同 | `/app/core/companion_harness/contracts/turn.py` |
-| REPL 实验 turn 编排（非生产） | `/experimental/agentic_ai_companion/turn_orchestrator.py`、`experimental_bridge.py` |
-| WebSocket schema | `/app/schemas/chat_websocket.py` |
-| MemoryStore 目标说明 | `/docs/companion_harness/MEMORY_STORE.md` |
-| 记忆管线说明 | `/docs/companion_harness/MEMORY_PIPELINE.md` |
-| 消息流术语（上行/下行/客户侧） | `/docs/companion_harness/GLOSSARY.md` |
-| Companion WebSocket 运行与排障 | `/docs/companion_harness/COMPANION_WS_RUNBOOK.md` |
-| Inner-tick 调度（proactive rhythm / worker poll / maintenance） | `/docs/companion_harness/INNER_TICK_SCHEDULING.md` |
+Read source files for details, do not list them here.
 
 ## 维护规则
 
