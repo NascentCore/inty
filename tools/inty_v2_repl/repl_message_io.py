@@ -3,14 +3,22 @@
 from __future__ import annotations
 
 from .backend_chat_ws import BackendChatWsBridge
-from .repl_session_messages import ReplDownlinkItem
+from .repl_session_messages import ReplDownlinkAssistant, ReplDownlinkItem
 
 
 def pop_downlink_item(bridge: BackendChatWsBridge) -> ReplDownlinkItem | None:
     """Non-blocking: map ``BackendChatWsBridge.try_pop_queued_chat`` to tagged items."""
-    text, err, meta = bridge.try_pop_queued_chat()
+    text, err, meta, audio_url = bridge.try_pop_queued_chat()
     if text is not None:
-        return {"kind": "assistant", "text": text, "raw": {}, "meta_data": meta}
+        item: ReplDownlinkAssistant = {
+            "kind": "assistant",
+            "text": text,
+            "raw": {},
+            "meta_data": meta,
+        }
+        if audio_url is not None:
+            item["audio_url"] = audio_url
+        return item
     if err is not None:
         code, message = err
         return {

@@ -135,12 +135,14 @@ def http_base_to_ws_chat_url(
 
 def parse_chat_completion_ws_payload(
     data: dict[str, Any],
-) -> tuple[str, dict[str, Any]]:
+) -> tuple[str, dict[str, Any], str | None]:
     """Parse one successful ``code==200`` chat completion JSON frame from ``/api/v1/chat/ws``."""
     return _parse_chat_response_payload(data)
 
 
-def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+def _parse_chat_response_payload(
+    data: dict[str, Any],
+) -> tuple[str, dict[str, Any], str | None]:
     if data.get("type") == "pong":
         raise ValueError("unexpected pong in response queue")
     code = data.get("code")
@@ -166,7 +168,13 @@ def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, A
     meta: dict[str, Any] = {}
     if isinstance(meta_raw, dict):
         meta = dict(meta_raw)
-    return content, meta
+    audio_url_raw = msg0.get("audio_url")
+    audio_url: str | None = None
+    if isinstance(audio_url_raw, str):
+        s = audio_url_raw.strip()
+        if s:
+            audio_url = s
+    return content, meta, audio_url
 
 
 def _agent_id_from_ws_url(ws_url: str) -> str | None:
@@ -410,15 +418,16 @@ class BackendChatWsBridge:
 
     def try_pop_queued_chat(
         self,
-    ) -> tuple[str | None, tuple[int, str] | None, dict[str, Any]]:
+    ) -> tuple[str | None, tuple[int, str] | None, dict[str, Any], str | None]:
         """Non-blocking: pop one queued chat JSON if present (runs on the bridge event loop).
 
-        Returns ``(assistant_text, None, meta_data)`` on success, ``(None, (code, message), {})`` on API error
-        frames or on **local parse failure** (so the REPL does not silently drop odd ``code==200`` payloads),
-        ``(None, None, {})`` if the queue was empty.
+        Returns ``(assistant_text, None, meta_data, audio_url)`` on success,
+        ``(None, (code, message), {}, None)`` on API error frames or on **local parse failure**
+        (so the REPL does not silently drop odd ``code==200`` payloads),
+        ``(None, None, {}, None)`` if the queue was empty.
         """
         if not self._loop or not self._response_q:
-            return None, None, {}
+            return None, None, {}, None
 
         async def _pop_raw() -> dict[str, Any] | None:
             q = self._response_q
@@ -434,14 +443,14 @@ class BackendChatWsBridge:
             raw = fut.result(timeout=3.0)
         except Exception:
             logger.exception("chat ws queued pop failed")
-            return None, None, {}
+            return None, None, {}, None
         if raw is None:
-            return None, None, {}
+            return None, None, {}, None
         try:
-            text, meta = _parse_chat_response_payload(raw)
-            return text, None, meta
+            text, meta, audio_url = _parse_chat_response_payload(raw)
+            return text, None, meta, audio_url
         except BackendChatWsError as exc:
-            return None, (int(exc.code), str(exc.agent_message)), {}
+            return None, (int(exc.code), str(exc.agent_message)), {}, None
         except ValueError as exc:
             logger.warning("chat ws queued frame dropped: {}", raw)
             return (
@@ -451,6 +460,7 @@ class BackendChatWsBridge:
                     f"Downlink chat JSON parse failed ({exc}). Check logs for raw frame.",
                 ),
                 {},
+                None,
             )
 
     async def _sleep_backoff(self, attempt_index: int, halt: asyncio.Event) -> None:

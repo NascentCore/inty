@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 
 class ReplDownlinkAssistant(TypedDict):
@@ -12,6 +12,7 @@ class ReplDownlinkAssistant(TypedDict):
     text: str
     raw: dict[str, Any]
     meta_data: dict[str, Any]
+    audio_url: NotRequired[str]
 
 
 class ReplDownlinkWsError(TypedDict):

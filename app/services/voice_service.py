@@ -40,11 +40,7 @@ from app.core.voice.tts_api import (
     resolve_voice_message_narration_mode,
     select_default_gemini_voice_for_imate_gender,
 )
-from app.external_services.gcs import (
-    GCS_GS_PREFIX,
-    GCS_PUBLIC_HTTPS_PREFIX,
-    get_bucket_and_path_from_gcs_url,
-)
+from app.external_services.gcs import build_storage_url_pair
 from app.external_services.fakes.tts import FakeTextToSpeechAPI
 from app.services.gcs_service import GCSService
 
@@ -95,18 +91,7 @@ class VoiceGenerationResult:
 
 
 def build_voice_gcs_urls(storage_url: str) -> Tuple[str, str]:
-    if storage_url.startswith(GCS_GS_PREFIX):
-        bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
-        return storage_url, f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}"
-    if storage_url.startswith(GCS_PUBLIC_HTTPS_PREFIX):
-        bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
-        return f"{GCS_GS_PREFIX}{bucket}/{path}", storage_url
-
-    bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
-    return (
-        f"{GCS_GS_PREFIX}{bucket}/{path}",
-        f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}",
-    )
+    return build_storage_url_pair(storage_url)
 
 
 def _process_outputs_generate_voice(
@@ -922,9 +907,6 @@ class VoiceService:
                 exception_message=str(e),
             )
             return None
-
-    def _build_gcs_urls(self, storage_url: str) -> Tuple[str, str]:
-        return build_voice_gcs_urls(storage_url)
 
     def _generate_file_name(
         self, text: str, voice_id: str, model: str, extension: str

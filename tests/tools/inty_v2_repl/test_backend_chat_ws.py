@@ -52,9 +52,32 @@ def test_parse_chat_response_payload_success() -> None:
         },
         "agent_id": "agent-1",
     }
-    text, meta = parse_chat_completion_ws_payload(data)
+    text, meta, audio_url = parse_chat_completion_ws_payload(data)
     assert text == "hello"
     assert meta == {"source": "chat"}
+    assert audio_url is None
+
+
+def test_parse_chat_response_payload_audio_url() -> None:
+    data = {
+        "code": 200,
+        "message": "success",
+        "data": {
+            "choices": [
+                {
+                    "message": {
+                        "content": "spoken",
+                        "audio_url": "file:///tmp/inty_fake_gcs/inty-static/voice/x.mp3",
+                        "meta_data": {"is_voice": True},
+                    }
+                }
+            ]
+        },
+    }
+    text, meta, audio_url = parse_chat_completion_ws_payload(data)
+    assert text == "spoken"
+    assert meta == {"is_voice": True}
+    assert audio_url == "file:///tmp/inty_fake_gcs/inty-static/voice/x.mp3"
 
 
 def test_parse_chat_response_payload_error() -> None:

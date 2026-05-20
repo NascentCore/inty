@@ -1,5 +1,6 @@
 """Tests for Gemini TTS voice result GCS URL fields."""
 
+import types
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -19,10 +20,38 @@ def voice_service() -> VoiceService:
     return service
 
 
-def test_build_gcs_urls_accepts_gs_url():
+def test_build_voice_gcs_urls_accepts_gs_url() -> None:
     gcs_url, gcs_http_url = build_voice_gcs_urls("gs://test-bucket/voice/x.wav")
     assert gcs_url == "gs://test-bucket/voice/x.wav"
     assert gcs_http_url == "https://storage.googleapis.com/test-bucket/voice/x.wav"
+
+
+def test_build_voice_gcs_urls_preserves_file_uri_when_fake_gcs(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    import app.external_services.gcs as gcs_module
+
+    base = tmp_path.resolve()
+    file_path = base / "test-bucket" / "voice" / "202605" / "x.mp3"
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_bytes(b"x")
+    storage_url = file_path.as_uri()
+    merged = types.SimpleNamespace(
+        gcs=types.SimpleNamespace(
+            bucket="test-bucket",
+            use_fake_gcs=True,
+            fake_gcs_base_dir=str(base),
+        )
+    )
+    monkeypatch.setattr(
+        gcs_module,
+        "global_config_loaded_from_config_yaml",
+        merged,
+        raising=True,
+    )
+    gcs_url, gcs_http_url = build_voice_gcs_urls(storage_url)
+    assert gcs_url == "gs://test-bucket/voice/202605/x.mp3"
+    assert gcs_http_url == storage_url
 
 
 @pytest.mark.asyncio

@@ -1619,9 +1619,12 @@ def test_chat_websocket_companion_voice_message_returns_audio_url(
         message = body["data"]["choices"][0]["message"]
         assert message["content"] == "visible bubble text"
         assert message["audio_url"]
-        assert message["audio_url"].startswith(
-            "https://storage.googleapis.com/"
-        )
+        if global_config_loaded_from_config_yaml.gcs.use_fake_gcs:
+            assert message["audio_url"].startswith("file:")
+        else:
+            assert message["audio_url"].startswith(
+                "https://storage.googleapis.com/"
+            )
         assert message["meta_data"]["reply_modality"] == "voice_message"
         assert message["meta_data"]["is_voice"] is True
 

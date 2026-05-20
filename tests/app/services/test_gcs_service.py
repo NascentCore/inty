@@ -89,6 +89,22 @@ async def test_upload_live_chat_audio_returns_none_on_upload_failure(stub_config
 
 
 @pytest.mark.asyncio
+async def test_upload_voice_file_fake_gcs_upload_and_cache_hit(
+    fake_gcs: FakeGCSClient,
+):
+    """Fake GCS: first upload and cache hit both return file:// URIs."""
+    mp3_bytes = b"fake-mp3-content"
+    service = GCSService()
+    file_name = "voice_cache_test.mp3"
+    url1 = await service.upload_voice_file(file_name, mp3_bytes)
+    assert url1 is not None
+    assert url1.startswith("file:")
+
+    url2 = await service.upload_voice_file(file_name, mp3_bytes)
+    assert url2 == url1
+
+
+@pytest.mark.asyncio
 async def test_upload_live_chat_audio_e2e_download_by_url(fake_gcs: FakeGCSClient):
     """端到端：上传后按返回 URL 用 FakeGCS 下载，验证路径正确且文件可检索。"""
     wav_bytes = b"fake-wav-content"

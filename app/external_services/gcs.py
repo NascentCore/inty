@@ -1,7 +1,7 @@
-"""Google Cloud Storage helpers used by services and tests.
+"""Google Cloud Storage SDK wrapper.
 
-This module centralizes GCS client creation, URL parsing, and common object
-operations so callers can work with both real GCS and the fake test client.
+This module centralizes GCS client creation, URL parsing, and common object operations.
+Limit the access to the official GCS SDK APIs to avoid unprincipled use of external APIs.
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ def _bucket_and_path_from_fake_local_file_uri(url: str) -> tuple[str, str]:
 
 
 def get_gcs_client():
-    """获取GCS客户端，根据配置选择真实或假客户端"""
+    """获取GCS客户端，根据配置选择真实或假客户端，可以在测试中返回假客户端。"""
     global gcs_client
     if gcs_client is None:
         if global_config_loaded_from_config_yaml.gcs.use_fake_gcs:
@@ -210,6 +210,28 @@ def gs_uri_from_storage_reference_url(url: str) -> str | None:
         return f"gs://{bucket_name}/{gcs_path}"
     except ValueError:
         return None
+
+
+def build_storage_url_pair(storage_url: str) -> tuple[str, str]:
+    """Return ``(gs://bucket/path, fetchable_url)`` from upload ``public_url``, ``gs://``, or https."""
+    if (
+        storage_url.startswith("file:")
+        and global_config_loaded_from_config_yaml.gcs.use_fake_gcs
+    ):
+        bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+        return f"{GCS_GS_PREFIX}{bucket}/{path}", storage_url
+    if storage_url.startswith(GCS_GS_PREFIX):
+        bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+        return storage_url, f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}"
+    if storage_url.startswith(GCS_PUBLIC_HTTPS_PREFIX):
+        bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+        return f"{GCS_GS_PREFIX}{bucket}/{path}", storage_url
+
+    bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+    return (
+        f"{GCS_GS_PREFIX}{bucket}/{path}",
+        f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}",
+    )
 
 
 def is_valid_gcs_url(url: str) -> bool:

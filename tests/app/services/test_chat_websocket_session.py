@@ -48,13 +48,19 @@ async def test_repl_pop_downlink_maps_bridge_tuple() -> None:
     from tools.inty_v2_repl.repl_message_io import pop_downlink_item
 
     bridge = MagicMock()
-    bridge.try_pop_queued_chat.return_value = ("hello", None, {"source": "chat"})
+    bridge.try_pop_queued_chat.return_value = (
+        "hello",
+        None,
+        {"source": "chat"},
+        "file:///tmp/voice.mp3",
+    )
     item = pop_downlink_item(bridge)
     assert item is not None
     assert item["kind"] == "assistant"
     assert item["text"] == "hello"
+    assert item.get("audio_url") == "file:///tmp/voice.mp3"
 
-    bridge.try_pop_queued_chat.return_value = (None, (400, "bad"), {})
+    bridge.try_pop_queued_chat.return_value = (None, (400, "bad"), {}, None)
     err_item = pop_downlink_item(bridge)
     assert err_item is not None
     assert err_item["kind"] == "ws_error"

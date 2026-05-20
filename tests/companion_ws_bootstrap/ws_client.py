@@ -48,7 +48,7 @@ def assert_implicit_sign_on_assistant_payload(
     expected_context_mode: str | None = None,
 ) -> None:
     try:
-        content, meta = parse_chat_completion_ws_payload(data)
+        content, meta, _audio_url = parse_chat_completion_ws_payload(data)
     except BackendChatWsError as exc:
         raise AssertionError(
             f"expected implicit sign-on assistant (code 200), got ws error "

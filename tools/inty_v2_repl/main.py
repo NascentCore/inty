@@ -369,6 +369,11 @@ def _print_tool_bg_local_image_paths_banner(meta: Mapping[str, Any]) -> None:
         print(f"local-path: {s}")
 
 
+def _print_audio_url_banner(audio_url: str) -> None:
+    """Emit ``audio-url:`` when the server attached ``message.audio_url`` (e.g. voice_message TTS)."""
+    print(f"audio-url: {audio_url}")
+
+
 def _print_generated_image_meta_banner(meta: Mapping[str, Any]) -> None:
     """Emit ``image-url:`` for ``meta_data.generated_image`` (``gs://``, ``https://``, or local ``file://`` with fake GCS)."""
     gi = meta.get("generated_image")
@@ -377,10 +382,7 @@ def _print_generated_image_meta_banner(meta: Mapping[str, Any]) -> None:
     url = gi.get("image_url")
     if not isinstance(url, str):
         return
-    s = url.strip()
-    if not s:
-        return
-    print(f"image-url: {s}")
+    print(f"image-url: {url}")
 
 
 def _print_transcript_compaction_banner(meta: Mapping[str, Any]) -> None:
@@ -414,6 +416,9 @@ def _emit_downlink_item(
         )
         _print_tool_bg_local_image_paths_banner(meta)
         _print_generated_image_meta_banner(meta)
+        audio_url = item.get("audio_url")
+        if isinstance(audio_url, str):
+            _print_audio_url_banner(audio_url)
         _print_transcript_compaction_banner(meta)
     else:
         print(
@@ -705,7 +710,8 @@ _REPL_APP_HELP = (
     "Each assistant downlink prints a metadata section (one line): wall clock, source label, "
     "elapsed ms, correlation key=value tokens from meta_data, optional LangSmith UI URLs, "
     "and optional tool_background_started=true. Additional lines after the assistant body "
-    "may include local-path: (tool_bg) or image-url: (generated image) metadata."
+    "may include local-path: (tool_bg), image-url: (generated image), or "
+    "audio-url: (voice_message audio_url) metadata."
 )
 
 app = App(

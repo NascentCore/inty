@@ -10,8 +10,10 @@ from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import (
+    build_storage_url_pair,
     check_gcs_file_exists,
     delete_from_gcs,
+    get_gcs_client,
     upload_to_gcs,
 )
 
@@ -21,6 +23,10 @@ class GCSService:
 
     def __init__(self):
         self.bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
+
+    def build_storage_urls(self, storage_reference_url: str) -> tuple[str, str]:
+        """Canonical ``gs://`` URI and client-fetchable URL for an object storage reference."""
+        return build_storage_url_pair(storage_reference_url)
 
     async def upload_voice_file(
         self, file_name: str, file_data: bytes, content_type: str = "audio/mpeg"
@@ -49,7 +55,12 @@ class GCSService:
             logger.debug(f"检查GCS文件是否存在: {file_path}")
             if check_gcs_file_exists(self.bucket_name, file_path):
                 logger.debug(f"语音文件已存在，直接返回缓存: {file_path}")
-                return f"https://storage.googleapis.com/{self.bucket_name}/{file_path}"
+                return (
+                    get_gcs_client()
+                    .bucket(self.bucket_name)
+                    .blob(file_path)
+                    .public_url
+                )
 
             logger.debug("文件不存在，开始上传到GCS")
             # 上传到GCS
