@@ -2,6 +2,9 @@
 """
 手动补算用户数据分析日报/周报，用于历史数据回填。
 
+生产 IntelliMate 日报定时由 GitHub Actions（daily_intellimate_user_activity_report.yaml）
+调用本脚本；push worker 默认不调度日报/周报（见 docs/FR_USER_ANALYTICS_REPORTS.md）。
+
 用法（在仓库根目录）:
     export PYTHONPATH=.
     python tools/scripts/run_user_analytics_report.py --type daily --date 2026-02-01
@@ -55,7 +58,9 @@ async def main() -> int:
         return 1
 
     if args.type == "weekly" and report_date.weekday() != 0:
-        logger.warning(f"周报日期 {args.date} 不是周一（weekday=0），将按该周周一计算")
+        logger.warning(
+            f"周报日期 {args.date} 不是周一（weekday=0），将按该周周一计算"
+        )
         report_date = report_date - timedelta(days=report_date.weekday())
 
     init_logger()

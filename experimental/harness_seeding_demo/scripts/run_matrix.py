@@ -163,7 +163,9 @@ def main() -> None:
                         "detail": repr(exc),
                     }
                 )
-                all_rep_rows.append({**row_base, "error": "summary_read_failed"})
+                all_rep_rows.append(
+                    {**row_base, "error": "summary_read_failed"}
+                )
                 continue
 
             fp = summary.get("first_pass_turn_by_rubric") or {}
@@ -213,7 +215,8 @@ def main() -> None:
     )
     err_path = out_root / "matrix_errors.json"
     err_path.write_text(
-        json.dumps(errors, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        json.dumps(errors, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
     )
 
     print((out_root / "matrix_summary.json").read_text(encoding="utf-8"))

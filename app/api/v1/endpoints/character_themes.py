@@ -37,7 +37,9 @@ async def create_theme(
     """创建角色主题专区"""
     try:
         theme = await character_theme_service.create_theme(db, theme_in)
-        theme_schema = character_theme_schemas.CharacterTheme.model_validate(theme)
+        theme_schema = character_theme_schemas.CharacterTheme.model_validate(
+            theme
+        )
         return APIResponse.success(data=theme_schema)
     except Exception as e:
         logger.error(f"创建角色主题专区失败: {str(e)}")
@@ -134,7 +136,9 @@ async def get_theme(
             return APIResponse.error(
                 message="Theme section not found", code=404
             )
-        theme_schema = character_theme_schemas.CharacterTheme.model_validate(theme)
+        theme_schema = character_theme_schemas.CharacterTheme.model_validate(
+            theme
+        )
         return APIResponse.success(data=theme_schema)
     except Exception as e:
         logger.error(f"获取角色主题专区详情失败: {str(e)}")
@@ -160,12 +164,16 @@ async def update_theme(
 ) -> Any:
     """更新角色主题专区"""
     try:
-        theme = await character_theme_service.update_theme(db, theme_id, theme_in)
+        theme = await character_theme_service.update_theme(
+            db, theme_id, theme_in
+        )
         if not theme:
             return APIResponse.error(
                 message="Theme section not found", code=404
             )
-        theme_schema = character_theme_schemas.CharacterTheme.model_validate(theme)
+        theme_schema = character_theme_schemas.CharacterTheme.model_validate(
+            theme
+        )
         return APIResponse.success(data=theme_schema)
     except Exception as e:
         logger.error(f"更新角色主题专区失败: {str(e)}")
@@ -223,8 +231,10 @@ async def add_agent_to_theme(
         theme_agent = await character_theme_service.add_agent_to_theme(
             db, theme_id, request.agent_id
         )
-        theme_agent_schema = character_theme_schemas.CharacterThemeAgent.model_validate(
-            theme_agent
+        theme_agent_schema = (
+            character_theme_schemas.CharacterThemeAgent.model_validate(
+                theme_agent
+            )
         )
         return APIResponse.success(data=theme_agent_schema)
     except HTTPException:
@@ -289,7 +299,9 @@ async def reorder_agents(
 ) -> Any:
     """调整角色顺序"""
     try:
-        await character_theme_service.reorder_agents(db, theme_id, request.agent_ids)
+        await character_theme_service.reorder_agents(
+            db, theme_id, request.agent_ids
+        )
         return APIResponse.success(data={"message": "角色顺序调整成功"})
     except HTTPException:
         raise

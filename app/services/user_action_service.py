@@ -43,7 +43,9 @@ async def get_user_total_chat_count(db: AsyncSession, user_id: str) -> int:
         total_count = result.scalar() or 0
         return int(total_count)
     except Exception as e:
-        logger.error(f"查询用户总聊天轮数失败: user_id={user_id}, error={str(e)}")
+        logger.error(
+            f"查询用户总聊天轮数失败: user_id={user_id}, error={str(e)}"
+        )
         return 0
 
 
@@ -70,7 +72,9 @@ async def has_user_submitted_feedback(db: AsyncSession, user_id: str) -> bool:
 async def _is_new_user(db: AsyncSession, user_id: str) -> bool:
     """检查用户是否为新用户（注册时间未满24小时）"""
     try:
-        result = await db.execute(select(User.created_at).where(User.id == user_id))
+        result = await db.execute(
+            select(User.created_at).where(User.id == user_id)
+        )
         created_at = result.scalar_one_or_none()
 
         if created_at is None:
@@ -80,7 +84,9 @@ async def _is_new_user(db: AsyncSession, user_id: str) -> bool:
         if created_at.tzinfo is None:
             created_at = created_at.replace(tzinfo=datetime.timezone.utc)
 
-        return (now - created_at) < datetime.timedelta(hours=NEW_USER_THRESHOLD_HOURS)
+        return (now - created_at) < datetime.timedelta(
+            hours=NEW_USER_THRESHOLD_HOURS
+        )
     except Exception as e:
         logger.error(f"检查新用户失败: user_id={user_id}, error={str(e)}")
         return True
@@ -161,7 +167,9 @@ async def _record_feedback_action(
         )
         db.add(history)
         await db.commit()
-        logger.info(f"Feedback action 已记录: user_id={user_id}, threshold={threshold}")
+        logger.info(
+            f"Feedback action 已记录: user_id={user_id}, threshold={threshold}"
+        )
     except Exception as e:
         logger.error(
             f"记录 feedback action 失败: user_id={user_id}, threshold={threshold}, "
@@ -199,8 +207,12 @@ async def get_user_actions(db: AsyncSession, user_id: str) -> list[UserAction]:
                 request_feedback_enabled = True
 
     except Exception as e:
-        logger.error(f"获取用户 actions 失败: user_id={user_id}, error={str(e)}")
+        logger.error(
+            f"获取用户 actions 失败: user_id={user_id}, error={str(e)}"
+        )
 
     return [
-        UserAction(type=ActionType.REQUEST_FEEDBACK, enabled=request_feedback_enabled)
+        UserAction(
+            type=ActionType.REQUEST_FEEDBACK, enabled=request_feedback_enabled
+        )
     ]

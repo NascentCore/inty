@@ -13,7 +13,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.companion.significance_perception import (
+from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     DualLlmChatBranchEnvelope,
     parse_dual_llm_chat_envelope_from_message,
@@ -86,7 +86,9 @@ def resolve_tool_bg_routing_sync(
         "(final_assistant_not_valid_unified_envelope_json)",
         tid,
     )
-    routing_tail = [{"role": "system", "content": _UNIFIED_FALLBACK_SYSTEM_PROMPT}]
+    routing_tail = [
+        {"role": "system", "content": _UNIFIED_FALLBACK_SYSTEM_PROMPT}
+    ]
     payload = [
         {k: v for k, v in m.items() if not str(k).startswith("_")}
         for m in conversation_messages
@@ -102,7 +104,9 @@ def resolve_tool_bg_routing_sync(
             phase_suffix=SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
         ),
     )
-    fallback = parse_dual_llm_chat_envelope_from_message(resp.choices[0].message)
+    fallback = parse_dual_llm_chat_envelope_from_message(
+        resp.choices[0].message
+    )
     if fallback is not None:
         logger.debug(
             "tool_bg_routing trace_id={} source=extra_completion_response "

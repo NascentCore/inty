@@ -19,7 +19,9 @@ def replay_events(
     since = datetime.now(timezone.utc).replace(microsecond=0)
     since = since - timedelta(minutes=since_minutes)
     if user_id:
-        events = ctx.events_repo.list_events_by_user(user_id=user_id, limit=limit)
+        events = ctx.events_repo.list_events_by_user(
+            user_id=user_id, limit=limit
+        )
     else:
         events = ctx.events_repo.list_events_since(since=since, limit=limit)
     lines: list[str] = []

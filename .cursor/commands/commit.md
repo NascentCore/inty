@@ -9,7 +9,8 @@ Git commit changes in the current conversation.
 1. **Write 1 sentence commit title**
 2. **Write bullet points of changes**
 3. **Git commit changes made in current conversation**
-4. **Summary**: output commit title to user 
+   3.1. In `cmd-k` mode, commit all changes
+4. **Summary**: output commit title to user
 
 ## Checklist
 

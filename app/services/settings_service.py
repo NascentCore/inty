@@ -18,9 +18,7 @@ def get_settings(db: Session, user_id: str) -> Optional[Settings]:
     获取用户设置
     """
     try:
-        return (
-            db.query(Settings).filter(Settings.user_id == user_id).first()
-        )
+        return db.query(Settings).filter(Settings.user_id == user_id).first()
     except SQLAlchemyError as e:
         logger.error(f"获取用户设置失败: {str(e)}")
         raise

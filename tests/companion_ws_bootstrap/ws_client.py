@@ -1,4 +1,4 @@
-"""WebSocket implicit sign-on (user_signed_on + implicit_greeting) E2E helpers."""
+"""WebSocket sign-on greeting (user_signed_on + message_id) E2E helpers."""
 
 from __future__ import annotations
 
@@ -10,10 +10,7 @@ from typing import Any
 
 import websockets
 
-from tests.companion_ws_bootstrap.constants import (
-    IMPLICIT_USER_SIGNED_ON_MESSAGE_TYPE,
-    WS_KEEPALIVE_PING_INTERVAL_SEC,
-)
+from tests.companion_ws_bootstrap.constants import WS_KEEPALIVE_PING_INTERVAL_SEC
 from tools.inty_v2_repl.backend_chat_ws import (
     BackendChatWsError,
     http_base_to_ws_chat_url,
@@ -57,11 +54,6 @@ def assert_implicit_sign_on_assistant_payload(
             f"expected implicit sign-on assistant (code 200), got ws error "
             f"code={exc.code} message={exc.agent_message!r} agent_id={exc.agent_id!r}"
         ) from exc
-    mt = meta.get("messageType")
-    assert mt == IMPLICIT_USER_SIGNED_ON_MESSAGE_TYPE, (
-        f"expected messageType={IMPLICIT_USER_SIGNED_ON_MESSAGE_TYPE!r}, got {mt!r}, "
-        f"code={data.get('code')}, meta_keys={sorted(meta.keys())}"
-    )
     assert content.strip(), f"empty assistant content: {data!r}"
     aid = data.get("agent_id")
     assert aid == agent_id, f"agent_id mismatch: expected {agent_id!r}, got {aid!r}"
@@ -83,7 +75,7 @@ async def connect_send_implicit_sign_on_and_expect_assistant(
     query_agent_id: bool = True,
     expected_context_mode: str | None = None,
 ) -> None:
-    """Connect WS, send ``user_signed_on`` with implicit_greeting, assert assistant reply."""
+    """Connect WS, send ``user_signed_on`` with ``message_id``, assert assistant reply."""
     url = http_base_to_ws_chat_url(
         http_base_url,
         agent_id=agent_id if query_agent_id else None,
@@ -97,7 +89,6 @@ async def connect_send_implicit_sign_on_and_expect_assistant(
             "type": "user_signed_on",
             "agent_id": agent_id,
             "message_id": msg_uuid,
-            "implicit_greeting": True,
         }
     )
     async with websockets.connect(

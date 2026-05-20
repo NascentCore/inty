@@ -1,7 +1,8 @@
 """Prompt slice ids (filename stem, no .md) for system injection and companion_update_prompt_slice.
 
 ``PromptSliceId.MEMORY`` maps to ``MEMORY.md`` (semantic memory). Episodic and gist layers live under
-``memory/daily/<date>.md`` and ``memory/<date>.md`` instead; see ``memory_taxonomy``."""
+``memory/daily/<date>.md`` and ``memory/<date>.md`` instead; see ``memory_taxonomy``.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ class PromptSliceId(StrEnum):
 
     BOOTSTRAP = "BOOTSTRAP"
     SOUL = "SOUL"
+    STYLE = "STYLE"
     IDENTITY = "IDENTITY"
     USER = "USER"
     MEMORY = "MEMORY"
@@ -38,6 +40,7 @@ _PERSISTABLE_SLICE_IDS: Final[frozenset[PromptSliceId]] = frozenset(
     {
         PromptSliceId.IDENTITY,
         PromptSliceId.SOUL,
+        PromptSliceId.STYLE,
         PromptSliceId.USER,
         PromptSliceId.MEMORY,
     }
@@ -47,7 +50,9 @@ _PERSISTABLE_SLICE_IDS: Final[frozenset[PromptSliceId]] = frozenset(
 def _persistable_workspace_rel(slice_id: PromptSliceId) -> str:
     rel = slice_to_workspace_rel(slice_id)
     if rel is None:
-        raise RuntimeError(f"persistable slice expected workspace rel: {slice_id!r}")
+        raise RuntimeError(
+            f"persistable slice expected workspace rel: {slice_id!r}"
+        )
     return rel
 
 

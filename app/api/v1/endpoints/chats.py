@@ -112,7 +112,8 @@ async def list_chat_modes(
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
         if (
             not agent_db
-            or getattr(agent_db, "mode_prompt", None) not in USER_FACING_CHAT_MODE_IDS
+            or getattr(agent_db, "mode_prompt", None)
+            not in USER_FACING_CHAT_MODE_IDS
         ):
             return []
     opts = get_user_facing_chat_mode_options()
@@ -167,7 +168,9 @@ async def create_chat(
     """
     Create new chat (evaluation can pass X-Assume-User-Id to create as another user).
     """
-    chat = await chat_service.create_chat(db, chat_in=chat_in, user_id=current_user.id)
+    chat = await chat_service.create_chat(
+        db, chat_in=chat_in, user_id=current_user.id
+    )
     return chat
 
 
@@ -226,7 +229,9 @@ async def get_agent_chat_messages(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     current_user: UserSchema = Depends(deps.get_effective_user_for_eval),
-    limit: int = Query(20, ge=1, le=100, description="Number of messages per page"),
+    limit: int = Query(
+        20, ge=1, le=100, description="Number of messages per page"
+    ),
     offset: int = Query(0, ge=0, description="Offset"),
     order: str = Query(
         "desc",
@@ -252,7 +257,9 @@ async def get_agent_chat_messages(
 
         # Verify if the agent_id in returned chat matches the input
         if chat.agent_id != agent_id:
-            logger.error(f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
+            logger.error(
+                f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}"
+            )
             raise HTTPException(
                 status_code=500,
                 detail=f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}",
@@ -280,7 +287,9 @@ async def get_agent_chat_messages(
                 await db.rollback()
                 logger.warning(f"投递日常记忆提示失败: {e}")
 
-        unlocked_ids = await get_unlocked_surprise_snap_message_ids(db, current_user_id)
+        unlocked_ids = await get_unlocked_surprise_snap_message_ids(
+            db, current_user_id
+        )
         messages_data = await asyncio.to_thread(
             chat_history_service.get_messages_paginated,
             session_id=session_id,
@@ -392,7 +401,11 @@ async def update_message_vote(
                 message_data = json.loads(str(message_raw))
 
             message_type = message_data.get("type", "human")
-            role = "user" if message_type in ["human", "HumanMessage"] else "assistant"
+            role = (
+                "user"
+                if message_type in ["human", "HumanMessage"]
+                else "assistant"
+            )
 
             # 仅允许对 AI 消息进行投票
             if role != "assistant":
@@ -410,7 +423,9 @@ async def update_message_vote(
         )
 
         if not success:
-            return APIResponse.error(message="Failed to update message vote", code=500)
+            return APIResponse.error(
+                message="Failed to update message vote", code=500
+            )
 
         return APIResponse.success(
             data={"vote": request.vote}, message="Vote updated successfully"
@@ -437,7 +452,9 @@ async def generate_message_voice(
     language: str = Query("zh", description="语言代码"),
     current_user: UserSchema = Depends(deps.get_effective_user_for_eval),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
-    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
+    subscription_svc: SubscriptionService = Depends(
+        deps.get_subscription_service
+    ),
 ):
     """
     为指定消息生成语音（evaluation 可传 X-Assume-User-Id）
@@ -495,7 +512,9 @@ async def generate_message_voice(
 
     except Exception as e:
         logger.error(f"按需语音生成失败: {str(e)}")
-        return APIResponse.error(message=f"Voice generation failed: {str(e)}", code=500)
+        return APIResponse.error(
+            message=f"Voice generation failed: {str(e)}", code=500
+        )
 
 
 @router.get(
@@ -547,7 +566,9 @@ async def update_agent_chat_settings(
     agent_id: str,
     settings_update: ChatSettingsUpdate,
     current_user: UserSchema = Depends(deps.get_effective_user_for_eval),
-    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
+    subscription_svc: SubscriptionService = Depends(
+        deps.get_subscription_service
+    ),
 ) -> Any:
     """
     Update chat settings by Agent ID
@@ -574,7 +595,9 @@ async def update_agent_chat_settings(
 
         # Verify if the agent_id in returned chat matches the input
         if chat.agent_id != agent_id:
-            logger.error(f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
+            logger.error(
+                f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}"
+            )
             raise HTTPException(status_code=500, detail=f"Agent ID mismatch")
 
         # Get or create chat settings, then update
@@ -583,8 +606,10 @@ async def update_agent_chat_settings(
             db=db, chat_id=chat.id, user_id=current_user_id, agent_id=agent_id
         )
 
-        subscription_status = await subscription_svc.get_user_subscription_status(
-            db, current_user_id
+        subscription_status = (
+            await subscription_svc.get_user_subscription_status(
+                db, current_user_id
+            )
         )
 
         # Check if trying to update style_prompt and if user has subscription
@@ -695,9 +720,9 @@ async def get_agent_chat_settings(
         else:
             chat_mode_value = settings.chat_mode or agent_default_mode
 
-        response = chat_schemas.ChatSettingsInDB.model_validate(settings).model_copy(
-            update={"chat_mode": chat_mode_value}
-        )
+        response = chat_schemas.ChatSettingsInDB.model_validate(
+            settings
+        ).model_copy(update={"chat_mode": chat_mode_value})
 
         logger.info(
             f"Successfully got Agent chat settings - Agent ID: {agent_id}, Settings ID: {settings.id}"
@@ -815,7 +840,8 @@ async def clear_agent_chat_messages(
 
         if not chat:
             raise HTTPException(
-                status_code=404, detail="Chat session for this agent was not found"
+                status_code=404,
+                detail="Chat session for this agent was not found",
             )
 
         # 生成session_id
@@ -834,7 +860,9 @@ async def clear_agent_chat_messages(
             )
         else:
             # 清除全部消息
-            result = chat_history_service.clear_all_messages(session_id=session_id)
+            result = chat_history_service.clear_all_messages(
+                session_id=session_id
+            )
 
         # 如果清除操作成功，同时清空 debug_messages 字段
         if result.get("success", False):
@@ -849,7 +877,9 @@ async def clear_agent_chat_messages(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"清除Agent聊天消息失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        logger.error(
+            f"清除Agent聊天消息失败 - Agent ID: {agent_id}, Error: {str(e)}"
+        )
         raise HTTPException(
             status_code=500, detail=f"Failed to clear messages: {str(e)}"
         )

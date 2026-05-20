@@ -1,7 +1,9 @@
 from loguru import logger
 
 from app.core.config import Environment, global_config_loaded_from_config_yaml
-from app.external_services.android_publisher import create_android_publisher_service
+from app.external_services.android_publisher import (
+    create_android_publisher_service,
+)
 from app.external_services.fakes.android_publisher import FakeAndroidPublisher
 from app.external_services.fakes.telegram_bot import FakeTelegramBotService
 from app.external_services.google_play_service import GooglePlayService
@@ -26,9 +28,12 @@ try:
             global_config_loaded_from_config_yaml.agent.telegram_bot_token
         )
         if telegram_bot_token:
-            telegram_bot_service = TelegramBotService(bot_token=telegram_bot_token)
+            telegram_bot_service = TelegramBotService(
+                bot_token=telegram_bot_token
+            )
     google_play_service = GooglePlayService(
-        android_publisher_service, global_config_loaded_from_config_yaml.google_play
+        android_publisher_service,
+        global_config_loaded_from_config_yaml.google_play,
     )
 except Exception as e:
     logger.error(f"Failed to create one of the external services: {e}")

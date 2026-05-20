@@ -16,22 +16,24 @@ maintenance agents can fix the highest-impact item first.
 
 ### Newly discovered open violations
 
-- [ ] Google 2.4 "Exceptions": `/app/services/live_chat_service.py`
+- [x] Google 2.4 "Exceptions": `/app/services/live_chat_service.py`
   catches broad `Exception` while waiting for prefill completion in
   `_flush_after_prefill`, then returns without logging. Log unexpected wait
   failures while still allowing cancellation to stop the background task.
-- [ ] Google 2.4 "Exceptions": `/app/services/voice_cache_service.py`
+  Fixed in `cursor/agent-maintenance-tasks-4b37`.
+- [x] Google 2.4 "Exceptions": `/app/services/voice_cache_service.py`
   suppresses rollback failures with `except Exception: pass` in the save and
   access-stat update paths. Log rollback failure context so voice cache database
-  errors remain diagnosable.
-- [ ] Google 2.4 "Exceptions": `/app/services/push_notification_service.py`
+  errors remain diagnosable. Fixed in `cursor/agent-maintenance-tasks-96b3`.
+- [x] Google 2.4 "Exceptions": `/app/services/push_notification_service.py`
   silently returns the original avatar URL when mobile image transformation
   fails. Log the transformation failure so push image delivery regressions are
-  observable.
-- [ ] Google 2.4 "Exceptions": `/app/services/memory_extraction_service.py`
+  observable. Fixed in `cursor/agent-maintenance-tasks-4b37`.
+- [x] Google 2.4 "Exceptions": `/app/services/memory_extraction_service.py`
   silently drops malformed metadata and messages with broad `Exception`
   fallbacks while reading chat history. Narrow expected JSON/data errors or log
-  skipped rows so memory extraction loss is traceable.
+  skipped rows so memory extraction loss is traceable. Fixed in
+  `cursor/agent-maintenance-tasks-5251`.
 - [ ] Google 2.4 "Exceptions": `/app/services/festival_memory_service.py`
   silently skips rows that fail chat-message JSON parsing. Log skipped rows or
   narrow the parser exceptions so festival memory inputs do not disappear
@@ -78,7 +80,7 @@ maintenance agents can fix the highest-impact item first.
 ### Newly discovered open violations
 
 - [x] Google 2.4 "Exceptions":
-  `/app/core/companion_harness/companion/significance_perception.py` catches broad
+  `/app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py` catches broad
   `Exception` while parsing and extracting dual-LLM envelope candidates, then
   silently returns `None` or `[]`. Narrow to JSON/Pydantic/model-dump failures
   or log unexpected parser failures so malformed companion envelopes do not
@@ -122,10 +124,10 @@ maintenance agents can fix the highest-impact item first.
   suppresses analytics query failures with `except Exception: pass`; report
   skipped metric groups in logs so operational dashboards do not silently lose
   fields.
-- [ ] Google 2.14 "True/False Evaluations":
+- [x] Google 2.14 "True/False Evaluations":
   `/tools/scripts/create_email_password_user.py` uses SQLAlchemy
   `User.deleted_at == None`. Prefer `User.deleted_at.is_(None)` for explicit
-  SQL `IS NULL` semantics.
+  SQL `IS NULL` semantics. Fixed in `cursor/agent-maintenance-tasks-4b37`.
 
 ### Open violations
 
@@ -149,6 +151,7 @@ maintenance agents can fix the highest-impact item first.
   keeps `_session_id_to_chat_cache` as mutable module-level state without an
   explicit invalidation path. Prefer caller-owned cache state or a force-reload
   option.
-- [ ] Google 2.14 "True/False Evaluations": `/app/api/v1/endpoints/auth.py`
+- [x] Google 2.14 "True/False Evaluations": `/app/api/v1/endpoints/auth.py`
   uses SQLAlchemy `User.deleted_at == None`. Prefer `User.deleted_at.is_(None)`
-  for explicit SQL `IS NULL` semantics.
+  for explicit SQL `IS NULL` semantics. Fixed in
+  `cursor/agent-maintenance-tasks-4b37`.

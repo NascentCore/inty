@@ -34,7 +34,10 @@ from app.schemas.phone_call import (
     PhoneCallStatusResponse,
     is_e164_phone_number,
 )
-from app.schemas.response import BusinessErrorCode, create_business_error_response
+from app.schemas.response import (
+    BusinessErrorCode,
+    create_business_error_response,
+)
 from app.schemas.user import User
 from app.services.subscription_service import SubscriptionService
 
@@ -53,7 +56,9 @@ class PhoneCallLimitError(RuntimeError):
     """Raised when existing live-chat quota blocks a phone call."""
 
     def __init__(self, error_response: dict[str, Any]) -> None:
-        super().__init__(str(error_response.get("message") or "Phone call limit reached"))
+        super().__init__(
+            str(error_response.get("message") or "Phone call limit reached")
+        )
         self.error_response = error_response
 
 
@@ -103,7 +108,9 @@ class PhoneCallService:
     def __init__(self) -> None:
         self.config = global_config_loaded_from_config_yaml.phone_call
         self.security = global_config_loaded_from_config_yaml.security
-        self.gemini_live_config = global_config_loaded_from_config_yaml.gemini_live
+        self.gemini_live_config = (
+            global_config_loaded_from_config_yaml.gemini_live
+        )
 
     @property
     def account_sid(self) -> str:
@@ -131,7 +138,9 @@ class PhoneCallService:
 
     @property
     def media_stream_base_url(self) -> str:
-        return (self.config.twilio_media_stream_base_url or "").strip().rstrip("/")
+        return (
+            (self.config.twilio_media_stream_base_url or "").strip().rstrip("/")
+        )
 
     def status(self) -> PhoneCallStatusResponse:
         twilio_configured = bool(self.account_sid and self.auth_token)
@@ -164,7 +173,9 @@ class PhoneCallService:
         if not st.from_number_configured:
             raise PhoneCallConfigError("Twilio from number is not configured")
         if not st.media_stream_configured:
-            raise PhoneCallConfigError("Twilio media stream WSS URL is not configured")
+            raise PhoneCallConfigError(
+                "Twilio media stream WSS URL is not configured"
+            )
 
     def normalize_phone_number(self, raw: str) -> str:
         s = (raw or "").strip()
@@ -318,11 +329,16 @@ class PhoneCallService:
     ) -> PhoneCallStartResponse:
         self.ensure_available()
         normalized = self.normalize_phone_number(phone_number)
-        is_allowed, reject_reason, limit_info = await subscription_svc.check_live_chat_limit(
-            db, current_user, agent_id
+        is_allowed, reject_reason, limit_info = (
+            await subscription_svc.check_live_chat_limit(
+                db, current_user, agent_id
+            )
         )
         if not is_allowed:
-            error_info = limit_info.get("error_info") or BusinessErrorCode.SUBSCRIPTION_REQUIRED
+            error_info = (
+                limit_info.get("error_info")
+                or BusinessErrorCode.SUBSCRIPTION_REQUIRED
+            )
             raise PhoneCallLimitError(
                 create_business_error_response(error_info).model_dump()
             )
@@ -374,7 +390,9 @@ class PhoneCallService:
         except ValueError:
             normalized = to_number.strip()
         mapping = self.config.inbound_number_agent_map or {}
-        return mapping.get(normalized) or (self.config.default_inbound_agent_id or None)
+        return mapping.get(normalized) or (
+            self.config.default_inbound_agent_id or None
+        )
 
     async def build_inbound_twiml(
         self,
@@ -383,16 +401,24 @@ class PhoneCallService:
         inbound: PhoneCallInboundWebhookRequest,
     ) -> str:
         if not self.config.enabled:
-            return self.build_reject_twiml("Phone calls are currently disabled.")
+            return self.build_reject_twiml(
+                "Phone calls are currently disabled."
+            )
         if not self.media_stream_base_url:
-            return self.build_reject_twiml("Phone calls are not fully configured.")
+            return self.build_reject_twiml(
+                "Phone calls are not fully configured."
+            )
         agent_id = self.agent_id_for_inbound_number(inbound.to_number)
         if not agent_id:
-            return self.build_reject_twiml("This Inty phone number is not assigned yet.")
+            return self.build_reject_twiml(
+                "This Inty phone number is not assigned yet."
+            )
         try:
             caller = self.normalize_phone_number(inbound.from_number)
         except ValueError:
-            return self.build_reject_twiml("We could not recognize your caller number.")
+            return self.build_reject_twiml(
+                "We could not recognize your caller number."
+            )
         user_id = await self.lookup_caller_user_id(
             db, normalized_phone_number=caller
         )

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -17,12 +18,18 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
     end_companion_turn_root_run_safe,
 )
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.models import InnerTickMode
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import start_tool_background_job
 from app.core.companion_harness.companion.turn import run_turn
+from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
+
+
+def _idle_tool_bg() -> threading.Event:
+    ev = threading.Event()
+    ev.set()
+    return ev
 
 
 @patch(
@@ -31,7 +38,13 @@ from app.core.companion_harness.companion.turn import run_turn
 )
 def test_create_companion_turn_root_run_returns_none_when_disabled(_mock: MagicMock) -> None:
     assert (
-        create_companion_turn_root_run(inty_trace_id="t1", user_msg_uuid="u1") is None
+        create_companion_turn_root_run(
+            inty_trace_id="t1",
+            user_msg_uuid="u1",
+            chat_model=resolve_chat_text_model("stub/disabled-chat"),
+            tool_model=resolve_chat_text_model("stub/disabled-tool"),
+        )
+        is None
     )
 
 
@@ -46,8 +59,8 @@ def test_create_companion_turn_root_run_skips_kernel_placeholder_models(
         create_companion_turn_root_run(
             inty_trace_id="t1",
             user_msg_uuid="u1",
-            chat_model="m/chat",
-            tool_model="m/tool",
+            chat_model=resolve_chat_text_model("m/chat"),
+            tool_model=resolve_chat_text_model("m/tool"),
         )
         is None
     )
@@ -66,8 +79,8 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
     out = create_companion_turn_root_run(
         inty_trace_id="t1",
         user_msg_uuid="u1",
-        chat_model="stub/chat-route",
-        tool_model="stub/tool-route",
+        chat_model=resolve_chat_text_model("stub/chat-route"),
+        tool_model=resolve_chat_text_model("stub/tool-route"),
         user_id="u-42",
         companion_id="c-7",
     )
@@ -84,15 +97,17 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
     assert kwargs["inputs"]["user_msg_uuid"] == "u1"
     assert kwargs["inputs"]["chat_model"] == "stub/chat-route"
     assert kwargs["inputs"]["tool_model"] == "stub/tool-route"
+    assert isinstance(kwargs["inputs"]["chat_model_catalog"], dict)
+    assert isinstance(kwargs["inputs"]["tool_model_catalog"], dict)
     assert kwargs["inputs"]["user_id"] == "u-42"
     assert kwargs["inputs"]["companion_id"] == "c-7"
     assert kwargs["inputs"]["inty_turn_lane"] == "explicit_user_message"
-    assert "inner_tick_mode" not in kwargs["inputs"]
+    assert "inner_tick_activity" not in kwargs["inputs"]
     assert kwargs["extra"]["metadata"]["ls_model_name"] == "stub/chat-route | stub/tool-route"
     assert kwargs["extra"]["metadata"]["inty_user_id"] == "u-42"
     assert kwargs["extra"]["metadata"]["inty_companion_id"] == "c-7"
     assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "explicit_user_message"
-    assert "inner_tick_mode" not in kwargs["extra"]["metadata"]
+    assert "inner_tick_activity" not in kwargs["extra"]["metadata"]
     mock_root.post.assert_called_once()
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
@@ -110,8 +125,8 @@ def test_create_companion_turn_root_run_name_uses_unknown_when_ids_empty(
     create_companion_turn_root_run(
         inty_trace_id="t1",
         user_msg_uuid="u1",
-        chat_model="stub/chat-route",
-        tool_model="stub/tool-route",
+        chat_model=resolve_chat_text_model("stub/chat-route"),
+        tool_model=resolve_chat_text_model("stub/tool-route"),
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_user_turn user=unknown agent=unknown"
@@ -134,8 +149,8 @@ def test_create_companion_turn_root_run_implicit_signed_on_lane(
     create_companion_turn_root_run(
         inty_trace_id="t1",
         user_msg_uuid="u1",
-        chat_model="stub/chat-route",
-        tool_model="stub/tool-route",
+        chat_model=resolve_chat_text_model("stub/chat-route"),
+        tool_model=resolve_chat_text_model("stub/tool-route"),
         user_id="u1",
         companion_id="a1",
         implicit_user_signed_on=True,
@@ -167,20 +182,20 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
     create_companion_turn_root_run(
         inty_trace_id="t1",
         user_msg_uuid="u1",
-        chat_model="stub/chat-route",
-        tool_model="stub/tool-route",
+        chat_model=resolve_chat_text_model("stub/chat-route"),
+        tool_model=resolve_chat_text_model("stub/tool-route"),
         user_id="u1",
         companion_id="a1",
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_inner_tick maintenance user=u1 agent=a1"
     assert kwargs["tags"] == ["agentic_companion", "inner_tick"]
     assert kwargs["inputs"]["inty_turn_lane"] == "inner_tick"
-    assert kwargs["inputs"]["inner_tick_mode"] == "maintenance"
+    assert kwargs["inputs"]["inner_tick_activity"] == "maintenance"
     assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "inner_tick"
-    assert kwargs["extra"]["metadata"]["inner_tick_mode"] == "maintenance"
+    assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "maintenance"
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
@@ -197,17 +212,17 @@ def test_create_companion_turn_root_run_inner_tick_proactive_lane(
     create_companion_turn_root_run(
         inty_trace_id="t1",
         user_msg_uuid="u1",
-        chat_model="stub/chat-route",
-        tool_model="stub/tool-route",
+        chat_model=resolve_chat_text_model("stub/chat-route"),
+        tool_model=resolve_chat_text_model("stub/tool-route"),
         user_id="u1",
         companion_id="a1",
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_inner_tick proactive_chat user=u1 agent=a1"
-    assert kwargs["inputs"]["inner_tick_mode"] == "proactive_chat"
-    assert kwargs["extra"]["metadata"]["inner_tick_mode"] == "proactive_chat"
+    assert kwargs["inputs"]["inner_tick_activity"] == "proactive_chat"
+    assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "proactive_chat"
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
@@ -257,7 +272,7 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
         start_tool_background_job(
             memory_store=st,
             request_messages=[{"role": "user", "content": "hi"}],
-            tool_model_name="m",
+            tool_model=resolve_chat_text_model("m"),
             user_msg_uuid="uuid",
             trace_id="tr",
             tools=[],
@@ -297,7 +312,7 @@ def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
         start_tool_background_job(
             memory_store=st,
             request_messages=[{"role": "user", "content": "hi"}],
-            tool_model_name="m",
+            tool_model=resolve_chat_text_model("m"),
             user_msg_uuid="uuid",
             trace_id="tr",
             tools=[],
@@ -318,15 +333,15 @@ class _FakeAsyncDualLLMClient:
     def __init__(self) -> None:
         self.config = CompanionLLMConfig(
             api_key="k",
-            default_model="m/default",
-            chat_model="m/chat",
-            tool_model="m/tool",
+            default_model=resolve_chat_text_model("m/default"),
+            chat_model=resolve_chat_text_model("m/chat"),
+            tool_model=resolve_chat_text_model("m/tool"),
             async_chat_front_timeout_sec=120.0,
         )
         self.chat_calls: list[dict[str, Any]] = []
 
-    def resolve_model(self, role: str) -> str:
-        return f"m/{role}"
+    def resolve_model(self, role: str) -> GenAIModel:
+        return resolve_chat_text_model(f"m/{role}")
 
     def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_calls.append(kwargs)
@@ -359,9 +374,9 @@ class _FakeAsyncDualLLMClient:
 async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    store = get_memory_store(
-        CompanionScope("ls", "agent", str(tmp_path.resolve())),
-        dsn="",
+    store = MemoryStore(
+        scope=CompanionScope("ls", "agent", str(tmp_path.resolve())),
+        repository=None,
     )
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
@@ -397,6 +412,7 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
         llm_client=client,  # type: ignore[arg-type]
         defer_memory_update=True,
         memory_config=None,
+        tool_bg_idle_event=_idle_tool_bg(),
     )
 
     assert len(bg_jobs) == 1

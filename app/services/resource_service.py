@@ -125,7 +125,9 @@ def create_image_resource(
         ),
         user_id=user_id,
     )
-    logger.debug(f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}")
+    logger.debug(
+        f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}"
+    )
 
 
 async def async_create_resource(
@@ -210,4 +212,6 @@ async def async_create_image_resource(
         ),
         user_id=user_id,
     )
-    logger.debug(f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}")
+    logger.debug(
+        f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}"
+    )

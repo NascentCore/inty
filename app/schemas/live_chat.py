@@ -133,7 +133,9 @@ class LiveChatMessage(BaseModel):
 
     type: LiveChatMessageType = Field(..., description="消息类型")
     data: Optional[str] = Field(default=None, description="消息数据")
-    timestamp: Optional[float] = Field(default=None, description="时间戳（毫秒）")
+    timestamp: Optional[float] = Field(
+        default=None, description="时间戳（毫秒）"
+    )
 
 
 class LiveChatAudioMessage(BaseModel):

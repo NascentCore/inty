@@ -43,7 +43,9 @@ def _extract_user_name_from_profile(user_profile: str) -> Optional[str]:
         name_match = re.search(r"Name:\s*([^\n]+)", user_profile)
         if name_match:
             return name_match.group(1).strip()
-        chinese_name_match = re.search(r"[名字|姓名]\s*[:=：]\s*([^\n]+)", user_profile)
+        chinese_name_match = re.search(
+            r"[名字|姓名]\s*[:=：]\s*([^\n]+)", user_profile
+        )
         if chinese_name_match:
             return chinese_name_match.group(1).strip()
     except (AttributeError, TypeError):
@@ -51,15 +53,14 @@ def _extract_user_name_from_profile(user_profile: str) -> Optional[str]:
     return None
 
 
-def _is_official_assistant(*, context: Any, config: PromptAssemblerConfig) -> bool:
+def _is_official_assistant(
+    *, context: Any, config: PromptAssemblerConfig
+) -> bool:
     return context.agent_id == config.official_agent_id
 
 
 def _axiom_system_messages_prefix() -> list[SystemMessage]:
-    axiom = get_imate_axiom_system_text()
-    if not axiom:
-        return []
-    return [SystemMessage(content=axiom)]
+    return [SystemMessage(content=get_imate_axiom_system_text())]
 
 
 def _get_effective_main_prompt(
@@ -99,7 +100,9 @@ def _get_effective_output_format_prompt(context: Any) -> str:
         return context.output_format_prompt
     if context.mode_prompt:
         try:
-            return prompts.get_mode_output_format_prompt_by_id(context.mode_prompt)
+            return prompts.get_mode_output_format_prompt_by_id(
+                context.mode_prompt
+            )
         except ValueError:
             return ""
     return prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
@@ -114,13 +117,17 @@ def _build_character_context(
 ) -> list[SystemMessage]:
     context_messages: list[SystemMessage] = []
     if context.personality:
-        rendered = deps.render_prompt(context.personality, context.name, user_name)
+        rendered = deps.render_prompt(
+            context.personality, context.name, user_name
+        )
         context_messages.append(SystemMessage(content=rendered))
     if context.scenario:
         rendered = deps.render_prompt(context.scenario, context.name, user_name)
         context_messages.append(SystemMessage(content=rendered))
     if context.message_example:
-        rendered = deps.render_prompt(context.message_example, context.name, user_name)
+        rendered = deps.render_prompt(
+            context.message_example, context.name, user_name
+        )
         context_messages.append(SystemMessage(content=rendered))
     if deps.is_christmas_prompt_enabled():
         rendered = deps.render_prompt(
@@ -143,9 +150,13 @@ def build_system_messages(
     system_messages: list[SystemMessage] = []
     system_messages.extend(_axiom_system_messages_prefix())
 
-    main_prompt = _get_effective_main_prompt(context=context, deps=deps, config=config)
+    main_prompt = _get_effective_main_prompt(
+        context=context, deps=deps, config=config
+    )
     if main_prompt:
-        rendered_main_prompt = deps.render_prompt(main_prompt, context.name, user_name)
+        rendered_main_prompt = deps.render_prompt(
+            main_prompt, context.name, user_name
+        )
         system_messages.append(SystemMessage(content=rendered_main_prompt))
 
     system_messages.extend(
@@ -173,7 +184,9 @@ def build_system_messages(
         )
     elif chat_settings and chat_settings.premium_mode:
         mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
-        output_format_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
+        output_format_prompt = (
+            prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
+        )
     else:
         mode_prompt = _get_effective_mode_prompt(
             context=context,
@@ -183,7 +196,9 @@ def build_system_messages(
         output_format_prompt = _get_effective_output_format_prompt(context)
 
     if mode_prompt:
-        rendered_mode_prompt = deps.render_prompt(mode_prompt, context.name, user_name)
+        rendered_mode_prompt = deps.render_prompt(
+            mode_prompt, context.name, user_name
+        )
         system_messages.append(SystemMessage(content=rendered_mode_prompt))
     if request.include_output_format_prompt and output_format_prompt:
         rendered_output_prompt = deps.render_prompt(
@@ -194,7 +209,9 @@ def build_system_messages(
         system_messages.append(SystemMessage(content=rendered_output_prompt))
 
     if chat_settings and chat_settings.style_prompt:
-        system_messages.append(SystemMessage(content=chat_settings.style_prompt))
+        system_messages.append(
+            SystemMessage(content=chat_settings.style_prompt)
+        )
 
     if request.user_profile:
         system_messages.append(SystemMessage(content=request.user_profile))
@@ -264,7 +281,9 @@ def build_system_messages_for_official_assistant(
             content=config.intro_system_message_prefix + context.intro,
         )
     )
-    system_messages.append(SystemMessage(content=config.official_rename_system_message))
+    system_messages.append(
+        SystemMessage(content=config.official_rename_system_message)
+    )
     system_messages.append(
         SystemMessage(content=config.official_tool_usage_system_message)
     )

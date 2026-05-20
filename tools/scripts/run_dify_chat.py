@@ -128,7 +128,9 @@ async def fetch_existing_agent_names(session: AsyncSession) -> list[str]:
     Returns:
         角色名称列表
     """
-    result = await session.execute(select(Agent.name).where(Agent.deleted_at.is_(None)))
+    result = await session.execute(
+        select(Agent.name).where(Agent.deleted_at.is_(None))
+    )
     names = [row[0] for row in result.all()]
     logger.info(f"数据库中已有 {len(names)} 个角色")
     return names
@@ -224,7 +226,9 @@ def generate_characters(
     """
     excluded_name_limit = MAX_EXCLUDED_NAMES_IN_PROMPT
     excluded_names_text = (
-        ", ".join(existing_names[:excluded_name_limit]) if existing_names else "none"
+        ", ".join(existing_names[:excluded_name_limit])
+        if existing_names
+        else "none"
     )
     if len(existing_names) > excluded_name_limit:
         excluded_names_text += (
@@ -273,7 +277,9 @@ IMPORTANT: Do NOT use any of these existing names: {excluded_names_text}"""
 
     characters = parse_generated_characters(text)
     logger.info(f"成功生成 {len(characters)} 个角色")
-    logger.debug(f"角色列表: {json.dumps(characters, indent=2, ensure_ascii=False)}")
+    logger.debug(
+        f"角色列表: {json.dumps(characters, indent=2, ensure_ascii=False)}"
+    )
     return characters
 
 
@@ -302,7 +308,9 @@ def call_dify(dify_api_key: str, character: dict) -> bool:
     logger.debug(f"query: {query}")
 
     try:
-        response = requests.post(endpoint, headers=headers, json=payload, timeout=180)
+        response = requests.post(
+            endpoint, headers=headers, json=payload, timeout=180
+        )
         logger.debug(f"响应状态码: {response.status_code}")
         logger.debug(f"响应内容: {response.text[:500]}")
 
@@ -365,7 +373,9 @@ async def main(
 
     db_url = create_db_url(db_config)
     engine = create_async_engine(db_url, echo=False)
-    Session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    Session = sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
 
     try:
         async with Session() as session:
@@ -393,13 +403,19 @@ async def main(
             for char in characters:
                 if call_dify(dify_api_key, char):
                     success_count += 1
-                    logger.info(f"已成功创建 {success_count}/{target_count} 个角色")
+                    logger.info(
+                        f"已成功创建 {success_count}/{target_count} 个角色"
+                    )
                     if success_count >= target_count:
-                        logger.info(f"已达到目标数量 ({target_count})，停止创建")
+                        logger.info(
+                            f"已达到目标数量 ({target_count})，停止创建"
+                        )
                         break
 
             if success_count < target_count:
-                logger.warning(f"仅成功创建 {success_count}/{target_count} 个角色")
+                logger.warning(
+                    f"仅成功创建 {success_count}/{target_count} 个角色"
+                )
                 return 1
 
             logger.info(f"成功完成：共创建 {success_count} 个角色")

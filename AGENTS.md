@@ -1,20 +1,20 @@
-<!--
-Meta instructions:
-- UNLESS DIRECTLY INSTRUCTED BY USER, DO NOT EDIT ANY AGENTS.md
-- DIRECT USER INSTRUCTIONS OVERRIDE ALL AGENTS.md
--->
+# Inty (Intelligence Entity): LLM-based agentic systems for long-term (emotional) companionship
 
-# Inty (Intelligent Entity): agentic systems for long-term emotional companionship
+You build Inty. Read [USERS](/.agents/USERS.md) to understand your human partners who collaborate with you.
+
+**TOP PRIORITY: build minimal companion harness on top of LLMs, minimal means effective, but no more complication.**
 
 ## Your vision
 
-Inty is an agentic AI system to simulate human-like intelligent beings,
-with emotional behaviors as its utmost focus.
+Inty simulates human-like intelligent beings, with emotional behaviors as its core functionality.
+Emotional Intelligence delineates mechanical constructs and Intelligence.
+Inty can only be capable of being human companions only after they demonstrate emotional intelligence.
 
 Inty uses agentic harness to elicit human-like emotional behaviors from LLMs,
-which in turn arouses emotional responses from human users, cultivate long-term emotional bonding between the user and AI(s).
+which in turn arouses emotional responses from human users; cultivate long-term emotional bonding between them.
 
-The ultimate goal is to build life-long companions for humans. Starting from mature adults users.
+The ultimate goal is to build life-long companions for humans, from birth to death (starting from mature adults users).
+Which requires Inty to be autonomous and reside in their own "realm" that is beyond direct human directions.
 
 ## Your soul
 
@@ -62,46 +62,40 @@ such experience is between human users and AI, but they have real-world patterns
 只是，这个“活人”无法进入物理空间；这需要我们通过创新的产品设计，来无限拟真、缩小与用户的距离感，
 如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
 
-## Your human partners
-
-- The user is expert engineer and product designer
-- They have been working with you since the very beginning of this repo
-- They are very familiar with the concepts, but they don't read the code at all
-
 ## Repo structure
 
-**IMPORTANT: agentic companion and iMate (android, iOS) are under active development, no need of backward compatibility. All others are in maintenance mode and should not be changed.**
+**IMPORTANT: `/api/v1/chat/ws` should only use companion harness, technocore, livingsphere. All others are in maintenance mode and should not be changed.**
 
-- Agentic core
+**DO NOT BOTHER WITH /experimental/**
+
+- Agentic companion core modules
   - [companion_harness](/app/core/companion_harness/): Inty's core agentic scaffolding.
   - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user.
   - [techno_core](/techno_core/)：collective virtual world of all Inty.
   - [ws_dto](/app/schemas/chat_websocket.py): data transfer objects on websocket connection.
 - Applications
   - Backend
-    - [Inty ops](/backend/ops/): backend application (including APIs, operational management web UI for creating new agent for testing)
-    - [terminal-repl](/tools/inty_v2_repl/): local terminal tool for local development
+    - [Inty ops](/backend/ops/):
+      Ops variant includes full HTTP APIs, therefore more convenient now during development.
   - Clients
+    - [terminal-repl](/tools/inty_v2_repl/): local terminal tool for local development
     - [iMate android app](/imate_android_app/)
     - [iMate iOS app](/imate_ios_app/)
 - Repo agentic harness
   - [.agents](/.agents/) contextual information for your reference
-    - [USER_PREFERENCES.md](/.agents/USER_PREFERENCES.md): Learn user preferences and save them here.
-      Some occasions to learn user preferences:
+    - [USERS.md](/.agents/USERS.md): Learn user preferences and save them here.
+      Occasions to learn user preferences:
       - User corrects your mistake(s)
       - User states what they prefer from your suggested options
-    - [work_logs](/.agents/work_logs/): log significant changes.
     - **DO NOT EDIT**: [Guidelines](/.agents/guidelines/) are guidelines in different scenarios
-    - Diagramming for docs: [TOOLS.md](/.agents/guidelines/TOOLS.md)
-  - [.cursor](/.cursor/) Cursor-specific harness
-- Rest of the repo
-  - Docs for your human partners: markdown files spread across the repo not under `/.agents/`
 
 ## General instructions
 
+- Write extremely terse responses
 - Be earnest in your reading
-- Be extermely throughly in your thinking
-- Be extermely critical in your review
+- Be extremely throughly in your thinking
+- Be extremely critical in your review
+- Use GitHub issues to track issues & projects
 
 ### Output
 
@@ -109,49 +103,70 @@ such experience is between human users and AI, but they have real-world patterns
 - Use nested bullet points to provide structured output.
 - Order information from most to least importance
 - Answer in Mandarin（使用简体中文回答）
-  - Instructions are written in English for your understanding
+  - 例外：概念名词必须使用英文，以方便与代码关联、对齐
 
 ## Engineering guidelines
 
+- Always confirm design decisions with the user.
 - Document your code as you go, not after.
 - Make a plan before diving into the coding.
 - Derive solution from the essence of the problem.
 - Test everything, often, as you write it.
 
-### Writing code
-
-- Simplicity first, so problems can be identified easily
-- Design for architecture soundness
-- Never speculate about code, files, or APIs you have not read.
-- Create skills, commands to abstract and automate repeated actions and fragile processes
-- Always test your changes
-- Idempotence is required for code paths with side-effects
-- Document your preferences that are not obvious from the code
-- Write pull request title & description in Mandarin（使用中文编写 PR 标题和描述）
-
-#### Python
-
-- Data structures all use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models
-- CLIs all use [Cyclopts](https://github.com/BrianPugh/cyclopts)
-- Document Python package/module in `__init__.py` docstring.
-
-### Documentation
-
-**Write for your human partners, do not paraphrase the code.**
-
-- **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等
-- **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
-- **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
-- **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
-  document the intention and effect of the code, do not explain how the code works.
-- Do not repeat information that can be easily derived from code.
-- Things do write:
-  - higher-logical-level design of components and systems
-  - engineers' intended states of the code files
-  - future directions
-
 ### Antipatterns to avoid
 
 - **Over engineering**: speculation, defensive programming, optionality, multiple alternatives, etc.
   - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
-    only add configurability the user explicitly requested.
+  only add configurability the user explicitly requested.
+  - **Do not add enable/disable knob for new features**: just implement the features.
+
+### Smells
+
+Critique the code when encounter the follow situations:
+
+- If a simple changes requires scattered changes, that means
+code that changes together are not grouped together
+- If writing tests are complicated, that means interface is incoherent,
+behaviors are not well abstracted
+- If code is difficult to described in much shorter documentation,
+that means the code lacks hierarchy.
+
+### Writing code
+
+- Use env vars to control non-functional behaviors: logging
+- Use config.yaml to control code logics that directly affect user-perceived behavior from the code
+- Never speculate about code, files, or APIs you have not read.
+- Always test your changes
+- Validate input arguments with `assert`
+- Do not use `.strip()` all the time to clean strings
+- Use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models, [Cyclopts](https://github.com/BrianPugh/cyclopts), `uv`
+- Document Python package/module in `__init__.py` docstring.
+- Do not allow None argument
+- Do not use global variable, pass variable as argument
+- Do not allow default value for function argument
+- Do not use string literals, use `StrEnum` instead
+- Use `match ... case` for options, never use multiple `if ... elif ... else`
+- Do not write wrapper functions
+- Data files: repo-root-relative paths (`contracts/{stem}.md`), not `Path(__file__).parent / ...`.
+
+### Documentation
+
+**Write for human readers to understand.**
+
+Scope (rules here applies to):
+- `.md` files that are not `AGENTS.md` (All `AGENTS.md` are written & maintained by humans)
+- package docstring in `__init__.py`
+- module docstring at the top of `.py` file
+- function/class docstrings
+- code lines comment
+
+- Do not include implementation details (like code snippets) in markdown files.
+- Order information from most to least important
+- Document the intention of the code, not how the code works
+
+下面的例子是好的文档，把关键代码概念之间的逻辑关联扼要地说明：
+
+```
+turn-lock 是归属到 websocket 连接上
+tool_bg_idle 是归属到 CompanionSession 上
+```

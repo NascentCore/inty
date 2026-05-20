@@ -12,6 +12,7 @@ from tools.inty_v2_repl.backend_chat_ws import (
     http_base_to_ws_chat_url,
     parse_chat_completion_ws_payload,
     _ws_chat_turn_send_payload,
+    _ws_user_signed_out_json,
 )
 
 
@@ -76,6 +77,16 @@ def test_build_ws_user_time_context_now_tz_utc(monkeypatch: pytest.MonkeyPatch) 
     ctx = build_ws_user_time_context_now()
     assert ctx.timezone == "UTC"
     assert ctx.utc_offset_minutes == 0
+
+
+def test_ws_user_signed_out_json_shape() -> None:
+    mid = "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    payload = json.loads(_ws_user_signed_out_json("agent-1", message_id=mid))
+    assert payload == {
+        "type": "user_signed_out",
+        "agent_id": "agent-1",
+        "message_id": mid,
+    }
 
 
 def test_ws_chat_turn_send_payload_includes_time_context() -> None:

@@ -1,6 +1,6 @@
 # `harness_seeding_demo/`：伴侣内核种子试验场
 
-**一句话**：围绕 **`CompanionManager` / `run_turn`** 做 **批量试验与评分矩阵**；默认通过环境变量 **关闭依赖 Postgres 的状态行工具**，以便在轻量环境跑通。
+**一句话**：围绕 **`CompanionManager` / `run_turn`** 做 **批量试验与评分矩阵**；`workspace_setup` / `run_trial` 与生产一致，要求仓库根 `config.yaml` 的 **`database.url` 非空**（MemoryStore 注册表与 `CompanionManager` 会话写 Postgres）。仍可单独用环境变量关闭**仅状态行类**工具等轻量依赖，但不再支持「无 DSN 跑完整内核会话」。
 
 ## 读者
 

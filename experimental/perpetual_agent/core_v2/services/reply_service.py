@@ -3,7 +3,9 @@ from __future__ import annotations
 from ..contracts import ChannelType
 
 
-def compose_reactive_reply(*, channel: ChannelType, inbound_content: str) -> str:
+def compose_reactive_reply(
+    *, channel: ChannelType, inbound_content: str
+) -> str:
     if channel is ChannelType.TELEGRAM:
         return f"收到你的消息：{inbound_content}"
     if channel is ChannelType.SMS:

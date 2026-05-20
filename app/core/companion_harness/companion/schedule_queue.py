@@ -15,7 +15,9 @@ from loguru import logger
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .utc import utc_iso_ts
-from app.core.companion_harness.memory.memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 
 ScheduleTaskStatus = Literal["pending", "fired"]
 
@@ -75,7 +77,9 @@ class ScheduleTask:
                 else None
             ),
             last_error=(
-                str(raw["last_error"]) if raw.get("last_error") is not None else None
+                str(raw["last_error"])
+                if raw.get("last_error") is not None
+                else None
             ),
         )
 
@@ -126,7 +130,9 @@ def _legacy_list_item_to_task(raw: dict[str, Any]) -> ScheduleTask:
             else None
         ),
         last_error=(
-            str(raw["last_error"]) if raw.get("last_error") is not None else None
+            str(raw["last_error"])
+            if raw.get("last_error") is not None
+            else None
         ),
     )
 
@@ -173,7 +179,9 @@ def _task_ready_at_utc(task: ScheduleTask) -> datetime:
     return max(exec_at, retry_at)
 
 
-def _safe_task_ready_at_utc(store: MemoryStore, task: ScheduleTask) -> datetime | None:
+def _safe_task_ready_at_utc(
+    store: MemoryStore, task: ScheduleTask
+) -> datetime | None:
     try:
         ready_at = _task_ready_at_utc(task)
         _clear_invalid_warned(store, task.id)
@@ -378,7 +386,9 @@ def _events_queue() -> queue.Queue[ScheduleDueEvent]:
         return _EVENTS_QUEUE
 
 
-def pop_due_task_events_nowait(*, scope_registry_key: str) -> list[ScheduleDueEvent]:
+def pop_due_task_events_nowait(
+    *, scope_registry_key: str
+) -> list[ScheduleDueEvent]:
     want = scope_registry_key.strip()
     out: list[ScheduleDueEvent] = []
     parked: list[ScheduleDueEvent] = []
@@ -441,12 +451,16 @@ def _clear_invalid_warned(store: MemoryStore, task_id: str) -> None:
         _INVALID_TASK_WARNED_KEYS.discard(key)
 
 
-def _reconcile_invalid_warned(store: MemoryStore, tasks: list[ScheduleTask]) -> None:
+def _reconcile_invalid_warned(
+    store: MemoryStore, tasks: list[ScheduleTask]
+) -> None:
     sk = store.scope.registry_key()
     live_ids = {t.id for t in tasks}
     with _INVALID_TASK_WARNED_KEYS_LOCK:
         stale = [
-            k for k in _INVALID_TASK_WARNED_KEYS if k[0] == sk and k[1] not in live_ids
+            k
+            for k in _INVALID_TASK_WARNED_KEYS
+            if k[0] == sk and k[1] not in live_ids
         ]
         for k in stale:
             _INVALID_TASK_WARNED_KEYS.discard(k)
@@ -470,7 +484,9 @@ def _scheduler_loop(store: MemoryStore, stop_flag: threading.Event) -> None:
             stop_flag.wait(timeout=1.0)
             continue
         _reconcile_invalid_warned(store, tasks)
-        due = _pick_next_due_task(store, tasks, now=now, in_flight_ids=in_flight)
+        due = _pick_next_due_task(
+            store, tasks, now=now, in_flight_ids=in_flight
+        )
         if due is not None:
             if runner is not None:
                 with runner.lock:

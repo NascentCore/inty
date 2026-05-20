@@ -109,7 +109,9 @@ ANIME_FACE = AvatarCroppingConfig(
 )
 
 
-def _calculate_top_square_boundaries(width, height) -> Tuple[int, int, int, int]:
+def _calculate_top_square_boundaries(
+    width, height
+) -> Tuple[int, int, int, int]:
     """
     Calculate the boundaries of a square that is centered horizontally and limited by the smaller dimension of the image.
     Return (x, y, w, h) of the square.
@@ -139,7 +141,9 @@ def _calculate_crop_square_boundaries(
     Return the coordinates (x, y, w, h) of the square.
     """
     if max_expansion_ratio < 1:
-        raise ValueError("It's not possible to crop a square smaller than the face.")
+        raise ValueError(
+            "It's not possible to crop a square smaller than the face."
+        )
 
     print(f"image shape: {img_shape}")
     x, y, w, h = face_coords
@@ -209,7 +213,12 @@ def crop_avatar(img_data: bytes) -> CropAvatarResult:
     faces = animeface.detect(pil_img)
     faces = [
         # Needs to do data format conversion.
-        (face.face.pos.x, face.face.pos.y, face.face.pos.width, face.face.pos.height)
+        (
+            face.face.pos.x,
+            face.face.pos.y,
+            face.face.pos.width,
+            face.face.pos.height,
+        )
         for face in faces
     ]
 
@@ -219,7 +228,9 @@ def crop_avatar(img_data: bytes) -> CropAvatarResult:
         faces = _detect_faces(gray, avatar_cropping_config)
 
     if len(faces) == 0:
-        logger.debug("Detecting faces with frontal face default (realistic style) ...")
+        logger.debug(
+            "Detecting faces with frontal face default (realistic style) ..."
+        )
         avatar_cropping_config = FRONTAL_FACE_DEFAULT
         faces = _detect_faces(gray, avatar_cropping_config)
 
@@ -229,10 +240,14 @@ def crop_avatar(img_data: bytes) -> CropAvatarResult:
 
     if len(faces) == 0:
         logger.warning("No faces detected, using top square boundaries")
-        x, y, w, h = _calculate_top_square_boundaries(img.shape[1], img.shape[0])
+        x, y, w, h = _calculate_top_square_boundaries(
+            img.shape[1], img.shape[0]
+        )
         cropped_face = img[y : y + h, x : x + w]
         return CropAvatarResult(
-            image=Image.fromarray(cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB)),
+            image=Image.fromarray(
+                cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB)
+            ),
             size=ImageSize(width=w, height=h),
         )
 

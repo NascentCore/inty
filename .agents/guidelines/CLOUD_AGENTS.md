@@ -34,8 +34,11 @@ The update script also installs **Google Cloud SDK** (`google-cloud-cli`) via ap
 
 ### Starting services
 
-1. **PostgreSQL**: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
-   - Verify readiness: `sudo docker exec pg-inty pg_isready -U postgres`
+1. **PostgreSQL** (preferred): run from repo root after install/update:
+   - `./tools/scripts/ensure_postgres_for_tests.sh` — pulls `postgres:16` when Docker works, otherwise starts distro PostgreSQL; runs `alembic upgrade head`.
+   - Cloud Agent VM start hook: `.cursor/cloud-agent-start.sh` (same script).
+   - Manual Docker only: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
+   - Verify readiness: `PGPASSWORD='sxwl666!' psql -h localhost -U postgres -d inty -c 'SELECT 1'`
 2. **Inty backend (port 8000)**: `source .venv/bin/activate && ./backend/inty/start.sh --test`
    - `config.yaml` is auto-provisioned by the update script; no manual copy needed.
    - `--test` and `--dev` both enable dev startup (same seeds and uvicorn `--reload`); `start.sh` only differs by the banner string. Neither runs the evaluation static build (that is Ops `backend/ops/start.sh --local` only).

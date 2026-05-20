@@ -31,7 +31,12 @@ class VoiceCacheService:
         return hashlib.md5(content.encode()).hexdigest()
 
     async def get_cached_voice(
-        self, db: AsyncSession, text: str, voice_id: str, model: str, language: str
+        self,
+        db: AsyncSession,
+        text: str,
+        voice_id: str,
+        model: str,
+        language: str,
     ) -> Optional[Tuple[str, float]]:
         """
         获取缓存的语音文件URL和时长
@@ -47,7 +52,9 @@ class VoiceCacheService:
             缓存的音频URL和时长的元组，如果不存在则返回None
         """
         try:
-            content_hash = self._generate_content_hash(text, voice_id, model, language)
+            content_hash = self._generate_content_hash(
+                text, voice_id, model, language
+            )
 
             # 查询缓存，使用 COALESCE 将 NULL duration 转换为 0.0
             result = await db.execute(
@@ -65,7 +72,9 @@ class VoiceCacheService:
 
             if cache_entry:
                 # 检查文件是否还存在
-                if self.gcs_service.check_voice_file_exists(cache_entry.audio_url):
+                if self.gcs_service.check_voice_file_exists(
+                    cache_entry.audio_url
+                ):
                     logger.debug(f"语音缓存命中: {content_hash}")
 
                     # 异步更新访问统计，不阻塞主流程
@@ -138,7 +147,14 @@ class VoiceCacheService:
                 )
         else:
             return await self._save_voice_cache_impl(
-                db, text, voice_id, model, language, audio_url, duration, file_size
+                db,
+                text,
+                voice_id,
+                model,
+                language,
+                audio_url,
+                duration,
+                file_size,
             )
 
     async def _save_voice_cache_impl(
@@ -158,11 +174,15 @@ class VoiceCacheService:
         try:
             import uuid
 
-            content_hash = self._generate_content_hash(text, voice_id, model, language)
+            content_hash = self._generate_content_hash(
+                text, voice_id, model, language
+            )
 
             # 检查是否已存在
             result = await db.execute(
-                select(VoiceCache).where(VoiceCache.content_hash == content_hash)
+                select(VoiceCache).where(
+                    VoiceCache.content_hash == content_hash
+                )
             )
             existing_cache = result.scalar_one_or_none()
 
@@ -198,8 +218,11 @@ class VoiceCacheService:
             logger.error(f"保存语音缓存失败: {str(e)}")
             try:
                 await db.rollback()
-            except Exception:
-                pass  # 如果rollback也失败，忽略
+            except Exception as rollback_error:
+                logger.error(
+                    f"保存语音缓存失败后回滚失败: voice_id={voice_id}, model={model}, language={language}, "
+                    f"original_error={str(e)}, rollback_error={str(rollback_error)}"
+                )
             return False
 
     async def update_access_stats(
@@ -222,21 +245,31 @@ class VoiceCacheService:
                     db_session, text, voice_id, model, language
                 )
         else:
-            await self._update_access_stats_impl(db, text, voice_id, model, language)
+            await self._update_access_stats_impl(
+                db, text, voice_id, model, language
+            )
 
     async def _update_access_stats_impl(
-        self, db: AsyncSession, text: str, voice_id: str, model: str, language: str
+        self,
+        db: AsyncSession,
+        text: str,
+        voice_id: str,
+        model: str,
+        language: str,
     ) -> None:
         """实际的更新访问统计实现"""
         try:
-            content_hash = self._generate_content_hash(text, voice_id, model, language)
+            content_hash = self._generate_content_hash(
+                text, voice_id, model, language
+            )
 
             # 更新访问统计
             stmt = (
                 update(VoiceCache)
                 .where(VoiceCache.content_hash == content_hash)
                 .values(
-                    last_accessed=datetime.now(), hit_count=VoiceCache.hit_count + 1
+                    last_accessed=datetime.now(),
+                    hit_count=VoiceCache.hit_count + 1,
                 )
             )
 
@@ -249,11 +282,19 @@ class VoiceCacheService:
             logger.error(f"更新缓存访问统计失败: {str(e)}")
             try:
                 await db.rollback()
-            except Exception:
-                pass  # 如果rollback也失败，忽略
+            except Exception as rollback_error:
+                logger.error(
+                    f"更新缓存访问统计失败后回滚失败: voice_id={voice_id}, model={model}, language={language}, "
+                    f"original_error={str(e)}, rollback_error={str(rollback_error)}"
+                )
 
     async def _update_cache_hit_async(
-        self, content_hash: str, text: str, voice_id: str, model: str, language: str
+        self,
+        content_hash: str,
+        text: str,
+        voice_id: str,
+        model: str,
+        language: str,
     ) -> None:
         """异步更新缓存命中统计，使用独立的数据库会话"""
         try:
@@ -324,7 +365,9 @@ class VoiceCacheService:
         try:
             # 总缓存数
             total_result = await db.execute(
-                select(func.count(VoiceCache.id)).where(VoiceCache.is_active == True)
+                select(func.count(VoiceCache.id)).where(
+                    VoiceCache.is_active == True
+                )
             )
             total_count = total_result.scalar()
 
@@ -356,7 +399,8 @@ class VoiceCacheService:
                 .limit(10)
             )
             popular_voices = [
-                {"text": row[0], "hits": row[1]} for row in popular_result.fetchall()
+                {"text": row[0], "hits": row[1]}
+                for row in popular_result.fetchall()
             ]
 
             return {
@@ -394,7 +438,8 @@ class VoiceCacheService:
             # 查询要删除的缓存
             result = await db.execute(
                 select(VoiceCache).where(
-                    VoiceCache.last_accessed < expire_time, VoiceCache.is_active == True
+                    VoiceCache.last_accessed < expire_time,
+                    VoiceCache.is_active == True,
                 )
             )
             old_caches = result.scalars().all()
@@ -446,7 +491,9 @@ class VoiceCacheService:
             for cache in active_caches:
                 try:
                     # 检查文件是否存在
-                    if not self.gcs_service.check_voice_file_exists(cache.audio_url):
+                    if not self.gcs_service.check_voice_file_exists(
+                        cache.audio_url
+                    ):
                         cache.is_active = False
                         invalid_count += 1
                         logger.debug(f"标记无效缓存: {cache.audio_url}")

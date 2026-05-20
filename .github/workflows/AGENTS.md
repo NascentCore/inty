@@ -11,7 +11,7 @@
 - **Legacy Android**：上传 AAB 到 Play 内测等（维护态；非必要不改）。
 - **iMate Android**：PR 上的 **assembleDebug** 门禁；定时或手动 **bundleRelease** 上传 **iMate 包名** 对应的内测轨道。
 - **后端与 Ops 部署**：多环境（含 iMate 第二后端实例）通过 **GitHub Environments 变量** 选择容器名、端口与配置变体；细节以 `devops/README.md` 与专项 runbook 为准。
-- **外围自动化**：如 Dify 定时任务、用户分析报表 **兜底重算** 等——**补充** 主业务链路而非替代。
+- **外围自动化**：如 Dify 定时任务；**IntelliMate 用户分析日报**（`daily_intellimate_user_activity_report.yaml`，生产主路径，push worker 默认不跑日报）等——**补充** 主业务链路而非替代。
 
 ## 机密与素材
 

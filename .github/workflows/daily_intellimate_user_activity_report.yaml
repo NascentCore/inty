@@ -1,24 +1,25 @@
 # CREATED_BY_AGENT
-# Daily user analytics / usage rollup on production primary DB (same path as push_worker
-# _run_user_analytics_daily_report: T-1 UTC, AsyncSessionLocal → primary when replica_host absent).
-name: Daily primary DB usage report
+# Production IntelliMate daily usage report (T-1 UTC, primary DB when replica_host omitted).
+# Push worker user_analytics_report.daily_enabled defaults to false — do not re-enable there
+# while this workflow runs, to avoid duplicate rollups / replica conflicts.
+# See docs/FR_USER_ANALYTICS_REPORTS.md.
+name: Daily - IntelliMate User Activity Report
 
 # 手动：仓库 Actions → 本 workflow →「Run workflow」（可选填日期、是否 force）。
 on:
   workflow_dispatch:
     inputs:
       report_date:
-        description: "Report date YYYY-MM-DD (empty = T-1 UTC, same as push worker)"
+        description: "Report date YYYY-MM-DD (empty = T-1 UTC)"
         required: false
         default: ""
       force:
         description: "Force overwrite existing report row"
         required: false
-        default: false
+        default: true
         type: boolean
   schedule:
-    # Align with push_worker default user_analytics_report.daily_cron_hour (UTC 6).
-    - cron: "0 6 * * *"
+    - cron: "0 6 * * *"  # UTC 06:00 daily (independent of push worker config)
 
 permissions:
   contents: read
@@ -63,7 +64,7 @@ jobs:
           fi
           echo "report_date=$REPORT_DATE" >> "$GITHUB_OUTPUT"
 
-      - name: Run daily usage report (same entrypoint as push worker analytics job)
+      - name: Run daily usage report
         env:
           PYTHONPATH: .
           EVENT_NAME: ${{ github.event_name }}

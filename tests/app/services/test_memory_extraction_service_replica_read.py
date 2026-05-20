@@ -97,8 +97,8 @@ def test_get_all_messages_for_user_prefers_replica_connection():
         fetchall_results=[
             [("chat-1",)],
             [
-                ({"type": "human", "data": {"content": "hi"}}, None),
-                ({"type": "ai", "data": {"content": "hello"}}, None),
+                ("row-1", {"type": "human", "data": {"content": "hi"}}, None),
+                ("row-2", {"type": "ai", "data": {"content": "hello"}}, None),
             ],
         ]
     )
@@ -128,7 +128,11 @@ def test_get_all_messages_for_user_fallbacks_to_primary_when_replica_fails():
         fetchall_results=[
             [("chat-1",)],
             [
-                ({"type": "human", "data": {"content": "fallback"}}, None),
+                (
+                    "row-1",
+                    {"type": "human", "data": {"content": "fallback"}},
+                    None,
+                ),
             ],
         ]
     )
@@ -154,6 +158,25 @@ def test_get_all_messages_for_user_fallbacks_to_primary_when_replica_fails():
 
     assert rows == [("user", "fallback", None)]
     mock_primary_conn.assert_called_once()
+
+
+def test_materialize_chat_history_row_logs_malformed_values():
+    log_messages = []
+    sink_id = service.logger.add(
+        lambda message: log_messages.append(str(message)), format="{message}"
+    )
+    try:
+        materialized = service._materialize_chat_history_row(
+            "row-bad", "[1, 2]", "{bad-json"
+        )
+    finally:
+        service.logger.remove(sink_id)
+
+    assert materialized is None
+    assert any(
+        "meta_data row_id=row-bad" in message for message in log_messages
+    )
+    assert any("message row_id=row-bad" in message for message in log_messages)
 
 
 def test_format_chat_for_prompt_includes_significance_brackets() -> None:

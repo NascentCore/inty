@@ -31,30 +31,40 @@ CREATED_BY_AGENT
 - **日报**：`report_date` 为统计日，统计该日 UTC 00:00–24:00 的活跃数据。用户范围：`register_start=2020-01-01`，`register_end=report_date+1`；活跃范围：`activity_start=report_date`，`activity_end=report_date+1`。
 - **周报**：`report_date` 为该周周一，统计该周周一至周日的活跃数据。用户范围同上；活跃范围：`activity_start=report_date`，`activity_end=report_date+7`。
 
-## 定时任务
+## 预计算由谁执行（当前）
 
-- **日报**：每日 UTC 04:00 执行，统计 T-1 日（前一天）数据。
-- **周报**：每周一 UTC 05:00 执行，统计上一周（周一到周日）数据。
+| 能力 | 生产默认 | 入口 |
+|------|----------|------|
+| **日报**（T-1 UTC） | GitHub Actions | [`.github/workflows/daily_intellimate_user_activity_report.yaml`](../.github/workflows/daily_intellimate_user_activity_report.yaml) → `tools/scripts/run_user_analytics_report.py --type daily` |
+| **周报** | 无定时（需手动或脚本） | `run_user_analytics_report.py --type weekly` |
+| **push worker 调度** | **默认全关** | `push_scheduler_service` 仅在 `config.yaml` 显式打开对应开关时注册 cron / 启动补算 |
 
-配置位于 `config.yaml` 的 `user_analytics_report`：
+push worker 上保留 `_run_user_analytics_*` 与补算实现，便于本地或历史环境按需打开；**勿与 GitHub Actions 日报同时开启**，避免主库/副本重复重算（见 [`docs/completed/FR_USER_ANALYTICS_DAILY_REPORT_STANDBY_CONFLICT.md`](completed/FR_USER_ANALYTICS_DAILY_REPORT_STANDBY_CONFLICT.md)）。
+
+## push worker 配置（`user_analytics_report`）
+
+默认值（[`app/utils/config.py`](../app/utils/config.py) 中 `UserAnalyticsReportConfig`）均为 **关闭**：
 
 ```yaml
 user_analytics_report:
-  enabled: true
-  daily_cron_hour: 4
-  weekly_cron_hour: 5
-  statement_timeout_sec: 600  # 生产大数据量时需调大，默认 600 秒
-  batch_size: 500             # 分批查询每批 session 数量，减小可降低 standby conflict with recovery
+  enabled: false          # 总开关；false 时 push worker 不进入日报/周报/补算分支
+  daily_enabled: false    # 日报 cron（生产由 GitHub Actions 承担）
+  weekly_enabled: false   # 周报 cron
+  backfill_enabled: false # 启动时缺失日报/周报补算（范围受 daily/weekly 开关约束）
+  daily_cron_hour: 6      # UTC，仅 daily_enabled 时生效
+  weekly_cron_hour: 6     # UTC 每周一，仅 weekly_enabled 时生效
+  statement_timeout_sec: 600
+  batch_size: 500
 ```
 
-定时任务由 `push_scheduler_service` 调度，需启动 push worker 后生效。
+在 push worker 上恢复某一能力时，需同时设 `enabled: true` 与对应子开关（例如仅本地测周报：`weekly_enabled: true`）。
 
-### 启动时自动补算
+### 启动时自动补算（仅 `backfill_enabled: true`）
 
-定时任务启动时，会异步执行一次补算逻辑：检查前 30 天日报和前七周周报是否存在，对缺失的日期逐个补算。补算在后台执行，不阻塞 scheduler 启动；`compute_and_save_*` 已包含「已存在则跳过」逻辑，不会重复写入。
+push worker 启动后异步补算；`compute_and_save_*` 已存在则跳过。
 
-- **日报补算范围**：`today - 30` 至 `today - 1` 共 30 天
-- **周报补算范围**：从今日起前七周（上一周周一、上上周周一、…、7 周前周一，共 7 个周一，可跨年）
+- **日报补算范围**（`daily_enabled` 为 true 时）：`today - 30` 至 `today - 1`
+- **周报补算范围**（`weekly_enabled` 为 true 时）：过去 7 个周一（可跨年）
 
 ### 生产大数据量
 

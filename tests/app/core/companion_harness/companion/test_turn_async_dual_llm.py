@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -13,18 +14,28 @@ import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.memory.memory_registry import get_memory_store
-from app.core.companion_harness.companion.models import InnerTickMode
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
 from app.core.companion_harness.companion.turn import (
     CHAT_TRACK_RESPONSE_MESSAGE_TITLE,
     run_turn,
 )
+from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
 def _store(p: Path):
-    return get_memory_store(CompanionScope("adllm", "a", str(p.resolve())), dsn="")
+    return MemoryStore(
+        scope=CompanionScope("adllm", "a", str(p.resolve())),
+        repository=None,
+    )
+
+
+def _idle_tool_bg() -> threading.Event:
+    ev = threading.Event()
+    ev.set()
+    return ev
 
 
 def _assert_no_adjacent_user_roles(messages: list[dict[str, Any]]) -> None:
@@ -39,15 +50,15 @@ class _FakeAsyncDualLLMClient:
     def __init__(self) -> None:
         self.config = CompanionLLMConfig(
             api_key="k",
-            default_model="m/default",
-            chat_model="m/chat",
-            tool_model="m/tool",
+            default_model=resolve_chat_text_model("m/default"),
+            chat_model=resolve_chat_text_model("m/chat"),
+            tool_model=resolve_chat_text_model("m/tool"),
             async_chat_front_timeout_sec=120.0,
         )
         self.chat_calls: list[dict[str, Any]] = []
 
-    def resolve_model(self, role: str) -> str:
-        return f"m/{role}"
+    def resolve_model(self, role: str) -> GenAIModel:
+        return resolve_chat_text_model(f"m/{role}")
 
     def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_calls.append(kwargs)
@@ -106,6 +117,7 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
         llm_client=client,  # type: ignore[arg-type]
         defer_memory_update=True,
         memory_config=None,
+        tool_bg_idle_event=_idle_tool_bg(),
     )
 
     assert out.tool_background_started is True
@@ -115,14 +127,14 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     fg_msgs = client.chat_calls[0]["messages"]
     fg_system = [m for m in fg_msgs if m.get("role") == "system"]
     assert len(fg_system) >= 2, "foreground chat should use multiple system messages (not one concatenated block)"
-    assert any("## IDENTITY" in str(m.get("content") or "") for m in fg_system)
-    assert any("## SOUL" in str(m.get("content") or "") for m in fg_system)
+    assert any(str(m.get("content") or "").strip() == "id" for m in fg_system)
+    assert any(str(m.get("content") or "").strip() == "s" for m in fg_system)
     assert len(bg_jobs) == 1
     assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
     bg_msgs = bg_jobs[0]["request_messages"]
     bg_system = [m for m in bg_msgs if m.get("role") == "system"]
     assert len(bg_system) >= 2, "background tool path should use multiple system messages"
-    assert bg_jobs[0]["tool_model_name"] == "m/tool"
+    assert bg_jobs[0]["tool_model"].id_on_provider == "m/tool"
     assert bg_jobs[0]["main_event_loop"] is loop
     assert bg_jobs[0]["force_tools_first_round"] is False
     _assert_no_adjacent_user_roles(bg_msgs)
@@ -163,14 +175,14 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
         defer_memory_update=True,
         memory_config=None,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
     )
 
     assert len(client.chat_calls) == 0
     assert len(bg_jobs) == 1
     job = bg_jobs[0]
     assert job["inner_tick_turn"] is True
-    assert job["inner_tick_mode"] == InnerTickMode.MAINTENANCE
+    assert job["inner_tick_activity"] == InnerTickActivity.MAINTENANCE
     assert job["implicit_signal_bundle"] is None
     assert job["main_event_loop"] is loop
     expected = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
@@ -184,10 +196,10 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
 
 
 @pytest.mark.asyncio
-async def test_proactive_inner_tick_heartbeat_sync_still_calls_llm(
+async def test_proactive_inner_tick_proactive_chat_sync_still_calls_llm(
     tmp_path: Path,
 ) -> None:
-    """PROACTIVE inner tick is HEARTBEAT_SYNC (no async dual branch); no foreground skip."""
+    """PROACTIVE inner tick is PROACTIVE_CHAT_SYNC (no async dual branch); no foreground skip."""
     store = _store(tmp_path)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
@@ -204,7 +216,7 @@ async def test_proactive_inner_tick_heartbeat_sync_still_calls_llm(
         defer_memory_update=True,
         memory_config=None,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
     )
 
     assert len(client.chat_calls) == 1
@@ -214,15 +226,15 @@ class _FakeAsyncDualLLMClientEmptyFg:
     def __init__(self) -> None:
         self.config = CompanionLLMConfig(
             api_key="k",
-            default_model="m/default",
-            chat_model="m/chat",
-            tool_model="m/tool",
+            default_model=resolve_chat_text_model("m/default"),
+            chat_model=resolve_chat_text_model("m/chat"),
+            tool_model=resolve_chat_text_model("m/tool"),
             async_chat_front_timeout_sec=120.0,
         )
         self.chat_calls: list[dict[str, Any]] = []
 
-    def resolve_model(self, role: str) -> str:
-        return f"m/{role}"
+    def resolve_model(self, role: str) -> GenAIModel:
+        return resolve_chat_text_model(f"m/{role}")
 
     def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_calls.append(kwargs)
@@ -280,6 +292,7 @@ async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_injec
         llm_client=client,  # type: ignore[arg-type]
         defer_memory_update=True,
         memory_config=None,
+        tool_bg_idle_event=_idle_tool_bg(),
     )
 
     assert len(bg_jobs) == 1

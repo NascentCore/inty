@@ -1,0 +1,33 @@
+---
+description: >-
+  Plan mode / implementation-planning: when drafting or revising a plan before
+  coding, optionally illustrate the user-visible or structural outcome with a
+  concise Now vs After-this-plan pair of fenced blocks.
+alwaysApply: false
+---
+
+# 计划模式：用「现在 / 计划后」对照说明效果
+
+在 **Plan 模式**下输出或修订**实现计划**时，若读者能因「计划落地后」与「当前状态」的对比而更快建立正确预期，则**应**用下面固定版式给出一个**简短、示意性**的对照（非完整实现、不必可运行）。
+
+- **何时使用**：行为/契约/目录结构/提示词或用户可见文案等会在计划执行后发生**可描述的变化**时。
+- **何时省略**：纯机械重构且对外行为不变；或示例容易误导、需要大量臆测才能写「之后」时——用文字说明即可。
+
+## 版式（标题与围栏标签逐字一致）
+
+在计划正文合适位置插入：
+
+Now:
+
+```text
+…
+```
+
+After this plan
+
+```text
+…
+```
+
+- 两个围栏均使用同一语言标签（上例为 `text`）；内容为示意（可含伪代码、路径列表、用户可见字符串片段），**保持简短**。
+- 「After this plan」块只描述**本计划采纳并完成后**的状态，不写未纳入本计划的后续设想。

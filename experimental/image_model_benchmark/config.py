@@ -74,7 +74,9 @@ class BenchmarkConfig:
         default_factory=lambda: os.environ.get("OPENROUTER_API_KEY", "")
     )
     gcp_credentials_path: str = field(
-        default_factory=lambda: os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+        default_factory=lambda: os.environ.get(
+            "GOOGLE_APPLICATION_CREDENTIALS", ""
+        )
     )
     gcp_project_id: str = field(
         default_factory=lambda: os.environ.get("GOOGLE_CLOUD_PROJECT", "")

@@ -2,18 +2,22 @@
 
 import asyncio
 import json
+import threading
 import time
 import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
+import uuid as uuid_module
+
 import pytest
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.testclient import TestClient as FastAPITestClient
 from jose import jwt
 from loguru import logger
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, delete
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.api import deps
@@ -24,8 +28,10 @@ from app.core.companion_harness.companion.llm_inference_errors import (
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.uuid import get_new_user_id
+from app.models.chat_history import ChatHistory
 from app.models.memory import Memory
-from app.models.user import AuthType
+from app.models.user import AuthType, User as UserModel
 from app.schemas.chat import ChatMusicGenerationResponse
 from app.schemas.response import (
     APIResponse,
@@ -33,15 +39,17 @@ from app.schemas.response import (
     BusinessErrorCode,
     UsageLimitExceeded,
 )
+from app.services import agent_service, chat_history_service, chat_service
+from app.services.chat_service import generate_session_id
 from app.services.voice_service import (
     VoiceGenerationResult,
     voice_service as global_voice_service,
 )
-from app.services import agent_service, chat_history_service, chat_service
 from app.services import companion_chat_service
 from app.services.global_services import (
     subscription_service as global_subscription_service,
 )
+from app.utils.models_catalog import GenAIModel
 from tests.app.api.test_client import TestClient
 from tests.app.api.v1.endpoints.conftest import (
     _client_with_user,
@@ -58,6 +66,63 @@ def db_session():
     session = Session()
     yield session
     session.close()
+
+
+def _cleanup_chat_history_session(db_session, session_id: str) -> None:
+    db_session.execute(
+        delete(ChatHistory).where(
+            ChatHistory.session_id == uuid_module.UUID(session_id)
+        )
+    )
+    db_session.commit()
+
+
+@pytest.fixture
+def chat_app_with_postgres_db(db_session):
+    """
+    Chat router with real async Postgres (config.yaml :5432, same as CI).
+
+    Yields (app, user_id, db_session).
+    """
+    user_id = get_new_user_id()
+    device_id = f"test-chat-ws-{uuid_module.uuid4().hex}"
+    db_session.add(
+        UserModel(
+            id=user_id,
+            auth_type=AuthType.GOOGLE,
+            device_id=device_id,
+        )
+    )
+    db_session.commit()
+
+    _db = global_config_loaded_from_config_yaml.database
+    async_engine = create_async_engine(
+        str(_db.async_url),
+        pool_size=1,
+        max_overflow=0,
+    )
+    async_session_factory = sessionmaker(
+        bind=async_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+    async def override_get_async_db():
+        async with async_session_factory() as session:
+            yield session
+
+    app = FastAPI()
+    app.include_router(chat_v1.router, prefix="/api/v1")
+    app.dependency_overrides[deps.get_async_db] = override_get_async_db
+
+    try:
+        yield app, user_id, db_session
+    finally:
+        app.dependency_overrides.clear()
+        user_row = db_session.get(UserModel, user_id)
+        if user_row is not None:
+            db_session.delete(user_row)
+            db_session.commit()
 
 
 def _decode_user_id_from_token(token: str) -> str:
@@ -898,11 +963,16 @@ def _setup_companion_ws_chat_test_env(
     async def fake_try_trigger_surprise_snap(db, session_id, user_id, aid):
         return None
 
-    monkeypatch.setattr(
-        companion_chat_service,
+    for attr in (
+        "run_companion_user_chat_turn_for_api",
+        "run_companion_implicit_sign_on_greeting_turn_for_api",
         "run_companion_chat_turn_for_api",
-        run_companion_chat_turn_for_api,
-    )
+    ):
+        monkeypatch.setattr(
+            companion_chat_service,
+            attr,
+            run_companion_chat_turn_for_api,
+        )
     monkeypatch.setattr(
         chat_service,
         "get_or_create_chat_by_agent",
@@ -985,6 +1055,116 @@ def _setup_companion_ws_chat_test_env(
         "_agent_status_line_for_chat_header",
         fake_agent_status_line,
     )
+
+
+def _setup_companion_ws_chat_test_env_with_postgres(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str,
+    run_companion_chat_turn_for_api,
+) -> str:
+    """
+    Companion WS stubs with real chat_history persistence on Postgres.
+
+    Returns session_id used for chat_history rows (for teardown).
+    """
+    companion_chat_service.clear_companion_chat_service_caches()
+    session_id = generate_session_id(chat_id)
+
+    async def fake_get_or_create_chat_by_agent(
+        db, user_id=None, agent_id=None, **_kwargs
+    ):
+        _ = user_id
+        return SimpleNamespace(id=chat_id, agent_id=agent_id)
+
+    async def fake_get_agent_for_chat(db, agent_id=None, **_kwargs):
+        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+
+    async def fake_get_or_create_chat_settings(
+        db, chat_id_arg, user_id=None, agent_id=None, **_kwargs
+    ):
+        _ = (chat_id_arg, user_id, agent_id)
+        return SimpleNamespace(
+            voice_enabled=False,
+            voice_id=None,
+            style_prompt=None,
+            premium_mode=False,
+            language="en",
+        )
+
+    async def fake_get_user_current_subscription(db, user_id, **_kwargs):
+        _ = user_id
+        return None
+
+    async def fake_record_usage(*args, **kwargs):
+        return None
+
+    async def fake_mark_user_push_notifications_as_read(db, uid):
+        return 0
+
+    async def fake_try_trigger_surprise_snap(db, session_id, uid, aid):
+        return None
+
+    for attr in (
+        "run_companion_user_chat_turn_for_api",
+        "run_companion_implicit_sign_on_greeting_turn_for_api",
+        "run_companion_chat_turn_for_api",
+    ):
+        monkeypatch.setattr(
+            companion_chat_service,
+            attr,
+            run_companion_chat_turn_for_api,
+        )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        global_subscription_service,
+        "get_user_current_subscription",
+        fake_get_user_current_subscription,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "record_usage",
+        fake_record_usage,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "mark_user_push_notifications_as_read",
+        fake_mark_user_push_notifications_as_read,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "try_trigger_surprise_snap",
+        fake_try_trigger_surprise_snap,
+    )
+
+    test_user = _make_user(user_id=user_id, auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return test_user
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+
+    async def fake_agent_status_line(db, aid):
+        return None
+
+    monkeypatch.setattr(
+        chat_v1,
+        "_agent_status_line_for_chat_header",
+        fake_agent_status_line,
+    )
+    return session_id
 
 
 def test_chat_completions_companion_kernel_branch_writes_history(
@@ -1245,11 +1425,16 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     async def fake_try_trigger_surprise_snap(db, session_id, user_id, agent_id):
         return None
 
-    monkeypatch.setattr(
-        companion_chat_service,
+    for attr in (
+        "run_companion_user_chat_turn_for_api",
+        "run_companion_implicit_sign_on_greeting_turn_for_api",
         "run_companion_chat_turn_for_api",
-        fake_run_companion_chat_turn_for_api,
-    )
+    ):
+        monkeypatch.setattr(
+            companion_chat_service,
+            attr,
+            fake_run_companion_chat_turn_for_api,
+        )
     monkeypatch.setattr(
         chat_service,
         "get_or_create_chat_by_agent",
@@ -1385,6 +1570,73 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     )
 
     companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_voice_message_returns_audio_url(
+    monkeypatch: pytest.MonkeyPatch,
+    chat_app_with_postgres_db,
+):
+    """WS voice_message: fake TTS (config) + real Postgres for history audio_url."""
+    assert global_config_loaded_from_config_yaml.tts.use_fake_tts is True
+
+    app, user_id, db_session = chat_app_with_postgres_db
+    agent_id = "agent-companion-ws-voice"
+    chat_id = f"chat-ws-voice-{uuid_module.uuid4().hex}"
+
+    async def fake_run_companion_chat_turn_for_api(**_kwargs):
+        return CompanionTurnResult(
+            assistant_text="visible bubble text",
+            reply_modality="voice_message",
+            voice_message_script="spoken script line",
+        )
+
+    session_id = _setup_companion_ws_chat_test_env_with_postgres(
+        monkeypatch,
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    turn_uuid = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    try:
+        with FastAPITestClient(app) as client:
+            with client.websocket_connect("/api/v1/chat/ws") as websocket:
+                websocket.send_json(
+                    {
+                        "agent_id": agent_id,
+                        "request": {
+                            "messages": [
+                                {"role": "user", "content": "voice please"}
+                            ],
+                            "message_id": turn_uuid,
+                        },
+                    }
+                )
+                body = websocket.receive_json()
+
+        assert body["code"] == 200
+        message = body["data"]["choices"][0]["message"]
+        assert message["content"] == "visible bubble text"
+        assert message["audio_url"]
+        assert message["audio_url"].startswith(
+            "https://storage.googleapis.com/"
+        )
+        assert message["meta_data"]["reply_modality"] == "voice_message"
+        assert message["meta_data"]["is_voice"] is True
+
+        ai_row = (
+            db_session.query(ChatHistory)
+            .filter(ChatHistory.session_id == uuid_module.UUID(session_id))
+            .order_by(ChatHistory.id.desc())
+            .first()
+        )
+        assert ai_row is not None
+        assert ai_row.audio_url == message["audio_url"]
+        assert ai_row.meta_data.get("reply_modality") == "voice_message"
+    finally:
+        _cleanup_chat_history_session(db_session, session_id)
+        companion_chat_service.clear_companion_chat_service_caches()
 
 
 def test_chat_websocket_companion_foreground_tool_background_started_meta(
@@ -1529,26 +1781,22 @@ def test_chat_websocket_companion_passes_implicit_signal_bundle_with_time_contex
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_implicit_user_signed_on_chat_frame_sets_bundle(
+def test_chat_websocket_companion_rejects_implicit_user_signed_on_message_type(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    captured: dict = {}
-    user_saves: list = []
-    ai_meta: list = []
+    captured: dict = {"companion_calls": 0}
 
     async def fake_run_companion_chat_turn_for_api(**kwargs):
-        captured["bundle"] = kwargs.get("implicit_signal_bundle")
-        return CompanionTurnResult(assistant_text="greet")
+        captured["companion_calls"] += 1
+        return CompanionTurnResult(assistant_text="should-not-run")
 
     _setup_companion_ws_chat_test_env(
         monkeypatch,
-        agent_id="agent-companion-signon-chatframe",
-        chat_id="chat-signon-chatframe-1",
+        agent_id="agent-companion-signon-reject",
+        chat_id="chat-signon-reject-1",
         latest_user_message_db_id=90,
         ai_message_id=902,
         run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
-        user_message_save_log=user_saves,
-        ai_message_meta_captures=ai_meta,
     )
 
     msg_uuid = "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
@@ -1556,7 +1804,7 @@ def test_chat_websocket_companion_implicit_user_signed_on_chat_frame_sets_bundle
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
                 {
-                    "agent_id": "agent-companion-signon-chatframe",
+                    "agent_id": "agent-companion-signon-reject",
                     "request": {
                         "messages": [{"role": "user", "content": ""}],
                         "message_id": msg_uuid,
@@ -1566,17 +1814,13 @@ def test_chat_websocket_companion_implicit_user_signed_on_chat_frame_sets_bundle
             )
             body = websocket.receive_json()
 
-    assert body["code"] == 200
-    bundle = captured["bundle"]
-    assert bundle is not None
-    assert bundle.user_signed_on is True
-    assert user_saves == []
-    assert ai_meta and ai_meta[-1].get("messageType") == "IMPLICIT_USER_SIGNED_ON"
+    assert body["code"] != 200
+    assert captured["companion_calls"] == 0
 
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_user_signed_on_implicit_greeting_sets_bundle(
+def test_chat_websocket_companion_user_signed_on_greeting_sets_bundle(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     captured: dict = {}
@@ -1604,19 +1848,60 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_sets_bundle(
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-cf",
                     "message_id": msg_uuid,
-                    "implicit_greeting": True,
                 }
             )
-            ack = websocket.receive_json()
-            assert ack["type"] == "user_signed_on_ack"
-            assert ack["ok"] is True
             body = websocket.receive_json()
+            if body.get("type") == "user_signed_on_ack":
+                body = websocket.receive_json()
 
     assert body["code"] == 200
     bundle = captured["bundle"]
     assert bundle is not None
     assert bundle.user_signed_on is True
     assert user_saves == []
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_user_signed_on_greeting_cancelled_on_disconnect(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """Regression: detached greeting turn is cancelled when the WebSocket session ends."""
+    turn_started = threading.Event()
+    turn_completed = threading.Event()
+
+    async def slow_run_companion_chat_turn_for_api(**_kwargs):
+        turn_started.set()
+        await asyncio.sleep(60.0)
+        turn_completed.set()
+        return CompanionTurnResult(assistant_text="never")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon-cancel",
+        chat_id="chat-signon-cancel-1",
+        latest_user_message_db_id=91,
+        ai_message_id=911,
+        run_companion_chat_turn_for_api=slow_run_companion_chat_turn_for_api,
+    )
+
+    msg_uuid = "bbbbbbbb-bbbb-4bbb-bbbb-aaaaaaaaaaaa"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-companion-signon-cancel",
+                    "message_id": msg_uuid,
+                }
+            )
+            ack = websocket.receive_json()
+            assert ack["type"] == "user_signed_on_ack"
+            assert ack["ok"] is True
+            assert turn_started.wait(timeout=2.0)
+
+    time.sleep(0.15)
+    assert not turn_completed.is_set()
 
     companion_chat_service.clear_companion_chat_service_caches()
 
@@ -1648,14 +1933,14 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
         run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
     )
 
-    # ``poll = max(floor, features.companion_ws_proactive_heartbeat_poll_seconds)``:
+    # ``poll = max(floor, features.companion_ws_proactive_chat_poll_seconds)``:
     # lowering only the floor is not enough when YAML sets a large poll interval.
     monkeypatch.setattr(
         chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05
     )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_proactive_heartbeat_poll_seconds",
+        "companion_ws_proactive_chat_poll_seconds",
         0.05,
     )
     monkeypatch.setattr(
@@ -1665,7 +1950,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     )
     monkeypatch.setattr(
         chat_v1,
-        "_try_fire_companion_ws_proactive_heartbeat",
+        "_try_fire_companion_ws_proactive_chat",
         spy_proactive,
     )
     monkeypatch.setattr(
@@ -1680,6 +1965,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
                 {
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-inner-tick-stop",
+                    "message_id": "cccccccc-cccc-4ccc-dddd-eeeeeeeeeeee",
                 }
             )
             ack = websocket.receive_json()
@@ -1697,7 +1983,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
+def test_chat_websocket_companion_inner_tick_scheduled_when_proactive_chat_disabled(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     """Scheduled reminder path runs even when proactive and maintenance inner-tick are off."""
@@ -1729,12 +2015,12 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
     )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_proactive_heartbeat_poll_seconds",
+        "companion_ws_proactive_chat_poll_seconds",
         0.05,
     )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_proactive_heartbeat_enabled",
+        "companion_ws_proactive_chat_enabled",
         False,
     )
     monkeypatch.setattr(
@@ -1749,7 +2035,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
     )
     monkeypatch.setattr(
         chat_v1,
-        "_try_fire_companion_ws_proactive_heartbeat",
+        "_try_fire_companion_ws_proactive_chat",
         spy_proactive,
     )
     monkeypatch.setattr(
@@ -1764,6 +2050,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
                 {
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-inner-tick-sched",
+                    "message_id": "dddddddd-dddd-4ddd-eeee-ffffffffffff",
                 }
             )
             ack = websocket.receive_json()
@@ -1775,7 +2062,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_heartbeats_disabled(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_user_signed_on_implicit_greeting_missing_message_id(
+def test_chat_websocket_companion_user_signed_on_missing_message_id(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     async def fake_run_companion_chat_turn_for_api(**kwargs):
@@ -1796,7 +2083,6 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_missing_messa
                 {
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-cf-mid",
-                    "implicit_greeting": True,
                 }
             )
             ack = websocket.receive_json()
@@ -1808,7 +2094,7 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_missing_messa
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_user_signed_on_implicit_greeting_invalid_message_id(
+def test_chat_websocket_companion_user_signed_on_invalid_message_id(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     async def fake_run_companion_chat_turn_for_api(**kwargs):
@@ -1830,7 +2116,6 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_invalid_messa
                     "type": "user_signed_on",
                     "agent_id": "agent-companion-signon-cf-badmid",
                     "message_id": "not-a-uuid",
-                    "implicit_greeting": True,
                 }
             )
             ack = websocket.receive_json()
@@ -1842,7 +2127,7 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_invalid_messa
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_v1_chat_completions_http_rejects_implicit_user_signed_on_message_type(
+def test_v1_chat_completions_http_rejects_removed_implicit_user_signed_on_message_type(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     _stub_chat_completion_dependencies(monkeypatch)
@@ -1856,9 +2141,9 @@ def test_v1_chat_completions_http_rejects_implicit_user_signed_on_message_type(
     }
     with _client_with_user(chat_business_error_app, user) as client:
         response = client.post("/api/v1/chat/completions/agent-1", json=payload)
-    assert response.status_code == 400
-    body = response.json()
-    assert body["detail"] == "messageType IMPLICIT_USER_SIGNED_ON is not supported"
+    assert response.status_code == 422
+
+    companion_chat_service.clear_companion_chat_service_caches()
 
 
 def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
@@ -2041,19 +2326,18 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_completions(
+    async def fake_agent_chat_ws_completions(
         *,
         db,
         agent_id,
         request,
         current_user,
-        app_version_code,
         subscription_svc,
-        voice_svc,
-        chat_route,
+        voice_svc=None,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
-        companion_ws_heartbeat_ctx=None,
+        companion_ws_inner_tick_ctx=None,
+        implicit_greeting_turn=False,
     ):
         return APIResponse.success(
             data={
@@ -2069,11 +2353,11 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
                 ],
                 "source_imate_id": request.target_imate_id,
             }
-        )
+        ).model_dump(exclude_none=True)
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
@@ -2119,8 +2403,8 @@ def test_chat_websocket_idle_timeout_reads_config(
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_completions(**kwargs):
-        return APIResponse.success(data={"choices": []})
+    async def fake_agent_chat_ws_completions(**kwargs):
+        return APIResponse.success(data={"choices": []}).model_dump(exclude_none=True)
 
     expected_idle = float(
         global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds
@@ -2143,7 +2427,7 @@ def test_chat_websocket_idle_timeout_reads_config(
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
     monkeypatch.setattr(chat_v1.asyncio, "wait_for", fake_wait_for)
 
@@ -2172,19 +2456,18 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_completions(
+    async def fake_agent_chat_ws_completions(
         *,
         db,
         agent_id,
         request,
         current_user,
-        app_version_code,
         subscription_svc,
-        voice_svc,
-        chat_route,
+        voice_svc=None,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
-        companion_ws_heartbeat_ctx=None,
+        companion_ws_inner_tick_ctx=None,
+        implicit_greeting_turn=False,
     ):
         captured["effective_user_id"] = current_user.id
         return APIResponse.success(
@@ -2197,11 +2480,11 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
                     }
                 ],
             }
-        )
+        ).model_dump(exclude_none=True)
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
@@ -2228,19 +2511,18 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_completions(
+    async def fake_agent_chat_ws_completions(
         *,
         db,
         agent_id,
         request,
         current_user,
-        app_version_code,
         subscription_svc,
-        voice_svc,
-        chat_route,
+        voice_svc=None,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
-        companion_ws_heartbeat_ctx=None,
+        companion_ws_inner_tick_ctx=None,
+        implicit_greeting_turn=False,
     ):
         captured["user_time_context"] = request.user_time_context
         return APIResponse.success(
@@ -2253,11 +2535,11 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
                     }
                 ],
             }
-        )
+        ).model_dump(exclude_none=True)
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(
-        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+        chat_v1, "_agent_chat_ws_completions_impl", fake_agent_chat_ws_completions
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
@@ -2293,9 +2575,11 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
     assert utc.utc_offset_minutes == 480
 
 
-def test_chat_websocket_user_signed_out_appends_chat_logs_line(
+def test_chat_websocket_user_signed_out_appends_ws_runtime_event(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
+    import time
+
     captured: dict[str, object] = {}
 
     def fake_append(**kwargs):
@@ -2309,7 +2593,7 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
 
     monkeypatch.setattr(
         companion_chat_service,
-        "append_companion_chat_logs_line_for_ws_control",
+        "append_companion_ws_runtime_event",
         fake_append,
     )
     monkeypatch.setattr(
@@ -2343,16 +2627,23 @@ def test_chat_websocket_user_signed_out_appends_chat_logs_line(
             ack = websocket.receive_json()
 
     assert ack == {"type": "user_signed_out_ack", "ok": True}
+    deadline = time.monotonic() + 2.0
+    while "kwargs" not in captured and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert "kwargs" in captured, "append_companion_ws_runtime_event should run after ack"
     kw = captured["kwargs"]
     assert kw["user_id"] == "user-so-1"
     assert kw["agent_id"] == "agent-so-1"
     assert kw["chat_id"] == 42
-    assert isinstance(kw["resolved_chat_model_id"], str)
-    assert kw["resolved_chat_model_id"]
-    line = kw["line"]
-    assert isinstance(line, str)
-    assert "**user_signed_out**" in line
-    assert f"`received_message_uuid={msg_uuid}`" in line
+    assert isinstance(kw["resolved_chat_model"], GenAIModel)
+    assert kw["resolved_chat_model"].id_on_provider
+    record = kw["record"]
+    assert isinstance(record, dict)
+    assert record["kind"] == "user_signed_out"
+    assert record["user_id"] == "user-so-1"
+    assert record["agent_id"] == "agent-so-1"
+    assert record["chat_id"] == "42"
+    assert record["received_message_uuid"] == msg_uuid
 
 
 def test_chat_websocket_verify_user_signed_out_not_supported(
@@ -2501,7 +2792,7 @@ def test_chat_websocket_invalid_ws_conn_id_query_logs_fallback(
     assert not any("not-a-valid-uuid" in m for m in session_open_msgs), session_open_msgs
 
 
-def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
+def test_chat_websocket_ws_conn_dropped_appends_ws_runtime_event(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     captured: dict[str, object] = {}
@@ -2517,7 +2808,7 @@ def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
 
     monkeypatch.setattr(
         companion_chat_service,
-        "append_companion_chat_logs_line_for_ws_control",
+        "append_companion_ws_runtime_event",
         fake_append,
     )
     monkeypatch.setattr(
@@ -2559,15 +2850,18 @@ def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
     assert kw["user_id"] == "user-wd-1"
     assert kw["agent_id"] == "agent-wd-1"
     assert kw["chat_id"] == 42
-    assert isinstance(kw["resolved_chat_model_id"], str)
-    assert kw["resolved_chat_model_id"]
-    line = kw["line"]
-    assert isinstance(line, str)
-    assert "**ws_conn_dropped**" in line
-    assert f"`client_dropped_at_utc={dropped_at}`" in line
-    assert "`ws_close_code=1006`" in line
-    assert "`ws_close_reason=connection reset`" in line
-    assert f"`received_message_uuid={msg_uuid}`" in line
+    assert isinstance(kw["resolved_chat_model"], GenAIModel)
+    assert kw["resolved_chat_model"].id_on_provider
+    record = kw["record"]
+    assert isinstance(record, dict)
+    assert record["kind"] == "ws_conn_dropped"
+    assert record["user_id"] == "user-wd-1"
+    assert record["agent_id"] == "agent-wd-1"
+    assert record["chat_id"] == "42"
+    assert record["client_dropped_at_utc"] == dropped_at
+    assert record["ws_close_code"] == 1006
+    assert record["ws_close_reason"] == "connection reset"
+    assert record["received_message_uuid"] == msg_uuid
 
 
 def test_chat_websocket_verify_ws_conn_dropped_not_supported(
@@ -2647,6 +2941,72 @@ def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(
     assert response.status_code == 200
     assert body["code"] == 200
     assert captured_voice_id["value"] == "google/Zephyr"
+
+
+def test_v1_chat_completions_http_uses_legacy_assistant_voice_not_ws_tts(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """HTTP /api/v1/chat/completions must keep synthesize_chat_assistant_audio; WS TTS is separate."""
+    legacy_called: dict[str, bool] = {"value": False}
+
+    _stub_success_chat_completion_with_multimodal_response(
+        monkeypatch,
+        response_content="voice me",
+    )
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(
+            voice_enabled=True,
+            voice_id="google/Zephyr",
+            style_prompt=None,
+            premium_mode=False,
+            language="en",
+        )
+
+    async def tracking_legacy_synthesize(**kwargs):
+        legacy_called["value"] = True
+        assert kwargs["voice_enabled"] is True
+        return (
+            "https://storage.googleapis.com/test-bucket/voice/legacy.wav",
+            1.23,
+        )
+
+    async def forbidden_ws_synthesize(*args, **kwargs):
+        raise AssertionError(
+            "HTTP completions must not call synthesize_chat_ws_voice_message"
+        )
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "synthesize_chat_assistant_audio",
+        tracking_legacy_synthesize,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "synthesize_chat_ws_voice_message",
+        forbidden_ws_synthesize,
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "en",
+    }
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["code"] == 200
+    assert legacy_called["value"] is True
 
 
 def test_v1_chat_completions_returns_text_and_image_content_parts(

@@ -32,9 +32,7 @@ async def _ensure_visibility_uniqueness(
     if visibility == CharacterThemeVisibility.HIDDEN:
         return
 
-    stmt = select(CharacterTheme).where(
-        CharacterTheme.visibility == visibility
-    )
+    stmt = select(CharacterTheme).where(CharacterTheme.visibility == visibility)
     if exclude_theme_id:
         stmt = stmt.where(CharacterTheme.id != exclude_theme_id)
 
@@ -88,7 +86,9 @@ async def create_theme(
     return theme
 
 
-async def get_theme(db: AsyncSession, theme_id: str) -> Optional[CharacterTheme]:
+async def get_theme(
+    db: AsyncSession, theme_id: str
+) -> Optional[CharacterTheme]:
     """获取角色主题专区详情（包含角色列表，按 order_index 排序）"""
     stmt = (
         select(CharacterTheme)
@@ -105,7 +105,10 @@ async def get_theme(db: AsyncSession, theme_id: str) -> Optional[CharacterTheme]
 
 
 async def list_themes(
-    db: AsyncSession, skip: int = 0, limit: int = 100, include_hidden: bool = False
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 100,
+    include_hidden: bool = False,
 ) -> List[CharacterTheme]:
     """获取角色主题专区列表
 
@@ -120,7 +123,10 @@ async def list_themes(
     if not include_hidden:
         stmt = stmt.where(
             CharacterTheme.visibility.in_(
-                [CharacterThemeVisibility.PRIMARY, CharacterThemeVisibility.SECONDARY]
+                [
+                    CharacterThemeVisibility.PRIMARY,
+                    CharacterThemeVisibility.SECONDARY,
+                ]
             )
         )
 
@@ -256,9 +262,7 @@ async def add_agent_to_theme(
             CharacterThemeAgent.agent_id == agent_id,
         )
         .options(
-            selectinload(CharacterThemeAgent.agent).selectinload(
-                Agent.creator
-            )
+            selectinload(CharacterThemeAgent.agent).selectinload(Agent.creator)
         )
     )
     result = await db.execute(stmt)
@@ -287,7 +291,9 @@ async def remove_agent_from_theme(
     return True
 
 
-async def reorder_agents(db: AsyncSession, theme_id: str, agent_ids: List[str]) -> bool:
+async def reorder_agents(
+    db: AsyncSession, theme_id: str, agent_ids: List[str]
+) -> bool:
     """调整角色顺序"""
     # 检查专区是否存在
     theme = await get_theme(db, theme_id)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,11 +15,12 @@ from app.core.companion_harness.tools import runtime_inspect_context as ric
 from app.core.companion_harness.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
-from app.core.companion_harness.memory.memory_registry import (
-    get_memory_store,
-    shutdown_memory_store,
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.companion.models import (
+    ContextMeta,
+    InnerTickActivity,
+    PromptBundle,
 )
-from app.core.companion_harness.companion.models import ContextMeta, InnerTickMode
 from app.core.companion_harness.tools.runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     build_turn_runtime_config_dict,
@@ -35,10 +37,25 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
 )
 from app.core.companion_harness.tools.runtime_inspect_tool import tool_companion_runtime_inspect
-from app.core.companion_harness.companion.prompts.system_messages import (
-    build_system_prompt,
+from app.core.companion_harness.companion.prompt_slices import (
+    SYSTEM_PROMPT_SLICE_SEPARATOR,
 )
+from app.core.companion_harness.companion.prompts.system_messages import (
+    build_system_messages,
+)
+
+
+def _concatenated_system_text(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    **kwargs: Any,
+) -> str:
+    msgs = build_system_messages(bundle, context, **kwargs)
+    return SYSTEM_PROMPT_SLICE_SEPARATOR.join(
+        str(m.get("content") or "") for m in msgs
+    )
 from app.core.companion_harness.companion.scope import CompanionScope
+from app.utils.models_catalog import resolve_chat_text_model
 
 
 _LANGSMITH_TEST_PROJECT = "inty-backend-test-runtime-inspect"
@@ -69,7 +86,7 @@ class _DualLlmForegroundStubCompanionLLMClient(CompanionLLMClient):
         self,
         *,
         messages: list[dict[str, Any]],
-        model: str | None = None,
+        model: Any | None = None,
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
@@ -89,19 +106,18 @@ class _DualLlmForegroundStubCompanionLLMClient(CompanionLLMClient):
 
 def test_companion_runtime_inspect_outside_scope(tmp_path: Path) -> None:
     scope = CompanionScope("ri", "a", f"out-{tmp_path.name}")
-    store = get_memory_store(scope, dsn="")
+    store = MemoryStore(scope=scope, repository=None)
     out = _run_tool(store, "companion_runtime_inspect", "{}")
     data = json.loads(out)
     assert "runtime_unavailable_reason" in data
     assert data["runtime_config"] is None
     assert data["last_chat_completion_request"] is None
     assert "correlation" not in data
-    shutdown_memory_store(scope)
 
 
 def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
     scope = CompanionScope("ri", "a", f"ctx-{tmp_path.name}")
-    store = get_memory_store(scope, dsn="")
+    store = MemoryStore(scope=scope, repository=None)
     store.write_document("SOUL.md", "soul-content-here")
     append_runtime_event(
         store,
@@ -113,7 +129,7 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         client = CompanionLLMClient(
             CompanionLLMConfig(
                 api_key="super-secret-key",
-                default_model="test/model-a",
+                default_model=resolve_chat_text_model("test/model-a"),
                 api_base="https://example.invalid/v1",
             )
         )
@@ -124,7 +140,7 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 context=ContextMeta(context_mode="intimate"),
                 transcript_llm_window_max_messages=12,
                 inner_tick_turn=False,
-                inner_tick_mode=InnerTickMode.MAINTENANCE,
+                inner_tick_activity=InnerTickActivity.MAINTENANCE,
                 repository_only_store_text=True,
                 transcript_compaction=None,
                 memory_store_read_document_max_chars_cap=(
@@ -134,7 +150,7 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         )
         runtime_inspect_set_last_chat_completion_request(
             build_last_chat_completion_request_payload(
-                model="test/model-a",
+                model=resolve_chat_text_model("test/model-a"),
                 messages=[
                     {"role": "system", "content": "system text"},
                     {"role": "user", "content": "hello"},
@@ -156,7 +172,9 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         assert msgs[1]["content"] == "hello"
         assert (
             data["last_chat_completion_request"]["openrouter_extra_body"]
-            == tool_path_chat_completion_kwargs("test/model-a")
+            == tool_path_chat_completion_kwargs(
+                resolve_chat_text_model("test/model-a")
+            )
         )
         assert "SOUL.md" in data["store_documents"]
         assert "soul-content-here" in data["store_documents"]["SOUL.md"]["text"]
@@ -173,12 +191,11 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         }
     finally:
         runtime_inspect_end_turn(token)
-    shutdown_memory_store(scope)
 
 
 def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
     scope = CompanionScope("ri", "a", f"ov-{tmp_path.name}")
-    scoped = get_memory_store(scope, dsn="")
+    scoped = MemoryStore(scope=scope, repository=None)
     ric.runtime_inspect_thread_overlay_begin(
         {
             "runtime_config": {"source": "tool_background", "tool_model_name": "bg/model"},
@@ -193,7 +210,7 @@ def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
     try:
         ric.runtime_inspect_set_last_chat_completion_request(
             build_last_chat_completion_request_payload(
-                model="bg/model",
+                model=resolve_chat_text_model("bg/model"),
                 messages=[{"role": "user", "content": "bg-user"}],
                 tools=[],
             )
@@ -209,15 +226,14 @@ def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
         assert "store_documents" not in data
     finally:
         ric.runtime_inspect_thread_overlay_end()
-    shutdown_memory_store(scope)
 
 
 def test_companion_runtime_inspect_prefers_scoped_memory_store(tmp_path: Path) -> None:
     scope_default = CompanionScope("u-d", "a", f"def-{tmp_path.name}")
     scope_scoped = CompanionScope("u-s", "a", f"scoped-{tmp_path.name}")
-    store_scoped = get_memory_store(scope_scoped, dsn="")
+    store_scoped = MemoryStore(scope=scope_scoped, repository=None)
     store_scoped.write_document("SOUL.md", "scoped-soul-body")
-    store_default = get_memory_store(scope_default, dsn="")
+    store_default = MemoryStore(scope=scope_default, repository=None)
     assert store_default is not store_scoped
     token = runtime_inspect_begin_turn()
     try:
@@ -227,14 +243,12 @@ def test_companion_runtime_inspect_prefers_scoped_memory_store(tmp_path: Path) -
         assert "scoped-soul-body" in data["store_documents"]["SOUL.md"]["text"]
     finally:
         runtime_inspect_end_turn(token)
-    shutdown_memory_store(scope_scoped)
-    shutdown_memory_store(scope_default)
 
 
 def test_build_system_prompt_tools_contract_mentions_inspect() -> None:
     from app.core.companion_harness.companion.models import PromptBundle
 
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         PromptBundle(
             identity="i",
             soul="s",
@@ -251,7 +265,7 @@ def test_build_system_prompt_tools_contract_mentions_inspect() -> None:
 def test_tool_side_compact_mentions_inspect() -> None:
     from app.core.companion_harness.companion.models import PromptBundle
 
-    text = build_system_prompt(
+    text = _concatenated_system_text(
         PromptBundle(
             identity="i",
             soul="s",
@@ -272,7 +286,7 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
     from app.core.companion_harness.companion.turn import run_turn
 
     scope = CompanionScope("ri", "a", f"dual-{tmp_path.name}")
-    store = get_memory_store(scope, dsn="")
+    store = MemoryStore(scope=scope, repository=None)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
@@ -291,7 +305,7 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
         json.dumps(envelope),
         CompanionLLMConfig(
             api_key="secret-key",
-            default_model="snap/model",
+            default_model=resolve_chat_text_model("snap/model"),
         ),
     )
 
@@ -304,14 +318,16 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
         turn_mod, "schedule_memory_update_after_turn", lambda *args, **kwargs: None
     )
 
+    idle = threading.Event()
+    idle.set()
     out = asyncio.run(
         run_turn(
             "user line",
             store=store,
             llm_client=client,
             langsmith_parent_run_enabled=False,
+            tool_bg_idle_event=idle,
         )
     )
     assert out.assistant_text == "final assistant"
     assert out.tool_background_started is True
-    shutdown_memory_store(scope)

@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 
 app = cyclopts.App(help="Fetch/save/replay LangSmith chat-to-image traces")
 
-_DEFAULT_TRACE_DIR = Path("tmp/langsmith_traces")
+_DEFAULT_TRACE_DIR = Path(".inty/langsmith_traces")
 
 _RUN_NAME_Z_IMAGE = "z_image_turbo_image_to_image"
 _RUN_NAME_SEEDREAM = "seedream_v4_5_edit"
@@ -186,7 +186,9 @@ def _list_trace_runs(
     if project_name:
         kwargs["project_name"] = project_name
 
-    filtered_kwargs, dropped = _filter_supported_kwargs(client.list_runs, kwargs)
+    filtered_kwargs, dropped = _filter_supported_kwargs(
+        client.list_runs, kwargs
+    )
     if dropped:
         logger.warning("list_runs() dropped unsupported kwargs: {}", dropped)
     runs = list(client.list_runs(**filtered_kwargs))
@@ -252,7 +254,8 @@ def _fetch_trace_record(
     if root_run_obj is not None:
         root_id = str(getattr(root_run_obj, "id", ""))
         if root_id and all(
-            str(getattr(candidate, "id", "")) != root_id for candidate in run_objects
+            str(getattr(candidate, "id", "")) != root_id
+            for candidate in run_objects
         ):
             run_objects.append(root_run_obj)
     if not run_objects:
@@ -261,7 +264,9 @@ def _fetch_trace_record(
     normalized_runs = [_normalize_run_record(run) for run in run_objects]
     root_run_id = _choose_root_run_id(
         normalized_runs,
-        preferred_run_id=(str(getattr(root_run_obj, "id")) if root_run_obj else None),
+        preferred_run_id=(
+            str(getattr(root_run_obj, "id")) if root_run_obj else None
+        ),
     )
     return TraceRecord(
         source="langsmith",
@@ -310,7 +315,9 @@ def _select_source_run(
 
     for expected_name in by_priority:
         matched = [
-            run for run in trace_record.runs if _name_matches(run.name, expected_name)
+            run
+            for run in trace_record.runs
+            if _name_matches(run.name, expected_name)
         ]
         if matched:
             matched.sort(key=lambda run: run.start_time or "", reverse=True)
@@ -329,7 +336,9 @@ def _is_http_url(value: Any) -> bool:
 
 def _extract_gemini_prompt(contents: list[Any]) -> str | None:
     text_parts = [
-        item for item in contents if isinstance(item, str) and not _is_http_url(item)
+        item
+        for item in contents
+        if isinstance(item, str) and not _is_http_url(item)
     ]
     if not text_parts:
         return None
@@ -368,7 +377,9 @@ def _build_replay_request_from_run(
     if _RUN_NAME_SEEDREAM in run_name:
         args = inputs.get("args")
         if not isinstance(args, dict):
-            raise ValueError("seedream trace inputs do not contain dict 'args'.")
+            raise ValueError(
+                "seedream trace inputs do not contain dict 'args'."
+            )
         gcs_uri_base = str(inputs.get("gcs_uri_base") or fallback_gcs_uri_base)
         prompt = args.get("prompt")
         image_urls = args.get("image_urls")
@@ -392,7 +403,9 @@ def _build_replay_request_from_run(
         model = inputs.get("model")
         contents = inputs.get("contents")
         if not isinstance(contents, list):
-            raise ValueError("gemini trace inputs do not contain list 'contents'.")
+            raise ValueError(
+                "gemini trace inputs do not contain list 'contents'."
+            )
         gcs_uri_base = str(inputs.get("gcs_uri_base") or fallback_gcs_uri_base)
         refs = [item for item in contents if _is_http_url(item)]
         return ReplayRequest(
@@ -427,7 +440,10 @@ async def _execute_replay(request: ReplayRequest) -> ReplayExecutionResult:
             gcs_uri_base=request.gcs_uri_base,
         )
     elif request.provider == "fal_seedream_v4_5_edit":
-        from app.core.images.fal import FalSeedreamV4_5EditInput, seedream_v4_5_edit
+        from app.core.images.fal import (
+            FalSeedreamV4_5EditInput,
+            seedream_v4_5_edit,
+        )
 
         result = await seedream_v4_5_edit(
             args=FalSeedreamV4_5EditInput(**request.provider_arguments),
@@ -438,17 +454,23 @@ async def _execute_replay(request: ReplayRequest) -> ReplayExecutionResult:
 
         model = request.provider_arguments.get("model")
         if not isinstance(model, str) or not model:
-            raise ValueError("Gemini replay requires string model in trace inputs.")
+            raise ValueError(
+                "Gemini replay requires string model in trace inputs."
+            )
         contents = request.provider_arguments.get("contents")
         if not isinstance(contents, list) or not contents:
             raise ValueError(
                 "Gemini replay requires non-empty list contents in trace inputs."
             )
-        system_instructions = request.provider_arguments.get("system_instructions")
+        system_instructions = request.provider_arguments.get(
+            "system_instructions"
+        )
         if system_instructions is not None and not isinstance(
             system_instructions, list
         ):
-            raise ValueError("Gemini system_instructions must be list[str] or null.")
+            raise ValueError(
+                "Gemini system_instructions must be list[str] or null."
+            )
         wrapped_client = get_wrapped_client()
         result = await wrapped_client.async_generate_image(
             model=model,
@@ -562,13 +584,15 @@ def main(
         --run-id <langsmith-run-id>
 
       PYTHONPATH=. python tools/scripts/replay_chat_to_image_trace.py \\
-        --trace-record-path tmp/langsmith_traces/<trace_id>.json \\
+        --trace-record-path .inty/langsmith_traces/<trace_id>.json \\
         --dry-run
     """
     if max_runs <= 0:
         raise ValueError("--max-runs must be > 0")
     if trace_record_path and (run_id or trace_id):
-        raise ValueError("Do not combine --trace-record-path with --run-id/--trace-id.")
+        raise ValueError(
+            "Do not combine --trace-record-path with --run-id/--trace-id."
+        )
 
     if trace_record_path:
         source_path = Path(trace_record_path)
@@ -621,7 +645,9 @@ def main(
 
     replay_result = asyncio.run(_execute_replay(replay_request))
     summary["mode"] = "live_replay"
-    summary["replay_result"] = _json_safe(replay_result.model_dump(mode="python"))
+    summary["replay_result"] = _json_safe(
+        replay_result.model_dump(mode="python")
+    )
 
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     if output_json:

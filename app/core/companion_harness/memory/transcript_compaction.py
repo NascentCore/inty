@@ -115,11 +115,16 @@ def transcript_compaction_meta_from_outcome(
 
 class ConversationCompactor:
     def __init__(
-        self, config: CompactionConfig, *, initial_state: CompactionState | None = None
+        self,
+        config: CompactionConfig,
+        *,
+        initial_state: CompactionState | None = None,
     ) -> None:
         self._config = config
         self._state = (
-            initial_state if initial_state is not None else CompactionState.empty()
+            initial_state
+            if initial_state is not None
+            else CompactionState.empty()
         )
 
     @property
@@ -157,9 +162,13 @@ class ConversationCompactor:
             )
 
         old_dialogue = dialogue_messages[: -self._config.keep_recent_messages]
-        recent_dialogue = dialogue_messages[-self._config.keep_recent_messages :]
+        recent_dialogue = dialogue_messages[
+            -self._config.keep_recent_messages :
+        ]
 
-        next_state = self._absorb_old_dialogue(old_dialogue=old_dialogue, turn=turn)
+        next_state = self._absorb_old_dialogue(
+            old_dialogue=old_dialogue, turn=turn
+        )
         memory_msg = {
             "role": "system",
             "content": self._build_compaction_system_prompt(
@@ -199,14 +208,16 @@ class ConversationCompactor:
         self, *, old_dialogue: list[dict[str, Any]], turn: int
     ) -> CompactionState:
         chunks = _chunk_messages(
-            messages=old_dialogue, max_messages=self._config.max_messages_per_episode
+            messages=old_dialogue,
+            max_messages=self._config.max_messages_per_episode,
         )
         new_episodes: list[MemoryEpisode] = [
             _build_episode(chunk=chunk, turn=turn) for chunk in chunks if chunk
         ]
         merged_episodes = [*self._state.episodic_memory, *new_episodes]
         merged_episodes = _trim_episodes(
-            episodes=merged_episodes, max_entries=self._config.max_episodic_entries
+            episodes=merged_episodes,
+            max_entries=self._config.max_episodic_entries,
         )
 
         merged_semantic = _merge_semantic_memory(
@@ -236,10 +247,13 @@ class ConversationCompactor:
             episodes=state.episodic_memory, turn=turn
         )[: self._config.retrieval_episode_count]
         ranked_semantic = sorted(
-            state.semantic_memory, key=lambda item: item.confidence, reverse=True
+            state.semantic_memory,
+            key=lambda item: item.confidence,
+            reverse=True,
         )[: self._config.retrieval_semantic_count]
         open_loops = _collect_open_loops(
-            episodes=ranked_episodes, max_items=self._config.retrieval_open_loop_count
+            episodes=ranked_episodes,
+            max_items=self._config.retrieval_open_loop_count,
         )
 
         episode_lines = [
@@ -276,7 +290,9 @@ class ConversationCompactor:
         self, *, state: CompactionState, turn: int
     ) -> str:
         top_semantic = sorted(
-            state.semantic_memory, key=lambda item: item.confidence, reverse=True
+            state.semantic_memory,
+            key=lambda item: item.confidence,
+            reverse=True,
         )[:3]
         semantic_lines = [f"- {item.fact[:80]}" for item in top_semantic]
         running_summary = state.running_summary[-280:]
@@ -313,7 +329,9 @@ def save_compaction_state_to_store(
     store.write_document(relative_path, body)
 
 
-def transcript_rows_to_openai_dialogue(rows: list[ChatMessage]) -> list[dict[str, Any]]:
+def transcript_rows_to_openai_dialogue(
+    rows: list[ChatMessage],
+) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for m in rows:
         if m.role not in ("user", "assistant", "system"):
@@ -331,7 +349,8 @@ def _chunk_messages(
     *, messages: list[dict[str, Any]], max_messages: int
 ) -> list[list[dict[str, Any]]]:
     return [
-        messages[i : i + max_messages] for i in range(0, len(messages), max_messages)
+        messages[i : i + max_messages]
+        for i in range(0, len(messages), max_messages)
     ]
 
 
@@ -380,14 +399,18 @@ def _collect_role_texts(*, chunk: list[dict[str, Any]], role: str) -> list[str]:
     return texts
 
 
-def _guess_turn_from_chunk(*, chunk: list[dict[str, Any]], fallback: int) -> int:
+def _guess_turn_from_chunk(
+    *, chunk: list[dict[str, Any]], fallback: int
+) -> int:
     user_messages = [m for m in chunk if m.get("role") == "user"]
     if not user_messages:
         return max(1, fallback - 1)
     return max(1, fallback - len(user_messages))
 
 
-def _build_episode_summary(*, user_texts: list[str], assistant_texts: list[str]) -> str:
+def _build_episode_summary(
+    *, user_texts: list[str], assistant_texts: list[str]
+) -> str:
     user_preview = " ".join(user_texts)[:_MAX_TEXT_PREVIEW].strip()
     assistant_preview = " ".join(assistant_texts)[:_MAX_TEXT_PREVIEW].strip()
     if user_preview and assistant_preview:
@@ -476,7 +499,11 @@ def _trim_episodes(
 ) -> list[MemoryEpisode]:
     ranked = sorted(
         episodes,
-        key=lambda item: (item.importance, item.last_access_turn, item.turn_end),
+        key=lambda item: (
+            item.importance,
+            item.last_access_turn,
+            item.turn_end,
+        ),
         reverse=True,
     )
     return ranked[:max_entries]
@@ -489,7 +516,9 @@ def _merge_semantic_memory(
     turn: int,
     max_entries: int,
 ) -> list[SemanticMemoryItem]:
-    by_key: dict[str, SemanticMemoryItem] = {item.key: item for item in existing}
+    by_key: dict[str, SemanticMemoryItem] = {
+        item.key: item for item in existing
+    }
     for episode in new_episodes:
         for fact in episode.salient_facts:
             key = _semantic_key(fact)
@@ -549,7 +578,9 @@ def _rank_episodes_for_retrieval(
     return sorted(episodes, key=rank_score, reverse=True)
 
 
-def _collect_open_loops(*, episodes: list[MemoryEpisode], max_items: int) -> list[str]:
+def _collect_open_loops(
+    *, episodes: list[MemoryEpisode], max_items: int
+) -> list[str]:
     loops: list[str] = []
     for episode in episodes:
         loops.extend(episode.open_loops)

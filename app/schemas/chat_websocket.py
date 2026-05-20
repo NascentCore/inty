@@ -65,34 +65,23 @@ class ChatWsClientContextAckFrame(BaseModel):
 
 
 class ChatWsUserSignedOnFrame(BaseModel):
-    """**Client → server** control frame: arms inner-tick coords for this user/agent/chat.
+    """**Client → server** control frame: arms inner-tick coords and schedules greeting turn.
 
-    When ``implicit_greeting`` is true, the server runs an internal implicit sign-on companion
-    turn after a successful ``user_signed_on_ack`` (same semantics as the former IMPLICIT chat
-    frame); see ``/app/core/companion_harness/companion/implicit_signal_messages.py``.
+    ``message_id`` (RFC4122 UUID) is required; see
+    ``/app/core/companion_harness/companion/implicit_signal_messages.py``.
     """
 
     type: Literal["user_signed_on"] = "user_signed_on"
     agent_id: str = Field(..., min_length=1)
-    message_id: Optional[str] = Field(
-        default=None,
-        description="Optional RFC4122 UUID string for client/server log correlation; "
-        "required when implicit_greeting is true (also used as companion transcript user_msg_uuid).",
-    )
-    implicit_greeting: bool = Field(
-        default=False,
-        description="When true, run implicit sign-on greeting companion turn after coords arm.",
-    )
-    implicit_greeting_note: Optional[str] = Field(
-        default=None,
-        max_length=160,
-        description="Optional client hint when implicit_greeting is false (e.g. reconnect); "
-        "server may include it in logs only.",
+    message_id: str = Field(
+        ...,
+        min_length=1,
+        description="RFC4122 UUID for log correlation and companion transcript user_msg_uuid.",
     )
 
 
 class ChatWsUserSignedOutFrame(BaseModel):
-    """**Client → server** control frame: records user leaving the chat channel for companion CHAT_LOGS.md."""
+    """**Client → server** control frame: records user leaving the chat channel in companion runtime events JSONL."""
 
     type: Literal["user_signed_out"] = "user_signed_out"
     agent_id: str = Field(..., min_length=1)
@@ -117,10 +106,12 @@ class ChatWsUserSignedOnAckFrame(BaseModel):
 
 
 class ChatWsUserSignedOutAckFrame(BaseModel):
-    """**Server → client (immediate)** result of ``user_signed_out`` handling.
+    """**Server → client (immediate)** acceptance of ``user_signed_out``.
 
-    Known ``reason`` values include ``not_supported``, ``invalid_payload``, ``agent_mismatch``,
-    ``server_error``; the wire may carry other strings for forward compatibility.
+    When ``ok`` is true, scope teardown (session shutdown, memory delete, history clear) continues
+    asynchronously on the server. Known ``reason`` values for ``ok: false`` include
+    ``not_supported``, ``invalid_payload``, ``agent_mismatch``, ``server_error``; the wire may carry
+    other strings for forward compatibility.
     """
 
     type: Literal["user_signed_out_ack"] = "user_signed_out_ack"
@@ -129,7 +120,7 @@ class ChatWsUserSignedOutAckFrame(BaseModel):
 
 
 class ChatWsWsConnDroppedFrame(BaseModel):
-    """**Client → server** control frame: prior transport disconnect context for companion CHAT_LOGS.md."""
+    """**Client → server** control frame: prior transport disconnect context for companion runtime events JSONL."""
 
     type: Literal["ws_conn_dropped"] = "ws_conn_dropped"
     agent_id: str = Field(..., min_length=1)
@@ -183,8 +174,18 @@ class ChatWsCompanionWireMetaData(BaseModel):
         description="Client optimistic id; stored under ``localId`` on wire / DB JSON.",
     )
     inner_tick: Optional[bool] = None
-    heartbeat: Optional[bool] = None
-    companion_proactive_heartbeat: Optional[bool] = None
+    # TODO: remove validation_alias for heartbeat; no backward compat needed
+    proactive_chat: Optional[bool] = Field(
+        default=None,
+        validation_alias=AliasChoices("proactive_chat", "heartbeat"),
+    )
+    # TODO: remove validation_alias for companion_proactive_heartbeat; no backward compat needed
+    companion_proactive_chat: Optional[bool] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "companion_proactive_chat", "companion_proactive_heartbeat"
+        ),
+    )
     companion_maintenance_inner_tick: Optional[bool] = None
     companion_scheduled_reminder: Optional[bool] = None
     scheduled_task_id: Optional[str] = Field(
@@ -234,7 +235,9 @@ class ChatWsCompanionWireMetaData(BaseModel):
     )
 
 
-def dump_chat_ws_companion_wire_meta(meta: ChatWsCompanionWireMetaData) -> dict[str, Any]:
+def dump_chat_ws_companion_wire_meta(
+    meta: ChatWsCompanionWireMetaData,
+) -> dict[str, Any]:
     """Serialize companion WebSocket ``meta_data`` for ORM / ``send_json`` (omit nulls, camelCase aliases)."""
     return meta.model_dump(exclude_none=True, by_alias=True)
 

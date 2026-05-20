@@ -1,4 +1,9 @@
-# Inty: AI 长期情感陪伴
+# Inty: Ultimate Emotional Bliss
+
+Your whole mind can be devoted to experience the ultimate emotional experience, not any brain cell is distracted by pleasing other hellish humans **Hell is other people** (Jean-Paul Sartre's 1944 existentialist play No Exit).
+
+Inty is an AI for long-term emotional companionship.
+
 
 [![Android App Tests](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml)
 [![CI - Backend](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml)
@@ -8,9 +13,9 @@
 
 ## 快速开始
 
-使用 [Cursor](https://cursor.com/)
-
 ```bash
+# 使用 [Cursor](https://cursor.com/)
+# Ask Cursor anything
 git clone git@github.com:NascentCore/inty.git
 cd inty
 cursor .

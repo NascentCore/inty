@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from app.core.companion_harness.memory.memory_registry import get_memory_store
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
     _schedule_document_rel,
@@ -16,7 +16,10 @@ from app.core.companion_harness.companion.schedule_queue import (
 
 
 def _store(tmp: Path):
-    return get_memory_store(CompanionScope("sq", "a", tmp.name), dsn="")
+    return MemoryStore(
+        scope=CompanionScope("sq", "a", tmp.name),
+        repository=None,
+    )
 
 
 def test_add_and_get_due_tasks(tmp_path: Path) -> None:

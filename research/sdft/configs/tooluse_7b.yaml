@@ -1,0 +1,28 @@
+experiment_name: sdft_tooluse_7b
+output_dir: research/sdft/results/tooluse_7b
+upstream_dir: research/sdft/upstream
+seed: 42
+model_name: Qwen/Qwen2.5-7B-Instruct
+dataset: tooluse
+train:
+  learning_rate: 5.0e-5
+  num_train_epochs: 2
+  num_prompts_per_batch: 32
+  ref_model_mixup_alpha: 0.01
+  max_prompt_length: 1024
+  max_completion_length: 1024
+  per_device_train_batch_size: 1
+  use_vllm: true
+  vllm_mode: colocate
+  vllm_gpu_memory_utilization: 0.3
+  sync_ref_model: true
+  ref_model_sync_steps: 1
+  save_steps: 100
+  max_grad_norm: 1.0
+  report_to: wandb
+  bf16: true
+  vllm_enable_sleep_mode: true
+eval:
+  max_new_tokens: 1024
+  temperature: 0.0
+  model_path: research/sdft/results/tooluse_7b

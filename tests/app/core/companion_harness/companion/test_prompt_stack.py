@@ -9,12 +9,10 @@ from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.companion.bootstrap_user_interactive import (
     tool_companion_bootstrap_user_interactive_complete,
 )
-from app.core.companion_harness.memory.memory_registry import (
-    get_memory_store,
-    shutdown_memory_store,
-)
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import (
-    InnerTickMode,
+    CompanionTurnTrack,
+    InnerTickActivity,
     load_context_meta,
     load_prompt_bundle,
 )
@@ -37,8 +35,8 @@ def _scope(tmp_path_name: str, suffix: str = "") -> CompanionScope:
     return CompanionScope("prompt-stack", "agent", chat_id)
 
 
-def _seed_workspace_bootstrap_incomplete(scope: CompanionScope) -> None:
-    st = get_memory_store(scope)
+def _seed_workspace_bootstrap_incomplete(scope: CompanionScope) -> MemoryStore:
+    st = MemoryStore(scope=scope, repository=None)
     for rel, body in (
         ("IDENTITY.md", "id\n"),
         ("SOUL.md", "soul\n"),
@@ -60,6 +58,7 @@ def _seed_workspace_bootstrap_incomplete(scope: CompanionScope) -> None:
         )
         + "\n",
     )
+    return st
 
 
 def _joined_leading_system_contents(system_messages: list[dict]) -> str:
@@ -73,7 +72,7 @@ def _joined_leading_system_contents(system_messages: list[dict]) -> str:
 
 def test_inner_tick_loads_ai_private_jsonl_into_system(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-tick")
-    st = get_memory_store(scope)
+    st = MemoryStore(scope=scope, repository=None)
     for rel, body in (
         ("IDENTITY.md", "id\n"),
         ("SOUL.md", "soul\n"),
@@ -102,20 +101,16 @@ def test_inner_tick_loads_ai_private_jsonl_into_system(tmp_path) -> None:
         bundle=bundle,
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
-        inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
-        tool_side_compact_system_prompt=False,
+        track=CompanionTurnTrack.INNER_TICK_MAINTENANCE,
     )
     joined = "\n".join(
         str(m.get("content") or "") for m in systems if m.get("role") == "system"
     )
     assert "jl seed line" in joined
-    shutdown_memory_store(scope)
 
 
-def test_inner_tick_compact_tool_side_forwards_ai_private(tmp_path) -> None:
-    scope = _scope(tmp_path.name, "-compact")
-    st = get_memory_store(scope)
+def _seed_minimal_companion_workspace(scope: CompanionScope) -> MemoryStore:
+    st = MemoryStore(scope=scope, repository=None)
     for rel, body in (
         ("IDENTITY.md", "id\n"),
         ("SOUL.md", "soul\n"),
@@ -136,53 +131,12 @@ def test_inner_tick_compact_tool_side_forwards_ai_private(tmp_path) -> None:
         )
         + "\n",
     )
-    st.write_document("ai_private.jsonl", '{"text": "jl seed line compact"}\n')
-    context = load_context_meta(store=st)
-    bundle = load_prompt_bundle(st, meta=context)
-    _, systems, _ = companion_turn_tools_and_system_messages(
-        store=st,
-        bundle=bundle,
-        context=context,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
-        inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
-        tool_side_compact_system_prompt=True,
-    )
-    joined = "\n".join(
-        str(m.get("content") or "") for m in systems if m.get("role") == "system"
-    )
-    assert "jl seed line compact" in joined
-    shutdown_memory_store(scope)
+    return st
 
 
-def _seed_minimal_companion_workspace(scope: CompanionScope) -> None:
-    st = get_memory_store(scope)
-    for rel, body in (
-        ("IDENTITY.md", "id\n"),
-        ("SOUL.md", "soul\n"),
-        ("USER.md", "user\n"),
-        ("MEMORY.md", "mem\n"),
-    ):
-        st.write_document(rel, body)
-    st.write_document(
-        "context.json",
-        json.dumps(
-            {
-                "context_mode": "public",
-                "user_id": "u",
-                "companion_id": "a",
-                "chat_id": "c",
-            },
-            ensure_ascii=False,
-        )
-        + "\n",
-    )
-
-
-def test_refresh_inner_tick_compact_keeps_inner_tick_tools(tmp_path) -> None:
+def test_refresh_inner_tick_keeps_inner_tick_tools(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-refresh-it")
-    _seed_minimal_companion_workspace(scope)
-    st = get_memory_store(scope)
+    st = _seed_minimal_companion_workspace(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     tools_before, systems, _ = companion_turn_tools_and_system_messages(
@@ -190,9 +144,7 @@ def test_refresh_inner_tick_compact_keeps_inner_tick_tools(tmp_path) -> None:
         bundle=bundle,
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
-        inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
-        tool_side_compact_system_prompt=True,
+        track=CompanionTurnTrack.INNER_TICK_MAINTENANCE,
     )
     expected_names = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
     assert {t["function"]["name"] for t in tools_before} == expected_names
@@ -203,19 +155,14 @@ def test_refresh_inner_tick_compact_keeps_inner_tick_tools(tmp_path) -> None:
         store=st,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         messages=messages,
-        tool_side_compact_system_prompt=True,
     )
     assert {t["function"]["name"] for t in new_tools} == expected_names
-    shutdown_memory_store(scope)
 
-
-def test_async_foreground_chat_system_stack_mirrors_tools_contract(tmp_path) -> None:
-    """Non-compact stack on ASYNC route skips full tool-output (6) clause; injects dual envelope."""
+def test_async_foreground_chat_turn_resolves_async_route(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-async-fg")
-    _seed_minimal_companion_workspace(scope)
-    st = get_memory_store(scope)
+    st = _seed_minimal_companion_workspace(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     _, systems, route = companion_turn_tools_and_system_messages(
@@ -223,26 +170,16 @@ def test_async_foreground_chat_system_stack_mirrors_tools_contract(tmp_path) -> 
         bundle=bundle,
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
-        inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
-        tool_side_compact_system_prompt=False,
-        include_significance_perception_slice=True,
-        implicit_user_signed_on_turn=False,
+        track=CompanionTurnTrack.USER_CHAT,
     )
     assert route == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-    joined = _joined_leading_system_contents(systems)
-    assert "快思考路径（系统 1）" in joined
-    assert "（6）当用户询问**当前所用模型" not in joined
-    assert "Dual-LLM chat branch" in joined
-    shutdown_memory_store(scope)
-
+    assert "Dual-LLM chat branch" in _joined_leading_system_contents(systems)
 
 def test_implicit_user_signed_on_chat_turn_forces_chat_only_route_and_no_tools(
     tmp_path,
 ) -> None:
     scope = _scope(tmp_path.name, "-implicit-sign")
-    _seed_minimal_companion_workspace(scope)
-    st = get_memory_store(scope)
+    st = _seed_minimal_companion_workspace(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     bundle_sig = ImplicitSignalBundle(user_signed_on=True)
@@ -252,36 +189,25 @@ def test_implicit_user_signed_on_chat_turn_forces_chat_only_route_and_no_tools(
         bundle=bundle,
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
-        inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
-        tool_side_compact_system_prompt=False,
-        implicit_signal_bundle=bundle_sig,
-        implicit_user_signed_on_turn=False,
+        track=CompanionTurnTrack.USER_CHAT,
     )
     tools_implicit, _, route_implicit = companion_turn_tools_and_system_messages(
         store=st,
         bundle=bundle,
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
-        inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
-        tool_side_compact_system_prompt=False,
-        implicit_signal_bundle=bundle_sig,
-        implicit_user_signed_on_turn=True,
+        track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
     )
     assert len(tools_normal) > 0
     assert route_normal == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     assert tools_implicit == []
     assert route_implicit == TurnRouteMode.CHAT_ONLY_SYNC
-    shutdown_memory_store(scope)
-
 
 def test_implicit_user_signed_on_turn_does_not_strip_tools_for_inner_tick(
     tmp_path,
 ) -> None:
     scope = _scope(tmp_path.name, "-it-implicit")
-    _seed_minimal_companion_workspace(scope)
-    st = get_memory_store(scope)
+    st = _seed_minimal_companion_workspace(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     tools, _, route = companion_turn_tools_and_system_messages(
@@ -289,20 +215,14 @@ def test_implicit_user_signed_on_turn_does_not_strip_tools_for_inner_tick(
         bundle=bundle,
         context=context,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
-        inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
-        tool_side_compact_system_prompt=False,
-        implicit_user_signed_on_turn=True,
+        track=CompanionTurnTrack.INNER_TICK_MAINTENANCE,
     )
     assert len(tools) > 0
     assert route == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-    shutdown_memory_store(scope)
-
 
 def test_refresh_implicit_user_signed_on_returns_empty_tools(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-refresh-implicit")
-    _seed_minimal_companion_workspace(scope)
-    st = get_memory_store(scope)
+    st = _seed_minimal_companion_workspace(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     systems = build_system_messages(
@@ -318,14 +238,11 @@ def test_refresh_implicit_user_signed_on_returns_empty_tools(tmp_path) -> None:
         store=st,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         messages=messages,
-        tool_side_compact_system_prompt=False,
         implicit_signal_bundle=sig,
     )
     assert new_tools == []
-    shutdown_memory_store(scope)
-
 
 def test_replace_leading_system_messages_inplace_keeps_tail() -> None:
     msgs = [
@@ -346,8 +263,7 @@ def test_replace_leading_system_messages_inplace_keeps_tail() -> None:
 
 def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-drop-boot")
-    _seed_workspace_bootstrap_incomplete(scope)
-    st = get_memory_store(scope)
+    st = _seed_workspace_bootstrap_incomplete(scope)
     context = load_context_meta(store=st)
     bundle = load_prompt_bundle(st, meta=context)
     systems = build_system_messages(
@@ -373,9 +289,8 @@ def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
         store=st,
         memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
         inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
         messages=messages,
-        tool_side_compact_system_prompt=False,
     )
 
     after = _joined_leading_system_contents(messages)
@@ -386,38 +301,3 @@ def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
     assert "companion_bootstrap_user_interactive_complete" not in tool_names
 
     assert messages[-1] == {"role": "user", "content": "hello"}
-    shutdown_memory_store(scope)
-
-
-def test_refresh_tool_side_compact_drops_bootstrap_after_complete(tmp_path) -> None:
-    scope = _scope(tmp_path.name, "-compact-boot")
-    _seed_workspace_bootstrap_incomplete(scope)
-    st = get_memory_store(scope)
-    context = load_context_meta(store=st)
-    bundle = load_prompt_bundle(st, meta=context)
-    systems = build_system_messages(
-        bundle,
-        context,
-        enable_tools=True,
-        enable_user_profile_tool=False,
-        inner_tick_turn=False,
-        include_repl_image_generation_contract=True,
-        tool_side_compact=True,
-        interactive_bootstrap_active=True,
-        include_significance_perception_slice=False,
-    )
-    messages = [dict(m) for m in systems]
-    messages.append({"role": "user", "content": "x"})
-    assert "INTERACTIVE_BOOTSTRAP" in _joined_leading_system_contents(messages)
-
-    tool_companion_bootstrap_user_interactive_complete(st, note=None)
-    refresh_companion_turn_prompt_stack(
-        store=st,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
-        inner_tick_turn=False,
-        inner_tick_mode=InnerTickMode.MAINTENANCE,
-        messages=messages,
-        tool_side_compact_system_prompt=True,
-    )
-    assert "INTERACTIVE_BOOTSTRAP" not in _joined_leading_system_contents(messages)
-    shutdown_memory_store(scope)

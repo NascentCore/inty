@@ -62,7 +62,9 @@ def inner_tick_poll_seconds() -> float:
 
 
 def inner_tick_min_gap_seconds() -> float:
-    return _env_float("INTY_V2_PROTO_INNER_TICK_MIN_GAP_SEC", _DEFAULT_MIN_GAP_SEC)
+    return _env_float(
+        "INTY_V2_PROTO_INNER_TICK_MIN_GAP_SEC", _DEFAULT_MIN_GAP_SEC
+    )
 
 
 def next_inner_tick_wait_seconds(

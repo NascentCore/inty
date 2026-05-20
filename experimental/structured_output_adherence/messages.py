@@ -34,7 +34,9 @@ def parse_lc_message_row(message_raw: Any) -> Dict[str, str]:
         message_type = message_data.get("type", "human")
         content = ""
         if "data" in message_data and "content" in message_data["data"]:
-            content = _extract_text_from_content(message_data["data"]["content"])
+            content = _extract_text_from_content(
+                message_data["data"]["content"]
+            )
         elif "content" in message_data:
             content = _extract_text_from_content(message_data["content"])
 
@@ -47,7 +49,10 @@ def parse_lc_message_row(message_raw: Any) -> Dict[str, str]:
 
         return {"content": content, "role": role}
     except Exception:
-        return {"content": str(message_raw) if message_raw else "", "role": "unknown"}
+        return {
+            "content": str(message_raw) if message_raw else "",
+            "role": "unknown",
+        }
 
 
 def transcript_upto(turns: List[Dict[str, str]], end_exclusive: int) -> str:
@@ -58,8 +63,10 @@ def transcript_upto(turns: List[Dict[str, str]], end_exclusive: int) -> str:
         body = t["content"].replace("\r\n", "\n").strip()
         if not body:
             continue
-        label = {"user": "User", "assistant": "Assistant", "system": "System"}.get(
-            role, role
-        )
+        label = {
+            "user": "User",
+            "assistant": "Assistant",
+            "system": "System",
+        }.get(role, role)
         lines.append(f"{label}: {body}")
     return "\n".join(lines)

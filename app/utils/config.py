@@ -136,20 +136,23 @@ class DatabaseSettings(BaseModel):
         )
 
 
-@dataclass
-class GoogleOAuthConfig:
+class GoogleOAuthConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     redirect_uri: Optional[str] = None
 
 
-@dataclass
-class VerificationConfig:
+class VerificationConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     code_expire_minutes: int = 5
 
 
-@dataclass
-class APIEndpointsConfig:
+class APIEndpointsConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     disable_api_v1_chat_completions: bool = False
     # 使用虚假的 Google 登录接口，用于测试，设为 True 时可以在 auth.py 中直接定义返回值来支持 app 前端测试。
     use_dummy_api_v1_auth_google_login: bool = False
@@ -191,14 +194,17 @@ class FeaturesConfig:
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
     companion_ws_session_system_text: Optional[str] = None
     # When True, ``/api/v1/chat/ws`` unified inner-tick worker may emit proactive companion turns
-    # (``InnerTickMode.PROACTIVE_CHAT``) when ``next_heartbeat_wait_seconds`` says ready.
-    companion_ws_proactive_heartbeat_enabled: bool = True
+    # (``InnerTickActivity.PROACTIVE_CHAT``) when ``next_proactive_chat_wait_seconds`` says ready.
+    companion_ws_proactive_chat_enabled: bool = True
     # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
-    companion_ws_proactive_heartbeat_poll_seconds: float = 60.0
-    # When True, the same worker may emit maintenance inner-tick turns (``InnerTickMode.MAINTENANCE``).
+    companion_ws_proactive_chat_poll_seconds: float = 60.0
+    # When True, the same worker may emit maintenance inner-tick turns (``InnerTickActivity.MAINTENANCE``).
     companion_ws_maintenance_inner_tick_enabled: bool = True
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
+    # Seconds to wait on ``CompanionSession.tool_bg_idle`` before LivingSphere jsonl compact
+    # (memory worker after user turns with defer_memory_update).
+    companion_tool_bg_idle_wait_timeout_sec: float = 120.0
 
     def __post_init__(self) -> None:
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()
@@ -212,7 +218,10 @@ class FeaturesConfig:
         self.companion_default_context_mode = normalize_experience_profile_id(
             self.companion_default_context_mode
         )
-        if self.companion_default_context_mode == ExperienceContextMode.BOOTSTRAP:
+        if (
+            self.companion_default_context_mode
+            == ExperienceContextMode.BOOTSTRAP
+        ):
             raise ValueError(
                 "app.features.companion_default_context_mode cannot be 'bootstrap'"
             )
@@ -238,7 +247,9 @@ class AppConfig:
     # 仅当请求头 appVersionCode >= 此值时返回日常记忆提醒（消息列表 daily_memory_prompt、角色详情 daily_memories）；小于此值按旧版不返回。0 表示不按版本限制。
     min_app_version_code_for_daily_memory: int = 0
 
-    api_endpoints: APIEndpointsConfig = field(default_factory=APIEndpointsConfig)
+    api_endpoints: APIEndpointsConfig = field(
+        default_factory=APIEndpointsConfig
+    )
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
 
     @dataclass
@@ -281,8 +292,9 @@ class AppConfig:
         return f"https://{self.name}-{self.environment.value}"
 
 
-@dataclass
-class EmbeddingConfig:
+class EmbeddingConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     base_url: str = "http://localhost:8001/v1"
     api_key: str = "sk-proj-1234567890"
     model: str = "DMetaSoul/Dmeta-embedding-zh-small"
@@ -302,7 +314,7 @@ class AgentConfig:
     # Companion WS tool-call route model id (passed to OpenAI-compatible gateway via
     # CompanionLLMConfig.tool_model). Independent of foreground chat envelope model so
     # the dual-LLM tool loop can scale separately. Empty string falls back to the chat
-    # model at companion_chat_service wiring time (resolved_chat_model_id).
+    # model at companion_chat_service wiring time (resolved_chat_model GenAIModel).
     companion_tool_call_model: str = "google/gemini-3-flash-preview"
     # 免费用户商业化触达：定期返回一条“付费专属预览”消息并引导订阅。
     enable_free_user_premium_preview: bool = False
@@ -352,7 +364,9 @@ class AgentConfig:
 
     free_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_FAST
     sub_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4
-    force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
+    force_default_prompts: bool = (
+        False  # 强制使用默认提示词，忽略Agent自定义提示词
+    )
     enable_christmas_prompt: bool = False  # 是否启用圣诞节季节性提示词
     # 图片生成配置
     image_generation_default_history_count: int = 10
@@ -391,8 +405,9 @@ class AgentConfig:
     agent_config_cache_ttl_seconds: int = 20 * 60  # 默认 20 分钟
 
 
-@dataclass
-class GCSConfig:
+class GCSConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     bucket: str = "inty-storage"
     # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
     # 删除部署环境中的配置文件使用，然后删除这个代码。
@@ -402,8 +417,9 @@ class GCSConfig:
     fake_gcs_base_dir: str = "/tmp/inty_fake_gcs"
 
 
-@dataclass
-class FirebaseConfig:
+class FirebaseConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     service_account_path: str = ".secrets/inty-backend-key.json"
 
 
@@ -422,7 +438,9 @@ class GooglePlayConfig:
     min_supported_version: int = 1  # 最低支持版本代码
     # DEPRECATED: 未被使用过。
     # 删除部署环境中的配置文件使用，然后删除这个代码。
-    release_track: str = "production"  # 发布轨道：internal/closed/open/production
+    release_track: str = (
+        "production"  # 发布轨道：internal/closed/open/production
+    )
     # DEPRECATED: 未被使用过。
     # 删除部署环境中的配置文件使用，然后删除这个代码。
     fallback_tracks: List[str] = None  # 备用轨道列表
@@ -435,8 +453,12 @@ class GooglePlayConfig:
     # 版本代码差距阈值配置；线性递增的多个阈值，超过某个阈值意味着之前超越的阈值的动作都会在 app 端执行。
     # 比如，触发 popup_reminder_version_code_gap 动作，意味着 settings reminder 与 popup reminder 都会在 app 端执行。
     force_update_version_code_gap: int = 1000  # 版本代码差距超过此值则强制更新
-    popup_reminder_version_code_gap: int = 200  # 版本代码差距在此值以上则显示弹窗提醒
-    settings_reminder_version_code_gap: int = 1  # 版本代码差距在此值以上则显示设置提醒
+    popup_reminder_version_code_gap: int = (
+        200  # 版本代码差距在此值以上则显示弹窗提醒
+    )
+    settings_reminder_version_code_gap: int = (
+        1  # 版本代码差距在此值以上则显示设置提醒
+    )
 
 
 @dataclass
@@ -480,14 +502,16 @@ class MemoryExtractionConfig:
         WorkflowMode.ALWAYS_SUMMARIZE_FULL_CHAT_MESSAGES_HISTORY
     )
     cron_hour: int = 3  # UTC 小时，每日执行
-    trigger_new_user_messages: int = 30  # 新用户总聊天次数阈值（subscription_usage）
+    trigger_new_user_messages: int = (
+        30  # 新用户总聊天次数阈值（subscription_usage）
+    )
     trigger_incremental_messages: int = (
         30  # 已提取用户自上次后新增聊天次数阈值（subscription_usage）
     )
     # When companion kernel fills CompanionTurnResult.significance_perception, chat.py mirrors it
     # into chat_history AI meta_data. Enabling this sorts extraction input by
     # meta_data.significance_perception.importance_round and adds bracket hints for the extractor LLM.
-    # Pipeline overview: app/core/companion_harness/companion/significance_perception.py module docstring.
+    # Pipeline overview: app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py module docstring.
     use_significance_perception_in_extraction: bool = False
 
     def __post_init__(self):
@@ -501,7 +525,9 @@ def _parse_surprise_snap_config(data: dict) -> "SurpriseSnapConfig":
     enabled_since = raw.get("enabled_since")
     if isinstance(enabled_since, str):
         try:
-            enabled_since = datetime.fromisoformat(enabled_since.replace("Z", "+00:00"))
+            enabled_since = datetime.fromisoformat(
+                enabled_since.replace("Z", "+00:00")
+            )
         except (ValueError, TypeError):
             enabled_since = None
     elif not isinstance(enabled_since, datetime):
@@ -528,11 +554,26 @@ class SurpriseSnapConfig:
 
 @dataclass
 class UserAnalyticsReportConfig:
-    """用户数据分析日报周报定时任务配置"""
+    """push worker 侧用户分析预计算调度配置。
 
-    enabled: bool = True
-    daily_cron_hour: int = 6  # UTC 小时，每日执行，统计 T-1 日
-    weekly_cron_hour: int = 6  # UTC 小时，每周一执行，统计上一周
+    默认 enabled / daily_enabled / weekly_enabled / backfill_enabled 均为 False，
+    push worker 不跑日报、周报 cron 与启动补算。生产 IntelliMate 日报由
+    .github/workflows/daily_intellimate_user_activity_report.yaml 承担。
+    见 docs/FR_USER_ANALYTICS_REPORTS.md。
+    """
+
+    enabled: bool = (
+        False  # False 时 push_scheduler 不注册任何 user_analytics 任务
+    )
+    daily_enabled: bool = (
+        False  # True 且 enabled 时注册日报 cron（勿与 GitHub Actions 日报并行）
+    )
+    weekly_enabled: bool = False  # True 且 enabled 时注册周报 cron
+    backfill_enabled: bool = (
+        False  # True 且 enabled 时启动补算；范围受 daily/weekly 开关约束
+    )
+    daily_cron_hour: int = 6  # UTC；daily_enabled 时统计 T-1 日
+    weekly_cron_hour: int = 6  # UTC 每周一；weekly_enabled 时统计上一周
     statement_timeout_sec: int = 600  # 单条 SQL 超时秒数，生产大数据量时需调大
     batch_size: int = (
         500  # 分批查询 session/chat 时每批数量，减小可降低 standby conflict with recovery
@@ -704,8 +745,12 @@ def load_config(path: str) -> Config:
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
     if "features" in app_data and isinstance(app_data["features"], dict):
         app_data["features"] = FeaturesConfig(**dict(app_data["features"]))
-    if "api_endpoints" in app_data and isinstance(app_data["api_endpoints"], dict):
-        app_data["api_endpoints"] = APIEndpointsConfig(**app_data["api_endpoints"])
+    if "api_endpoints" in app_data and isinstance(
+        app_data["api_endpoints"], dict
+    ):
+        app_data["api_endpoints"] = APIEndpointsConfig.model_validate(
+            app_data["api_endpoints"]
+        )
 
     # Convert environment string to Environment enum if present
     if "environment" in app_data and isinstance(app_data["environment"], str):
@@ -715,17 +760,23 @@ def load_config(path: str) -> Config:
         app=AppConfig(**app_data),
         security=SecurityConfig.model_validate(data.get("security") or {}),
         database=DatabaseSettings.model_validate(data.get("database") or {}),
-        google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
-        verification=VerificationConfig(**data.get("verification", {})),
+        google_oauth=GoogleOAuthConfig.model_validate(
+            data.get("google_oauth") or {}
+        ),
+        verification=VerificationConfig.model_validate(
+            data.get("verification") or {}
+        ),
         logging=LoggingConfig.model_validate(data.get("logging") or {}),
-        embedding=EmbeddingConfig(**data.get("embedding", {})),
+        embedding=EmbeddingConfig.model_validate(data.get("embedding") or {}),
         agent=AgentConfig(**data.get("agent", {})),
-        gcs=GCSConfig(**data.get("gcs", {})),
-        firebase=FirebaseConfig(**data.get("firebase", {})),
+        gcs=GCSConfig.model_validate(data.get("gcs") or {}),
+        firebase=FirebaseConfig.model_validate(data.get("firebase") or {}),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
-        push_notification=PushNotificationConfig(**data.get("push_notification", {})),
+        push_notification=PushNotificationConfig(
+            **data.get("push_notification", {})
+        ),
         memory_extraction=MemoryExtractionConfig(
             **(data.get("memory_extraction") or {})
         ),
@@ -756,7 +807,9 @@ def _validate_config(config: Config):
         raise ValueError("elevenlabs.api_key is required")
 
     # 消息生图模型 nickname 必须能解析为允许的模型
-    models_catalog.must_resolve_nickname(config.agent.free_user_chat_image_model)
+    models_catalog.must_resolve_nickname(
+        config.agent.free_user_chat_image_model
+    )
     models_catalog.must_resolve_nickname(config.agent.sub_user_chat_image_model)
 
     if config.agent.chat_llm_provider not in ("openrouter", "litellm"):
@@ -825,16 +878,26 @@ def _validate_config(config: Config):
 
     pc = config.phone_call
     if pc.enabled:
-        if pc.media_stream_token_ttl_seconds < 60 or pc.media_stream_token_ttl_seconds > 3600:
+        if (
+            pc.media_stream_token_ttl_seconds < 60
+            or pc.media_stream_token_ttl_seconds > 3600
+        ):
             raise ValueError(
                 "phone_call.media_stream_token_ttl_seconds must be between 60 and 3600"
             )
-        if pc.twilio_media_stream_base_url and not pc.twilio_media_stream_base_url.startswith(
-            "wss://"
+        if (
+            pc.twilio_media_stream_base_url
+            and not pc.twilio_media_stream_base_url.startswith("wss://")
         ):
-            raise ValueError("phone_call.twilio_media_stream_base_url must start with wss://")
-        if pc.default_country_code and not pc.default_country_code.startswith("+"):
-            raise ValueError("phone_call.default_country_code must start with '+'")
+            raise ValueError(
+                "phone_call.twilio_media_stream_base_url must start with wss://"
+            )
+        if pc.default_country_code and not pc.default_country_code.startswith(
+            "+"
+        ):
+            raise ValueError(
+                "phone_call.default_country_code must start with '+'"
+            )
 
     from app.core.companion_harness.memory.transcript_compaction import (
         CompactionConfig as CompanionTranscriptCompactionConfig,
@@ -850,4 +913,9 @@ def _validate_config(config: Config):
     if feats.companion_transcript_compaction is not None:
         CompanionTranscriptCompactionConfig.model_validate(
             feats.companion_transcript_compaction
+        )
+    tb_wait = feats.companion_tool_bg_idle_wait_timeout_sec
+    if tb_wait < 1.0 or tb_wait > 3600.0:
+        raise ValueError(
+            "app.features.companion_tool_bg_idle_wait_timeout_sec must be between 1 and 3600"
         )

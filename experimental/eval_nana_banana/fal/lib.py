@@ -115,7 +115,9 @@ def save_result_to_files(
     if not fal_result.images:
         raise ValueError("fal_result has no images")
     first_url = fal_result.images[0].url
-    req = urllib.request.Request(first_url, headers={"User-Agent": "inty-eval-fal/1"})
+    req = urllib.request.Request(
+        first_url, headers={"User-Agent": "inty-eval-fal/1"}
+    )
     with urllib.request.urlopen(req, timeout=60) as resp:
         image_data = resp.read()
     with open(out_image, "wb") as f:

@@ -45,7 +45,9 @@ class FakeBucket:
 
 
 class FakeBlob:
-    def __init__(self, client: FakeGCSClient, bucket_name: str, path: str) -> None:
+    def __init__(
+        self, client: FakeGCSClient, bucket_name: str, path: str
+    ) -> None:
         self._client = client
         self._bucket_name = bucket_name
         # 统一去掉前导斜杠，避免生成路径时出现双斜杠

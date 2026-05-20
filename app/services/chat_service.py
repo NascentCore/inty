@@ -45,9 +45,7 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[Chat]:
     try:
         result = await db.execute(
             select(Chat)
-            .options(
-                selectinload(Chat.settings), selectinload(Chat.agent)
-            )
+            .options(selectinload(Chat.settings), selectinload(Chat.agent))
             .where(Chat.id == chat_id)
         )
         chat = result.scalar_one_or_none()
@@ -55,10 +53,8 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[Chat]:
             # Get recent message and timestamp, use unified session_id generation rule
             try:
                 session_id = generate_session_id(chat.id)
-                last_message_data = (
-                    await chat_history_service.get_last_message_with_timestamp_async(
-                        session_id
-                    )
+                last_message_data = await chat_history_service.get_last_message_with_timestamp_async(
+                    session_id
                 )
 
                 if last_message_data:
@@ -74,11 +70,15 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[Chat]:
             # Set agent name and avatar
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
-            chat.agent_background = chat.agent.background if chat.agent else None
+            chat.agent_background = (
+                chat.agent.background if chat.agent else None
+            )
             chat.agent_background_animated = (
                 chat.agent.background_animated if chat.agent else None
             )
-            chat.agent_extensions = chat.agent.extensions if chat.agent else None
+            chat.agent_extensions = (
+                chat.agent.extensions if chat.agent else None
+            )
             chat.agent_is_deleted = (
                 chat.agent.deleted_at is not None if chat.agent else None
             )
@@ -115,9 +115,7 @@ async def get_chats(
 
         result = await db.execute(
             select(Chat)
-            .options(
-                selectinload(Chat.settings), selectinload(Chat.agent)
-            )
+            .options(selectinload(Chat.settings), selectinload(Chat.agent))
             .where(Chat.user_id == user_id)
         )
         all_chats = result.scalars().all()
@@ -128,10 +126,8 @@ async def get_chats(
             try:
                 # Use unified session_id generation rule
                 session_id = generate_session_id(chat.id)
-                last_message_data = (
-                    await chat_history_service.get_last_message_with_timestamp_async(
-                        session_id
-                    )
+                last_message_data = await chat_history_service.get_last_message_with_timestamp_async(
+                    session_id
                 )
 
                 if last_message_data:
@@ -144,7 +140,9 @@ async def get_chats(
                 # Check if chat has ever had user messages (including deleted ones)
                 # This ensures chats remain visible even after user deletes all messages
                 has_user_messages = (
-                    await chat_history_service.has_user_messages_ever_async(session_id)
+                    await chat_history_service.has_user_messages_ever_async(
+                        session_id
+                    )
                 )
 
                 # Only include chats that have (or ever had) user messages
@@ -161,11 +159,15 @@ async def get_chats(
 
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
-            chat.agent_background = chat.agent.background if chat.agent else None
+            chat.agent_background = (
+                chat.agent.background if chat.agent else None
+            )
             chat.agent_background_animated = (
                 chat.agent.background_animated if chat.agent else None
             )
-            chat.agent_extensions = chat.agent.extensions if chat.agent else None
+            chat.agent_extensions = (
+                chat.agent.extensions if chat.agent else None
+            )
             chat.agent_is_deleted = (
                 chat.agent.deleted_at is not None if chat.agent else None
             )
@@ -178,7 +180,9 @@ async def get_chats(
 
         # Sort by recent message time (chats without messages go last, sorted by creation time)
         chats_with_message_time.sort(
-            key=lambda x: x.last_message_time if x.last_message_time else x.created_at,
+            key=lambda x: (
+                x.last_message_time if x.last_message_time else x.created_at
+            ),
             reverse=True,
         )
 
@@ -246,7 +250,9 @@ async def create_chat(
                         agent_name=agent.name,
                         user_name=user_nickname,
                     )
-                    logger.debug(f"添加Agent开场白成功 - Session ID: {session_id}")
+                    logger.debug(
+                        f"添加Agent开场白成功 - Session ID: {session_id}"
+                    )
                 else:
                     logger.debug(
                         f"聊天会话已有消息({existing_messages.get('total', 0)}条)，跳过开场白添加 - Session ID: {session_id}"
@@ -258,9 +264,7 @@ async def create_chat(
         # Re-query to load relational data
         result = await db.execute(
             select(Chat)
-            .options(
-                selectinload(Chat.settings), selectinload(Chat.agent)
-            )
+            .options(selectinload(Chat.settings), selectinload(Chat.agent))
             .where(Chat.id == db_chat.id)
         )
         chat = result.scalar_one()
@@ -268,10 +272,8 @@ async def create_chat(
         # Get recent message and timestamp (should be the opening message just added) and agent name
         try:
             session_id = generate_session_id(chat.id)
-            last_message_data = (
-                await chat_history_service.get_last_message_with_timestamp_async(
-                    session_id
-                )
+            last_message_data = await chat_history_service.get_last_message_with_timestamp_async(
+                session_id
             )
 
             if last_message_data:
@@ -328,7 +330,9 @@ async def update_chat(
 
         update_data = chat_in.model_dump(exclude_unset=True)
         if not update_data:
-            raise HTTPException(status_code=400, detail="No data provided to update")
+            raise HTTPException(
+                status_code=400, detail="No data provided to update"
+            )
 
         for field, value in update_data.items():
             setattr(db_chat, field, value)
@@ -405,7 +409,9 @@ async def get_or_create_chat_by_agent(
     每个用户和每个Agent只能有一个会话
     """
     try:
-        logger.debug(f"获取或创建聊天会话 - 用户ID: {user_id}, Agent ID: {agent_id}")
+        logger.debug(
+            f"获取或创建聊天会话 - 用户ID: {user_id}, Agent ID: {agent_id}"
+        )
 
         # 1. 先检查会话缓存
         session_key = f"{user_id}:{agent_id}"
@@ -429,7 +435,9 @@ async def get_or_create_chat_by_agent(
             )
             chat.agent_intro = cached_session.get("agent_intro")
             chat.agent_opening = cached_session.get("agent_opening")
-            chat.agent_opening_audio_url = cached_session.get("agent_opening_audio_url")
+            chat.agent_opening_audio_url = cached_session.get(
+                "agent_opening_audio_url"
+            )
             return chat
 
         # 2. 数据库查询（使用简单查询，减少预加载）
@@ -479,9 +487,7 @@ async def get_or_create_chat_by_agent(
                     # For cached agents, we need to check the actual database for deletion status
                     # since the cache might not include deleted_at info
                     agent_result = await db.execute(
-                        select(Agent.deleted_at).where(
-                            Agent.id == agent_id
-                        )
+                        select(Agent.deleted_at).where(Agent.id == agent_id)
                     )
                     agent_info = agent_result.first()
                     existing_chat.agent_is_deleted = (
@@ -508,7 +514,9 @@ async def get_or_create_chat_by_agent(
                         existing_chat.agent_intro = agent_info[3]
                         existing_chat.agent_opening = agent_info[4]
                         existing_chat.agent_opening_audio_url = agent_info[5]
-                        existing_chat.agent_is_deleted = agent_info[6] is not None
+                        existing_chat.agent_is_deleted = (
+                            agent_info[6] is not None
+                        )
                         # 缓存Agent信息
                         cache_service.set_agent_config(
                             agent_id,
@@ -567,7 +575,9 @@ async def get_or_create_chat_by_agent(
                     opening_audio_url = None
                     if cached_agent:
                         agent_opening = cached_agent.get("opening")
-                        opening_audio_url = cached_agent.get("opening_audio_url")
+                        opening_audio_url = cached_agent.get(
+                            "opening_audio_url"
+                        )
                     else:
                         # 如果缓存中没有开场白，从数据库查询
                         agent_result = await db.execute(
@@ -584,16 +594,18 @@ async def get_or_create_chat_by_agent(
                     if agent_opening:
                         # 获取用户和 Agent 信息用于变量替换
                         user_result = await db.execute(
-                            select(User.nickname).where(
-                                User.id == user_id
-                            )
+                            select(User.nickname).where(User.id == user_id)
                         )
-                        user_nickname = user_result.scalar_one_or_none() or "you"
+                        user_nickname = (
+                            user_result.scalar_one_or_none() or "you"
+                        )
 
                         agent_result = await db.execute(
                             select(Agent.name).where(Agent.id == agent_id)
                         )
-                        agent_name = agent_result.scalar_one_or_none() or "IntelliMate"
+                        agent_name = (
+                            agent_result.scalar_one_or_none() or "IntelliMate"
+                        )
 
                         await chat_history_service.add_agent_opening_message(
                             db,
@@ -608,7 +620,9 @@ async def get_or_create_chat_by_agent(
                             f"为已存在的空聊天会话添加Agent开场白成功 - Session ID: {session_id}"
                         )
                     else:
-                        logger.debug(f"Agent无开场白，跳过添加 - Agent ID: {agent_id}")
+                        logger.debug(
+                            f"Agent无开场白，跳过添加 - Agent ID: {agent_id}"
+                        )
                 else:
                     logger.debug(
                         f"聊天会话已有消息({existing_messages.get('total', 0)}条)，跳过开场白添加 - Session ID: {session_id}"
@@ -624,7 +638,9 @@ async def get_or_create_chat_by_agent(
                 "agent_id": agent_id,
                 "agent_name": getattr(existing_chat, "agent_name", None),
                 "agent_avatar": getattr(existing_chat, "agent_avatar", None),
-                "agent_background": getattr(existing_chat, "agent_background", None),
+                "agent_background": getattr(
+                    existing_chat, "agent_background", None
+                ),
                 "agent_background_animated": getattr(
                     existing_chat, "agent_background_animated", None
                 ),
@@ -645,7 +661,9 @@ async def get_or_create_chat_by_agent(
             return existing_chat
 
         # 6. 如果不存在，则创建新的会话
-        logger.debug(f"未找到已存在的聊天会话，创建新的会话 - Agent ID: {agent_id}")
+        logger.debug(
+            f"未找到已存在的聊天会话，创建新的会话 - Agent ID: {agent_id}"
+        )
 
         # 7. 优先从缓存获取Agent信息
         cached_agent = cache_service.get_agent_config(agent_id)
@@ -696,7 +714,9 @@ async def get_or_create_chat_by_agent(
                     "opening_audio_url": opening_audio_url,
                 },
             )
-            logger.debug(f"验证Agent存在 - Agent ID: {agent_id}, Name: {agent_name}")
+            logger.debug(
+                f"验证Agent存在 - Agent ID: {agent_id}, Name: {agent_name}"
+            )
 
         # 8. 创建新的聊天会话
         chat_id = str(uuid.uuid4())
@@ -746,7 +766,9 @@ async def get_or_create_chat_by_agent(
                         agent_name=agent_name,
                         user_name=user_nickname,
                     )
-                    logger.debug(f"添加Agent开场白成功 - Session ID: {session_id}")
+                    logger.debug(
+                        f"添加Agent开场白成功 - Session ID: {session_id}"
+                    )
                 else:
                     logger.debug(
                         f"聊天会话已有消息({existing_messages.get('total', 0)}条)，跳过开场白添加 - Session ID: {session_id}"
@@ -763,12 +785,16 @@ async def get_or_create_chat_by_agent(
             if cached_agent
             else agent_background_animated
         )
-        db_chat.agent_intro = cached_agent.get("intro") if cached_agent else agent_intro
+        db_chat.agent_intro = (
+            cached_agent.get("intro") if cached_agent else agent_intro
+        )
         db_chat.agent_opening = (
             cached_agent.get("opening") if cached_agent else agent_opening
         )
         db_chat.agent_opening_audio_url = (
-            cached_agent.get("opening_audio_url") if cached_agent else opening_audio_url
+            cached_agent.get("opening_audio_url")
+            if cached_agent
+            else opening_audio_url
         )
 
         # Handle agent deletion status for cached vs database cases
@@ -778,7 +804,9 @@ async def get_or_create_chat_by_agent(
                 select(Agent.deleted_at).where(Agent.id == agent_id)
             )
             agent_info = agent_result.first()
-            db_chat.agent_is_deleted = agent_info[0] is not None if agent_info else None
+            db_chat.agent_is_deleted = (
+                agent_info[0] is not None if agent_info else None
+            )
         else:
             # We already have deleted_at from the database query above
             db_chat.agent_is_deleted = agent_deleted_at is not None
@@ -796,7 +824,9 @@ async def get_or_create_chat_by_agent(
                 if cached_agent
                 else agent_background_animated
             ),
-            "agent_intro": cached_agent.get("intro") if cached_agent else agent_intro,
+            "agent_intro": (
+                cached_agent.get("intro") if cached_agent else agent_intro
+            ),
             "agent_opening": (
                 cached_agent.get("opening") if cached_agent else agent_opening
             ),
@@ -823,14 +853,14 @@ async def get_or_create_chat_by_agent(
         raise
     except IntegrityError as e:
         await db.rollback()
-        logger.warning(f"数据完整性错误 - 获取或创建聊天（并发冲突已重试）: {str(e)}")
+        logger.warning(
+            f"数据完整性错误 - 获取或创建聊天（并发冲突已重试）: {str(e)}"
+        )
         # 可能是并发创建导致的重复，尝试再次查询
         try:
             result = await db.execute(
                 select(Chat)
-                .options(
-                    selectinload(Chat.settings), selectinload(Chat.agent)
-                )
+                .options(selectinload(Chat.settings), selectinload(Chat.agent))
                 .where(
                     Chat.user_id == user_id,
                     Chat.agent_id == agent_id,
@@ -846,7 +876,9 @@ async def get_or_create_chat_by_agent(
         except Exception as retry_e:
             logger.error(f"重试查询失败: {str(retry_e)}")
             pass
-        raise HTTPException(status_code=500, detail="Failed to create chat session")
+        raise HTTPException(
+            status_code=500, detail="Failed to create chat session"
+        )
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"数据库错误 - 获取或创建聊天: {str(e)}")
@@ -876,14 +908,14 @@ async def get_or_create_chat_settings(
             return settings
 
         # 确保chat记录存在（防止外键约束违反）
-        chat_result = await db.execute(
-            select(Chat).where(Chat.id == chat_id)
-        )
+        chat_result = await db.execute(select(Chat).where(Chat.id == chat_id))
         chat = chat_result.scalar_one_or_none()
 
         if not chat:
             logger.error(f"Chat记录不存在，无法创建设置 - chat_id: {chat_id}")
-            raise HTTPException(status_code=404, detail="Chat history not found")
+            raise HTTPException(
+                status_code=404, detail="Chat history not found"
+            )
 
         # 如果不存在，创建新的设置
         settings_id = str(uuid.uuid4())
@@ -915,7 +947,9 @@ async def get_or_create_chat_settings(
 
         except IntegrityError:
             await db.rollback()
-            logger.debug(f"并发创建聊天设置冲突，查询已存在设置 - chat_id: {chat_id}")
+            logger.debug(
+                f"并发创建聊天设置冲突，查询已存在设置 - chat_id: {chat_id}"
+            )
 
             # 查询已存在的设置
             result = await db.execute(
@@ -952,12 +986,16 @@ async def update_chat_settings(
         settings = result.scalar_one_or_none()
 
         if not settings:
-            raise HTTPException(status_code=404, detail="Chat settings not found")
+            raise HTTPException(
+                status_code=404, detail="Chat settings not found"
+            )
 
         # 更新设置
         update_data = settings_update.model_dump(exclude_unset=True)
         if not update_data:
-            raise HTTPException(status_code=400, detail="No data provided to update")
+            raise HTTPException(
+                status_code=400, detail="No data provided to update"
+            )
 
         for field, value in update_data.items():
             setattr(settings, field, value)
@@ -996,9 +1034,7 @@ async def get_chat_by_agent_and_user(
     try:
         result = await db.execute(
             select(Chat)
-            .options(
-                selectinload(Chat.settings), selectinload(Chat.agent)
-            )
+            .options(selectinload(Chat.settings), selectinload(Chat.agent))
             .where(
                 Chat.agent_id == agent_id,
                 Chat.user_id == user_id,
@@ -1043,7 +1079,9 @@ async def delete_chats_by_agent_id(
         dict: 删除结果摘要
     """
     try:
-        logger.info(f"开始删除聊天记录 - Agent ID: {agent_id}, User ID: {user_id}")
+        logger.info(
+            f"开始删除聊天记录 - Agent ID: {agent_id}, User ID: {user_id}"
+        )
 
         # 查找所有匹配的聊天记录
         result = await db.execute(
@@ -1054,7 +1092,9 @@ async def delete_chats_by_agent_id(
         chats = result.scalars().all()
 
         if not chats:
-            logger.debug(f"未找到聊天记录 - Agent ID: {agent_id}, User ID: {user_id}")
+            logger.debug(
+                f"未找到聊天记录 - Agent ID: {agent_id}, User ID: {user_id}"
+            )
             return {
                 "chats_deleted": 0,
                 "messages_deleted": 0,
@@ -1191,7 +1231,9 @@ async def save_debug_messages(
         )
 
     except Exception as e:
-        logger.error(f"保存调试信息失败，session_id: {session_id}, 错误: {str(e)}")
+        logger.error(
+            f"保存调试信息失败，session_id: {session_id}, 错误: {str(e)}"
+        )
         await db.rollback()
         # 不抛出异常，避免影响正常的聊天流程
 
@@ -1267,7 +1309,9 @@ _DEFAULT_CHAT_IMAGE_TIMEOUT_SECONDS = 30
 _SUBSCRIBED_PREMIUM_CHAT_IMAGE_TIMEOUT_SECONDS = 60
 
 
-def _resolve_chat_image_timeout_seconds(*, is_subscribed: bool, model_id: str) -> int:
+def _resolve_chat_image_timeout_seconds(
+    *, is_subscribed: bool, model_id: str
+) -> int:
     if model_id in (
         NANO_BANANA_PRO.id_on_provider,
         NEWAPI_NANO_BANANA_2.id_on_provider,
@@ -1354,11 +1398,11 @@ async def _try_match_existing_image(
         )
 
         # 读取该 chat 已展示的兜底图 id，避免重复展示
-        chat_result = await db.execute(
-            select(Chat).where(Chat.id == chat_id)
-        )
+        chat_result = await db.execute(select(Chat).where(Chat.id == chat_id))
         chat = chat_result.scalar_one_or_none()
-        sent_fallback_images = list(chat.sent_fallback_images or []) if chat else []
+        sent_fallback_images = (
+            list(chat.sent_fallback_images or []) if chat else []
+        )
 
         similar_image = await image_generation_service.find_most_similar_image(
             db=db,
@@ -1378,7 +1422,9 @@ async def _try_match_existing_image(
             )
 
             # 记录已展示的兜底图 id（按 image_id 去重），供后续兜底排除
-            image_id = similar_image.get("image_id") or similar_image.get("image_url")
+            image_id = similar_image.get("image_id") or similar_image.get(
+                "image_url"
+            )
             if chat and image_id and image_id not in sent_fallback_images:
                 chat.sent_fallback_images = sent_fallback_images + [image_id]
                 await db.flush()
@@ -1533,7 +1579,9 @@ async def generate_chat_image(
         raise HTTPException(status_code=404, detail="Agent not found")
 
     # 获取或创建聊天会话
-    chat = await get_or_create_chat_by_agent(db=db, user_id=user_id, agent_id=agent_id)
+    chat = await get_or_create_chat_by_agent(
+        db=db, user_id=user_id, agent_id=agent_id
+    )
 
     # 验证chat中的agent_id是否与传入的一致
     if chat.agent_id != agent_id:
@@ -1557,7 +1605,9 @@ async def generate_chat_image(
     )
 
     if not is_allowed:
-        logger.warning(f"用户 {user_id} 已达到图片生成限额: {used_count}/{daily_limit}")
+        logger.warning(
+            f"用户 {user_id} 已达到图片生成限额: {used_count}/{daily_limit}"
+        )
 
         # 返回业务错误信息，而非抛出异常
         if user.auth_type == AuthType.GUEST:
@@ -1565,7 +1615,9 @@ async def generate_chat_image(
         else:
             # 获取订阅状态以判断错误码
             subscription_status = (
-                await subscription_service.get_user_subscription_status(db, user.id)
+                await subscription_service.get_user_subscription_status(
+                    db, user.id
+                )
             )
             if subscription_status.is_subscribed:
                 error_code = BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED
@@ -1581,7 +1633,9 @@ async def generate_chat_image(
         )
 
     # 获取Agent完整数据
-    agent_data = await agent_service.get_agent_for_chat(db, agent_id=chat.agent_id)
+    agent_data = await agent_service.get_agent_for_chat(
+        db, agent_id=chat.agent_id
+    )
     if not agent_data:
         logger.error(f"Agent数据未找到: {chat.agent_id}")
         raise HTTPException(status_code=404, detail="Agent data not found")
@@ -1595,7 +1649,9 @@ async def generate_chat_image(
 
     if not message_content:
         logger.error(f"消息未找到: message_id={message_id}")
-        raise HTTPException(status_code=404, detail=f"Message not found: {message_id}")
+        raise HTTPException(
+            status_code=404, detail=f"Message not found: {message_id}"
+        )
 
     logger.debug(f"查询到消息内容: {message_content[:100]}...")
 
@@ -1615,15 +1671,20 @@ async def generate_chat_image(
 
     # 模型选择仅按订阅状态，使用 config 中的 nickname 解析为 GenAIModel（无请求覆盖）
     from app.core.model_selection import select_chat_image_model
-    from app.utils.models_catalog import ModelNameFamily, detect_model_name_family
+    from app.utils.models_catalog import (
+        ModelNameFamily,
+        detect_model_name_family,
+    )
 
-    subscription_status = await subscription_service.get_user_subscription_status(
-        db, user.id
+    subscription_status = (
+        await subscription_service.get_user_subscription_status(db, user.id)
     )
     is_subscribed = subscription_status.is_subscribed
 
     try:
-        resolved_model = select_chat_image_model(user=user, is_subscribed=is_subscribed)
+        resolved_model = select_chat_image_model(
+            user=user, is_subscribed=is_subscribed
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -1659,7 +1720,9 @@ async def generate_chat_image(
             chat_history = messages_data.get("messages", [])
             # 获取用户信息（与 image_generation_service 的统一生图入口保持一致）
             user_info = (
-                await build_user_info_prompt_block(db, user_id) if user_id else ""
+                await build_user_info_prompt_block(db, user_id)
+                if user_id
+                else ""
             )
             char_name, user_name = (
                 await image_generation_service.get_char_user_names_for_image_prompt(
@@ -1762,7 +1825,9 @@ async def generate_chat_image(
         generation_time_ms = int((time.time() - generation_start_time) * 1000)
         image_generation_result["model"] = actual_model
         image_generation_result["generation_time_ms"] = generation_time_ms
-        image_generation_result["model_fallback_due_to_429"] = model_fallback_due_to_429
+        image_generation_result["model_fallback_due_to_429"] = (
+            model_fallback_due_to_429
+        )
         logger.info(
             f"图片生成完成 - 模型: {actual_model}, 耗时: {generation_time_ms}ms"
             + (", 因429使用备用模型" if model_fallback_due_to_429 else "")
@@ -1843,7 +1908,9 @@ async def generate_chat_image(
             )
             return BizError(
                 code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"],
-                error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"],
+                error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED[
+                    "error_code"
+                ],
                 message=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"],
             )
         else:
@@ -1915,7 +1982,9 @@ async def generate_chat_image(
             )
             return BizError(
                 code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"],
-                error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"],
+                error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED[
+                    "error_code"
+                ],
                 message=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"],
             )
 
@@ -1953,7 +2022,9 @@ async def generate_chat_image(
                 "session_id": session_id,
                 "message_id": message_id,
                 "model": actual_model,
-                "generation_time_ms": image_generation_result.get("generation_time_ms"),
+                "generation_time_ms": image_generation_result.get(
+                    "generation_time_ms"
+                ),
                 "model_fallback_due_to_429": model_fallback_due_to_429,
                 "prompt": image_generation_result.get("prompt"),
             },
@@ -2027,7 +2098,9 @@ async def generate_chat_music(
         logger.error(f"Agent未找到: {agent_id}")
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    chat = await get_or_create_chat_by_agent(db=db, user_id=user_id, agent_id=agent_id)
+    chat = await get_or_create_chat_by_agent(
+        db=db, user_id=user_id, agent_id=agent_id
+    )
     if chat.agent_id != agent_id:
         logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
         raise HTTPException(
@@ -2046,12 +2119,16 @@ async def generate_chat_music(
         await subscription_service.check_music_gen_limit(db, user)
     )
     if not is_allowed:
-        logger.warning(f"用户 {user_id} 已达到音乐生成限额: {used_count}/{daily_limit}")
+        logger.warning(
+            f"用户 {user_id} 已达到音乐生成限额: {used_count}/{daily_limit}"
+        )
         if user.auth_type == AuthType.GUEST:
             error_code = BusinessErrorCode.GUEST_LOGIN_REQUIRED
         else:
             subscription_status = (
-                await subscription_service.get_user_subscription_status(db, user.id)
+                await subscription_service.get_user_subscription_status(
+                    db, user.id
+                )
             )
             if subscription_status.is_subscribed:
                 error_code = BusinessErrorCode.MUSIC_GENERATION_LIMIT_REACHED
@@ -2072,7 +2149,9 @@ async def generate_chat_music(
     )
     if not message_content:
         logger.error(f"消息未找到: message_id={message_id}")
-        raise HTTPException(status_code=404, detail=f"Message not found: {message_id}")
+        raise HTTPException(
+            status_code=404, detail=f"Message not found: {message_id}"
+        )
 
     latest_ai_message_id = await chat_history_service.get_latest_ai_message_id(
         db, session_id
@@ -2086,13 +2165,15 @@ async def generate_chat_music(
             detail="Only the latest AI reply can be used to generate music",
         )
 
-    agent_data = await agent_service.get_agent_for_chat(db, agent_id=chat.agent_id)
+    agent_data = await agent_service.get_agent_for_chat(
+        db, agent_id=chat.agent_id
+    )
     if not agent_data:
         logger.error(f"Agent数据未找到: {chat.agent_id}")
         raise HTTPException(status_code=404, detail="Agent data not found")
 
-    subscription_status = await subscription_service.get_user_subscription_status(
-        db, user.id
+    subscription_status = (
+        await subscription_service.get_user_subscription_status(db, user.id)
     )
     resolved_model = model
     if not resolved_model:

@@ -30,7 +30,11 @@ from .models import (
 )
 
 from .tag_parser import TagParser
-from .database import DatabaseManager, create_database_manager, load_config_from_yaml
+from .database import (
+    DatabaseManager,
+    create_database_manager,
+    load_config_from_yaml,
+)
 from .logger import setup_logger, MigrationLogger
 
 __all__ = [

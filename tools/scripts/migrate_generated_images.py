@@ -262,7 +262,9 @@ async def update_chat_history_metadata(
         True 如果更新成功
     """
     if dry_run:
-        logger.info(f"DRY-RUN: 将更新记录 {record_id} 的 image_url 为 {new_image_url}")
+        logger.info(
+            f"DRY-RUN: 将更新记录 {record_id} 的 image_url 为 {new_image_url}"
+        )
         return True
 
     # 更新 meta_data 中的 image_url
@@ -341,7 +343,9 @@ async def migrate_single_record(
     # 获取 chat 信息
     chat_info = await get_chat_info_by_session_id(db, session_id)
     if not chat_info:
-        logger.warning(f"记录 {record_id} 找不到对应的 chat，session_id={session_id}")
+        logger.warning(
+            f"记录 {record_id} 找不到对应的 chat，session_id={session_id}"
+        )
         return False, "no_chat"
 
     agent_id = chat_info["agent_id"]
@@ -368,7 +372,9 @@ async def migrate_single_record(
             else:
                 try:
                     copy_gcs_file(old_image_url, new_gcs_path, bucket_name)
-                    logger.debug(f"已复制文件: {old_image_url} -> {new_gcs_uri}")
+                    logger.debug(
+                        f"已复制文件: {old_image_url} -> {new_gcs_uri}"
+                    )
                 except Exception as e:
                     logger.error(f"复制文件失败: {e}")
                     return False, "copy_failed"
@@ -435,7 +441,9 @@ async def run_migration(
     while True:
         # 每批使用新的数据库连接，避免事务污染
         async with AsyncSessionLocal() as db:
-            records = await get_generated_images_to_migrate(db, batch_size, offset)
+            records = await get_generated_images_to_migrate(
+                db, batch_size, offset
+            )
             if not records:
                 break
 

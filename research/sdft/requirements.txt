@@ -1,0 +1,2 @@
+# P1 full stack: install after clone_upstream.sh
+-r upstream/requirements.txt

@@ -14,8 +14,12 @@ from experimental.perpetual_agent.core_v2.contracts import (
 from experimental.perpetual_agent.core_v2.repositories.events_repo import (
     EventsRepository,
 )
-from experimental.perpetual_agent.core_v2.repositories.sqlite_db import SQLiteDatabase
-from experimental.perpetual_agent.core_v2.repositories.sqlite_schema import init_schema
+from experimental.perpetual_agent.core_v2.repositories.sqlite_db import (
+    SQLiteDatabase,
+)
+from experimental.perpetual_agent.core_v2.repositories.sqlite_schema import (
+    init_schema,
+)
 from experimental.perpetual_agent.core_v2.settings import CompanionSettings
 
 

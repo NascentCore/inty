@@ -61,12 +61,12 @@ flowchart TB
 | CFG-PYD-01 | done | `LoggingConfig` | — | `logging` | 已迁移为 `BaseModel`；`colorize` 格式覆盖由 `model_validator(after)` 保持 |
 | CFG-PYD-02 | done | `SecurityConfig` | — | `security` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-03 | done | `DatabaseSettings` | — | `database` | 已迁移为 `BaseModel`；保留 `@property`：`url` / `async_url` / `async_replica_url` |
-| CFG-PYD-04 | todo | `GoogleOAuthConfig` | — | `google_oauth` | 纯字段 |
-| CFG-PYD-05 | todo | `VerificationConfig` | — | `verification` | 纯字段 |
-| CFG-PYD-06 | todo | `APIEndpointsConfig` | — | `app.api_endpoints`（预处理 dict） | 被 `AppConfig` 引用；先迁移便于 `AppConfig` 一次到位 |
-| CFG-PYD-07 | todo | `EmbeddingConfig` | — | `embedding` | 纯字段 |
-| CFG-PYD-08 | todo | `GCSConfig` | — | `gcs` | 纯字段 |
-| CFG-PYD-09 | todo | `FirebaseConfig` | — | `firebase` | 纯字段 |
+| CFG-PYD-04 | done | `GoogleOAuthConfig` | — | `google_oauth` | 已迁移为 `BaseModel`；纯字段 |
+| CFG-PYD-05 | done | `VerificationConfig` | — | `verification` | 已迁移为 `BaseModel`；纯字段 |
+| CFG-PYD-06 | done | `APIEndpointsConfig` | — | `app.api_endpoints`（预处理 dict） | 已迁移为 `BaseModel`；被 `AppConfig` 引用；先迁移便于 `AppConfig` 一次到位 |
+| CFG-PYD-07 | done | `EmbeddingConfig` | — | `embedding` | 已迁移为 `BaseModel`；纯字段 |
+| CFG-PYD-08 | done | `GCSConfig` | — | `gcs` | 已迁移为 `BaseModel`；纯字段 |
+| CFG-PYD-09 | done | `FirebaseConfig` | — | `firebase` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-10 | todo | `GooglePlayConfig` | — | `google_play` | 修正 `fallback_tracks: list[str] = None` 等为 `Optional[...]` |
 | CFG-PYD-11 | todo | `CloudflareConfig` | — | `cloudflare` | 纯字段 |
 | CFG-PYD-12 | todo | `ElevenLabsConfig` | — | `elevenlabs` | 必填 `api_key`：保留无默认或 `Field(...)` |

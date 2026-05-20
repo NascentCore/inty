@@ -127,7 +127,9 @@ async def run_scenario(
         return {"error": "audio_not_found"}
 
     info = wav_info(wav_path)
-    print(f"  音频时长: {info['duration_ms']:.0f}ms, 采样率: {info['sample_rate']}Hz")
+    print(
+        f"  音频时长: {info['duration_ms']:.0f}ms, 采样率: {info['sample_rate']}Hz"
+    )
 
     await client.send_audio_wav(wav_path)
     ai_text = await client.wait_for_turn_complete(timeout=30.0)
@@ -156,7 +158,9 @@ async def main():
     parser = argparse.ArgumentParser(description="复现长句截断问题")
     parser.add_argument("--token", required=True, help="认证 token")
     parser.add_argument("--agent-id", required=True, help="Agent ID")
-    parser.add_argument("--base-url", default="ws://localhost:8000", help="服务端地址")
+    parser.add_argument(
+        "--base-url", default="ws://localhost:8000", help="服务端地址"
+    )
     parser.add_argument(
         "--language", default="Chinese", help="回复语言 (默认: Chinese)"
     )

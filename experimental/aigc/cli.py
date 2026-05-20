@@ -108,7 +108,9 @@ Examples:
         help="Use the multistage generator (name/intro/prompts/assets)",
     )
 
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "--verbose", action="store_true", help="Enable verbose logging"
+    )
 
     args = parser.parse_args()
 
@@ -197,7 +199,9 @@ Examples:
             logger.info("Character summary displayed successfully")
         else:
             # Export character
-            logger.info(f"Exporting character in {args.export_format} format...")
+            logger.info(
+                f"Exporting character in {args.export_format} format..."
+            )
 
             if args.export_format == "json":
                 output_data = character.model_dump_json(indent=2)
@@ -214,7 +218,9 @@ Examples:
                 try:
                     output_path.write_text(output_data)
                     print(f"💾 Character saved to: {output_path}")
-                    logger.info(f"Character successfully saved to: {output_path}")
+                    logger.info(
+                        f"Character successfully saved to: {output_path}"
+                    )
                 except Exception as e:
                     logger.error(f"Failed to write output file: {e}")
                     print(f"❌ Error saving file: {e}")
@@ -254,7 +260,9 @@ def _run_multistage_cli(args_request, args, logger):
 
     print("🧩 Multistage pipeline summary")
     for stage in result.stages:
-        print(f"- {stage.title}: {stage.status.value} ({stage.duration_seconds:.2f}s)")
+        print(
+            f"- {stage.title}: {stage.status.value} ({stage.duration_seconds:.2f}s)"
+        )
 
     payload = result.payload
     if args.summary_only:

@@ -4,8 +4,12 @@ Wire payloads use types from ``app.schemas.chat`` (completion body) and
 ``app.schemas.chat_websocket`` (WebSocket envelope); downlink JSON parsing helpers live in this
 module, not in ``app/schemas`` (schemas stay type-only).
 
-Transport-only tunables (e.g. ``ws_conn_dropped`` ack wait) use package-level defaults here so the
-REPL does not import server ``config.yaml`` / ``app.core.config``.
+Transport-only tunables (e.g. ``ws_conn_dropped`` / ``user_signed_out`` ack wait) use package-level
+defaults here so the REPL does not import server ``config.yaml`` / ``app.core.config``.
+
+On intentional shutdown (``BackendChatWsBridge.stop``), the client sends ``user_signed_out`` for the
+URL ``agent_id`` before closing the socket so the server can reset companion scope like the mobile
+app logout path.
 """
 
 from __future__ import annotations
@@ -38,8 +42,9 @@ from app.schemas.chat_websocket import (
 )
 from loguru import logger
 
-# Seconds to wait for ``ws_conn_dropped_ack`` after sending ``ws_conn_dropped`` on reconnect.
+# Seconds to wait for control-frame acks after sending ``ws_conn_dropped`` / ``user_signed_out``.
 _WS_CONN_DROPPED_ACK_TIMEOUT_SEC: float = 5.0
+_USER_SIGNED_OUT_ACK_TIMEOUT_SEC: float = 5.0
 
 
 class BackendChatWsError(RuntimeError):
@@ -54,6 +59,10 @@ def default_ws_conn_dropped_ack_timeout_sec() -> float:
     return float(_WS_CONN_DROPPED_ACK_TIMEOUT_SEC)
 
 
+def default_user_signed_out_ack_timeout_sec() -> float:
+    return float(_USER_SIGNED_OUT_ACK_TIMEOUT_SEC)
+
+
 def _ws_close_reason_text(reason: object | None) -> str:
     if reason is None:
         return ""
@@ -62,25 +71,24 @@ def _ws_close_reason_text(reason: object | None) -> str:
     return str(reason)
 
 
-def _ws_user_signed_on_json(
-    agent_id: str,
-    *,
-    message_id: str,
-    implicit_greeting: bool = False,
-    implicit_greeting_note: str | None = None,
-) -> str:
-    payload: dict[str, Any] = {
-        "type": "user_signed_on",
-        "agent_id": agent_id.strip(),
-        "message_id": message_id,
-    }
-    if implicit_greeting:
-        payload["implicit_greeting"] = True
-    else:
-        note = (implicit_greeting_note or "").strip()
-        if note:
-            payload["implicit_greeting_note"] = note
-    return json.dumps(payload)
+def _ws_user_signed_on_json(agent_id: str, *, message_id: str) -> str:
+    return json.dumps(
+        {
+            "type": "user_signed_on",
+            "agent_id": agent_id.strip(),
+            "message_id": message_id,
+        }
+    )
+
+
+def _ws_user_signed_out_json(agent_id: str, *, message_id: str) -> str:
+    return json.dumps(
+        {
+            "type": "user_signed_out",
+            "agent_id": agent_id.strip(),
+            "message_id": message_id,
+        }
+    )
 
 
 def _ws_conn_dropped_json(
@@ -314,6 +322,8 @@ class BackendChatWsBridge:
         bearer_token: str,
         on_user_signed_on_sent: Callable[[str, str], None] | None = None,
         on_user_signed_on_ack: Callable[[dict[str, Any]], None] | None = None,
+        on_user_signed_out_sent: Callable[[str, str], None] | None = None,
+        on_user_signed_out_ack: Callable[[dict[str, Any]], None] | None = None,
         on_transport_lost: Callable[[int | None, str], None] | None = None,
         on_transport_ready: Callable[[bool], None] | None = None,
     ) -> None:
@@ -323,6 +333,8 @@ class BackendChatWsBridge:
             raise ValueError("bearer_token is empty")
         self._on_user_signed_on_sent = on_user_signed_on_sent
         self._on_user_signed_on_ack = on_user_signed_on_ack
+        self._on_user_signed_out_sent = on_user_signed_out_sent
+        self._on_user_signed_out_ack = on_user_signed_out_ack
         self._on_transport_lost = on_transport_lost
         self._on_transport_ready = on_transport_ready
         self._thread: threading.Thread | None = None
@@ -338,10 +350,12 @@ class BackendChatWsBridge:
         self._reconnect_max = default_reconnect_max_sec()
         self._send_max_retries = default_send_turn_retries()
         self._online_ev: asyncio.Event | None = None
-        self._implicit_greeting_sent: bool = False
         self._had_transport_drop: bool = False
         self._pending_ws_drop: dict[str, Any] | None = None
         self._pending_ws_conn_dropped_ack_fut: asyncio.Future[dict[str, Any]] | None = (
+            None
+        )
+        self._pending_user_signed_out_ack_fut: asyncio.Future[dict[str, Any]] | None = (
             None
         )
 
@@ -540,33 +554,15 @@ class BackendChatWsBridge:
             finally:
                 self._pending_ws_conn_dropped_ack_fut = None
 
-        use_implicit = not self._implicit_greeting_sent
         try:
             frame_mid = str(uuid.uuid4())
             await ws.send(
-                _ws_user_signed_on_json(
-                    aid,
-                    message_id=frame_mid,
-                    implicit_greeting=use_implicit,
-                    implicit_greeting_note=(
-                        None
-                        if use_implicit
-                        else "repl already resumed"
-                    ),
-                )
+                _ws_user_signed_on_json(aid, message_id=frame_mid),
             )
-            if use_implicit:
-                self._implicit_greeting_sent = True
             logger.info(
-                "chat ws user_signed_on sent (repl) agent_id={} message_id={} implicit_greeting={}{}",
+                "chat ws user_signed_on sent (repl) agent_id={} message_id={}",
                 aid,
                 frame_mid,
-                use_implicit,
-                (
-                    ""
-                    if use_implicit
-                    else " (repl already resumed)"
-                ),
             )
             if self._on_user_signed_on_sent is not None:
                 try:
@@ -577,6 +573,60 @@ class BackendChatWsBridge:
             logger.debug("chat ws user_signed_on skipped (connection closed)")
         except Exception:
             logger.exception("chat ws user_signed_on send failed agent_id={}", aid)
+
+    async def _send_user_signed_out_before_shutdown(self, ws: Any) -> None:
+        """Best-effort ``user_signed_out`` so server resets companion scope before socket close."""
+        aid = _agent_id_from_ws_url(self._ws_url)
+        if not aid:
+            return
+        fut = asyncio.get_running_loop().create_future()
+        self._pending_user_signed_out_ack_fut = fut
+        frame_mid = str(uuid.uuid4())
+        try:
+            await ws.send(_ws_user_signed_out_json(aid, message_id=frame_mid))
+            logger.info(
+                "chat ws user_signed_out sent (repl shutdown) agent_id={} message_id={}",
+                aid,
+                frame_mid,
+            )
+            if self._on_user_signed_out_sent is not None:
+                try:
+                    self._on_user_signed_out_sent(aid, frame_mid)
+                except Exception:
+                    logger.exception("on_user_signed_out_sent callback failed")
+            try:
+                ack = await asyncio.wait_for(
+                    fut, timeout=default_user_signed_out_ack_timeout_sec()
+                )
+            except TimeoutError:
+                logger.warning(
+                    "chat ws user_signed_out_ack timed out agent_id={}",
+                    aid,
+                )
+            else:
+                if isinstance(ack, dict) and ack.get("ok") is False:
+                    logger.warning(
+                        "chat ws user_signed_out_ack ok=false agent_id={} ack={}",
+                        aid,
+                        ack,
+                    )
+                if self._on_user_signed_out_ack is not None:
+                    try:
+                        self._on_user_signed_out_ack(ack)
+                    except Exception:
+                        logger.exception("on_user_signed_out_ack callback failed")
+        except ConnectionClosed:
+            logger.debug(
+                "chat ws user_signed_out skipped (connection closed) agent_id={}",
+                aid,
+            )
+        except Exception:
+            logger.exception(
+                "chat ws user_signed_out send failed agent_id={}",
+                aid,
+            )
+        finally:
+            self._pending_user_signed_out_ack_fut = None
 
     async def _run_session(self, *, connect_timeout: float) -> None:
         headers = [("Authorization", f"Bearer {self._bearer_token}")]
@@ -622,9 +672,15 @@ class BackendChatWsBridge:
                         {reader_task, halt_task},
                         return_when=asyncio.FIRST_COMPLETED,
                     )
-                    for t in pending:
-                        t.cancel()
-                    await asyncio.gather(*pending, return_exceptions=True)
+                    if halt.is_set():
+                        # Reader must stay alive until user_signed_out_ack is consumed.
+                        if halt_task in pending:
+                            halt_task.cancel()
+                            await asyncio.gather(halt_task, return_exceptions=True)
+                    else:
+                        for t in pending:
+                            t.cancel()
+                        await asyncio.gather(*pending, return_exceptions=True)
                 finally:
                     pinger.cancel()
                     try:
@@ -634,6 +690,7 @@ class BackendChatWsBridge:
                     except Exception:
                         logger.exception("pinger task exit")
                 if halt.is_set():
+                    await self._send_user_signed_out_before_shutdown(ws)
                     reader_task.cancel()
                     try:
                         await reader_task
@@ -699,6 +756,16 @@ class BackendChatWsBridge:
                             self._on_user_signed_on_ack(data)
                         except Exception:
                             logger.exception("on_user_signed_on_ack callback failed")
+                    continue
+                if data.get("type") == "user_signed_out_ack":
+                    fut = self._pending_user_signed_out_ack_fut
+                    if fut is not None and not fut.done():
+                        fut.set_result(data)
+                    elif self._on_user_signed_out_ack is not None:
+                        try:
+                            self._on_user_signed_out_ack(data)
+                        except Exception:
+                            logger.exception("on_user_signed_out_ack callback failed")
                     continue
                 if "code" in data:
                     await self._response_q.put(data)

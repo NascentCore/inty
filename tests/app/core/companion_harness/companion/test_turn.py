@@ -14,20 +14,27 @@ from app.core.companion_harness.companion.llm_client import (
     CompanionLLMConfig,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.heartbeat import (
-    HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE,
+from app.core.companion_harness.companion.proactive_chat import (
+    PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
 )
 from app.core.companion_harness.companion.models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
-    InnerTickMode,
+    InnerTickActivity,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.turn import run_turn
+from app.core.companion_harness.companion.schedule_queue import (
+    scheduled_task_synthetic_user_text,
+)
+from app.core.companion_harness.companion.turn import (
+    run_companion_inner_tick_scheduled_turn,
+    run_turn,
+)
 from app.core.companion_harness.companion.user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
 )
 from app.schemas.chat import UserTimeContext
 from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
 class _FakeLLMClient:
@@ -42,8 +49,8 @@ class _FakeLLMClient:
     def chat_completions_sync(self):
         return create_chat_completion_sync
 
-    def resolve_model(self, role: str) -> str:
-        return f"test/{role}"
+    def resolve_model(self, role: str) -> GenAIModel:
+        return resolve_chat_text_model(f"test/{role}")
 
     def chat_completion(self, **kwargs: Any) -> Any:
         rec = dict(kwargs)
@@ -143,7 +150,7 @@ def test_run_turn_inner_tick_maintenance_injects_user_time_system_before_tail_us
             store=store,
             llm_client=client,  # type: ignore[arg-type]
             inner_tick_turn=True,
-            inner_tick_mode=InnerTickMode.MAINTENANCE,
+            inner_tick_activity=InnerTickActivity.MAINTENANCE,
             implicit_signal_bundle=bundle,
         )
     )
@@ -169,7 +176,7 @@ def test_run_turn_inner_tick_maintenance_injects_user_time_system_before_tail_us
     )
 
 
-def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
+def test_run_turn_inner_tick_proactive_chat_semantics(
     tmp_path: Path,
 ) -> None:
     scope = CompanionScope("turn-t", "a", f"it-pro-{tmp_path.name}")
@@ -183,7 +190,7 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
             store=store,
             llm_client=client,  # type: ignore[arg-type]
             inner_tick_turn=True,
-            inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+            inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         )
     )
 
@@ -194,12 +201,12 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     llm_msgs = client.calls[0]["messages"]
     assert llm_msgs[-1]["role"] == "user"
     user_tail = llm_msgs[-1]["content"] or ""
-    assert user_tail.startswith("[SYSTEM HEARTBEAT]")
+    assert user_tail.startswith("[SYSTEM PROACTIVE CHAT]")
     assert "Time since the user's last message:" in user_tail
     assert "Time since the assistant's last message:" in user_tail
     assert out.transcript_user_content == user_tail
     assert llm_msgs[-2]["role"] == "system"
-    assert llm_msgs[-2]["content"] == HEARTBEAT_SYNTHETIC_SYSTEM_MESSAGE
+    assert llm_msgs[-2]["content"] == PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE
     assert not any(
         m.get("role") == "user"
         and (m.get("content") or "").strip() == INNER_TICK_SYNTHETIC_USER_TEXT.strip()
@@ -212,9 +219,61 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     ]
     assert rows[0]["role"] == "user"
     row0 = rows[0]["content"] or ""
-    assert row0.startswith("[SYSTEM HEARTBEAT]")
+    assert row0.startswith("[SYSTEM PROACTIVE CHAT]")
     assert "Time since the user's last message:" in row0
     assert "Time since the assistant's last message:" in row0
     assert row0 == out.transcript_user_content
     assert rows[0]["inner_tick"] is True
-    assert rows[0]["heartbeat"] is True
+    assert rows[0]["proactive_chat"] is True
+
+
+def test_run_turn_inner_tick_scheduled_semantics(
+    tmp_path: Path,
+) -> None:
+    scope = CompanionScope("turn-t", "a", f"it-sched-{tmp_path.name}")
+    store = MemoryStore(scope=scope, repository=None)
+    _seed_workspace(store)
+    client = _FakeLLMClient()
+    scheduled_text = scheduled_task_synthetic_user_text(
+        task_text="吃药",
+        exec_time_utc="2026-05-19T08:00:00Z",
+    )
+
+    out = asyncio.run(
+        run_companion_inner_tick_scheduled_turn(
+            scheduled_text,
+            store=store,
+            llm_client=client,  # type: ignore[arg-type]
+            defer_memory_update=True,
+            memory_config=None,
+            transcript_compaction=None,
+            transcript_llm_window_max_messages=None,
+            repository_only_store_text=False,
+            memory_bootstrap_type="NONE",
+            background_output_sink=None,
+            preset_user_msg_uuid=None,
+            implicit_signal_bundle=None,
+            langsmith_parent_run_enabled=False,
+            tool_bg_idle_event=None,
+        )
+    )
+
+    assert out.assistant_text == "inner reply"
+    assert out.inner_tick_activity == "proactive_chat"
+    llm_msgs = client.calls[0]["messages"]
+    assert llm_msgs[-1]["role"] == "user"
+    user_tail = llm_msgs[-1]["content"] or ""
+    assert "提醒事项" in user_tail
+    assert scheduled_text == user_tail
+    assert "[SYSTEM PROACTIVE CHAT]" not in user_tail
+    assert out.transcript_user_content == scheduled_text
+
+    rows = [
+        json.loads(line)
+        for line in store.read_document("transcript.jsonl").strip().splitlines()
+    ]
+    assert rows[0]["role"] == "user"
+    assert rows[0]["content"] == scheduled_text
+    assert rows[0]["inner_tick"] is True
+    assert rows[0]["scheduled"] is True
+    assert rows[0].get("proactive_chat") is not True

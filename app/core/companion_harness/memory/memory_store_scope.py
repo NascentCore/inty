@@ -19,6 +19,7 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
     {
         "AXIOM.md",
         "BOOTSTRAP.md",
+        "INTY.md",
         "TOOLS.md",
         "SIGNIFICANCE_PERCEPTION.md",
     }
@@ -26,21 +27,31 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
 
 
 def load_template_seed_text(filename: str) -> str:
-    base = _PROMPTS_DIR if filename in _PACKAGE_PROMPT_SEED_FILES else _TEMPLATES_DIR
+    base = (
+        _PROMPTS_DIR
+        if filename in _PACKAGE_PROMPT_SEED_FILES
+        else _TEMPLATES_DIR
+    )
     path = base / filename
     if not path.is_file():
         raise FileNotFoundError(f"missing memory template seed file: {path}")
-    return read_text(path).rstrip() + "\n"
+    body = read_text(path).rstrip() + "\n"
+    assert (
+        body.strip()
+    ), f"template seed file is empty after strip (catastrophic): {path}"
+    return body
 
 
 @lru_cache(maxsize=1)
-def get_imate_axiom_system_text() -> str | None:
-    """Product axiom from prompts/AXIOM.md; first system slice for iMate. None if empty."""
-    body = load_template_seed_text("AXIOM.md").strip()
-    if not body:
-        logger.warning("AXIOM.md is empty after strip; skipping axiom system injection")
-        return None
-    return body
+def get_imate_axiom_system_text() -> str:
+    """Product axiom from prompts/AXIOM.md; first system slice for iMate."""
+    return load_template_seed_text("AXIOM.md").strip()
+
+
+@lru_cache(maxsize=1)
+def get_inty_facts_system_text() -> str:
+    """Inty ontology and philosophy from prompts/INTY.md; fixed system slice after AXIOM."""
+    return load_template_seed_text("INTY.md").strip()
 
 
 @dataclass(frozen=True)
@@ -56,6 +67,10 @@ class MemoryStoreScopePaths:
     @property
     def soul(self) -> str:
         return "SOUL.md"
+
+    @property
+    def style_md(self) -> str:
+        return "STYLE.md"
 
     @property
     def user_md(self) -> str:
@@ -130,10 +145,18 @@ class MemoryStoreScopePaths:
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()
 
-_REQUIRED_FILES_ATTR = ("identity", "soul", "user_md", "memory_md", "transcript")
+_REQUIRED_FILES_ATTR = (
+    "identity",
+    "soul",
+    "user_md",
+    "memory_md",
+    "transcript",
+)
 
 
-def _required_scope_file_relpaths(paths: MemoryStoreScopePaths) -> tuple[str, ...]:
+def _required_scope_file_relpaths(
+    paths: MemoryStoreScopePaths,
+) -> tuple[str, ...]:
     return tuple(getattr(paths, attr) for attr in _REQUIRED_FILES_ATTR)
 
 
@@ -168,6 +191,7 @@ _MINIMAL_TRANSCRIPT_SEED = ""
 _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "identity",
     "soul",
+    "style_md",
     "user_md",
     "memory_md",
 )
@@ -175,7 +199,7 @@ _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
 
 def ensure_template_seeded_core_documents_in_store(store: MemoryStore) -> None:
     """
-    Persist package templates for IDENTITY / SOUL / USER / MEMORY when the store has no usable
+    Persist package templates for IDENTITY / SOUL / STYLE / USER / MEMORY when the store has no usable
     body (None or whitespace). Uses MemoryStore.write_document (repository append + cache).
     Does not touch transcript.jsonl; ``ensure_minimal_documents_in_store`` creates an
     empty transcript when the five-piece is not yet satisfied.

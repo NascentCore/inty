@@ -19,7 +19,9 @@ def build_followup_action(
 
     preferred_channel = preferred_channel_from_memory or ChannelType.TELEGRAM
     action_hash = sha256(
-        f"{user_id}:{trigger_event_id}:{preferred_channel.value}".encode("utf-8")
+        f"{user_id}:{trigger_event_id}:{preferred_channel.value}".encode(
+            "utf-8"
+        )
     ).hexdigest()[:24]
     return PlanAction(
         action_id=f"act_{action_hash}",

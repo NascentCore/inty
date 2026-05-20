@@ -12,7 +12,9 @@ from typing import Any
 from langsmith import traceable
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.runtime_events import read_runtime_events
+from app.core.companion_harness.companion.runtime_events import (
+    read_runtime_events,
+)
 from app.core.companion_harness.companion.utc import local_date_str
 
 from .runtime_inspect_context import (
@@ -182,7 +184,9 @@ def tool_companion_runtime_inspect(
             out["last_chat_completion_request"] = last
 
     eff_store = runtime_inspect_get_scoped_memory_store() or store
-    out["runtime_events"] = read_runtime_events(eff_store, limit=max_runtime_events)
+    out["runtime_events"] = read_runtime_events(
+        eff_store, limit=max_runtime_events
+    )
 
     if include_store_documents:
         day = local_date_str()
@@ -195,6 +199,9 @@ def tool_companion_runtime_inspect(
             ),
             "SOUL.md": _read_store_optional(
                 eff_store, "SOUL.md", max_chars=max_chars_per_doc
+            ),
+            "STYLE.md": _read_store_optional(
+                eff_store, "STYLE.md", max_chars=max_chars_per_doc
             ),
             "USER.md": _read_store_optional(
                 eff_store, "USER.md", max_chars=max_chars_per_doc
@@ -228,6 +235,6 @@ def tool_companion_runtime_inspect(
         "include_full_tools_schema is not implemented; use tools_summary in last_chat_completion_request. "
         "TOOLS / SIGNIFICANCE_PERCEPTION operator guidance are fixed package templates in PromptBundle, "
         "not authoritative MemoryStore documents here; importance scoring contract and consumers are "
-        "documented in significance_perception.py module docstring."
+        "documented in dual_llm_chat_branch_envelope module docstring."
     )
     return json.dumps(out, ensure_ascii=False, indent=2) + "\n"

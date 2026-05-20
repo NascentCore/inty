@@ -6,13 +6,13 @@ headings and docs. Paths remain implemented as ``memory/daily/{date}.md``,
 
 from __future__ import annotations
 
-# System injection section titles (must stay stable for tests and LLM-visible rubric).
+# System injection section lead-ins (plain text, no markdown H2; kept stable for tests).
 MEMORY_SYSTEM_HEADING_EPISODIC = (
-    "## MEMORY - episodic memory / 情景记忆（memory/daily/{date}.md）\n\n"
+    "MEMORY — episodic memory / 情景记忆（memory/daily/{date}.md）\n\n"
 )
 MEMORY_SYSTEM_HEADING_GIST = (
-    "## MEMORY - gist memory / 单日摘要（memory/{date}.md）\n\n"
+    "MEMORY — gist memory / 单日摘要（memory/{date}.md）\n\n"
 )
 MEMORY_SYSTEM_HEADING_SEMANTIC = (
-    "## MEMORY - semantic memory / 语义记忆（MEMORY.md）\n\n"
+    "MEMORY — semantic memory / 语义记忆（MEMORY.md）\n\n"
 )

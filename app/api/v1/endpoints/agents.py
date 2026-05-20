@@ -113,7 +113,9 @@ async def admin_list_all_agents(
     limit: int = Query(1000, ge=1, le=1000),
     current_user: UserSchema = Depends(deps.get_current_superuser),
 ) -> Any:
-    agents = await agent_service.get_all_agents_for_admin(db, skip=skip, limit=limit)
+    agents = await agent_service.get_all_agents_for_admin(
+        db, skip=skip, limit=limit
+    )
     return APIResponse.success(data=agents)
 
 
@@ -126,7 +128,9 @@ async def admin_list_all_agents(
 async def search_agents(
     q: str = Query(..., description="Search keyword"),
     page: int = Query(1, ge=1, description="Page number, starting from 1"),
-    page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
+    page_size: int = Query(
+        10, ge=1, le=100, description="Items per page, maximum 100"
+    ),
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -154,7 +158,9 @@ async def search_agents(
 async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     page: int = Query(1, ge=1, description="Page number, starting from 1"),
-    page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
+    page_size: int = Query(
+        10, ge=1, le=100, description="Items per page, maximum 100"
+    ),
     sort: AgentSortOption = Query(
         AgentSortOption.CREATED_DESC,
         description=(
@@ -305,8 +311,10 @@ async def get_agent(
     festival_list: list[dict] = []
     daily_list: list[dict] = []
     if is_festival_memory_enabled(app_version_code):
-        festival_list = await memory_service.get_festival_memories_for_user_agent(
-            db, current_user.id, agent_id
+        festival_list = (
+            await memory_service.get_festival_memories_for_user_agent(
+                db, current_user.id, agent_id
+            )
         )
     if is_daily_memory_enabled(app_version_code):
         daily_list = await memory_service.get_daily_memories_for_user_agent(
@@ -346,7 +354,9 @@ async def update_agent(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    agent = await agent_service.update_agent(db, db_agent=agent, agent_in=agent_in)
+    agent = await agent_service.update_agent(
+        db, db_agent=agent, agent_in=agent_in
+    )
     return AgentSchema.model_validate(agent)
 
 
@@ -373,9 +383,7 @@ async def delete_agent(
         raise HTTPException(status_code=403, detail="Permission denied")
 
     deleted_agent = await agent_service.delete_agent(db, db_agent=agent)
-    return APIResponse.success(
-        data=AgentSchema.model_validate(deleted_agent)
-    )
+    return APIResponse.success(data=AgentSchema.model_validate(deleted_agent))
 
 
 @router.post(
@@ -542,7 +550,9 @@ def get_opposite_gender(gender: str | None) -> str:
     return opposite
 
 
-def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> dict:
+def process_generated_images(
+    generated_images: List[ImagenGeneratedImage],
+) -> dict:
     """
     Process the generated images and return the HTTPS URL list and RAI filtering reasons.
     """
@@ -552,7 +562,9 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     for i, image in enumerate(generated_images):
         if image.rai_filtered_reason:
             rai_reasons.append(image.rai_filtered_reason)
-            logger.warning(f"Image {i} filtered by RAI: {image.rai_filtered_reason}")
+            logger.warning(
+                f"Image {i} filtered by RAI: {image.rai_filtered_reason}"
+            )
             continue
         generated_uris.append(image.gcs_uri)
 
@@ -676,13 +688,17 @@ async def _generate_with_fal_ai(
 
             image_size = None
             if fal_image.width and fal_image.height:
-                image_size = ImageSize(width=fal_image.width, height=fal_image.height)
+                image_size = ImageSize(
+                    width=fal_image.width, height=fal_image.height
+                )
 
             imagen_image = ImagenGeneratedImage(
                 gcs_uri=gcs_uri,
                 size=image_size,
                 byte_size=byte_size,
-                format=ImageFormat.PNG if file_ext == "png" else ImageFormat.JPEG,
+                format=(
+                    ImageFormat.PNG if file_ext == "png" else ImageFormat.JPEG
+                ),
                 rai_filtered_reason=None,
                 enhanced_prompt=prompt,
             )
@@ -797,16 +813,20 @@ async def generate_background(
 
         # Construct GCS base path - use unified directory instead of tmp
         gcs_base_path = f"backgrounds/{current_user.id}/{uuid.uuid4().hex}"
-        gcs_uri_base = (
-            f"gs://{global_config_loaded_from_config_yaml.gcs.bucket}/{gcs_base_path}"
-        )
+        gcs_uri_base = f"gs://{global_config_loaded_from_config_yaml.gcs.bucket}/{gcs_base_path}"
 
         # 获取用户性别信息并转换为相应格式
         user_gender = None
         if current_user.gender:
             # 将数据库中的Gender枚举转换为字符串格式
-            gender_mapping = {"MALE": "male", "FEMALE": "female", "OTHER": "non-binary"}
-            user_gender = gender_mapping.get(current_user.gender.value, "non-binary")
+            gender_mapping = {
+                "MALE": "male",
+                "FEMALE": "female",
+                "OTHER": "non-binary",
+            }
+            user_gender = gender_mapping.get(
+                current_user.gender.value, "non-binary"
+            )
 
         logger.debug(
             f"Starting background generation for user {current_user.id}, prompt: {request.prompt}, count: {request.count}, gender: {user_gender}"
@@ -867,7 +887,9 @@ async def generate_background(
         for gcs_url in gcs_urls:
             try:
                 cdn_url = image_transform_service.transform_desktop(gcs_url)
-                logger.debug(f"Transformed GCS URL to CDN URL: {gcs_url} -> {cdn_url}")
+                logger.debug(
+                    f"Transformed GCS URL to CDN URL: {gcs_url} -> {cdn_url}"
+                )
                 cdn_urls.append(cdn_url)
                 cdn_url_to_img_dict[cdn_url] = gcs_url_to_img_dict[gcs_url]
             except Exception as transform_error:
@@ -1059,7 +1081,9 @@ async def get_image_generation_config(
     tags=[INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG],
 )
 async def get_available_prompts(
-    include_content: bool = Query(False, description="是否包含完整的 prompt 内容"),
+    include_content: bool = Query(
+        False, description="是否包含完整的 prompt 内容"
+    ),
     current_user: UserSchema = Depends(deps.get_current_active_user),
 ) -> Any:
     """获取可用的 prompt 列表"""
@@ -1122,7 +1146,9 @@ async def update_image_generation_config(
     try:
         # 更新内存中的配置
         if "prompt_template" in config:
-            agent_prompts.IMAGE_GENERATION_PROMPT_TEMPLATE = config["prompt_template"]
+            agent_prompts.IMAGE_GENERATION_PROMPT_TEMPLATE = config[
+                "prompt_template"
+            ]
 
         if "default_history_count" in config:
             global_config_loaded_from_config_yaml.agent.image_generation_default_history_count = config[
@@ -1130,14 +1156,14 @@ async def update_image_generation_config(
             ]
 
         if "free_user_chat_image_model" in config:
-            global_config_loaded_from_config_yaml.agent.free_user_chat_image_model = (
-                config["free_user_chat_image_model"]
-            )
+            global_config_loaded_from_config_yaml.agent.free_user_chat_image_model = config[
+                "free_user_chat_image_model"
+            ]
 
         if "sub_user_chat_image_model" in config:
-            global_config_loaded_from_config_yaml.agent.sub_user_chat_image_model = (
-                config["sub_user_chat_image_model"]
-            )
+            global_config_loaded_from_config_yaml.agent.sub_user_chat_image_model = config[
+                "sub_user_chat_image_model"
+            ]
 
         logger.info(f"超级用户 {current_user.id} 更新了图片生成配置")
 

@@ -3,7 +3,13 @@ from datetime import datetime
 from typing import Annotated, Any, Dict, List, Literal, Optional
 
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    model_validator,
+)
 
 from app.schemas.biz_action import BizAction
 from app.core.agent.prompt_template import (
@@ -95,7 +101,9 @@ class ChatSettingsBase(BaseModel):
 
     language: str = "en"
     voice_enabled: bool = True  # 个性化语音自动播放开关
-    voice_id: Optional[str] = None  # Per-chat selected voice id (google/* for MVP)
+    voice_id: Optional[str] = (
+        None  # Per-chat selected voice id (google/* for MVP)
+    )
     # keep_talking 字段已弃用，不再在 API 中暴露
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: bool = False  # 高级模式开关，仅订阅用户可设置
@@ -115,7 +123,9 @@ class ChatSettingsUpdate(ChatSettingsBase):
 
     language: Optional[str] = None
     voice_enabled: Optional[bool] = None  # 个性化语音自动播放开关
-    voice_id: Optional[str] = None  # Per-chat selected voice id (google/* for MVP)
+    voice_id: Optional[str] = (
+        None  # Per-chat selected voice id (google/* for MVP)
+    )
     # keep_talking 字段已弃用，不再在 API 中暴露
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: Optional[bool] = None  # 高级模式开关，仅订阅用户可设置
@@ -214,10 +224,14 @@ class Chat(ChatInDB):
     settings: Optional[ChatSettings] = None
 
     @field_serializer("agent_avatar")
-    def serialize_agent_avatar(self, agent_avatar: Optional[str]) -> Optional[str]:
+    def serialize_agent_avatar(
+        self, agent_avatar: Optional[str]
+    ) -> Optional[str]:
         """转换agent_avatar URL为CDN URL，支持基于extension裁切数据的avatar生成"""
         try:
-            from app.services.image_transform_service import image_transform_service
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
 
             # 优先检查是否存在裁切数据，如果存在则使用裁切数据而不是独立的avatar
             if (
@@ -297,7 +311,9 @@ class Chat(ChatInDB):
         if not agent_background:
             return agent_background
         try:
-            from app.services.image_transform_service import image_transform_service
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
 
             return image_transform_service.transform_desktop(agent_background)
         except Exception:
@@ -311,14 +327,20 @@ class Chat(ChatInDB):
         if not agent_background_animated:
             return agent_background_animated
         try:
-            from app.services.image_transform_service import image_transform_service
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
 
-            return image_transform_service.transform_desktop(agent_background_animated)
+            return image_transform_service.transform_desktop(
+                agent_background_animated
+            )
         except Exception:
             return agent_background_animated
 
     @field_serializer("agent_intro")
-    def serialize_agent_intro(self, agent_intro: Optional[str]) -> Optional[str]:
+    def serialize_agent_intro(
+        self, agent_intro: Optional[str]
+    ) -> Optional[str]:
         """渲染 agent_intro 中的模板变量，避免客户端展示原始 {{ char }}。"""
         if not agent_intro or not has_template_variable(agent_intro):
             return agent_intro
@@ -329,7 +351,9 @@ class Chat(ChatInDB):
         )
 
     @field_serializer("agent_opening")
-    def serialize_agent_opening(self, agent_opening: Optional[str]) -> Optional[str]:
+    def serialize_agent_opening(
+        self, agent_opening: Optional[str]
+    ) -> Optional[str]:
         """渲染 agent_opening 中的模板变量，保证接口返回可直接展示。"""
         if not agent_opening or not has_template_variable(agent_opening):
             return agent_opening
@@ -362,15 +386,9 @@ ChatMessageContentPart = Annotated[
 
 
 class CompanionChatTurnMessageType(str, enum.Enum):
-    """Turn category for companion plumbing.
-
-    ``IMPLICIT_USER_SIGNED_ON`` marks implicit sign-on rounds (server synthetic from ``user_signed_on``
-    + ``implicit_greeting``, or the same shape on a WebSocket chat frame). **Product** clients prefer
-    the control frame; HTTP completions do not use ``IMPLICIT_USER_SIGNED_ON``.
-    """
+    """Turn category for companion chat completion requests (normal user turns)."""
 
     USER_MESSAGE = "USER_MESSAGE"
-    IMPLICIT_USER_SIGNED_ON = "IMPLICIT_USER_SIGNED_ON"
 
 
 class ChatMessage(BaseModel):
@@ -388,7 +406,8 @@ class ChatMessage(BaseModel):
         text_parts = [
             part.text.strip()
             for part in self.content
-            if isinstance(part, ChatMessageTextContentPart) and part.text.strip()
+            if isinstance(part, ChatMessageTextContentPart)
+            and part.text.strip()
         ]
         return "\n".join(text_parts)
 
@@ -396,7 +415,8 @@ class ChatMessage(BaseModel):
         if isinstance(self.content, str):
             return False
         return any(
-            isinstance(part, ChatMessageImageContentPart) for part in self.content
+            isinstance(part, ChatMessageImageContentPart)
+            for part in self.content
         )
 
 
@@ -405,7 +425,9 @@ class UserTimeContext(BaseModel):
 
     local_time: Optional[str] = None  # ISO 8601 或可读时间字符串
     timezone: Optional[str] = None  # IANA 时区名称，如 Asia/Shanghai
-    utc_offset_minutes: Optional[int] = None  # UTC 偏移分钟数，如 480 表示 UTC+8
+    utc_offset_minutes: Optional[int] = (
+        None  # UTC 偏移分钟数，如 480 表示 UTC+8
+    )
 
 
 class ChatCompletionRequest(BaseModel):
@@ -435,11 +457,7 @@ class ChatCompletionRequest(BaseModel):
     message_type: CompanionChatTurnMessageType = Field(
         default=CompanionChatTurnMessageType.USER_MESSAGE,
         alias="messageType",
-        description=(
-            "Turn kind: USER_MESSAGE for normal chat; IMPLICIT_USER_SIGNED_ON for implicit sign-on "
-            "(product: user_signed_on + implicit_greeting; wire may use the same message_type on "
-            "chat frames). Not supported on HTTP completions."
-        ),
+        description="Turn kind; greeting uses WebSocket ``user_signed_on`` with ``message_id``.",
     )
 
     @model_validator(mode="after")
@@ -450,19 +468,6 @@ class ChatCompletionRequest(BaseModel):
             logger.warning("DEPRECATED: 'model' parameter has no use")
         if self.language != "zh":
             logger.warning("DEPRECATED: 'language' parameter has no use")
-        return self
-
-    @model_validator(mode="after")
-    def implicit_user_signed_on_requires_empty_user_text(
-        self,
-    ) -> "ChatCompletionRequest":
-        if self.message_type != CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON:
-            return self
-        user_msgs = [m for m in self.messages if m.role == "user"]
-        if user_msgs and user_msgs[-1].extract_text_content().strip():
-            raise ValueError(
-                "messageType IMPLICIT_USER_SIGNED_ON requires an empty user message text"
-            )
         return self
 
 
@@ -511,7 +516,9 @@ class ClearMessagesRequest(BaseModel):
     """
 
     message_id: Optional[int] = None  # 消息ID，清除该ID及其之后的所有消息
-    timestamp: Optional[str] = None  # 时间戳，清除该时间之后的所有消息（ISO格式）
+    timestamp: Optional[str] = (
+        None  # 时间戳，清除该时间之后的所有消息（ISO格式）
+    )
     request_id: Optional[str] = None
 
     class Config:
@@ -554,7 +561,9 @@ class ChatImageGenerationResponse(BaseModel):
     message_id: int
     model: Optional[str] = None  # 使用的生图模型
     generation_time_ms: Optional[int] = None  # 模型调用耗时（毫秒）
-    model_fallback_due_to_429: Optional[bool] = None  # 是否因 429 使用了备用模型
+    model_fallback_due_to_429: Optional[bool] = (
+        None  # 是否因 429 使用了备用模型
+    )
 
 
 class ChatMusicGenerationRequest(BaseModel):

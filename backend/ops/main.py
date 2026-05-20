@@ -164,6 +164,11 @@ async def _preload_popular_agent_data(db: AsyncSession):
 @app.on_event("shutdown")
 async def shutdown_event():
     try:
+        from app.core.companion_harness.companion.websocket_coordinator import (
+            ChatWsInflightShutdownRegistry,
+        )
+
+        await ChatWsInflightShutdownRegistry.cancel_all_registered()
         agent_manager.stop()
         from app.services.cache_service import cache_service
 

@@ -12,20 +12,30 @@ from app.core.companion_harness.experience_profile import (
     experience_profile_injects_private_memory,
 )
 
-from app.core.companion_harness.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
+from app.core.companion_harness.companion.llm_chat_runtime import (
+    tool_path_chat_completion_kwargs,
+)
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient
+from app.utils.models_catalog import (
+    GenAIModel,
+    genai_model_langsmith_meta_subset,
+)
 from app.core.companion_harness.companion.models import (
     AI_PRIVATE_INJECT_MAX_CHARS,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ContextMeta,
-    InnerTickMode,
+    InnerTickActivity,
     _MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS,
     _MEMORY_RAW_INJECT_MAX_CHARS,
     _OPTIONAL_DOC_MAX_CHARS,
 )
-from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
+from app.core.companion_harness.memory.memory_pipeline import (
+    MemoryPipelineConfig,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.transcript_compaction import CompactionConfig as TranscriptCompactionConfig
+from app.core.companion_harness.memory.transcript_compaction import (
+    CompactionConfig as TranscriptCompactionConfig,
+)
 
 _MAX_TOOL_ROUNDS_SNAPSHOT = 24
 
@@ -62,7 +72,9 @@ def runtime_inspect_set_scoped_memory_store(store: MemoryStore | None) -> None:
         d["scoped_memory_store"] = store
 
 
-def runtime_inspect_set_last_chat_completion_request(payload: dict[str, Any]) -> None:
+def runtime_inspect_set_last_chat_completion_request(
+    payload: dict[str, Any],
+) -> None:
     d = _inspect_var.get()
     if d is not None:
         d["last_chat_completion_request"] = payload
@@ -111,7 +123,9 @@ def _bundle_payload_with_store(bundle: dict[str, Any]) -> dict[str, Any] | None:
         or bundle.get("scoped_memory_store") is not None
     ):
         return None
-    serializable = {k: v for k, v in bundle.items() if k != "scoped_memory_store"}
+    serializable = {
+        k: v for k, v in bundle.items() if k != "scoped_memory_store"
+    }
     return copy.deepcopy(serializable)
 
 
@@ -192,7 +206,7 @@ def build_turn_runtime_config_dict(
     context: ContextMeta,
     transcript_llm_window_max_messages: int,
     inner_tick_turn: bool,
-    inner_tick_mode: InnerTickMode,
+    inner_tick_activity: InnerTickActivity,
     repository_only_store_text: bool,
     transcript_compaction: TranscriptCompactionConfig | None,
     memory_store_read_document_max_chars_cap: int,
@@ -215,17 +229,21 @@ def build_turn_runtime_config_dict(
             "chat_id": context.chat_id,
         },
         "llm": llm_dump,
-        "resolved_model_chat": rm_chat,
-        "resolved_model_tool": rm_tool,
-        "openrouter_extra_kwargs_chat": tool_path_chat_completion_kwargs(rm_chat),
-        "openrouter_extra_kwargs_tool": tool_path_chat_completion_kwargs(rm_tool),
+        "resolved_model_chat": genai_model_langsmith_meta_subset(rm_chat),
+        "resolved_model_tool": genai_model_langsmith_meta_subset(rm_tool),
+        "openrouter_extra_kwargs_chat": tool_path_chat_completion_kwargs(
+            rm_chat
+        ),
+        "openrouter_extra_kwargs_tool": tool_path_chat_completion_kwargs(
+            rm_tool
+        ),
         "llm_call_notes": (
             "Companion kernel does not set temperature or max_tokens in Python when calling "
             "chat.completions; OpenRouter/provider defaults apply."
         ),
         "memory_pipeline": mem_cfg.model_dump(),
         "inner_tick_turn": inner_tick_turn,
-        "inner_tick_mode": inner_tick_mode.value,
+        "inner_tick_activity": inner_tick_activity.value,
         "repository_only_store_text": repository_only_store_text,
         "transcript_compaction": (
             transcript_compaction.model_dump()
@@ -249,7 +267,7 @@ def build_turn_runtime_config_dict(
 
 def build_last_chat_completion_request_payload(
     *,
-    model: str,
+    model: GenAIModel,
     messages: list[dict[str, Any]],
     tools: list[Any] | None,
     tool_choice: str | None = None,
@@ -257,7 +275,8 @@ def build_last_chat_completion_request_payload(
 ) -> dict[str, Any]:
     norm, w = normalize_messages_for_snapshot(messages)
     payload: dict[str, Any] = {
-        "model": model,
+        "model": model.id_on_provider,
+        "model_catalog": genai_model_langsmith_meta_subset(model),
         "messages": norm,
         "tools_summary": tools_summary_from_openai_tools(tools),
         "openrouter_extra_body": tool_path_chat_completion_kwargs(model),
@@ -265,7 +284,9 @@ def build_last_chat_completion_request_payload(
     if tool_choice is not None:
         payload["tool_choice"] = tool_choice
     if response_format_json_schema_name:
-        payload["response_format_json_schema_name"] = response_format_json_schema_name
+        payload["response_format_json_schema_name"] = (
+            response_format_json_schema_name
+        )
     if w:
         payload["per_message_warnings"] = w
         payload["messages_serialization_note"] = (

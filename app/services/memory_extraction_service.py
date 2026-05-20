@@ -6,7 +6,7 @@
 为真时，从 PostgreSQL ``chat_history.meta_data.significance_perception`` 读取内核写入的重要性三元组
 （``importance_round`` / ``importance_user_message`` / ``importance_assistant_message``），按
 ``importance_round`` 对消息排序并在拼装给抽取模型的文本中附加简短标注（见 ``_prepare_messages_for_memory_extraction``、
-``_format_chat_for_prompt``）。数据来源与契约说明见 ``app/core/companion_harness/companion/significance_perception.py`` 模块 docstring。
+``_format_chat_for_prompt``）。数据来源与契约说明见 ``app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py`` 模块 docstring。
 """
 
 import asyncio
@@ -228,7 +228,10 @@ def _utc_day_bounds(target_date_utc: date) -> tuple[datetime, datetime]:
 
 
 def _build_daily_profile_prompt(
-    chat_text: str, target_date_utc: date, *, include_significance_hints: bool = False
+    chat_text: str,
+    target_date_utc: date,
+    *,
+    include_significance_hints: bool = False,
 ) -> str:
     header = _DAILY_PROFILE_PROMPT_TEMPLATE.format(
         target_day=target_date_utc.isoformat()
@@ -238,9 +241,7 @@ def _build_daily_profile_prompt(
         if include_significance_hints
         else ""
     )
-    return (
-        f"{header}{sig}\n\n---\n\n# User chat history for the target day\n\n{chat_text}"
-    )
+    return f"{header}{sig}\n\n---\n\n# User chat history for the target day\n\n{chat_text}"
 
 
 def _build_incremental_update_prompt(
@@ -292,7 +293,8 @@ def _format_chat_for_prompt(
                 iu = sp.get("importance_user_message")
                 ia = sp.get("importance_assistant_message")
                 if all(
-                    isinstance(x, int) and not isinstance(x, bool) for x in (ir, iu, ia)
+                    isinstance(x, int) and not isinstance(x, bool)
+                    for x in (ir, iu, ia)
                 ):
                     extra = (
                         f" [significance round={ir}/10 user_msg={iu}/10 "
@@ -346,8 +348,67 @@ async def _chat_completion_with_structured_fallback(
             prompt, llm_config=llm_config, response_format=response_format
         )
     except Exception as format_err:
-        logger.debug(f"{log_prefix} structured output 失败，回退自由文本: {format_err}")
-        return await chat_completion_for_extraction(prompt, llm_config=llm_config)
+        logger.debug(
+            f"{log_prefix} structured output 失败，回退自由文本: {format_err}"
+        )
+        return await chat_completion_for_extraction(
+            prompt, llm_config=llm_config
+        )
+
+
+def _parse_chat_history_json_object(
+    value: Any, chat_history_id: str, column_name: str
+) -> dict[str, Any] | None:
+    assert column_name in {"message", "meta_data"}
+    try:
+        if isinstance(value, str):
+            parsed = json.loads(value)
+        elif isinstance(value, dict):
+            parsed = value
+        else:
+            parsed = json.loads(str(value))
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.warning(
+            "[记忆抽取] 跳过 malformed chat_history "
+            f"{column_name} row_id={chat_history_id}: {e}"
+        )
+        return None
+
+    if not isinstance(parsed, dict):
+        logger.warning(
+            "[记忆抽取] 跳过非对象 chat_history "
+            f"{column_name} row_id={chat_history_id}"
+        )
+        return None
+
+    return parsed
+
+
+def _materialize_chat_history_row(
+    chat_history_id: str, raw: Any, meta_raw: Any
+) -> Tuple[str, str, dict[str, Any] | None] | None:
+    meta = None
+    if meta_raw is not None:
+        meta = _parse_chat_history_json_object(
+            meta_raw, chat_history_id, "meta_data"
+        )
+
+    data = _parse_chat_history_json_object(raw, chat_history_id, "message")
+    if data is None:
+        return None
+
+    msg_type = data.get("type", "human")
+    content = ""
+    if (
+        "data" in data
+        and isinstance(data["data"], dict)
+        and "content" in data["data"]
+    ):
+        content = data["data"]["content"] or ""
+    elif "content" in data:
+        content = data["content"] or ""
+    role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
+    return (role, str(content), meta)
 
 
 def get_all_messages_for_user(
@@ -362,7 +423,9 @@ def get_all_messages_for_user(
         try:
             conn = get_chat_history_replica_connection()
         except psycopg.Error as e:
-            logger.warning(f"[记忆抽取] 获取副本连接失败，回退主库读取消息: {e}")
+            logger.warning(
+                f"[记忆抽取] 获取副本连接失败，回退主库读取消息: {e}"
+            )
     if conn is None:
         conn = get_chat_history_connection()
     with conn.cursor() as cur:
@@ -379,7 +442,7 @@ def get_all_messages_for_user(
     with conn.cursor() as cur:
         cur.execute(
             f"""
-            SELECT message, meta_data
+            SELECT id, message, meta_data
             FROM chat_history
             WHERE session_id::text IN ({placeholders}) AND deleted_at IS NULL
             ORDER BY created_at ASC
@@ -387,41 +450,11 @@ def get_all_messages_for_user(
             session_ids,
         )
         for row in cur.fetchall():
-            raw = row[0]
-            meta_raw = row[1]
-            meta: dict[str, Any] | None = None
-            if meta_raw is not None:
-                try:
-                    if isinstance(meta_raw, str):
-                        parsed = json.loads(meta_raw)
-                    elif isinstance(meta_raw, dict):
-                        parsed = meta_raw
-                    else:
-                        parsed = json.loads(str(meta_raw))
-                    meta = parsed if isinstance(parsed, dict) else None
-                except Exception:
-                    meta = None
-            try:
-                if isinstance(raw, str):
-                    data = json.loads(raw)
-                elif isinstance(raw, dict):
-                    data = raw
-                else:
-                    data = json.loads(str(raw))
-            except Exception:
-                continue
-            msg_type = data.get("type", "human")
-            content = ""
-            if (
-                "data" in data
-                and isinstance(data["data"], dict)
-                and "content" in data["data"]
-            ):
-                content = data["data"]["content"] or ""
-            elif "content" in data:
-                content = data["content"] or ""
-            role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
-            out.append((role, str(content), meta))
+            materialized = _materialize_chat_history_row(
+                str(row[0]), row[1], row[2]
+            )
+            if materialized is not None:
+                out.append(materialized)
     return out
 
 
@@ -437,7 +470,9 @@ def get_messages_for_user_in_utc_day(
         try:
             conn = get_chat_history_replica_connection()
         except psycopg.Error as e:
-            logger.warning(f"[记忆抽取] 获取副本连接失败，回退主库读取消息: {e}")
+            logger.warning(
+                f"[记忆抽取] 获取副本连接失败，回退主库读取消息: {e}"
+            )
     if conn is None:
         conn = get_chat_history_connection()
     with conn.cursor() as cur:
@@ -454,7 +489,7 @@ def get_messages_for_user_in_utc_day(
     with conn.cursor() as cur:
         cur.execute(
             f"""
-            SELECT message, meta_data
+            SELECT id, message, meta_data
             FROM chat_history
             WHERE session_id::text IN ({placeholders})
               AND deleted_at IS NULL
@@ -465,41 +500,11 @@ def get_messages_for_user_in_utc_day(
             session_ids + [start_at, end_at],
         )
         for row in cur.fetchall():
-            raw = row[0]
-            meta_raw = row[1]
-            meta: dict[str, Any] | None = None
-            if meta_raw is not None:
-                try:
-                    if isinstance(meta_raw, str):
-                        parsed = json.loads(meta_raw)
-                    elif isinstance(meta_raw, dict):
-                        parsed = meta_raw
-                    else:
-                        parsed = json.loads(str(meta_raw))
-                    meta = parsed if isinstance(parsed, dict) else None
-                except Exception:
-                    meta = None
-            try:
-                if isinstance(raw, str):
-                    data = json.loads(raw)
-                elif isinstance(raw, dict):
-                    data = raw
-                else:
-                    data = json.loads(str(raw))
-            except (json.JSONDecodeError, TypeError, ValueError):
-                continue
-            msg_type = data.get("type", "human")
-            content = ""
-            if (
-                "data" in data
-                and isinstance(data["data"], dict)
-                and "content" in data["data"]
-            ):
-                content = data["data"]["content"] or ""
-            elif "content" in data:
-                content = data["content"] or ""
-            role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
-            out.append((role, str(content), meta))
+            materialized = _materialize_chat_history_row(
+                str(row[0]), row[1], row[2]
+            )
+            if materialized is not None:
+                out.append(materialized)
     return out
 
 
@@ -507,10 +512,14 @@ _USAGE_TYPE_CHAT = "chat"
 
 
 def _get_sync_replica_db_url() -> Optional[str]:
-    async_replica_url = global_config_loaded_from_config_yaml.database.async_replica_url
+    async_replica_url = (
+        global_config_loaded_from_config_yaml.database.async_replica_url
+    )
     if not async_replica_url:
         return None
-    return async_replica_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    return async_replica_url.replace(
+        "postgresql+asyncpg://", "postgresql://", 1
+    )
 
 
 def _resolve_sync_read_db_url(prefer_replica_read: bool) -> str:
@@ -537,9 +546,13 @@ def _compute_users_to_extract_sync(
         return []
 
     candidate_user_ids = list(user_to_chats.keys())
-    new_user_ids = [uid for uid in candidate_user_ids if uid not in user_to_last]
+    new_user_ids = [
+        uid for uid in candidate_user_ids if uid not in user_to_last
+    ]
     old_user_items = [
-        (uid, user_to_last[uid]) for uid in candidate_user_ids if uid in user_to_last
+        (uid, user_to_last[uid])
+        for uid in candidate_user_ids
+        if uid in user_to_last
     ]
     num_users = len(candidate_user_ids)
     logger.info(
@@ -554,7 +567,9 @@ def _compute_users_to_extract_sync(
     except psycopg.Error as e:
         if read_db_url and db_url != primary_db_url:
             # 迁移关键步骤：离线读优先副本，副本不可达时自动回退主库，保证任务可继续执行。
-            logger.warning(f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}")
+            logger.warning(
+                f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}"
+            )
             conn = psycopg.connect(primary_db_url, autocommit=True)
         else:
             raise
@@ -581,7 +596,9 @@ def _compute_users_to_extract_sync(
         if old_user_items:
             for i in range(0, len(old_user_items), _MAX_IN_PARAMS):
                 chunk = old_user_items[i : i + _MAX_IN_PARAMS]
-                values_ph = ",".join("(%s::text, %s::timestamptz)" for _ in chunk)
+                values_ph = ",".join(
+                    "(%s::text, %s::timestamptz)" for _ in chunk
+                )
                 flat = []
                 for uid, last_at in chunk:
                     flat.append(uid)
@@ -620,7 +637,9 @@ def _compute_users_with_messages_in_utc_day_sync(
         conn = psycopg.connect(db_url, autocommit=True)
     except psycopg.Error as e:
         if read_db_url and db_url != primary_db_url:
-            logger.warning(f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}")
+            logger.warning(
+                f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}"
+            )
             conn = psycopg.connect(primary_db_url, autocommit=True)
         else:
             raise
@@ -666,7 +685,9 @@ async def get_users_to_extract(
     thresh_incr = cfg.trigger_incremental_messages
 
     # 所有有会话的用户及其 chat_id
-    r = await db.execute(text("SELECT user_id, id FROM chats WHERE is_active = true"))
+    r = await db.execute(
+        text("SELECT user_id, id FROM chats WHERE is_active = true")
+    )
     rows = r.fetchall()
     user_to_chats: dict = {}
     for uid, cid in rows:
@@ -712,7 +733,9 @@ async def get_users_with_messages_in_utc_day(
 
 
 def _memory_llm_config(cfg) -> LLMConfig:
-    model_name = cfg.model.strip() if cfg.model else DEFAULT_MEMORY_EXTRACTION_MODEL
+    model_name = (
+        cfg.model.strip() if cfg.model else DEFAULT_MEMORY_EXTRACTION_MODEL
+    )
     return LLMConfig(
         model=model_name or None,
         max_tokens=4000,
@@ -720,7 +743,9 @@ def _memory_llm_config(cfg) -> LLMConfig:
     )
 
 
-async def _latest_user_common_memory_content(db: AsyncSession, user_id: str) -> str:
+async def _latest_user_common_memory_content(
+    db: AsyncSession, user_id: str
+) -> str:
     result = await db.execute(
         text("""
             SELECT content
@@ -762,13 +787,19 @@ async def extract_and_save(
         logger.debug(f"记忆抽取跳过：user_id={user_id} 无消息")
         return
 
-    sig_enabled = bool(getattr(cfg, "use_significance_perception_in_extraction", False))
+    sig_enabled = bool(
+        getattr(cfg, "use_significance_perception_in_extraction", False)
+    )
     messages_for_prompt = _prepare_messages_for_memory_extraction(
         messages, use_significance=sig_enabled
     )
     chat_text = _format_chat_for_prompt(messages_for_prompt)
-    sig_block = f"\n\n{_significance_extraction_prompt_block()}" if sig_enabled else ""
-    full_prompt = f"{prompt}{sig_block}\n\n---\n\n# User chat history\n\n{chat_text}"
+    sig_block = (
+        f"\n\n{_significance_extraction_prompt_block()}" if sig_enabled else ""
+    )
+    full_prompt = (
+        f"{prompt}{sig_block}\n\n---\n\n# User chat history\n\n{chat_text}"
+    )
 
     start_time = time.perf_counter()
     try:
@@ -871,7 +902,9 @@ async def extract_and_save_incremental_daily(
         )
         return
 
-    sig_enabled = bool(getattr(cfg, "use_significance_perception_in_extraction", False))
+    sig_enabled = bool(
+        getattr(cfg, "use_significance_perception_in_extraction", False)
+    )
     messages_for_prompt = _prepare_messages_for_memory_extraction(
         messages, use_significance=sig_enabled
     )

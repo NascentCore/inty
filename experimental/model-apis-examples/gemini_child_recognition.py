@@ -80,7 +80,9 @@ def resize_to_512_if_needed(image_path):
         new_height = int(height * scale)
 
         # Resize the image
-        resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        resized_img = img.resize(
+            (new_width, new_height), Image.Resampling.LANCZOS
+        )
         return resized_img.copy()
 
 

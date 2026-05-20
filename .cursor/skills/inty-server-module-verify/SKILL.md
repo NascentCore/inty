@@ -21,6 +21,7 @@ description: >-
 
 - Ops 挂载与 App 共用的 **shared** 路由（含 [`backend/ops/api/v1/shared.py`](../../../backend/ops/api/v1/shared.py) 里的 `chat`、`chats` 等），HTTP/WebSocket 路径与 Inty 主后端一致（例如 WebSocket `/api/v1/chat/ws`）。
 - `./backend/ops/start.sh --local` 会初始化 `user-testing`、跑迁移，并把 JWT 写入仓库根 **[`.inty_ops_bearer_token`](../../../backend/ops/start.sh)**（可用 `INTY_OPS_BEARER_TOKEN_FILE` 改路径）。smoke 脚本会**自动读取**该文件，通常无需再 `export INTY_BEARER_TOKEN`。
+- 文件日志：脚本会先 `cd` 到仓库根（见 `backend/ops/start.sh`），默认 **`INTY_LOG_FILE`** 为 **`.inty/inty.log`**；`--workspace DIR` 时则为 **`DIR/inty.log`**（`DIR` 相对该 cwd）。排障见 [`inty-backend-inspect`](../inty-backend-inspect/SKILL.md)。
 - 默认监听 **`http://127.0.0.1:8001`**（环境变量 `PORT` 可覆盖）。前端构建较慢时可加 **`--no-build-frontend`**。
 - 流程示例：`./backend/ops/start.sh --local --no-build-frontend`（另开终端）→ `export INTY_API_BASE_URL=http://127.0.0.1:8001` → `python3 tools/scripts/inty_backend_smoke_tests/test_chat_ws.py --create-agent`。
 
@@ -52,7 +53,7 @@ description: >-
 
 ### 行为说明
 
-- WebSocket URL 可为 `.../api/v1/chat/ws?agent_id=...`（与交互 REPL 一致）。服务端不在连接建立后主动推送开场；若需首轮问候，先发 `user_signed_on` 控制帧并设 `implicit_greeting: true` 与 RFC4122 `message_id`（见 `/app/core/companion_harness/companion/implicit_signal_messages.py`）。脚本若仍「先收再发」，仅适用于排空 ping 或异步 tool 补帧等场景。
+- WebSocket URL 可为 `.../api/v1/chat/ws?agent_id=...`（与交互 REPL 一致）。服务端不在连接建立后主动推送开场；若需首轮问候，先发 `user_signed_on` 控制帧并带 RFC4122 `message_id`（见 `/app/core/companion_harness/companion/implicit_signal_messages.py`）。脚本若仍「先收再发」，仅适用于排空 ping 或异步 tool 补帧等场景。
 
 ### 运行示例
 

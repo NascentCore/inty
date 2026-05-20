@@ -149,7 +149,9 @@ def main():
         print(f"  run={i+1} temperature={TEMP_HIGH} -> {text!r}")
 
     all_same = len(set(outputs_temp_zero)) == 1
-    print(f"\nAll temperature=0 outputs identical? {'Yes' if all_same else 'No'}")
+    print(
+        f"\nAll temperature=0 outputs identical? {'Yes' if all_same else 'No'}"
+    )
 
 
 if __name__ == "__main__":

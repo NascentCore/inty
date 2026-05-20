@@ -32,7 +32,7 @@ _PRIVATE_MEMORY_SHARED_EMOTIONAL_CLAUSE_IDS = frozenset(
     _PRIVATE_MEMORY_PROFILE_IDS - {ExperienceContextMode.INTIMATE}
 )
 
-EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING = "## 当前体验配置（context_mode）"
+EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING = "当前体验配置（context_mode）"
 
 
 def _experience_profile_clause(body: str) -> str:
@@ -42,12 +42,17 @@ def _experience_profile_clause(body: str) -> str:
 def normalize_experience_profile_id(raw: str) -> str:
     s = raw.strip().lower()
     if not s:
-        raise ValueError("experience profile id (context_mode) must be non-empty")
+        raise ValueError(
+            "experience profile id (context_mode) must be non-empty"
+        )
     return s
 
 
 def experience_profile_injects_private_memory(profile_id: str) -> bool:
-    return normalize_experience_profile_id(profile_id) in _PRIVATE_MEMORY_PROFILE_IDS
+    return (
+        normalize_experience_profile_id(profile_id)
+        in _PRIVATE_MEMORY_PROFILE_IDS
+    )
 
 
 def experience_profile_system_clause(context_mode: str) -> str:
