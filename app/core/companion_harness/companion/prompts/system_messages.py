@@ -2,6 +2,8 @@
 
 **Stack order (fixed):** Doctrine → Tools → Persona → Output → Contextual.
 
+Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdown ``##`` headings.
+
 **Scenario → entrypoint** (production; call from ``prompt_stack`` / ``turn`` / ``tool_background``):
 
 | Scenario | Function |
@@ -256,7 +258,7 @@ def _output_contract_text_interactive_bootstrap_tools(
 
 def _proactive_chat_clause() -> str:
     return (
-        "## 本轮（陪伴主动聊天）\n\n"
+        "本轮（陪伴主动聊天）\n"
         "用户尚未发送新消息。承接上文**同一语境**：延续当前场景、话题与表达风格，自然续一句或两句，"
         "勿改换语气或像重新开始一段对话；仅输出自然语言短句，不要调用工具。"
     )
@@ -264,7 +266,7 @@ def _proactive_chat_clause() -> str:
 
 def _repl_online_ack_clause() -> str:
     return (
-        "## 本轮（REPL 会话恢复）\n\n"
+        "本轮（REPL 会话恢复）\n\n"
         "用户刚回到本对话窗口。请结合上文**承接**同一语境；若尚无比拼的上下文则简短自然问候；"
         "可正常调用工具。勿提系统、上线或主动聊天机制。"
     )
@@ -274,12 +276,12 @@ def _inner_tick_ai_private_section(ai_private_text: str) -> str:
     ap = (ai_private_text or "").strip()
     if not ap:
         ap = "（尚未记录内在活动；仅依据对话窗口续接即可。）"
-    return "## 内在活动（ai_private）\n\n" + ap
+    return "内在活动（ai_private）\n\n" + ap
 
 
 def _inner_tick_turn_section() -> str:
     return (
-        "## 本轮（内在节拍）\n\n"
+        "本轮（内在节拍）\n\n"
         "**意图**：模拟一次拟人的、向内的思考节拍，而不是为了往 REPL 里「找话说」。"
         "默认假设用户没有在看你这条输出。\n\n"
         "**场景演化（与内向整理并列）**：\n"

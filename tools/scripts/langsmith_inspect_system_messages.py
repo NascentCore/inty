@@ -33,11 +33,11 @@ def _heuristic_label(content: str) -> str:
         return "security"
     if c.startswith("# Tools") or "TOOLS（工具说明" in c[:80]:
         return "tools_md"
-    if "## 本轮（陪伴主动聊天）" in c[:120]:
+    if "本轮（陪伴主动聊天）" in c[:120]:
         return "proactive_chat_clause"
-    if "## 本轮（内在节拍）" in c[:120]:
+    if "本轮（内在节拍）" in c[:120]:
         return "inner_tick_clause"
-    if "## 本轮（REPL 会话恢复）" in c[:120]:
+    if "本轮（REPL 会话恢复）" in c[:120]:
         return "repl_online_ack"
     if "## 工具侧（后台" in c[:80]:
         return "tool_side_compact"
@@ -71,7 +71,7 @@ def _heuristic_label(content: str) -> str:
         return "output_contract"
     if "快思考路径（系统 1）" in c[:80]:
         return "dual_llm_chat_contract"
-    if "## 内在活动（ai_private）" in c[:80]:
+    if "内在活动（ai_private）" in c[:80]:
         return "ai_private"
     if "##User Time Context" in c or "User Time Context" in c[:80]:
         return "user_time_context"
