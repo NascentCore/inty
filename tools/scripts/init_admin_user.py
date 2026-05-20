@@ -73,7 +73,9 @@ def create_user(
         db.add(created_user)
         db.commit()
 
-    # Generate bearer token for the created user
+    # TODO: skip create_access_token + token_file write when user exists and
+    # token_file is non-empty with a still-valid JWT (avoids rotating JWT on
+    # every `backend/ops/start.sh --local` restart; sync REPL .env if rotated).
     access_token = create_access_token(created_user.id)
 
     logger.info("Admin user created successfully!")

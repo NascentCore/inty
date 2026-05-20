@@ -37,7 +37,7 @@ python -m tools.inty_v2_repl.main repl \
   --agent-id YOUR_AGENT_ID
 ```
 
-- **Bearer**: `INTY_ACCESS_TOKEN` or `INTY_BEARER_TOKEN`, or repo-root `.inty_ops_bearer_token` (e.g. from `./backend/ops/start.sh --local`).
+- **Bearer**: `INTY_ACCESS_TOKEN` or `INTY_BEARER_TOKEN` from `tools/inty_v2_repl/.env`; else repo-root `.inty_ops_bearer_token` (`backend/ops/start.sh --local`). LangSmith 可点链接需 `.env` 的 `LANGCHAIN_API_KEY`（见 examine-local-inty-repl-env skill）。
 - **Agent**: `--agent-id` or `INTY_V2_CHAT_AGENT_ID`.
 - **HTTP base**: `INTY_API_BASE_URL` or `--api-base-url` (default `http://127.0.0.1:8000`); WebSocket URL is derived as `ws(s)://.../api/v1/chat/ws`.
 - **Logs**: REPL does not write a local log file; **loguru** is stderr-only (`proto_log.configure_proto_log`).

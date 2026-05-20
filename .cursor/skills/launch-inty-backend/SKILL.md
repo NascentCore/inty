@@ -2,7 +2,7 @@
 name: launch-inty-backend
 description: >-
   Launch Inty Ops backend locally for terminal REPL, iMate Android, and iMate iOS
-  development and evaluation.
+  development and evaluation. Includes REPL .env (bearer, API base, LANGCHAIN_API_KEY for clickable LangSmith URLs). After launch, use examine-local-inty-repl-env to verify setup.
 ---
 
 # Launch Inty backend locally
@@ -13,11 +13,15 @@ description: >-
 - [`Terminal REPL`](/tools/inty_v2_repl/AGENTS.md)
 - **[iMate Android](/imate_android_app/)** / **[iMate iOS](/imate_ios_app/)** pointing at the same Ops instance
 
+环境是否配齐（LangSmith metadata 可点链接、bootstrap 等）：见 [`examine-local-inty-repl-env`](../examine-local-inty-repl-env/SKILL.md)。
+
 ## Ops
 
 From repository root: `uv venv`, `source .venv/bin/activate`, then
 `uv pip install -r requirements.txt -r tools/inty_v2_repl/requirements.txt`
 (see [repl AGENTS.md](/tools/inty_v2_repl/AGENTS.md) Setup).
+
+根目录 `requirements.txt` 含 **`langsmith`**；仅装 `tools/inty_v2_repl/requirements.txt` 会导致 REPL metadata **无法** 解析 `langsmith_trace_url=`。
 
 Use `INTY_CONFIG_YAML` env var to specify the config file for launching the ops variant
 of Inty backend.
@@ -28,6 +32,35 @@ backend/ops/start.sh --local --debug --no-build-frontend
 ```
 
 `INTY_CONFIG_YAML` 使用仓库根目录为相对路径基准；**不传 `--workspace` 时**默认工作目录为仓库根下 **`.inty`**，文件日志 **`.inty/inty.log`**（启动时若已存在会先删除再写）；需要把日志放到其它目录时再传 **`--workspace DIR`**（见 **`backend/ops/start.sh --help`**）。
+
+### 服务端 LangSmith（tracing 出 id）
+
+后端从 **`config.yaml`**（或 `INTY_CONFIG_YAML`）写入进程环境（[`app/core/config.py`](../../../app/core/config.py)）：
+
+- `agent.langchain_api_key` → `LANGCHAIN_API_KEY`
+- `agent.langsmith_tracing_enabled` → `LANGSMITH_TRACING_V2`
+- `langsmith_text_chat_sample_rate`（本地 `devops/config.yaml.local` 常为 **1.0**）
+
+本地评 companion 时 key 非空且 tracing 开启，REPL metadata 才可能出现 **`langsmith_trace_id=`**。这与 REPL 能否显示 **可点击 URL** 是两件独立的事（见下节）。
+
+## REPL `.env`（与后端分离）
+
+REPL **只**读 [`tools/inty_v2_repl/.env`](../../../tools/inty_v2_repl/.env)，**不**加载 `config.yaml`。Ops 已起、token 正确，仍可能 **只有 id 没有 url**。
+
+首次或缺文件时：
+
+```bash
+cp tools/inty_v2_repl/.env.example tools/inty_v2_repl/.env
+```
+
+| 变量 | 来源 / 说明 |
+| --- | --- |
+| `INTY_ACCESS_TOKEN` | 写入 **`tools/inty_v2_repl/.env`**（与 **`.inty_ops_bearer_token`** 相同）；**已一致则不必再抄** |
+| `INTY_API_BASE_URL` | 与 Ops 一致，默认 **`http://127.0.0.1:8001`**（`PORT` 覆盖时同步） |
+| `INTY_V2_CHAT_AGENT_ID` | 可选；或 `repl --agent-id` |
+| **`LANGCHAIN_API_KEY`** | **推荐**：与 `config.yaml` 的 **`agent.langchain_api_key`** 相同；否则 metadata 常有 `langsmith_trace_id=` 但 **无** `langsmith_trace_url=` |
+
+改 REPL `.env` 后 **重启 REPL**。无 feature flag；URL 解析失败会静默省略 url 字段（[`tools/inty_v2_repl/main.py`](../../../tools/inty_v2_repl/main.py)）。
 
 ## Terminate Ops
 
@@ -52,12 +85,19 @@ pgrep -af 'python -m tools\.inty_v2_repl' || true
 Bearer 默认读 **`${INTY_OPS_BEARER_TOKEN_FILE:-.inty_ops_bearer_token}`**（`--local` 启动已写入）。API 基址默认 **`http://127.0.0.1:8001`**；若使用环境变量 **`PORT`** 覆盖监听端口，请同步改客户端与 **`INTY_API_BASE_URL`**（例如 `export INTY_API_BASE_URL=http://127.0.0.1:9001`）。
 
 ```bash
-cat .inty_ops_bearer_token
+# 对照 .inty_ops_bearer_token：已一致则不要重写 .env
+FILE="$(cat .inty_ops_bearer_token | tr -d '[:space:]')"
+ENV="$(grep '^INTY_ACCESS_TOKEN=' tools/inty_v2_repl/.env 2>/dev/null | cut -d= -f2- | tr -d '[:space:]')"
+if [ -z "$ENV" ] || echo "$ENV" | grep -q '^<'; then
+  echo "REPL: set INTY_ACCESS_TOKEN in .env from bearer file"
+elif [ "$FILE" = "$ENV" ]; then
+  echo "REPL: INTY_ACCESS_TOKEN matches bearer file (no .env update)"
+else
+  echo "REPL: INTY_ACCESS_TOKEN differs — update .env from bearer file"
+fi
 ```
 
-Read `.inty_ops_bearer_token` to fill in the value of `INTY_ACCESS_TOKEN` env var in `tools/inty_v2_repl/.env`
-
-Run the command below to get the agent ID for launching the repl:
+勿在聊天里粘贴完整 JWT。
 
 ```bash
 AGENT_ID=$(python3 tools/scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR==1 {print $1}')
@@ -76,8 +116,12 @@ After ops instance is ready, respond to user with the following (always include 
 3. **Bearer token**（`user-testing` JWT，`Authorization: Bearer …`）：
    - 文件：**仓库根 [`.inty_ops_bearer_token`](../../../.inty_ops_bearer_token)**（`backend/ops/start.sh --local` 写入；可用 **`INTY_OPS_BEARER_TOKEN_FILE`** 改路径）
    - 读取：`cat .inty_ops_bearer_token`（勿提交 git）
+   - REPL：**`INTY_ACCESS_TOKEN` 与 `.inty_ops_bearer_token` 一致则不必再抄**；否则用 `cat .inty_ops_bearer_token` 更新 `.env`
 4. **Agent ID**：`python3 tools/scripts/list_inty_ops_agents_admin.py` 首列，或上节 `AGENT_ID=…`
 5. **Terminal REPL**（另开终端，仓库根）— 见 [repl AGENTS.md](/tools/inty_v2_repl/AGENTS.md)
+   - 确认 **`.env`** 含 **`INTY_ACCESS_TOKEN`**、**`INTY_API_BASE_URL`**、**`LANGCHAIN_API_KEY`**（与 config 相同）
+   - 发一句试聊后，metadata 行宜含 **`langsmith_trace_url=https://…`**；若只有 `langsmith_trace_id=` → 补 REPL 的 `LANGCHAIN_API_KEY` 并重启 REPL
+   - 全量检查：[`examine-local-inty-repl-env`](../examine-local-inty-repl-env/SKILL.md)
 6. **iMate Android**（[`imate_android_app/core/build.gradle.kts`](../../../imate_android_app/core/build.gradle.kts) debug **`API_BASE_URL`**）：
    - **模拟器**连宿主机 Ops：**`http://10.0.2.2:8001/`**（`10.0.2.2` = 宿主机 loopback）
    - **真机**：**`http://<电脑局域网 IP>:8001/`**（与 Mac/PC 同一 Wi‑Fi）
