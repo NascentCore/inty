@@ -1660,8 +1660,7 @@ async def test_tool_background_ws_payload_precomputed_audio_skips_synthesize(
         return None
 
     monkeypatch.setattr(
-        chat_v1,
-        "synthesize_chat_ws_voice_message",
+        "app.services.chat_ws_voice_message.synthesize_chat_ws_voice_message",
         _fake_synthesize,
     )
 
@@ -3162,8 +3161,10 @@ def test_v1_chat_completions_http_uses_legacy_assistant_voice_not_ws_tts(
         "synthesize_chat_assistant_audio",
         tracking_legacy_synthesize,
     )
+    import app.services.chat_ws_voice_message as chat_ws_voice_module
+
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_voice_module,
         "synthesize_chat_ws_voice_message",
         forbidden_ws_synthesize,
     )

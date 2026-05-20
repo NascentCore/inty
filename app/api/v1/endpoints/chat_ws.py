@@ -117,7 +117,6 @@ from app.api.v1.endpoints.chat import (
     _companion_turn_voice_ctx,
     _normalize_chat_response_content,
     _persist_companion_user_message_for_bg,
-    _require_websocket_companion_message_id_uuid,
 )
 
 from app.api.utils.logger_route import LoggerRoute
@@ -1863,6 +1862,16 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             agent_id,
             chat_row_id,
         )
+
+
+def _require_websocket_companion_message_id_uuid(
+    request: ChatCompletionRequest,
+) -> str:
+    """WebSocket companion turns require a client ``message_id`` that parses as UUID."""
+    try:
+        return normalize_websocket_companion_message_id_uuid(request.message_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 async def _agent_chat_ws_completions_impl(
