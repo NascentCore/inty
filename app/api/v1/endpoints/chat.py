@@ -1179,6 +1179,22 @@ def _companion_rejects_multimodal_user_turn(
     return last_user_message.has_image_content_part()
 
 
+def _companion_turn_voice_ctx(
+    *,
+    chat_settings: Any,
+    agent_data: dict[str, Any],
+    language: str,
+) -> dict[str, object]:
+    """Voice/TTS resolution for companion foreground and tool_background turns."""
+    return {
+        "chat_voice_id": chat_settings.voice_id,
+        "agent_voice_id": agent_data.get("voice_id"),
+        "agent_gender": agent_data.get("gender"),
+        "agent_settings": agent_data.get("settings"),
+        "language": language,
+    }
+
+
 def _require_websocket_companion_message_id_uuid(
     request: ChatCompletionRequest,
 ) -> str:
@@ -2574,18 +2590,11 @@ async def _agent_chat_ws_completions_impl(
                             "agent_settings": agent_data.get("settings"),
                             "language": request.language,
                         }
-                    companion_voice_ctx: dict[str, object] | None = None
-                    if (
-                        companion_preset_uid is not None
-                        and companion_ws_foreground_pending is not None
-                    ):
-                        companion_voice_ctx = {
-                            "chat_voice_id": chat_settings.voice_id,
-                            "agent_voice_id": agent_data.get("voice_id"),
-                            "agent_gender": agent_data.get("gender"),
-                            "agent_settings": agent_data.get("settings"),
-                            "language": request.language,
-                        }
+                    companion_voice_ctx = _companion_turn_voice_ctx(
+                        chat_settings=chat_settings,
+                        agent_data=agent_data,
+                        language=request.language,
+                    )
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
                             client_time=request.user_time_context,
@@ -2604,6 +2613,7 @@ async def _agent_chat_ws_completions_impl(
                                 session_id=session_id,
                                 background_output_sink=companion_background_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
+                                voice_ctx=companion_voice_ctx,
                             )
                         else:
                             companion_turn = await companion_chat_service.run_companion_user_chat_turn_for_api(
@@ -3090,18 +3100,11 @@ async def _agent_chat_completions_impl(
                             "agent_settings": agent_data.get("settings"),
                             "language": request.language,
                         }
-                    companion_voice_ctx: dict[str, object] | None = None
-                    if (
-                        companion_preset_uid is not None
-                        and companion_ws_foreground_pending is not None
-                    ):
-                        companion_voice_ctx = {
-                            "chat_voice_id": chat_settings.voice_id,
-                            "agent_voice_id": agent_data.get("voice_id"),
-                            "agent_gender": agent_data.get("gender"),
-                            "agent_settings": agent_data.get("settings"),
-                            "language": request.language,
-                        }
+                    companion_voice_ctx = _companion_turn_voice_ctx(
+                        chat_settings=chat_settings,
+                        agent_data=agent_data,
+                        language=request.language,
+                    )
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
                             client_time=request.user_time_context,
@@ -3120,6 +3123,7 @@ async def _agent_chat_completions_impl(
                                 session_id=session_id,
                                 background_output_sink=companion_background_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
+                                voice_ctx=companion_voice_ctx,
                             )
                         else:
                             companion_turn = await companion_chat_service.run_companion_user_chat_turn_for_api(

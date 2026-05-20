@@ -1897,6 +1897,84 @@ def test_chat_websocket_companion_rejects_implicit_user_signed_on_message_type(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_companion_turn_voice_ctx_includes_language() -> None:
+    settings = SimpleNamespace(voice_id="chat-voice-1")
+    agent_data = {
+        "voice_id": "agent-voice-1",
+        "gender": "FEMALE",
+        "settings": {"narration": "default"},
+    }
+    ctx = chat_v1._companion_turn_voice_ctx(
+        chat_settings=settings,
+        agent_data=agent_data,
+        language="en",
+    )
+    assert ctx == {
+        "chat_voice_id": "chat-voice-1",
+        "agent_voice_id": "agent-voice-1",
+        "agent_gender": "FEMALE",
+        "agent_settings": {"narration": "default"},
+        "language": "en",
+    }
+
+
+def test_chat_websocket_implicit_sign_on_greeting_passes_voice_ctx(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict = {}
+
+    async def fake_implicit(**kwargs):
+        captured["voice_ctx"] = kwargs.get("voice_ctx")
+        return CompanionTurnResult(assistant_text="greet-voice")
+
+    async def fake_user(**kwargs):
+        raise AssertionError("user chat turn must not run for implicit greeting")
+
+    companion_chat_service.clear_companion_chat_service_caches()
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon-voice",
+        chat_id="chat-signon-voice-1",
+        latest_user_message_db_id=90,
+        ai_message_id=911,
+        run_companion_chat_turn_for_api=fake_implicit,
+    )
+    monkeypatch.setattr(
+        companion_chat_service,
+        "run_companion_implicit_sign_on_greeting_turn_for_api",
+        fake_implicit,
+    )
+    monkeypatch.setattr(
+        companion_chat_service,
+        "run_companion_user_chat_turn_for_api",
+        fake_user,
+    )
+
+    msg_uuid = "aaaaaaaa-bbbb-4ccc-dddd-888888888888"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-companion-signon-voice",
+                    "message_id": msg_uuid,
+                }
+            )
+            body = websocket.receive_json()
+            if body.get("type") == "user_signed_on_ack":
+                body = websocket.receive_json()
+
+    assert body["code"] == 200
+    assert captured["voice_ctx"] == {
+        "chat_voice_id": None,
+        "agent_voice_id": "voice-1",
+        "agent_gender": "FEMALE",
+        "agent_settings": None,
+        "language": "zh",
+    }
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_companion_user_signed_on_greeting_sets_bundle(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):

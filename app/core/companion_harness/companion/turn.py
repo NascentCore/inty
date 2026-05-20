@@ -1161,6 +1161,7 @@ async def run_companion_implicit_sign_on_greeting_turn(
     preset_user_msg_uuid: str | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
+    voice_ctx: dict[str, object],
 ) -> CompanionTurnResult:
     assert implicit_user_signed_on_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
@@ -1182,6 +1183,7 @@ async def run_companion_implicit_sign_on_greeting_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
+        voice_ctx=voice_ctx,
     )
 
 
@@ -1200,6 +1202,7 @@ async def run_companion_inner_tick_proactive_chat_turn(
     implicit_signal_bundle: ImplicitSignalBundle | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
+    voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_turn_core(
         "",
@@ -1217,6 +1220,7 @@ async def run_companion_inner_tick_proactive_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
+        voice_ctx=voice_ctx,
     )
 
 
@@ -1236,6 +1240,7 @@ async def run_companion_inner_tick_scheduled_turn(
     implicit_signal_bundle: ImplicitSignalBundle | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
+    voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
     assert scheduled_user_text.strip(), (
         "run_companion_inner_tick_scheduled_turn requires non-empty scheduled_user_text"
@@ -1256,6 +1261,7 @@ async def run_companion_inner_tick_scheduled_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
+        voice_ctx=voice_ctx,
     )
 
 
@@ -1274,6 +1280,7 @@ async def run_companion_inner_tick_maintenance_turn(
     implicit_signal_bundle: ImplicitSignalBundle | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
+    voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_turn_core(
         "",
@@ -1291,4 +1298,5 @@ async def run_companion_inner_tick_maintenance_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
+        voice_ctx=voice_ctx,
     )
