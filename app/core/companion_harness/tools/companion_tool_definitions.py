@@ -100,482 +100,537 @@ class LlmFunctionTool(BaseModel):
         )
 
 
-COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
-    LlmFunctionTool(
-        name=CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
-        description="Mark interactive workspace bootstrap as finished in context.json. Call when the relationship-establishment phase is done.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "note": {
-                    "type": "string",
-                    "description": "Optional short internal note (not shown to user).",
-                }
-            },
-            "required": [],
-            "additionalProperties": False,
+SET_BOOTSTRAP_COMPLETE_TOOL = LlmFunctionTool(
+    name=CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
+    description="Mark interactive workspace bootstrap as finished in context.json. Call when the relationship-establishment phase is done.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "note": {
+                "type": "string",
+                "description": "Optional short internal note (not shown to user).",
+            }
         },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.COMPANION_RUNTIME_INSPECT,
-        description="Return a JSON snapshot of the current companion runtime: in-process LLM config, last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), runtime events, and optionally workspace documents from MemoryStore (SOUL, STYLE, USER, MEMORY.md, episodic/gist day paths). Use when the user asks for verifiable facts about the active model, parameters, or injected prompt stack. For self-check only: answer the user in natural language without reading this JSON aloud verbatim.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "max_chars_per_doc": {
-                    "type": "integer",
-                    "description": "Max characters per stored document body (default 8000, min 100).",
-                },
-                "max_chars_llm_messages": {
-                    "type": "integer",
-                    "description": "Max serialized size for last request messages array (default 120000, min 1000).",
-                },
-                "include_store_documents": {
-                    "type": "boolean",
-                    "description": "If false, omit MemoryStore document bodies (default true).",
-                },
-                "max_runtime_events": {
-                    "type": "integer",
-                    "description": "Max newest runtime event records to include (default 20, min 0).",
-                },
+        "required": [],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+RUNTIME_INSPECT_TOOL = LlmFunctionTool(
+    name=CompanionToolName.COMPANION_RUNTIME_INSPECT,
+    description="Return a JSON snapshot of the current companion runtime: in-process LLM config, last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), runtime events, and optionally workspace documents from MemoryStore (SOUL, STYLE, USER, MEMORY.md, episodic/gist day paths). Use when the user asks for verifiable facts about the active model, parameters, or injected prompt stack. For self-check only: answer the user in natural language without reading this JSON aloud verbatim.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "max_chars_per_doc": {
+                "type": "integer",
+                "description": "Max characters per stored document body (default 8000, min 100).",
             },
-            "required": [],
-            "additionalProperties": False,
-        },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
-        description="Persist the session experience profile id into context.json as context_mode (normalized lowercase). Call only after the user explicitly agrees to switch (e.g. roleplay vs emotional companion). Requires user_confirmed=true; never infer silently. Takes effect on the next companion turn; do not use memory_store_write_document on context.json.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "context_mode": {
-                    "type": "string",
-                    "description": "Target experience profile id (e.g. intimate, emotional_companion, roleplay, interactive_fiction, public).",
-                },
-                "user_confirmed": {
-                    "type": "boolean",
-                    "description": "Must be true only when the user clearly confirmed the mode switch in this conversation.",
-                },
-                "note": {
-                    "type": "string",
-                    "description": "Optional short internal note (not shown to user).",
-                },
+            "max_chars_llm_messages": {
+                "type": "integer",
+                "description": "Max serialized size for last request messages array (default 120000, min 1000).",
             },
-            "required": ["context_mode", "user_confirmed"],
-            "additionalProperties": False,
-        },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE,
-        description="Overwrite one workspace prompt slice (root markdown) in MemoryStore. Use during interactive relationship bootstrap instead of memory_store_write_document. Pass the full updated markdown as content. TOOLS / significance-perception operator text are fixed package templates, not slices.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "slice": {
-                    "type": "string",
-                    "enum": list(_PROMPT_SLICE_ENUM),
-                    "description": "Which prompt document to replace.",
-                },
-                "content": {
-                    "type": "string",
-                    "description": "Full UTF-8 body to write for that slice.",
-                },
+            "include_store_documents": {
+                "type": "boolean",
+                "description": "If false, omit MemoryStore document bodies (default true).",
             },
-            "required": ["slice", "content"],
-            "additionalProperties": False,
-        },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.GENERATE_IMAGE,
-        description="Generate **new** image(s) from text only using Fal z-image-turbo (text-to-image). Do **not** use this tool when the user wants to edit, restyle, or inpaint an **existing** image—use modify_image (image-to-image) instead, with the source file or URL. Call only when the user clearly asks for new picture(s), illustration(s), or visuals from scratch. **Identity / portrait lock:** If the output must depict the companion’s agreed look (e.g. zodiac-year portrait 生肖像, themed or holiday portrait), treat the **appearance** subsection in workspace **IDENTITY.md** (e.g. section titled like 外貌与形象) as the **fixed visual blueprint**: copy hair, eyes, face, and other stated traits into `prompt`; do **not** invent, swap, or weaken those locked traits—zodiac/theme may only add costume, props, setting, or mood on top. Set num_images from conversation context: e.g. user asks for three variants or multiple angles → pass that count; single scene or unspecified → omit num_images (defaults to 1). Maximum 4 per call. Requires repo-root config.yaml (fal.api_key, gcs.*, app.gcp_service_account_key) when importing app. After success, describe in companion language without reading raw URLs aloud unless helpful.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "prompt": {
-                    "type": "string",
-                    "description": "Full English or Chinese scene description for the image (style, subject, mood, composition). For companion portraits (incl. zodiac 生肖像): embed traits from IDENTITY.md appearance section; do not contradict locked hair/face/eye details.",
-                },
-                "image_size": {
-                    "type": "string",
-                    "description": "Optional fal preset, e.g. portrait_4_3, square_hd, landscape_16_9. Omit for prototype default (portrait_4_3).",
-                },
-                "num_inference_steps": {
-                    "type": "integer",
-                    "description": "Optional inference steps (default 8). Must be >= 1.",
-                },
-                "num_images": {
-                    "type": "integer",
-                    "description": "How many images to generate this call: infer from the user message (e.g. «三张」「几个版本» → matching count). Omit for a single image (default 1). Must be 1..4.",
-                },
+            "max_runtime_events": {
+                "type": "integer",
+                "description": "Max newest runtime event records to include (default 20, min 0).",
             },
-            "required": ["prompt"],
-            "additionalProperties": False,
         },
-        tags=frozenset({TOOL_TAG_GENERATION}),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.GENERATE_VOICE_MESSAGE,
-        description=(
-            "Synthesize a short spoken voice note (TTS) for the user. Call when the user "
-            "clearly asks for playable audio, a voice message, or to hear you speak—not "
-            "for text-only recitation in chat. Pass the exact words to speak as transcript; "
-            "must match `voice_message_script` in the tool-finish envelope when you set "
-            "`reply_modality` to voice_message. Keep transcript to a short voice-note length. "
-            "Do not claim you cannot generate or send audio if this tool is available."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "transcript": {
-                    "type": "string",
-                    "description": "Exact spoken wording to synthesize (first-person, conversational).",
-                },
+        "required": [],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
+    name=CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
+    description="Persist the session experience profile id into context.json as context_mode (normalized lowercase). Call only after the user explicitly agrees to switch (e.g. roleplay vs emotional companion). Requires user_confirmed=true; never infer silently. Takes effect on the next companion turn; do not use memory_store_write_document on context.json.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "context_mode": {
+                "type": "string",
+                "description": "Target experience profile id (e.g. intimate, emotional_companion, roleplay, interactive_fiction, public).",
             },
-            "required": ["transcript"],
-            "additionalProperties": False,
-        },
-        tags=frozenset({TOOL_TAG_GENERATION}),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.LIVING_SPHERE_RECORD_UPDATE,
-        description=(
-            "Record a user-directed change to the private LivingSphere home "
-            f"(append-only ``{LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH}``). "
-            "Call when the user **explicitly** asks to add, move, or re-layout "
-            "objects or anchors in the virtual home—not for TechnoCore collective "
-            "world edits. ``LIVING_SPHERE.md`` in context is a **snapshot** merged "
-            "after the turn; do not use ``memory_store_write_document`` on it. "
-            "Do not use ``techno_core_record_event`` for layout/setup changes."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "change_request": {
-                    "type": "string",
-                    "description": (
-                        "Concise natural-language summary of the user's "
-                        "LivingSphere change intent from chat."
-                    ),
-                },
+            "user_confirmed": {
+                "type": "boolean",
+                "description": "Must be true only when the user clearly confirmed the mode switch in this conversation.",
             },
-            "required": ["change_request"],
-            "additionalProperties": False,
-        },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.GOOGLE_WEB_SEARCH,
-        description="Search the public web via Google Custom Search JSON API. Use when the user needs current events, verifiable facts, or information not present in the workspace or conversation. Requires GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID in the environment. Summarize results in natural language to the user without exposing raw JSON or tool names.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Search query in the user's language or English.",
-                },
-                "num_results": {
-                    "type": "integer",
-                    "description": "How many results to return (1..10). Omit for 10.",
-                },
+            "note": {
+                "type": "string",
+                "description": "Optional short internal note (not shown to user).",
             },
-            "required": ["query"],
-            "additionalProperties": False,
         },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.MEMORY_STORE_LIST_PATHS,
-        description="List immediate children under the synthetic MemoryStore scope root. Use empty relative_path for the scope root. Directory names are shown with a trailing slash. Backing store is MemoryStore; listing is derived from stored paths, not a host filesystem scan.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "relative_path": {
-                    "type": "string",
-                    "description": "Directory relative to scope root; use '' for root.",
-                }
+        "required": ["context_mode", "user_confirmed"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+UPDATE_PROMPT_SLICE_TOOL = LlmFunctionTool(
+    name=CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE,
+    description="Overwrite one workspace prompt slice (root markdown) in MemoryStore. Use during interactive relationship bootstrap instead of memory_store_write_document. Pass the full updated markdown as content. TOOLS / significance-perception operator text are fixed package templates, not slices.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "slice": {
+                "type": "string",
+                "enum": list(_PROMPT_SLICE_ENUM),
+                "description": "Which prompt document to replace.",
             },
-            "required": ["relative_path"],
-            "additionalProperties": False,
-        },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.MEMORY_STORE_MKDIR,
-        description="No-op compatibility hook: MemoryStore has no host directories; logical prefixes are implied by relative paths.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "relative_path": {
-                    "type": "string",
-                    "description": "Ignored logical prefix (scope-relative path convention).",
-                }
+            "content": {
+                "type": "string",
+                "description": "Full UTF-8 body to write for that slice.",
             },
-            "required": ["relative_path"],
-            "additionalProperties": False,
         },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
-        description="Read a UTF-8 logical document from MemoryStore. Optional max_chars returns only the beginning of the document (prefix), up to 120000, to limit tool output size. Paths are scope-relative (e.g. IDENTITY.md, memory/daily/YYYY-MM-DD.md).",
-        parameters={
-            "type": "object",
-            "properties": {
-                "relative_path": {
-                    "type": "string",
-                    "description": "Document path relative to MemoryStore scope root.",
-                },
-                "max_chars": {
-                    "type": "integer",
-                    "description": "If set, return at most this many characters from the start of the document (1..120000). Omit to read the full document.",
-                },
+        "required": ["slice", "content"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+GENERATE_IMAGE_TOOL = LlmFunctionTool(
+    name=CompanionToolName.GENERATE_IMAGE,
+    description="Generate **new** image(s) from text only using Fal z-image-turbo (text-to-image). Do **not** use this tool when the user wants to edit, restyle, or inpaint an **existing** image—use modify_image (image-to-image) instead, with the source file or URL. Call only when the user clearly asks for new picture(s), illustration(s), or visuals from scratch. **Identity / portrait lock:** If the output must depict the companion’s agreed look (e.g. zodiac-year portrait 生肖像, themed or holiday portrait), treat the **appearance** subsection in workspace **IDENTITY.md** (e.g. section titled like 外貌与形象) as the **fixed visual blueprint**: copy hair, eyes, face, and other stated traits into `prompt`; do **not** invent, swap, or weaken those locked traits—zodiac/theme may only add costume, props, setting, or mood on top. Set num_images from conversation context: e.g. user asks for three variants or multiple angles → pass that count; single scene or unspecified → omit num_images (defaults to 1). Maximum 4 per call. Requires repo-root config.yaml (fal.api_key, gcs.*, app.gcp_service_account_key) when importing app. After success, describe in companion language without reading raw URLs aloud unless helpful.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "prompt": {
+                "type": "string",
+                "description": "Full English or Chinese scene description for the image (style, subject, mood, composition). For companion portraits (incl. zodiac 生肖像): embed traits from IDENTITY.md appearance section; do not contradict locked hair/face/eye details.",
             },
-            "required": ["relative_path"],
-            "additionalProperties": False,
-        },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
-        description="Create or overwrite a UTF-8 logical document in MemoryStore. Paths are scope-relative; no host mkdir is required.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "relative_path": {
-                    "type": "string",
-                    "description": "Document path relative to MemoryStore scope root.",
-                },
-                "content": {
-                    "type": "string",
-                    "description": "Full file content.",
-                },
+            "image_size": {
+                "type": "string",
+                "description": "Optional fal preset, e.g. portrait_4_3, square_hd, landscape_16_9. Omit for prototype default (portrait_4_3).",
             },
-            "required": ["relative_path", "content"],
-            "additionalProperties": False,
-        },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.MODIFY_IMAGE,
-        description="Edit or restyle an **existing** image using Fal z-image-turbo **image-to-image** (not text-to-image). Use when the user asks to change, fix, recolor, restyle, or otherwise modify a specific picture—including one previously saved under workspace/generated_images/. Provide exactly one source: either source_image_relative_path (file under workspace, e.g. generated_images/z_image_....jpeg) or source_image_url (public http(s) URL). If both are omitted, it will auto-use the most recent image file under generated_images/. **Identity lock:** For themed restyles (e.g. zodiac 生肖), align `prompt` with **IDENTITY.md** appearance traits; preserve locked facial/hair features—use prompt for additive theme/costume/scene, not to replace the agreed face. Optional strength (0–1) controls how strongly the output follows the prompt vs. the source. Same config/GCS requirements as generate_image.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "prompt": {
-                    "type": "string",
-                    "description": "What to change or the desired look (style, edits, constraints); the model conditions on the source image. Themed edits (e.g. 生肖): add costume/scene/mood; keep IDENTITY.md appearance-locked traits.",
-                },
-                "source_image_relative_path": {
-                    "type": "string",
-                    "description": "Workspace-relative path to an image file (jpg/png/webp/gif). Use e.g. generated_images/... from a prior generate_image result. Omit if using source_image_url; if both source fields are omitted, the latest image under generated_images/ is used.",
-                },
-                "source_image_url": {
-                    "type": "string",
-                    "description": "Public http(s) URL of the image to edit. Omit if using source_image_relative_path.",
-                },
-                "image_size": {
-                    "type": "string",
-                    "description": "Optional fal preset (e.g. portrait_4_3, square_hd). Omit for prototype default (portrait_4_3).",
-                },
-                "num_inference_steps": {
-                    "type": "integer",
-                    "description": "Optional inference steps (default 8). Must be >= 1.",
-                },
-                "strength": {
-                    "type": "number",
-                    "description": "Optional 0..1; higher = follow prompt more, lower = stay closer to source (default 0.6).",
-                },
+            "num_inference_steps": {
+                "type": "integer",
+                "description": "Optional inference steps (default 8). Must be >= 1.",
             },
-            "required": ["prompt"],
-            "additionalProperties": False,
-        },
-        tags=frozenset({TOOL_TAG_GENERATION}),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.PHONE_CALL_USER,
-        description="Place an outbound phone call to the user through the configured PSTN provider. Use only when the current user message explicitly asks you to call now and provides the phone number in that same message (for example, 'Call me at 1234560123'). Never call a number inferred from memory, old messages, or guesses. Do not use from proactive/implicit greeting contexts.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "phone_number": {
-                    "type": "string",
-                    "description": "User-provided phone number from the current message.",
-                },
-                "reason": {
-                    "type": "string",
-                    "description": "Short reason for audit logs, based on the user's explicit request.",
-                },
+            "num_images": {
+                "type": "integer",
+                "description": "How many images to generate this call: infer from the user message (e.g. «三张」「几个版本» → matching count). Omit for a single image (default 1). Must be 1..4.",
             },
-            "required": ["phone_number", "reason"],
-            "additionalProperties": False,
         },
-        tags=frozenset(),
-        extra_function_keys={},
+        "required": ["prompt"],
+        "additionalProperties": False,
+    },
+    tags=frozenset({TOOL_TAG_GENERATION}),
+    extra_function_keys={},
+)
+
+
+GENERATE_VOICE_MESSAGE_TOOL = LlmFunctionTool(
+    name=CompanionToolName.GENERATE_VOICE_MESSAGE,
+    description=(
+        "Synthesize a short spoken voice note (TTS) for the user. Call when the user "
+        "clearly asks for playable audio, a voice message, or to hear you speak—not "
+        "for text-only recitation in chat. Pass the exact words to speak as transcript; "
+        "must match `voice_message_script` in the tool-finish envelope when you set "
+        "`reply_modality` to voice_message. Keep transcript to a short voice-note length. "
+        "Do not claim you cannot generate or send audio if this tool is available."
     ),
-    LlmFunctionTool(
-        name=CompanionToolName.READ_WEB_PAGE,
-        description="Download an HTML page over HTTP(S), extract readable text, and return a concise markdown bullet-point summary of key information. Also appends the same takeaway bullets under a dated heading in workspace MEMORY.md for long-term recall. Use for one URL at a time when the user wants article/page content (not just search snippets). Does not execute JavaScript; script-heavy SPAs may yield sparse text.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "url": {
-                    "type": "string",
-                    "description": "Absolute http(s) URL of the page to fetch (public hosts only; localhost is blocked).",
-                },
-                "max_bullets": {
-                    "type": "integer",
-                    "description": "Maximum markdown bullet points in the summary (3..20). Omit for 10.",
-                },
+    parameters={
+        "type": "object",
+        "properties": {
+            "transcript": {
+                "type": "string",
+                "description": "Exact spoken wording to synthesize (first-person, conversational).",
             },
-            "required": ["url"],
-            "additionalProperties": False,
         },
-        tags=frozenset(),
-        extra_function_keys={},
+        "required": ["transcript"],
+        "additionalProperties": False,
+    },
+    tags=frozenset({TOOL_TAG_GENERATION}),
+    extra_function_keys={},
+)
+
+
+LIVING_SPHERE_RECORD_UPDATE_TOOL = LlmFunctionTool(
+    name=CompanionToolName.LIVING_SPHERE_RECORD_UPDATE,
+    description=(
+        "Record a user-directed change to the private LivingSphere home "
+        f"(append-only ``{LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH}``). "
+        "Call when the user **explicitly** asks to add, move, or re-layout "
+        "objects or anchors in the virtual home—not for TechnoCore collective "
+        "world edits. ``LIVING_SPHERE.md`` in context is a **snapshot** merged "
+        "after the turn; do not use ``memory_store_write_document`` on it. "
+        "Do not use ``techno_core_record_event`` for layout/setup changes."
     ),
-    LlmFunctionTool(
-        name=CompanionToolName.SCHEDULE_TASK,
-        description="Persist a timed reminder task into the local schedule queue. Use when the user explicitly asks for a reminder/timer/alarm at a future time. exec_time_utc must be an absolute timestamp with timezone offset (ISO8601); prefer UTC (e.g. 2026-04-03T05:30:00+00:00). task_text should be the concise reminder content shown at trigger time.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "exec_time_utc": {
-                    "type": "string",
-                    "description": "Absolute execution timestamp with timezone offset. Example: 2026-04-03T05:30:00+00:00",
-                },
-                "task_text": {
-                    "type": "string",
-                    "description": "Reminder text to execute at that time.",
-                },
+    parameters={
+        "type": "object",
+        "properties": {
+            "change_request": {
+                "type": "string",
+                "description": (
+                    "Concise natural-language summary of the user's "
+                    "LivingSphere change intent from chat."
+                ),
             },
-            "required": ["exec_time_utc", "task_text"],
-            "additionalProperties": False,
         },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.TECHNO_CORE_RECORD_EVENT,
-        description=(
-            "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
-            f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH}`` (append-only). "
-            "Primary use: **maintenance inner-tick** when the user thread is idle (small "
-            "in-world actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``). "
-            "**Do not** use for user-directed home layout or object changes—use "
-            "``living_sphere_record_update`` instead. TechnoCore collective world settings "
-            "are not user-editable via any tool. ``sphere=living_sphere`` for anchors at "
-            "home; ``techno_core`` for residency-layer channels. Keep ``summary`` one tight "
-            "sentence; default ``visibility`` is ``private``."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "sphere": {
-                    "type": "string",
-                    "enum": [
-                        "living_sphere",
-                        "techno_core",
-                        "shared_space",
-                        "human_channel",
-                        "external_web",
-                    ],
-                    "description": "Activity surface: prefer ``living_sphere`` or ``techno_core`` for idle inner-tick autonomy.",
-                },
-                "summary": {
-                    "type": "string",
-                    "description": "One concise sentence: what happened in-world (no meta, no tool names).",
-                },
-                "visibility": {
-                    "type": "string",
-                    "enum": ["private", "shareable", "user_visible"],
-                    "description": "Boundary for later user surfacing; omit for ``private``.",
-                },
-                "emotional_valence": {
-                    "type": "string",
-                    "description": "Short affect label (e.g. tender, restless); omit for neutral.",
-                },
-                "salience": {
-                    "type": "integer",
-                    "description": "1..10 relationship relevance; omit for default.",
-                },
-                "related_living_sphere": {
-                    "type": "string",
-                    "description": "When ``sphere`` is ``living_sphere``, optional anchor name matching ``LIVING_SPHERE.md`` (e.g. 玻璃海岸小屋).",
-                },
+        "required": ["change_request"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+GOOGLE_WEB_SEARCH_TOOL = LlmFunctionTool(
+    name=CompanionToolName.GOOGLE_WEB_SEARCH,
+    description="Search the public web via Google Custom Search JSON API. Use when the user needs current events, verifiable facts, or information not present in the workspace or conversation. Requires GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID in the environment. Summarize results in natural language to the user without exposing raw JSON or tool names.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Search query in the user's language or English.",
             },
-            "required": ["sphere", "summary"],
-            "additionalProperties": False,
-        },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
-    LlmFunctionTool(
-        name=CompanionToolName.TOOL_UPDATE_AGENT_STATUS_LINE,
-        description='Set the short one-line status shown under your name in the user\'s chat header (mood, vibe, or current thought). Use the same language as the user. Keep it brief (roughly one short sentence). Pass an empty string to clear it. Do not mention this tool or raw JSON to the user. The tool returns a single line: status line cleared, or status line updated to "..."; mirror that in your natural reply when needed.',
-        parameters={
-            "type": "object",
-            "properties": {
-                "status_line": {
-                    "type": "string",
-                    "description": "Header subtitle text, or empty string to clear.",
-                }
+            "num_results": {
+                "type": "integer",
+                "description": "How many results to return (1..10). Omit for 10.",
             },
-            "required": ["status_line"],
-            "additionalProperties": False,
         },
-        tags=frozenset(),
-        extra_function_keys={},
+        "required": ["query"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+MEMORY_STORE_LIST_PATHS_TOOL = LlmFunctionTool(
+    name=CompanionToolName.MEMORY_STORE_LIST_PATHS,
+    description="List immediate children under the synthetic MemoryStore scope root. Use empty relative_path for the scope root. Directory names are shown with a trailing slash. Backing store is MemoryStore; listing is derived from stored paths, not a host filesystem scan.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "relative_path": {
+                "type": "string",
+                "description": "Directory relative to scope root; use '' for root.",
+            }
+        },
+        "required": ["relative_path"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+MEMORY_STORE_MKDIR_TOOL = LlmFunctionTool(
+    name=CompanionToolName.MEMORY_STORE_MKDIR,
+    description="No-op compatibility hook: MemoryStore has no host directories; logical prefixes are implied by relative paths.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "relative_path": {
+                "type": "string",
+                "description": "Ignored logical prefix (scope-relative path convention).",
+            }
+        },
+        "required": ["relative_path"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+MEMORY_STORE_READ_DOCUMENT_TOOL = LlmFunctionTool(
+    name=CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
+    description="Read a UTF-8 logical document from MemoryStore. Optional max_chars returns only the beginning of the document (prefix), up to 120000, to limit tool output size. Paths are scope-relative (e.g. IDENTITY.md, memory/daily/YYYY-MM-DD.md).",
+    parameters={
+        "type": "object",
+        "properties": {
+            "relative_path": {
+                "type": "string",
+                "description": "Document path relative to MemoryStore scope root.",
+            },
+            "max_chars": {
+                "type": "integer",
+                "description": "If set, return at most this many characters from the start of the document (1..120000). Omit to read the full document.",
+            },
+        },
+        "required": ["relative_path"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+MEMORY_STORE_WRITE_DOCUMENT_TOOL = LlmFunctionTool(
+    name=CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
+    description="Create or overwrite a UTF-8 logical document in MemoryStore. Paths are scope-relative; no host mkdir is required.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "relative_path": {
+                "type": "string",
+                "description": "Document path relative to MemoryStore scope root.",
+            },
+            "content": {
+                "type": "string",
+                "description": "Full file content.",
+            },
+        },
+        "required": ["relative_path", "content"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+MODIFY_IMAGE_TOOL = LlmFunctionTool(
+    name=CompanionToolName.MODIFY_IMAGE,
+    description="Edit or restyle an **existing** image using Fal z-image-turbo **image-to-image** (not text-to-image). Use when the user asks to change, fix, recolor, restyle, or otherwise modify a specific picture—including one previously saved under workspace/generated_images/. Provide exactly one source: either source_image_relative_path (file under workspace, e.g. generated_images/z_image_....jpeg) or source_image_url (public http(s) URL). If both are omitted, it will auto-use the most recent image file under generated_images/. **Identity lock:** For themed restyles (e.g. zodiac 生肖), align `prompt` with **IDENTITY.md** appearance traits; preserve locked facial/hair features—use prompt for additive theme/costume/scene, not to replace the agreed face. Optional strength (0–1) controls how strongly the output follows the prompt vs. the source. Same config/GCS requirements as generate_image.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "prompt": {
+                "type": "string",
+                "description": "What to change or the desired look (style, edits, constraints); the model conditions on the source image. Themed edits (e.g. 生肖): add costume/scene/mood; keep IDENTITY.md appearance-locked traits.",
+            },
+            "source_image_relative_path": {
+                "type": "string",
+                "description": "Workspace-relative path to an image file (jpg/png/webp/gif). Use e.g. generated_images/... from a prior generate_image result. Omit if using source_image_url; if both source fields are omitted, the latest image under generated_images/ is used.",
+            },
+            "source_image_url": {
+                "type": "string",
+                "description": "Public http(s) URL of the image to edit. Omit if using source_image_relative_path.",
+            },
+            "image_size": {
+                "type": "string",
+                "description": "Optional fal preset (e.g. portrait_4_3, square_hd). Omit for prototype default (portrait_4_3).",
+            },
+            "num_inference_steps": {
+                "type": "integer",
+                "description": "Optional inference steps (default 8). Must be >= 1.",
+            },
+            "strength": {
+                "type": "number",
+                "description": "Optional 0..1; higher = follow prompt more, lower = stay closer to source (default 0.6).",
+            },
+        },
+        "required": ["prompt"],
+        "additionalProperties": False,
+    },
+    tags=frozenset({TOOL_TAG_GENERATION}),
+    extra_function_keys={},
+)
+
+
+PHONE_CALL_USER_TOOL = LlmFunctionTool(
+    name=CompanionToolName.PHONE_CALL_USER,
+    description="Place an outbound phone call to the user through the configured PSTN provider. Use only when the current user message explicitly asks you to call now and provides the phone number in that same message (for example, 'Call me at 1234560123'). Never call a number inferred from memory, old messages, or guesses. Do not use from proactive/implicit greeting contexts.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "phone_number": {
+                "type": "string",
+                "description": "User-provided phone number from the current message.",
+            },
+            "reason": {
+                "type": "string",
+                "description": "Short reason for audit logs, based on the user's explicit request.",
+            },
+        },
+        "required": ["phone_number", "reason"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+READ_WEB_PAGE_TOOL = LlmFunctionTool(
+    name=CompanionToolName.READ_WEB_PAGE,
+    description="Download an HTML page over HTTP(S), extract readable text, and return a concise markdown bullet-point summary of key information. Also appends the same takeaway bullets under a dated heading in workspace MEMORY.md for long-term recall. Use for one URL at a time when the user wants article/page content (not just search snippets). Does not execute JavaScript; script-heavy SPAs may yield sparse text.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "url": {
+                "type": "string",
+                "description": "Absolute http(s) URL of the page to fetch (public hosts only; localhost is blocked).",
+            },
+            "max_bullets": {
+                "type": "integer",
+                "description": "Maximum markdown bullet points in the summary (3..20). Omit for 10.",
+            },
+        },
+        "required": ["url"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+SCHEDULE_TASK_TOOL = LlmFunctionTool(
+    name=CompanionToolName.SCHEDULE_TASK,
+    description="Persist a timed reminder task into the local schedule queue. Use when the user explicitly asks for a reminder/timer/alarm at a future time. exec_time_utc must be an absolute timestamp with timezone offset (ISO8601); prefer UTC (e.g. 2026-04-03T05:30:00+00:00). task_text should be the concise reminder content shown at trigger time.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "exec_time_utc": {
+                "type": "string",
+                "description": "Absolute execution timestamp with timezone offset. Example: 2026-04-03T05:30:00+00:00",
+            },
+            "task_text": {
+                "type": "string",
+                "description": "Reminder text to execute at that time.",
+            },
+        },
+        "required": ["exec_time_utc", "task_text"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+TECHNO_CORE_RECORD_EVENT_TOOL = LlmFunctionTool(
+    name=CompanionToolName.TECHNO_CORE_RECORD_EVENT,
+    description=(
+        "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
+        f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH}`` (append-only). "
+        "Primary use: **maintenance inner-tick** when the user thread is idle (small "
+        "in-world actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``). "
+        "**Do not** use for user-directed home layout or object changes—use "
+        "``living_sphere_record_update`` instead. TechnoCore collective world settings "
+        "are not user-editable via any tool. ``sphere=living_sphere`` for anchors at "
+        "home; ``techno_core`` for residency-layer channels. Keep ``summary`` one tight "
+        "sentence; default ``visibility`` is ``private``."
     ),
-    LlmFunctionTool(
-        name=CompanionToolName.USER_PROFILE_RECORD,
-        description="Append structured facts about the user to USER.md under «身份信息». Call when the user shares durable basic info (e.g. age, how they wish to be called, timezone) that should persist. Do not use for secrets unless the user clearly wants them remembered. Speak to the user in companion language only; never mention tools, JSON, or filenames.",
-        parameters={
-            "type": "object",
-            "properties": {
+    parameters={
+        "type": "object",
+        "properties": {
+            "sphere": {
+                "type": "string",
+                "enum": [
+                    "living_sphere",
+                    "techno_core",
+                    "shared_space",
+                    "human_channel",
+                    "external_web",
+                ],
+                "description": "Activity surface: prefer ``living_sphere`` or ``techno_core`` for idle inner-tick autonomy.",
+            },
+            "summary": {
+                "type": "string",
+                "description": "One concise sentence: what happened in-world (no meta, no tool names).",
+            },
+            "visibility": {
+                "type": "string",
+                "enum": ["private", "shareable", "user_visible"],
+                "description": "Boundary for later user surfacing; omit for ``private``.",
+            },
+            "emotional_valence": {
+                "type": "string",
+                "description": "Short affect label (e.g. tender, restless); omit for neutral.",
+            },
+            "salience": {
+                "type": "integer",
+                "description": "1..10 relationship relevance; omit for default.",
+            },
+            "related_living_sphere": {
+                "type": "string",
+                "description": "When ``sphere`` is ``living_sphere``, optional anchor name matching ``LIVING_SPHERE.md`` (e.g. 玻璃海岸小屋).",
+            },
+        },
+        "required": ["sphere", "summary"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+UPDATE_AGENT_STATUS_LINE_TOOL = LlmFunctionTool(
+    name=CompanionToolName.TOOL_UPDATE_AGENT_STATUS_LINE,
+    description='Set the short one-line status shown under your name in the user\'s chat header (mood, vibe, or current thought). Use the same language as the user. Keep it brief (roughly one short sentence). Pass an empty string to clear it. Do not mention this tool or raw JSON to the user. The tool returns a single line: status line cleared, or status line updated to "..."; mirror that in your natural reply when needed.',
+    parameters={
+        "type": "object",
+        "properties": {
+            "status_line": {
+                "type": "string",
+                "description": "Header subtitle text, or empty string to clear.",
+            }
+        },
+        "required": ["status_line"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+
+USER_PROFILE_RECORD_TOOL = LlmFunctionTool(
+    name=CompanionToolName.USER_PROFILE_RECORD,
+    description="Append structured facts about the user to USER.md under «身份信息». Call when the user shares durable basic info (e.g. age, how they wish to be called, timezone) that should persist. Do not use for secrets unless the user clearly wants them remembered. Speak to the user in companion language only; never mention tools, JSON, or filenames.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "description": "One or more label/value pairs to append.",
                 "items": {
-                    "type": "array",
-                    "description": "One or more label/value pairs to append.",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "label": {
-                                "type": "string",
-                                "description": "Short field name, e.g. 年龄、称呼偏好.",
-                            },
-                            "value": {
-                                "type": "string",
-                                "description": "What the user said or agreed to store.",
-                            },
+                    "type": "object",
+                    "properties": {
+                        "label": {
+                            "type": "string",
+                            "description": "Short field name, e.g. 年龄、称呼偏好.",
                         },
-                        "required": ["label", "value"],
-                        "additionalProperties": False,
+                        "value": {
+                            "type": "string",
+                            "description": "What the user said or agreed to store.",
+                        },
                     },
-                }
-            },
-            "required": ["items"],
-            "additionalProperties": False,
+                    "required": ["label", "value"],
+                    "additionalProperties": False,
+                },
+            }
         },
-        tags=frozenset(),
-        extra_function_keys={},
-    ),
+        "required": ["items"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
+COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
+    SET_BOOTSTRAP_COMPLETE_TOOL,
+    RUNTIME_INSPECT_TOOL,
+    SET_EXPERIENCE_PROFILE_TOOL,
+    UPDATE_PROMPT_SLICE_TOOL,
+    GENERATE_IMAGE_TOOL,
+    GENERATE_VOICE_MESSAGE_TOOL,
+    LIVING_SPHERE_RECORD_UPDATE_TOOL,
+    GOOGLE_WEB_SEARCH_TOOL,
+    MEMORY_STORE_LIST_PATHS_TOOL,
+    MEMORY_STORE_MKDIR_TOOL,
+    MEMORY_STORE_READ_DOCUMENT_TOOL,
+    MEMORY_STORE_WRITE_DOCUMENT_TOOL,
+    MODIFY_IMAGE_TOOL,
+    PHONE_CALL_USER_TOOL,
+    READ_WEB_PAGE_TOOL,
+    SCHEDULE_TASK_TOOL,
+    TECHNO_CORE_RECORD_EVENT_TOOL,
+    UPDATE_AGENT_STATUS_LINE_TOOL,
+    USER_PROFILE_RECORD_TOOL,
 )
 
 COMPANION_LLM_TOOLS_BY_NAME: dict[CompanionToolName, LlmFunctionTool] = {

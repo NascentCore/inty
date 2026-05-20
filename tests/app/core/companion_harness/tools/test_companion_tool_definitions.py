@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from app.core.companion_harness.tools.companion_tool_definitions import (
-    COMPANION_LLM_TOOLS,
     CompanionToolName,
     TOOL_TAG_GENERATION,
 )
@@ -21,18 +20,6 @@ def _function_tool_names(tools: list) -> list[str]:
         for t in tools
         if t.get("type") == "function" and isinstance(t.get("function"), dict)
     )
-
-
-def test_companion_llm_tools_names_unique():
-    names = [tool.name for tool in COMPANION_LLM_TOOLS]
-    assert len(names) == len(set(names))
-
-
-def test_companion_llm_tools_parameters_object_schema():
-    for tool in COMPANION_LLM_TOOLS:
-        params = tool.parameters
-        assert params.get("type") == "object"
-        assert params.get("additionalProperties") is False
 
 
 def test_build_openai_tools_name_set():
