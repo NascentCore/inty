@@ -43,6 +43,7 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.companion.proactive_chat import (
+    PROACTIVE_CHAT_SILENT_TOKEN,
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
     ProactiveChatConfig,
     next_proactive_chat_wait_seconds,
@@ -513,7 +514,7 @@ async def _try_handle_ws_user_signed_on_frame(
             )
         else:
             assert inflight_turn_tracker is not None
-            inflight_turn_tracker.spawn(
+            greeting_task = inflight_turn_tracker.spawn(
                 _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                     db=db,
                     agent_id=agent_id,
@@ -528,6 +529,7 @@ async def _try_handle_ws_user_signed_on_frame(
                 ),
                 name=f"chat_ws_user_signed_on_greeting_{ws_conn_id}",
             )
+            companion_ws.register_implicit_greeting_turn(greeting_task)
             greeting_scheduled = True
         await websocket.send_json(
             ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
@@ -571,10 +573,10 @@ async def _try_handle_ws_user_signed_out_frame(
     """
     Consume ``{"type":"user_signed_out","agent_id":...}``.
 
-    Validates the frame, cancels detached companion turns on this connection, appends a
+    Validates the frame, cancels detached companion turns on this connection, disarms inner-tick
+    coords (pauses proactive/maintenance until the next ``user_signed_on``), appends a
     ``user_signed_out`` row to companion ``.companion_runtime_events.jsonl`` (MemoryStore), then
-    sends ``user_signed_out_ack``. Does not alter inner-tick coords, transcript, or companion scope
-    persistence.
+    sends ``user_signed_out_ack``. Does not alter transcript or companion scope persistence.
 
     ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
@@ -622,6 +624,7 @@ async def _try_handle_ws_user_signed_out_frame(
         if inflight_turn_tracker is not None:
             # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
             await inflight_turn_tracker.cancel_all()
+        companion_ws.inner_tick_context.clear()
         companion_chat_service.append_companion_ws_runtime_event(
             user_id=current_user.id,
             agent_id=agent_id,
@@ -1798,24 +1801,16 @@ async def _try_fire_companion_ws_proactive_chat(
         if mem_store is None:
             return
 
+        feats = global_config_loaded_from_config_yaml.app.features
         remain = next_proactive_chat_wait_seconds(
             mem_store,
-            ProactiveChatConfig(enabled=True),
+            ProactiveChatConfig(
+                base_idle_sec=float(
+                    feats.companion_ws_proactive_chat_base_idle_seconds
+                ),
+            ),
         )
         if remain > 0:
-            return
-
-        is_allowed, used_count, daily_limit = (
-            await subscription_svc.check_chat_limit(pre_db, current_user)
-        )
-        if not is_allowed:
-            logger.info(
-                "companion_ws_proactive_chat skipped subscription ws_conn_id={} user={} used={} limit={}",
-                ws_conn_id,
-                user_id,
-                used_count,
-                daily_limit,
-            )
             return
 
         chat_row_id = chat.id
@@ -1864,9 +1859,12 @@ async def _try_fire_companion_ws_proactive_chat(
             companion_ws.bind_ws_inner_tick_proactive_tool_bg_idle(None)
 
         companion_reply = companion_turn.assistant_text
-        if companion_reply is None or not str(companion_reply).strip():
-            logger.warning(
-                "companion_ws_proactive_chat empty reply ws_conn_id={} user={} agent={}",
+        reply_text = (
+            str(companion_reply).strip() if companion_reply is not None else ""
+        )
+        if not reply_text or PROACTIVE_CHAT_SILENT_TOKEN.lower() in reply_text.lower():
+            logger.debug(
+                "companion_ws_proactive_chat silent ws_conn_id={} user={} agent={}",
                 ws_conn_id,
                 user_id,
                 agent_id,
@@ -3650,15 +3648,14 @@ async def chat_completions_websocket(
                     ws_conn_id=ws_conn_id,
                     tc_box=tc_box,
                 )
-                if feats.companion_ws_proactive_chat_enabled:
-                    await _try_fire_companion_ws_proactive_chat(
-                        outbound_queue=outbound_queue,
-                        ctx=inner_tick_snapshot,
-                        subscription_svc=subscription_svc,
-                        companion_ws=companion_ws,
-                        ws_conn_id=ws_conn_id,
-                        tc_box=tc_box,
-                    )
+                await _try_fire_companion_ws_proactive_chat(
+                    outbound_queue=outbound_queue,
+                    ctx=inner_tick_snapshot,
+                    subscription_svc=subscription_svc,
+                    companion_ws=companion_ws,
+                    ws_conn_id=ws_conn_id,
+                    tc_box=tc_box,
+                )
                 if feats.companion_ws_maintenance_inner_tick_enabled:
                     await _try_fire_companion_ws_maintenance_inner_tick(
                         outbound_queue=outbound_queue,
@@ -3842,6 +3839,7 @@ async def chat_completions_websocket(
                 # the frame is accepted but no chat response is sent (REPL: user-input only).
                 # https://github.com/NascentCore/inty/issues/3113
                 # https://github.com/NascentCore/inty/issues/3123
+                await companion_ws.cancel_implicit_greeting_turn_if_running()
                 async with companion_ws.turn_lock:
                     turn_task = inflight_turn_tracker.spawn(
                         _agent_chat_ws_completions_impl(

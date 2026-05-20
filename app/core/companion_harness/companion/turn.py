@@ -49,6 +49,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
@@ -623,18 +624,44 @@ async def _run_companion_turn_core(
                         if inner_tick_turn and not tick_proactive
                         else LLM_SCENE_CHAT
                     )
-                    resp = llm_client.chat_completion(
-                        messages=messages,
-                        model=resolved_model,
-                        tools=None,
-                        response_format=(
-                            DUAL_LLM_CHAT_RESPONSE_FORMAT
-                            if use_dual_structured_chat
-                            else None
-                        ),
-                        scene=llm_scene,
-                        high_reasoning=tick_proactive,
+                    response_format = (
+                        DUAL_LLM_CHAT_RESPONSE_FORMAT
+                        if use_dual_structured_chat
+                        else None
                     )
+                    if implicit_sign_on_turn:
+                        greet_feats = (
+                            global_config_loaded_from_config_yaml.app.features
+                        )
+                        greet_timeout_sec = float(
+                            greet_feats.companion_implicit_sign_on_greeting_llm_timeout_sec
+                        )
+                        greet_max_attempts = int(
+                            greet_feats.companion_implicit_sign_on_greeting_llm_max_attempts
+                        )
+                        resp = await llm_client.chat_completion_with_retrial(
+                            messages=messages,
+                            model=resolved_model,
+                            tools=None,
+                            tool_choice=None,
+                            response_format=response_format,
+                            scene=llm_scene,
+                            langsmith_extra=None,
+                            high_reasoning=tick_proactive,
+                            max_attempts=greet_max_attempts,
+                            per_attempt_timeout_sec=greet_timeout_sec,
+                            trace_id=trace_id,
+                            attempt_log_label="implicit_sign_on_greeting",
+                        )
+                    else:
+                        resp = llm_client.chat_completion(
+                            messages=messages,
+                            model=resolved_model,
+                            tools=None,
+                            response_format=response_format,
+                            scene=llm_scene,
+                            high_reasoning=tick_proactive,
+                        )
                     langsmith_trace_acc = (
                         langsmith_trace_id_from_completion(resp)
                         or langsmith_trace_acc

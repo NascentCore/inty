@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import time
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -87,3 +90,83 @@ def test_complete_text_passes_memory_pipeline_langsmith_extra(
     assert extra.get("name") == "agentic_companion_memory_pipeline-day_summary"
     meta = extra.get("metadata") or {}
     assert meta.get("inty_llm_source") == "memory_pipeline_day_summary"
+
+
+def _ok_completion() -> Any:
+    msg = SimpleNamespace(content="ok", tool_calls=[])
+    return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
+
+
+@pytest.mark.asyncio
+async def test_chat_completion_with_retrial_succeeds_after_transient_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
+    calls = 0
+
+    def _flaky(**_kwargs: Any) -> Any:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("transient")
+        return _ok_completion()
+
+    monkeypatch.setattr(client, "chat_completion", _flaky)
+    out = await client.chat_completion_with_retrial(
+        messages=[{"role": "user", "content": "hi"}],
+        model=None,
+        tools=None,
+        tool_choice=None,
+        response_format=None,
+        scene="chat",
+        langsmith_extra=None,
+        high_reasoning=False,
+        max_attempts=2,
+        per_attempt_timeout_sec=30.0,
+        trace_id="trace-1",
+        attempt_log_label="test_retrial",
+    )
+
+    assert out.choices[0].message.content == "ok"
+    assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_chat_completion_with_retrial_times_out_per_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
+    calls = 0
+
+    def _slow(**_kwargs: Any) -> Any:
+        nonlocal calls
+        calls += 1
+        time.sleep(0.25)
+        return _ok_completion()
+
+    monkeypatch.setattr(client, "chat_completion", _slow)
+    with pytest.raises(asyncio.TimeoutError):
+        await client.chat_completion_with_retrial(
+            messages=[{"role": "user", "content": "hi"}],
+            model=None,
+            tools=None,
+            tool_choice=None,
+            response_format=None,
+            scene="chat",
+            langsmith_extra=None,
+            high_reasoning=False,
+            max_attempts=2,
+            per_attempt_timeout_sec=0.1,
+            trace_id="trace-2",
+            attempt_log_label="test_retrial",
+        )
+
+    assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_create_chat_completion_sync_json_retry_is_separate() -> None:
+    """OpenAI path retries JSONDecodeError only; not a substitute for with_retrial."""
+    from app.core.companion_harness.llm import chat_completions as cc_mod
+
+    assert cc_mod._OPENROUTER_JSON_MAX_ATTEMPTS == 3

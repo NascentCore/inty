@@ -14,12 +14,32 @@ Inty is an AI for long-term emotional companionship.
 ## 快速开始
 
 ```bash
-# 使用 [Cursor](https://cursor.com/)
-# Ask Cursor anything
 git clone git@github.com:NascentCore/inty.git
 cd inty
+
+# 使用 [Cursor](https://cursor.com/)
+# 然后通过与 Cursor 智能体 问答来使用各种功能
 cursor .
 ```
+
+使用 [Cursor](https://cursor.com/) 打开本仓库，用 **Chat / Agent** 让编码智能体代劳启动与自检（仓库内已写好 skill，Agent 会自动选用）。
+
+### 1. 启动本地 Ops + 准备好 REPL
+
+在 Cursor Chat（**Agent 模式**）粘贴或改写：
+
+> 按 launch-inty-backend skill 在本地拉起 Ops 后端，并告诉我 API 地址、agent id、REPL 该怎么开。
+
+### 2. 自检环境是否就绪
+
+后端已起、准备连 REPL 或已看到异常时，在 Chat 说：
+
+> 按 examine-local-inty-repl-env skill 检查我的本地 Inty + REPL 环境，给我结论清单。
+
+### 3. 评体验 / 排 REPL 一行 metadata
+
+- **聊 companion**：让 Agent 帮你在终端开 REPL，或自行在 Agent 已起的终端里输入；产品行为以服务端为准，与 iMate 同 WebSocket 路径。
+- **看不懂某行 `[墙钟] chat … langsmith_trace_id=…`**：把该行贴回 Chat，说「按 inspect-repl-message-metadata 解释」。
 
 ## FAQ
 

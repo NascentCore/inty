@@ -27,8 +27,6 @@ class CompanionMemoryDocumentKind(str, Enum):
     TECHNO_CORE_EVENTS_JSONL = "techno_core_events_jsonl"
     LIVING_SPHERE = "living_sphere"
     LIVING_SPHERE_UPDATES_JSONL = "living_sphere_updates_jsonl"
-    # Stale ORM kind: ``HEARTBEAT.md`` is mapped below but never seeded/read; unrelated to proactive chat scheduling.
-    HEARTBEAT = "heartbeat"
     TOOLS = "tools"
     # Package seed SIGNIFICANCE_PERCEPTION.md; scoring semantics consumed via PromptBundle, not ORM-only.
     SIGNIFICANCE_PERCEPTION = "significance_perception"
@@ -70,8 +68,6 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         CompanionMemoryDocumentKind.LIVING_SPHERE_UPDATES_JSONL,
         None,
     ),
-    # Stale path mapping (not in MemoryStore unless created manually); not proactive chat.
-    "HEARTBEAT.md": (CompanionMemoryDocumentKind.HEARTBEAT, None),
     "TOOLS.md": (CompanionMemoryDocumentKind.TOOLS, None),
     "SIGNIFICANCE_PERCEPTION.md": (
         CompanionMemoryDocumentKind.SIGNIFICANCE_PERCEPTION,

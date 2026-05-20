@@ -1,11 +1,15 @@
 """Proactive chat scheduling and prompt copy for user-idle companion turns.
 
-- **Scheduling**: ``next_proactive_chat_wait_seconds`` estimates rhythm from transcript gaps
-  and config (base idle, min gap between proactive chat rounds, min transcript lines).
-- **Copy**: system/user placeholders for ``InnerTickActivity.PROACTIVE_CHAT`` turns; main user
-  marker path is ``build_proactive_chat_transcript_user_marker`` in the turn pipeline.
+- **Scheduling**: ``next_proactive_chat_wait_seconds`` uses ``last_assistant_ts + rhythm``;
+  ``rhythm`` is ``base_idle_sec`` or adapts from real-user message gaps (median × 0.65 + 20),
+  capped at ``base_idle_sec * 2`` (no clamp band).
+- **Usage**: proactive turns are not gated by daily message count; future limits use token
+  consumption (see companion WS proactive path NOTE in ``app.utils.config``).
+- **Copy**: system/user placeholders for ``InnerTickActivity.PROACTIVE_CHAT`` turns.
 - **Transcript**: proactive rounds mark the synthetic user row with ``proactive_chat: true``
-  so schedulers can anchor ``min_gap_sec`` separately from real user messages.
+  (for markers and LLM context; not used as a separate scheduling anchor).
+
+Full WS worker / poll / maintenance relationship: ``docs/companion_harness/INNER_TICK_SCHEDULING.md``.
 """
 
 from __future__ import annotations
@@ -30,31 +34,20 @@ PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER = (
     "[SYSTEM PROACTIVE CHAT] The user has not sent a new message for some time."
 )
 
+PROACTIVE_CHAT_SILENT_TOKEN = "[SILENT]"
+
 _NEVER = 86400.0 * 365.0
-_RHYTHM_CLAMP_SEC = (90.0, 900.0)
 
 
 class ProactiveChatConfig(BaseModel):
     """Tuning for when companion may speak on ``PROACTIVE_CHAT`` inner ticks."""
 
-    enabled: bool = Field(
-        default=True,
-        description=(
-            "Master switch. When false, companion will not proactively chat while the user is idle."
-        ),
-    )
     base_idle_sec: float = Field(
         default=30.0,
         description=(
-            "Base quiet period after the assistant's last **non-proactive-chat** reply before "
-            "another proactive chat round may fire."
-        ),
-    )
-    min_gap_sec: float = Field(
-        default=60.0,
-        description=(
-            "Minimum interval anchored on the **last proactive-chat synthetic user** row; "
-            "prevents back-to-back proactive chat while the user stays silent."
+            "Base quiet period after the assistant's last reply before another "
+            "proactive chat round may fire; also the rhythm fallback when transcript "
+            "has fewer than two real-user gaps."
         ),
     )
     min_transcript_lines: int = Field(
@@ -80,6 +73,8 @@ def _user_message_gaps_seconds(msgs: list[ChatMessage]) -> list[float]:
     for m in msgs:
         if m.role != "user":
             continue
+        if m.proactive_chat is True:
+            continue
         user_ts.append(_parse_ts(m.ts))
     if len(user_ts) < 2:
         return []
@@ -97,8 +92,7 @@ def _rhythm_idle_seconds(msgs: list[ChatMessage], base: float) -> float:
         return base
     med = float(statistics.median(gaps))
     scaled = med * 0.65 + 20.0
-    lo, hi = _RHYTHM_CLAMP_SEC
-    return max(lo, min(hi, min(base * 2.0, scaled)))
+    return min(base * 2.0, scaled)
 
 
 def _last_assistant_ts(msgs: list[ChatMessage]) -> datetime | None:
@@ -120,13 +114,9 @@ def _format_elapsed_since(seconds: float) -> str:
     return f"{h}h {m}m" if m else f"{h}h"
 
 
-def _is_proactive_chat_user_row(m: ChatMessage) -> bool:
-    return m.proactive_chat is True
-
-
 def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     for m in reversed(msgs):
-        if m.role == "user" and not _is_proactive_chat_user_row(m):
+        if m.role == "user" and m.proactive_chat is not True:
             return _parse_ts(m.ts)
     return None
 
@@ -153,13 +143,6 @@ def build_proactive_chat_transcript_user_marker(
     return f"[SYSTEM PROACTIVE CHAT] {u_seg} {a_seg}"
 
 
-def _last_proactive_chat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
-    for m in reversed(msgs):
-        if m.role == "user" and _is_proactive_chat_user_row(m):
-            return _parse_ts(m.ts)
-    return None
-
-
 def next_proactive_chat_wait_seconds(
     store: MemoryStore,
     config: ProactiveChatConfig,
@@ -167,9 +150,6 @@ def next_proactive_chat_wait_seconds(
     now: datetime | None = None,
 ) -> float:
     """Seconds until proactive chat may fire; <= 0 when due; large value when gated off."""
-    if not config.enabled:
-        return _NEVER
-
     msgs = load_transcript_from_store(store, "transcript.jsonl")
     if len(msgs) < config.min_transcript_lines:
         return _NEVER
@@ -184,11 +164,4 @@ def next_proactive_chat_wait_seconds(
     t = now if now is not None else datetime.now(timezone.utc)
     rhythm = _rhythm_idle_seconds(msgs, config.base_idle_sec)
     earliest = last_asst + timedelta(seconds=rhythm)
-
-    last_pc = _last_proactive_chat_user_ts(msgs)
-    if last_pc is not None:
-        pc_earliest = last_pc + timedelta(seconds=config.min_gap_sec)
-        if pc_earliest > earliest:
-            earliest = pc_earliest
-
     return (earliest - t).total_seconds()

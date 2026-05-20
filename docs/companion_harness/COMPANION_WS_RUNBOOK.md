@@ -35,6 +35,15 @@
 - `voice_message` 朗读文本优先取 `voice_message_script`；为空时才使用可见 assistant 文本。
 - 连接结束时，当前实现会取消仍在运行的连接内 turn；这是当前事实，不是目标生命周期。
 
+## Inner-tick 调度
+
+完整机制（proactive **rhythm**、worker **poll**、maintenance **min_gap**、REPL 原型 env）见 [INNER_TICK_SCHEDULING.md](./INNER_TICK_SCHEDULING.md)。当前事实摘要：
+
+- 签入后 inner-tick worker 约每 **60s** 醒一次（`companion_ws_proactive_chat_poll_seconds`，下限 5s），顺序尝试 scheduled → proactive → maintenance。
+- Proactive 是否到期由 `next_proactive_chat_wait_seconds` 决定：锚在 **最后一条 assistant** 的 `ts`，quiet 时长 **rhythm** 默认约 **30–60s**（随真实用户消息间隔自适应，上限 `2×base_idle`）。
+- 两条 proactive 在 REPL 上的时间差常为 **rhythm + 至多一轮 poll + LLM/占锁**，故可能远大于 60s。
+- `[SILENT]` 可能已写 `transcript.jsonl` 但不推业务下行；`prev_inner_tick_tool_bg` 会跳过本轮 proactive / scheduled。
+
 ## 正常工作流
 
 ### 客户端签入
@@ -187,12 +196,16 @@
 - inner-tick 依赖成功签入后的 user、agent、chat 坐标。
 - scheduled reminder、proactive heartbeat 和 maintenance inner-tick 共用连接级轮次串行化。
 - 上一次 proactive tool background 未空闲时，后续 proactive / scheduled reminder 会跳过，避免同一 session 的自主消息重叠。
+- rhythm 未到（`remain > 0`）时 worker 每轮 poll 不会跑 proactive，属正常而非故障。
+- transcript 末条不是 `assistant` 时 proactive 长期禁用，直到 assistant 回复落库。
+- 模型返回 `[SILENT]` 时不推下行；若「很久没说话」但 LangSmith 有 proactive trace，先查是否 silent。
 
 证据：
 
 - 查 `user_signed_on_ack.ok` 是否为真。
 - 查 `companion_ws_inner_tick_poll no_heartbeat_coords` 或 chat_id mismatch 日志。
-- 查 `prev_inner_tick_tool_bg`、`prev_maintenance_pending` 等跳过日志。
+- 查 `prev_inner_tick_tool_bg`、`prev_maintenance_pending`、`companion_ws_proactive_chat silent` 等跳过日志。
+- 对照 [INNER_TICK_SCHEDULING.md](./INNER_TICK_SCHEDULING.md) 核对 rhythm / poll 是否解释观测间隔。
 
 ### 断线后用户没有收到原本可能完成的回复
 

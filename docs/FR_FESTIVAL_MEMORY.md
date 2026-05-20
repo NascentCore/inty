@@ -4,7 +4,7 @@ CREATED_BY_AGENT
 
 ## 范围与边界
 
-本功能属于 **IntelliMate Android 旧版角色扮演聊天栈**（`chat_history` / `chat_history_service`、节日 `memory` 表投递），**不是** agentic **companion harness** 的 proactive chat（`proactive_chat` inner tick、`turn_routes` 等）。提示文案里的 “secret heartbeat diary” 仅为节日记忆 UI 模板用语，与 harness 调度或 `HEARTBEAT.md` MemoryStore 文档无关。
+本功能属于 **IntelliMate Android 旧版角色扮演聊天栈**（`chat_history` / `chat_history_service`、节日 `memory` 表投递），**不是** agentic **companion harness** 的 proactive chat（`proactive_chat` inner tick、`turn_routes` 等）。提示文案里的 “secret heartbeat diary” 仅为节日记忆 UI 模板用语，与 harness 调度无关。
 
 ## 概述
 

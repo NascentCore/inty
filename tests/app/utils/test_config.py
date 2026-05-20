@@ -303,6 +303,47 @@ def test_companion_transcript_window_out_of_range_raises(config):
         _validate_config(config)
 
 
+def test_implicit_sign_on_greeting_llm_defaults(config):
+    _validate_config(config)
+    assert (
+        config.app.features.companion_implicit_sign_on_greeting_llm_timeout_sec
+        == 6.0
+    )
+    assert (
+        config.app.features.companion_implicit_sign_on_greeting_llm_max_attempts
+        == 2
+    )
+
+
+def test_implicit_sign_on_greeting_llm_timeout_out_of_range_raises(config):
+    config.app.features = FeaturesConfig(
+        companion_implicit_sign_on_greeting_llm_timeout_sec=0.5,
+    )
+    with pytest.raises(ValueError, match="timeout_sec"):
+        _validate_config(config)
+
+
+def test_implicit_sign_on_greeting_llm_max_attempts_out_of_range_raises(config):
+    config.app.features = FeaturesConfig(
+        companion_implicit_sign_on_greeting_llm_max_attempts=6,
+    )
+    with pytest.raises(ValueError, match="max_attempts"):
+        _validate_config(config)
+
+
+def test_proactive_chat_base_idle_seconds_default(config):
+    _validate_config(config)
+    assert config.app.features.companion_ws_proactive_chat_base_idle_seconds == 30.0
+
+
+def test_proactive_chat_base_idle_seconds_out_of_range_raises(config):
+    config.app.features = FeaturesConfig(
+        companion_ws_proactive_chat_base_idle_seconds=5.0,
+    )
+    with pytest.raises(ValueError, match="base_idle_seconds"):
+        _validate_config(config)
+
+
 def test_name_for_openrouter_dev_environment():
     """测试DEV环境下的name_for_openrouter属性"""
     app_config = AppConfig(

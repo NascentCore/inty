@@ -20,6 +20,7 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
         "AXIOM.md",
         "BOOTSTRAP.md",
         "INTY.md",
+        "SAFETY.md",
         "TOOLS.md",
         "SIGNIFICANCE_PERCEPTION.md",
     }
@@ -52,6 +53,12 @@ def get_imate_axiom_system_text() -> str:
 def get_inty_facts_system_text() -> str:
     """Inty ontology and philosophy from prompts/INTY.md; fixed system slice after AXIOM."""
     return load_template_seed_text("INTY.md").strip()
+
+
+@lru_cache(maxsize=1)
+def get_safety_system_text() -> str:
+    """Interaction safety from prompts/SAFETY.md; third doctrine system slice."""
+    return load_template_seed_text("SAFETY.md").strip()
 
 
 @dataclass(frozen=True)
