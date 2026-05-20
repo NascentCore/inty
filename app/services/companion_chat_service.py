@@ -425,6 +425,7 @@ async def run_companion_user_chat_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="user_chat",
@@ -442,6 +443,7 @@ async def run_companion_user_chat_turn_for_api(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             implicit_signal_bundle=implicit_signal_bundle,
+            voice_ctx=voice_ctx,
         ),
     )
 

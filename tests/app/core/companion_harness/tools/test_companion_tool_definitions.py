@@ -56,6 +56,7 @@ def test_build_openai_repl_tools_name_set_non_bootstrap():
         "companion_runtime_inspect",
         "companion_set_experience_profile",
         "generate_image",
+        "generate_voice_message",
         "google_web_search",
         "living_sphere_record_update",
         "memory_store_list_paths",
@@ -80,6 +81,7 @@ def test_build_openai_repl_tools_name_set_bootstrap():
         "companion_set_experience_profile",
         "companion_update_prompt_slice",
         "generate_image",
+        "generate_voice_message",
         "google_web_search",
         "memory_store_list_paths",
         "memory_store_read_document",
@@ -105,5 +107,8 @@ def test_build_openai_repl_tools_inner_tick_name_set():
 
 def test_tool_has_tag_generation():
     assert tool_has_tag(CompanionToolName.GENERATE_IMAGE.value, TOOL_TAG_GENERATION)
+    assert tool_has_tag(
+        CompanionToolName.GENERATE_VOICE_MESSAGE.value, TOOL_TAG_GENERATION
+    )
     assert tool_has_tag(CompanionToolName.MODIFY_IMAGE.value, TOOL_TAG_GENERATION)
     assert not tool_has_tag(CompanionToolName.SCHEDULE_TASK.value, TOOL_TAG_GENERATION)

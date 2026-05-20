@@ -64,6 +64,7 @@ class CompanionToolName(StrEnum):
     COMPANION_SET_EXPERIENCE_PROFILE = "companion_set_experience_profile"
     COMPANION_UPDATE_PROMPT_SLICE = "companion_update_prompt_slice"
     GENERATE_IMAGE = "generate_image"
+    GENERATE_VOICE_MESSAGE = "generate_voice_message"
     GOOGLE_WEB_SEARCH = "google_web_search"
     LIVING_SPHERE_RECORD_UPDATE = "living_sphere_record_update"
     MEMORY_STORE_LIST_PATHS = "memory_store_list_paths"
@@ -217,6 +218,30 @@ COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
                 },
             },
             "required": ["prompt"],
+            "additionalProperties": False,
+        },
+        tags=frozenset({TOOL_TAG_GENERATION}),
+        extra_function_keys={},
+    ),
+    LlmFunctionTool(
+        name=CompanionToolName.GENERATE_VOICE_MESSAGE,
+        description=(
+            "Synthesize a short spoken voice note (TTS) for the user. Call when the user "
+            "clearly asks for playable audio, a voice message, or to hear you speak—not "
+            "for text-only recitation in chat. Pass the exact words to speak as transcript; "
+            "must match `voice_message_script` in the tool-finish envelope when you set "
+            "`reply_modality` to voice_message. Keep transcript to a short voice-note length. "
+            "Do not claim you cannot generate or send audio if this tool is available."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "transcript": {
+                    "type": "string",
+                    "description": "Exact spoken wording to synthesize (first-person, conversational).",
+                },
+            },
+            "required": ["transcript"],
             "additionalProperties": False,
         },
         tags=frozenset({TOOL_TAG_GENERATION}),
@@ -569,7 +594,7 @@ OPENAI_TOOLS_BASE_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.PHONE_CALL_USER,
 )
 
-REPL_TOOL_NAMES_SHARED_HEAD: tuple[CompanionToolName, ...] = (
+TOOL_NAMES_SHARED_HEAD: tuple[CompanionToolName, ...] = (
     CompanionToolName.USER_PROFILE_RECORD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     CompanionToolName.SCHEDULE_TASK,
@@ -578,18 +603,19 @@ REPL_TOOL_NAMES_SHARED_HEAD: tuple[CompanionToolName, ...] = (
     CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
 )
 
-REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[CompanionToolName, ...] = (
+TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[CompanionToolName, ...] = (
     CompanionToolName.LIVING_SPHERE_RECORD_UPDATE,
     CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
     CompanionToolName.PHONE_CALL_USER,
 )
 
-REPL_TOOL_NAMES_APPENDED: tuple[CompanionToolName, ...] = (
+TOOL_NAMES_APPENDED: tuple[CompanionToolName, ...] = (
     CompanionToolName.COMPANION_RUNTIME_INSPECT,
     CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
     CompanionToolName.GOOGLE_WEB_SEARCH,
     CompanionToolName.READ_WEB_PAGE,
     CompanionToolName.GENERATE_IMAGE,
+    CompanionToolName.GENERATE_VOICE_MESSAGE,
     CompanionToolName.MODIFY_IMAGE,
 )
 

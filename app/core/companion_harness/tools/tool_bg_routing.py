@@ -39,7 +39,11 @@ _UNIFIED_FALLBACK_SYSTEM_PROMPT = (
     "delivery for this follow-up is a voice note (spoken script goes in `voice_message_script`).\n"
     "- `voice_message_script` (string): exact words to speak when `reply_modality` is "
     "`voice_message`; empty string when modality is `text`.\n"
-    "Successful image generation still delivers the asset; `output_to_user` only gates extra text.\n"
+    "Successful image generation still delivers the asset; successful `generate_voice_message` "
+    "still delivers audio; `output_to_user` only gates extra text.\n"
+    "When the user asked for playable audio, call `generate_voice_message` in the tool loop "
+    "before this finish envelope; set `reply_modality` to `voice_message` and match "
+    "`voice_message_script` to the tool transcript. Do not claim you cannot send audio.\n"
 )
 
 

@@ -141,6 +141,16 @@ def _output_contract_text_chat_branch_mirrored_tools() -> str:
     )
 
 
+def _repl_tool_contract_voice_generation_clause() -> str:
+    return (
+        "（8）当用户**明确索要可播放的语音、音频、语音便签**（而非仅在文字里「念」）时，"
+        "必须先调用 generate_voice_message，transcript 为完整口语文本；"
+        "工具环收尾信封须设 reply_modality=voice_message，"
+        "voice_message_script 与 transcript 一致；"
+        "禁止声称无法生成或发送音频。"
+    )
+
+
 def _repl_tool_contract_image_generation_clause() -> str:
     return (
         "（7）当用户**明确索要新的**图片、画面、肖像照、插图（从零生成）时，必须先调用 generate_image（Fal z-image-turbo 文生图），"
@@ -211,6 +221,7 @@ def _output_contract_text_with_tools(
         "**禁止**编造与实现不符的技术说法（例如错误描述模型族系、温度或未发生的调用方式）。"
     )
     base += _repl_tool_contract_image_generation_clause()
+    base += _repl_tool_contract_voice_generation_clause()
     base += _repl_tool_contract_suffix_after_image_clause(
         tool_side_compact=tool_side_compact
     )
@@ -367,6 +378,7 @@ def _tool_background_final_json_routing_contract_text() -> str:
         "- `reply_modality`（字符串）：`text` 或 `voice_message`；主交付为语音便签时用 `voice_message`。\n"
         '- `voice_message_script`（字符串）：`voice_message` 时对用户诵读的完整口语文本；`text` 时为 `""`。\n'
         "**生图 / 改图**：若 `generate_image` 或 `modify_image` **成功**产出路径，系统仍会向用户投递产物；"
+        "**语音**：若 `generate_voice_message` **成功**产出 audio_url，系统仍会向用户投递语音消息；"
         "`output_to_user` 不能否决成功产物投递，只控制是否额外附文字。\n"
         "若你无法产出合法 JSON，后端会追加一次 **同一 schema**、无 tools 的补解析请求。\n"
     )

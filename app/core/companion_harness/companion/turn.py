@@ -366,6 +366,7 @@ async def _run_companion_turn_core(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     langsmith_parent_run_enabled: bool | None = None,
     tool_bg_idle_event: threading.Event | None = None,
+    voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
     """
     执行一轮完整对话。
@@ -734,6 +735,7 @@ async def _run_companion_turn_core(
                         companion_turn_track=track,
                         tool_bg_idle_event=tool_bg_idle_event,
                         force_tools_first_round=force_tools_first_round,
+                        voice_ctx=voice_ctx,
                     )
                     tool_background_started = True
                     logger.info(
@@ -1102,6 +1104,7 @@ async def run_companion_user_chat_turn(
     implicit_signal_bundle: ImplicitSignalBundle | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
+    voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
     if implicit_signal_bundle is not None and implicit_user_signed_on_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
@@ -1138,6 +1141,7 @@ async def run_companion_user_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
+        voice_ctx=voice_ctx,
     )
 
 

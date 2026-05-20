@@ -32,6 +32,23 @@ def _tool_background_db_loop() -> asyncio.AbstractEventLoop | None:
     return getattr(_tls, "persist_bridge_loop", None)
 
 
+def set_tool_background_voice_ctx(ctx: dict[str, object] | None) -> None:
+    """TTS voice resolution for ``generate_voice_message`` in tool_background threads."""
+    _tls.voice_ctx = ctx
+
+
+def clear_tool_background_voice_ctx() -> None:
+    _tls.voice_ctx = None
+
+
+def get_tool_background_voice_ctx() -> dict[str, object] | None:
+    raw = getattr(_tls, "voice_ctx", None)
+    if raw is None:
+        return None
+    assert isinstance(raw, dict)
+    return raw
+
+
 def agent_id_from_companion_memory_store(store: MemoryStore) -> str:
     """Agent id is the companion id in ``CompanionScope``."""
     return store.scope.companion_id

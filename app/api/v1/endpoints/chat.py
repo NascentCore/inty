@@ -1201,10 +1201,17 @@ async def _build_companion_tool_background_ws_payload(
     foreground_voice_ctx: dict[str, Any] | None = None,
     voice_svc: VoiceService | None = None,
 ) -> WsOutboundPayload:
+    precomputed_audio = (ev.precomputed_audio_url or "").strip()
     _tb_script = (ev.voice_message_script or "").strip()
+    reply_modality_tb = str(ev.reply_modality or "text")
     is_voice_tb: bool | None = None
     voice_script_tb: str | None = None
-    if str(ev.reply_modality or "") == "voice_message":
+    if precomputed_audio:
+        reply_modality_tb = "voice_message"
+        is_voice_tb = True
+        if _tb_script:
+            voice_script_tb = _tb_script
+    elif reply_modality_tb == "voice_message":
         is_voice_tb = True
         if _tb_script:
             voice_script_tb = _tb_script
@@ -1222,7 +1229,7 @@ async def _build_companion_tool_background_ws_payload(
             reply_to_user_msg_uuid=ev.user_msg_uuid or None,
             tool_bg_output_to_user=ev.output_to_user,
             tool_bg_generation_deliver=ev.generation_deliver,
-            reply_modality=ev.reply_modality or None,
+            reply_modality=reply_modality_tb or None,
             is_voice=is_voice_tb,
             voice_message_script=voice_script_tb,
             langsmith_trace_id=ev.langsmith_trace_id or None,
@@ -1240,9 +1247,23 @@ async def _build_companion_tool_background_ws_payload(
         meta_data=meta_data,
     )
     audio_url: Optional[str] = None
-    if voice_svc is not None and foreground_voice_ctx is not None:
+    if precomputed_audio and ai_message_id is not None:
+        audio_url = precomputed_audio
+        try:
+            await chat_history_service.update_message_audio_url(
+                db,
+                session_id,
+                str(ai_message_id),
+                precomputed_audio,
+                None,
+            )
+        except Exception as e:
+            logger.warning(
+                f"tool_bg precomputed audio_url persist failed: {e}"
+            )
+    elif voice_svc is not None and foreground_voice_ctx is not None:
         audio_url = await _chat_ws_voice_message_audio_url(
-            reply_modality=str(ev.reply_modality or "text"),
+            reply_modality=reply_modality_tb,
             voice_message_script=ev.voice_message_script or "",
             assistant_text=ev.text,
             db=db,
@@ -2551,6 +2572,19 @@ async def _agent_chat_ws_completions_impl(
                             "agent_voice_id": agent_data.get("voice_id"),
                             "agent_gender": agent_data.get("gender"),
                             "agent_settings": agent_data.get("settings"),
+                            "language": request.language,
+                        }
+                    companion_voice_ctx: dict[str, object] | None = None
+                    if (
+                        companion_preset_uid is not None
+                        and companion_ws_foreground_pending is not None
+                    ):
+                        companion_voice_ctx = {
+                            "chat_voice_id": chat_settings.voice_id,
+                            "agent_voice_id": agent_data.get("voice_id"),
+                            "agent_gender": agent_data.get("gender"),
+                            "agent_settings": agent_data.get("settings"),
+                            "language": request.language,
                         }
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
@@ -2583,6 +2617,7 @@ async def _agent_chat_ws_completions_impl(
                                 background_output_sink=companion_background_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
                                 implicit_signal_bundle=companion_implicit_bundle,
+                                voice_ctx=companion_voice_ctx,
                             )
                         if (
                             companion_preset_uid is not None
@@ -3053,6 +3088,19 @@ async def _agent_chat_completions_impl(
                             "agent_voice_id": agent_data.get("voice_id"),
                             "agent_gender": agent_data.get("gender"),
                             "agent_settings": agent_data.get("settings"),
+                            "language": request.language,
+                        }
+                    companion_voice_ctx: dict[str, object] | None = None
+                    if (
+                        companion_preset_uid is not None
+                        and companion_ws_foreground_pending is not None
+                    ):
+                        companion_voice_ctx = {
+                            "chat_voice_id": chat_settings.voice_id,
+                            "agent_voice_id": agent_data.get("voice_id"),
+                            "agent_gender": agent_data.get("gender"),
+                            "agent_settings": agent_data.get("settings"),
+                            "language": request.language,
                         }
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
@@ -3085,6 +3133,7 @@ async def _agent_chat_completions_impl(
                                 background_output_sink=companion_background_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
                                 implicit_signal_bundle=companion_implicit_bundle,
+                                voice_ctx=companion_voice_ctx,
                             )
                         companion_reply_modality = companion_turn.reply_modality
                         companion_voice_script = (

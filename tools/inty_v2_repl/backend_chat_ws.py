@@ -166,6 +166,9 @@ def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, A
     meta: dict[str, Any] = {}
     if isinstance(meta_raw, dict):
         meta = dict(meta_raw)
+    audio_url = msg0.get("audio_url")
+    if isinstance(audio_url, str) and audio_url.strip():
+        meta["audio_url"] = audio_url.strip()
     return content, meta
 
 

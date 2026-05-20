@@ -1639,6 +1639,83 @@ def test_chat_websocket_companion_voice_message_returns_audio_url(
         companion_chat_service.clear_companion_chat_service_caches()
 
 
+@pytest.mark.asyncio
+async def test_tool_background_ws_payload_precomputed_audio_skips_synthesize(
+    monkeypatch: pytest.MonkeyPatch,
+    chat_app_with_postgres_db,
+):
+    from app.core.companion_harness.companion.scope import CompanionScope
+    from app.core.companion_harness.memory.memory_store import MemoryStore
+    from app.core.companion_harness.tools.tool_background import ToolOutputEvent
+    from app.schemas.chat import ChatCompletionRequest, ChatMessage
+    from app.services.chat_ws_voice_message import synthesize_chat_ws_voice_message
+
+    synthesize_calls: list[int] = []
+
+    async def _fake_synthesize(*_args, **_kwargs):
+        synthesize_calls.append(1)
+        return None
+
+    monkeypatch.setattr(
+        chat_v1,
+        "synthesize_chat_ws_voice_message",
+        _fake_synthesize,
+    )
+
+    app, user_id, db_session = chat_app_with_postgres_db
+    agent_id = "agent-companion-ws-tb-voice"
+    chat_id = f"chat-ws-tb-voice-{uuid_module.uuid4().hex}"
+    session_id = chat_service.generate_session_id(chat_id)
+
+    st = MemoryStore(
+        scope=CompanionScope(user_id, agent_id, chat_id),
+        repository=None,
+    )
+    precomputed = "https://storage.googleapis.com/bucket/voice.mp3"
+    ev = ToolOutputEvent(
+        scope_registry_key=st.scope.registry_key(),
+        memory_store=st,
+        user_msg_uuid=str(uuid_module.uuid4()),
+        assistant_msg_uuid=str(uuid_module.uuid4()),
+        text="caption",
+        ts="2026-05-20T00:00:00Z",
+        elapsed_ms=10,
+        reply_modality="text",
+        precomputed_audio_url=precomputed,
+        generation_deliver=True,
+    )
+    request = ChatCompletionRequest(
+        messages=[ChatMessage(role="user", content="voice")],
+        language="en",
+    )
+    _db = global_config_loaded_from_config_yaml.database
+    engine = create_async_engine(str(_db.async_url), pool_size=1, max_overflow=0)
+    factory = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    try:
+        async with factory() as db:
+            out = await chat_v1._build_companion_tool_background_ws_payload(
+                db=db,
+                agent_id=agent_id,
+                session_id=session_id,
+                ev=ev,
+                request=request,
+                effective_local_id=None,
+                foreground_voice_ctx={
+                    "chat_voice_id": "v1",
+                    "language": "en",
+                },
+                voice_svc=global_voice_service,
+            )
+    finally:
+        await engine.dispose()
+
+    assert synthesize_calls == []
+    message = out["data"]["choices"][0]["message"]
+    assert message["audio_url"] == precomputed
+    assert message["meta_data"]["is_voice"] is True
+    assert message["meta_data"]["reply_modality"] == "voice_message"
+
+
 def test_chat_websocket_companion_foreground_tool_background_started_meta(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):

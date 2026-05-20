@@ -179,6 +179,8 @@
 
 判断：
 
+- **tool 先合成**：`generate_voice_message` 成功时 `ToolOutputEvent.precomputed_audio_url` 已带 URL，WS tool_bg 路径只落库、不再打 `chat_ws voice_message TTS`；日志里该短语出现两次即重复合成 bug。
+- **信封 fallback**：未调 voice tool 但 `reply_modality = voice_message` 时，仍由 `_chat_ws_voice_message_audio_url` 合成。
 - `reply_modality = "voice_message"` 只表示 Companion 选择语音消息；`audio_url` 只有 TTS 成功并回填后才出现。
 - 若 `voice_message_script` 和可见 assistant 文本都为空，不会合成音频。
 - 若音色无法解析或 TTS provider 返回空数据，业务下行仍可返回文本气泡。
