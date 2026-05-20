@@ -76,16 +76,12 @@ def _parse_ts(ts: str) -> datetime:
     return dt.astimezone(timezone.utc)
 
 
-def _is_proactive_chat_user_row(m: ChatMessage) -> bool:
-    return m.proactive_chat is True
-
-
 def _user_message_gaps_seconds(msgs: list[ChatMessage]) -> list[float]:
     user_ts: list[datetime] = []
     for m in msgs:
         if m.role != "user":
             continue
-        if _is_proactive_chat_user_row(m):
+        if m.proactive_chat is True:
             continue
         user_ts.append(_parse_ts(m.ts))
     if len(user_ts) < 2:
@@ -128,7 +124,7 @@ def _format_elapsed_since(seconds: float) -> str:
 
 def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     for m in reversed(msgs):
-        if m.role == "user" and not _is_proactive_chat_user_row(m):
+        if m.role == "user" and m.proactive_chat is not True:
             return _parse_ts(m.ts)
     return None
 

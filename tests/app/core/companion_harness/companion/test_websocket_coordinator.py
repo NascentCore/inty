@@ -78,7 +78,7 @@ async def test_companion_websocket_coordinator_clear_inner_tick_coords() -> None
     coordinator = CompanionWebSocketCoordinator.for_current_loop()
     coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
     assert coordinator.snapshot_inner_tick_coords() is not None
-    coordinator.clear_inner_tick_coords()
+    coordinator.inner_tick_context.clear()
     assert coordinator.snapshot_inner_tick_coords() is None
 
 

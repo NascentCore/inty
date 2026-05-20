@@ -13,9 +13,9 @@ from unittest.mock import patch
 
 import pytest
 
-from app.core.companion_harness.companion.llm_client import (
-    CompanionLLMConfig,
-    async_chat_completion_with_retrial,
+from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.companion_harness.companion.llm_runtime_events import (
+    record_llm_inference_failure,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import (
@@ -64,16 +64,29 @@ class _FakeLLMClient:
         **kwargs: Any,
     ) -> Any:
         resolved = model or self.resolve_model("chat")
-        return await async_chat_completion_with_retrial(
-            chat_completion_call=lambda: self.chat_completion(
-                model=resolved, **kwargs
-            ),
-            max_attempts=max_attempts,
-            per_attempt_timeout_sec=per_attempt_timeout_sec,
-            model_id_for_failure=resolved.id_on_provider,
-            attempt_log_label=attempt_log_label,
-            trace_id=trace_id,
-        )
+        model_id = resolved.id_on_provider
+        resp = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                resp = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        lambda: self.chat_completion(model=resolved, **kwargs)
+                    ),
+                    timeout=per_attempt_timeout_sec,
+                )
+                break
+            except asyncio.CancelledError:
+                raise
+            except BaseException as exc:
+                record_llm_inference_failure(
+                    model=model_id,
+                    exc=exc,
+                    foreground_timeout_sec=per_attempt_timeout_sec,
+                )
+                if attempt >= max_attempts:
+                    raise
+        assert resp is not None
+        return resp
 
 
 class _FlakyLLMClient(_FakeLLMClient):
