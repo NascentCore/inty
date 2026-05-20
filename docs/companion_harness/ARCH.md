@@ -55,28 +55,20 @@ flowchart TD
 
 当前生产入口仍是 `/api/v1/chat/ws`。API 层负责鉴权、schema、用量、chat history 和 transport framing；companion 内核负责 session、MemoryStore、prompt、模型路由、工具链和 transcript。这个分层是现状，不是目标完成态：API 层仍承载过多 companion 相关协调逻辑。
 
-## 核心层次
-
-| 层次 | 当前职责 | 设计判断 |
-| --- | --- | --- |
-| Transport adapter | `/api/v1/chat/ws` 长连接、控制帧、业务帧 FIFO、REPL bridge。 | 应继续下沉为传输适配层；不能作为 companion 能力边界。 |
-| API shell | 鉴权、版本门控、usage、chat_history、错误映射、客户端兼容。 | 可保留业务网关职责，但不应持有 turn 并发和后台补帧语义。 |
-| Companion session | 按 `user_id + companion_id + chat_id` 绑定 `context.json`、工作区、transcript。 | 当前作用域偏会话；需要向 user / companion / chat 分层关系状态演进。 |
-| Turn execution | 组装 prompt、解析 envelope、选择 route、调用模型、启动工具后台。 | 是内核主心跳；未来应收敛到单一编排合同，减少平行抽象。 |
-| MemoryStore | 版本化文档、transcript、context、runtime events、状态 JSON。 | 当前是有效过渡层；长期应拆成事件流、可编辑文档和检索层。 |
-| Async effects | tool background、proactive heartbeat、maintenance inner tick、图像等副作用。 | 必须与 turn / transcript / chat_history 保持一致，不应只表现为额外下行帧。 |
-| Observability | `user_msg_uuid`、`inty_trace_id`、LangSmith、runtime events、log correlation。 | 是架构约束，不是排障附属品。 |
-
 ## 记忆模型
 
-当前 companion 的“世界”主要由 MemoryStore 中的一组版本化文档、transcript 和工具副作用构成，还不是独立 world engine。文档记忆分三层：episodic、gist、semantic；详见 `/docs/companion_harness/MEMORY_PIPELINE.md`。
+当前 companion 的“世界”主要由 MemoryStore 中的一组版本化 markdown 文档、transcript 和工具副作用构成，
+还不是独立 world engine。
+其中记忆分三层：episodic、gist、semantic 通过 MemoryPiplein 更新；
+详见 `/docs/companion_harness/MEMORY_PIPELINE.md`。
 
-## 传输合同
+## Websocket 上下行传输
 
 当前 WebSocket 协议有两类下行：
 
 - **业务事件**：assistant 回复、错误 envelope、可见 tool background 补帧，必须保持 per-connection FIFO。
 - **连接控制**：`ping` / `pong`、client context ack、signed-on ack 等，只表达连接或时间上下文，不应进入 dialogue FIFO。
+- **数据类型**：数据类型定义为 Pydantic model 位于 `app/schemas/chat_websocket.py`
 
 ### 连接生命周期
 
@@ -88,21 +80,70 @@ flowchart TD
 4. **主动退出或登出**：客户端应在关闭前发送 `user_signed_out` 并等待 ack。ack 只表示服务端接受了 teardown 请求；之后服务端会取消本连接尚未完成的 companion turn，并收束当前聊天 scope、记忆文档和聊天历史。客户端不要把普通断线当作登出，也不要在未收到新状态前假设旧历史已完成清理。
 5. **服务端关闭或连接结束**：仍在运行的 companion turn 必须被取消，避免用户离开后继续产生孤儿回复、后台补帧或记忆写入。
 
-最小控制帧形状示例：
+## 3.2 单一核心循环（Runtime Loop）
 
-```json
-{"type": "user_signed_on", "agent_id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", "message_id": "11111111-2222-4aaa-8bbb-333333333333"}
-{"type": "ws_conn_dropped", "agent_id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", "dropped_at_utc": "2026-05-17T02:22:25Z", "message_id": "44444444-5555-4aaa-8bbb-666666666666"}
-{"type": "user_signed_out", "agent_id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", "message_id": "77777777-8888-4aaa-8bbb-999999999999"}
-```
+`Inbound queue -> Inbound Event -> Routing/Orchestration -> Memory Extract/Update/Prompt-Assembling -> LLM-calls -> Output Queue -> Dispatch`
 
-## 实现索引
+## 4. 代码层技术选型（Tech Stack）
 
-Read source files for details, do not list them here.
+- Python 3.12（与仓库环境一致）。
 
-## 维护规则
+数据建模与契约：Pydantic v2，用途：
 
-- 新增架构内容必须先说明跨模块设计含义，再给实现入口。
-- 不在本文记录可直接从单个函数读出的细节。
-- 若某段内容只为排障服务，应移入对应目录 `AGENTS.md` 或专题 runbook。
-- 若目标态与现状不同，必须显式标注“当前事实”和“淘汰方向”。
+- 统一定义跨模块输入/输出契约（event/memory/plan）。
+- 做边界校验、类型约束、序列化与反序列化。
+- 防止 dataclass + dict 组合导致的字段漂移。
+
+具体使用：
+
+- Domain DTO 与 Adapter DTO 均使用 Pydantic BaseModel。
+- 入站外部 payload 先过校验再进入业务层。
+
+## 4.3 CLI：Cyclopts
+
+用途：
+
+- 实现统一命令入口：`serve inbound` / `serve scheduler` / `admin replay`。
+- 替代散落的 argparse 子脚本。
+
+原则：
+
+- 明确 `main.py` 入口，不使用 `__main__.py`。
+
+## LLM client：封装 OpenAI-SDK（OpenAI-compatible）
+
+用途：
+
+- 统一模型调用层（支持 OpenAI 兼容端点，如 OpenRouter）。
+- 支持 chat completion + tool calling。
+- 集成 LangSmith LLM tracing
+
+原则：
+
+- 在 `ModelGateway` 统一封装 SDK 调用、超时、重试、用量日志。
+- 上层业务不直接调用 SDK 客户端。
+
+## 4.5 配置管理：python-dotenv (repl) + config-files
+
+用途：
+
+- 本地/实验环境使用 dotenv 加载密钥。
+- 服务级配置通过 config.yaml+[config.py](/app/utils/config.py)。
+
+原则：
+
+- 配置读取集中在 `config.yaml`，业务代码不直接 `os.environ[...]`。
+- 缺失关键配置时启动即失败（fail fast）。
+
+## 4.6 持久化
+
+- PostgreSQL + SQLAlchemy（生产化、并发与查询能力）。
+- 迁移：Alembic 管理 schema 版本。
+
+## 4.8 可观测性与日志
+
+- LangSmith：通过 LLM client 接入
+- REPL: metadata (for debugging) & content messages
+- 标准库 logging（结构化 key-value 风格）。
+- 指标维度：inbound latency、LLM latency、dispatch latency、retry count、drop count。
+- 错误分级：transient vs terminal。
