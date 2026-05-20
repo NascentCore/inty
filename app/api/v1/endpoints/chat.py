@@ -153,10 +153,6 @@ from app.schemas.user import User as UserSchema
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
-# Floors ``companion_ws_proactive_chat_poll_seconds`` inside ``companion_ws_inner_tick_worker``.
-# Tests may monkeypatch this module attribute to shorten poll intervals.
-_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS: float = 5.0
-
 
 class CompanionInferenceUpstreamHTTPException(HTTPException):
     """HTTPException with optional fields merged into ``/chat/ws`` error JSON frames."""
@@ -3659,17 +3655,14 @@ async def chat_completions_websocket(
     companion_ws = CompanionWebSocketCoordinator.for_current_loop()
     inflight_turn_tracker = ChatWsInflightTurnTracker()
     ChatWsInflightShutdownRegistry.register(inflight_turn_tracker)
-    hb_worker_stop = asyncio.Event()
+    inner_tick_worker_stop = asyncio.Event()
 
     async def companion_ws_inner_tick_worker() -> None:
-        while not hb_worker_stop.is_set():
+        while not inner_tick_worker_stop.is_set():
             feats = global_config_loaded_from_config_yaml.app.features
-            poll = max(
-                _COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS,
-                float(feats.companion_ws_proactive_chat_poll_seconds),
-            )
+            poll = float(feats.companion_ws_proactive_chat_poll_seconds)
             try:
-                await asyncio.wait_for(hb_worker_stop.wait(), timeout=poll)
+                await asyncio.wait_for(inner_tick_worker_stop.wait(), timeout=poll)
                 break
             except asyncio.TimeoutError:
                 pass
@@ -3937,7 +3930,7 @@ async def chat_completions_websocket(
             ws_conn_id,
             current_user.id,
         )
-        hb_worker_stop.set()
+        inner_tick_worker_stop.set()
         hb_worker_task.cancel()
         try:
             await hb_worker_task

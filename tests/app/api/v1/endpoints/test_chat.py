@@ -2088,11 +2088,6 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
         run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
     )
 
-    # ``poll = max(floor, features.companion_ws_proactive_chat_poll_seconds)``:
-    # lowering only the floor is not enough when YAML sets a large poll interval.
-    monkeypatch.setattr(
-        chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05
-    )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
         "companion_ws_proactive_chat_poll_seconds",
@@ -2165,9 +2160,6 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
         run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
     )
 
-    monkeypatch.setattr(
-        chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05
-    )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
         "companion_ws_proactive_chat_poll_seconds",
