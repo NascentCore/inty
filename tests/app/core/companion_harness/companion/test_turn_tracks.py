@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     CompanionTurnResult,
 )
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn_tracks import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
@@ -39,24 +44,89 @@ def _minimal_turn_kwargs() -> dict[str, object]:
 
 
 @pytest.mark.asyncio
-async def test_user_chat_track_passes_non_inner_tick_flags() -> None:
+async def test_user_chat_track_passes_non_inner_tick_flags(tmp_path) -> None:
+    scope = CompanionScope("turn-tracks-daily", "agent", tmp_path.name)
+    st = MemoryStore(scope=scope, repository=None)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "public",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+                "workspace_bootstrap_user_interactive_completed": True,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
+        st.write_document(rel, f"{rel}\n")
     stub = CompanionTurnResult(
         trace_id="t",
         user_msg_uuid="u",
         assistant_text="",
+    )
+    kwargs = _minimal_turn_kwargs()
+    kwargs["store"] = st
+    kwargs["memory_bootstrap_type"] = (
+        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     )
     with patch(
         "app.core.companion_harness.companion.turn._run_companion_turn_core",
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
-        await run_companion_user_chat_turn(
-            "hello",
-            **_minimal_turn_kwargs(),
-        )
+        await run_companion_user_chat_turn("hello", **kwargs)
     assert run_turn_mock.await_args is not None
     assert run_turn_mock.await_args.args[0] == "hello"
     assert run_turn_mock.await_args.kwargs["track"] == CompanionTurnTrack.USER_CHAT
+
+
+@pytest.mark.asyncio
+async def test_user_chat_turn_selects_bootstrap_track_when_incomplete(
+    tmp_path,
+) -> None:
+    scope = CompanionScope("turn-tracks", "agent", tmp_path.name)
+    st = MemoryStore(scope=scope, repository=None)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "bootstrap",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+                "workspace_bootstrap_user_interactive_completed": False,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
+        st.write_document(rel, f"{rel}\n")
+    stub = CompanionTurnResult(
+        trace_id="t",
+        user_msg_uuid="u",
+        assistant_text="",
+    )
+    kwargs = _minimal_turn_kwargs()
+    kwargs["store"] = st
+    kwargs["memory_bootstrap_type"] = (
+        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    )
+    with patch(
+        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        new_callable=AsyncMock,
+        return_value=stub,
+    ) as run_turn_mock:
+        await run_companion_user_chat_turn("hello", **kwargs)
+    assert run_turn_mock.await_args is not None
+    assert (
+        run_turn_mock.await_args.kwargs["track"]
+        == CompanionTurnTrack.USER_CHAT_BOOTSTRAP
+    )
 
 
 @pytest.mark.asyncio

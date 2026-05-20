@@ -7,6 +7,7 @@ from typing import Any
 from .companion_tool_runtime import (
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+    build_openai_bootstrap_track_tools,
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,
 )
@@ -24,5 +25,6 @@ __all__ = [
     "MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP",
     "MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST",
     "build_companion_tools",
+    "build_openai_bootstrap_track_tools",
     "build_openai_repl_tools_inner_tick",
 ]

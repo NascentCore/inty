@@ -66,6 +66,10 @@ def test_turn_flags_for_track() -> None:
         False,
         InnerTickActivity.MAINTENANCE,
     )
+    assert turn_flags_for_track(CompanionTurnTrack.USER_CHAT_BOOTSTRAP) == (
+        False,
+        InnerTickActivity.MAINTENANCE,
+    )
     assert turn_flags_for_track(CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT) == (
         True,
         InnerTickActivity.PROACTIVE_CHAT,
@@ -125,3 +129,51 @@ def test_track_route_mode_matrix(tmp_path) -> None:
         track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
     )
     assert proactive_route == TurnRouteMode.PROACTIVE_CHAT_SYNC
+
+
+def test_bootstrap_track_tools_and_system(tmp_path) -> None:
+    scope = CompanionScope("track-bootstrap", "agent", tmp_path.name)
+    st = MemoryStore(scope=scope, repository=None)
+    for rel, body in (
+        ("IDENTITY.md", "id\n"),
+        ("SOUL.md", "soul\n"),
+        ("USER.md", "user\n"),
+        ("MEMORY.md", "mem\n"),
+    ):
+        st.write_document(rel, body)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "bootstrap",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+                "workspace_bootstrap_user_interactive_completed": False,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    context = load_context_meta(store=st)
+    bundle = load_prompt_bundle(st, meta=context)
+    mb = CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    tools, systems, route = companion_turn_tools_and_system_messages(
+        store=st,
+        bundle=bundle,
+        context=context,
+        memory_bootstrap_type=mb,
+        track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+    )
+    tool_names = sorted(t["function"]["name"] for t in tools)
+    assert tool_names == [
+        "companion_bootstrap_user_interactive_complete",
+        "companion_update_prompt_slice",
+    ]
+    joined = "\n".join(
+        str(m.get("content") or "")
+        for m in systems
+        if m.get("role") == "system"
+    )
+    assert "INTERACTIVE_BOOTSTRAP" in joined
+    assert route == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL

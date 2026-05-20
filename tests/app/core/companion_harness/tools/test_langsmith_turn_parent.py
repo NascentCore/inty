@@ -18,7 +18,10 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
     end_companion_turn_root_run_safe,
 )
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.models import InnerTickActivity
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    InnerTickActivity,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import start_tool_background_job
@@ -277,6 +280,7 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
             trace_id="tr",
             tools=[],
             client=MagicMock(),
+            companion_turn_track=CompanionTurnTrack.USER_CHAT,
             langsmith_parent_run=parent,
         )
         runner = mock_thread.call_args.kwargs["target"]
@@ -317,6 +321,7 @@ def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
             trace_id="tr",
             tools=[],
             client=MagicMock(),
+            companion_turn_track=CompanionTurnTrack.USER_CHAT,
         )
         runner = mock_thread.call_args.kwargs["target"]
         runner()

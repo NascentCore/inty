@@ -20,6 +20,7 @@ from .models import (
 from .turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .prompts.system_messages import (
+    build_system_messages_for_bootstrap_track,
     build_system_messages_for_chat_track,
     build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_maintenance,
@@ -28,6 +29,7 @@ from .prompts.system_messages import (
 )
 from app.core.companion_harness.tools.companion_tools import (
     build_companion_tools,
+    build_openai_bootstrap_track_tools,
     build_openai_repl_tools_inner_tick,
 )
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
@@ -45,6 +47,7 @@ def replace_leading_system_messages_inplace(
 
 def companion_tools_for_turn(
     *,
+    track: CompanionTurnTrack,
     context: ContextMeta,
     memory_bootstrap_type: str,
     inner_tick_turn: bool,
@@ -52,29 +55,27 @@ def companion_tools_for_turn(
     implicit_user_signed_on_turn: bool = False,
 ) -> list[dict[str, Any]]:
     """OpenAI tool schemas for this turn (independent of which system-message wrapper runs)."""
-    tick_proactive = (
-        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
-    )
-    interactive_bootstrap = interactive_bootstrap_active(
-        feature_enabled=(
-            memory_bootstrap_type
-            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-        ),
-        meta=context,
-    )
-    tools_for_turn: list[dict[str, Any]] = (
-        []
-        if tick_proactive
-        else (
-            build_openai_repl_tools_inner_tick()
-            if inner_tick_turn
-            else build_companion_tools(
-                interactive_bootstrap_active=interactive_bootstrap
+    match track:
+        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            tools_for_turn = build_openai_bootstrap_track_tools()
+        case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+            tools_for_turn = []
+        case _:
+            tick_proactive = (
+                inner_tick_turn
+                and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
             )
-        )
-    )
-    if implicit_user_signed_on_turn and not inner_tick_turn:
-        tools_for_turn = []
+            tools_for_turn = (
+                []
+                if tick_proactive
+                else (
+                    build_openai_repl_tools_inner_tick()
+                    if inner_tick_turn
+                    else build_companion_tools(interactive_bootstrap_active=False)
+                )
+            )
+            if implicit_user_signed_on_turn and not inner_tick_turn:
+                tools_for_turn = []
     return tools_for_turn
 
 
@@ -110,6 +111,8 @@ def companion_system_messages_for_track(
             return build_system_messages_for_inner_tick_maintenance(
                 bundle, context, store
             )
+        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            return build_system_messages_for_bootstrap_track(bundle, context)
         case CompanionTurnTrack.USER_CHAT:
             if route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
                 raise RuntimeError(
@@ -183,6 +186,7 @@ def companion_turn_tools_and_system_messages(
     if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
         implicit_user_signed_on_turn = True
     tools_for_turn = companion_tools_for_turn(
+        track=track,
         context=context,
         memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
@@ -213,6 +217,7 @@ def refresh_companion_turn_prompt_stack(
     inner_tick_activity: InnerTickActivity,
     messages: list[dict[str, Any]],
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    track: CompanionTurnTrack,
 ) -> list[dict[str, Any]]:
     """
     Re-read context.json and prompt slices, replace leading system messages, return tools schema.
@@ -224,20 +229,44 @@ def refresh_companion_turn_prompt_stack(
         inner_tick_turn=inner_tick_turn,
     )
     tools_for_turn = companion_tools_for_turn(
+        track=track,
         context=context,
         memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
         inner_tick_activity=inner_tick_activity,
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,
     )
-    tick_proactive = (
-        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
-    )
-    if inner_tick_turn and not tick_proactive:
-        refreshed = build_system_messages_for_inner_tick_maintenance(
-            bundle, context, store
-        )
-    else:
-        refreshed = build_system_messages_for_tool_track(bundle, context)
+    match track:
+        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            bootstrap_still_active = interactive_bootstrap_active(
+                feature_enabled=(
+                    memory_bootstrap_type
+                    == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+                ),
+                meta=context,
+            )
+            if bootstrap_still_active:
+                refreshed = build_system_messages_for_bootstrap_track(
+                    bundle, context
+                )
+            else:
+                refreshed = build_system_messages_for_chat_track(
+                    bundle, context, memory_bootstrap_type
+                )
+        case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
+            refreshed = build_system_messages_for_inner_tick_maintenance(
+                bundle, context, store
+            )
+        case CompanionTurnTrack.USER_CHAT:
+            refreshed = build_system_messages_for_tool_track(bundle, context)
+        case (
+            CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
+        ):
+            raise RuntimeError(
+                "refresh_companion_turn_prompt_stack unsupported track="
+                f"{track.value}"
+            )
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn

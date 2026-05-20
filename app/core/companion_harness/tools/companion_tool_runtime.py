@@ -82,8 +82,8 @@ from .companion_tool_definitions import (
     INNER_TICK_TOOL_NAMES,
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+    BOOTSTRAP_TRACK_TOOL_NAMES,
     OPENAI_TOOLS_BASE_NAMES,
-    REPL_BOOTSTRAP_TOOL_NAMES,
     REPL_DESCRIPTION_OVERRIDES,
     REPL_TOOL_NAMES_APPENDED,
     REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL,
@@ -519,6 +519,16 @@ def build_openai_tools() -> list[dict[str, Any]]:
     return prepare_openai_tools_for_chat_completions(tools)
 
 
+def build_openai_bootstrap_track_tools() -> list[dict[str, Any]]:
+    """USER_CHAT_BOOTSTRAP: slice update + bootstrap complete only."""
+    return prepare_openai_tools_for_chat_completions(
+        openai_tools_for_names(
+            BOOTSTRAP_TRACK_TOOL_NAMES,
+            description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
+        )
+    )
+
+
 def build_openai_repl_tools(
     *, interactive_bootstrap_active: bool = False
 ) -> list[dict[str, Any]]:
@@ -542,7 +552,7 @@ def build_openai_repl_tools(
     if interactive_bootstrap_active:
         out.extend(
             openai_tools_for_names(
-                REPL_BOOTSTRAP_TOOL_NAMES,
+                BOOTSTRAP_TRACK_TOOL_NAMES,
                 description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
             )
         )
