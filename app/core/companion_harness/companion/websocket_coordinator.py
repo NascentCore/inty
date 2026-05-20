@@ -196,6 +196,10 @@ class CompanionWebSocketCoordinator:
             return None
         return {"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id}
 
+    def clear_inner_tick_coords(self) -> None:
+        """Disarm proactive/maintenance inner-tick until the next ``user_signed_on``."""
+        self.inner_tick_context.clear()
+
     def last_maintenance_inner_tick_monotonic(self) -> Any:
         return self.inner_tick_context.get(
             "_last_maintenance_inner_tick_monotonic"

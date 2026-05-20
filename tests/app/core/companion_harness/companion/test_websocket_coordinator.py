@@ -74,6 +74,15 @@ async def test_companion_websocket_coordinator_inner_tick_refresh_preserves_same
 
 
 @pytest.mark.asyncio
+async def test_companion_websocket_coordinator_clear_inner_tick_coords() -> None:
+    coordinator = CompanionWebSocketCoordinator.for_current_loop()
+    coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
+    assert coordinator.snapshot_inner_tick_coords() is not None
+    coordinator.clear_inner_tick_coords()
+    assert coordinator.snapshot_inner_tick_coords() is None
+
+
+@pytest.mark.asyncio
 async def test_companion_websocket_coordinator_inner_tick_async_overlap_flags() -> None:
     coordinator = CompanionWebSocketCoordinator.for_current_loop()
 

@@ -331,6 +331,19 @@ def test_implicit_sign_on_greeting_llm_max_attempts_out_of_range_raises(config):
         _validate_config(config)
 
 
+def test_proactive_chat_base_idle_seconds_default(config):
+    _validate_config(config)
+    assert config.app.features.companion_ws_proactive_chat_base_idle_seconds == 30.0
+
+
+def test_proactive_chat_base_idle_seconds_out_of_range_raises(config):
+    config.app.features = FeaturesConfig(
+        companion_ws_proactive_chat_base_idle_seconds=5.0,
+    )
+    with pytest.raises(ValueError, match="base_idle_seconds"):
+        _validate_config(config)
+
+
 def test_name_for_openrouter_dev_environment():
     """测试DEV环境下的name_for_openrouter属性"""
     app_config = AppConfig(

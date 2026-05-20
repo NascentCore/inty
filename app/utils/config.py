@@ -193,9 +193,11 @@ class FeaturesConfig:
     )
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
     companion_ws_session_system_text: Optional[str] = None
-    # When True, ``/api/v1/chat/ws`` unified inner-tick worker may emit proactive companion turns
-    # (``InnerTickActivity.PROACTIVE_CHAT``) when ``next_proactive_chat_wait_seconds`` says ready.
-    companion_ws_proactive_chat_enabled: bool = True
+    # Base quiet period (seconds) before proactive chat may fire; rhythm adapts from real-user gaps
+    # up to 2× this value. WS proactive is always on when inner-tick coords are armed (signed on).
+    # NOTE: proactive chat is not gated by daily message count; usage limits will use token
+    # consumption (future), not ``limits.free_user_chat_24h_limit``.
+    companion_ws_proactive_chat_base_idle_seconds: float = 30.0
     # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
     companion_ws_proactive_chat_poll_seconds: float = 60.0
     # When True, the same worker may emit maintenance inner-tick turns (``InnerTickActivity.MAINTENANCE``).
@@ -934,4 +936,10 @@ def _validate_config(config: Config):
         raise ValueError(
             "app.features.companion_implicit_sign_on_greeting_llm_max_attempts "
             "must be between 1 and 5"
+        )
+    pc_idle = feats.companion_ws_proactive_chat_base_idle_seconds
+    if pc_idle < 10.0 or pc_idle > 3600.0:
+        raise ValueError(
+            "app.features.companion_ws_proactive_chat_base_idle_seconds "
+            "must be between 10 and 3600"
         )

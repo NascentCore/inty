@@ -1983,17 +1983,17 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
-def test_chat_websocket_companion_inner_tick_scheduled_when_proactive_chat_disabled(
+def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    """Scheduled reminder path runs even when proactive and maintenance inner-tick are off."""
-    ticks = {"scheduled": 0}
+    """Scheduled reminder runs when armed; proactive skips after user_signed_out disarms coords."""
+    ticks = {"scheduled": 0, "proactive": 0}
 
     async def spy_scheduled(**_kwargs):
         ticks["scheduled"] += 1
 
     async def spy_proactive(**_kwargs):
-        raise AssertionError("proactive should not run when disabled")
+        ticks["proactive"] += 1
 
     async def spy_maintenance(**_kwargs):
         raise AssertionError("maintenance should not run when disabled")
@@ -2017,11 +2017,6 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_proactive_chat_disab
         global_config_loaded_from_config_yaml.app.features,
         "companion_ws_proactive_chat_poll_seconds",
         0.05,
-    )
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_proactive_chat_enabled",
-        False,
     )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
@@ -2058,6 +2053,26 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_proactive_chat_disab
             assert ack["ok"] is True
             time.sleep(0.2)
             assert ticks["scheduled"] >= 1
+            assert ticks["proactive"] >= 1
+            websocket.send_json(
+                {
+                    "type": "user_signed_out",
+                    "agent_id": "agent-companion-inner-tick-sched",
+                    "message_id": "eeeeeeee-eeee-4eee-ffff-eeeeeeeeeeee",
+                }
+            )
+            out_ack = None
+            deadline = time.monotonic() + 2.0
+            while time.monotonic() < deadline:
+                msg = websocket.receive_json()
+                if msg.get("type") == "user_signed_out_ack":
+                    out_ack = msg
+                    break
+            assert out_ack is not None
+            assert out_ack.get("ok") is True
+            ticks["proactive"] = 0
+            time.sleep(0.2)
+            assert ticks["proactive"] == 0
 
     companion_chat_service.clear_companion_chat_service_caches()
 
