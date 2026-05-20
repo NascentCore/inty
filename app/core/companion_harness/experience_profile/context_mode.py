@@ -1,4 +1,12 @@
-"""Context-mode ids, normalization, and system-clause bodies for experience profiles."""
+"""Experience profile ids persisted in companion ``context.json``.
+
+``context_mode`` is the product-facing switch that controls two prompt-time
+decisions: which system clause describes the active relationship mode, and
+whether the private memory layers are injected into the turn.  Interactive
+bootstrap also writes ``post_bootstrap_context_mode`` in ``context.json``; this
+module only validates and describes ids, while the bootstrap tool performs the
+state transition after the user-facing setup finishes.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +17,8 @@ EXPERIENCE_PROFILE_ID_BOOTSTRAP = "bootstrap"
 
 
 class ExperienceContextMode(StrEnum):
+    """Built-in ``context_mode`` values understood by prompt assembly."""
+
     UNSPECIFIC = "unspecific"
     INTIMATE = "intimate"
     EMOTIONAL_COMPANION = "emotional_companion"
@@ -40,6 +50,8 @@ def _experience_profile_clause(body: str) -> str:
 
 
 def normalize_experience_profile_id(raw: str) -> str:
+    """Return the canonical lowercase profile id used in ``context.json``."""
+
     s = raw.strip().lower()
     if not s:
         raise ValueError(
@@ -49,6 +61,8 @@ def normalize_experience_profile_id(raw: str) -> str:
 
 
 def experience_profile_injects_private_memory(profile_id: str) -> bool:
+    """Whether this profile loads long-term and day-scoped private memory."""
+
     return (
         normalize_experience_profile_id(profile_id)
         in _PRIVATE_MEMORY_PROFILE_IDS
@@ -56,6 +70,13 @@ def experience_profile_injects_private_memory(profile_id: str) -> bool:
 
 
 def experience_profile_system_clause(context_mode: str) -> str:
+    """Build the prompt clause that explains the current relationship mode.
+
+    Unknown ids stay valid so experiments can opt into a public-safe clause
+    without adding a new enum member first; only built-in private-memory modes
+    enable the memory layers above.
+    """
+
     raw = (context_mode or "").strip()
     if not raw:
         raise ValueError("context_mode must be non-empty")
