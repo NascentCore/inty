@@ -730,6 +730,7 @@ async def _run_companion_turn_core(
                         inner_tick_turn=inner_tick_turn,
                         inner_tick_activity=route_inner_activity,
                         implicit_signal_bundle=implicit_signal_bundle,
+                        companion_turn_track=track,
                         tool_bg_idle_event=tool_bg_idle_event,
                         force_tools_first_round=force_tools_first_round,
                     )

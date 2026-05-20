@@ -217,7 +217,7 @@ def refresh_companion_turn_prompt_stack(
     inner_tick_activity: InnerTickActivity,
     messages: list[dict[str, Any]],
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    track: CompanionTurnTrack | None = None,
+    track: CompanionTurnTrack,
 ) -> list[dict[str, Any]]:
     """
     Re-read context.json and prompt slices, replace leading system messages, return tools schema.
@@ -228,12 +228,6 @@ def refresh_companion_turn_prompt_stack(
         implicit_signal_bundle=implicit_signal_bundle,
         inner_tick_turn=inner_tick_turn,
     )
-    if track is None:
-        track = (
-            CompanionTurnTrack.INNER_TICK_MAINTENANCE
-            if inner_tick_turn
-            else CompanionTurnTrack.USER_CHAT
-        )
     tools_for_turn = companion_tools_for_turn(
         track=track,
         context=context,
@@ -241,9 +235,6 @@ def refresh_companion_turn_prompt_stack(
         inner_tick_turn=inner_tick_turn,
         inner_tick_activity=inner_tick_activity,
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,
-    )
-    tick_proactive = (
-        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     match track:
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
@@ -262,11 +253,20 @@ def refresh_companion_turn_prompt_stack(
                 refreshed = build_system_messages_for_chat_track(
                     bundle, context, memory_bootstrap_type
                 )
-        case _ if inner_tick_turn and not tick_proactive:
+        case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             refreshed = build_system_messages_for_inner_tick_maintenance(
                 bundle, context, store
             )
-        case _:
+        case CompanionTurnTrack.USER_CHAT:
             refreshed = build_system_messages_for_tool_track(bundle, context)
+        case (
+            CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
+        ):
+            raise RuntimeError(
+                "refresh_companion_turn_prompt_stack unsupported track="
+                f"{track.value}"
+            )
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn

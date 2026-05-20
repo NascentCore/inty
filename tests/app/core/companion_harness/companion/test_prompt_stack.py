@@ -157,6 +157,7 @@ def test_refresh_inner_tick_keeps_inner_tick_tools(tmp_path) -> None:
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         messages=messages,
+        track=CompanionTurnTrack.INNER_TICK_MAINTENANCE,
     )
     assert {t["function"]["name"] for t in new_tools} == expected_names
 
@@ -241,6 +242,7 @@ def test_refresh_implicit_user_signed_on_returns_empty_tools(tmp_path) -> None:
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         messages=messages,
         implicit_signal_bundle=sig,
+        track=CompanionTurnTrack.USER_CHAT,
     )
     assert new_tools == []
 
@@ -308,6 +310,7 @@ def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         messages=messages,
+        track=CompanionTurnTrack.USER_CHAT,
     )
 
     after = _joined_leading_system_contents(messages)

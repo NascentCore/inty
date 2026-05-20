@@ -593,7 +593,7 @@ REPL_TOOL_NAMES_APPENDED: tuple[CompanionToolName, ...] = (
     CompanionToolName.MODIFY_IMAGE,
 )
 
-REPL_BOOTSTRAP_TOOL_NAMES: tuple[CompanionToolName, ...] = (
+BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE,
     CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
 )

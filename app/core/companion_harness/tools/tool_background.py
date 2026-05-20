@@ -67,6 +67,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     exc_chain_includes_llm_inference_failure_root_causes,
 )
 from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
     InnerTickActivity,
     transcript_relative_path_for_turn_persistence,
 )
@@ -577,6 +578,7 @@ async def _run_background_tool_loop(
     execute_tool_call_fn: Callable[..., Any],
     client: Any,
     chat_completion_sync: ChatCompletionsSyncPort,
+    companion_turn_track: CompanionTurnTrack,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_store_text: bool = False,
@@ -805,6 +807,7 @@ async def _run_background_tool_loop(
                 inner_tick_activity=inner_tick_activity,
                 messages=messages_with_tool_results,
                 implicit_signal_bundle=implicit_signal_bundle,
+                track=companion_turn_track,
             )
 
         try:
@@ -1027,6 +1030,7 @@ def start_tool_background_job(
     on_event: Callable[[ToolOutputEvent], None] | None = None,
     execute_tool_call_fn: Callable[..., Any] = execute_tool_call,
     client: Any,
+    companion_turn_track: CompanionTurnTrack,
     chat_completions_sync: ChatCompletionsSyncPort | None = None,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
@@ -1084,6 +1088,7 @@ def start_tool_background_job(
                     inner_tick_turn=inner_tick_turn,
                     inner_tick_activity=inner_tick_activity,
                     implicit_signal_bundle=implicit_signal_bundle,
+                    companion_turn_track=companion_turn_track,
                     force_tools_first_round=force_tools_first_round,
                 )
             )
