@@ -53,10 +53,12 @@ async def produce_voice_for_user(
         )
         return None, is_allowed, used_count, limit
 
-    synthesis_voice_id, synthesis_text = voice_svc.prepare_synthesis_voice_id_and_text(
-        text,
-        voice_id,
-        agent_gender,
+    synthesis_voice_id, synthesis_text = (
+        voice_svc.prepare_synthesis_voice_id_and_text(
+            text,
+            voice_id,
+            agent_gender,
+        )
     )
     if not synthesis_text.strip() or not synthesis_voice_id:
         return None, is_allowed, used_count, limit
@@ -162,15 +164,17 @@ async def synthesize_chat_assistant_audio(
         with log_time(
             f"语音生成: voice_id={resolved_voice_id}, text_length={len(tts_text)}, language={language}"
         ):
-            voice_result, is_allowed, used_count, limit = await produce_voice_for_user(
-                voice_svc=voice_svc,
-                db=db,
-                user=current_user,
-                text=tts_text,
-                voice_id=resolved_voice_id,
-                language=language,
-                agent_gender=agent_gender,
-                voice_message_narration_mode=voice_message_narration_mode,
+            voice_result, is_allowed, used_count, limit = (
+                await produce_voice_for_user(
+                    voice_svc=voice_svc,
+                    db=db,
+                    user=current_user,
+                    text=tts_text,
+                    voice_id=resolved_voice_id,
+                    language=language,
+                    agent_gender=agent_gender,
+                    voice_message_narration_mode=voice_message_narration_mode,
+                )
             )
             if not is_allowed:
                 logger.warning(

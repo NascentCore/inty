@@ -241,8 +241,10 @@ class VoiceService:
         """按 provider / 订阅 / 配置解析 TTS model id（与 tts_catalog 查表无关）。"""
         if provider_selected == TTS_PROVIDER_GEMINI:
             if user and db:
-                subscription = await subscription_service.get_user_current_subscription(
-                    db, user.id
+                subscription = (
+                    await subscription_service.get_user_current_subscription(
+                        db, user.id
+                    )
                 )
                 model_selected = select_chat_tts_model(
                     user=user, is_subscribed=bool(subscription)
@@ -278,7 +280,9 @@ class VoiceService:
             (not is_gemini_voice(_voice_id_for_decision))
             and global_config_loaded_from_config_yaml.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
         )
-        if not (use_prompted_gemini or use_gemini_then_elevenlabs_voice_changer):
+        if not (
+            use_prompted_gemini or use_gemini_then_elevenlabs_voice_changer
+        ):
             text = self._clean_text_for_voice(text)
         if len(text) > self.config.max_text_length:
             text = text[: self.config.max_text_length]
@@ -557,7 +561,9 @@ class VoiceService:
                 is_allowed,
                 used_count,
                 limit,
-            ) = await subscription_service.check_voice_generation_limit(db, user)
+            ) = await subscription_service.check_voice_generation_limit(
+                db, user
+            )
             if not is_allowed:
                 logger.warning(
                     f"用户 {user.id} 已达到语音生成限制: {used_count}/{limit}"
@@ -575,7 +581,9 @@ class VoiceService:
                 )
             )
             if not synthesis_text.strip():
-                logger.warning("文本清理后为空（可能全部是心理/动作描写），跳过语音生成")
+                logger.warning(
+                    "文本清理后为空（可能全部是心理/动作描写），跳过语音生成"
+                )
                 return self._trace_and_return_none("empty_text_after_cleaning")
             if not synthesis_voice_id:
                 logger.warning(

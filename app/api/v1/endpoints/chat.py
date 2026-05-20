@@ -167,7 +167,6 @@ class CompanionInferenceUpstreamHTTPException(HTTPException):
         self.ws_extra = ws_extra or {}
 
 
-
 async def _handle_subscription_limit_error(
     session_id: str,
     last_user_message: str | List[dict[str, Any]],
@@ -520,8 +519,6 @@ def _companion_turn_voice_ctx(
         "agent_settings": agent_data.get("settings"),
         "language": language,
     }
-
-
 
 
 async def _persist_companion_user_message_for_bg(
@@ -1396,8 +1393,6 @@ async def agent_chat_completions(
         voice_svc=voice_svc,
         chat_route="http",
     )
-
-
 
 
 class ChatImageBizErrorData(BizError):

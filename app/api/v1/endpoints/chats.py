@@ -494,15 +494,17 @@ async def generate_message_voice(
         from app.models.user import AuthType
         from app.services.chat_assistant_voice import produce_voice_for_user
 
-        voice_result, is_allowed, used_count, limit = await produce_voice_for_user(
-            voice_svc=voice_svc,
-            db=db,
-            user=current_user,
-            text=message_content,
-            voice_id=resolved_voice_id,
-            language=language,
-            agent_gender=agent_data.get("gender"),
-            voice_message_narration_mode=voice_message_narration_mode,
+        voice_result, is_allowed, used_count, limit = (
+            await produce_voice_for_user(
+                voice_svc=voice_svc,
+                db=db,
+                user=current_user,
+                text=message_content,
+                voice_id=resolved_voice_id,
+                language=language,
+                agent_gender=agent_data.get("gender"),
+                voice_message_narration_mode=voice_message_narration_mode,
+            )
         )
 
         if not is_allowed:
@@ -517,7 +519,9 @@ async def generate_message_voice(
             )
 
         if not voice_result:
-            raise HTTPException(status_code=500, detail="Voice generation failed")
+            raise HTTPException(
+                status_code=500, detail="Voice generation failed"
+            )
 
         audio_url = voice_result.gcs_http_url
         audio_duration = voice_result.duration_seconds

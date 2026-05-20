@@ -28,7 +28,10 @@ from app.core.companion_harness.companion.langsmith_parent_policy import (
     companion_langsmith_parent_run_allowed,
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
-from app.core.companion_harness.companion.models import CompanionTurnTrack, InnerTickActivity
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    InnerTickActivity,
+)
 from app.core.companion_harness.companion.turn_track import (
     langsmith_inty_turn_lane_for_companion_track,
     turn_flags_for_track,
@@ -205,7 +208,8 @@ def create_companion_turn_root_run(
                 companion_turn_track
             )
             implicit_user_signed_on = (
-                companion_turn_track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+                companion_turn_track
+                == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
             )
             inner_tick_activity = (
                 route_inner_activity if inner_tick_turn else None
