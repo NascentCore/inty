@@ -317,7 +317,7 @@ def _inner_tick_turn_section() -> str:
 
 def _living_sphere_persistence_clause() -> str:
     return (
-        "## LivingSphere 与 TechnoCore 边界\n\n"
+        "# LivingSphere 与 TechnoCore 边界\n\n"
         "上文 ``LIVING_SPHERE.md`` 是**可读快照**（最终一致）：用户明确要改小家布局、物件、锚点时，"
         f"调用 ``{LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME}`` 记入更新日志，**不要**用 "
         "``memory_store_write_document`` 覆盖 ``LIVING_SPHERE.md``。"
