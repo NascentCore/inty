@@ -8,19 +8,9 @@ from pathlib import Path
 from app.core.companion_harness.companion.proactive_chat import (
     ProactiveChatConfig,
     next_proactive_chat_wait_seconds,
-    proactive_chat_reply_is_silent,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-
-
-def test_proactive_chat_reply_is_silent() -> None:
-    assert proactive_chat_reply_is_silent(None)
-    assert proactive_chat_reply_is_silent("")
-    assert proactive_chat_reply_is_silent("  ")
-    assert proactive_chat_reply_is_silent("[SILENT]")
-    assert proactive_chat_reply_is_silent("thinking... [SILENT]")
-    assert not proactive_chat_reply_is_silent("Hello there")
 
 
 def test_proactive_chat_empty_transcript(tmp_path: Path) -> None:

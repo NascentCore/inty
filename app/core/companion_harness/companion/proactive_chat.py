@@ -56,16 +56,6 @@ class ProactiveChatConfig(BaseModel):
     )
 
 
-def proactive_chat_reply_is_silent(assistant_text: str | None) -> bool:
-    """True when the model chose not to speak (empty or contains ``[SILENT]``)."""
-    if assistant_text is None:
-        return True
-    text = str(assistant_text).strip()
-    if not text:
-        return True
-    return PROACTIVE_CHAT_SILENT_TOKEN.lower() in text.lower()
-
-
 def _parse_ts(ts: str) -> datetime:
     s = ts.strip()
     if s.endswith("Z"):

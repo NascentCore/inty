@@ -43,10 +43,10 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.companion.proactive_chat import (
+    PROACTIVE_CHAT_SILENT_TOKEN,
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
     ProactiveChatConfig,
     next_proactive_chat_wait_seconds,
-    proactive_chat_reply_is_silent,
 )
 from app.core.companion_harness.companion.inner_tick_schedule import (
     InnerTickScheduleOverrides,
@@ -1859,7 +1859,10 @@ async def _try_fire_companion_ws_proactive_chat(
             companion_ws.bind_ws_inner_tick_proactive_tool_bg_idle(None)
 
         companion_reply = companion_turn.assistant_text
-        if proactive_chat_reply_is_silent(companion_reply):
+        reply_text = (
+            str(companion_reply).strip() if companion_reply is not None else ""
+        )
+        if not reply_text or PROACTIVE_CHAT_SILENT_TOKEN.lower() in reply_text.lower():
             logger.debug(
                 "companion_ws_proactive_chat silent ws_conn_id={} user={} agent={}",
                 ws_conn_id,
