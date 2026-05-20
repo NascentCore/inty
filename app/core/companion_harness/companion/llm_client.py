@@ -216,9 +216,7 @@ class CompanionLLMClient:
         trace_id: str | None,
         attempt_log_label: str,
     ) -> Any:
-        resolved = model or self.resolve_model(
-            "tool" if tools else "chat"
-        )
+        resolved = model or self.resolve_model("tool" if tools else "chat")
         model_id = resolved.id_on_provider
         assert max_attempts >= 1
         assert per_attempt_timeout_sec > 0.0

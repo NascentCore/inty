@@ -8,7 +8,9 @@ from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .models import CompanionTurnTrack, InnerTickActivity
 
 
-def turn_flags_for_track(track: CompanionTurnTrack) -> tuple[bool, InnerTickActivity]:
+def turn_flags_for_track(
+    track: CompanionTurnTrack,
+) -> tuple[bool, InnerTickActivity]:
     match track:
         case (
             CompanionTurnTrack.USER_CHAT
@@ -44,9 +46,14 @@ def track_from_legacy_flags(
     return CompanionTurnTrack.USER_CHAT
 
 
-def langsmith_inty_turn_lane_for_companion_track(track: CompanionTurnTrack) -> str:
+def langsmith_inty_turn_lane_for_companion_track(
+    track: CompanionTurnTrack,
+) -> str:
     match track:
-        case CompanionTurnTrack.USER_CHAT | CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+        case (
+            CompanionTurnTrack.USER_CHAT
+            | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
+        ):
             return "explicit_user_message"
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
             return "implicit_turn"

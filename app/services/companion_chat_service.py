@@ -13,7 +13,9 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.companion.runtime_events import append_runtime_event
+from app.core.companion_harness.companion.runtime_events import (
+    append_runtime_event,
+)
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
@@ -527,9 +529,9 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> CompanionTurnResult:
-    assert scheduled_user_text.strip(), (
-        "run_companion_inner_tick_scheduled_turn_for_api requires non-empty scheduled_user_text"
-    )
+    assert (
+        scheduled_user_text.strip()
+    ), "run_companion_inner_tick_scheduled_turn_for_api requires non-empty scheduled_user_text"
     return await _run_companion_api_track_turn(
         track_path="inner_tick_scheduled",
         user_id=user_id,
@@ -611,8 +613,10 @@ async def run_companion_chat_turn_for_api(
     if inner_tick_turn:
         match inner_tick_activity:
             case InnerTickActivity.PROACTIVE_CHAT:
-                return await run_companion_inner_tick_proactive_chat_turn_for_api(
-                    **common,
+                return (
+                    await run_companion_inner_tick_proactive_chat_turn_for_api(
+                        **common,
+                    )
                 )
             case InnerTickActivity.MAINTENANCE:
                 return await run_companion_inner_tick_maintenance_turn_for_api(

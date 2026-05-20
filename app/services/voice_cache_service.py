@@ -14,7 +14,10 @@ from sqlalchemy.sql import func
 
 from app.models.voice_cache import VoiceCache
 from app.services.gcs_service import GCSService
-from app.services.voice_service import VoiceGenerationResult, build_voice_gcs_urls
+from app.services.voice_service import (
+    VoiceGenerationResult,
+    build_voice_gcs_urls,
+)
 
 
 class VoiceCacheService:

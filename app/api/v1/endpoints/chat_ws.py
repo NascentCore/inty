@@ -12,7 +12,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -123,6 +129,7 @@ from app.api.v1.endpoints.chat import (
 from app.api.utils.logger_route import LoggerRoute
 
 router = APIRouter(route_class=LoggerRoute)
+
 
 def _chat_ws_error_payload_from_http_exception(
     exc: HTTPException, *, agent_id: str
@@ -792,6 +799,7 @@ async def _resolve_assumed_chat_websocket_user(
     )
     return operator_schema
 
+
 async def _build_companion_tool_background_ws_payload(
     *,
     db: AsyncSession,
@@ -861,9 +869,7 @@ async def _build_companion_tool_background_ws_payload(
                 None,
             )
         except Exception as e:
-            logger.warning(
-                f"tool_bg precomputed audio_url persist failed: {e}"
-            )
+            logger.warning(f"tool_bg precomputed audio_url persist failed: {e}")
     elif voice_svc is not None and foreground_voice_ctx is not None:
         audio_url = await _chat_ws_voice_message_audio_url(
             reply_modality=reply_modality_tb,
@@ -963,7 +969,9 @@ async def _chat_ws_voice_message_audio_url(
 ) -> Optional[str]:
     if str(reply_modality or "") != "voice_message":
         return None
-    transcript = (voice_message_script or "").strip() or (assistant_text or "").strip()
+    transcript = (voice_message_script or "").strip() or (
+        assistant_text or ""
+    ).strip()
     if not transcript:
         return None
     voice_id = _resolve_chat_ws_voice_id(
@@ -998,6 +1006,8 @@ async def _chat_ws_voice_message_audio_url(
     except Exception as e:
         logger.warning(f"chat_ws voice_message persist audio_url failed: {e}")
     return audio_url
+
+
 async def _try_fire_companion_ws_scheduled_task_inner_tick(
     *,
     outbound_queue: asyncio.Queue,
@@ -1098,19 +1108,17 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
             )
             return
         try:
-            companion_turn = (
-                await companion_chat_service.run_companion_inner_tick_scheduled_turn_for_api(
-                    scheduled_user_text=synthetic_user_text,
-                    user_id=user_id,
-                    agent_id=agent_id,
-                    chat_id=chat_row_id,
-                    resolved_chat_model=model_override,
-                    defer_memory_update=True,
-                    session_id=session_id,
-                    background_output_sink=None,
-                    preset_user_msg_uuid=preset_uid,
-                    implicit_signal_bundle=ws_implicit,
-                )
+            companion_turn = await companion_chat_service.run_companion_inner_tick_scheduled_turn_for_api(
+                scheduled_user_text=synthetic_user_text,
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_id=chat_row_id,
+                resolved_chat_model=model_override,
+                defer_memory_update=True,
+                session_id=session_id,
+                background_output_sink=None,
+                preset_user_msg_uuid=preset_uid,
+                implicit_signal_bundle=ws_implicit,
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):
@@ -1380,18 +1388,16 @@ async def _try_fire_companion_ws_proactive_chat(
                 agent_id,
             )
             return
-        companion_turn = (
-            await companion_chat_service.run_companion_inner_tick_proactive_chat_turn_for_api(
-                user_id=user_id,
-                agent_id=agent_id,
-                chat_id=chat_row_id,
-                resolved_chat_model=model_override,
-                defer_memory_update=True,
-                session_id=session_id,
-                background_output_sink=None,
-                preset_user_msg_uuid=preset_uid,
-                implicit_signal_bundle=ws_implicit,
-            )
+        companion_turn = await companion_chat_service.run_companion_inner_tick_proactive_chat_turn_for_api(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_row_id,
+            resolved_chat_model=model_override,
+            defer_memory_update=True,
+            session_id=session_id,
+            background_output_sink=None,
+            preset_user_msg_uuid=preset_uid,
+            implicit_signal_bundle=ws_implicit,
         )
         hb_user_text = (
             companion_turn.transcript_user_content
@@ -1413,7 +1419,10 @@ async def _try_fire_companion_ws_proactive_chat(
         reply_text = (
             str(companion_reply).strip() if companion_reply is not None else ""
         )
-        if not reply_text or PROACTIVE_CHAT_SILENT_TOKEN.lower() in reply_text.lower():
+        if (
+            not reply_text
+            or PROACTIVE_CHAT_SILENT_TOKEN.lower() in reply_text.lower()
+        ):
             logger.debug(
                 "companion_ws_proactive_chat silent ws_conn_id={} user={} agent={}",
                 ws_conn_id,
@@ -1693,18 +1702,16 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             },
         )
         try:
-            companion_turn = (
-                await companion_chat_service.run_companion_inner_tick_maintenance_turn_for_api(
-                    user_id=user_id,
-                    agent_id=agent_id,
-                    chat_id=chat_row_id,
-                    resolved_chat_model=model_override,
-                    defer_memory_update=True,
-                    session_id=session_id,
-                    background_output_sink=companion_ws.background_sink,
-                    preset_user_msg_uuid=preset_uid,
-                    implicit_signal_bundle=ws_implicit,
-                )
+            companion_turn = await companion_chat_service.run_companion_inner_tick_maintenance_turn_for_api(
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_id=chat_row_id,
+                resolved_chat_model=model_override,
+                defer_memory_update=True,
+                session_id=session_id,
+                background_output_sink=companion_ws.background_sink,
+                preset_user_msg_uuid=preset_uid,
+                implicit_signal_bundle=ws_implicit,
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):
@@ -2330,6 +2337,7 @@ async def _agent_chat_ws_completions_impl(
         logger.exception("聊天请求异常详细信息:")
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
+
 @router.websocket("/ws")
 async def chat_completions_websocket(
     websocket: WebSocket,
@@ -2386,7 +2394,9 @@ async def chat_completions_websocket(
             feats = global_config_loaded_from_config_yaml.app.features
             poll = float(feats.companion_ws_proactive_chat_poll_seconds)
             try:
-                await asyncio.wait_for(inner_tick_worker_stop.wait(), timeout=poll)
+                await asyncio.wait_for(
+                    inner_tick_worker_stop.wait(), timeout=poll
+                )
                 break
             except asyncio.TimeoutError:
                 pass

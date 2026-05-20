@@ -240,9 +240,7 @@ async def _run_bootstrap_track_sync_tool_loop(
     initial_resp = await asyncio.to_thread(
         _chat_sync, working_messages, loop_tools
     )
-    langsmith_trace_acc = (
-        langsmith_trace_id_from_completion(initial_resp) or ""
-    )
+    langsmith_trace_acc = langsmith_trace_id_from_completion(initial_resp) or ""
     langsmith_llm_run_acc = (
         langsmith_llm_run_id_from_completion(initial_resp) or ""
     )
@@ -522,7 +520,9 @@ async def _run_companion_turn_core(
             parent_run_enabled=langsmith_parent_run_enabled,
             companion_turn_track=track,
             inner_tick_turn=inner_tick_turn,
-            inner_tick_activity=route_inner_activity if inner_tick_turn else None,
+            inner_tick_activity=(
+                route_inner_activity if inner_tick_turn else None
+            ),
             implicit_user_signed_on=implicit_sign_on_turn,
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(
@@ -971,7 +971,9 @@ async def _run_companion_turn_core(
         assert tool_bg_idle_event is not None
         if defer_memory_update:
 
-            def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:
+            def _complete_fn(
+                msgs: list[dict[str, Any]], model_role: str
+            ) -> str:
                 return llm_client.complete_text(msgs, model_role=model_role)
 
             schedule_memory_update_after_turn(
@@ -1037,7 +1039,9 @@ async def _run_companion_turn_core(
         langsmith_run_id=langsmith_llm_run_acc,
         tool_background_started=tool_background_started,
         assistant_source=runtime_flags.turn_type,
-        inner_tick_activity=route_inner_activity.value if inner_tick_turn else None,
+        inner_tick_activity=(
+            route_inner_activity.value if inner_tick_turn else None
+        ),
         turn_start_context_mode=context.context_mode,
         transcript_compaction=prompt_plan.transcript_compaction,
         transcript_user_content=transcript_user_content,
@@ -1106,9 +1110,12 @@ async def run_companion_user_chat_turn(
     tool_bg_idle_event: threading.Event | None,
     voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
-    if implicit_signal_bundle is not None and implicit_user_signed_on_chat_turn(
-        implicit_signal_bundle=implicit_signal_bundle,
-        inner_tick_turn=False,
+    if (
+        implicit_signal_bundle is not None
+        and implicit_user_signed_on_chat_turn(
+            implicit_signal_bundle=implicit_signal_bundle,
+            inner_tick_turn=False,
+        )
     ):
         raise ValueError(
             "implicit sign-on greeting must use run_companion_implicit_sign_on_greeting_turn"
@@ -1242,9 +1249,9 @@ async def run_companion_inner_tick_scheduled_turn(
     tool_bg_idle_event: threading.Event | None,
     voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
-    assert scheduled_user_text.strip(), (
-        "run_companion_inner_tick_scheduled_turn requires non-empty scheduled_user_text"
-    )
+    assert (
+        scheduled_user_text.strip()
+    ), "run_companion_inner_tick_scheduled_turn requires non-empty scheduled_user_text"
     return await _run_companion_turn_core(
         scheduled_user_text,
         track=CompanionTurnTrack.INNER_TICK_SCHEDULED,

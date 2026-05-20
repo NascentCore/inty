@@ -109,10 +109,14 @@ def resolve_turn_runtime_flags(
     inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
     tick_proactive = track == CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
     tick_scheduled = track == CompanionTurnTrack.INNER_TICK_SCHEDULED
-    implicit_sign_on_turn = track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+    implicit_sign_on_turn = (
+        track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+    )
     effective_user_text = user_text
     if tick_scheduled:
-        assert user_text.strip(), "inner_tick_scheduled requires non-empty scheduled_user_text"
+        assert (
+            user_text.strip()
+        ), "inner_tick_scheduled requires non-empty scheduled_user_text"
         effective_user_text = user_text
     elif inner_tick_turn:
         effective_user_text = (
@@ -281,7 +285,10 @@ def build_companion_turn_prompt_plan(
 
     if tick_proactive:
         messages.append(
-            {"role": "system", "content": PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE}
+            {
+                "role": "system",
+                "content": PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
+            }
         )
     time_ctx_system = _companion_user_time_context_system_for_llm(
         implicit_signal_bundle=implicit_signal_bundle,

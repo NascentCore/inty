@@ -70,7 +70,9 @@ def companion_tools_for_turn(
                 else (
                     build_openai_repl_tools_inner_tick()
                     if inner_tick_turn
-                    else build_companion_tools(interactive_bootstrap_active=False)
+                    else build_companion_tools(
+                        interactive_bootstrap_active=False
+                    )
                 )
             )
             if implicit_user_signed_on_turn and not inner_tick_turn:
@@ -102,7 +104,10 @@ def companion_system_messages_for_track(
                 bundle, context
             )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
-            if route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
+            if (
+                route_mode
+                != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+            ):
                 raise RuntimeError(
                     "inner_tick_maintenance track requires ASYNC route, got "
                     f"{route_mode.value}"
@@ -113,7 +118,10 @@ def companion_system_messages_for_track(
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             return build_system_messages_for_bootstrap_track(bundle, context)
         case CompanionTurnTrack.USER_CHAT:
-            if route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
+            if (
+                route_mode
+                != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+            ):
                 raise RuntimeError(
                     "user_chat track requires ASYNC route, got "
                     f"{route_mode.value}"
