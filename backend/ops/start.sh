@@ -124,7 +124,10 @@ if [ "$LOCAL" = true ]; then
 
   echo "在另外一个 terminal 窗口运行下面的命令来启动评测平台 UI"
   echo "cd evaluation && npm run dev"
-fi
 
-echo "Starting ops backend server on port $OPS_PORT..."
-python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" "${UVICORN_LOG_LEVEL[@]}"
+  echo "Starting ops backend server with reloading on port $OPS_PORT..."
+  python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" --reload "${UVICORN_LOG_LEVEL[@]}"
+else
+  echo "Starting ops backend server on port $OPS_PORT..."
+  python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" "${UVICORN_LOG_LEVEL[@]}"
+fi
