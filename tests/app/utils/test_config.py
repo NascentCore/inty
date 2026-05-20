@@ -464,6 +464,17 @@ def test_gcs_config_model_validate_ignores_unknown_keys():
     assert settings.fake_gcs_base_dir == "/tmp/test-gcs"
 
 
+def test_firebase_config_model_validate_ignores_unknown_keys():
+    settings = FirebaseConfig.model_validate(
+        {
+            "service_account_path": "firebase-test.json",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.service_account_path == "firebase-test.json"
+
+
 def test_agent_config_langsmith_always_trace_user_emails_defaults_to_empty_list():
     agent_config = AgentConfig(api_key="test", langchain_api_key="test")
 
@@ -569,6 +580,28 @@ def test_load_config_database_settings_uses_pydantic_validation():
         cfg.database.url
         == "postgresql://inty_user:secret@primary.internal:15432/inty_prod"
     )
+
+
+def test_load_config_firebase_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "firebase:\n  service_account_path: \"test-firebase.json\"\n",
+        "\n".join(
+            [
+                "firebase:",
+                "  service_account_path: test-firebase-model.json",
+                "  unknown_key: ignored",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.firebase.service_account_path == "test-firebase-model.json"
 
 
 def test_load_config_google_oauth_uses_pydantic_validation():

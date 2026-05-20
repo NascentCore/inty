@@ -417,8 +417,9 @@ class GCSConfig(BaseModel):
     fake_gcs_base_dir: str = "/tmp/inty_fake_gcs"
 
 
-@dataclass
-class FirebaseConfig:
+class FirebaseConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     service_account_path: str = ".secrets/inty-backend-key.json"
 
 
@@ -769,7 +770,7 @@ def load_config(path: str) -> Config:
         embedding=EmbeddingConfig.model_validate(data.get("embedding") or {}),
         agent=AgentConfig(**data.get("agent", {})),
         gcs=GCSConfig.model_validate(data.get("gcs") or {}),
-        firebase=FirebaseConfig(**data.get("firebase", {})),
+        firebase=FirebaseConfig.model_validate(data.get("firebase") or {}),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),

@@ -356,6 +356,61 @@ async def _chat_completion_with_structured_fallback(
         )
 
 
+def _parse_chat_history_json_object(
+    value: Any, chat_history_id: str, column_name: str
+) -> dict[str, Any] | None:
+    assert column_name in {"message", "meta_data"}
+    try:
+        if isinstance(value, str):
+            parsed = json.loads(value)
+        elif isinstance(value, dict):
+            parsed = value
+        else:
+            parsed = json.loads(str(value))
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.warning(
+            "[记忆抽取] 跳过 malformed chat_history "
+            f"{column_name} row_id={chat_history_id}: {e}"
+        )
+        return None
+
+    if not isinstance(parsed, dict):
+        logger.warning(
+            "[记忆抽取] 跳过非对象 chat_history "
+            f"{column_name} row_id={chat_history_id}"
+        )
+        return None
+
+    return parsed
+
+
+def _materialize_chat_history_row(
+    chat_history_id: str, raw: Any, meta_raw: Any
+) -> Tuple[str, str, dict[str, Any] | None] | None:
+    meta = None
+    if meta_raw is not None:
+        meta = _parse_chat_history_json_object(
+            meta_raw, chat_history_id, "meta_data"
+        )
+
+    data = _parse_chat_history_json_object(raw, chat_history_id, "message")
+    if data is None:
+        return None
+
+    msg_type = data.get("type", "human")
+    content = ""
+    if (
+        "data" in data
+        and isinstance(data["data"], dict)
+        and "content" in data["data"]
+    ):
+        content = data["data"]["content"] or ""
+    elif "content" in data:
+        content = data["content"] or ""
+    role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
+    return (role, str(content), meta)
+
+
 def get_all_messages_for_user(
     user_id: str, prefer_replica_read: bool = False
 ) -> List[Tuple[str, str, dict[str, Any] | None]]:
@@ -387,7 +442,7 @@ def get_all_messages_for_user(
     with conn.cursor() as cur:
         cur.execute(
             f"""
-            SELECT message, meta_data
+            SELECT id, message, meta_data
             FROM chat_history
             WHERE session_id::text IN ({placeholders}) AND deleted_at IS NULL
             ORDER BY created_at ASC
@@ -395,43 +450,11 @@ def get_all_messages_for_user(
             session_ids,
         )
         for row in cur.fetchall():
-            raw = row[0]
-            meta_raw = row[1]
-            meta: dict[str, Any] | None = None
-            if meta_raw is not None:
-                try:
-                    if isinstance(meta_raw, str):
-                        parsed = json.loads(meta_raw)
-                    elif isinstance(meta_raw, dict):
-                        parsed = meta_raw
-                    else:
-                        parsed = json.loads(str(meta_raw))
-                    meta = parsed if isinstance(parsed, dict) else None
-                except Exception:
-                    meta = None
-            try:
-                if isinstance(raw, str):
-                    data = json.loads(raw)
-                elif isinstance(raw, dict):
-                    data = raw
-                else:
-                    data = json.loads(str(raw))
-            except Exception:
-                continue
-            msg_type = data.get("type", "human")
-            content = ""
-            if (
-                "data" in data
-                and isinstance(data["data"], dict)
-                and "content" in data["data"]
-            ):
-                content = data["data"]["content"] or ""
-            elif "content" in data:
-                content = data["content"] or ""
-            role = (
-                "user" if msg_type in ("human", "HumanMessage") else "assistant"
+            materialized = _materialize_chat_history_row(
+                str(row[0]), row[1], row[2]
             )
-            out.append((role, str(content), meta))
+            if materialized is not None:
+                out.append(materialized)
     return out
 
 
@@ -466,7 +489,7 @@ def get_messages_for_user_in_utc_day(
     with conn.cursor() as cur:
         cur.execute(
             f"""
-            SELECT message, meta_data
+            SELECT id, message, meta_data
             FROM chat_history
             WHERE session_id::text IN ({placeholders})
               AND deleted_at IS NULL
@@ -477,43 +500,11 @@ def get_messages_for_user_in_utc_day(
             session_ids + [start_at, end_at],
         )
         for row in cur.fetchall():
-            raw = row[0]
-            meta_raw = row[1]
-            meta: dict[str, Any] | None = None
-            if meta_raw is not None:
-                try:
-                    if isinstance(meta_raw, str):
-                        parsed = json.loads(meta_raw)
-                    elif isinstance(meta_raw, dict):
-                        parsed = meta_raw
-                    else:
-                        parsed = json.loads(str(meta_raw))
-                    meta = parsed if isinstance(parsed, dict) else None
-                except Exception:
-                    meta = None
-            try:
-                if isinstance(raw, str):
-                    data = json.loads(raw)
-                elif isinstance(raw, dict):
-                    data = raw
-                else:
-                    data = json.loads(str(raw))
-            except (json.JSONDecodeError, TypeError, ValueError):
-                continue
-            msg_type = data.get("type", "human")
-            content = ""
-            if (
-                "data" in data
-                and isinstance(data["data"], dict)
-                and "content" in data["data"]
-            ):
-                content = data["data"]["content"] or ""
-            elif "content" in data:
-                content = data["content"] or ""
-            role = (
-                "user" if msg_type in ("human", "HumanMessage") else "assistant"
+            materialized = _materialize_chat_history_row(
+                str(row[0]), row[1], row[2]
             )
-            out.append((role, str(content), meta))
+            if materialized is not None:
+                out.append(materialized)
     return out
 
 
