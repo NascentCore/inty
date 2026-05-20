@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import time
+from collections.abc import Callable
 from typing import Any, Literal
 
 from loguru import logger
@@ -20,6 +22,9 @@ from app.core.companion_harness.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_sync_client,
 )
+from app.core.companion_harness.companion.llm_runtime_events import (
+    record_llm_inference_failure,
+)
 from app.utils.models_catalog import DEEPSEEK_V3_2, GenAIModel
 
 LLM_SCENE_CHAT = "chat"
@@ -27,6 +32,53 @@ LLM_SCENE_TOOL_CALL = "tool_call"
 LLM_SCENE_INNER_TICK = "inner_tick"
 
 LLMScene = Literal["chat", "tool_call", "inner_tick"]
+
+
+async def async_chat_completion_with_retrial(
+    *,
+    chat_completion_call: Callable[[], Any],
+    max_attempts: int,
+    per_attempt_timeout_sec: float,
+    model_id_for_failure: str,
+    attempt_log_label: str,
+    trace_id: str | None,
+) -> Any:
+    """Per-attempt ``asyncio.wait_for`` around a sync ``chat_completion`` (not OpenAI SDK HTTP retry).
+
+    ``create_chat_completion_sync`` only retries invalid JSON bodies; SDK ``max_retries`` does not
+    cover companion ``app.features`` per-attempt caps or ``asyncio.CancelledError`` preemption.
+    """
+    assert max_attempts >= 1
+    assert per_attempt_timeout_sec > 0.0
+    resp = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            resp = await asyncio.wait_for(
+                asyncio.to_thread(chat_completion_call),
+                timeout=per_attempt_timeout_sec,
+            )
+            break
+        except asyncio.CancelledError:
+            raise
+        except BaseException as exc:
+            record_llm_inference_failure(
+                model=model_id_for_failure,
+                exc=exc,
+                foreground_timeout_sec=per_attempt_timeout_sec,
+            )
+            logger.warning(
+                "chat_completion_with_retrial failed label={} attempt={}/{} "
+                "trace_id={} exc_type={}",
+                attempt_log_label,
+                attempt,
+                max_attempts,
+                trace_id,
+                type(exc).__name__,
+            )
+            if attempt >= max_attempts:
+                raise
+    assert resp is not None
+    return resp
 
 
 class CompanionLLMConfig(BaseModel):
@@ -194,6 +246,43 @@ class CompanionLLMClient:
             response_format=response_format,
             langsmith_extra=langsmith_extra,
             high_reasoning=high_reasoning,
+        )
+
+    async def chat_completion_with_retrial(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        model: GenAIModel | None,
+        tools: list[Any] | None,
+        tool_choice: str | None,
+        response_format: dict[str, Any] | None,
+        scene: LLMScene | None,
+        langsmith_extra: dict[str, Any] | None,
+        high_reasoning: bool,
+        max_attempts: int,
+        per_attempt_timeout_sec: float,
+        trace_id: str | None,
+        attempt_log_label: str,
+    ) -> Any:
+        resolved = model or self.resolve_model(
+            "tool" if tools else "chat"
+        )
+        return await async_chat_completion_with_retrial(
+            chat_completion_call=lambda: self.chat_completion(
+                messages=messages,
+                model=resolved,
+                tools=tools,
+                tool_choice=tool_choice,
+                response_format=response_format,
+                scene=scene,
+                langsmith_extra=langsmith_extra,
+                high_reasoning=high_reasoning,
+            ),
+            max_attempts=max_attempts,
+            per_attempt_timeout_sec=per_attempt_timeout_sec,
+            model_id_for_failure=resolved.id_on_provider,
+            attempt_log_label=attempt_log_label,
+            trace_id=trace_id,
         )
 
     def chat_completion_unified(

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -12,7 +13,10 @@ from unittest.mock import patch
 
 import pytest
 
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.companion_harness.companion.llm_client import (
+    CompanionLLMConfig,
+    async_chat_completion_with_retrial,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import (
     run_companion_implicit_sign_on_greeting_turn,
@@ -49,6 +53,28 @@ class _FakeLLMClient:
     ) -> str:
         return ""
 
+    async def chat_completion_with_retrial(
+        self,
+        *,
+        max_attempts: int,
+        per_attempt_timeout_sec: float,
+        trace_id: str | None,
+        attempt_log_label: str,
+        model: GenAIModel | None,
+        **kwargs: Any,
+    ) -> Any:
+        resolved = model or self.resolve_model("chat")
+        return await async_chat_completion_with_retrial(
+            chat_completion_call=lambda: self.chat_completion(
+                model=resolved, **kwargs
+            ),
+            max_attempts=max_attempts,
+            per_attempt_timeout_sec=per_attempt_timeout_sec,
+            model_id_for_failure=resolved.id_on_provider,
+            attempt_log_label=attempt_log_label,
+            trace_id=trace_id,
+        )
+
 
 class _FlakyLLMClient(_FakeLLMClient):
     def __init__(self) -> None:
@@ -61,6 +87,18 @@ class _FlakyLLMClient(_FakeLLMClient):
         if self._failures_remaining > 0:
             self._failures_remaining -= 1
             raise RuntimeError("transient provider error")
+        return super().chat_completion(**kwargs)
+
+
+class _SlowLLMClient(_FakeLLMClient):
+    def __init__(self, *, block_sec: float) -> None:
+        super().__init__()
+        self._block_sec = block_sec
+        self.chat_completion_invocations = 0
+
+    def chat_completion(self, **kwargs: Any) -> Any:
+        self.chat_completion_invocations += 1
+        time.sleep(self._block_sec)
         return super().chat_completion(**kwargs)
 
 
@@ -101,6 +139,39 @@ def _implicit_greeting_kwargs(
         "langsmith_parent_run_enabled": False,
         "tool_bg_idle_event": _idle_tool_bg(),
     }
+
+
+def test_implicit_sign_on_greeting_llm_timeout_retries_then_raises(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.companion_harness.companion import turn as turn_mod
+
+    feats = turn_mod.global_config_loaded_from_config_yaml.app.features
+    monkeypatch.setattr(
+        feats,
+        "companion_implicit_sign_on_greeting_llm_timeout_sec",
+        0.1,
+    )
+    monkeypatch.setattr(
+        feats,
+        "companion_implicit_sign_on_greeting_llm_max_attempts",
+        2,
+    )
+    scope = CompanionScope("turn-t", "a", f"it-greet-timeout-{tmp_path.name}")
+    store = MemoryStore(scope=scope, repository=None)
+    _seed_workspace(store)
+    client = _SlowLLMClient(block_sec=0.25)
+
+    with pytest.raises(asyncio.TimeoutError):
+        asyncio.run(
+            run_companion_implicit_sign_on_greeting_turn(
+                "",
+                **_implicit_greeting_kwargs(store, client),
+            )
+        )
+
+    assert client.chat_completion_invocations == 2
 
 
 def test_implicit_sign_on_greeting_llm_retries_then_succeeds(
@@ -156,7 +227,7 @@ def test_implicit_sign_on_greeting_llm_cancelled_skips_further_attempts(
 
     async def _exercise() -> None:
         with patch(
-            "app.core.companion_harness.companion.turn.asyncio.wait_for",
+            "app.core.companion_harness.companion.llm_client.asyncio.wait_for",
             side_effect=_counting_wait_for,
         ):
             with pytest.raises(asyncio.CancelledError):

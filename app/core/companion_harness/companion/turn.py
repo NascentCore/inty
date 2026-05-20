@@ -639,43 +639,20 @@ async def _run_companion_turn_core(
                         greet_max_attempts = int(
                             greet_feats.companion_implicit_sign_on_greeting_llm_max_attempts
                         )
-                        def _implicit_greeting_chat_sync() -> Any:
-                            return llm_client.chat_completion(
-                                messages=messages,
-                                model=resolved_model,
-                                tools=None,
-                                response_format=response_format,
-                                scene=llm_scene,
-                                high_reasoning=tick_proactive,
-                            )
-
-                        resp = None
-                        for attempt in range(1, greet_max_attempts + 1):
-                            try:
-                                resp = await asyncio.wait_for(
-                                    asyncio.to_thread(_implicit_greeting_chat_sync),
-                                    timeout=greet_timeout_sec,
-                                )
-                                break
-                            except asyncio.CancelledError:
-                                raise
-                            except BaseException as exc:
-                                record_llm_inference_failure(
-                                    model=resolved_model.id_on_provider,
-                                    exc=exc,
-                                    foreground_timeout_sec=greet_timeout_sec,
-                                )
-                                logger.warning(
-                                    "run_turn implicit_sign_on_greeting llm failed "
-                                    "attempt={}/{} trace_id={} exc_type={}",
-                                    attempt,
-                                    greet_max_attempts,
-                                    trace_id,
-                                    type(exc).__name__,
-                                )
-                                if attempt >= greet_max_attempts:
-                                    raise
-                        assert resp is not None
+                        resp = await llm_client.chat_completion_with_retrial(
+                            messages=messages,
+                            model=resolved_model,
+                            tools=None,
+                            tool_choice=None,
+                            response_format=response_format,
+                            scene=llm_scene,
+                            langsmith_extra=None,
+                            high_reasoning=tick_proactive,
+                            max_attempts=greet_max_attempts,
+                            per_attempt_timeout_sec=greet_timeout_sec,
+                            trace_id=trace_id,
+                            attempt_log_label="implicit_sign_on_greeting",
+                        )
                     else:
                         resp = llm_client.chat_completion(
                             messages=messages,
