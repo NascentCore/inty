@@ -134,7 +134,8 @@ maintenance agents can fix the highest-impact item first.
 - [ ] Google 2.4 "Exceptions": `/app/core/companion_harness/llm/langsmith_completion_enrich.py`
   uses multiple `except Exception: pass` blocks around LangSmith enrichment
   monkey-patch code. Log suppressed failures and move import-time patching to
-  an explicit initialization path if possible.
+  an explicit initialization path if possible. Claimed in
+  `cursor/agent-maintenance-tasks-1000`.
 - [ ] Google 2.4 "Exceptions": `/app/schemas/agent.py` has several broad
   `except Exception` blocks that silently return `None` or the original value
   while transforming URLs and metadata. Add structured logging and narrow the
@@ -142,7 +143,7 @@ maintenance agents can fix the highest-impact item first.
 - [ ] Google 2.4 "Exceptions": `/app/core/companion_harness/companion/turn.py`
   catches `BaseException`, mutates the exception object, then suppresses
   metadata tagging errors. Avoid dynamic mutation of arbitrary exceptions and
-  log secondary failures.
+  log secondary failures. Claimed in `cursor/agent-maintenance-tasks-1000`.
 - [x] Google 2.4 "Exceptions": `/tools/inty_v2_repl/backend_chat_ws.py` uses
   `assert self._response_q is not None` as a runtime precondition. Replace it
   with an explicit `RuntimeError` because optimized Python removes asserts.
