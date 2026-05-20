@@ -157,6 +157,16 @@ CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 _BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS = 24
 
 
+class CompanionToolBackgroundStartedError(RuntimeError):
+    """Raised when foreground turn fails after ``tool_background`` ownership moved out."""
+
+    companion_tool_background_started = True
+
+    def __init__(self, original_exception: Exception) -> None:
+        self.original_exception = original_exception
+        super().__init__(str(original_exception))
+
+
 def _replace_leading_system_messages_multi(
     messages: list[dict[str, Any]],
     system_messages: list[dict[str, Any]],
@@ -860,11 +870,9 @@ async def _run_companion_turn_core(
                         (time.perf_counter() - t_loop) * 1000.0,
                     )
             except BaseException as exc:
-                if tool_background_started and isinstance(exc, Exception):
-                    try:
-                        exc.companion_tool_background_started = True
-                    except Exception:
-                        pass
+                wrap_tool_background_exception = (
+                    tool_background_started and isinstance(exc, Exception)
+                )
                 if not tool_background_started:
                     end_companion_turn_root_run_safe(
                         langsmith_parent_run,
@@ -882,6 +890,8 @@ async def _run_companion_turn_core(
                         ),
                         type(exc).__name__,
                     )
+                if wrap_tool_background_exception:
+                    raise CompanionToolBackgroundStartedError(exc) from exc
                 raise
             else:
                 if not tool_background_started:
