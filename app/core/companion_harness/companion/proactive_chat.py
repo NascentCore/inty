@@ -8,6 +8,8 @@
 - **Copy**: system/user placeholders for ``InnerTickActivity.PROACTIVE_CHAT`` turns.
 - **Transcript**: proactive rounds mark the synthetic user row with ``proactive_chat: true``
   (for markers and LLM context; not used as a separate scheduling anchor).
+
+Full WS worker / poll / maintenance relationship: ``docs/companion_harness/INNER_TICK_SCHEDULING.md``.
 """
 
 from __future__ import annotations

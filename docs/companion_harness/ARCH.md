@@ -120,6 +120,7 @@ flowchart TD
 | 记忆管线说明 | `/docs/companion_harness/MEMORY_PIPELINE.md` |
 | 消息流术语（上行/下行/客户侧） | `/docs/companion_harness/GLOSSARY.md` |
 | Companion WebSocket 运行与排障 | `/docs/companion_harness/COMPANION_WS_RUNBOOK.md` |
+| Inner-tick 调度（proactive rhythm / worker poll / maintenance） | `/docs/companion_harness/INNER_TICK_SCHEDULING.md` |
 
 ## 维护规则
 

@@ -1,4 +1,10 @@
-"""REPL idle inner tick: fixed poll chunk + min gap between successful ticks."""
+"""Maintenance and REPL-prototype inner-tick wait helpers (poll chunk + min gap).
+
+WebSocket **proactive chat rhythm** lives in ``proactive_chat.py``; the unified WS worker
+fires scheduled / proactive / maintenance on ``companion_ws_proactive_chat_poll_seconds``.
+
+See ``docs/companion_harness/INNER_TICK_SCHEDULING.md`` for human-facing scheduling semantics.
+"""
 
 from __future__ import annotations
 

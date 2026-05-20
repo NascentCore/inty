@@ -197,12 +197,16 @@ class FeaturesConfig:
     # up to 2× this value. WS proactive is always on when inner-tick coords are armed (signed on).
     # NOTE: proactive chat is not gated by daily message count; usage limits will use token
     # consumption (future), not ``limits.free_user_chat_24h_limit``.
+    # See docs/companion_harness/INNER_TICK_SCHEDULING.md (proactive rhythm).
     companion_ws_proactive_chat_base_idle_seconds: float = 30.0
     # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
+    # See docs/companion_harness/INNER_TICK_SCHEDULING.md (worker poll).
     companion_ws_proactive_chat_poll_seconds: float = 60.0
     # When True, the same worker may emit maintenance inner-tick turns (``InnerTickActivity.MAINTENANCE``).
+    # See docs/companion_harness/INNER_TICK_SCHEDULING.md.
     companion_ws_maintenance_inner_tick_enabled: bool = True
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
+    # See docs/companion_harness/INNER_TICK_SCHEDULING.md (maintenance min_gap).
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
     # Seconds to wait on ``CompanionSession.tool_bg_idle`` before LivingSphere jsonl compact
     # (memory worker after user turns with defer_memory_update).
