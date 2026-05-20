@@ -69,3 +69,30 @@ def test_next_inner_tick_overrides_enabled_false_disables(tmp_path: Path) -> Non
         overrides=InnerTickScheduleOverrides(enabled=False),
     )
     assert w >= 86400.0 * 300
+
+
+def test_next_inner_tick_bootstrap_context_mode_disables(tmp_path: Path) -> None:
+    sc = CompanionScope("it", "a", f"boot-{tmp_path.name}")
+    store = _write_transcript_store(
+        sc,
+        [
+            {
+                "role": "user",
+                "content": "hi",
+                "ts": "2026-01-01T00:00:00+00:00",
+                "uuid": "a",
+            },
+            {
+                "role": "assistant",
+                "content": "yo",
+                "ts": "2026-01-01T00:00:01+00:00",
+                "uuid": "b",
+            },
+        ],
+    )
+    store.write_document(
+        "context.json",
+        json.dumps({"context_mode": "bootstrap"}, ensure_ascii=False),
+    )
+    w = next_inner_tick_wait_seconds(store, last_inner_fire_monotonic=None)
+    assert w >= 86400.0 * 300

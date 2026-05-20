@@ -205,6 +205,6 @@ def test_bootstrap_track_tools_and_system(tmp_path) -> None:
         for m in systems
         if m.get("role") == "system"
     )
-    assert "INTERACTIVE_BOOTSTRAP" in joined
+    assert "Agentic 初始化执行规范" in joined
     assert "自我交互媒介" not in joined
     assert route == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL

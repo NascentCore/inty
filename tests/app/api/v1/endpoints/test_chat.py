@@ -1579,18 +1579,46 @@ def test_chat_websocket_companion_voice_message_returns_audio_url(
     monkeypatch: pytest.MonkeyPatch,
     chat_app_with_postgres_db,
 ):
-    """WS voice_message: fake TTS (config) + real Postgres for history audio_url."""
-    assert global_config_loaded_from_config_yaml.tts.use_fake_tts is True
+    """WS voice_message audio_url comes from tool_background precomputed_audio_url only."""
+    from app.core.companion_harness.companion.scope import CompanionScope
+    from app.core.companion_harness.memory.memory_store import MemoryStore
+    from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
     app, user_id, db_session = chat_app_with_postgres_db
     agent_id = "agent-companion-ws-voice"
     chat_id = f"chat-ws-voice-{uuid_module.uuid4().hex}"
+    precomputed = "https://storage.googleapis.com/bucket/voice.mp3"
 
-    async def fake_run_companion_chat_turn_for_api(**_kwargs):
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        sink = kwargs.get("background_output_sink")
+        preset_uid = kwargs.get("preset_user_msg_uuid")
+        assert isinstance(preset_uid, str)
+        if sink is not None:
+            st = MemoryStore(
+                scope=CompanionScope(user_id, agent_id, chat_id),
+                repository=None,
+            )
+            sink(
+                ToolOutputEvent(
+                    scope_registry_key=st.scope.registry_key(),
+                    memory_store=st,
+                    user_msg_uuid=preset_uid,
+                    assistant_msg_uuid=str(uuid_module.uuid4()),
+                    text="visible bubble text",
+                    ts="2026-05-20T00:00:00Z",
+                    elapsed_ms=1,
+                    reply_modality="voice_message",
+                    voice_message_script="spoken script line",
+                    precomputed_audio_url=precomputed,
+                    generation_deliver=True,
+                )
+            )
         return CompanionTurnResult(
             assistant_text="visible bubble text",
             reply_modality="voice_message",
             voice_message_script="spoken script line",
+            tool_background_started=True,
+            user_msg_uuid=preset_uid,
         )
 
     session_id = _setup_companion_ws_chat_test_env_with_postgres(
@@ -1616,15 +1644,18 @@ def test_chat_websocket_companion_voice_message_returns_audio_url(
                         },
                     }
                 )
-                body = websocket.receive_json()
+                fg_body = websocket.receive_json()
+                bg_body = websocket.receive_json()
 
-        assert body["code"] == 200
-        message = body["data"]["choices"][0]["message"]
-        assert message["content"] == "visible bubble text"
-        assert message["audio_url"]
-        assert message["audio_url"].startswith(
-            "https://storage.googleapis.com/"
-        )
+        assert fg_body["code"] == 200
+        fg_message = fg_body["data"]["choices"][0]["message"]
+        assert fg_message["content"] == "visible bubble text"
+        assert fg_message.get("audio_url") in (None, "")
+        assert fg_message["meta_data"]["tool_background_started"] is True
+
+        assert bg_body["code"] == 200
+        message = bg_body["data"]["choices"][0]["message"]
+        assert message["audio_url"] == precomputed
         assert message["meta_data"]["reply_modality"] == "voice_message"
         assert message["meta_data"]["is_voice"] is True
 
@@ -1643,27 +1674,69 @@ def test_chat_websocket_companion_voice_message_returns_audio_url(
 
 
 @pytest.mark.asyncio
-async def test_tool_background_ws_payload_precomputed_audio_skips_synthesize(
-    monkeypatch: pytest.MonkeyPatch,
+async def test_tool_background_ws_payload_voice_modality_without_precomputed_has_no_audio(
     chat_app_with_postgres_db,
 ):
     from app.core.companion_harness.companion.scope import CompanionScope
     from app.core.companion_harness.memory.memory_store import MemoryStore
     from app.core.companion_harness.tools.tool_background import ToolOutputEvent
     from app.schemas.chat import ChatCompletionRequest, ChatMessage
-    from app.services.chat_ws_voice_message import synthesize_chat_ws_voice_message
 
-    synthesize_calls: list[int] = []
+    app, user_id, db_session = chat_app_with_postgres_db
+    agent_id = "agent-companion-ws-tb-voice-miss"
+    chat_id = f"chat-ws-tb-voice-miss-{uuid_module.uuid4().hex}"
+    session_id = chat_service.generate_session_id(chat_id)
 
-    async def _fake_synthesize(*_args, **_kwargs):
-        synthesize_calls.append(1)
-        return None
-
-    monkeypatch.setattr(
-        chat_ws_v1,
-        "synthesize_chat_ws_voice_message",
-        _fake_synthesize,
+    st = MemoryStore(
+        scope=CompanionScope(user_id, agent_id, chat_id),
+        repository=None,
     )
+    ev = ToolOutputEvent(
+        scope_registry_key=st.scope.registry_key(),
+        memory_store=st,
+        user_msg_uuid=str(uuid_module.uuid4()),
+        assistant_msg_uuid=str(uuid_module.uuid4()),
+        text="no tts",
+        ts="2026-05-20T00:00:00Z",
+        elapsed_ms=10,
+        reply_modality="voice_message",
+        voice_message_script="script only",
+        generation_deliver=False,
+    )
+    request = ChatCompletionRequest(
+        messages=[ChatMessage(role="user", content="voice")],
+        language="en",
+    )
+    _db = global_config_loaded_from_config_yaml.database
+    engine = create_async_engine(str(_db.async_url), pool_size=1, max_overflow=0)
+    factory = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    try:
+        async with factory() as db:
+            out = await chat_ws_v1._build_companion_tool_background_ws_payload(
+                db=db,
+                agent_id=agent_id,
+                session_id=session_id,
+                ev=ev,
+                request=request,
+                effective_local_id=None,
+            )
+    finally:
+        await engine.dispose()
+
+    message = out["data"]["choices"][0]["message"]
+    assert message.get("audio_url") in (None, "")
+    assert message["meta_data"]["reply_modality"] == "voice_message"
+    assert message["meta_data"].get("is_voice") is not True
+
+
+@pytest.mark.asyncio
+async def test_tool_background_ws_payload_uses_precomputed_audio_only(
+    chat_app_with_postgres_db,
+):
+    from app.core.companion_harness.companion.scope import CompanionScope
+    from app.core.companion_harness.memory.memory_store import MemoryStore
+    from app.core.companion_harness.tools.tool_background import ToolOutputEvent
+    from app.schemas.chat import ChatCompletionRequest, ChatMessage
 
     app, user_id, db_session = chat_app_with_postgres_db
     agent_id = "agent-companion-ws-tb-voice"
@@ -1703,16 +1776,10 @@ async def test_tool_background_ws_payload_precomputed_audio_skips_synthesize(
                 ev=ev,
                 request=request,
                 effective_local_id=None,
-                foreground_voice_ctx={
-                    "chat_voice_id": "v1",
-                    "language": "en",
-                },
-                voice_svc=global_voice_service,
             )
     finally:
         await engine.dispose()
 
-    assert synthesize_calls == []
     message = out["data"]["choices"][0]["message"]
     assert message["audio_url"] == precomputed
     assert message["meta_data"]["is_voice"] is True
@@ -3122,7 +3189,7 @@ def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(
 def test_v1_chat_completions_http_uses_legacy_assistant_voice_not_ws_tts(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    """HTTP /api/v1/chat/completions must keep synthesize_chat_assistant_audio; WS TTS is separate."""
+    """HTTP /api/v1/chat/completions uses synthesize_chat_assistant_audio for legacy voice_enabled TTS."""
     legacy_called: dict[str, bool] = {"value": False}
 
     _stub_success_chat_completion_with_multimodal_response(

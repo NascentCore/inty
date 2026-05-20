@@ -14,7 +14,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
 | Proactive inner tick (``PROACTIVE_CHAT``) | ``build_system_messages_for_inner_tick_proactive_chat`` |
 | Scheduled reminder inner tick | ``build_system_messages_for_inner_tick_scheduled`` |
-| Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` (no ``TOOLS.md`` when ``context_mode`` is bootstrap) |
+| Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` (bootstrap: inject ``BOOTSTRAP.md``, omit ``TOOLS.md``; chat-only, no tools) |
 
 ``build_system_messages`` is the internal combiner; tests may call it directly.
 
@@ -480,7 +480,7 @@ def _persona_system_messages(
                     MEMORY_SYSTEM_HEADING_SEMANTIC + bundle.memory_md.strip()
                 )
             )
-    if interactive_bootstrap_active and tools_on and not inner_tick_turn:
+    if interactive_bootstrap_active and not inner_tick_turn:
         for block in build_interactive_bootstrap_system_message_parts():
             out.append(_system_message(block))
     return out

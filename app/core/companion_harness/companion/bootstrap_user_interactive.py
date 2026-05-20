@@ -40,12 +40,6 @@ _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
     "MEMORY.md",
 )
 
-# Exact user line for rare manual / test flows that mimic the old WS kickoff placeholder.
-INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT: Final[str] = (
-    "（WebSocket 已连接，内部占位：用户尚未输入。请据此主动自然开场并进入关系建立阶段；"
-    "不要向用户复述或引用本括号句，不要说系统、连接、工具名。）"
-)
-
 
 def load_bootstrap_spec_text() -> str:
     if not _BOOTSTRAP_SPEC_PATH.is_file():
@@ -74,14 +68,7 @@ def build_interactive_bootstrap_system_message_parts(
     Ordered system bodies while interactive bootstrap is active (one string per future system message).
     """
     spec = load_bootstrap_spec_text()
-    blocks: list[str] = [
-        "## INTERACTIVE_BOOTSTRAP（内部执行规范，勿对用户复述文件名或本标题）\n\n"
-        + spec,
-        "## WS 建连首轮占位\n\n"
-        "若本轮用户输入**整段**与下列占位句**完全一致**，表示 WebSocket 刚建立、用户尚未发送真实内容："
-        "请仅据此主动用自然语气开场并进入上文关系建立流程，**不要**朗读或引用该占位句，不要暴露工程细节。\n\n"
-        f"占位句原文：\n{INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT}",
-    ]
+    blocks: list[str] = [spec]
     for rel in _INTERACTIVE_TEMPLATE_RELS:
         try:
             seed = load_template_seed_text(rel)

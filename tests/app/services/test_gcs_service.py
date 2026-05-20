@@ -5,6 +5,7 @@ GCSService 单元测试：upload_live_chat_audio 等。
 """
 
 import types
+from datetime import datetime
 
 import pytest
 
@@ -52,6 +53,43 @@ def stub_config(monkeypatch: pytest.MonkeyPatch):
         stub,
         raising=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_upload_voice_file_returns_file_uri_under_fake_gcs(
+    fake_gcs: FakeGCSClient,
+) -> None:
+    service = GCSService()
+    file_name = "voice_repl_test.mp3"
+    url = await service.upload_voice_file(file_name, b"mp3-bytes", "audio/mpeg")
+    assert url is not None
+    assert url.startswith("file:")
+    date_path = datetime.now().strftime("%Y%m")
+    expected = (
+        fake_gcs.base_dir
+        / "test-bucket"
+        / f"voice/{date_path}/{file_name}"
+    ).resolve().as_uri()
+    assert url == expected
+    blob = fake_gcs.bucket("test-bucket").blob(f"voice/{date_path}/{file_name}")
+    assert blob.exists() is True
+    assert blob.download_as_bytes() == b"mp3-bytes"
+
+
+@pytest.mark.asyncio
+async def test_upload_voice_file_cache_hit_returns_file_uri(
+    fake_gcs: FakeGCSClient,
+) -> None:
+    service = GCSService()
+    file_name = "voice_cache_hit_test.mp3"
+    url1 = await service.upload_voice_file(file_name, b"first", "audio/mpeg")
+    url2 = await service.upload_voice_file(file_name, b"second", "audio/mpeg")
+    assert url1 is not None
+    assert url2 == url1
+    assert url1.startswith("file:")
+    date_path = datetime.now().strftime("%Y%m")
+    blob = fake_gcs.bucket("test-bucket").blob(f"voice/{date_path}/{file_name}")
+    assert blob.download_as_bytes() == b"first"
 
 
 @pytest.mark.asyncio

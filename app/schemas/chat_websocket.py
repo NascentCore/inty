@@ -155,7 +155,7 @@ class ChatWsWsConnDroppedAckFrame(BaseModel):
     reason: Optional[str] = None
 
 
-class ChatWsCompanionWireMetaData(BaseModel):
+class ChatWsCompanionWireMessageMetaData(BaseModel):
     """Single schema for ``meta_data`` on companion ``/api/v1/chat/ws`` chat_history rows and downlink bodies.
 
     **Client → server** (persisted on user rows): optimistic ``localId`` via :attr:`local_id`.
@@ -163,6 +163,9 @@ class ChatWsCompanionWireMetaData(BaseModel):
     modality, inner-tick, LangSmith, tool-background flags, etc. The same type is used for any
     chat WebSocket user row that only carries ``localId`` (e.g. subscription-limit path). Keys not
     listed remain valid via ``extra="allow"`` (legacy DB rows, analytics-only keys, future product fields).
+
+    Do not use bool value to specify type.
+    Must use message_type enum to specify type.
     """
 
     model_config = ConfigDict(extra="allow", populate_by_name=True)
@@ -196,6 +199,14 @@ class ChatWsCompanionWireMetaData(BaseModel):
     )
 
     source: Optional[str] = None
+    bootstrap_round_index: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "bootstrapRoundIndex", "bootstrap_round_index"
+        ),
+        serialization_alias="bootstrapRoundIndex",
+        description="1-based LLM round index within USER_CHAT_BOOTSTRAP sync tool loop.",
+    )
     inner_tick_activity: Optional[str] = None
     reply_modality: Optional[str] = None
     is_voice: Optional[bool] = None
@@ -215,6 +226,8 @@ class ChatWsCompanionWireMetaData(BaseModel):
     tool_bg_local_image_paths: Optional[list[str]] = None
     transcript_compaction: Optional[dict[str, Any]] = None
 
+    # TODO(refactoring): Define a enum for message_type, and remove all of the bool members
+    # that represent message_type, like inner_tick, proactive_chat, companion_proactive_chat, etc.
     message_type: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("messageType", "message_type"),
@@ -236,7 +249,7 @@ class ChatWsCompanionWireMetaData(BaseModel):
 
 
 def dump_chat_ws_companion_wire_meta(
-    meta: ChatWsCompanionWireMetaData,
+    meta: ChatWsCompanionWireMessageMetaData,
 ) -> dict[str, Any]:
     """Serialize companion WebSocket ``meta_data`` for ORM / ``send_json`` (omit nulls, camelCase aliases)."""
     return meta.model_dump(exclude_none=True, by_alias=True)

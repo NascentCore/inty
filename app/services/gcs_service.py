@@ -12,6 +12,8 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import (
     check_gcs_file_exists,
     delete_from_gcs,
+    get_bucket_and_path_from_gcs_url,
+    get_gcs_client,
     upload_to_gcs,
 )
 
@@ -21,6 +23,10 @@ class GCSService:
 
     def __init__(self):
         self.bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
+
+    def _blob_public_url(self, object_path: str) -> str:
+        client = get_gcs_client()
+        return client.bucket(self.bucket_name).blob(object_path).public_url
 
     async def upload_voice_file(
         self, file_name: str, file_data: bytes, content_type: str = "audio/mpeg"
@@ -49,7 +55,7 @@ class GCSService:
             logger.debug(f"检查GCS文件是否存在: {file_path}")
             if check_gcs_file_exists(self.bucket_name, file_path):
                 logger.debug(f"语音文件已存在，直接返回缓存: {file_path}")
-                return f"https://storage.googleapis.com/{self.bucket_name}/{file_path}"
+                return self._blob_public_url(file_path)
 
             logger.debug("文件不存在，开始上传到GCS")
             # 上传到GCS
@@ -117,9 +123,8 @@ class GCSService:
             是否删除成功
         """
         try:
-            # 如果是完整URL，提取路径
-            if file_path.startswith("https://storage.googleapis.com/"):
-                file_path = file_path.split(f"{self.bucket_name}/", 1)[1]
+            if file_path.startswith("https://") or file_path.startswith("file:"):
+                _, file_path = get_bucket_and_path_from_gcs_url(file_path)
 
             delete_from_gcs(self.bucket_name, file_path)
             logger.info(f"语音文件删除成功: {file_path}")
@@ -140,9 +145,8 @@ class GCSService:
             文件是否存在
         """
         try:
-            # 如果是完整URL，提取路径
-            if file_path.startswith("https://storage.googleapis.com/"):
-                file_path = file_path.split(f"{self.bucket_name}/", 1)[1]
+            if file_path.startswith("https://") or file_path.startswith("file:"):
+                _, file_path = get_bucket_and_path_from_gcs_url(file_path)
 
             return check_gcs_file_exists(self.bucket_name, file_path)
 
@@ -160,7 +164,7 @@ class GCSService:
         Returns:
             公共URL
         """
-        if file_path.startswith("https://"):
+        if file_path.startswith("https://") or file_path.startswith("file:"):
             return file_path
 
-        return f"https://storage.googleapis.com/{self.bucket_name}/{file_path}"
+        return self._blob_public_url(file_path)

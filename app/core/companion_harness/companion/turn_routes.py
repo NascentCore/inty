@@ -12,7 +12,9 @@ that return value (maintenance inner tick skips foreground—see ``turn`` module
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Awaitable, Callable
+
+from pydantic import BaseModel, ConfigDict
 
 from .models import InnerTickActivity
 
@@ -20,6 +22,24 @@ if TYPE_CHECKING:
     from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
 BackgroundToolEventSink = Callable[["ToolOutputEvent"], None]
+
+
+class BootstrapInterimOutput(BaseModel):
+    """One bootstrap sync tool-loop LLM round delivered to the client before turn end."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+    user_msg_uuid: str
+    trace_id: str
+    langsmith_trace_id: str
+    langsmith_run_id: str
+    round_index: int
+    had_tool_calls: bool
+    assistant_msg_uuid: str
+
+
+BootstrapInterimOutputSink = Callable[[BootstrapInterimOutput], Awaitable[None]]
 
 
 class TurnRouteMode(str, Enum):

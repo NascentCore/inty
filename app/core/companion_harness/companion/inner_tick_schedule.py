@@ -13,8 +13,12 @@ import os
 import time
 from dataclasses import dataclass
 
+from app.core.companion_harness.experience_profile.context_mode import (
+    experience_profile_allows_maintenance_inner_tick,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import (
+    load_context_meta,
     load_transcript_from_store,
     transcript_without_trailing_presence_signals,
 )
@@ -85,6 +89,11 @@ def next_inner_tick_wait_seconds(
     if overrides is not None and overrides.enabled is not None:
         enabled = overrides.enabled
     if not enabled:
+        return _DISABLED_INNER_TICK_WAIT_SEC
+
+    if not experience_profile_allows_maintenance_inner_tick(
+        load_context_meta(store=store).context_mode
+    ):
         return _DISABLED_INNER_TICK_WAIT_SEC
 
     now = now_monotonic if now_monotonic is not None else time.monotonic()

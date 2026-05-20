@@ -32,7 +32,10 @@ _PRIVATE_MEMORY_SHARED_EMOTIONAL_CLAUSE_IDS = frozenset(
     _PRIVATE_MEMORY_PROFILE_IDS - {ExperienceContextMode.INTIMATE}
 )
 
-EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING = "当前体验配置（context_mode）"
+EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING = (
+    "根据与用户的对话历史和当前体验配置（context_mode），与用户进行对话。\n"
+    "当前体验配置（context_mode）："
+)
 
 
 def _experience_profile_clause(body: str) -> str:
@@ -52,6 +55,14 @@ def experience_profile_injects_private_memory(profile_id: str) -> bool:
     return (
         normalize_experience_profile_id(profile_id)
         in _PRIVATE_MEMORY_PROFILE_IDS
+    )
+
+
+def experience_profile_allows_maintenance_inner_tick(context_mode: str) -> bool:
+    """LivingSphere / TechnoCore maintenance inner-tick is off during interactive bootstrap."""
+    return (
+        normalize_experience_profile_id(context_mode)
+        != ExperienceContextMode.BOOTSTRAP
     )
 
 

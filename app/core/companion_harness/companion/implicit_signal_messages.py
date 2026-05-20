@@ -5,9 +5,9 @@ loaded transcript in ``turn.run_turn`` as a **user** message, not mixed into the
 system prefix. A tail **system** line for the same text was observed to yield overly
 similar greetings across turns (models weigh trailing system instructions heavily);
 framing the trigger as user input improves variation while keeping the signal last in
-the dialogue before the assistant reply. The Chinese bootstrap line mirrors the old
-WebSocket connect-time interactive kickoff placeholder so USER_INTERACTIVE sessions
-still open naturally when the client triggers greeting via ``user_signed_on`` with ``message_id``.
+the dialogue before the assistant reply. During interactive bootstrap, ``user_signed_on``
+with ``message_id`` is the first-turn opener (replacing the legacy WebSocket kickoff
+placeholder); system stack carries ``BOOTSTRAP.md`` via ``build_interactive_bootstrap_system_message_parts``.
 
 Client wall-clock context (``ImplicitSignalBundle.client_time``) is not injected here;
 ``turn_pipeline`` emits a dedicated ``## user-time-context`` **system** message
@@ -22,7 +22,9 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 USER_SIGNED_ON_TRIGGER_USER_TEXT = (
     "## Implicit user signed on signal\n"
     "- The user has just come online in the chat session.\n"
-    "- If currently in bootstrap phase: continue the bootstrap process naturally\n"
+    "- If currently in bootstrap phase: open naturally as if you have just woken up; "
+    "lead the relationship-establishment flow proactively; ask one question at a time; "
+    "do not expose engineering or system details.\n"
     "- If not in bootstrap phase: continue the conversation naturally with a brief, natural, warm greeting that fits the current conversation context.\n"
 )
 

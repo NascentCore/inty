@@ -114,8 +114,6 @@ SET_BOOTSTRAP_COMPLETE_TOOL = LlmFunctionTool(
         "required": [],
         "additionalProperties": False,
     },
-    tags=frozenset(),
-    extra_function_keys={},
 )
 
 RUNTIME_INSPECT_TOOL = LlmFunctionTool(
@@ -151,7 +149,11 @@ RUNTIME_INSPECT_TOOL = LlmFunctionTool(
 
 SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
     name=CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
-    description="Persist the session experience profile id into context.json as context_mode (normalized lowercase). Call only after the user explicitly agrees to switch (e.g. roleplay vs emotional companion). Requires user_confirmed=true; never infer silently. Takes effect on the next companion turn; do not use memory_store_write_document on context.json.",
+    description=(
+        "Persist the session experience profile id into context.json as context_mode (normalized lowercase).\n"
+        "Call only after inferred from conversation context that the user wants to switch (e.g. roleplay vs emotional companion).\n"
+        "Takes effect on the next companion turn; do not use memory_store_write_document on context.json."
+    ),
     parameters={
         "type": "object",
         "properties": {
@@ -159,16 +161,12 @@ SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
                 "type": "string",
                 "description": "Target experience profile id (e.g. intimate, emotional_companion, roleplay, interactive_fiction, public).",
             },
-            "user_confirmed": {
-                "type": "boolean",
-                "description": "Must be true only when the user clearly confirmed the mode switch in this conversation.",
-            },
             "note": {
                 "type": "string",
-                "description": "Optional short internal note (not shown to user).",
+                "description": "Short internal note (not shown to user) about the reason for the change.",
             },
         },
-        "required": ["context_mode", "user_confirmed"],
+        "required": ["context_mode", "note"],
         "additionalProperties": False,
     },
     tags=frozenset(),
