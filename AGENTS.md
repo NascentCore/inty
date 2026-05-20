@@ -158,18 +158,19 @@ that means the code lacks hierarchy.
 
 ### Documentation
 
-**Write for human readers to understand.**
+**Do note write or edit any markdown documents. They are maintained by human partners.**
 
-Scope (rules here applies to):
-- `.md` files that are not `AGENTS.md` (All `AGENTS.md` are written & maintained by humans)
+**You should maintain the following documentation:**
+
 - package docstring in `__init__.py`
 - module docstring at the top of `.py` file
 - function/class docstrings
 - code lines comment
 
-- Do not include implementation details (like code snippets) in markdown files.
-- Order information from most to least important
-- Document the intention of the code, not how the code works
+**Write for human readers to understand.**
+
+- Document the intention of the code
+- If the code is difficult to understand, explain how the code works
 
 下面的例子是好的文档，把关键代码概念之间的逻辑关联扼要地说明：
 
