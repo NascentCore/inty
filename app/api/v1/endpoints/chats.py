@@ -452,9 +452,6 @@ async def generate_message_voice(
     language: str = Query("zh", description="语言代码"),
     current_user: UserSchema = Depends(deps.get_effective_user_for_eval),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
-    subscription_svc: SubscriptionService = Depends(
-        deps.get_subscription_service
-    ),
 ):
     """
     为指定消息生成语音（evaluation 可传 X-Assume-User-Id）
@@ -494,43 +491,33 @@ async def generate_message_voice(
                 agent_data.get("settings")
             )
         )
-        voice_result = await voice_svc.generate_voice(
+        from app.models.user import AuthType
+        from app.services.chat_assistant_voice import produce_voice_for_user
+
+        voice_result, is_allowed, used_count, limit = await produce_voice_for_user(
+            voice_svc=voice_svc,
+            db=db,
+            user=current_user,
             text=message_content,
             voice_id=resolved_voice_id,
             language=language,
-            db=db,
             agent_gender=agent_data.get("gender"),
-            user=current_user,
             voice_message_narration_mode=voice_message_narration_mode,
         )
 
-        if not voice_result:
-            # 检查是否是因为达到限制
-            (
-                is_allowed,
-                used_count,
-                limit,
-            ) = await subscription_svc.check_voice_generation_limit(
-                db, current_user
+        if not is_allowed:
+            if current_user.auth_type == AuthType.GUEST:
+                return create_business_error_response(
+                    error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
+                    extra_data={"used_count": used_count, "limit": limit},
+                )
+            return create_business_error_response(
+                error_info=BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED,
+                extra_data={"used_count": used_count, "limit": limit},
             )
-            if not is_allowed:
-                from app.models.user import AuthType
 
-                if current_user.auth_type == AuthType.GUEST:
-                    # 游客用户：提示登录
-                    return create_business_error_response(
-                        error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
-                        extra_data={"used_count": used_count, "limit": limit},
-                    )
-                else:
-                    # 已登录用户：提示达到限制
-                    return create_business_error_response(
-                        error_info=BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED,
-                        extra_data={"used_count": used_count, "limit": limit},
-                    )
-            raise HTTPException(
-                status_code=500, detail="Voice generation failed"
-            )
+        if not voice_result:
+            raise HTTPException(status_code=500, detail="Voice generation failed")
 
         audio_url = voice_result.gcs_http_url
         audio_duration = voice_result.duration_seconds

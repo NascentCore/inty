@@ -5,7 +5,7 @@
 
 import hashlib
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 from loguru import logger
 from sqlalchemy import func, select, update
@@ -14,6 +14,7 @@ from sqlalchemy.sql import func
 
 from app.models.voice_cache import VoiceCache
 from app.services.gcs_service import GCSService
+from app.services.voice_service import VoiceGenerationResult, build_voice_gcs_urls
 
 
 class VoiceCacheService:
@@ -37,9 +38,9 @@ class VoiceCacheService:
         voice_id: str,
         model: str,
         language: str,
-    ) -> Optional[Tuple[str, float]]:
+    ) -> Optional[VoiceGenerationResult]:
         """
-        获取缓存的语音文件URL和时长
+        获取缓存的语音；命中时返回 gs:// 与 https:// URL 及音频时长。
 
         Args:
             db: 数据库会话
@@ -49,7 +50,7 @@ class VoiceCacheService:
             language: 语言
 
         Returns:
-            缓存的音频URL和时长的元组，如果不存在则返回None
+            VoiceGenerationResult，未命中则 None
         """
         try:
             content_hash = self._generate_content_hash(
@@ -86,7 +87,14 @@ class VoiceCacheService:
                         )
                     )
 
-                    return (cache_entry.audio_url, cache_entry.duration)
+                    gcs_url, gcs_http_url = build_voice_gcs_urls(
+                        cache_entry.audio_url
+                    )
+                    return VoiceGenerationResult(
+                        gcs_url=gcs_url,
+                        gcs_http_url=gcs_http_url,
+                        duration_seconds=cache_entry.duration,
+                    )
                 else:
                     # 文件不存在，标记为无效（使用独立事务）
                     try:

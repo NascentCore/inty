@@ -2926,20 +2926,31 @@ def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(
             language="en",
         )
 
-    async def fake_generate_voice(*args, **kwargs):
+    async def fake_produce_voice_for_user(*args, **kwargs):
         captured_voice_id["value"] = kwargs.get("voice_id")
-        return VoiceGenerationResult(
-            gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
-            gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
-            duration_seconds=1.23,
+        return (
+            VoiceGenerationResult(
+                gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
+                gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
+                duration_seconds=1.23,
+            ),
+            True,
+            0,
+            10,
         )
+
+    from app.services import chat_assistant_voice
 
     monkeypatch.setattr(
         chat_service,
         "get_or_create_chat_settings",
         fake_get_or_create_chat_settings,
     )
-    monkeypatch.setattr(global_voice_service, "generate_voice", fake_generate_voice)
+    monkeypatch.setattr(
+        chat_assistant_voice,
+        "produce_voice_for_user",
+        fake_produce_voice_for_user,
+    )
 
     user = _make_user(auth_type=AuthType.GOOGLE)
     payload = {
