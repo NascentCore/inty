@@ -25,6 +25,7 @@ from .prompts.system_messages import (
     build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_maintenance,
     build_system_messages_for_inner_tick_proactive_chat,
+    build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.tools.companion_tools import (
@@ -48,8 +49,6 @@ def replace_leading_system_messages_inplace(
 def companion_tools_for_turn(
     *,
     track: CompanionTurnTrack,
-    context: ContextMeta,
-    memory_bootstrap_type: str,
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
     implicit_user_signed_on_turn: bool = False,
@@ -92,14 +91,14 @@ def companion_system_messages_for_track(
     match track:
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
             return build_system_messages_for_implicit_sign_on_greeting(
-                bundle, context
+                bundle, context, memory_bootstrap_type
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             return build_system_messages_for_inner_tick_proactive_chat(
                 bundle, context
             )
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
-            return build_system_messages_for_inner_tick_proactive_chat(
+            return build_system_messages_for_inner_tick_scheduled(
                 bundle, context
             )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
@@ -124,50 +123,6 @@ def companion_system_messages_for_track(
             )
 
 
-def companion_system_messages_for_turn(
-    *,
-    store: MemoryStore,
-    bundle: PromptBundle,
-    context: ContextMeta,
-    memory_bootstrap_type: str,
-    inner_tick_turn: bool,
-    inner_tick_activity: InnerTickActivity,
-    route_mode: TurnRouteMode,
-    implicit_user_signed_on_turn: bool,
-) -> list[dict[str, Any]]:
-    """Legacy bool-based selector; prefer ``companion_system_messages_for_track``."""
-    tick_proactive = (
-        inner_tick_turn and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
-    )
-    if implicit_user_signed_on_turn and not inner_tick_turn:
-        track = CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-    elif tick_proactive:
-        track = CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
-    elif (
-        route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-        and inner_tick_turn
-        and inner_tick_activity == InnerTickActivity.MAINTENANCE
-    ):
-        track = CompanionTurnTrack.INNER_TICK_MAINTENANCE
-    elif route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
-        track = CompanionTurnTrack.USER_CHAT
-    else:
-        raise RuntimeError(
-            "unsupported companion system-message scenario: "
-            f"route_mode={route_mode.value} inner_tick_turn={inner_tick_turn} "
-            f"inner_tick_activity={inner_tick_activity.value} "
-            f"implicit_user_signed_on_turn={implicit_user_signed_on_turn}"
-        )
-    return companion_system_messages_for_track(
-        store=store,
-        bundle=bundle,
-        context=context,
-        memory_bootstrap_type=memory_bootstrap_type,
-        track=track,
-        route_mode=route_mode,
-    )
-
-
 def companion_turn_tools_and_system_messages(
     *,
     store: MemoryStore,
@@ -187,8 +142,6 @@ def companion_turn_tools_and_system_messages(
         implicit_user_signed_on_turn = True
     tools_for_turn = companion_tools_for_turn(
         track=track,
-        context=context,
-        memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
         inner_tick_activity=route_inner_activity,
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,
@@ -230,8 +183,6 @@ def refresh_companion_turn_prompt_stack(
     )
     tools_for_turn = companion_tools_for_turn(
         track=track,
-        context=context,
-        memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
         inner_tick_activity=inner_tick_activity,
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,

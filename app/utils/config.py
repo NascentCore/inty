@@ -212,7 +212,7 @@ class FeaturesConfig:
     # (memory worker after user turns with defer_memory_update).
     companion_tool_bg_idle_wait_timeout_sec: float = 120.0
     # Implicit ``user_signed_on`` greeting: per-attempt LLM wait (``CHAT_ONLY_SYNC`` path).
-    companion_implicit_sign_on_greeting_llm_timeout_sec: float = 6.0
+    companion_implicit_sign_on_greeting_llm_timeout_sec: float = 12.0
     # Max LLM attempts for that greeting (includes the first call; 2 = one retry).
     companion_implicit_sign_on_greeting_llm_max_attempts: int = 2
 

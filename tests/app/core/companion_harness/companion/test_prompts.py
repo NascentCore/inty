@@ -22,6 +22,7 @@ from app.core.companion_harness.companion.prompt_slices import (
 )
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
+    build_system_messages_for_bootstrap_track,
     build_system_messages_for_chat_track,
     build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_maintenance,
@@ -179,6 +180,32 @@ def test_build_system_prompt_interactive_bootstrap_injects_spec() -> None:
     assert "companion_bootstrap_user_interactive_complete" in text
 
 
+def test_build_system_prompt_bootstrap_omits_tools_md_system_slice() -> None:
+    b = _minimal_bundle().model_copy(
+        update={"tools_md": "# Tools heading\n\nTool slice body for test."}
+    )
+    text = _concatenated_system_text(
+        b,
+        ContextMeta(workspace_bootstrap_user_interactive_completed=False),
+        enable_tools=True,
+        interactive_bootstrap_active=True,
+    )
+    assert "Tool slice body for test." not in text
+    assert "INTERACTIVE_BOOTSTRAP" in text
+
+
+def test_build_system_messages_for_bootstrap_track_omits_tools_md_system_slice() -> (
+    None
+):
+    b = _minimal_bundle().model_copy(
+        update={"tools_md": "TOOLS_MD_SLICE_BODY_MARKER"}
+    )
+    msgs = build_system_messages_for_bootstrap_track(b, ContextMeta())
+    joined = _joined_system(msgs)
+    assert "TOOLS_MD_SLICE_BODY_MARKER" not in joined
+    assert "INTERACTIVE_BOOTSTRAP" in joined
+
+
 def test_build_system_prompt_intimate_memory() -> None:
     b = PromptBundle(
         identity="i",
@@ -297,8 +324,26 @@ def test_wrapper_inner_tick_proactive_chat() -> None:
 def test_wrapper_implicit_sign_on_greeting_no_tool_contract() -> None:
     joined = _joined_system(
         build_system_messages_for_implicit_sign_on_greeting(
-            _minimal_bundle(), ContextMeta()
+            _minimal_bundle(),
+            ContextMeta(),
+            CompanionMemoryBootstrapType.NONE.value,
         )
     )
     assert "输出与工具：" not in joined
     assert "user_profile_record" not in joined
+
+
+def test_implicit_sign_on_greeting_bootstrap_context_omits_tools_md() -> None:
+    b = _minimal_bundle().model_copy(
+        update={"tools_md": "TOOLS_MD_SLICE_BODY_MARKER"}
+    )
+    ctx = ContextMeta(context_mode="bootstrap")
+    joined = _joined_system(
+        build_system_messages_for_implicit_sign_on_greeting(
+            b,
+            ctx,
+            CompanionMemoryBootstrapType.NONE.value,
+        )
+    )
+    assert "TOOLS_MD_SLICE_BODY_MARKER" not in joined
+    assert "交互式关系建立（bootstrap）" in joined
