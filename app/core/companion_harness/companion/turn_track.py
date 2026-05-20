@@ -10,7 +10,11 @@ from .models import CompanionTurnTrack, InnerTickActivity
 
 def turn_flags_for_track(track: CompanionTurnTrack) -> tuple[bool, InnerTickActivity]:
     match track:
-        case CompanionTurnTrack.USER_CHAT | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+        case (
+            CompanionTurnTrack.USER_CHAT
+            | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
+            | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+        ):
             return False, InnerTickActivity.MAINTENANCE
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             return True, InnerTickActivity.PROACTIVE_CHAT
@@ -42,7 +46,7 @@ def track_from_legacy_flags(
 
 def langsmith_inty_turn_lane_for_companion_track(track: CompanionTurnTrack) -> str:
     match track:
-        case CompanionTurnTrack.USER_CHAT:
+        case CompanionTurnTrack.USER_CHAT | CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             return "explicit_user_message"
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
             return "implicit_turn"

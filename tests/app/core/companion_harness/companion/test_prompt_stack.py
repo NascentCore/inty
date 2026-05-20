@@ -261,6 +261,23 @@ def test_replace_leading_system_messages_inplace_keeps_tail() -> None:
     ]
 
 
+def test_user_chat_track_omits_bootstrap_blocks_even_when_incomplete(tmp_path) -> None:
+    scope = _scope(tmp_path.name, "-no-boot-in-chat")
+    st = _seed_workspace_bootstrap_incomplete(scope)
+    context = load_context_meta(store=st)
+    bundle = load_prompt_bundle(st, meta=context)
+    mb = CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    _, systems, _ = companion_turn_tools_and_system_messages(
+        store=st,
+        bundle=bundle,
+        context=context,
+        memory_bootstrap_type=mb,
+        track=CompanionTurnTrack.USER_CHAT,
+    )
+    joined = _joined_leading_system_contents(systems)
+    assert "INTERACTIVE_BOOTSTRAP" not in joined
+
+
 def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-drop-boot")
     st = _seed_workspace_bootstrap_incomplete(scope)

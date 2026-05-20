@@ -45,6 +45,7 @@ class CompanionTurnTrack(StrEnum):
     """Active production turn entry tracks (1:1 with ``build_system_messages_for_*``)."""
 
     USER_CHAT = "user_chat"
+    USER_CHAT_BOOTSTRAP = "user_chat_bootstrap"
     IMPLICIT_SIGN_ON_GREETING = "implicit_sign_on_greeting"
     INNER_TICK_PROACTIVE_CHAT = "inner_tick_proactive_chat"
     INNER_TICK_SCHEDULED = "inner_tick_scheduled"
