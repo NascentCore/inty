@@ -72,7 +72,7 @@ ORDER BY user_id, chat_id, sequence_id DESC;
 
 ## 语义（代码真源）
 
-- 体验配置 id 存 **`context.json`** 的 **`context_mode`**；**`post_bootstrap_context_mode`** 仅在 **`context_mode = bootstrap`** 等过渡阶段有意义；见 **`app/core/companion_harness/experience_profile.py`** 与 **`ContextMeta`**（`app/core/companion_harness/companion/models.py`）。
+- 体验配置 id 存 **`context.json`** 的 **`context_mode`**；**`post_bootstrap_context_mode`** 仅在 **`context_mode = bootstrap`** 等过渡阶段有意义；见 **`app/core/companion_harness/experience_profile/`** 与 **`ContextMeta`**（`app/core/companion_harness/companion/models.py`）。
 
 ## 注意
 

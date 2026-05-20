@@ -81,7 +81,7 @@
 - 迁移一轮对话编排：`turn.py`、`turn_engine.py`、`turn_pipeline.py`、`turn_routes.py`、`manager.py`、`websocket_coordinator.py`、`schedule_queue.py`。
 - 迁移运行时事件、消息格式与 session 模型：`runtime_events.py`、`llm_runtime_events.py`、`message_format.py`、`models.py`、`utc.py`。
 - 迁移运行期 LLM 调用包装中不属于 provider / llm port 的部分：`llm_chat_runtime.py`、`llm_client.py`、`llm_inference_errors.py`、`langsmith_parent_policy.py`。
-- 迁移 bootstrap 运行流程：`bootstrap_user_interactive.py`；体验配置真源仍在 `experience_profile.py`。
+- 迁移 bootstrap 运行流程：`bootstrap_user_interactive.py`；体验配置真源仍在 `experience_profile/`。
 - 同步移动 `test_turn*`、`test_websocket_coordinator.py`、`test_schedule_queue.py`、`test_models.py`、`test_companion_llm_client.py`、`test_llm_runtime_events.py`、`test_bootstrap_user_interactive.py`。
 - 切片验收：`run_turn`、dual-LLM 前台/后台、WebSocket coordinator、schedule queue、LangSmith parent policy 测试通过。
 

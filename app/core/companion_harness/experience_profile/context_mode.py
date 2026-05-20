@@ -1,4 +1,4 @@
-"""Experience profile ids are stored in companion `context.json` as `context_mode`."""
+"""Context-mode ids, normalization, and system-clause bodies for experience profiles."""
 
 from __future__ import annotations
 
