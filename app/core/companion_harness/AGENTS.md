@@ -1,13 +1,10 @@
-# Companion Harness：伴侣智能体的运行时
+# Companion Harness
 
 **DO NOT MAINTAIN BACKWARD COMPATIBILITY**
 
 **一句话**：把 Inty 变成「会对用户说话、也会自己琢磨」的 **单一逻辑主体**——负责多通道响应、记忆持久化，以及来自 LivingSphere / TechnoCore 的合成刺激。
 
-## 读者与边界
-
-- 读者：要理解或修改 **伴侣推理主循环、记忆、inner-tick、工具** 的编码智能体与后端核心工程师。
-- 边界：产品级 HTTP/WS 外壳在 `app/api`；本包专注 **会话级智能体语义**。
+- Use LLM+companion-harness (memories, tools, seeded static prompt slices, etc.) to simulate human emotional behaviors in modality in text (and then audio image video in the future)
 
 ## 架构直觉（不写具体类名）
 

@@ -1,6 +1,6 @@
 # Inner-tick 调度
 
-WebSocket 连接上 **何时** 会尝试 scheduled reminder、proactive chat、maintenance inner-tick，以及 proactive **rhythm** 如何计算。实现入口见文末索引；排障日志关键字见 [COMPANION_WS_RUNBOOK.md](./COMPANION_WS_RUNBOOK.md)。
+WebSocket 连接上 **何时** 会尝试 scheduled reminder、proactive chat、maintenance inner-tick，以及 proactive **rhythm** 如何计算。
 
 ## Unified inner-tick worker
 
@@ -22,7 +22,7 @@ sequenceDiagram
 
 | 项 | 当前事实 |
 | --- | --- |
-| **唤醒周期** | `poll = max(5, companion_ws_proactive_chat_poll_seconds)`，默认 **60s**。不是「到点唤醒」；rhythm 归零后仍可能多等接近一整轮 poll。 |
+| **唤醒周期** | `poll = companion_ws_proactive_chat_poll_seconds`（`config.yaml`），默认 **60s**。不是「到点唤醒」；rhythm 归零后仍可能多等接近一整轮 poll。 |
 | **每轮顺序** | scheduled → proactive → maintenance（同一次 wake 内依次尝试）。 |
 | **坐标** | 无 `user_signed_on` 武装的 snapshot 时，整轮跳过（日志 `no_inner_tick_coords` / 历史别名 `no_heartbeat_coords`）。 |
 | **串行** | 用户轮、greeting、inner-tick、tool background 补帧组装共用连接级 `turn_lock`；inner-tick 还会看 session 级 `tool_bg_idle`，避免与上一轮 proactive 的 tool background 重叠。 |

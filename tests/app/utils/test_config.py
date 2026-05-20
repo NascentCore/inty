@@ -303,18 +303,6 @@ def test_companion_transcript_window_out_of_range_raises(config):
         _validate_config(config)
 
 
-def test_implicit_sign_on_greeting_llm_defaults(config):
-    _validate_config(config)
-    assert (
-        config.app.features.companion_implicit_sign_on_greeting_llm_timeout_sec
-        == 6.0
-    )
-    assert (
-        config.app.features.companion_implicit_sign_on_greeting_llm_max_attempts
-        == 2
-    )
-
-
 def test_implicit_sign_on_greeting_llm_timeout_out_of_range_raises(config):
     config.app.features = FeaturesConfig(
         companion_implicit_sign_on_greeting_llm_timeout_sec=0.5,

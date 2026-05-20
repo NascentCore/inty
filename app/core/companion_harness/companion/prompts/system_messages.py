@@ -8,12 +8,13 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 
 | Scenario | Function |
 |----------|----------|
-| USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``build_system_messages_for_bootstrap_track`` |
+| USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``build_system_messages_for_bootstrap_track`` (no ``TOOLS.md`` system slice) |
 | ASYNC user-round foreground + plan prefix | ``build_system_messages_for_chat_track`` |
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
 | Proactive inner tick (``PROACTIVE_CHAT``) | ``build_system_messages_for_inner_tick_proactive_chat`` |
-| Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` |
+| Scheduled reminder inner tick | ``build_system_messages_for_inner_tick_scheduled`` |
+| Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` (no ``TOOLS.md`` when ``context_mode`` is bootstrap) |
 
 ``build_system_messages`` is the internal combiner; tests may call it directly.
 
@@ -25,8 +26,10 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.companion_harness.experience_profile import (
+    ExperienceContextMode,
     experience_profile_injects_private_memory,
     experience_profile_system_clause,
+    normalize_experience_profile_id,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -141,6 +144,16 @@ def _output_contract_text_chat_branch_mirrored_tools() -> str:
     )
 
 
+def _repl_tool_contract_voice_generation_clause() -> str:
+    return (
+        "（8）当用户**明确索要可播放的语音、音频、语音便签**（而非仅在文字里「念」）时，"
+        "必须先调用 generate_voice_message，transcript 为完整口语文本；"
+        "工具环收尾信封须设 reply_modality=voice_message，"
+        "voice_message_script 与 transcript 一致；"
+        "禁止声称无法生成或发送音频。"
+    )
+
+
 def _repl_tool_contract_image_generation_clause() -> str:
     return (
         "（7）当用户**明确索要新的**图片、画面、肖像照、插图（从零生成）时，必须先调用 generate_image（Fal z-image-turbo 文生图），"
@@ -211,6 +224,7 @@ def _output_contract_text_with_tools(
         "**禁止**编造与实现不符的技术说法（例如错误描述模型族系、温度或未发生的调用方式）。"
     )
     base += _repl_tool_contract_image_generation_clause()
+    base += _repl_tool_contract_voice_generation_clause()
     base += _repl_tool_contract_suffix_after_image_clause(
         tool_side_compact=tool_side_compact
     )
@@ -367,6 +381,7 @@ def _tool_background_final_json_routing_contract_text() -> str:
         "- `reply_modality`（字符串）：`text` 或 `voice_message`；主交付为语音便签时用 `voice_message`。\n"
         '- `voice_message_script`（字符串）：`voice_message` 时对用户诵读的完整口语文本；`text` 时为 `""`。\n'
         "**生图 / 改图**：若 `generate_image` 或 `modify_image` **成功**产出路径，系统仍会向用户投递产物；"
+        "**语音**：若 `generate_voice_message` **成功**产出 audio_url，系统仍会向用户投递语音消息；"
         "`output_to_user` 不能否决成功产物投递，只控制是否额外附文字。\n"
         "若你无法产出合法 JSON，后端会追加一次 **同一 schema**、无 tools 的补解析请求。\n"
     )
@@ -387,9 +402,14 @@ def _tools_system_messages(
     chat_branch_no_tool_api: bool,
     tool_side_compact: bool,
     inner_tick_turn: bool,
+    interactive_bootstrap_active: bool,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    if bundle.tools_md.strip() and not chat_branch_no_tool_api:
+    if (
+        bundle.tools_md.strip()
+        and not chat_branch_no_tool_api
+        and not interactive_bootstrap_active
+    ):
         out.append(_system_message(bundle.tools_md.strip()))
     if tool_side_compact and not inner_tick_turn:
         out.append(_system_message(_tool_side_compact_directive()))
@@ -569,6 +589,7 @@ def build_system_messages(
             chat_branch_no_tool_api=chat_branch_no_tool_api,
             tool_side_compact=tool_side_compact,
             inner_tick_turn=inner_tick_turn,
+            interactive_bootstrap_active=interactive_bootstrap_active,
         )
     )
     out.extend(
@@ -699,9 +720,45 @@ def build_system_messages_for_inner_tick_proactive_chat(
     )
 
 
+def build_system_messages_for_inner_tick_scheduled(
+    bundle: PromptBundle,
+    context: ContextMeta,
+) -> list[dict[str, Any]]:
+    """``PROACTIVE_CHAT_SYNC``: schedule_queue reminder inner tick (scheduled user line)."""
+    return build_system_messages(
+        bundle,
+        context,
+        enable_tools=False,
+        inner_tick_turn=True,
+        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
+        ai_private_text="",
+        include_significance_perception_slice=False,
+    )
+
+
+def _greeting_omit_tools_md_system_slice(
+    *,
+    context: ContextMeta,
+    memory_bootstrap_type: str,
+) -> bool:
+    if (
+        normalize_experience_profile_id(context.context_mode)
+        == ExperienceContextMode.BOOTSTRAP
+    ):
+        return True
+    return interactive_bootstrap_active(
+        feature_enabled=(
+            memory_bootstrap_type
+            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+        ),
+        meta=context,
+    )
+
+
 def build_system_messages_for_implicit_sign_on_greeting(
     bundle: PromptBundle,
     context: ContextMeta,
+    memory_bootstrap_type: str,
 ) -> list[dict[str, Any]]:
     """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no tool contracts)."""
     return build_system_messages(
@@ -711,4 +768,8 @@ def build_system_messages_for_implicit_sign_on_greeting(
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         include_significance_perception_slice=True,
+        interactive_bootstrap_active=_greeting_omit_tools_md_system_slice(
+            context=context,
+            memory_bootstrap_type=memory_bootstrap_type,
+        ),
     )

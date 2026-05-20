@@ -369,6 +369,17 @@ def _print_tool_bg_local_image_paths_banner(meta: Mapping[str, Any]) -> None:
         print(f"local-path: {s}")
 
 
+def _print_audio_url_meta_banner(meta: Mapping[str, Any]) -> None:
+    """Emit ``audio-url:`` when completion message includes voice_message audio."""
+    raw = meta.get("audio_url")
+    if not isinstance(raw, str):
+        return
+    s = raw.strip()
+    if not s:
+        return
+    print(f"audio-url: {s}")
+
+
 def _print_generated_image_meta_banner(meta: Mapping[str, Any]) -> None:
     """Emit ``image-url:`` for ``meta_data.generated_image`` (``gs://``, ``https://``, or local ``file://`` with fake GCS)."""
     gi = meta.get("generated_image")
@@ -414,6 +425,7 @@ def _emit_downlink_item(
         )
         _print_tool_bg_local_image_paths_banner(meta)
         _print_generated_image_meta_banner(meta)
+        _print_audio_url_meta_banner(meta)
         _print_transcript_compaction_banner(meta)
     else:
         print(

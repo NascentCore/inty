@@ -151,6 +151,7 @@ def _implicit_greeting_kwargs(
         "preset_user_msg_uuid": None,
         "langsmith_parent_run_enabled": False,
         "tool_bg_idle_event": _idle_tool_bg(),
+        "voice_ctx": {},
     }
 
 

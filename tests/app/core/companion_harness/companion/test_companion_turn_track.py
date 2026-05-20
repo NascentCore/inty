@@ -121,6 +121,36 @@ def test_track_route_mode_matrix(tmp_path) -> None:
     )
     assert implicit_route == TurnRouteMode.CHAT_ONLY_SYNC
 
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "bootstrap",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    bootstrap_context = load_context_meta(store=st)
+    bootstrap_bundle = load_prompt_bundle(st, meta=bootstrap_context)
+    _, implicit_bootstrap_systems, _ = companion_turn_tools_and_system_messages(
+        store=st,
+        bundle=bootstrap_bundle,
+        context=bootstrap_context,
+        memory_bootstrap_type=mb,
+        track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+    )
+    implicit_bootstrap_joined = "\n".join(
+        str(m.get("content") or "")
+        for m in implicit_bootstrap_systems
+        if m.get("role") == "system"
+    )
+    assert "交互式关系建立（bootstrap）" in implicit_bootstrap_joined
+    assert "自我交互媒介" not in implicit_bootstrap_joined
+
     _, _, proactive_route = companion_turn_tools_and_system_messages(
         store=st,
         bundle=bundle,
@@ -176,4 +206,5 @@ def test_bootstrap_track_tools_and_system(tmp_path) -> None:
         if m.get("role") == "system"
     )
     assert "INTERACTIVE_BOOTSTRAP" in joined
+    assert "自我交互媒介" not in joined
     assert route == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL

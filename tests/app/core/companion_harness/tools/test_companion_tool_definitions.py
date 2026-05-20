@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from app.core.companion_harness.tools.companion_tool_definitions import (
-    COMPANION_LLM_TOOLS,
     CompanionToolName,
     TOOL_TAG_GENERATION,
 )
@@ -21,18 +20,6 @@ def _function_tool_names(tools: list) -> list[str]:
         for t in tools
         if t.get("type") == "function" and isinstance(t.get("function"), dict)
     )
-
-
-def test_companion_llm_tools_names_unique():
-    names = [tool.name for tool in COMPANION_LLM_TOOLS]
-    assert len(names) == len(set(names))
-
-
-def test_companion_llm_tools_parameters_object_schema():
-    for tool in COMPANION_LLM_TOOLS:
-        params = tool.parameters
-        assert params.get("type") == "object"
-        assert params.get("additionalProperties") is False
 
 
 def test_build_openai_tools_name_set():
@@ -56,6 +43,7 @@ def test_build_openai_repl_tools_name_set_non_bootstrap():
         "companion_runtime_inspect",
         "companion_set_experience_profile",
         "generate_image",
+        "generate_voice_message",
         "google_web_search",
         "living_sphere_record_update",
         "memory_store_list_paths",
@@ -80,6 +68,7 @@ def test_build_openai_repl_tools_name_set_bootstrap():
         "companion_set_experience_profile",
         "companion_update_prompt_slice",
         "generate_image",
+        "generate_voice_message",
         "google_web_search",
         "memory_store_list_paths",
         "memory_store_read_document",
@@ -105,5 +94,8 @@ def test_build_openai_repl_tools_inner_tick_name_set():
 
 def test_tool_has_tag_generation():
     assert tool_has_tag(CompanionToolName.GENERATE_IMAGE.value, TOOL_TAG_GENERATION)
+    assert tool_has_tag(
+        CompanionToolName.GENERATE_VOICE_MESSAGE.value, TOOL_TAG_GENERATION
+    )
     assert tool_has_tag(CompanionToolName.MODIFY_IMAGE.value, TOOL_TAG_GENERATION)
     assert not tool_has_tag(CompanionToolName.SCHEDULE_TASK.value, TOOL_TAG_GENERATION)

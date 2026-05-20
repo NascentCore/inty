@@ -78,16 +78,16 @@ from .image_gate import (
 from .companion_tool_definitions import (
     COMPANION_LLM_TOOLS,
     COMPANION_LLM_TOOLS_BY_NAME,
+    BOOTSTRAP_TRACK_TOOL_NAMES,
     CompanionToolName,
     INNER_TICK_TOOL_NAMES,
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
-    BOOTSTRAP_TRACK_TOOL_NAMES,
     OPENAI_TOOLS_BASE_NAMES,
     REPL_DESCRIPTION_OVERRIDES,
-    REPL_TOOL_NAMES_APPENDED,
-    REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL,
-    REPL_TOOL_NAMES_SHARED_HEAD,
+    TOOL_NAMES_APPENDED,
+    TOOL_NAMES_NON_BOOTSTRAP_TAIL,
+    TOOL_NAMES_SHARED_HEAD,
     TOOL_TAG_GENERATION,
     _EMPTY_DESCRIPTION_OVERRIDES,
     openai_tools_for_names,
@@ -95,14 +95,27 @@ from .companion_tool_definitions import (
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
 from .runtime_inspect_tool import tool_companion_runtime_inspect
+from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.global_services import subscription_service
-from app.services.agent_status_line import tool_update_agent_status_line
+from app.services.agent_status_line import (
+    get_tool_background_voice_ctx,
+    tool_update_agent_status_line,
+)
+from app.services.chat_ws_voice_message import (
+    ChatWsVoiceMessageTtsInput,
+    synthesize_chat_ws_voice_message,
+)
 from app.services.phone_call_service import (
     PhoneCallConfigError,
     PhoneCallLimitError,
     phone_call_service,
+)
+from app.services.voice_service import (
+    GENDER_VOICE_MAPPING,
+    get_voice_message_narration_mode_from_agent_settings,
+    voice_service,
 )
 from sqlalchemy import select
 
@@ -115,6 +128,65 @@ _USER_PROFILE_SECTION = "## 身份信息"
 
 # TODO(product): ai_private.jsonl is ORM-mapped but not in MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST; model
 # cannot memory_store_write_document it until allowlist or a dedicated append tool exists.
+def _resolve_voice_id_from_ctx(ctx: dict[str, object]) -> str | None:
+    for key in ("chat_voice_id", "agent_voice_id"):
+        raw = ctx.get(key)
+        if raw is not None:
+            resolved = str(raw).strip()
+            if resolved:
+                return resolved
+    agent_gender = ctx.get("agent_gender")
+    if agent_gender is not None:
+        gender_key = str(agent_gender).strip()
+        if gender_key:
+            mapped = GENDER_VOICE_MAPPING.get(gender_key)
+            if mapped:
+                return mapped
+    cfg_voice = global_config_loaded_from_config_yaml.elevenlabs.voice_id
+    if cfg_voice is not None:
+        cfg_resolved = str(cfg_voice).strip()
+        if cfg_resolved:
+            return cfg_resolved
+    return None
+
+
+async def tool_generate_voice_message(transcript: str) -> str:
+    text = transcript.strip()
+    if not text:
+        return "ERROR: transcript must be non-empty"
+    ctx = get_tool_background_voice_ctx()
+    if ctx is None:
+        return "ERROR: voice context not available for TTS"
+    voice_id = _resolve_voice_id_from_ctx(ctx)
+    if voice_id is None:
+        return "ERROR: could not resolve voice_id for TTS"
+    language_raw = ctx.get("language")
+    if not isinstance(language_raw, str) or not language_raw.strip():
+        return "ERROR: language must be set in voice context"
+    language = language_raw.strip()
+    narration_mode = get_voice_message_narration_mode_from_agent_settings(
+        ctx.get("agent_settings")
+    )
+    async with AsyncSessionLocal() as db:
+        result = await synthesize_chat_ws_voice_message(
+            ChatWsVoiceMessageTtsInput(transcript=text),
+            db=db,
+            voice_svc=voice_service,
+            voice_id=voice_id,
+            language=language,
+            voice_message_narration_mode=narration_mode,
+        )
+    if result is None:
+        return "ERROR: TTS returned no audio"
+    url = (result.gcs_http_url or "").strip()
+    if not url:
+        return "ERROR: TTS returned empty audio_url"
+    duration = result.duration_seconds
+    if duration is not None:
+        return f"OK audio_url={url} duration_seconds={duration}"
+    return f"OK audio_url={url}"
+
+
 def _latest_generated_image_http_url_from_index(
     store: MemoryStore,
 ) -> str | None:
@@ -520,7 +592,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
 
 
 def build_openai_bootstrap_track_tools() -> list[dict[str, Any]]:
-    """USER_CHAT_BOOTSTRAP: slice update + bootstrap complete only."""
+    """USER_CHAT_BOOTSTRAP track: prompt-slice writes + bootstrap complete only."""
     return prepare_openai_tools_for_chat_completions(
         openai_tools_for_names(
             BOOTSTRAP_TRACK_TOOL_NAMES,
@@ -536,16 +608,16 @@ def build_openai_repl_tools(
     伴侣对话轮：用户档案追加、LivingSphere/TechnoCore 事件落库、工作区文档读写（写入仅限 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST）。
     """
     if interactive_bootstrap_active:
-        names = REPL_TOOL_NAMES_SHARED_HEAD
+        names = TOOL_NAMES_SHARED_HEAD
     else:
-        names = REPL_TOOL_NAMES_SHARED_HEAD + REPL_TOOL_NAMES_NON_BOOTSTRAP_TAIL
+        names = TOOL_NAMES_SHARED_HEAD + TOOL_NAMES_NON_BOOTSTRAP_TAIL
     out = openai_tools_for_names(
         names,
         description_overrides=REPL_DESCRIPTION_OVERRIDES,
     )
     out.extend(
         openai_tools_for_names(
-            REPL_TOOL_NAMES_APPENDED,
+            TOOL_NAMES_APPENDED,
             description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
         )
     )
@@ -700,6 +772,21 @@ async def _dispatch(
         else:
             return "ERROR: max_bullets must be a positive integer or omitted"
         return await run_read_web_page(store, url=raw_u, max_bullets=mb_opt)
+    if name == "generate_voice_message":
+        raw_t = arguments.get("transcript")
+        if not isinstance(raw_t, str):
+            return "ERROR: transcript must be a string"
+        from loguru import logger
+
+        t_voice = time.perf_counter()
+        out = await tool_generate_voice_message(raw_t)
+        logger.info(
+            "tool generate_voice_message wall_ms={:.0f} scope={} ok={}",
+            (time.perf_counter() - t_voice) * 1000.0,
+            store.scope.registry_key(),
+            not out.startswith("ERROR:"),
+        )
+        return out
     if name == "generate_image":
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):
