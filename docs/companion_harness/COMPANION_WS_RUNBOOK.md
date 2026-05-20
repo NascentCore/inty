@@ -19,6 +19,7 @@
 | 业务 outbound 队列 | 单条 WebSocket 连接 | FIFO 发送 assistant、业务错误、tool background 等对话下行 | 控制 ack 不在这条 FIFO 里；排查“消息顺序”时先区分业务下行与信令下行。 |
 | tool background 事件队列 | 单条 WebSocket 连接 | 接收工具线程完成事件，再组装成可见补帧 | 事件只说明工具完成；真正下发还要等连接读循环取到事件并拿到 `turn_lock`。 |
 | foreground pending | 单条 WebSocket 连接 | 用 `user_msg_uuid` 保存当轮 chat、voice、history 等补帧上下文 | “missing foreground ctx”通常指事件与当轮上下文脱钩，不是模型无回复。 |
+| `voice_message` TTS | 单条业务下行 | 当 Companion 选择语音消息时，为对应 assistant 行生成并回填 `audio_url` | 语音缺失先按该业务下行排查，不要按 Live Chat audio 或 REST TTS 排查。 |
 | `tool_bg_idle` | Companion session | 标记该 session 的后台工具是否空闲 | inner-tick 会用它避免主动心跳与上一次 proactive tool background 重叠。 |
 | inflight turn tracker | 单条 WebSocket 连接，另有进程级索引 | 跟踪连接上已派生但未完成的 turn | 当前连接结束和进程关闭会取消未完成 turn；目标方向是完成后持久化为未投递。 |
 
@@ -30,6 +31,8 @@
 - 用户轮的 `message_id` 被规范化为 `user_msg_uuid`，用于 transcript、LangSmith、tool background 事件和下行 `meta_data` 关联。
 - 维护性 inner-tick 可产生无前台正文但有后台工具的轮次；主动心跳和 scheduled reminder 走可见主动聊天语义。
 - 同一连接上的用户轮、inner-tick 和 tool background 补帧组装都要经过 `turn_lock`；当前没有“新用户消息打断正在运行用户轮”的 WebSocket supersede 语义。
+- 当 assistant 或 tool background 的 `reply_modality = "voice_message"` 时，WebSocket 路径会在 assistant 行落库后合成 TTS；成功后把 `audio_url` 写回同一条 `chat_history` assistant 行，并在 completion message 里返回。
+- `voice_message` 朗读文本优先取 `voice_message_script`；为空时才使用可见 assistant 文本。
 - 连接结束时，当前实现会取消仍在运行的连接内 turn；这是当前事实，不是目标生命周期。
 
 ## 正常工作流
@@ -65,6 +68,26 @@
 - 若本轮启动 tool background，主回复的 `meta_data.tool_background_started` 为真。
 - 后台工具若需要可见投递，会追加一条 `meta_data.source = "tool_bg"` 的业务下行，并用 `reply_to_user_msg_uuid` 指回原用户轮。
 
+### 语音消息下行
+
+触发条件：
+
+- Companion turn 或 tool background 输出 `reply_modality = "voice_message"`。
+- 对应 assistant 文本已经写入 chat history；语音 URL 归属这条 assistant 行，而不是用户行。
+- 语音文本来自 `voice_message_script`，没有脚本时才朗读可见气泡文本。
+
+期望结果：
+
+- completion message 的 `meta_data.reply_modality` 为 `voice_message`，`meta_data.is_voice` 为真。
+- TTS 成功时，completion message 的 `audio_url` 指向生成的音频；同一 assistant 行的 `chat_history.audio_url` 也被更新。
+- 有音频时，时长写入 `meta_data.audioDuration`，供客户端播放进度和分析使用。
+
+约束：
+
+- 这是 `/api/v1/chat/ws` 专用路径，不是 HTTP chat completion 的 legacy auto-play TTS，也不是用户按需点击的 REST TTS。
+- 语音选择顺序是 chat settings voice、agent voice、agent gender mapping、backend TTS default。
+- 该路径调用 TTS 时不传订阅用户上下文；不要用它推断订阅计费或 REST 语音额度。
+
 ### 非主动断线后重连
 
 ```json
@@ -97,6 +120,9 @@
 | `source = "inner_tick"` | assistant 主回复 | 服务端 synthetic inner-tick 的前台 assistant 回复。 | 看到它先看 `inner_tick_activity`，再判断是否应展示给用户。 |
 | `source = "greeting"` | assistant 主回复 | `user_signed_on` 触发的隐式问候。 | 没有对应用户 chat_history 行是正常现象；上行控制帧不是用户正文。 |
 | `source = "tool_bg"` | tool background 补帧 | 后台工具线程完成后追加的业务下行。 | 用 `reply_to_user_msg_uuid` 指回前台轮；它不是新的用户输入。 |
+| `reply_modality = "voice_message"`、`is_voice = true` | assistant 主回复 / tool_bg 补帧 | Companion 要求客户端把该气泡按语音消息呈现。 | 若无 `audio_url`，继续查 TTS 触发、音色解析、持久化回填。 |
+| `voice_message_script` | assistant 主回复 / tool_bg 补帧 | 实际朗读脚本；可与可见气泡文本不同。 | 排查“听到的内容和气泡不同”时优先看它。 |
+| `audioDuration` | assistant 主回复 / tool_bg 补帧 | 生成音频时长，写在 `meta_data`。 | 客户端播放 UI 或分析口径异常时用。 |
 | `inner_tick_activity = "proactive_chat"` | inner-tick assistant / tool_bg | 主动心跳或 scheduled reminder 所属轮次。 | 与 `companion_proactive_heartbeat`、`companion_scheduled_reminder` 区分来源。 |
 | `inner_tick_activity = "maintenance"` | maintenance assistant / tool_bg | 维护型 inner-tick；可无前台正文，仅启动后台工具。 | 用户发消息无回复时，若前序 maintenance 仍有 tool_bg，优先查 `turn_lock` + `tool_bg_idle`。 |
 | `tool_background_started = true` | assistant 主回复 | 当前前台轮已启动后台工具线程，之后可能有 `source = "tool_bg"` 补帧。 | 主回复已到但后续缺失时，继续查 foreground pending 与工具事件队列。 |
@@ -140,6 +166,20 @@
 - 查后续是否有 `meta_data.source = "tool_bg"`，以及 `reply_to_user_msg_uuid` 是否等于原用户轮。
 - 若有 “missing foreground ctx”，优先怀疑连接生命周期、重复 UUID 或 pending 被过早清理。
 
+### `voice_message` 气泡没有音频
+
+判断：
+
+- `reply_modality = "voice_message"` 只表示 Companion 选择语音消息；`audio_url` 只有 TTS 成功并回填后才出现。
+- 若 `voice_message_script` 和可见 assistant 文本都为空，不会合成音频。
+- 若音色无法解析或 TTS provider 返回空数据，业务下行仍可返回文本气泡。
+
+证据：
+
+- completion message 或 chat_history assistant 行有 `meta_data.reply_modality = "voice_message"` 与 `meta_data.is_voice = true`。
+- 同一 assistant 行缺少 `audio_url` 或 `meta_data.audioDuration`。
+- 后端日志可见 `chat_ws voice_message TTS`、`TTS 生成完成`、`tts_provider_returned_empty` 或 `chat_ws voice_message persist audio_url failed`。
+
 ### inner-tick 没有主动说话
 
 判断：
@@ -174,4 +214,5 @@
 - 不要把控制 ack 展示成 Companion 说话；它们是信令下行。
 - 不要用普通断线代替 `user_signed_out`；登出有 scope teardown 语义，普通断线没有。
 - 不要预期 HTTP chat completion 与 WebSocket chat completion 的 async tool background 投递完全一致；本文只覆盖 WebSocket 文本通道。
+- 不要把 `audio_url` 缺失解释成 WebSocket 帧丢失；先确认该 assistant 行是否真的完成 TTS 并成功回填。
 
