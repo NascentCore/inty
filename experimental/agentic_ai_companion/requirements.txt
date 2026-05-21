@@ -1,8 +1,0 @@
-aioconsole
-cyclopts
-loguru
-google-genai
-langsmith
-openai
-pydantic
-python-dotenv
