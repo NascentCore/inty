@@ -77,7 +77,8 @@ class VoiceGenerationResult:
     """
     Structured voice generation result:
     - gcs_url: canonical gs:// URL
-    - gcs_http_url: canonical https://storage.googleapis.com URL
+    - gcs_http_url: client-fetchable URL (https://storage.googleapis.com in prod;
+      file:// under fake GCS)
     - duration_seconds: audio duration in seconds
     """
 
@@ -95,6 +96,14 @@ class VoiceGenerationResult:
 
 
 def build_voice_gcs_urls(storage_url: str) -> Tuple[str, str]:
+    """Map upload/cache storage reference to (gs://, fetchable public URL)."""
+    if storage_url.startswith("file:"):
+        if not global_config_loaded_from_config_yaml.gcs.use_fake_gcs:
+            raise ValueError(
+                f"file URI not supported when use_fake_gcs is false: {storage_url}"
+            )
+        bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+        return f"{GCS_GS_PREFIX}{bucket}/{path}", storage_url
     if storage_url.startswith(GCS_GS_PREFIX):
         bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
         return storage_url, f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}"

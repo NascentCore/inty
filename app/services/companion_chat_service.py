@@ -19,6 +19,7 @@ from app.core.companion_harness.companion.runtime_events import (
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
+    BootstrapInterimOutputSink,
 )
 from app.core.companion_harness.companion.manager import (
     CompanionConfig,
@@ -83,6 +84,38 @@ def companion_memory_store_if_ready(
     if not session.is_initialized:
         return None
     return session.store
+
+
+def companion_bootstrap_interim_ws_enabled(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+) -> bool:
+    """Whether this chat should stream bootstrap sync tool-loop rounds over WebSocket."""
+    from app.core.companion_harness.companion.bootstrap_user_interactive import (
+        interactive_bootstrap_active,
+    )
+    from app.core.companion_harness.companion.models import load_context_meta
+
+    chat_api_id = resolved_chat_model.id_on_provider
+    tool_api_id = _companion_tool_model_api_id(chat_api_id)
+    manager = _companion_manager_for_resolved_model(
+        chat_api_id,
+        tool_api_id,
+        _companion_runtime_config_fingerprint(),
+    )
+    session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
+    if not session.is_initialized:
+        return False
+    if (
+        session.config.memory_bootstrap_type
+        != CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    ):
+        return False
+    meta = load_context_meta(store=session.store)
+    return interactive_bootstrap_active(feature_enabled=True, meta=meta)
 
 
 def companion_session_tool_bg_idle_event(
@@ -428,6 +461,7 @@ async def run_companion_user_chat_turn_for_api(
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     voice_ctx: dict[str, object] | None = None,
+    bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="user_chat",
@@ -446,6 +480,7 @@ async def run_companion_user_chat_turn_for_api(
             preset_user_msg_uuid=preset_user_msg_uuid,
             implicit_signal_bundle=implicit_signal_bundle,
             voice_ctx=voice_ctx,
+            bootstrap_interim_output_sink=bootstrap_interim_output_sink,
         ),
     )
 

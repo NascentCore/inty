@@ -176,7 +176,7 @@ def test_build_system_prompt_interactive_bootstrap_injects_spec() -> None:
         enable_tools=True,
         interactive_bootstrap_active=True,
     )
-    assert "INTERACTIVE_BOOTSTRAP" in text
+    assert "Agentic 初始化执行规范" in text
     assert "companion_update_prompt_slice" in text
     assert "companion_bootstrap_user_interactive_complete" in text
 
@@ -192,7 +192,7 @@ def test_build_system_prompt_bootstrap_omits_tools_md_system_slice() -> None:
         interactive_bootstrap_active=True,
     )
     assert "Tool slice body for test." not in text
-    assert "INTERACTIVE_BOOTSTRAP" in text
+    assert "Agentic 初始化执行规范" in text
 
 
 def test_build_system_messages_for_bootstrap_track_omits_tools_md_system_slice() -> (
@@ -204,7 +204,7 @@ def test_build_system_messages_for_bootstrap_track_omits_tools_md_system_slice()
     msgs = build_system_messages_for_bootstrap_track(b, ContextMeta())
     joined = _joined_system(msgs)
     assert "TOOLS_MD_SLICE_BODY_MARKER" not in joined
-    assert "INTERACTIVE_BOOTSTRAP" in joined
+    assert "Agentic 初始化执行规范" in joined
 
 
 def test_build_system_prompt_intimate_memory() -> None:
@@ -349,3 +349,23 @@ def test_implicit_sign_on_greeting_bootstrap_context_omits_tools_md() -> None:
     )
     assert "TOOLS_MD_SLICE_BODY_MARKER" not in joined
     assert "交互式关系建立（bootstrap）" in joined
+    assert "Agentic 初始化执行规范" in joined
+    assert "companion_bootstrap_user_interactive_complete" in joined
+    assert "输出与工具：" not in joined
+
+
+def test_implicit_sign_on_greeting_user_interactive_injects_bootstrap_spec() -> None:
+    b = _minimal_bundle().model_copy(
+        update={"tools_md": "TOOLS_MD_SLICE_BODY_MARKER"}
+    )
+    ctx = ContextMeta(workspace_bootstrap_user_interactive_completed=False)
+    joined = _joined_system(
+        build_system_messages_for_implicit_sign_on_greeting(
+            b,
+            ctx,
+            CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
+        )
+    )
+    assert "TOOLS_MD_SLICE_BODY_MARKER" not in joined
+    assert "Agentic 初始化执行规范" in joined
+    assert "companion_update_prompt_slice" in joined

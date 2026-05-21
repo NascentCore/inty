@@ -263,6 +263,26 @@ def test_replace_leading_system_messages_inplace_keeps_tail() -> None:
     ]
 
 
+def test_implicit_sign_on_greeting_injects_bootstrap_when_incomplete(tmp_path) -> None:
+    scope = _scope(tmp_path.name, "-greet-boot")
+    st = _seed_workspace_bootstrap_incomplete(scope)
+    context = load_context_meta(store=st)
+    bundle = load_prompt_bundle(st, meta=context)
+    mb = CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    tools, systems, route = companion_turn_tools_and_system_messages(
+        store=st,
+        bundle=bundle,
+        context=context,
+        memory_bootstrap_type=mb,
+        track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+    )
+    joined = _joined_leading_system_contents(systems)
+    assert tools == []
+    assert route == TurnRouteMode.CHAT_ONLY_SYNC
+    assert "Agentic 初始化执行规范" in joined
+    assert "companion_bootstrap_user_interactive_complete" in joined
+
+
 def test_user_chat_track_omits_bootstrap_blocks_even_when_incomplete(tmp_path) -> None:
     scope = _scope(tmp_path.name, "-no-boot-in-chat")
     st = _seed_workspace_bootstrap_incomplete(scope)
@@ -277,7 +297,7 @@ def test_user_chat_track_omits_bootstrap_blocks_even_when_incomplete(tmp_path) -
         track=CompanionTurnTrack.USER_CHAT,
     )
     joined = _joined_leading_system_contents(systems)
-    assert "INTERACTIVE_BOOTSTRAP" not in joined
+    assert "Agentic 初始化执行规范" not in joined
 
 
 def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
@@ -296,7 +316,7 @@ def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
     messages.append({"role": "user", "content": "hello"})
 
     before = _joined_leading_system_contents(messages)
-    assert "INTERACTIVE_BOOTSTRAP" in before
+    assert "Agentic 初始化执行规范" in before
 
     out = tool_companion_bootstrap_user_interactive_complete(st, note=None)
     assert out.startswith("OK ")
@@ -314,7 +334,7 @@ def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path) -> None:
     )
 
     after = _joined_leading_system_contents(messages)
-    assert "INTERACTIVE_BOOTSTRAP" not in after
+    assert "Agentic 初始化执行规范" not in after
     assert "BOOTSTRAP.md" not in after
     tool_names = [t["function"]["name"] for t in new_tools]
     assert "memory_store_write_document" in tool_names

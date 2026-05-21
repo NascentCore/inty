@@ -15,7 +15,10 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.turn_tracks import (
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutput,
+)
+from app.core.companion_harness.companion.turn import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,
@@ -126,6 +129,54 @@ async def test_user_chat_turn_selects_bootstrap_track_when_incomplete(
     assert (
         run_turn_mock.await_args.kwargs["track"]
         == CompanionTurnTrack.USER_CHAT_BOOTSTRAP
+    )
+
+
+@pytest.mark.asyncio
+async def test_user_chat_turn_plumbs_bootstrap_interim_output_sink(tmp_path) -> None:
+    scope = CompanionScope("turn-tracks-sink", "agent", tmp_path.name)
+    st = MemoryStore(scope=scope, repository=None)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "bootstrap",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+                "workspace_bootstrap_user_interactive_completed": False,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
+        st.write_document(rel, f"{rel}\n")
+    emitted: list[str] = []
+
+    async def _sink(ev: BootstrapInterimOutput) -> None:
+        emitted.append(ev.text)
+
+    stub = CompanionTurnResult(
+        trace_id="t",
+        user_msg_uuid="u",
+        assistant_text="final",
+    )
+    kwargs = _minimal_turn_kwargs()
+    kwargs["store"] = st
+    kwargs["memory_bootstrap_type"] = (
+        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    )
+    kwargs["bootstrap_interim_output_sink"] = _sink
+    with patch(
+        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        new_callable=AsyncMock,
+        return_value=stub,
+    ) as run_turn_mock:
+        await run_companion_user_chat_turn("hello", **kwargs)
+    assert run_turn_mock.await_args is not None
+    assert (
+        run_turn_mock.await_args.kwargs["bootstrap_interim_output_sink"] is _sink
     )
 
 

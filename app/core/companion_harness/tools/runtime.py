@@ -117,6 +117,7 @@ def resolve_official_assistant_tool_loop(
     build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
     insert_system_message: Callable[[list[dict[str, Any]], str], None],
     initial_trace_id: str | None = None,
+    on_assistant_message: Callable[[Any], None] | None = None,
 ) -> OfficialAssistantToolLoopResult:
     """
     Resolve OpenAI-style tool-call rounds for official assistant chat flow.
@@ -132,6 +133,8 @@ def resolve_official_assistant_tool_loop(
     last_trace_id = initial_trace_id
     for _ in range(max_tool_call_rounds):
         current_message = current_response.choices[0].message
+        if on_assistant_message is not None:
+            on_assistant_message(current_message)
         tool_calls = getattr(current_message, "tool_calls", None) or []
         if not tool_calls:
             return OfficialAssistantToolLoopResult(
@@ -187,6 +190,9 @@ async def resolve_official_assistant_tool_loop_async(
     after_tool_messages_appended: (
         Callable[[list[dict[str, Any]]], Awaitable[None]] | None
     ) = None,
+    on_assistant_message: (
+        Callable[[Any], Awaitable[None]] | None
+    ) = None,
 ) -> OfficialAssistantToolLoopResult:
     """
     Async variant of official assistant tool-call loop.
@@ -204,6 +210,8 @@ async def resolve_official_assistant_tool_loop_async(
     last_trace_id = initial_trace_id
     for _ in range(max_tool_call_rounds):
         current_message = current_response.choices[0].message
+        if on_assistant_message is not None:
+            await on_assistant_message(current_message)
         tool_calls = getattr(current_message, "tool_calls", None) or []
         if not tool_calls:
             return OfficialAssistantToolLoopResult(

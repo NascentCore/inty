@@ -40,7 +40,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .models import CompanionTurnResult, InnerTickActivity
 from .scope import CompanionScope
-from .turn_routes import BackgroundToolEventSink
+from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 from .turn_tracks import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
@@ -330,17 +330,21 @@ class CompanionManager:
         preset_user_msg_uuid: str | None = None,
         implicit_signal_bundle: ImplicitSignalBundle | None = None,
         voice_ctx: dict[str, object] | None = None,
+        bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_user_chat_turn(
             user_text,
-            **self._track_turn_kwargs(
-                session,
-                defer_memory_update=defer_memory_update,
-                background_output_sink=background_output_sink,
-                preset_user_msg_uuid=preset_user_msg_uuid,
-                implicit_signal_bundle=implicit_signal_bundle,
-                voice_ctx=voice_ctx,
-            ),
+            **{
+                **self._track_turn_kwargs(
+                    session,
+                    defer_memory_update=defer_memory_update,
+                    background_output_sink=background_output_sink,
+                    preset_user_msg_uuid=preset_user_msg_uuid,
+                    implicit_signal_bundle=implicit_signal_bundle,
+                    voice_ctx=voice_ctx,
+                ),
+                "bootstrap_interim_output_sink": bootstrap_interim_output_sink,
+            },
         )
 
     async def run_implicit_sign_on_greeting_turn(

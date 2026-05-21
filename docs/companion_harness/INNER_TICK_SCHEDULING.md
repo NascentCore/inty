@@ -83,7 +83,7 @@ REPL 上两条 `inner-tick proactive-chat` 时间戳 **不是** 单一配置项�
 | `poll_seconds` | 与 proactive 相同 `companion_ws_proactive_chat_poll_seconds` | 60s（用于 transcript 未就绪时的阻塞睡眠上限） |
 | `last_inner_fire_monotonic` | `CompanionWebSocketCoordinator.last_maintenance_inner_tick_monotonic()` | 无则立即可试 |
 
-另需满足：feature `companion_ws_maintenance_inner_tick_enabled`、订阅日 chat 限额、无 pending maintenance 前台、chat_id 与坐标一致等；日志见 RUNBOOK。
+另需满足：feature `companion_ws_maintenance_inner_tick_enabled`、订阅日 chat 限额、无 pending maintenance 前台、chat_id 与坐标一致等；**`context.json` 的 `context_mode` 为 `bootstrap` 时不调度 maintenance**（`next_inner_tick_wait_seconds` 返回极大等待）；日志见 RUNBOOK。
 
 维护轮写入 **`transcript_inner_tick.jsonl`**；与 proactive rhythm 无共用公式。
 

@@ -2,9 +2,12 @@
 
 The FastAPI endpoint owns transport, auth, persistence, and payload shaping. This module owns
 the small set of per-connection companion invariants that must stay together: turn
-serialization, background tool event delivery, foreground/background correlation,
-inner-tick coordinates, and overlap guards when a prior inner-tick pass still has async
-tool_background work in flight.
+serialization, background tool event delivery, bootstrap interim LLM-round events,
+foreground/background correlation, inner-tick coordinates, and overlap guards when a prior
+inner-tick pass still has async tool_background work in flight.
+
+Bootstrap interim events are queued here during ``USER_CHAT_BOOTSTRAP`` sync tool loops;
+the WS main loop drains the queue and materializes chat frames (no ``turn_lock``).
 
 TODO(ws-disconnect-lifecycle): On server shutdown or WebSocket session end, do not cancel
 in-flight companion turns. Let background tasks finish, persist produced messages to storage,
@@ -17,11 +20,41 @@ import asyncio
 import threading
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutput,
+    BootstrapInterimOutputSink,
+)
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.schemas.chat import ChatCompletionRequest
+
 _ChatWsInflightTurnResult = TypeVar("_ChatWsInflightTurnResult")
+
+
+@dataclass
+class BootstrapInterimDeliverCtx:
+    """Per user_chat turn: materialize ``BootstrapInterimOutput`` into WS + chat history."""
+
+    db: "AsyncSession"
+    agent_id: str
+    session_id: str
+    request: "ChatCompletionRequest"
+    last_user_text: str
+    effective_local_id: str | None
+    outbound_queue: asyncio.Queue[Any]
+
+
+@dataclass(frozen=True)
+class BootstrapInterimQueued:
+    """Queued interim round with deliver ctx captured at enqueue time."""
+
+    ev: BootstrapInterimOutput
+    ctx: BootstrapInterimDeliverCtx
 
 
 @dataclass
@@ -135,6 +168,13 @@ class CompanionWebSocketCoordinator:
     background_events: asyncio.Queue[ToolOutputEvent] = field(
         default_factory=asyncio.Queue
     )
+    bootstrap_interim_events: asyncio.Queue[BootstrapInterimQueued] = field(
+        default_factory=asyncio.Queue
+    )
+    bootstrap_interim_deliver_ctx: BootstrapInterimDeliverCtx | None = field(
+        default=None, repr=False
+    )
+    outbound_queue: asyncio.Queue[Any] | None = field(default=None, repr=False)
     foreground_pending: dict[str, dict[str, Any]] = field(default_factory=dict)
     inner_tick_context: dict[str, Any] = field(default_factory=dict)
     _ws_inner_tick_proactive_tool_bg_idle: threading.Event | None = field(
@@ -151,6 +191,30 @@ class CompanionWebSocketCoordinator:
     def background_sink(self, event: ToolOutputEvent) -> None:
         """Thread-safe sink passed into tool_background jobs."""
         self.loop.call_soon_threadsafe(self.background_events.put_nowait, event)
+
+    def set_bootstrap_interim_deliver_ctx(
+        self, ctx: BootstrapInterimDeliverCtx
+    ) -> None:
+        self.bootstrap_interim_deliver_ctx = ctx
+
+    def clear_bootstrap_interim_deliver_ctx(self) -> None:
+        self.bootstrap_interim_deliver_ctx = None
+
+    def bind_outbound_queue(self, queue: asyncio.Queue[Any]) -> None:
+        self.outbound_queue = queue
+
+    def bootstrap_interim_output_sink(self) -> BootstrapInterimOutputSink:
+        """Async sink for bootstrap sync tool-loop assistant rounds (queues only)."""
+
+        async def _sink(ev: BootstrapInterimOutput) -> None:
+            ctx = self.bootstrap_interim_deliver_ctx
+            if ctx is None:
+                return
+            await self.bootstrap_interim_events.put(
+                BootstrapInterimQueued(ev=ev, ctx=ctx)
+            )
+
+        return _sink
 
     def set_foreground_pending(
         self, user_msg_uuid: str, context: dict[str, Any]

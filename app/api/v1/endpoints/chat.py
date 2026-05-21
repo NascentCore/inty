@@ -38,7 +38,7 @@ from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
 from app.schemas.chat_websocket import (
-    ChatWsCompanionWireMetaData,
+    ChatWsCompanionWireMessageMetaData,
     dump_chat_ws_companion_wire_meta,
     normalize_websocket_companion_message_id_uuid,
 )
@@ -112,7 +112,7 @@ async def _handle_subscription_limit_error(
     try:
         meta = (
             dump_chat_ws_companion_wire_meta(
-                ChatWsCompanionWireMetaData(local_id=client_local_id)
+                ChatWsCompanionWireMessageMetaData(local_id=client_local_id)
             )
             if client_local_id
             else None
@@ -371,7 +371,7 @@ def _build_premium_preview_choice(preview_content: str) -> dict:
             "Subscribe to Premium to unlock this quality in every chat."
         ),
         "meta_data": dump_chat_ws_companion_wire_meta(
-            ChatWsCompanionWireMetaData(
+            ChatWsCompanionWireMessageMetaData(
                 premium_only=True,
                 source="free_user_premium_preview",
             )
@@ -478,7 +478,7 @@ async def _persist_companion_user_message_for_bg(
             session_id,
             last_user_message,
             meta_data=dump_chat_ws_companion_wire_meta(
-                ChatWsCompanionWireMetaData(local_id=effective_local_id)
+                ChatWsCompanionWireMessageMetaData(local_id=effective_local_id)
             ),
         )
     return await chat_history_service.add_user_message_async(
@@ -512,7 +512,7 @@ def _companion_ai_meta_from_turn_result(
             voice_message_script = _fg_script
     sp = companion_turn.significance_perception
     significance = sp if isinstance(sp, dict) and sp else None
-    meta = ChatWsCompanionWireMetaData(
+    meta = ChatWsCompanionWireMessageMetaData(
         source=companion_turn.assistant_source,
         reply_modality=companion_turn.reply_modality,
         inner_tick_activity=companion_turn.inner_tick_activity,
@@ -727,7 +727,7 @@ async def _agent_chat_completions_impl(
                             response_text_content,
                             agent_id=chat.agent_id,
                             meta_data=dump_chat_ws_companion_wire_meta(
-                                ChatWsCompanionWireMetaData.model_validate(
+                                ChatWsCompanionWireMessageMetaData.model_validate(
                                     phone_meta
                                 )
                             ),

@@ -148,9 +148,7 @@ async def synthesize_chat_assistant_audio(
         use_companion
         and str(companion_reply_modality or "").strip() == "voice_message"
     ):
-        tts_text = (companion_voice_script or "").strip() or (
-            response_text_content or ""
-        ).strip()
+        return audio_url, audio_duration
     else:
         tts_text = (response_text_content or "").strip()
     if not tts_text:

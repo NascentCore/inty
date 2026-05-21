@@ -109,3 +109,34 @@ async def test_synthesize_skips_tts_when_quota_denied():
 
     assert audio_url is None
     assert duration is None
+
+
+@pytest.mark.asyncio
+async def test_synthesize_skips_companion_voice_message_modality():
+    voice_svc = MagicMock(spec=VoiceService)
+
+    with patch(
+        "app.services.chat_assistant_voice.produce_voice_for_user",
+        new_callable=AsyncMock,
+    ) as mock_produce:
+        audio_url, duration = await synthesize_chat_assistant_audio(
+            db=MagicMock(),
+            session_id="sess-1",
+            ai_message_id=None,
+            voice_enabled=True,
+            chat_voice_id="google/Zephyr",
+            agent_voice_id=None,
+            agent_gender="FEMALE",
+            agent_settings={},
+            language="en",
+            current_user=MagicMock(id="u1"),
+            voice_svc=voice_svc,
+            response_text_content="hello",
+            use_companion=True,
+            companion_reply_modality="voice_message",
+            companion_voice_script="spoken",
+        )
+
+    mock_produce.assert_not_called()
+    assert audio_url is None
+    assert duration is None
