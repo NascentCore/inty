@@ -724,16 +724,12 @@ async def _dispatch(
         raw_ctx = arguments.get("context_mode")
         if not isinstance(raw_ctx, str):
             return "ERROR: context_mode must be a string"
-        raw_uc = arguments.get("user_confirmed")
-        if not isinstance(raw_uc, bool):
-            return "ERROR: user_confirmed must be a boolean"
         raw_note = arguments.get("note")
-        if raw_note is not None and not isinstance(raw_note, str):
-            return "ERROR: note must be a string or omitted"
+        if not isinstance(raw_note, str):
+            return "ERROR: note must be a string"
         return tool_companion_set_experience_profile(
             store,
             raw_ctx,
-            user_confirmed=raw_uc,
             note=raw_note,
         )
     if name == "google_web_search":
