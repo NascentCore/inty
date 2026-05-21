@@ -1018,6 +1018,10 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
     tc_box: list[Optional[dict]],
 ) -> None:
     """When ``schedule_queue`` has a due pending task, run one inner-tick reminder turn."""
+    # TODO(scheduled-reminder-early-proactive): Proactive chat can read recent
+    # reminder context and tell the user "到点了" before a pending schedule_queue
+    # task is due. Keep scheduled reminders on this deterministic path only,
+    # e.g. gate proactive chat while any future pending reminder exists.
     user_id = str(ctx.get("user_id") or "").strip()
     agent_id = str(ctx.get("agent_id") or "").strip()
     chat_id_raw = ctx.get("chat_id")
