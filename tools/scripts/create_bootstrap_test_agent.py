@@ -26,7 +26,9 @@ def _read_bearer_token(token_path: str, stderr: TextIO) -> str | None:
         with open(token_path, encoding="utf-8") as f:
             raw = f.read()
     except OSError as exc:
-        print(f"error: cannot read token file {token_path!r}: {exc}", file=stderr)
+        print(
+            f"error: cannot read token file {token_path!r}: {exc}", file=stderr
+        )
         return None
     tok = raw.strip()
     if not tok:

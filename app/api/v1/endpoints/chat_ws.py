@@ -1940,17 +1940,15 @@ async def _agent_chat_ws_completions_impl(
                             implicit_greeting_turn=implicit_greeting_ws,
                         )
                     )
-                    ai_message_id = (
-                        await chat_history_service.add_ai_message_sync_async(
-                            session_id,
-                            response_text_content,
-                            agent_id=chat.agent_id,
-                            meta_data=dump_chat_ws_companion_wire_meta(
-                                ChatWsCompanionWireMessageMetaData.model_validate(
-                                    phone_meta
-                                )
-                            ),
-                        )
+                    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+                        session_id,
+                        response_text_content,
+                        agent_id=chat.agent_id,
+                        meta_data=dump_chat_ws_companion_wire_meta(
+                            ChatWsCompanionWireMessageMetaData.model_validate(
+                                phone_meta
+                            )
+                        ),
                     )
                     if companion_ws_inner_tick_ctx is not None:
                         apply_companion_ws_inner_tick_coords(
@@ -1982,9 +1980,9 @@ async def _agent_chat_ws_completions_impl(
                             "agent_settings": agent_data.get("settings"),
                             "language": request.language,
                         }
-                    bootstrap_interim_sink: BootstrapInterimOutputSink | None = (
-                        None
-                    )
+                    bootstrap_interim_sink: (
+                        BootstrapInterimOutputSink | None
+                    ) = None
                     if ws_outbound_queue is not None:
                         bootstrap_interim_sink = (
                             _bootstrap_interim_output_sink_for_ws(

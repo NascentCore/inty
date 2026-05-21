@@ -190,9 +190,7 @@ async def resolve_official_assistant_tool_loop_async(
     after_tool_messages_appended: (
         Callable[[list[dict[str, Any]]], Awaitable[None]] | None
     ) = None,
-    on_assistant_message: (
-        Callable[[Any], Awaitable[None]] | None
-    ) = None,
+    on_assistant_message: Callable[[Any], Awaitable[None]] | None = None,
 ) -> OfficialAssistantToolLoopResult:
     """
     Async variant of official assistant tool-call loop.

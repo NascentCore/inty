@@ -35,8 +35,12 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 
-from app.core.companion_harness.companion.ai_private_prompt import get_ai_private_jsonl_text_for_prompt
-from app.core.companion_harness.companion.bootstrap import interactive_bootstrap_active
+from app.core.companion_harness.companion.ai_private_prompt import (
+    get_ai_private_jsonl_text_for_prompt,
+)
+from app.core.companion_harness.companion.bootstrap import (
+    interactive_bootstrap_active,
+)
 from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
     get_inty_facts_system_text,

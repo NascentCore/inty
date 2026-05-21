@@ -83,7 +83,9 @@ from .proactive_chat import (
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
     build_proactive_chat_transcript_user_marker,
 )
-from app.core.companion_harness.companion.bootstrap import interactive_bootstrap_active
+from app.core.companion_harness.companion.bootstrap import (
+    interactive_bootstrap_active,
+)
 from .message_format import openai_assistant_message_dict
 from .models import (
     CompanionTurnTrack,
@@ -593,9 +595,11 @@ async def _run_companion_turn_core(
         with _langsmith_cm:
             try:
                 if track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-                    rel_tr_bootstrap = transcript_relative_path_for_turn_persistence(
-                        inner_tick_turn=False,
-                        inner_tick_activity=route_inner_activity,
+                    rel_tr_bootstrap = (
+                        transcript_relative_path_for_turn_persistence(
+                            inner_tick_turn=False,
+                            inner_tick_activity=route_inner_activity,
+                        )
                     )
                     (
                         last_text,
