@@ -208,9 +208,6 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
         description="1-based LLM round index within USER_CHAT_BOOTSTRAP sync tool loop.",
     )
     inner_tick_activity: Optional[str] = None
-    reply_modality: Optional[str] = None
-    is_voice: Optional[bool] = None
-    voice_message_script: Optional[str] = None
     trace_id: Optional[str] = None
     user_msg_uuid: Optional[str] = None
     assistant_msg_uuid: Optional[str] = None

@@ -119,13 +119,7 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
         "- `importance_user_message` (integer 1-10): importance of the latest user message alone.\n"
         "- `importance_assistant_message` (integer 1-10): importance of `user_facing_reply` alone.\n"
         "- `output_to_user` (boolean): **must be true** on this foreground dual-LLM chat branch "
-        "(the parallel tool branch decides silent vs visible follow-ups).\n"
-        "- `reply_modality` (string): `text` or `voice_message`. Choose `voice_message` when you are "
-        "primarily sending a spoken voice note to the user (like a real person holding voice mode); "
-        "otherwise `text`.\n"
-        "- `voice_message_script` (string): exact spoken wording for TTS when `reply_modality` is "
-        '`voice_message`; use `""` when modality is `text`. '
-        "`user_facing_reply` may still hold a short caption or transcript line when helpful.\n\n"
+        "(the parallel tool branch decides silent vs visible follow-ups).\n\n"
         "This branch still must not call tools (`tool_choice=none`).\n"
     )
 
@@ -145,16 +139,6 @@ def _output_contract_text_chat_branch_mirrored_tools() -> str:
         "可核对事实由并行工具路自愿调用 `companion_runtime_inspect` 取得 JSON 后再由该路收口。\n\n"
         "当用户请求生图、改图、联网检索、持久化文档核对等工具型任务时：不要拒绝，不要宣称已完成或编造结果；"
         "一句承接即可。保持简洁有温度，避免机械列表堆砌。"
-    )
-
-
-def _repl_tool_contract_voice_generation_clause() -> str:
-    return (
-        "（8）当用户**明确索要可播放的语音、音频、语音便签**（而非仅在文字里「念」）时，"
-        "必须先调用 generate_voice_message，transcript 为完整口语文本；"
-        "工具环收尾信封须设 reply_modality=voice_message，"
-        "voice_message_script 与 transcript 一致；"
-        "禁止声称无法生成或发送音频。"
     )
 
 
@@ -228,7 +212,6 @@ def _output_contract_text_with_tools(
         "**禁止**编造与实现不符的技术说法（例如错误描述模型族系、温度或未发生的调用方式）。"
     )
     base += _repl_tool_contract_image_generation_clause()
-    base += _repl_tool_contract_voice_generation_clause()
     base += _repl_tool_contract_suffix_after_image_clause(
         tool_side_compact=tool_side_compact
     )
@@ -386,10 +369,7 @@ def _tool_background_final_json_routing_contract_text() -> str:
         "- `output_to_user`（布尔）：用户是否还应收到一条**额外**后续气泡，用于总结本轮工具可读结果"
         "（读档、列目录、联网检索、状态行、runtime_inspect 等）。"
         "若本轮仅为静默持久化（如 user_profile_record、SOUL/MEMORY 写回）且无需对用户追加说明，设为 false。\n"
-        "- `reply_modality`（字符串）：`text` 或 `voice_message`；主交付为语音便签时用 `voice_message`。\n"
-        '- `voice_message_script`（字符串）：`voice_message` 时对用户诵读的完整口语文本；`text` 时为 `""`。\n'
         "**生图 / 改图**：若 `generate_image` 或 `modify_image` **成功**产出路径，系统仍会向用户投递产物；"
-        "**语音**：若 `generate_voice_message` **成功**产出 audio_url，系统仍会向用户投递语音消息；"
         "`output_to_user` 不能否决成功产物投递，只控制是否额外附文字。\n"
         "若你无法产出合法 JSON，后端会追加一次 **同一 schema**、无 tools 的补解析请求。\n"
     )

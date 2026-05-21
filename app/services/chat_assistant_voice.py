@@ -137,20 +137,14 @@ async def synthesize_chat_assistant_audio(
     voice_svc: VoiceService,
     response_text_content: str,
     use_companion: bool,
-    companion_reply_modality: str,
-    companion_voice_script: str,
 ) -> tuple[Optional[str], Optional[float]]:
     audio_url: Optional[str] = None
     audio_duration: Optional[float] = None
     if not voice_enabled:
         return audio_url, audio_duration
-    if (
-        use_companion
-        and str(companion_reply_modality or "").strip() == "voice_message"
-    ):
+    if use_companion:
         return audio_url, audio_duration
-    else:
-        tts_text = (response_text_content or "").strip()
+    tts_text = (response_text_content or "").strip()
     if not tts_text:
         return audio_url, audio_duration
     resolved_voice_id = chat_voice_id or agent_voice_id

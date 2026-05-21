@@ -98,6 +98,18 @@ from .tool_bg_routing import resolve_tool_bg_routing_sync
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
 _OUTPUT_QUEUE_LOCK = threading.Lock()
+_DB_LOOP_TLS = threading.local()
+
+
+def set_tool_background_db_loop(loop: asyncio.AbstractEventLoop) -> None:
+    """Bind the session's main asyncio loop for tool_background thread DB work."""
+    _DB_LOOP_TLS.loop = loop
+
+
+def clear_tool_background_db_loop() -> None:
+    _DB_LOOP_TLS.loop = None
+
+
 _ACTIVE_THREADS: set[threading.Thread] = set()
 _ACTIVE_THREADS_LOCK = threading.Lock()
 _ABORT_TOOL_BG_LOCK = threading.Lock()
@@ -146,7 +158,6 @@ class BackgroundToolLoopAborted(Exception):
 
 # Fal `generate_image` / `modify_image` tool summaries include `local_path=/abs/path/...`.
 _LOCAL_PATH_IN_TOOL = re.compile(r"local_path=(\S+)")
-_AUDIO_URL_IN_TOOL = re.compile(r"audio_url=(\S+)")
 # First tool_background completion tries tool_choice=required whenever the OpenAI tools list
 # is non-empty; BadRequest fallbacks omit it (provider auto mode).
 
@@ -168,26 +179,6 @@ def _local_paths_from_tool_messages(
             if p and p != "(none)" and p not in seen:
                 seen.add(p)
                 out.append(p)
-    return out
-
-
-def _audio_urls_from_tool_messages(
-    messages: list[dict[str, Any]],
-) -> list[str]:
-    """Collect audio URLs from tool role messages (dedupe, order preserved)."""
-    seen: set[str] = set()
-    out: list[str] = []
-    for m in messages:
-        if m.get("role") != "tool":
-            continue
-        content = m.get("content")
-        if not isinstance(content, str):
-            continue
-        for match in _AUDIO_URL_IN_TOOL.finditer(content):
-            u = match.group(1)
-            if u and u not in seen:
-                seen.add(u)
-                out.append(u)
     return out
 
 
@@ -268,14 +259,13 @@ def _generation_tool_execution_deliver(
     appended_messages: list[dict[str, Any]],
     tool_call_names: list[str],
     image_paths: list[str],
-    audio_urls: list[str],
 ) -> bool:
     """
     GENERATION tools must reach the client only when execution succeeded (paths or non-ERROR tool text).
     """
     if not round_includes_generation_tool(tool_call_names):
         return False
-    if image_paths or audio_urls:
+    if image_paths:
         return True
     pending: dict[str, str] = {}
     for m in appended_messages:
@@ -341,10 +331,6 @@ class ToolOutputEvent:
     langsmith_run_id: str = ""
     output_to_user: bool = False
     generation_deliver: bool = False
-    # Same dual-LLM envelope fields as foreground CompanionTurnResult (routing layer runs TTS).
-    reply_modality: str = "text"
-    voice_message_script: str = ""
-    precomputed_audio_url: str = ""
     image_asset_baseline: int = 0
     # Absolute on-disk paths for images created during this background tool round.
     # Surfaced to REPL via meta_data.tool_bg_local_image_paths; production clients ignore.
@@ -871,13 +857,10 @@ async def _run_background_tool_loop(
         appended_turn_msgs = loop_result.messages[len(working_messages) :]
         tool_call_names = _extract_tool_call_names(appended_turn_msgs)
         image_paths = _local_paths_from_tool_messages(loop_result.messages)
-        audio_urls = _audio_urls_from_tool_messages(loop_result.messages)
-        precomputed_audio_url = audio_urls[-1] if audio_urls else ""
         generation_deliver = _generation_tool_execution_deliver(
             appended_turn_msgs,
             tool_call_names,
             image_paths,
-            audio_urls,
         )
         routing = resolve_tool_bg_routing_sync(
             client=resolved_client,
@@ -1026,11 +1009,6 @@ async def _run_background_tool_loop(
                 langsmith_run_id=bg_ls_llm_run,
                 output_to_user=output_to_user_flag,
                 generation_deliver=generation_deliver,
-                reply_modality=routing.reply_modality,
-                voice_message_script=(
-                    routing.voice_message_script or ""
-                ).strip(),
-                precomputed_audio_url=precomputed_audio_url,
                 image_asset_baseline=image_asset_baseline,
                 local_image_paths=tuple(image_paths),
                 significance_perception=significance_meta,
@@ -1068,7 +1046,6 @@ def start_tool_background_job(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     tool_bg_idle_event: threading.Event | None = None,
     force_tools_first_round: bool = True,
-    voice_ctx: dict[str, object] | None = None,
 ) -> None:
     sync_port = chat_completions_sync or create_chat_completion_sync
 
@@ -1123,7 +1100,6 @@ def start_tool_background_job(
             try:
                 if main_event_loop is not None:
                     set_tool_background_db_loop(main_event_loop)
-                set_tool_background_voice_ctx(voice_ctx)
                 if langsmith_parent_run is not None:
                     from langsmith.run_helpers import set_tracing_parent
 
@@ -1166,7 +1142,6 @@ def start_tool_background_job(
                     ls_end_source="tool_background_thread",
                 )
                 clear_tool_background_db_loop()
-                clear_tool_background_voice_ctx()
         finally:
             companion_llm_runtime_event_bind_ctx.reset(llm_bg_bind_token)
             # TODO(tool-bg-idle-starves-user-chat): Sole normal path that sets idle after

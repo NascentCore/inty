@@ -71,8 +71,6 @@ async def test_synthesize_uses_produce_voice_for_user():
             voice_svc=voice_svc,
             response_text_content="hello",
             use_companion=False,
-            companion_reply_modality="",
-            companion_voice_script="",
         )
 
     mock_produce.assert_awaited_once()
@@ -103,8 +101,6 @@ async def test_synthesize_skips_tts_when_quota_denied():
             voice_svc=voice_svc,
             response_text_content="hello",
             use_companion=False,
-            companion_reply_modality="",
-            companion_voice_script="",
         )
 
     assert audio_url is None
@@ -112,7 +108,7 @@ async def test_synthesize_skips_tts_when_quota_denied():
 
 
 @pytest.mark.asyncio
-async def test_synthesize_skips_companion_voice_message_modality():
+async def test_synthesize_skips_tts_for_companion_turn():
     voice_svc = MagicMock(spec=VoiceService)
 
     with patch(
@@ -133,8 +129,6 @@ async def test_synthesize_skips_companion_voice_message_modality():
             voice_svc=voice_svc,
             response_text_content="hello",
             use_companion=True,
-            companion_reply_modality="voice_message",
-            companion_voice_script="spoken",
         )
 
     mock_produce.assert_not_called()

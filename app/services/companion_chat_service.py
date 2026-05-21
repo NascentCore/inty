@@ -460,7 +460,6 @@ async def run_companion_user_chat_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    voice_ctx: dict[str, object] | None = None,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
@@ -479,7 +478,6 @@ async def run_companion_user_chat_turn_for_api(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             implicit_signal_bundle=implicit_signal_bundle,
-            voice_ctx=voice_ctx,
             bootstrap_interim_output_sink=bootstrap_interim_output_sink,
         ),
     )
@@ -497,7 +495,6 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
-    voice_ctx: dict[str, object],
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="implicit_sign_on_greeting",
@@ -515,7 +512,6 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
             defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
-            voice_ctx=voice_ctx,
         ),
     )
 
@@ -664,7 +660,6 @@ async def run_companion_chat_turn_for_api(
         return await run_companion_implicit_sign_on_greeting_turn_for_api(
             user_text=user_text,
             implicit_signal_bundle=implicit_signal_bundle,
-            voice_ctx={},
             **common,
         )
     return await run_companion_user_chat_turn_for_api(

@@ -23,8 +23,6 @@ def _envelope_payload() -> dict[str, Any]:
         "importance_user_message": 2,
         "importance_assistant_message": 4,
         "output_to_user": True,
-        "reply_modality": "text",
-        "voice_message_script": "",
     }
 
 
@@ -44,8 +42,6 @@ def assert_dual_llm_response_format_schema_contract(fmt: dict[str, Any]) -> None
         "importance_user_message",
         "importance_assistant_message",
         "output_to_user",
-        "reply_modality",
-        "voice_message_script",
     }
     assert set(props) == expected_keys
     req = schema["required"]
@@ -63,9 +59,6 @@ def assert_dual_llm_response_format_schema_contract(fmt: dict[str, Any]) -> None
         assert props[key]["minimum"] == 1
         assert props[key]["maximum"] == 10
     assert props["output_to_user"]["type"] == "boolean"
-    assert props["reply_modality"]["type"] == "string"
-    assert props["reply_modality"]["enum"] == ["text", "voice_message"]
-    assert props["voice_message_script"]["type"] == "string"
 
 
 def test_dual_llm_chat_response_format_schema_contract() -> None:
@@ -100,7 +93,6 @@ def test_split_dual_llm_chat_branch_message_reads_content_envelope() -> None:
         "importance_assistant_message": 4,
     }
     assert split.output_to_user is True
-    assert split.reply_modality == "text"
 
 
 def test_split_dual_llm_chat_branch_message_json_fence_in_content() -> None:

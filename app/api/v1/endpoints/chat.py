@@ -438,22 +438,6 @@ def _companion_rejects_multimodal_user_turn(
     return last_user_message.has_image_content_part()
 
 
-def _companion_turn_voice_ctx(
-    *,
-    chat_settings: Any,
-    agent_data: dict[str, Any],
-    language: str,
-) -> dict[str, object]:
-    """Voice/TTS resolution for companion foreground and tool_background turns."""
-    return {
-        "chat_voice_id": chat_settings.voice_id,
-        "agent_voice_id": agent_data.get("voice_id"),
-        "agent_gender": agent_data.get("gender"),
-        "agent_settings": agent_data.get("settings"),
-        "language": language,
-    }
-
-
 async def _persist_companion_user_message_for_bg(
     *,
     session_id: str,
@@ -503,21 +487,11 @@ def _companion_ai_meta_from_turn_result(
     scheduled_task_id: str | None = None,
 ) -> dict[str, Any]:
     """Build assistant ``meta_data`` for chat_history / WS from one companion kernel turn."""
-    _fg_script = (companion_turn.voice_message_script or "").strip()
-    is_voice = None
-    voice_message_script = None
-    if str(companion_turn.reply_modality or "") == "voice_message":
-        is_voice = True
-        if _fg_script:
-            voice_message_script = _fg_script
     sp = companion_turn.significance_perception
     significance = sp if isinstance(sp, dict) and sp else None
     meta = ChatWsCompanionWireMessageMetaData(
         source=companion_turn.assistant_source,
-        reply_modality=companion_turn.reply_modality,
         inner_tick_activity=companion_turn.inner_tick_activity,
-        is_voice=is_voice,
-        voice_message_script=voice_message_script,
         trace_id=companion_turn.trace_id or None,
         user_msg_uuid=companion_turn.user_msg_uuid or None,
         assistant_msg_uuid=companion_turn.assistant_msg_uuid or None,
@@ -836,8 +810,6 @@ async def _agent_chat_completions_impl(
                 voice_svc=voice_svc,
                 response_text_content=response_text_content,
                 use_companion=False,
-                companion_reply_modality="text",
-                companion_voice_script="",
             )
         except Exception as e:
             logger.error(f"语音生成失败: {str(e)}")

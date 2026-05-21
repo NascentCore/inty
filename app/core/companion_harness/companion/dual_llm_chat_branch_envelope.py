@@ -17,7 +17,7 @@ companion turn pipeline.
   ``prompt_stack.companion_turn_tools_and_system_messages``).
 - **Parsed / split**: ``split_dual_llm_chat_branch_message`` / ``split_dual_llm_chat_branch_content``
   return ``DualLlmChatBranchSplit`` (visible text, optional significance metadata dict,
-  ``output_to_user``, ``reply_modality``, ``voice_message_script``). Validated payloads deserialize
+  ``output_to_user``). Validated payloads deserialize
   as ``DualLlmChatBranchEnvelope``.
 - **Kernel return**: ``CompanionTurnResult.significance_perception`` (``models.py``) carries the dict;
   may be ``None`` if parse failed.
@@ -39,7 +39,7 @@ import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Final, Literal
+from typing import Any, Final
 from unittest.mock import Base as _UnittestMockBase
 
 from loguru import logger
@@ -101,47 +101,6 @@ class DualLlmChatBranchEnvelope(BaseModel):
             "user-visible recap is needed."
         ),
     )
-    reply_modality: Literal["text", "voice_message"] = Field(
-        default="text",
-        description=(
-            "How this turn is primarily delivered. "
-            "`text`: normal chat bubble (optional spoken playback may mirror "
-            "`user_facing_reply`). "
-            "`voice_message`: you are sending a short voice note as a person would; "
-            "then fill `voice_message_script` with natural spoken words for synthesis "
-            "(not stage directions). "
-            "`user_facing_reply` may carry an optional caption or transcript preview."
-        ),
-    )
-    voice_message_script: str = Field(
-        default="",
-        description=(
-            "When `reply_modality` is `voice_message`, the exact wording to speak "
-            "for the voice clip (first-person, conversational). "
-            "Use empty string when `reply_modality` is `text`."
-        ),
-    )
-
-    @field_validator("reply_modality", mode="before")
-    @classmethod
-    def _coerce_reply_modality(cls, v: object) -> str:
-        if v is None:
-            return "text"
-        if isinstance(v, str):
-            s = v.strip().lower()
-            if s == "voice_message":
-                return "voice_message"
-            return "text"
-        return "text"
-
-    @field_validator("voice_message_script", mode="before")
-    @classmethod
-    def _coerce_voice_script(cls, v: object) -> str:
-        if v is None:
-            return ""
-        if isinstance(v, str):
-            return v
-        return str(v)
 
     @field_validator("output_to_user", mode="before")
     @classmethod
@@ -182,15 +141,6 @@ class DualLlmChatBranchEnvelope(BaseModel):
         if isinstance(v, str) and v.strip().isdigit():
             return int(v.strip())
         raise ValueError("score must be integer 1-10")
-
-    @model_validator(mode="after")
-    def _clear_voice_script_when_text_modality(
-        self,
-    ) -> DualLlmChatBranchEnvelope:
-        if self.reply_modality == "text":
-            self.voice_message_script = ""
-        return self
-
 
 def _build_dual_llm_chat_response_format() -> dict[str, Any]:
     """OpenAI ``response_format`` wrapper from ``DualLlmChatBranchEnvelope`` JSON Schema."""
@@ -261,8 +211,6 @@ class DualLlmChatBranchSplit:
     visible_text: str
     significance_meta: dict[str, Any] | None
     output_to_user: bool | None
-    reply_modality: Literal["text", "voice_message"]
-    voice_message_script: str
 
 
 def _message_field(message: Any, field_name: str) -> Any:
@@ -339,15 +287,11 @@ def split_dual_llm_chat_branch_content(raw: str) -> DualLlmChatBranchSplit:
             visible_text=(raw or "").strip(),
             significance_meta=None,
             output_to_user=None,
-            reply_modality="text",
-            voice_message_script="",
         )
     return DualLlmChatBranchSplit(
         visible_text=env.user_facing_reply.strip(),
         significance_meta=envelope_to_assistant_metadata_dict(env),
         output_to_user=env.output_to_user,
-        reply_modality=env.reply_modality,
-        voice_message_script=(env.voice_message_script or "").strip(),
     )
 
 
@@ -367,8 +311,6 @@ def split_dual_llm_chat_branch_message(message: Any) -> DualLlmChatBranchSplit:
             visible_text=env.user_facing_reply.strip(),
             significance_meta=envelope_to_assistant_metadata_dict(env),
             output_to_user=env.output_to_user,
-            reply_modality=env.reply_modality,
-            voice_message_script=(env.voice_message_script or "").strip(),
         )
     content = _message_field(message, "content")
     raw = content if isinstance(content, str) else ""
@@ -376,6 +318,4 @@ def split_dual_llm_chat_branch_message(message: Any) -> DualLlmChatBranchSplit:
         visible_text=(raw or "").strip(),
         significance_meta=None,
         output_to_user=None,
-        reply_modality="text",
-        voice_message_script="",
     )

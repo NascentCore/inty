@@ -35,15 +35,7 @@ _UNIFIED_FALLBACK_SYSTEM_PROMPT = (
     "- `output_to_user` (boolean): **true** if the user should see a follow-up bubble with tool "
     "outcomes (read_file, list_dir, search, runtime_inspect, status line, etc.). **false** when "
     "only silent persistence ran and no recap is needed.\n"
-    "- `reply_modality` (string): `text` or `voice_message`. Use `voice_message` when the primary "
-    "delivery for this follow-up is a voice note (spoken script goes in `voice_message_script`).\n"
-    "- `voice_message_script` (string): exact words to speak when `reply_modality` is "
-    "`voice_message`; empty string when modality is `text`.\n"
-    "Successful image generation still delivers the asset; successful `generate_voice_message` "
-    "still delivers audio; `output_to_user` only gates extra text.\n"
-    "When the user asked for playable audio, call `generate_voice_message` in the tool loop "
-    "before this finish envelope; set `reply_modality` to `voice_message` and match "
-    "`voice_message_script` to the tool transcript. Do not claim you cannot send audio.\n"
+    "Successful image generation still delivers the asset; `output_to_user` only gates extra text.\n"
 )
 
 
@@ -54,8 +46,6 @@ def _conservative_tool_finish_envelope() -> DualLlmChatBranchEnvelope:
         importance_user_message=5,
         importance_assistant_message=5,
         output_to_user=False,
-        reply_modality="text",
-        voice_message_script="",
     )
 
 

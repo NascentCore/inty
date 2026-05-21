@@ -43,7 +43,6 @@ async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle
             session,
             "hi",
             implicit_signal_bundle=bundle,
-            voice_ctx={},
         )
 
     assert result is stub
@@ -52,32 +51,3 @@ async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle
     assert track_mock.await_args.kwargs["implicit_signal_bundle"] is bundle
     assert "bootstrap_interim_output_sink" not in track_mock.await_args.kwargs
 
-
-@pytest.mark.asyncio
-async def test_manager_implicit_sign_on_greeting_forwards_voice_ctx() -> None:
-    bundle = ImplicitSignalBundle(user_signed_on=True)
-    voice_ctx = {"chat_voice_id": "v1", "language": "en"}
-    stub = CompanionTurnResult(
-        trace_id="t",
-        user_msg_uuid="u",
-        assistant_text="",
-    )
-    manager = CompanionManager(
-        CompanionConfig(llm=CompanionLLMConfig(api_key="k"))
-    )
-    session = _minimal_manager_session()
-
-    with patch(
-        "app.core.companion_harness.companion.manager.run_companion_implicit_sign_on_greeting_turn",
-        new_callable=AsyncMock,
-        return_value=stub,
-    ) as track_mock:
-        await manager.run_implicit_sign_on_greeting_turn(
-            session,
-            "hi",
-            implicit_signal_bundle=bundle,
-            voice_ctx=voice_ctx,
-        )
-
-    assert track_mock.await_args is not None
-    assert track_mock.await_args.kwargs["voice_ctx"] == voice_ctx

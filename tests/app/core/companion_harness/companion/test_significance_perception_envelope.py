@@ -17,8 +17,6 @@ def _envelope_dict() -> dict:
         "importance_user_message": 4,
         "importance_assistant_message": 6,
         "output_to_user": True,
-        "reply_modality": "text",
-        "voice_message_script": "",
     }
 
 
@@ -41,8 +39,6 @@ def test_split_dual_llm_chat_branch_content_strips_fence_and_returns_meta() -> N
         "importance_assistant_message": 6,
     }
     assert split.output_to_user is True
-    assert split.reply_modality == "text"
-    assert split.voice_message_script == ""
 
 
 def test_split_dual_llm_chat_branch_message_reads_reasoning_envelope() -> None:
@@ -85,15 +81,3 @@ def test_split_dual_llm_chat_branch_message_ignores_non_json_reasoning() -> None
 
 def test_parse_dual_llm_chat_envelope_invalid_inside_fence_returns_none() -> None:
     assert parse_dual_llm_chat_envelope_json("```json\nnot json\n```") is None
-
-
-def test_dual_llm_envelope_clears_voice_script_when_reply_modality_text() -> None:
-    d = _envelope_dict()
-    d["voice_message_script"] = "（声音柔柔的）hello"
-    raw = json.dumps(d, ensure_ascii=False)
-    env = parse_dual_llm_chat_envelope_json(raw)
-    assert env is not None
-    assert env.reply_modality == "text"
-    assert env.voice_message_script == ""
-    split = split_dual_llm_chat_branch_content(raw)
-    assert split.voice_message_script == ""

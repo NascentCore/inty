@@ -64,7 +64,6 @@ class CompanionToolName(StrEnum):
     COMPANION_SET_EXPERIENCE_PROFILE = "companion_set_experience_profile"
     COMPANION_UPDATE_PROMPT_SLICE = "companion_update_prompt_slice"
     GENERATE_IMAGE = "generate_image"
-    GENERATE_VOICE_MESSAGE = "generate_voice_message"
     GOOGLE_WEB_SEARCH = "google_web_search"
     LIVING_SPHERE_RECORD_UPDATE = "living_sphere_record_update"
     MEMORY_STORE_LIST_PATHS = "memory_store_list_paths"
@@ -72,11 +71,10 @@ class CompanionToolName(StrEnum):
     MEMORY_STORE_READ_DOCUMENT = "memory_store_read_document"
     MEMORY_STORE_WRITE_DOCUMENT = "memory_store_write_document"
     MODIFY_IMAGE = "modify_image"
-    PHONE_CALL_USER = "phone_call_user"
     READ_WEB_PAGE = "read_web_page"
     SCHEDULE_TASK = "schedule_task"
     TECHNO_CORE_RECORD_EVENT = "techno_core_record_event"
-    USER_PROFILE_RECORD = "user_profile_record"
+    UPDATE_USER_MD = "update_user_md"
 
 
 class LlmFunctionTool(BaseModel):
@@ -221,32 +219,6 @@ GENERATE_IMAGE_TOOL = LlmFunctionTool(
             },
         },
         "required": ["prompt"],
-        "additionalProperties": False,
-    },
-    tags=frozenset({TOOL_TAG_GENERATION}),
-    extra_function_keys={},
-)
-
-
-GENERATE_VOICE_MESSAGE_TOOL = LlmFunctionTool(
-    name=CompanionToolName.GENERATE_VOICE_MESSAGE,
-    description=(
-        "Synthesize a short spoken voice note (TTS) for the user. Call when the user "
-        "clearly asks for playable audio, a voice message, or to hear you speak—not "
-        "for text-only recitation in chat. Pass the exact words to speak as transcript; "
-        "must match `voice_message_script` in the tool-finish envelope when you set "
-        "`reply_modality` to voice_message. Keep transcript to a short voice-note length. "
-        "Do not claim you cannot generate or send audio if this tool is available."
-    ),
-    parameters={
-        "type": "object",
-        "properties": {
-            "transcript": {
-                "type": "string",
-                "description": "Exact spoken wording to synthesize (first-person, conversational).",
-            },
-        },
-        "required": ["transcript"],
         "additionalProperties": False,
     },
     tags=frozenset({TOOL_TAG_GENERATION}),
@@ -430,29 +402,6 @@ MODIFY_IMAGE_TOOL = LlmFunctionTool(
 )
 
 
-PHONE_CALL_USER_TOOL = LlmFunctionTool(
-    name=CompanionToolName.PHONE_CALL_USER,
-    description="Place an outbound phone call to the user through the configured PSTN provider. Use only when the current user message explicitly asks you to call now and provides the phone number in that same message (for example, 'Call me at 1234560123'). Never call a number inferred from memory, old messages, or guesses. Do not use from proactive/implicit greeting contexts.",
-    parameters={
-        "type": "object",
-        "properties": {
-            "phone_number": {
-                "type": "string",
-                "description": "User-provided phone number from the current message.",
-            },
-            "reason": {
-                "type": "string",
-                "description": "Short reason for audit logs, based on the user's explicit request.",
-            },
-        },
-        "required": ["phone_number", "reason"],
-        "additionalProperties": False,
-    },
-    tags=frozenset(),
-    extra_function_keys={},
-)
-
-
 READ_WEB_PAGE_TOOL = LlmFunctionTool(
     name=CompanionToolName.READ_WEB_PAGE,
     description="Download an HTML page over HTTP(S), extract readable text, and return a concise markdown bullet-point summary of key information. Also appends the same takeaway bullets under a dated heading in workspace MEMORY.md for long-term recall. Use for one URL at a time when the user wants article/page content (not just search snippets). Does not execute JavaScript; script-heavy SPAs may yield sparse text.",
@@ -556,8 +505,8 @@ TECHNO_CORE_RECORD_EVENT_TOOL = LlmFunctionTool(
 )
 
 
-USER_PROFILE_RECORD_TOOL = LlmFunctionTool(
-    name=CompanionToolName.USER_PROFILE_RECORD,
+UPDATE_USER_MD = LlmFunctionTool(
+    name=CompanionToolName.UPDATE_USER_MD,
     description="Append structured facts about the user to USER.md under «身份信息». Call when the user shares durable basic info (e.g. age, how they wish to be called, timezone) that should persist. Do not use for secrets unless the user clearly wants them remembered. Speak to the user in companion language only; never mention tools, JSON, or filenames.",
     parameters={
         "type": "object",
@@ -595,7 +544,6 @@ COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     SET_EXPERIENCE_PROFILE_TOOL,
     UPDATE_PROMPT_SLICE_TOOL,
     GENERATE_IMAGE_TOOL,
-    GENERATE_VOICE_MESSAGE_TOOL,
     LIVING_SPHERE_RECORD_UPDATE_TOOL,
     GOOGLE_WEB_SEARCH_TOOL,
     MEMORY_STORE_LIST_PATHS_TOOL,
@@ -603,11 +551,10 @@ COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     MEMORY_STORE_READ_DOCUMENT_TOOL,
     MEMORY_STORE_WRITE_DOCUMENT_TOOL,
     MODIFY_IMAGE_TOOL,
-    PHONE_CALL_USER_TOOL,
     READ_WEB_PAGE_TOOL,
     SCHEDULE_TASK_TOOL,
     TECHNO_CORE_RECORD_EVENT_TOOL,
-    USER_PROFILE_RECORD_TOOL,
+    UPDATE_USER_MD,
 )
 
 COMPANION_LLM_TOOLS_BY_NAME: dict[CompanionToolName, LlmFunctionTool] = {
@@ -619,14 +566,13 @@ OPENAI_TOOLS_BASE_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
     CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
     CompanionToolName.MEMORY_STORE_MKDIR,
-    CompanionToolName.USER_PROFILE_RECORD,
+    CompanionToolName.UPDATE_USER_MD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     CompanionToolName.SCHEDULE_TASK,
-    CompanionToolName.PHONE_CALL_USER,
 )
 
 TOOL_NAMES_SHARED_HEAD: tuple[CompanionToolName, ...] = (
-    CompanionToolName.USER_PROFILE_RECORD,
+    CompanionToolName.UPDATE_USER_MD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     CompanionToolName.SCHEDULE_TASK,
     CompanionToolName.MEMORY_STORE_LIST_PATHS,
@@ -636,7 +582,6 @@ TOOL_NAMES_SHARED_HEAD: tuple[CompanionToolName, ...] = (
 TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[CompanionToolName, ...] = (
     CompanionToolName.LIVING_SPHERE_RECORD_UPDATE,
     CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
-    CompanionToolName.PHONE_CALL_USER,
 )
 
 TOOL_NAMES_APPENDED: tuple[CompanionToolName, ...] = (
@@ -645,7 +590,6 @@ TOOL_NAMES_APPENDED: tuple[CompanionToolName, ...] = (
     CompanionToolName.GOOGLE_WEB_SEARCH,
     CompanionToolName.READ_WEB_PAGE,
     CompanionToolName.GENERATE_IMAGE,
-    CompanionToolName.GENERATE_VOICE_MESSAGE,
     CompanionToolName.MODIFY_IMAGE,
 )
 
@@ -655,7 +599,7 @@ BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
 )
 
 INNER_TICK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
-    CompanionToolName.USER_PROFILE_RECORD,
+    CompanionToolName.UPDATE_USER_MD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     CompanionToolName.MEMORY_STORE_LIST_PATHS,
     CompanionToolName.MEMORY_STORE_READ_DOCUMENT,

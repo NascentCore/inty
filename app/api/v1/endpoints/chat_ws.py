@@ -118,7 +118,6 @@ from app.api.v1.endpoints.chat import (
     _build_chat_response,
     _companion_ai_meta_from_turn_result,
     _companion_rejects_multimodal_user_turn,
-    _companion_turn_voice_ctx,
     _normalize_chat_response_content,
     _persist_companion_user_message_for_bg,
     _require_websocket_companion_message_id_uuid,
@@ -809,20 +808,6 @@ async def _build_companion_tool_background_ws_payload(
     effective_local_id: Optional[str],
     foreground_user_message_id: Optional[int] = None,
 ) -> WsOutboundPayload:
-    precomputed_audio = (ev.precomputed_audio_url or "").strip()
-    _tb_script = (ev.voice_message_script or "").strip()
-    reply_modality_tb = str(ev.reply_modality or "text")
-    is_voice_tb: bool | None = None
-    voice_script_tb: str | None = None
-    if precomputed_audio:
-        reply_modality_tb = "voice_message"
-        is_voice_tb = True
-        if _tb_script:
-            voice_script_tb = _tb_script
-    elif reply_modality_tb == "voice_message":
-        is_voice_tb = True
-        if _tb_script:
-            voice_script_tb = _tb_script
     gi = generated_image_meta_from_index_slice(
         ev.memory_store, ev.image_asset_baseline
     )
@@ -837,9 +822,6 @@ async def _build_companion_tool_background_ws_payload(
             reply_to_user_msg_uuid=ev.user_msg_uuid or None,
             tool_bg_output_to_user=ev.output_to_user,
             tool_bg_generation_deliver=ev.generation_deliver,
-            reply_modality=reply_modality_tb or None,
-            is_voice=is_voice_tb,
-            voice_message_script=voice_script_tb,
             langsmith_trace_id=ev.langsmith_trace_id or None,
             langsmith_run_id=ev.langsmith_run_id or None,
             generated_image=gi or None,
@@ -854,21 +836,6 @@ async def _build_companion_tool_background_ws_payload(
         agent_id=agent_id,
         meta_data=meta_data,
     )
-    audio_url: Optional[str] = None
-    if precomputed_audio and ai_message_id is not None:
-        audio_url = precomputed_audio
-        try:
-            await chat_history_service.update_message_audio_url(
-                db,
-                session_id,
-                str(ai_message_id),
-                precomputed_audio,
-                None,
-            )
-        except Exception as e:
-            logger.warning(
-                f"tool_bg precomputed audio_url persist failed: {e}"
-            )
     latest_message_info = None
     try:
         if ai_message_id is not None:
@@ -897,7 +864,7 @@ async def _build_companion_tool_background_ws_payload(
         None,
         "",
         latest_message_info,
-        audio_url,
+        None,
         request,
         source_imate_id=request.target_imate_id,
         user_message_id=user_message_id,
@@ -1806,7 +1773,7 @@ async def _agent_chat_ws_completions_impl(
 ) -> dict:
     """One companion chat turn for ``/api/v1/chat/ws`` (production WebSocket path).
 
-    Companion kernel + wire envelope; ``voice_message`` audio is delivered via tool_background only.
+    Companion kernel + wire envelope.
     HTTP-era extras (chat limit gate, legacy TTS, usage accounting, push read side-effects,
     surprise snap, in-frame memory prompts) stay on ``_agent_chat_completions_impl`` or other routes.
     """
@@ -2015,11 +1982,6 @@ async def _agent_chat_ws_completions_impl(
                             "agent_settings": agent_data.get("settings"),
                             "language": request.language,
                         }
-                    companion_voice_ctx = _companion_turn_voice_ctx(
-                        chat_settings=chat_settings,
-                        agent_data=agent_data,
-                        language=request.language,
-                    )
                     bootstrap_interim_sink: BootstrapInterimOutputSink | None = (
                         None
                     )
@@ -2053,7 +2015,6 @@ async def _agent_chat_ws_completions_impl(
                                 session_id=session_id,
                                 background_output_sink=companion_background_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
-                                voice_ctx=companion_voice_ctx,
                             )
                         else:
                             companion_turn = await companion_chat_service.run_companion_user_chat_turn_for_api(
@@ -2067,7 +2028,6 @@ async def _agent_chat_ws_completions_impl(
                                 background_output_sink=companion_background_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
                                 implicit_signal_bundle=companion_implicit_bundle,
-                                voice_ctx=companion_voice_ctx,
                                 bootstrap_interim_output_sink=bootstrap_interim_sink,
                             )
                         if (

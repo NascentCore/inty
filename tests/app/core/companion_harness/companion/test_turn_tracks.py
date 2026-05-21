@@ -204,7 +204,6 @@ async def test_implicit_sign_on_track() -> None:
     ) as run_turn_mock:
         kwargs = _minimal_turn_kwargs()
         kwargs["implicit_signal_bundle"] = bundle
-        kwargs["voice_ctx"] = {}
         await run_companion_implicit_sign_on_greeting_turn("hi", **kwargs)
     assert run_turn_mock.await_args is not None
     assert (

@@ -299,7 +299,6 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None,
         preset_user_msg_uuid: str | None,
         implicit_signal_bundle: ImplicitSignalBundle | None,
-        voice_ctx: dict[str, object] | None = None,
     ) -> dict[str, object]:
         return {
             "store": session.store,
@@ -317,7 +316,6 @@ class CompanionManager:
                 session
             ),
             "tool_bg_idle_event": session.tool_bg_idle,
-            "voice_ctx": voice_ctx,
         }
 
     async def run_user_chat_turn(
@@ -329,7 +327,6 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         implicit_signal_bundle: ImplicitSignalBundle | None = None,
-        voice_ctx: dict[str, object] | None = None,
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_user_chat_turn(
@@ -341,7 +338,6 @@ class CompanionManager:
                     background_output_sink=background_output_sink,
                     preset_user_msg_uuid=preset_user_msg_uuid,
                     implicit_signal_bundle=implicit_signal_bundle,
-                    voice_ctx=voice_ctx,
                 ),
                 "bootstrap_interim_output_sink": bootstrap_interim_output_sink,
             },
@@ -356,7 +352,6 @@ class CompanionManager:
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
-        voice_ctx: dict[str, object],
     ) -> CompanionTurnResult:
         return await run_companion_implicit_sign_on_greeting_turn(
             user_text,
@@ -366,7 +361,6 @@ class CompanionManager:
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 implicit_signal_bundle=implicit_signal_bundle,
-                voice_ctx=voice_ctx,
             ),
         )
 
@@ -469,7 +463,6 @@ class CompanionManager:
                 session,
                 user_text,
                 implicit_signal_bundle=implicit_signal_bundle,
-                voice_ctx={},
                 **track_kwargs,
             )
         return await self.run_user_chat_turn(

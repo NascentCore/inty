@@ -450,7 +450,6 @@ async def _run_companion_turn_core(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     langsmith_parent_run_enabled: bool | None = None,
     tool_bg_idle_event: threading.Event | None = None,
-    voice_ctx: dict[str, object] | None = None,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
 ) -> CompanionTurnResult:
     """
@@ -557,8 +556,6 @@ async def _run_companion_turn_core(
 
     last_text = ""
     significance_meta: dict[str, Any] | None = None
-    reply_modality: str = "text"
-    voice_message_script = ""
     tool_background_started = False
     bootstrap_skip_final_transcript_assistant_row = False
     bootstrap_last_interim_assistant_msg_uuid: str | None = None
@@ -664,8 +661,6 @@ async def _run_companion_turn_core(
                             bootstrap_interim_output_sink
                         ),
                     )
-                    reply_modality = "text"
-                    voice_message_script = ""
                     logger.info(
                         "run_turn loop_done bootstrap_track loop_total_ms={:.0f}",
                         (time.perf_counter() - t_loop) * 1000.0,
@@ -721,8 +716,6 @@ async def _run_companion_turn_core(
                         )
                         last_text = ""
                         significance_meta = None
-                        reply_modality = "text"
-                        voice_message_script = ""
                         tool_msgs_for_bg = deepcopy(tool_msgs)
                         force_tools_first_round = True
                     else:
@@ -790,8 +783,6 @@ async def _run_companion_turn_core(
                         last_text = _dual_split.visible_text
                         significance_meta = _dual_split.significance_meta
                         fg_output_to_user = _dual_split.output_to_user
-                        reply_modality = _dual_split.reply_modality
-                        voice_message_script = _dual_split.voice_message_script
                         # Async foreground chat leg (tools present): same dual-LLM envelope contract as
                         # single-shot structured chat; ``output_to_user`` must be true here. False is for
                         # tool_background routing only; non-fatal drift -> WARNING with ``trace_id``.
@@ -835,7 +826,6 @@ async def _run_companion_turn_core(
                         companion_turn_track=track,
                         tool_bg_idle_event=tool_bg_idle_event,
                         force_tools_first_round=force_tools_first_round,
-                        voice_ctx=voice_ctx,
                     )
                     tool_background_started = True
                     logger.info(
@@ -937,8 +927,6 @@ async def _run_companion_turn_core(
                         last_text = _dual_split.visible_text
                         significance_meta = _dual_split.significance_meta
                         fg_output_to_user = _dual_split.output_to_user
-                        reply_modality = _dual_split.reply_modality
-                        voice_message_script = _dual_split.voice_message_script
                         # Single-shot path: one completion, no tool loop, structured dual-LLM envelope.
                         # Contract (see ``prompts/system_messages._dual_llm_chat_structured_output_contract_text``):
                         # ``output_to_user`` must be true on foreground chat; false is for tool_background
@@ -952,8 +940,6 @@ async def _run_companion_turn_core(
                     else:
                         raw_content = msg.content or ""
                         last_text = raw_content.strip()
-                        reply_modality = "text"
-                        voice_message_script = ""
                     logger.info(
                         "run_turn loop_done single_shot route={} loop_total_ms={:.0f}",
                         route_mode.value,
@@ -1059,10 +1045,6 @@ async def _run_companion_turn_core(
     }
     if significance_meta:
         assistant_row["significance_perception"] = significance_meta
-    if reply_modality == "voice_message":
-        assistant_row["reply_modality"] = reply_modality
-        if voice_message_script:
-            assistant_row["voice_message_script"] = voice_message_script
     if not bootstrap_skip_final_transcript_assistant_row:
         store.append_jsonl_record(rel_tr, assistant_row)
 
@@ -1134,8 +1116,6 @@ async def _run_companion_turn_core(
     )
     return CompanionTurnResult(
         assistant_text=last_text,
-        reply_modality=reply_modality,  # type: ignore[arg-type]
-        voice_message_script=voice_message_script,
         significance_perception=significance_meta,
         user_msg_uuid=user_msg_uuid,
         assistant_msg_uuid=assistant_msg_uuid,
@@ -1213,7 +1193,6 @@ async def run_companion_user_chat_turn(
     implicit_signal_bundle: ImplicitSignalBundle | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
-    voice_ctx: dict[str, object] | None = None,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
 ) -> CompanionTurnResult:
     if (
@@ -1254,7 +1233,6 @@ async def run_companion_user_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
-        voice_ctx=voice_ctx,
         bootstrap_interim_output_sink=bootstrap_interim_output_sink,
     )
 
@@ -1275,7 +1253,6 @@ async def run_companion_implicit_sign_on_greeting_turn(
     preset_user_msg_uuid: str | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
-    voice_ctx: dict[str, object],
 ) -> CompanionTurnResult:
     assert implicit_user_signed_on_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
@@ -1297,7 +1274,6 @@ async def run_companion_implicit_sign_on_greeting_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
-        voice_ctx=voice_ctx,
     )
 
 
@@ -1316,7 +1292,6 @@ async def run_companion_inner_tick_proactive_chat_turn(
     implicit_signal_bundle: ImplicitSignalBundle | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
-    voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_turn_core(
         "",
@@ -1334,7 +1309,6 @@ async def run_companion_inner_tick_proactive_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
-        voice_ctx=voice_ctx,
     )
 
 
@@ -1354,7 +1328,6 @@ async def run_companion_inner_tick_scheduled_turn(
     implicit_signal_bundle: ImplicitSignalBundle | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
-    voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
     assert (
         scheduled_user_text.strip()
@@ -1375,7 +1348,6 @@ async def run_companion_inner_tick_scheduled_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
-        voice_ctx=voice_ctx,
     )
 
 
@@ -1394,7 +1366,6 @@ async def run_companion_inner_tick_maintenance_turn(
     implicit_signal_bundle: ImplicitSignalBundle | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
-    voice_ctx: dict[str, object] | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_turn_core(
         "",
@@ -1412,5 +1383,4 @@ async def run_companion_inner_tick_maintenance_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
-        voice_ctx=voice_ctx,
     )
