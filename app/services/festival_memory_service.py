@@ -207,7 +207,7 @@ def get_messages_for_user_agent_sync(
     out: List[Tuple[str, str]] = []
     with conn.cursor() as cur:
         cur.execute(query, (session_id,))
-        for r in cur.fetchall():
+        for row_index, r in enumerate(cur.fetchall()):
             raw = r[0]
             try:
                 data = (
@@ -217,7 +217,15 @@ def get_messages_for_user_agent_sync(
                         raw if isinstance(raw, dict) else json.loads(str(raw))
                     )
                 )
-            except Exception:
+            except (json.JSONDecodeError, TypeError, ValueError) as exc:
+                logger.warning(
+                    f"节日记忆跳过无法解析的 chat_history message: session_id={session_id} row_index={row_index} error={exc}"
+                )
+                continue
+            if not isinstance(data, dict):
+                logger.warning(
+                    f"节日记忆跳过非对象 chat_history message: session_id={session_id} row_index={row_index} type={type(data).__name__}"
+                )
                 continue
             msg_type = data.get("type", "human")
             content = ""
