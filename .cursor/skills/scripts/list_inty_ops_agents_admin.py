@@ -39,7 +39,7 @@ def _read_bearer_token(token_path: str) -> str | None:
 def _print_empty_guidance(api_base: str, out: TextIO) -> None:
     print(
         "admin/list returned no agents. Create one, then re-run:",
-        "python3 tools/scripts/inty_backend_smoke_tests/test_chat_ws.py \\",
+        "python3 .cursor/skills/scripts/inty_backend_smoke_tests/test_chat_ws.py \\",
         f"  --api-base {api_base} --create-agent",
         sep="\n",
         file=out,

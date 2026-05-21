@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Summarize companion LangSmith run ``inputs.messages`` system-role blocks.
 
-Reads JSON from ``tools/scripts/download_run.py`` (single run or full trace).
+Reads JSON from ``.cursor/skills/scripts/download_run.py`` (single run or full trace).
 Prints index, heuristic label, size, first line; flags duplicate bodies.
 """
 

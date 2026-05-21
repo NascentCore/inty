@@ -15,7 +15,7 @@ description: >-
 
 ## Sub-skills
 
-- **`show-memory-document/SKILL.md`**：用 **`tools/scripts/companion_memory_show_document.py`** 打印指定逻辑文档（如 **`STYLE.md`**）的最新正文或版本元数据。
+- **`show-memory-document/SKILL.md`**：用 **`.cursor/skills/scripts/companion_memory_show_document.py`** 打印指定逻辑文档（如 **`STYLE.md`**）的最新正文或版本元数据。
 - **`context-mode-in-db/SKILL.md`**：只查 **`context.json`** 落库里的 **`context_mode`** / **`post_bootstrap_context_mode`**（`document_kind = context_json`），按 **`agent_id`（`companion_id`）** 排查体验配置。
 
 ## 打印指定 MemoryStore 文档（推荐）
@@ -23,7 +23,7 @@ description: >-
 读库走 Python，避免手写 SQL 占位符：
 
 ```bash
-PYTHONPATH=. python tools/scripts/companion_memory_show_document.py STYLE.md \
+PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
   --companion-id <agent_id>
 ```
 

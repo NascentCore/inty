@@ -4,4 +4,4 @@
 
 ## 维护方式
 
-- 若某技能需要 **可执行 helper**，优先把脚本落在 [`tools/scripts/`](/tools/scripts/)，在 SKILL 里 **链接与说明参数**。
+- 若某技能需要 **可执行 helper**，优先把脚本落在 [`.cursor/skills/scripts/`](/.cursor/skills/scripts/)，在 SKILL 里 **链接与说明参数**。

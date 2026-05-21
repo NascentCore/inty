@@ -76,15 +76,15 @@ description: >-
 
 - 配置与 **`config.yaml` + 环境变量** 一致（见 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)）。
 - **`list_runs` `limit` ≤ 100**；大窗需分段或收窄 `start_time`（UTC）。
-- 对 `user_msg_uuid` **勿只依赖 metadata filter**（可能 0 命中）；可 **时间窗 + 子串匹配** 序列化 run，或用 [`tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py`](../../../tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py)。
+- 对 `user_msg_uuid` **勿只依赖 metadata filter**（可能 0 命中）；可 **时间窗 + 子串匹配** 序列化 run，或用 [`.cursor/skills/scripts/langsmith_find_companion_run_by_user_msg_uuid.py`](../scripts/langsmith_find_companion_run_by_user_msg_uuid.py)。
 - **下载全 trace**（仓库根、venv）：
 
 ```bash
-python tools/scripts/download_run.py --trace-id "<TRACE_UUID>"
+python .cursor/skills/scripts/download_run.py --trace-id "<TRACE_UUID>"
 # 若 0 条：trace 可能不在 config 推出的 LANGSMITH_PROJECT，加 --project-name "<实际项目名>"
 ```
 
-（参数与默认输出路径见同目录 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)、**`python tools/scripts/download_run.py --help`**。）
+（参数与默认输出路径见同目录 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)、**`python .cursor/skills/scripts/download_run.py --help`**。）
 
 ### D. Postgres（`config.yaml` → `database`）
 
@@ -106,7 +106,7 @@ LIMIT 30;
 ### E. 客户端传输与复测
 
 - `INTY_V2_BACKEND_WS_POST_TURN_TIMEOUT_SEC` 等见 [`backend_chat_ws.py`](../../../tools/inty_v2_repl/backend_chat_ws.py)。
-- Smoke：[`inty-server-module-verify`](../inty-server-module-verify/SKILL.md)、[`tools/scripts/inty_backend_smoke_tests/test_chat_ws.py`](../../../tools/scripts/inty_backend_smoke_tests/test_chat_ws.py)。
+- Smoke：[`inty-server-module-verify`](../inty-server-module-verify/SKILL.md)、[`.cursor/skills/scripts/inty_backend_smoke_tests/test_chat_ws.py`](../scripts/inty_backend_smoke_tests/test_chat_ws.py)。
 
 ## 专项调查目标示例：消息「时间戳」
 
@@ -130,7 +130,7 @@ LIMIT 30;
 3. 等待期间：日志里 **有** WS `< TEXT … USER_MESSAGE`，**无** 该 `user_msg_uuid` 的 `run_turn start` / LangSmith parent / `chat_history` 行（回合尚未开跑）。
 4. 超时后出现 **`run_turn tool_bg_idle wait timed out after 600.00s scope=…`**；若僵死 tool 线程仍在，**下一轮用户 chat 可能再次卡在同一个 wait**。
 
-**LangSmith 侧**：找事发前几分钟的 **`agentic_companion_inner_tick` … maintenance** 父 trace（常 **pending**）；子 span **`tool_background_initial`** 为 **error**（如 `invalid_json_response`）或仍 **pending**——这是 **inner-tick 后台 tool**，不是用户 `user_msg_uuid` 的 chat trace。用 [`download_run.py`](../../../tools/scripts/download_run.py) 拉全 trace 核对。
+**LangSmith 侧**：找事发前几分钟的 **`agentic_companion_inner_tick` … maintenance** 父 trace（常 **pending**）；子 span **`tool_background_initial`** 为 **error**（如 `invalid_json_response`）或仍 **pending**——这是 **inner-tick 后台 tool**，不是用户 `user_msg_uuid` 的 chat trace。用 [`download_run.py`](../scripts/download_run.py) 拉全 trace 核对。
 
 **快速定性**：用户发消息后 ~10 分钟仍无 `chat`，且日志有 `tool_bg_idle wait timed out` → 优先怀疑 **卡死的 maintenance tool_bg**，而非「tracing 未开」或 REPL 未发送。
 
@@ -141,7 +141,7 @@ LIMIT 30;
 ```bash
 cd /path/to/inty/repo/root
 source .venv/bin/activate
-python3 tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py \
+python3 .cursor/skills/scripts/langsmith_find_companion_run_by_user_msg_uuid.py \
   --user-msg-uuid 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' \
   --window-start-utc '2026-05-11T10:30:00+00:00'
 ```
@@ -169,5 +169,5 @@ python3 tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py \
 
 ## 实现边界
 
-- 技能 **不**改产品代码；LangSmith 辅助脚本见 [`tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py`](../../../tools/scripts/langsmith_find_companion_run_by_user_msg_uuid.py)。
+- 技能 **不**改产品代码；LangSmith 辅助脚本见 [`.cursor/skills/scripts/langsmith_find_companion_run_by_user_msg_uuid.py`](../scripts/langsmith_find_companion_run_by_user_msg_uuid.py)。
 - **不要**在 Markdown 或 git 中粘贴 `config.yaml` 里的密码或 API key。

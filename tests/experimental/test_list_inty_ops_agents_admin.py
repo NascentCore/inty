@@ -12,7 +12,9 @@ import pytest
 from urllib.error import HTTPError
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_SCRIPT_PATH = _REPO_ROOT / "tools" / "scripts" / "list_inty_ops_agents_admin.py"
+_SCRIPT_PATH = (
+    _REPO_ROOT / ".cursor" / "skills" / "scripts" / "list_inty_ops_agents_admin.py"
+)
 
 
 def _load_script_module():

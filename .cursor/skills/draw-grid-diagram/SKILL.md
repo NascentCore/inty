@@ -28,7 +28,7 @@ Requires `matplotlib` and `PyYAML`. Uses `Agg` backend (no display).
 ## Run
 
 ```bash
-python3 tools/scripts/draw_labeled_grid.py \
+python3 .cursor/skills/scripts/draw_labeled_grid.py \
   PATH/to/config.yaml \
   -o PATH/to/output.png
 ```
@@ -56,7 +56,7 @@ Checked-in sample: [/docs/companion_harness/conversation_intelligence_realtime_g
 ## Verify
 
 ```bash
-python3 tools/scripts/draw_labeled_grid.py \
+python3 .cursor/skills/scripts/draw_labeled_grid.py \
   docs/companion_harness/conversation_intelligence_realtime_grid.yaml \
   -o /tmp/conversation_grid_matplotlib.png
 ```
