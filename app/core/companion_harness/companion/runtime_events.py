@@ -1,4 +1,4 @@
-"""Append-only runtime exceptional events surfaced via companion_runtime_inspect.
+"""Append-only runtime exceptional events persisted in MemoryStore.
 
 Known ``kind`` values include ``llm_inference_failure`` (every failed companion
 ``chat.completions`` via ``llm.chat_completions.create_chat_completion_sync`` plus structured-chat

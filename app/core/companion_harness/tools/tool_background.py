@@ -29,10 +29,7 @@ from openai import BadRequestError
 
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
-from app.utils.models_catalog import (
-    GenAIModel,
-    genai_model_langsmith_meta_subset,
-)
+from app.utils.models_catalog import GenAIModel
 
 from app.core.companion_harness.llm.chat_completions import (
     create_chat_completion_sync,
@@ -54,7 +51,6 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
     end_companion_turn_root_run_safe,
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
-    tool_path_chat_completion_kwargs,
 )
 from app.core.companion_harness.companion.llm_client import LLM_SCENE_TOOL_CALL
 from app.core.companion_harness.companion.llm_runtime_events import (
@@ -87,13 +83,6 @@ from .companion_tool_runtime import (
     tool_requires_client_delivery_on_success,
 )
 from .image_gate import list_image_asset_records
-from .runtime_inspect_context import (
-    build_last_chat_completion_request_payload,
-    runtime_inspect_set_last_chat_completion_request,
-    runtime_inspect_thread_overlay_begin,
-    runtime_inspect_thread_overlay_end,
-    tools_summary_from_openai_tools,
-)
 from .tool_bg_routing import resolve_tool_bg_routing_sync
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
@@ -425,7 +414,7 @@ def _single_line_log_preview(text: str, max_chars: int = 280) -> str:
 
 @dataclass(frozen=True)
 class _InitialToolBgCompletionMeta:
-    """Winning attempt parameters for tool_background first completion (runtime_inspect)."""
+    """Winning attempt parameters for tool_background first completion."""
 
     tool_choice: str | None
 
@@ -609,37 +598,6 @@ async def _run_background_tool_loop(
             )
             return
 
-        runtime_inspect_thread_overlay_begin(
-            {
-                "runtime_config": {
-                    "source": "tool_background",
-                    "tool_model_name": tool_api_id,
-                    "tool_model_catalog": genai_model_langsmith_meta_subset(
-                        tool_model
-                    ),
-                    "trace_id": trace_id,
-                    "inner_tick_turn": inner_tick_turn,
-                    "inner_tick_activity": inner_tick_activity.value,
-                    "tools_summary": tools_summary_from_openai_tools(tools),
-                    "force_tools_first_round": force_tools_first_round,
-                    "llm_call_notes": (
-                        "Foreground CompanionLLMConfig is not copied into this async tool_background "
-                        "path; use tool_model_name (API id), tool_model_catalog, and last_chat_completion_request. "
-                        "temperature/max_tokens are not set in companion code (provider defaults)."
-                    ),
-                    "openrouter_extra_body_tool_path": tool_path_chat_completion_kwargs(
-                        tool_model
-                    ),
-                },
-                "last_chat_completion_request": None,
-                "scoped_memory_store": memory_store,
-                "correlation": {
-                    "trace_id": trace_id,
-                    "user_msg_uuid": user_msg_uuid,
-                },
-            }
-        )
-
         resolved_client = client
         t0 = time.perf_counter()
         working_messages = deepcopy(request_messages)
@@ -658,15 +616,6 @@ async def _run_background_tool_loop(
             messages_payload=payload,
             tools=tools,
             force_tools=force_tools,
-        )
-        runtime_inspect_set_last_chat_completion_request(
-            build_last_chat_completion_request_payload(
-                model=tool_model,
-                messages=list(payload),
-                tools=tools,
-                tool_choice=initial_meta.tool_choice,
-                response_format_json_schema_name=None,
-            )
         )
 
         if is_tool_background_aborted(user_msg_uuid):
@@ -763,13 +712,6 @@ async def _run_background_tool_loop(
             active_round = rounds_used
             request_snapshot_inner = deepcopy(messages_with_tool_results)
             inner_payload = _openai_messages_payload(messages_with_tool_results)
-            runtime_inspect_set_last_chat_completion_request(
-                build_last_chat_completion_request_payload(
-                    model=tool_model,
-                    messages=list(inner_payload),
-                    tools=tools,
-                )
-            )
             next_resp = await asyncio.to_thread(
                 chat_completion_sync,
                 resolved_client,
@@ -1018,7 +960,6 @@ async def _run_background_tool_loop(
             )
         )
     finally:
-        runtime_inspect_thread_overlay_end()
         clear_tool_background_abort_flag(user_msg_uuid)
 
 

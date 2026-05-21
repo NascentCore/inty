@@ -120,16 +120,6 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
 from app.core.companion_harness.tools.companion_tools import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
 )
-from app.core.companion_harness.tools.runtime_inspect_context import (
-    build_last_chat_completion_request_payload,
-    build_turn_runtime_config_dict,
-    runtime_inspect_begin_turn,
-    runtime_inspect_end_turn,
-    runtime_inspect_set_correlation,
-    runtime_inspect_set_last_chat_completion_request,
-    runtime_inspect_set_runtime_config,
-    runtime_inspect_set_scoped_memory_store,
-)
 from app.core.companion_harness.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
@@ -255,13 +245,6 @@ async def _run_bootstrap_track_sync_tool_loop(
             langsmith_extra=invocation_extra(source=SOURCE_BOOTSTRAP_TRACK),
         )
 
-    runtime_inspect_set_last_chat_completion_request(
-        build_last_chat_completion_request_payload(
-            model=chat_model,
-            messages=working_messages,
-            tools=loop_tools,
-        )
-    )
     t_api = time.perf_counter()
     initial_resp = await asyncio.to_thread(
         _chat_sync, working_messages, loop_tools
@@ -287,13 +270,6 @@ async def _run_bootstrap_track_sync_tool_loop(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> tuple[Any, str | None]:
         nonlocal loop_tools
-        runtime_inspect_set_last_chat_completion_request(
-            build_last_chat_completion_request_payload(
-                model=chat_model,
-                messages=messages_with_tool_results,
-                tools=loop_tools,
-            )
-        )
         next_resp = await asyncio.to_thread(
             _chat_sync, messages_with_tool_results, loop_tools
         )
@@ -561,7 +537,6 @@ async def _run_companion_turn_core(
     bootstrap_last_interim_assistant_msg_uuid: str | None = None
     t_loop = time.perf_counter()
 
-    inspect_token = runtime_inspect_begin_turn()
     llm_runtime_bind_token: (
         contextvars.Token[LlmRuntimeEventBind | None] | None
     ) = None
@@ -575,25 +550,6 @@ async def _run_companion_turn_core(
                 phase=_llm_ev_phase,
                 scene=None,
             )
-        )
-        runtime_inspect_set_scoped_memory_store(store)
-        runtime_inspect_set_runtime_config(
-            build_turn_runtime_config_dict(
-                llm_client=llm_client,
-                mem_cfg=mem_cfg,
-                context=context,
-                transcript_llm_window_max_messages=loaded_state.window_cap,
-                inner_tick_turn=inner_tick_turn,
-                inner_tick_activity=route_inner_activity,
-                repository_only_store_text=repository_only_store_text,
-                transcript_compaction=transcript_compaction,
-                memory_store_read_document_max_chars_cap=(
-                    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP
-                ),
-            )
-        )
-        runtime_inspect_set_correlation(
-            {"trace_id": trace_id, "user_msg_uuid": user_msg_uuid}
         )
 
         langsmith_parent_run = create_companion_turn_root_run(
@@ -719,13 +675,6 @@ async def _run_companion_turn_core(
                         tool_msgs_for_bg = deepcopy(tool_msgs)
                         force_tools_first_round = True
                     else:
-                        runtime_inspect_set_last_chat_completion_request(
-                            build_last_chat_completion_request_payload(
-                                model=chat_model,
-                                messages=chat_msgs,
-                                tools=None,
-                            )
-                        )
                         t_api = time.perf_counter()
                         try:
 
@@ -850,13 +799,6 @@ async def _run_companion_turn_core(
                         "run_turn llm_request model={} route={} (no tools; single completion)",
                         resolved_model,
                         route_mode.value,
-                    )
-                    runtime_inspect_set_last_chat_completion_request(
-                        build_last_chat_completion_request_payload(
-                            model=resolved_model,
-                            messages=messages,
-                            tools=None,
-                        )
                     )
                     llm_scene = (
                         LLM_SCENE_INNER_TICK
@@ -987,7 +929,6 @@ async def _run_companion_turn_core(
     finally:
         if llm_runtime_bind_token is not None:
             companion_llm_runtime_event_bind_ctx.reset(llm_runtime_bind_token)
-        runtime_inspect_end_turn(inspect_token)
 
     # 持久化 transcript
     rel_tr = (

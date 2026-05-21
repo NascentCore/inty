@@ -111,8 +111,8 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
         "It must match the API `response_format` schema. Fields:\n"
         "- `user_facing_reply` (string): natural-language text for the user; may be empty when the parallel tool branch will carry the visible reply.\n"
         "  For **verifiable runtime / model / implementation** questions: keep this field **short** (immediate tone); "
-        "do **not** state concrete model ids, temperatures, or injected stack details here—the parallel tool branch may call "
-        "`companion_runtime_inspect` for JSON facts. Do not imply you already ran that tool or «checked internally».\n"
+        "do **not** state concrete model ids, temperatures, context windows, or injected stack details unless they appear "
+        "in the current visible context. Do not imply you already «checked internally».\n"
         "  Do not refuse or claim you cannot access MemoryStore text in ways the parallel tool branch will contradict "
         "when it runs allowed file tools; keep this branch aligned with that branch as one persona (fast vs slow).\n"
         "- `importance_round` (integer 1-10): importance of this turn overall given transcript and system context.\n"
@@ -127,8 +127,7 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
 def _output_contract_text_chat_branch_mirrored_tools() -> str:
     return (
         "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致\n\n"
-        "你与**并行工具路**是同一人格的两种速度：本路优先低延迟外显；工具路负责读档案、联网、生图、`companion_runtime_inspect` "
-        "等须核对或慢步骤。"
+        "你与**并行工具路**是同一人格的两种速度：本路优先低延迟外显；工具路负责读档案、联网、生图等须核对或慢步骤。"
         "对用户的事实立场、边界与态度必须一致，禁止「一路拒绝、一路照做」的分裂。\n\n"
         "本路 **API 不带工具**（禁止在本路发起任何 tool_calls），系统提示里也可能未展开完整 TOOLS 操作说明，但你仍须遵守：凡应以持久化档案原文、检索结果或工具返回为准的问题，"
         "不得以「无法读取」「不能向你展示内部文件」等说法抢先否定并行路即将执行的核对；"
@@ -136,7 +135,7 @@ def _output_contract_text_chat_branch_mirrored_tools() -> str:
         "或将 `user_facing_reply` 留空/极短，把可核对正文交给工具路落点。\n\n"
         "当用户询问**当前模型、调用侧参数、真实注入的 system/对话栈**等须可核验的实现细节时："
         "本路只给即时、克制的衔接语，**不得**输出具体模型名、参数或栈细节，**不得**暗示已在无工具返回前完成自省；"
-        "可核对事实由并行工具路自愿调用 `companion_runtime_inspect` 取得 JSON 后再由该路收口。\n\n"
+        "可核对事实须来自并行工具路已执行的允许工具返回或当前可见上下文。\n\n"
         "当用户请求生图、改图、联网检索、持久化文档核对等工具型任务时：不要拒绝，不要宣称已完成或编造结果；"
         "一句承接即可。保持简洁有温度，避免机械列表堆砌。"
     )
@@ -208,8 +207,8 @@ def _output_contract_text_with_tools(
         "且持久化约定文档与当前对话无法提供依据时，须先调用 google_web_search 再作答；"
         "未读到工具返回前不得编造检索结果、链接或摘要。"
         "（6）当用户询问**当前所用模型、调用参数、上下文窗口、真实注入的 system/对话栈**或与实现细节相关、"
-        "且需要可核验的事实时，必须先调用 companion_runtime_inspect 读取 JSON 快照，再依据其中字段用自然语言作答；"
-        "**禁止**编造与实现不符的技术说法（例如错误描述模型族系、温度或未发生的调用方式）。"
+        "且需要可核验的事实时，**禁止**编造与实现不符的技术说法（例如错误描述模型族系、温度或未发生的调用方式）；"
+        "仅可依据当前可见上下文或已执行工具返回作答，无法核验时如实说明不确定。"
     )
     base += _repl_tool_contract_image_generation_clause()
     base += _repl_tool_contract_suffix_after_image_clause(
@@ -238,7 +237,7 @@ def _output_contract_text_interactive_bootstrap_tools(
         "列表目录约束与上文「输出与工具」一致：勿为闲聊列根目录。"
         "（3）凡涉及可与持久化档案核对的事实，须先读到持久化正文再作答。"
         "（4）需要公开可核验信息且持久化文档无依据时，须先调用 google_web_search。"
-        "（5）模型与实现细节类问题须先调用 companion_runtime_inspect。"
+        "（5）模型与实现细节类问题：仅可依据当前可见上下文或已执行工具返回作答，无法核验时如实说明不确定。"
     )
     base += _repl_tool_contract_image_generation_clause()
     base += _repl_tool_contract_suffix_after_image_clause(
@@ -329,9 +328,9 @@ def _tool_side_compact_directive() -> str:
     return (
         "## 工具侧（后台 / 系统 2）\n\n"
         "本回合须优先根据用户**最后一轮**与**上文**判断是否需要调用工具"
-        "（联网检索、生图/改图、档案、持久化约定文档路径工具、companion_runtime_inspect 等）。若需要，必须先调用工具并依据返回作答；"
+        "（联网检索、生图/改图、档案、持久化约定文档路径工具等）。若需要，必须先调用工具并依据返回作答；"
         "不要仅用角色扮演替代未执行的工具。"
-        "若用户问当前模型名、调用参数、真实请求内容或可核验的运行时状态，须自愿调用 companion_runtime_inspect 再作答；"
+        "若用户问当前模型名、调用参数、真实请求内容或可核验的运行时状态，仅可依据已执行工具返回或当前可见上下文作答；"
         "快路径一句「我去看看 / 稍等」**不等于**已完成核验，你仍须在适当时机发出 tool_calls。\n\n"
         "与并行快思考路径同一立场：若快路径仅有短承接、未下事实断言，你可在工具依据上完整作答；"
         "若快路径已有表态，非经档案或工具返回明确要求修正，不要随意推翻，避免同一轮两路口径冲突。"
@@ -345,8 +344,7 @@ def _tool_background_first_round_skip_contract_text() -> str:
         "在**异步工具后台**下，首轮 `chat.completions` 有两种模式（由服务端与上下文决定，你须自行对齐）：\n\n"
         "**模式 A（并行快思考已注入）**：若对话末尾出现一条额外的 **`assistant`** 正文，"
         "那是并行快思考路径（前台）已对用户说过的话；你须与其口径一致：需要工具则调；"
-        "若用户索要**可核验**的运行时/模型/实现细节而快路径仅有短承接，你仍须自愿调用 "
-        "`companion_runtime_inspect`（不得以空话代替）。"
+        "若用户索要**可核验**的运行时/模型/实现细节而快路径仅有短承接，须用允许的工具取得依据后再作答（不得以空话代替）。"
         "若快路径已在澄清、等待用户选择或明确拒绝执行，不要擅自用工具推翻或抢答；"
         "不要输出与快路径重复的长篇角色扮演正文。\n\n"
         "**模式 B（快思考让位）**：若**没有**上述注入的 `assistant` 行，首轮可能被设为 "
@@ -367,7 +365,7 @@ def _tool_background_final_json_routing_contract_text() -> str:
         "- `importance_round`、`importance_user_message`、`importance_assistant_message`（整数 1-10）："
         "按 significance 规则为本轮工具收尾打分。\n"
         "- `output_to_user`（布尔）：用户是否还应收到一条**额外**后续气泡，用于总结本轮工具可读结果"
-        "（读档、列目录、联网检索、状态行、runtime_inspect 等）。"
+        "（读档、列目录、联网检索、状态行等）。"
         "若本轮仅为静默持久化（如 user_profile_record、SOUL/MEMORY 写回）且无需对用户追加说明，设为 false。\n"
         "**生图 / 改图**：若 `generate_image` 或 `modify_image` **成功**产出路径，系统仍会向用户投递产物；"
         "`output_to_user` 不能否决成功产物投递，只控制是否额外附文字。\n"

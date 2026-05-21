@@ -60,7 +60,6 @@ class CompanionToolName(StrEnum):
     COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE = (
         "companion_bootstrap_user_interactive_complete"
     )
-    COMPANION_RUNTIME_INSPECT = "companion_runtime_inspect"
     COMPANION_SET_EXPERIENCE_PROFILE = "companion_set_experience_profile"
     COMPANION_UPDATE_PROMPT_SLICE = "companion_update_prompt_slice"
     GENERATE_IMAGE = "generate_image"
@@ -112,37 +111,6 @@ SET_BOOTSTRAP_COMPLETE_TOOL = LlmFunctionTool(
         "additionalProperties": False,
     },
 )
-
-RUNTIME_INSPECT_TOOL = LlmFunctionTool(
-    name=CompanionToolName.COMPANION_RUNTIME_INSPECT,
-    description="Return a JSON snapshot of the current companion runtime: in-process LLM config, last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), runtime events, and optionally workspace documents from MemoryStore (SOUL, STYLE, USER, MEMORY.md, episodic/gist day paths). Use when the user asks for verifiable facts about the active model, parameters, or injected prompt stack. For self-check only: answer the user in natural language without reading this JSON aloud verbatim.",
-    parameters={
-        "type": "object",
-        "properties": {
-            "max_chars_per_doc": {
-                "type": "integer",
-                "description": "Max characters per stored document body (default 8000, min 100).",
-            },
-            "max_chars_llm_messages": {
-                "type": "integer",
-                "description": "Max serialized size for last request messages array (default 120000, min 1000).",
-            },
-            "include_store_documents": {
-                "type": "boolean",
-                "description": "If false, omit MemoryStore document bodies (default true).",
-            },
-            "max_runtime_events": {
-                "type": "integer",
-                "description": "Max newest runtime event records to include (default 20, min 0).",
-            },
-        },
-        "required": [],
-        "additionalProperties": False,
-    },
-    tags=frozenset(),
-    extra_function_keys={},
-)
-
 
 SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
     name=CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
@@ -540,7 +508,6 @@ UPDATE_USER_MD = LlmFunctionTool(
 
 COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     SET_BOOTSTRAP_COMPLETE_TOOL,
-    RUNTIME_INSPECT_TOOL,
     SET_EXPERIENCE_PROFILE_TOOL,
     UPDATE_PROMPT_SLICE_TOOL,
     GENERATE_IMAGE_TOOL,
@@ -585,7 +552,6 @@ TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[CompanionToolName, ...] = (
 )
 
 TOOL_NAMES_APPENDED: tuple[CompanionToolName, ...] = (
-    CompanionToolName.COMPANION_RUNTIME_INSPECT,
     CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
     CompanionToolName.GOOGLE_WEB_SEARCH,
     CompanionToolName.READ_WEB_PAGE,

@@ -93,7 +93,6 @@ from .companion_tool_definitions import (
 )
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
-from .runtime_inspect_tool import tool_companion_runtime_inspect
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
@@ -642,8 +641,6 @@ async def _dispatch(
         if not isinstance(raw_reason, str):
             return "ERROR: reason must be a string"
         return await tool_phone_call_user(store, raw_phone, raw_reason)
-    if name == "companion_runtime_inspect":
-        return tool_companion_runtime_inspect(store, dict(arguments or {}))
     if name == "companion_set_experience_profile":
         raw_ctx = arguments.get("context_mode")
         if not isinstance(raw_ctx, str):

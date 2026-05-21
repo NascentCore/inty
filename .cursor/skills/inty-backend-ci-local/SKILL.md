@@ -96,6 +96,13 @@ export INTY_CONFIG_YAML=devops/config.yaml.test
 export PYTHONPATH=.
 ./backend/inty/start.sh --test >> inty_backend.log 2>&1 &
 backend_pid=$!
+cleanup_backend() {
+  if [ -n "${backend_pid:-}" ] && kill -0 "$backend_pid" 2>/dev/null; then
+    kill "$backend_pid"
+    wait "$backend_pid" 2>/dev/null || true
+  fi
+}
+trap cleanup_backend EXIT
 ```
 
 等待服务就绪（与 workflow 中循环等价）：
@@ -129,13 +136,11 @@ python -m pytest -m "not noci" -v -s tests/ --capture=fd --show-capture=no
 python .cursor/skills/scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
 ```
 
-测试与日志检查完成后，**结束本次启动的 backend**，避免与后续或日常开发占口冲突：
+测试与日志检查完成后，**结束本次启动的 backend**，避免与后续或日常开发占口冲突；若上面已设置 `trap cleanup_backend EXIT`，shell 退出时会自动执行，也可在同一 shell 内手动提前执行：
 
 ```bash
-if [ -n "${backend_pid:-}" ] && kill -0 "$backend_pid" 2>/dev/null; then
-  kill "$backend_pid"
-  wait "$backend_pid" 2>/dev/null || true
-fi
+cleanup_backend
+trap - EXIT
 ```
 
 ## 6) Push worker 启动自检（选做，对应 workflow `Start push worker...`）
