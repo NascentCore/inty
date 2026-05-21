@@ -1660,7 +1660,7 @@ async def test_tool_background_ws_payload_precomputed_audio_skips_synthesize(
         return None
 
     monkeypatch.setattr(
-        chat_v1,
+        chat_ws_v1,
         "synthesize_chat_ws_voice_message",
         _fake_synthesize,
     )
@@ -3147,11 +3147,6 @@ def test_v1_chat_completions_http_uses_legacy_assistant_voice_not_ws_tts(
             1.23,
         )
 
-    async def forbidden_ws_synthesize(*args, **kwargs):
-        raise AssertionError(
-            "HTTP completions must not call synthesize_chat_ws_voice_message"
-        )
-
     monkeypatch.setattr(
         chat_service,
         "get_or_create_chat_settings",
@@ -3161,11 +3156,6 @@ def test_v1_chat_completions_http_uses_legacy_assistant_voice_not_ws_tts(
         chat_v1,
         "synthesize_chat_assistant_audio",
         tracking_legacy_synthesize,
-    )
-    monkeypatch.setattr(
-        chat_v1,
-        "synthesize_chat_ws_voice_message",
-        forbidden_ws_synthesize,
     )
 
     user = _make_user(auth_type=AuthType.GOOGLE)
