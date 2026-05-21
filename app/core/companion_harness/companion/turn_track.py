@@ -1,4 +1,11 @@
-"""Map ``CompanionTurnTrack`` to kernel bools and LangSmith lane labels."""
+"""Turn-track adapters for the companion kernel.
+
+Production entrypoints choose a ``CompanionTurnTrack`` before calling the core
+turn runner.  This module is the narrow bridge to older kernel booleans
+(``inner_tick_turn`` and ``InnerTickActivity``) and to LangSmith lane labels
+used for trace filtering.  ``USER_CHAT_BOOTSTRAP`` is selected upstream from
+``context.json`` state, so legacy flags cannot reconstruct it.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +18,8 @@ from .models import CompanionTurnTrack, InnerTickActivity
 def turn_flags_for_track(
     track: CompanionTurnTrack,
 ) -> tuple[bool, InnerTickActivity]:
+    """Translate a production track into the legacy kernel routing flags."""
+
     match track:
         case (
             CompanionTurnTrack.USER_CHAT
@@ -32,6 +41,12 @@ def track_from_legacy_flags(
     inner_tick_activity: InnerTickActivity,
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> CompanionTurnTrack:
+    """Recover the closest production track from old call-site flags.
+
+    The bootstrap user-chat track is intentionally not recoverable here because
+    it depends on MemoryStore ``context.json`` bootstrap completion state.
+    """
+
     if inner_tick_turn:
         match inner_tick_activity:
             case InnerTickActivity.PROACTIVE_CHAT:
@@ -49,6 +64,8 @@ def track_from_legacy_flags(
 def langsmith_inty_turn_lane_for_companion_track(
     track: CompanionTurnTrack,
 ) -> str:
+    """Return the coarse LangSmith lane name for trace grouping."""
+
     match track:
         case (
             CompanionTurnTrack.USER_CHAT
