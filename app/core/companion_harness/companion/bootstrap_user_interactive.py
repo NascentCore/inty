@@ -1,4 +1,12 @@
-"""User-interactive companion MemoryStore bootstrap (tool-driven phase in run_turn)."""
+"""Tool-driven MemoryStore bootstrap for first-run relationship setup.
+
+When ``context.json`` marks ``context_mode=bootstrap`` and the interactive
+bootstrap flag is incomplete, ``run_companion_user_chat_turn`` enters
+``USER_CHAT_BOOTSTRAP``.  That track uses a single in-turn tool loop so the
+assistant can update prompt slices, optionally choose a post-bootstrap
+``context_mode``, then mark setup complete before normal user-chat routing
+resumes.
+"""
 
 from __future__ import annotations
 
@@ -48,6 +56,8 @@ INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT: Final[str] = (
 
 
 def load_bootstrap_spec_text() -> str:
+    """Load the internal bootstrap procedure injected into bootstrap turns."""
+
     if not _BOOTSTRAP_SPEC_PATH.is_file():
         raise FileNotFoundError(
             f"missing bootstrap spec: {_BOOTSTRAP_SPEC_PATH}"
@@ -60,6 +70,8 @@ def interactive_bootstrap_active(
     feature_enabled: bool,
     meta: ContextMeta,
 ) -> bool:
+    """Whether a user chat turn should run on ``USER_CHAT_BOOTSTRAP``."""
+
     return (
         bool(feature_enabled)
         and not meta.workspace_bootstrap_user_interactive_completed
@@ -111,6 +123,8 @@ def tool_companion_update_prompt_slice(
     slice_name: str,
     content: str,
 ) -> str:
+    """Write an allowed prompt slice and return ``OK`` or ``ERROR`` text."""
+
     from app.core.companion_harness.memory.memory_store_document_mapping import (
         parse_memory_store_relative_path,
     )
@@ -139,6 +153,14 @@ def tool_companion_bootstrap_user_interactive_complete(
     store: MemoryStore,
     note: str | None = None,
 ) -> str:
+    """Mark interactive bootstrap complete in ``context.json``.
+
+    If the current mode is ``bootstrap``, the stored
+    ``post_bootstrap_context_mode`` becomes the next ``context_mode``; otherwise
+    the current mode is preserved.  Tool callers receive a plain ``OK`` or
+    ``ERROR`` status string because the LLM tool loop consumes the result text.
+    """
+
     rel = "context.json"
     st = store
     raw_body = st.read_document_if_exists(rel)
@@ -193,6 +215,8 @@ def tool_companion_set_experience_profile(
     user_confirmed: bool,
     note: str | None = None,
 ) -> str:
+    """Persist a user-confirmed non-bootstrap mode for later turns."""
+
     if user_confirmed is not True:
         return (
             "ERROR: user_confirmed must be true only after the user explicitly agrees "
