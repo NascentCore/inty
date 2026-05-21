@@ -3,8 +3,8 @@ name: inty-backend-ci-local
 description: >-
   Replicate GitHub workflow `.github/workflows/ci_backend.yaml` locally: venv, layer
   checks, single Alembic head, `tests/alembic/test_custom_config.sh`, test config via
-  `INTY_CONFIG_YAML` (or cp like CI), Inty server on :8000, `pytest -m "not noci"`, optional
-  log scan and push worker smoke. Use when running the same checks as backend CI before a
+  `INTY_CONFIG_YAML` (or cp like CI), Inty server on :8000, `pytest -m "not noci"`, backend
+  cleanup, optional log scan and push worker smoke. Use when running the same checks as backend CI before a
   PR, or when debugging CI failures.
 ---
 
@@ -95,6 +95,7 @@ rm -f inty_backend.log
 export INTY_CONFIG_YAML=devops/config.yaml.test
 export PYTHONPATH=.
 ./backend/inty/start.sh --test >> inty_backend.log 2>&1 &
+backend_pid=$!
 ```
 
 等待服务就绪（与 workflow 中循环等价）：
@@ -128,7 +129,14 @@ python -m pytest -m "not noci" -v -s tests/ --capture=fd --show-capture=no
 python .cursor/skills/scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
 ```
 
-完成后**按需**结束后台的 `start.sh`/`uvicorn` 进程，避免与后续或日常开发占口冲突。
+测试与日志检查完成后，**结束本次启动的 backend**，避免与后续或日常开发占口冲突：
+
+```bash
+if [ -n "${backend_pid:-}" ] && kill -0 "$backend_pid" 2>/dev/null; then
+  kill "$backend_pid"
+  wait "$backend_pid" 2>/dev/null || true
+fi
+```
 
 ## 6) Push worker 启动自检（选做，对应 workflow `Start push worker...`）
 
