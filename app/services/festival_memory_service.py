@@ -219,12 +219,15 @@ def get_messages_for_user_agent_sync(
                 )
             except (json.JSONDecodeError, TypeError, ValueError) as exc:
                 logger.warning(
-                    f"节日记忆跳过无法解析的 chat_history message: session_id={session_id} row_index={row_index} error={exc}"
+                    "节日记忆跳过无法解析的 chat_history message: "
+                    f"session_id={session_id} row_index={row_index} error={exc}"
                 )
                 continue
             if not isinstance(data, dict):
                 logger.warning(
-                    f"节日记忆跳过非对象 chat_history message: session_id={session_id} row_index={row_index} type={type(data).__name__}"
+                    "节日记忆跳过非对象 chat_history message: "
+                    f"session_id={session_id} row_index={row_index} "
+                    f"type={type(data).__name__}"
                 )
                 continue
             msg_type = data.get("type", "human")
