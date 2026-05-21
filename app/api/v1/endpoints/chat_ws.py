@@ -1015,6 +1015,7 @@ async def _try_fire_companion_ws_scheduled_task_inner_tick(
     subscription_svc: SubscriptionService,
     companion_ws: CompanionWebSocketCoordinator,
     ws_conn_id: str,
+    # TODO(typing): Define a TimeContext Pydantic model and replace this.
     tc_box: list[Optional[dict]],
 ) -> None:
     """When ``schedule_queue`` has a due pending task, run one inner-tick reminder turn."""
