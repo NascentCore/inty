@@ -83,7 +83,7 @@ from .proactive_chat import (
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
     build_proactive_chat_transcript_user_marker,
 )
-from .bootstrap_user_interactive import interactive_bootstrap_active
+from app.core.companion_harness.companion.bootstrap import interactive_bootstrap_active
 from .message_format import openai_assistant_message_dict
 from .models import (
     CompanionTurnTrack,

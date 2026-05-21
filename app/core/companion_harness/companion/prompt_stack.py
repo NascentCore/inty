@@ -7,7 +7,7 @@ from typing import Any
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 
-from .bootstrap_user_interactive import interactive_bootstrap_active
+from app.core.companion_harness.companion.bootstrap import interactive_bootstrap_active
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import (
     CompanionTurnTrack,

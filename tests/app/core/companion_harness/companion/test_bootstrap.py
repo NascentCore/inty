@@ -4,7 +4,7 @@ import asyncio
 import json
 from pathlib import Path
 
-from app.core.companion_harness.companion.bootstrap_user_interactive import (
+from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,

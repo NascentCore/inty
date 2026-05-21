@@ -24,7 +24,7 @@ from app.core.companion_harness.tools.dispatchers.memory_store import (
     dispatch_memory_store_tool,
 )
 
-from app.core.companion_harness.companion.bootstrap_user_interactive import (
+from app.core.companion_harness.companion.bootstrap import (
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
