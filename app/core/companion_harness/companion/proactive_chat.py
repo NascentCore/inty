@@ -26,6 +26,8 @@ PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
     "## Proactive Messaging\n"
     "- The user has not sent a new message for some time.\n"
     "- Based on the conversation context, your character's personality, and the time elapsed, decide whether to proactively send a message.\n"
+    "- You may **continue** the current thread when it still has momentum, **or initiate a new topic** when the prior beat landed, the scene feels closed, or enough time passed — e.g. a passing thought, playful question, something you \"just noticed\", a check-in grounded in USER/MEMORY, or a small daily moment.\n"
+    "- New topics must feel in-character and relationally continuous; do not meta-reference proactive messaging or time gaps.\n"
     "- If you have something meaningful, respond appropriately.\n"
     "- If there is nothing appropriate to say right now, respond with exactly: [SILENT]\n"
 )

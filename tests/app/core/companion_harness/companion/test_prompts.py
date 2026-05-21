@@ -147,6 +147,7 @@ def test_build_system_prompt_proactive_chat() -> None:
     )
     assert "本轮（陪伴主动聊天）" in text
     assert "用户尚未发送新消息" in text
+    assert "开新话题" in text
     idx_output = _first_system_index_containing(msgs, "仅自然语言文本回复")
     idx_proactive = _first_system_index_containing(msgs, "本轮（陪伴主动聊天）")
     assert idx_output < idx_proactive
@@ -318,6 +319,7 @@ def test_wrapper_inner_tick_proactive_chat() -> None:
         )
     )
     assert "本轮（陪伴主动聊天）" in joined
+    assert "开新话题" in joined
     assert "输出与工具：" not in joined
 
 
