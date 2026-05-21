@@ -13,7 +13,7 @@ description: >-
 - [`Terminal REPL`](/tools/inty_v2_repl/AGENTS.md)
 - **[iMate Android](/imate_android_app/)** / **[iMate iOS](/imate_ios_app/)** pointing at the same Ops instance
 
-环境是否配齐（LangSmith metadata 可点链接、bootstrap 等）：见 [`examine-local-inty-repl-env`](../examine-local-inty-repl-env/SKILL.md)。
+环境是否配齐（LangSmith metadata 可点链接、bootstrap 等）：见 [`examine-local-inty-repl-env`](../examine-local-inty-repl-env/SKILL.md)。Ops 已起、需**新建** bootstrap 测试用 agent：见 [`create-bootstrap-test-agent`](../create-bootstrap-test-agent/SKILL.md)。
 
 ## Ops
 
