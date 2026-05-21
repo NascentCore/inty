@@ -44,6 +44,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
     get_inty_facts_system_text,
     get_safety_system_text,
+    get_subconscious_system_text,
 )
 from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
@@ -394,6 +395,7 @@ def _doctrine_system_messages() -> list[dict[str, Any]]:
     return [
         _system_message(get_imate_axiom_system_text()),
         _system_message(get_inty_facts_system_text()),
+        _system_message(get_subconscious_system_text()),
         _system_message(get_safety_system_text()),
     ]
 

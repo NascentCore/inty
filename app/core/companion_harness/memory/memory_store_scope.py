@@ -21,6 +21,7 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
         "BOOTSTRAP.md",
         "INTY.md",
         "SAFETY.md",
+        "SUBCONSCIOUS.md",
         "TOOLS.md",
         "SIGNIFICANCE_PERCEPTION.md",
     }
@@ -56,8 +57,14 @@ def get_inty_facts_system_text() -> str:
 
 
 @lru_cache(maxsize=1)
+def get_subconscious_system_text() -> str:
+    """Emotional personhood drive from prompts/SUBCONSCIOUS.md; third doctrine system slice."""
+    return load_template_seed_text("SUBCONSCIOUS.md").strip()
+
+
+@lru_cache(maxsize=1)
 def get_safety_system_text() -> str:
-    """Interaction safety from prompts/SAFETY.md; third doctrine system slice."""
+    """Interaction safety from prompts/SAFETY.md; fourth doctrine system slice."""
     return load_template_seed_text("SAFETY.md").strip()
 
 
