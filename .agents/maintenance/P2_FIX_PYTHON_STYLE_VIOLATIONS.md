@@ -37,7 +37,7 @@ maintenance agents can fix the highest-impact item first.
 - [ ] Google 2.4 "Exceptions": `/app/services/festival_memory_service.py`
   silently skips rows that fail chat-message JSON parsing. Log skipped rows or
   narrow the parser exceptions so festival memory inputs do not disappear
-  without evidence.
+  without evidence. Claimed in `cursor/agent-maintenance-tasks-83c7`.
 
 ## 2026-05-09 scan
 
