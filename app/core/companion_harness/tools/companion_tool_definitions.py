@@ -76,7 +76,6 @@ class CompanionToolName(StrEnum):
     READ_WEB_PAGE = "read_web_page"
     SCHEDULE_TASK = "schedule_task"
     TECHNO_CORE_RECORD_EVENT = "techno_core_record_event"
-    TOOL_UPDATE_AGENT_STATUS_LINE = "tool_update_agent_status_line"
     USER_PROFILE_RECORD = "user_profile_record"
 
 
@@ -557,25 +556,6 @@ TECHNO_CORE_RECORD_EVENT_TOOL = LlmFunctionTool(
 )
 
 
-UPDATE_AGENT_STATUS_LINE_TOOL = LlmFunctionTool(
-    name=CompanionToolName.TOOL_UPDATE_AGENT_STATUS_LINE,
-    description='Set the short one-line status shown under your name in the user\'s chat header (mood, vibe, or current thought). Use the same language as the user. Keep it brief (roughly one short sentence). Pass an empty string to clear it. Do not mention this tool or raw JSON to the user. The tool returns a single line: status line cleared, or status line updated to "..."; mirror that in your natural reply when needed.',
-    parameters={
-        "type": "object",
-        "properties": {
-            "status_line": {
-                "type": "string",
-                "description": "Header subtitle text, or empty string to clear.",
-            }
-        },
-        "required": ["status_line"],
-        "additionalProperties": False,
-    },
-    tags=frozenset(),
-    extra_function_keys={},
-)
-
-
 USER_PROFILE_RECORD_TOOL = LlmFunctionTool(
     name=CompanionToolName.USER_PROFILE_RECORD,
     description="Append structured facts about the user to USER.md under «身份信息». Call when the user shares durable basic info (e.g. age, how they wish to be called, timezone) that should persist. Do not use for secrets unless the user clearly wants them remembered. Speak to the user in companion language only; never mention tools, JSON, or filenames.",
@@ -627,7 +607,6 @@ COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     READ_WEB_PAGE_TOOL,
     SCHEDULE_TASK_TOOL,
     TECHNO_CORE_RECORD_EVENT_TOOL,
-    UPDATE_AGENT_STATUS_LINE_TOOL,
     USER_PROFILE_RECORD_TOOL,
 )
 
@@ -643,7 +622,6 @@ OPENAI_TOOLS_BASE_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.USER_PROFILE_RECORD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     CompanionToolName.SCHEDULE_TASK,
-    CompanionToolName.TOOL_UPDATE_AGENT_STATUS_LINE,
     CompanionToolName.PHONE_CALL_USER,
 )
 
@@ -651,7 +629,6 @@ TOOL_NAMES_SHARED_HEAD: tuple[CompanionToolName, ...] = (
     CompanionToolName.USER_PROFILE_RECORD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     CompanionToolName.SCHEDULE_TASK,
-    CompanionToolName.TOOL_UPDATE_AGENT_STATUS_LINE,
     CompanionToolName.MEMORY_STORE_LIST_PATHS,
     CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
 )
@@ -680,7 +657,6 @@ BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
 INNER_TICK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.USER_PROFILE_RECORD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
-    CompanionToolName.TOOL_UPDATE_AGENT_STATUS_LINE,
     CompanionToolName.MEMORY_STORE_LIST_PATHS,
     CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
     CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,

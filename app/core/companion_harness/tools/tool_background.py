@@ -28,12 +28,6 @@ from loguru import logger
 from openai import BadRequestError
 
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.services.agent_status_line import (
-    clear_tool_background_db_loop,
-    clear_tool_background_voice_ctx,
-    set_tool_background_db_loop,
-    set_tool_background_voice_ctx,
-)
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import (
     GenAIModel,

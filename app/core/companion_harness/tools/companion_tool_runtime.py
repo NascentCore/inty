@@ -6,7 +6,6 @@ Persisted companion documents and transcript go through MemoryStore; tool paths 
 
 from __future__ import annotations
 
-import os
 import asyncio
 import json
 import time
@@ -99,10 +98,6 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.global_services import subscription_service
-from app.services.agent_status_line import (
-    get_tool_background_voice_ctx,
-    tool_update_agent_status_line,
-)
 from app.services.chat_ws_voice_message import (
     ChatWsVoiceMessageTtsInput,
     synthesize_chat_ws_voice_message,
@@ -690,11 +685,6 @@ async def _dispatch(
         return tool_techno_core_record_event(store, arguments)
     if name == LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME:
         return tool_living_sphere_record_update(store, arguments)
-    if name == "tool_update_agent_status_line":
-        raw_sl = arguments.get("status_line")
-        if not isinstance(raw_sl, str):
-            return "ERROR: status_line must be a string"
-        return await tool_update_agent_status_line(store, raw_sl)
     if name == "schedule_task":
         raw_exec_time = arguments.get("exec_time_utc")
         raw_task_text = arguments.get("task_text")
