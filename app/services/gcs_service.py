@@ -123,7 +123,9 @@ class GCSService:
             是否删除成功
         """
         try:
-            if file_path.startswith("https://") or file_path.startswith("file:"):
+            if file_path.startswith("https://") or file_path.startswith(
+                "file:"
+            ):
                 _, file_path = get_bucket_and_path_from_gcs_url(file_path)
 
             delete_from_gcs(self.bucket_name, file_path)
@@ -145,7 +147,9 @@ class GCSService:
             文件是否存在
         """
         try:
-            if file_path.startswith("https://") or file_path.startswith("file:"):
+            if file_path.startswith("https://") or file_path.startswith(
+                "file:"
+            ):
                 _, file_path = get_bucket_and_path_from_gcs_url(file_path)
 
             return check_gcs_file_exists(self.bucket_name, file_path)

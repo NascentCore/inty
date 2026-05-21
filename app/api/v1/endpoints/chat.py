@@ -695,17 +695,15 @@ async def _agent_chat_completions_impl(
                         effective_local_id=effective_local_id,
                         implicit_greeting_turn=False,
                     )
-                    ai_message_id = (
-                        await chat_history_service.add_ai_message_sync_async(
-                            session_id,
-                            response_text_content,
-                            agent_id=chat.agent_id,
-                            meta_data=dump_chat_ws_companion_wire_meta(
-                                ChatWsCompanionWireMessageMetaData.model_validate(
-                                    phone_meta
-                                )
-                            ),
-                        )
+                    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+                        session_id,
+                        response_text_content,
+                        agent_id=chat.agent_id,
+                        meta_data=dump_chat_ws_companion_wire_meta(
+                            ChatWsCompanionWireMessageMetaData.model_validate(
+                                phone_meta
+                            )
+                        ),
                     )
                 else:
                     chat_result = await agent.chat(

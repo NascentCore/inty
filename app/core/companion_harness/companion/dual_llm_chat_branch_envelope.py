@@ -142,6 +142,7 @@ class DualLlmChatBranchEnvelope(BaseModel):
             return int(v.strip())
         raise ValueError("score must be integer 1-10")
 
+
 def _build_dual_llm_chat_response_format() -> dict[str, Any]:
     """OpenAI ``response_format`` wrapper from ``DualLlmChatBranchEnvelope`` JSON Schema."""
     inner = DualLlmChatBranchEnvelope.model_json_schema()
