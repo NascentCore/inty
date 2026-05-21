@@ -48,8 +48,10 @@ def _ensure_langsmith_handle_container_end_patch() -> None:
                             s = str(rid).strip()
                             if s:
                                 _LS_WRAPPED_LLM_RUN_ID.set(s)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug(
+                    "langsmith wrapped llm run id capture skipped: {}", exc
+                )
             return _orig(
                 container,
                 outputs=outputs,
@@ -70,7 +72,8 @@ def langsmith_llm_run_id_from_completion(resp: Any) -> str:
         if v is None:
             return ""
         return str(v).strip()
-    except Exception:
+    except Exception as exc:
+        logger.debug("langsmith llm run id extraction skipped: {}", exc)
         return ""
 
 
@@ -81,7 +84,8 @@ def langsmith_trace_id_from_completion(resp: Any) -> str:
         if v is None:
             return ""
         return str(v).strip()
-    except Exception:
+    except Exception as exc:
+        logger.debug("langsmith trace id extraction skipped: {}", exc)
         return ""
 
 
@@ -103,7 +107,8 @@ def _langsmith_trace_id_from_active_run_tree() -> str:
         if tid is None:
             return ""
         return str(tid).strip()
-    except Exception:
+    except Exception as exc:
+        logger.debug("langsmith active run tree trace id skipped: {}", exc)
         return ""
 
 
@@ -126,8 +131,6 @@ def completion_with_langsmith_trace_id(raw: Any) -> Any:
         return raw
     try:
         return model_copy(update=updates)
-    except Exception:
+    except Exception as exc:
+        logger.debug("langsmith completion enrichment skipped: {}", exc)
         return raw
-
-
-_ensure_langsmith_handle_container_end_patch()
