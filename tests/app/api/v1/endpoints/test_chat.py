@@ -1726,7 +1726,64 @@ async def test_tool_background_ws_payload_voice_modality_without_precomputed_has
     message = out["data"]["choices"][0]["message"]
     assert message.get("audio_url") in (None, "")
     assert message["meta_data"]["reply_modality"] == "voice_message"
-    assert message["meta_data"].get("is_voice") is not True
+    assert message["meta_data"]["is_voice"] is True
+    assert message["meta_data"]["voice_message_script"] == "script only"
+
+
+@pytest.mark.asyncio
+async def test_tool_background_ws_payload_voice_modality_empty_script_still_is_voice(
+    chat_app_with_postgres_db,
+):
+    from app.core.companion_harness.companion.scope import CompanionScope
+    from app.core.companion_harness.memory.memory_store import MemoryStore
+    from app.core.companion_harness.tools.tool_background import ToolOutputEvent
+    from app.schemas.chat import ChatCompletionRequest, ChatMessage
+
+    app, user_id, db_session = chat_app_with_postgres_db
+    agent_id = "agent-companion-ws-tb-voice-no-script"
+    chat_id = f"chat-ws-tb-voice-no-script-{uuid_module.uuid4().hex}"
+    session_id = chat_service.generate_session_id(chat_id)
+
+    st = MemoryStore(
+        scope=CompanionScope(user_id, agent_id, chat_id),
+        repository=None,
+    )
+    ev = ToolOutputEvent(
+        scope_registry_key=st.scope.registry_key(),
+        memory_store=st,
+        user_msg_uuid=str(uuid_module.uuid4()),
+        assistant_msg_uuid=str(uuid_module.uuid4()),
+        text="caption only",
+        ts="2026-05-20T00:00:00Z",
+        elapsed_ms=10,
+        reply_modality="voice_message",
+        voice_message_script="",
+        generation_deliver=False,
+    )
+    request = ChatCompletionRequest(
+        messages=[ChatMessage(role="user", content="voice")],
+        language="en",
+    )
+    _db = global_config_loaded_from_config_yaml.database
+    engine = create_async_engine(str(_db.async_url), pool_size=1, max_overflow=0)
+    factory = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    try:
+        async with factory() as db:
+            out = await chat_ws_v1._build_companion_tool_background_ws_payload(
+                db=db,
+                agent_id=agent_id,
+                session_id=session_id,
+                ev=ev,
+                request=request,
+                effective_local_id=None,
+            )
+    finally:
+        await engine.dispose()
+
+    message = out["data"]["choices"][0]["message"]
+    assert message["meta_data"]["reply_modality"] == "voice_message"
+    assert message["meta_data"]["is_voice"] is True
+    assert message["meta_data"].get("voice_message_script") is None
 
 
 @pytest.mark.asyncio

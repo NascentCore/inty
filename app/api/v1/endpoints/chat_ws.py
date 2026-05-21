@@ -819,8 +819,10 @@ async def _build_companion_tool_background_ws_payload(
         is_voice_tb = True
         if _tb_script:
             voice_script_tb = _tb_script
-    elif reply_modality_tb == "voice_message" and _tb_script:
-        voice_script_tb = _tb_script
+    elif reply_modality_tb == "voice_message":
+        is_voice_tb = True
+        if _tb_script:
+            voice_script_tb = _tb_script
     gi = generated_image_meta_from_index_slice(
         ev.memory_store, ev.image_asset_baseline
     )
