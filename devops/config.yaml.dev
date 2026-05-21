@@ -79,6 +79,8 @@ agent:
   free_user_chat_model: "deepseek/deepseek-v4-pro"
   sub_user_chat_model: "deepseek/deepseek-v4-pro"
 
+  companion_tool_call_model: "google/gemini-3.5-flash"
+
   # 打开高级功能预览，吸引用户付费
   enable_free_user_premium_preview: true
   free_user_premium_preview_every_n_messages: 10
