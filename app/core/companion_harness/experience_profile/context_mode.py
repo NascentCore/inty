@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+from app.core.companion_harness.tools.companion_tool_definitions import BOOTSTRAP_UPDATE_MEMORY_DOC_TOOL
+
 # Reserved profile for interactive bootstrap before the user-facing experience id is chosen.
 EXPERIENCE_PROFILE_ID_BOOTSTRAP = "bootstrap"
 
@@ -94,10 +96,12 @@ def experience_profile_system_clause(context_mode: str) -> str:
     n = normalize_experience_profile_id(raw)
     if n == ExperienceContextMode.BOOTSTRAP:
         return _experience_profile_clause(
-            "交互式关系建立（bootstrap）。本阶段以初始化 SOUL 等与用户的最底层约定为主；"
-            "仍可加载私人记忆与日程记忆层以承接已有档案与会话上下文；"
-            "语气与边界仍须遵守安全与同意条款。"
-            "完成引导后将恢复到常规体验配置（由会话快照或产品默认决定）。"
+            "交互式关系建立（bootstrap）。\n"
+            f"本阶段使用 {BOOTSTRAP_UPDATE_MEMORY_DOC_TOOL.name}.md 是初始化 SOUL.md IDENTITY.md USER.md 等与用户的初步关系锚点；\n"
+            "不要延续超过 30 轮对话，否则用户可能会感到厌烦。\n"
+            "完成引导后将恢复到常规体验配置（由会话快照或产品默认决定）。\n"
+            "需要按照模板询问用户来定义你和用户的基本信息；犹豫不决的用户可以代为体用户建议。\n"
+            ""
         )
     if n in _PRIVATE_MEMORY_PROFILE_IDS:
         if n == ExperienceContextMode.INTIMATE:
