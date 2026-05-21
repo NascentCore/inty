@@ -79,7 +79,12 @@ def test_generate_voice_message_success_returns_audio_url(tmp_path) -> None:
             json.dumps({"transcript": "hello there"}),
         )
         assert out.startswith("OK ")
-        assert "audio_url=https://" in out
+        assert "audio_url=" in out
+        audio_url = out.split("audio_url=", 1)[1].split()[0]
+        if global_config_loaded_from_config_yaml.gcs.use_fake_gcs:
+            assert audio_url.startswith("file://")
+        else:
+            assert audio_url.startswith("https://storage.googleapis.com/")
         assert "duration_seconds=" in out
     finally:
         clear_tool_background_voice_ctx()

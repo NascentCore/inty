@@ -177,14 +177,8 @@ def tool_companion_set_experience_profile(
     store: MemoryStore,
     context_mode: str,
     *,
-    user_confirmed: bool,
-    note: str | None = None,
+    note: str,
 ) -> str:
-    if user_confirmed is not True:
-        return (
-            "ERROR: user_confirmed must be true only after the user explicitly agrees "
-            "to switch experience mode (do not infer silently)"
-        )
     try:
         normalized = normalize_experience_profile_id(context_mode)
     except ValueError as exc:
@@ -208,8 +202,7 @@ def tool_companion_set_experience_profile(
         return "ERROR: context.json must be a JSON object"
     previous = str(data.get("context_mode", "")).strip() or "(unset)"
     data["context_mode"] = normalized
-    if note is not None and str(note).strip():
-        data["experience_profile_change_note"] = str(note).strip()[:2000]
+    data["experience_profile_change_note"] = note.strip()[:2000]
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel_ctx, out)
     logger.info(

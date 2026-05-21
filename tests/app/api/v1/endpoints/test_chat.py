@@ -2570,6 +2570,7 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
         implicit_greeting_turn=False,
+        ws_outbound_queue=None,
     ):
         return APIResponse.success(
             data={
@@ -2700,6 +2701,7 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
         implicit_greeting_turn=False,
+        ws_outbound_queue=None,
     ):
         captured["effective_user_id"] = current_user.id
         return APIResponse.success(
@@ -2755,6 +2757,7 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
         implicit_greeting_turn=False,
+        ws_outbound_queue=None,
     ):
         captured["user_time_context"] = request.user_time_context
         return APIResponse.success(

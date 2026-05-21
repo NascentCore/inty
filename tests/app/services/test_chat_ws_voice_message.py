@@ -82,7 +82,10 @@ async def test_synthesize_chat_ws_voice_message_uses_fake_tts_without_user(
         voice_message_narration_mode=VoiceMessageNarrationMode.DIALOGUE_ONLY,
     )
     assert result is not None
-    assert result.gcs_http_url.startswith("https://storage.googleapis.com/")
+    if global_config_loaded_from_config_yaml.gcs.use_fake_gcs:
+        assert result.gcs_http_url.startswith("file://")
+    else:
+        assert result.gcs_http_url.startswith("https://storage.googleapis.com/")
     assert result.duration_seconds > 0
 
 
