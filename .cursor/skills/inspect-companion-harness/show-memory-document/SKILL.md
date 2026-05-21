@@ -2,7 +2,7 @@
 name: inspect-companion-harness-show-memory-document
 description: >-
   Print a companion MemoryStore document (e.g. STYLE.md, IDENTITY.md) from Postgres
-  companion_memory_document_versions. Uses tools/scripts/companion_memory_show_document.py.
+  companion_memory_document_versions. Uses .cursor/skills/scripts/companion_memory_show_document.py.
   Parent: ../SKILL.md.
 ---
 
@@ -20,7 +20,7 @@ description: >-
 仓库根执行（`PYTHONPATH=.`）：
 
 ```bash
-PYTHONPATH=. python tools/scripts/companion_memory_show_document.py STYLE.md \
+PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
   --companion-id <agent_id>
 ```
 
@@ -43,21 +43,21 @@ PYTHONPATH=. python tools/scripts/companion_memory_show_document.py STYLE.md \
 
 ```bash
 # 最新 STYLE.md 全文
-PYTHONPATH=. python tools/scripts/companion_memory_show_document.py STYLE.md \
+PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
   --companion-id 4ca541f4-64fa-43c0-af6c-7f440def4839
 
 # 本地测试用户 + 明确 chat
-PYTHONPATH=. python tools/scripts/companion_memory_show_document.py STYLE.md \
+PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
   --companion-id <agent_id> \
   --user-id user-testing \
   --chat-id <chat_id>
 
 # 最近两版对比
-PYTHONPATH=. python tools/scripts/companion_memory_show_document.py STYLE.md \
+PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
   --companion-id <agent_id> --limit 2
 
 # 该会话写过哪些 document_kind
-PYTHONPATH=. python tools/scripts/companion_memory_show_document.py STYLE.md \
+PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
   --companion-id <agent_id> --list-kinds
 ```
 

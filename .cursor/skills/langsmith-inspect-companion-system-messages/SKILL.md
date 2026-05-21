@@ -15,7 +15,7 @@ description: >-
 1. **下载 trace**（配置见 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)）：
 
 ```bash
-python tools/scripts/download_run.py --trace-id "<TRACE_UUID>"
+python .cursor/skills/scripts/download_run.py --trace-id "<TRACE_UUID>"
 ```
 
 2. **选对子 run**（以 child 的 `inputs.messages` 为准）：
@@ -25,7 +25,7 @@ python tools/scripts/download_run.py --trace-id "<TRACE_UUID>"
 3. **枚举并查重**（仓库根）：
 
 ```bash
-python tools/scripts/langsmith_inspect_system_messages.py \
+python .cursor/skills/scripts/langsmith_inspect_system_messages.py \
   .inty/traces/<file>.json --run-name agentic_companion_chat
 ```
 

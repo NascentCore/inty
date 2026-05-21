@@ -100,7 +100,7 @@ fi
 勿在聊天里粘贴完整 JWT。
 
 ```bash
-AGENT_ID=$(python3 tools/scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR==1 {print $1}')
+AGENT_ID=$(python3 .cursor/skills/scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR==1 {print $1}')
 ```
 
 ## Final reply to user（默认）
@@ -117,7 +117,7 @@ After ops instance is ready, respond to user with the following (always include 
    - 文件：**仓库根 [`.inty_ops_bearer_token`](../../../.inty_ops_bearer_token)**（`backend/ops/start.sh --local` 写入；可用 **`INTY_OPS_BEARER_TOKEN_FILE`** 改路径）
    - 读取：`cat .inty_ops_bearer_token`（勿提交 git）
    - REPL：**`INTY_ACCESS_TOKEN` 与 `.inty_ops_bearer_token` 一致则不必再抄**；否则用 `cat .inty_ops_bearer_token` 更新 `.env`
-4. **Agent ID**：`python3 tools/scripts/list_inty_ops_agents_admin.py` 首列，或上节 `AGENT_ID=…`
+4. **Agent ID**：`python3 .cursor/skills/scripts/list_inty_ops_agents_admin.py` 首列，或上节 `AGENT_ID=…`
 5. **Terminal REPL**（另开终端，仓库根）— 见 [repl AGENTS.md](/tools/inty_v2_repl/AGENTS.md)
    - 确认 **`.env`** 含 **`INTY_ACCESS_TOKEN`**、**`INTY_API_BASE_URL`**、**`LANGCHAIN_API_KEY`**（与 config 相同）
    - 发一句试聊后，metadata 行宜含 **`langsmith_trace_url=https://…`**；若只有 `langsmith_trace_id=` → 补 REPL 的 `LANGCHAIN_API_KEY` 并重启 REPL

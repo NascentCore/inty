@@ -47,7 +47,7 @@ python -m pip install -r tests/requirements.txt
 ## 2) 架构层依赖检查
 
 ```bash
-python tools/scripts/check_layer_dependencies.py
+python .cursor/skills/scripts/check_layer_dependencies.py
 ```
 
 ## 3) 单一 Alembic head
@@ -88,7 +88,7 @@ Alembic：`backend/alembic/env.py` 在未传 `-x config=...` 时会回落到 **`
 
 [`ci_backend.yaml`](.github/workflows/ci_backend.yaml) 里仍是 `cp devops/config.yaml.test config.yaml`；若你要**逐字对齐 workflow 的 shell**，可继续用复制；与 `INTY_CONFIG_YAML=devops/config.yaml.test` **在行为上等价**（只要在任何进程首次 `import app.core.config` 之前定好其一）。
 
-先**停掉**本机占用 **8000** 的旧 `uvicorn`/旧 `./backend/inty/start.sh`（若存在）。若还要跑 [`tools/scripts/check_ci_backend_logs.py`](tools/scripts/check_ci_backend_logs.py)，建议**删旧日志再起服**，避免历史 ERROR 误报：
+先**停掉**本机占用 **8000** 的旧 `uvicorn`/旧 `./backend/inty/start.sh`（若存在）。若还要跑 [`.cursor/skills/scripts/check_ci_backend_logs.py`](.cursor/skills/scripts/check_ci_backend_logs.py)，建议**删旧日志再起服**，避免历史 ERROR 误报：
 
 ```bash
 rm -f inty_backend.log
@@ -125,7 +125,7 @@ python -m pytest -m "not noci" -v -s tests/ --capture=fd --show-capture=no
 可选：与 workflow 该 job 内一致扫后端日志（依赖上面的 `inty_backend.log`）：
 
 ```bash
-python tools/scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
+python .cursor/skills/scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
 ```
 
 完成后**按需**结束后台的 `start.sh`/`uvicorn` 进程，避免与后续或日常开发占口冲突。

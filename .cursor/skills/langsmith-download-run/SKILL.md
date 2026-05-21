@@ -29,18 +29,18 @@ Inty YAML does **not** define LangSmith API host; for EU / self-hosted, set **`L
 
 ## Preferred: repo helper script
 
-Helper: [`tools/scripts/download_run.py`](../../../tools/scripts/download_run.py)（**Cyclopts** CLI）。在**仓库根**执行，以便默认 **`--config config.yaml`** 能解析。
+Helper: [`.cursor/skills/scripts/download_run.py`](../scripts/download_run.py)（**Cyclopts** CLI）。在**仓库根**执行，以便默认 **`--config config.yaml`** 能解析。
 
-**智能体查路径与默认值**：先执行 **`python tools/scripts/download_run.py --help`**（说明省略 **`-o`/`--output`** 时写入 **`./.inty/`**；**`-o -`** 为 stdout）。**`RUN_ID`** 可位置参数传入，也可用显式参数（见 `--help`）。
+**智能体查路径与默认值**：先执行 **`python .cursor/skills/scripts/download_run.py --help`**（说明省略 **`-o`/`--output`** 时写入 **`./.inty/`**；**`-o -`** 为 stdout）。**`RUN_ID`** 可位置参数传入，也可用显式参数（见 `--help`）。
 
 常用调用（不传 `-o` 即落盘到默认路径）：
 
 ```bash
 source .venv/bin/activate
 
-python tools/scripts/download_run.py --trace-id "<TRACE_UUID>"
-python tools/scripts/download_run.py --run-id "<ANY_RUN_UUID_IN_TRACE>" --entire-trace
-python tools/scripts/download_run.py "<RUN_ID>"
+python .cursor/skills/scripts/download_run.py --trace-id "<TRACE_UUID>"
+python .cursor/skills/scripts/download_run.py --run-id "<ANY_RUN_UUID_IN_TRACE>" --entire-trace
+python .cursor/skills/scripts/download_run.py "<RUN_ID>"
 ```
 
 **`--load-child-runs`**：仅单 run 的 `read_run`；勿与 `--trace-id` / `--entire-trace` 同用。

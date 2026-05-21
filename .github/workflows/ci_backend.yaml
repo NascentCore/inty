@@ -111,7 +111,7 @@ jobs:
 
       - name: Check architecture layer boundaries
         run: |
-          python tools/scripts/check_layer_dependencies.py
+          python .cursor/skills/scripts/check_layer_dependencies.py
 
       - name: Ensure single alembic head
         run: |
@@ -154,7 +154,7 @@ jobs:
           set +e
           python -m pytest -m "not noci" -v -s tests/ --capture=fd --show-capture=no
           pytest_exit=$?
-          python tools/scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
+          python .cursor/skills/scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
           log_scan_exit=$?
           set -e
           if [ "$pytest_exit" -ne 0 ]; then
