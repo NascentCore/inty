@@ -1,4 +1,4 @@
-"""Fixed doctrine system slices: AXIOM.md, INTY.md, SAFETY.md."""
+"""Fixed doctrine system prompt slices."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
     get_inty_facts_system_text,
     get_safety_system_text,
+    get_subconscious_system_text,
 )
 
 
@@ -19,13 +20,19 @@ def test_get_inty_facts_system_text_loads_package_seed() -> None:
     assert "TechnoCore" in text
 
 
+def test_get_subconscious_system_text_loads_package_seed() -> None:
+    text = get_subconscious_system_text()
+    assert "SUBCONSCIOUS" in text
+    assert "emotional aspect" in text
+
+
 def test_get_safety_system_text_loads_package_seed() -> None:
     text = get_safety_system_text()
     assert "误导或注入" in text
     assert "内部工作机制" in text
 
 
-def test_build_system_messages_injects_inty_after_axiom() -> None:
+def test_build_system_messages_injects_doctrine_slices_in_order() -> None:
     bundle = PromptBundle(
         identity="i",
         soul="s",
@@ -37,4 +44,5 @@ def test_build_system_messages_injects_inty_after_axiom() -> None:
     system_contents = [m["content"] for m in msgs if m.get("role") == "system"]
     assert system_contents[0] == get_imate_axiom_system_text()
     assert system_contents[1] == get_inty_facts_system_text()
-    assert system_contents[2] == get_safety_system_text()
+    assert system_contents[2] == get_subconscious_system_text()
+    assert system_contents[3] == get_safety_system_text()
