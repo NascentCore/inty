@@ -15,23 +15,13 @@ on:
       - "backend/alembic/**/*.py"
       - "backend/inty/*.py"
       - "backend/inty/start.sh"
-      # iMate 开发环境配置（push main 默认部署到 GitHub Environment imate-dev）
-      - "devops/config.yaml.imate_dev"
+      # dev 环境（iMate & IntelliMate 共用同一环境与配置）
+      - "devops/config.yaml.dev"
+      # prod 环境部署暂时关闭
       # - "devops/config.yaml.prod"
-      # 评测系统；已经迁移到 ops.inty.cc/evaluation dev.ops.inty.cc/evaluation backend/ops/
-      # - "evaluation/**/*.tsx"
-      # - "evaluation/tsconfig.json"
-      # - "evaluation/tsconfig.node.json"
-      # - "evaluation/package.json"
-      # - "evaluation/package-lock.json"
-      # - "evaluation/vite.config.ts"
-      # - "evaluation/vitest.config.ts"
-      # - "evaluation/index.html"
-      # - "evaluation/build.sh"
       # 容器
       - "devops/docker/Dockerfile"
-      # 工作流文件暂时取消掉，减少运行频率
-      # - ".github/workflows/build_and_deploy_backend.yml"
+      - ".github/workflows/build_and_deploy_backend.yml"
 
   workflow_dispatch:
     inputs:
@@ -39,24 +29,25 @@ on:
         type: environment
         description: The environment to deploy to
         required: true
-        default: imate-dev
+        default: dev
 
-  schedule:
-    # GitHub Environment imate-prod（与手动选 imate-prod 一致）
-    # 美西凌晨 3 点 UTC（Pacific）：11 AM UTC = 3:00 PST（冬令时），夏令时期间为当地 4:00
-    - cron: "0 11 * * *"
+  # 暂停 prod 环境部署避免干扰 IntelliMate
+  # schedule:
+  #   # GitHub Environment prod（与手动选 prod 一致）
+  #   # 美西凌晨 3 点 UTC（Pacific）：11 AM UTC = 3:00 PST（冬令时），夏令时期间为当地 4:00
+  #   - cron: "0 11 * * *"
 
 # 部署环境解析（以下三处表达式必须完全一致；concurrency 与 jobs.*.environment 不能使用 job env）：
 #   concurrency.group
 #   jobs.build-and-deploy.environment
 #   jobs.build-and-deploy.env.DEPLOY_ENV
-# 语义：workflow_dispatch -> inputs.environment；schedule -> imate-prod；其余（如 push main）-> imate-dev
+# 语义：workflow_dispatch -> inputs.environment；schedule -> prod；其余（如 push main）-> dev
 #
-# iMate Android（imate_android_app core BuildConfig.API_BASE_URL）与 GitHub Environment vars.SERVICE_PUBLIC_URL 对齐：
-#   imate-dev  -> https://dev.imate.inty.cc/（对应 app debug）
-#   imate-prod -> https://imate.inty.cc/（对应 app release）
+# 后端部署与 GitHub Environment vars.SERVICE_PUBLIC_URL 对齐：
+#   dev  -> 开发环境
+#   prod -> 生产环境
 concurrency:
-  group: inty-deploy-backend-${{ inputs.environment || (github.event_name == 'schedule' && 'imate-prod') || 'imate-dev' }}
+  group: inty-deploy-backend-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
   cancel-in-progress: true
 
 env:
@@ -67,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
     env:
-      DEPLOY_ENV: ${{ inputs.environment || (github.event_name == 'schedule' && 'imate-prod') || 'imate-dev' }}
+      DEPLOY_ENV: ${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
 
     permissions:
       # Push to ghcr.io
@@ -75,7 +66,7 @@ jobs:
       # Create tag/release (and checkout repository)
       contents: write
 
-    environment: ${{ inputs.environment || (github.event_name == 'schedule' && 'imate-prod') || 'imate-dev' }}
+    environment: ${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -107,18 +98,6 @@ jobs:
               echo "keys_dir=/opt/inty-prod" >> $GITHUB_OUTPUT
               echo "app_label=inty-backend" >> $GITHUB_OUTPUT
               echo "langchain_project=inty-backend-prod" >> $GITHUB_OUTPUT
-              ;;
-            imate-dev)
-              echo "config_file=devops/config.yaml.imate_dev" >> $GITHUB_OUTPUT
-              echo "keys_dir=/opt/inty-imate-dev" >> $GITHUB_OUTPUT
-              echo "app_label=inty-backend-imate" >> $GITHUB_OUTPUT
-              echo "langchain_project=inty-backend-imate-dev" >> $GITHUB_OUTPUT
-              ;;
-            imate-prod)
-              echo "config_file=devops/config.yaml.imate_prod" >> $GITHUB_OUTPUT
-              echo "keys_dir=/opt/inty-imate-prod" >> $GITHUB_OUTPUT
-              echo "app_label=inty-backend-imate" >> $GITHUB_OUTPUT
-              echo "langchain_project=inty-backend-imate-prod" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "Unsupported environment: ${{ steps.prep.outputs.environment }}"
