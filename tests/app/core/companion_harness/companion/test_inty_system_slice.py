@@ -1,4 +1,4 @@
-"""Fixed doctrine system slices: AXIOM.md, INTY.md, SUBCONSCIOUS.md, SAFETY.md."""
+"""Fixed doctrine system prompt slices."""
 
 from __future__ import annotations
 
