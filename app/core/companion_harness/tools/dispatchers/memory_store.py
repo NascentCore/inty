@@ -1,3 +1,11 @@
+"""Dispatcher for memory-store companion tools.
+
+Memory-store tools share one storage object and several small handlers for
+listing, reading, writing, directory creation, and user-profile facts. This
+module keeps their routing together so the broader tool runtime can hand off
+memory operations before handling world, schedule, web, or media tools.
+"""
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -26,6 +34,9 @@ def dispatch_memory_store_tool(
     ],
 ) -> str | None:
     """Dispatch MemoryStore-oriented tool calls.
+
+    The dispatcher returns the tool result for handled names and preserves
+    ``None`` as the signal that another dispatcher owns the tool name.
 
     Returns `None` when the tool name is not handled by this dispatcher.
     """

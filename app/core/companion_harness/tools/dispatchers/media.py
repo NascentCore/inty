@@ -1,3 +1,10 @@
+"""Shared argument parsers for companion media tools.
+
+Image generation and editing accept model-facing JSON arguments before the
+provider adapter runs. These helpers validate the small numeric payload fields
+that affect media requests and return user-visible error text for the tool loop.
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -8,7 +15,7 @@ def parse_optional_positive_int(
     *,
     field_name: str,
 ) -> tuple[int | None, str | None]:
-    """Parse optional positive integer payload fields."""
+    """Parse optional positive integer payload fields for media requests."""
     if raw is None:
         return (None, None)
     if isinstance(raw, bool):
@@ -21,7 +28,7 @@ def parse_optional_positive_int(
 
 
 def parse_optional_strength(raw: Any) -> tuple[float | None, str | None]:
-    """Parse optional image-edit strength field."""
+    """Parse optional image-edit strength as a closed interval from 0 to 1."""
     if raw is None:
         return (None, None)
     if isinstance(raw, bool):

@@ -1,4 +1,11 @@
-"""Per-track entry aliases; implementations live in ``turn``."""
+"""Public turn-track entry aliases for the companion harness.
+
+WebSocket sessions, managers, and schedulers enter the companion harness through
+explicit tracks: user chat, implicit sign-on greeting, proactive inner tick,
+scheduled inner tick, and maintenance inner tick. This module keeps those entry
+names importable from one place while their implementations stay in the turn
+pipeline.
+"""
 
 from __future__ import annotations
 

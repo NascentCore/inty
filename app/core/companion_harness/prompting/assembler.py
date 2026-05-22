@@ -1,3 +1,11 @@
+"""Legacy prompt assembler for role-card based chat paths.
+
+Most current companion harness turns build system messages from memory-store
+documents. This module remains for the older role-card surface where prompts,
+chat settings, user profile text, seasonal slices, and official-assistant
+constraints are merged into ordered system messages.
+"""
+
 from __future__ import annotations
 
 import re
@@ -17,6 +25,8 @@ PromptOverrideLookupFn = Callable[[str, str], Any]
 
 @dataclass(frozen=True)
 class PromptAssemblerDeps:
+    """External prompt services needed to assemble legacy system messages."""
+
     render_prompt: RenderPromptFn
     lookup_prompt_override: PromptOverrideLookupFn
     is_christmas_prompt_enabled: Callable[[], bool]
@@ -24,6 +34,8 @@ class PromptAssemblerDeps:
 
 @dataclass(frozen=True)
 class PromptAssemblerConfig:
+    """Static prompt texts and switches for the legacy prompt stack."""
+
     official_agent_id: str
     force_default_prompts: bool
     christmas_seasonal_behavior_prompt: str
@@ -146,6 +158,7 @@ def build_system_messages(
     deps: PromptAssemblerDeps,
     config: PromptAssemblerConfig,
 ) -> list[SystemMessage]:
+    """Assemble the general role-card system prompt sequence for one chat turn."""
     user_name = _extract_user_name_from_profile(request.user_profile)
     system_messages: list[SystemMessage] = []
     system_messages.extend(_axiom_system_messages_prefix())
@@ -249,6 +262,7 @@ def build_system_messages_for_official_assistant(
     deps: PromptAssemblerDeps,
     config: PromptAssemblerConfig,
 ) -> list[SystemMessage]:
+    """Assemble the narrower official-assistant prompt sequence."""
     user_name = _extract_user_name_from_profile(request.user_profile)
     system_messages: list[SystemMessage] = []
     system_messages.extend(_axiom_system_messages_prefix())
@@ -297,6 +311,7 @@ def build_system_messages_for_chat(
     deps: PromptAssemblerDeps,
     config: PromptAssemblerConfig,
 ) -> list[SystemMessage]:
+    """Choose the official or general prompt sequence for a chat request."""
     if _is_official_assistant(context=context, config=config):
         return build_system_messages_for_official_assistant(
             context=context,

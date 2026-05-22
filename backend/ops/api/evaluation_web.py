@@ -1,3 +1,11 @@
+"""Evaluation web mounting for the Ops process.
+
+Ops can serve both its internal API and the evaluation web UI from the same
+FastAPI app. This module owns the small switch that lets API-only workflows skip
+static assets while preserving the root and legacy evaluation entry points when
+the UI build is present.
+"""
+
 import os
 
 from fastapi import FastAPI

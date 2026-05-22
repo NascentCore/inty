@@ -1,4 +1,11 @@
-"""Persistent schedule queue + non-LLM due-event kernel."""
+"""Persistent schedule queue and due-reminder kernel.
+
+Schedule tasks live in the companion memory store, not in process memory. The
+WebSocket inner-tick path polls this module for one due reminder at a time,
+turns it into synthetic user text, and then records the result as a scheduled
+inner tick; the optional background scheduler emits the same due-event shape for
+surfaces that need push-style polling.
+"""
 
 from __future__ import annotations
 
