@@ -119,7 +119,7 @@ maintenance agents can fix the highest-impact item first.
 - [ ] Google 2.4 "Exceptions": `/app/schemas/chat.py` has broad
   `except Exception` blocks that silently return original agent background
   values during URL transformation. Add structured logging and narrow expected
-  exception types.
+  exception types. Claimed in `cursor/agent-maintenance-tasks-e4f9`.
 - [ ] Google 2.4 "Exceptions": `/app/services/user_analytics_service.py`
   suppresses analytics query failures with `except Exception: pass`; report
   skipped metric groups in logs so operational dashboards do not silently lose
