@@ -17,6 +17,13 @@ from app.core.agent.prompt_template import (
     render_prompt_jinja2_template,
 )
 
+IMAGE_TRANSFORM_FALLBACK_ERRORS = (
+    AttributeError,
+    ImportError,
+    TypeError,
+    ValueError,
+)
+
 
 class MessageType(str, enum.Enum):
     """消息类型"""
@@ -297,10 +304,12 @@ class Chat(ChatInDB):
 
             return agent_avatar
 
-        except Exception as e:
-            logger.warning(
-                f"Failed to serialize agent_avatar for chat {getattr(self, 'id', 'unknown')}: {str(e)}"
-            )
+        except IMAGE_TRANSFORM_FALLBACK_ERRORS as exc:
+            logger.bind(
+                chat_id=getattr(self, "id", "unknown"),
+                image_field="agent_avatar",
+                error_type=type(exc).__name__,
+            ).warning("Failed to transform chat image URL during serialization")
             return agent_avatar
 
     @field_serializer("agent_background")
@@ -316,7 +325,12 @@ class Chat(ChatInDB):
             )
 
             return image_transform_service.transform_desktop(agent_background)
-        except Exception:
+        except IMAGE_TRANSFORM_FALLBACK_ERRORS as exc:
+            logger.bind(
+                chat_id=getattr(self, "id", "unknown"),
+                image_field="agent_background",
+                error_type=type(exc).__name__,
+            ).warning("Failed to transform chat image URL during serialization")
             return agent_background
 
     @field_serializer("agent_background_animated")
@@ -334,7 +348,12 @@ class Chat(ChatInDB):
             return image_transform_service.transform_desktop(
                 agent_background_animated
             )
-        except Exception:
+        except IMAGE_TRANSFORM_FALLBACK_ERRORS as exc:
+            logger.bind(
+                chat_id=getattr(self, "id", "unknown"),
+                image_field="agent_background_animated",
+                error_type=type(exc).__name__,
+            ).warning("Failed to transform chat image URL during serialization")
             return agent_background_animated
 
     @field_serializer("agent_intro")

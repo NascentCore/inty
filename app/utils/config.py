@@ -10,7 +10,7 @@ from typing import Any, List, Optional
 
 import yaml
 from loguru import logger
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
 
 from loguru import logger
 
@@ -480,11 +480,12 @@ class CloudflareConfig:
     fallback_to_original: bool = True  # 转换失败时是否回退到原始URL
 
 
-@dataclass
-class ElevenLabsConfig:
+class ElevenLabsConfig(BaseModel):
     """ElevenLabs语音生成配置"""
 
-    api_key: str
+    model_config = ConfigDict(extra="ignore")
+
+    api_key: str = Field(...)
     model: str = "eleven_multilingual_v2"
     voice_id: str = "JBFqnCBsd6RMkjVDRZzb"  # 默认语音ID
     output_format: str = "mp3_44100_128"
@@ -620,9 +621,10 @@ class PushNotificationConfig:
             }
 
 
-@dataclass
-class FalConfig:
+class FalConfig(BaseModel):
     """fal.ai 生图服务配置"""
+
+    model_config = ConfigDict(extra="ignore")
 
     api_key: str = ""  # fal.ai API key
 
@@ -782,7 +784,9 @@ def load_config(path: str) -> Config:
         gcs=GCSConfig.model_validate(data.get("gcs") or {}),
         firebase=FirebaseConfig.model_validate(data.get("firebase") or {}),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
-        elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
+        elevenlabs=ElevenLabsConfig.model_validate(
+            data.get("elevenlabs") or {}
+        ),
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
         push_notification=PushNotificationConfig(
             **data.get("push_notification", {})
@@ -793,7 +797,7 @@ def load_config(path: str) -> Config:
         user_analytics_report=UserAnalyticsReportConfig(
             **(data.get("user_analytics_report") or {})
         ),
-        fal=FalConfig(**data.get("fal", {})),
+        fal=FalConfig.model_validate(data.get("fal") or {}),
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
         phone_call=PhoneCallConfig(**(data.get("phone_call") or {})),
         tts=TTSConfig(**data.get("tts", {})),

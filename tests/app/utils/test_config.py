@@ -18,6 +18,7 @@ from app.utils.config import (
     ElevenLabsConfig,
     EmbeddingConfig,
     Environment,
+    FalConfig,
     FirebaseConfig,
     GCSConfig,
     GeminiLiveConfig,
@@ -751,3 +752,53 @@ def test_load_config_gcs_uses_pydantic_validation():
     assert cfg.gcs.bucket == "inty-test-bucket"
     assert cfg.gcs.use_fake_gcs is True
     assert cfg.gcs.fake_gcs_base_dir == "/tmp/test-gcs"
+
+
+def test_load_config_elevenlabs_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        'elevenlabs:\n  api_key: "test-eleven"\n',
+        "\n".join(
+            [
+                "elevenlabs:",
+                "  api_key: eleven-key",
+                "  model: eleven-custom-model",
+                "  enabled: false",
+                "  unknown_key: ignored",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert isinstance(cfg.elevenlabs, ElevenLabsConfig)
+    assert cfg.elevenlabs.api_key == "eleven-key"
+    assert cfg.elevenlabs.model == "eleven-custom-model"
+    assert cfg.elevenlabs.enabled is False
+
+
+def test_load_config_fal_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "firebase:\n",
+        "\n".join(
+            [
+                "fal:",
+                "  api_key: fal-key",
+                "  unknown_key: ignored",
+                "firebase:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert isinstance(cfg.fal, FalConfig)
+    assert cfg.fal.api_key == "fal-key"
