@@ -39,6 +39,7 @@ from app.core.companion_harness.companion.ai_private_prompt import (
     get_ai_private_jsonl_text_for_prompt,
 )
 from app.core.companion_harness.companion.bootstrap import (
+    build_interactive_bootstrap_system_message_parts,
     interactive_bootstrap_active,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
