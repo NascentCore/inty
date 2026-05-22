@@ -92,60 +92,120 @@ def _view(session: _WechatDemoSession) -> WechatDemoSessionView:
     )
 
 
-async def create_session(body: WechatDemoSessionCreate) -> WechatDemoSessionView:
+async def create_session(
+    body: WechatDemoSessionCreate,
+) -> WechatDemoSessionView:
     _ensure_wechat_demo_dependencies()
     session_id = str(uuid.uuid4())
     session = _WechatDemoSession(
         session_id=session_id,
-        inty_api_base_url=body.inty_api_base_url.strip(),
-        inty_jwt=body.inty_jwt.strip(),
-        agent_id=body.agent_id.strip(),
+        inty_api_base_url=body.inty_api_base_url,
+        inty_jwt=body.inty_jwt,
+        agent_id=body.agent_id,
     )
     async with _lock:
         _sessions[session_id] = session
-    session.orchestrator_task = asyncio.create_task(
-        _run_session_lifecycle(session),
-        name=f"wechat_demo_{session_id}",
-    )
-    return _view(session)
+        session.orchestrator_task = asyncio.create_task(
+            _run_session_lifecycle(session),
+            name=f"wechat_demo_{session_id}",
+        )
+        return _view(session)
 
 
 async def get_session(session_id: str) -> WechatDemoSessionView | None:
     async with _lock:
         session = _sessions.get(session_id)
-    if session is None:
-        return None
-    return _view(session)
+        if session is None:
+            return None
+        return _view(session)
 
 
 async def stop_session(session_id: str) -> WechatDemoSessionView | None:
     async with _lock:
         session = _sessions.get(session_id)
-    if session is None:
-        return None
+        if session is None:
+            return None
+        session.phase = _StorePhase.STOPPED
     await _stop_session_tasks(session)
-    session.phase = _StorePhase.STOPPED
-    return _view(session)
+    async with _lock:
+        return _view(session)
 
 
 async def _stop_session_tasks(session: _WechatDemoSession) -> None:
-    if session.orchestrator_task is not None and not session.orchestrator_task.done():
-        session.orchestrator_task.cancel()
+    async with _lock:
+        orchestrator_task = session.orchestrator_task
+        bridge_runner = session.bridge_runner
+        bridge_task = session.bridge_task
+    if orchestrator_task is not None and not orchestrator_task.done():
+        orchestrator_task.cancel()
         try:
-            await session.orchestrator_task
+            await orchestrator_task
         except asyncio.CancelledError:
             pass
-        session.orchestrator_task = None
-    if session.bridge_runner is not None:
-        await session.bridge_runner.stop()
-        session.bridge_runner = None
-    if session.bridge_task is not None and not session.bridge_task.done():
-        session.bridge_task.cancel()
+    if bridge_runner is not None:
+        await bridge_runner.stop()
+    if bridge_task is not None and not bridge_task.done():
+        bridge_task.cancel()
         try:
-            await session.bridge_task
+            await bridge_task
         except asyncio.CancelledError:
             pass
-        session.bridge_task = None
+    async with _lock:
+        if session.orchestrator_task is orchestrator_task:
+            session.orchestrator_task = None
+        if session.bridge_runner is bridge_runner:
+            session.bridge_runner = None
+        if session.bridge_task is bridge_task:
+            session.bridge_task = None
+
+
+async def _set_session_qr_flow(
+    session: _WechatDemoSession, qr_flow: Any
+) -> bool:
+    async with _lock:
+        if session.phase == _StorePhase.STOPPED:
+            return False
+        session.qr_flow = qr_flow
+        return True
+
+
+async def _fail_session(session: _WechatDemoSession, error: str) -> None:
+    async with _lock:
+        if session.phase == _StorePhase.STOPPED:
+            return
+        session.phase = _StorePhase.FAILED
+        session.error = error
+
+
+async def _set_session_bridge_runner(
+    session: _WechatDemoSession,
+    runner: Any,
+) -> bool:
+    async with _lock:
+        if session.phase == _StorePhase.STOPPED:
+            return False
+        session.bridge_runner = runner
+        session.phase = _StorePhase.BRIDGE_RUNNING
+        return True
+
+
+async def _set_session_bridge_task(
+    session: _WechatDemoSession,
+    bridge_task: asyncio.Task[None],
+) -> bool:
+    async with _lock:
+        if session.phase == _StorePhase.STOPPED:
+            return False
+        session.bridge_task = bridge_task
+        return True
+
+
+async def _mark_session_stopped_after_bridge(
+    session: _WechatDemoSession,
+) -> None:
+    async with _lock:
+        if session.phase == _StorePhase.BRIDGE_RUNNING:
+            session.phase = _StorePhase.STOPPED
 
 
 async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
@@ -159,23 +219,28 @@ async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
     hermes_home = str(get_hermes_home())
     os.makedirs(hermes_home, exist_ok=True)
     qr_flow = WeixinQrFlow(hermes_home)
-    session.qr_flow = qr_flow
+    if not await _set_session_qr_flow(session, qr_flow):
+        return
     try:
         cred = await qr_flow.run(timeout_seconds=480)
     except asyncio.CancelledError:
-        if session.bridge_runner is not None:
-            await session.bridge_runner.stop()
+        async with _lock:
+            bridge_runner = session.bridge_runner
+        if bridge_runner is not None:
+            await bridge_runner.stop()
         raise
     except Exception as exc:
-        logger.exception("wechat_demo QR flow failed session_id={}", session.session_id)
-        session.phase = _StorePhase.FAILED
-        session.error = str(exc)
+        logger.exception(
+            "wechat_demo QR flow failed session_id={}", session.session_id
+        )
+        await _fail_session(session, str(exc))
         return
 
     if cred is None:
-        session.phase = _StorePhase.FAILED
-        if session.error is None:
-            session.error = qr_flow.error or "Weixin login failed"
+        await _fail_session(
+            session,
+            qr_flow.error or "Weixin login failed",
+        )
         return
 
     inty = IntyWsConnection(
@@ -189,8 +254,9 @@ async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
         base_url=cred.get("base_url") or "https://ilinkai.weixin.qq.com",
     )
     runner = WeixinBridgeRunner(weixin_cred, inty)
-    session.bridge_runner = runner
-    session.phase = _StorePhase.BRIDGE_RUNNING
+    if not await _set_session_bridge_runner(session, runner):
+        await runner.stop()
+        return
 
     async def _bridge_loop() -> None:
         try:
@@ -201,13 +267,18 @@ async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
             logger.exception(
                 "wechat_demo bridge failed session_id={}", session.session_id
             )
-            session.phase = _StorePhase.FAILED
-            session.error = str(exc)
+            await _fail_session(session, str(exc))
 
-    session.bridge_task = asyncio.create_task(
+    bridge_task = asyncio.create_task(
         _bridge_loop(),
         name=f"wechat_demo_bridge_{session.session_id}",
     )
-    await session.bridge_task
-    if session.phase == _StorePhase.BRIDGE_RUNNING:
-        session.phase = _StorePhase.STOPPED
+    if not await _set_session_bridge_task(session, bridge_task):
+        bridge_task.cancel()
+        try:
+            await bridge_task
+        except asyncio.CancelledError:
+            pass
+        return
+    await bridge_task
+    await _mark_session_stopped_after_bridge(session)

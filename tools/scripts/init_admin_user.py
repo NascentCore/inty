@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token
 from app.db.base import SessionLocal
+from app.models.agent import Agent
 from app.models.registry import load_model_modules
 from app.models.user import AuthType, Gender, User
 
@@ -36,10 +37,11 @@ def create_user(
     user_id: str = DEFAULT_ADMIN_USER_ID,
     is_superuser: bool = True,
     token_file: Path | None = None,
+    agent_id_file: Path | None = None,
 ):
     """Create an admin user in the database.
 
-    Optionally write the bearer token to a file via --token-file path.
+    Optionally write local reference files for the bearer token and user's agent.
     """
     logger.info("Starting admin user creation...")
 
@@ -88,6 +90,23 @@ def create_user(
     if token_file is not None:
         token_file.write_text(access_token + "\n")
         logger.info(f"Token written to {token_file}")
+
+    if agent_id_file is not None:
+        agent_id = (
+            db.query(Agent.id)
+            .filter(Agent.creator_id == created_user.id)
+            .filter(Agent.deleted_at.is_(None))
+            .order_by(Agent.created_at.desc(), Agent.id.desc())
+            .limit(1)
+            .scalar()
+        )
+        if agent_id is None:
+            if agent_id_file.exists():
+                agent_id_file.unlink()
+            logger.warning(f"No active agent found for user {created_user.id}")
+        else:
+            agent_id_file.write_text(agent_id + "\n")
+            logger.info(f"Agent ID written to {agent_id_file}")
 
 
 if __name__ == "__main__":

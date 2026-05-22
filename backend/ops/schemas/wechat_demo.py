@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class WechatDemoSessionPhase(StrEnum):
@@ -18,6 +18,16 @@ class WechatDemoSessionCreate(BaseModel):
     inty_api_base_url: str = Field(..., min_length=1)
     inty_jwt: str = Field(..., min_length=1)
     agent_id: str = Field(..., min_length=1)
+
+    @field_validator("inty_api_base_url", "inty_jwt", "agent_id", mode="before")
+    @classmethod
+    def _strip_required_text(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        out = value.strip()
+        if not out:
+            raise ValueError("field must be non-empty")
+        return out
 
 
 class WechatDemoSessionView(BaseModel):
