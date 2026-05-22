@@ -24,6 +24,7 @@ Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-bui
   Environment (common):
     INTY_CONFIG_YAML   Config path relative to repo root (e.g. devops/config.yaml.local).
     INTY_OPS_BEARER_TOKEN_FILE  Where to write the local JWT in --local mode (default: <repo>/.inty_ops_bearer_token).
+    .inty-user-testing-agent-id  Local user-testing agent id written in --local mode.
 
   Flags (any mode):
     --debug              Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL).
@@ -31,7 +32,7 @@ Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-bui
                          Existing log file is removed at startup. With --debug: console INFO, file DEBUG.
 
   Flags (--local|--dev only):
-    --local|--dev        Seed admin + report fixtures; uvicorn --reload; write JWT for user-testing (see INTY_OPS_BEARER_TOKEN_FILE).
+    --local|--dev        Seed admin + report fixtures; uvicorn --reload; write JWT and agent id for user-testing.
     --build-frontend     Run evaluation/build.sh before uvicorn (default: on).
     --no-build-frontend  Skip that step; use existing app/static/evaluation.
 
@@ -112,12 +113,18 @@ if [ "$LOCAL" = true ]; then
   fi
 
   OPS_BEARER_TOKEN_FILE="${INTY_OPS_BEARER_TOKEN_FILE:-$REPO_ROOT/.inty_ops_bearer_token}"
+  USER_TESTING_AGENT_ID_FILE="$REPO_ROOT/.inty-user-testing-agent-id"
   echo "创建测试用管理员账户用于在 ops 平台登陆访问"
-  python tools/scripts/init_admin_user.py --user-id user-testing --is-superuser=true --token-file "$OPS_BEARER_TOKEN_FILE"
+  python tools/scripts/init_admin_user.py --user-id user-testing --is-superuser=true --token-file "$OPS_BEARER_TOKEN_FILE" --agent-id-file "$USER_TESTING_AGENT_ID_FILE"
   if ! chmod 600 "$OPS_BEARER_TOKEN_FILE" 2>/dev/null; then
     echo "warning: could not chmod 600 $OPS_BEARER_TOKEN_FILE" >&2
   fi
   echo "本地测试 JWT 已写入: $OPS_BEARER_TOKEN_FILE（可与 INTY_BEARER_TOKEN / INTY_ACCESS_TOKEN 互换使用）"
+  if [[ -s "$USER_TESTING_AGENT_ID_FILE" ]]; then
+    echo "本地测试 Agent ID 已写入: $USER_TESTING_AGENT_ID_FILE"
+  else
+    echo "未找到 user-testing 的本地测试 Agent，未写入: $USER_TESTING_AGENT_ID_FILE"
+  fi
 
   echo "Seeding report test data..."
   python tools/scripts/seed_report_test_data.py
