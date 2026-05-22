@@ -69,8 +69,8 @@ flowchart TB
 | CFG-PYD-09 | done | `FirebaseConfig` | — | `firebase` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-10 | todo | `GooglePlayConfig` | — | `google_play` | 修正 `fallback_tracks: list[str] = None` 等为 `Optional[...]` |
 | CFG-PYD-11 | todo | `CloudflareConfig` | — | `cloudflare` | 纯字段 |
-| CFG-PYD-12 | claimed in `cursor/agent-maintenance-tasks-e4f9` | `ElevenLabsConfig` | — | `elevenlabs` | 必填 `api_key`：保留无默认或 `Field(...)` |
-| CFG-PYD-13 | claimed in `cursor/agent-maintenance-tasks-e4f9` | `FalConfig` | — | `fal` | 纯字段 |
+| CFG-PYD-12 | done | `ElevenLabsConfig` | — | `elevenlabs` | 已迁移为 `BaseModel`；必填 `api_key` 保留为 `Field(...)` |
+| CFG-PYD-13 | done | `FalConfig` | — | `fal` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-14 | todo | `SurpriseSnapConfig` | — | `_parse_surprise_snap_config` 返回值 | 与解析函数联动；解析函数可改为返回已 validate 的模型 |
 | CFG-PYD-15 | todo | `UserAnalyticsReportConfig` | — | `user_analytics_report` | 纯字段 |
 | CFG-PYD-16 | todo | `GeminiLiveConfig` | — | `gemini_live` | 纯字段 |
