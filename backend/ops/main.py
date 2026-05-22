@@ -21,6 +21,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.api.deps import get_async_db
 from app.api.utils.health_check_payload import build_health_check_data
 from backend.ops.api.evaluation_web import configure_evaluation_web_routes
+from backend.ops.api.wechat_demo_web import configure_wechat_demo_web_routes
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
 from app.external_services.firebase import init_firebase
@@ -89,6 +90,7 @@ configure_evaluation_web_routes(
     static_root_dir=static_dir,
     api_only_mode_enabled=False,
 )
+configure_wechat_demo_web_routes(app=app)
 
 init_firebase()
 

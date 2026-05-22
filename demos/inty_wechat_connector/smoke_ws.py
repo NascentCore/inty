@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from bridge import ask_inty
+from demos.inty_wechat_connector.bridge import ask_inty
 
 
 async def main() -> None:
