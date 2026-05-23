@@ -1435,14 +1435,18 @@ class UserAnalyticsService:
                 )
             except Exception:
                 logger.exception(
-                    "查询达到限制的用户失败: activity_start_date=%s, activity_end_date=%s",
+                    "查询达到限制的用户失败: activity_start_date={}, activity_end_date={}",
                     activity_start_date,
                     activity_end_date,
                 )
                 try:
                     await self.db.rollback()
                 except Exception:
-                    pass
+                    logger.exception(
+                        "查询达到限制的用户失败后回滚事务失败: activity_start_date={}, activity_end_date={}",
+                        activity_start_date,
+                        activity_end_date,
+                    )
                 return []
 
         all_results: List[Dict[str, Any]] = []
@@ -1458,14 +1462,18 @@ class UserAnalyticsService:
                 all_results.extend(day_results)
             except Exception:
                 logger.exception(
-                    "查询达到限制的用户失败（单日）: day_start=%s, day_end=%s",
+                    "查询达到限制的用户失败（单日）: day_start={}, day_end={}",
                     day_start,
                     day_end,
                 )
                 try:
                     await self.db.rollback()
                 except Exception:
-                    pass
+                    logger.exception(
+                        "查询达到限制的用户失败后回滚单日事务失败: day_start={}, day_end={}",
+                        day_start,
+                        day_end,
+                    )
         return all_results
 
     async def get_agent_analytics(

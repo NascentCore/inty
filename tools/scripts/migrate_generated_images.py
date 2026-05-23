@@ -27,7 +27,7 @@ import json
 import re
 import uuid
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 import cyclopts
 from loguru import logger
@@ -59,6 +59,19 @@ class MigrationStats:
     skipped_file_not_found: int = 0
     skipped_resource_exists: int = 0
     error: int = 0
+
+
+ChatSessionMapping = dict[str, dict[str, Any]]
+
+
+@dataclass
+class MigrationContext:
+    """迁移运行期共享上下文，避免脚本级可变状态跨运行泄漏。"""
+
+    bucket_name: str
+    dry_run: bool
+    skip_gcs_copy: bool
+    session_id_to_chat: ChatSessionMapping
 
 
 def is_already_migrated(image_url: str) -> bool:
@@ -110,10 +123,6 @@ def build_new_gcs_path(old_url: str, agent_id: str) -> str:
     return f"chat_images/{agent_id}/{filename}"
 
 
-# 全局缓存: session_id -> chat_info
-_session_id_to_chat_cache: dict = {}
-
-
 def generate_session_id(chat_id: str) -> str:
     """
     根据 chat_id 生成 session_id
@@ -123,17 +132,17 @@ def generate_session_id(chat_id: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
 
 
-async def load_chat_session_mapping(db: AsyncSession) -> dict:
+async def load_chat_session_mapping(
+    db: AsyncSession, session_id_to_chat: ChatSessionMapping
+) -> ChatSessionMapping:
     """
     加载所有 chats 并构建 session_id -> chat_info 的映射
 
     Returns:
         session_id -> {"chat_id": ..., "user_id": ..., "agent_id": ...}
     """
-    global _session_id_to_chat_cache
-
-    if _session_id_to_chat_cache:
-        return _session_id_to_chat_cache
+    if session_id_to_chat:
+        return session_id_to_chat
 
     logger.info("加载 chats 表构建 session_id 映射...")
 
@@ -144,18 +153,20 @@ async def load_chat_session_mapping(db: AsyncSession) -> dict:
     for row in rows:
         chat_id, user_id, agent_id = row
         session_id = generate_session_id(chat_id)
-        _session_id_to_chat_cache[session_id] = {
+        session_id_to_chat[session_id] = {
             "chat_id": chat_id,
             "user_id": user_id,
             "agent_id": agent_id,
         }
 
-    logger.info(f"已加载 {len(_session_id_to_chat_cache)} 条 chat 记录")
-    return _session_id_to_chat_cache
+    logger.info(f"已加载 {len(session_id_to_chat)} 条 chat 记录")
+    return session_id_to_chat
 
 
 async def get_chat_info_by_session_id(
-    db: AsyncSession, session_id: str
+    db: AsyncSession,
+    session_id: str,
+    session_id_to_chat: ChatSessionMapping,
 ) -> Optional[dict]:
     """
     根据 session_id 查询对应的 chat 信息
@@ -163,7 +174,7 @@ async def get_chat_info_by_session_id(
     session_id = uuid5(uuid.NAMESPACE_DNS, chat_id)
     使用预加载的缓存进行查找
     """
-    cache = await load_chat_session_mapping(db)
+    cache = await load_chat_session_mapping(db, session_id_to_chat)
     return cache.get(session_id)
 
 
@@ -286,9 +297,7 @@ async def update_chat_history_metadata(
 async def migrate_single_record(
     db: AsyncSession,
     record: tuple,
-    bucket_name: str,
-    dry_run: bool = False,
-    skip_gcs_copy: bool = False,
+    context: MigrationContext,
 ) -> tuple[bool, str]:
     """
     迁移单条记录
@@ -314,7 +323,9 @@ async def migrate_single_record(
         logger.debug(f"记录 {record_id} 的图片已在新路径结构中")
 
         # 获取 chat 信息
-        chat_info = await get_chat_info_by_session_id(db, session_id)
+        chat_info = await get_chat_info_by_session_id(
+            db, session_id, context.session_id_to_chat
+        )
         if not chat_info:
             return False, "no_chat"
 
@@ -335,13 +346,15 @@ async def migrate_single_record(
             width=generated_image.get("width"),
             height=generated_image.get("height"),
             image_format=generated_image.get("format", "jpeg"),
-            dry_run=dry_run,
+            dry_run=context.dry_run,
         )
 
         return True, "created_resource_only"
 
     # 获取 chat 信息
-    chat_info = await get_chat_info_by_session_id(db, session_id)
+    chat_info = await get_chat_info_by_session_id(
+        db, session_id, context.session_id_to_chat
+    )
     if not chat_info:
         logger.warning(
             f"记录 {record_id} 找不到对应的 chat，session_id={session_id}"
@@ -353,25 +366,27 @@ async def migrate_single_record(
 
     # 构建新路径
     new_gcs_path = build_new_gcs_path(old_image_url, agent_id)
-    new_gcs_uri = f"{GCS_GS_PREFIX}{bucket_name}/{new_gcs_path}"
+    new_gcs_uri = f"{GCS_GS_PREFIX}{context.bucket_name}/{new_gcs_path}"
 
     # 复制 GCS 文件
-    if not skip_gcs_copy:
+    if not context.skip_gcs_copy:
         # 检查源文件是否存在
         _, old_path = get_bucket_and_path_from_gcs_url(old_image_url)
-        if not check_gcs_file_exists(bucket_name, old_path):
+        if not check_gcs_file_exists(context.bucket_name, old_path):
             logger.warning(f"源文件不存在: {old_image_url}")
             return False, "file_not_found"
 
         # 检查目标文件是否已存在
-        if check_gcs_file_exists(bucket_name, new_gcs_path):
+        if check_gcs_file_exists(context.bucket_name, new_gcs_path):
             logger.debug(f"目标文件已存在: {new_gcs_uri}")
         else:
-            if dry_run:
+            if context.dry_run:
                 logger.info(f"DRY-RUN: 将复制 {old_image_url} -> {new_gcs_uri}")
             else:
                 try:
-                    copy_gcs_file(old_image_url, new_gcs_path, bucket_name)
+                    copy_gcs_file(
+                        old_image_url, new_gcs_path, context.bucket_name
+                    )
                     logger.debug(
                         f"已复制文件: {old_image_url} -> {new_gcs_uri}"
                     )
@@ -389,10 +404,10 @@ async def migrate_single_record(
         width=generated_image.get("width"),
         height=generated_image.get("height"),
         image_format=generated_image.get("format", "jpeg"),
-        dry_run=dry_run,
+        dry_run=context.dry_run,
     )
 
-    if not created and not dry_run:
+    if not created and not context.dry_run:
         return False, "resource_exists"
 
     # 更新 chat_history 的 meta_data
@@ -401,7 +416,7 @@ async def migrate_single_record(
         record_id=record_id,
         new_image_url=new_gcs_uri,
         original_meta_data=meta_data,
-        dry_run=dry_run,
+        dry_run=context.dry_run,
     )
 
     return True, "migrated"
@@ -424,13 +439,14 @@ async def run_migration(
         迁移统计信息
     """
     stats = MigrationStats()
-    bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
+    context = MigrationContext(
+        bucket_name=global_config_loaded_from_config_yaml.gcs.bucket,
+        dry_run=dry_run,
+        skip_gcs_copy=skip_gcs_copy,
+        session_id_to_chat={},
+    )
 
-    # 清空缓存，确保使用最新数据
-    global _session_id_to_chat_cache
-    _session_id_to_chat_cache = {}
-
-    logger.info(f"开始迁移，bucket: {bucket_name}")
+    logger.info(f"开始迁移，bucket: {context.bucket_name}")
     if dry_run:
         logger.info("DRY-RUN 模式：不会做任何实际修改")
     if skip_gcs_copy:
@@ -461,9 +477,7 @@ async def run_migration(
                     success, reason = await migrate_single_record(
                         db=db,
                         record=record,
-                        bucket_name=bucket_name,
-                        dry_run=dry_run,
-                        skip_gcs_copy=skip_gcs_copy,
+                        context=context,
                     )
 
                     if success:

@@ -627,11 +627,12 @@ class FalConfig:
     api_key: str = ""  # fal.ai API key
 
 
-@dataclass
-class GeminiLiveConfig:
+class GeminiLiveConfig(BaseModel):
     """Gemini Live API 实时语音通话配置
     使用 Vertex AI 模式，复用 app.gcp_service_account_key 进行认证
     """
+
+    model_config = ConfigDict(extra="ignore")
 
     enabled: bool = False  # 是否启用实时语音通话功能
     project_id: str = "inty-backend"  # GCP 项目 ID
@@ -794,7 +795,9 @@ def load_config(path: str) -> Config:
             **(data.get("user_analytics_report") or {})
         ),
         fal=FalConfig(**data.get("fal", {})),
-        gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
+        gemini_live=GeminiLiveConfig.model_validate(
+            data.get("gemini_live") or {}
+        ),
         phone_call=PhoneCallConfig(**(data.get("phone_call") or {})),
         tts=TTSConfig(**data.get("tts", {})),
         surprise_snap=_parse_surprise_snap_config(data),
