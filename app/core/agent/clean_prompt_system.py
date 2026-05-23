@@ -34,7 +34,7 @@ from app.core.agent.agent import (
     _load_intellimate_user_manual,
 )
 from app.core.agent.agent_prompt_configs import get_agent_prompt_override
-from app.core.companion_harness.prompting.assembler import (
+from app.core.agent.prompting.assembler import (
     PromptAssemblerConfig,
     PromptAssemblerDeps,
     build_system_messages as build_system_messages_with_assembler,
