@@ -25,8 +25,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install black
-        run: pip install --upgrade pip && pip install black
+      - name: Install uv and Python dev tools
+        run: pip install --upgrade pip && pip install uv && uv sync --group dev
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
@@ -79,7 +79,7 @@ jobs:
           body: |
             This PR applies automated formatting via tools/scripts/fmt.sh.
 
-            - Python: black
+            - Python: uv run black (pyproject.toml, 80 cols; app/ backend/)
             - Kotlin: ktfmt
             - JS/TS: prettier (evaluation)
             - Markdown: prettier（变更路径）+ markdownlint-cli2（与 `.markdownlint*.yaml` 一致）
