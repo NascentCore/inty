@@ -120,10 +120,10 @@ maintenance agents can fix the highest-impact item first.
   `except Exception` blocks that silently return original agent background
   values during URL transformation. Add structured logging and narrow expected
   exception types.
-- [ ] Google 2.4 "Exceptions": `/app/services/user_analytics_service.py`
+- [x] Google 2.4 "Exceptions": `/app/services/user_analytics_service.py`
   suppresses analytics query failures with `except Exception: pass`; report
   skipped metric groups in logs so operational dashboards do not silently lose
-  fields. Claimed in `cursor/agent-maintenance-tasks-ed41`.
+  fields. Fixed in `cursor/agent-maintenance-tasks-ed41`.
 - [x] Google 2.14 "True/False Evaluations":
   `/tools/scripts/create_email_password_user.py` uses SQLAlchemy
   `User.deleted_at == None`. Prefer `User.deleted_at.is_(None)` for explicit
@@ -150,10 +150,10 @@ maintenance agents can fix the highest-impact item first.
   `assert self._response_q is not None` as a runtime precondition. Replace it
   with an explicit `RuntimeError` because optimized Python removes asserts.
   Fixed in `cursor/worst-python-style-violation-cd9b`.
-- [ ] Google 2.5 "Mutable Global State": `/tools/scripts/migrate_generated_images.py`
+- [x] Google 2.5 "Mutable Global State": `/tools/scripts/migrate_generated_images.py`
   keeps `_session_id_to_chat_cache` as mutable module-level state without an
   explicit invalidation path. Prefer caller-owned cache state or a force-reload
-  option. Claimed in `cursor/agent-maintenance-tasks-ed41`.
+  option. Fixed in `cursor/agent-maintenance-tasks-ed41`.
 - [x] Google 2.14 "True/False Evaluations": `/app/api/v1/endpoints/auth.py`
   uses SQLAlchemy `User.deleted_at == None`. Prefer `User.deleted_at.is_(None)`
   for explicit SQL `IS NULL` semantics. Fixed in
