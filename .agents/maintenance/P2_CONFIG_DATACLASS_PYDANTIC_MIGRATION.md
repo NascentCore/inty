@@ -73,7 +73,7 @@ flowchart TB
 | CFG-PYD-13 | todo | `FalConfig` | — | `fal` | 纯字段 |
 | CFG-PYD-14 | todo | `SurpriseSnapConfig` | — | `_parse_surprise_snap_config` 返回值 | 与解析函数联动；解析函数可改为返回已 validate 的模型 |
 | CFG-PYD-15 | todo | `UserAnalyticsReportConfig` | — | `user_analytics_report` | 纯字段 |
-| CFG-PYD-16 | todo | `GeminiLiveConfig` | — | `gemini_live` | 纯字段 |
+| CFG-PYD-16 | claimed | `GeminiLiveConfig` | — | `gemini_live` | Claimed in `cursor/agent-maintenance-tasks-ed41`；纯字段 |
 | CFG-PYD-17 | todo | `TTSConfig` | — | `tts` | 纯字段 |
 | CFG-PYD-18 | todo | `MemoryExtractionConfig` | — | `memory_extraction` | 内含 `WorkflowMode`；`__post_init__` 字符串→枚举 |
 | CFG-PYD-19 | todo | `PushNotificationConfig` | — | `push_notification` | `stages` 默认 dict；`__post_init__` → `model_validator(after)` |

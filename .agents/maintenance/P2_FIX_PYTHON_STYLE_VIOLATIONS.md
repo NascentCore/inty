@@ -123,7 +123,7 @@ maintenance agents can fix the highest-impact item first.
 - [ ] Google 2.4 "Exceptions": `/app/services/user_analytics_service.py`
   suppresses analytics query failures with `except Exception: pass`; report
   skipped metric groups in logs so operational dashboards do not silently lose
-  fields.
+  fields. Claimed in `cursor/agent-maintenance-tasks-ed41`.
 - [x] Google 2.14 "True/False Evaluations":
   `/tools/scripts/create_email_password_user.py` uses SQLAlchemy
   `User.deleted_at == None`. Prefer `User.deleted_at.is_(None)` for explicit
@@ -153,7 +153,7 @@ maintenance agents can fix the highest-impact item first.
 - [ ] Google 2.5 "Mutable Global State": `/tools/scripts/migrate_generated_images.py`
   keeps `_session_id_to_chat_cache` as mutable module-level state without an
   explicit invalidation path. Prefer caller-owned cache state or a force-reload
-  option.
+  option. Claimed in `cursor/agent-maintenance-tasks-ed41`.
 - [x] Google 2.14 "True/False Evaluations": `/app/api/v1/endpoints/auth.py`
   uses SQLAlchemy `User.deleted_at == None`. Prefer `User.deleted_at.is_(None)`
   for explicit SQL `IS NULL` semantics. Fixed in
