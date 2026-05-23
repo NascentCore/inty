@@ -1,4 +1,11 @@
-"""Ops-only API: in-memory WeChat QR login + Inty WS bridge demo."""
+"""Ops-only API for the WeChat self-service demo.
+
+The API starts a temporary QR login session, exposes polling state for the
+browser page, and stops the bridge on request. It is hidden from OpenAPI
+because it is an internal demo surface, not a stable product contract.
+Missing WeChat bridge dependencies are reported as unavailable so Ops can
+still run other evaluation and shared APIs without the demo extra installed.
+"""
 
 from __future__ import annotations
 

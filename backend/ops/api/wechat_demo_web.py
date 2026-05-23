@@ -1,4 +1,10 @@
-"""Serve minimal WeChat self-service demo page on Ops."""
+"""Serve the Ops WeChat self-service demo page.
+
+The page is a thin internal control panel: testers paste Inty credentials,
+scan the WeChat QR code, then watch session state while messages are bridged.
+It stores no credentials beyond the browser form and the process-local demo
+session created through the Ops API.
+"""
 
 from __future__ import annotations
 

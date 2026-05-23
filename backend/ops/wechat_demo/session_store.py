@@ -1,4 +1,15 @@
-"""In-memory WeChat demo sessions (single Ops process; lost on restart)."""
+"""Runtime state for the Ops WeChat self-service demo.
+
+Each session owns one QR login flow and, after login, one bridge between
+WeChat messages and Inty WebSocket chat. The store is intentionally in-memory:
+it avoids persisting tester bearer tokens or WeChat credentials, but it also
+means sessions are scoped to a single Ops process and disappear on restart.
+
+The session lifecycle is small enough to reason about operationally:
+QR login starts first, bridge running means direct messages are being relayed,
+stopped means user or bridge shutdown, and failed exposes the first visible
+setup or runtime error to the polling client.
+"""
 
 from __future__ import annotations
 

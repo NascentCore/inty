@@ -1,4 +1,10 @@
-"""Pydantic models for Ops WeChat self-service demo API."""
+"""Request and status shapes for the Ops WeChat self-service demo.
+
+The client provides only the Inty API base URL, bearer token, and agent id
+needed to open WebSocket chat after WeChat login. Status responses report the
+coarse session phase, QR progress, bridge liveness, and any user-actionable
+error so the browser page can stay simple and poll-based.
+"""
 
 from __future__ import annotations
 
