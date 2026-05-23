@@ -27,7 +27,9 @@ def configure_evaluation_web_routes(
         return
 
     if os.path.exists(static_root_dir):
-        app.mount("/static", StaticFiles(directory=static_root_dir), name="static")
+        app.mount(
+            "/static", StaticFiles(directory=static_root_dir), name="static"
+        )
 
     evaluation_static_dir = os.path.join(static_root_dir, "evaluation")
     evaluation_index = os.path.join(evaluation_static_dir, "index.html")

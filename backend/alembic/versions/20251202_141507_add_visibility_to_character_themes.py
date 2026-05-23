@@ -31,7 +31,10 @@ def upgrade() -> None:
         sa.Column(
             "visibility",
             sa.Enum(
-                "PRIMARY", "SECONDARY", "HIDDEN", name="character_theme_visibility"
+                "PRIMARY",
+                "SECONDARY",
+                "HIDDEN",
+                name="character_theme_visibility",
             ),
             nullable=False,
             server_default="HIDDEN",
@@ -49,6 +52,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(op.f("ix_character_themes_visibility"), table_name="character_themes")
+    op.drop_index(
+        op.f("ix_character_themes_visibility"), table_name="character_themes"
+    )
     op.drop_column("character_themes", "visibility")
     op.execute("DROP TYPE character_theme_visibility")

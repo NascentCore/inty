@@ -6,7 +6,20 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.ops.schemas.evaluation import BatchEvaluationRequest, EvaluationComparison, EvaluationExportRequest, EvaluationResultResponse, EvaluationSessionCreate, EvaluationSessionDetail, EvaluationSessionResponse, EvaluationStats, EvaluationTemplateCreate, EvaluationTemplateResponse, QuestionFileUpload, ScoringModelInfo
+from backend.ops.schemas.evaluation import (
+    BatchEvaluationRequest,
+    EvaluationComparison,
+    EvaluationExportRequest,
+    EvaluationResultResponse,
+    EvaluationSessionCreate,
+    EvaluationSessionDetail,
+    EvaluationSessionResponse,
+    EvaluationStats,
+    EvaluationTemplateCreate,
+    EvaluationTemplateResponse,
+    QuestionFileUpload,
+    ScoringModelInfo,
+)
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
@@ -150,7 +163,9 @@ async def start_evaluation_session(
         # 验证会话所有权
         session = await evaluation_service.get_session(session_id)
         if not session:
-            raise HTTPException(status_code=404, detail="Evaluation session not found")
+            raise HTTPException(
+                status_code=404, detail="Evaluation session not found"
+            )
 
         if session.creator_id != current_user.id:
             raise HTTPException(
@@ -193,7 +208,9 @@ async def get_evaluation_session(
 
         session = await evaluation_service.get_session(session_id)
         if not session:
-            raise HTTPException(status_code=404, detail="Evaluation session not found")
+            raise HTTPException(
+                status_code=404, detail="Evaluation session not found"
+            )
 
         if session.creator_id != current_user.id:
             raise HTTPException(
@@ -205,7 +222,9 @@ async def get_evaluation_session(
 
     except Exception as e:
         logger.error(f"获取评测会话详情失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch session details")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch session details"
+        )
 
 
 @router.get(
@@ -230,7 +249,9 @@ async def get_evaluation_results(
         # 验证权限
         session = await evaluation_service.get_session(session_id)
         if not session:
-            raise HTTPException(status_code=404, detail="Evaluation session not found")
+            raise HTTPException(
+                status_code=404, detail="Evaluation session not found"
+            )
 
         if session.creator_id != current_user.id:
             raise HTTPException(
@@ -269,7 +290,9 @@ async def cancel_evaluation_session(
         # 验证权限
         session = await evaluation_service.get_session(session_id)
         if not session:
-            raise HTTPException(status_code=404, detail="Evaluation session not found")
+            raise HTTPException(
+                status_code=404, detail="Evaluation session not found"
+            )
 
         if session.creator_id != current_user.id:
             raise HTTPException(
@@ -307,11 +330,15 @@ async def parse_questions_file(
     try:
         # 验证文件大小（最大10MB）
         if file.size and file.size > 10 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="File size cannot exceed 10MB")
+            raise HTTPException(
+                status_code=400, detail="File size cannot exceed 10MB"
+            )
 
         # 验证文件类型
         allowed_types = [".json"]
-        if not any(file.filename.lower().endswith(ext) for ext in allowed_types):
+        if not any(
+            file.filename.lower().endswith(ext) for ext in allowed_types
+        ):
             raise HTTPException(
                 status_code=400,
                 detail=(
@@ -341,7 +368,9 @@ async def parse_questions_file(
         raise
     except Exception as e:
         logger.error(f"解析问题文件失败: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
+        raise HTTPException(
+            status_code=400, detail=f"Failed to parse file: {str(e)}"
+        )
 
 
 @router.get(
@@ -363,7 +392,9 @@ async def get_scoring_models(
 
     except Exception as e:
         logger.error(f"获取评分模型失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch scoring models")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch scoring models"
+        )
 
 
 @router.post(
@@ -424,7 +455,9 @@ async def get_evaluation_stats(
 
     except Exception as e:
         logger.error(f"获取评测统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch statistics")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch statistics"
+        )
 
 
 # WebSocket端点用于实时监控评测进度
@@ -495,7 +528,9 @@ async def get_evaluation_agents(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: UserSchema = Depends(deps.get_current_superuser),
-    type: str = Query("public", pattern="^(public|private)$", description="智能体类型"),
+    type: str = Query(
+        "public", pattern="^(public|private)$", description="智能体类型"
+    ),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
 ) -> Any:
@@ -514,7 +549,9 @@ async def get_evaluation_agents(
             )
         else:
             # 获取公开智能体
-            agents = await agent_service.get_public_agents(db, skip=skip, limit=limit)
+            agents = await agent_service.get_public_agents(
+                db, skip=skip, limit=limit
+            )
 
         logger.info(
             f"用户 {current_user.id} 获取评测智能体列表: {type}, 数量: {len(agents)}"
@@ -814,7 +851,9 @@ async def deploy_agent_to_production(
     try:
         # 这里应该实现实际的部署逻辑
         # 暂时返回模拟响应
-        logger.info(f"用户 {current_user.id} 请求部署智能体 {agent_id} 到生产环境")
+        logger.info(
+            f"用户 {current_user.id} 请求部署智能体 {agent_id} 到生产环境"
+        )
 
         return {
             "success": True,
@@ -912,7 +951,10 @@ async def get_evaluation_templates(
             conditions.append(EvaluationTemplate.is_public == True)
 
         stmt = (
-            select(EvaluationTemplate).where(or_(*conditions)).offset(skip).limit(limit)
+            select(EvaluationTemplate)
+            .where(or_(*conditions))
+            .offset(skip)
+            .limit(limit)
         )
 
         result = await db.execute(stmt)
@@ -965,7 +1007,9 @@ async def create_batch_evaluation(
             )
             sessions.append(session)
 
-        logger.info(f"用户 {current_user.id} 批量创建 {len(sessions)} 个评测会话")
+        logger.info(
+            f"用户 {current_user.id} 批量创建 {len(sessions)} 个评测会话"
+        )
         return sessions
 
     except Exception as e:
@@ -1118,7 +1162,8 @@ def _normalize_user_lookup_params(
     # 默认规则：必须且只能提供其中一个
     if bool(normalized_email) == bool(normalized_user_id):
         raise HTTPException(
-            status_code=400, detail="Provide either email or user_id, but not both"
+            status_code=400,
+            detail="Provide either email or user_id, but not both",
         )
 
     return normalized_email, normalized_user_id
@@ -1127,7 +1172,9 @@ def _normalize_user_lookup_params(
 async def _find_user_info_by_identifier(
     service: Any, *, email: Optional[str], user_id: Optional[str]
 ) -> Dict[str, Any]:
-    normalized_email, normalized_user_id = _normalize_user_lookup_params(email, user_id)
+    normalized_email, normalized_user_id = _normalize_user_lookup_params(
+        email, user_id
+    )
 
     if normalized_email:
         user_info = await service.find_user_by_email(normalized_email)
@@ -1141,7 +1188,8 @@ async def _find_user_info_by_identifier(
     user_info = await service.find_user_by_id(normalized_user_id)
     if not user_info:
         raise HTTPException(
-            status_code=404, detail=f"User with ID {normalized_user_id} not found"
+            status_code=404,
+            detail=f"User with ID {normalized_user_id} not found",
         )
     return user_info
 
@@ -1186,7 +1234,9 @@ async def get_new_users(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取用户统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch user statistics")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch user statistics"
+        )
 
 
 @router.get(
@@ -1229,7 +1279,9 @@ async def get_user_activity(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取用户活动失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch user activity")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch user activity"
+        )
 
 
 @router.get(
@@ -1394,7 +1446,9 @@ async def get_popular_agents(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取热门角色失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch popular agents")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch popular agents"
+        )
 
 
 @router.get(
@@ -1428,9 +1482,9 @@ async def get_users_hitting_limit(
             act_end = now
             act_start = now - timedelta(days=activity_last_days)
         elif activity_start_date and activity_end_date:
-            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
+            act_start = datetime.strptime(
+                activity_start_date, "%Y-%m-%d"
+            ).replace(tzinfo=timezone.utc)
             act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
             ) + timedelta(days=1)
@@ -1494,14 +1548,18 @@ async def get_agent_analytics(
         )
 
         service = UserAnalyticsService(db)
-        data = await service.get_agent_analytics(reg_start, reg_end, act_start, act_end)
+        data = await service.get_agent_analytics(
+            reg_start, reg_end, act_start, act_end
+        )
         return data
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取角色分析失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch agent analysis")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch agent analysis"
+        )
 
 
 @router.get(
@@ -1721,7 +1779,8 @@ async def get_user_agent_conversations_detail_paginated(
     except Exception as e:
         logger.error(f"获取分页对话详情失败: {str(e)}")
         raise HTTPException(
-            status_code=500, detail="Failed to fetch paginated conversation details"
+            status_code=500,
+            detail="Failed to fetch paginated conversation details",
         )
 
 
@@ -1767,14 +1826,18 @@ async def get_user_analytics_stats(
         )
 
         service = UserAnalyticsService(db)
-        data = await service.get_analytics_stats(reg_start, reg_end, act_start, act_end)
+        data = await service.get_analytics_stats(
+            reg_start, reg_end, act_start, act_end
+        )
         return data
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取统计数据失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch statistics")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch statistics"
+        )
 
 
 @router.get(
@@ -1821,7 +1884,9 @@ async def get_user_analytics_reports(
                 "active_sessions": _safe_to_int(item.get("active_sessions")),
             }
 
-        def _build_daily_top_agents_by_rounds(charts: Any) -> List[Dict[str, Any]]:
+        def _build_daily_top_agents_by_rounds(
+            charts: Any,
+        ) -> List[Dict[str, Any]]:
             if not isinstance(charts, dict):
                 return []
 
@@ -1869,7 +1934,9 @@ async def get_user_analytics_reports(
             if isinstance(charts, dict):
                 raw_most_discussed = charts.get("daily_most_discussed_agent")
                 if isinstance(raw_most_discussed, dict):
-                    normalized_item = _normalize_daily_top_agent(raw_most_discussed, 1)
+                    normalized_item = _normalize_daily_top_agent(
+                        raw_most_discussed, 1
+                    )
                     if normalized_item is not None:
                         return normalized_item
             if daily_top_agents_by_rounds:
@@ -1889,7 +1956,9 @@ async def get_user_analytics_reports(
 
         reports = []
         for row in rows:
-            daily_top_agents_by_rounds = _build_daily_top_agents_by_rounds(row.charts)
+            daily_top_agents_by_rounds = _build_daily_top_agents_by_rounds(
+                row.charts
+            )
             daily_most_discussed_agent = _build_daily_most_discussed_agent(
                 row.charts, daily_top_agents_by_rounds
             )
@@ -1897,11 +1966,15 @@ async def get_user_analytics_reports(
             if include_charts and row.charts:
                 charts_data = UserAnalyticsReportCharts(
                     new_users=row.charts.get("new_users", []),
-                    conversation_rounds=row.charts.get("conversation_rounds", []),
+                    conversation_rounds=row.charts.get(
+                        "conversation_rounds", []
+                    ),
                     user_rounds_distribution=row.charts.get(
                         "user_rounds_distribution", []
                     ),
-                    users_hitting_limit=row.charts.get("users_hitting_limit", []),
+                    users_hitting_limit=row.charts.get(
+                        "users_hitting_limit", []
+                    ),
                     popular_agents=row.charts.get("popular_agents", []),
                     generated_images=row.charts.get("generated_images", []),
                     daily_top_agents_by_rounds=daily_top_agents_by_rounds,
@@ -1916,7 +1989,9 @@ async def get_user_analytics_reports(
                     daily_top_agents_by_rounds=daily_top_agents_by_rounds,
                     daily_most_discussed_agent=daily_most_discussed_agent,
                     charts=charts_data,
-                    created_at=(row.created_at.isoformat() if row.created_at else None),
+                    created_at=(
+                        row.created_at.isoformat() if row.created_at else None
+                    ),
                 )
             )
 
@@ -2016,9 +2091,9 @@ async def get_llm_latency_trend(
             act_end = now
             act_start = now - timedelta(days=activity_last_days)
         elif activity_start_date and activity_end_date:
-            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
+            act_start = datetime.strptime(
+                activity_start_date, "%Y-%m-%d"
+            ).replace(tzinfo=timezone.utc)
             act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
             ) + timedelta(days=1)
@@ -2037,7 +2112,9 @@ async def get_llm_latency_trend(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取 LLM 延迟趋势失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch LLM latency trend")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch LLM latency trend"
+        )
 
 
 @router.get(
@@ -2072,9 +2149,9 @@ async def get_image_generation_latency_trend(
             act_end = now
             act_start = now - timedelta(days=activity_last_days)
         elif activity_start_date and activity_end_date:
-            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
+            act_start = datetime.strptime(
+                activity_start_date, "%Y-%m-%d"
+            ).replace(tzinfo=timezone.utc)
             act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
             ) + timedelta(days=1)
@@ -2085,7 +2162,9 @@ async def get_image_generation_latency_trend(
             )
 
         service = UserAnalyticsService(db)
-        data = await service.get_image_generation_latency_trend(act_start, act_end)
+        data = await service.get_image_generation_latency_trend(
+            act_start, act_end
+        )
         return {"data": data}
 
     except HTTPException:
@@ -2130,9 +2209,9 @@ async def get_image_generation_failure_analytics(
             act_end = now
             act_start = now - timedelta(days=activity_last_days)
         elif activity_start_date and activity_end_date:
-            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
+            act_start = datetime.strptime(
+                activity_start_date, "%Y-%m-%d"
+            ).replace(tzinfo=timezone.utc)
             act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
             ) + timedelta(days=1)
@@ -2191,9 +2270,9 @@ async def get_live_chat_latency_trend(
             act_end = now
             act_start = now - timedelta(days=activity_last_days)
         elif activity_start_date and activity_end_date:
-            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
+            act_start = datetime.strptime(
+                activity_start_date, "%Y-%m-%d"
+            ).replace(tzinfo=timezone.utc)
             act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
             ) + timedelta(days=1)
@@ -2248,9 +2327,9 @@ async def get_live_chat_basic_stats(
             act_end = now
             act_start = now - timedelta(days=activity_last_days)
         elif activity_start_date and activity_end_date:
-            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
+            act_start = datetime.strptime(
+                activity_start_date, "%Y-%m-%d"
+            ).replace(tzinfo=timezone.utc)
             act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
             ) + timedelta(days=1)
@@ -2284,7 +2363,9 @@ async def get_user_daily_messages(
     current_user: UserSchema = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
+    start_date: Optional[str] = Query(
+        None, description="开始日期 (YYYY-MM-DD)"
+    ),
     end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
 ) -> Any:
     """获取用户每日消息统计"""
@@ -2460,7 +2541,9 @@ async def get_user_generated_images(
         agent_ids = list(set(r.agent_id for r in resources if r.agent_id))
         agent_info_map: dict[str, dict] = {}
         if agent_ids:
-            agent_query = select(Agent.id, Agent.name).where(Agent.id.in_(agent_ids))
+            agent_query = select(Agent.id, Agent.name).where(
+                Agent.id.in_(agent_ids)
+            )
             agent_result = await db.execute(agent_query)
             for row in agent_result.all():
                 agent_info_map[row.id] = {
@@ -2479,9 +2562,13 @@ async def get_user_generated_images(
 
             size = metadata.get("size", {})
             try:
-                cdn_url = image_transform_service.transform_desktop(resource.url)
+                cdn_url = image_transform_service.transform_desktop(
+                    resource.url
+                )
             except Exception as e:
-                logger.warning(f"转换图片URL失败: {resource.url}, 错误: {str(e)}")
+                logger.warning(
+                    f"转换图片URL失败: {resource.url}, 错误: {str(e)}"
+                )
                 cdn_url = resource.url  # 使用原始URL作为fallback
             reference_image_url = metadata.get("reference_image_url")
 
@@ -2495,7 +2582,9 @@ async def get_user_generated_images(
                     "width": size.get("width"),
                     "height": size.get("height"),
                     "created_at": (
-                        resource.created_at.isoformat() if resource.created_at else None
+                        resource.created_at.isoformat()
+                        if resource.created_at
+                        else None
                     ),
                     "agent_id": resource.agent_id,
                     "agent_name": agent_info.get("name"),
@@ -2516,7 +2605,9 @@ async def get_user_generated_images(
             if metadata.get("generation_prompt"):
                 total += 1
 
-        logger.debug(f"获取用户 {user_info['id']} 的生成图片，共 {len(images)} 张")
+        logger.debug(
+            f"获取用户 {user_info['id']} 的生成图片，共 {len(images)} 张"
+        )
         return {"images": images, "total": total}
 
     except HTTPException:
@@ -2559,7 +2650,9 @@ async def get_user_sessions(
         raise
     except Exception as e:
         logger.error(f"获取用户会话列表失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch user sessions")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch user sessions"
+        )
 
 
 @router.get(
@@ -2587,7 +2680,9 @@ async def get_session_messages(
 
     except Exception as e:
         logger.error(f"获取会话消息失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch session messages")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch session messages"
+        )
 
 
 # =============================================================================
@@ -2719,18 +2814,24 @@ async def get_agent_generated_images(
             langsmith_trace_url = metadata.get("langsmith_trace_url")
             if isinstance(generated_image_meta, dict):
                 model = generated_image_meta.get("model")
-                generation_time_ms = generated_image_meta.get("generation_time_ms")
+                generation_time_ms = generated_image_meta.get(
+                    "generation_time_ms"
+                )
                 model_fallback_due_to_429 = generated_image_meta.get(
                     "model_fallback_due_to_429"
                 )
                 if reference_image_url is None:
-                    reference_image_url = generated_image_meta.get("reference_image_url")
+                    reference_image_url = generated_image_meta.get(
+                        "reference_image_url"
+                    )
                 if user_reference_image_url is None:
                     user_reference_image_url = generated_image_meta.get(
                         "user_reference_image_url"
                     )
                 if reference_image_urls is None:
-                    reference_image_urls = generated_image_meta.get("reference_image_urls")
+                    reference_image_urls = generated_image_meta.get(
+                        "reference_image_urls"
+                    )
             if model is None:
                 model = metadata.get("model")
 
@@ -2746,7 +2847,9 @@ async def get_agent_generated_images(
                     "width": size.get("width"),
                     "height": size.get("height"),
                     "created_at": (
-                        resource.created_at.isoformat() if resource.created_at else None
+                        resource.created_at.isoformat()
+                        if resource.created_at
+                        else None
                     ),
                     "user_id": resource.user_id,
                     "user_nickname": user_info.get("nickname"),

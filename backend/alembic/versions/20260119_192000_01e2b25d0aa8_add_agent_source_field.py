@@ -22,7 +22,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # 创建 enum 类型
-    agentsource_enum = sa.Enum("USER_CREATED", "AUTO_GENERATED", name="agentsource")
+    agentsource_enum = sa.Enum(
+        "USER_CREATED", "AUTO_GENERATED", name="agentsource"
+    )
     agentsource_enum.create(op.get_bind(), checkfirst=True)
 
     # 添加 source 列
@@ -42,5 +44,7 @@ def downgrade() -> None:
     op.drop_column("agents", "source")
 
     # 删除 enum 类型
-    agentsource_enum = sa.Enum("USER_CREATED", "AUTO_GENERATED", name="agentsource")
+    agentsource_enum = sa.Enum(
+        "USER_CREATED", "AUTO_GENERATED", name="agentsource"
+    )
     agentsource_enum.drop(op.get_bind(), checkfirst=True)

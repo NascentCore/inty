@@ -23,9 +23,16 @@ def upgrade() -> None:
         sa.Column("phone_number_hmac", sa.String(length=64), nullable=False),
         sa.Column("phone_number_masked", sa.String(length=32), nullable=False),
         sa.Column("last_agent_id", sa.String(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+        ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["last_agent_id"], ["agents.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["last_agent_id"], ["agents.id"], ondelete="SET NULL"
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("phone_number_hmac"),

@@ -73,7 +73,9 @@ async def create_festival_memory_config(
         run_at_hour=body.run_at_hour,
         min_rounds_in_window=body.min_rounds_in_window,
         llm_config=(
-            body.llm_config.model_dump() if body.llm_config is not None else None
+            body.llm_config.model_dump()
+            if body.llm_config is not None
+            else None
         ),
     )
     db.add(config)
@@ -140,7 +142,9 @@ async def update_festival_memory_config(
         config.min_rounds_in_window = body.min_rounds_in_window
     if "llm_config" in body.model_fields_set:
         config.llm_config = (
-            body.llm_config.model_dump() if body.llm_config is not None else None
+            body.llm_config.model_dump()
+            if body.llm_config is not None
+            else None
         )
     if (
         config.run_at_date is not None
@@ -176,7 +180,9 @@ async def run_festival_memory_extraction(
         )
         config = result.scalar_one_or_none()
         if not config:
-            raise HTTPException(status_code=404, detail="Configuration not found")
+            raise HTTPException(
+                status_code=404, detail="Configuration not found"
+            )
         festival_name = config.festival_name
         festival_date = config.festival_date
         prompt = config.prompt
@@ -186,7 +192,9 @@ async def run_festival_memory_extraction(
             or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
         )
         raw_llm = getattr(config, "llm_config", None)
-        llm_config = LLMConfig.model_validate(raw_llm) if raw_llm is not None else None
+        llm_config = (
+            LLMConfig.model_validate(raw_llm) if raw_llm is not None else None
+        )
     else:
         if (
             body.festival_name is None

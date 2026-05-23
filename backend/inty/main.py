@@ -32,7 +32,10 @@ from app.middleware.error_handler import (
     validation_error_handler,
     validation_exception_handler,
 )
-from app.middleware.observability import ObservabilityMiddleware, metrics_response
+from app.middleware.observability import (
+    ObservabilityMiddleware,
+    metrics_response,
+)
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.schemas.health import HealthCheckData
 from app.schemas.response import APIResponse
@@ -47,10 +50,16 @@ app = FastAPI(
     version=global_config_loaded_from_config_yaml.app.version,
     # 只在debug模式下开启OpenAPI docs
     openapi_url=(
-        "/openapi.json" if global_config_loaded_from_config_yaml.app.debug else None
+        "/openapi.json"
+        if global_config_loaded_from_config_yaml.app.debug
+        else None
     ),
-    docs_url="/docs" if global_config_loaded_from_config_yaml.app.debug else None,
-    redoc_url="/redoc" if global_config_loaded_from_config_yaml.app.debug else None,
+    docs_url=(
+        "/docs" if global_config_loaded_from_config_yaml.app.debug else None
+    ),
+    redoc_url=(
+        "/redoc" if global_config_loaded_from_config_yaml.app.debug else None
+    ),
     # Swagger UI参数配置（仅在debug模式下生效）
     swagger_ui_parameters=(
         {
@@ -196,14 +205,18 @@ async def _preload_popular_agent_data(db: AsyncSession):
         for agent_db in popular_agents:
             try:
                 # 使用轻量级方法预加载数据（这会自动缓存）
-                agent_data = await agent_service.get_agent_for_chat(db, agent_db.id)
+                agent_data = await agent_service.get_agent_for_chat(
+                    db, agent_db.id
+                )
                 if agent_data:
                     preloaded_count += 1
                     logger.debug(f"预加载Agent数据: {agent_data['name']}")
             except Exception as e:
                 logger.warning(f"预加载Agent数据失败 {agent_db.id}: {str(e)}")
 
-        logger.info(f"热门Agent数据预加载完成: {preloaded_count}/{len(popular_agents)}")
+        logger.info(
+            f"热门Agent数据预加载完成: {preloaded_count}/{len(popular_agents)}"
+        )
 
     except Exception as e:
         logger.error(f"预加载热门Agent数据失败: {str(e)}")
@@ -296,7 +309,9 @@ def custom_openapi():
             # 为路径下的所有操作添加安全要求
             for method in openapi_schema["paths"][path]:
                 if method.lower() in ("get", "post", "put", "delete", "patch"):
-                    openapi_schema["paths"][path][method]["security"] = [{"Bearer": []}]
+                    openapi_schema["paths"][path][method]["security"] = [
+                        {"Bearer": []}
+                    ]
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
@@ -307,7 +322,9 @@ if global_config_loaded_from_config_yaml.app.debug:
     app.openapi = custom_openapi
 
 
-@app.get("/", response_model=APIResponse[HealthCheckData], include_in_schema=False)
+@app.get(
+    "/", response_model=APIResponse[HealthCheckData], include_in_schema=False
+)
 async def root():
     """健康检查接口"""
     return APIResponse.success(data=build_health_check_data(ops=False))
@@ -317,7 +334,8 @@ async def root():
 async def metrics():
     if (
         not global_config_loaded_from_config_yaml.app.debug
-        and global_config_loaded_from_config_yaml.app.environment != Environment.TEST
+        and global_config_loaded_from_config_yaml.app.environment
+        != Environment.TEST
     ):
         raise HTTPException(status_code=404, detail="Not Found")
     return metrics_response()

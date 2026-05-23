@@ -43,10 +43,16 @@ app = FastAPI(
     description="Inty Ops – evaluation and shared API",
     version=global_config_loaded_from_config_yaml.app.version,
     openapi_url=(
-        "/openapi.json" if global_config_loaded_from_config_yaml.app.debug else None
+        "/openapi.json"
+        if global_config_loaded_from_config_yaml.app.debug
+        else None
     ),
-    docs_url="/docs" if global_config_loaded_from_config_yaml.app.debug else None,
-    redoc_url="/redoc" if global_config_loaded_from_config_yaml.app.debug else None,
+    docs_url=(
+        "/docs" if global_config_loaded_from_config_yaml.app.debug else None
+    ),
+    redoc_url=(
+        "/redoc" if global_config_loaded_from_config_yaml.app.debug else None
+    ),
     swagger_ui_parameters=(
         {
             "persistAuthorization": True,
@@ -206,7 +212,13 @@ if global_config_loaded_from_config_yaml.app.debug:
                 ):
                     continue
                 for method in openapi_schema["paths"][path]:
-                    if method.lower() in ("get", "post", "put", "delete", "patch"):
+                    if method.lower() in (
+                        "get",
+                        "post",
+                        "put",
+                        "delete",
+                        "patch",
+                    ):
                         openapi_schema["paths"][path][method]["security"] = [
                             {"Bearer": []}
                         ]
@@ -216,6 +228,10 @@ if global_config_loaded_from_config_yaml.app.debug:
     app.openapi = custom_openapi
 
 
-@app.get("/health", response_model=APIResponse[HealthCheckData], include_in_schema=False)
+@app.get(
+    "/health",
+    response_model=APIResponse[HealthCheckData],
+    include_in_schema=False,
+)
 async def health():
     return APIResponse.success(data=build_health_check_data(ops=True))

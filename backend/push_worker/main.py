@@ -119,7 +119,9 @@ class PushWorker:
             loop = asyncio.get_running_loop()
             current = asyncio.current_task(loop)
             pending = [
-                t for t in asyncio.all_tasks(loop) if t is not current and not t.done()
+                t
+                for t in asyncio.all_tasks(loop)
+                if t is not current and not t.done()
             ]
             for t in pending:
                 t.cancel()
@@ -185,7 +187,9 @@ class PushWorker:
             await self._stop_async()
 
 
-def setup_signal_handlers(worker: PushWorker, loop: asyncio.AbstractEventLoop) -> None:
+def setup_signal_handlers(
+    worker: PushWorker, loop: asyncio.AbstractEventLoop
+) -> None:
     """设置信号处理器"""
 
     def signal_handler(signum, frame):
