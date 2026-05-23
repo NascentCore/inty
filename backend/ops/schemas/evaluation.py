@@ -11,7 +11,9 @@ from app.models.evaluation import EvaluationStatus
 class EvaluationSessionCreate(BaseModel):
     """创建评测会话的请求模型"""
 
-    name: str = Field(..., min_length=1, max_length=255, description="评测会话名称")
+    name: str = Field(
+        ..., min_length=1, max_length=255, description="评测会话名称"
+    )
     questions: List[str] = Field(..., min_items=1, description="测试问题列表")
     selected_agents: List[str] = Field(
         ..., min_items=1, description="选中的智能体ID列表"
@@ -130,7 +132,9 @@ class EvaluationSessionDetail(EvaluationSessionResponse):
     """评测会话详细信息（包含结果）"""
 
     results: List[EvaluationResultResponse] = Field(default_factory=list)
-    interactions: List[EvaluationInteractionResponse] = Field(default_factory=list)
+    interactions: List[EvaluationInteractionResponse] = Field(
+        default_factory=list
+    )
 
 
 class EvaluationTemplateCreate(BaseModel):
@@ -139,8 +143,12 @@ class EvaluationTemplateCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="模板名称")
     description: Optional[str] = Field(None, description="模板描述")
     questions: List[str] = Field(..., min_items=1, description="问题列表")
-    default_scoring_criteria: Optional[str] = Field(None, description="默认评分标准")
-    recommended_models: Optional[List[str]] = Field(None, description="推荐的评分模型")
+    default_scoring_criteria: Optional[str] = Field(
+        None, description="默认评分标准"
+    )
+    recommended_models: Optional[List[str]] = Field(
+        None, description="推荐的评分模型"
+    )
     config: Optional[Dict[str, Any]] = Field(None, description="模板配置")
     tags: Optional[List[str]] = Field(None, description="标签")
     is_public: bool = Field(False, description="是否公开")
@@ -208,7 +216,9 @@ class WebSocketMessage(BaseModel):
     type: str = Field(..., description="消息类型")
     session_id: str = Field(..., description="会话ID")
     data: Optional[Dict[str, Any]] = Field(None, description="消息数据")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="时间戳")
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow, description="时间戳"
+    )
 
 
 class EvaluationSessionUpdate(BaseModel):
@@ -247,8 +257,12 @@ class EvaluationComparison(BaseModel):
 class EvaluationExportRequest(BaseModel):
     """评测结果导出请求"""
 
-    session_ids: List[str] = Field(..., min_items=1, description="要导出的会话ID列表")
-    format: str = Field("csv", pattern="^(csv|json|xlsx)$", description="导出格式")
+    session_ids: List[str] = Field(
+        ..., min_items=1, description="要导出的会话ID列表"
+    )
+    format: str = Field(
+        "csv", pattern="^(csv|json|xlsx)$", description="导出格式"
+    )
     include_interactions: bool = Field(False, description="是否包含交互记录")
     include_metadata: bool = Field(False, description="是否包含元数据")
     request_id: Optional[str] = None

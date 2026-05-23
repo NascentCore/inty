@@ -5,6 +5,7 @@ Revises: d4e5f6a7b8c0
 Create Date: 2026-02-18 12:00:00.000000+00:00
 
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -22,9 +23,13 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("agent_id", sa.String(), nullable=False),
-        sa.Column("next_photo_index", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "next_photo_index", sa.Integer(), nullable=False, server_default="0"
+        ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("user_id", "agent_id", name="uq_surprise_snap_progress_user_agent"),
+        sa.UniqueConstraint(
+            "user_id", "agent_id", name="uq_surprise_snap_progress_user_agent"
+        ),
     )
     op.create_index(
         "ix_surprise_snap_progress_user_id",
@@ -44,9 +49,13 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("message_id", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(["message_id"], ["chat_history.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["message_id"], ["chat_history.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("user_id", "message_id", name="uq_surprise_snap_unlock_user_message"),
+        sa.UniqueConstraint(
+            "user_id", "message_id", name="uq_surprise_snap_unlock_user_message"
+        ),
     )
     op.create_index(
         "ix_surprise_snap_unlock_user_id",
@@ -63,9 +72,18 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_surprise_snap_unlock_message_id", table_name="surprise_snap_unlock")
-    op.drop_index("ix_surprise_snap_unlock_user_id", table_name="surprise_snap_unlock")
+    op.drop_index(
+        "ix_surprise_snap_unlock_message_id", table_name="surprise_snap_unlock"
+    )
+    op.drop_index(
+        "ix_surprise_snap_unlock_user_id", table_name="surprise_snap_unlock"
+    )
     op.drop_table("surprise_snap_unlock")
-    op.drop_index("ix_surprise_snap_progress_agent_id", table_name="surprise_snap_progress")
-    op.drop_index("ix_surprise_snap_progress_user_id", table_name="surprise_snap_progress")
+    op.drop_index(
+        "ix_surprise_snap_progress_agent_id",
+        table_name="surprise_snap_progress",
+    )
+    op.drop_index(
+        "ix_surprise_snap_progress_user_id", table_name="surprise_snap_progress"
+    )
     op.drop_table("surprise_snap_progress")

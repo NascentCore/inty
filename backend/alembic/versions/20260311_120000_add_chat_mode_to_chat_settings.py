@@ -5,6 +5,7 @@ Revises: 6f8c4a2d9b11
 Create Date: 2026-03-11 12:00:00.000000
 
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -20,7 +21,9 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     connection = op.get_bind()
     inspector = sa.inspect(connection)
-    columns = [column["name"] for column in inspector.get_columns("chat_settings")]
+    columns = [
+        column["name"] for column in inspector.get_columns("chat_settings")
+    ]
 
     if "chat_mode" not in columns:
         op.add_column(
@@ -37,7 +40,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     connection = op.get_bind()
     inspector = sa.inspect(connection)
-    columns = [column["name"] for column in inspector.get_columns("chat_settings")]
+    columns = [
+        column["name"] for column in inspector.get_columns("chat_settings")
+    ]
 
     if "chat_mode" in columns:
         op.drop_column("chat_settings", "chat_mode")

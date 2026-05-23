@@ -10,14 +10,22 @@ class UserAnalyticsDateRange(BaseModel):
     """日期范围请求（支持双日期范围：注册日期 + 活跃日期）"""
 
     # 用户注册日期范围
-    register_start_date: Optional[datetime] = Field(None, description="注册开始日期")
-    register_end_date: Optional[datetime] = Field(None, description="注册结束日期")
+    register_start_date: Optional[datetime] = Field(
+        None, description="注册开始日期"
+    )
+    register_end_date: Optional[datetime] = Field(
+        None, description="注册结束日期"
+    )
     register_last_days: Optional[int] = Field(
         None, ge=1, le=365, description="注册最近N天"
     )
     # 用户活跃日期范围
-    activity_start_date: Optional[datetime] = Field(None, description="活跃开始日期")
-    activity_end_date: Optional[datetime] = Field(None, description="活跃结束日期")
+    activity_start_date: Optional[datetime] = Field(
+        None, description="活跃开始日期"
+    )
+    activity_end_date: Optional[datetime] = Field(
+        None, description="活跃结束日期"
+    )
     activity_last_days: Optional[int] = Field(
         None, ge=1, le=365, description="活跃最近N天"
     )
@@ -199,14 +207,18 @@ class UserAnalyticsStatsResponse(BaseModel):
     total_chat_initiators: int = Field(
         description="发起聊天的人数（排除仅浏览开场白的用户）"
     )
-    total_user_messages: int = Field(description="总发送消息数（排除AI回复和开场白）")
+    total_user_messages: int = Field(
+        description="总发送消息数（排除AI回复和开场白）"
+    )
     total_ai_messages: int = Field(
         default=0, description="AI 回复消息数（排除开场白）"
     )
     total_active_sessions: int = Field(
         description="包含用户消息的会话数（排除仅浏览开场白的会话）"
     )
-    total_voice_requests: int = Field(description="总语音请求数（排除开场白语音）")
+    total_voice_requests: int = Field(
+        description="总语音请求数（排除开场白语音）"
+    )
     # 用户维度（仅统计发送聊天的用户）
     avg_messages_per_user: float = Field(description="平均发送消息数")
     avg_sessions_per_user: float = Field(description="平均会话数")
@@ -218,21 +230,35 @@ class UserAnalyticsStatsResponse(BaseModel):
         description="开口率（total_chat_initiators / total_new_users，0-100）"
     )
     # 生图统计
-    total_image_generation_requests: int = Field(description="总生图请求数", default=0)
-    total_image_generation_success: int = Field(description="成功次数", default=0)
-    total_image_generation_failures: int = Field(description="失败次数", default=0)
+    total_image_generation_requests: int = Field(
+        description="总生图请求数", default=0
+    )
+    total_image_generation_success: int = Field(
+        description="成功次数", default=0
+    )
+    total_image_generation_failures: int = Field(
+        description="失败次数", default=0
+    )
     image_generation_success_rate: float = Field(
         description="成功率（百分比，0-100）", default=0.0
     )
     # 生图细分统计
-    total_image_new_generation: int = Field(description="新生成图片次数", default=0)
-    total_image_fallback_used: int = Field(description="使用兜底图片次数", default=0)
+    total_image_new_generation: int = Field(
+        description="新生成图片次数", default=0
+    )
+    total_image_fallback_used: int = Field(
+        description="使用兜底图片次数", default=0
+    )
     # 语音通话统计（Live Chat）
-    total_live_chat_users: int = Field(description="发起语音通话人数", default=0)
+    total_live_chat_users: int = Field(
+        description="发起语音通话人数", default=0
+    )
     total_live_chat_sessions: int = Field(
         description="总语音通话 session 数", default=0
     )
-    total_live_chat_duration: int = Field(description="总通话时长（秒）", default=0)
+    total_live_chat_duration: int = Field(
+        description="总通话时长（秒）", default=0
+    )
     avg_live_chat_sessions_per_user: float = Field(
         description="人均语音通话次数", default=0.0
     )
@@ -279,7 +305,9 @@ class UserSessionItem(BaseModel):
     chat_id: str
     agent_id: str = Field(description="角色 UUID")
     agent_name: str
-    agent_avatar_url: Optional[str] = Field(None, description="角色形象图片 URL")
+    agent_avatar_url: Optional[str] = Field(
+        None, description="角色形象图片 URL"
+    )
     created_at: Optional[str]
     updated_at: Optional[str]
     message_count: int
@@ -378,8 +406,12 @@ class LiveChatBasicStatsResponse(BaseModel):
     total_users: int = Field(description="发起语音通话人数", default=0)
     total_sessions: int = Field(description="总语音通话 session 数", default=0)
     total_duration: int = Field(description="总通话时长（秒）", default=0)
-    avg_sessions_per_user: float = Field(description="人均语音通话次数", default=0.0)
-    avg_duration_per_user: float = Field(description="人均通话时长（秒）", default=0.0)
+    avg_sessions_per_user: float = Field(
+        description="人均语音通话次数", default=0.0
+    )
+    avg_duration_per_user: float = Field(
+        description="人均通话时长（秒）", default=0.0
+    )
     avg_duration_per_session: float = Field(
         description="每 session 平均时长（秒）", default=0.0
     )
@@ -414,7 +446,9 @@ class UserAnalyticsReportGeneratedImageItem(BaseModel):
     image_url: str = Field(
         description="图片 URL（gs:// 已转换为 https://storage.googleapis.com/）"
     )
-    meta_data: Dict[str, Any] = Field(default_factory=dict, description="消息元数据")
+    meta_data: Dict[str, Any] = Field(
+        default_factory=dict, description="消息元数据"
+    )
     created_at: Optional[str] = Field(None, description="创建时间")
 
 
@@ -424,7 +458,9 @@ class VoiceAudioItem(BaseModel):
     audio_url: str = Field(description="GCS 或 CDN 音频 URL")
     message_id: int = Field(description="chat_history 消息 ID")
     created_at: Optional[str] = Field(None, description="创建时间 ISO 字符串")
-    duration_seconds: Optional[float] = Field(None, description="音频时长（秒）")
+    duration_seconds: Optional[float] = Field(
+        None, description="音频时长（秒）"
+    )
 
 
 class VoiceAudioGroupByUserAgent(BaseModel):
@@ -481,12 +517,15 @@ class UserAnalyticsReportCharts(BaseModel):
     generated_images: List[UserAnalyticsReportGeneratedImageItem] = Field(
         default_factory=list, description="日报当日生图列表"
     )
-    daily_top_agents_by_rounds: List[UserAnalyticsReportDailyTopAgentItem] = Field(
-        default_factory=list, description="日报当日聊天轮数 Top 角色（默认 Top10）"
+    daily_top_agents_by_rounds: List[UserAnalyticsReportDailyTopAgentItem] = (
+        Field(
+            default_factory=list,
+            description="日报当日聊天轮数 Top 角色（默认 Top10）",
+        )
     )
-    daily_most_discussed_agent: Optional[UserAnalyticsReportDailyTopAgentItem] = Field(
-        None, description="日报当日聊天轮数最高角色"
-    )
+    daily_most_discussed_agent: Optional[
+        UserAnalyticsReportDailyTopAgentItem
+    ] = Field(None, description="日报当日聊天轮数最高角色")
 
 
 class UserAnalyticsReportItem(BaseModel):
@@ -498,15 +537,21 @@ class UserAnalyticsReportItem(BaseModel):
         description="日报：统计日期；周报：该周周一日期 (YYYY-MM-DD)"
     )
     stats: UserAnalyticsStatsResponse = Field(description="聚合统计数据")
-    daily_top_agents_by_rounds: List[UserAnalyticsReportDailyTopAgentItem] = Field(
-        default_factory=list,
-        description="日报当日聊天轮数 Top 角色（用于轻量列表请求）",
+    daily_top_agents_by_rounds: List[UserAnalyticsReportDailyTopAgentItem] = (
+        Field(
+            default_factory=list,
+            description="日报当日聊天轮数 Top 角色（用于轻量列表请求）",
+        )
     )
-    daily_most_discussed_agent: Optional[UserAnalyticsReportDailyTopAgentItem] = Field(
+    daily_most_discussed_agent: Optional[
+        UserAnalyticsReportDailyTopAgentItem
+    ] = Field(
         None,
         description="日报当日聊天轮数最高角色（用于轻量列表请求）",
     )
-    charts: Optional[UserAnalyticsReportCharts] = Field(None, description="图表数据")
+    charts: Optional[UserAnalyticsReportCharts] = Field(
+        None, description="图表数据"
+    )
     created_at: Optional[str] = Field(None, description="创建时间")
 
 

@@ -5,19 +5,19 @@ Revises: 43b18ddc9846
 Create Date: 2025-08-08 07:31:25.068007+00:00
 
 """
+
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
-revision = 'f7f85747dd24'
-down_revision = '43b18ddc9846'
+revision = "f7f85747dd24"
+down_revision = "43b18ddc9846"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
     """Bridge upgrade - checks if unique constraint exists before creating"""
-    
+
     # 检查唯一索引是否已存在，如果不存在则创建
     # 这样可以安全地从v1.0.1-dev迁移到main
     op.execute("""

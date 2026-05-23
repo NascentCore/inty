@@ -32,7 +32,9 @@ class FestivalMemoryConfigCreate(BaseModel):
         default="UTC",
         description="节日日期与执行时间所属时区，IANA 名如 Asia/Shanghai",
     )
-    run_at_date: date = Field(..., description="执行日期（该时区下），须不早于节日日期")
+    run_at_date: date = Field(
+        ..., description="执行日期（该时区下），须不早于节日日期"
+    )
     run_at_hour: int = Field(
         ...,
         ge=RUN_AT_HOUR_MIN,
@@ -57,7 +59,9 @@ class FestivalMemoryConfigCreate(BaseModel):
     @model_validator(mode="after")
     def run_at_not_before_festival(self) -> "FestivalMemoryConfigCreate":
         if self.run_at_date < self.festival_date:
-            raise ValueError("Run date cannot be earlier than the festival date")
+            raise ValueError(
+                "Run date cannot be earlier than the festival date"
+            )
         return self
 
 
@@ -100,7 +104,9 @@ class FestivalMemoryConfigUpdate(BaseModel):
         run_at = self.run_at_date
         festival = self.festival_date
         if run_at is not None and festival is not None and run_at < festival:
-            raise ValueError("Run date cannot be earlier than the festival date")
+            raise ValueError(
+                "Run date cannot be earlier than the festival date"
+            )
         return self
 
 
@@ -113,7 +119,9 @@ class FestivalMemoryConfigInDB(BaseModel):
     prompt: str
     enabled: bool
     timezone: str = Field(..., description="节日与执行时间所属时区，IANA 名")
-    run_at_date: Optional[date] = Field(None, description="执行日期（该时区下）")
+    run_at_date: Optional[date] = Field(
+        None, description="执行日期（该时区下）"
+    )
     run_at_hour: Optional[int] = Field(
         None, description="执行时刻（该时区下本地小时）0-23"
     )
@@ -147,14 +155,18 @@ class FestivalMemoryConfigInDB(BaseModel):
 class FestivalMemoryExtractionRunRequest(BaseModel):
     """立即执行节日记忆抽取请求：可指定 config_id 或直接传节日参数"""
 
-    config_id: Optional[int] = Field(None, description="配置 ID，若指定则从表取配置")
+    config_id: Optional[int] = Field(
+        None, description="配置 ID，若指定则从表取配置"
+    )
     festival_name: Optional[str] = Field(
         None, description="节日名称（与 config_id 二选一）"
     )
     festival_date: Optional[date] = Field(
         None, description="节日日期（与 config_id 二选一）"
     )
-    prompt: Optional[str] = Field(None, description="抽取提示词（与 config_id 二选一）")
+    prompt: Optional[str] = Field(
+        None, description="抽取提示词（与 config_id 二选一）"
+    )
     timezone: Optional[str] = Field(
         default="UTC",
         description="节日日期所属时区（仅当未传 config_id 时用于窗口计算）",

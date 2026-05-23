@@ -25,16 +25,12 @@ def upgrade() -> None:
     connection = op.get_bind()
 
     # 检查是否已有主键约束
-    result = connection.execute(
-        sa.text(
-            """
+    result = connection.execute(sa.text("""
         SELECT COUNT(*) 
         FROM information_schema.table_constraints 
         WHERE table_name = 'resources' 
         AND constraint_type = 'PRIMARY KEY'
-    """
-        )
-    )
+    """))
 
     has_primary_key = result.scalar() > 0
 
@@ -46,25 +42,21 @@ def upgrade() -> None:
         op.create_primary_key("pk_resources", "resources", ["url"])
 
         # 确保有 url 列的索引
-        result = connection.execute(
-            sa.text(
-                """
+        result = connection.execute(sa.text("""
                     SELECT COUNT(*) 
                     FROM pg_indexes 
                     WHERE tablename = 'resources' 
                     AND indexname = 'ix_resources_url'
-                """
-            )
-        )
+                """))
         index_exists = result.scalar() > 0
 
         if not index_exists:
-            op.create_index("ix_resources_url", "resources", ["url"], unique=False)
+            op.create_index(
+                "ix_resources_url", "resources", ["url"], unique=False
+            )
     else:
         # 如果已有主键，检查是否是 url 列
-        result = connection.execute(
-            sa.text(
-                """
+        result = connection.execute(sa.text("""
             SELECT column_name 
             FROM information_schema.key_column_usage 
             WHERE table_name = 'resources' 
@@ -74,28 +66,24 @@ def upgrade() -> None:
                 WHERE table_name = 'resources' 
                 AND constraint_type = 'PRIMARY KEY'
             )
-        """
-            )
-        )
+        """))
 
         pk_columns = [row[0] for row in result.fetchall()]
         if "url" not in pk_columns:
             # 如果主键不是 url，需要先删除现有主键再添加新的
             # 获取实际的主键约束名称
-            result = connection.execute(
-                sa.text(
-                    """
+            result = connection.execute(sa.text("""
                 SELECT constraint_name 
                 FROM information_schema.table_constraints 
                 WHERE table_name = 'resources' 
                 AND constraint_type = 'PRIMARY KEY'
-            """
-                )
-            )
+            """))
             constraint_name = result.scalar()
 
             if constraint_name:
-                op.drop_constraint(constraint_name, "resources", type_="primary")
+                op.drop_constraint(
+                    constraint_name, "resources", type_="primary"
+                )
 
             op.create_primary_key("pk_resources", "resources", ["url"])
 

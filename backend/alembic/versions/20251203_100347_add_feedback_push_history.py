@@ -98,4 +98,3 @@ def downgrade() -> None:
         table_name="feedback_push_history",
     )
     op.drop_table("feedback_push_history")
-
