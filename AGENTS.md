@@ -97,8 +97,9 @@ You should only changes and use code in the following dirs:
 - Answer in Mandarin（使用简体中文回答）
   - 例外：概念名词必须使用英文，以方便与代码关联、对齐
 
-## Engineering guidelines
+## Writing code
 
+- Write few & dense code to accomplish the requests
 - Document your code as you go, not after.
 - Make a plan before diving into the coding.
 - Test everything, often, as you write it.
