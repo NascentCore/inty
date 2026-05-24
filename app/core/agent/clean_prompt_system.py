@@ -1,10 +1,13 @@
-"""
-Review-only clean agent prompt system.
+"""Review-only clean agent prompt system.
 
 Design goals:
 1) Keep behavior parity with the current Agent prompt assembly/tool-loop behavior.
 2) Keep agent loop code free of direct DB access.
 3) Use structured types + explicit dependency passing at function boundaries.
+
+Prompt message ordering is delegated to ``app.core.agent.prompting.assembler``.
+This module remains on the legacy HTTP chat path and does not assemble
+companion websocket prompts.
 """
 
 from __future__ import annotations

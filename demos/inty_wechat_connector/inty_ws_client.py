@@ -55,6 +55,13 @@ def chat_turn_frame(agent_id: str, user_text: str, message_id: str) -> str:
 
 
 async def ask_inty(user_text: str, conn: IntyWsConnection) -> str:
+    """Send one WeChat text message through the companion websocket API.
+
+    Each call opens a fresh websocket connection, sends ``client_context`` first,
+    sends one chat turn frame, then returns the first successful assistant text.
+    The frame contract is defined by the chat websocket schemas.
+    """
+
     assert conn.api_base_url.strip() != ""
     assert conn.jwt.strip() != ""
     assert conn.agent_id.strip() != ""

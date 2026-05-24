@@ -151,6 +151,13 @@ def build_system_messages(
     deps: PromptAssemblerDeps,
     config: PromptAssemblerConfig,
 ) -> list[SystemMessage]:
+    """Build legacy HTTP chat system messages for a normal role-play agent.
+
+    The order preserves shipped role-card behavior: shared axioms first,
+    character prompts, chat-mode prompts, user profile/time context, seasonal
+    prompts, then official-assistant extras when the agent id matches.
+    """
+
     user_name = _extract_user_name_from_profile(request.user_profile)
     system_messages: list[SystemMessage] = []
     system_messages.extend(_axiom_system_messages_prefix())
@@ -254,6 +261,13 @@ def build_system_messages_for_official_assistant(
     deps: PromptAssemblerDeps,
     config: PromptAssemblerConfig,
 ) -> list[SystemMessage]:
+    """Build the reduced legacy prompt stack for the official assistant.
+
+    The official assistant keeps shared axioms and character context, then adds
+    manual/change-log tool instructions; it intentionally skips normal role-play
+    mode prompts so support answers stay product-facing.
+    """
+
     user_name = _extract_user_name_from_profile(request.user_profile)
     system_messages: list[SystemMessage] = []
     system_messages.extend(_axiom_system_messages_prefix())
@@ -302,6 +316,13 @@ def build_system_messages_for_chat(
     deps: PromptAssemblerDeps,
     config: PromptAssemblerConfig,
 ) -> list[SystemMessage]:
+    """Select the legacy HTTP chat prompt stack for one agent turn.
+
+    This dispatch is the public assembler boundary used by
+    ``clean_prompt_system``; companion websocket turns use the companion prompt
+    stack instead.
+    """
+
     if _is_official_assistant(context=context, config=config):
         return build_system_messages_for_official_assistant(
             context=context,

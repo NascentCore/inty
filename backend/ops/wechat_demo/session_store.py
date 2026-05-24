@@ -209,6 +209,13 @@ async def _mark_session_stopped_after_bridge(
 
 
 async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
+    """Drive one Ops-only WeChat demo session from QR login to bridge exit.
+
+    The in-memory phase model is ``QR_LOGIN`` -> ``BRIDGE_RUNNING`` ->
+    ``STOPPED`` or ``FAILED``.  Sessions belong to one Ops process and vanish
+    when that process restarts.
+    """
+
     (
         IntyWsConnection,
         WeixinBridgeRunner,

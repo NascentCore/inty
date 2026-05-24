@@ -6,6 +6,10 @@ bootstrap flag is incomplete, ``run_companion_user_chat_turn`` enters
 assistant can update prompt slices, optionally choose a post-bootstrap
 ``context_mode``, then mark setup complete before normal user-chat routing
 resumes.
+
+The module is named ``bootstrap``; the tool names and ``context.json`` fields
+still use ``bootstrap_user_interactive`` wording because those names are part of
+the persisted setup contract.
 """
 
 from __future__ import annotations
