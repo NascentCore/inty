@@ -562,8 +562,7 @@ class SurpriseSnapConfig:
     )  # 用户消息数达到这些轮数时触发
 
 
-@dataclass
-class UserAnalyticsReportConfig:
+class UserAnalyticsReportConfig(BaseModel):
     """push worker 侧用户分析预计算调度配置。
 
     默认 enabled / daily_enabled / weekly_enabled / backfill_enabled 均为 False，
@@ -571,6 +570,8 @@ class UserAnalyticsReportConfig:
     .github/workflows/daily_intellimate_user_activity_report.yaml 承担。
     见 docs/FR_USER_ANALYTICS_REPORTS.md。
     """
+
+    model_config = ConfigDict(extra="ignore")
 
     enabled: bool = (
         False  # False 时 push_scheduler 不注册任何 user_analytics 任务
@@ -685,9 +686,10 @@ class PhoneCallConfig:
             self.inbound_number_agent_map = {}
 
 
-@dataclass
-class TTSConfig:
+class TTSConfig(BaseModel):
     """语音播报配置"""
+
+    model_config = ConfigDict(extra="ignore")
 
     # 测试环境启用 fake provider，避免 CI/本地测试依赖真实 TTS API。
     use_fake_tts: bool = False
@@ -790,13 +792,13 @@ def load_config(path: str) -> Config:
         memory_extraction=MemoryExtractionConfig(
             **(data.get("memory_extraction") or {})
         ),
-        user_analytics_report=UserAnalyticsReportConfig(
-            **(data.get("user_analytics_report") or {})
+        user_analytics_report=UserAnalyticsReportConfig.model_validate(
+            data.get("user_analytics_report") or {}
         ),
         fal=FalConfig(**data.get("fal", {})),
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
         phone_call=PhoneCallConfig(**(data.get("phone_call") or {})),
-        tts=TTSConfig(**data.get("tts", {})),
+        tts=TTSConfig.model_validate(data.get("tts") or {}),
         surprise_snap=_parse_surprise_snap_config(data),
     )
 

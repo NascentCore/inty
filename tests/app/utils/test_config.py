@@ -26,6 +26,8 @@ from app.utils.config import (
     LoggingConfig,
     PushNotificationConfig,
     SecurityConfig,
+    TTSConfig,
+    UserAnalyticsReportConfig,
     VerificationConfig,
     _validate_config,
     load_config,
@@ -387,6 +389,34 @@ def test_gemini_live_language_defaults():
 
     assert config.speech_language_code == "en-US"
     assert config.response_language_name == "English"
+
+
+def test_user_analytics_report_config_model_validate_ignores_unknown_keys():
+    settings = UserAnalyticsReportConfig.model_validate(
+        {
+            "enabled": True,
+            "daily_enabled": True,
+            "daily_cron_hour": 9,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.enabled is True
+    assert settings.daily_enabled is True
+    assert settings.daily_cron_hour == 9
+
+
+def test_tts_config_model_validate_ignores_unknown_keys():
+    settings = TTSConfig.model_validate(
+        {
+            "use_fake_tts": True,
+            "voice_message_narration_mode": "dialogue_and_stage_directions",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.use_fake_tts is True
+    assert settings.voice_message_narration_mode == "dialogue_and_stage_directions"
 
 
 def test_chat_messages_window_limit_defaults():
@@ -751,3 +781,57 @@ def test_load_config_gcs_uses_pydantic_validation():
     assert cfg.gcs.bucket == "inty-test-bucket"
     assert cfg.gcs.use_fake_gcs is True
     assert cfg.gcs.fake_gcs_base_dir == "/tmp/test-gcs"
+
+
+def test_load_config_user_analytics_report_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n  api_key: \"test-eleven\"\n",
+        "\n".join(
+            [
+                "user_analytics_report:",
+                "  enabled: true",
+                "  weekly_enabled: true",
+                "  statement_timeout_sec: 90",
+                "  unknown_key: ignored",
+                "elevenlabs:",
+                '  api_key: "test-eleven"',
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.user_analytics_report.enabled is True
+    assert cfg.user_analytics_report.weekly_enabled is True
+    assert cfg.user_analytics_report.statement_timeout_sec == 90
+
+
+def test_load_config_tts_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n  api_key: \"test-eleven\"\n",
+        "\n".join(
+            [
+                "tts:",
+                "  use_fake_tts: true",
+                "  voice_message_narration_mode: dialogue_and_stage_directions",
+                "  unknown_key: ignored",
+                "elevenlabs:",
+                '  api_key: "test-eleven"',
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.tts.use_fake_tts is True
+    assert cfg.tts.voice_message_narration_mode == "dialogue_and_stage_directions"

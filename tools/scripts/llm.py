@@ -28,15 +28,27 @@ def _to_jsonable(obj):
             try:
                 return model_dump()
             except Exception:
-                pass
+                log.debug(
+                    "model_dump fallback failed for %r",
+                    type(obj).__name__,
+                    exc_info=True,
+                )
         except Exception:
-            pass
+            log.debug(
+                "model_dump(mode='json') failed for %r",
+                type(obj).__name__,
+                exc_info=True,
+            )
     dict_fn = getattr(obj, "dict", None)
     if dict_fn is not None and callable(dict_fn):
         try:
             return dict_fn()
         except Exception:
-            pass
+            log.debug(
+                "dict() conversion failed for %r",
+                type(obj).__name__,
+                exc_info=True,
+            )
     if isinstance(obj, dict):
         return {k: _to_jsonable(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
