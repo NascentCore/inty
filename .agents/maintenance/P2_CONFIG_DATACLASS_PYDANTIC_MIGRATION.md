@@ -72,9 +72,9 @@ flowchart TB
 | CFG-PYD-12 | todo | `ElevenLabsConfig` | — | `elevenlabs` | 必填 `api_key`：保留无默认或 `Field(...)` |
 | CFG-PYD-13 | todo | `FalConfig` | — | `fal` | 纯字段 |
 | CFG-PYD-14 | todo | `SurpriseSnapConfig` | — | `_parse_surprise_snap_config` 返回值 | 与解析函数联动；解析函数可改为返回已 validate 的模型 |
-| CFG-PYD-15 | claimed | `UserAnalyticsReportConfig` | — | `user_analytics_report` | 纯字段；claimed in `cursor/agent-maintenance-tasks-b22e` |
+| CFG-PYD-15 | done | `UserAnalyticsReportConfig` | — | `user_analytics_report` | 已迁移为 `BaseModel`；`load_config` 使用 `model_validate`；fixed in `cursor/agent-maintenance-tasks-b22e` |
 | CFG-PYD-16 | todo | `GeminiLiveConfig` | — | `gemini_live` | 纯字段 |
-| CFG-PYD-17 | claimed | `TTSConfig` | — | `tts` | 纯字段；claimed in `cursor/agent-maintenance-tasks-b22e` |
+| CFG-PYD-17 | done | `TTSConfig` | — | `tts` | 已迁移为 `BaseModel`；`load_config` 使用 `model_validate`；fixed in `cursor/agent-maintenance-tasks-b22e` |
 | CFG-PYD-18 | todo | `MemoryExtractionConfig` | — | `memory_extraction` | 内含 `WorkflowMode`；`__post_init__` 字符串→枚举 |
 | CFG-PYD-19 | todo | `PushNotificationConfig` | — | `push_notification` | `stages` 默认 dict；`__post_init__` → `model_validator(after)` |
 | CFG-PYD-20 | todo | `FeaturesConfig` | — | `app.features`（预处理 dict） | `companion_transcript_compaction` 等；`__post_init__` 校验 bootstrap / context_mode |
