@@ -32,6 +32,44 @@ Companion Harness 的目标是为用户提供长期关系中的“虚拟活人�
 
 ## 当前生产架构
 
+下图把 `companion_harness` 收成单盒；内核模块（Manager、Turn、MemoryStore、Tools、LLM）在另图展开。
+
+```mermaid
+flowchart TB
+    subgraph Clients["客户端 / 开发工具"]
+        iMate["iMate App\n(Android / iOS)"]
+        REPL["inty_v2_repl\n(本地终端)"]
+    end
+
+    subgraph AppLayer["app/ 应用层"]
+        WS["/api/v1/chat/ws\nWebSocket 网关"]
+        Svc["companion_chat_service\n(路由 + 组装参数)"]
+    end
+
+    subgraph Harness["app/core/companion_harness\nCompanion Harness 内核"]
+        CH["Companion Harness"]
+    end
+
+    subgraph Worlds["虚拟世界（合成刺激源）"]
+        LS["living_sphere/\n伴侣私人空间"]
+        TC["techno_core/\n集体虚拟世界"]
+    end
+
+    subgraph Storage["持久化"]
+        PG[("Postgres\ncompanion_memory_document_versions")]
+    end
+
+    iMate --> WS
+    REPL --> WS
+    WS --> Svc
+    Svc --> CH
+    CH --> PG
+    CH <--> LS
+    CH <--> TC
+```
+
+### 回合运行时（Harness 内）
+
 ```mermaid
 flowchart TD
   Client["iMate / REPL / debug client"]
