@@ -19,6 +19,7 @@ from app.utils.config import (
     ElevenLabsConfig,
     EmbeddingConfig,
     Environment,
+    FalConfig,
     FirebaseConfig,
     GCSConfig,
     GeminiLiveConfig,
@@ -29,6 +30,8 @@ from app.utils.config import (
     PushNotificationConfig,
     SecurityConfig,
     SurpriseSnapConfig,
+    TTSConfig,
+    UserAnalyticsReportConfig,
     VerificationConfig,
     _validate_config,
     load_config,
@@ -549,6 +552,21 @@ def test_cloudflare_config_model_validate_ignores_unknown_keys():
     assert settings.fallback_to_original is False
 
 
+def test_elevenlabs_config_model_validate_ignores_unknown_keys():
+    settings = ElevenLabsConfig.model_validate(
+        {
+            "api_key": "eleven-key",
+            "model": "eleven_test_model",
+            "enabled": False,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.api_key == "eleven-key"
+    assert settings.model == "eleven_test_model"
+    assert settings.enabled is False
+
+
 def test_memory_extraction_config_model_validate_ignores_unknown_keys():
     settings = MemoryExtractionConfig.model_validate(
         {
@@ -563,6 +581,32 @@ def test_memory_extraction_config_model_validate_ignores_unknown_keys():
     )
     assert settings.trigger_new_user_messages == 12
     assert not hasattr(settings, "unknown_key")
+
+
+def test_user_analytics_report_config_model_validate_ignores_unknown_keys():
+    settings = UserAnalyticsReportConfig.model_validate(
+        {
+            "enabled": True,
+            "daily_enabled": True,
+            "batch_size": 100,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.enabled is True
+    assert settings.daily_enabled is True
+    assert settings.batch_size == 100
+
+
+def test_fal_config_model_validate_ignores_unknown_keys():
+    settings = FalConfig.model_validate(
+        {
+            "api_key": "fal-key",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.api_key == "fal-key"
 
 
 def test_push_notification_config_model_validate_defaults_stages():
@@ -582,6 +626,22 @@ def test_surprise_snap_config_model_validate_defaults_trigger_rounds():
     first.trigger_rounds.append(21)
     assert second.trigger_rounds == [3, 8, 15]
     assert not hasattr(first, "unknown_key")
+
+
+def test_tts_config_model_validate_ignores_unknown_keys():
+    settings = TTSConfig.model_validate(
+        {
+            "use_fake_tts": True,
+            "voice_message_narration_mode": "dialogue_and_stage_directions",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.use_fake_tts is True
+    assert (
+        settings.voice_message_narration_mode
+        == "dialogue_and_stage_directions"
+    )
 
 
 def test_agent_config_langsmith_always_trace_user_emails_defaults_to_empty_list():
@@ -910,6 +970,32 @@ def test_load_config_gemini_live_uses_pydantic_validation():
     assert not hasattr(cfg.gemini_live, "unknown_key")
 
 
+def test_load_config_elevenlabs_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n  api_key: \"test-eleven\"\n",
+        "\n".join(
+            [
+                "elevenlabs:",
+                "  api_key: test-eleven-model",
+                "  model: eleven_test_model",
+                "  enabled: false",
+                "  unknown_key: ignored",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.elevenlabs.api_key == "test-eleven-model"
+    assert cfg.elevenlabs.model == "eleven_test_model"
+    assert cfg.elevenlabs.enabled is False
+
+
 def test_load_config_memory_extraction_uses_pydantic_validation():
     yaml_text = _minimal_yaml_for_load_config(
         "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
@@ -963,6 +1049,32 @@ def test_load_config_push_notification_uses_pydantic_validation():
     assert not hasattr(cfg.push_notification, "unknown_key")
 
 
+def test_load_config_user_analytics_report_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n",
+        "\n".join(
+            [
+                "user_analytics_report:",
+                "  enabled: true",
+                "  daily_enabled: true",
+                "  batch_size: 100",
+                "  unknown_key: ignored",
+                "elevenlabs:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.user_analytics_report.enabled is True
+    assert cfg.user_analytics_report.daily_enabled is True
+    assert cfg.user_analytics_report.batch_size == 100
+
+
 def test_load_config_surprise_snap_uses_pydantic_validation():
     yaml_text = _minimal_yaml_for_load_config(
         "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
@@ -990,3 +1102,52 @@ def test_load_config_surprise_snap_uses_pydantic_validation():
     )
     assert cfg.surprise_snap.trigger_rounds == [2, 4]
     assert not hasattr(cfg.surprise_snap, "unknown_key")
+
+
+def test_load_config_fal_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n",
+        "\n".join(
+            [
+                "fal:",
+                "  api_key: fal-yaml-key",
+                "  unknown_key: ignored",
+                "elevenlabs:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.fal.api_key == "fal-yaml-key"
+
+
+def test_load_config_tts_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n",
+        "\n".join(
+            [
+                "tts:",
+                "  use_fake_tts: true",
+                "  voice_message_narration_mode: dialogue_and_stage_directions",
+                "  unknown_key: ignored",
+                "elevenlabs:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.tts.use_fake_tts is True
+    assert (
+        cfg.tts.voice_message_narration_mode
+        == "dialogue_and_stage_directions"
+    )
