@@ -7,7 +7,6 @@ import os
 import uuid
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
 
 from hermes_constants import get_hermes_home
 from loguru import logger
@@ -38,9 +37,9 @@ class _WechatDemoSession:
     inty_jwt: str
     agent_id: str
     phase: _StorePhase = _StorePhase.QR_LOGIN
-    qr_flow: Any = None
+    qr_flow: WeixinQrFlow | None = None
     error: str | None = None
-    channel_session: Any = None
+    channel_session: WeixinChannelSession | None = None
     orchestrator_task: asyncio.Task[None] | None = None
     bridge_task: asyncio.Task[None] | None = None
 
@@ -136,7 +135,8 @@ async def _stop_session_tasks(session: _WechatDemoSession) -> None:
 
 
 async def _set_session_qr_flow(
-    session: _WechatDemoSession, qr_flow: Any
+    session: _WechatDemoSession,
+    qr_flow: WeixinQrFlow,
 ) -> bool:
     async with _lock:
         if session.phase == _StorePhase.STOPPED:
@@ -155,7 +155,7 @@ async def _fail_session(session: _WechatDemoSession, error: str) -> None:
 
 async def _set_session_channel(
     session: _WechatDemoSession,
-    channel_session: Any,
+    channel_session: WeixinChannelSession,
 ) -> bool:
     async with _lock:
         if session.phase == _StorePhase.STOPPED:

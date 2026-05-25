@@ -6,17 +6,21 @@ import asyncio
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+
 from loguru import logger
 
 from backend.ops.weixin_channel.inty_ws_client import (
     IntyWsChannelClient,
     IntyWsChannelConfig,
 )
-from backend.ops.weixin_channel.transport import (
-    WeixinCredential,
-    WeixinInboundMessage,
-    WeixinTransport,
-)
+
+if TYPE_CHECKING:
+    from backend.ops.weixin_channel.transport import (
+        WeixinCredential,
+        WeixinInboundMessage,
+        WeixinTransport,
+    )
 
 
 @dataclass
@@ -44,6 +48,11 @@ class WeixinChannelSession:
         self._stop = asyncio.Event()
 
     async def start(self) -> None:
+        from backend.ops.weixin_channel.transport import (
+            WeixinCredential,
+            WeixinTransport,
+        )
+
         cred = WeixinCredential(
             account_id=self.binding.weixin_account_id,
             token=self.binding.weixin_token,

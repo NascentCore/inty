@@ -7,15 +7,15 @@ import time
 from enum import StrEnum
 
 import aiohttp
+from gateway.platforms.weixin import save_weixin_account
 
-from gateway.platforms.weixin import (
+from backend.ops.weixin_channel.ilink_qr_client import (
     EP_GET_BOT_QR,
     EP_GET_QR_STATUS,
     ILINK_BASE_URL,
     QR_TIMEOUT_MS,
-    _api_get,
-    _make_ssl_connector,
-    save_weixin_account,
+    ilink_api_get,
+    make_ilink_ssl_connector,
 )
 
 
@@ -44,10 +44,10 @@ class WeixinQrFlow:
         assert timeout_seconds > 0
         bot_type = "3"
         async with aiohttp.ClientSession(
-            trust_env=True, connector=_make_ssl_connector()
+            trust_env=True, connector=make_ilink_ssl_connector()
         ) as session:
             try:
-                qr_resp = await _api_get(
+                qr_resp = await ilink_api_get(
                     session,
                     base_url=ILINK_BASE_URL,
                     endpoint=f"{EP_GET_BOT_QR}?bot_type={bot_type}",
@@ -75,7 +75,7 @@ class WeixinQrFlow:
 
             while time.monotonic() < deadline:
                 try:
-                    status_resp = await _api_get(
+                    status_resp = await ilink_api_get(
                         session,
                         base_url=current_base_url,
                         endpoint=f"{EP_GET_QR_STATUS}?qrcode={qrcode_value}",
@@ -105,7 +105,7 @@ class WeixinQrFlow:
                             self.error = "QR expired too many times"
                             return None
                         try:
-                            qr_resp = await _api_get(
+                            qr_resp = await ilink_api_get(
                                 session,
                                 base_url=ILINK_BASE_URL,
                                 endpoint=f"{EP_GET_BOT_QR}?bot_type={bot_type}",
