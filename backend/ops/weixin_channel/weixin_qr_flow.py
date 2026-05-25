@@ -1,10 +1,11 @@
-"""Weixin iLink QR login with pollable status (for Ops web demo)."""
+"""Weixin iLink QR login with pollable status (Ops ``/wechat-demo`` sessions)."""
 
 from __future__ import annotations
 
 import asyncio
 import time
 from enum import StrEnum
+
 import aiohttp
 
 from gateway.platforms.weixin import (
@@ -83,7 +84,7 @@ class WeixinQrFlow:
                 except asyncio.TimeoutError:
                     await asyncio.sleep(1)
                     continue
-                except Exception as exc:
+                except Exception:
                     await asyncio.sleep(1)
                     continue
 

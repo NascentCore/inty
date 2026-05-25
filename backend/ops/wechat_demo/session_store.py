@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from hermes_constants import get_hermes_home
 from loguru import logger
 
 from backend.ops.schemas.wechat_demo import (
@@ -16,37 +17,11 @@ from backend.ops.schemas.wechat_demo import (
     WechatDemoSessionPhase,
     WechatDemoSessionView,
 )
-
-
-def _ensure_wechat_demo_dependencies() -> None:
-    try:
-        import gateway.config  # noqa: F401
-    except ImportError as exc:
-        raise ImportError(
-            "WeChat demo requires hermes-agent[messaging]; "
-            "pip install -r demos/inty_wechat_connector/requirements.txt"
-        ) from exc
-
-
-# TODO(cleanup): This is a hack to import a module for wechat demo.
-# We must revise the architecture to wrap wechat connector into a stable component.
-# So that the deps is included in the backend package.
-# The issue is that the hermes-agent deps on conflicting packages with versions different from the inty backend.
-def _import_wechat_demo_runtime() -> tuple[Any, ...]:
-    _ensure_wechat_demo_dependencies()
-    from backend.ops.weixin_channel.session import (
-        WeixinChannelBinding,
-        WeixinChannelSession,
-    )
-    from demos.inty_wechat_connector.weixin_qr_flow import WeixinQrFlow
-    from hermes_constants import get_hermes_home
-
-    return (
-        WeixinChannelBinding,
-        WeixinChannelSession,
-        WeixinQrFlow,
-        get_hermes_home,
-    )
+from backend.ops.weixin_channel.session import (
+    WeixinChannelBinding,
+    WeixinChannelSession,
+)
+from backend.ops.weixin_channel.weixin_qr_flow import WeixinQrFlow
 
 
 class _StorePhase(StrEnum):
@@ -97,7 +72,6 @@ def _view(session: _WechatDemoSession) -> WechatDemoSessionView:
 async def create_session(
     body: WechatDemoSessionCreate,
 ) -> WechatDemoSessionView:
-    _ensure_wechat_demo_dependencies()
     session_id = str(uuid.uuid4())
     session = _WechatDemoSession(
         session_id=session_id,
@@ -211,12 +185,6 @@ async def _mark_session_stopped_after_bridge(
 
 
 async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
-    (
-        WeixinChannelBinding,
-        WeixinChannelSession,
-        WeixinQrFlow,
-        get_hermes_home,
-    ) = _import_wechat_demo_runtime()
     hermes_home = str(get_hermes_home())
     os.makedirs(hermes_home, exist_ok=True)
     qr_flow = WeixinQrFlow(hermes_home)

@@ -10,6 +10,7 @@ on:
   #     # 数据库改动以后端部署为出发点，ops 平台不做部署
   #     # - "backend/alembic/**/*.py"
   #     - "backend/ops/**"
+  #     - "requirements.txt"
   #     - "devops/config.yaml.dev"
   #     - "devops/config.yaml.prod"
   #     - "evaluation/**/*.tsx"

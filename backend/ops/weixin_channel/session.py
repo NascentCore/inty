@@ -6,20 +6,17 @@ import asyncio
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
-
 from loguru import logger
 
 from backend.ops.weixin_channel.inty_ws_client import (
     IntyWsChannelClient,
     IntyWsChannelConfig,
 )
-
-if TYPE_CHECKING:
-    from backend.ops.weixin_channel.transport import (
-        WeixinInboundMessage,
-        WeixinTransport,
-    )
+from backend.ops.weixin_channel.transport import (
+    WeixinCredential,
+    WeixinInboundMessage,
+    WeixinTransport,
+)
 
 
 @dataclass
@@ -47,13 +44,6 @@ class WeixinChannelSession:
         self._stop = asyncio.Event()
 
     async def start(self) -> None:
-        # Hermes ``gateway`` is optional (``hermes-agent[messaging]``); defer import so
-        # CI can import ``WeixinChannelSession`` without that extra dependency.
-        from backend.ops.weixin_channel.transport import (
-            WeixinCredential,
-            WeixinTransport,
-        )
-
         cred = WeixinCredential(
             account_id=self.binding.weixin_account_id,
             token=self.binding.weixin_token,

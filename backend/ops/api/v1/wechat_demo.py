@@ -29,16 +29,7 @@ router = APIRouter(
 async def create_wechat_demo_session(
     body: WechatDemoSessionCreate,
 ) -> Any:
-    try:
-        view = await session_store.create_session(body)
-    except ImportError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "WeChat demo requires hermes-agent[messaging]; "
-                f"install demos/inty_wechat_connector/requirements.txt ({exc})"
-            ),
-        ) from exc
+    view = await session_store.create_session(body)
     return APIResponse.success(data=view)
 
 

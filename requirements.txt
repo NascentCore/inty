@@ -1,6 +1,6 @@
 aiohappyeyeballs==2.6.1
-aiohttp==3.12.11
-aiosignal==1.3.2
+aiohttp==3.13.3
+aiosignal==1.4.0
 alembic==1.16.1
 annotated-types==0.7.0
 apscheduler==3.10.4
@@ -72,7 +72,7 @@ msgpack==1.1.0
 multidict==6.4.4
 mypy_extensions==1.1.0
 numpy==2.2.6
-openai==1.82.1
+openai==2.24.0
 orjson==3.10.18
 ormsgpack==1.10.0
 packaging==24.2
@@ -90,20 +90,20 @@ psycopg2-binary==2.9.10
 pyasn1==0.4.8
 pyasn1_modules==0.4.1
 pycparser==2.22
-pydantic==2.11.5
+pydantic==2.12.5
 pydantic-settings==2.9.1
-pydantic_core==2.33.2
-PyJWT==2.10.1
+pydantic_core==2.41.5
+PyJWT==2.12.1
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
-python-dotenv==1.1.0
+python-dotenv==1.2.1
 python-jose==3.4.0
 python-multipart==0.0.20
 python-ulid==3.0.0
-PyYAML==6.0.2
+PyYAML==6.0.3
 rapidfuzz==3.11.0
 regex==2024.11.6
-requests==2.32.3
+requests==2.33.0
 requests-toolbelt==1.0.0
 rsa==4.9.1
 shapely==2.1.1
@@ -112,13 +112,13 @@ sniffio==1.3.1
 soupsieve==2.7
 SQLAlchemy==2.0.41
 starlette==0.46.2
-tenacity==9.1.2
+tenacity==9.1.4
 tiktoken==0.9.0
 tqdm==4.67.1
 trustcall==0.0.39
 typing-inspect==0.9.0
-typing-inspection==0.4.1
-typing_extensions==4.13.2
+typing-inspection==0.4.2
+typing_extensions==4.14.1
 uritemplate==4.2.0
 urllib3==2.4.0
 uvicorn==0.34.2
@@ -137,3 +137,5 @@ twilio
 # 视频处理依赖（ffmpeg 需要系统级安装，支持 libavif 编码器）
 # 注意：ffmpeg 需要系统级安装，不在 requirements.txt 中
 # 确保系统已安装 ffmpeg 且支持 libavif: ffmpeg -encoders | grep avif
+# Ops Weixin channel / iLink QR (WeChat demo)
+hermes-agent[messaging]==0.14.0
