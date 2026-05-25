@@ -69,12 +69,12 @@ flowchart TB
 | CFG-PYD-09 | done | `FirebaseConfig` | — | `firebase` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-10 | done | `GooglePlayConfig` | — | `google_play` | 已迁移为 `BaseModel`；`fallback_tracks` 已修正为 `Optional[list[str]]`；Fixed in `cursor/agent-maintenance-tasks-83c7` |
 | CFG-PYD-11 | done | `CloudflareConfig` | — | `cloudflare` | 已迁移为 `BaseModel`；Fixed in `cursor/agent-maintenance-tasks-83c7` |
-| CFG-PYD-12 | todo | `ElevenLabsConfig` | — | `elevenlabs` | 必填 `api_key`：保留无默认或 `Field(...)` |
-| CFG-PYD-13 | todo | `FalConfig` | — | `fal` | 纯字段 |
+| CFG-PYD-12 | claimed in `cursor/agent-maintenance-tasks-3e21` | `ElevenLabsConfig` | — | `elevenlabs` | 必填 `api_key`：保留无默认或 `Field(...)` |
+| CFG-PYD-13 | claimed in `cursor/agent-maintenance-tasks-3e21` | `FalConfig` | — | `fal` | 纯字段 |
 | CFG-PYD-14 | done | `SurpriseSnapConfig` | — | `_parse_surprise_snap_config` 返回值 | 已迁移为 `BaseModel`；解析函数返回 validated model；Fixed in `cursor/agent-maintenance-tasks-772c` |
-| CFG-PYD-15 | todo | `UserAnalyticsReportConfig` | — | `user_analytics_report` | 纯字段 |
+| CFG-PYD-15 | claimed in `cursor/agent-maintenance-tasks-3e21` | `UserAnalyticsReportConfig` | — | `user_analytics_report` | 纯字段 |
 | CFG-PYD-16 | done | `GeminiLiveConfig` | — | `gemini_live` | 已迁移为 `BaseModel`；Fixed in `cursor/agent-maintenance-tasks-ed41` |
-| CFG-PYD-17 | todo | `TTSConfig` | — | `tts` | 纯字段 |
+| CFG-PYD-17 | claimed in `cursor/agent-maintenance-tasks-3e21` | `TTSConfig` | — | `tts` | 纯字段 |
 | CFG-PYD-18 | done | `MemoryExtractionConfig` | — | `memory_extraction` | 已迁移为 `BaseModel`；`WorkflowMode` 由 Pydantic 字符串→枚举；Fixed in `cursor/agent-maintenance-tasks-772c` |
 | CFG-PYD-19 | done | `PushNotificationConfig` | — | `push_notification` | 已迁移为 `BaseModel`；`stages` 默认值由 `model_validator(after)` 保持；Fixed in `cursor/agent-maintenance-tasks-772c` |
 | CFG-PYD-20 | todo | `FeaturesConfig` | — | `app.features`（预处理 dict） | `companion_transcript_compaction` 等；`__post_init__` 校验 bootstrap / context_mode |
