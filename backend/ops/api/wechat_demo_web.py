@@ -48,6 +48,8 @@ _WECHAT_DEMO_HTML = """<!DOCTYPE html>
     function renderQr(url) {
       const el = document.getElementById("qr");
       if (!url) { el.innerHTML = ""; return; }
+      // TODO: replace qrserver.com with backend-generated PNG via Python qrcode package
+      // (https://pypi.org/project/qrcode/) — e.g. GET /sessions/{id}/qrcode or inline base64.
       const imgUrl = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data="
         + encodeURIComponent(url);
       el.innerHTML = '<p>Scan with WeChat:</p>'
