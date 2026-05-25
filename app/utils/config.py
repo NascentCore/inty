@@ -734,6 +734,10 @@ class Config:
     )
 
 
+# TODO(INTY_CONFIG_YAML): add resolve_inty_config_yaml_path() — INTY_CONFIG_YAML or config.yaml;
+# used by app.core.config, backend/alembic/env.py, and standalone scripts.
+
+
 def load_config(path: str) -> Config:
     """加载配置文件
 

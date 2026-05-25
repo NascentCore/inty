@@ -115,6 +115,7 @@ jobs:
 
       - name: Ensure single alembic head
         run: |
+          # TODO(INTY_CONFIG_YAML): env INTY_CONFIG_YAML=devops/config.yaml.test (alembic env.py import needs config)
           export PYTHONPATH=.
           export ALEMBIC_CONFIG=backend/alembic/alembic.ini
           heads_count=$(python -m alembic heads | wc -l)
@@ -129,8 +130,10 @@ jobs:
           ./tests/alembic/test_custom_config.sh
         env:
           PYTHONPATH: .
+          # TODO(INTY_CONFIG_YAML): set INTY_CONFIG_YAML=devops/config.yaml.test when test_custom_config.sh stops using cp
       - name: Run python tests
         run: |
+          # TODO(INTY_CONFIG_YAML): replace cp with INTY_CONFIG_YAML=devops/config.yaml.test
           cp devops/config.yaml.test config.yaml
           # alembic upgrade head: no need to run, as backend/inty/start.sh already includes it
           ./backend/inty/start.sh --test 2>&1 | tee inty_backend.log &
@@ -168,6 +171,7 @@ jobs:
 
       - name: Start push worker and verify startup
         run: |
+          # TODO(INTY_CONFIG_YAML): replace cp with INTY_CONFIG_YAML=devops/config.yaml.test
           cp devops/config.yaml.test config.yaml
           ./backend/push_worker/start.sh 2>&1 | tee push_worker.log &
 

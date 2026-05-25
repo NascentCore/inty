@@ -47,6 +47,7 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Use prod IntelliMate DB config (primary when replica omitted)
+        # TODO(INTY_CONFIG_YAML): replace cp with INTY_CONFIG_YAML=devops/config.yaml.prod on run step env
         run: cp devops/config.yaml.prod config.yaml
 
       - name: Resolve report date (T-1 UTC if unset)

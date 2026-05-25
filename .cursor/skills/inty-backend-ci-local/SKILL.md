@@ -86,6 +86,8 @@ Alembic：`backend/alembic/env.py` 在未传 `-x config=...` 时会回落到 **`
 
 ### 与 GHA 文案差异（可选 `cp`）
 
+<!-- TODO(INTY_CONFIG_YAML): align ci_backend.yaml to INTY_CONFIG_YAML only; remove cp recommendation here -->
+
 [`ci_backend.yaml`](.github/workflows/ci_backend.yaml) 里仍是 `cp devops/config.yaml.test config.yaml`；若你要**逐字对齐 workflow 的 shell**，可继续用复制；与 `INTY_CONFIG_YAML=devops/config.yaml.test` **在行为上等价**（只要在任何进程首次 `import app.core.config` 之前定好其一）。
 
 先**停掉**本机占用 **8000** 的旧 `uvicorn`/旧 `./backend/inty/start.sh`（若存在）。若还要跑 [`.cursor/skills/scripts/check_ci_backend_logs.py`](.cursor/skills/scripts/check_ci_backend_logs.py)，建议**删旧日志再起服**，避免历史 ERROR 误报：

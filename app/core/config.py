@@ -1,6 +1,10 @@
 """Load Inty YAML config at process import time.
 
 Path: ``INTY_CONFIG_YAML`` when set, otherwise ``config.yaml`` in the current working directory.
+
+Migration (grep ``TODO(INTY_CONFIG_YAML)``): shared ``resolve_inty_config_yaml_path()`` in
+``app.utils.config``; entrypoints export env instead of ``cp devops/config.yaml.*`` — see
+workspace TODO list ``resolve-helper`` … ``skills-verify``.
 """
 
 import getpass
@@ -38,6 +42,7 @@ from app.utils.config import (
     load_config,
 )
 
+# TODO(INTY_CONFIG_YAML): use resolve_inty_config_yaml_path() from app.utils.config
 _CONFIG_PATH = (
     os.environ.get("INTY_CONFIG_YAML") or "config.yaml"
 ).strip() or "config.yaml"

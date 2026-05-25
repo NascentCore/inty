@@ -50,6 +50,7 @@ COPY backend/push_worker/start.sh .
 
 # 复制指定的配置文件到 config.yaml
 COPY ${CONFIG_FILE} config.yaml
+# TODO(INTY_CONFIG_YAML): ENV INTY_CONFIG_YAML=config.yaml
 
 # 推送服务不需要暴露端口（不是 HTTP 服务）
 

@@ -9,6 +9,18 @@ with community iLink client implementations. Tencent's iLink Bot API
 (``ILINK_BASE_URL``, endpoints, QR login headers such as ``iLink-App-ClientVersion``,
 media/CDN flows) is not published like MP/WeCom Open Platform contracts—it can
 drift; our QR wire helpers can desync from ``WeixinAdapter`` unless we track upstream.
+iLink time limits (not documented as a fixed wall-clock TTL on the wire):
+
+- **QR poll token** (``qrcode`` query param): short-lived; ``get_qrcode_status`` may
+  return ``status=expired`` (refresh ``get_bot_qrcode``). No ``14``-minute field.
+- **QR login client budget**: callers pass ``timeout_seconds`` (wechat-demo uses
+  ``WECHAT_DEMO_QR_LOGIN_POLL_TIMEOUT_SECONDS`` = 480s / 8 min).
+- **Post-login ``bot_token``** (bridge ``weixin_token``), after QR ``status=confirmed``:
+  iLink does **not** return ``expires_in``, ``valid_until``, or any TTL. There is no
+  documented wall-clock lifetime (not 14 minutes — do not confuse with ``errcode=-14``).
+  The token stays usable until ``getupdates`` / ``sendmessage`` fail with
+  ``errcode=-14`` (session expired); then re-scan QR. Hermes: ``SESSION_EXPIRED_ERRCODE``.
+  Empirical lifetime varies (hours to days reported); Ops must not assume a fixed duration.
 """
 
 from __future__ import annotations
@@ -26,6 +38,9 @@ ILINK_APP_CLIENT_VERSION = (2 << 16) | (2 << 8) | 0
 EP_GET_BOT_QR = "ilink/bot/get_bot_qrcode"
 EP_GET_QR_STATUS = "ilink/bot/get_qrcode_status"
 QR_TIMEOUT_MS = 35_000
+
+# Post-QR bot_token session end signal (iLink wire + Hermes gateway.platforms.weixin).
+ILINK_SESSION_EXPIRED_ERRCODE = -14
 
 
 def make_ilink_ssl_connector() -> aiohttp.TCPConnector:

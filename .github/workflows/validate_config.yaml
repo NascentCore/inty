@@ -64,6 +64,7 @@ jobs:
 
       - name: Validate configs
         run: |
+          # TODO(INTY_CONFIG_YAML): replace cp with INTY_CONFIG_YAML=devops/config.yaml.test
           # config.py 默认加载 config.yaml 文件，因此需要创建一份
           cp devops/config.yaml.test config.yaml
           pytest -v -s devops/test_config_yaml_configs.py

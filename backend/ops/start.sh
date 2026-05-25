@@ -82,6 +82,7 @@ LOG_FILE="$WORKSPACE/inty.log"
 
 echo "Starting database migrations..."
 export PYTHONPATH=.
+# TODO(INTY_CONFIG_YAML): if unset and --local, export devops/config.yaml.local before alembic/uvicorn
 export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/backend/alembic/alembic.ini}"
 alembic -c "$ALEMBIC_CONFIG" upgrade head
 

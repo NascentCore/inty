@@ -12,12 +12,15 @@ def _load_runtime_config() -> Config:
     """读取 Alembic -x 自定义参数，根据指定路径加载配置文件。
     当 -x config=<path> 存在时仅从 app.utils.config 加载，不依赖 config.yaml；
     否则使用 app.core.config 的 global_config_loaded_from_config_yaml（需 config.yaml 存在）。
+
+    TODO(INTY_CONFIG_YAML): else branch — load via resolve_inty_config_yaml_path() + load_config().
     """
     x_args = context.get_x_argument(as_dictionary=True)
     config_path = x_args.get("config", None)
     if config_path:
         logger.info(f"[ALEMBIC] 使用自定义配置文件: {config_path}")
         return load_config(config_path)
+    # TODO(INTY_CONFIG_YAML): log resolved path from INTY_CONFIG_YAML, not hardcoded config.yaml
     logger.info("[ALEMBIC] 使用默认配置文件: config.yaml")
     from app.core.config import global_config_loaded_from_config_yaml
 

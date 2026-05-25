@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -31,7 +32,10 @@ if TYPE_CHECKING:
 
 @dataclass
 class WeixinChannelBinding:
-    """In-memory binding for one Ops demo session (lost on restart).
+    """Binding for one Ops demo session (bridge fields persisted in Postgres).
+
+    ``weixin_token`` is iLink ``bot_token`` after QR confirm. No API TTL field — session
+    ends at ``errcode=-14`` (``ILINK_SESSION_EXPIRED_ERRCODE``); then re-scan QR.
 
     TODO(weixin-1to1-binding): Ops wechat-demo rule — one agent ↔ one Inty user_id ↔
     one WeChat peer_id; reject a second peer or user on the same agent. Persist and
@@ -53,10 +57,20 @@ class WeixinChannelBinding:
 
 
 class WeixinChannelSession:
-    """One Weixin bot + one long-lived Inty WS for proactive and DM replies."""
+    """One Weixin bot + one long-lived Inty WS for proactive and DM replies.
 
-    def __init__(self, binding: WeixinChannelBinding) -> None:
+    TODO(wechat-demo-ws-disconnect-hermes-wording): ``_handle_inbound`` → ``send_user_text``
+    ties WeChat DMs to one Inty WS; after Inty :8000 restart the WS is dead until
+    ``start()`` / wechat-demo restore, but Hermes still delivers "/reset" error text.
+    """
+
+    def __init__(
+        self,
+        binding: WeixinChannelBinding,
+        on_binding_peer_updated: Callable[[WeixinChannelBinding], Awaitable[None]] | None,
+    ) -> None:
         self.binding = binding
+        self._on_binding_peer_updated = on_binding_peer_updated
         self._transport: WeixinTransport | None = None
         self._ws_client: IntyWsChannelClient | None = None
         self._stop = asyncio.Event()
@@ -108,7 +122,12 @@ class WeixinChannelSession:
         # and reject or warn when peer_id != bound peer once 1:1 binding is enforced.
         self.binding.last_peer_id = inbound.peer_id
         self.binding.last_peer_seen_at = datetime.now(timezone.utc)
+        peer_updated = self._on_binding_peer_updated
+        if peer_updated is not None:
+            await peer_updated(self.binding)
         assert self._ws_client is not None
+        # TODO(wechat-demo-ws-disconnect-hermes-wording): catch ``ConnectionClosed*`` and
+        # return Inty-specific user text (or trigger WS reconnect) instead of Hermes "/reset".
         return await self._ws_client.send_user_text(inbound.text)
 
     async def _handle_proactive_push(self, text: str) -> None:
