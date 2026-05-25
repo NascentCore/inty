@@ -32,6 +32,11 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 COPY tools/scripts/requirements.txt scripts_requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r scripts_requirements.txt
 
+# WeChat demo (Ops-only): Hermes iLink QR login + bridge.
+# TODO: Add prod integration of wechat channel, and properly update this instructions.
+COPY demos/inty_wechat_connector/requirements.txt wechat_demo_requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r wechat_demo_requirements.txt
+
 FROM base
 
 ARG CONFIG_FILE
@@ -51,6 +56,8 @@ fi
 
 COPY app/ app/
 COPY backend/ backend/
+# TODO: Add prod integration of wechat channel, and properly update this instructions.
+COPY demos/inty_wechat_connector/ demos/inty_wechat_connector/
 # companion_harness 在 PYTHONPATH 根目录 import living_sphere / techno_core
 COPY living_sphere/ living_sphere/
 COPY techno_core/ techno_core/
