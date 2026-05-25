@@ -1,4 +1,10 @@
-"""Weixin channel session: transport inbound + Inty WS downlink routing."""
+"""Weixin channel session: transport inbound + Inty WS downlink routing.
+
+Inty WS currently carries text-shaped chat only. Inbound image/video/file/voice
+handling (CDN decrypt, voice transcription vs SILK cache, quoted-message media) is
+still owned by Hermes ``WeixinAdapter``; see the module docstring of
+``backend/ops/weixin_channel/transport`` for the per-type plain-language summary.
+"""
 
 from __future__ import annotations
 

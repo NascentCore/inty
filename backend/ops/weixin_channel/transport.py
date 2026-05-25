@@ -7,6 +7,41 @@ AES-128-ECB CDN encrypt/decrypt for media, and SSRF validation on outbound media
 URLs. This Ops bridge currently surfaces text DMs only; dropping Hermes for a
 custom iLink client requires an explicit decision per behavior so Inty UX stays
 intentional—not accidentally weaker or stricter than today.
+
+Hermes Weixin user guide — media (plain language, aligned with upstream docs):
+
+Transport mental model — WeChat/iLink does not give a permanent public raw file
+URL like a static image host. Media goes through their CDN with per-message key
+material. Inbound: download ciphertext from CDN using encrypted query params,
+decrypt with the per-file key embedded in the message payload → real bytes for
+the agent. Outbound: generate a random AES key, encrypt file bytes (AES-128-ECB
++ PKCS#7 per Hermes docs), call ``getuploadurl``, PUT ciphertext to CDN, then
+send the chat message carrying the CDN reference. ``AES-128-ECB`` is only the
+cipher name; the point is "bytes on the CDN hop are encrypted, not a naked GET."
+
+SSRF (separate concern): when the adapter downloads media from a URL supplied in
+message content, it rejects private/internal targets so a peer cannot trick the
+gateway into probing ``localhost`` or RFC1918 addresses.
+
+Inbound — what ``WeixinAdapter`` does with user attachments (before our bridge
+sees ``MessageEvent.text`` only for the text path we wire today):
+
+- Images — fetch from CDN, decrypt, cache locally as JPEG for downstream use.
+- Video — decrypt from CDN, cache as MP4.
+- Files — decrypt, cache; original filename preserved when the payload allows.
+- Voice — if WeChat provides a text transcription, the adapter prefers that text;
+  otherwise download/decrypt audio and cache as SILK for further handling.
+- Quoted / reply-to messages — media referenced inside quotes may be extracted so
+  the agent sees what the user is replying to.
+
+Outbound — Hermes adapter entry points (this module only calls ``send`` today):
+
+- ``send`` — text; Markdown is preserved when the WeChat client + iLink path can
+  render it.
+- ``send_image`` / ``send_image_file`` — native image bubble: encrypt, CDN upload,
+  send reference.
+- ``send_document`` — file attachment: same encrypted CDN upload flow.
+- ``send_video`` — video message: same encrypted CDN upload flow.
 """
 
 from __future__ import annotations
@@ -92,6 +127,7 @@ class WeixinTransport:
             await asyncio.sleep(1)
 
     async def send_text(self, peer_id: str, text: str) -> None:
+        # Text-only path; image/file/video use adapter ``send_*`` (see module doc).
         assert peer_id != ""
         assert text != ""
         adapter = self._adapter
