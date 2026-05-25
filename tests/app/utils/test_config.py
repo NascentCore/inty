@@ -389,6 +389,20 @@ def test_gemini_live_language_defaults():
     assert config.response_language_name == "English"
 
 
+def test_gemini_live_config_model_validate_ignores_unknown_keys():
+    settings = GeminiLiveConfig.model_validate(
+        {
+            "enabled": True,
+            "project_id": "inty-live-test",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.enabled is True
+    assert settings.project_id == "inty-live-test"
+    assert not hasattr(settings, "unknown_key")
+
+
 def test_chat_messages_window_limit_defaults():
     limits = AppConfig.LimitsConfig()
 
@@ -751,3 +765,28 @@ def test_load_config_gcs_uses_pydantic_validation():
     assert cfg.gcs.bucket == "inty-test-bucket"
     assert cfg.gcs.use_fake_gcs is True
     assert cfg.gcs.fake_gcs_base_dir == "/tmp/test-gcs"
+
+
+def test_load_config_gemini_live_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n",
+        "\n".join(
+            [
+                "gemini_live:",
+                "  enabled: true",
+                "  project_id: inty-live-yaml",
+                "  unknown_key: ignored",
+                "elevenlabs:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.gemini_live.enabled is True
+    assert cfg.gemini_live.project_id == "inty-live-yaml"
+    assert not hasattr(cfg.gemini_live, "unknown_key")
