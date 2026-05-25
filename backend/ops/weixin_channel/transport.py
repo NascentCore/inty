@@ -1,4 +1,13 @@
-"""Hermes ``WeixinAdapter`` transport for Ops Weixin channel."""
+"""Hermes ``WeixinAdapter`` transport for Ops Weixin channel.
+
+NOTE(weixin-adapter-product-layer): ``WeixinAdapter`` encapsulates iLink-facing
+product behaviors beyond raw HTTP: inbound message deduplication, Markdown and
+~4000-character chunking, typing indicators, per-peer ``context_token`` persistence,
+AES-128-ECB CDN encrypt/decrypt for media, and SSRF validation on outbound media
+URLs. This Ops bridge currently surfaces text DMs only; dropping Hermes for a
+custom iLink client requires an explicit decision per behavior so Inty UX stays
+intentional—not accidentally weaker or stricter than today.
+"""
 
 from __future__ import annotations
 
@@ -61,6 +70,9 @@ class WeixinTransport:
                 "group_policy": "disabled",
             },
         )
+        # TODO(weixin-adapter-parity): If we replace ``WeixinAdapter``, re-audit
+        # Hermes Weixin docs/features (dedup, Markdown/chunking, typing, media CDN,
+        # context_token store, retry/-14 handling) against Inty requirements.
         adapter = WeixinAdapter(config)
 
         async def handle_weixin_message(event: MessageEvent) -> str:

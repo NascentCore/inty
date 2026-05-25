@@ -5,4 +5,7 @@
 ``IntyWsChannelClient`` speaks the wire protocol via ``app.schemas.chat_websocket``.
 ``WeixinChannelSession`` binds one companion ``(user, agent)`` to one Weixin DM peer
 for inbound replies and proactive downlink delivery.
+
+Upstream parity: ``ilink_qr_client`` TODO(weixin-upstream-parity); adapter
+product-layer NOTE in ``transport``.
 """
