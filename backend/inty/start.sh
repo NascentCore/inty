@@ -44,6 +44,7 @@ done
 # Run database migrations
 echo "Starting database migrations..."
 export PYTHONPATH=.
+# TODO(INTY_CONFIG_YAML): if unset, export devops/config.yaml.test (--test) or devops/config.yaml.dev (--dev)
 export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/backend/alembic/alembic.ini}"
 # 初始化管理员用户 user-01JWZ34Y4D1C92GD86A5R6EWYJ，这个算是预置的用户。
 # 所有预置角色均由这个用户创建。也支持管理系统的登录。

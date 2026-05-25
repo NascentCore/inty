@@ -30,6 +30,7 @@ source .venv/bin/activate
 python -m pip install -U pip setuptools wheel
 python -m pip install -r requirements.txt -r tests/requirements.txt
 
+# TODO(INTY_CONFIG_YAML): export INTY_CONFIG_YAML=devops/config.yaml.test instead of cp
 if [[ ! -f config.yaml ]]; then
   cp devops/config.yaml.test config.yaml
 fi

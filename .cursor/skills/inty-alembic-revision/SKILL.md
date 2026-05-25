@@ -39,6 +39,7 @@ python -m alembic -c backend/alembic/alembic.ini <subcommand> ...
 默认：`config.yaml` 在仓库根，`backend/alembic/env.py` 通过 `app.core.config` 读库 URL。生成迁移前通常：
 
 ```bash
+# TODO(INTY_CONFIG_YAML): prefer export INTY_CONFIG_YAML=devops/config.yaml.test
 cp devops/config.yaml.test config.yaml
 ```
 

@@ -39,6 +39,7 @@ done
 # Run database migrations
 echo "Starting database migrations..."
 export PYTHONPATH=.
+# TODO(INTY_CONFIG_YAML): require or inherit env from caller/CI (e.g. devops/config.yaml.test); no implicit default
 export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-$ROOT/backend/alembic/alembic.ini}"
 python -m alembic -c "$ALEMBIC_CONFIG" upgrade head
 

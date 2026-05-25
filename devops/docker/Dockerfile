@@ -63,6 +63,7 @@ COPY backend/inty/start.sh .
 
 # 复制指定的配置文件到 config.yaml
 COPY ${CONFIG_FILE} config.yaml
+# TODO(INTY_CONFIG_YAML): ENV INTY_CONFIG_YAML=config.yaml
 
 # 暴露端口
 EXPOSE 8000

@@ -2,6 +2,7 @@
 
 Requires LANGSMITH_PROJECT and GCP credentials (app.gcp_service_account_key) when run locally (noci).
 
+# TODO(INTY_CONFIG_YAML): export INTY_CONFIG_YAML=devops/config.yaml.local (remove cp config.yaml)
 cp devops/config.yaml.local config.yaml
 # 拷贝 GCP 凭证到本地
 cp ~/Workspace/NascentCore/inty/.secrets/inty-backend-key.json .secrets

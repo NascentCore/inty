@@ -163,6 +163,7 @@ async def main():
     logger.info(f"验证 Token 格式: {args.validate_token}")
 
     # 加载配置
+    # TODO(INTY_CONFIG_YAML): load_config(resolve_inty_config_yaml_path()) from app.utils.config
     config_path = project_root / "config.yaml"
     try:
         load_config(config_path)

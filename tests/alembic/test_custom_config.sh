@@ -139,6 +139,7 @@ main() {
     # 生成自定义配置
     write_custom_config "$config_path" "$db_name"
     
+    # TODO(INTY_CONFIG_YAML): drop temp repo-root config.yaml; export INTY_CONFIG_YAML="$config_path" instead
     # 创建默认 config.yaml 文件，因为 app/core/config.py 在导入时会尝试加载它
     # 使用 BASE_CONFIG_PATH 作为模板，但使用默认数据库名
     if [ ! -f "$default_config_path" ]; then

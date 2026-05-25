@@ -86,6 +86,7 @@ fi
 if [[ -f .venv/bin/python ]]; then
   export PYTHONPATH=.
   export ALEMBIC_CONFIG=backend/alembic/alembic.ini
+  # TODO(INTY_CONFIG_YAML): export INTY_CONFIG_YAML=devops/config.yaml.test instead of cp
   if [[ ! -f config.yaml ]]; then
     cp devops/config.yaml.test config.yaml
   fi

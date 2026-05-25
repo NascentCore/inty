@@ -61,6 +61,7 @@ COPY docs/INTELLIMATE.md docs/INTELLIMATE.md
 COPY android_app/docs/CHANGE_LOGS.md android_app/docs/CHANGE_LOGS.md
 
 COPY ${CONFIG_FILE} config.yaml
+# TODO(INTY_CONFIG_YAML): ENV INTY_CONFIG_YAML=config.yaml
 
 COPY --from=frontend-builder /app/static/evaluation/ app/static/evaluation/
 
