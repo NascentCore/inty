@@ -25,8 +25,15 @@ if TYPE_CHECKING:
 
 @dataclass
 class WeixinChannelBinding:
-    """In-memory binding for one Ops demo session (lost on restart)."""
+    """In-memory binding for one Ops demo session (lost on restart).
 
+    TODO(weixin-1to1-binding): Ops wechat-demo rule — one agent ↔ one Inty user_id ↔
+    one WeChat peer_id; reject a second peer or user on the same agent. Persist and
+    enforce at bind time (not via last_peer_id heuristics). Registry/API likely in
+    wechat_demo session_store plus Ops wechat-demo routes.
+    """
+
+    # Demo session UUID today; not the enforced 1:1 Inty user until binding is implemented.
     user_id: str
     agent_id: str
     inty_api_base_url: str
@@ -34,6 +41,7 @@ class WeixinChannelBinding:
     weixin_account_id: str
     weixin_token: str
     weixin_base_url: str
+    # Interim: most recent inbound WeChat DM peer; replace with explicit bound_peer_id.
     last_peer_id: str | None = None
     last_peer_seen_at: datetime | None = None
 
@@ -90,12 +98,16 @@ class WeixinChannelSession:
             await self._ws_client.disconnect()
 
     async def _handle_inbound(self, inbound: WeixinInboundMessage) -> str:
+        # TODO(weixin-1to1-binding): last_peer_id is interim; inbound should use bound_peer_id
+        # and reject or warn when peer_id != bound peer once 1:1 binding is enforced.
         self.binding.last_peer_id = inbound.peer_id
         self.binding.last_peer_seen_at = datetime.now(timezone.utc)
         assert self._ws_client is not None
         return await self._ws_client.send_user_text(inbound.text)
 
     async def _handle_proactive_push(self, text: str) -> None:
+        # TODO(weixin-1to1-binding): proactive send targets last_peer_id (latest inbound DM),
+        # not the enforced 1:1 bound peer/user; drop or queue until bound_peer_id is set.
         peer_id = self.binding.last_peer_id
         if peer_id is None:
             logger.debug(
