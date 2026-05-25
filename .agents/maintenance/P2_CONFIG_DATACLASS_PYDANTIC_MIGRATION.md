@@ -67,8 +67,8 @@ flowchart TB
 | CFG-PYD-07 | done | `EmbeddingConfig` | — | `embedding` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-08 | done | `GCSConfig` | — | `gcs` | 已迁移为 `BaseModel`；纯字段 |
 | CFG-PYD-09 | done | `FirebaseConfig` | — | `firebase` | 已迁移为 `BaseModel`；纯字段 |
-| CFG-PYD-10 | todo | `GooglePlayConfig` | — | `google_play` | 修正 `fallback_tracks: list[str] = None` 等为 `Optional[...]` |
-| CFG-PYD-11 | todo | `CloudflareConfig` | — | `cloudflare` | 纯字段 |
+| CFG-PYD-10 | done | `GooglePlayConfig` | — | `google_play` | 已迁移为 `BaseModel`；`fallback_tracks` 已修正为 `Optional[list[str]]`；Fixed in `cursor/agent-maintenance-tasks-83c7` |
+| CFG-PYD-11 | done | `CloudflareConfig` | — | `cloudflare` | 已迁移为 `BaseModel`；Fixed in `cursor/agent-maintenance-tasks-83c7` |
 | CFG-PYD-12 | todo | `ElevenLabsConfig` | — | `elevenlabs` | 必填 `api_key`：保留无默认或 `Field(...)` |
 | CFG-PYD-13 | todo | `FalConfig` | — | `fal` | 纯字段 |
 | CFG-PYD-14 | todo | `SurpriseSnapConfig` | — | `_parse_surprise_snap_config` 返回值 | 与解析函数联动；解析函数可改为返回已 validate 的模型 |

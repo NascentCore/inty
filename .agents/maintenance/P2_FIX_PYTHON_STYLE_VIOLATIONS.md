@@ -34,10 +34,10 @@ maintenance agents can fix the highest-impact item first.
   fallbacks while reading chat history. Narrow expected JSON/data errors or log
   skipped rows so memory extraction loss is traceable. Fixed in
   `cursor/agent-maintenance-tasks-5251`.
-- [ ] Google 2.4 "Exceptions": `/app/services/festival_memory_service.py`
+- [x] Google 2.4 "Exceptions": `/app/services/festival_memory_service.py`
   silently skips rows that fail chat-message JSON parsing. Log skipped rows or
   narrow the parser exceptions so festival memory inputs do not disappear
-  without evidence.
+  without evidence. Fixed in `cursor/agent-maintenance-tasks-83c7`.
 
 ## 2026-05-09 scan
 

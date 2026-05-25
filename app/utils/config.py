@@ -433,9 +433,10 @@ class FirebaseConfig(BaseModel):
     service_account_path: str = ".secrets/inty-backend-key.json"
 
 
-@dataclass
-class GooglePlayConfig:
+class GooglePlayConfig(BaseModel):
     """Google Play配置"""
+
+    model_config = ConfigDict(extra="ignore")
 
     # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
     # 删除部署环境中的配置文件使用，然后删除这个代码。
@@ -453,7 +454,7 @@ class GooglePlayConfig:
     )
     # DEPRECATED: 未被使用过。
     # 删除部署环境中的配置文件使用，然后删除这个代码。
-    fallback_tracks: List[str] = None  # 备用轨道列表
+    fallback_tracks: Optional[list[str]] = None  # 备用轨道列表
     # DEPRECATED: 不检查 version name，只检查 version code，这样使用简单的线性递增逻辑，很容易理解。
     max_minor_version_gap: int = 10  # Minor版本号最大差距，超过则强制更新
     # 当前生产环境版本代码（覆盖值）：
@@ -471,9 +472,10 @@ class GooglePlayConfig:
     )
 
 
-@dataclass
-class CloudflareConfig:
+class CloudflareConfig(BaseModel):
     """Cloudflare CDN代理配置"""
+
+    model_config = ConfigDict(extra="ignore")
 
     domain: str = ""  # Cloudflare代理的域名
     enabled: bool = False  # 是否启用Cloudflare CDN代理
@@ -786,9 +788,13 @@ def load_config(path: str) -> Config:
         agent=AgentConfig(**data.get("agent", {})),
         gcs=GCSConfig.model_validate(data.get("gcs") or {}),
         firebase=FirebaseConfig.model_validate(data.get("firebase") or {}),
-        google_play=GooglePlayConfig(**data.get("google_play", {})),
+        google_play=GooglePlayConfig.model_validate(
+            data.get("google_play") or {}
+        ),
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
-        cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
+        cloudflare=CloudflareConfig.model_validate(
+            data.get("cloudflare") or {}
+        ),
         push_notification=PushNotificationConfig(
             **data.get("push_notification", {})
         ),

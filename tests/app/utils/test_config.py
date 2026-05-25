@@ -518,6 +518,34 @@ def test_firebase_config_model_validate_ignores_unknown_keys():
     assert settings.service_account_path == "firebase-test.json"
 
 
+def test_google_play_config_model_validate_ignores_unknown_keys():
+    settings = GooglePlayConfig.model_validate(
+        {
+            "package_name": "com.example.inty",
+            "fallback_tracks": ["production", "beta"],
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.package_name == "com.example.inty"
+    assert settings.fallback_tracks == ["production", "beta"]
+
+
+def test_cloudflare_config_model_validate_ignores_unknown_keys():
+    settings = CloudflareConfig.model_validate(
+        {
+            "domain": "cdn.example.com",
+            "enabled": True,
+            "fallback_to_original": False,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.domain == "cdn.example.com"
+    assert settings.enabled is True
+    assert settings.fallback_to_original is False
+
+
 def test_agent_config_langsmith_always_trace_user_emails_defaults_to_empty_list():
     agent_config = AgentConfig(api_key="test", langchain_api_key="test")
 
@@ -645,6 +673,58 @@ def test_load_config_firebase_uses_pydantic_validation():
         cfg = load_config(str(path))
 
     assert cfg.firebase.service_account_path == "test-firebase-model.json"
+
+
+def test_load_config_google_play_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n",
+        "\n".join(
+            [
+                "google_play:",
+                "  package_name: com.example.inty",
+                "  fallback_tracks:",
+                "    - production",
+                "    - beta",
+                "  unknown_key: ignored",
+                "elevenlabs:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.google_play.package_name == "com.example.inty"
+    assert cfg.google_play.fallback_tracks == ["production", "beta"]
+
+
+def test_load_config_cloudflare_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n",
+        "\n".join(
+            [
+                "cloudflare:",
+                "  domain: cdn.example.com",
+                "  enabled: true",
+                "  fallback_to_original: false",
+                "  unknown_key: ignored",
+                "elevenlabs:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.cloudflare.domain == "cdn.example.com"
+    assert cfg.cloudflare.enabled is True
+    assert cfg.cloudflare.fallback_to_original is False
 
 
 def test_load_config_google_oauth_uses_pydantic_validation():

@@ -341,3 +341,37 @@ def test_get_messages_for_user_agent_sync_fallbacks_to_primary_when_replica_fail
 
     assert rows == [("user", "fallback")]
     mock_primary_conn.assert_called_once()
+
+
+def test_get_messages_for_user_agent_sync_logs_skipped_malformed_messages():
+    primary_conn = _FakeConnection(
+        fetchone_results=[("chat-1",)],
+        fetchall_results=[
+            [
+                ("not-json",),
+                ('["not", "an", "object"]',),
+                ({"type": "human", "data": {"content": "kept"}},),
+            ]
+        ],
+    )
+
+    with (
+        patch.object(
+            festival_memory_service,
+            "get_chat_history_connection",
+            return_value=primary_conn,
+        ),
+        patch.object(
+            festival_memory_service,
+            "generate_session_id",
+            return_value="session-chat-1",
+        ),
+        patch.object(festival_memory_service.logger, "warning") as mock_warning,
+    ):
+        rows = festival_memory_service.get_messages_for_user_agent_sync(
+            "user-1",
+            "agent-1",
+        )
+
+    assert rows == [("user", "kept")]
+    assert mock_warning.call_count == 2
