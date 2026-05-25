@@ -1,4 +1,10 @@
-"""Long-lived Inty ``/api/v1/chat/ws`` client for Ops Weixin channel."""
+"""Long-lived Inty ``/api/v1/chat/ws`` client for Ops Weixin channel.
+
+TODO(wechat-demo-ws-disconnect-hermes-wording): no auto-reconnect. Inty backend restart
+closes this WS with 1012 (service restart); ``send_user_text`` / read_loop raise
+``ConnectionClosed*``, then Hermes WeixinAdapter sends misleading "/reset" copy to the
+peer. Reconnect via ``WeixinChannelSession.start`` or wechat-demo bridge restore.
+"""
 
 from __future__ import annotations
 
@@ -265,6 +271,8 @@ class IntyWsChannelClient:
         except asyncio.CancelledError:
             raise
         except ConnectionClosed as exc:
+            # TODO(wechat-demo-ws-disconnect-hermes-wording): 1012 = Inty uvicorn shutdown;
+            # pending DM replies fail; user may see Hermes "/reset" text, not Inty-owned.
             logger.info(
                 "inty_ws_channel read_loop closed ws_conn_id={}: {}",
                 self._ws_conn_id,

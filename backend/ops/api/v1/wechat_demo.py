@@ -1,4 +1,9 @@
-"""Ops-only API: in-memory WeChat QR login + Inty WS bridge demo."""
+"""Ops-only API: WeChat QR login + Inty WS bridge demo (bridge state in Postgres).
+
+Post-scan ``weixin_token`` (iLink ``bot_token``): protocol publishes **no** fixed
+validity duration; treat as valid until ``errcode=-14`` on iLink long-poll/send — see
+``backend.ops.weixin_channel.ilink_qr_client``.
+"""
 
 from __future__ import annotations
 

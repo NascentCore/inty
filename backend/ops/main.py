@@ -22,6 +22,7 @@ from app.api.deps import get_async_db
 from app.api.utils.health_check_payload import build_health_check_data
 from backend.ops.api.evaluation_web import configure_evaluation_web_routes
 from backend.ops.api.wechat_demo_web import configure_wechat_demo_web_routes
+from backend.ops.wechat_demo.session_store import restore_persisted_sessions
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
 from app.external_services.firebase import init_firebase
@@ -121,6 +122,8 @@ async def startup_event():
             await agent_manager.initialize_popular_agents(db_session)
             break
         logger.info("Ops Agent 初始化完成")
+        await restore_persisted_sessions()
+        logger.info("WeChat demo bridge restore scheduled")
     except Exception as e:
         logger.error(f"Ops 应用启动过程中出错: {str(e)}")
 

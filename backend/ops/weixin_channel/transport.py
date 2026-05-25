@@ -1,4 +1,13 @@
-"""Hermes ``WeixinAdapter`` transport for Ops Weixin channel."""
+"""Hermes ``WeixinAdapter`` transport for Ops Weixin channel.
+
+Long-poll/send use ``weixin_token`` (iLink ``bot_token``). When iLink session ends,
+``getupdates`` returns ``errcode=-14`` (session expired; **not** “14 minutes”).
+Stop demo and re-scan QR.
+
+TODO(wechat-demo-ws-disconnect-hermes-wording): ``inbound_handler`` exceptions (e.g.
+Inty WS ``ConnectionClosedError``) are caught by Hermes ``BasePlatformAdapter`` and
+replied to WeChat with "use /reset"—Hermes CLI wording, not an Inty slash command.
+"""
 
 from __future__ import annotations
 
@@ -64,6 +73,8 @@ class WeixinTransport:
         adapter = WeixinAdapter(config)
 
         async def handle_weixin_message(event: MessageEvent) -> str:
+            # TODO(wechat-demo-ws-disconnect-hermes-wording): return-value path only; raises
+            # from ``_inbound_handler`` become Hermes generic error DM to the peer.
             peer_id = event.source.chat_id
             assert peer_id != ""
             inbound = WeixinInboundMessage(

@@ -168,7 +168,7 @@ async def test_proactive_push_without_last_peer_id_is_dropped() -> None:
         weixin_token="token",
         weixin_base_url="https://ilinkai.weixin.qq.com",
     )
-    session = WeixinChannelSession(binding=binding)
+    session = WeixinChannelSession(binding=binding, on_binding_peer_updated=None)
     await session._handle_proactive_push("proactive text")
 
 
@@ -191,7 +191,7 @@ async def test_proactive_push_with_last_peer_id_calls_transport() -> None:
         weixin_base_url="https://ilinkai.weixin.qq.com",
         last_peer_id="peer-42",
     )
-    session = WeixinChannelSession(binding=binding)
+    session = WeixinChannelSession(binding=binding, on_binding_peer_updated=None)
     transport = _RecordingTransport()
     session._transport = transport
     await session._handle_proactive_push("proactive hello")

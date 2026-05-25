@@ -1,4 +1,9 @@
-"""Weixin iLink QR login with pollable status (Ops ``/wechat-demo`` sessions)."""
+"""Weixin iLink QR login with pollable status (Ops ``/wechat-demo`` sessions).
+
+Only the **QR-login phase** runs here. After ``status=confirmed``, ``bot_token`` is
+the long-lived bridge credential (persisted as ``weixin_token``); that session ends
+when iLink returns ``errcode=-14``, not on a published 14-minute QR TTL.
+"""
 
 from __future__ import annotations
 
@@ -29,7 +34,12 @@ class WeixinQrPhase(StrEnum):
 
 
 class WeixinQrFlow:
-    """Poll iLink QR status; exposes ``qrcode_url`` for browser display."""
+    """Poll iLink QR status; exposes ``qrcode_url`` for browser display.
+
+    Per-QR expiry: iLink ``status=expired`` (auto-refresh, max 3). Overall poll
+    stops at ``timeout_seconds`` (wechat-demo: 480s). Distinct from bridge
+    ``bot_token`` expiry (``errcode=-14`` on long-poll/send).
+    """
 
     def __init__(self, hermes_home: str) -> None:
         assert hermes_home != ""
@@ -124,6 +134,7 @@ class WeixinQrFlow:
                             return None
                     case "confirmed":
                         account_id = str(status_resp.get("ilink_bot_id") or "")
+                        # bot_token: no TTL in response; valid until iLink errcode=-14.
                         token = str(status_resp.get("bot_token") or "")
                         base_url = str(status_resp.get("baseurl") or ILINK_BASE_URL)
                         user_id = str(status_resp.get("ilink_user_id") or "")
