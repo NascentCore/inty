@@ -28,20 +28,22 @@ def _ensure_wechat_demo_dependencies() -> None:
         ) from exc
 
 
+# TODO(cleanup): This is a hack to import a module for wechat demo.
+# We must revise the architecture to wrap wechat connector into a stable component.
+# So that the deps is included in the backend package.
+# The issue is that the hermes-agent deps on conflicting packages with versions different from the inty backend.
 def _import_wechat_demo_runtime() -> tuple[Any, ...]:
     _ensure_wechat_demo_dependencies()
-    from demos.inty_wechat_connector.inty_ws_client import IntyWsConnection
-    from demos.inty_wechat_connector.weixin_bridge import (
-        WeixinBridgeRunner,
-        WeixinCredential,
+    from backend.ops.weixin_channel.session import (
+        WeixinChannelBinding,
+        WeixinChannelSession,
     )
     from demos.inty_wechat_connector.weixin_qr_flow import WeixinQrFlow
     from hermes_constants import get_hermes_home
 
     return (
-        IntyWsConnection,
-        WeixinBridgeRunner,
-        WeixinCredential,
+        WeixinChannelBinding,
+        WeixinChannelSession,
         WeixinQrFlow,
         get_hermes_home,
     )
@@ -63,7 +65,7 @@ class _WechatDemoSession:
     phase: _StorePhase = _StorePhase.QR_LOGIN
     qr_flow: Any = None
     error: str | None = None
-    bridge_runner: Any = None
+    channel_session: Any = None
     orchestrator_task: asyncio.Task[None] | None = None
     bridge_task: asyncio.Task[None] | None = None
 
@@ -134,7 +136,7 @@ async def stop_session(session_id: str) -> WechatDemoSessionView | None:
 async def _stop_session_tasks(session: _WechatDemoSession) -> None:
     async with _lock:
         orchestrator_task = session.orchestrator_task
-        bridge_runner = session.bridge_runner
+        channel_session = session.channel_session
         bridge_task = session.bridge_task
     if orchestrator_task is not None and not orchestrator_task.done():
         orchestrator_task.cancel()
@@ -142,8 +144,8 @@ async def _stop_session_tasks(session: _WechatDemoSession) -> None:
             await orchestrator_task
         except asyncio.CancelledError:
             pass
-    if bridge_runner is not None:
-        await bridge_runner.stop()
+    if channel_session is not None:
+        await channel_session.stop()
     if bridge_task is not None and not bridge_task.done():
         bridge_task.cancel()
         try:
@@ -153,8 +155,8 @@ async def _stop_session_tasks(session: _WechatDemoSession) -> None:
     async with _lock:
         if session.orchestrator_task is orchestrator_task:
             session.orchestrator_task = None
-        if session.bridge_runner is bridge_runner:
-            session.bridge_runner = None
+        if session.channel_session is channel_session:
+            session.channel_session = None
         if session.bridge_task is bridge_task:
             session.bridge_task = None
 
@@ -177,14 +179,14 @@ async def _fail_session(session: _WechatDemoSession, error: str) -> None:
         session.error = error
 
 
-async def _set_session_bridge_runner(
+async def _set_session_channel(
     session: _WechatDemoSession,
-    runner: Any,
+    channel_session: Any,
 ) -> bool:
     async with _lock:
         if session.phase == _StorePhase.STOPPED:
             return False
-        session.bridge_runner = runner
+        session.channel_session = channel_session
         session.phase = _StorePhase.BRIDGE_RUNNING
         return True
 
@@ -210,9 +212,8 @@ async def _mark_session_stopped_after_bridge(
 
 async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
     (
-        IntyWsConnection,
-        WeixinBridgeRunner,
-        WeixinCredential,
+        WeixinChannelBinding,
+        WeixinChannelSession,
         WeixinQrFlow,
         get_hermes_home,
     ) = _import_wechat_demo_runtime()
@@ -225,9 +226,9 @@ async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
         cred = await qr_flow.run(timeout_seconds=480)
     except asyncio.CancelledError:
         async with _lock:
-            bridge_runner = session.bridge_runner
-        if bridge_runner is not None:
-            await bridge_runner.stop()
+            channel_session = session.channel_session
+        if channel_session is not None:
+            await channel_session.stop()
         raise
     except Exception as exc:
         logger.exception(
@@ -243,24 +244,31 @@ async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
         )
         return
 
-    inty = IntyWsConnection(
-        api_base_url=session.inty_api_base_url,
-        jwt=session.inty_jwt,
+    binding = WeixinChannelBinding(
+        user_id=session.session_id,
         agent_id=session.agent_id,
+        inty_api_base_url=session.inty_api_base_url,
+        inty_jwt=session.inty_jwt,
+        weixin_account_id=cred["account_id"],
+        weixin_token=cred["token"],
+        weixin_base_url=cred.get("base_url") or "https://ilinkai.weixin.qq.com",
     )
-    weixin_cred = WeixinCredential(
-        account_id=cred["account_id"],
-        token=cred["token"],
-        base_url=cred.get("base_url") or "https://ilinkai.weixin.qq.com",
-    )
-    runner = WeixinBridgeRunner(weixin_cred, inty)
-    if not await _set_session_bridge_runner(session, runner):
-        await runner.stop()
+    channel = WeixinChannelSession(binding=binding)
+    try:
+        await channel.start()
+    except Exception as exc:
+        logger.exception(
+            "wechat_demo channel start failed session_id={}", session.session_id
+        )
+        await _fail_session(session, str(exc))
+        return
+    if not await _set_session_channel(session, channel):
+        await channel.stop()
         return
 
     async def _bridge_loop() -> None:
         try:
-            await runner.run_until_stopped()
+            await channel.run_until_stopped()
         except asyncio.CancelledError:
             raise
         except Exception as exc:

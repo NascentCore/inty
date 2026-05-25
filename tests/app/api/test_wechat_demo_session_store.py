@@ -18,34 +18,8 @@ def test_session_create_rejects_whitespace_only_credentials() -> None:
         )
 
 
-@pytest.mark.asyncio
-async def test_stopped_session_ignores_late_lifecycle_failure(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    class FakeQrFlow:
-        phase = type("FakePhase", (), {"value": "qr_login"})()
-        qrcode_url = None
-        error = None
-
-        def __init__(self, hermes_home: str) -> None:
-            assert hermes_home
-
-        async def run(self, timeout_seconds: int) -> None:
-            assert timeout_seconds > 0
-            raise RuntimeError("late failure after stop")
-
-    monkeypatch.setattr(
-        session_store,
-        "_import_wechat_demo_runtime",
-        lambda: (
-            object,
-            object,
-            object,
-            FakeQrFlow,
-            lambda: "/tmp/inty-wechat-demo-test",
-        ),
-    )
-    session = session_store._WechatDemoSession(
+def _stopped_session() -> session_store._WechatDemoSession:
+    return session_store._WechatDemoSession(
         session_id="session-test",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt",
@@ -53,7 +27,27 @@ async def test_stopped_session_ignores_late_lifecycle_failure(
         phase=session_store._StorePhase.STOPPED,
     )
 
-    await session_store._run_session_lifecycle(session)
 
+@pytest.mark.asyncio
+async def test_fail_session_ignores_stopped_session() -> None:
+    session = _stopped_session()
+    await session_store._fail_session(session, "late failure after stop")
     assert session.phase == session_store._StorePhase.STOPPED
     assert session.error is None
+
+
+@pytest.mark.asyncio
+async def test_set_session_qr_flow_ignores_stopped_session() -> None:
+    session = _stopped_session()
+    accepted = await session_store._set_session_qr_flow(session, object())
+    assert accepted is False
+    assert session.qr_flow is None
+
+
+@pytest.mark.asyncio
+async def test_set_session_channel_ignores_stopped_session() -> None:
+    session = _stopped_session()
+    accepted = await session_store._set_session_channel(session, object())
+    assert accepted is False
+    assert session.channel_session is None
+    assert session.phase == session_store._StorePhase.STOPPED
