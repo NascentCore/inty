@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
-import pytest
+import asyncio
+import json
 
-from app.schemas.chat_websocket import ChatWsCompanionWireMessageMetaData
+import pytest
+import websockets
+
+from app.schemas.chat_websocket import ChatWsCompanionWireMessageMetaData, ChatWsPingFrame
 from backend.ops.weixin_channel.inty_ws_client import (
+    IntyWsChannelClient,
+    IntyWsChannelConfig,
+    _WS_PING_INTERVAL_SEC,
     _assistant_text_from_response_payload,
     http_base_to_ws_chat_url,
     is_proactive_chat_downlink,
@@ -14,6 +21,99 @@ from backend.ops.weixin_channel.session import (
     WeixinChannelBinding,
     WeixinChannelSession,
 )
+
+
+def test_ws_ping_interval_below_server_idle_minimum() -> None:
+    assert _WS_PING_INTERVAL_SEC == 9.0
+    assert _WS_PING_INTERVAL_SEC < 10.0
+
+
+def test_ws_ping_frame_wire_json() -> None:
+    payload = ChatWsPingFrame().model_dump_json()
+    assert json.loads(payload) == {"type": "ping"}
+
+
+@pytest.mark.asyncio
+async def test_pinger_loop_emits_ping_on_interval() -> None:
+    received: list[str] = []
+
+    async def handler(ws: websockets.ServerConnection) -> None:
+        async for raw in ws:
+            received.append(str(raw))
+
+    async with websockets.serve(handler, "127.0.0.1", 0) as server:
+        port = server.sockets[0].getsockname()[1]
+        async with websockets.connect(f"ws://127.0.0.1:{port}") as ws:
+            client = IntyWsChannelClient(
+                IntyWsChannelConfig(
+                    api_base_url="http://127.0.0.1:8001",
+                    jwt="jwt",
+                    agent_id="agent-1",
+                ),
+                on_proactive_push=_noop_proactive_push,
+                timezone_name=None,
+            )
+            client._ws = ws
+            ping_task = asyncio.create_task(client._pinger_loop())
+            try:
+                await asyncio.sleep(_WS_PING_INTERVAL_SEC + 0.5)
+            finally:
+                ping_task.cancel()
+                try:
+                    await ping_task
+                except asyncio.CancelledError:
+                    pass
+
+    ping_frames = [json.loads(raw) for raw in received]
+    assert ping_frames == [{"type": "ping"}]
+
+
+@pytest.mark.asyncio
+async def test_pinger_loop_prevents_idle_disconnect() -> None:
+    """Ping keepalive resets server idle timer (WeChat demo ConnectionClosedOK regression)."""
+    idle_sec = 12.0
+
+    async def handler(ws: websockets.ServerConnection) -> None:
+        while True:
+            try:
+                raw = await asyncio.wait_for(ws.recv(), timeout=idle_sec)
+            except asyncio.TimeoutError:
+                await ws.close()
+                return
+            data = json.loads(str(raw))
+            if data.get("type") == "ping":
+                await ws.send(json.dumps({"type": "pong"}))
+
+    async with websockets.serve(handler, "127.0.0.1", 0) as server:
+        port = server.sockets[0].getsockname()[1]
+        async with websockets.connect(f"ws://127.0.0.1:{port}") as ws:
+            client = IntyWsChannelClient(
+                IntyWsChannelConfig(
+                    api_base_url="http://127.0.0.1:8001",
+                    jwt="jwt",
+                    agent_id="agent-1",
+                ),
+                on_proactive_push=_noop_proactive_push,
+                timezone_name=None,
+            )
+            client._ws = ws
+            ping_task = asyncio.create_task(client._pinger_loop())
+            try:
+                # Without ping, server closes at ``idle_sec``; first ping at 9s keeps link up.
+                await asyncio.sleep(idle_sec + 3.0)
+                await ws.send(ChatWsPingFrame().model_dump_json())
+                raw = await asyncio.wait_for(ws.recv(), timeout=idle_sec)
+                assert json.loads(str(raw)) == {"type": "pong"}
+            finally:
+                ping_task.cancel()
+                try:
+                    await ping_task
+                except asyncio.CancelledError:
+                    pass
+
+
+async def _noop_proactive_push(_text: str) -> None:
+    return None
 
 
 def test_http_base_to_ws_chat_url() -> None:

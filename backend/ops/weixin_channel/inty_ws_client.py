@@ -16,6 +16,7 @@ from urllib.parse import urlencode
 import websockets
 from loguru import logger
 from pydantic import ValidationError
+from websockets.exceptions import ConnectionClosed
 
 from app.schemas.chat import ChatCompletionRequest, ChatMessage, UserTimeContext
 from app.schemas.chat_websocket import (
@@ -24,6 +25,7 @@ from app.schemas.chat_websocket import (
     ChatWsClientContextAckFrame,
     ChatWsClientContextFrame,
     ChatWsCompanionWireMessageMetaData,
+    ChatWsPingFrame,
     ChatWsPongFrame,
     ChatWsUserSignedOnAckFrame,
     ChatWsUserSignedOnFrame,
@@ -32,6 +34,9 @@ from app.schemas.chat_websocket import (
 )
 
 ProactivePushHandler = Callable[[str], Awaitable[None]]
+
+# Below server ``chat_ws_idle_timeout_seconds`` minimum (10s); matches iMate Android.
+_WS_PING_INTERVAL_SEC = 9.0
 
 
 class IntyWsChannelState(StrEnum):
@@ -124,6 +129,7 @@ class IntyWsChannelClient:
         self._timezone_name = timezone_name
         self._ws: websockets.ClientConnection | None = None
         self._read_task: asyncio.Task[None] | None = None
+        self._ping_task: asyncio.Task[None] | None = None
         self._state = IntyWsChannelState.DISCONNECTED
         self._pending_replies: asyncio.Queue[asyncio.Future[str]] = asyncio.Queue()
         self._signed_on = False
@@ -153,15 +159,24 @@ class IntyWsChannelClient:
             self._read_loop(),
             name=f"inty_ws_channel_read_{self._ws_conn_id}",
         )
+        self._ping_task = asyncio.create_task(
+            self._pinger_loop(),
+            name=f"inty_ws_channel_ping_{self._ws_conn_id}",
+        )
         self._state = IntyWsChannelState.READY
 
-    async def disconnect(self) -> None:
-        if self._read_task is not None and not self._read_task.done():
-            self._read_task.cancel()
+    async def _cancel_background_task(self, task: asyncio.Task[None] | None) -> None:
+        if task is not None and not task.done():
+            task.cancel()
             try:
-                await self._read_task
+                await task
             except asyncio.CancelledError:
                 pass
+
+    async def disconnect(self) -> None:
+        await self._cancel_background_task(self._ping_task)
+        self._ping_task = None
+        await self._cancel_background_task(self._read_task)
         self._read_task = None
         ws = self._ws
         if ws is not None and self._signed_on:
@@ -249,6 +264,17 @@ class IntyWsChannelClient:
                 await self._handle_raw_frame(str(raw))
         except asyncio.CancelledError:
             raise
+        except ConnectionClosed as exc:
+            logger.info(
+                "inty_ws_channel read_loop closed ws_conn_id={}: {}",
+                self._ws_conn_id,
+                exc,
+            )
+            self._state = IntyWsChannelState.FAILED
+            while not self._pending_replies.empty():
+                fut = self._pending_replies.get_nowait()
+                if not fut.done():
+                    fut.set_exception(exc)
         except Exception as exc:
             logger.exception(
                 "inty_ws_channel read_loop failed ws_conn_id={}: {}",
@@ -260,6 +286,19 @@ class IntyWsChannelClient:
                 fut = self._pending_replies.get_nowait()
                 if not fut.done():
                     fut.set_exception(exc)
+
+    async def _pinger_loop(self) -> None:
+        assert self._ws is not None
+        ping_payload = ChatWsPingFrame().model_dump_json()
+        try:
+            while True:
+                await asyncio.sleep(_WS_PING_INTERVAL_SEC)
+                try:
+                    await self._ws.send(ping_payload)
+                except ConnectionClosed:
+                    return
+        except asyncio.CancelledError:
+            raise
 
     async def _handle_raw_frame(self, raw: str) -> None:
         data = json.loads(raw)
