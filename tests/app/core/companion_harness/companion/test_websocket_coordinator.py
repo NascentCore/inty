@@ -115,7 +115,7 @@ async def test_companion_websocket_coordinator_inner_tick_refresh_preserves_same
     coordinator = CompanionWebSocketCoordinator.for_current_loop()
 
     coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
-    coordinator.mark_maintenance_inner_tick_fired(123.5)
+    coordinator.mark_maintenance_inner_tick_fired(123.5, 7)
     coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
 
     assert coordinator.snapshot_inner_tick_coords() == {
@@ -124,6 +124,7 @@ async def test_companion_websocket_coordinator_inner_tick_refresh_preserves_same
         "chat_id": 10,
     }
     assert coordinator.last_maintenance_inner_tick_monotonic() == 123.5
+    assert coordinator.last_maintenance_transcript_line_count() == 7
 
     coordinator.store_inner_tick_coords(user_id="u1", agent_id="a2", chat_id=10)
     assert coordinator.snapshot_inner_tick_coords() == {
@@ -132,6 +133,7 @@ async def test_companion_websocket_coordinator_inner_tick_refresh_preserves_same
         "chat_id": 10,
     }
     assert coordinator.last_maintenance_inner_tick_monotonic() is None
+    assert coordinator.last_maintenance_transcript_line_count() is None
 
 
 @pytest.mark.asyncio

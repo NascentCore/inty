@@ -1,8 +1,9 @@
 """Proactive chat scheduling and prompt copy for user-idle companion turns.
 
 - **Scheduling**: ``next_proactive_chat_wait_seconds`` uses ``last_assistant_ts + rhythm``;
-  ``rhythm`` is ``base_idle_sec`` or adapts from real-user message gaps (median × 0.65 + 20),
-  capped at ``base_idle_sec * 2`` (no clamp band).
+  ``rhythm = min(max(exponential, median), stop_after_silence)`` where exponential is
+  ``N × 2^k`` (``k`` = proactive rounds since last real user) and median adapts from
+  real-user gaps; total silence since last real user beyond ``stop_after_silence`` stops proactive.
 - **Usage**: proactive turns are not gated by daily message count; future limits use token
   consumption (see companion WS proactive path NOTE in ``app.utils.config``).
 - **Copy**: system/user placeholders for ``InnerTickActivity.PROACTIVE_CHAT`` turns.
@@ -56,6 +57,13 @@ class ProactiveChatConfig(BaseModel):
         default=0,
         description=(
             "Minimum transcript lines before proactive chat scheduling is considered."
+        ),
+    )
+    stop_after_silence_minutes: float = Field(
+        default=30.0,
+        description=(
+            "Cap each proactive wait interval and stop proactive "
+            "when time since the last real user message exceeds this threshold."
         ),
     )
 
@@ -123,6 +131,30 @@ def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     return None
 
 
+def _proactive_rounds_since_last_real_user(msgs: list[ChatMessage]) -> int:
+    """Count synthetic proactive user rows after the last real user message."""
+    count = 0
+    for m in reversed(msgs):
+        if m.role == "user" and m.proactive_chat is not True:
+            break
+        if m.role == "user" and m.proactive_chat is True:
+            count += 1
+    return count
+
+
+def _combined_rhythm_seconds(
+    msgs: list[ChatMessage],
+    *,
+    k: int,
+    base: float,
+    stop_sec: float,
+) -> float:
+    """``min(max(exponential, median), stop_sec)`` for the next proactive wait."""
+    exponential = min(base * (2**k), stop_sec)
+    median = _rhythm_idle_seconds(msgs, base)
+    return min(max(exponential, median), stop_sec)
+
+
 def build_proactive_chat_transcript_user_marker(
     msgs: list[ChatMessage],
     *,
@@ -162,6 +194,19 @@ def next_proactive_chat_wait_seconds(
         return _NEVER
 
     t = now if now is not None else datetime.now(timezone.utc)
-    rhythm = _rhythm_idle_seconds(msgs, config.base_idle_sec)
+    stop_sec = config.stop_after_silence_minutes * 60.0
+    last_real_user = _last_real_user_ts(msgs)
+    if last_real_user is not None:
+        silence_sec = (t - last_real_user).total_seconds()
+        if silence_sec > stop_sec:
+            return _NEVER
+
+    k = _proactive_rounds_since_last_real_user(msgs)
+    rhythm = _combined_rhythm_seconds(
+        msgs,
+        k=k,
+        base=config.base_idle_sec,
+        stop_sec=stop_sec,
+    )
     earliest = last_asst + timedelta(seconds=rhythm)
     return (earliest - t).total_seconds()

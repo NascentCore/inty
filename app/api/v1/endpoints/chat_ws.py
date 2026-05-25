@@ -34,6 +34,7 @@ from app.core.companion_harness.companion.proactive_chat import (
 )
 from app.core.companion_harness.companion.inner_tick_schedule import (
     InnerTickScheduleOverrides,
+    maintenance_transcript_line_count,
     next_inner_tick_wait_seconds,
 )
 from app.core.companion_harness.companion.llm_inference_errors import (
@@ -43,7 +44,6 @@ from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
 from app.core.companion_harness.companion.models import (
-    CompanionTurnResult,
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
 from app.core.companion_harness.companion.turn_routes import (
@@ -1221,6 +1221,9 @@ async def _try_fire_companion_ws_proactive_chat(
                 base_idle_sec=float(
                     feats.companion_ws_proactive_chat_base_idle_seconds
                 ),
+                stop_after_silence_minutes=float(
+                    feats.companion_ws_proactive_chat_stop_after_silence_minutes
+                ),
             ),
         )
         if remain > 0:
@@ -1449,10 +1452,15 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         if mem_store is None:
             return
 
+        line_count = maintenance_transcript_line_count(mem_store)
+
         remain = next_inner_tick_wait_seconds(
             mem_store,
             last_inner_fire_monotonic=(
                 companion_ws.last_maintenance_inner_tick_monotonic()
+            ),
+            last_maintenance_transcript_line_count=(
+                companion_ws.last_maintenance_transcript_line_count()
             ),
             overrides=InnerTickScheduleOverrides(
                 enabled=True,
@@ -1669,7 +1677,10 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                 )
                 await outbound_queue.put(out)
 
-        companion_ws.mark_maintenance_inner_tick_fired(time.monotonic())
+        companion_ws.mark_maintenance_inner_tick_fired(
+            time.monotonic(),
+            line_count,
+        )
 
     if reply_stripped:
         logger.info(

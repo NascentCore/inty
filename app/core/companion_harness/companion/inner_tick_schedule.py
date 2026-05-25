@@ -78,10 +78,19 @@ def inner_tick_min_gap_seconds() -> float:
     )
 
 
+def maintenance_transcript_line_count(store: MemoryStore) -> int:
+    """Line count for ``transcript.jsonl`` (presence tail stripped), for maintenance skip."""
+    msgs = transcript_without_trailing_presence_signals(
+        load_transcript_from_store(store, "transcript.jsonl")
+    )
+    return len(msgs)
+
+
 def next_inner_tick_wait_seconds(
     store: MemoryStore,
     *,
     last_inner_fire_monotonic: float | None,
+    last_maintenance_transcript_line_count: int | None,
     now_monotonic: float | None = None,
     overrides: InnerTickScheduleOverrides | None = None,
 ) -> float:
@@ -100,6 +109,11 @@ def next_inner_tick_wait_seconds(
     msgs = transcript_without_trailing_presence_signals(
         load_transcript_from_store(store, "transcript.jsonl")
     )
+    line_count = len(msgs)
+    if last_maintenance_transcript_line_count is not None:
+        if line_count <= last_maintenance_transcript_line_count:
+            return _DISABLED_INNER_TICK_WAIT_SEC
+
     if overrides is not None and overrides.min_transcript_msgs is not None:
         min_lines = overrides.min_transcript_msgs
     else:
@@ -113,7 +127,7 @@ def next_inner_tick_wait_seconds(
         poll = overrides.poll_seconds
 
     blocked_sleep = min(_INNER_TICK_BLOCKED_MAX_SLEEP_SEC, poll)
-    if len(msgs) < min_lines:
+    if line_count < min_lines:
         return blocked_sleep
 
     if not msgs or msgs[-1].role != "assistant":

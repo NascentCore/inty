@@ -199,6 +199,9 @@ class FeaturesConfig:
     # consumption (future), not ``limits.free_user_chat_24h_limit``.
     # See docs/companion_harness/INNER_TICK_SCHEDULING.md (proactive rhythm).
     companion_ws_proactive_chat_base_idle_seconds: float = 30.0
+    # Stop proactive chat and cap each proactive wait when silence since last real user message
+    # exceeds this many minutes. See docs/companion_harness/INNER_TICK_SCHEDULING.md.
+    companion_ws_proactive_chat_stop_after_silence_minutes: float = 30.0
     # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
     # See docs/companion_harness/INNER_TICK_SCHEDULING.md (worker poll).
     companion_ws_proactive_chat_poll_seconds: float = 60.0
@@ -959,4 +962,10 @@ def _validate_config(config: Config):
         raise ValueError(
             "app.features.companion_ws_proactive_chat_base_idle_seconds "
             "must be between 10 and 3600"
+        )
+    pc_stop = feats.companion_ws_proactive_chat_stop_after_silence_minutes
+    if pc_stop < 1.0 or pc_stop > 1440.0:
+        raise ValueError(
+            "app.features.companion_ws_proactive_chat_stop_after_silence_minutes "
+            "must be between 1 and 1440"
         )
