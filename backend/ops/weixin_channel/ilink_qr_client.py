@@ -3,6 +3,12 @@
 Owns the QR login wire protocol so ``weixin_qr_flow`` does not depend on Hermes
 private symbols (``gateway.platforms.weixin._api_get``, etc.).
 
+TODO(weixin-upstream-parity): Periodically align with the Hermes Agent project
+(Weixin messaging user guide, release notes, ``gateway.platforms.weixin``) and
+with community iLink client implementations. Tencent's iLink Bot API
+(``ILINK_BASE_URL``, endpoints, QR login headers such as ``iLink-App-ClientVersion``,
+media/CDN flows) is not published like MP/WeCom Open Platform contracts—it can
+drift; our QR wire helpers can desync from ``WeixinAdapter`` unless we track upstream.
 iLink time limits (not documented as a fixed wall-clock TTL on the wire):
 
 - **QR poll token** (``qrcode`` query param): short-lived; ``get_qrcode_status`` may
