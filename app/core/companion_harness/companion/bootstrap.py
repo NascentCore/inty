@@ -9,7 +9,9 @@ resumes.
 
 The module is named ``bootstrap``; the tool names and ``context.json`` fields
 still use ``bootstrap_user_interactive`` wording because those names are part of
-the persisted setup contract.
+the left-over from previous renaming. Bootstrap used to have another mode
+in addition to user-interactive.
+TODO: Remove user-interactive suffix from bootstrap_user_interactive and other left-over names.
 """
 
 from __future__ import annotations
