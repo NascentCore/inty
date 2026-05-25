@@ -109,7 +109,9 @@ def _message_meta_from_response_payload(
         return None
 
 
-def is_proactive_chat_downlink(meta: ChatWsCompanionWireMessageMetaData | None) -> bool:
+def is_proactive_chat_downlink(
+    meta: ChatWsCompanionWireMessageMetaData | None,
+) -> bool:
     if meta is None:
         return False
     if meta.companion_proactive_chat is True or meta.proactive_chat is True:
@@ -137,7 +139,9 @@ class IntyWsChannelClient:
         self._read_task: asyncio.Task[None] | None = None
         self._ping_task: asyncio.Task[None] | None = None
         self._state = IntyWsChannelState.DISCONNECTED
-        self._pending_replies: asyncio.Queue[asyncio.Future[str]] = asyncio.Queue()
+        self._pending_replies: asyncio.Queue[asyncio.Future[str]] = (
+            asyncio.Queue()
+        )
         self._signed_on = False
         self._ws_conn_id = str(uuid.uuid4())
 
@@ -171,7 +175,9 @@ class IntyWsChannelClient:
         )
         self._state = IntyWsChannelState.READY
 
-    async def _cancel_background_task(self, task: asyncio.Task[None] | None) -> None:
+    async def _cancel_background_task(
+        self, task: asyncio.Task[None] | None
+    ) -> None:
         if task is not None and not task.done():
             task.cancel()
             try:
@@ -219,7 +225,9 @@ class IntyWsChannelClient:
                 message_id=message_id,
             ),
         )
-        reply_fut: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+        reply_fut: asyncio.Future[str] = (
+            asyncio.get_running_loop().create_future()
+        )
         await self._pending_replies.put(reply_fut)
         await self._ws.send(request.model_dump_json())
         return await reply_fut
@@ -317,7 +325,11 @@ class IntyWsChannelClient:
             case "pong":
                 ChatWsPongFrame.model_validate(data)
                 return
-            case "client_context_ack" | "user_signed_on_ack" | "user_signed_out_ack":
+            case (
+                "client_context_ack"
+                | "user_signed_on_ack"
+                | "user_signed_out_ack"
+            ):
                 return
             case _:
                 pass

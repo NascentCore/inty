@@ -67,7 +67,9 @@ class WeixinChannelSession:
     def __init__(
         self,
         binding: WeixinChannelBinding,
-        on_binding_peer_updated: Callable[[WeixinChannelBinding], Awaitable[None]] | None,
+        on_binding_peer_updated: (
+            Callable[[WeixinChannelBinding], Awaitable[None]] | None
+        ),
     ) -> None:
         self.binding = binding
         self._on_binding_peer_updated = on_binding_peer_updated

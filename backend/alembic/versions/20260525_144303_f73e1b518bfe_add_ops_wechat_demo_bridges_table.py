@@ -5,15 +5,15 @@ Revises: 20260512_phone_call_bindings
 Create Date: 2026-05-25 14:43:03.370931+00:00
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
-revision: str = 'f73e1b518bfe'
-down_revision: Union[str, None] = '20260512_phone_call_bindings'
+revision: str = "f73e1b518bfe"
+down_revision: Union[str, None] = "20260512_phone_call_bindings"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -88,10 +88,12 @@ def upgrade() -> None:
             onupdate=sa.text("now()"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(["agent_id"], ["agents.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["agent_id"], ["agents.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("session_id"),
     )
 
 
 def downgrade() -> None:
-    op.drop_table('ops_wechat_demo_bridges')
+    op.drop_table("ops_wechat_demo_bridges")

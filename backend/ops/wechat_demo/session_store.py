@@ -126,7 +126,9 @@ def _binding_from_qr_cred(
     )
 
 
-def _binding_from_persisted(record: PersistedWechatDemoBridge) -> WeixinChannelBinding:
+def _binding_from_persisted(
+    record: PersistedWechatDemoBridge,
+) -> WeixinChannelBinding:
     return WeixinChannelBinding(
         user_id=record.session_id,
         agent_id=record.agent_id,

@@ -105,7 +105,9 @@ class WeixinQrFlow:
                     case "scaned":
                         self.phase = WeixinQrPhase.SCANNED
                     case "scaned_but_redirect":
-                        redirect_host = str(status_resp.get("redirect_host") or "")
+                        redirect_host = str(
+                            status_resp.get("redirect_host") or ""
+                        )
                         if redirect_host:
                             current_base_url = f"https://{redirect_host}"
                     case "expired":
@@ -122,7 +124,9 @@ class WeixinQrFlow:
                                 timeout_ms=QR_TIMEOUT_MS,
                             )
                             qrcode_value = str(qr_resp.get("qrcode") or "")
-                            qrcode_url = str(qr_resp.get("qrcode_img_content") or "")
+                            qrcode_url = str(
+                                qr_resp.get("qrcode_img_content") or ""
+                            )
                             self.qrcode_value = qrcode_value
                             self.qrcode_url = (
                                 qrcode_url if qrcode_url else qrcode_value
@@ -136,7 +140,9 @@ class WeixinQrFlow:
                         account_id = str(status_resp.get("ilink_bot_id") or "")
                         # bot_token: no TTL in response; valid until iLink errcode=-14.
                         token = str(status_resp.get("bot_token") or "")
-                        base_url = str(status_resp.get("baseurl") or ILINK_BASE_URL)
+                        base_url = str(
+                            status_resp.get("baseurl") or ILINK_BASE_URL
+                        )
                         user_id = str(status_resp.get("ilink_user_id") or "")
                         if not account_id or not token:
                             self.phase = WeixinQrPhase.FAILED
