@@ -6,6 +6,12 @@ bootstrap flag is incomplete, ``run_companion_user_chat_turn`` enters
 assistant can update prompt slices, optionally choose a post-bootstrap
 ``context_mode``, then mark setup complete before normal user-chat routing
 resumes.
+
+WebSocket startup does not inject a synthetic kickoff user message.  A signed-on
+client emits the implicit sign-on greeting track, whose system stack carries the
+bootstrap procedure while the tail user line frames the user coming online.  The
+bootstrap tool path is still responsible for persisting the relationship seed
+documents and flipping ``context.json`` out of bootstrap.
 """
 
 from __future__ import annotations
@@ -64,7 +70,12 @@ def interactive_bootstrap_active(
     feature_enabled: bool,
     meta: ContextMeta,
 ) -> bool:
-    """Whether a user chat turn should run on ``USER_CHAT_BOOTSTRAP``."""
+    """Whether a user chat turn should run on ``USER_CHAT_BOOTSTRAP``.
+
+    The decision is intentionally just feature flag plus completion state.  The
+    current experience profile may already be ``bootstrap`` or a non-bootstrap
+    mode because completion can preserve an externally chosen relationship mode.
+    """
 
     return (
         bool(feature_enabled)
@@ -77,7 +88,12 @@ def build_interactive_bootstrap_system_message_parts(
     max_chars_per_seed: int = 6000,
 ) -> list[str]:
     """
-    Ordered system bodies while interactive bootstrap is active (one string per future system message).
+    Ordered system bodies while interactive bootstrap is active.
+
+    The first body is the bootstrap procedure; following bodies are template
+    references for the writable prompt slices.  Returning one string per future
+    system message keeps the procedure and examples from being collapsed into one
+    large block, which makes stack inspection and model weighting clearer.
     """
     spec = load_bootstrap_spec_text()
     blocks: list[str] = [spec]

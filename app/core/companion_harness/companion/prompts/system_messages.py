@@ -1,6 +1,14 @@
 """Companion **system context** assembly for leading ``role: system`` messages.
 
+This module is the prompt-stack contract for every companion turn track.  It does
+not own transcript tail messages, runtime user-time slices, or tool execution;
+it only materializes the ordered system prefix consumed by model calls.
+
 **Stack order (fixed):** Doctrine → Tools → Persona → Output → Contextual.
+
+**Doctrine (fixed package prompts):** product axiom → Inty ontology →
+subconscious emotional drive → safety.  Doctrine is loaded from package prompt
+seeds and is never writable through MemoryStore tools.
 
 Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdown ``##`` headings.
 

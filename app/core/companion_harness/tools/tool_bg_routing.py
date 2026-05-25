@@ -33,7 +33,7 @@ _UNIFIED_FALLBACK_SYSTEM_PROMPT = (
     "- `importance_round`, `importance_user_message`, `importance_assistant_message` "
     "(integers 1-10): score this tool-finish moment per significance perception rules.\n"
     "- `output_to_user` (boolean): **true** if the user should see a follow-up bubble with tool "
-    "outcomes (read_file, list_dir, search, status line, etc.). **false** when "
+    "outcomes (read_file, list_dir, search, generated assets, etc.). **false** when "
     "only silent persistence ran and no recap is needed.\n"
     "Successful image generation still delivers the asset; `output_to_user` only gates extra text.\n"
 )

@@ -1,4 +1,11 @@
-"""Reload companion system prefix after MemoryStore scope / context.json changes mid-turn."""
+"""Select and refresh the companion prompt stack for each turn track.
+
+The companion turn track is the public routing fact: it decides which tool
+schemas are exposed, which system-message wrapper is used, and which route mode
+must be enforced.  Mid-turn refreshes re-read MemoryStore and ``context.json`` so
+tool-side writes to persona/context documents become visible before the next
+model leg continues.
+"""
 
 from __future__ import annotations
 
@@ -145,7 +152,10 @@ def companion_turn_tools_and_system_messages(
     """
     Single source for companion chat-round tools list and system message stack.
 
-    Must stay aligned with ``turn._run_companion_turn_core`` for the same ``track``.
+    ``USER_CHAT_BOOTSTRAP`` runs one in-turn tool loop so setup can write prompt
+    slices before completion.  Normal user chat and maintenance inner tick require
+    the async foreground/tool-background route.  Proactive, scheduled, and
+    implicit sign-on greeting tracks are chat-only system stacks with no tools.
     """
     inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
     if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
@@ -184,6 +194,10 @@ def refresh_companion_turn_prompt_stack(
 ) -> list[dict[str, Any]]:
     """
     Re-read context.json and prompt slices, replace leading system messages, return tools schema.
+
+    Only tool-capable tracks refresh here.  Chat-only tracks have no follow-up
+    tool leg after their initial completion, so refreshing them would hide a
+    routing bug rather than update useful context.
     """
     context = load_context_meta(store=store)
     bundle = load_prompt_bundle(store, meta=context)
