@@ -81,6 +81,10 @@ You should only changes and use code in the following dirs:
       - User states what they prefer from your suggested options
     - **DO NOT EDIT**: [Guidelines](/.agents/guidelines/) are guidelines in different scenarios
 
+## DevOps
+
+- [devops](/devops/) specify Inty's deployment configurations (environment and application configs etc.)
+
 ## General instructions
 
 - Write extremely terse responses

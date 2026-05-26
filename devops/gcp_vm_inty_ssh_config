@@ -1,0 +1,8 @@
+# This is a ssh config file snippet point to the gcp vm that runs
+# all of our shared dev & prod instances.
+host inty
+    IdentityFile <place-holder>
+    HostName 35.186.154.142
+    ForwardAgent yes
+    User licairong
+    IdentitiesOnly yes
