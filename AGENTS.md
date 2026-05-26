@@ -145,6 +145,8 @@ that means the code lacks hierarchy.
 
 ### Writing code
 
+- KISS ("Keep it simple, stupid")
+- DRY ("Don't repeat yourself")
 - Use env vars to control non-functional behaviors: logging
 - Use config.yaml to control code logics that directly affect user-perceived behavior from the code
 - Never speculate about code, files, or APIs you have not read.
