@@ -12,6 +12,7 @@ from app.schemas.chat_websocket import ChatWsCompanionWireMessageMetaData, ChatW
 from backend.ops.weixin_channel.inty_ws_client import (
     IntyWsChannelClient,
     IntyWsChannelConfig,
+    IntyWsChannelState,
     _WS_PING_INTERVAL_SEC,
     _assistant_text_from_response_payload,
     http_base_to_ws_chat_url,
@@ -110,6 +111,69 @@ async def test_pinger_loop_prevents_idle_disconnect() -> None:
                     await ping_task
                 except asyncio.CancelledError:
                     pass
+
+
+@pytest.mark.asyncio
+async def test_send_user_text_reconnects_after_normal_close() -> None:
+    """A stale WeChat bridge WS should reconnect before surfacing Hermes /reset copy."""
+    connection_count = 0
+
+    async def handler(ws: websockets.ServerConnection) -> None:
+        nonlocal connection_count
+        connection_count += 1
+        await ws.recv()
+        await ws.send(json.dumps({"type": "client_context_ack", "ok": True}))
+        await ws.recv()
+        await ws.send(json.dumps({"type": "user_signed_on_ack", "ok": True}))
+        if connection_count == 1:
+            await ws.close()
+            return
+        await ws.recv()
+        await ws.send(
+            json.dumps(
+                {
+                    "code": 200,
+                    "message": "success",
+                    "data": {
+                        "choices": [
+                            {
+                                "index": 0,
+                                "message": {
+                                    "role": "assistant",
+                                    "content": "after reconnect",
+                                },
+                                "finish_reason": "stop",
+                            }
+                        ],
+                    },
+                    "agent_id": "agent-1",
+                }
+            )
+        )
+
+    async with websockets.serve(handler, "127.0.0.1", 0) as server:
+        port = server.sockets[0].getsockname()[1]
+        client = IntyWsChannelClient(
+            IntyWsChannelConfig(
+                api_base_url=f"http://127.0.0.1:{port}",
+                jwt="jwt",
+                agent_id="agent-1",
+            ),
+            on_proactive_push=_noop_proactive_push,
+            timezone_name=None,
+        )
+        await client.connect()
+        try:
+            deadline = asyncio.get_running_loop().time() + 3.0
+            while client.state != IntyWsChannelState.FAILED:
+                if asyncio.get_running_loop().time() > deadline:
+                    raise AssertionError("client did not observe server close")
+                await asyncio.sleep(0.01)
+            assert await client.send_user_text("hello") == "after reconnect"
+        finally:
+            await client.disconnect()
+
+    assert connection_count == 2
 
 
 async def _noop_proactive_push(_text: str) -> None:
