@@ -71,12 +71,12 @@ flowchart TB
 | CFG-PYD-11 | done | `CloudflareConfig` | — | `cloudflare` | 已迁移为 `BaseModel`；Fixed in `cursor/agent-maintenance-tasks-83c7` |
 | CFG-PYD-12 | todo | `ElevenLabsConfig` | — | `elevenlabs` | 必填 `api_key`：保留无默认或 `Field(...)` |
 | CFG-PYD-13 | todo | `FalConfig` | — | `fal` | 纯字段 |
-| CFG-PYD-14 | todo | `SurpriseSnapConfig` | — | `_parse_surprise_snap_config` 返回值 | 与解析函数联动；解析函数可改为返回已 validate 的模型 |
+| CFG-PYD-14 | claimed | `SurpriseSnapConfig` | — | `_parse_surprise_snap_config` 返回值 | 与解析函数联动；解析函数可改为返回已 validate 的模型；Claimed in `cursor/agent-maintenance-tasks-772c` |
 | CFG-PYD-15 | todo | `UserAnalyticsReportConfig` | — | `user_analytics_report` | 纯字段 |
 | CFG-PYD-16 | done | `GeminiLiveConfig` | — | `gemini_live` | 已迁移为 `BaseModel`；Fixed in `cursor/agent-maintenance-tasks-ed41` |
 | CFG-PYD-17 | todo | `TTSConfig` | — | `tts` | 纯字段 |
-| CFG-PYD-18 | todo | `MemoryExtractionConfig` | — | `memory_extraction` | 内含 `WorkflowMode`；`__post_init__` 字符串→枚举 |
-| CFG-PYD-19 | todo | `PushNotificationConfig` | — | `push_notification` | `stages` 默认 dict；`__post_init__` → `model_validator(after)` |
+| CFG-PYD-18 | claimed | `MemoryExtractionConfig` | — | `memory_extraction` | 内含 `WorkflowMode`；`__post_init__` 字符串→枚举；Claimed in `cursor/agent-maintenance-tasks-772c` |
+| CFG-PYD-19 | claimed | `PushNotificationConfig` | — | `push_notification` | `stages` 默认 dict；`__post_init__` → `model_validator(after)`；Claimed in `cursor/agent-maintenance-tasks-772c` |
 | CFG-PYD-20 | todo | `FeaturesConfig` | — | `app.features`（预处理 dict） | `companion_transcript_compaction` 等；`__post_init__` 校验 bootstrap / context_mode |
 | CFG-PYD-21 | todo | `AgentConfig` | — | `agent` | 体量大；无其它 *Config* dataclass 交叉引用 |
 | CFG-PYD-22 | todo | `AppConfig.LimitsConfig` | CFG-PYD-01..21 中与 app 树无冲突者 | `app.limits`（预处理 dict） | **仅嵌套类**：先改为 `BaseModel`，父 `AppConfig` 仍为 dataclass 亦可 |
