@@ -10,7 +10,7 @@ from typing import Any, List, Optional
 
 import yaml
 from loguru import logger
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
 
 from loguru import logger
 
@@ -499,9 +499,10 @@ class ElevenLabsConfig:
     voice_change_model: str = "eleven_english_sts_v2"
 
 
-@dataclass
-class MemoryExtractionConfig:
+class MemoryExtractionConfig(BaseModel):
     """记忆抽取定时任务配置；默认使用 OpenRouter mistralai/devstral-2512。"""
+
+    model_config = ConfigDict(extra="ignore")
 
     class WorkflowMode(str, Enum):
         ALWAYS_SUMMARIZE_FULL_CHAT_MESSAGES_HISTORY = (
@@ -529,11 +530,6 @@ class MemoryExtractionConfig:
     # Pipeline overview: app/core/companion_harness/companion/dual_llm_chat_branch_envelope.py module docstring.
     use_significance_perception_in_extraction: bool = False
 
-    def __post_init__(self):
-        mode = self.workflow_mode
-        if isinstance(mode, str):
-            self.workflow_mode = self.WorkflowMode(mode)
-
 
 def _parse_surprise_snap_config(data: dict) -> "SurpriseSnapConfig":
     raw = data.get("surprise_snap") or {}
@@ -550,19 +546,20 @@ def _parse_surprise_snap_config(data: dict) -> "SurpriseSnapConfig":
     trigger_rounds = raw.get("trigger_rounds")
     if not isinstance(trigger_rounds, list):
         trigger_rounds = [3, 8, 15]
-    return SurpriseSnapConfig(
-        enabled_since=enabled_since, trigger_rounds=trigger_rounds
+    return SurpriseSnapConfig.model_validate(
+        {"enabled_since": enabled_since, "trigger_rounds": trigger_rounds}
     )
 
 
-@dataclass
-class SurpriseSnapConfig:
+class SurpriseSnapConfig(BaseModel):
     """Surprise Snap：用户与角色对话达到指定轮数时插入专属照消息。"""
+
+    model_config = ConfigDict(extra="ignore")
 
     enabled_since: Optional[datetime] = (
         None  # 只统计此时间之后的用户消息；None 则不触发
     )
-    trigger_rounds: List[int] = field(
+    trigger_rounds: List[int] = Field(
         default_factory=lambda: [3, 8, 15]
     )  # 用户消息数达到这些轮数时触发
 
@@ -595,9 +592,10 @@ class UserAnalyticsReportConfig:
     )
 
 
-@dataclass
-class PushNotificationConfig:
+class PushNotificationConfig(BaseModel):
     """推送通知服务配置"""
+
+    model_config = ConfigDict(extra="ignore")
 
     enabled: bool = True  # 是否启用推送服务
     batch_size: int = 50  # 每批处理的聊天数量
@@ -610,11 +608,12 @@ class PushNotificationConfig:
     workers_per_user_ratio: int = (
         10  # 每 N 个用户分配 1 个 worker（如 10 表示每 10 个用户 1 个 worker）
     )
-    stages: dict = (
+    stages: Optional[dict[str, Any]] = (
         None  # 推送阶段策略配置（10min, 30min, 2h, 24h, 48h），有聊天记录和无聊天记录用户共用
     )
 
-    def __post_init__(self):
+    @model_validator(mode="after")
+    def apply_default_stages(self) -> "PushNotificationConfig":
         if self.stages is None:
             self.stages = {
                 "10min": {"count": 0, "minutes": 10},
@@ -623,6 +622,7 @@ class PushNotificationConfig:
                 "24h": {"count": 3, "hours": 24},
                 "48h": {"count": 4, "hours": 48},
             }
+        return self
 
 
 @dataclass
@@ -798,11 +798,11 @@ def load_config(path: str) -> Config:
         cloudflare=CloudflareConfig.model_validate(
             data.get("cloudflare") or {}
         ),
-        push_notification=PushNotificationConfig(
-            **data.get("push_notification", {})
+        push_notification=PushNotificationConfig.model_validate(
+            data.get("push_notification") or {}
         ),
-        memory_extraction=MemoryExtractionConfig(
-            **(data.get("memory_extraction") or {})
+        memory_extraction=MemoryExtractionConfig.model_validate(
+            data.get("memory_extraction") or {}
         ),
         user_analytics_report=UserAnalyticsReportConfig(
             **(data.get("user_analytics_report") or {})
