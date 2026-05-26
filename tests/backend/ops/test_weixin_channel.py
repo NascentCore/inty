@@ -20,7 +20,9 @@ from backend.ops.weixin_channel.inty_ws_client import (
 from backend.ops.weixin_channel.session import (
     WeixinChannelBinding,
     WeixinChannelSession,
+    weixin_bridge_reply_for_inbound,
 )
+from backend.ops.weixin_channel.transport import WeixinInboundMessage
 
 
 def test_ws_ping_interval_below_server_idle_minimum() -> None:
@@ -116,7 +118,103 @@ async def _noop_proactive_push(_text: str) -> None:
     return None
 
 
-def test_http_base_to_ws_chat_url() -> None:
+def test_weixin_bridge_reply_for_image_only_inbound() -> None:
+    reply = weixin_bridge_reply_for_inbound(
+        text="",
+        media_types=("image/jpeg",),
+    )
+    assert reply is not None
+    assert "text" in reply.lower()
+    assert "image" in reply.lower()
+
+
+def test_weixin_bridge_reply_for_empty_non_image_inbound() -> None:
+    reply = weixin_bridge_reply_for_inbound(text="  ", media_types=())
+    assert reply is not None
+    assert "text message" in reply.lower()
+
+
+def test_weixin_bridge_reply_for_image_with_caption_forwards() -> None:
+    reply = weixin_bridge_reply_for_inbound(
+        text="what is this?",
+        media_types=("image/jpeg",),
+    )
+    assert reply is None
+
+
+def test_weixin_bridge_reply_for_plain_text_forwards() -> None:
+    reply = weixin_bridge_reply_for_inbound(text="hello", media_types=())
+    assert reply is None
+
+
+@pytest.mark.asyncio
+async def test_handle_inbound_image_only_does_not_call_inty_ws() -> None:
+    class _RecordingWsClient:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        async def send_user_text(self, user_text: str) -> str:
+            self.calls.append(user_text)
+            return "should not be used"
+
+    binding = WeixinChannelBinding(
+        user_id="user-1",
+        agent_id="agent-1",
+        inty_api_base_url="http://127.0.0.1:8001",
+        inty_jwt="jwt",
+        weixin_account_id="wx-acct",
+        weixin_token="token",
+        weixin_base_url="https://ilinkai.weixin.qq.com",
+    )
+    session = WeixinChannelSession(binding=binding, on_binding_peer_updated=None)
+    ws_client = _RecordingWsClient()
+    session._ws_client = ws_client
+    inbound = WeixinInboundMessage(
+        account_id="wx-acct",
+        peer_id="peer-42",
+        text="",
+        media_paths=("/tmp/weixin-image.jpg",),
+        media_types=("image/jpeg",),
+    )
+    reply = await session._handle_inbound(inbound)
+    assert ws_client.calls == []
+    assert reply is not None
+    assert "image" in reply.lower()
+
+
+@pytest.mark.asyncio
+async def test_handle_inbound_text_forwards_to_inty_ws() -> None:
+    class _RecordingWsClient:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        async def send_user_text(self, user_text: str) -> str:
+            self.calls.append(user_text)
+            return "companion reply"
+
+    binding = WeixinChannelBinding(
+        user_id="user-1",
+        agent_id="agent-1",
+        inty_api_base_url="http://127.0.0.1:8001",
+        inty_jwt="jwt",
+        weixin_account_id="wx-acct",
+        weixin_token="token",
+        weixin_base_url="https://ilinkai.weixin.qq.com",
+    )
+    session = WeixinChannelSession(binding=binding, on_binding_peer_updated=None)
+    ws_client = _RecordingWsClient()
+    session._ws_client = ws_client
+    inbound = WeixinInboundMessage(
+        account_id="wx-acct",
+        peer_id="peer-42",
+        text="  hello  ",
+        media_paths=(),
+        media_types=(),
+    )
+    reply = await session._handle_inbound(inbound)
+    assert ws_client.calls == ["hello"]
+    assert reply == "companion reply"
+
     url = http_base_to_ws_chat_url("http://127.0.0.1:8001", "conn-1")
     assert url.startswith("ws://127.0.0.1:8001/api/v1/chat/ws?")
     assert "ws_conn_id=conn-1" in url
