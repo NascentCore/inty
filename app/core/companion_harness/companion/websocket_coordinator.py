@@ -123,8 +123,8 @@ class CompanionWebSocketCoordinator(Coordinator):
     """``/api/v1/chat/ws`` coordinator: presence state plus WS bootstrap/outbound hooks."""
 
     # TODO(companion-ws-bootstrap-downlink): fold queue + deliver_ctx into session downlink. #3209 #3211
-    bootstrap_interim_queued_events: asyncio.Queue[BootstrapInterimQueued] = field(
-        default_factory=asyncio.Queue
+    bootstrap_interim_queued_events: asyncio.Queue[BootstrapInterimQueued] = (
+        field(default_factory=asyncio.Queue)
     )
     bootstrap_interim_deliver_ctx: BootstrapInterimDeliverCtx | None = field(
         default=None, repr=False

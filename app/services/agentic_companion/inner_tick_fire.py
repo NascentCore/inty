@@ -49,7 +49,11 @@ from app.schemas.chat_websocket import (
     dump_chat_ws_companion_wire_meta,
 )
 from app.schemas.response import APIResponse
-from app.services import chat_history_service, chat_service, companion_chat_service
+from app.services import (
+    chat_history_service,
+    chat_service,
+    companion_chat_service,
+)
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.inner_tick_delivery import (
     InnerTickDelivery,
@@ -60,6 +64,7 @@ from app.services.agentic_companion.ws_implicit_signals import (
     implicit_signal_bundle_from_tc_box,
 )
 from app.services.subscription_service import SubscriptionService
+
 
 async def try_fire_scheduled_inner_tick(
     *,
@@ -658,7 +663,9 @@ async def try_fire_maintenance_inner_tick(
                 min_gap_seconds=float(
                     feats.companion_ws_maintenance_inner_tick_min_gap_seconds
                 ),
-                poll_seconds=float(feats.companion_ws_proactive_chat_poll_seconds),
+                poll_seconds=float(
+                    feats.companion_ws_proactive_chat_poll_seconds
+                ),
             ),
         )
         if remain > 0:
@@ -891,5 +898,3 @@ async def try_fire_maintenance_inner_tick(
             agent_id,
             chat_row_id,
         )
-
-

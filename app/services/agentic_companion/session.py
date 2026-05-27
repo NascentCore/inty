@@ -221,7 +221,9 @@ class Session:
     downlink: ChannelDownlink
     coordinator: Coordinator
     _inner_tick_stop: asyncio.Event = field(repr=False)
-    _inner_tick_task: asyncio.Task[None] | None = field(default=None, repr=False)
+    _inner_tick_task: asyncio.Task[None] | None = field(
+        default=None, repr=False
+    )
 
     @classmethod
     def create(
@@ -289,7 +291,9 @@ class Session:
         run_one_poll: InnerTickPollRunner,
     ) -> None:
         assert poll_seconds > 0.0
-        if self._inner_tick_task is not None and (not self._inner_tick_task.done()):
+        if self._inner_tick_task is not None and (
+            not self._inner_tick_task.done()
+        ):
             return
 
         async def _worker() -> None:

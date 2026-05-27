@@ -32,7 +32,9 @@ from app.core.companion_harness.companion.llm_inference_errors import (
 from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
-from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutputSink
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutputSink,
+)
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.core.companion_harness.companion.runtime_events import (
     build_user_signed_out_runtime_event_record,
