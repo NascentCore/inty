@@ -14,7 +14,7 @@ from pathlib import Path
 
 import httpx
 
-from tests.companion_ws_bootstrap.constants import (
+from tests.app.companion_ws_bootstrap.constants import (
     DEFAULT_PG_HOST,
     DEFAULT_PG_PORT,
     ENV_E2E_RELAX_SUBSCRIPTION,

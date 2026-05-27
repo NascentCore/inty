@@ -1,4 +1,5 @@
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -24,8 +25,10 @@ from app.utils.config import (
     GoogleOAuthConfig,
     GooglePlayConfig,
     LoggingConfig,
+    MemoryExtractionConfig,
     PushNotificationConfig,
     SecurityConfig,
+    SurpriseSnapConfig,
     VerificationConfig,
     _validate_config,
     load_config,
@@ -546,6 +549,41 @@ def test_cloudflare_config_model_validate_ignores_unknown_keys():
     assert settings.fallback_to_original is False
 
 
+def test_memory_extraction_config_model_validate_ignores_unknown_keys():
+    settings = MemoryExtractionConfig.model_validate(
+        {
+            "workflow_mode": "daily_incremental_summarization",
+            "trigger_new_user_messages": 12,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.workflow_mode == (
+        MemoryExtractionConfig.WorkflowMode.DAILY_INCREMENTAL_SUMMARIZATION
+    )
+    assert settings.trigger_new_user_messages == 12
+    assert not hasattr(settings, "unknown_key")
+
+
+def test_push_notification_config_model_validate_defaults_stages():
+    first = PushNotificationConfig.model_validate({"stages": None})
+    second = PushNotificationConfig()
+
+    assert first.stages is not None
+    assert second.stages is not None
+    first.stages["10min"]["count"] = 99
+    assert second.stages["10min"]["count"] == 0
+
+
+def test_surprise_snap_config_model_validate_defaults_trigger_rounds():
+    first = SurpriseSnapConfig.model_validate({"unknown_key": "ignored"})
+    second = SurpriseSnapConfig()
+
+    first.trigger_rounds.append(21)
+    assert second.trigger_rounds == [3, 8, 15]
+    assert not hasattr(first, "unknown_key")
+
+
 def test_agent_config_langsmith_always_trace_user_emails_defaults_to_empty_list():
     agent_config = AgentConfig(api_key="test", langchain_api_key="test")
 
@@ -870,3 +908,85 @@ def test_load_config_gemini_live_uses_pydantic_validation():
     assert cfg.gemini_live.enabled is True
     assert cfg.gemini_live.project_id == "inty-live-yaml"
     assert not hasattr(cfg.gemini_live, "unknown_key")
+
+
+def test_load_config_memory_extraction_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "agent:\n",
+        "\n".join(
+            [
+                "memory_extraction:",
+                "  workflow_mode: daily_incremental_summarization",
+                "  trigger_incremental_messages: 9",
+                "  unknown_key: ignored",
+                "agent:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.memory_extraction.workflow_mode == (
+        MemoryExtractionConfig.WorkflowMode.DAILY_INCREMENTAL_SUMMARIZATION
+    )
+    assert cfg.memory_extraction.trigger_incremental_messages == 9
+    assert not hasattr(cfg.memory_extraction, "unknown_key")
+
+
+def test_load_config_push_notification_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n",
+        "\n".join(
+            [
+                "push_notification:",
+                "  batch_size: 25",
+                "  stages: null",
+                "  unknown_key: ignored",
+                "elevenlabs:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.push_notification.batch_size == 25
+    assert cfg.push_notification.stages is not None
+    assert cfg.push_notification.stages["10min"] == {"count": 0, "minutes": 10}
+    assert not hasattr(cfg.push_notification, "unknown_key")
+
+
+def test_load_config_surprise_snap_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n",
+        "\n".join(
+            [
+                "surprise_snap:",
+                '  enabled_since: "2026-05-01T10:00:00Z"',
+                "  trigger_rounds:",
+                "    - 2",
+                "    - 4",
+                "  unknown_key: ignored",
+                "elevenlabs:\n",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.surprise_snap.enabled_since == datetime(
+        2026, 5, 1, 10, 0, tzinfo=timezone.utc
+    )
+    assert cfg.surprise_snap.trigger_rounds == [2, 4]
+    assert not hasattr(cfg.surprise_snap, "unknown_key")

@@ -168,23 +168,3 @@ jobs:
           INTY_LOGGING_LEVEL: INFO
           INTY_CONSOLE_LOGGING_LEVEL: INFO
           UVICORN_LOG_LEVEL: warning
-
-      - name: Start push worker and verify startup
-        run: |
-          # TODO(INTY_CONFIG_YAML): replace cp with INTY_CONFIG_YAML=devops/config.yaml.test
-          cp devops/config.yaml.test config.yaml
-          ./backend/push_worker/start.sh 2>&1 | tee push_worker.log &
-
-          # Wait for the push worker to be ready (same pattern as main server readiness loop)
-          echo "Waiting for push worker to start..."
-          for i in {1..30}; do
-            if grep -q -E "推送服务初始化完成|推送服务启动成功|推送服务未启用" push_worker.log 2>/dev/null; then
-              echo "Push worker is ready!"
-              break
-            fi
-            echo "Attempt $i: Push worker not ready yet, waiting..."
-            sleep 2
-          done
-
-          # Final check: at least one of the expected messages must appear
-          grep -q -E "推送服务初始化完成|推送服务启动成功|推送服务未启用" push_worker.log

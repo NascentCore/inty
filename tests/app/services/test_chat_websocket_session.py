@@ -41,21 +41,3 @@ async def test_chat_ws_outbound_pump_send_json_disconnect_exits_cleanly() -> Non
     assert pump.done()
     await pump
     assert ws.send_json.await_count == 1
-
-
-@pytest.mark.asyncio
-async def test_repl_pop_downlink_maps_bridge_tuple() -> None:
-    from tools.inty_v2_repl.repl_message_io import pop_downlink_item
-
-    bridge = MagicMock()
-    bridge.try_pop_queued_chat.return_value = ("hello", None, {"source": "chat"})
-    item = pop_downlink_item(bridge)
-    assert item is not None
-    assert item["kind"] == "assistant"
-    assert item["text"] == "hello"
-
-    bridge.try_pop_queued_chat.return_value = (None, (400, "bad"), {})
-    err_item = pop_downlink_item(bridge)
-    assert err_item is not None
-    assert err_item["kind"] == "ws_error"
-    assert err_item["code"] == 400

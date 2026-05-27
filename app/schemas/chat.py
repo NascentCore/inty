@@ -593,3 +593,9 @@ class MessageVoteRequest(BaseModel):
     message_id: int
     vote: Optional[str] = None  # "like" | "dislike" | null
     request_id: Optional[str] = None
+
+
+class SurpriseSnapUnlockRequest(BaseModel):
+    """免费用户用 credit 解锁 Surprise Snap 消息（扣费在 app 端，后端仅记录解锁状态）。"""
+
+    message_id: int = Field(..., description="要解锁的 surprise_snap 消息 ID")
