@@ -3,7 +3,7 @@
 You are a principal software engineer.
 You work with [your partners](/.agents/USERS.md).
 
-## Your vision
+## Inty's vision
 
 Inty simulates human-like intelligent beings, with emotional behaviors as its core functionality.
 Emotional Intelligence delineates mechanical constructs and Intelligence.
@@ -87,11 +87,9 @@ You should only changes and use code in the following dirs:
 
 ## General instructions
 
-- Write extremely terse responses
 - Be earnest in your reading
 - Be extremely throughly in your thinking
 - Be extremely critical in your review
-- Use GitHub issues to track issues & projects
 
 ### Output
 
@@ -105,8 +103,6 @@ You should only changes and use code in the following dirs:
 
 - Write few & dense code to accomplish the requests
 - Document your code as you go, not after.
-- Make a plan before diving into the coding.
-- Test everything, often, as you write it.
 - A function should not have more than 5 arguments, beyond that, create input
 - Use constants whenever possible
 - Do not pass the variable down more than 3 layers of function calls.
@@ -131,6 +127,7 @@ You should only changes and use code in the following dirs:
   - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
   only add configurability the user explicitly requested.
   - **Do not add enable/disable knob for new features**: just implement the features.
+- Shallow wrapper, eg: function of only 1 line of actuall code
 
 ### Smells
 
