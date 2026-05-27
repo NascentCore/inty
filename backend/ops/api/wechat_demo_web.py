@@ -1,4 +1,8 @@
-"""Serve minimal WeChat self-service demo page on Ops."""
+"""Serve minimal WeChat self-service demo page on Ops.
+
+Call qrcode api to generate qr code url.
+第三方 API：前端拼 URL 即可，零后端、零依赖。
+"""
 
 from __future__ import annotations
 
