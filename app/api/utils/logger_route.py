@@ -147,6 +147,7 @@ class LoggerRoute(APIRoute):
                 except Exception as e:
                     duration = time.time() - start_time
                     # 4xx HTTPException 是预期的客户端错误，降级为 WARNING 减少测试/CI error 日志噪音。
+                    # TODO: 可配置抑制或降级 4xx 日志 — https://github.com/NascentCore/inty/issues/3200
                     is_client_error = (
                         isinstance(e, HTTPException)
                         and 400 <= getattr(e, "status_code", 0) < 500
