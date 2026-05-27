@@ -92,7 +92,9 @@ class WeixinInprocessPresence:
         poll_secs = float(
             global_config_loaded_from_config_yaml.app.features.companion_ws_proactive_chat_poll_seconds
         )
-        delivery = inner_tick_delivery_for_weixin(self._push_weixin_assistant_text)
+        delivery = inner_tick_delivery_for_weixin(
+            self._push_weixin_assistant_text
+        )
 
         async def _run_poll(ctx: dict) -> None:
             await run_inner_tick_poll(
@@ -141,7 +143,9 @@ class WeixinInprocessPresence:
         agent_id = self._binding.agent_id
         try:
             async with AsyncSessionLocal() as db:
-                inty_user = await deps.get_user_from_token(self._binding.inty_jwt, db)
+                inty_user = await deps.get_user_from_token(
+                    self._binding.inty_jwt, db
+                )
                 if inty_user is None:
                     return (
                         "This demo bridge could not verify your Inty token. "

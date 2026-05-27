@@ -17,7 +17,9 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 if TYPE_CHECKING:
-    from backend.ops.weixin_channel.inprocess_presence import WeixinInprocessPresence
+    from backend.ops.weixin_channel.inprocess_presence import (
+        WeixinInprocessPresence,
+    )
     from backend.ops.weixin_channel.transport import (
         WeixinCredential,
         WeixinInboundMessage,
@@ -32,7 +34,9 @@ def weixin_bridge_reply_for_inbound(
 ) -> str | None:
     """Return a fixed WeChat reply when companion must not be called; else ``None``."""
     stripped = text.strip()
-    has_image = any(media_type.startswith("image/") for media_type in media_types)
+    has_image = any(
+        media_type.startswith("image/") for media_type in media_types
+    )
     if has_image and not stripped:
         return (
             "This WeChat demo bridge can only forward text right now. "
