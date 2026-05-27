@@ -1,9 +1,9 @@
 """Weixin channel session: transport inbound + Inty WS downlink routing.
 
-Inty WS currently carries text-shaped chat only. Inbound image/video/file/voice
-handling (CDN decrypt, voice transcription vs SILK cache, quoted-message media) is
-still owned by Hermes ``WeixinAdapter``; see the module docstring of
-``backend/ops/weixin_channel/transport`` for the per-type plain-language summary.
+Inty WS currently carries text-shaped chat only. Image-only WeChat DMs are answered
+with a bridge-side text reply (no ``send_user_text``) so Hermes does not surface
+``AssertionError`` from empty user text. Inbound image/video/file/voice CDN handling
+is still owned by Hermes ``WeixinAdapter``; see ``transport`` module docstring.
 """
 
 from __future__ import annotations
@@ -28,6 +28,27 @@ if TYPE_CHECKING:
         WeixinInboundMessage,
         WeixinTransport,
     )
+
+
+def weixin_bridge_reply_for_inbound(
+    *,
+    text: str,
+    media_types: tuple[str, ...],
+) -> str | None:
+    """Return a fixed WeChat reply when Inty WS must not be called; else ``None``."""
+    stripped = text.strip()
+    has_image = any(media_type.startswith("image/") for media_type in media_types)
+    if has_image and not stripped:
+        return (
+            "This WeChat demo bridge can only forward text right now. "
+            "Please send your message as text (images are not passed through to the companion yet)."
+        )
+    if not stripped:
+        return (
+            "Please send a text message. "
+            "This bridge cannot forward images or other attachments without text yet."
+        )
+    return None
 
 
 @dataclass
@@ -128,9 +149,15 @@ class WeixinChannelSession:
         if peer_updated is not None:
             await peer_updated(self.binding)
         assert self._ws_client is not None
+        bridge_reply = weixin_bridge_reply_for_inbound(
+            text=inbound.text,
+            media_types=inbound.media_types,
+        )
+        if bridge_reply is not None:
+            return bridge_reply
         # TODO(wechat-demo-ws-disconnect-hermes-wording): catch ``ConnectionClosed*`` and
         # return Inty-specific user text (or trigger WS reconnect) instead of Hermes "/reset".
-        return await self._ws_client.send_user_text(inbound.text)
+        return await self._ws_client.send_user_text(inbound.text.strip())
 
     async def _handle_proactive_push(self, text: str) -> None:
         # TODO(weixin-1to1-binding): proactive send targets last_peer_id (latest inbound DM),

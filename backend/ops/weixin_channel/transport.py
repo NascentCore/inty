@@ -80,6 +80,9 @@ class WeixinInboundMessage:
     account_id: str
     peer_id: str
     text: str
+    # Hermes WeixinAdapter local cache paths + MIME types (image-only DMs have empty text).
+    media_paths: tuple[str, ...]
+    media_types: tuple[str, ...]
 
 
 WeixinInboundHandler = Callable[[WeixinInboundMessage], Awaitable[str]]
@@ -126,6 +129,8 @@ class WeixinTransport:
                 account_id=self._cred.account_id,
                 peer_id=peer_id,
                 text=event.text,
+                media_paths=tuple(event.media_urls),
+                media_types=tuple(event.media_types),
             )
             return await self._inbound_handler(inbound)
 
