@@ -8,8 +8,8 @@ are centralized in :class:`ChatWsCompanionWireMessageMetaData`.
 
 Companion WS downlink completion types (:class:`ChatWsAssistantMessage`,
 :class:`ChatWsCompletionData`, :class:`ChatWebSocketQueuedSuccessFrame`) are defined in
-Phase 1 only; emit/parse paths still use loose dicts until Phase 2 adoption (GitHub issue
-from template ``companion-ws-wire-types-phase2``).
+Phase 1 only; emit/parse paths still use loose dicts until Phase 2 adoption
+(`GitHub issue #3207 <https://github.com/NascentCore/inty/issues/3207>`_).
 
 Direction tags in model docstrings:
 
@@ -375,9 +375,8 @@ class ChatWebSocketResponse(BaseModel):
     include ``error_kind`` and ``llm_provider_http_status`` (and other keys merged from
     ``CompanionInferenceUpstreamHTTPException.ws_extra`` in the handler).
 
-    TODO(issue#TBD): type ``data`` as ``ChatWsCompletionData | None``; success
-    frames should validate as :class:`ChatWebSocketQueuedSuccessFrame`. Checklist:
-    `.github/ISSUE_TEMPLATE/companion-ws-wire-types-phase2.md`.
+    TODO(issue#3207): type ``data`` as ``ChatWsCompletionData | None``; success
+    frames should validate as :class:`ChatWebSocketQueuedSuccessFrame`.
     """
 
     model_config = ConfigDict(extra="allow")
