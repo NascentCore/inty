@@ -155,6 +155,7 @@ that means the code lacks hierarchy.
 - Do not use `.strip()` all the time to clean strings
 - Use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models, [Cyclopts](https://github.com/BrianPugh/cyclopts), `uv`
   I/O 与外部输入用 `Pydantic`；进程内 immutable value object 用 `@dataclass(frozen=True)`；可变 runtime state 用 `dataclass`
+  - Document pydantic model fields as Field description
 - `__init__.py` must only include docstring, no actual code.
 - Do not allow None argument
 - Do not use global variable, pass variable as argument
