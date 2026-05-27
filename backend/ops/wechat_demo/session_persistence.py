@@ -50,7 +50,7 @@ class PersistedWechatDemoBridge(BaseModel):
     inty_api_base_url: str = Field(
         ...,
         min_length=1,
-        description="Inty HTTP API origin used by IntyWsChannelClient to open the companion WebSocket.",
+        description="Inty HTTP API origin for the demo bridge JWT and agent binding (legacy field name).",
     )
     inty_jwt: str = Field(
         ...,

@@ -1873,19 +1873,21 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
         "companion_ws_proactive_chat_poll_seconds",
         0.05,
     )
+    from app.services.agentic_companion import inner_tick_fire as inner_tick_fire_mod
+
     monkeypatch.setattr(
-        chat_ws_v1,
-        "_try_fire_companion_ws_scheduled_task_inner_tick",
+        inner_tick_fire_mod,
+        "try_fire_scheduled_inner_tick",
         spy_scheduled,
     )
     monkeypatch.setattr(
-        chat_ws_v1,
-        "_try_fire_companion_ws_proactive_chat",
+        inner_tick_fire_mod,
+        "try_fire_proactive_chat_inner_tick",
         spy_proactive,
     )
     monkeypatch.setattr(
-        chat_ws_v1,
-        "_try_fire_companion_ws_maintenance_inner_tick",
+        inner_tick_fire_mod,
+        "try_fire_maintenance_inner_tick",
         spy_maintenance,
     )
 
@@ -1950,19 +1952,21 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
         "companion_ws_maintenance_inner_tick_enabled",
         False,
     )
+    from app.services.agentic_companion import inner_tick_fire as inner_tick_fire_mod
+
     monkeypatch.setattr(
-        chat_ws_v1,
-        "_try_fire_companion_ws_scheduled_task_inner_tick",
+        inner_tick_fire_mod,
+        "try_fire_scheduled_inner_tick",
         spy_scheduled,
     )
     monkeypatch.setattr(
-        chat_ws_v1,
-        "_try_fire_companion_ws_proactive_chat",
+        inner_tick_fire_mod,
+        "try_fire_proactive_chat_inner_tick",
         spy_proactive,
     )
     monkeypatch.setattr(
-        chat_ws_v1,
-        "_try_fire_companion_ws_maintenance_inner_tick",
+        inner_tick_fire_mod,
+        "try_fire_maintenance_inner_tick",
         spy_maintenance,
     )
 
@@ -2279,6 +2283,7 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
+        companion_ws=None,
         implicit_greeting_turn=False,
         ws_outbound_queue=None,
     ):
@@ -2410,6 +2415,7 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
+        companion_ws=None,
         implicit_greeting_turn=False,
         ws_outbound_queue=None,
     ):
@@ -2466,6 +2472,7 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
+        companion_ws=None,
         implicit_greeting_turn=False,
         ws_outbound_queue=None,
     ):
