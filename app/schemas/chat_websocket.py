@@ -4,7 +4,12 @@ This package defines Pydantic models for WebSocket text frames (JSON objects) ex
 between clients and the Inty chat backend. It is the authoritative spec for client
 implementations; user-visible ``message`` strings on error paths remain English per
 ``app/AGENTS.md``. Companion chat ``meta_data`` blobs (user + assistant + ``tool_bg``)
-are centralized in :class:`ChatWsCompanionWireMetaData`.
+are centralized in :class:`ChatWsCompanionWireMessageMetaData`.
+
+Companion WS downlink completion types (:class:`ChatWsAssistantMessage`,
+:class:`ChatWsCompletionData`, :class:`ChatWebSocketQueuedSuccessFrame`) are defined in
+Phase 1 only; emit/parse paths still use loose dicts until Phase 2 adoption
+(``COMPANION_WS_WIRE_TYPES_PHASE2_ISSUE_CHECKLIST``).
 
 Direction tags in model docstrings:
 
@@ -25,7 +30,33 @@ from typing import Any, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from app.schemas.chat import ChatCompletionRequest, UserTimeContext
+from app.schemas.biz_action import BizAction
+from app.schemas.chat import (
+    ChatCompletionRequest,
+    ChatMessageContentPart,
+    UserTimeContext,
+)
+
+# GitHub issue body for Phase 2 adoption (create issue titled COMPANION_WS_WIRE_TYPES_PHASE2_ISSUE_TITLE).
+COMPANION_WS_WIRE_TYPES_PHASE2_ISSUE_TITLE = (
+    "Companion WS completion: adopt typed Pydantic wire models (Phase 2+)"
+)
+COMPANION_WS_WIRE_TYPES_PHASE2_ISSUE_CHECKLIST = """
+Phase 1 adds typed models in app/schemas/chat_websocket.py without changing emit/parse paths.
+
+- [ ] Implement build_companion_ws_completion_data(input: BuildCompanionWsCompletionInput) -> ChatWsCompletionData
+- [ ] app/api/v1/endpoints/chat_ws.py: all emit paths use typed builder (foreground / tool_bg / bootstrap interim / inner-tick / greeting)
+- [ ] app/api/v1/endpoints/chat.py: _companion_ai_meta_from_turn_result returns ChatWsCompanionWireMessageMetaData
+- [ ] app/schemas/chat_websocket.py: tighten ChatWebSocketResponse.data to ChatWsCompletionData | None
+- [ ] tools/inty_v2_repl/backend_chat_ws.py: parse via ChatWebSocketQueuedSuccessFrame.model_validate
+- [ ] backend/ops/weixin_channel/inty_ws_client.py: align downlink parse with ChatWebSocketQueuedSuccessFrame
+- [ ] app/core/companion_harness/companion/models.py: CompanionTurnResult docstring points to wire types
+- [ ] app/services/chat_history_service.py: get_ai_message_info_by_id returns ChatWsPersistedAssistantRow
+- [ ] Endpoint regression tests (tests/app/api/v1/endpoints/test_chat.py WS companion cases)
+- [ ] Out of scope: tighten HTTP ChatCompletionResponse.choices (separate issue)
+
+Search codebase for TODO(companion-ws-wire-types-phase2).
+"""
 
 
 def normalize_websocket_companion_message_id_uuid(raw: Optional[str]) -> str:
@@ -143,6 +174,22 @@ class ChatWsWsConnDroppedFrame(BaseModel):
     )
 
 
+class ChatWsSignificancePerception(BaseModel):
+    """``meta_data.significance_perception`` from dual-LLM envelope (partial dicts allowed)."""
+
+    importance_round: Optional[int] = None
+    importance_user_message: Optional[int] = None
+    importance_assistant_message: Optional[int] = None
+
+
+class ChatWsGeneratedImageMeta(BaseModel):
+    """``meta_data.generated_image`` on tool_bg downlink frames."""
+
+    image_url: str = Field(min_length=1)
+    width: int = 0
+    height: int = 0
+
+
 class ChatWsWsConnDroppedAckFrame(BaseModel):
     """**Server → client (immediate)** result of ``ws_conn_dropped`` handling.
 
@@ -214,12 +261,12 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
     reply_to_user_msg_uuid: Optional[str] = None
     langsmith_trace_id: Optional[str] = None
     langsmith_run_id: Optional[str] = None
-    significance_perception: Optional[dict[str, Any]] = None
+    significance_perception: Optional[ChatWsSignificancePerception] = None
     tool_background_started: Optional[bool] = None
     context_mode: Optional[str] = None
     tool_bg_output_to_user: Optional[bool] = None
     tool_bg_generation_deliver: Optional[bool] = None
-    generated_image: Optional[dict[str, Any]] = None
+    generated_image: Optional[ChatWsGeneratedImageMeta] = None
     tool_bg_local_image_paths: Optional[list[str]] = None
     transcript_compaction: Optional[dict[str, Any]] = None
 
@@ -252,6 +299,77 @@ def dump_chat_ws_companion_wire_meta(
     return meta.model_dump(exclude_none=True, by_alias=True)
 
 
+class ChatWsPersistedAssistantRow(BaseModel):
+    """Mirror of ``chat_history_service.get_ai_message_info_by_id`` for Phase 2 builder input."""
+
+    id: int
+    content: str
+    audio_url: Optional[str] = None
+    meta_data: Optional[dict[str, Any]] = None
+    timestamp: Optional[str] = None
+
+
+class ChatWsAssistantMessage(BaseModel):
+    """**Server → client (queued)** assistant row inside ``choices[].message`` (companion WS)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    role: Literal["assistant"] = "assistant"
+    content: str
+    id: Optional[int] = None
+    meta_data: Optional[ChatWsCompanionWireMessageMetaData] = None
+    timestamp: Optional[str] = None
+    audio_url: Optional[str] = None
+    content_parts: Optional[list[ChatMessageContentPart]] = None
+
+
+class ChatWsCompletionChoice(BaseModel):
+    """**Server → client (queued)** single OpenAI-shaped choice on companion WS downlink."""
+
+    index: int
+    message: ChatWsAssistantMessage
+    finish_reason: Literal["stop"] = "stop"
+
+
+class ChatWsCompletionUsage(BaseModel):
+    """Client-contract token counts on companion WS completion ``data`` (not provider semantics)."""
+
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+
+class ChatWsCompletionData(BaseModel):
+    """**Server → client (queued)** success ``data`` body for companion WS completion frames."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str
+    object: Literal["chat.completion"] = "chat.completion"
+    created: int
+    model: str
+    user_message_id: Optional[int] = None
+    business_actions: list[BizAction]
+    choices: list[ChatWsCompletionChoice]
+    usage: ChatWsCompletionUsage
+    local_id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("localId", "local_id"),
+        serialization_alias="localId",
+    )
+    source_imate_id: Optional[str] = None
+
+
+class ChatWebSocketQueuedSuccessFrame(BaseModel):
+    """**Server → client (queued)** successful companion chat completion envelope."""
+
+    code: Literal[200] = 200
+    message: str = "success"
+    data: ChatWsCompletionData
+    agent_id: str
+    status_line: Optional[str] = None
+
+
 class ChatWebSocketRequest(BaseModel):
     """**Client → server** chat turn: ``agent_id`` plus embedded HTTP-shaped completion request."""
 
@@ -277,6 +395,9 @@ class ChatWebSocketResponse(BaseModel):
     ``extra="allow"``. Optional ``status_line`` may appear on successful turns. Error frames may
     include ``error_kind`` and ``llm_provider_http_status`` (and other keys merged from
     ``CompanionInferenceUpstreamHTTPException.ws_extra`` in the handler).
+
+    TODO(companion-ws-wire-types-phase2): type ``data`` as ``ChatWsCompletionData | None``; success
+    frames should validate as :class:`ChatWebSocketQueuedSuccessFrame`.
     """
 
     model_config = ConfigDict(extra="allow")

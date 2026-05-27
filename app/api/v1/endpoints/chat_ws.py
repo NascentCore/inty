@@ -808,6 +808,7 @@ async def _build_companion_tool_background_ws_payload(
     effective_local_id: Optional[str],
     foreground_user_message_id: Optional[int] = None,
 ) -> WsOutboundPayload:
+    # TODO(companion-ws-wire-types-phase2): emit ChatWebSocketQueuedSuccessFrame via typed builder.
     gi = generated_image_meta_from_index_slice(
         ev.memory_store, ev.image_asset_baseline
     )
@@ -1789,6 +1790,8 @@ async def _agent_chat_ws_completions_impl(
     surprise snap, in-frame memory prompts) stay on ``_agent_chat_completions_impl`` or other routes.
     """
     # TODO(cleanup-ws-http-chat-impl): Deduplicate post-turn finalize with HTTP impl where shared.
+    # TODO(companion-ws-wire-types-phase2): return ChatWebSocketQueuedSuccessFrame via typed builder
+    # (all _build_chat_response call sites in this module).
     assert voice_svc is not None
     try:
         request_handling_timer = Timer("请求处理")
