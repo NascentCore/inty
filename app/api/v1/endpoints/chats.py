@@ -31,8 +31,11 @@ from app.core.agent.prompts import (
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.voice.tts_api import is_gemini_voice
-from app.schemas.chat import ChatCompletionRequest, MessageVoteRequest
-from backend.ops.schemas.evaluation import SurpriseSnapUnlockRequest
+from app.schemas.chat import (
+    ChatCompletionRequest,
+    MessageVoteRequest,
+    SurpriseSnapUnlockRequest,
+)
 from app.schemas.response import (
     APIResponse,
     BizError,
