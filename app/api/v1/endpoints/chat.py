@@ -291,8 +291,8 @@ def _build_chat_response(
     client_local_id: Optional[str] = None,
 ) -> dict:
     """构建聊天响应数据"""
-    # TODO(companion-ws-wire-types-phase2): WS paths call build_companion_ws_completion_data
-    # (ChatWsCompletionData) instead of manual dict assembly; HTTP keeps dict append paths.
+    # TODO(issue#TBD): WS paths call build_companion_ws_completion_data (ChatWsCompletionData).
+    # Checklist: .github/ISSUE_TEMPLATE/companion-ws-wire-types-phase2.md
     message = {"role": "assistant", "content": response_text_content}
     if response_content_parts is not None and len(response_content_parts) > 0:
         message["content_parts"] = response_content_parts
@@ -489,8 +489,8 @@ def _companion_ai_meta_from_turn_result(
     scheduled_task_id: str | None = None,
 ) -> dict[str, Any]:
     """Build assistant ``meta_data`` for chat_history / WS from one companion kernel turn."""
-    # TODO(companion-ws-wire-types-phase2): return ChatWsCompanionWireMessageMetaData;
-    # persist via dump_chat_ws_companion_wire_meta at call sites.
+    # TODO(issue#TBD): return ChatWsCompanionWireMessageMetaData; persist via dump_chat_ws_companion_wire_meta.
+    # Checklist: .github/ISSUE_TEMPLATE/companion-ws-wire-types-phase2.md
     sp = companion_turn.significance_perception
     significance = sp if isinstance(sp, dict) and sp else None
     meta = ChatWsCompanionWireMessageMetaData(

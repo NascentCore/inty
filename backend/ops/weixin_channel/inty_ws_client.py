@@ -90,7 +90,8 @@ def _assistant_text_from_response_payload(raw: dict[str, Any]) -> str | None:
 def _message_meta_from_response_payload(
     raw: dict[str, Any],
 ) -> ChatWsCompanionWireMessageMetaData | None:
-    # TODO(companion-ws-wire-types-phase2): parse success frames via ChatWebSocketQueuedSuccessFrame.
+    # TODO(issue#TBD): parse success frames via ChatWebSocketQueuedSuccessFrame.
+    # Checklist: .github/ISSUE_TEMPLATE/companion-ws-wire-types-phase2.md
     try:
         frame = ChatWebSocketResponse.model_validate(raw)
     except ValidationError:

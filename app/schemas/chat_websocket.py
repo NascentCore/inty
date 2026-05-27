@@ -8,8 +8,8 @@ are centralized in :class:`ChatWsCompanionWireMessageMetaData`.
 
 Companion WS downlink completion types (:class:`ChatWsAssistantMessage`,
 :class:`ChatWsCompletionData`, :class:`ChatWebSocketQueuedSuccessFrame`) are defined in
-Phase 1 only; emit/parse paths still use loose dicts until Phase 2 adoption
-(``COMPANION_WS_WIRE_TYPES_PHASE2_ISSUE_CHECKLIST``).
+Phase 1 only; emit/parse paths still use loose dicts until Phase 2 adoption (GitHub issue
+from template ``companion-ws-wire-types-phase2``).
 
 Direction tags in model docstrings:
 
@@ -36,27 +36,6 @@ from app.schemas.chat import (
     ChatMessageContentPart,
     UserTimeContext,
 )
-
-# GitHub issue body for Phase 2 adoption (create issue titled COMPANION_WS_WIRE_TYPES_PHASE2_ISSUE_TITLE).
-COMPANION_WS_WIRE_TYPES_PHASE2_ISSUE_TITLE = (
-    "Companion WS completion: adopt typed Pydantic wire models (Phase 2+)"
-)
-COMPANION_WS_WIRE_TYPES_PHASE2_ISSUE_CHECKLIST = """
-Phase 1 adds typed models in app/schemas/chat_websocket.py without changing emit/parse paths.
-
-- [ ] Implement build_companion_ws_completion_data(input: BuildCompanionWsCompletionInput) -> ChatWsCompletionData
-- [ ] app/api/v1/endpoints/chat_ws.py: all emit paths use typed builder (foreground / tool_bg / bootstrap interim / inner-tick / greeting)
-- [ ] app/api/v1/endpoints/chat.py: _companion_ai_meta_from_turn_result returns ChatWsCompanionWireMessageMetaData
-- [ ] app/schemas/chat_websocket.py: tighten ChatWebSocketResponse.data to ChatWsCompletionData | None
-- [ ] tools/inty_v2_repl/backend_chat_ws.py: parse via ChatWebSocketQueuedSuccessFrame.model_validate
-- [ ] backend/ops/weixin_channel/inty_ws_client.py: align downlink parse with ChatWebSocketQueuedSuccessFrame
-- [ ] app/core/companion_harness/companion/models.py: CompanionTurnResult docstring points to wire types
-- [ ] app/services/chat_history_service.py: get_ai_message_info_by_id returns ChatWsPersistedAssistantRow
-- [ ] Endpoint regression tests (tests/app/api/v1/endpoints/test_chat.py WS companion cases)
-- [ ] Out of scope: tighten HTTP ChatCompletionResponse.choices (separate issue)
-
-Search codebase for TODO(companion-ws-wire-types-phase2).
-"""
 
 
 def normalize_websocket_companion_message_id_uuid(raw: Optional[str]) -> str:
@@ -396,8 +375,9 @@ class ChatWebSocketResponse(BaseModel):
     include ``error_kind`` and ``llm_provider_http_status`` (and other keys merged from
     ``CompanionInferenceUpstreamHTTPException.ws_extra`` in the handler).
 
-    TODO(companion-ws-wire-types-phase2): type ``data`` as ``ChatWsCompletionData | None``; success
-    frames should validate as :class:`ChatWebSocketQueuedSuccessFrame`.
+    TODO(issue#TBD): type ``data`` as ``ChatWsCompletionData | None``; success
+    frames should validate as :class:`ChatWebSocketQueuedSuccessFrame`. Checklist:
+    `.github/ISSUE_TEMPLATE/companion-ws-wire-types-phase2.md`.
     """
 
     model_config = ConfigDict(extra="allow")

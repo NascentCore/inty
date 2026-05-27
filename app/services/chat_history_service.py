@@ -1226,7 +1226,8 @@ async def get_ai_message_info_by_id(
     db: AsyncSession, message_id: int
 ) -> Optional[Dict[str, Any]]:
     """根据消息 ID 获取 AI 消息的完整信息（与 get_latest_ai_message_info 返回结构一致）。"""
-    # TODO(companion-ws-wire-types-phase2): return ChatWsPersistedAssistantRow | None.
+    # TODO(issue#TBD): return ChatWsPersistedAssistantRow | None.
+    # Checklist: .github/ISSUE_TEMPLATE/companion-ws-wire-types-phase2.md
     try:
         stmt = (
             select(ChatHistory)

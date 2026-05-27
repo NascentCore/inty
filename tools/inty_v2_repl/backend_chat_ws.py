@@ -141,7 +141,8 @@ def parse_chat_completion_ws_payload(
 
 
 def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    # TODO(companion-ws-wire-types-phase2): parse via ChatWebSocketQueuedSuccessFrame.model_validate.
+    # TODO(issue#TBD): parse via ChatWebSocketQueuedSuccessFrame.model_validate.
+    # Checklist: .github/ISSUE_TEMPLATE/companion-ws-wire-types-phase2.md
     if data.get("type") == "pong":
         raise ValueError("unexpected pong in response queue")
     code = data.get("code")
