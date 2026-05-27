@@ -15,6 +15,7 @@ from sqlalchemy import delete
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.db.session import async_engine
 from app.models.agent import Agent, AgentStatus
 from app.models.ops_wechat_demo_bridge import OpsWechatDemoBridge
 from app.models.registry import load_model_modules
@@ -151,6 +152,9 @@ async def _wait_bridge_running(session_id: str) -> None:
 @pytest.mark.asyncio
 async def test_restore_scenarios(agent_id: str) -> None:
     """Single async test: global ``AsyncSessionLocal`` breaks a second async DB test."""
+    # Prior tests may close per-function event loops while global async_engine pool
+    # still holds asyncpg connections bound to those loops.
+    await async_engine.dispose()
     session_id = f"sess-restore-{uuid.uuid4().hex[:8]}"
     await upsert_bridge(_bridge_record(session_id, agent_id))
     assert session_store.WeixinChannelSession is _FakeWeixinChannelSession
