@@ -167,26 +167,10 @@ that means the code lacks hierarchy.
 
 ### Documentation
 
-**Do note write or edit any markdown documents. They are maintained by human partners.**
-
-**You should maintain the following documentation:**
-
-- package docstring in `__init__.py`
-- module docstring at the top of `.py` file
-- function/class docstrings
-- code lines comment
-
-**Write for human readers to understand.**
-
-- Document the intention of the code
-- If the code is difficult to understand, explain how the code works
-
-下面的例子是好的文档，把关键代码概念之间的逻辑关联扼要地说明：
-
-```
-turn-lock 是归属到 websocket 连接上
-tool_bg_idle 是归属到 CompanionSession 上
-```
+- package docstring in `__init__.py`, document design intenion of the package.
+- module docstring at the top of `.py` file, document the concepts and structure.
+- function/class docstrings, document semantic and intended use.
+- code lines comment, how does the code work
 
 ## Agent skills
 
