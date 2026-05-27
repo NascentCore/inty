@@ -138,4 +138,5 @@ twilio
 # 注意：ffmpeg 需要系统级安装，不在 requirements.txt 中
 # 确保系统已安装 ffmpeg 且支持 libavif: ffmpeg -encoders | grep avif
 # Ops Weixin channel / iLink QR (WeChat demo)
+qrcode==7.4.2
 hermes-agent[messaging]==0.14.0

@@ -182,6 +182,18 @@ async def get_session(session_id: str) -> WechatDemoSessionView | None:
         return _view(session)
 
 
+async def get_session_qrcode_payload(session_id: str) -> str | None:
+    """QR payload for browser display while ``qr_flow`` is active."""
+    async with _lock:
+        session = _sessions.get(session_id)
+        if session is None or session.qr_flow is None:
+            return None
+        payload = session.qr_flow.qrcode_url
+        if not payload:
+            return None
+        return payload
+
+
 async def stop_session(session_id: str) -> WechatDemoSessionView | None:
     async with _lock:
         session = _sessions.get(session_id)
