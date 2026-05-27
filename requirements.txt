@@ -102,6 +102,7 @@ python-multipart==0.0.20
 python-ulid==3.0.0
 PyYAML==6.0.3
 regex==2024.11.6
+rapidfuzz==3.11.0
 requests==2.33.0
 requests-toolbelt==1.0.0
 rsa==4.9.1
