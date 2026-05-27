@@ -139,7 +139,9 @@ def apply_companion_ws_inner_tick_coords(
     prev_agent = inner_tick_ctx.get("agent_id")
     prev_chat = inner_tick_ctx.get("chat_id")
     prev_mono = inner_tick_ctx.get("_last_maintenance_inner_tick_monotonic")
-    prev_line_count = inner_tick_ctx.get("_last_maintenance_transcript_line_count")
+    prev_line_count = inner_tick_ctx.get(
+        "_last_maintenance_transcript_line_count"
+    )
     inner_tick_ctx.clear()
     inner_tick_ctx.update(
         {"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id}
@@ -152,7 +154,9 @@ def apply_companion_ws_inner_tick_coords(
     if same_coords and prev_mono is not None:
         inner_tick_ctx["_last_maintenance_inner_tick_monotonic"] = prev_mono
     if same_coords and prev_line_count is not None:
-        inner_tick_ctx["_last_maintenance_transcript_line_count"] = prev_line_count
+        inner_tick_ctx["_last_maintenance_transcript_line_count"] = (
+            prev_line_count
+        )
 
 
 @dataclass
@@ -269,7 +273,9 @@ class CompanionWebSocketCoordinator:
         )
 
     def last_maintenance_transcript_line_count(self) -> int | None:
-        raw = self.inner_tick_context.get("_last_maintenance_transcript_line_count")
+        raw = self.inner_tick_context.get(
+            "_last_maintenance_transcript_line_count"
+        )
         if raw is None:
             return None
         return int(raw)

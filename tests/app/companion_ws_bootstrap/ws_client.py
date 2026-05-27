@@ -7,15 +7,75 @@ import json
 import time
 import uuid
 from typing import Any
+from urllib.parse import urlencode
 
 import websockets
 
-from tests.companion_ws_bootstrap.constants import WS_KEEPALIVE_PING_INTERVAL_SEC
-from tools.inty_v2_repl.backend_chat_ws import (
-    BackendChatWsError,
-    http_base_to_ws_chat_url,
-    parse_chat_completion_ws_payload,
-)
+from tests.app.companion_ws_bootstrap.constants import WS_KEEPALIVE_PING_INTERVAL_SEC
+
+
+class BackendChatWsError(RuntimeError):
+    """Non-200 ``code`` on a chat completion WebSocket frame."""
+
+    def __init__(self, code: int, message: str, agent_id: str | None = None):
+        self.code = code
+        self.agent_message = message
+        self.agent_id = agent_id
+        super().__init__(f"chat ws error code={code} message={message!r}")
+
+
+def http_base_to_ws_chat_url(
+    http_base: str,
+    *,
+    agent_id: str | None = None,
+    ws_conn_id: str | None = None,
+) -> str:
+    base = http_base.strip().rstrip("/")
+    ws_base = base.replace("http://", "ws://").replace("https://", "wss://")
+    url = f"{ws_base}/api/v1/chat/ws"
+    params: list[tuple[str, str]] = []
+    aid = (agent_id or "").strip()
+    if aid:
+        params.append(("agent_id", aid))
+    wcid = (ws_conn_id or "").strip()
+    if wcid:
+        params.append(("ws_conn_id", wcid))
+    if params:
+        url = f"{url}?{urlencode(params)}"
+    return url
+
+
+def parse_chat_completion_ws_payload(
+    data: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    """Parse one successful ``code==200`` chat completion JSON frame."""
+    code = data.get("code")
+    if code is None:
+        raise ValueError(f"chat ws response missing code: {data!r}")
+    if code != 200:
+        msg = data.get("message")
+        if not isinstance(msg, str):
+            msg = str(msg)
+        aid = data.get("agent_id")
+        raise BackendChatWsError(
+            int(code), msg, agent_id=str(aid) if aid is not None else None
+        )
+    inner = data.get("data") or {}
+    choices = inner.get("choices") or []
+    if not choices:
+        raise ValueError(f"chat ws success but no choices: {data!r}")
+    msg0 = (choices[0] or {}).get("message") or {}
+    content = msg0.get("content")
+    if not isinstance(content, str):
+        raise ValueError(f"chat ws assistant content not a string: {content!r}")
+    meta_raw = msg0.get("meta_data")
+    meta: dict[str, Any] = {}
+    if isinstance(meta_raw, dict):
+        meta = dict(meta_raw)
+    audio_url = msg0.get("audio_url")
+    if isinstance(audio_url, str) and audio_url.strip():
+        meta["audio_url"] = audio_url.strip()
+    return content, meta
 
 
 async def recv_first_chat_completion_frame(

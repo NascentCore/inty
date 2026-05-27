@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Forbidden imports: app/ layer boundaries and app/tests.app intra-repo package rules."""
 from __future__ import annotations
 
 import ast
@@ -10,7 +11,9 @@ from typing import Annotated
 import cyclopts
 from loguru import logger
 
-app = cyclopts.App(help="Check forbidden cross-layer imports in app/")
+app = cyclopts.App(
+    help="Check app/ layer boundaries and app + tests/app intra-repo import rules."
+)
 
 ARCH_LAYERS = {
     "api",
@@ -57,6 +60,34 @@ FORBIDDEN_LAYER_DEPENDENCIES: dict[tuple[str, str], str] = {
     ): "External services must not depend on middleware layer.",
 }
 
+# Top-level repo packages (``import <name>``). Not exhaustive for stdlib/third-party.
+INTRA_REPO_PACKAGE_ROOTS = frozenset(
+    {
+        "app",
+        "backend",
+        "experimental",
+        "living_sphere",
+        "research",
+        "techno_core",
+        "tests",
+        "tools",
+    }
+)
+
+# ``app/`` and ``tests/app/`` may import these intra-repo roots only.
+ALLOWED_INTRA_REPO_IMPORT_ROOTS = frozenset(
+    {
+        "app",
+        "living_sphere",
+        "techno_core",
+    }
+)
+
+SCAN_TREES: tuple[tuple[str, str], ...] = (
+    ("app", "app"),
+    ("tests/app", "tests.app"),
+)
+
 
 @dataclass(frozen=True)
 class Violation:
@@ -91,12 +122,12 @@ def _target_layer(module: str) -> str | None:
 
 
 def _resolve_from_module(
-    file_path: Path, app_root: Path, node: ast.ImportFrom
+    file_path: Path, repo_root: Path, node: ast.ImportFrom
 ) -> str | None:
     if node.level == 0:
         return node.module
 
-    relative_file = file_path.relative_to(app_root.parent).with_suffix("")
+    relative_file = file_path.relative_to(repo_root).with_suffix("")
     package_parts = list(relative_file.parts[:-1])
 
     up_levels = node.level - 1
@@ -113,7 +144,7 @@ def _resolve_from_module(
     return ".".join(package_parts)
 
 
-def _iter_imports(file_path: Path, app_root: Path) -> list[tuple[str, int]]:
+def _iter_imports(file_path: Path, repo_root: Path) -> list[tuple[str, int]]:
     imports: list[tuple[str, int]] = []
     tree = ast.parse(file_path.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
@@ -125,7 +156,7 @@ def _iter_imports(file_path: Path, app_root: Path) -> list[tuple[str, int]]:
         if not isinstance(node, ast.ImportFrom):
             continue
 
-        module = _resolve_from_module(file_path, app_root, node)
+        module = _resolve_from_module(file_path, repo_root, node)
         if not module:
             continue
 
@@ -139,7 +170,23 @@ def _iter_imports(file_path: Path, app_root: Path) -> list[tuple[str, int]]:
     return imports
 
 
-def _scan(app_root: Path) -> list[Violation]:
+def _intra_repo_import_rule(importer_label: str, module: str) -> str | None:
+    root = module.split(".", 1)[0]
+    if root not in INTRA_REPO_PACKAGE_ROOTS:
+        return None
+    if root in ALLOWED_INTRA_REPO_IMPORT_ROOTS:
+        return None
+    if importer_label == "tests.app" and root == "tests":
+        parts = module.split(".")
+        if len(parts) >= 2 and parts[1] == "app":
+            return None
+    return (
+        f"{importer_label}/ must only depend on app/, living_sphere/, techno_core/, "
+        f"and external packages; must not import intra-repo {root!r}."
+    )
+
+
+def _scan_layer_violations(app_root: Path, repo_root: Path) -> list[Violation]:
     violations: list[Violation] = []
     scanned_files = 0
     for file_path in sorted(app_root.rglob("*.py")):
@@ -149,7 +196,7 @@ def _scan(app_root: Path) -> list[Violation]:
         scanned_files += 1
 
         try:
-            imported_modules = _iter_imports(file_path, app_root)
+            imported_modules = _iter_imports(file_path, repo_root)
         except SyntaxError as exc:
             logger.error(f"Failed to parse {file_path}: {exc}")
             raise
@@ -165,7 +212,7 @@ def _scan(app_root: Path) -> list[Violation]:
 
             violations.append(
                 Violation(
-                    file_path=file_path.relative_to(app_root.parent).as_posix(),
+                    file_path=file_path.relative_to(repo_root).as_posix(),
                     line_number=line_number,
                     source_layer=source_layer,
                     target_layer=target_layer,
@@ -173,18 +220,73 @@ def _scan(app_root: Path) -> list[Violation]:
                     rule=FORBIDDEN_LAYER_DEPENDENCIES[rule_key],
                 )
             )
-    logger.debug(f"Scanned python files: {scanned_files}")
+    logger.debug(f"Scanned app layer python files: {scanned_files}")
+    return violations
+
+
+def _scan_intra_repo_violations(
+    tree_root: Path,
+    importer_label: str,
+    repo_root: Path,
+) -> list[Violation]:
+    violations: list[Violation] = []
+    if not tree_root.is_dir():
+        return violations
+
+    scanned_files = 0
+    for file_path in sorted(tree_root.rglob("*.py")):
+        scanned_files += 1
+        try:
+            imported_modules = _iter_imports(file_path, repo_root)
+        except SyntaxError as exc:
+            logger.error(f"Failed to parse {file_path}: {exc}")
+            raise
+
+        for imported_module, line_number in imported_modules:
+            rule = _intra_repo_import_rule(importer_label, imported_module)
+            if rule is None:
+                continue
+            root = imported_module.split(".", 1)[0]
+            violations.append(
+                Violation(
+                    file_path=file_path.relative_to(repo_root).as_posix(),
+                    line_number=line_number,
+                    source_layer=importer_label,
+                    target_layer=root,
+                    imported_module=imported_module,
+                    rule=rule,
+                )
+            )
+    logger.debug(
+        f"Scanned {importer_label} intra-repo python files: {scanned_files}"
+    )
+    return violations
+
+
+def _scan(repo_root: Path) -> list[Violation]:
+    app_root = repo_root / "app"
+    violations: list[Violation] = []
+    violations.extend(_scan_layer_violations(app_root, repo_root))
+    for tree_rel, importer_label in SCAN_TREES:
+        violations.extend(
+            _scan_intra_repo_violations(
+                repo_root / tree_rel,
+                importer_label,
+                repo_root,
+            )
+        )
     return violations
 
 
 @app.default
 def main(
-    app_root: Annotated[
+    repo_root: Annotated[
         str,
         cyclopts.Parameter(
-            name="--app-root", help="Path to app root directory."
+            name="--repo-root",
+            help="Repository root (contains app/ and tests/app/).",
         ),
-    ] = "app",
+    ] = ".",
     json_output: Annotated[
         str | None,
         cyclopts.Parameter(
@@ -192,9 +294,10 @@ def main(
         ),
     ] = None,
 ) -> None:
-    root = Path(app_root).resolve()
-    if not root.exists() or not root.is_dir():
-        print(f"[ERROR] app root does not exist: {root}")
+    root = Path(repo_root).resolve()
+    app_dir = root / "app"
+    if not app_dir.exists() or not app_dir.is_dir():
+        print(f"[ERROR] app/ does not exist under repo root: {root}")
         raise SystemExit(2)
 
     violations = _scan(root)
@@ -210,9 +313,11 @@ def main(
         )
         print(f"Wrote JSON report: {output_path}")
 
+    rules_checked = len(FORBIDDEN_LAYER_DEPENDENCIES) + len(SCAN_TREES)
+
     if not violations:
         print("Layer dependency check passed.")
-        print(f"Rules checked: {len(FORBIDDEN_LAYER_DEPENDENCIES)}")
+        print(f"Rules checked: {rules_checked}")
         raise SystemExit(0)
 
     print("Layer dependency check failed.")

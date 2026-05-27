@@ -28,7 +28,7 @@ from app.core.images.fal import (
 from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.fakes.gcs import FakeGCSClient
 from app.external_services.gcs import get_bucket_and_path_from_gcs_url
-from tests.langsmith import find_run_inputs_contain_string
+from tests.app.langsmith import find_run_inputs_contain_string
 
 load_dotenv()
 
