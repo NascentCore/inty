@@ -4,7 +4,7 @@ This module is the prompt-stack contract for every companion turn track.  It doe
 not own transcript tail messages, runtime user-time slices, or tool execution;
 it only materializes the ordered system prefix consumed by model calls.
 
-**Stack order (fixed):** Doctrine → Tools → Persona → Output → Contextual.
+**Stack order (fixed):** Doctrine → Capability → Persona → Output → Contextual.
 
 **Doctrine (fixed package prompts):** product axiom → Inty ontology →
 subconscious emotional drive → safety.  Doctrine is loaded from package prompt
@@ -16,7 +16,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 
 | Scenario | Function |
 |----------|----------|
-| USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``build_system_messages_for_bootstrap_track`` (no ``TOOLS.md`` system slice) |
+| USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``build_system_messages_for_bootstrap_track`` (no Capability package slices) |
 | ASYNC user-round foreground + plan prefix | ``build_system_messages_for_chat_track`` |
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
@@ -392,7 +392,7 @@ def _doctrine_system_messages() -> list[dict[str, Any]]:
     ]
 
 
-def _tools_system_messages(
+def _capability_system_messages(
     *,
     bundle: PromptBundle,
     tools_on: bool,
@@ -407,6 +407,8 @@ def _tools_system_messages(
         and not chat_branch_no_tool_api
         and not interactive_bootstrap_active
     ):
+        if bundle.channels_md.strip():
+            out.append(_system_message(bundle.channels_md.strip()))
         out.append(_system_message(bundle.tools_md.strip()))
     if tool_side_compact and not inner_tick_turn:
         out.append(_system_message(_tool_side_compact_directive()))
@@ -580,7 +582,7 @@ def build_system_messages(
     out: list[dict[str, Any]] = []
     out.extend(_doctrine_system_messages())
     out.extend(
-        _tools_system_messages(
+        _capability_system_messages(
             bundle=bundle,
             tools_on=tools_on,
             chat_branch_no_tool_api=chat_branch_no_tool_api,
@@ -733,7 +735,7 @@ def build_system_messages_for_inner_tick_scheduled(
     )
 
 
-def _greeting_omit_tools_md_system_slice(
+def _greeting_omit_capability_system_slices(
     *,
     context: ContextMeta,
     memory_bootstrap_type: str,
@@ -757,7 +759,7 @@ def build_system_messages_for_implicit_sign_on_greeting(
     context: ContextMeta,
     memory_bootstrap_type: str,
 ) -> list[dict[str, Any]]:
-    """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no tool contracts)."""
+    """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts)."""
     return build_system_messages(
         bundle,
         context,
@@ -765,7 +767,7 @@ def build_system_messages_for_implicit_sign_on_greeting(
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         include_significance_perception_slice=True,
-        interactive_bootstrap_active=_greeting_omit_tools_md_system_slice(
+        interactive_bootstrap_active=_greeting_omit_capability_system_slices(
             context=context,
             memory_bootstrap_type=memory_bootstrap_type,
         ),
