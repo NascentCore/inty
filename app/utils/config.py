@@ -485,11 +485,12 @@ class CloudflareConfig(BaseModel):
     fallback_to_original: bool = True  # 转换失败时是否回退到原始URL
 
 
-@dataclass
-class ElevenLabsConfig:
+class ElevenLabsConfig(BaseModel):
     """ElevenLabs语音生成配置"""
 
-    api_key: str
+    model_config = ConfigDict(extra="ignore")
+
+    api_key: str = Field(...)
     model: str = "eleven_multilingual_v2"
     voice_id: str = "JBFqnCBsd6RMkjVDRZzb"  # 默认语音ID
     output_format: str = "mp3_44100_128"
@@ -564,8 +565,7 @@ class SurpriseSnapConfig(BaseModel):
     )  # 用户消息数达到这些轮数时触发
 
 
-@dataclass
-class UserAnalyticsReportConfig:
+class UserAnalyticsReportConfig(BaseModel):
     """push worker 侧用户分析预计算调度配置。
 
     默认 enabled / daily_enabled / weekly_enabled / backfill_enabled 均为 False，
@@ -573,6 +573,8 @@ class UserAnalyticsReportConfig:
     .github/workflows/daily_intellimate_user_activity_report.yaml 承担。
     见 docs/FR_USER_ANALYTICS_REPORTS.md。
     """
+
+    model_config = ConfigDict(extra="ignore")
 
     enabled: bool = (
         False  # False 时 push_scheduler 不注册任何 user_analytics 任务
@@ -625,9 +627,10 @@ class PushNotificationConfig(BaseModel):
         return self
 
 
-@dataclass
-class FalConfig:
+class FalConfig(BaseModel):
     """fal.ai 生图服务配置"""
+
+    model_config = ConfigDict(extra="ignore")
 
     api_key: str = ""  # fal.ai API key
 
@@ -691,9 +694,10 @@ class PhoneCallConfig:
             self.inbound_number_agent_map = {}
 
 
-@dataclass
-class TTSConfig:
+class TTSConfig(BaseModel):
     """语音播报配置"""
+
+    model_config = ConfigDict(extra="ignore")
 
     # 测试环境启用 fake provider，避免 CI/本地测试依赖真实 TTS API。
     use_fake_tts: bool = False
@@ -794,7 +798,9 @@ def load_config(path: str) -> Config:
         google_play=GooglePlayConfig.model_validate(
             data.get("google_play") or {}
         ),
-        elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
+        elevenlabs=ElevenLabsConfig.model_validate(
+            data.get("elevenlabs") or {}
+        ),
         cloudflare=CloudflareConfig.model_validate(
             data.get("cloudflare") or {}
         ),
@@ -804,15 +810,15 @@ def load_config(path: str) -> Config:
         memory_extraction=MemoryExtractionConfig.model_validate(
             data.get("memory_extraction") or {}
         ),
-        user_analytics_report=UserAnalyticsReportConfig(
-            **(data.get("user_analytics_report") or {})
+        user_analytics_report=UserAnalyticsReportConfig.model_validate(
+            data.get("user_analytics_report") or {}
         ),
-        fal=FalConfig(**data.get("fal", {})),
+        fal=FalConfig.model_validate(data.get("fal") or {}),
         gemini_live=GeminiLiveConfig.model_validate(
             data.get("gemini_live") or {}
         ),
         phone_call=PhoneCallConfig(**(data.get("phone_call") or {})),
-        tts=TTSConfig(**data.get("tts", {})),
+        tts=TTSConfig.model_validate(data.get("tts") or {}),
         surprise_snap=_parse_surprise_snap_config(data),
     )
 
