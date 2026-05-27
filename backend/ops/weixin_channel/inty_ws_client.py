@@ -43,6 +43,8 @@ ProactivePushHandler = Callable[[str], Awaitable[None]]
 
 # Below server ``chat_ws_idle_timeout_seconds`` minimum (10s); matches iMate Android.
 _WS_PING_INTERVAL_SEC = 9.0
+_SEND_ATTEMPT_COUNT = 2
+_WS_NORMAL_CLOSE_MESSAGE = "Inty WebSocket closed normally"
 
 
 class IntyWsChannelState(StrEnum):
@@ -50,6 +52,10 @@ class IntyWsChannelState(StrEnum):
     CONNECTING = "connecting"
     READY = "ready"
     FAILED = "failed"
+
+
+class IntyWsChannelClosed(RuntimeError):
+    """Raised for a closed Inty WS when no protocol close exception is available."""
 
 
 @dataclass(frozen=True)
@@ -156,6 +162,22 @@ class IntyWsChannelClient:
     async def connect(self) -> None:
         if self._state == IntyWsChannelState.READY:
             return
+        await self._cancel_background_task(self._ping_task)
+        self._ping_task = None
+        if self._read_task is not None and self._read_task is not asyncio.current_task():
+            await self._cancel_background_task(self._read_task)
+        self._read_task = None
+        if self._ws is not None:
+            try:
+                await self._ws.close()
+            except Exception:
+                logger.debug(
+                    "inty_ws_channel stale close failed ws_conn_id={}",
+                    self._ws_conn_id,
+                )
+        self._ws = None
+        self._signed_on = False
+        self._ws_conn_id = str(uuid.uuid4())
         self._state = IntyWsChannelState.CONNECTING
         ws_url = http_base_to_ws_chat_url(
             self._config.api_base_url,
@@ -174,6 +196,12 @@ class IntyWsChannelClient:
             name=f"inty_ws_channel_ping_{self._ws_conn_id}",
         )
         self._state = IntyWsChannelState.READY
+
+    def _fail_pending_replies(self, exc: BaseException) -> None:
+        while not self._pending_replies.empty():
+            fut = self._pending_replies.get_nowait()
+            if not fut.done():
+                fut.set_exception(exc)
 
     async def _cancel_background_task(
         self, task: asyncio.Task[None] | None
@@ -215,22 +243,44 @@ class IntyWsChannelClient:
 
     async def send_user_text(self, user_text: str) -> str:
         assert user_text != ""
-        assert self._ws is not None
-        assert self._signed_on
-        message_id = str(uuid.uuid4())
-        request = ChatWebSocketRequest(
-            agent_id=self._config.agent_id,
-            request=ChatCompletionRequest(
-                messages=[ChatMessage(role="user", content=user_text)],
-                message_id=message_id,
-            ),
-        )
-        reply_fut: asyncio.Future[str] = (
-            asyncio.get_running_loop().create_future()
-        )
-        await self._pending_replies.put(reply_fut)
-        await self._ws.send(request.model_dump_json())
-        return await reply_fut
+        last_closed: BaseException | None = None
+        for _attempt in range(_SEND_ATTEMPT_COUNT):
+            if (
+                self._state != IntyWsChannelState.READY
+                or self._ws is None
+                or not self._signed_on
+            ):
+                await self.connect()
+            assert self._ws is not None
+            assert self._signed_on
+            message_id = str(uuid.uuid4())
+            request = ChatWebSocketRequest(
+                agent_id=self._config.agent_id,
+                request=ChatCompletionRequest(
+                    messages=[ChatMessage(role="user", content=user_text)],
+                    message_id=message_id,
+                ),
+            )
+            reply_fut: asyncio.Future[str] = (
+                asyncio.get_running_loop().create_future()
+            )
+            await self._pending_replies.put(reply_fut)
+            try:
+                await self._ws.send(request.model_dump_json())
+                return await reply_fut
+            except ConnectionClosed as exc:
+                last_closed = exc
+                self._state = IntyWsChannelState.FAILED
+                self._signed_on = False
+                self._fail_pending_replies(exc)
+                logger.info(
+                    "inty_ws_channel send closed retrying ws_conn_id={}: {}",
+                    self._ws_conn_id,
+                    exc,
+                )
+        if last_closed is not None:
+            raise last_closed
+        raise IntyWsChannelClosed(_WS_NORMAL_CLOSE_MESSAGE)
 
     async def _send_client_context(self) -> None:
         assert self._ws is not None
@@ -287,10 +337,8 @@ class IntyWsChannelClient:
                 exc,
             )
             self._state = IntyWsChannelState.FAILED
-            while not self._pending_replies.empty():
-                fut = self._pending_replies.get_nowait()
-                if not fut.done():
-                    fut.set_exception(exc)
+            self._signed_on = False
+            self._fail_pending_replies(exc)
         except Exception as exc:
             logger.exception(
                 "inty_ws_channel read_loop failed ws_conn_id={}: {}",
@@ -298,10 +346,18 @@ class IntyWsChannelClient:
                 exc,
             )
             self._state = IntyWsChannelState.FAILED
-            while not self._pending_replies.empty():
-                fut = self._pending_replies.get_nowait()
-                if not fut.done():
-                    fut.set_exception(exc)
+            self._signed_on = False
+            self._fail_pending_replies(exc)
+        else:
+            exc = IntyWsChannelClosed(_WS_NORMAL_CLOSE_MESSAGE)
+            logger.info(
+                "inty_ws_channel read_loop ended ws_conn_id={}: {}",
+                self._ws_conn_id,
+                exc,
+            )
+            self._state = IntyWsChannelState.FAILED
+            self._signed_on = False
+            self._fail_pending_replies(exc)
 
     async def _pinger_loop(self) -> None:
         assert self._ws is not None
