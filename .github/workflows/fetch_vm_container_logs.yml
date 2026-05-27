@@ -13,6 +13,11 @@ on:
         required: true
         default: "200"
         type: string
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/fetch_vm_container_logs.yml"
 
 jobs:
   fetch-logs:
@@ -26,9 +31,11 @@ jobs:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          capture_stdout: true
           script: |
             set -euo pipefail
-            input="${{ inputs.container }}"
+            input="${{ inputs.container || 'ops-dev' }}"
+            tail_lines="${{ inputs.tail_lines || '300' }}"
             case "${input}" in
               ops-dev) container="inty-ops-dev" ;;
               ops-prod) container="inty-ops-prod" ;;
@@ -41,7 +48,7 @@ jobs:
             sudo docker ps -a --filter "name=${container}" || true
             echo "=== docker inspect state ==="
             sudo docker inspect "${container}" --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Error={{.State.Error}} Started={{.State.StartedAt}}' 2>/dev/null || true
-            echo "=== docker logs (tail ${{ inputs.tail_lines }}) ==="
-            sudo docker logs "${container}" 2>&1 | tail -n "${{ inputs.tail_lines }}" || true
+            echo "=== docker logs (tail ${tail_lines}) ==="
+            sudo docker logs "${container}" 2>&1 | tail -n "${tail_lines}" || true
             echo "=== listening on 8001 ==="
-            sudo ss -ltnp | rg ':8001' || true
+            sudo ss -ltnp | grep ':8001' || true
