@@ -141,7 +141,7 @@ def parse_chat_completion_ws_payload(
 
 
 def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    # TODO(issue#3207): parse via ChatWebSocketQueuedSuccessFrame.model_validate.
+    # TODO(issue#3208): parse via ChatWebSocketQueuedSuccessFrame.model_validate.
     if data.get("type") == "pong":
         raise ValueError("unexpected pong in response queue")
     code = data.get("code")
