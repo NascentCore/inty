@@ -116,10 +116,10 @@ maintenance agents can fix the highest-impact item first.
 - [ ] Google 2.4 "Exceptions": `/tools/llm.py` silently swallows multiple
   `Exception` blocks while loading LLM configuration and environment state.
   Log the suppressed failures or narrow the expected exception types.
-- [ ] Google 2.4 "Exceptions": `/app/schemas/chat.py` has broad
+- [x] Google 2.4 "Exceptions": `/app/schemas/chat.py` has broad
   `except Exception` blocks that silently return original agent background
   values during URL transformation. Add structured logging and narrow expected
-  exception types. Claimed in `cursor/agent-maintenance-tasks-e9ac`.
+  exception types. Fixed in `cursor/agent-maintenance-tasks-e9ac`.
 - [x] Google 2.4 "Exceptions": `/app/services/user_analytics_service.py`
   suppresses analytics query failures with `except Exception: pass`; report
   skipped metric groups in logs so operational dashboards do not silently lose
@@ -137,10 +137,10 @@ maintenance agents can fix the highest-impact item first.
   an explicit initialization path if possible. Claimed in
   `cursor/agent-maintenance-tasks-1000`. Fixed in
   `cursor/agent-maintenance-tasks-1000`.
-- [ ] Google 2.4 "Exceptions": `/app/schemas/agent.py` has several broad
+- [x] Google 2.4 "Exceptions": `/app/schemas/agent.py` has several broad
   `except Exception` blocks that silently return `None` or the original value
   while transforming URLs and metadata. Add structured logging and narrow the
-  expected exception types. Claimed in `cursor/agent-maintenance-tasks-e9ac`.
+  expected exception types. Fixed in `cursor/agent-maintenance-tasks-e9ac`.
 - [x] Google 2.4 "Exceptions": `/app/core/companion_harness/companion/turn.py`
   catches `BaseException`, mutates the exception object, then suppresses
   metadata tagging errors. Avoid dynamic mutation of arbitrary exceptions and
