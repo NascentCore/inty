@@ -19,6 +19,7 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
     {
         "AXIOM.md",
         "BOOTSTRAP.md",
+        "CHANNELS.md",
         "INTY.md",
         "SAFETY.md",
         "SUBCONSCIOUS.md",
@@ -93,6 +94,10 @@ class MemoryStoreScopePaths:
     @property
     def memory_md(self) -> str:
         return "MEMORY.md"
+
+    @property
+    def channels_md(self) -> str:
+        return "CHANNELS.md"
 
     @property
     def techno_core_md(self) -> str:
@@ -208,6 +213,7 @@ _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "style_md",
     "user_md",
     "memory_md",
+    "channels_md",
 )
 
 

@@ -15,6 +15,7 @@ class PromptSliceId(StrEnum):
 
     ``BOOTSTRAP`` is package-only (no workspace path). ``TOOLS`` / ``SIGNIFICANCE_PERCEPTION`` are
     fixed from package templates for model injection, not store-backed prompt slices.
+    ``CHANNELS`` is persistable but not injected into any system-message group yet.
     """
 
     BOOTSTRAP = "BOOTSTRAP"
@@ -23,6 +24,7 @@ class PromptSliceId(StrEnum):
     IDENTITY = "IDENTITY"
     USER = "USER"
     MEMORY = "MEMORY"
+    CHANNELS = "CHANNELS"
 
 
 # Joins legacy single-string system prompt and interactive-bootstrap block strings.
@@ -43,6 +45,7 @@ _PERSISTABLE_SLICE_IDS: Final[frozenset[PromptSliceId]] = frozenset(
         PromptSliceId.STYLE,
         PromptSliceId.USER,
         PromptSliceId.MEMORY,
+        PromptSliceId.CHANNELS,
     }
 )
 
