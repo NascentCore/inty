@@ -55,7 +55,7 @@ venv
 # Ops local dev: JWT from backend/ops/start.sh --local (tools/scripts/init_admin_user.py --token-file)
 .inty_ops_bearer_token
 # Ops local dev: user-testing agent id from backend/ops/start.sh --local
-.inty-user-testing-agent-id
+.inty_user_testing_agent_id
 # Ops / start.sh default workspace (Loguru file log .inty/inty.log)
 .inty/
 

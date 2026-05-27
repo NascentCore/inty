@@ -45,7 +45,7 @@ async def test_companion_websocket_coordinator_bootstrap_interim_sink_queues_eve
     )
     sink = coordinator.bootstrap_interim_output_sink()
     await sink(ev)
-    queued = await coordinator.bootstrap_interim_events.get()
+    queued = await coordinator.bootstrap_interim_queued_events.get()
 
     assert queued.ev == ev
     assert queued.ctx is coordinator.bootstrap_interim_deliver_ctx

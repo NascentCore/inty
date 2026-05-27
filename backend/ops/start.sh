@@ -21,11 +21,6 @@ Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-bui
   Always (before uvicorn): alembic upgrade head (see ALEMBIC_CONFIG / backend/alembic/alembic.ini).
   Listen port: \${PORT:-8001}.
 
-  Environment (common):
-    INTY_CONFIG_YAML   Config path relative to repo root (e.g. devops/config.yaml.local).
-    INTY_OPS_BEARER_TOKEN_FILE  Where to write the local JWT in --local mode (default: <repo>/.inty_ops_bearer_token).
-    .inty-user-testing-agent-id  Local user-testing agent id written in --local mode.
-
   Flags (any mode):
     --debug              Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL).
     --workspace DIR      Local working directory for file log DIR/inty.log (INTY_LOG_FILE); default DIR is .inty under repo root.
@@ -114,7 +109,7 @@ if [ "$LOCAL" = true ]; then
   fi
 
   OPS_BEARER_TOKEN_FILE="${INTY_OPS_BEARER_TOKEN_FILE:-$REPO_ROOT/.inty_ops_bearer_token}"
-  USER_TESTING_AGENT_ID_FILE="$REPO_ROOT/.inty-user-testing-agent-id"
+  USER_TESTING_AGENT_ID_FILE="$REPO_ROOT/.inty_user_testing_agent_id"
   echo "创建测试用管理员账户用于在 ops 平台登陆访问"
   python tools/scripts/init_admin_user.py --user-id user-testing --is-superuser=true --token-file "$OPS_BEARER_TOKEN_FILE" --agent-id-file "$USER_TESTING_AGENT_ID_FILE"
   if ! chmod 600 "$OPS_BEARER_TOKEN_FILE" 2>/dev/null; then

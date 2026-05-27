@@ -26,9 +26,6 @@ _WECHAT_DEMO_HTML = """<!DOCTYPE html>
 <body>
   <h1>WeChat ↔ Inty Demo</h1>
   <p>Paste Inty credentials, scan WeChat QR, then DM the logged-in account.</p>
-  <label>Inty API Base URL
-    <input id="apiBase" type="text" value="http://127.0.0.1:8001" />
-  </label>
   <label>Inty JWT (Bearer)
     <input id="jwt" type="password" autocomplete="off" />
   </label>
@@ -40,8 +37,7 @@ _WECHAT_DEMO_HTML = """<!DOCTYPE html>
     <p class="btn-hint" id="startHint">
       <strong>Start QR Login</strong> 创建新 <code>session_id</code>，走 iLink 扫码（QR 轮询最长约 8 分钟；
       单张 QR 过期会自动刷新）。扫码确认后进入 <code>bridge_running</code>：拉起微信 Hermes long-poll，
-      并以表单中的 JWT / Agent ID 连接 Inty <code>/api/v1/chat/ws</code>（<strong>Inty API Base URL</strong>
-      须指向实际提供 companion WS 的进程，本地常为 <code>:8001</code> 或 <code>:8000</code>）。
+      并以表单中的 JWT / Agent ID 连接当前 Ops 同源上的 Inty <code>/api/v1/chat/ws</code>。
       bridge 凭证会写入 Postgres <code>ops_wechat_demo_bridges</code>；<em>仅重启 Ops</em> 时可无 QR 恢复
       （见下方 Stop 说明）。此前若点过 Stop，需重新 Start（可能要再扫码）。
       扫码后的 iLink <code>bot_token</code>（<code>weixin_token</code>）<strong>无协议公布的固定分钟/小时数</strong>，
@@ -132,7 +128,7 @@ _WECHAT_DEMO_HTML = """<!DOCTYPE html>
 
     document.getElementById("startBtn").onclick = async () => {
       const payload = {
-        inty_api_base_url: document.getElementById("apiBase").value.trim(),
+        inty_api_base_url: window.location.origin,
         inty_jwt: document.getElementById("jwt").value.trim(),
         agent_id: document.getElementById("agentId").value.trim(),
       };
