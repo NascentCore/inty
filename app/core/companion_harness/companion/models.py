@@ -64,8 +64,6 @@ INNER_TICK_SYNTHETIC_USER_TEXT = (
 
 MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER = "（内在节拍）"
 
-AI_PRIVATE_INJECT_MAX_CHARS = 12_000
-
 
 class CompanionTurnResult(BaseModel):
     """One companion kernel turn: visible assistant text plus optional significance scores."""
@@ -186,6 +184,11 @@ def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
 
 
 class PromptBundle(BaseModel):
+    """
+    Prompt bundle for system prompt messages injection.
+    Each document is inserted as a system prompt message into the prompt of llm invocation.
+    """
+
     identity: str
     soul: str
     style_md: str = Field(

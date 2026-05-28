@@ -967,7 +967,7 @@ def _setup_companion_ws_chat_test_env(
         return None
 
     for attr in (
-        "run_companion_user_chat_turn_for_api",
+        "run_user_chat",
         "run_companion_implicit_sign_on_greeting_turn_for_api",
         "run_companion_chat_turn_for_api",
     ):
@@ -1111,7 +1111,7 @@ def _setup_companion_ws_chat_test_env_with_postgres(
         return None
 
     for attr in (
-        "run_companion_user_chat_turn_for_api",
+        "run_user_chat",
         "run_companion_implicit_sign_on_greeting_turn_for_api",
         "run_companion_chat_turn_for_api",
     ):
@@ -1429,7 +1429,7 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
         return None
 
     for attr in (
-        "run_companion_user_chat_turn_for_api",
+        "run_user_chat",
         "run_companion_implicit_sign_on_greeting_turn_for_api",
         "run_companion_chat_turn_for_api",
     ):

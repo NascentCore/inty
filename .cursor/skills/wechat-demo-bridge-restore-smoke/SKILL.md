@@ -109,6 +109,7 @@ LIMIT 5;
 | QR 后无 DB 行 | bridge 未进入 `BRIDGE_RUNNING`；看 Ops 日志 `wechat_demo` |
 | Ops 重启后一直 404 | restore `channel.start()` 失败（行会被 delete）；查 `wechat_demo restore channel start failed` |
 | DM 无回复 | `inty_jwt` 过期（`TODO(wechat-demo-bridge-jwt)`）、`inty_api_base_url` 指错端口、或 Inty WS 未起 |
+| restore 后仍 `bridge_running` 但 DM 不通 | Postgres 行里是已失效 `bot_token`；应在数秒内变为 `phase=failed` 且 `error` 提示重新扫码，DB 行被删——若长期 `bridge_running` 查 Ops 日志 `weixin_ilink_expired` |
 | 多份 Weixin 连接 | 多个 Ops 实例同时 restore（违反单 runner） |
 
 ## 代码真源

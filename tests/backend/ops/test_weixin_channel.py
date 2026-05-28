@@ -18,6 +18,10 @@ from backend.ops.weixin_channel.session import (
     WeixinChannelSession,
     weixin_bridge_reply_for_inbound,
 )
+
+
+async def _noop_ilink_session_expired() -> None:
+    pass
 from backend.ops.weixin_channel.transport import WeixinInboundMessage
 
 
@@ -79,7 +83,11 @@ async def test_handle_inbound_image_only_does_not_call_companion() -> None:
         weixin_token="token",
         weixin_base_url="https://ilinkai.weixin.qq.com",
     )
-    session = WeixinChannelSession(binding=binding, on_binding_peer_updated=None)
+    session = WeixinChannelSession(
+        binding=binding,
+        on_binding_peer_updated=None,
+        on_ilink_session_expired=_noop_ilink_session_expired,
+    )
     presence = _RecordingPresence()
     session._presence = presence
     inbound = WeixinInboundMessage(
@@ -114,7 +122,11 @@ async def test_handle_inbound_text_forwards_to_inprocess_presence() -> None:
         weixin_token="token",
         weixin_base_url="https://ilinkai.weixin.qq.com",
     )
-    session = WeixinChannelSession(binding=binding, on_binding_peer_updated=None)
+    session = WeixinChannelSession(
+        binding=binding,
+        on_binding_peer_updated=None,
+        on_ilink_session_expired=_noop_ilink_session_expired,
+    )
     presence = _RecordingPresence()
     session._presence = presence
     inbound = WeixinInboundMessage(

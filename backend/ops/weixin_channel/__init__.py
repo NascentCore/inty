@@ -6,7 +6,8 @@ iLink: QR poll token expires via ``status=expired``; bridge ``bot_token`` ends o
 ``WeixinQrFlow`` polls iLink QR login for ``/wechat-demo`` sessions via ``ilink_qr_client``.
 ``WeixinTransport`` owns Hermes ``WeixinAdapter`` (iLink long-poll).
 ``WeixinChannelSession`` binds one companion ``(user, agent)`` to one Weixin DM peer
-via ``WeixinInprocessPresence`` (no ``/api/v1/chat/ws`` loopback).
+via ``WeixinInprocessPresence`` (no ``/api/v1/chat/ws`` loopback). iLink cannot
+report WeChat user presence (open app / open DM); see ``ilink_qr_client``, ``transport``.
 
 ``chat_ws_wire`` holds shared ``/api/v1/chat/ws`` response parsing helpers.
 

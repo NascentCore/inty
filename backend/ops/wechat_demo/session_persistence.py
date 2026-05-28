@@ -3,7 +3,8 @@
 **Bridge** (not the QR-login phase): one live ``WeixinChannelSession`` relay after QR
 success — Hermes/iLink Weixin bot on one side, long-lived Inty ``/api/v1/chat/ws`` on
 the other. Inbound WeChat DMs go to the companion; proactive Inty downlink goes to
-``last_peer_id``.
+``last_peer_id``. iLink cannot detect WeChat user presence; ``last_peer_seen_at`` is
+last inbound DM only (see ``backend.ops.weixin_channel``).
 
 Each running bridge upserts one ``ops_wechat_demo_bridges`` row (credentials +
 binding snapshot). Ops restart calls ``list_bridges()`` and reattaches channels without

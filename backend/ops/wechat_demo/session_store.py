@@ -31,6 +31,7 @@ from backend.ops.wechat_demo.session_persistence import (
     record_from_binding_fields,
     upsert_bridge,
 )
+from backend.ops.weixin_channel.ilink_qr_client import ILINK_SESSION_EXPIRED_USER_MESSAGE
 from backend.ops.weixin_channel.session import (
     WeixinChannelBinding,
     WeixinChannelSession,
@@ -181,9 +182,13 @@ def _channel_for_session(
     async def on_binding_peer_updated(_binding: WeixinChannelBinding) -> None:
         await _persist_bridge_session(session)
 
+    async def on_ilink_session_expired() -> None:
+        await fail_wechat_demo_ilink_session_expired(session.session_id)
+
     return WeixinChannelSession(
         binding=binding,
         on_binding_peer_updated=on_binding_peer_updated,
+        on_ilink_session_expired=on_ilink_session_expired,
     )
 
 
@@ -235,6 +240,18 @@ async def create_onboard_session(
         raise OnboardQrReadyTimeoutError("QR ready timeout") from None
     async with _lock:
         return _view(session)
+
+
+async def fail_wechat_demo_ilink_session_expired(session_id: str) -> None:
+    """Tear down bridge after iLink ``errcode=-14`` (idempotent)."""
+    assert session_id != ""
+    async with _lock:
+        session = _sessions.get(session_id)
+        if session is None:
+            return
+        if _phase_blocks_lifecycle(session.phase):
+            return
+    await _fail_session(session, ILINK_SESSION_EXPIRED_USER_MESSAGE)
 
 
 async def get_session(session_id: str) -> WechatDemoSessionView | None:
@@ -313,6 +330,8 @@ async def _set_session_qr_flow(
 
 async def _fail_session(session: _WechatDemoSession, error: str) -> None:
     orchestrator_task: asyncio.Task[None] | None = None
+    channel_session: WeixinChannelSession | None = None
+    bridge_task: asyncio.Task[None] | None = None
     async with _lock:
         if _phase_blocks_lifecycle(session.phase):
             return
@@ -322,13 +341,19 @@ async def _fail_session(session: _WechatDemoSession, error: str) -> None:
         if ready is not None and not ready.is_set():
             ready.set()
         orchestrator_task = session.orchestrator_task
+        channel_session = session.channel_session
+        bridge_task = session.bridge_task
     await _clear_persisted_bridge(session.session_id)
     current = asyncio.current_task()
-    if (
+    orchestrator_to_stop = (
         orchestrator_task is not None
         and not orchestrator_task.done()
         and orchestrator_task is not current
-    ):
+    )
+    bridge_to_stop = channel_session is not None or (
+        bridge_task is not None and not bridge_task.done()
+    )
+    if orchestrator_to_stop or bridge_to_stop:
         await _stop_session_tasks(session)
 
 

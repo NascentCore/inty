@@ -23,6 +23,11 @@ iLink time limits (not documented as a fixed wall-clock TTL on the wire):
   Empirical lifetime varies (hours to days reported); Ops must not assume a fixed duration.
 - **User re-login after ``-14``**: cannot push re-scan QR through WeChat DM (token dead);
   see ``TODO(wechat-demo-ilink-session-expired-user-notify)`` in ``transport`` module doc.
+- **WeChat user presence**: the iLink Bot API exposed here (``getupdates``,
+  ``sendmessage``, QR login, etc.) does **not** report whether a chatter opened WeChat,
+  opened the bot DM thread, or is online. Inbound activity is DM payloads only; there is
+  no read receipt, enter-session, or peer-typing event on this wire. Do not infer
+  presence from ``last_peer_seen_at`` (that is last inbound message time).
 """
 
 from __future__ import annotations
@@ -43,6 +48,52 @@ QR_TIMEOUT_MS = 35_000
 
 # Post-QR bot_token session end signal (iLink wire + Hermes gateway.platforms.weixin).
 ILINK_SESSION_EXPIRED_ERRCODE = -14
+ILINK_RATE_LIMIT_ERRCODE = -2
+
+# Shown on wechat-demo session poll when bridge tears down after iLink session end.
+ILINK_SESSION_EXPIRED_USER_MESSAGE = (
+    "iLink session expired (errcode=-14). Re-scan QR at Ops /wechat-demo."
+)
+
+
+def is_ilink_session_expired(
+    ret: int | None,
+    errcode: int | None,
+    errmsg: str | None,
+) -> bool:
+    """True when iLink signals bot_token is dead (Hermes ``WeixinAdapter`` parity)."""
+    if (
+        ret == ILINK_SESSION_EXPIRED_ERRCODE
+        or errcode == ILINK_SESSION_EXPIRED_ERRCODE
+    ):
+        return True
+    if ret != ILINK_RATE_LIMIT_ERRCODE and errcode != ILINK_RATE_LIMIT_ERRCODE:
+        return False
+    return (errmsg or "").lower() == "unknown error"
+
+
+def is_ilink_session_expired_runtime_error(exc: BaseException) -> bool:
+    """Parse Hermes ``RuntimeError`` from ``sendmessage`` for session-expired codes."""
+    if not isinstance(exc, RuntimeError):
+        return False
+    text = str(exc)
+    errcode: int | None = None
+    ret: int | None = None
+    errmsg: str | None = None
+    for part in text.replace(",", " ").split():
+        if part.startswith("errcode="):
+            try:
+                errcode = int(part.split("=", 1)[1])
+            except ValueError:
+                pass
+        elif part.startswith("ret="):
+            try:
+                ret = int(part.split("=", 1)[1])
+            except ValueError:
+                pass
+        elif part.startswith("errmsg="):
+            errmsg = part.split("=", 1)[1]
+    return is_ilink_session_expired(ret, errcode, errmsg)
 
 
 def make_ilink_ssl_connector() -> aiohttp.TCPConnector:

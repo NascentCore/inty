@@ -1,4 +1,7 @@
-"""In-process companion presence for Weixin demo bridge (no ``/api/v1/chat/ws`` loopback)."""
+"""In-process companion presence for Weixin demo bridge (no ``/api/v1/chat/ws`` loopback).
+
+Not WeChat user presence: iLink does not expose open-app or open-DM signals (see ``transport``).
+"""
 
 from __future__ import annotations
 

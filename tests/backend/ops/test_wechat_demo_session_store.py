@@ -13,8 +13,10 @@ from backend.ops.schemas.wechat_demo import (
     WeixinOnboardSessionCreate,
 )
 from backend.ops.wechat_demo import session_store
+from backend.ops.weixin_channel.ilink_qr_client import ILINK_SESSION_EXPIRED_USER_MESSAGE
 from backend.ops.weixin_channel.session import WeixinChannelBinding, WeixinChannelSession
 from backend.ops.weixin_channel.weixin_qr_flow import WeixinQrFlow
+from app.db.session import async_engine
 
 
 def test_session_create_rejects_whitespace_only_credentials() -> None:
@@ -128,6 +130,79 @@ async def test_set_session_channel_ignores_failed_session() -> None:
     assert session.error == "already failed"
 
 
+async def _noop_ilink_session_expired() -> None:
+    pass
+
+
+class _RecordingChannel:
+    """Restore-path stand-in: records ``stop()`` without Hermes / orchestrator."""
+
+    def __init__(self) -> None:
+        self.stop_called = False
+
+    async def stop(self) -> None:
+        self.stop_called = True
+
+
+@pytest.mark.asyncio
+async def test_fail_wechat_demo_ilink_session_expired_marks_failed() -> None:
+    await async_engine.dispose()
+    session = session_store._WechatDemoSession(
+        session_id="session-ilink-expired",
+        inty_api_base_url="http://127.0.0.1:8001",
+        inty_jwt="jwt",
+        agent_id="agent",
+        phase=session_store._StorePhase.BRIDGE_RUNNING,
+    )
+    async with session_store._lock:
+        session_store._sessions["session-ilink-expired"] = session
+    await session_store.fail_wechat_demo_ilink_session_expired("session-ilink-expired")
+    assert session.phase == session_store._StorePhase.FAILED
+    assert session.error == ILINK_SESSION_EXPIRED_USER_MESSAGE
+    async with session_store._lock:
+        session_store._sessions.pop("session-ilink-expired", None)
+
+
+@pytest.mark.asyncio
+async def test_fail_wechat_demo_ilink_session_expired_stops_restore_like_channel() -> None:
+    await async_engine.dispose()
+    channel = _RecordingChannel()
+    session_id = "session-restore-like-expired"
+    bridge_task = asyncio.create_task(asyncio.Event().wait())
+
+    session = session_store._WechatDemoSession(
+        session_id=session_id,
+        inty_api_base_url="http://127.0.0.1:8001",
+        inty_jwt="jwt",
+        agent_id="agent",
+        phase=session_store._StorePhase.BRIDGE_RUNNING,
+        channel_session=channel,  # type: ignore[arg-type]
+        bridge_task=bridge_task,
+    )
+    async with session_store._lock:
+        session_store._sessions[session_id] = session
+    await session_store.fail_wechat_demo_ilink_session_expired(session_id)
+    assert channel.stop_called
+    assert session.phase == session_store._StorePhase.FAILED
+    assert session.error == ILINK_SESSION_EXPIRED_USER_MESSAGE
+    assert session.channel_session is None
+    assert bridge_task.done()
+    async with session_store._lock:
+        session_store._sessions.pop(session_id, None)
+
+
+@pytest.mark.asyncio
+async def test_fail_wechat_demo_ilink_session_expired_idempotent_on_stopped() -> None:
+    session = _stopped_session()
+    async with session_store._lock:
+        session_store._sessions[session.session_id] = session
+    await session_store.fail_wechat_demo_ilink_session_expired(session.session_id)
+    assert session.phase == session_store._StorePhase.STOPPED
+    assert session.error is None
+    async with session_store._lock:
+        session_store._sessions.pop(session.session_id, None)
+
+
 def test_onboard_same_weixin_identity_matches_ilink_user_id() -> None:
     other = session_store._WechatDemoSession(
         session_id="old",
@@ -154,7 +229,11 @@ def test_onboard_same_weixin_identity_matches_bridge_account_id() -> None:
         weixin_token="tok",
         weixin_base_url="https://ilinkai.weixin.qq.com",
     )
-    channel = WeixinChannelSession(binding=binding, on_binding_peer_updated=None)
+    channel = WeixinChannelSession(
+        binding=binding,
+        on_binding_peer_updated=None,
+        on_ilink_session_expired=_noop_ilink_session_expired,
+    )
     other = session_store._WechatDemoSession(
         session_id="old",
         inty_api_base_url="http://127.0.0.1:8001",
@@ -188,6 +267,7 @@ def test_onboard_same_weixin_identity_rejects_different_user() -> None:
 
 @pytest.mark.asyncio
 async def test_fail_session_sets_qrcode_ready_event() -> None:
+    await async_engine.dispose()
     session = session_store._WechatDemoSession(
         session_id="session-ready",
         inty_api_base_url="http://127.0.0.1:8001",
