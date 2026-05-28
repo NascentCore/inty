@@ -6,18 +6,25 @@ As a fellow team member, review and revise the pending changes in the current co
 
 ## Instructions
 
-1. **Review**
-   - Understand what the code does
-   - Critique architecture
-   - Check for bugs
-   - Review based on [style rules](/.agents/guidelines/PY_STYLE_RULES.md)
+### Review
 
-2. **Enhance**
-   - Propose architecture improvement to improve structural clarity
-   - Simplify code
+- Understand what the code does
+- Critique architecture
+- Check for bugs
+- Review based on [style rules](/.agents/guidelines/PY_STYLE_RULES.md)
 
-3. **Double check**
-   - After edits: re-read the diff, run relevant tests, and fix any new broken tests.
+### Enhance
+
+- Propose architecture improvement to improve structural clarity
+
+### Identify code smells
+
+- If a simple changes requires scattered changes, that means
+code that changes together are not grouped together
+- If writing tests are complicated, that means interface is incoherent,
+behaviors are not well abstracted
+- If code is difficult to described in much shorter documentation,
+that means the code lacks hierarchy.
 
 ## Checklist
 

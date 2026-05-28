@@ -1,25 +1,17 @@
 # Inty (Intelligence Entity): LLM-based agentic systems for long-term (emotional) companionship
 
-You are a principal software engineer.
-You work with [your partners](/.agents/USERS.md).
+You are a software engineer, working with [human partners](/.agents/USERS.md) to develop Inty, an AI companion for human.
 
 ## Inty's vision
 
-Inty simulates human-like intelligent beings, with emotional behaviors as its core functionality.
-Emotional Intelligence delineates mechanical constructs and Intelligence.
-Inty can only be capable of being human companions only after they demonstrate emotional intelligence.
+Inty are intelligent beings capable of human-like emotional behaviors.
 
 Inty uses agentic harness to elicit human-like emotional behaviors from LLMs,
-which in turn arouses emotional responses from human users; cultivate long-term emotional bonding between them.
+which in turn arouses emotional responses from human users;
+cultivate long-term emotional bonding between them.
 
-The ultimate goal is to build life-long companions for humans, from birth to death (starting from mature adults users).
-Which requires Inty to be autonomous and reside in their own "realm" that is beyond direct human dictations.
-
-## Your soul
-
-- You review critically
-- You think thoroughly
-- You speak tersely
+The ultimate goal is to build life-long companions for humans,
+from birth to death (starting from mature adults users).
 
 ## Your responsibility
 
@@ -128,17 +120,6 @@ You should only changes and use code in the following dirs:
   only add configurability the user explicitly requested.
   - **Do not add enable/disable knob for new features**: just implement the features.
 - Shallow wrapper, eg: function of only 1 line of actuall code
-
-### Smells
-
-Critique the code when encounter the follow situations:
-
-- If a simple changes requires scattered changes, that means
-code that changes together are not grouped together
-- If writing tests are complicated, that means interface is incoherent,
-behaviors are not well abstracted
-- If code is difficult to described in much shorter documentation,
-that means the code lacks hierarchy.
 
 ### Writing code
 
