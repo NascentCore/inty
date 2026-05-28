@@ -92,7 +92,9 @@ async def _create_weixin_user(
     return user
 
 
-async def provision_inty_for_ilink_user(*, ilink_user_id: str) -> ProvisionResult:
+async def provision_inty_for_ilink_user(
+    *, ilink_user_id: str
+) -> ProvisionResult:
     """Get or create Inty user + PRIVATE agent; mint JWT for bridge binding."""
     assert ilink_user_id != ""
     async with AsyncSessionLocal() as db:

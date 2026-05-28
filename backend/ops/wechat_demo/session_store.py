@@ -31,7 +31,9 @@ from backend.ops.wechat_demo.session_persistence import (
     record_from_binding_fields,
     upsert_bridge,
 )
-from backend.ops.weixin_channel.ilink_qr_client import ILINK_SESSION_EXPIRED_USER_MESSAGE
+from backend.ops.weixin_channel.ilink_qr_client import (
+    ILINK_SESSION_EXPIRED_USER_MESSAGE,
+)
 from backend.ops.weixin_channel.session import (
     WeixinChannelBinding,
     WeixinChannelSession,
@@ -536,7 +538,9 @@ async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
         name=f"weixin_qr_{session.session_id}",
     )
     try:
-        cred = await _signal_qrcode_ready_while_running(session, qr_flow, qr_task)
+        cred = await _signal_qrcode_ready_while_running(
+            session, qr_flow, qr_task
+        )
     except asyncio.CancelledError:
         if not qr_task.done():
             qr_task.cancel()
@@ -578,7 +582,8 @@ async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
             )
         except Exception as exc:
             logger.exception(
-                "weixin onboard provision failed session_id={}", session.session_id
+                "weixin onboard provision failed session_id={}",
+                session.session_id,
             )
             await _fail_session(session, str(exc))
             return

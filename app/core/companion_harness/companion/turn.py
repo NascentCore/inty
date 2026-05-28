@@ -570,9 +570,7 @@ async def _run_companion_turn_core(
             ),
             implicit_user_signed_on=implicit_sign_on_turn,
             transcript_newest_message_uuid=(
-                transcript_tail_message_uuid(store)
-                if inner_tick_turn
-                else None
+                transcript_tail_message_uuid(store) if inner_tick_turn else None
             ),
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(
