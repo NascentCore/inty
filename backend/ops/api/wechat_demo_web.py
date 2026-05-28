@@ -2,6 +2,10 @@
 
 Call qrcode api to generate qr code url.
 第三方 API：前端拼 URL 即可，零后端、零依赖。
+
+TODO(wechat-demo-ilink-session-expired-user-notify): when bridge hits iLink ``-14``,
+this page (Start QR Login + status ``error``) is the supported re-auth surface — not a
+WeChat DM from the bot. See ``backend.ops.weixin_channel.transport`` module doc.
 """
 
 from __future__ import annotations

@@ -15,6 +15,10 @@ protocol** — valid until iLink returns ``errcode=-14`` on long-poll/send (see
 ``ILINK_SESSION_EXPIRED_ERRCODE`` in ``ilink_qr_client``). Persisted rows may hold an
 already-expired token after Ops restore; channel start / ``-14`` then requires re-QR.
 
+TODO(wechat-demo-ilink-session-expired-user-notify): same as
+``backend.ops.weixin_channel.transport`` — after ``-14``, notify QR operator via Ops
+session ``error`` / ``FAILED``, not via WeChat bot DM.
+
 Manual release smoke (QR + WeChat DM + Ops restart): see
 ``.cursor/skills/wechat-demo-bridge-restore-smoke/SKILL.md``.
 

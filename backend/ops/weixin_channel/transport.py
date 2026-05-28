@@ -46,6 +46,17 @@ Long-poll/send use ``weixin_token`` (iLink ``bot_token``). When iLink session en
 ``getupdates`` returns ``errcode=-14`` (session expired; **not** “14 minutes”).
 Stop demo and re-scan QR.
 
+TODO(wechat-demo-ilink-session-expired-user-notify): iLink / Tencent
+``openclaw-weixin`` publish **no** ``expires_in`` or session-TTL query — validity is
+only known when ``getupdates`` / ``sendmessage`` return ``errcode=-14`` (or Hermes
+stale-session ``ret/errcode=-2`` + ``errmsg=unknown error``). After ``-14`` the
+``bot_token`` cannot send WeChat DMs, so **cannot** ask the chatter to re-scan QR
+inside WeChat chat; re-auth is QR on Ops ``/wechat-demo`` (or CLI) + phone WeChat scan.
+Product options: (1) on ``-14`` probe/fail bridge → ``session_store`` ``FAILED`` + poll
+UI ``error`` for whoever scans QR; (2) optional restore-time ``getupdates`` probe before
+Hermes 10-minute pause; (3) while token still valid, one-shot DM to ``last_peer_id`` with
+Ops re-login URL only (not a long-lived QR image). Do not rely on Hermes log rewrite alone.
+
 TODO(wechat-demo-ws-disconnect-hermes-wording): ``inbound_handler`` exceptions (e.g.
 Inty WS ``ConnectionClosedError``) are caught by Hermes ``BasePlatformAdapter`` and
 replied to WeChat with "use /reset"—Hermes CLI wording, not an Inty slash command.

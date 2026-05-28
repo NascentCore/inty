@@ -21,6 +21,8 @@ iLink time limits (not documented as a fixed wall-clock TTL on the wire):
   The token stays usable until ``getupdates`` / ``sendmessage`` fail with
   ``errcode=-14`` (session expired); then re-scan QR. Hermes: ``SESSION_EXPIRED_ERRCODE``.
   Empirical lifetime varies (hours to days reported); Ops must not assume a fixed duration.
+- **User re-login after ``-14``**: cannot push re-scan QR through WeChat DM (token dead);
+  see ``TODO(wechat-demo-ilink-session-expired-user-notify)`` in ``transport`` module doc.
 """
 
 from __future__ import annotations
