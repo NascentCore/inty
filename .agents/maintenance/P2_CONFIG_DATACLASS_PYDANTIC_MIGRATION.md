@@ -77,7 +77,7 @@ flowchart TB
 | CFG-PYD-17 | done | `TTSConfig` | — | `tts` | 已迁移为 `BaseModel`；Fixed in `cursor/agent-maintenance-tasks-3e21` |
 | CFG-PYD-18 | done | `MemoryExtractionConfig` | — | `memory_extraction` | 已迁移为 `BaseModel`；`WorkflowMode` 由 Pydantic 字符串→枚举；Fixed in `cursor/agent-maintenance-tasks-772c` |
 | CFG-PYD-19 | done | `PushNotificationConfig` | — | `push_notification` | 已迁移为 `BaseModel`；`stages` 默认值由 `model_validator(after)` 保持；Fixed in `cursor/agent-maintenance-tasks-772c` |
-| CFG-PYD-20 | todo | `FeaturesConfig` | — | `app.features`（预处理 dict） | `companion_transcript_compaction` 等；`__post_init__` 校验 bootstrap / context_mode |
+| CFG-PYD-20 | done | `FeaturesConfig` | — | `app.features`（预处理 dict） | 已迁移为 `BaseModel`；`companion_transcript_compaction` 使用 `Field(default_factory=...)`；bootstrap / context_mode 校验由 `model_validator(after)` 保持；Fixed in `cursor/agent-maintenance-tasks-e9ac` |
 | CFG-PYD-21 | todo | `AgentConfig` | — | `agent` | 体量大；无其它 *Config* dataclass 交叉引用 |
 | CFG-PYD-22 | todo | `AppConfig.LimitsConfig` | CFG-PYD-01..21 中与 app 树无冲突者 | `app.limits`（预处理 dict） | **仅嵌套类**：先改为 `BaseModel`，父 `AppConfig` 仍为 dataclass 亦可 |
 | CFG-PYD-23 | todo | `AppConfig` | CFG-PYD-06, CFG-PYD-20, CFG-PYD-22 | `app` | 含 `backend_cors_origins` 等；修正 `List[AnyHttpUrl] = None` 为 `Optional[...]`；`LimitsConfig` / `features` / `api_endpoints` 默认值用 `Field(default_factory=...)`；`__post_init__` 合并进 validator |

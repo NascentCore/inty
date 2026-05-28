@@ -172,8 +172,9 @@ class CompanionMemoryBootstrapType(StrEnum):
     USER_INTERACTIVE = "USER_INTERACTIVE"
 
 
-@dataclass
-class FeaturesConfig:
+class FeaturesConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     class CompanionHarnessConfig(BaseModel):
         dreaming_idle_seconds: int = Field(default=7200, ge=1)
 
@@ -189,7 +190,7 @@ class FeaturesConfig:
     # dialogue is folded into a structured system snapshot when over budget. Default matches
     # app.utils.companion_feature_defaults.DEFAULT_COMPANION_FEATURE_COMPACTION.
     # Set to null in YAML to disable.
-    companion_transcript_compaction: Optional[dict[str, Any]] = field(
+    companion_transcript_compaction: Optional[dict[str, Any]] = Field(
         default_factory=lambda: dict(DEFAULT_COMPANION_FEATURE_COMPACTION)
     )
     # Optional: max transcript rows loaded before compaction (default: kernel TRANSCRIPT_WINDOW_MAX_MESSAGES).
@@ -228,17 +229,12 @@ class FeaturesConfig:
     # Max LLM attempts for that greeting (includes the first call; 2 = one retry).
     companion_implicit_sign_on_greeting_llm_max_attempts: int = 2
     # TODO: Move existing companion harness configs into CompanionHarnessConfig.
-    companion_harness: CompanionHarnessConfig = field(
+    companion_harness: CompanionHarnessConfig = Field(
         default_factory=CompanionHarnessConfig
     )
 
-    def __post_init__(self) -> None:
-        if isinstance(self.companion_harness, dict):
-            self.companion_harness = (
-                self.CompanionHarnessConfig.model_validate(
-                    self.companion_harness
-                )
-            )
+    @model_validator(mode="after")
+    def normalize_companion_fields(self) -> "FeaturesConfig":
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()
         allowed = {m.value for m in CompanionMemoryBootstrapType}
         if raw not in allowed:
@@ -257,6 +253,7 @@ class FeaturesConfig:
             raise ValueError(
                 "app.features.companion_default_context_mode cannot be 'bootstrap'"
             )
+        return self
 
 
 @dataclass
@@ -787,7 +784,9 @@ def load_config(path: str) -> Config:
     if "limits" in app_data and isinstance(app_data["limits"], dict):
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
     if "features" in app_data and isinstance(app_data["features"], dict):
-        app_data["features"] = FeaturesConfig(**dict(app_data["features"]))
+        app_data["features"] = FeaturesConfig.model_validate(
+            app_data["features"]
+        )
     if "api_endpoints" in app_data and isinstance(
         app_data["api_endpoints"], dict
     ):

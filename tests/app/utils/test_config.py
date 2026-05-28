@@ -282,6 +282,19 @@ def test_features_config_companion_harness_dreaming_idle_seconds() -> None:
     assert f.companion_harness.dreaming_idle_seconds == 33
 
 
+def test_features_config_uses_pydantic_validation():
+    f = FeaturesConfig.model_validate(
+        {
+            "companion_memory_bootstrap_type": "user_interactive",
+            "unknown_key": "ignored",
+        }
+    )
+    assert f.companion_memory_bootstrap_type == (
+        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    )
+    assert not hasattr(f, "unknown_key")
+
+
 def test_companion_transcript_compaction_config_validates(config):
     config.app.features = FeaturesConfig(
         companion_transcript_compaction={
