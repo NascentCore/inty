@@ -212,6 +212,10 @@ class PromptBundle(BaseModel):
             "include_significance_perception_slice is true (package prompts/SIGNIFICANCE_PERCEPTION.md)."
         ),
     )
+    channels_md: str = Field(
+        default="",
+        description="Channel capability contract: CHANNELS.md body for Capability system injection.",
+    )
     tools_md: str = ""
     memory_raw_diary_today_md: str = Field(
         default="",
@@ -302,6 +306,7 @@ def load_prompt_bundle(
         tools_md=_template_doc_truncated(
             "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
+        channels_md=_read_memory_document_required(store, "CHANNELS.md"),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),

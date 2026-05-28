@@ -12,6 +12,7 @@ from app.core.companion_harness.companion.models import (
     ChatMessage,
     ContextMeta,
     PromptBundle,
+    load_prompt_bundle,
     load_transcript_from_store,
     load_transcript_text,
     transcript_for_llm_turn,
@@ -40,9 +41,20 @@ def test_chat_message_timestamp_alias() -> None:
 def test_prompt_bundle_defaults() -> None:
     b = PromptBundle(identity="i", soul="s", user_md="u", memory_md="m")
     assert b.style_md == ""
+    assert b.channels_md == ""
     assert b.tools_md == ""
     assert b.memory_raw_diary_today_md == ""
     assert b.memory_day_summary_today_md == ""
+
+
+def test_load_prompt_bundle_reads_channels_from_memory_store(tmp_path: Path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("models", "a", f"{tmp_path.name}-channels"),
+        repository=None,
+    )
+    store.write_document("CHANNELS.md", "# Channels\ncustom channel contract\n")
+    bundle = load_prompt_bundle(store, meta=ContextMeta())
+    assert bundle.channels_md == "# Channels\ncustom channel contract\n"
 
 
 def test_context_meta_defaults() -> None:
