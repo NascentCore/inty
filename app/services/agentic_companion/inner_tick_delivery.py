@@ -6,7 +6,9 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
-from app.schemas.implicit_signals import OutputFormatPromptSlice
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
 
 WeixinAssistantTextSink = Callable[[str], Awaitable[None]]
 
@@ -26,7 +28,7 @@ class InnerTickDelivery:
 
     ws_outbound_queue: asyncio.Queue | None
     weixin_assistant_text: WeixinAssistantTextSink | None
-    output_format_prompt_slice: OutputFormatPromptSlice | None
+    runtime_channel: CompanionRuntimeChannel
 
     def __post_init__(self) -> None:
         ws = self.ws_outbound_queue is not None
@@ -58,7 +60,7 @@ def inner_tick_delivery_for_ws(
     return InnerTickDelivery(
         ws_outbound_queue=outbound_queue,
         weixin_assistant_text=None,
-        output_format_prompt_slice=None,
+        runtime_channel=CompanionRuntimeChannel.APP,
     )
 
 
@@ -69,5 +71,5 @@ def inner_tick_delivery_for_weixin(
     return InnerTickDelivery(
         ws_outbound_queue=None,
         weixin_assistant_text=assistant_text,
-        output_format_prompt_slice=OutputFormatPromptSlice.WECHAT_WEIXIN,
+        runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
     )

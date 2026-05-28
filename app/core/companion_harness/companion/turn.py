@@ -97,9 +97,10 @@ from .models import (
     transcript_relative_path_for_turn_persistence,
 )
 from .prompt_stack import (
-    output_format_prompt_slice_for_implicit_signals,
+    output_format_prompt_slice_for_runtime_channel,
     refresh_companion_turn_prompt_stack,
 )
+from .runtime_channel import CompanionRuntimeChannel
 from .turn_track import track_from_legacy_flags, turn_flags_for_track
 from .prompts.system_messages import (
     build_system_messages_for_chat_track,
@@ -196,7 +197,7 @@ def _async_dual_llm_system_message_variants(
     memory_bootstrap_type: str,
     inner_tick_turn: bool,
     route_inner_activity: InnerTickActivity,
-    output_format_prompt_slice: str,
+    runtime_channel: CompanionRuntimeChannel,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Foreground ``chat_track`` vs tool-path stacks for ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``.
 
@@ -205,6 +206,10 @@ def _async_dual_llm_system_message_variants(
     tick_proactive = (
         inner_tick_turn
         and route_inner_activity == InnerTickActivity.PROACTIVE_CHAT
+    )
+    output_format_prompt_slice = output_format_prompt_slice_for_runtime_channel(
+        bundle=bundle,
+        runtime_channel=runtime_channel,
     )
     if inner_tick_turn and not tick_proactive:
         tool_system_msgs = build_system_messages_for_inner_tick_maintenance(
@@ -433,6 +438,7 @@ async def _run_companion_turn_core(
     transcript_llm_window_max_messages: int | None = None,
     repository_only_store_text: bool = False,
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
+    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -518,10 +524,6 @@ async def _run_companion_turn_core(
         )
     context = loaded_state.context
     bundle = loaded_state.bundle
-    output_format_prompt_slice = output_format_prompt_slice_for_implicit_signals(
-        bundle=bundle,
-        implicit_signal_bundle=implicit_signal_bundle,
-    )
     prompt_plan = build_companion_turn_prompt_plan(
         store=store,
         loaded_state=loaded_state,
@@ -531,6 +533,7 @@ async def _run_companion_turn_core(
         tick_proactive=tick_proactive,
         implicit_signal_bundle=implicit_signal_bundle,
         implicit_sign_on_turn=implicit_sign_on_turn,
+        runtime_channel=runtime_channel,
         transcript_compaction=transcript_compaction,
     )
     tools_for_turn = prompt_plan.tools_for_turn
@@ -656,7 +659,7 @@ async def _run_companion_turn_core(
                             memory_bootstrap_type=memory_bootstrap_type,
                             inner_tick_turn=inner_tick_turn,
                             route_inner_activity=route_inner_activity,
-                            output_format_prompt_slice=output_format_prompt_slice,
+                            runtime_channel=runtime_channel,
                         )
                     )
                     _stack_depth = len(prompt_plan.system_messages)
@@ -796,6 +799,7 @@ async def _run_companion_turn_core(
                         inner_tick_turn=inner_tick_turn,
                         inner_tick_activity=route_inner_activity,
                         implicit_signal_bundle=implicit_signal_bundle,
+                        runtime_channel=runtime_channel,
                         companion_turn_track=track,
                         tool_bg_idle_event=tool_bg_idle_event,
                         force_tools_first_round=force_tools_first_round,
@@ -1111,6 +1115,7 @@ async def run_turn(
     transcript_llm_window_max_messages: int | None = None,
     repository_only_store_text: bool = False,
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
+    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -1134,6 +1139,7 @@ async def run_turn(
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
         memory_bootstrap_type=memory_bootstrap_type,
+        runtime_channel=runtime_channel,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         implicit_signal_bundle=implicit_signal_bundle,
@@ -1153,6 +1159,7 @@ async def run_companion_user_chat_turn(
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
     memory_bootstrap_type: str,
+    runtime_channel: CompanionRuntimeChannel,
     background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
     implicit_signal_bundle: ImplicitSignalBundle | None,
@@ -1193,6 +1200,7 @@ async def run_companion_user_chat_turn(
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
         memory_bootstrap_type=memory_bootstrap_type,
+        runtime_channel=runtime_channel,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         implicit_signal_bundle=implicit_signal_bundle,
@@ -1214,6 +1222,7 @@ async def run_companion_implicit_sign_on_greeting_turn(
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
     memory_bootstrap_type: str,
+    runtime_channel: CompanionRuntimeChannel,
     background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
     langsmith_parent_run_enabled: bool | None,
@@ -1234,6 +1243,7 @@ async def run_companion_implicit_sign_on_greeting_turn(
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
         memory_bootstrap_type=memory_bootstrap_type,
+        runtime_channel=runtime_channel,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         implicit_signal_bundle=implicit_signal_bundle,
@@ -1252,6 +1262,7 @@ async def run_companion_inner_tick_proactive_chat_turn(
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
     memory_bootstrap_type: str,
+    runtime_channel: CompanionRuntimeChannel,
     background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
     implicit_signal_bundle: ImplicitSignalBundle | None,
@@ -1269,6 +1280,7 @@ async def run_companion_inner_tick_proactive_chat_turn(
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
         memory_bootstrap_type=memory_bootstrap_type,
+        runtime_channel=runtime_channel,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         implicit_signal_bundle=implicit_signal_bundle,
@@ -1288,6 +1300,7 @@ async def run_companion_inner_tick_scheduled_turn(
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
     memory_bootstrap_type: str,
+    runtime_channel: CompanionRuntimeChannel,
     background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
     implicit_signal_bundle: ImplicitSignalBundle | None,
@@ -1308,6 +1321,7 @@ async def run_companion_inner_tick_scheduled_turn(
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
         memory_bootstrap_type=memory_bootstrap_type,
+        runtime_channel=runtime_channel,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         implicit_signal_bundle=implicit_signal_bundle,
@@ -1326,6 +1340,7 @@ async def run_companion_inner_tick_maintenance_turn(
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
     memory_bootstrap_type: str,
+    runtime_channel: CompanionRuntimeChannel,
     background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
     implicit_signal_bundle: ImplicitSignalBundle | None,
@@ -1343,6 +1358,7 @@ async def run_companion_inner_tick_maintenance_turn(
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
         memory_bootstrap_type=memory_bootstrap_type,
+        runtime_channel=runtime_channel,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         implicit_signal_bundle=implicit_signal_bundle,

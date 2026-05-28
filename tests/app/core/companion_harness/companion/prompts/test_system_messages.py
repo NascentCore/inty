@@ -8,10 +8,15 @@ from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
+from app.core.companion_harness.companion.prompt_stack import (
+    output_format_prompt_slice_for_runtime_channel,
+)
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
-from app.schemas.implicit_signals import OutputFormatPromptSlice
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
 
 
 def test_doctrine_system_prefix_excludes_subconscious_prompt() -> None:
@@ -76,4 +81,31 @@ def test_wechat_weixin_output_format_slice_is_in_output_layer() -> None:
         "- Do not mention WeChat, Weixin, iLink, Hermes, transport adapters, prompt slices, tool routes, or delivery mechanics.",
         "- If the model response must use a structured envelope, apply this format only inside user-facing natural-language fields such as `user_facing_reply`; keep the envelope itself valid.",
     ]
-    assert OutputFormatPromptSlice.WECHAT_WEIXIN.value == "wechat_weixin"
+    assert CompanionRuntimeChannel.WECHAT_WEIXIN.value == "wechat_weixin"
+
+
+def test_output_format_slice_resolves_from_runtime_channel() -> None:
+    body = load_template_seed_text(OUTPUT_FORMAT_WECHAT_WEIXIN_MD)
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+        output_format_wechat_weixin_md=body,
+    )
+
+    assert (
+        output_format_prompt_slice_for_runtime_channel(
+            bundle=bundle,
+            runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+        )
+        == body
+    )
+    assert (
+        output_format_prompt_slice_for_runtime_channel(
+            bundle=bundle,
+            runtime_channel=CompanionRuntimeChannel.APP,
+        )
+        == ""
+    )

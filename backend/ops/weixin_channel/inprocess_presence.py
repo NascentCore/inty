@@ -18,9 +18,9 @@ from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
-from app.schemas.implicit_signals import (
-    ImplicitSignalBundle,
-    OutputFormatPromptSlice,
+from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
 )
 from app.services import chat_service, companion_chat_service
 from app.services.chat_service import generate_session_id
@@ -194,7 +194,6 @@ class WeixinInprocessPresence:
                 client_time=None,
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
-                output_format_prompt_slice=OutputFormatPromptSlice.WECHAT_WEIXIN,
             )
             async with self._coordinator.turn_lock:
                 turn = await companion_chat_service.run_user_chat(
@@ -207,6 +206,7 @@ class WeixinInprocessPresence:
                     background_output_sink=self._coordinator.background_sink,
                     preset_user_msg_uuid=preset_uid,
                     implicit_signal_bundle=implicit_bundle,
+                    runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
                 )
             if not turn.tool_background_started:
                 self._coordinator.remove_foreground_pending(preset_uid)

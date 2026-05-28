@@ -37,6 +37,9 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
     InnerTickActivity,
 )
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
@@ -460,6 +463,7 @@ async def run_user_chat(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
@@ -478,6 +482,7 @@ async def run_user_chat(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             implicit_signal_bundle=implicit_signal_bundle,
+            runtime_channel=runtime_channel,
             bootstrap_interim_output_sink=bootstrap_interim_output_sink,
         ),
     )
@@ -495,6 +500,7 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
+    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="implicit_sign_on_greeting",
@@ -512,6 +518,7 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
             defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
+            runtime_channel=runtime_channel,
         ),
     )
 
@@ -527,6 +534,7 @@ async def run_companion_inner_tick_proactive_chat_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="inner_tick_proactive_chat",
@@ -543,6 +551,7 @@ async def run_companion_inner_tick_proactive_chat_turn_for_api(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             implicit_signal_bundle=implicit_signal_bundle,
+            runtime_channel=runtime_channel,
         ),
     )
 
@@ -559,6 +568,7 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
 ) -> CompanionTurnResult:
     assert (
         scheduled_user_text.strip()
@@ -579,6 +589,7 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             implicit_signal_bundle=implicit_signal_bundle,
+            runtime_channel=runtime_channel,
         ),
     )
 
@@ -594,6 +605,7 @@ async def run_companion_inner_tick_maintenance_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="inner_tick_maintenance",
@@ -610,6 +622,7 @@ async def run_companion_inner_tick_maintenance_turn_for_api(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             implicit_signal_bundle=implicit_signal_bundle,
+            runtime_channel=runtime_channel,
         ),
     )
 
@@ -628,6 +641,7 @@ async def run_companion_chat_turn_for_api(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
+    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
 ) -> CompanionTurnResult:
     """Legacy delegator; WebSocket handlers should call track-specific APIs."""
     common = {
@@ -640,6 +654,7 @@ async def run_companion_chat_turn_for_api(
         "background_output_sink": background_output_sink,
         "preset_user_msg_uuid": preset_user_msg_uuid,
         "implicit_signal_bundle": implicit_signal_bundle,
+        "runtime_channel": runtime_channel,
     }
     if inner_tick_turn:
         match inner_tick_activity:

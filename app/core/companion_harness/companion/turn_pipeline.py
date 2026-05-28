@@ -46,6 +46,7 @@ from .models import (
     load_prompt_bundle,
     transcript_for_llm_turn,
 )
+from .runtime_channel import CompanionRuntimeChannel
 from .turn_track import turn_flags_for_track
 from .prompt_stack import companion_turn_tools_and_system_messages
 from app.core.companion_harness.memory.transcript_compaction import (
@@ -216,6 +217,7 @@ def build_companion_turn_prompt_plan(
     tick_proactive: bool,
     implicit_signal_bundle: ImplicitSignalBundle | None,
     implicit_sign_on_turn: bool,
+    runtime_channel: CompanionRuntimeChannel,
     transcript_compaction: TranscriptCompactionConfig | None,
 ) -> CompanionTurnPromptPlan:
     """Assemble system messages, route, and final request messages."""
@@ -230,6 +232,7 @@ def build_companion_turn_prompt_plan(
             track=track,
             implicit_user_signed_on_turn=implicit_sign_on_turn,
             implicit_signal_bundle=implicit_signal_bundle,
+            runtime_channel=runtime_channel,
         )
     )
     use_dual_structured_chat = (

@@ -3,18 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
 from app.schemas.chat import UserTimeContext
-
-
-class OutputFormatPromptSlice(StrEnum):
-    """Prompt slice ids for channel-specific assistant output formatting."""
-
-    WECHAT_WEIXIN = "wechat_weixin"
 
 
 class ImplicitSignalBundle(BaseModel):
@@ -31,8 +24,4 @@ class ImplicitSignalBundle(BaseModel):
     server_received_at_utc: Optional[datetime] = Field(
         default=None,
         description="Server receipt time; not rendered into prompts in MVP.",
-    )
-    output_format_prompt_slice: Optional[OutputFormatPromptSlice] = Field(
-        default=None,
-        description="Optional channel output-format prompt slice to inject for this turn.",
     )
