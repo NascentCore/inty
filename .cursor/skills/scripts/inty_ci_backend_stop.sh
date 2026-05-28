@@ -5,18 +5,36 @@ set -euo pipefail
 port="${1:-8000}"
 stopped=0
 
-stop_matching_pids() {
-  local sig="$1"
+is_inty_main_cmd() {
+  case "$1" in
+    *backend.inty.main*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# PIDs listening on $port whose command line includes backend.inty.main.
+inty_main_pids_on_port() {
+  local pid cmd
   for pid in $(lsof -ti ":${port}" 2>/dev/null || true); do
-    local cmd
     cmd=$(ps -p "$pid" -o args= 2>/dev/null || true)
-    case "$cmd" in
-      *backend.inty.main*)
-        echo "Sending ${sig} to PID ${pid}"
-        kill "-${sig}" "$pid" 2>/dev/null || true
-        stopped=$((stopped + 1))
-        ;;
-    esac
+    if is_inty_main_cmd "$cmd"; then
+      echo "$pid"
+    fi
+  done
+}
+
+inty_main_still_on_port() {
+  local pids
+  pids=$(inty_main_pids_on_port)
+  [ -n "$pids" ]
+}
+
+stop_matching_pids() {
+  local sig="$1" pid
+  for pid in $(inty_main_pids_on_port); do
+    echo "Sending ${sig} to PID ${pid}"
+    kill "-${sig}" "$pid" 2>/dev/null || true
+    stopped=$((stopped + 1))
   done
 }
 
@@ -24,18 +42,22 @@ stop_matching_pids TERM
 
 if [ "$stopped" -gt 0 ]; then
   for _ in 1 2 3 4 5 6 7 8 9 10; do
-    if ! lsof -ti ":${port}" >/dev/null 2>&1; then
-      echo "Port ${port} is free."
+    if ! inty_main_still_on_port; then
+      echo "No backend.inty.main listener on port ${port}."
       exit 0
     fi
     sleep 1
   done
-  echo "Port ${port} still in use; sending KILL to remaining backend.inty.main PIDs" >&2
+  echo "backend.inty.main still on port ${port}; sending KILL" >&2
   stop_matching_pids KILL
 fi
 
-if lsof -ti ":${port}" >/dev/null 2>&1; then
-  echo "WARN: port ${port} still has listeners (may be non-Inty processes)" >&2
+if inty_main_still_on_port; then
+  echo "ERROR: backend.inty.main still listening on port ${port}" >&2
   lsof -i ":${port}" 2>/dev/null || true
   exit 1
+fi
+
+if lsof -ti ":${port}" >/dev/null 2>&1; then
+  echo "Note: port ${port} has non-Inty listeners (left unchanged)" >&2
 fi
