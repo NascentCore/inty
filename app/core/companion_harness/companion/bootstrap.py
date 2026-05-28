@@ -217,11 +217,7 @@ def tool_companion_set_experience_profile(
     *,
     note: str,
 ) -> str:
-    """Persist experience profile id in ``context.json`` with audit note.
-
-    During interactive bootstrap (``context_mode=bootstrap``), writes
-    ``post_bootstrap_context_mode`` and keeps bootstrap active until complete.
-    """
+    """Persist a non-bootstrap ``context_mode`` in ``context.json`` with audit note."""
 
     try:
         normalized = normalize_experience_profile_id(context_mode)
