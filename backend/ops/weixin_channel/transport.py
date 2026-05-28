@@ -54,6 +54,8 @@ replied to WeChat with "use /reset"—Hermes CLI wording, not an Inty slash comm
 from __future__ import annotations
 
 import asyncio
+import contextvars
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -62,6 +64,42 @@ from gateway.config import PlatformConfig
 from gateway.platforms.base import MessageEvent
 from gateway.platforms.weixin import WeixinAdapter
 from loguru import logger
+
+from backend.ops.weixin_channel.ilink_qr_client import ILINK_SESSION_EXPIRED_ERRCODE
+
+# Hermes ``WeixinAdapter._poll_loop`` logs a terse session-expired line on stdlib logging;
+# Ops rewrites it here so restore/-14 failures are actionable without reading Hermes source.
+_HERMES_WEIXIN_LOGGER = logging.getLogger("gateway.platforms.weixin")
+_HERMES_SESSION_EXPIRED_PAUSE_SUBSTR = "Session expired; pausing for 10 minutes"
+_weixin_transport_account_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "weixin_transport_account_id",
+    default=None,
+)
+_weixin_hermes_log_filter_installed = False
+
+
+class WeixinIlinkSessionExpiredLogFilter(logging.Filter):
+    """Rewrite Hermes getupdates ``errcode=-14`` pause log with Ops bridge context."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if _HERMES_SESSION_EXPIRED_PAUSE_SUBSTR not in record.getMessage():
+            return True
+        account_id = _weixin_transport_account_id.get() or "unknown"
+        record.msg = (
+            "[weixin] iLink bot_token 已失效（errcode=%s）：从 Postgres 恢复的 WeChat demo 桥接 "
+            "account_id=%s 无法收发消息；Hermes getupdates 暂停 10 分钟——请在 Ops /wechat-demo "
+            "重新扫码登录"
+        )
+        record.args = (ILINK_SESSION_EXPIRED_ERRCODE, account_id)
+        return True
+
+
+def _ensure_weixin_hermes_session_expired_log_filter() -> None:
+    global _weixin_hermes_log_filter_installed
+    if _weixin_hermes_log_filter_installed:
+        return
+    _HERMES_WEIXIN_LOGGER.addFilter(WeixinIlinkSessionExpiredLogFilter())
+    _weixin_hermes_log_filter_installed = True
 
 
 @dataclass(frozen=True)
@@ -136,9 +174,14 @@ class WeixinTransport:
 
         adapter.set_message_handler(handle_weixin_message)
         self._adapter = adapter
-        await adapter.connect()
-        while not self._stop.is_set():
-            await asyncio.sleep(1)
+        _ensure_weixin_hermes_session_expired_log_filter()
+        account_ctx = _weixin_transport_account_id.set(self._cred.account_id)
+        try:
+            await adapter.connect()
+            while not self._stop.is_set():
+                await asyncio.sleep(1)
+        finally:
+            _weixin_transport_account_id.reset(account_ctx)
 
     async def send_text(self, peer_id: str, text: str) -> None:
         # Text-only path; image/file/video use adapter ``send_*`` (see module doc).
