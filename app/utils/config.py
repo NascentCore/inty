@@ -172,8 +172,9 @@ class CompanionMemoryBootstrapType(StrEnum):
     USER_INTERACTIVE = "USER_INTERACTIVE"
 
 
-@dataclass
-class FeaturesConfig:
+class FeaturesConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     experimental_enable_chat_with_user_time_context: bool = True
     # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
     enable_selfie_persona_summary: bool = True
@@ -186,7 +187,7 @@ class FeaturesConfig:
     # dialogue is folded into a structured system snapshot when over budget. Default matches
     # app.utils.companion_feature_defaults.DEFAULT_COMPANION_FEATURE_COMPACTION.
     # Set to null in YAML to disable.
-    companion_transcript_compaction: Optional[dict[str, Any]] = field(
+    companion_transcript_compaction: Optional[dict[str, Any]] = Field(
         default_factory=lambda: dict(DEFAULT_COMPANION_FEATURE_COMPACTION)
     )
     # Optional: max transcript rows loaded before compaction (default: kernel TRANSCRIPT_WINDOW_MAX_MESSAGES).
@@ -225,7 +226,8 @@ class FeaturesConfig:
     # Max LLM attempts for that greeting (includes the first call; 2 = one retry).
     companion_implicit_sign_on_greeting_llm_max_attempts: int = 2
 
-    def __post_init__(self) -> None:
+    @model_validator(mode="after")
+    def normalize_companion_fields(self) -> "FeaturesConfig":
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()
         allowed = {m.value for m in CompanionMemoryBootstrapType}
         if raw not in allowed:
@@ -244,6 +246,7 @@ class FeaturesConfig:
             raise ValueError(
                 "app.features.companion_default_context_mode cannot be 'bootstrap'"
             )
+        return self
 
 
 @dataclass
@@ -774,7 +777,9 @@ def load_config(path: str) -> Config:
     if "limits" in app_data and isinstance(app_data["limits"], dict):
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
     if "features" in app_data and isinstance(app_data["features"], dict):
-        app_data["features"] = FeaturesConfig(**dict(app_data["features"]))
+        app_data["features"] = FeaturesConfig.model_validate(
+            app_data["features"]
+        )
     if "api_endpoints" in app_data and isinstance(
         app_data["api_endpoints"], dict
     ):

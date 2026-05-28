@@ -297,10 +297,11 @@ class Chat(ChatInDB):
 
             return agent_avatar
 
-        except Exception as e:
-            logger.warning(
-                f"Failed to serialize agent_avatar for chat {getattr(self, 'id', 'unknown')}: {str(e)}"
-            )
+        except (ImportError, AttributeError, TypeError, ValueError) as e:
+            logger.bind(
+                chat_id=getattr(self, "id", "unknown"),
+                field="agent_avatar",
+            ).warning("Failed to serialize chat image URL: {}", e)
             return agent_avatar
 
     @field_serializer("agent_background")
@@ -316,7 +317,11 @@ class Chat(ChatInDB):
             )
 
             return image_transform_service.transform_desktop(agent_background)
-        except Exception:
+        except (ImportError, AttributeError, TypeError, ValueError) as e:
+            logger.bind(
+                chat_id=getattr(self, "id", "unknown"),
+                field="agent_background",
+            ).warning("Failed to serialize chat image URL: {}", e)
             return agent_background
 
     @field_serializer("agent_background_animated")
@@ -334,7 +339,11 @@ class Chat(ChatInDB):
             return image_transform_service.transform_desktop(
                 agent_background_animated
             )
-        except Exception:
+        except (ImportError, AttributeError, TypeError, ValueError) as e:
+            logger.bind(
+                chat_id=getattr(self, "id", "unknown"),
+                field="agent_background_animated",
+            ).warning("Failed to serialize chat image URL: {}", e)
             return agent_background_animated
 
     @field_serializer("agent_intro")
