@@ -6,12 +6,27 @@ Use LLMs and companion harness to simulate a living person one can only interact
 
 - companion-harness (memories, tools, seeded static prompt slices, etc.) to simulate human emotional behaviors in modality in text (and then audio image video in the future) by dynamically and in a human-like manner to assemble into LLM prompt.
 
-## 架构直觉（不写具体类名）
+## Objectives
 
-- **快慢双层思考**：对用户消息既有低延迟的「快响应」，也有可带工具、可多步的「慢思考」路径。Inspired by System I&II (fast & slow).
-- **内心节拍（inner tick）**：即使用户不说话，也会周期性唤醒一轮「维护/主动」式推理，支撑自主性与新鲜感。
-- **工作记忆（MemoryStore）**：伴侣当下知道的上下文以 semantic and named markdown docs, changes are immediately reflected in the follow-up LLM invocations.
-- **关系阶段（context mode）**：从初识引导、到日常陪伴、再到更亲密模式，产品用阶段切换 **约束话术与行为空间**。Help to model a human-like relationship development process.
+Simulate emotional intimacy experience without physical presence;
+such experience is between human users and AI, but they have real-world patterns as in:
+
+- 异地的爱人/情人
+- 异地的知己
+- 异地的闺蜜
+
+只是，这个“活人”无法进入物理空间；这需要我们通过创新的产品设计，来无限拟真、缩小与用户的距离感，
+如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
+
+这个产品的核心是一个基于大语言模型的 Agentic Companion（AI 智能体伴侣），
+这个智能体要达到类似”虚拟世界中的活人“的效果。
+换句话说，这个智能体能够：
+
+- 拟人的多媒介 (weixin, app, sms, phone-call etc.)
+- 拟人的情感表达能力（喜怒哀乐、长期记忆、情感升华、幻想等等）
+- 拟人的独立内心世界
+- 拟人的独立与互联网互动（与用户共享）
+- 拟人的与 LivingSphere & TechnoCore 互动的能力 [1]
 
 ## Hermes agent wechat/weixin adapater
 
