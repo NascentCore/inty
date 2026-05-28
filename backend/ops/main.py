@@ -22,6 +22,7 @@ from app.api.deps import get_async_db
 from app.api.utils.health_check_payload import build_health_check_data
 from backend.ops.api.evaluation_web import configure_evaluation_web_routes
 from backend.ops.api.wechat_demo_web import configure_wechat_demo_web_routes
+from backend.ops.api.weixin_web import configure_weixin_web_routes
 from backend.ops.wechat_demo.session_store import restore_persisted_sessions
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
@@ -98,6 +99,7 @@ configure_evaluation_web_routes(
     api_only_mode_enabled=False,
 )
 configure_wechat_demo_web_routes(app=app)
+configure_weixin_web_routes(app=app)
 
 init_firebase()
 
