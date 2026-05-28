@@ -5,6 +5,7 @@ import inspect
 from app.core.companion_harness.companion.models import (
     OUTPUT_FORMAT_WECHAT_WEIXIN_MD,
     ContextMeta,
+    InnerTickActivity,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.companion.prompts.system_messages import (
@@ -145,3 +146,31 @@ def test_output_format_slice_resolves_from_runtime_channel() -> None:
         )
         == ""
     )
+
+
+def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() -> None:
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+    )
+    messages = build_system_messages(
+        bundle,
+        ContextMeta(),
+        enable_tools=True,
+        inner_tick_turn=True,
+        inner_tick_activity=InnerTickActivity.AUTONOMY,
+        tool_side_compact=True,
+    )
+    contents = [str(m["content"]) for m in messages]
+    autonomy_blocks = [c for c in contents if c.startswith("本轮（AUTONOMY 自主活动）")]
+    assert len(autonomy_blocks) == 1
+    proactive_blocks = [c for c in contents if c.startswith("本轮（陪伴主动聊天）")]
+    assert proactive_blocks == []
+    maintenance_blocks = [c for c in contents if c.startswith("本轮（内在节拍）")]
+    assert maintenance_blocks == []
+    autonomy_lines = autonomy_blocks[0].split("\n")
+    assert "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；" in autonomy_lines[2]
+    assert any("LIFE_CURRENTS.md" in line for line in autonomy_lines)

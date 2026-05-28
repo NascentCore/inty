@@ -10,6 +10,7 @@ from .turn import (
     run_companion_inner_tick_proactive_chat_turn,
     run_companion_inner_tick_scheduled_turn,
     run_companion_user_chat_turn,
+    run_inner_tick_autonomy,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "run_companion_inner_tick_proactive_chat_turn",
     "run_companion_inner_tick_scheduled_turn",
     "run_companion_user_chat_turn",
+    "run_inner_tick_autonomy",
 ]

@@ -590,6 +590,24 @@ INNER_TICK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
 )
 
+# AUTONOMY inner-tick (silent self-directed work): open tool set so the model
+# can read MemoryStore, browse the web, generate/modify images, and rewrite
+# LIFE_CURRENTS.md / MEMORY.md etc. SCHEDULE_TASK and COMPANION_SET_EXPERIENCE_PROFILE
+# are excluded because they produce user-visible side effects, which would
+# break "do not send anything to the user" for this track.
+INNER_TICK_AUTONOMY_TOOL_NAMES: tuple[CompanionToolName, ...] = (
+    CompanionToolName.UPDATE_USER_MD,
+    CompanionToolName.TECHNO_CORE_RECORD_EVENT,
+    CompanionToolName.LIVING_SPHERE_RECORD_UPDATE,
+    CompanionToolName.MEMORY_STORE_LIST_PATHS,
+    CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
+    CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
+    CompanionToolName.GOOGLE_WEB_SEARCH,
+    CompanionToolName.READ_WEB_PAGE,
+    CompanionToolName.GENERATE_IMAGE,
+    CompanionToolName.MODIFY_IMAGE,
+)
+
 _EMPTY_DESCRIPTION_OVERRIDES: dict[CompanionToolName, str] = {}
 
 

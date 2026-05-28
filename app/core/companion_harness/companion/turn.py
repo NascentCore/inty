@@ -1123,3 +1123,45 @@ async def run_companion_inner_tick_maintenance_turn(
         track=CompanionTurnTrack.INNER_TICK_MAINTENANCE,
         deps=deps,
     )
+
+
+async def run_inner_tick_autonomy(
+    *,
+    store: MemoryStore,
+    llm_client: CompanionLLMClient,
+    defer_memory_update: bool,
+    memory_config: MemoryPipelineConfig | None,
+    transcript_compaction: TranscriptCompactionConfig | None,
+    transcript_llm_window_max_messages: int | None,
+    repository_only_store_text: bool,
+    memory_bootstrap_type: str,
+    background_output_sink: BackgroundToolEventSink | None,
+    preset_user_msg_uuid: str | None,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+    langsmith_parent_run_enabled: bool | None,
+    tool_bg_idle_event: threading.Event | None,
+) -> CompanionTurnResult:
+    """AUTONOMY inner tick: open tool set, **never** delivers to the user.
+
+    Same async foreground/tool-background lifecycle as maintenance, but with
+    an open tool set and the autonomy system prompt slice that instructs the
+    model to read ``LIFE_CURRENTS.md``, do real work (web, image, MemoryStore
+    writes), and write progress back — all silently.
+    """
+    return await _run_companion_turn_core(
+        "",
+        track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
+        store=store,
+        llm_client=llm_client,
+        defer_memory_update=defer_memory_update,
+        memory_config=memory_config,
+        transcript_compaction=transcript_compaction,
+        transcript_llm_window_max_messages=transcript_llm_window_max_messages,
+        repository_only_store_text=repository_only_store_text,
+        memory_bootstrap_type=memory_bootstrap_type,
+        background_output_sink=background_output_sink,
+        preset_user_msg_uuid=preset_user_msg_uuid,
+        implicit_signal_bundle=implicit_signal_bundle,
+        langsmith_parent_run_enabled=langsmith_parent_run_enabled,
+        tool_bg_idle_event=tool_bg_idle_event,
+    )

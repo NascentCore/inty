@@ -79,6 +79,7 @@ from .companion_tool_definitions import (
     COMPANION_LLM_TOOLS_BY_NAME,
     BOOTSTRAP_TRACK_TOOL_NAMES,
     CompanionToolName,
+    INNER_TICK_AUTONOMY_TOOL_NAMES,
     INNER_TICK_TOOL_NAMES,
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
@@ -566,6 +567,25 @@ def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     return prepare_openai_tools_for_chat_completions(
         openai_tools_for_names(
             INNER_TICK_TOOL_NAMES,
+            description_overrides=REPL_DESCRIPTION_OVERRIDES,
+        )
+    )
+
+
+def build_openai_repl_tools_inner_tick_autonomy() -> list[dict[str, Any]]:
+    """
+    AUTONOMY 内在节拍：开放工具集让 Inty 真的去做 LIFE_CURRENTS.md 里的中期主题与当日兴致。
+
+    含联网（google_web_search / read_web_page）、生图/改图、LivingSphere/TechnoCore 事件，
+    与 MemoryStore 整文件读写（写入仍受 ``MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST`` 限制，
+    其中已包含 ``LIFE_CURRENTS.md``）。
+
+    故意不含 ``schedule_task``（面向用户预约）与 ``companion_set_experience_profile``
+    （切换会话模式），因为这两者会产生用户可见副作用，违背 autonomy "不向用户发任何消息"。
+    """
+    return prepare_openai_tools_for_chat_completions(
+        openai_tools_for_names(
+            INNER_TICK_AUTONOMY_TOOL_NAMES,
             description_overrides=REPL_DESCRIPTION_OVERRIDES,
         )
     )

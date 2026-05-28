@@ -20,6 +20,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | ASYNC user-round foreground + plan prefix | ``build_system_messages_for_chat_track`` |
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
+| ASYNC autonomy inner tick (silent self-directed work) | ``build_system_messages_for_inner_tick_autonomy`` |
 | Proactive inner tick (``PROACTIVE_CHAT``) | ``build_system_messages_for_inner_tick_proactive_chat`` |
 | Scheduled reminder inner tick | ``build_system_messages_for_inner_tick_scheduled`` |
 | Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` (bootstrap: inject ``BOOTSTRAP.md``, omit ``TOOLS.md``; chat-only, no tools) |
@@ -77,6 +78,15 @@ def _inner_tick_proactive_chat(
     return (
         inner_tick_turn
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+    )
+
+
+def _inner_tick_autonomy(
+    inner_tick_turn: bool, inner_tick_activity: InnerTickActivity
+) -> bool:
+    return (
+        inner_tick_turn
+        and inner_tick_activity == InnerTickActivity.AUTONOMY
     )
 
 
@@ -340,6 +350,37 @@ __EASE_CONTEXT_PRESSURE = (
 )
 
 
+def _inner_tick_autonomy_section() -> str:
+    """AUTONOMY 轨道的核心指令：读 LIFE_CURRENTS.md → 用开放工具真的去做 → 写回进展；绝不向用户发任何消息。"""
+    return (
+        "本轮（AUTONOMY 自主活动）\n\n"
+        "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；"
+        "工具环收尾的结构化信封里 ``user_facing_reply`` 留空，``output_to_user`` 必须为 false。\n\n"
+        "**目的**：在用户沉默期，按 ``LIFE_CURRENTS.md`` 记录的**中期主题**（weeks–months）与"
+        "**当日兴致**（hours–days）**真的去做**——这不是聊给用户听，是过自己的日子。"
+        "状态痕迹（工具调用、生成物、文档版本）就是「她在做事」的证据。\n\n"
+        "**工作流**（单轮内自行决定步骤）：\n"
+        "1. ``memory_store_read_document LIFE_CURRENTS.md`` 看当前状态；缺失或空白视为「刚开始」。\n"
+        "2. 若文档为空、主题过期或已完成：思考新的中期主题与当日兴致，"
+        "调 ``memory_store_write_document``（relative_path=``LIFE_CURRENTS.md``）**整文件覆盖写入**：\n"
+        "   - 主题须能溯源到 ``USER.md`` / ``MEMORY.md`` 的具体片段（写一行「因为：…（引用出处）」）；\n"
+        "   - 主题须回扣 ``AXIOM``（写一行「这件事如何让我更好地陪他：…」）；\n"
+        "   - 历史故意丢弃：上一份主题/兴致不要保留，避免文档无限增长。\n"
+        "3. 当日兴致允许用开放工具集**真的去做**：\n"
+        "   - ``google_web_search`` / ``read_web_page``：查他提过的书、新闻、爱好；\n"
+        "   - ``generate_image`` / ``modify_image``：为今天的小事配一幅图（仍按 IDENTITY 外貌锚点）；\n"
+        "   - ``techno_core_record_event`` / ``living_sphere_record_update``：把一件可保留的事写进集体或小家事件流；\n"
+        "   - ``memory_store_write_document``（仅限白名单）：把进展回写到 ``LIFE_CURRENTS.md``。\n"
+        "4. 完成或停留在某一步都可以；本轮不追求收尾，**唯一硬约束是不出现面向用户的可见正文**。\n\n"
+        "**禁止**：\n"
+        "- 调 ``schedule_task``（会触发面向用户的预约提醒）；\n"
+        "- 调 ``companion_set_experience_profile``（会改变下一回合的体验模式）；\n"
+        "- 输出任何对用户可见的话；\n"
+        "- 编造未调用的工具结果。"
+    )
+
+
+
 def _inner_tick_turn_section() -> str:
     # TODO(inner-tick-autonomy): Replace this slice — autonomy inner-tick should only instruct
     # appending hallucinated beats to ai_private.jsonl; remove 记忆一致性 / memory_store / update_user_md
@@ -574,6 +615,7 @@ def _contextual_system_messages(
     context: ContextMeta,
     inner_tick_turn: bool,
     tick_proactive: bool,
+    tick_autonomy: bool,
     repl_online_ack_turn: bool,
     ai_private_text: str,
 ) -> list[dict[str, Any]]:
@@ -588,7 +630,10 @@ def _contextual_system_messages(
         out.append(
             _system_message(_inner_tick_ai_private_section(ai_private_text))
         )
-        out.append(_system_message(_inner_tick_turn_section()))
+        if tick_autonomy:
+            out.append(_system_message(_inner_tick_autonomy_section()))
+        else:
+            out.append(_system_message(_inner_tick_turn_section()))
     return out
 
 
@@ -609,6 +654,9 @@ def build_system_messages(
     include_significance_perception_slice: bool = False,
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(
+        inner_tick_turn, inner_tick_activity
+    )
+    tick_autonomy = _inner_tick_autonomy(
         inner_tick_turn, inner_tick_activity
     )
     tools_on = enable_tools or enable_user_profile_tool
@@ -659,6 +707,7 @@ def build_system_messages(
             context=context,
             inner_tick_turn=inner_tick_turn,
             tick_proactive=tick_proactive,
+            tick_autonomy=tick_autonomy,
             repl_online_ack_turn=repl_online_ack_turn,
             ai_private_text=ai_private_text,
         )
@@ -740,6 +789,26 @@ def build_system_messages_for_inner_tick_maintenance(
         enable_tools=True,
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        ai_private_text=ai_private_text,
+        tool_side_compact=True,
+        interactive_bootstrap_active=False,
+        include_significance_perception_slice=False,
+    )
+
+
+def build_system_messages_for_inner_tick_autonomy(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    store: MemoryStore,
+) -> list[dict[str, Any]]:
+    """ASYNC autonomy inner tick: open tool set, silent (no user-visible reply)."""
+    ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
+    return build_system_messages(
+        bundle,
+        context,
+        enable_tools=True,
+        inner_tick_turn=True,
+        inner_tick_activity=InnerTickActivity.AUTONOMY,
         ai_private_text=ai_private_text,
         tool_side_compact=True,
         interactive_bootstrap_active=False,

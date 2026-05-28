@@ -10,6 +10,7 @@ from .companion_tool_runtime import (
     build_openai_bootstrap_track_tools,
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,
+    build_openai_repl_tools_inner_tick_autonomy,
 )
 
 
@@ -27,4 +28,5 @@ __all__ = [
     "build_companion_tools",
     "build_openai_bootstrap_track_tools",
     "build_openai_repl_tools_inner_tick",
+    "build_openai_repl_tools_inner_tick_autonomy",
 ]
