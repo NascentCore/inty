@@ -29,6 +29,18 @@ inty_main_still_on_port() {
   [ -n "$pids" ]
 }
 
+# Poll until no backend.inty.main listener remains (or retries exhausted).
+wait_inty_main_off_port() {
+  local _
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    if ! inty_main_still_on_port; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
 stop_matching_pids() {
   local sig="$1" pid
   for pid in $(inty_main_pids_on_port); do
@@ -41,15 +53,16 @@ stop_matching_pids() {
 stop_matching_pids TERM
 
 if [ "$stopped" -gt 0 ]; then
-  for _ in 1 2 3 4 5 6 7 8 9 10; do
-    if ! inty_main_still_on_port; then
-      echo "No backend.inty.main listener on port ${port}."
-      exit 0
-    fi
-    sleep 1
-  done
+  if wait_inty_main_off_port; then
+    echo "No backend.inty.main listener on port ${port}."
+    exit 0
+  fi
   echo "backend.inty.main still on port ${port}; sending KILL" >&2
   stop_matching_pids KILL
+  if wait_inty_main_off_port; then
+    echo "No backend.inty.main listener on port ${port}."
+    exit 0
+  fi
 fi
 
 if inty_main_still_on_port; then
