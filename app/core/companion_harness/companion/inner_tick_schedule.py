@@ -18,6 +18,7 @@ from app.core.companion_harness.experience_profile.context_mode import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import (
+    ChatMessage,
     load_context_meta,
     load_transcript_from_store,
     transcript_without_trailing_presence_signals,
@@ -78,12 +79,31 @@ def inner_tick_min_gap_seconds() -> float:
     )
 
 
-def maintenance_transcript_line_count(store: MemoryStore) -> int:
-    """Line count for ``transcript.jsonl`` (presence tail stripped), for maintenance skip."""
-    msgs = transcript_without_trailing_presence_signals(
+def _maintenance_transcript_messages(store: MemoryStore) -> list[ChatMessage]:
+    """``transcript.jsonl`` rows with trailing presence user lines stripped (maintenance gate view)."""
+    return transcript_without_trailing_presence_signals(
         load_transcript_from_store(store, "transcript.jsonl")
     )
-    return len(msgs)
+
+
+def maintenance_transcript_line_count(store: MemoryStore) -> int:
+    """Line count for ``transcript.jsonl`` (presence tail stripped), for maintenance skip."""
+    return len(_maintenance_transcript_messages(store))
+
+
+def transcript_tail_message_uuid(store: MemoryStore) -> str | None:
+    """``uuid`` of the last ``transcript.jsonl`` row in the maintenance gate view.
+
+    Maintenance turns persist to ``transcript_inner_tick.jsonl``; this reflects main-track
+    state only (same source as ``next_inner_tick_wait_seconds``).
+    """
+    msgs = _maintenance_transcript_messages(store)
+    if not msgs:
+        return None
+    tail_uuid = msgs[-1].uuid
+    if tail_uuid is None or not str(tail_uuid).strip():
+        return None
+    return str(tail_uuid).strip()
 
 
 def next_inner_tick_wait_seconds(
@@ -106,9 +126,7 @@ def next_inner_tick_wait_seconds(
         return _DISABLED_INNER_TICK_WAIT_SEC
 
     now = now_monotonic if now_monotonic is not None else time.monotonic()
-    msgs = transcript_without_trailing_presence_signals(
-        load_transcript_from_store(store, "transcript.jsonl")
-    )
+    msgs = _maintenance_transcript_messages(store)
     line_count = len(msgs)
     if last_maintenance_transcript_line_count is not None:
         if line_count <= last_maintenance_transcript_line_count:

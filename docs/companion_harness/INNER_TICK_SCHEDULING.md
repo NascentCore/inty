@@ -87,6 +87,8 @@ REPL 上两条 `inner-tick proactive-chat` 时间戳 **不是** 单一配置项�
 
 维护轮写入 **`transcript_inner_tick.jsonl`**；与 proactive rhythm 无共用公式。
 
+Inner-tick 的 LangSmith parent run 在 `inputs` / `extra.metadata` 含 **`transcript_newest_message_uuid`**：主轨 `transcript.jsonl` 去 presence 尾后的末条 `uuid`（与 `next_inner_tick_wait_seconds` 同源；区别于本轮 synthetic user 的 `user_msg_uuid`）。
+
 ## REPL / 原型路径（非生产 WS）
 
 `inner_tick_schedule.py` 另支持环境变量（本地 REPL idle 实验，**非** `/api/v1/chat/ws`）：
