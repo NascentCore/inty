@@ -111,6 +111,12 @@ async def test_run_inner_tick_poll_falls_through_to_dreaming() -> None:
         ) as scheduled,
         patch.object(
             inner_tick_poll.inner_tick_fire,
+            "try_fire_autonomy_inner_tick",
+            new_callable=AsyncMock,
+            return_value=False,
+        ) as autonomy,
+        patch.object(
+            inner_tick_poll.inner_tick_fire,
             "try_fire_maintenance_inner_tick",
             new_callable=AsyncMock,
             return_value=False,
@@ -131,5 +137,6 @@ async def test_run_inner_tick_poll_falls_through_to_dreaming() -> None:
 
     proactive.assert_awaited_once()
     scheduled.assert_awaited_once()
+    autonomy.assert_awaited_once()
     maintenance.assert_awaited_once()
     dreaming.assert_awaited_once()
