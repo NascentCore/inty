@@ -32,15 +32,6 @@ def test_experience_profile_system_clause_emotional_companion() -> None:
     assert "情感陪伴（emotional_companion）" in out
 
 
-def test_experience_profile_system_clause_remote_lover() -> None:
-    out = experience_profile_system_clause("remote_lover")
-    _assert_clause_heading(out)
-    assert "异地 AI 伴侣（remote_lover）" in out
-    assert "节奏拟人" in out
-    assert "口语微信风" in out
-    assert "不完美人设" in out
-
-
 def test_experience_profile_system_clause_unspecific_uses_emotional_companion_body() -> None:
     out = experience_profile_system_clause("unspecific")
     _assert_clause_heading(out)

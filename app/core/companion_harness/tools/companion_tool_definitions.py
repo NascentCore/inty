@@ -121,6 +121,14 @@ SET_BOOTSTRAP_COMPLETE_TOOL = LlmFunctionTool(
     },
 )
 
+_SELECTABLE_EXPERIENCE_PROFILE_IDS = ", ".join(
+    sorted(
+        m.value
+        for m in ExperienceContextMode
+        if m != ExperienceContextMode.BOOTSTRAP
+    )
+)
+
 SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
     name=CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
     description=(

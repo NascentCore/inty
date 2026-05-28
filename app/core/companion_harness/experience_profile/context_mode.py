@@ -39,17 +39,9 @@ _PRIVATE_MEMORY_PROFILE_IDS = frozenset(
     }
 )
 
-# Private-memory modes with a dedicated system clause (not emotional_companion body).
-_PRIVATE_MEMORY_CUSTOM_CLAUSE_IDS = frozenset(
-    {
-        ExperienceContextMode.INTIMATE,
-        ExperienceContextMode.REMOTE_LOVER,
-    }
-)
-
-# Private-memory modes other than custom-clause ids share the emotional_companion body.
+# Private-memory modes other than intimate share the emotional_companion clause body.
 _PRIVATE_MEMORY_SHARED_EMOTIONAL_CLAUSE_IDS = frozenset(
-    _PRIVATE_MEMORY_PROFILE_IDS - _PRIVATE_MEMORY_CUSTOM_CLAUSE_IDS
+    _PRIVATE_MEMORY_PROFILE_IDS - {ExperienceContextMode.INTIMATE}
 )
 
 EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING = (
