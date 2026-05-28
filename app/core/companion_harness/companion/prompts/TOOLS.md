@@ -1,3 +1,13 @@
-# Tools - iMate智能体的自我交互媒介
+# Tools - interact with the environment
 
-1. 你通过各类工具与你所处的环境互动，环境包括：你所在的虚拟运行空间、用户与你交互的虚拟空间、其他媒介等等
+Tools categories
+
+- Read-only access to the Internet: reading web pages and search the web
+- Update memory docs
+- Manifesting autonomy: force llm to produce non-user-triggered autonomous activities, can include the above tools
+
+## Environments
+
+Tools interface with different environments:
+Running environment
+Virtual worlds: living space & techno core
