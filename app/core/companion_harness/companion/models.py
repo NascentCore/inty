@@ -36,20 +36,21 @@ AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 class InnerTickActivity(StrEnum):
     """Idle poll activities serialized on presence ``turn_lock``.
 
-    ``MAINTENANCE`` and ``PROACTIVE_CHAT`` are synthetic **turns** (``run_turn``,
-    ``CompanionTurnResult``, optional delivery). ``DREAMING`` is a **memory batch** only
+    ``MAINTENANCE``, ``PROACTIVE_CHAT``, and ``AUTONOMY`` are synthetic **turns**
+    (``run_turn``, ``CompanionTurnResult``, optional delivery). ``DREAMING`` is a **memory batch** only
     (``consolidate_memory_during_dreaming``; observability via ``dreaming_observability`` and
     ``inner_tick_activity=dreaming`` on LangSmith / runtime events — not ``CompanionTurnResult``).
 
     Poll order per wake: proactive → scheduled → maintenance → dreaming (at most one fires;
     see ``inner_tick_poll`` TODO inner-tick-poll-multi-track / #3273).
 
-    TODO(inner-tick-autonomy): Narrow maintenance to autonomy-only — append ``ai_private.jsonl``;
-    profile/MemoryDoc sync moves to dreaming. Rename ``MAINTENANCE`` → ``AUTONOMY``.
+    ``AUTONOMY`` advances ``ai_private.jsonl`` during idle inner-tick; profile/MemoryDoc sync
+    belongs in ``DREAMING`` (see TODO inner-tick-autonomy across harness).
     """
 
     MAINTENANCE = "maintenance"
     PROACTIVE_CHAT = "proactive_chat"
+    AUTONOMY = "autonomy"
     DREAMING = "dreaming"
 
 
@@ -62,6 +63,7 @@ class CompanionTurnTrack(StrEnum):
     INNER_TICK_PROACTIVE_CHAT = "inner_tick_proactive_chat"
     INNER_TICK_SCHEDULED = "inner_tick_scheduled"
     INNER_TICK_MAINTENANCE = "inner_tick_maintenance"
+    INNER_TICK_AUTONOMY = "inner_tick_autonomy"
 
 
 PresenceSignal = Literal["repl_online", "repl_offline"]

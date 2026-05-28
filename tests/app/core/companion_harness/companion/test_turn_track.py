@@ -1,0 +1,81 @@
+"""Pure translation between CompanionTurnTrack and legacy kernel flags / LangSmith lanes."""
+
+from __future__ import annotations
+
+import pytest
+
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    InnerTickActivity,
+)
+from app.core.companion_harness.companion.turn_track import (
+    langsmith_inty_turn_lane_for_companion_track,
+    track_from_legacy_flags,
+    turn_flags_for_track,
+)
+
+
+@pytest.mark.parametrize(
+    "track, expect_inner, expect_activity",
+    [
+        (CompanionTurnTrack.USER_CHAT, False, InnerTickActivity.MAINTENANCE),
+        (
+            CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+            False,
+            InnerTickActivity.MAINTENANCE,
+        ),
+        (
+            CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+            False,
+            InnerTickActivity.MAINTENANCE,
+        ),
+        (
+            CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+            True,
+            InnerTickActivity.PROACTIVE_CHAT,
+        ),
+        (
+            CompanionTurnTrack.INNER_TICK_SCHEDULED,
+            True,
+            InnerTickActivity.PROACTIVE_CHAT,
+        ),
+        (
+            CompanionTurnTrack.INNER_TICK_MAINTENANCE,
+            True,
+            InnerTickActivity.MAINTENANCE,
+        ),
+        (
+            CompanionTurnTrack.INNER_TICK_AUTONOMY,
+            True,
+            InnerTickActivity.AUTONOMY,
+        ),
+    ],
+)
+def test_turn_flags_for_track(
+    track: CompanionTurnTrack,
+    expect_inner: bool,
+    expect_activity: InnerTickActivity,
+) -> None:
+    inner, activity = turn_flags_for_track(track)
+    assert inner is expect_inner
+    assert activity == expect_activity
+
+
+def test_autonomy_legacy_flags_roundtrip() -> None:
+    assert (
+        track_from_legacy_flags(
+            inner_tick_turn=True,
+            inner_tick_activity=InnerTickActivity.AUTONOMY,
+            implicit_signal_bundle=None,
+        )
+        == CompanionTurnTrack.INNER_TICK_AUTONOMY
+    )
+
+
+def test_autonomy_langsmith_lane_groups_with_inner_tick() -> None:
+    assert (
+        langsmith_inty_turn_lane_for_companion_track(
+            CompanionTurnTrack.INNER_TICK_AUTONOMY
+        )
+        == "inner_tick"
+    )
