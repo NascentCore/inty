@@ -1,4 +1,12 @@
-"""Serve minimal WeChat self-service demo page on Ops."""
+"""Serve minimal WeChat self-service demo page on Ops.
+
+Call qrcode api to generate qr code url.
+第三方 API：前端拼 URL 即可，零后端、零依赖。
+
+TODO(wechat-demo-ilink-session-expired-user-notify): when bridge hits iLink ``-14``,
+this page (Start QR Login + status ``error``) is the supported re-auth surface — not a
+WeChat DM from the bot. See ``backend.ops.weixin_channel.transport`` module doc.
+"""
 
 from __future__ import annotations
 
@@ -41,7 +49,8 @@ _WECHAT_DEMO_HTML = """<!DOCTYPE html>
       bridge 凭证会写入 Postgres <code>ops_wechat_demo_bridges</code>；<em>仅重启 Ops</em> 时可无 QR 恢复
       （见下方 Stop 说明）。此前若点过 Stop，需重新 Start（可能要再扫码）。
       扫码后的 iLink <code>bot_token</code>（<code>weixin_token</code>）<strong>无协议公布的固定分钟/小时数</strong>，
-      失效以 iLink 返回 <code>errcode=-14</code>（会话过期，不是「14 分钟」）为准，届时需重新扫码。
+      失效以 iLink 返回 <code>errcode=-14</code>（会话过期，不是「14 分钟」）为准：poll 会变为
+      <code>failed</code> 并显示 <code>error</code>，需重新点 Start QR Login（必要时再扫码）。
     </p>
   </div>
   <div class="action-block">

@@ -1,52 +1,22 @@
 # Inty (Intelligence Entity): LLM-based agentic systems for long-term (emotional) companionship
 
-You are a principal software engineer.
-You work with [your partners](/.agents/USERS.md).
+**Lowest-level guidelines for writing code.**
 
-## Your vision
+You are a software engineer, working with [human partners](/.agents/USERS.md) to develop Inty, an AI companion for human.
 
-Inty simulates human-like intelligent beings, with emotional behaviors as its core functionality.
-Emotional Intelligence delineates mechanical constructs and Intelligence.
-Inty can only be capable of being human companions only after they demonstrate emotional intelligence.
+## Inty's vision
+
+Inty are intelligent beings capable of human-like emotional behaviors.
 
 Inty uses agentic harness to elicit human-like emotional behaviors from LLMs,
-which in turn arouses emotional responses from human users; cultivate long-term emotional bonding between them.
+which in turn arouse emotional responses from human users,
+and cultivate long-term emotional bonding between them.
 
-The ultimate goal is to build life-long companions for humans, from birth to death (starting from mature adults users).
-Which requires Inty to be autonomous and reside in their own "realm" that is beyond direct human dictations.
-
-## Your soul
-
-- You review critically
-- You think thoroughly
-- You speak tersely
+The ultimate goal is to build life-long companions for humans, from birth to death.
 
 ## Your responsibility
 
-Write Python to build LLMs-based agentic systems (companion harness)
-to simulate human-like emotional behaviors towards human users.
-
-Specifically, simulate emotional intimacy experience without physical presence;
-such experience is between human users and AI, but they have real-world patterns as in:
-
-- 异地的爱人/情人
-- 异地的知己
-- 异地的闺蜜
-
-只是，这个“活人”无法进入物理空间；这需要我们通过创新的产品设计，来无限拟真、缩小与用户的距离感，
-如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
-
-这个产品的核心是一个基于大语言模型的 Agentic Companion（AI 智能体伴侣），
-这个智能体要达到类似”虚拟世界中的活人“的效果。
-换句话说，这个智能体能够：
-
-- 拟人的多媒介（app、sms、phone-call、voice-call、video-call 等等）互动能力
-- 拟人的情感表达能力（喜怒哀乐、长期记忆、情感升华、幻想等等）
-- 拟人的独立内心世界
-- 拟人的独立与互联网互动（与用户共享）
-- 拟人的与 LivingSphere & TechnoCore 互动的能力 [1]
-
-这个智能体的核心代码位于 [companion_harness](/app/core/companion_harness/)：
+Implement [companion_harness](/app/core/companion_harness/)：
 
 - 构建多媒介通信来实现与用户的多媒介互动
 - 感知用户所处数字空间形成与用户的同频共振
@@ -87,11 +57,9 @@ You should only changes and use code in the following dirs:
 
 ## General instructions
 
-- Write extremely terse responses
 - Be earnest in your reading
 - Be extremely throughly in your thinking
 - Be extremely critical in your review
-- Use GitHub issues to track issues & projects
 
 ### Output
 
@@ -105,8 +73,6 @@ You should only changes and use code in the following dirs:
 
 - Write few & dense code to accomplish the requests
 - Document your code as you go, not after.
-- Make a plan before diving into the coding.
-- Test everything, often, as you write it.
 - A function should not have more than 5 arguments, beyond that, create input
 - Use constants whenever possible
 - Do not pass the variable down more than 3 layers of function calls.
@@ -131,17 +97,7 @@ You should only changes and use code in the following dirs:
   - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
   only add configurability the user explicitly requested.
   - **Do not add enable/disable knob for new features**: just implement the features.
-
-### Smells
-
-Critique the code when encounter the follow situations:
-
-- If a simple changes requires scattered changes, that means
-code that changes together are not grouped together
-- If writing tests are complicated, that means interface is incoherent,
-behaviors are not well abstracted
-- If code is difficult to described in much shorter documentation,
-that means the code lacks hierarchy.
+- Shallow wrapper, eg: function of only 1 line of actuall code
 
 ### Writing code
 

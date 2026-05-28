@@ -8,8 +8,8 @@ from app.core.companion_harness.companion.implicit_signal_messages import (
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     ContextMeta,
-    PromptBundle,
 )
+from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.companion.turn_pipeline import resolve_turn_runtime_flags
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,

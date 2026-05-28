@@ -18,11 +18,11 @@ from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.prompting.bundle import PromptBundle
 from .models import (
     CompanionTurnTrack,
     ContextMeta,
     InnerTickActivity,
-    PromptBundle,
     load_context_meta,
     load_prompt_bundle,
 )

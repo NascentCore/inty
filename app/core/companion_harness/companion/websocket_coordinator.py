@@ -1,8 +1,8 @@
 """WebSocket-specific companion coordinator and per-connection inflight turn tracking.
 
-``CompanionWebSocketCoordinator`` extends :class:`~app.services.companion_presence.session.CompanionPresenceCoordinator`
+``CompanionWebSocketCoordinator`` extends :class:`~app.services.agentic_companion.session.Coordinator`
 with WS-only bootstrap deliver context and outbound queue binding. Channel-agnostic
-state lives in ``app.services.companion_presence.session``.
+state lives in ``app.services.agentic_companion.session``.
 
 TODO(ws-disconnect-lifecycle): On server shutdown or WebSocket session end, do not cancel
 in-flight companion turns. Let background tasks finish, persist produced messages to storage,
@@ -12,7 +12,6 @@ and mark them undelivered so the client can receive them after ``user_signed_on`
 from __future__ import annotations
 
 import asyncio
-import threading
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -21,9 +20,9 @@ from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
     BootstrapInterimOutputSink,
 )
-from app.services.companion_presence.session import (
-    CompanionPresenceCoordinator,
-    apply_companion_inner_tick_coords,
+from app.services.agentic_companion.session import (
+    Coordinator,
+    apply_inner_tick_coords,
 )
 
 if TYPE_CHECKING:
@@ -41,8 +40,8 @@ def apply_companion_ws_inner_tick_coords(
     agent_id: str,
     chat_id: Any,
 ) -> None:
-    """Alias for :func:`apply_companion_inner_tick_coords` (``chat_ws`` import path)."""
-    apply_companion_inner_tick_coords(
+    """Alias for :func:`apply_inner_tick_coords` (``chat_ws`` import path)."""
+    apply_inner_tick_coords(
         inner_tick_ctx,
         user_id=user_id,
         agent_id=agent_id,
@@ -120,11 +119,12 @@ class ChatWsInflightShutdownRegistry:
 
 
 @dataclass
-class CompanionWebSocketCoordinator(CompanionPresenceCoordinator):
+class CompanionWebSocketCoordinator(Coordinator):
     """``/api/v1/chat/ws`` coordinator: presence state plus WS bootstrap/outbound hooks."""
 
-    bootstrap_interim_queued_events: asyncio.Queue[BootstrapInterimQueued] = field(
-        default_factory=asyncio.Queue
+    # TODO(companion-ws-bootstrap-downlink): fold queue + deliver_ctx into session downlink. #3209 #3211
+    bootstrap_interim_queued_events: asyncio.Queue[BootstrapInterimQueued] = (
+        field(default_factory=asyncio.Queue)
     )
     bootstrap_interim_deliver_ctx: BootstrapInterimDeliverCtx | None = field(
         default=None, repr=False
@@ -148,27 +148,13 @@ class CompanionWebSocketCoordinator(CompanionPresenceCoordinator):
 
     def bootstrap_interim_output_sink(self) -> BootstrapInterimOutputSink:
         """WS sink: queue ``BootstrapInterimQueued`` with captured deliver ctx."""
+        # TODO(companion-ws-bootstrap-downlink): collapse with session downlink. #3209
 
         async def _sink(ev: BootstrapInterimOutput) -> None:
             ctx = self.bootstrap_interim_deliver_ctx
-            if ctx is None:
-                return
+            assert ctx is not None
             await self.bootstrap_interim_queued_events.put(
                 BootstrapInterimQueued(ev=ev, ctx=ctx)
             )
 
         return _sink
-
-    def bind_ws_inner_tick_proactive_tool_bg_idle(
-        self, ev: threading.Event | None
-    ) -> None:
-        self.bind_inner_tick_proactive_tool_bg_idle(ev)
-
-    def clear_ws_inner_tick_proactive_tool_bg_idle_if_idle(self) -> None:
-        self.clear_inner_tick_proactive_tool_bg_idle_if_idle()
-
-    def ws_inner_tick_proactive_tool_bg_still_running(self) -> bool:
-        return self.inner_tick_proactive_tool_bg_still_running()
-
-    def ws_inner_tick_maintenance_foreground_pending(self) -> bool:
-        return self.inner_tick_maintenance_foreground_pending()

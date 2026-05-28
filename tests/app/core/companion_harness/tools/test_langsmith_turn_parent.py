@@ -191,14 +191,17 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
         companion_id="a1",
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        transcript_newest_message_uuid="tail-uuid-1",
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_inner_tick maintenance user=u1 agent=a1"
     assert kwargs["tags"] == ["agentic_companion", "inner_tick"]
     assert kwargs["inputs"]["inty_turn_lane"] == "inner_tick"
     assert kwargs["inputs"]["inner_tick_activity"] == "maintenance"
+    assert kwargs["inputs"]["transcript_newest_message_uuid"] == "tail-uuid-1"
     assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "inner_tick"
     assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "maintenance"
+    assert kwargs["extra"]["metadata"]["transcript_newest_message_uuid"] == "tail-uuid-1"
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
@@ -221,11 +224,14 @@ def test_create_companion_turn_root_run_inner_tick_proactive_lane(
         companion_id="a1",
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
+        transcript_newest_message_uuid="tail-uuid-2",
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_inner_tick proactive_chat user=u1 agent=a1"
     assert kwargs["inputs"]["inner_tick_activity"] == "proactive_chat"
+    assert kwargs["inputs"]["transcript_newest_message_uuid"] == "tail-uuid-2"
     assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "proactive_chat"
+    assert kwargs["extra"]["metadata"]["transcript_newest_message_uuid"] == "tail-uuid-2"
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 

@@ -1,10 +1,10 @@
-"""In-process companion presence: coordinator state + session lifecycle across channels.
+"""In-process agentic companion: coordinator state + session lifecycle across channels.
 
-``CompanionPresenceCoordinator`` holds turn serialization, tool-background queues,
-inner-tick coordinates, and overlap guards (channel-agnostic). ``CompanionPresenceSession``
-binds a :class:`~app.services.companion_presence.downlink.CompanionChannelDownlink` and
+``Coordinator`` holds turn serialization, tool-background queues,
+inner-tick coordinates, and overlap guards (channel-agnostic). ``Session``
+binds a :class:`~app.services.agentic_companion.downlink.ChannelDownlink` and
 runs the inner-tick poll worker skeleton; transport adapters materialize
-:class:`~app.services.companion_presence.downlink.CompanionDownlink` events.
+:class:`~app.services.agentic_companion.downlink.Downlink` events.
 """
 
 from __future__ import annotations
@@ -20,15 +20,15 @@ from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutputSink,
 )
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
-from app.services.companion_presence.downlink import (
-    CompanionChannelDownlink,
+from app.services.agentic_companion.downlink import (
+    ChannelDownlink,
     bootstrap_interim_downlink,
 )
 
 InnerTickPollRunner = Callable[[dict[str, Any]], Awaitable[None]]
 
 
-def apply_companion_inner_tick_coords(
+def apply_inner_tick_coords(
     inner_tick_ctx: dict[str, Any],
     *,
     user_id: Any,
@@ -61,7 +61,7 @@ def apply_companion_inner_tick_coords(
 
 
 @dataclass
-class CompanionPresenceCoordinator:
+class Coordinator:
     """Channel-agnostic companion invariants for one signed-on (user, agent, chat) presence."""
 
     loop: asyncio.AbstractEventLoop
@@ -71,6 +71,7 @@ class CompanionPresenceCoordinator:
     background_events: asyncio.Queue[ToolOutputEvent] = field(
         default_factory=asyncio.Queue
     )
+    # TODO(companion-ws-bootstrap-downlink): channel-agnostic queue unused on WS; collapse with downlink. #3209
     bootstrap_interim_events: asyncio.Queue[BootstrapInterimOutput] = field(
         default_factory=asyncio.Queue
     )
@@ -84,11 +85,11 @@ class CompanionPresenceCoordinator:
     )
 
     @classmethod
-    def for_current_loop(cls) -> CompanionPresenceCoordinator:
+    def for_current_loop(cls) -> Coordinator:
         return cls.for_loop(asyncio.get_running_loop())
 
     @classmethod
-    def for_loop(cls, loop: asyncio.AbstractEventLoop) -> CompanionPresenceCoordinator:
+    def for_loop(cls, loop: asyncio.AbstractEventLoop) -> Coordinator:
         return cls(loop=loop)
 
     def background_sink(self, event: ToolOutputEvent) -> None:
@@ -132,7 +133,7 @@ class CompanionPresenceCoordinator:
         agent_id: str,
         chat_id: Any,
     ) -> None:
-        apply_companion_inner_tick_coords(
+        apply_inner_tick_coords(
             self.inner_tick_context,
             user_id=user_id,
             agent_id=agent_id,
@@ -214,24 +215,42 @@ class CompanionPresenceCoordinator:
 
 
 @dataclass
-class CompanionPresenceSession:
+class Session:
     """One companion presence: coordinator + channel downlink + inner-tick worker."""
 
-    downlink: CompanionChannelDownlink
-    coordinator: CompanionPresenceCoordinator
+    downlink: ChannelDownlink
+    coordinator: Coordinator
     _inner_tick_stop: asyncio.Event = field(repr=False)
-    _inner_tick_task: asyncio.Task[None] | None = field(default=None, repr=False)
+    _inner_tick_task: asyncio.Task[None] | None = field(
+        default=None, repr=False
+    )
 
     @classmethod
     def create(
         cls,
         *,
-        downlink: CompanionChannelDownlink,
+        downlink: ChannelDownlink,
         loop: asyncio.AbstractEventLoop,
-    ) -> CompanionPresenceSession:
+    ) -> Session:
         return cls(
             downlink=downlink,
-            coordinator=CompanionPresenceCoordinator.for_loop(loop),
+            coordinator=Coordinator.for_loop(loop),
+            _inner_tick_stop=asyncio.Event(),
+        )
+
+    @classmethod
+    def from_coordinator(
+        cls,
+        *,
+        downlink: ChannelDownlink,
+        coordinator: Coordinator,
+    ) -> Session:
+        """Bind an existing coordinator (e.g. ``CompanionWebSocketCoordinator``) to a channel downlink."""
+        assert downlink is not None
+        assert coordinator is not None
+        return cls(
+            downlink=downlink,
+            coordinator=coordinator,
             _inner_tick_stop=asyncio.Event(),
         )
 
@@ -260,6 +279,7 @@ class CompanionPresenceSession:
     async def deliver_bootstrap_interim(
         self, interim: BootstrapInterimOutput
     ) -> None:
+        # TODO(companion-ws-bootstrap-downlink): WS downlink must handle BOOTSTRAP_INTERIM before this is wired. #3209
         await self.downlink.deliver(
             bootstrap_interim_downlink(interim=interim),
         )
@@ -271,7 +291,9 @@ class CompanionPresenceSession:
         run_one_poll: InnerTickPollRunner,
     ) -> None:
         assert poll_seconds > 0.0
-        if self._inner_tick_task is not None and (not self._inner_tick_task.done()):
+        if self._inner_tick_task is not None and (
+            not self._inner_tick_task.done()
+        ):
             return
 
         async def _worker() -> None:
@@ -297,7 +319,7 @@ class CompanionPresenceSession:
         self._inner_tick_stop.clear()
         self._inner_tick_task = asyncio.create_task(
             _worker(),
-            name="companion_presence_inner_tick",
+            name="inner_tick",
         )
 
     async def stop(self) -> None:

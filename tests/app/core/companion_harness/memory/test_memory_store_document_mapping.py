@@ -25,6 +25,7 @@ def test_parse_identity_and_daily() -> None:
 
 def test_roundtrip_static_paths() -> None:
     for rel in (
+        "CHANNELS.md",
         "SOUL.md",
         "STYLE.md",
         "transcript.jsonl",

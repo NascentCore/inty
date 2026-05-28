@@ -5,7 +5,6 @@ on:
     branches:
       - main
     paths:
-      # 不含 devops/config.yaml.imate_*：push 默认只部署 dev/prod，避免仅改 iMate 配置却重部署 IntelliMate inty-ops-dev
       - "app/**/*.py"
       # 数据库改动以后端部署为出发点，ops 平台不做部署
       # - "backend/alembic/**/*.py"
@@ -75,15 +74,6 @@ jobs:
               ;;
             prod)
               echo "config_file=devops/config.yaml.prod" >> $GITHUB_OUTPUT
-              ;;
-            imate-dev)
-              echo "config_file=devops/config.yaml.imate_dev" >> $GITHUB_OUTPUT
-              ;;
-            imate-prod)
-              echo "config_file=devops/config.yaml.imate_prod" >> $GITHUB_OUTPUT
-              ;;
-            imate)
-              echo "config_file=devops/config.yaml.imate" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "Unsupported environment: ${{ steps.prep.outputs.environment }}"

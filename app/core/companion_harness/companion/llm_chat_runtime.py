@@ -180,6 +180,7 @@ def create_companion_turn_root_run(
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity | None = None,
     implicit_user_signed_on: bool = False,
+    transcript_newest_message_uuid: str | None = None,
 ) -> Any | None:
     enabled = (
         companion_turn_langsmith_parent_enabled()
@@ -236,6 +237,9 @@ def create_companion_turn_root_run(
         meta["inty_turn_lane"] = turn_lane
         if inner_tick_turn:
             meta["inner_tick_activity"] = lane_inputs["inner_tick_activity"]
+            tail_uuid = (transcript_newest_message_uuid or "").strip()
+            if tail_uuid:
+                meta["transcript_newest_message_uuid"] = tail_uuid
         if implicit_user_signed_on:
             meta["implicit_signal"] = lane_inputs["implicit_signal"]
         root_inputs: dict[str, Any] = {
@@ -250,6 +254,10 @@ def create_companion_turn_root_run(
             "inty_turn_lane": turn_lane,
             **lane_inputs,
         }
+        if inner_tick_turn:
+            tail_uuid = (transcript_newest_message_uuid or "").strip()
+            if tail_uuid:
+                root_inputs["transcript_newest_message_uuid"] = tail_uuid
         root = RunTree(
             name=run_name,
             run_type="chain",

@@ -40,9 +40,11 @@ class _FakeWeixinChannelSession:
         self,
         binding: object,
         on_binding_peer_updated: object,
+        on_ilink_session_expired: object,
     ) -> None:
         self.binding = binding
         self._on_binding_peer_updated = on_binding_peer_updated
+        self._on_ilink_session_expired = on_ilink_session_expired
         self._stop = asyncio.Event()
         _FakeWeixinChannelSession.instances.append(self)
 

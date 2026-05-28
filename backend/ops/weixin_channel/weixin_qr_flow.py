@@ -23,6 +23,8 @@ from backend.ops.weixin_channel.ilink_qr_client import (
     make_ilink_ssl_connector,
 )
 
+QRCODE_EXPIRED_ERROR = "qrcode_expired"
+
 
 class WeixinQrPhase(StrEnum):
     FETCHING_QR = "fetching_qr"
@@ -36,14 +38,22 @@ class WeixinQrPhase(StrEnum):
 class WeixinQrFlow:
     """Poll iLink QR status; exposes ``qrcode_url`` for browser display.
 
-    Per-QR expiry: iLink ``status=expired`` (auto-refresh, max 3). Overall poll
-    stops at ``timeout_seconds`` (wechat-demo: 480s). Distinct from bridge
-    ``bot_token`` expiry (``errcode=-14`` on long-poll/send).
+    ``refresh_on_expired``: legacy wechat-demo refreshes QR (max 3); onboard fails.
+    ``persist_hermes_account``: legacy writes Hermes home; onboard uses Postgres bridge only.
     """
 
-    def __init__(self, hermes_home: str) -> None:
-        assert hermes_home != ""
+    def __init__(
+        self,
+        *,
+        persist_hermes_account: bool,
+        hermes_home: str,
+        refresh_on_expired: bool,
+    ) -> None:
+        if persist_hermes_account:
+            assert hermes_home != ""
+        self._persist_hermes_account = persist_hermes_account
         self._hermes_home = hermes_home
+        self._refresh_on_expired = refresh_on_expired
         self.phase = WeixinQrPhase.FETCHING_QR
         self.qrcode_url: str | None = None
         self.qrcode_value: str | None = None
@@ -111,6 +121,10 @@ class WeixinQrFlow:
                         if redirect_host:
                             current_base_url = f"https://{redirect_host}"
                     case "expired":
+                        if not self._refresh_on_expired:
+                            self.phase = WeixinQrPhase.FAILED
+                            self.error = QRCODE_EXPIRED_ERROR
+                            return None
                         refresh_count += 1
                         if refresh_count > 3:
                             self.phase = WeixinQrPhase.FAILED
@@ -148,13 +162,14 @@ class WeixinQrFlow:
                             self.phase = WeixinQrPhase.FAILED
                             self.error = "confirmed but credential incomplete"
                             return None
-                        save_weixin_account(
-                            self._hermes_home,
-                            account_id=account_id,
-                            token=token,
-                            base_url=base_url,
-                            user_id=user_id,
-                        )
+                        if self._persist_hermes_account:
+                            save_weixin_account(
+                                self._hermes_home,
+                                account_id=account_id,
+                                token=token,
+                                base_url=base_url,
+                                user_id=user_id,
+                            )
                         cred = {
                             "account_id": account_id,
                             "token": token,

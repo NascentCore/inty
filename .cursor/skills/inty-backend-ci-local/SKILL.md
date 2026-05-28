@@ -72,6 +72,25 @@ export PYTHONPATH=.
 
 ## 5) 起 Inty 后端并跑 Pytest（与 `Run python tests` 步一致）
 
+### 智能体必做（本地跑本节时）
+
+- **禁止**因 `:8000` 已有响应就跳过 `start.sh` 直接 `pytest`；须用测试配置**自行起停**一轮 backend。
+- **起服前**：[`inty_ci_backend_stop.sh`](.cursor/skills/scripts/inty_ci_backend_stop.sh) 清掉占用 **8000** 的 `backend.inty.main`（不误杀其他进程）。
+- **起服后**：设 `INTY_CI_BACKEND_STARTED=1`，并对当前 shell 设 `trap`，在 **pytest 结束或失败**、log scan 之后**必须**执行 stop（GHA runner 会销毁 VM，本地不会）。
+- **禁止**在 CI 流程结束后仍占用 `:8000`；若你启动了 backend，用户问「有没有关掉」时应能确认 `lsof -i :8000` 已无 `backend.inty.main`。
+
+```bash
+chmod +x .cursor/skills/scripts/inty_ci_backend_stop.sh
+
+stop_ci_backend() {
+  if [ "${INTY_CI_BACKEND_STARTED:-}" = "1" ]; then
+    .cursor/skills/scripts/inty_ci_backend_stop.sh 8000
+    unset INTY_CI_BACKEND_STARTED
+  fi
+}
+trap stop_ci_backend EXIT
+```
+
 ### 配置路径：推荐 `INTY_CONFIG_YAML`（不覆盖 `config.yaml`）
 
 [`app/core/config.py`](app/core/config.py)：`INTY_CONFIG_YAML` 优先；未设置时才读仓库根 `config.yaml`。本地跑 CI 同款测试叠层时，**推荐**导出：
@@ -90,21 +109,17 @@ Alembic：`backend/alembic/env.py` 在未传 `-x config=...` 时会回落到 **`
 
 [`ci_backend.yaml`](.github/workflows/ci_backend.yaml) 里仍是 `cp devops/config.yaml.test config.yaml`；若你要**逐字对齐 workflow 的 shell**，可继续用复制；与 `INTY_CONFIG_YAML=devops/config.yaml.test` **在行为上等价**（只要在任何进程首次 `import app.core.config` 之前定好其一）。
 
-先**停掉**本机占用 **8000** 的旧 `uvicorn`/旧 `./backend/inty/start.sh`（若存在）。若还要跑 [`.cursor/skills/scripts/check_ci_backend_logs.py`](.cursor/skills/scripts/check_ci_backend_logs.py)，建议**删旧日志再起服**，避免历史 ERROR 误报：
+先**停掉**本机占用 **8000** 的 Inty `uvicorn`（仅 `backend.inty.main`），再启 CI 测试服。若还要跑 [`.cursor/skills/scripts/check_ci_backend_logs.py`](.cursor/skills/scripts/check_ci_backend_logs.py)，建议**删旧日志再起服**，避免历史 ERROR 误报：
 
 ```bash
+.cursor/skills/scripts/inty_ci_backend_stop.sh 8000
 rm -f inty_backend.log
 export INTY_CONFIG_YAML=devops/config.yaml.test
 export PYTHONPATH=.
 ./backend/inty/start.sh --test >> inty_backend.log 2>&1 &
 backend_pid=$!
-cleanup_backend() {
-  if [ -n "${backend_pid:-}" ] && kill -0 "$backend_pid" 2>/dev/null; then
-    kill "$backend_pid"
-    wait "$backend_pid" 2>/dev/null || true
-  fi
-}
-trap cleanup_backend EXIT
+export INTY_CI_BACKEND_STARTED=1
+# stop_ci_backend + trap EXIT：见上文「智能体必做」
 ```
 
 等待服务就绪（与 workflow 中循环等价）：
@@ -138,11 +153,12 @@ python -m pytest -m "not noci" -v -s tests/ --capture=fd --show-capture=no
 python .cursor/skills/scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
 ```
 
-测试与日志检查完成后，**结束本次启动的 backend**，避免与后续或日常开发占口冲突；若上面已设置 `trap cleanup_backend EXIT`，shell 退出时会自动执行，也可在同一 shell 内手动提前执行：
+测试与日志检查完成后，**必须**结束本次启动的 backend（`trap` 在 shell 退出时也会跑；pytest 失败时同样要清理）：
 
 ```bash
-cleanup_backend
+stop_ci_backend
 trap - EXIT
+# 可选确认：lsof -i :8000 应无 backend.inty.main
 ```
 
 ## 6) Push worker 启动自检（选做，对应 workflow `Start push worker...`）

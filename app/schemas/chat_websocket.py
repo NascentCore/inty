@@ -9,7 +9,7 @@ are centralized in :class:`ChatWsCompanionWireMessageMetaData`.
 Companion WS downlink completion types (:class:`ChatWsAssistantMessage`,
 :class:`ChatWsCompletionData`, :class:`ChatWebSocketQueuedSuccessFrame`) are defined in
 Phase 1 only; emit/parse paths still use loose dicts until Phase 2 adoption
-(`GitHub issue #3207 <https://github.com/NascentCore/inty/issues/3207>`_).
+(`GitHub issue #3208 <https://github.com/NascentCore/inty/issues/3208>`_).
 
 Direction tags in model docstrings:
 
@@ -375,7 +375,7 @@ class ChatWebSocketResponse(BaseModel):
     include ``error_kind`` and ``llm_provider_http_status`` (and other keys merged from
     ``CompanionInferenceUpstreamHTTPException.ws_extra`` in the handler).
 
-    TODO(issue#3207): type ``data`` as ``ChatWsCompletionData | None``; success
+    TODO(issue#3208): type ``data`` as ``ChatWsCompletionData | None``; success
     frames should validate as :class:`ChatWebSocketQueuedSuccessFrame`.
     """
 

@@ -62,7 +62,7 @@ agent:
   api_key: "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"
   # intellimate-dev project, inty-dev-shared api key, personal access token
   # 用于所有 dev 环境的 trace 记录
-  langchain_api_key: "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"
+  langchain_api_key: "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"
   # 与 Prod 环境配置保持一致，方便测试
   # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本）
   free_user_chat_image_model: "Z Image Turbo Image to Image"

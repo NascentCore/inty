@@ -20,6 +20,7 @@ from app.core.companion_harness.experience_profile import (
     experience_profile_injects_private_memory,
     normalize_experience_profile_id,
 )
+from app.core.companion_harness.prompting.bundle import PromptBundle
 
 from .utc import local_date_str
 from app.core.companion_harness.memory.memory_store_scope import (
@@ -63,8 +64,6 @@ INNER_TICK_SYNTHETIC_USER_TEXT = (
 )
 
 MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER = "（内在节拍）"
-
-AI_PRIVATE_INJECT_MAX_CHARS = 12_000
 
 
 class CompanionTurnResult(BaseModel):
@@ -185,44 +184,6 @@ def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
     return text
 
 
-class PromptBundle(BaseModel):
-    identity: str
-    soul: str
-    style_md: str = Field(
-        default="",
-        description="Communication style: STYLE.md body for system injection (tone, pacing, expression boundaries).",
-    )
-    user_md: str
-    memory_md: str = Field(
-        ...,
-        description="semantic memory: MEMORY.md body for system injection when private memory is on.",
-    )
-    techno_core_md: str = Field(
-        default="",
-        description="TechnoCore virtual residency constitution for autonomy boundaries.",
-    )
-    living_sphere_md: str = Field(
-        default="",
-        description="Stable virtual home anchor seeded by living_sphere for TechnoCore presence.",
-    )
-    significance_perception_md: str = Field(
-        default="",
-        description=(
-            "Operator guidance for 1-10 importance scoring; injected when "
-            "include_significance_perception_slice is true (package prompts/SIGNIFICANCE_PERCEPTION.md)."
-        ),
-    )
-    tools_md: str = ""
-    memory_raw_diary_today_md: str = Field(
-        default="",
-        description="episodic memory: memory/daily/<date>.md tail for system injection.",
-    )
-    memory_day_summary_today_md: str = Field(
-        default="",
-        description="gist memory: memory/<date>.md for system injection.",
-    )
-
-
 class ContextMeta(BaseModel):
     # Experience profile id (canonical); JSON field name remains context_mode for persistence.
     context_mode: str = "intimate"
@@ -302,6 +263,7 @@ def load_prompt_bundle(
         tools_md=_template_doc_truncated(
             "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
+        channels_md=_read_memory_document_required(store, "CHANNELS.md"),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
