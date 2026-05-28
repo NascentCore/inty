@@ -126,6 +126,11 @@ async def startup_event():
         logger.info("Ops Agent 初始化完成")
         await restore_persisted_sessions()
         logger.info("WeChat demo bridge restore scheduled")
+        from app.services.agentic_companion.dreaming_scheduler import (
+            companion_dreaming_scheduler,
+        )
+
+        companion_dreaming_scheduler.start()
     except Exception as e:
         logger.error(f"Ops 应用启动过程中出错: {str(e)}")
 
@@ -183,6 +188,11 @@ async def shutdown_event():
 
         await ChatWsInflightShutdownRegistry.cancel_all_registered()
         agent_manager.stop()
+        from app.services.agentic_companion.dreaming_scheduler import (
+            companion_dreaming_scheduler,
+        )
+
+        companion_dreaming_scheduler.stop()
         from app.services.cache_service import cache_service
 
         cache_service.stop_cleanup_task()

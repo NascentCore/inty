@@ -174,6 +174,9 @@ class CompanionMemoryBootstrapType(StrEnum):
 
 @dataclass
 class FeaturesConfig:
+    class CompanionHarnessConfig(BaseModel):
+        dreaming_idle_seconds: int = Field(default=7200, ge=1)
+
     experimental_enable_chat_with_user_time_context: bool = True
     # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
     enable_selfie_persona_summary: bool = True
@@ -224,8 +227,18 @@ class FeaturesConfig:
     companion_implicit_sign_on_greeting_llm_timeout_sec: float = 12.0
     # Max LLM attempts for that greeting (includes the first call; 2 = one retry).
     companion_implicit_sign_on_greeting_llm_max_attempts: int = 2
+    # TODO: Move existing companion harness configs into CompanionHarnessConfig.
+    companion_harness: CompanionHarnessConfig = field(
+        default_factory=CompanionHarnessConfig
+    )
 
     def __post_init__(self) -> None:
+        if isinstance(self.companion_harness, dict):
+            self.companion_harness = (
+                self.CompanionHarnessConfig.model_validate(
+                    self.companion_harness
+                )
+            )
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()
         allowed = {m.value for m in CompanionMemoryBootstrapType}
         if raw not in allowed:

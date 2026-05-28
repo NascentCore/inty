@@ -23,6 +23,10 @@ from app.core.companion_harness.companion.utc import (
     local_date_str,
     local_iso_ts,
 )
+from app.core.companion_harness.companion.dreaming import (
+    parse_transcript_datetime,
+)
+from app.core.companion_harness.companion.models import ChatMessage
 
 from .living_sphere_curator import compact_living_sphere_if_pending
 
@@ -249,6 +253,28 @@ def _append_diary(
     store.append_line(rel, line)
 
 
+def _append_dreaming_diary_entries(
+    store: MemoryStore,
+    *,
+    rows: list[ChatMessage],
+) -> None:
+    """Append every dreamed transcript row to its calendar day's episodic memory."""
+    for row in rows:
+        day = parse_transcript_datetime(row.ts).date().isoformat()
+        role = "用户" if row.role == "user" else "助手"
+        line = f"[{row.ts}] {role}: {_clip(row.content, _DIARY_ASSISTANT_MAX)}"
+        store.append_line(f"memory/daily/{day}.md", line)
+
+
+def _dreaming_transcript_block(rows: list[ChatMessage]) -> str:
+    """Render a compact transcript block for batch curation prompts."""
+    lines: list[str] = []
+    for row in rows:
+        role = "User" if row.role == "user" else "Assistant"
+        lines.append(f"[{row.ts}] {role}: {row.content}")
+    return "\n".join(lines)
+
+
 def _rewrite_day_summary_md(
     store: MemoryStore,
     *,
@@ -270,6 +296,29 @@ def _rewrite_day_summary_md(
         {"role": "user", "content": user_block},
     ]
     new_body = complete_fn(messages, "day_summary")
+    store.write_document(f"memory/{day}.md", new_body.strip() + "\n")
+
+
+def _rewrite_dreaming_day_summary_md(
+    store: MemoryStore,
+    *,
+    day: str,
+    rows: list[ChatMessage],
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+) -> None:
+    raw_full = store.read_document_if_exists(f"memory/daily/{day}.md") or ""
+    prev_summary = store.read_document_if_exists(f"memory/{day}.md") or ""
+    user_block = (
+        f"Previous day summary (memory/{day}.md):\n\n{prev_summary}\n\n"
+        f"---\n\nRaw diary (memory/daily/{day}.md):\n\n"
+        f"{_raw_for_summary_prompt(raw_full)}\n\n"
+        f"---\n\nDreaming transcript slice:\n{_dreaming_transcript_block(rows)}\n"
+    )
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": _DAY_SUMMARY_SYSTEM},
+        {"role": "user", "content": user_block},
+    ]
+    new_body = complete_fn(messages, "dreaming_day_summary")
     store.write_document(f"memory/{day}.md", new_body.strip() + "\n")
 
 
@@ -558,6 +607,92 @@ def memory_update_after_turn(
             ws,
             turn_n,
         )
+    return any_curation
+
+
+def memory_update_after_dreaming(
+    store: MemoryStore,
+    rows: list[ChatMessage],
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    *,
+    tool_bg_idle_event: Event,
+) -> bool:
+    """Batch-curate all applicable memory docs from a sleeping-state transcript slice."""
+    assert rows
+    t_all = time.perf_counter()
+    ws = store.scope.registry_key()
+    transcript_block = _dreaming_transcript_block(rows)
+    logger.info(
+        "memory_pipeline dreaming_start ws={} rows={} chars={}",
+        ws,
+        len(rows),
+        len(transcript_block),
+    )
+    _append_dreaming_diary_entries(store, rows=rows)
+
+    any_curation = False
+    rows_by_day: dict[str, list[ChatMessage]] = {}
+    for row in rows:
+        day = parse_transcript_datetime(row.ts).date().isoformat()
+        rows_by_day.setdefault(day, []).append(row)
+
+    for day, day_rows in sorted(rows_by_day.items()):
+        t = time.perf_counter()
+        _rewrite_dreaming_day_summary_md(
+            store,
+            day=day,
+            rows=day_rows,
+            complete_fn=complete_fn,
+        )
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step=f"dreaming_day_summary_md:{day}",
+            ws=ws,
+            turn_n=0,
+            ms=(time.perf_counter() - t) * 1000.0,
+        )
+
+    user_text = "Dreaming transcript slice:\n" + transcript_block
+    assistant_text = ""
+    for step, rewrite_fn in (
+        ("dreaming_memory_md", _rewrite_memory_md),
+        ("dreaming_user_md", _rewrite_user_md),
+        ("dreaming_style_md", _rewrite_style_md),
+        ("dreaming_soul_md", _rewrite_soul_md),
+    ):
+        t = time.perf_counter()
+        rewrite_fn(
+            store,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            complete_fn=complete_fn,
+        )
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step=step,
+            ws=ws,
+            turn_n=0,
+            ms=(time.perf_counter() - t) * 1000.0,
+        )
+
+    t = time.perf_counter()
+    if compact_living_sphere_if_pending(
+        store, complete_fn, tool_bg_idle_event=tool_bg_idle_event
+    ):
+        any_curation = True
+        _log_memory_pipeline_curated(
+            step="dreaming_living_sphere_md",
+            ws=ws,
+            turn_n=0,
+            ms=(time.perf_counter() - t) * 1000.0,
+        )
+
+    logger.info(
+        "memory_pipeline dreaming_done total_ms={:.0f} ws={} curated={}",
+        (time.perf_counter() - t_all) * 1000.0,
+        ws,
+        any_curation,
+    )
     return any_curation
 
 
