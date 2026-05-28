@@ -217,7 +217,11 @@ def tool_companion_set_experience_profile(
     *,
     note: str,
 ) -> str:
-    """Persist a non-bootstrap ``context_mode`` in ``context.json`` with audit note."""
+    """Persist experience profile id in ``context.json`` with audit note.
+
+    During interactive bootstrap (``context_mode=bootstrap``), writes
+    ``post_bootstrap_context_mode`` and keeps bootstrap active until complete.
+    """
 
     try:
         normalized = normalize_experience_profile_id(context_mode)
@@ -240,9 +244,30 @@ def tool_companion_set_experience_profile(
         return f"ERROR: invalid context.json: {exc}"
     if not isinstance(data, dict):
         return "ERROR: context.json must be a JSON object"
+    bootstrap_id = ExperienceContextMode.BOOTSTRAP.value
+    try:
+        current_mode = normalize_experience_profile_id(
+            str(data.get("context_mode", ""))
+        )
+    except ValueError:
+        current_mode = ""
     previous = str(data.get("context_mode", "")).strip() or "(unset)"
-    data["context_mode"] = normalized
     data["experience_profile_change_note"] = note.strip()[:2000]
+    if current_mode == bootstrap_id:
+        data["post_bootstrap_context_mode"] = normalized
+        out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+        st.write_document(rel_ctx, out)
+        logger.info(
+            "companion_set_experience_profile scope={} post_bootstrap {} -> {}",
+            st.scope.registry_key(),
+            previous,
+            normalized,
+        )
+        return (
+            f"OK post-bootstrap experience profile set to {normalized!r} "
+            f"(bootstrap still active); applies after companion_bootstrap_user_interactive_complete."
+        )
+    data["context_mode"] = normalized
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel_ctx, out)
     logger.info(
