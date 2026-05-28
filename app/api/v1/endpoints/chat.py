@@ -1,6 +1,6 @@
 """HTTP chat completions and shared chat response helpers (maintenance-mode REST).
 
-Companion WebSocket ``/api/v1/chat/ws`` lives in ``chat_ws.py`` (production harness path).
+Companion WebSocket ``/api/v1/chat/ws`` lives in ``chat_ws/`` (production harness path).
 """
 
 import time
@@ -533,7 +533,7 @@ async def _agent_chat_completions_impl(
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService,
 ) -> APIResponse[dict]:
-    """HTTP ``/chat/completions`` turn: legacy Agent kernel (companion harness is ``chat_ws.py`` only)."""
+    """HTTP ``/chat/completions`` turn: legacy Agent kernel (companion harness is ``chat_ws/`` only)."""
     try:
         request_handling_timer = Timer("请求处理")
         logger.debug(

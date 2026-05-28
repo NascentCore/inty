@@ -1,12 +1,12 @@
 from fastapi import APIRouter
 
 from app.api.constants import API_V1_PREFIX
+from app.api.v1.endpoints.chat_ws.router import router as chat_ws_router
 from app.api.v1.endpoints import (
     agents,
     auth,
     character_themes,
     chat,
-    chat_ws,
     chats,
     images,
     live_chat,
@@ -39,7 +39,7 @@ api_router.include_router(report.router, tags=["report"])
 api_router.include_router(agents.router, tags=["agents", "characters"])
 api_router.include_router(chats.router, tags=["chats"])
 api_router.include_router(chat.router, tags=["chat"])
-api_router.include_router(chat_ws.router, prefix="/chat", tags=["chat"])
+api_router.include_router(chat_ws_router, prefix="/chat", tags=["chat"])
 api_router.include_router(images.router, tags=["images"])
 api_router.include_router(settings.router, tags=["settings"])
 
