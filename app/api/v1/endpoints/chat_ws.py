@@ -71,7 +71,7 @@ from app.schemas.chat_websocket import (
     dump_chat_ws_companion_wire_meta,
     normalize_websocket_companion_message_id_uuid,
 )
-from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.schemas.implicit_signals import HumanChannel, ImplicitSignalBundle
 from app.schemas.response import APIResponse
 from app.services import agent_service, chat_history_service, chat_service
 from app.services import companion_chat_service
@@ -1169,6 +1169,7 @@ async def _agent_chat_ws_completions_impl(
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
                             client_time=request.user_time_context,
+                            human_channel=HumanChannel.APP,
                             user_signed_on=implicit_greeting_ws,
                             server_received_at_utc=datetime.now(timezone.utc),
                         )
@@ -1483,6 +1484,7 @@ async def chat_completions_websocket(
                 coordinator=companion_ws,
                 ws_conn_id=ws_conn_id,
                 tc_box=tc_box,
+                human_channel=HumanChannel.APP,
             )
         except Exception:
             logger.exception(

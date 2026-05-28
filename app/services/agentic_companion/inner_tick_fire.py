@@ -48,6 +48,7 @@ from app.schemas.chat_websocket import (
     ChatWsCompanionWireMessageMetaData,
     dump_chat_ws_companion_wire_meta,
 )
+from app.schemas.implicit_signals import HumanChannel
 from app.schemas.response import APIResponse
 from app.services import (
     chat_history_service,
@@ -75,6 +76,7 @@ async def try_fire_scheduled_inner_tick(
     ws_conn_id: str,
     # TODO(typing): Define a TimeContext Pydantic model and replace this.
     tc_box: list[Optional[dict]],
+    human_channel: HumanChannel,
 ) -> None:
     """When ``schedule_queue`` has a due pending task, run one inner-tick reminder turn."""
     # TODO(scheduled-reminder-early-proactive): Proactive chat can read recent
@@ -150,7 +152,9 @@ async def try_fire_scheduled_inner_tick(
     session_id = generate_session_id(str(chat_row_id))
     preset_uid = str(uuid.uuid4())
 
-    ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
+    ws_implicit = implicit_signal_bundle_from_tc_box(
+        tc_box, human_channel=human_channel
+    )
     async with coordinator.turn_lock:
         if coordinator.inner_tick_maintenance_foreground_pending():
             logger.debug(
@@ -363,6 +367,7 @@ async def try_fire_proactive_chat_inner_tick(
     coordinator: Coordinator,
     ws_conn_id: str,
     tc_box: list[Optional[dict]],
+    human_channel: HumanChannel,
 ) -> None:
     """If companion transcript says proactive chat is due, run one turn and queue WS payload."""
     user_id = str(ctx.get("user_id") or "").strip()
@@ -426,7 +431,9 @@ async def try_fire_proactive_chat_inner_tick(
         session_id = generate_session_id(str(chat_row_id))
         preset_uid = str(uuid.uuid4())
 
-    ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
+    ws_implicit = implicit_signal_bundle_from_tc_box(
+        tc_box, human_channel=human_channel
+    )
     async with coordinator.turn_lock:
         coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
         if coordinator.inner_tick_proactive_tool_bg_still_running():
@@ -600,6 +607,7 @@ async def try_fire_maintenance_inner_tick(
     coordinator: Coordinator,
     ws_conn_id: str,
     tc_box: list[Optional[dict]],
+    human_channel: HumanChannel,
 ) -> None:
     """If companion transcript says maintenance inner-tick is due, run one MAINTENANCE turn and queue WS."""
     # TODO(tool-bg-idle-starves-user-chat): Foreground often returns tool_bg_only while session
@@ -688,7 +696,9 @@ async def try_fire_maintenance_inner_tick(
         chat_row_agent_id = chat.agent_id
         session_id = generate_session_id(str(chat_row_id))
 
-    ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
+    ws_implicit = implicit_signal_bundle_from_tc_box(
+        tc_box, human_channel=human_channel
+    )
     stub_utc = ws_implicit.client_time if ws_implicit else None
     preset_uid = str(uuid.uuid4())
     stub_request = ChatCompletionRequest(

@@ -229,6 +229,7 @@ def build_companion_turn_prompt_plan(
             memory_bootstrap_type=memory_bootstrap_type,
             track=track,
             implicit_user_signed_on_turn=implicit_sign_on_turn,
+            implicit_signal_bundle=implicit_signal_bundle,
         )
     )
     use_dual_structured_chat = (

@@ -40,7 +40,7 @@ from app.core.companion_harness.experience_profile import (
     normalize_experience_profile_id,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.schemas.implicit_signals import HumanChannel, ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.ai_private_prompt import (
@@ -286,6 +286,18 @@ def _wechat_clawbot_contact_alias_clause() -> str:
         "可低频、自然地提醒用户给这个 ClawBot 联系人设置一个只属于你们的微信备注；"
         "不要频繁催促，不要声称已替用户改名，也不要把 `botAgent`、`agent_id` 或 Inty 内部 nickname 说成微信可见名称。"
     )
+
+
+def _implicit_signal_channel_is_wechat(
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+) -> bool:
+    if implicit_signal_bundle is None:
+        return False
+    match implicit_signal_bundle.human_channel:
+        case HumanChannel.WECHAT | HumanChannel.WEIXIN:
+            return True
+        case _:
+            return False
 
 
 def _inner_tick_ai_private_section(ai_private_text: str) -> str:
@@ -548,11 +560,13 @@ def _contextual_system_messages(
     tick_proactive: bool,
     repl_online_ack_turn: bool,
     ai_private_text: str,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = [
         _system_message(experience_profile_system_clause(context.context_mode)),
-        _system_message(_wechat_clawbot_contact_alias_clause()),
     ]
+    if _implicit_signal_channel_is_wechat(implicit_signal_bundle):
+        out.append(_system_message(_wechat_clawbot_contact_alias_clause()))
     if repl_online_ack_turn:
         out.append(_system_message(_repl_online_ack_clause()))
     if tick_proactive:
@@ -633,6 +647,7 @@ def build_system_messages(
             tick_proactive=tick_proactive,
             repl_online_ack_turn=repl_online_ack_turn,
             ai_private_text=ai_private_text,
+            implicit_signal_bundle=implicit_signal_bundle,
         )
     )
     return out
@@ -641,6 +656,7 @@ def build_system_messages(
 def build_system_messages_for_bootstrap_track(
     bundle: PromptBundle,
     context: ContextMeta,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
     """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background)."""
     return build_system_messages(
@@ -654,6 +670,7 @@ def build_system_messages_for_bootstrap_track(
         tool_side_compact=False,
         interactive_bootstrap_active=True,
         include_significance_perception_slice=False,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
 
 
@@ -661,6 +678,7 @@ def build_system_messages_for_chat_track(
     bundle: PromptBundle,
     context: ContextMeta,
     memory_bootstrap_type: str,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
     """ASYNC user round: foreground chat (``tools=None``) and ``prompt_plan`` prefix."""
     return build_system_messages(
@@ -674,12 +692,14 @@ def build_system_messages_for_chat_track(
         tool_side_compact=False,
         interactive_bootstrap_active=False,
         include_significance_perception_slice=True,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
 
 
 def build_system_messages_for_tool_track(
     bundle: PromptBundle,
     context: ContextMeta,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
     """ASYNC user round: ``tool_background`` and refresh on the tool-model path."""
     return build_system_messages(
@@ -692,6 +712,7 @@ def build_system_messages_for_tool_track(
         tool_side_compact=True,
         interactive_bootstrap_active=False,
         include_significance_perception_slice=False,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
 
 
@@ -699,6 +720,7 @@ def build_system_messages_for_inner_tick_maintenance(
     bundle: PromptBundle,
     context: ContextMeta,
     store: MemoryStore,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
     """ASYNC maintenance inner tick: plan prefix and tool leg (no foreground envelope)."""
     ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
@@ -712,12 +734,14 @@ def build_system_messages_for_inner_tick_maintenance(
         tool_side_compact=True,
         interactive_bootstrap_active=False,
         include_significance_perception_slice=False,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
 
 
 def build_system_messages_for_inner_tick_proactive_chat(
     bundle: PromptBundle,
     context: ContextMeta,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
     """``PROACTIVE_CHAT_SYNC``: proactive chat inner tick while user is idle."""
     return build_system_messages(
@@ -728,12 +752,14 @@ def build_system_messages_for_inner_tick_proactive_chat(
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         ai_private_text="",
         include_significance_perception_slice=False,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
 
 
 def build_system_messages_for_inner_tick_scheduled(
     bundle: PromptBundle,
     context: ContextMeta,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
     """``PROACTIVE_CHAT_SYNC``: schedule_queue reminder inner tick (scheduled user line)."""
     return build_system_messages(
@@ -744,6 +770,7 @@ def build_system_messages_for_inner_tick_scheduled(
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         ai_private_text="",
         include_significance_perception_slice=False,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
 
 
@@ -770,6 +797,7 @@ def build_system_messages_for_implicit_sign_on_greeting(
     bundle: PromptBundle,
     context: ContextMeta,
     memory_bootstrap_type: str,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
     """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts)."""
     return build_system_messages(
@@ -783,4 +811,5 @@ def build_system_messages_for_implicit_sign_on_greeting(
             context=context,
             memory_bootstrap_type=memory_bootstrap_type,
         ),
+        implicit_signal_bundle=implicit_signal_bundle,
     )

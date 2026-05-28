@@ -6,6 +6,7 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
     build_system_messages_for_bootstrap_track,
 )
+from app.schemas.implicit_signals import HumanChannel, ImplicitSignalBundle
 
 
 def _system_contents(messages: list[dict[str, object]]) -> list[str]:
@@ -49,7 +50,7 @@ def test_bootstrap_omits_capability_package_slices() -> None:
     assert "tool contract" not in joined
 
 
-def test_system_messages_include_wechat_clawbot_contact_alias_boundary() -> None:
+def test_system_messages_omit_wechat_clawbot_alias_for_unknown_channel() -> None:
     bundle = PromptBundle(
         identity="identity",
         soul="soul",
@@ -60,6 +61,30 @@ def test_system_messages_include_wechat_clawbot_contact_alias_boundary() -> None
 
     system_text = "\n".join(
         _system_contents(build_system_messages(bundle, ContextMeta()))
+    )
+
+    assert "WeChat / ClawBot 联系人显示名" not in system_text
+
+
+def test_system_messages_include_wechat_clawbot_alias_for_weixin_channel() -> None:
+    bundle = PromptBundle(
+        identity="identity",
+        soul="soul",
+        style_md="style",
+        user_md="user",
+        memory_md="memory",
+    )
+
+    system_text = "\n".join(
+        _system_contents(
+            build_system_messages(
+                bundle,
+                ContextMeta(),
+                implicit_signal_bundle=ImplicitSignalBundle(
+                    human_channel=HumanChannel.WEIXIN,
+                ),
+            )
+        )
     )
 
     assert "WeChat / ClawBot 联系人显示名" in system_text
