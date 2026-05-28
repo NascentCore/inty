@@ -40,12 +40,14 @@ def test_memory_update_after_dreaming_curates_applicable_docs(
         roles.append(role)
         return f"{role} curated"
 
+    tool_bg_idle = Event()
+    tool_bg_idle.set()
     assert (
         memory_update_after_dreaming(
             store,
             rows,
             complete_fn,
-            tool_bg_idle_event=Event(),
+            tool_bg_idle_event=tool_bg_idle,
         )
         is True
     )

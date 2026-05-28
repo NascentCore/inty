@@ -19,7 +19,7 @@ from app.models.companion_memory_documents import (
 )
 from app.models.user import User
 from app.services import companion_chat_service
-from app.services.subscription_service import SubscriptionService
+from app.services.global_services import subscription_service
 
 _DREAMING_SCAN_INTERVAL_SECONDS = 300
 
@@ -42,13 +42,18 @@ class CompanionDreamingScheduler:
 
     def __init__(self) -> None:
         self._scheduler: AsyncIOScheduler | None = None
-        self._subscription_svc = SubscriptionService()
 
     def start(self) -> None:
         """Start the process-local scheduler."""
         if self._scheduler is not None and self._scheduler.running:
             return
         scheduler = AsyncIOScheduler()
+        self._add_scan_job(scheduler)
+        scheduler.start()
+        self._scheduler = scheduler
+        logger.info("companion_dreaming_scheduler started")
+
+    def _add_scan_job(self, scheduler: AsyncIOScheduler) -> None:
         scheduler.add_job(
             self.run_once,
             trigger=IntervalTrigger(seconds=_DREAMING_SCAN_INTERVAL_SECONDS),
@@ -59,9 +64,6 @@ class CompanionDreamingScheduler:
             max_instances=1,
             next_run_time=datetime.now(timezone.utc),
         )
-        scheduler.start()
-        self._scheduler = scheduler
-        logger.info("companion_dreaming_scheduler started")
 
     def stop(self) -> None:
         """Stop the process-local scheduler."""
@@ -124,7 +126,7 @@ class CompanionDreamingScheduler:
                 if user is None:
                     return
                 subscription = (
-                    await self._subscription_svc.get_user_current_subscription(
+                    await subscription_service.get_user_current_subscription(
                         db, scope.user_id
                     )
                 )
