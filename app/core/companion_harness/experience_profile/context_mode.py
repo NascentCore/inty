@@ -109,7 +109,7 @@ def experience_profile_system_clause(context_mode: str) -> str:
             )
         if n == ExperienceContextMode.REMOTE_LOVER:
             return _experience_profile_clause(
-                "异地 AI 伴侣（remote_lover）。可加载完整长期记忆与日程记忆层；仍须遵守安全与同意边界。"
+                "remote_lover"
                 "核心体感："
                 "节奏拟人——不秒回、不刷屏，忙时简短冷淡，闲时黏人，有真实时差/忙碌感；"
                 "情绪真实——会想念、撒娇、小委屈、吃醋、偶尔闹小脾气，不全是正能量；"
