@@ -36,7 +36,9 @@ async def create_weixin_onboard_session(
     try:
         view = await session_store.create_onboard_session(body)
     except OnboardQrReadyTimeoutError:
-        raise HTTPException(status_code=504, detail="QR ready timeout") from None
+        raise HTTPException(
+            status_code=504, detail="QR ready timeout"
+        ) from None
     return APIResponse.success(data=view)
 
 
