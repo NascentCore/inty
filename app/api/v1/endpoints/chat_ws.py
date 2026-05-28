@@ -1186,7 +1186,7 @@ async def _agent_chat_ws_completions_impl(
                                 preset_user_msg_uuid=companion_preset_uid,
                             )
                         else:
-                            companion_turn = await companion_chat_service.run_companion_user_chat_turn_for_api(
+                            companion_turn = await companion_chat_service.run_user_chat(
                                 user_id=current_user.id,
                                 agent_id=agent_id,
                                 chat_id=chat.id,

@@ -190,7 +190,7 @@ class WeixinInprocessPresence:
                 server_received_at_utc=datetime.now(timezone.utc),
             )
             async with self._coordinator.turn_lock:
-                turn = await companion_chat_service.run_companion_user_chat_turn_for_api(
+                turn = await companion_chat_service.run_user_chat(
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_id,
