@@ -11,6 +11,7 @@ from app.core.companion_harness.companion.inner_tick_schedule import (
     InnerTickScheduleOverrides,
     inner_tick_enabled_from_env,
     next_inner_tick_wait_seconds,
+    transcript_tail_message_uuid,
 )
 
 
@@ -130,3 +131,38 @@ def test_next_inner_tick_skips_when_transcript_unchanged(tmp_path: Path) -> None
         last_maintenance_transcript_line_count=len(rows),
     )
     assert w >= 86400.0 * 300
+
+
+def test_transcript_tail_message_uuid_returns_last_business_row(tmp_path: Path) -> None:
+    sc = CompanionScope("it", "a", f"tail-{tmp_path.name}")
+    store = _write_transcript_store(
+        sc,
+        [
+            {
+                "role": "user",
+                "content": "hi",
+                "ts": "2026-01-01T00:00:00+00:00",
+                "uuid": "user-1",
+            },
+            {
+                "role": "assistant",
+                "content": "yo",
+                "ts": "2026-01-01T00:00:01+00:00",
+                "uuid": "assistant-tail",
+            },
+            {
+                "role": "user",
+                "content": "",
+                "ts": "2026-01-01T00:00:02+00:00",
+                "uuid": "presence-tail",
+                "presence": "repl_online",
+            },
+        ],
+    )
+    assert transcript_tail_message_uuid(store) == "assistant-tail"
+
+
+def test_transcript_tail_message_uuid_empty_transcript(tmp_path: Path) -> None:
+    sc = CompanionScope("it", "a", f"empty-{tmp_path.name}")
+    store = MemoryStore(scope=sc, repository=None)
+    assert transcript_tail_message_uuid(store) is None

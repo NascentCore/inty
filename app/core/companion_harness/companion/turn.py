@@ -143,6 +143,7 @@ from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )
+from .inner_tick_schedule import transcript_tail_message_uuid
 from .llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
@@ -568,6 +569,11 @@ async def _run_companion_turn_core(
                 route_inner_activity if inner_tick_turn else None
             ),
             implicit_user_signed_on=implicit_sign_on_turn,
+            transcript_newest_message_uuid=(
+                transcript_tail_message_uuid(store)
+                if inner_tick_turn
+                else None
+            ),
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(
             langsmith_parent_run

@@ -49,6 +49,7 @@ description: >-
     - `python .cursor/skills/scripts/download_run.py --run-id <RUN_ID>`（或位置参数 `RUN_ID`；见 `python .cursor/skills/scripts/download_run.py --help`）
   - 打开 JSON，看 **`extra.metadata`**
     - **`inner_tick_activity`**：`proactive_chat` | `maintenance`
+    - **`transcript_newest_message_uuid`**：主轨 `transcript.jsonl` 去 presence 尾后的末条 `uuid`（调度当时认定的主轨状态；区别于 `user_msg_uuid`）
     - **`inty_turn_lane`**：如 `inner_tick`
     - **不要**单靠 span 的 `name` 判断模式
   - **前置与排错**
