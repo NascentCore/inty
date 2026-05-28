@@ -7,6 +7,8 @@ from app.core.companion_harness.companion.models import (
     ContextMeta,
     InnerTickActivity,
 )
+from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
@@ -174,3 +176,61 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
     autonomy_lines = autonomy_blocks[0].split("\n")
     assert "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；" in autonomy_lines[2]
     assert any("LIFE_CURRENTS.md" in line for line in autonomy_lines)
+
+
+def _make_bundle() -> PromptBundle:
+    return PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+    )
+
+
+def test_proactive_chat_injects_life_currents_when_present(tmp_path) -> None:
+    scope = CompanionScope("u-proactive", "a", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    life_currents = (
+        "# 我最近在做的事\n\n"
+        "## 当前主题（中期）\n"
+        "跟得上他在做的独立游戏圈\n\n"
+        "## 今天（当日兴致）\n"
+        "翻一翻他上次提到的那本《xxx》\n"
+    )
+    store.write_document("LIFE_CURRENTS.md", life_currents)
+    messages = build_system_messages_for_inner_tick_proactive_chat(
+        _make_bundle(), ContextMeta(), store
+    )
+    contents = [str(m["content"]) for m in messages]
+    proactive_idx = next(
+        i for i, c in enumerate(contents) if c.startswith("本轮（陪伴主动聊天）")
+    )
+    life_block = contents[proactive_idx + 1]
+    life_lines = life_block.split("\n")
+    assert life_lines[0] == "## 你最近在做的事（仅供参考）"
+    assert "跟得上他在做的独立游戏圈" in life_block
+    assert "翻一翻他上次提到的那本《xxx》" in life_block
+    assert life_lines[-1].startswith("若自然，可把")
+
+
+def test_proactive_chat_omits_life_currents_when_missing(tmp_path) -> None:
+    scope = CompanionScope("u-proactive-missing", "a", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    messages = build_system_messages_for_inner_tick_proactive_chat(
+        _make_bundle(), ContextMeta(), store
+    )
+    contents = [str(m["content"]) for m in messages]
+    assert any(c.startswith("本轮（陪伴主动聊天）") for c in contents)
+    assert all("## 你最近在做的事" not in c for c in contents)
+
+
+def test_proactive_chat_omits_life_currents_when_blank(tmp_path) -> None:
+    scope = CompanionScope("u-proactive-blank", "a", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    store.write_document("LIFE_CURRENTS.md", "   \n")
+    messages = build_system_messages_for_inner_tick_proactive_chat(
+        _make_bundle(), ContextMeta(), store
+    )
+    contents = [str(m["content"]) for m in messages]
+    assert all("## 你最近在做的事" not in c for c in contents)

@@ -146,7 +146,7 @@ def companion_system_messages_for_track(
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             out = build_system_messages_for_inner_tick_proactive_chat(
-                bundle, context
+                bundle, context, store
             )
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
             out = build_system_messages_for_inner_tick_scheduled(
@@ -173,7 +173,7 @@ def companion_system_messages_for_track(
                     "inner_tick_autonomy track requires ASYNC route, got "
                     f"{route_mode.value}"
                 )
-            return build_system_messages_for_inner_tick_autonomy(
+            out = build_system_messages_for_inner_tick_autonomy(
                 bundle, context, store
             )
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:

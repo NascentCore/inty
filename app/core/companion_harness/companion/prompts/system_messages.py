@@ -279,6 +279,30 @@ def _proactive_chat_clause() -> str:
     )
 
 
+_LIFE_CURRENTS_PROACTIVE_HEADER = "## 你最近在做的事（仅供参考）"
+_LIFE_CURRENTS_PROACTIVE_FOOTER = (
+    "若自然，可把「今天在做的这件小事」轻轻带入这次主动消息；"
+    "不要刻意推销、不要 meta 提及「我正在做某事」这种自报式句式。"
+)
+
+
+def _proactive_life_currents_section(store: MemoryStore) -> str | None:
+    """Return the LIFE_CURRENTS.md injection block for PROACTIVE_CHAT, or None when absent/empty."""
+    body = store.read_document_if_exists("LIFE_CURRENTS.md")
+    if body is None:
+        return None
+    trimmed = body.strip()
+    if not trimmed:
+        return None
+    return (
+        _LIFE_CURRENTS_PROACTIVE_HEADER
+        + "\n\n"
+        + trimmed
+        + "\n\n"
+        + _LIFE_CURRENTS_PROACTIVE_FOOTER
+    )
+
+
 def _repl_online_ack_clause() -> str:
     return (
         "本轮（REPL 会话恢复）\n\n"
@@ -618,6 +642,7 @@ def _contextual_system_messages(
     tick_autonomy: bool,
     repl_online_ack_turn: bool,
     ai_private_text: str,
+    proactive_life_currents_block: str | None,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = [
         _system_message(experience_profile_system_clause(context.context_mode)),
@@ -626,6 +651,8 @@ def _contextual_system_messages(
         out.append(_system_message(_repl_online_ack_clause()))
     if tick_proactive:
         out.append(_system_message(_proactive_chat_clause()))
+        if proactive_life_currents_block is not None:
+            out.append(_system_message(proactive_life_currents_block))
     if inner_tick_turn and not tick_proactive:
         out.append(
             _system_message(_inner_tick_ai_private_section(ai_private_text))
@@ -652,6 +679,7 @@ def build_system_messages(
     tool_side_compact: bool = False,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
+    proactive_life_currents_block: str | None = None,
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(
         inner_tick_turn, inner_tick_activity
@@ -710,6 +738,7 @@ def build_system_messages(
             tick_autonomy=tick_autonomy,
             repl_online_ack_turn=repl_online_ack_turn,
             ai_private_text=ai_private_text,
+            proactive_life_currents_block=proactive_life_currents_block,
         )
     )
     return out
@@ -819,8 +848,15 @@ def build_system_messages_for_inner_tick_autonomy(
 def build_system_messages_for_inner_tick_proactive_chat(
     bundle: PromptBundle,
     context: ContextMeta,
+    store: MemoryStore,
 ) -> list[dict[str, Any]]:
-    """``PROACTIVE_CHAT_SYNC``: proactive chat inner tick while user is idle."""
+    """``PROACTIVE_CHAT_SYNC``: proactive chat inner tick while user is idle.
+
+    Reads ``LIFE_CURRENTS.md`` (written by the AUTONOMY track) and injects it
+    as a "for reference only" system block so the assistant can naturally
+    weave today's small thing into the next proactive message without
+    self-advertising.
+    """
     return build_system_messages(
         bundle,
         context,
@@ -829,6 +865,7 @@ def build_system_messages_for_inner_tick_proactive_chat(
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         ai_private_text="",
         include_significance_perception_slice=False,
+        proactive_life_currents_block=_proactive_life_currents_section(store),
     )
 
 
