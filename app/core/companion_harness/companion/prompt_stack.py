@@ -28,6 +28,7 @@ from .models import (
 )
 from .turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
+from .output_format_slices import output_format_prompt_slice_for_implicit_signals
 from .prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
     build_system_messages_for_chat_track,
@@ -97,20 +98,24 @@ def companion_system_messages_for_track(
     memory_bootstrap_type: str,
     track: CompanionTurnTrack,
     route_mode: TurnRouteMode,
+    output_format_prompt_slice: str = "",
 ) -> list[dict[str, Any]]:
     """Pick the scenario wrapper from ``CompanionTurnTrack`` (see ``system_messages`` docstring)."""
     match track:
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
             return build_system_messages_for_implicit_sign_on_greeting(
-                bundle, context, memory_bootstrap_type
+                bundle,
+                context,
+                memory_bootstrap_type,
+                output_format_prompt_slice,
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             return build_system_messages_for_inner_tick_proactive_chat(
-                bundle, context
+                bundle, context, output_format_prompt_slice
             )
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
             return build_system_messages_for_inner_tick_scheduled(
-                bundle, context
+                bundle, context, output_format_prompt_slice
             )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             if (
@@ -122,10 +127,12 @@ def companion_system_messages_for_track(
                     f"{route_mode.value}"
                 )
             return build_system_messages_for_inner_tick_maintenance(
-                bundle, context, store
+                bundle, context, store, output_format_prompt_slice
             )
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            return build_system_messages_for_bootstrap_track(bundle, context)
+            return build_system_messages_for_bootstrap_track(
+                bundle, context, output_format_prompt_slice
+            )
         case CompanionTurnTrack.USER_CHAT:
             if (
                 route_mode
@@ -136,7 +143,10 @@ def companion_system_messages_for_track(
                     f"{route_mode.value}"
                 )
             return build_system_messages_for_chat_track(
-                bundle, context, memory_bootstrap_type
+                bundle,
+                context,
+                memory_bootstrap_type,
+                output_format_prompt_slice,
             )
 
 
@@ -148,6 +158,7 @@ def companion_turn_tools_and_system_messages(
     memory_bootstrap_type: str,
     track: CompanionTurnTrack,
     implicit_user_signed_on_turn: bool = False,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], TurnRouteMode]:
     """
     Single source for companion chat-round tools list and system message stack.
@@ -178,6 +189,9 @@ def companion_turn_tools_and_system_messages(
         memory_bootstrap_type=memory_bootstrap_type,
         track=track,
         route_mode=route_mode,
+        output_format_prompt_slice=output_format_prompt_slice_for_implicit_signals(
+            implicit_signal_bundle
+        ),
     )
     return tools_for_turn, system_messages, route_mode
 
@@ -222,18 +236,38 @@ def refresh_companion_turn_prompt_stack(
             )
             if bootstrap_still_active:
                 refreshed = build_system_messages_for_bootstrap_track(
-                    bundle, context
+                    bundle,
+                    context,
+                    output_format_prompt_slice_for_implicit_signals(
+                        implicit_signal_bundle
+                    ),
                 )
             else:
                 refreshed = build_system_messages_for_chat_track(
-                    bundle, context, memory_bootstrap_type
+                    bundle,
+                    context,
+                    memory_bootstrap_type,
+                    output_format_prompt_slice_for_implicit_signals(
+                        implicit_signal_bundle
+                    ),
                 )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             refreshed = build_system_messages_for_inner_tick_maintenance(
-                bundle, context, store
+                bundle,
+                context,
+                store,
+                output_format_prompt_slice_for_implicit_signals(
+                    implicit_signal_bundle
+                ),
             )
         case CompanionTurnTrack.USER_CHAT:
-            refreshed = build_system_messages_for_tool_track(bundle, context)
+            refreshed = build_system_messages_for_tool_track(
+                bundle,
+                context,
+                output_format_prompt_slice_for_implicit_signals(
+                    implicit_signal_bundle
+                ),
+            )
         case (
             CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
             | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT

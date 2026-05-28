@@ -97,6 +97,7 @@ from .models import (
     transcript_relative_path_for_turn_persistence,
 )
 from .prompt_stack import refresh_companion_turn_prompt_stack
+from .output_format_slices import output_format_prompt_slice_for_implicit_signals
 from .turn_track import track_from_legacy_flags, turn_flags_for_track
 from .prompts.system_messages import (
     build_system_messages_for_chat_track,
@@ -192,6 +193,7 @@ def _async_dual_llm_system_message_variants(
     memory_bootstrap_type: str,
     inner_tick_turn: bool,
     route_inner_activity: InnerTickActivity,
+    output_format_prompt_slice: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Foreground ``chat_track`` vs tool-path stacks for ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``.
 
@@ -203,12 +205,17 @@ def _async_dual_llm_system_message_variants(
     )
     if inner_tick_turn and not tick_proactive:
         tool_system_msgs = build_system_messages_for_inner_tick_maintenance(
-            bundle, context, store
+            bundle, context, store, output_format_prompt_slice
         )
     else:
-        tool_system_msgs = build_system_messages_for_tool_track(bundle, context)
+        tool_system_msgs = build_system_messages_for_tool_track(
+            bundle, context, output_format_prompt_slice
+        )
     chat_system_msgs = build_system_messages_for_chat_track(
-        bundle, context, memory_bootstrap_type
+        bundle,
+        context,
+        memory_bootstrap_type,
+        output_format_prompt_slice,
     )
     return tool_system_msgs, chat_system_msgs
 
@@ -508,6 +515,9 @@ async def _run_companion_turn_core(
         )
     context = loaded_state.context
     bundle = loaded_state.bundle
+    output_format_prompt_slice = output_format_prompt_slice_for_implicit_signals(
+        implicit_signal_bundle
+    )
     prompt_plan = build_companion_turn_prompt_plan(
         store=store,
         loaded_state=loaded_state,
@@ -637,6 +647,7 @@ async def _run_companion_turn_core(
                             memory_bootstrap_type=memory_bootstrap_type,
                             inner_tick_turn=inner_tick_turn,
                             route_inner_activity=route_inner_activity,
+                            output_format_prompt_slice=output_format_prompt_slice,
                         )
                     )
                     _stack_depth = len(prompt_plan.system_messages)

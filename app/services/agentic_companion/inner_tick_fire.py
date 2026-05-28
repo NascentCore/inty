@@ -48,6 +48,7 @@ from app.schemas.chat_websocket import (
     ChatWsCompanionWireMessageMetaData,
     dump_chat_ws_companion_wire_meta,
 )
+from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.schemas.response import APIResponse
 from app.services import (
     chat_history_service,
@@ -64,6 +65,20 @@ from app.services.agentic_companion.ws_implicit_signals import (
     implicit_signal_bundle_from_tc_box,
 )
 from app.services.subscription_service import SubscriptionService
+
+
+def _implicit_signals_for_delivery(
+    delivery: InnerTickDelivery,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+) -> ImplicitSignalBundle | None:
+    output_format = delivery.output_format_prompt_slice
+    if output_format is None:
+        return implicit_signal_bundle
+    if implicit_signal_bundle is None:
+        return ImplicitSignalBundle(output_format_prompt_slice=output_format)
+    return implicit_signal_bundle.model_copy(
+        update={"output_format_prompt_slice": output_format}
+    )
 
 
 async def try_fire_scheduled_inner_tick(
@@ -150,7 +165,9 @@ async def try_fire_scheduled_inner_tick(
     session_id = generate_session_id(str(chat_row_id))
     preset_uid = str(uuid.uuid4())
 
-    ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
+    ws_implicit = _implicit_signals_for_delivery(
+        delivery, implicit_signal_bundle_from_tc_box(tc_box)
+    )
     async with coordinator.turn_lock:
         if coordinator.inner_tick_maintenance_foreground_pending():
             logger.debug(
@@ -426,7 +443,9 @@ async def try_fire_proactive_chat_inner_tick(
         session_id = generate_session_id(str(chat_row_id))
         preset_uid = str(uuid.uuid4())
 
-    ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
+    ws_implicit = _implicit_signals_for_delivery(
+        delivery, implicit_signal_bundle_from_tc_box(tc_box)
+    )
     async with coordinator.turn_lock:
         coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
         if coordinator.inner_tick_proactive_tool_bg_still_running():
@@ -688,7 +707,9 @@ async def try_fire_maintenance_inner_tick(
         chat_row_agent_id = chat.agent_id
         session_id = generate_session_id(str(chat_row_id))
 
-    ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
+    ws_implicit = _implicit_signals_for_delivery(
+        delivery, implicit_signal_bundle_from_tc_box(tc_box)
+    )
     stub_utc = ws_implicit.client_time if ws_implicit else None
     preset_uid = str(uuid.uuid4())
     stub_request = ChatCompletionRequest(

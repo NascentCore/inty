@@ -15,7 +15,10 @@ from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
-from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.schemas.implicit_signals import (
+    ImplicitSignalBundle,
+    OutputFormatPromptSlice,
+)
 from app.services import chat_service, companion_chat_service
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.downlink import tool_background_downlink
@@ -188,6 +191,7 @@ class WeixinInprocessPresence:
                 client_time=None,
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
+                output_format_prompt_slice=OutputFormatPromptSlice.WECHAT_WEIXIN,
             )
             async with self._coordinator.turn_lock:
                 turn = await companion_chat_service.run_companion_user_chat_turn_for_api(
