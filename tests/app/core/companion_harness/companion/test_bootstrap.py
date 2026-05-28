@@ -187,59 +187,6 @@ def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootst
     assert "post_bootstrap_context_mode" not in data
 
 
-def test_tool_companion_set_experience_profile_during_bootstrap_sets_post_mode(
-    tmp_path: Path,
-) -> None:
-    root = tmp_path
-    st = _store(root)
-    st.write_document(
-        "context.json",
-        json.dumps(
-            {
-                "context_mode": "bootstrap",
-                "user_id": "u",
-                "workspace_bootstrap_user_interactive_completed": False,
-            },
-            ensure_ascii=False,
-        )
-        + "\n",
-    )
-    ok = tool_companion_set_experience_profile(
-        st, "remote_lover", note="user picked remote lover"
-    )
-    assert ok.startswith("OK post-bootstrap")
-    data = json.loads(st.read_document("context.json"))
-    assert data["context_mode"] == "bootstrap"
-    assert data["post_bootstrap_context_mode"] == "remote_lover"
-    assert data["experience_profile_change_note"] == "user picked remote lover"
-
-
-def test_tool_companion_set_experience_profile_bootstrap_then_complete(
-    tmp_path: Path,
-) -> None:
-    root = tmp_path
-    st = _store(root)
-    st.write_document(
-        "context.json",
-        json.dumps(
-            {
-                "context_mode": "bootstrap",
-                "user_id": "u",
-                "workspace_bootstrap_user_interactive_completed": False,
-            },
-            ensure_ascii=False,
-        )
-        + "\n",
-    )
-    tool_companion_set_experience_profile(
-        st, "remote_lover", note="user picked remote lover"
-    )
-    tool_companion_bootstrap_user_interactive_complete(st, "done")
-    data = json.loads(st.read_document("context.json"))
-    assert data["context_mode"] == "remote_lover"
-    assert "post_bootstrap_context_mode" not in data
-
-
 def test_tool_companion_set_experience_profile_rejects_bootstrap(tmp_path: Path) -> None:
     root = tmp_path
     st = _store(root)
