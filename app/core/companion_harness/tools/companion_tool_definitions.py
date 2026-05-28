@@ -39,6 +39,7 @@ MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
     {
         "IDENTITY.md",
+        "LIFE_CURRENTS.md",
         "MEMORY.md",
         "SOUL.md",
         "STYLE.md",
