@@ -1,3 +1,8 @@
+"""Application configuration
+
+Use Pydantic models, instead of dataclass.
+"""
+
 import dataclasses
 import math
 import os

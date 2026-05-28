@@ -1,4 +1,7 @@
-"""In-process companion presence for Weixin demo bridge (no ``/api/v1/chat/ws`` loopback)."""
+"""In-process companion presence for Weixin demo bridge (no ``/api/v1/chat/ws`` loopback).
+
+Not WeChat user presence: iLink does not expose open-app or open-DM signals (see ``transport``).
+"""
 
 from __future__ import annotations
 
@@ -194,7 +197,7 @@ class WeixinInprocessPresence:
                 output_format_prompt_slice=OutputFormatPromptSlice.WECHAT_WEIXIN,
             )
             async with self._coordinator.turn_lock:
-                turn = await companion_chat_service.run_companion_user_chat_turn_for_api(
+                turn = await companion_chat_service.run_user_chat(
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_id,

@@ -32,6 +32,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+from app.core.companion_harness.prompting.bundle import PromptBundle
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -40,7 +41,6 @@ from .models import (
     CompanionTurnTrack,
     ContextMeta,
     InnerTickActivity,
-    PromptBundle,
     companion_turn_transcript_loaded_messages,
     load_context_meta,
     load_prompt_bundle,

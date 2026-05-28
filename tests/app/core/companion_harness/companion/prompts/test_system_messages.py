@@ -3,8 +3,8 @@ from __future__ import annotations
 from app.core.companion_harness.companion.models import (
     OUTPUT_FORMAT_WECHAT_WEIXIN_MD,
     ContextMeta,
-    PromptBundle,
 )
+from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )

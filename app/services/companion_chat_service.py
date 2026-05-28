@@ -448,7 +448,7 @@ async def _run_companion_api_track_turn(
     return out
 
 
-async def run_companion_user_chat_turn_for_api(
+async def run_user_chat(
     *,
     user_id: str,
     agent_id: str,
@@ -662,7 +662,7 @@ async def run_companion_chat_turn_for_api(
             implicit_signal_bundle=implicit_signal_bundle,
             **common,
         )
-    return await run_companion_user_chat_turn_for_api(
+    return await run_user_chat(
         user_text=user_text,
         **common,
     )

@@ -27,7 +27,7 @@ Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-bui
                          Existing log file is removed at startup. With --debug: console INFO, file DEBUG.
 
   Flags (--local|--dev only):
-    --local|--dev        Seed admin + report fixtures; uvicorn --reload; write JWT and agent id for user-testing.
+    --local|--dev        Use devops/config.yaml.local (unless INTY_CONFIG_YAML already set); seed admin + report fixtures; uvicorn --reload; write JWT and agent id for user-testing.
     --build-frontend     Run evaluation/build.sh before uvicorn (default: on).
     --no-build-frontend  Skip that step; use existing app/static/evaluation.
 
@@ -75,9 +75,13 @@ WORKSPACE="${WORKSPACE:-.inty}"
 mkdir -p "$WORKSPACE"
 LOG_FILE="$WORKSPACE/inty.log"
 
+if [ "$LOCAL" = true ] && [ -z "${INTY_CONFIG_YAML:-}" ]; then
+  export INTY_CONFIG_YAML=devops/config.yaml.local
+  echo "Using local config: INTY_CONFIG_YAML=$INTY_CONFIG_YAML"
+fi
+
 echo "Starting database migrations..."
 export PYTHONPATH=.
-# TODO(INTY_CONFIG_YAML): if unset and --local, export devops/config.yaml.local before alembic/uvicorn
 export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/backend/alembic/alembic.ini}"
 alembic -c "$ALEMBIC_CONFIG" upgrade head
 

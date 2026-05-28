@@ -4,6 +4,9 @@ iLink session limits: QR poll budget 480s; each QR may ``expired`` (≤3 refresh
 Bridge ``weixin_token`` lasts until iLink ``errcode=-14`` (negative fourteen — not
 14-minute QR validity). Then Stop + Start QR Login again.
 
+WeChat chatter presence (opened WeChat / opened bot chat) is **not** detectable via
+iLink; only inbound DMs update ``last_peer_seen_at`` (see ``backend.ops.weixin_channel``).
+
 Release smoke (bridge persist + Ops restart restore):
 ``.cursor/skills/wechat-demo-bridge-restore-smoke/SKILL.md``.
 

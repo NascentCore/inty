@@ -81,3 +81,21 @@ def test_tool_memory_store_write_not_in_allowlist(tmp_path: Path) -> None:
     )
     assert out.startswith("ERROR:")
     assert "only allows" in out
+
+
+def test_tool_memory_store_write_channels_not_mutable_during_chat(
+    tmp_path: Path,
+) -> None:
+    st = MemoryStore(
+        scope=CompanionScope("tools", "a", f"{tmp_path.name}-channels"),
+        repository=None,
+    )
+    st.write_document("CHANNELS.md", "seed\n")
+    out = _run_tool(
+        st,
+        "memory_store_write_document",
+        json.dumps({"relative_path": "CHANNELS.md", "content": "mutated"}),
+        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+    )
+    assert out.startswith("ERROR:")
+    assert st.read_document("CHANNELS.md") == "seed\n"

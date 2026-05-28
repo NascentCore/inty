@@ -1,5 +1,8 @@
 """Weixin channel session: transport inbound + in-process companion presence.
 
+``WeixinInprocessPresence`` is the Inty companion coordinator in-process—not WeChat
+user online/open-chat detection (iLink provides no such signal; see ``transport``).
+
 Inty WS currently carries text-shaped chat only. Image-only WeChat DMs are answered
 with a bridge-side text reply (no companion turn) so Hermes does not surface
 ``AssertionError`` from empty user text. Inbound image/video/file/voice CDN handling
@@ -73,6 +76,7 @@ class WeixinChannelBinding:
     weixin_base_url: str
     # Interim: most recent inbound WeChat DM peer; replace with explicit bound_peer_id.
     last_peer_id: str | None = None
+    # Last inbound DM time only—not "user opened WeChat" or "opened bot chat" (iLink N/A).
     last_peer_seen_at: datetime | None = None
 
 
@@ -85,9 +89,11 @@ class WeixinChannelSession:
         on_binding_peer_updated: (
             Callable[[WeixinChannelBinding], Awaitable[None]] | None
         ),
+        on_ilink_session_expired: Callable[[], Awaitable[None]],
     ) -> None:
         self.binding = binding
         self._on_binding_peer_updated = on_binding_peer_updated
+        self._on_ilink_session_expired = on_ilink_session_expired
         self._transport: WeixinTransport | None = None
         self._presence: WeixinInprocessPresence | None = None
         self._stop = asyncio.Event()
@@ -110,6 +116,7 @@ class WeixinChannelSession:
         self._transport = WeixinTransport(
             cred,
             inbound_handler=self._handle_inbound,
+            on_ilink_session_expired=self._on_ilink_session_expired,
         )
         await self._presence.start(self._transport)
 
