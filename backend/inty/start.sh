@@ -26,7 +26,7 @@ while [[ $# -gt 0 ]]; do
     --help|-h)
       echo "Usage: $0 [--dev] [--test]"
       echo "  --dev   Dev mode: seed test user/data, uvicorn --reload"
-      echo "  --test  Test mode: same as --dev, intended for CI/testing"
+      echo "  --test  Test mode: same seeds as --dev, uvicorn without reload (CI/testing)"
       echo "Run from repository root. Default: run migrations and start uvicorn without reload."
       exit 0
       ;;
@@ -72,7 +72,11 @@ if [ "$DEV" = true ]; then
   # python tools/scripts/init_admin_user.py --user-id user-testing --is-superuser=true
   # 生成测试用户用于本地 app 登陆
   python tools/scripts/create_email_password_user.py --email test@sxwl.ai --password test --yes
-  python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload "${UVICORN_LOG_ARGS[@]}"
+  if [ "$TEST" = true ]; then
+    python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 "${UVICORN_LOG_ARGS[@]}"
+  else
+    python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload "${UVICORN_LOG_ARGS[@]}"
+  fi
 else
   echo "Starting in normal mode without reloading..."
   python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 "${UVICORN_LOG_ARGS[@]}"

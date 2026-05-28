@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.companion_harness.companion.prompt_slices import (
     PROMPT_SLICE_TO_REL,
 )
+from app.core.companion_harness.experience_profile import ExperienceContextMode
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
@@ -50,6 +51,14 @@ TOOL_TAG_GENERATION = "GENERATION"
 
 _PROMPT_SLICE_ENUM: tuple[str, ...] = tuple(
     sorted(s.value for s in PROMPT_SLICE_TO_REL)
+)
+
+_SELECTABLE_EXPERIENCE_PROFILE_IDS: tuple[str, ...] = tuple(
+    sorted(
+        m.value
+        for m in ExperienceContextMode
+        if m != ExperienceContextMode.BOOTSTRAP
+    )
 )
 
 assert TECHNO_CORE_RECORD_EVENT_TOOL_NAME == "techno_core_record_event"
@@ -124,11 +133,14 @@ SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
         "properties": {
             "context_mode": {
                 "type": "string",
-                "description": "Target experience profile id (e.g. intimate, emotional_companion, roleplay, interactive_fiction, public).",
+                "description": (
+                    "Target experience profile ID: "
+                    f"{', '.join(_SELECTABLE_EXPERIENCE_PROFILE_IDS)}"
+                ),
             },
             "note": {
                 "type": "string",
-                "description": "Short internal note (not shown to user) about the reason for the change.",
+                "description": "Short internal note (not shown to user) about the rationale of the change.",
             },
         },
         "required": ["context_mode", "note"],
