@@ -1,0 +1,12 @@
+from __future__ import annotations
+
+from app.core.companion_harness.prompting.bundle import PromptBundle
+
+
+def test_prompt_bundle_defaults() -> None:
+    b = PromptBundle(identity="i", soul="s", user_md="u", memory_md="m")
+    assert b.style_md == ""
+    assert b.channels_md == ""
+    assert b.tools_md == ""
+    assert b.memory_raw_diary_today_md == ""
+    assert b.memory_day_summary_today_md == ""

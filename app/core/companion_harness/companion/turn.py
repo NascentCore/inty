@@ -86,13 +86,13 @@ from .proactive_chat import (
 from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
 )
+from app.core.companion_harness.prompting.bundle import PromptBundle
 from .message_format import openai_assistant_message_dict
 from .models import (
     CompanionTurnTrack,
     CompanionTurnResult,
     ContextMeta,
     InnerTickActivity,
-    PromptBundle,
     load_context_meta,
     transcript_relative_path_for_turn_persistence,
 )

@@ -11,7 +11,6 @@ from app.core.companion_harness.companion.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     ContextMeta,
-    PromptBundle,
     load_prompt_bundle,
     load_transcript_from_store,
     load_transcript_text,
@@ -36,15 +35,6 @@ def test_chat_message_timestamp_alias() -> None:
         }
     )
     assert m.ts == "2026-01-02T12:00:00Z"
-
-
-def test_prompt_bundle_defaults() -> None:
-    b = PromptBundle(identity="i", soul="s", user_md="u", memory_md="m")
-    assert b.style_md == ""
-    assert b.channels_md == ""
-    assert b.tools_md == ""
-    assert b.memory_raw_diary_today_md == ""
-    assert b.memory_day_summary_today_md == ""
 
 
 def test_load_prompt_bundle_reads_channels_from_memory_store(tmp_path: Path) -> None:
