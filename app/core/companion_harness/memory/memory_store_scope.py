@@ -20,6 +20,7 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
         "AXIOM.md",
         "BOOTSTRAP.md",
         "INTY.md",
+        "OUTPUT_FORMAT_WECHAT_WEIXIN.md",
         "SAFETY.md",
         "TOOLS.md",
         "SIGNIFICANCE_PERCEPTION.md",

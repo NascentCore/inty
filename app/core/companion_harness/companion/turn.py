@@ -96,8 +96,10 @@ from .models import (
     load_context_meta,
     transcript_relative_path_for_turn_persistence,
 )
-from .prompt_stack import refresh_companion_turn_prompt_stack
-from .output_format_slices import output_format_prompt_slice_for_implicit_signals
+from .prompt_stack import (
+    output_format_prompt_slice_for_implicit_signals,
+    refresh_companion_turn_prompt_stack,
+)
 from .turn_track import track_from_legacy_flags, turn_flags_for_track
 from .prompts.system_messages import (
     build_system_messages_for_chat_track,
@@ -516,7 +518,8 @@ async def _run_companion_turn_core(
     context = loaded_state.context
     bundle = loaded_state.bundle
     output_format_prompt_slice = output_format_prompt_slice_for_implicit_signals(
-        implicit_signal_bundle
+        bundle=bundle,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
     prompt_plan = build_companion_turn_prompt_plan(
         store=store,

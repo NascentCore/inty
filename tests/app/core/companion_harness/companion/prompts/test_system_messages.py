@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from app.core.companion_harness.companion.models import ContextMeta, PromptBundle
-from app.core.companion_harness.companion.output_format_slices import (
-    WECHAT_WEIXIN_OUTPUT_FORMAT_PROMPT_SLICE,
+from app.core.companion_harness.companion.models import (
+    OUTPUT_FORMAT_WECHAT_WEIXIN_MD,
+    ContextMeta,
+    PromptBundle,
 )
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    load_template_seed_text,
 )
 from app.schemas.implicit_signals import OutputFormatPromptSlice
 
@@ -38,6 +42,9 @@ def test_wechat_weixin_output_format_slice_is_in_output_layer() -> None:
         style_md="style\n",
         user_md="user\n",
         memory_md="memory\n",
+        output_format_wechat_weixin_md=load_template_seed_text(
+            OUTPUT_FORMAT_WECHAT_WEIXIN_MD
+        ),
     )
     messages = build_system_messages(
         bundle,
@@ -45,21 +52,21 @@ def test_wechat_weixin_output_format_slice_is_in_output_layer() -> None:
         enable_tools=True,
         async_foreground_chat_stack=True,
         include_significance_perception_slice=True,
-        output_format_prompt_slice=WECHAT_WEIXIN_OUTPUT_FORMAT_PROMPT_SLICE,
+        output_format_prompt_slice=bundle.output_format_wechat_weixin_md,
     )
     contents = [str(message["content"]) for message in messages]
     first_lines = [content.split("\n")[0] for content in contents]
     mirrored_tools_index = first_lines.index(
         "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致"
     )
-    wechat_index = first_lines.index("## Output format: WeChat / Weixin DM")
+    wechat_index = first_lines.index("# Output format: WeChat / Weixin DM")
     envelope_index = first_lines.index(
         "## Dual-LLM chat branch: structured reply envelope"
     )
 
     assert mirrored_tools_index < wechat_index < envelope_index
     assert contents[wechat_index].split("\n") == [
-        "## Output format: WeChat / Weixin DM",
+        "# Output format: WeChat / Weixin DM",
         "",
         "The visible reply is written into a WeChat/Weixin one-to-one chat thread.",
         "",

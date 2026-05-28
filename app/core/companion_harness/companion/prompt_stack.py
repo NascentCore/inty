@@ -11,7 +11,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.schemas.implicit_signals import (
+    ImplicitSignalBundle,
+    OutputFormatPromptSlice,
+)
 from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.bootstrap import (
@@ -28,7 +31,6 @@ from .models import (
 )
 from .turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
-from .output_format_slices import output_format_prompt_slice_for_implicit_signals
 from .prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
     build_system_messages_for_chat_track,
@@ -54,6 +56,22 @@ def replace_leading_system_messages_inplace(
     while i < len(messages) and messages[i].get("role") == "system":
         i += 1
     messages[:] = [*system_messages, *messages[i:]]
+
+
+def output_format_prompt_slice_for_implicit_signals(
+    *,
+    bundle: PromptBundle,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+) -> str:
+    """Resolve selected channel output-format text from the current PromptBundle."""
+    if implicit_signal_bundle is None:
+        return ""
+    output_format = implicit_signal_bundle.output_format_prompt_slice
+    if output_format is None:
+        return ""
+    match output_format:
+        case OutputFormatPromptSlice.WECHAT_WEIXIN:
+            return bundle.output_format_wechat_weixin_md
 
 
 def companion_tools_for_turn(
@@ -190,7 +208,8 @@ def companion_turn_tools_and_system_messages(
         track=track,
         route_mode=route_mode,
         output_format_prompt_slice=output_format_prompt_slice_for_implicit_signals(
-            implicit_signal_bundle
+            bundle=bundle,
+            implicit_signal_bundle=implicit_signal_bundle,
         ),
     )
     return tools_for_turn, system_messages, route_mode
@@ -239,7 +258,8 @@ def refresh_companion_turn_prompt_stack(
                     bundle,
                     context,
                     output_format_prompt_slice_for_implicit_signals(
-                        implicit_signal_bundle
+                        bundle=bundle,
+                        implicit_signal_bundle=implicit_signal_bundle,
                     ),
                 )
             else:
@@ -248,7 +268,8 @@ def refresh_companion_turn_prompt_stack(
                     context,
                     memory_bootstrap_type,
                     output_format_prompt_slice_for_implicit_signals(
-                        implicit_signal_bundle
+                        bundle=bundle,
+                        implicit_signal_bundle=implicit_signal_bundle,
                     ),
                 )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
@@ -257,7 +278,8 @@ def refresh_companion_turn_prompt_stack(
                 context,
                 store,
                 output_format_prompt_slice_for_implicit_signals(
-                    implicit_signal_bundle
+                    bundle=bundle,
+                    implicit_signal_bundle=implicit_signal_bundle,
                 ),
             )
         case CompanionTurnTrack.USER_CHAT:
@@ -265,7 +287,8 @@ def refresh_companion_turn_prompt_stack(
                 bundle,
                 context,
                 output_format_prompt_slice_for_implicit_signals(
-                    implicit_signal_bundle
+                    bundle=bundle,
+                    implicit_signal_bundle=implicit_signal_bundle,
                 ),
             )
         case (
