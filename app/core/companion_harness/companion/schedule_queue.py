@@ -1,11 +1,9 @@
-"""Persistent schedule queue + non-LLM due-event kernel."""
+"""Persistent schedule queue polled by WebSocket inner-tick."""
 
 from __future__ import annotations
 
 import json
-import queue
 import threading
-import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -20,15 +18,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 
 ScheduleTaskStatus = Literal["pending", "fired"]
-
-
-@dataclass(frozen=True)
-class ScheduleDueEvent:
-    scope_registry_key: str
-    task_id: str
-    task_text: str
-    exec_time_utc: str
-    emitted_at_utc: str
 
 
 def scheduled_task_synthetic_user_text(
@@ -179,6 +168,25 @@ def _task_ready_at_utc(task: ScheduleTask) -> datetime:
     return max(exec_at, retry_at)
 
 
+_INVALID_TASK_WARNED_KEYS: set[tuple[str, str]] = set()
+_INVALID_TASK_WARNED_KEYS_LOCK = threading.Lock()
+
+
+def _mark_invalid_warned(store: MemoryStore, task_id: str) -> bool:
+    key = (store.scope.registry_key(), task_id)
+    with _INVALID_TASK_WARNED_KEYS_LOCK:
+        if key in _INVALID_TASK_WARNED_KEYS:
+            return False
+        _INVALID_TASK_WARNED_KEYS.add(key)
+        return True
+
+
+def _clear_invalid_warned(store: MemoryStore, task_id: str) -> None:
+    key = (store.scope.registry_key(), task_id)
+    with _INVALID_TASK_WARNED_KEYS_LOCK:
+        _INVALID_TASK_WARNED_KEYS.discard(key)
+
+
 def _safe_task_ready_at_utc(
     store: MemoryStore, task: ScheduleTask
 ) -> datetime | None:
@@ -233,33 +241,11 @@ def next_due_task_for_execution(store: MemoryStore) -> ScheduleTask | None:
 
     Ordering matches :func:`_pick_next_due_task` with no in-flight ids: earliest
     ready time, then ``created_at_utc``, then ``id``. Used by WebSocket inner-tick
-    to pull one reminder per poll without starting the unused scheduler thread.
+    to pull one reminder per poll.
     """
     now = datetime.now(timezone.utc)
     tasks = _load_tasks(store)
     return _pick_next_due_task(store, tasks, now=now, in_flight_ids=set())
-
-
-def _seconds_until_next_pending_task(
-    store: MemoryStore,
-    tasks: list[ScheduleTask],
-    *,
-    now: datetime,
-    in_flight_ids: set[str],
-) -> float | None:
-    waits: list[float] = []
-    for t in tasks:
-        if t.status != "pending":
-            continue
-        if t.id in in_flight_ids:
-            continue
-        ready_at = _safe_task_ready_at_utc(store, t)
-        if ready_at is None:
-            continue
-        waits.append((ready_at - now).total_seconds())
-    if not waits:
-        return None
-    return min(waits)
 
 
 def add_schedule_task(
@@ -317,7 +303,6 @@ def mark_task_fired(store: MemoryStore, task_id: str) -> bool:
         changed = True
     if changed:
         _save_tasks(store, out)
-        _clear_in_flight(store, task_id)
     return changed
 
 
@@ -348,250 +333,4 @@ def mark_task_retry(store: MemoryStore, task_id: str, error_text: str) -> bool:
         changed = True
     if changed:
         _save_tasks(store, out)
-        _clear_in_flight(store, task_id)
     return changed
-
-
-def get_due_tasks(store: MemoryStore) -> list[dict[str, Any]]:
-    now = datetime.now(timezone.utc)
-    tasks = _load_tasks(store)
-    due: list[dict[str, Any]] = []
-    for t in tasks:
-        if t.status != "pending":
-            continue
-        ready = _safe_task_ready_at_utc(store, t)
-        if ready is None or ready > now:
-            continue
-        due.append(
-            {
-                "id": t.id,
-                "exec_time_utc": t.exec_time_utc,
-                "task_text": t.task_text,
-                "status": t.status,
-                "created_at_utc": t.created_at_utc,
-            }
-        )
-    return due
-
-
-_EVENTS_QUEUE: queue.Queue[ScheduleDueEvent] | None = None
-_EVENTS_QUEUE_LOCK = threading.Lock()
-
-
-def _events_queue() -> queue.Queue[ScheduleDueEvent]:
-    global _EVENTS_QUEUE
-    with _EVENTS_QUEUE_LOCK:
-        if _EVENTS_QUEUE is None:
-            _EVENTS_QUEUE = queue.Queue()
-        return _EVENTS_QUEUE
-
-
-def pop_due_task_events_nowait(
-    *, scope_registry_key: str
-) -> list[ScheduleDueEvent]:
-    want = scope_registry_key.strip()
-    out: list[ScheduleDueEvent] = []
-    parked: list[ScheduleDueEvent] = []
-    q = _events_queue()
-    while True:
-        try:
-            ev = q.get_nowait()
-        except queue.Empty:
-            break
-        if ev.scope_registry_key == want:
-            out.append(ev)
-        else:
-            parked.append(ev)
-    for ev in parked:
-        q.put(ev)
-    return out
-
-
-@dataclass
-class _SchedulerRunner:
-    store: MemoryStore
-    scope_registry_key: str
-    stop_flag: threading.Event
-    thread: threading.Thread
-    in_flight_ids: set[str]
-    lock: threading.Lock
-
-
-_RUNNERS: dict[str, _SchedulerRunner] = {}
-_RUNNERS_LOCK = threading.Lock()
-_INVALID_TASK_WARNED_KEYS: set[tuple[str, str]] = set()
-_INVALID_TASK_WARNED_KEYS_LOCK = threading.Lock()
-
-
-def _runner_for_store(store: MemoryStore) -> _SchedulerRunner | None:
-    with _RUNNERS_LOCK:
-        return _RUNNERS.get(store.scope.registry_key())
-
-
-def _clear_in_flight(store: MemoryStore, task_id: str) -> None:
-    runner = _runner_for_store(store)
-    if runner is None:
-        return
-    with runner.lock:
-        runner.in_flight_ids.discard(task_id)
-
-
-def _mark_invalid_warned(store: MemoryStore, task_id: str) -> bool:
-    key = (store.scope.registry_key(), task_id)
-    with _INVALID_TASK_WARNED_KEYS_LOCK:
-        if key in _INVALID_TASK_WARNED_KEYS:
-            return False
-        _INVALID_TASK_WARNED_KEYS.add(key)
-        return True
-
-
-def _clear_invalid_warned(store: MemoryStore, task_id: str) -> None:
-    key = (store.scope.registry_key(), task_id)
-    with _INVALID_TASK_WARNED_KEYS_LOCK:
-        _INVALID_TASK_WARNED_KEYS.discard(key)
-
-
-def _reconcile_invalid_warned(
-    store: MemoryStore, tasks: list[ScheduleTask]
-) -> None:
-    sk = store.scope.registry_key()
-    live_ids = {t.id for t in tasks}
-    with _INVALID_TASK_WARNED_KEYS_LOCK:
-        stale = [
-            k
-            for k in _INVALID_TASK_WARNED_KEYS
-            if k[0] == sk and k[1] not in live_ids
-        ]
-        for k in stale:
-            _INVALID_TASK_WARNED_KEYS.discard(k)
-
-
-def _scheduler_loop(store: MemoryStore, stop_flag: threading.Event) -> None:
-    sk = store.scope.registry_key()
-    logger.info("schedule_queue scheduler_start scope={}", sk)
-    while not stop_flag.is_set():
-        runner = _runner_for_store(store)
-        if runner is not None:
-            with runner.lock:
-                in_flight = set(runner.in_flight_ids)
-        else:
-            in_flight = set()
-        now = datetime.now(timezone.utc)
-        try:
-            tasks = _load_tasks(store)
-        except Exception:
-            logger.exception("schedule_queue load failed scope={}", sk)
-            stop_flag.wait(timeout=1.0)
-            continue
-        _reconcile_invalid_warned(store, tasks)
-        due = _pick_next_due_task(
-            store, tasks, now=now, in_flight_ids=in_flight
-        )
-        if due is not None:
-            if runner is not None:
-                with runner.lock:
-                    runner.in_flight_ids.add(due.id)
-            _events_queue().put(
-                ScheduleDueEvent(
-                    scope_registry_key=sk,
-                    task_id=due.id,
-                    task_text=due.task_text,
-                    exec_time_utc=due.exec_time_utc,
-                    emitted_at_utc=utc_iso_ts(),
-                )
-            )
-            logger.info(
-                "schedule_queue due_emitted scope={} task_id={} exec_time_utc={}",
-                sk,
-                due.id,
-                due.exec_time_utc,
-            )
-            continue
-        wait = _seconds_until_next_pending_task(
-            store,
-            tasks,
-            now=now,
-            in_flight_ids=in_flight,
-        )
-        if wait is None:
-            sleep_s = 1.0
-        else:
-            sleep_s = min(60.0, max(0.05, wait))
-        stop_flag.wait(timeout=sleep_s)
-    logger.info("schedule_queue scheduler_stop scope={}", sk)
-
-
-def start_schedule_scheduler(store: MemoryStore) -> None:
-    sk = store.scope.registry_key()
-    with _RUNNERS_LOCK:
-        existing = _RUNNERS.get(sk)
-        if existing is not None and existing.thread.is_alive():
-            return
-        stop_flag = threading.Event()
-        runner = _SchedulerRunner(
-            store=store,
-            scope_registry_key=sk,
-            stop_flag=stop_flag,
-            thread=threading.Thread(
-                target=_scheduler_loop,
-                name=f"companion-scheduler-{store.scope.chat_id}",
-                args=(store, stop_flag),
-                daemon=True,
-            ),
-            in_flight_ids=set(),
-            lock=threading.Lock(),
-        )
-        _RUNNERS[sk] = runner
-        runner.thread.start()
-
-
-def stop_schedule_scheduler(store: MemoryStore) -> None:
-    sk = store.scope.registry_key()
-    with _RUNNERS_LOCK:
-        runner = _RUNNERS.get(sk)
-    if runner is None:
-        return
-    if not runner.thread.is_alive():
-        with _RUNNERS_LOCK:
-            current = _RUNNERS.get(sk)
-            if current is runner:
-                _RUNNERS.pop(sk, None)
-        return
-    runner.stop_flag.set()
-    runner.thread.join(timeout=2.0)
-    if runner.thread.is_alive():
-        logger.warning("schedule_queue scheduler_join_timeout scope={}", sk)
-        with _RUNNERS_LOCK:
-            current = _RUNNERS.get(sk)
-            if current is None:
-                _RUNNERS[sk] = runner
-        return
-    with _RUNNERS_LOCK:
-        current = _RUNNERS.get(sk)
-        if current is runner:
-            _RUNNERS.pop(sk, None)
-
-
-def pending_task_count(store: MemoryStore) -> int:
-    tasks = _load_tasks(store)
-    return len([t for t in tasks if t.status == "pending"])
-
-
-def next_due_wait_seconds(
-    store: MemoryStore, *, now: datetime | None = None
-) -> float | None:
-    t = now if now is not None else datetime.now(timezone.utc)
-    tasks = _load_tasks(store)
-    _reconcile_invalid_warned(store, tasks)
-    runner = _runner_for_store(store)
-    if runner is None:
-        in_flight: set[str] = set()
-    else:
-        with runner.lock:
-            in_flight = set(runner.in_flight_ids)
-    return _seconds_until_next_pending_task(
-        store,
-        tasks,
-        now=t,
-        in_flight_ids=in_flight,
-    )
