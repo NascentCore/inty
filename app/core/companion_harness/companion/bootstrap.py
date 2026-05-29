@@ -178,8 +178,6 @@ def tool_companion_bootstrap_user_interactive_complete(
         cm = ""
     if cm in ("", "bootstrap"):
         data["context_mode"] = ExperienceContextMode.UNSPECIFIC.value
-    if "post_bootstrap_context_mode" in data:
-        del data["post_bootstrap_context_mode"]
     data["workspace_bootstrap_user_interactive_completed"] = True
     if note is not None and str(note).strip():
         data["workspace_bootstrap_user_interactive_complete_note"] = str(

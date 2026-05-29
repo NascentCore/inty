@@ -71,8 +71,6 @@ def _migrate_interactive_bootstrap_context_if_needed(
         cm = ""
     if cm in ("", "bootstrap"):
         fixed["context_mode"] = ExperienceContextMode.UNSPECIFIC.value
-    if "post_bootstrap_context_mode" in fixed:
-        del fixed["post_bootstrap_context_mode"]
     if json.dumps(fixed, sort_keys=True) != json.dumps(
         parsed_ctx, sort_keys=True
     ):

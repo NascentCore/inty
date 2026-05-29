@@ -47,7 +47,7 @@ def test_build_companion_tools_interactive_excludes_memory_store_write(tmp_path:
     assert "memory_store_write_document" not in names
     assert "companion_update_prompt_slice" in names
     assert "companion_bootstrap_user_interactive_complete" in names
-    assert "companion_set_experience_profile" not in names
+    assert "companion_set_experience_profile" in names
 
 
 def test_tool_companion_set_experience_profile_updates_context(tmp_path: Path) -> None:
@@ -124,7 +124,6 @@ def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
     st = _store(root)
     ctx = {
         "context_mode": "unspecific",
-        "post_bootstrap_context_mode": "roleplay",
         "user_id": "u1",
         "companion_id": "a1",
         "chat_id": "c1",
@@ -137,7 +136,6 @@ def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
     assert data["workspace_bootstrap_user_interactive_completed"] is True
     assert data["workspace_bootstrap_user_interactive_complete_note"] == "done"
     assert data["context_mode"] == "unspecific"
-    assert "post_bootstrap_context_mode" not in data
 
 
 def test_tool_companion_bootstrap_user_interactive_complete_promotes_legacy_bootstrap_mode(
@@ -160,7 +158,6 @@ def test_tool_companion_bootstrap_user_interactive_complete_promotes_legacy_boot
     tool_companion_bootstrap_user_interactive_complete(st, None)
     data = json.loads(st.read_document("context.json"))
     assert data["context_mode"] == "unspecific"
-    assert "post_bootstrap_context_mode" not in data
 
 
 def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootstrap_mode(
@@ -173,7 +170,6 @@ def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootst
         json.dumps(
             {
                 "context_mode": "roleplay",
-                "post_bootstrap_context_mode": "intimate",
                 "user_id": "u",
                 "workspace_bootstrap_user_interactive_completed": False,
             },
@@ -184,7 +180,6 @@ def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootst
     tool_companion_bootstrap_user_interactive_complete(st, None)
     data = json.loads(st.read_document("context.json"))
     assert data["context_mode"] == "roleplay"
-    assert "post_bootstrap_context_mode" not in data
 
 
 def test_tool_companion_set_experience_profile_rejects_bootstrap(tmp_path: Path) -> None:
