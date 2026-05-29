@@ -1575,6 +1575,15 @@ async def update_agent(
             db_agent.extensions = extensions
             flag_modified(db_agent, "extensions")
 
+        # Background tasks may update generated fields between read and write.
+        latest_version = await db.scalar(
+            select(Agent.version).where(Agent.id == db_agent.id)
+        )
+        if latest_version is not None and latest_version != db_agent.version:
+            from sqlalchemy.orm.attributes import set_committed_value
+
+            set_committed_value(db_agent, "version", latest_version)
+
         await db.commit()
         await db.refresh(db_agent)
 
