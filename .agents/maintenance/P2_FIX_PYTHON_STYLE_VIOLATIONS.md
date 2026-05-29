@@ -113,9 +113,10 @@ maintenance agents can fix the highest-impact item first.
   and callback paths. Preserve thread/session isolation with narrower exception
   handling and re-raise process-level control exceptions. Fixed in
   `cursor/worst-python-style-violation-cd9b`.
-- [ ] Google 2.4 "Exceptions": `/tools/llm.py` silently swallows multiple
-  `Exception` blocks while loading LLM configuration and environment state.
-  Log the suppressed failures or narrow the expected exception types.
+- [x] Google 2.4 "Exceptions": `/tools/scripts/llm.py` silently swallowed
+  multiple `Exception` blocks while converting LLM SDK responses for stats
+  output. Logged the suppressed fallback failures so serialization loss is
+  diagnosable. Fixed in `cursor/agent-maintenance-tasks-5273`.
 - [x] Google 2.4 "Exceptions": `/app/schemas/chat.py` has broad
   `except Exception` blocks that silently return original agent background
   values during URL transformation. Add structured logging and narrow expected

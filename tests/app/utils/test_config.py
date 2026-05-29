@@ -429,6 +429,20 @@ def test_chat_messages_window_limit_defaults():
     assert limits.sub_user_chat_messages_limit == 1000
 
 
+def test_app_limits_config_model_validate_ignores_unknown_keys():
+    limits = AppConfig.LimitsConfig.model_validate(
+        {
+            "free_user_chat_24h_limit": 42,
+            "guest_user_voice_24h_limit": 7,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert limits.free_user_chat_24h_limit == 42
+    assert limits.guest_user_voice_24h_limit == 7
+    assert not hasattr(limits, "unknown_key")
+
+
 def test_database_settings_model_validate_preserves_database_urls():
     settings = DatabaseSettings.model_validate(
         {
@@ -904,6 +918,29 @@ def test_load_config_api_endpoints_uses_pydantic_validation():
         cfg = load_config(str(path))
 
     assert cfg.app.api_endpoints.disable_api_v1_chat_completions is True
+
+
+def test_load_config_app_limits_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "\n".join(
+            [
+                "    companion_memory_bootstrap_type: USER_INTERACTIVE",
+                "  limits:",
+                "    guest_user_chat_24h_limit: 3",
+                "    guest_user_voice_24h_limit: 3",
+                "    unknown_key: ignored",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.app.limits.guest_user_chat_24h_limit == 3
+    assert cfg.app.limits.guest_user_voice_24h_limit == 3
+    assert not hasattr(cfg.app.limits, "unknown_key")
 
 
 def test_load_config_embedding_uses_pydantic_validation():
