@@ -11,7 +11,7 @@ from typing import Any, List, Optional, Tuple
 from fastapi import HTTPException
 from loguru import logger
 from rapidfuzz import fuzz
-from sqlalchemy import Integer, and_, case, desc, func, or_, select, text
+from sqlalchemy import Integer, and_, case, desc, func, inspect, or_, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -1476,13 +1476,29 @@ async def update_agent(
     """
     更新AI角色
     """
+    db_agent_id_for_log = "unknown"
     try:
         if not db_agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
+        update_data = agent_in.model_dump(exclude_unset=True)
+        agent_state = inspect(db_agent)
+        if agent_state.identity:
+            db_agent_id_for_log = str(agent_state.identity[0])
+        fields_read_before_update = {"visibility", "background_images"}
+        if "llm_config" in update_data:
+            fields_read_before_update.add("settings")
+        if "extensions" in update_data:
+            fields_read_before_update.add("extensions")
+
+        fields_to_load = (
+            agent_state.unloaded | agent_state.expired_attributes
+        ) & fields_read_before_update
+        if fields_to_load:
+            await db.refresh(db_agent, attribute_names=sorted(fields_to_load))
+
         previous_visibility = db_agent.visibility
         # 检查是否需要重新生成开场白语音
-        update_data = agent_in.model_dump(exclude_unset=True)
         energy_points_delta = update_data.pop("energy_points", None)
         if energy_points_delta is not None and energy_points_delta <= 0:
             raise HTTPException(
@@ -1494,6 +1510,18 @@ async def update_agent(
         )
 
         update_data = process_agent_image_urls(update_data)
+        json_fields_to_flag = set()
+        if "llm_config" in update_data:
+            json_fields_to_flag.add("settings")
+        if (
+            "background_images" in update_data
+            or "replace_background_images" in update_data
+        ):
+            json_fields_to_flag.add("background_images")
+        if "meta_data" in update_data:
+            json_fields_to_flag.add("meta_data")
+        if "extensions" in update_data:
+            json_fields_to_flag.add("extensions")
         # 与写入 DB 的 update_data 对齐：不含 energy_points；图片 URL 已规范化/校验
         reload_log_reason = "update_agent fields=" + ",".join(
             sorted(update_data.keys())
@@ -1507,26 +1535,24 @@ async def update_agent(
 
         # 确保在异步上下文中调用 flag_modified
         # 在 _update_agent_in_db() 调用 flag_modified 会报 MissingGreenlet 错误
-        # 这里的两个数据强制更新，实际上并不一定需要。
-        # TODO：使用正确的差异检测函数来避免修改没有更改的值。
+        # 只标记本次触碰的 JSON 字段，避免读取未加载属性触发 MissingGreenlet。
         from sqlalchemy.orm.attributes import flag_modified
 
-        if hasattr(db_agent, "settings") and db_agent.settings is not None:
-            flag_modified(db_agent, "settings")
-        if (
-            hasattr(db_agent, "background_images")
-            and db_agent.background_images is not None
-        ):
-            flag_modified(db_agent, "background_images")
-        if hasattr(db_agent, "meta_data") and db_agent.meta_data is not None:
-            flag_modified(db_agent, "meta_data")
-        if hasattr(db_agent, "extensions") and db_agent.extensions is not None:
-            flag_modified(db_agent, "extensions")
+        for json_field in json_fields_to_flag:
+            if getattr(db_agent, json_field) is not None:
+                flag_modified(db_agent, json_field)
 
         visibility_promoted_to_public = (
             previous_visibility == AgentVisibility.PRIVATE
             and db_agent.visibility == AgentVisibility.PUBLIC
         )
+        if visibility_promoted_to_public:
+            agent_state = inspect(db_agent)
+            if (
+                "extensions" in agent_state.unloaded
+                or "extensions" in agent_state.expired_attributes
+            ):
+                await db.refresh(db_agent, attribute_names=["extensions"])
         has_telegram_metadata = (
             isinstance(db_agent.extensions, dict)
             and isinstance(db_agent.extensions.get("telegram"), dict)
@@ -1568,6 +1594,7 @@ async def update_agent(
             select(Agent)
             .options(selectinload(Agent.creator))
             .where(Agent.id == db_agent.id)
+            .execution_options(populate_existing=True)
         )
         updated_agent = result.scalar_one()
 
@@ -1628,7 +1655,7 @@ async def update_agent(
     except IntegrityError as e:
         await db.rollback()
         logger.error(
-            f"数据完整性错误 - 更新角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
+            f"数据完整性错误 - 更新角色 {db_agent_id_for_log}: {str(e)}"
         )
         raise HTTPException(
             status_code=400, detail="Data integrity constraint violated"
@@ -1636,13 +1663,13 @@ async def update_agent(
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(
-            f"数据库错误 - 更新角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
+            f"数据库错误 - 更新角色 {db_agent_id_for_log}: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(
-            f"未知错误 - 更新角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
+            f"未知错误 - 更新角色 {db_agent_id_for_log}: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Internal server error")
 

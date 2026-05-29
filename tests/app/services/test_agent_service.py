@@ -270,6 +270,73 @@ async def test_update_agent_increments_version(db_session, monkeypatch):
     assert updated_agent.version == 2
     assert dummy_cache.invalidated == [agent.id]
 
+
+@pytest.mark.asyncio
+async def test_update_agent_promotes_public_with_unloaded_json_fields(
+    db_session, monkeypatch
+):
+    """Promotion must not lazy-load JSON columns outside SQLAlchemy's async greenlet."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import load_only
+
+    from app.external_services.fakes.telegram_bot import FakeTelegramBotService
+
+    agent = Agent(
+        id=str(uuid.uuid4()),
+        readable_id=str(uuid.uuid4().int)[:8],
+        name="Telegram Deferred Agent",
+        gender=Gender.FEMALE,
+        visibility=AgentVisibility.PRIVATE,
+        extensions={"existing": "metadata"},
+        creator_id=admin_user.id,
+    )
+    db_session.add(agent)
+    await db_session.commit()
+    db_session.expunge(agent)
+
+    result = await db_session.execute(
+        select(Agent)
+        .options(
+            load_only(
+                Agent.id,
+                Agent.name,
+                Agent.gender,
+                Agent.visibility,
+                Agent.creator_id,
+                Agent.version,
+            )
+        )
+        .where(Agent.id == agent.id)
+    )
+    unloaded_agent = result.scalar_one()
+
+    class DummyCacheService:
+        def invalidate_agent_config(self, agent_id: str) -> bool:
+            return bool(agent_id)
+
+    dummy_agent_manager = type("DummyAgentManager", (), {})()
+    dummy_agent_manager.reload_agent = AsyncMock(return_value=True)
+
+    monkeypatch.setattr(agent_service, "cache_service", DummyCacheService())
+    monkeypatch.setattr(agent_service, "agent_manager", dummy_agent_manager)
+    monkeypatch.setattr(
+        agent_service, "telegram_bot_service", FakeTelegramBotService()
+    )
+
+    updated_agent = await agent_service.update_agent(
+        db_session,
+        db_agent=unloaded_agent,
+        agent_in=AgentUpdate(visibility=AgentVisibility.PUBLIC),
+    )
+
+    assert updated_agent.extensions["existing"] == "metadata"
+    assert updated_agent.extensions["telegram"]["status"] == "provisioned"
+    assert (
+        updated_agent.extensions["telegram"]["start_parameter"]
+        == f"agent_{agent.id}"
+    )
+
+
 # TODO: See how to test the ordering of the agents returned from get_balanced_score_based_agents.
 # The ordering is deterministic but determined by random seed.
 # Also the database can have values from other tests.
