@@ -553,6 +553,7 @@ def _contextual_system_messages(
     return out
 
 
+# TODO(track-driven-system-messages-building): Inline calling of this function in the callers.
 def build_system_messages(
     bundle: PromptBundle,
     context: ContextMeta,
