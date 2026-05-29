@@ -1,17 +1,13 @@
 """Turn-track adapters for the companion kernel.
 
 Production entrypoints choose a ``CompanionTurnTrack`` before calling the core
-turn runner.  This module is the narrow bridge to older kernel booleans
+turn runner.  This module maps tracks to legacy kernel booleans
 (``inner_tick_turn`` and ``InnerTickActivity``) and to LangSmith lane labels
-used for trace filtering.  ``USER_CHAT_BOOTSTRAP`` is selected upstream from
-``context.json`` state, so legacy flags cannot reconstruct it.
+used for trace filtering.
 """
 
 from __future__ import annotations
 
-from app.schemas.implicit_signals import ImplicitSignalBundle
-
-from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .models import CompanionTurnTrack, InnerTickActivity
 
 
@@ -33,32 +29,6 @@ def turn_flags_for_track(
             return True, InnerTickActivity.PROACTIVE_CHAT
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             return True, InnerTickActivity.MAINTENANCE
-
-
-def track_from_legacy_flags(
-    *,
-    inner_tick_turn: bool,
-    inner_tick_activity: InnerTickActivity,
-    implicit_signal_bundle: ImplicitSignalBundle | None,
-) -> CompanionTurnTrack:
-    """Recover the closest production track from old call-site flags.
-
-    The bootstrap user-chat track is intentionally not recoverable here because
-    it depends on MemoryStore ``context.json`` bootstrap completion state.
-    """
-
-    if inner_tick_turn:
-        match inner_tick_activity:
-            case InnerTickActivity.PROACTIVE_CHAT:
-                return CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
-            case InnerTickActivity.MAINTENANCE:
-                return CompanionTurnTrack.INNER_TICK_MAINTENANCE
-    if implicit_user_signed_on_chat_turn(
-        implicit_signal_bundle=implicit_signal_bundle,
-        inner_tick_turn=False,
-    ):
-        return CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-    return CompanionTurnTrack.USER_CHAT
 
 
 def langsmith_inty_turn_lane_for_companion_track(
