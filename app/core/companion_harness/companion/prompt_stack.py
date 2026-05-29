@@ -36,6 +36,7 @@ from .prompts.system_messages import (
     build_system_messages_for_inner_tick_proactive_chat,
     build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
+    weixin_clawbot_contact_alias_system_message,
 )
 from app.core.companion_harness.tools.companion_tools import (
     build_companion_tools,
@@ -175,11 +176,14 @@ def companion_system_messages_for_track(
                 context,
                 memory_bootstrap_type,
             )
-    return append_runtime_output_format_system_message(
+    out = append_runtime_output_format_system_message(
         system_messages=out,
         bundle=bundle,
         runtime_context=runtime_context,
     )
+    if runtime_context.channel == CompanionRuntimeChannel.WECHAT_WEIXIN:
+        out.append(weixin_clawbot_contact_alias_system_message())
+    return out
 
 
 def companion_turn_tools_and_system_messages(
@@ -306,5 +310,7 @@ def refresh_companion_turn_prompt_stack(
         bundle=bundle,
         runtime_context=runtime_context,
     )
+    if runtime_context.channel == CompanionRuntimeChannel.WECHAT_WEIXIN:
+        refreshed.append(weixin_clawbot_contact_alias_system_message())
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn
