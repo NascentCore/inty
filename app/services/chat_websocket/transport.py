@@ -21,17 +21,6 @@ _WS_RECEIVE_TEXT_NOT_CONNECTED_MSG: str = (
     'WebSocket is not connected. Need to call "accept" first.'
 )
 
-# Starlette ``WebSocket.receive_text`` when ``application_state != CONNECTED`` (race after drop).
-_WS_RECEIVE_TEXT_NOT_CONNECTED_MSG: str = (
-    'WebSocket is not connected. Need to call "accept" first.'
-)
-
-
-# Starlette ``WebSocket.receive_text`` when ``application_state != CONNECTED`` (race after drop).
-_WS_RECEIVE_TEXT_NOT_CONNECTED_MSG: str = (
-    'WebSocket is not connected. Need to call "accept" first.'
-)
-
 
 def _is_ws_receive_text_not_connected_runtime_error(exc: BaseException) -> bool:
     return (

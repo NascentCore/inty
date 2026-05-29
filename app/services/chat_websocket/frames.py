@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Optional
 
-from fastapi import WebSocket
+from fastapi import HTTPException, WebSocket
 from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession

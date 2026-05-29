@@ -6,12 +6,11 @@ import asyncio
 import json
 from typing import Any, Optional
 
-from fastapi import Depends, WebSocket, WebSocketDisconnect
+from fastapi import HTTPException, WebSocket, WebSocketDisconnect
 from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import deps
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.companion.websocket_coordinator import (
     ChatWsInflightShutdownRegistry,
@@ -67,11 +66,9 @@ from app.api.v1.endpoints.chat import (
 
 async def run_chat_completions_websocket(
     websocket: WebSocket,
-    db: AsyncSession = Depends(deps.get_async_db),
-    subscription_svc: SubscriptionService = Depends(
-        deps.get_subscription_service
-    ),
-    voice_svc: VoiceService = Depends(deps.get_voice_service),
+    db: AsyncSession,
+    subscription_svc: SubscriptionService,
+    voice_svc: VoiceService,
 ):
     await websocket.accept()
     ws_conn_id = _resolve_ws_conn_id_from_websocket(websocket)
@@ -382,10 +379,8 @@ async def run_chat_completions_websocket(
 
 async def run_chat_completions_websocket_verify(
     websocket: WebSocket,
-    db: AsyncSession = Depends(deps.get_async_db),
-    subscription_svc: SubscriptionService = Depends(
-        deps.get_subscription_service
-    ),
+    db: AsyncSession,
+    subscription_svc: SubscriptionService,
 ):
     """
     Legacy smoke endpoint: same **outbound queue + pump** as ``/ws`` (FIFO business JSON).
