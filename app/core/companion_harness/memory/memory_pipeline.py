@@ -433,6 +433,21 @@ def _rewrite_soul_md(
     store.write_document("SOUL.md", new_body.strip() + "\n")
 
 
+# TODO(dreaming-curator-ownership): Move LLM-heavy long-term curation
+# ownership out of the post-turn pipeline once sleeping-state dreaming is
+# product-stable. Today ``memory_update_after_turn`` and
+# ``memory_update_after_dreaming`` both call the same curator prompts for
+# ``memory/<date>.md``, ``MEMORY.md``, ``USER.md``, ``STYLE.md``, and
+# ``SOUL.md``. That means a chat segment can be interpreted once during an
+# awake post-turn curation tick and again during a later sleeping dream.
+# Keep the immediate post-turn path for cheap, lossless capture such as raw
+# diary append and state needed by active conversation, but make dreaming the
+# batch consolidation owner for durable memory docs: day summary, semantic
+# memory, user understanding, communication style, and relationship/personality
+# boundaries. When cleaning this up, also define the handoff invariant clearly:
+# raw chat should stay auditably preserved in transcript, raw diary can be
+# appended promptly, and checkpoint advancement must happen only after dreaming
+# has successfully consolidated the slice.
 def memory_update_after_turn(
     store: MemoryStore,
     user_text: str,
