@@ -9,6 +9,9 @@ New tool checklist:
 3. Update REPL / inner-tick name tuples if the tool appears there
 4. Add ``_dispatch`` branch in ``companion_tool_runtime``
 5. Run ``test_companion_tool_definitions.py``
+
+TODO(abstraction): Group tools by defining tuple of LlmFunctionTool data objects.
+Do not group by tool names.
 """
 
 from __future__ import annotations
