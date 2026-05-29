@@ -412,6 +412,7 @@ async def _await_tool_background_idle_if_configured(
         )
 
 
+# TODO(track-driven-system-messages-building): Inline calling of this function in the callers.
 async def _run_companion_turn_core(
     user_text: str,
     *,
