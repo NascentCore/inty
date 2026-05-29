@@ -21,7 +21,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.companion_harness.companion.prompt_slices import (
     PROMPT_SLICE_TO_REL,
 )
-from app.core.companion_harness.experience_profile import ExperienceContextMode
+from app.core.companion_harness.experience_profile import (
+    EXPERIENCE_PROFILE_ID_BOOTSTRAP,
+    ExperienceContextMode,
+)
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
@@ -57,7 +60,7 @@ _SELECTABLE_EXPERIENCE_PROFILE_IDS: tuple[str, ...] = tuple(
     sorted(
         m.value
         for m in ExperienceContextMode
-        if m != ExperienceContextMode.BOOTSTRAP
+        if m.value != EXPERIENCE_PROFILE_ID_BOOTSTRAP
     )
 )
 
@@ -119,14 +122,6 @@ SET_BOOTSTRAP_COMPLETE_TOOL = LlmFunctionTool(
         "required": [],
         "additionalProperties": False,
     },
-)
-
-_SELECTABLE_EXPERIENCE_PROFILE_IDS: tuple[str, ...] = tuple(
-    sorted(
-        m.value
-        for m in ExperienceContextMode
-        if m != ExperienceContextMode.BOOTSTRAP
-    )
 )
 
 SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
