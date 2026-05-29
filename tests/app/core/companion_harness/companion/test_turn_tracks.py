@@ -1,4 +1,4 @@
-"""Track entry functions fix inner-tick / implicit-sign-on flags before ``run_turn``."""
+"""Track entry functions fix inner-tick / implicit-sign-on flags before core turn."""
 
 from __future__ import annotations
 
