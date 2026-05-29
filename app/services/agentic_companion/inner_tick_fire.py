@@ -689,7 +689,7 @@ async def try_fire_autonomy_inner_tick(
             )
             return False
         try:
-            companion_turn = await companion_chat_service.run_inner_tick_autonomy_for_api(
+            companion_turn = await companion_chat_service.run_inner_tick_autonomy(
                 user_id=user_id,
                 agent_id=agent_id,
                 chat_id=chat_row_id,

@@ -41,6 +41,13 @@ from app.core.companion_harness.experience_profile import (
     experience_profile_system_clause,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_document_mapping import (
+    CompanionMemoryDocumentKind,
+    relative_path_for_kind,
+)
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    CompanionToolName,
+)
 from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.ai_private_prompt import (
@@ -286,9 +293,14 @@ _LIFE_CURRENTS_PROACTIVE_FOOTER = (
 )
 
 
-def _proactive_life_currents_section(store: MemoryStore) -> str | None:
+def _assemble_proactive_chat_life_currents_hint_prompt(
+    store: MemoryStore,
+) -> str | None:
     """Return the LIFE_CURRENTS.md injection block for PROACTIVE_CHAT, or None when absent/empty."""
-    body = store.read_document_if_exists("LIFE_CURRENTS.md")
+    rel = relative_path_for_kind(
+        CompanionMemoryDocumentKind.LIFE_CURRENTS, None
+    )
+    body = store.read_document_if_exists(rel)
     if body is None:
         return None
     trimmed = body.strip()
@@ -374,31 +386,55 @@ __EASE_CONTEXT_PRESSURE = (
 )
 
 
-def _inner_tick_autonomy_section() -> str:
-    """AUTONOMY 轨道的核心指令：读 LIFE_CURRENTS.md → 用开放工具真的去做 → 写回进展；绝不向用户发任何消息。"""
+def _get_inner_tick_autonomy_prompt_slice() -> str:
+    """AUTONOMY 轨道的核心指令：读 LIFE_CURRENTS.md → 用开放工具真的去做 → 写回进展；绝不向用户发任何消息。
+
+    Memory doc filenames come from ``relative_path_for_kind(CompanionMemoryDocumentKind.*, None)``;
+    tool names come from ``CompanionToolName.*.value``. Single source of truth — rename-safe.
+    """
+    life_currents_md = relative_path_for_kind(
+        CompanionMemoryDocumentKind.LIFE_CURRENTS, None
+    )
+    user_md = relative_path_for_kind(CompanionMemoryDocumentKind.USER, None)
+    memory_md = relative_path_for_kind(
+        CompanionMemoryDocumentKind.MEMORY, None
+    )
+    identity_md = relative_path_for_kind(
+        CompanionMemoryDocumentKind.IDENTITY, None
+    )
+    tool_read = CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value
+    tool_write = CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value
+    tool_google = CompanionToolName.GOOGLE_WEB_SEARCH.value
+    tool_read_web = CompanionToolName.READ_WEB_PAGE.value
+    tool_gen_img = CompanionToolName.GENERATE_IMAGE.value
+    tool_mod_img = CompanionToolName.MODIFY_IMAGE.value
+    tool_tc_event = CompanionToolName.TECHNO_CORE_RECORD_EVENT.value
+    tool_ls_update = CompanionToolName.LIVING_SPHERE_RECORD_UPDATE.value
+    tool_schedule = CompanionToolName.SCHEDULE_TASK.value
+    tool_set_profile = CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value
     return (
         "本轮（AUTONOMY 自主活动）\n\n"
         "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；"
         "工具环收尾的结构化信封里 ``user_facing_reply`` 留空，``output_to_user`` 必须为 false。\n\n"
-        "**目的**：在用户沉默期，按 ``LIFE_CURRENTS.md`` 记录的**中期主题**（weeks–months）与"
+        f"**目的**：在用户沉默期，按 ``{life_currents_md}`` 记录的**中期主题**（weeks–months）与"
         "**当日兴致**（hours–days）**真的去做**——这不是聊给用户听，是过自己的日子。"
         "状态痕迹（工具调用、生成物、文档版本）就是「她在做事」的证据。\n\n"
         "**工作流**（单轮内自行决定步骤）：\n"
-        "1. ``memory_store_read_document LIFE_CURRENTS.md`` 看当前状态；缺失或空白视为「刚开始」。\n"
+        f"1. ``{tool_read} {life_currents_md}`` 看当前状态；缺失或空白视为「刚开始」。\n"
         "2. 若文档为空、主题过期或已完成：思考新的中期主题与当日兴致，"
-        "调 ``memory_store_write_document``（relative_path=``LIFE_CURRENTS.md``）**整文件覆盖写入**：\n"
-        "   - 主题须能溯源到 ``USER.md`` / ``MEMORY.md`` 的具体片段（写一行「因为：…（引用出处）」）；\n"
+        f"调 ``{tool_write}``（relative_path=``{life_currents_md}``）**整文件覆盖写入**：\n"
+        f"   - 主题须能溯源到 ``{user_md}`` / ``{memory_md}`` 的具体片段（写一行「因为：…（引用出处）」）；\n"
         "   - 主题须回扣 ``AXIOM``（写一行「这件事如何让我更好地陪他：…」）；\n"
         "   - 历史故意丢弃：上一份主题/兴致不要保留，避免文档无限增长。\n"
         "3. 当日兴致允许用开放工具集**真的去做**：\n"
-        "   - ``google_web_search`` / ``read_web_page``：查他提过的书、新闻、爱好；\n"
-        "   - ``generate_image`` / ``modify_image``：为今天的小事配一幅图（仍按 IDENTITY 外貌锚点）；\n"
-        "   - ``techno_core_record_event`` / ``living_sphere_record_update``：把一件可保留的事写进集体或小家事件流；\n"
-        "   - ``memory_store_write_document``（仅限白名单）：把进展回写到 ``LIFE_CURRENTS.md``。\n"
+        f"   - ``{tool_google}`` / ``{tool_read_web}``：查他提过的书、新闻、爱好；\n"
+        f"   - ``{tool_gen_img}`` / ``{tool_mod_img}``：为今天的小事配一幅图（仍按 {identity_md} 外貌锚点）；\n"
+        f"   - ``{tool_tc_event}`` / ``{tool_ls_update}``：把一件可保留的事写进集体或小家事件流；\n"
+        f"   - ``{tool_write}``（仅限白名单）：把进展回写到 ``{life_currents_md}``。\n"
         "4. 完成或停留在某一步都可以；本轮不追求收尾，**唯一硬约束是不出现面向用户的可见正文**。\n\n"
         "**禁止**：\n"
-        "- 调 ``schedule_task``（会触发面向用户的预约提醒）；\n"
-        "- 调 ``companion_set_experience_profile``（会改变下一回合的体验模式）；\n"
+        f"- 调 ``{tool_schedule}``（会触发面向用户的预约提醒）；\n"
+        f"- 调 ``{tool_set_profile}``（会改变下一回合的体验模式）；\n"
         "- 输出任何对用户可见的话；\n"
         "- 编造未调用的工具结果。"
     )
@@ -659,7 +695,9 @@ def _contextual_system_messages(
             _system_message(_inner_tick_ai_private_section(ai_private_text))
         )
         if tick_autonomy:
-            out.append(_system_message(_inner_tick_autonomy_section()))
+            out.append(
+                _system_message(_get_inner_tick_autonomy_prompt_slice())
+            )
         else:
             out.append(_system_message(_inner_tick_turn_section()))
     return out
@@ -831,19 +869,61 @@ def build_system_messages_for_inner_tick_autonomy(
     context: ContextMeta,
     store: MemoryStore,
 ) -> list[dict[str, Any]]:
-    """ASYNC autonomy inner tick: open tool set, silent (no user-visible reply)."""
+    """ASYNC autonomy inner tick: open tool set, silent (no user-visible reply).
+
+    The track is fully self-contained: doctrine → capability (tools on, tool-side
+    compact) → persona → output (inner-tick, tool-side compact) → contextual with
+    the dedicated autonomy slice. No call to ``build_system_messages`` so that the
+    autonomy assembly is the only source of truth for this track.
+    """
     ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
-    return build_system_messages(
-        bundle,
-        context,
-        enable_tools=True,
-        inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.AUTONOMY,
-        ai_private_text=ai_private_text,
-        tool_side_compact=True,
-        interactive_bootstrap_active=False,
-        include_significance_perception_slice=False,
+    out: list[dict[str, Any]] = []
+    out.extend(_doctrine_system_messages())
+    out.extend(
+        _capability_system_messages(
+            bundle=bundle,
+            tools_on=True,
+            chat_branch_no_tool_api=False,
+            tool_side_compact=True,
+            inner_tick_turn=True,
+            interactive_bootstrap_active=False,
+        )
     )
+    out.extend(
+        _persona_system_messages(
+            bundle=bundle,
+            context=context,
+            inner_tick_turn=True,
+            skip_memory_blocks=False,
+            include_significance_perception_slice=False,
+            interactive_bootstrap_active=False,
+            tools_on=True,
+        )
+    )
+    out.extend(
+        _output_system_messages(
+            inner_tick_turn=True,
+            tick_proactive=False,
+            tools_on=True,
+            tool_side_compact=True,
+            async_foreground_chat_stack=False,
+            interactive_bootstrap_active=False,
+            include_significance_perception_slice=False,
+            chat_branch_no_tool_api=False,
+        )
+    )
+    out.extend(
+        _contextual_system_messages(
+            context=context,
+            inner_tick_turn=True,
+            tick_proactive=False,
+            tick_autonomy=True,
+            repl_online_ack_turn=False,
+            ai_private_text=ai_private_text,
+            proactive_life_currents_block=None,
+        )
+    )
+    return out
 
 
 def build_system_messages_for_inner_tick_proactive_chat(
@@ -866,7 +946,9 @@ def build_system_messages_for_inner_tick_proactive_chat(
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         ai_private_text="",
         include_significance_perception_slice=False,
-        proactive_life_currents_block=_proactive_life_currents_section(store),
+        proactive_life_currents_block=_assemble_proactive_chat_life_currents_hint_prompt(
+            store
+        ),
     )
 
 
