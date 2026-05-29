@@ -23,7 +23,48 @@ from backend.ops.weixin_channel.session import (
 async def _noop_ilink_session_expired() -> None:
     pass
 from backend.ops.weixin_channel.transport import WeixinInboundMessage
+from app.utils.config import WeixinChannelConfig
 
+
+def test_weixin_channel_config_split_multiline_default_false() -> None:
+    cfg = WeixinChannelConfig()
+    assert cfg.split_multiline_messages is False
+
+
+def test_weixin_channel_config_split_multiline_true_from_yaml_dict() -> None:
+    cfg = WeixinChannelConfig.model_validate(
+        {"split_multiline_messages": True},
+    )
+    assert cfg.split_multiline_messages is True
+
+
+def test_weixin_adapter_split_multiline_reads_platform_extra() -> None:
+    """Hermes reads PlatformConfig.extra; transport injects split_multiline_messages."""
+    from gateway.config import PlatformConfig
+    from gateway.platforms.weixin import WeixinAdapter
+
+    base_extra = {
+        "account_id": "wx-acct",
+        "base_url": "https://ilinkai.weixin.qq.com",
+        "dm_policy": "open",
+        "group_policy": "disabled",
+    }
+    adapter_false = WeixinAdapter(
+        PlatformConfig(
+            enabled=True,
+            token="test-token",
+            extra={**base_extra, "split_multiline_messages": False},
+        ),
+    )
+    adapter_true = WeixinAdapter(
+        PlatformConfig(
+            enabled=True,
+            token="test-token",
+            extra={**base_extra, "split_multiline_messages": True},
+        ),
+    )
+    assert adapter_false._split_multiline_messages is False
+    assert adapter_true._split_multiline_messages is True
 
 def test_ws_ping_interval_below_server_idle_minimum() -> None:
     assert CHAT_WS_CLIENT_PING_INTERVAL_SEC == 9.0

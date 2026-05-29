@@ -1201,3 +1201,35 @@ def test_load_config_tts_uses_pydantic_validation():
         cfg.tts.voice_message_narration_mode
         == "dialogue_and_stage_directions"
     )
+
+
+def test_load_config_weixin_channel_split_multiline_default_false() -> None:
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+    assert cfg.weixin_channel.split_multiline_messages is False
+
+
+def test_load_config_weixin_channel_split_multiline_true() -> None:
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n",
+        "\n".join(
+            [
+                "weixin_channel:",
+                "  split_multiline_messages: true",
+                "elevenlabs:",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+    assert cfg.weixin_channel.split_multiline_messages is True

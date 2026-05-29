@@ -220,6 +220,8 @@ class WeixinTransport:
         self._stop = asyncio.Event()
 
     async def run_until_stopped(self) -> None:
+        from app.core.config import global_config_loaded_from_config_yaml
+
         config = PlatformConfig(
             enabled=True,
             token=self._cred.token,
@@ -228,6 +230,9 @@ class WeixinTransport:
                 "base_url": self._cred.base_url,
                 "dm_policy": "open",
                 "group_policy": "disabled",
+                "split_multiline_messages": (
+                    global_config_loaded_from_config_yaml.weixin_channel.split_multiline_messages
+                ),
             },
         )
         # TODO(weixin-adapter-parity): If we replace ``WeixinAdapter``, re-audit
