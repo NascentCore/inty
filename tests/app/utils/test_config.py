@@ -277,6 +277,11 @@ def test_features_config_companion_transcript_compaction_null_disables():
     assert f.companion_transcript_compaction is None
 
 
+def test_features_config_companion_harness_dreaming_idle_seconds() -> None:
+    f = FeaturesConfig(companion_harness={"dreaming_idle_seconds": 33})
+    assert f.companion_harness.dreaming_idle_seconds == 33
+
+
 def test_features_config_uses_pydantic_validation():
     f = FeaturesConfig.model_validate(
         {

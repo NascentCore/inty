@@ -16,6 +16,12 @@ from loguru import logger
 from app.core.companion_harness.companion.runtime_events import (
     append_runtime_event,
 )
+from app.core.companion_harness.companion.dreaming import (
+    dreaming_due,
+    dreaming_race_guard_matches,
+    dreaming_state_from_candidate,
+    save_dreaming_state,
+)
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
@@ -30,6 +36,9 @@ from app.core.companion_harness.memory.memory_registry import (
     MEMORY_STORE_REGISTRY_REQUIRES_DSN,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_pipeline import (
+    memory_update_after_dreaming,
+)
 from app.core.companion_harness.companion.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
@@ -139,6 +148,66 @@ def companion_session_tool_bg_idle_event(
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     return session.tool_bg_idle
+
+
+def run_companion_dreaming_for_api(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    dreaming_idle_seconds: int,
+) -> bool:
+    """Run one sleeping-state dreaming batch for a ready companion scope."""
+    chat_api_id = resolved_chat_model.id_on_provider
+    tool_api_id = _companion_tool_model_api_id(chat_api_id)
+    manager = _companion_manager_for_resolved_model(
+        chat_api_id,
+        tool_api_id,
+        _companion_runtime_config_fingerprint(),
+    )
+    session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
+    if not session.is_initialized:
+        return False
+    from datetime import datetime, timezone
+
+    candidate = dreaming_due(
+        session.store,
+        now=datetime.now(timezone.utc),
+        dreaming_idle_seconds=dreaming_idle_seconds,
+    )
+    if candidate is None:
+        return False
+
+    def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
+        return session.llm_client.complete_text(messages, model_role=role)
+
+    memory_update_after_dreaming(
+        session.store,
+        candidate.rows,
+        _complete_fn,
+        tool_bg_idle_event=session.tool_bg_idle,
+    )
+    if not dreaming_race_guard_matches(session.store, candidate):
+        logger.info(
+            "companion_dreaming checkpoint_skipped_race user={} agent={} chat={}",
+            user_id,
+            agent_id,
+            chat_id,
+        )
+        return False
+    state = dreaming_state_from_candidate(
+        candidate, processed_at=datetime.now(timezone.utc)
+    )
+    save_dreaming_state(session.store, state)
+    logger.info(
+        "companion_dreaming checkpoint_saved user={} agent={} chat={} rows={}",
+        user_id,
+        agent_id,
+        chat_id,
+        len(candidate.rows),
+    )
+    return True
 
 
 def append_companion_ws_runtime_event(
