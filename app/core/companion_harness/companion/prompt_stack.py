@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.bootstrap import (
@@ -28,7 +27,7 @@ from .models import (
 )
 from .turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
-from .runtime_channel import CompanionRuntimeChannel
+from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from .prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
     build_system_messages_for_chat_track,
@@ -171,8 +170,10 @@ def companion_turn_tools_and_system_messages(
     memory_bootstrap_type: str,
     track: CompanionTurnTrack,
     implicit_user_signed_on_turn: bool = False,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
+    runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+        channel=CompanionRuntimeChannel.APP,
+        implicit_signal_bundle=None,
+    ),
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], TurnRouteMode]:
     """
     Single source for companion chat-round tools list and system message stack.
@@ -205,7 +206,7 @@ def companion_turn_tools_and_system_messages(
         route_mode=route_mode,
         output_format_prompt_slice=output_format_prompt_slice_for_runtime_channel(
             bundle=bundle,
-            runtime_channel=runtime_channel,
+            runtime_channel=runtime_context.channel,
         ),
     )
     return tools_for_turn, system_messages, route_mode
@@ -219,8 +220,10 @@ def refresh_companion_turn_prompt_stack(
     inner_tick_activity: InnerTickActivity,
     messages: list[dict[str, Any]],
     track: CompanionTurnTrack,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
+    runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+        channel=CompanionRuntimeChannel.APP,
+        implicit_signal_bundle=None,
+    ),
 ) -> list[dict[str, Any]]:
     """
     Re-read context.json and prompt slices, replace leading system messages, return tools schema.
@@ -232,7 +235,7 @@ def refresh_companion_turn_prompt_stack(
     context = load_context_meta(store=store)
     bundle = load_prompt_bundle(store, meta=context)
     implicit_user_signed_on_turn = implicit_user_signed_on_chat_turn(
-        implicit_signal_bundle=implicit_signal_bundle,
+        implicit_signal_bundle=runtime_context.implicit_signal_bundle,
         inner_tick_turn=inner_tick_turn,
     )
     tools_for_turn = companion_tools_for_turn(
@@ -256,7 +259,7 @@ def refresh_companion_turn_prompt_stack(
                     context,
                     output_format_prompt_slice_for_runtime_channel(
                         bundle=bundle,
-                        runtime_channel=runtime_channel,
+                        runtime_channel=runtime_context.channel,
                     ),
                 )
             else:
@@ -266,7 +269,7 @@ def refresh_companion_turn_prompt_stack(
                     memory_bootstrap_type,
                     output_format_prompt_slice_for_runtime_channel(
                         bundle=bundle,
-                        runtime_channel=runtime_channel,
+                        runtime_channel=runtime_context.channel,
                     ),
                 )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
@@ -276,7 +279,7 @@ def refresh_companion_turn_prompt_stack(
                 store,
                 output_format_prompt_slice_for_runtime_channel(
                     bundle=bundle,
-                    runtime_channel=runtime_channel,
+                    runtime_channel=runtime_context.channel,
                 ),
             )
         case CompanionTurnTrack.USER_CHAT:
@@ -285,7 +288,7 @@ def refresh_companion_turn_prompt_stack(
                 context,
                 output_format_prompt_slice_for_runtime_channel(
                     bundle=bundle,
-                    runtime_channel=runtime_channel,
+                    runtime_channel=runtime_context.channel,
                 ),
             )
         case (

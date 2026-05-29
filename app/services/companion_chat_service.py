@@ -39,6 +39,7 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
+    TurnRuntimeContext,
 )
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
@@ -481,8 +482,10 @@ async def run_user_chat(
             defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
-            implicit_signal_bundle=implicit_signal_bundle,
-            runtime_channel=runtime_channel,
+            runtime_context=TurnRuntimeContext(
+                channel=runtime_channel,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
             bootstrap_interim_output_sink=bootstrap_interim_output_sink,
         ),
     )
@@ -514,11 +517,13 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
         run_track=lambda manager, session: manager.run_implicit_sign_on_greeting_turn(
             session,
             user_text,
-            implicit_signal_bundle=implicit_signal_bundle,
             defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
-            runtime_channel=runtime_channel,
+            runtime_context=TurnRuntimeContext(
+                channel=runtime_channel,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
         ),
     )
 
@@ -550,8 +555,10 @@ async def run_companion_inner_tick_proactive_chat_turn_for_api(
             defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
-            implicit_signal_bundle=implicit_signal_bundle,
-            runtime_channel=runtime_channel,
+            runtime_context=TurnRuntimeContext(
+                channel=runtime_channel,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
         ),
     )
 
@@ -588,8 +595,10 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
             defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
-            implicit_signal_bundle=implicit_signal_bundle,
-            runtime_channel=runtime_channel,
+            runtime_context=TurnRuntimeContext(
+                channel=runtime_channel,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
         ),
     )
 
@@ -621,8 +630,10 @@ async def run_companion_inner_tick_maintenance_turn_for_api(
             defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
-            implicit_signal_bundle=implicit_signal_bundle,
-            runtime_channel=runtime_channel,
+            runtime_context=TurnRuntimeContext(
+                channel=runtime_channel,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
         ),
     )
 

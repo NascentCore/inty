@@ -39,7 +39,7 @@ from app.core.companion_harness.memory.memory_registry import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .models import CompanionTurnResult, InnerTickActivity
-from .runtime_channel import CompanionRuntimeChannel
+from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from .scope import CompanionScope
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 from .turn_tracks import (
@@ -299,8 +299,7 @@ class CompanionManager:
         defer_memory_update: bool,
         background_output_sink: BackgroundToolEventSink | None,
         preset_user_msg_uuid: str | None,
-        implicit_signal_bundle: ImplicitSignalBundle | None,
-        runtime_channel: CompanionRuntimeChannel,
+        runtime_context: TurnRuntimeContext,
     ) -> dict[str, object]:
         return {
             "store": session.store,
@@ -313,8 +312,7 @@ class CompanionManager:
             "memory_bootstrap_type": session.config.memory_bootstrap_type,
             "background_output_sink": background_output_sink,
             "preset_user_msg_uuid": preset_user_msg_uuid,
-            "implicit_signal_bundle": implicit_signal_bundle,
-            "runtime_channel": runtime_channel,
+            "runtime_context": runtime_context,
             "langsmith_parent_run_enabled": self._langsmith_parent_run_enabled(
                 session
             ),
@@ -329,8 +327,10 @@ class CompanionManager:
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
-        implicit_signal_bundle: ImplicitSignalBundle | None = None,
-        runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
+        runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=None,
+        ),
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_user_chat_turn(
@@ -341,8 +341,7 @@ class CompanionManager:
                     defer_memory_update=defer_memory_update,
                     background_output_sink=background_output_sink,
                     preset_user_msg_uuid=preset_user_msg_uuid,
-                    implicit_signal_bundle=implicit_signal_bundle,
-                    runtime_channel=runtime_channel,
+                    runtime_context=runtime_context,
                 ),
                 "bootstrap_interim_output_sink": bootstrap_interim_output_sink,
             },
@@ -353,11 +352,13 @@ class CompanionManager:
         session: CompanionSession,
         user_text: str,
         *,
-        implicit_signal_bundle: ImplicitSignalBundle,
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
-        runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
+        runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=None,
+        ),
     ) -> CompanionTurnResult:
         return await run_companion_implicit_sign_on_greeting_turn(
             user_text,
@@ -366,8 +367,7 @@ class CompanionManager:
                 defer_memory_update=defer_memory_update,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
-                implicit_signal_bundle=implicit_signal_bundle,
-                runtime_channel=runtime_channel,
+                runtime_context=runtime_context,
             ),
         )
 
@@ -378,8 +378,10 @@ class CompanionManager:
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
-        implicit_signal_bundle: ImplicitSignalBundle | None = None,
-        runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
+        runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=None,
+        ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_proactive_chat_turn(
             **self._track_turn_kwargs(
@@ -387,8 +389,7 @@ class CompanionManager:
                 defer_memory_update=defer_memory_update,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
-                implicit_signal_bundle=implicit_signal_bundle,
-                runtime_channel=runtime_channel,
+                runtime_context=runtime_context,
             ),
         )
 
@@ -400,8 +401,10 @@ class CompanionManager:
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
-        implicit_signal_bundle: ImplicitSignalBundle | None = None,
-        runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
+        runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=None,
+        ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_scheduled_turn(
             scheduled_user_text,
@@ -410,8 +413,7 @@ class CompanionManager:
                 defer_memory_update=defer_memory_update,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
-                implicit_signal_bundle=implicit_signal_bundle,
-                runtime_channel=runtime_channel,
+                runtime_context=runtime_context,
             ),
         )
 
@@ -422,8 +424,10 @@ class CompanionManager:
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
-        implicit_signal_bundle: ImplicitSignalBundle | None = None,
-        runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
+        runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=None,
+        ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_maintenance_turn(
             **self._track_turn_kwargs(
@@ -431,8 +435,7 @@ class CompanionManager:
                 defer_memory_update=defer_memory_update,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
-                implicit_signal_bundle=implicit_signal_bundle,
-                runtime_channel=runtime_channel,
+                runtime_context=runtime_context,
             ),
         )
 
@@ -450,12 +453,15 @@ class CompanionManager:
         runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
     ) -> CompanionTurnResult:
         """Legacy delegator; prefer track methods at call sites."""
+        runtime_context = TurnRuntimeContext(
+            channel=runtime_channel,
+            implicit_signal_bundle=implicit_signal_bundle,
+        )
         track_kwargs = {
             "defer_memory_update": defer_memory_update,
             "background_output_sink": background_output_sink,
             "preset_user_msg_uuid": preset_user_msg_uuid,
-            "implicit_signal_bundle": implicit_signal_bundle,
-            "runtime_channel": runtime_channel,
+            "runtime_context": runtime_context,
         }
         if inner_tick_turn:
             match inner_tick_activity:
@@ -477,7 +483,6 @@ class CompanionManager:
             return await self.run_implicit_sign_on_greeting_turn(
                 session,
                 user_text,
-                implicit_signal_bundle=implicit_signal_bundle,
                 **track_kwargs,
             )
         return await self.run_user_chat_turn(
