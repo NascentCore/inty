@@ -448,6 +448,26 @@ def test_app_limits_config_model_validate_ignores_unknown_keys():
     assert not hasattr(limits, "unknown_key")
 
 
+def test_app_config_model_validate_ignores_unknown_keys_and_defaults_nested():
+    settings = AppConfig.model_validate(
+        {
+            "name": "inty-config-test",
+            "environment": "test",
+            "limits": None,
+            "features": None,
+            "api_endpoints": None,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert settings.name == "inty-config-test"
+    assert settings.environment == Environment.TEST
+    assert isinstance(settings.limits, AppConfig.LimitsConfig)
+    assert isinstance(settings.features, FeaturesConfig)
+    assert isinstance(settings.api_endpoints, APIEndpointsConfig)
+    assert not hasattr(settings, "unknown_key")
+
+
 def test_database_settings_model_validate_preserves_database_urls():
     settings = DatabaseSettings.model_validate(
         {
@@ -696,6 +716,26 @@ def test_agent_config_langsmith_always_trace_user_emails_supports_explicit_value
         "dev1@example.com",
         "dev2@example.com",
     ]
+
+
+def test_agent_config_model_validate_ignores_unknown_keys():
+    agent_config = AgentConfig.model_validate(
+        {
+            "api_key": "test-openrouter",
+            "langchain_api_key": "test-langchain",
+            "langsmith_text_chat_always_trace_user_emails": [
+                "dev@example.com",
+            ],
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert agent_config.api_key == "test-openrouter"
+    assert agent_config.langchain_api_key == "test-langchain"
+    assert agent_config.langsmith_text_chat_always_trace_user_emails == [
+        "dev@example.com",
+    ]
+    assert not hasattr(agent_config, "unknown_key")
 
 
 def test_features_config_companion_memory_bootstrap_type_default():
@@ -972,6 +1012,36 @@ def test_load_config_embedding_uses_pydantic_validation():
     assert cfg.embedding.base_url == "https://embedding.example/v1"
     assert cfg.embedding.api_key == "embedding-key"
     assert cfg.embedding.model == "embedding-model"
+
+
+def test_load_config_agent_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        'agent:\n  api_key: "test-openrouter"\n  langchain_api_key: "test-langchain"\n',
+        "\n".join(
+            [
+                "agent:",
+                "  api_key: test-openrouter-model",
+                "  langchain_api_key: test-langchain-model",
+                "  langsmith_text_chat_always_trace_user_emails:",
+                "    - dev@example.com",
+                "  unknown_key: ignored",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.agent.api_key == "test-openrouter-model"
+    assert cfg.agent.langchain_api_key == "test-langchain-model"
+    assert cfg.agent.langsmith_text_chat_always_trace_user_emails == [
+        "dev@example.com",
+    ]
+    assert not hasattr(cfg.agent, "unknown_key")
 
 
 def test_load_config_gcs_uses_pydantic_validation():
