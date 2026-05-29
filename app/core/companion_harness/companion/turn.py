@@ -177,10 +177,7 @@ def _replace_leading_system_messages_multi(
 ) -> list[dict[str, Any]]:
     """Replace the first ``stack_depth`` system messages (MemoryStore stack) with ``system_messages``.
 
-    Deeper ``role: system`` slices after dialogue (e.g. ``## user-time-context`` with
-    ``User's time`` / ``Time zone``) must remain
-    in ``messages[stack_depth:]`` and are not stripped; callers pass ``stack_depth`` equal to
-    ``len(prompt_plan.system_messages)`` from the same turn's :func:`build_companion_turn_prompt_plan`.
+    In dual-LLM invocation turn, 把消息列表开头那几段「人设/记忆」系统提示换成 chat 或 tool 各自需要的版本，同时完整保留后面的聊天记录、时间上下文和当前用户输入。
     """
     return [*system_messages, *messages[stack_depth:]]
 
