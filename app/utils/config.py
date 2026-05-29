@@ -281,8 +281,9 @@ class AppConfig:
     )
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
 
-    @dataclass
-    class LimitsConfig:
+    class LimitsConfig(BaseModel):
+        model_config = ConfigDict(extra="ignore")
+
         # Maximal image size in MB, for any uploaded images.
         max_image_size_mb: int = 4
         # DEPRECATED: Use free_user_image_gen_24h_limit instead
@@ -306,7 +307,7 @@ class AppConfig:
         subscribed_user_music_gen_24h_limit: int = 6
         image_compression_threshold_size_kb: int = 500
 
-    limits: LimitsConfig = None
+    limits: LimitsConfig = field(default_factory=LimitsConfig)
 
     def __post_init__(self):
         if self.limits is None:
@@ -782,7 +783,9 @@ def load_config(path: str) -> Config:
     # Handle nested app config with limits
     app_data = data.get("app", {})
     if "limits" in app_data and isinstance(app_data["limits"], dict):
-        app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
+        app_data["limits"] = AppConfig.LimitsConfig.model_validate(
+            app_data["limits"]
+        )
     if "features" in app_data and isinstance(app_data["features"], dict):
         app_data["features"] = FeaturesConfig.model_validate(
             app_data["features"]
