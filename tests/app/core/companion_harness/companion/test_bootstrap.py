@@ -47,7 +47,7 @@ def test_build_companion_tools_interactive_excludes_memory_store_write(tmp_path:
     assert "memory_store_write_document" not in names
     assert "companion_update_prompt_slice" in names
     assert "companion_bootstrap_user_interactive_complete" in names
-    assert "companion_set_experience_profile" in names
+    assert "companion_set_experience_profile" not in names
 
 
 def test_tool_companion_set_experience_profile_updates_context(tmp_path: Path) -> None:
@@ -123,7 +123,7 @@ def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
     root = tmp_path
     st = _store(root)
     ctx = {
-        "context_mode": "bootstrap",
+        "context_mode": "unspecific",
         "post_bootstrap_context_mode": "roleplay",
         "user_id": "u1",
         "companion_id": "a1",
@@ -136,11 +136,11 @@ def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
     data = json.loads(st.read_document("context.json"))
     assert data["workspace_bootstrap_user_interactive_completed"] is True
     assert data["workspace_bootstrap_user_interactive_complete_note"] == "done"
-    assert data["context_mode"] == "roleplay"
+    assert data["context_mode"] == "unspecific"
     assert "post_bootstrap_context_mode" not in data
 
 
-def test_tool_companion_bootstrap_user_interactive_complete_fallback_intimate_without_post(
+def test_tool_companion_bootstrap_user_interactive_complete_promotes_legacy_bootstrap_mode(
     tmp_path: Path,
 ) -> None:
     root = tmp_path
@@ -159,7 +159,7 @@ def test_tool_companion_bootstrap_user_interactive_complete_fallback_intimate_wi
     )
     tool_companion_bootstrap_user_interactive_complete(st, None)
     data = json.loads(st.read_document("context.json"))
-    assert data["context_mode"] == "intimate"
+    assert data["context_mode"] == "unspecific"
     assert "post_bootstrap_context_mode" not in data
 
 

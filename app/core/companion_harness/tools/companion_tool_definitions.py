@@ -54,11 +54,7 @@ _PROMPT_SLICE_ENUM: tuple[str, ...] = tuple(
 )
 
 _SELECTABLE_EXPERIENCE_PROFILE_IDS: tuple[str, ...] = tuple(
-    sorted(
-        m.value
-        for m in ExperienceContextMode
-        if m != ExperienceContextMode.BOOTSTRAP
-    )
+    sorted(m.value for m in ExperienceContextMode)
 )
 
 assert TECHNO_CORE_RECORD_EVENT_TOOL_NAME == "techno_core_record_event"
@@ -565,6 +561,13 @@ TOOL_NAMES_NON_BOOTSTRAP_TAIL: tuple[CompanionToolName, ...] = (
 
 TOOL_NAMES_APPENDED: tuple[CompanionToolName, ...] = (
     CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
+    CompanionToolName.GOOGLE_WEB_SEARCH,
+    CompanionToolName.READ_WEB_PAGE,
+    CompanionToolName.GENERATE_IMAGE,
+    CompanionToolName.MODIFY_IMAGE,
+)
+
+TOOL_NAMES_BOOTSTRAP_APPENDED: tuple[CompanionToolName, ...] = (
     CompanionToolName.GOOGLE_WEB_SEARCH,
     CompanionToolName.READ_WEB_PAGE,
     CompanionToolName.GENERATE_IMAGE,

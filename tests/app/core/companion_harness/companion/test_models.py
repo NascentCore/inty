@@ -50,7 +50,6 @@ def test_load_prompt_bundle_reads_channels_from_memory_store(tmp_path: Path) -> 
 def test_context_meta_defaults() -> None:
     c = ContextMeta()
     assert c.context_mode == "intimate"
-    assert c.post_bootstrap_context_mode is None
     assert c.workspace_bootstrap_user_interactive_completed is True
     assert c.companion_ws_session_system_written is True
     assert c.companion_ws_interactive_kickoff_sent is True
@@ -61,22 +60,9 @@ def test_context_meta_normalizes_experience_profile_id() -> None:
     assert c.context_mode == "public"
 
 
-def test_context_meta_post_bootstrap_context_mode_rejects_bootstrap_value() -> None:
-    with pytest.raises(ValueError, match="post_bootstrap_context_mode"):
-        ContextMeta(
-            context_mode="intimate",
-            post_bootstrap_context_mode="bootstrap",
-        )
-
-
-def test_context_meta_accepts_bootstrap_context_mode_with_post_target() -> None:
-    c = ContextMeta(
-        context_mode="bootstrap",
-        post_bootstrap_context_mode="roleplay",
-    )
+def test_context_meta_bootstrap_string_is_plain_unknown_profile() -> None:
+    c = ContextMeta(context_mode="bootstrap")
     assert c.context_mode == "bootstrap"
-    assert c.post_bootstrap_context_mode == "roleplay"
-
 
 def test_transcript_for_llm_turn_short() -> None:
     loaded = [

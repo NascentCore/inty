@@ -85,6 +85,7 @@ from .companion_tool_definitions import (
     OPENAI_TOOLS_BASE_NAMES,
     REPL_DESCRIPTION_OVERRIDES,
     TOOL_NAMES_APPENDED,
+    TOOL_NAMES_BOOTSTRAP_APPENDED,
     TOOL_NAMES_NON_BOOTSTRAP_TAIL,
     TOOL_NAMES_SHARED_HEAD,
     TOOL_TAG_GENERATION,
@@ -541,9 +542,14 @@ def build_openai_repl_tools(
         names,
         description_overrides=REPL_DESCRIPTION_OVERRIDES,
     )
+    appended_names = (
+        TOOL_NAMES_BOOTSTRAP_APPENDED
+        if interactive_bootstrap_active
+        else TOOL_NAMES_APPENDED
+    )
     out.extend(
         openai_tools_for_names(
-            TOOL_NAMES_APPENDED,
+            appended_names,
             description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
         )
     )

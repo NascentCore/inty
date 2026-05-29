@@ -10,7 +10,7 @@ The subprocess sets ``INTY_E2E_RELAX_SUBSCRIPTION=1`` so guest chat limits do no
 
 Optional: ``INTY_COMPANION_WS_BOOTSTRAP_SERVER_STDERR=1`` inherits uvicorn stderr; ``INTY_COMPANION_WS_BOOTSTRAP_RECV_TIMEOUT`` overrides wait seconds.
 
-``test_ws_new_agent_first_implicit_sign_on_context_mode_bootstrap`` asserts ``meta_data.context_mode`` is ``bootstrap`` for a newly created agent on the first implicit sign-on turn.
+``test_ws_new_agent_first_implicit_sign_on_context_mode_unspecific`` asserts ``meta_data.context_mode`` is ``unspecific`` for a newly created agent on the first implicit sign-on turn.
 
 Marked ``noci`` and gated so default ``pytest`` does not hit OpenRouter.
 """
@@ -29,7 +29,7 @@ from tests.app.companion_ws_bootstrap.server import (
     postgres_tcp_reachable,
     run_inty_backend_subprocess,
 )
-from app.core.companion_harness.experience_profile import EXPERIENCE_PROFILE_ID_BOOTSTRAP
+from app.core.companion_harness.experience_profile import ExperienceContextMode
 
 from tests.app.companion_ws_bootstrap.ws_client import (
     connect_send_implicit_sign_on_and_expect_assistant,
@@ -87,10 +87,10 @@ async def test_ws_implicit_user_signed_on_returns_assistant(bootstrap_e2e_client
 @pytest.mark.noci
 @pytest.mark.slow
 @pytest.mark.asyncio
-async def test_ws_new_agent_first_implicit_sign_on_context_mode_bootstrap(
+async def test_ws_new_agent_first_implicit_sign_on_context_mode_unspecific(
     bootstrap_e2e_client,
 ):
-    """Fresh POST /ai/agents id + first WS implicit sign-on sees bootstrap context_mode in meta."""
+    """Fresh POST /ai/agents id + first WS implicit sign-on sees unspecific context_mode in meta."""
     agent_id = bootstrap_e2e_client.create_agent()
     token = bootstrap_e2e_client.token
     assert token
@@ -100,5 +100,5 @@ async def test_ws_new_agent_first_implicit_sign_on_context_mode_bootstrap(
         agent_id=agent_id,
         recv_timeout_sec=_recv_timeout_sec(),
         query_agent_id=True,
-        expected_context_mode=EXPERIENCE_PROFILE_ID_BOOTSTRAP,
+        expected_context_mode=ExperienceContextMode.UNSPECIFIC.value,
     )

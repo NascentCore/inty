@@ -1,17 +1,15 @@
 """Tool-driven MemoryStore bootstrap for first-run relationship setup.
 
-When ``context.json`` marks ``context_mode=bootstrap`` and the interactive
-bootstrap flag is incomplete, ``run_companion_user_chat_turn`` enters
-``USER_CHAT_BOOTSTRAP``.  That track uses a single in-turn tool loop so the
-assistant can update prompt slices, optionally choose a post-bootstrap
-``context_mode``, then mark setup complete before normal user-chat routing
-resumes.
+When ``context.json`` marks the interactive bootstrap flag incomplete,
+``run_companion_user_chat_turn`` enters ``USER_CHAT_BOOTSTRAP``.  That track
+uses a single in-turn tool loop so the assistant can update prompt slices and
+mark setup complete before normal user-chat routing resumes.
 
 WebSocket startup does not inject a synthetic kickoff user message.  A signed-on
 client emits the implicit sign-on greeting track, whose system stack carries the
 bootstrap procedure while the tail user line frames the user coming online.  The
 bootstrap tool path is still responsible for persisting the relationship seed
-documents and flipping ``context.json`` out of bootstrap.
+documents and flipping the bootstrap completion flag.
 """
 
 from __future__ import annotations
@@ -158,9 +156,8 @@ def tool_companion_bootstrap_user_interactive_complete(
 ) -> str:
     """Mark interactive bootstrap complete in ``context.json``.
 
-    If the current mode is ``bootstrap``, the stored
-    ``post_bootstrap_context_mode`` becomes the next ``context_mode``; otherwise
-    the current mode is preserved.  Tool callers receive a plain ``OK`` or
+    ``context_mode`` remains the real experience profile for the session;
+    bootstrap is only a completion flag. Tool callers receive a plain ``OK`` or
     ``ERROR`` status string because the LLM tool loop consumes the result text.
     """
 
@@ -175,22 +172,12 @@ def tool_companion_bootstrap_user_interactive_complete(
         return f"ERROR: invalid context.json: {exc}"
     if not isinstance(data, dict):
         return "ERROR: context.json must be a JSON object"
-    bootstrap_id = ExperienceContextMode.BOOTSTRAP.value
     try:
         cm = normalize_experience_profile_id(str(data.get("context_mode", "")))
     except ValueError:
         cm = ""
-    if cm == bootstrap_id:
-        pb_raw = data.get("post_bootstrap_context_mode")
-        next_mode = "intimate"
-        if pb_raw is not None and str(pb_raw).strip():
-            try:
-                next_mode = normalize_experience_profile_id(str(pb_raw))
-            except ValueError:
-                next_mode = "intimate"
-            if next_mode == bootstrap_id:
-                next_mode = "intimate"
-        data["context_mode"] = next_mode
+    if cm in ("", "bootstrap"):
+        data["context_mode"] = ExperienceContextMode.UNSPECIFIC.value
     if "post_bootstrap_context_mode" in data:
         del data["post_bootstrap_context_mode"]
     data["workspace_bootstrap_user_interactive_completed"] = True
@@ -217,13 +204,13 @@ def tool_companion_set_experience_profile(
     *,
     note: str,
 ) -> str:
-    """Persist a non-bootstrap ``context_mode`` in ``context.json`` with audit note."""
+    """Persist ``context_mode`` in ``context.json`` with audit note."""
 
     try:
         normalized = normalize_experience_profile_id(context_mode)
     except ValueError as exc:
         return f"ERROR: {exc}"
-    if normalized == ExperienceContextMode.BOOTSTRAP:
+    if normalized == "bootstrap":
         return (
             "ERROR: context_mode 'bootstrap' is reserved for the interactive workspace "
             "bootstrap phase (not user-selectable via companion_set_experience_profile)"

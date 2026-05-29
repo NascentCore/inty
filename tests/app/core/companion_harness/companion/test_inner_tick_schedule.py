@@ -77,7 +77,7 @@ def test_next_inner_tick_overrides_enabled_false_disables(tmp_path: Path) -> Non
     assert w >= 86400.0 * 300
 
 
-def test_next_inner_tick_bootstrap_context_mode_disables(tmp_path: Path) -> None:
+def test_next_inner_tick_incomplete_bootstrap_phase_disables(tmp_path: Path) -> None:
     sc = CompanionScope("it", "a", f"boot-{tmp_path.name}")
     store = _write_transcript_store(
         sc,
@@ -98,7 +98,7 @@ def test_next_inner_tick_bootstrap_context_mode_disables(tmp_path: Path) -> None
     )
     store.write_document(
         "context.json",
-        json.dumps({"context_mode": "bootstrap"}, ensure_ascii=False),
+        json.dumps({"context_mode": "unspecific", "workspace_bootstrap_user_interactive_completed": False}, ensure_ascii=False),
     )
     w = next_inner_tick_wait_seconds(
         store,
