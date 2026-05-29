@@ -50,7 +50,7 @@ def test_bootstrap_omits_capability_package_slices() -> None:
     assert "tool contract" not in joined
 
 
-def test_system_messages_omit_wechat_clawbot_alias_for_unknown_channel() -> None:
+def test_system_messages_omit_weixin_clawbot_alias_for_unknown_channel() -> None:
     bundle = PromptBundle(
         identity="identity",
         soul="soul",
@@ -63,10 +63,10 @@ def test_system_messages_omit_wechat_clawbot_alias_for_unknown_channel() -> None
         _system_contents(build_system_messages(bundle, ContextMeta()))
     )
 
-    assert "WeChat / ClawBot 联系人显示名" not in system_text
+    assert "Weixin / ClawBot 联系人显示名" not in system_text
 
 
-def test_system_messages_include_wechat_clawbot_alias_for_weixin_channel() -> None:
+def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> None:
     bundle = PromptBundle(
         identity="identity",
         soul="soul",
@@ -87,6 +87,6 @@ def test_system_messages_include_wechat_clawbot_alias_for_weixin_channel() -> No
         )
     )
 
-    assert "WeChat / ClawBot 联系人显示名" in system_text
-    assert "微信联系人资料页" in system_text
+    assert "Weixin / ClawBot 联系人显示名" in system_text
+    assert "Weixin 里看到的名称" in system_text
     assert "不要声称已替用户改名" in system_text

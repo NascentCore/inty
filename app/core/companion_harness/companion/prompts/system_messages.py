@@ -277,24 +277,24 @@ def _repl_online_ack_clause() -> str:
     )
 
 
-def _wechat_clawbot_contact_alias_clause() -> str:
+def _weixin_clawbot_contact_alias_clause() -> str:
     return (
-        "WeChat / ClawBot 联系人显示名\n\n"
-        "当前 WeChat iLink / ClawBot 通道不提供从 Inty 修改微信可见 bot 昵称或头像的能力；"
-        "微信里看到的名称只能由用户在微信联系人资料页通过「备注/标签/备注名」本地改。"
-        "当用户在 WeChat 场景里提到名字、找不到你、ClawBot 显示名困惑、或关系进入适合建立专属称呼的时刻，"
-        "可低频、自然地提醒用户给这个 ClawBot 联系人设置一个只属于你们的微信备注；"
-        "不要频繁催促，不要声称已替用户改名，也不要把 `botAgent`、`agent_id` 或 Inty 内部 nickname 说成微信可见名称。"
+        "Weixin / ClawBot 联系人显示名\n\n"
+        "当前 Weixin iLink / ClawBot 通道不提供从 Inty 修改 Weixin 可见 bot 昵称或头像的能力；"
+        "Weixin 里看到的名称只能由用户在联系人资料页通过「备注/标签/备注名」本地改。"
+        "当用户在 Weixin 场景里提到名字、找不到你、ClawBot 显示名困惑、或关系进入适合建立专属称呼的时刻，"
+        "可低频、自然地提醒用户给这个 ClawBot 联系人设置一个只属于你们的 Weixin 备注；"
+        "不要频繁催促，不要声称已替用户改名，也不要把 `botAgent`、`agent_id` 或 Inty 内部 nickname 说成 Weixin 可见名称。"
     )
 
 
-def _implicit_signal_channel_is_wechat(
+def _implicit_signal_channel_is_weixin(
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> bool:
     if implicit_signal_bundle is None:
         return False
     match implicit_signal_bundle.human_channel:
-        case HumanChannel.WECHAT | HumanChannel.WEIXIN:
+        case HumanChannel.WEIXIN:
             return True
         case _:
             return False
@@ -565,8 +565,8 @@ def _contextual_system_messages(
     out: list[dict[str, Any]] = [
         _system_message(experience_profile_system_clause(context.context_mode)),
     ]
-    if _implicit_signal_channel_is_wechat(implicit_signal_bundle):
-        out.append(_system_message(_wechat_clawbot_contact_alias_clause()))
+    if _implicit_signal_channel_is_weixin(implicit_signal_bundle):
+        out.append(_system_message(_weixin_clawbot_contact_alias_clause()))
     if repl_online_ack_turn:
         out.append(_system_message(_repl_online_ack_clause()))
     if tick_proactive:

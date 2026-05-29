@@ -16,7 +16,6 @@ class HumanChannel(StrEnum):
 
     UNKNOWN = "unknown"
     APP = "app"
-    WECHAT = "wechat"
     WEIXIN = "weixin"
 
 
