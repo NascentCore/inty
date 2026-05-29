@@ -243,10 +243,6 @@ class FeaturesConfig(BaseModel):
         self.companion_default_context_mode = normalize_experience_profile_id(
             self.companion_default_context_mode
         )
-        if self.companion_default_context_mode == "bootstrap":
-            raise ValueError(
-                "app.features.companion_default_context_mode cannot be 'bootstrap'"
-            )
         return self
 
 

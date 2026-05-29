@@ -138,28 +138,6 @@ def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
     assert data["context_mode"] == "unspecific"
 
 
-def test_tool_companion_bootstrap_user_interactive_complete_promotes_legacy_bootstrap_mode(
-    tmp_path: Path,
-) -> None:
-    root = tmp_path
-    st = _store(root)
-    st.write_document(
-        "context.json",
-        json.dumps(
-            {
-                "context_mode": "bootstrap",
-                "user_id": "u",
-                "workspace_bootstrap_user_interactive_completed": False,
-            },
-            ensure_ascii=False,
-        )
-        + "\n",
-    )
-    tool_companion_bootstrap_user_interactive_complete(st, None)
-    data = json.loads(st.read_document("context.json"))
-    assert data["context_mode"] == "unspecific"
-
-
 def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootstrap_mode(
     tmp_path: Path,
 ) -> None:
@@ -182,18 +160,18 @@ def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootst
     assert data["context_mode"] == "roleplay"
 
 
-def test_tool_companion_set_experience_profile_rejects_bootstrap(tmp_path: Path) -> None:
+def test_tool_companion_set_experience_profile_accepts_unknown_profile_id(tmp_path: Path) -> None:
     root = tmp_path
     st = _store(root)
     st.write_document(
         "context.json",
         json.dumps({"context_mode": "intimate", "user_id": "u"}, ensure_ascii=False) + "\n",
     )
-    err = tool_companion_set_experience_profile(
-        st, "bootstrap", note="attempt bootstrap switch"
+    ok = tool_companion_set_experience_profile(
+        st, "custom_profile", note="experiment"
     )
-    assert err.startswith("ERROR:")
-    assert json.loads(st.read_document("context.json"))["context_mode"] == "intimate"
+    assert ok.startswith("OK ")
+    assert json.loads(st.read_document("context.json"))["context_mode"] == "custom_profile"
 
 
 def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:

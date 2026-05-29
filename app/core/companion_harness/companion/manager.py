@@ -52,30 +52,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 
 
-def _migrate_interactive_bootstrap_context_if_needed(
-    store: MemoryStore,
-    parsed_ctx: dict[str, object],
-) -> None:
-    if (
-        parsed_ctx.get("workspace_bootstrap_user_interactive_completed")
-        is not False
-    ):
-        return
-    fixed = dict(parsed_ctx)
-    try:
-        cm = normalize_experience_profile_id(str(fixed.get("context_mode", "")))
-    except ValueError:
-        cm = ""
-    if cm in ("", "bootstrap"):
-        fixed["context_mode"] = ExperienceContextMode.UNSPECIFIC.value
-    if json.dumps(fixed, sort_keys=True) != json.dumps(
-        parsed_ctx, sort_keys=True
-    ):
-        store.write_document(
-            "context.json",
-            json.dumps(fixed, indent=2, ensure_ascii=False) + "\n",
-        )
-
 
 class CompanionConfig(BaseModel):
     """集中管理 companion 所有可调参数。"""
@@ -114,8 +90,6 @@ class CompanionConfig(BaseModel):
     @classmethod
     def _validate_default_context_mode(cls, v: str) -> str:
         n = normalize_experience_profile_id(v)
-        if n == "bootstrap":
-            raise ValueError("default_context_mode cannot be 'bootstrap'")
         return n
 
 
@@ -230,12 +204,6 @@ class CompanionManager:
                     + "\n"
                 )
                 store.write_document("context.json", context_json)
-            elif user_interactive and isinstance(parsed_ctx, dict):
-                _migrate_interactive_bootstrap_context_if_needed(
-                    store,
-                    parsed_ctx,
-                )
-
             ensure_minimal_documents_in_store(store)
             ensure_techno_core_seeded(store)
             ensure_living_sphere_seeded(store)

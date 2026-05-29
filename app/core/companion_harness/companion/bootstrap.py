@@ -20,10 +20,7 @@ from typing import Any, Final
 
 from loguru import logger
 
-from app.core.companion_harness.experience_profile import (
-    ExperienceContextMode,
-    normalize_experience_profile_id,
-)
+from app.core.companion_harness.experience_profile import normalize_experience_profile_id
 
 from app.core.companion_harness.memory.memory_store import (
     MemoryStore,
@@ -172,12 +169,6 @@ def tool_companion_bootstrap_user_interactive_complete(
         return f"ERROR: invalid context.json: {exc}"
     if not isinstance(data, dict):
         return "ERROR: context.json must be a JSON object"
-    try:
-        cm = normalize_experience_profile_id(str(data.get("context_mode", "")))
-    except ValueError:
-        cm = ""
-    if cm in ("", "bootstrap"):
-        data["context_mode"] = ExperienceContextMode.UNSPECIFIC.value
     data["workspace_bootstrap_user_interactive_completed"] = True
     if note is not None and str(note).strip():
         data["workspace_bootstrap_user_interactive_complete_note"] = str(
@@ -208,12 +199,6 @@ def tool_companion_set_experience_profile(
         normalized = normalize_experience_profile_id(context_mode)
     except ValueError as exc:
         return f"ERROR: {exc}"
-    if normalized == "bootstrap":
-        return (
-            "ERROR: context_mode 'bootstrap' is reserved for the interactive workspace "
-            "bootstrap phase (not user-selectable via companion_set_experience_profile)"
-        )
-
     rel_ctx = "context.json"
     st = store
     raw_body = st.read_document_if_exists(rel_ctx)
