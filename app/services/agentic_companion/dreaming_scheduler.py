@@ -94,9 +94,7 @@ class CompanionDreamingScheduler:
                 CompanionMemoryDocumentVersion.companion_id,
                 CompanionMemoryDocumentVersion.chat_id,
             )
-            .where(
-                CompanionMemoryDocumentVersion.document_kind == "transcript"
-            )
+            .where(CompanionMemoryDocumentVersion.document_kind == "transcript")
             .distinct()
             .order_by(
                 CompanionMemoryDocumentVersion.user_id,

@@ -209,9 +209,7 @@ def _async_dual_llm_system_message_variants(
             bundle, context, store
         )
     else:
-        tool_system_msgs = build_system_messages_for_tool_track(
-            bundle, context
-        )
+        tool_system_msgs = build_system_messages_for_tool_track(bundle, context)
     chat_system_msgs = build_system_messages_for_chat_track(
         bundle,
         context,
@@ -395,6 +393,7 @@ async def _run_bootstrap_track_sync_tool_loop(
         skip_final_transcript_assistant_row,
         last_interim_assistant_msg_uuid,
     )
+
 
 async def _await_tool_background_idle_if_configured(
     tool_bg_idle_event: threading.Event | None,
