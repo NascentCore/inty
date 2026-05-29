@@ -64,6 +64,62 @@ def test_weixin_bridge_reply_for_plain_text_forwards() -> None:
     assert reply is None
 
 
+def test_weixin_bridge_reply_for_voice_only_inbound() -> None:
+    reply = weixin_bridge_reply_for_inbound(
+        text="",
+        media_types=("audio/silk",),
+    )
+    assert reply is not None
+    assert "voice" in reply.lower()
+
+
+def test_weixin_bridge_reply_for_voice_transcription_forwards() -> None:
+    reply = weixin_bridge_reply_for_inbound(
+        text="hello there",
+        media_types=(),
+    )
+    assert reply is None
+
+
+@pytest.mark.asyncio
+async def test_handle_inbound_voice_only_does_not_call_companion() -> None:
+    class _RecordingPresence:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        async def handle_user_text(self, user_text: str) -> str:
+            self.calls.append(user_text)
+            return "should not be used"
+
+    binding = WeixinChannelBinding(
+        user_id="user-1",
+        agent_id="agent-1",
+        inty_api_base_url="http://127.0.0.1:8001",
+        inty_jwt="jwt",
+        weixin_account_id="wx-acct",
+        weixin_token="token",
+        weixin_base_url="https://ilinkai.weixin.qq.com",
+    )
+    session = WeixinChannelSession(
+        binding=binding,
+        on_binding_peer_updated=None,
+        on_ilink_session_expired=_noop_ilink_session_expired,
+    )
+    presence = _RecordingPresence()
+    session._presence = presence
+    inbound = WeixinInboundMessage(
+        account_id="wx-acct",
+        peer_id="peer-42",
+        text="",
+        media_paths=("/tmp/weixin-voice.silk",),
+        media_types=("audio/silk",),
+    )
+    reply = await session._handle_inbound(inbound)
+    assert presence.calls == []
+    assert reply is not None
+    assert "voice" in reply.lower()
+
+
 @pytest.mark.asyncio
 async def test_handle_inbound_image_only_does_not_call_companion() -> None:
     class _RecordingPresence:
