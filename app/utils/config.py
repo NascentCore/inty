@@ -312,14 +312,17 @@ class AppConfig(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def apply_nested_defaults(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            if data.get("limits") is None:
-                data["limits"] = cls.LimitsConfig()
-            if data.get("features") is None:
-                data["features"] = FeaturesConfig()
-            if data.get("api_endpoints") is None:
-                data["api_endpoints"] = APIEndpointsConfig()
-        return data
+        if not isinstance(data, dict):
+            return data
+
+        normalized = dict(data)
+        if normalized.get("limits") is None:
+            normalized["limits"] = cls.LimitsConfig()
+        if normalized.get("features") is None:
+            normalized["features"] = FeaturesConfig()
+        if normalized.get("api_endpoints") is None:
+            normalized["api_endpoints"] = APIEndpointsConfig()
+        return normalized
 
     @property
     def name_for_openrouter(self) -> str:
