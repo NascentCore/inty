@@ -1599,6 +1599,13 @@ async def chat_completions_websocket(
                 response_data = response.model_dump(exclude_none=True)
             response_data["agent_id"] = websocket_request.agent_id
             await outbound_queue.put(response_data)
+    except asyncio.CancelledError:
+        logger.debug(
+            "chat_ws session cancelled ws_conn_id={} user={}",
+            ws_conn_id,
+            current_user.id,
+        )
+        return
     except WebSocketDisconnect:
         return
     finally:
