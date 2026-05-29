@@ -1,4 +1,22 @@
-"""Sleeping-state dreaming checkpoint and transcript slice selection."""
+"""Sleeping-state dreaming for turning recent chat into memory.
+
+Dreaming is Inty's sleeping-state memory activity. When the user has not sent
+messages for more than two hours, the background dreaming scheduler reviews the
+chat since the previous dream and settles it into applicable MemoryDocs.
+
+If there has never been a previous dream, Inty only looks back over the last
+24 hours so the first dream does not reopen an unbounded history.
+
+Dreaming is separate from inner tick: inner tick is for awake internal activity,
+while dreaming is for asleep background consolidation. Dreaming does not send a
+message to the user and does not alter the original visible chat history.
+
+The dream settles chat into documents such as the raw diary, day summary,
+long-term memory, user understanding, communication style, and durable
+relationship/personality boundaries. After a dream succeeds, Inty records a
+checkpoint so future LLM calls do not carry raw chat before that checkpoint;
+the next conversation continues from the consolidated memories instead.
+"""
 
 from __future__ import annotations
 
