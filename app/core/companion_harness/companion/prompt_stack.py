@@ -127,6 +127,8 @@ def companion_tools_for_turn(
     return tools_for_turn
 
 
+# TODO(structural-simplicity): Dissolve this function, and let caller directly call the
+# track-denominated system messsages building API.
 def companion_system_messages_for_track(
     *,
     store: MemoryStore,
