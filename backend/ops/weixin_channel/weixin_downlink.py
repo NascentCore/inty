@@ -2,6 +2,11 @@
 
 Weixin only forwards user-visible assistant text today, matching
 ``WeixinChannelSession._handle_proactive_push`` (no images, tool_bg meta, or bootstrap rounds).
+
+Each ``send_assistant_text`` / ``deliver`` call passes one plain-text string to
+``WeixinTransport.send_text``. Hermes later decides whether that string appears
+as one or several WeChat bubbles. See ``transport`` and
+``config.yaml`` ``weixin_channel.split_multiline_messages``.
 """
 
 from __future__ import annotations
