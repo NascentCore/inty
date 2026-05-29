@@ -97,7 +97,7 @@ from .models import (
     transcript_relative_path_for_turn_persistence,
 )
 from .prompt_stack import (
-    output_format_prompt_slice_for_runtime_channel,
+    append_runtime_output_format_system_message,
     refresh_companion_turn_prompt_stack,
 )
 from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
@@ -207,23 +207,28 @@ def _async_dual_llm_system_message_variants(
         inner_tick_turn
         and route_inner_activity == InnerTickActivity.PROACTIVE_CHAT
     )
-    output_format_prompt_slice = output_format_prompt_slice_for_runtime_channel(
-        bundle=bundle,
-        runtime_channel=runtime_context.channel,
-    )
     if inner_tick_turn and not tick_proactive:
         tool_system_msgs = build_system_messages_for_inner_tick_maintenance(
-            bundle, context, store, output_format_prompt_slice
+            bundle, context, store
         )
     else:
         tool_system_msgs = build_system_messages_for_tool_track(
-            bundle, context, output_format_prompt_slice
+            bundle, context
         )
     chat_system_msgs = build_system_messages_for_chat_track(
         bundle,
         context,
         memory_bootstrap_type,
-        output_format_prompt_slice,
+    )
+    tool_system_msgs = append_runtime_output_format_system_message(
+        system_messages=tool_system_msgs,
+        bundle=bundle,
+        runtime_context=runtime_context,
+    )
+    chat_system_msgs = append_runtime_output_format_system_message(
+        system_messages=chat_system_msgs,
+        bundle=bundle,
+        runtime_context=runtime_context,
     )
     return tool_system_msgs, chat_system_msgs
 

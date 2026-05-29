@@ -68,6 +68,25 @@ def output_format_prompt_slice_for_runtime_channel(
             return ""
 
 
+def append_runtime_output_format_system_message(
+    *,
+    system_messages: list[dict[str, Any]],
+    bundle: PromptBundle,
+    runtime_context: TurnRuntimeContext,
+) -> list[dict[str, Any]]:
+    """Append channel output-format prompt selected from runtime context."""
+    output_format = output_format_prompt_slice_for_runtime_channel(
+        bundle=bundle,
+        runtime_channel=runtime_context.channel,
+    )
+    if output_format.strip():
+        return [
+            *system_messages,
+            {"role": "system", "content": output_format.strip()},
+        ]
+    return system_messages
+
+
 def companion_tools_for_turn(
     *,
     track: CompanionTurnTrack,
@@ -110,24 +129,23 @@ def companion_system_messages_for_track(
     memory_bootstrap_type: str,
     track: CompanionTurnTrack,
     route_mode: TurnRouteMode,
-    output_format_prompt_slice: str = "",
+    runtime_context: TurnRuntimeContext,
 ) -> list[dict[str, Any]]:
     """Pick the scenario wrapper from ``CompanionTurnTrack`` (see ``system_messages`` docstring)."""
     match track:
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
-            return build_system_messages_for_implicit_sign_on_greeting(
+            out = build_system_messages_for_implicit_sign_on_greeting(
                 bundle,
                 context,
                 memory_bootstrap_type,
-                output_format_prompt_slice,
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
-            return build_system_messages_for_inner_tick_proactive_chat(
-                bundle, context, output_format_prompt_slice
+            out = build_system_messages_for_inner_tick_proactive_chat(
+                bundle, context
             )
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
-            return build_system_messages_for_inner_tick_scheduled(
-                bundle, context, output_format_prompt_slice
+            out = build_system_messages_for_inner_tick_scheduled(
+                bundle, context
             )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             if (
@@ -138,13 +156,11 @@ def companion_system_messages_for_track(
                     "inner_tick_maintenance track requires ASYNC route, got "
                     f"{route_mode.value}"
                 )
-            return build_system_messages_for_inner_tick_maintenance(
-                bundle, context, store, output_format_prompt_slice
+            out = build_system_messages_for_inner_tick_maintenance(
+                bundle, context, store
             )
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            return build_system_messages_for_bootstrap_track(
-                bundle, context, output_format_prompt_slice
-            )
+            out = build_system_messages_for_bootstrap_track(bundle, context)
         case CompanionTurnTrack.USER_CHAT:
             if (
                 route_mode
@@ -154,12 +170,16 @@ def companion_system_messages_for_track(
                     "user_chat track requires ASYNC route, got "
                     f"{route_mode.value}"
                 )
-            return build_system_messages_for_chat_track(
+            out = build_system_messages_for_chat_track(
                 bundle,
                 context,
                 memory_bootstrap_type,
-                output_format_prompt_slice,
             )
+    return append_runtime_output_format_system_message(
+        system_messages=out,
+        bundle=bundle,
+        runtime_context=runtime_context,
+    )
 
 
 def companion_turn_tools_and_system_messages(
@@ -204,10 +224,7 @@ def companion_turn_tools_and_system_messages(
         memory_bootstrap_type=memory_bootstrap_type,
         track=track,
         route_mode=route_mode,
-        output_format_prompt_slice=output_format_prompt_slice_for_runtime_channel(
-            bundle=bundle,
-            runtime_channel=runtime_context.channel,
-        ),
+        runtime_context=runtime_context,
     )
     return tools_for_turn, system_messages, route_mode
 
@@ -257,39 +274,23 @@ def refresh_companion_turn_prompt_stack(
                 refreshed = build_system_messages_for_bootstrap_track(
                     bundle,
                     context,
-                    output_format_prompt_slice_for_runtime_channel(
-                        bundle=bundle,
-                        runtime_channel=runtime_context.channel,
-                    ),
                 )
             else:
                 refreshed = build_system_messages_for_chat_track(
                     bundle,
                     context,
                     memory_bootstrap_type,
-                    output_format_prompt_slice_for_runtime_channel(
-                        bundle=bundle,
-                        runtime_channel=runtime_context.channel,
-                    ),
                 )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             refreshed = build_system_messages_for_inner_tick_maintenance(
                 bundle,
                 context,
                 store,
-                output_format_prompt_slice_for_runtime_channel(
-                    bundle=bundle,
-                    runtime_channel=runtime_context.channel,
-                ),
             )
         case CompanionTurnTrack.USER_CHAT:
             refreshed = build_system_messages_for_tool_track(
                 bundle,
                 context,
-                output_format_prompt_slice_for_runtime_channel(
-                    bundle=bundle,
-                    runtime_channel=runtime_context.channel,
-                ),
             )
         case (
             CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
@@ -300,5 +301,10 @@ def refresh_companion_turn_prompt_stack(
                 "refresh_companion_turn_prompt_stack unsupported track="
                 f"{track.value}"
             )
+    refreshed = append_runtime_output_format_system_message(
+        system_messages=refreshed,
+        bundle=bundle,
+        runtime_context=runtime_context,
+    )
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn
