@@ -1,4 +1,7 @@
-"""Companion tools: OpenAI schemas in this module; execution lives in companion_tool_runtime."""
+"""Companion tools: OpenAI schemas in this module; execution lives in companion_tool_runtime.
+
+TODO(cleanup): This file can be removed, names referenced here can be replaced by sources.
+"""
 
 from __future__ import annotations
 
