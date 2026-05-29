@@ -155,6 +155,10 @@ class MemoryStoreScopePaths:
     def schedule_queue_json(self) -> str:
         return f"{self.state_file_prefix}_schedule_tasks.json"
 
+    @property
+    def maintenance_tick_state_json(self) -> str:
+        return f"{self.state_file_prefix}_maintenance_tick_state.json"
+
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()
 

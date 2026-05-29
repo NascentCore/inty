@@ -181,6 +181,13 @@ async def _preload_database_connections():
         await cache_service.start_cleanup_task()
         logger.info("缓存服务启动完成")
 
+        # 5. 启动离线 maintenance heartbeat（无 presence 时持续演化 companion 记忆）
+        from app.services.agentic_companion.offline_maintenance_scheduler import (
+            start_offline_maintenance_scheduler,
+        )
+
+        await start_offline_maintenance_scheduler()
+
         logger.info("数据库连接池初始化完成")
 
     except Exception as e:
@@ -266,6 +273,13 @@ async def shutdown_event():
 
         cache_service.stop_cleanup_task()
         logger.info("缓存服务已停止")
+
+        # 停止离线 maintenance heartbeat
+        from app.services.agentic_companion.offline_maintenance_scheduler import (
+            stop_offline_maintenance_scheduler,
+        )
+
+        await stop_offline_maintenance_scheduler()
 
     except Exception as e:
         logger.error(f"应用关闭过程中出错: {str(e)}")

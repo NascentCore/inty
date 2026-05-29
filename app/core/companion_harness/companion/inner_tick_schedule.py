@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass
+from datetime import datetime
 
 from app.core.companion_harness.experience_profile.context_mode import (
     experience_profile_allows_maintenance_inner_tick,
@@ -79,6 +80,13 @@ def inner_tick_min_gap_seconds() -> float:
     )
 
 
+def inner_tick_min_transcript_msgs() -> int:
+    return _env_int(
+        "INTY_V2_PROTO_INNER_TICK_MIN_TRANSCRIPT_MSGS",
+        _DEFAULT_MIN_TRANSCRIPT_MSGS,
+    )
+
+
 def _maintenance_transcript_messages(store: MemoryStore) -> list[ChatMessage]:
     """``transcript.jsonl`` rows with trailing presence user lines stripped (maintenance gate view)."""
     return transcript_without_trailing_presence_signals(
@@ -135,10 +143,7 @@ def next_inner_tick_wait_seconds(
     if overrides is not None and overrides.min_transcript_msgs is not None:
         min_lines = overrides.min_transcript_msgs
     else:
-        min_lines = _env_int(
-            "INTY_V2_PROTO_INNER_TICK_MIN_TRANSCRIPT_MSGS",
-            _DEFAULT_MIN_TRANSCRIPT_MSGS,
-        )
+        min_lines = inner_tick_min_transcript_msgs()
 
     poll = inner_tick_poll_seconds()
     if overrides is not None and overrides.poll_seconds is not None:
@@ -162,3 +167,47 @@ def next_inner_tick_wait_seconds(
     if remain <= 0.0:
         return 0.0
     return min(remain, poll)
+
+
+def maintenance_due_offline(
+    store: MemoryStore,
+    *,
+    now_utc: datetime,
+    last_fired_at_utc: datetime | None,
+    last_transcript_line_count: int | None,
+    min_gap_seconds: float,
+    min_transcript_msgs: int,
+) -> bool:
+    """Wall-clock maintenance gate for the presence-less offline scheduler.
+
+    Mirrors :func:`next_inner_tick_wait_seconds` gating (experience profile,
+    transcript growth, assistant-tail, min lines, min gap) but throttles on a
+    persisted UTC ``last_fired_at_utc`` instead of the in-process monotonic clock.
+    """
+    assert now_utc.tzinfo is not None, "now_utc must be tz-aware UTC"
+    assert min_gap_seconds >= 0.0, "min_gap_seconds must be non-negative"
+    assert min_transcript_msgs >= 1, "min_transcript_msgs must be positive"
+
+    if not experience_profile_allows_maintenance_inner_tick(
+        load_context_meta(store=store).context_mode
+    ):
+        return False
+
+    msgs = _maintenance_transcript_messages(store)
+    line_count = len(msgs)
+    if (
+        last_transcript_line_count is not None
+        and line_count <= last_transcript_line_count
+    ):
+        return False
+    if line_count < min_transcript_msgs:
+        return False
+    if msgs[-1].role != "assistant":
+        return False
+
+    if last_fired_at_utc is None:
+        return True
+    assert (
+        last_fired_at_utc.tzinfo is not None
+    ), "last_fired_at_utc must be tz-aware"
+    return (now_utc - last_fired_at_utc).total_seconds() >= min_gap_seconds

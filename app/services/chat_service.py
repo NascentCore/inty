@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.companion_harness.companion.scope import CompanionScope
 from app.models.agent import Agent
 from app.models.chat import Chat
 from app.models.chat_settings import ChatSettings
@@ -36,6 +37,25 @@ def generate_session_id(chat_id: str) -> str:
     Ensure the same session_id is used when creating chat and chatting
     """
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
+
+
+async def list_active_companion_scopes(
+    db: AsyncSession,
+) -> list[CompanionScope]:
+    """All active chats as ``(user, companion=agent, chat)`` scopes for the offline scan.
+
+    ``companion_id`` equals ``agent_id``; the offline maintenance scheduler iterates
+    these and skips ones not yet initialized in MemoryStore or with a live presence.
+    """
+    result = await db.execute(
+        select(Chat.user_id, Chat.agent_id, Chat.id).where(
+            Chat.is_active.is_(True)
+        )
+    )
+    return [
+        CompanionScope(str(user_id), str(agent_id), str(chat_id))
+        for user_id, agent_id, chat_id in result.all()
+    ]
 
 
 async def get_chat(db: AsyncSession, chat_id: str) -> Optional[Chat]:

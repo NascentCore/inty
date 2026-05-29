@@ -19,7 +19,12 @@ from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
     BootstrapInterimOutputSink,
 )
+from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
+from app.services.agentic_companion.active_presence_registry import (
+    clear_present,
+    mark_present,
+)
 from app.services.agentic_companion.downlink import (
     ChannelDownlink,
     bootstrap_interim_downlink,
@@ -85,6 +90,7 @@ class Coordinator:
     _implicit_greeting_turn_task: asyncio.Task[Any] | None = field(
         default=None, repr=False
     )
+    _present_scope_key: str | None = field(default=None, repr=False)
 
     @classmethod
     def for_current_loop(cls) -> Coordinator:
@@ -141,6 +147,36 @@ class Coordinator:
             agent_id=agent_id,
             chat_id=chat_id,
         )
+        self._arm_presence_from_coords()
+
+    def _arm_presence_from_coords(self) -> None:
+        """Mark this scope present so the offline scheduler defers to this live presence."""
+        coords = self.snapshot_inner_tick_coords()
+        if coords is None:
+            self.disarm_presence()
+            return
+        scope_key = CompanionScope(
+            str(coords["user_id"]),
+            str(coords["agent_id"]),
+            str(coords["chat_id"]),
+        ).registry_key()
+        if scope_key == self._present_scope_key:
+            return
+        if self._present_scope_key is not None:
+            clear_present(self._present_scope_key)
+        mark_present(scope_key)
+        self._present_scope_key = scope_key
+
+    def disarm_presence(self) -> None:
+        """Drop this presence from the registry (idempotent)."""
+        if self._present_scope_key is not None:
+            clear_present(self._present_scope_key)
+            self._present_scope_key = None
+
+    def sign_out(self) -> None:
+        """Disarm presence and clear inner-tick coords (proactive/maintenance pause)."""
+        self.disarm_presence()
+        self.inner_tick_context.clear()
 
     def snapshot_inner_tick_coords(self) -> dict[str, Any] | None:
         user_id = str(self.inner_tick_context.get("user_id") or "").strip()
@@ -270,7 +306,7 @@ class Session:
         )
 
     def sign_out(self) -> None:
-        self.coordinator.inner_tick_context.clear()
+        self.coordinator.sign_out()
 
     async def cancel_implicit_greeting_if_running(self) -> bool:
         return await self.coordinator.cancel_implicit_greeting_turn_if_running()
@@ -331,4 +367,5 @@ class Session:
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
         self._inner_tick_task = None
+        self.coordinator.disarm_presence()
         await self.cancel_implicit_greeting_if_running()

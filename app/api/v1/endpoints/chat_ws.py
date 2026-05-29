@@ -475,7 +475,7 @@ async def _try_handle_ws_user_signed_out_frame(
         uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
         # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
         await inflight_turn_tracker.cancel_all()
-        companion_ws.inner_tick_context.clear()
+        companion_ws.sign_out()
         companion_chat_service.append_companion_ws_runtime_event(
             user_id=current_user.id,
             agent_id=agent_id,

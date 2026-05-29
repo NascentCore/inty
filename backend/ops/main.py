@@ -126,6 +126,11 @@ async def startup_event():
         logger.info("Ops Agent 初始化完成")
         await restore_persisted_sessions()
         logger.info("WeChat demo bridge restore scheduled")
+        from app.services.agentic_companion.offline_maintenance_scheduler import (
+            start_offline_maintenance_scheduler,
+        )
+
+        await start_offline_maintenance_scheduler()
     except Exception as e:
         logger.error(f"Ops 应用启动过程中出错: {str(e)}")
 
@@ -186,6 +191,11 @@ async def shutdown_event():
         from app.services.cache_service import cache_service
 
         cache_service.stop_cleanup_task()
+        from app.services.agentic_companion.offline_maintenance_scheduler import (
+            stop_offline_maintenance_scheduler,
+        )
+
+        await stop_offline_maintenance_scheduler()
     except Exception as e:
         logger.error(f"应用关闭过程中出错: {str(e)}")
 
