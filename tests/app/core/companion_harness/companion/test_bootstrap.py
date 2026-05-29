@@ -47,7 +47,7 @@ def test_build_companion_tools_interactive_excludes_memory_store_write(tmp_path:
     assert "memory_store_write_document" not in names
     assert "companion_update_prompt_slice" in names
     assert "companion_bootstrap_user_interactive_complete" in names
-    assert "companion_set_experience_profile" in names
+    assert "companion_set_experience_profile" not in names
 
 
 def test_tool_companion_set_experience_profile_updates_context(tmp_path: Path) -> None:
