@@ -15,7 +15,6 @@ _WEIXIN_HTML = """<!DOCTYPE html>
     .hint { font-size: 0.85rem; color: #444; margin: 0.75rem 0 0; line-height: 1.45; max-width: 40rem; }
     #status { margin-top: 1rem; white-space: pre-wrap; background: #f4f4f4; padding: 0.75rem; }
     #qr img { max-width: 16rem; margin-top: 0.5rem; }
-    #qr a { word-break: break-all; }
   </style>
 </head>
 <body>
@@ -23,7 +22,6 @@ _WEIXIN_HTML = """<!DOCTYPE html>
   <p>Scan WeChat QR to register or sign in; a companion agent is created after confirm.</p>
   <p class="hint">
     扫码后，如果微信提示二维码过期，请刷新页面重新生成二维码。
-    Legacy manual demo: <a href="/wechat-demo">/wechat-demo</a>.
   </p>
   <div id="qr"></div>
   <pre id="status">正在获取二维码…</pre>
@@ -40,8 +38,7 @@ _WEIXIN_HTML = """<!DOCTYPE html>
       const imgUrl = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data="
         + encodeURIComponent(url);
       el.innerHTML = '<p>请使用微信扫码：</p>'
-        + '<img alt="QR" src="' + imgUrl + '" />'
-        + '<p><a href="' + url + '" target="_blank" rel="noopener">' + url + '</a></p>';
+        + '<img alt="QR" src="' + imgUrl + '" />';
     }
 
     async function beginSession() {
@@ -63,12 +60,7 @@ _WEIXIN_HTML = """<!DOCTYPE html>
         }
         const s = body.data;
         if (s.qrcode_url) renderQr(s.qrcode_url);
-        const lines = [
-          "session_id: " + s.session_id,
-          "phase: " + s.phase,
-          "error: " + (s.error || "-"),
-        ];
-        setStatus(lines.join("\\n") + "\\n\\n扫码成功后请在微信中与 Inty 对话。");
+        setStatus("扫码成功后请在微信中与 Inty 对话。");
       } catch (err) {
         setStatus("请求失败: " + String(err));
       }

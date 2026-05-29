@@ -11,7 +11,17 @@ from typing import Any, List, Optional, Tuple
 from fastapi import HTTPException
 from loguru import logger
 from rapidfuzz import fuzz
-from sqlalchemy import Integer, and_, case, desc, func, or_, select, text
+from sqlalchemy import (
+    Integer,
+    and_,
+    case,
+    desc,
+    func,
+    or_,
+    select,
+    text,
+    update as sqlalchemy_update,
+)
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -102,14 +112,15 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: Agent) -> None:
 
 
 async def generate_agent_opening_voice(
-    agent: Agent, db: AsyncSession
+    agent: Agent, db: AsyncSession, expected_version: int
 ) -> Optional[str]:
     """
     为Agent生成开场白语音并返回音频URL
     """
+    agent_id = agent.id
     try:
         if not agent.opening or not agent.opening.strip():
-            logger.debug(f"Agent {agent.id} 没有开场白文本，跳过语音生成")
+            logger.debug(f"Agent {agent_id} 没有开场白文本，跳过语音生成")
             return None
 
         opening = agent.opening
@@ -131,7 +142,7 @@ async def generate_agent_opening_voice(
                 return None
 
         logger.debug(
-            f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '性别默认值'})"
+            f"Agent {agent_id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '性别默认值'})"
         )
 
         voice_service = VoiceService()
@@ -147,20 +158,39 @@ async def generate_agent_opening_voice(
         )
 
         if not voice_result:
-            logger.warning(f"Agent {agent.id} 开场白语音生成失败，未返回URL")
+            logger.warning(f"Agent {agent_id} 开场白语音生成失败，未返回URL")
             return None
 
         audio_url, audio_duration = voice_result
-        # 更新 agent 的 opening_audio_url字段
-        agent.opening_audio_url = audio_url
+        # opening_audio_url 是派生产物；后台写入不能推进业务版本，避免与用户更新冲突。
+        result = await db.execute(
+            sqlalchemy_update(Agent)
+            .where(
+                and_(
+                    Agent.id == agent_id,
+                    Agent.deleted_at.is_(None),
+                    Agent.version == expected_version,
+                )
+            )
+            .values(opening_audio_url=audio_url)
+        )
+        if result.rowcount != 1:
+            await db.rollback()
+            logger.debug(
+                "Skip outdated opening voice write: agent_id={}, expected_version={}",
+                agent_id,
+                expected_version,
+            )
+            return None
         await db.commit()
         logger.debug(
-            f"成功为Agent {agent.id} 生成开场白语音: {audio_url}, 时长: {audio_duration:.2f}秒"
+            f"成功为Agent {agent_id} 生成开场白语音: {audio_url}, 时长: {audio_duration:.2f}秒"
         )
         return audio_url
 
     except Exception as e:
-        logger.error(f"为Agent {agent.id} 生成开场白语音失败: {str(e)}")
+        await db.rollback()
+        logger.error(f"为Agent {agent_id} 生成开场白语音失败: {str(e)}")
         return None
 
 
@@ -222,7 +252,9 @@ async def _generate_agent_opening_voice_in_background(
             )
             return
 
-        await generate_agent_opening_voice(db_agent, background_db)
+        await generate_agent_opening_voice(
+            db_agent, background_db, expected_version
+        )
 
 
 @deprecated("app 不在显示 readable_id 字段，请使用 id 字段")
@@ -1626,23 +1658,26 @@ async def update_agent(
     except HTTPException:
         raise
     except IntegrityError as e:
+        agent_id = db_agent.id if db_agent else "unknown"
         await db.rollback()
         logger.error(
-            f"数据完整性错误 - 更新角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
+            f"数据完整性错误 - 更新角色 {agent_id}: {str(e)}"
         )
         raise HTTPException(
             status_code=400, detail="Data integrity constraint violated"
         )
     except SQLAlchemyError as e:
+        agent_id = db_agent.id if db_agent else "unknown"
         await db.rollback()
         logger.error(
-            f"数据库错误 - 更新角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
+            f"数据库错误 - 更新角色 {agent_id}: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
+        agent_id = db_agent.id if db_agent else "unknown"
         await db.rollback()
         logger.error(
-            f"未知错误 - 更新角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
+            f"未知错误 - 更新角色 {agent_id}: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Internal server error")
 

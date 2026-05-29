@@ -25,18 +25,22 @@ def _to_jsonable(obj):
         try:
             return model_dump(mode="json")
         except TypeError:
+            log.debug(
+                "model_dump(mode='json') unsupported; retrying without mode",
+                exc_info=True,
+            )
             try:
                 return model_dump()
-            except Exception:
-                pass
-        except Exception:
-            pass
+            except Exception as exc:
+                log.debug("model_dump fallback failed: %s", exc, exc_info=True)
+        except Exception as exc:
+            log.debug("model_dump(mode='json') failed: %s", exc, exc_info=True)
     dict_fn = getattr(obj, "dict", None)
     if dict_fn is not None and callable(dict_fn):
         try:
             return dict_fn()
-        except Exception:
-            pass
+        except Exception as exc:
+            log.debug("dict() serialization fallback failed: %s", exc, exc_info=True)
     if isinstance(obj, dict):
         return {k: _to_jsonable(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
