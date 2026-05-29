@@ -93,6 +93,10 @@ from .companion_tool_definitions import (
 )
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
+from .user_feedback import tool_record_user_feedback
+from app.models.agentic_companion.user_feedback import (
+    RECORD_USER_FEEDBACK_TOOL_NAME,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
@@ -618,6 +622,8 @@ async def _dispatch(
         return tool_techno_core_record_event(store, arguments)
     if name == LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME:
         return tool_living_sphere_record_update(store, arguments)
+    if name == RECORD_USER_FEEDBACK_TOOL_NAME:
+        return tool_record_user_feedback(store, arguments)
     if name == "schedule_task":
         raw_exec_time = arguments.get("exec_time_utc")
         raw_task_text = arguments.get("task_text")

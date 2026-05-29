@@ -25,6 +25,10 @@ from app.core.companion_harness.experience_profile import ExperienceContextMode
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
+from app.models.agentic_companion.user_feedback import (
+    RECORD_USER_FEEDBACK_TOOL_NAME,
+    UserFeedbackCategory,
+)
 from living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
@@ -63,6 +67,11 @@ _SELECTABLE_EXPERIENCE_PROFILE_IDS: tuple[str, ...] = tuple(
 
 assert TECHNO_CORE_RECORD_EVENT_TOOL_NAME == "techno_core_record_event"
 assert LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME == "living_sphere_record_update"
+assert RECORD_USER_FEEDBACK_TOOL_NAME == "record_user_feedback"
+
+_USER_FEEDBACK_CATEGORY_ENUM: tuple[str, ...] = tuple(
+    m.value for m in UserFeedbackCategory
+)
 
 
 class CompanionToolName(StrEnum):
@@ -80,6 +89,7 @@ class CompanionToolName(StrEnum):
     MEMORY_STORE_WRITE_DOCUMENT = "memory_store_write_document"
     MODIFY_IMAGE = "modify_image"
     READ_WEB_PAGE = "read_web_page"
+    RECORD_USER_FEEDBACK = "record_user_feedback"
     SCHEDULE_TASK = "schedule_task"
     TECHNO_CORE_RECORD_EVENT = "techno_core_record_event"
     UPDATE_USER_MD = "update_user_md"
@@ -526,6 +536,47 @@ UPDATE_USER_MD = LlmFunctionTool(
     extra_function_keys={},
 )
 
+RECORD_USER_FEEDBACK_TOOL = LlmFunctionTool(
+    name=CompanionToolName.RECORD_USER_FEEDBACK,
+    description=(
+        "Record feedback the user has about your behavior into the database. "
+        "This is a maintenance-time reflection, not a reply to the user: review the recent "
+        "conversation and infer feedback that emerges across multiple messages (do not wait for one "
+        "explicit complaint). Examples: the user repeatedly says replies are too long or tells you "
+        "'you are talking too much'; the user keeps steering away from a tone or persona; the user "
+        "shows recurring dissatisfaction with answer quality. Summarize the inferred feedback in "
+        "feedback_text, pick the closest category, and when identifiable include the user's verbatim "
+        "words in user_quote and the companion reply it is about in offending_assistant_text so the "
+        "case can be reproduced. Call once per distinct, clearly-evidenced piece of feedback."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "category": {
+                "type": "string",
+                "enum": list(_USER_FEEDBACK_CATEGORY_ENUM),
+                "description": "Closest feedback bucket for the companion's behavior.",
+            },
+            "feedback_text": {
+                "type": "string",
+                "description": "Concise summary of the feedback inferred across the conversation.",
+            },
+            "user_quote": {
+                "type": "string",
+                "description": "Optional verbatim user words from the window evidencing the feedback.",
+            },
+            "offending_assistant_text": {
+                "type": "string",
+                "description": "Optional companion reply the feedback is about.",
+            },
+        },
+        "required": ["category", "feedback_text"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
 COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     SET_BOOTSTRAP_COMPLETE_TOOL,
     SET_EXPERIENCE_PROFILE_TOOL,
@@ -539,6 +590,7 @@ COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     MEMORY_STORE_WRITE_DOCUMENT_TOOL,
     MODIFY_IMAGE_TOOL,
     READ_WEB_PAGE_TOOL,
+    RECORD_USER_FEEDBACK_TOOL,
     SCHEDULE_TASK_TOOL,
     TECHNO_CORE_RECORD_EVENT_TOOL,
     UPDATE_USER_MD,
@@ -591,6 +643,7 @@ INNER_TICK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.MEMORY_STORE_LIST_PATHS,
     CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
     CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
+    CompanionToolName.RECORD_USER_FEEDBACK,
 )
 
 _EMPTY_DESCRIPTION_OVERRIDES: dict[CompanionToolName, str] = {}
