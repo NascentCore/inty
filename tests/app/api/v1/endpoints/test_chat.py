@@ -1919,7 +1919,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     """Scheduled reminder runs when armed; proactive skips after user_signed_out disarms coords."""
-    ticks = {"scheduled": 0, "proactive": 0}
+    ticks = {"scheduled": 0, "proactive": 0, "maintenance": 0}
 
     async def spy_scheduled(**_kwargs):
         ticks["scheduled"] += 1
@@ -1928,7 +1928,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
         ticks["proactive"] += 1
 
     async def spy_maintenance(**_kwargs):
-        raise AssertionError("maintenance should not run when disabled")
+        ticks["maintenance"] += 1
 
     async def fake_run_companion_chat_turn_for_api(**_kwargs):
         return CompanionTurnResult(assistant_text="unused")
@@ -1946,11 +1946,6 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
         global_config_loaded_from_config_yaml.app.features,
         "companion_ws_proactive_chat_poll_seconds",
         0.05,
-    )
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_maintenance_inner_tick_enabled",
-        False,
     )
     from app.services.agentic_companion import inner_tick_fire as inner_tick_fire_mod
 

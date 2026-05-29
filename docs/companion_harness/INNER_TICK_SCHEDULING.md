@@ -83,7 +83,7 @@ REPL 上两条 `inner-tick proactive-chat` 时间戳 **不是** 单一配置项�
 | `poll_seconds` | 与 proactive 相同 `companion_ws_proactive_chat_poll_seconds` | 60s（用于 transcript 未就绪时的阻塞睡眠上限） |
 | `last_inner_fire_monotonic` | `CompanionWebSocketCoordinator.last_maintenance_inner_tick_monotonic()` | 无则立即可试 |
 
-另需满足：feature `companion_ws_maintenance_inner_tick_enabled`、订阅日 chat 限额、无 pending maintenance 前台、chat_id 与坐标一致等；**`context.json` 的 `context_mode` 为 `bootstrap` 时不调度 maintenance**（`next_inner_tick_wait_seconds` 返回极大等待）；日志见 RUNBOOK。
+另需满足：订阅日 chat 限额、无 pending maintenance 前台、chat_id 与坐标一致等；maintenance inner-tick **永远开启**（无 enable/disable flag）；**`context.json` 的 `context_mode` 为 `bootstrap` 时不调度 maintenance**（`next_inner_tick_wait_seconds` 返回极大等待）；日志见 RUNBOOK。
 
 维护轮写入 **`transcript_inner_tick.jsonl`**；与 proactive rhythm 无共用公式。
 
@@ -106,8 +106,7 @@ Inner-tick 的 LangSmith parent run 在 `inputs` / `extra.metadata` 含 **`trans
 | 字段 | 默认 | 作用 |
 | --- | --- | --- |
 | `companion_ws_proactive_chat_base_idle_seconds` | 30 | proactive rhythm 的 `base_idle` 与 `2×` 上限 |
-| `companion_ws_proactive_chat_poll_seconds` | 60 | inner-tick worker 周期；maintenance 调度中的 poll 上限 |
-| `companion_ws_maintenance_inner_tick_enabled` | true | 是否在 worker 中尝试 maintenance |
-| `companion_ws_maintenance_inner_tick_min_gap_seconds` | 120 | 单连接两次成功 maintenance 最小间隔 |
+| `companion_ws_proactive_chat_poll_seconds` | 60 | inner-tick worker 周期；maintenance 调度中的 poll 上限；离线 maintenance scheduler 扫描周期 |
+| `companion_ws_maintenance_inner_tick_min_gap_seconds` | 120 | 单连接两次成功 maintenance 最小间隔（离线 scheduler 复用为 wall-clock min gap） |
 
 校验逻辑见 `app/utils/config.py` 的 `validate_config`。
