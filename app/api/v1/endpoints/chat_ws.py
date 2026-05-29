@@ -1,4 +1,4 @@
-"""Companion chat WebSocket: ``/api/v1/chat/ws`` and ``/api/v1/chat/ws/verify``.
+"""Companion chat WebSocket: ``/api/v1/chat/ws``.
 
 Only the production companion harness path (companion_harness, technocore, livingsphere).
 HTTP chat completions and image/music generation stay in ``chat.py``.
@@ -101,7 +101,6 @@ from app.services.voice_service import (
     VoiceService,
     voice_service as default_voice_service,
 )
-from app.utils.openai_client import get_chat_openai_client
 from app.utils.timing import Timer, log_time
 from app.schemas.user import User as UserSchema
 
@@ -180,44 +179,6 @@ async def _shutdown_chat_ws_outbound_pump(pump_task: asyncio.Task) -> None:
             "chat_ws_outbound_pump failed (e.g. WebSocket send_json); "
             "distinct from normal CancelledError teardown"
         )
-
-
-async def _verify_ws_simple_llm_reply(
-    *,
-    agent_row: dict[str, Any],
-    user_text: str,
-    model_name: str,
-) -> str:
-    """
-    Single chat-completions call (system + user only). No Agent instance, no history, no tools.
-    Used by ``/ws/verify`` only.
-    """
-    name = (agent_row.get("name") or "Assistant").strip() or "Assistant"
-    snippet = (
-        agent_row.get("personality") or agent_row.get("intro") or ""
-    ).strip()
-    if snippet:
-        system = f"You are {name}. Character notes: {snippet[:1200]}"
-    else:
-        system = f"You are {name}. Reply concisely in the same language as the user's message."
-
-    client = get_chat_openai_client()
-
-    def _sync_call() -> str:
-        resp = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_text},
-            ],
-            max_tokens=2048,
-            temperature=0.7,
-        )
-        if not resp.choices:
-            return ""
-        return (resp.choices[0].message.content or "").strip()
-
-    return await asyncio.to_thread(_sync_call)
 
 
 def _chat_request_with_merged_ws_time_context(
@@ -350,14 +311,14 @@ async def _try_handle_ws_user_signed_on_frame(
     *,
     db: AsyncSession,
     current_user: UserSchema,
-    companion_ws: CompanionWebSocketCoordinator | None,
-    inflight_turn_tracker: ChatWsInflightTurnTracker | None,
+    companion_ws: CompanionWebSocketCoordinator,
+    inflight_turn_tracker: ChatWsInflightTurnTracker,
     ws_conn_id: str,
-    outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
-    tc_box: list[Optional[dict]] | None = None,
-    subscription_svc: SubscriptionService | None = None,
-    voice_svc: VoiceService | None = None,
-    app_version_code: Optional[int] = None,
+    outbound_queue: asyncio.Queue[WsOutboundPayload],
+    tc_box: list[Optional[dict]],
+    subscription_svc: SubscriptionService,
+    voice_svc: VoiceService,
+    app_version_code: Optional[int],
 ) -> bool:
     """
     Consume ``{"type":"user_signed_on","agent_id":...}``.
@@ -365,19 +326,9 @@ async def _try_handle_ws_user_signed_on_frame(
     Product intent: arms inner-tick WebSocket coordinates (proactive chat, maintenance inner-tick,
     and due ``schedule_queue`` reminders share this registration). Requires ``message_id`` (RFC4122);
     missing/invalid ids fail before ack; greeting turn is scheduled before ``user_signed_on_ack``.
-
-    ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
     if not isinstance(data, dict) or data.get("type") != "user_signed_on":
         return False
-    if companion_ws is None:
-        await websocket.send_json(
-            ChatWsUserSignedOnAckFrame(
-                ok=False,
-                reason="not_supported",
-            ).model_dump(exclude_none=True)
-        )
-        return True
     raw_mid_field = data.get("message_id")
     if raw_mid_field is None or not str(raw_mid_field).strip():
         await websocket.send_json(
@@ -427,49 +378,33 @@ async def _try_handle_ws_user_signed_on_frame(
             agent_id=agent_id,
             chat_id=chat.id,
         )
-        greeting_scheduled = False
-        if (
-            outbound_queue is None
-            or tc_box is None
-            or subscription_svc is None
-            or voice_svc is None
-        ):
-            logger.error(
-                "chat_ws user_signed_on greeting missing ws deps ws_conn_id={} agent_id={}",
-                ws_conn_id,
-                agent_id,
-            )
-        else:
-            assert inflight_turn_tracker is not None
-            greeting_task = inflight_turn_tracker.spawn(
-                _enqueue_companion_greeting_ws_turn_after_user_signed_on(
-                    db=db,
-                    agent_id=agent_id,
-                    preset_message_id=preset_mid,
-                    current_user=current_user,
-                    app_version_code=app_version_code,
-                    subscription_svc=subscription_svc,
-                    voice_svc=voice_svc,
-                    companion_ws=companion_ws,
-                    tc_box=tc_box,
-                    outbound_queue=outbound_queue,
-                ),
-                name=f"chat_ws_user_signed_on_greeting_{ws_conn_id}",
-            )
-            companion_ws.register_implicit_greeting_turn(greeting_task)
-            greeting_scheduled = True
+        greeting_task = inflight_turn_tracker.spawn(
+            _enqueue_companion_greeting_ws_turn_after_user_signed_on(
+                db=db,
+                agent_id=agent_id,
+                preset_message_id=preset_mid,
+                current_user=current_user,
+                app_version_code=app_version_code,
+                subscription_svc=subscription_svc,
+                voice_svc=voice_svc,
+                companion_ws=companion_ws,
+                tc_box=tc_box,
+                outbound_queue=outbound_queue,
+            ),
+            name=f"chat_ws_user_signed_on_greeting_{ws_conn_id}",
+        )
+        companion_ws.register_implicit_greeting_turn(greeting_task)
         await websocket.send_json(
             ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
         )
         logger.info(
             "chat_ws user_signed_on armed inner_tick coords ws_conn_id={} user={} agent={} "
-            "chat_id={} received_message_uuid={} greeting_scheduled={}",
+            "chat_id={} received_message_uuid={}",
             ws_conn_id,
             current_user.id,
             agent_id,
             chat.id,
             preset_mid,
-            greeting_scheduled,
         )
     except Exception:
         logger.exception(
@@ -492,8 +427,8 @@ async def _try_handle_ws_user_signed_out_frame(
     *,
     db: AsyncSession,
     current_user: UserSchema,
-    companion_ws: CompanionWebSocketCoordinator | None,
-    inflight_turn_tracker: ChatWsInflightTurnTracker | None,
+    companion_ws: CompanionWebSocketCoordinator,
+    inflight_turn_tracker: ChatWsInflightTurnTracker,
     subscription_svc: SubscriptionService,
     ws_conn_id: str,
 ) -> bool:
@@ -504,19 +439,9 @@ async def _try_handle_ws_user_signed_out_frame(
     coords (pauses proactive/maintenance until the next ``user_signed_on``), appends a
     ``user_signed_out`` row to companion ``.companion_runtime_events.jsonl`` (MemoryStore), then
     sends ``user_signed_out_ack``. Does not alter transcript or companion scope persistence.
-
-    ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
     if not isinstance(data, dict) or data.get("type") != "user_signed_out":
         return False
-    if companion_ws is None:
-        await websocket.send_json(
-            ChatWsUserSignedOutAckFrame(
-                ok=False,
-                reason="not_supported",
-            ).model_dump(exclude_none=True)
-        )
-        return True
     try:
         frame = ChatWsUserSignedOutFrame.model_validate(data)
     except ValidationError:
@@ -548,9 +473,8 @@ async def _try_handle_ws_user_signed_out_frame(
         )
         recv_msg_uuid = (frame.message_id or "").strip()
         uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
-        if inflight_turn_tracker is not None:
-            # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
-            await inflight_turn_tracker.cancel_all()
+        # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
+        await inflight_turn_tracker.cancel_all()
         companion_ws.inner_tick_context.clear()
         companion_chat_service.append_companion_ws_runtime_event(
             user_id=current_user.id,
@@ -597,7 +521,7 @@ async def _try_handle_ws_ws_conn_dropped_frame(
     *,
     db: AsyncSession,
     current_user: UserSchema,
-    companion_ws: CompanionWebSocketCoordinator | None,
+    companion_ws: CompanionWebSocketCoordinator,
     subscription_svc: SubscriptionService,
     ws_conn_id: str,
 ) -> bool:
@@ -606,20 +530,9 @@ async def _try_handle_ws_ws_conn_dropped_frame(
 
     Appends a ``ws_conn_dropped`` row to companion ``.companion_runtime_events.jsonl`` (MemoryStore).
     Does not alter inner-tick coords or transcript.
-
-    ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
     """
     if not isinstance(data, dict) or data.get("type") != "ws_conn_dropped":
         return False
-    if companion_ws is None:
-        await websocket.send_json(
-            {
-                "type": "ws_conn_dropped_ack",
-                "ok": False,
-                "reason": "not_supported",
-            }
-        )
-        return True
     try:
         frame = ChatWsWsConnDroppedFrame.model_validate(data)
     except ValidationError:
@@ -1703,221 +1616,4 @@ async def chat_completions_websocket(
         # TODO(ws-disconnect-lifecycle): do not cancel on disconnect; finish turns and mark chat_history undelivered.
         await inflight_turn_tracker.cancel_all()
         ChatWsInflightShutdownRegistry.unregister(inflight_turn_tracker)
-        await _shutdown_chat_ws_outbound_pump(pump_task)
-
-
-@router.websocket("/ws/verify")
-async def chat_completions_websocket_verify(
-    websocket: WebSocket,
-    db: AsyncSession = Depends(deps.get_async_db),
-    subscription_svc: SubscriptionService = Depends(
-        deps.get_subscription_service
-    ),
-):
-    """
-    Legacy smoke endpoint: same **outbound queue + pump** as ``/ws`` (FIFO business JSON).
-
-    Per chat frame: **one** ``chat.completions`` call with system + user messages only (via
-    ``get_chat_openai_client``). No ``Agent`` runtime, no companion pipeline, no chat_history
-    persistence. Use to validate transport, queue behavior, and minimal LLM connectivity.
-    """
-    await websocket.accept()
-    ws_conn_id = _resolve_ws_conn_id_from_websocket(websocket)
-    current_user = await _get_current_user_from_websocket(websocket, db)
-    if current_user is None:
-        await websocket.close(code=4001, reason="Unauthorized")
-        return
-
-    current_user = await _resolve_assumed_chat_websocket_user(
-        operator=current_user,
-        assume_user_id=websocket.query_params.get("assume_user_id"),
-        db=db,
-    )
-
-    logger.info(
-        "chat_ws_verify session_open ws_conn_id={} user={} path={}",
-        ws_conn_id,
-        current_user.id,
-        websocket.url.path,
-    )
-
-    outbound_queue: asyncio.Queue[WsOutboundPayload] = asyncio.Queue()
-    pump_task = asyncio.create_task(
-        chat_ws_outbound_pump(websocket, outbound_queue),
-        name="chat_ws_verify_outbound_pump",
-    )
-    tc_box: list[Optional[dict]] = [None]
-    try:
-        while True:
-            try:
-                raw = await asyncio.wait_for(
-                    websocket.receive_text(),
-                    timeout=_chat_ws_idle_timeout_seconds(),
-                )
-            except asyncio.TimeoutError:
-                await websocket.close()
-                return
-            except WebSocketDisconnect:
-                return
-            except RuntimeError as exc:
-                if _is_ws_receive_text_not_connected_runtime_error(exc):
-                    return
-                raise
-            try:
-                data = json.loads(raw)
-            except json.JSONDecodeError:
-                data = None
-            if await _try_handle_ws_user_signed_on_frame(
-                websocket,
-                data,
-                db=db,
-                current_user=current_user,
-                companion_ws=None,
-                inflight_turn_tracker=None,
-                ws_conn_id=ws_conn_id,
-            ):
-                continue
-            if await _try_handle_ws_user_signed_out_frame(
-                websocket,
-                data,
-                db=db,
-                current_user=current_user,
-                companion_ws=None,
-                inflight_turn_tracker=None,
-                subscription_svc=subscription_svc,
-                ws_conn_id=ws_conn_id,
-            ):
-                continue
-            if await _try_handle_ws_ws_conn_dropped_frame(
-                websocket,
-                data,
-                db=db,
-                current_user=current_user,
-                companion_ws=None,
-                subscription_svc=subscription_svc,
-                ws_conn_id=ws_conn_id,
-            ):
-                continue
-            if await _handle_chat_websocket_control_json(
-                websocket, data, tc_box
-            ):
-                continue
-            if not isinstance(data, dict):
-                await outbound_queue.put(
-                    ChatWebSocketQueuedPlainError(
-                        code=400,
-                        message="Chat frame must be a JSON object",
-                        data=None,
-                        agent_id="",
-                    ).model_dump()
-                )
-                continue
-            try:
-                websocket_request = ChatWebSocketRequest.model_validate(data)
-            except ValidationError as exc:
-                await outbound_queue.put(
-                    ChatWebSocketQueuedPlainError(
-                        code=422,
-                        message="Invalid chat WebSocket request",
-                        data=json.loads(exc.json()),
-                        agent_id=str(data.get("agent_id") or ""),
-                    ).model_dump()
-                )
-                continue
-            agent_id = websocket_request.agent_id
-            request = _chat_request_with_merged_ws_time_context(
-                websocket_request.request,
-                tc_box[0],
-            )
-
-            user_messages = [
-                msg for msg in request.messages if msg.role == "user"
-            ]
-            if not user_messages:
-                await outbound_queue.put(
-                    ChatWebSocketQueuedPlainError(
-                        code=400,
-                        message="No user message found",
-                        data=None,
-                        agent_id=agent_id,
-                    ).model_dump()
-                )
-                continue
-
-            last_user_text = user_messages[-1].extract_text_content()
-
-            agent_row = await agent_service.get_agent_for_chat(
-                db, agent_id=agent_id
-            )
-            if not agent_row:
-                await outbound_queue.put(
-                    ChatWebSocketQueuedPlainError(
-                        code=404,
-                        message="Agent not found",
-                        data=None,
-                        agent_id=agent_id,
-                    ).model_dump()
-                )
-                continue
-
-            subscription = await subscription_svc.get_user_current_subscription(
-                db, current_user.id
-            )
-            is_subscribed = bool(subscription)
-            model_override = select_chat_model(
-                user=current_user, is_subscribed=is_subscribed
-            )
-
-            effective_local_id = (
-                request.local_id or request.message_id or ""
-            ).strip() or None
-
-            try:
-                response_text = await _verify_ws_simple_llm_reply(
-                    agent_row=agent_row,
-                    user_text=last_user_text or "",
-                    model_name=model_override.id_on_provider,
-                )
-            except Exception as e:
-                logger.exception("ws/verify simple chat.completions failed")
-                await outbound_queue.put(
-                    ChatWebSocketQueuedPlainError(
-                        code=500,
-                        message=str(e),
-                        data=None,
-                        agent_id=agent_id,
-                    ).model_dump()
-                )
-                continue
-
-            response_text_content, response_content_parts = (
-                _normalize_chat_response_content(response_text)
-            )
-            data = _build_chat_response(
-                response_text_content,
-                response_content_parts,
-                last_user_text or "",
-                latest_message_info=None,
-                audio_url=None,
-                request=request,
-                source_imate_id=request.target_imate_id,
-                user_message_id=None,
-                subscription_actions=[],
-                client_local_id=effective_local_id,
-            )
-            response = APIResponse.success(data=data)
-            response_data = response.model_dump(exclude_none=True)
-            response_data["agent_id"] = agent_id
-            response_data["status_line"] = (
-                await _agent_status_line_for_chat_header(db, agent_id)
-            )
-            await outbound_queue.put(response_data)
-    except WebSocketDisconnect:
-        return
-    finally:
-        logger.info(
-            "chat_ws_verify session_end ws_conn_id={} user={}",
-            ws_conn_id,
-            current_user.id,
-        )
         await _shutdown_chat_ws_outbound_pump(pump_task)
