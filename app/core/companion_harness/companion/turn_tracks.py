@@ -1,4 +1,7 @@
-"""Per-track entry aliases; implementations live in ``turn``."""
+"""Per-track entry aliases; implementations live in ``turn``.
+
+TODO(cleanup): Remove this, callers import the source modules directly.
+"""
 
 from __future__ import annotations
 
