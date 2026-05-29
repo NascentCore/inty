@@ -80,6 +80,7 @@ def test_normalize_experience_profile_id_empty_raises() -> None:
 
 def test_experience_profile_injects_private_memory_covers_known_ids() -> None:
     assert experience_profile_injects_private_memory("intimate") is True
+    assert experience_profile_injects_private_memory("remote_lover") is True
     assert experience_profile_injects_private_memory("unspecific") is True
     assert experience_profile_injects_private_memory("emotional_companion") is True
     assert experience_profile_injects_private_memory("bootstrap") is True
