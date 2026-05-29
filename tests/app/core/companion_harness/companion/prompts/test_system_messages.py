@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 from app.core.companion_harness.companion.models import (
     OUTPUT_FORMAT_WECHAT_WEIXIN_MD,
     ContextMeta,
@@ -7,8 +9,16 @@ from app.core.companion_harness.companion.models import (
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
+    build_system_messages_for_bootstrap_track,
+    build_system_messages_for_chat_track,
+    build_system_messages_for_implicit_sign_on_greeting,
+    build_system_messages_for_inner_tick_maintenance,
+    build_system_messages_for_inner_tick_proactive_chat,
+    build_system_messages_for_inner_tick_scheduled,
+    build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.companion.prompt_stack import (
+    append_runtime_output_format_system_message,
     output_format_prompt_slice_for_runtime_channel,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
@@ -16,6 +26,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
+    TurnRuntimeContext,
 )
 
 
@@ -40,7 +51,7 @@ def test_doctrine_system_prefix_excludes_subconscious_prompt() -> None:
     assert all("SUBCONSCIOUS" not in str(message["content"]) for message in messages)
 
 
-def test_wechat_weixin_output_format_slice_is_in_output_layer() -> None:
+def test_wechat_weixin_output_format_slice_is_appended_by_runtime_decorator() -> None:
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
@@ -57,7 +68,14 @@ def test_wechat_weixin_output_format_slice_is_in_output_layer() -> None:
         enable_tools=True,
         async_foreground_chat_stack=True,
         include_significance_perception_slice=True,
-        output_format_prompt_slice=bundle.output_format_wechat_weixin_md,
+    )
+    messages = append_runtime_output_format_system_message(
+        system_messages=messages,
+        bundle=bundle,
+        runtime_context=TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+            implicit_signal_bundle=None,
+        ),
     )
     contents = [str(message["content"]) for message in messages]
     first_lines = [content.split("\n")[0] for content in contents]
@@ -69,7 +87,7 @@ def test_wechat_weixin_output_format_slice_is_in_output_layer() -> None:
         "## Dual-LLM chat branch: structured reply envelope"
     )
 
-    assert mirrored_tools_index < wechat_index < envelope_index
+    assert mirrored_tools_index < envelope_index < wechat_index
     assert contents[wechat_index].split("\n") == [
         "# Output format: WeChat / Weixin DM",
         "",
@@ -82,6 +100,24 @@ def test_wechat_weixin_output_format_slice_is_in_output_layer() -> None:
         "- If the model response must use a structured envelope, apply this format only inside user-facing natural-language fields such as `user_facing_reply`; keep the envelope itself valid.",
     ]
     assert CompanionRuntimeChannel.WECHAT_WEIXIN.value == "wechat_weixin"
+
+
+def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() -> None:
+    builders = [
+        build_system_messages,
+        build_system_messages_for_bootstrap_track,
+        build_system_messages_for_chat_track,
+        build_system_messages_for_tool_track,
+        build_system_messages_for_inner_tick_maintenance,
+        build_system_messages_for_inner_tick_proactive_chat,
+        build_system_messages_for_inner_tick_scheduled,
+        build_system_messages_for_implicit_sign_on_greeting,
+    ]
+
+    for builder in builders:
+        assert "output_format_prompt_slice" not in inspect.signature(
+            builder
+        ).parameters
 
 
 def test_output_format_slice_resolves_from_runtime_channel() -> None:
