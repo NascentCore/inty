@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.schemas.chat import UserTimeContext
 
+
 class ImplicitSignalBundle(BaseModel):
     """Versioned bundle for telemetry injected alongside user turns (not user-authored text)."""
 

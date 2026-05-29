@@ -1660,25 +1660,19 @@ async def update_agent(
     except IntegrityError as e:
         agent_id = db_agent.id if db_agent else "unknown"
         await db.rollback()
-        logger.error(
-            f"数据完整性错误 - 更新角色 {agent_id}: {str(e)}"
-        )
+        logger.error(f"数据完整性错误 - 更新角色 {agent_id}: {str(e)}")
         raise HTTPException(
             status_code=400, detail="Data integrity constraint violated"
         )
     except SQLAlchemyError as e:
         agent_id = db_agent.id if db_agent else "unknown"
         await db.rollback()
-        logger.error(
-            f"数据库错误 - 更新角色 {agent_id}: {str(e)}"
-        )
+        logger.error(f"数据库错误 - 更新角色 {agent_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         agent_id = db_agent.id if db_agent else "unknown"
         await db.rollback()
-        logger.error(
-            f"未知错误 - 更新角色 {agent_id}: {str(e)}"
-        )
+        logger.error(f"未知错误 - 更新角色 {agent_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

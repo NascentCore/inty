@@ -769,7 +769,9 @@ class Config:
     surprise_snap: SurpriseSnapConfig = field(
         default_factory=lambda: SurpriseSnapConfig()
     )
-    weixin_channel: WeixinChannelConfig = field(default_factory=WeixinChannelConfig)
+    weixin_channel: WeixinChannelConfig = field(
+        default_factory=WeixinChannelConfig
+    )
 
 
 # TODO(INTY_CONFIG_YAML): add resolve_inty_config_yaml_path() — INTY_CONFIG_YAML or config.yaml;
