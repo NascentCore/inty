@@ -25,6 +25,10 @@ from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_scheduled_turn,
     run_companion_user_chat_turn,
 )
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 
@@ -40,7 +44,10 @@ def _minimal_turn_kwargs() -> dict[str, object]:
         "memory_bootstrap_type": "NONE",
         "background_output_sink": None,
         "preset_user_msg_uuid": None,
-        "implicit_signal_bundle": None,
+        "runtime_context": TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=None,
+        ),
         "langsmith_parent_run_enabled": False,
         "tool_bg_idle_event": None,
     }
@@ -184,7 +191,10 @@ async def test_user_chat_turn_plumbs_bootstrap_interim_output_sink(tmp_path) -> 
 async def test_user_chat_track_rejects_implicit_sign_on_bundle() -> None:
     bundle = ImplicitSignalBundle(user_signed_on=True)
     kwargs = _minimal_turn_kwargs()
-    kwargs["implicit_signal_bundle"] = bundle
+    kwargs["runtime_context"] = TurnRuntimeContext(
+        channel=CompanionRuntimeChannel.APP,
+        implicit_signal_bundle=bundle,
+    )
     with pytest.raises(ValueError, match="implicit sign-on"):
         await run_companion_user_chat_turn("hello", **kwargs)
 
@@ -203,14 +213,22 @@ async def test_implicit_sign_on_track() -> None:
         return_value=stub,
     ) as run_turn_mock:
         kwargs = _minimal_turn_kwargs()
-        kwargs["implicit_signal_bundle"] = bundle
+        kwargs["runtime_context"] = TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=bundle,
+        )
         await run_companion_implicit_sign_on_greeting_turn("hi", **kwargs)
     assert run_turn_mock.await_args is not None
     assert (
         run_turn_mock.await_args.kwargs["track"]
         == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
     )
-    assert run_turn_mock.await_args.kwargs["implicit_signal_bundle"] is bundle
+    assert (
+        run_turn_mock.await_args.kwargs[
+            "runtime_context"
+        ].implicit_signal_bundle
+        is bundle
+    )
 
 
 @pytest.mark.asyncio

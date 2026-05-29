@@ -28,6 +28,10 @@ from app.core.companion_harness.companion.schedule_queue import (
 from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_scheduled_turn
 )
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.companion.user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
 )
@@ -97,7 +101,10 @@ def test_run_turn_inner_tick_scheduled_semantics(
             memory_bootstrap_type="NONE",
             background_output_sink=None,
             preset_user_msg_uuid=None,
-            implicit_signal_bundle=None,
+            runtime_context=TurnRuntimeContext(
+                channel=CompanionRuntimeChannel.APP,
+                implicit_signal_bundle=None,
+            ),
             langsmith_parent_run_enabled=False,
             tool_bg_idle_event=None,
         )

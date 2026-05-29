@@ -27,7 +27,6 @@ from typing import Any, Callable, Protocol
 from loguru import logger
 from openai import BadRequestError
 
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel
 
@@ -65,6 +64,10 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.companion.prompt_stack import (
     refresh_companion_turn_prompt_stack,
+)
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.runtime_events import (
     append_runtime_event,
@@ -538,7 +541,10 @@ async def _run_background_tool_loop(
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+        channel=CompanionRuntimeChannel.APP,
+        implicit_signal_bundle=None,
+    ),
     force_tools_first_round: bool = True,
 ) -> None:
     scope_registry_key = memory_store.scope.registry_key()
@@ -712,8 +718,8 @@ async def _run_background_tool_loop(
                 inner_tick_turn=inner_tick_turn,
                 inner_tick_activity=inner_tick_activity,
                 messages=messages_with_tool_results,
-                implicit_signal_bundle=implicit_signal_bundle,
                 track=companion_turn_track,
+                runtime_context=runtime_context,
             )
 
         try:
@@ -943,7 +949,10 @@ def start_tool_background_job(
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+        channel=CompanionRuntimeChannel.APP,
+        implicit_signal_bundle=None,
+    ),
     tool_bg_idle_event: threading.Event | None = None,
     force_tools_first_round: bool = True,
 ) -> None:
@@ -990,7 +999,7 @@ def start_tool_background_job(
                     memory_bootstrap_type=memory_bootstrap_type,
                     inner_tick_turn=inner_tick_turn,
                     inner_tick_activity=inner_tick_activity,
-                    implicit_signal_bundle=implicit_signal_bundle,
+                    runtime_context=runtime_context,
                     companion_turn_track=companion_turn_track,
                     force_tools_first_round=force_tools_first_round,
                 )

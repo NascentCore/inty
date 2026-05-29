@@ -23,6 +23,10 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import start_tool_background_job
@@ -431,7 +435,10 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         background_output_sink=None,
         preset_user_msg_uuid=None,
-        implicit_signal_bundle=None,
+        runtime_context=TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=None,
+        ),
         langsmith_parent_run_enabled=None,
         tool_bg_idle_event=_idle_tool_bg(),
     )

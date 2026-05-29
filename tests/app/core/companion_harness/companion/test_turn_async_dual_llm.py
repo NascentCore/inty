@@ -15,6 +15,10 @@ import pytest
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.models import InnerTickActivity
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
@@ -38,7 +42,10 @@ def _default_turn_kwargs(**overrides: object) -> dict[str, object]:
         "memory_bootstrap_type": CompanionMemoryBootstrapType.NONE.value,
         "background_output_sink": None,
         "preset_user_msg_uuid": None,
-        "implicit_signal_bundle": None,
+        "runtime_context": TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=None,
+        ),
         "langsmith_parent_run_enabled": None,
         "tool_bg_idle_event": None,
     }
@@ -198,7 +205,7 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
     job = bg_jobs[0]
     assert job["inner_tick_turn"] is True
     assert job["inner_tick_activity"] == InnerTickActivity.MAINTENANCE
-    assert job["implicit_signal_bundle"] is None
+    assert job["runtime_context"].implicit_signal_bundle is None
     assert job["main_event_loop"] is loop
     expected = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
     got = {t["function"]["name"] for t in job["tools"]}
