@@ -10,8 +10,11 @@ from app.core.companion_harness.companion.prompt_stack import (
     companion_system_messages_for_track,
 )
 from app.core.companion_harness.companion.models import CompanionTurnTrack
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.companion.turn_routes import TurnRouteMode
-from app.schemas.implicit_signals import HumanChannel, ImplicitSignalBundle
 
 
 def _system_contents(messages: list[dict[str, object]]) -> list[str]:
@@ -89,8 +92,9 @@ def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> No
             memory_bootstrap_type="none",
             track=CompanionTurnTrack.USER_CHAT,
             route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
-            implicit_signal_bundle=ImplicitSignalBundle(
-                human_channel=HumanChannel.WEIXIN
+            runtime_context=TurnRuntimeContext(
+                channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+                implicit_signal_bundle=None,
             ),
         )
     )

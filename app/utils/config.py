@@ -723,6 +723,16 @@ class TTSConfig(BaseModel):
     enable_gemini_tts_then_elevenlabs_voice_changer_for_imate: bool = False
 
 
+class WeixinChannelConfig(BaseModel):
+    """Ops WeChat demo bridge behavior flags."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    # True: Hermes legacy per_line — top-level line breaks become separate WeChat DMs.
+    # False (default): compact — single bubble unless short chatty multiline heuristic fires.
+    split_multiline_messages: bool = False
+
+
 @dataclass
 class Config:
     app: AppConfig
@@ -752,6 +762,7 @@ class Config:
     surprise_snap: SurpriseSnapConfig = field(
         default_factory=lambda: SurpriseSnapConfig()
     )
+    weixin_channel: WeixinChannelConfig = field(default_factory=WeixinChannelConfig)
 
 
 # TODO(INTY_CONFIG_YAML): add resolve_inty_config_yaml_path() — INTY_CONFIG_YAML or config.yaml;
@@ -834,6 +845,9 @@ def load_config(path: str) -> Config:
         phone_call=PhoneCallConfig(**(data.get("phone_call") or {})),
         tts=TTSConfig.model_validate(data.get("tts") or {}),
         surprise_snap=_parse_surprise_snap_config(data),
+        weixin_channel=WeixinChannelConfig.model_validate(
+            data.get("weixin_channel") or {}
+        ),
     )
 
 

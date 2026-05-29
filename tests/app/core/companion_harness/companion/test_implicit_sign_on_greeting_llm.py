@@ -24,6 +24,10 @@ from app.core.companion_harness.companion.turn import (
 from app.core.companion_harness.companion.websocket_coordinator import (
     CompanionWebSocketCoordinator,
 )
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
@@ -140,7 +144,10 @@ def _implicit_greeting_kwargs(
     return {
         "store": store,
         "llm_client": client,
-        "implicit_signal_bundle": bundle,
+        "runtime_context": TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=bundle,
+        ),
         "defer_memory_update": True,
         "memory_config": None,
         "transcript_compaction": None,

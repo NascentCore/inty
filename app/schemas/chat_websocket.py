@@ -1,4 +1,4 @@
-"""JSON wire protocol for ``/api/v1/chat/ws`` and ``/api/v1/chat/ws/verify``.
+"""JSON wire protocol for ``/api/v1/chat/ws``.
 
 This package defines Pydantic models for WebSocket text frames (JSON objects) exchanged
 between clients and the Inty chat backend. It is the authoritative spec for client

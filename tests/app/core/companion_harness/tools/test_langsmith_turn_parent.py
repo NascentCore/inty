@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -22,10 +23,15 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import start_tool_background_job
-from app.core.companion_harness.companion.turn import run_turn
+from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
+from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
@@ -417,12 +423,23 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
     )
 
     client = _FakeAsyncDualLLMClient()
-    await run_turn(
+    await run_companion_user_chat_turn(
         "hello async dual langsmith",
         store=store,
         llm_client=client,  # type: ignore[arg-type]
         defer_memory_update=True,
         memory_config=None,
+        transcript_compaction=None,
+        transcript_llm_window_max_messages=None,
+        repository_only_store_text=False,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        background_output_sink=None,
+        preset_user_msg_uuid=None,
+        runtime_context=TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.APP,
+            implicit_signal_bundle=None,
+        ),
+        langsmith_parent_run_enabled=None,
         tool_bg_idle_event=_idle_tool_bg(),
     )
 

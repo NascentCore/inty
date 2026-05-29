@@ -23,14 +23,25 @@ SSRF (separate concern): when the adapter downloads media from a URL supplied in
 message content, it rejects private/internal targets so a peer cannot trick the
 gateway into probing ``localhost`` or RFC1918 addresses.
 
+NOTE(weixin-voice-hermes): Voice readability on the companion path is decided in
+Hermes before Inty sees ``MessageEvent``: ``_extract_text`` prefers
+``voice_item.text``; ``_download_voice`` runs only when that field is empty.
+Our bridge never re-fetches or transcribes audio—only forwards Hermes ``text`` or
+answers with a fallback when Hermes surfaced ``audio/silk`` without text.
+
 Inbound — what ``WeixinAdapter`` does with user attachments (before our bridge
 sees ``MessageEvent.text`` only for the text path we wire today):
 
 - Images — fetch from CDN, decrypt, cache locally as JPEG for downstream use.
 - Video — decrypt from CDN, cache as MP4.
 - Files — decrypt, cache; original filename preserved when the payload allows.
-- Voice — if WeChat provides a text transcription, the adapter prefers that text;
-  otherwise download/decrypt audio and cache as SILK for further handling.
+- Voice — if WeChat provides a text transcription, the adapter prefers that text
+  and our bridge forwards it to the companion like any text DM; otherwise
+  download/decrypt audio and cache as SILK, and the bridge replies with a
+  voice-specific fallback (no Inty SILK/ASR yet).
+  TODO(weixin-voice-asr): Decode Hermes-cached SILK from ``media_paths`` and run
+  batch ASR (e.g. Gemini) so untranscribed voice DMs reach the companion without
+  relying on WeChat ``voice_item.text``.
 - Quoted / reply-to messages — media referenced inside quotes may be extracted so
   the agent sees what the user is replying to.
 
@@ -177,8 +188,12 @@ class WeixinInboundMessage:
 
     account_id: str
     peer_id: str
+    # User-visible text; for voice DMs Hermes sets this from WeChat ``voice_item.text``
+    # when present, else empty and ``media_paths`` / ``media_types`` carry SILK.
     text: str
     # Hermes WeixinAdapter local cache paths + MIME types (image-only DMs have empty text).
+    # TODO(weixin-voice-asr): ``audio/silk`` paths here are the ASR input when WeChat
+    # omits ``voice_item.text``; today only ``media_types`` gates the bridge fallback.
     media_paths: tuple[str, ...]
     media_types: tuple[str, ...]
 
@@ -205,6 +220,8 @@ class WeixinTransport:
         self._stop = asyncio.Event()
 
     async def run_until_stopped(self) -> None:
+        from app.core.config import global_config_loaded_from_config_yaml
+
         config = PlatformConfig(
             enabled=True,
             token=self._cred.token,
@@ -213,6 +230,9 @@ class WeixinTransport:
                 "base_url": self._cred.base_url,
                 "dm_policy": "open",
                 "group_policy": "disabled",
+                "split_multiline_messages": (
+                    global_config_loaded_from_config_yaml.weixin_channel.split_multiline_messages
+                ),
             },
         )
         # TODO(weixin-adapter-parity): If we replace ``WeixinAdapter``, re-audit
@@ -223,6 +243,8 @@ class WeixinTransport:
         async def handle_weixin_message(event: MessageEvent) -> str:
             # TODO(wechat-demo-ws-disconnect-hermes-wording): return-value path only; raises
             # from ``_inbound_handler`` become Hermes generic error DM to the peer.
+            # Voice ``event.text`` is whatever Hermes extracted (WeChat transcription or
+            # empty); we do not inspect raw iLink ``item_list`` here.
             peer_id = event.source.chat_id
             assert peer_id != ""
             inbound = WeixinInboundMessage(

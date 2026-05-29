@@ -18,7 +18,10 @@ from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
-from app.schemas.implicit_signals import HumanChannel, ImplicitSignalBundle
+from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
 from app.services import chat_service, companion_chat_service
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.downlink import tool_background_downlink
@@ -107,7 +110,6 @@ class WeixinInprocessPresence:
                 coordinator=self._coordinator,
                 ws_conn_id=None,
                 tc_box=None,
-                human_channel=HumanChannel.WEIXIN,
             )
 
         await self._presence.start_inner_tick_worker(
@@ -190,7 +192,6 @@ class WeixinInprocessPresence:
             )
             implicit_bundle = ImplicitSignalBundle(
                 client_time=None,
-                human_channel=HumanChannel.WEIXIN,
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
             )
@@ -205,6 +206,7 @@ class WeixinInprocessPresence:
                     background_output_sink=self._coordinator.background_sink,
                     preset_user_msg_uuid=preset_uid,
                     implicit_signal_bundle=implicit_bundle,
+                    runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
                 )
             if not turn.tool_background_started:
                 self._coordinator.remove_foreground_pending(preset_uid)

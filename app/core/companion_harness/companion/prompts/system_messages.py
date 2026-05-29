@@ -504,6 +504,7 @@ def _output_system_messages(
     interactive_bootstrap_active: bool,
     include_significance_perception_slice: bool,
     chat_branch_no_tool_api: bool,
+    output_format_prompt_slice: str,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     if inner_tick_turn:
@@ -537,6 +538,8 @@ def _output_system_messages(
             )
     else:
         out.append(_system_message(_output_contract_text()))
+    if output_format_prompt_slice.strip():
+        out.append(_system_message(output_format_prompt_slice.strip()))
     if include_significance_perception_slice and chat_branch_no_tool_api:
         out.append(
             _system_message(_dual_llm_chat_structured_output_contract_text())
@@ -582,6 +585,7 @@ def build_system_messages(
     tool_side_compact: bool = False,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
+    output_format_prompt_slice: str = "",
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(
         inner_tick_turn, inner_tick_activity
@@ -626,6 +630,7 @@ def build_system_messages(
             interactive_bootstrap_active=interactive_bootstrap_active,
             include_significance_perception_slice=include_significance_perception_slice,
             chat_branch_no_tool_api=chat_branch_no_tool_api,
+            output_format_prompt_slice=output_format_prompt_slice,
         )
     )
     out.extend(
@@ -643,6 +648,7 @@ def build_system_messages(
 def build_system_messages_for_bootstrap_track(
     bundle: PromptBundle,
     context: ContextMeta,
+    output_format_prompt_slice: str = "",
 ) -> list[dict[str, Any]]:
     """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background)."""
     return build_system_messages(
@@ -656,6 +662,7 @@ def build_system_messages_for_bootstrap_track(
         tool_side_compact=False,
         interactive_bootstrap_active=True,
         include_significance_perception_slice=False,
+        output_format_prompt_slice=output_format_prompt_slice,
     )
 
 
@@ -663,6 +670,7 @@ def build_system_messages_for_chat_track(
     bundle: PromptBundle,
     context: ContextMeta,
     memory_bootstrap_type: str,
+    output_format_prompt_slice: str = "",
 ) -> list[dict[str, Any]]:
     """ASYNC user round: foreground chat (``tools=None``) and ``prompt_plan`` prefix."""
     return build_system_messages(
@@ -676,12 +684,14 @@ def build_system_messages_for_chat_track(
         tool_side_compact=False,
         interactive_bootstrap_active=False,
         include_significance_perception_slice=True,
+        output_format_prompt_slice=output_format_prompt_slice,
     )
 
 
 def build_system_messages_for_tool_track(
     bundle: PromptBundle,
     context: ContextMeta,
+    output_format_prompt_slice: str = "",
 ) -> list[dict[str, Any]]:
     """ASYNC user round: ``tool_background`` and refresh on the tool-model path."""
     return build_system_messages(
@@ -694,6 +704,7 @@ def build_system_messages_for_tool_track(
         tool_side_compact=True,
         interactive_bootstrap_active=False,
         include_significance_perception_slice=False,
+        output_format_prompt_slice=output_format_prompt_slice,
     )
 
 
@@ -701,6 +712,7 @@ def build_system_messages_for_inner_tick_maintenance(
     bundle: PromptBundle,
     context: ContextMeta,
     store: MemoryStore,
+    output_format_prompt_slice: str = "",
 ) -> list[dict[str, Any]]:
     """ASYNC maintenance inner tick: plan prefix and tool leg (no foreground envelope)."""
     ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
@@ -714,12 +726,14 @@ def build_system_messages_for_inner_tick_maintenance(
         tool_side_compact=True,
         interactive_bootstrap_active=False,
         include_significance_perception_slice=False,
+        output_format_prompt_slice=output_format_prompt_slice,
     )
 
 
 def build_system_messages_for_inner_tick_proactive_chat(
     bundle: PromptBundle,
     context: ContextMeta,
+    output_format_prompt_slice: str = "",
 ) -> list[dict[str, Any]]:
     """``PROACTIVE_CHAT_SYNC``: proactive chat inner tick while user is idle."""
     return build_system_messages(
@@ -730,12 +744,14 @@ def build_system_messages_for_inner_tick_proactive_chat(
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         ai_private_text="",
         include_significance_perception_slice=False,
+        output_format_prompt_slice=output_format_prompt_slice,
     )
 
 
 def build_system_messages_for_inner_tick_scheduled(
     bundle: PromptBundle,
     context: ContextMeta,
+    output_format_prompt_slice: str = "",
 ) -> list[dict[str, Any]]:
     """``PROACTIVE_CHAT_SYNC``: schedule_queue reminder inner tick (scheduled user line)."""
     return build_system_messages(
@@ -746,6 +762,7 @@ def build_system_messages_for_inner_tick_scheduled(
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         ai_private_text="",
         include_significance_perception_slice=False,
+        output_format_prompt_slice=output_format_prompt_slice,
     )
 
 
@@ -772,6 +789,7 @@ def build_system_messages_for_implicit_sign_on_greeting(
     bundle: PromptBundle,
     context: ContextMeta,
     memory_bootstrap_type: str,
+    output_format_prompt_slice: str = "",
 ) -> list[dict[str, Any]]:
     """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts)."""
     return build_system_messages(
@@ -785,4 +803,5 @@ def build_system_messages_for_implicit_sign_on_greeting(
             context=context,
             memory_bootstrap_type=memory_bootstrap_type,
         ),
+        output_format_prompt_slice=output_format_prompt_slice,
     )
