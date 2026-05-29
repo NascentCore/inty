@@ -59,6 +59,38 @@ Outbound — Hermes adapter entry points (this module only calls ``send`` today)
   send reference.
 - ``send_document`` — file attachment: same encrypted CDN upload flow.
 - ``send_video`` — video message: same encrypted CDN upload flow.
+
+Outbound text - what the user sees in WeChat:
+
+Inty always creates one assistant text string per downlink (see
+``weixin_downlink`` and ``WeixinInprocessPresence.handle_user_text``). This module
+passes that one string to Hermes. Hermes ``WeixinAdapter.send`` may then split it
+into chunks, and each chunk becomes one iLink ``sendmessage`` call and one white
+bubble in the WeChat chat UI.
+
+This means LangSmith can show one assistant message with embedded newlines while
+WeChat shows several bubbles. The split happens in upstream
+``gateway.platforms.weixin``, not in this repo.
+
+``WeixinTransport.run_until_stopped`` forwards
+``weixin_channel.split_multiline_messages`` from ``config.yaml`` through
+``PlatformConfig.extra`` so Ops can tune Hermes without changing upstream code:
+
+- **``false`` (default, compact)** - Hermes sends one bubble when the whole reply
+  fits under its text limit. It can still split a short casual reply, roughly
+  2-6 short non-empty lines that do not look like markdown headings, lists, or
+  tables. This is why a three-line companion reply can become three WeChat
+  bubbles even when the flag is off.
+- **``true`` (legacy per_line)** - each top-level line break becomes a separate
+  bubble.
+- **Long replies** - Hermes packs or truncates by markdown blocks regardless of
+  this flag.
+
+Between chunks Hermes sleeps ``send_chunk_delay_seconds`` (about 1.5 seconds by
+default) so bubbles do not arrive in one burst. Hermes may still honor
+``WEIXIN_SPLIT_MULTILINE_MESSAGES`` when that environment variable is set; Inty
+injects the yaml value through ``PlatformConfig.extra`` when the adapter connects.
+
 Long-poll/send use ``weixin_token`` (iLink ``bot_token``). When iLink session ends,
 ``getupdates`` / ``sendmessage`` return ``errcode=-14`` (session expired; **not**
 “14 minutes”). ``on_ilink_session_expired`` disconnects Hermes, fails the demo session,
@@ -230,6 +262,7 @@ class WeixinTransport:
                 "base_url": self._cred.base_url,
                 "dm_policy": "open",
                 "group_policy": "disabled",
+                # Hermes outbound bubble splitting; see module docstring.
                 "split_multiline_messages": (
                     global_config_loaded_from_config_yaml.weixin_channel.split_multiline_messages
                 ),
@@ -273,7 +306,7 @@ class WeixinTransport:
             _weixin_transport_account_id.reset(account_ctx)
 
     async def send_text(self, peer_id: str, text: str) -> None:
-        # Text-only path; image/file/video use adapter ``send_*`` (see module doc).
+        # One Inty string can become several WeChat bubbles; see module docstring.
         assert peer_id != ""
         assert text != ""
         adapter = self._adapter

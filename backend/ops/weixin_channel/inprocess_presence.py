@@ -133,7 +133,12 @@ class WeixinInprocessPresence:
         self._inty_user_id = None
 
     async def handle_user_text(self, user_text: str) -> str:
-        """Run one foreground user-chat turn; return assistant plain text for Hermes."""
+        """Run one foreground user-chat turn; return one assistant string for Hermes.
+
+        Hermes may split that string into several WeChat bubbles when sending.
+        Inty does not split here; see ``transport`` and
+        ``config.yaml`` ``weixin_channel.split_multiline_messages``.
+        """
         stripped = user_text.strip()
         assert stripped
         if self._inty_user_id is None:

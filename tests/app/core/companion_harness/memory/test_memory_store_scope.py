@@ -32,6 +32,7 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.memory_pipeline_state_json == ".companion_memory_pipeline.json"
     assert p.context_compaction_state_json == ".companion_context_compaction_state.json"
     assert p.schedule_queue_json == ".companion_schedule_tasks.json"
+    assert p.dreaming_state_json == ".companion_dreaming_state.json"
 
 
 def test_is_scope_initialized_on_disk_empty(tmp_path: Path) -> None:
@@ -58,6 +59,7 @@ def test_memory_store_scope_paths_custom_state_file_prefix() -> None:
     p = MemoryStoreScopePaths(state_file_prefix=".inty_v2")
     assert p.memory_pipeline_state_json == ".inty_v2_memory_pipeline.json"
     assert p.schedule_queue_json == ".inty_v2_schedule_tasks.json"
+    assert p.dreaming_state_json == ".inty_v2_dreaming_state.json"
     assert p.identity == "IDENTITY.md"
     assert p.transcript == "transcript.jsonl"
 

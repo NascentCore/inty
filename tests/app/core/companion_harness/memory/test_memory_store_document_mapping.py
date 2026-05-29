@@ -33,6 +33,7 @@ def test_roundtrip_static_paths() -> None:
         "tool_background.jsonl",
         ".companion_memory_pipeline.json",
         ".companion_runtime_events.jsonl",
+        ".companion_dreaming_state.json",
         "generated_images/index.jsonl",
         "techno_core_events.jsonl",
     ):

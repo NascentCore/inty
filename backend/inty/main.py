@@ -147,6 +147,11 @@ async def startup_event():
             await agent_manager.initialize_popular_agents(db_session)
             break  # 只需要一次初始化
         logger.info("Agent初始化完成")
+        from app.services.agentic_companion.dreaming_scheduler import (
+            companion_dreaming_scheduler,
+        )
+
+        companion_dreaming_scheduler.start()
 
     except Exception as e:
         logger.error(f"应用启动过程中出错: {str(e)}")
@@ -267,6 +272,12 @@ async def shutdown_event():
         logger.info("正在停止Agent管理器...")
         agent_manager.stop()
         logger.info("Agent管理器已停止")
+        from app.services.agentic_companion.dreaming_scheduler import (
+            companion_dreaming_scheduler,
+        )
+
+        companion_dreaming_scheduler.stop()
+        logger.info("companion dreaming scheduler 已停止")
 
         # 停止缓存服务
         from app.services.cache_service import cache_service

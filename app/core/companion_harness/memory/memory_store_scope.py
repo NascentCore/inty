@@ -156,6 +156,10 @@ class MemoryStoreScopePaths:
         return f"{self.state_file_prefix}_schedule_tasks.json"
 
     @property
+    def dreaming_state_json(self) -> str:
+        return f"{self.state_file_prefix}_dreaming_state.json"
+
+    @property
     def maintenance_tick_state_json(self) -> str:
         return f"{self.state_file_prefix}_maintenance_tick_state.json"
 

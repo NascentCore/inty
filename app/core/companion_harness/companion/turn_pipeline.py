@@ -48,6 +48,10 @@ from .models import (
 )
 from .runtime_channel import TurnRuntimeContext
 from .turn_track import turn_flags_for_track
+from .dreaming import (
+    apply_dreaming_checkpoint_to_prompt_rows,
+    load_dreaming_state,
+)
 from .prompt_stack import companion_turn_tools_and_system_messages
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
@@ -188,6 +192,10 @@ def load_companion_turn_state(
         inner_tick_turn=inner_tick_turn,
         inner_tick_activity=route_inner_activity,
     )
+    if not inner_tick_turn:
+        loaded = apply_dreaming_checkpoint_to_prompt_rows(
+            loaded, load_dreaming_state(store)
+        )
     window_cap = (
         transcript_llm_window_max_messages
         if transcript_llm_window_max_messages is not None
