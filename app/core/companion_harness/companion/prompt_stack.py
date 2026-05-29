@@ -93,6 +93,7 @@ def append_runtime_output_format_system_message(
 def companion_tools_for_turn(
     *,
     track: CompanionTurnTrack,
+    # TODO(abstraction): The following 3 args should be removed, and reflect the combination in track: CompanionTureTrack
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
     implicit_user_signed_on_turn: bool = False,
