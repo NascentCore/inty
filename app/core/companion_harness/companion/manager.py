@@ -16,7 +16,6 @@ from app.core.companion_harness.experience_profile import (
     ExperienceContextMode,
     normalize_experience_profile_id,
 )
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from living_sphere.seeding import ensure_living_sphere_seeded
 from techno_core.seeding import ensure_techno_core_seeded
@@ -34,11 +33,9 @@ from app.core.companion_harness.memory.transcript_compaction import (
 from app.core.companion_harness.memory.memory_registry import (
     MEMORY_STORE_REGISTRY_REQUIRES_DSN,
     get_memory_store,
-    shutdown_memory_store,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .implicit_signal_messages import implicit_user_signed_on_chat_turn
-from .models import CompanionTurnResult, InnerTickActivity
+from .models import CompanionTurnResult
 from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from .scope import CompanionScope
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
@@ -52,7 +49,6 @@ from .turn_tracks import (
 from app.core.companion_harness.memory.memory_store_scope import (
     ensure_minimal_documents_in_store,
     is_scope_initialized_in_store,
-    needs_startup_profile_inquiry,
 )
 
 
@@ -166,10 +162,6 @@ class CompanionSession:
     @property
     def is_initialized(self) -> bool:
         return is_scope_initialized_in_store(self.store)
-
-    @property
-    def needs_profile_inquiry(self) -> bool:
-        return needs_startup_profile_inquiry(self.store)
 
 
 class CompanionManager:
@@ -437,85 +429,4 @@ class CompanionManager:
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
             ),
-        )
-
-    async def run_turn(
-        self,
-        session: CompanionSession,
-        user_text: str,
-        *,
-        inner_tick_turn: bool = False,
-        inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
-        defer_memory_update: bool = True,
-        background_output_sink: BackgroundToolEventSink | None = None,
-        preset_user_msg_uuid: str | None = None,
-        implicit_signal_bundle: ImplicitSignalBundle | None = None,
-        runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
-    ) -> CompanionTurnResult:
-        """Legacy delegator; prefer track methods at call sites."""
-        runtime_context = TurnRuntimeContext(
-            channel=runtime_channel,
-            implicit_signal_bundle=implicit_signal_bundle,
-        )
-        track_kwargs = {
-            "defer_memory_update": defer_memory_update,
-            "background_output_sink": background_output_sink,
-            "preset_user_msg_uuid": preset_user_msg_uuid,
-            "runtime_context": runtime_context,
-        }
-        if inner_tick_turn:
-            match inner_tick_activity:
-                case InnerTickActivity.PROACTIVE_CHAT:
-                    return await self.run_inner_tick_proactive_chat_turn(
-                        session,
-                        **track_kwargs,
-                    )
-                case InnerTickActivity.MAINTENANCE:
-                    return await self.run_inner_tick_maintenance_turn(
-                        session,
-                        **track_kwargs,
-                    )
-        if implicit_user_signed_on_chat_turn(
-            implicit_signal_bundle=implicit_signal_bundle,
-            inner_tick_turn=False,
-        ):
-            assert implicit_signal_bundle is not None
-            return await self.run_implicit_sign_on_greeting_turn(
-                session,
-                user_text,
-                **track_kwargs,
-            )
-        return await self.run_user_chat_turn(
-            session,
-            user_text,
-            **track_kwargs,
-        )
-
-    def shutdown_session(
-        self,
-        user_id: str,
-        companion_id: str,
-        chat_id: str,
-    ) -> None:
-        key = self._session_key(user_id, companion_id, chat_id)
-        with self._lock:
-            session = self._sessions.pop(key, None)
-        if session is None:
-            return
-        shutdown_memory_store(session.scope)
-        logger.info(
-            "companion_manager session_shutdown user={} companion={} chat={}",
-            user_id,
-            companion_id,
-            chat_id,
-        )
-
-    def shutdown_all(self) -> None:
-        with self._lock:
-            sessions = list(self._sessions.values())
-            self._sessions.clear()
-        for session in sessions:
-            shutdown_memory_store(session.scope)
-        logger.info(
-            "companion_manager all_sessions_shutdown count={}", len(sessions)
         )

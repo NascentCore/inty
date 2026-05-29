@@ -11,7 +11,7 @@ import json
 import time
 from datetime import date
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Iterable
 
 from pydantic import ValidationError
 
@@ -82,7 +82,6 @@ from .companion_tool_definitions import (
     INNER_TICK_TOOL_NAMES,
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
-    OPENAI_TOOLS_BASE_NAMES,
     REPL_DESCRIPTION_OVERRIDES,
     TOOL_NAMES_APPENDED,
     TOOL_NAMES_NON_BOOTSTRAP_TAIL,
@@ -508,15 +507,6 @@ async def tool_phone_call_user(
     )
 
 
-def build_openai_tools() -> list[dict[str, Any]]:
-    """OpenAI Chat Completions `tools` 列表。"""
-    tools = openai_tools_for_names(
-        OPENAI_TOOLS_BASE_NAMES,
-        description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
-    )
-    return prepare_openai_tools_for_chat_completions(tools)
-
-
 def build_openai_bootstrap_track_tools() -> list[dict[str, Any]]:
     """USER_CHAT_BOOTSTRAP track: prompt-slice writes + bootstrap complete only."""
     return prepare_openai_tools_for_chat_completions(
@@ -922,14 +912,3 @@ def execute_tool_call_blocking(
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
         return ex.submit(_run_new_loop).result(timeout=1200)
-
-
-def tool_executor_for_store(store: MemoryStore) -> Callable[[str, str], str]:
-    """返回 (name, arguments_json) -> result_str，供循环内调用。"""
-
-    def run(name: str, arguments_json: str) -> str:
-        return execute_tool_call_blocking(
-            store, name, arguments_json, write_allowlist=None
-        )
-
-    return run

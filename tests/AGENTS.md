@@ -1,6 +1,7 @@
 # Tests
 
 - Do not write tests for `/tools/`
+- Do not write tests for `/experimental/`
 - Add test files for a source file with the same relative paths
 - Never use mocks or monkeypatch in tests
 - When checking multiline text, split text to array of lines and compare with the expected array.

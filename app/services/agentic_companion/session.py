@@ -75,7 +75,9 @@ class Coordinator:
     bootstrap_interim_events: asyncio.Queue[BootstrapInterimOutput] = field(
         default_factory=asyncio.Queue
     )
+    # TODO(data-type-abstraction): Change this to a dataclass.
     foreground_pending: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # TODO(data-type-abstraction): Change this to a dataclass.
     inner_tick_context: dict[str, Any] = field(default_factory=dict)
     _inner_tick_proactive_tool_bg_idle: threading.Event | None = field(
         default=None, repr=False

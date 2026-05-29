@@ -2598,28 +2598,6 @@ def test_chat_websocket_user_signed_out_appends_ws_runtime_event(
     assert record["received_message_uuid"] == msg_uuid
 
 
-def test_chat_websocket_verify_user_signed_out_not_supported(
-    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
-):
-    user = _make_user(auth_type=AuthType.GOOGLE)
-
-    async def fake_ws_user(websocket, db):
-        return user
-
-    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
-
-    with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws/verify") as websocket:
-            websocket.send_json({"type": "user_signed_out", "agent_id": "agent-v"})
-            ack = websocket.receive_json()
-
-    assert ack == {
-        "type": "user_signed_out_ack",
-        "ok": False,
-        "reason": "not_supported",
-    }
-
-
 def test_is_ws_receive_text_not_connected_runtime_error() -> None:
     assert chat_ws_v1._is_ws_receive_text_not_connected_runtime_error(
         RuntimeError(chat_ws_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
@@ -2630,26 +2608,6 @@ def test_is_ws_receive_text_not_connected_runtime_error() -> None:
     assert not chat_ws_v1._is_ws_receive_text_not_connected_runtime_error(
         WebSocketDisconnect()
     )
-
-
-def test_chat_websocket_verify_receive_text_not_connected_runtime_exits_cleanly(
-    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
-) -> None:
-    user = _make_user(auth_type=AuthType.GOOGLE)
-
-    async def fake_ws_user(websocket, db):
-        return user
-
-    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
-
-    async def boom_receive_text(self):
-        raise RuntimeError(chat_ws_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
-
-    monkeypatch.setattr(WebSocket, "receive_text", boom_receive_text)
-
-    with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws/verify"):
-            pass
 
 
 def test_chat_websocket_recv_not_connected_runtime_after_ping_exits_cleanly(
@@ -2814,34 +2772,6 @@ def test_chat_websocket_ws_conn_dropped_appends_ws_runtime_event(
     assert record["ws_close_code"] == 1006
     assert record["ws_close_reason"] == "connection reset"
     assert record["received_message_uuid"] == msg_uuid
-
-
-def test_chat_websocket_verify_ws_conn_dropped_not_supported(
-    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
-):
-    user = _make_user(auth_type=AuthType.GOOGLE)
-
-    async def fake_ws_user(websocket, db):
-        return user
-
-    monkeypatch.setattr(chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user)
-
-    with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws/verify") as websocket:
-            websocket.send_json(
-                {
-                    "type": "ws_conn_dropped",
-                    "agent_id": "agent-v",
-                    "dropped_at_utc": "2026-05-11T12:00:00+00:00",
-                }
-            )
-            ack = websocket.receive_json()
-
-    assert ack == {
-        "type": "ws_conn_dropped_ack",
-        "ok": False,
-        "reason": "not_supported",
-    }
 
 
 def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(

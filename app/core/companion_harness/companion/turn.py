@@ -101,7 +101,7 @@ from .prompt_stack import (
     refresh_companion_turn_prompt_stack,
 )
 from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
-from .turn_track import track_from_legacy_flags, turn_flags_for_track
+from .turn_track import turn_flags_for_track
 from .prompts.system_messages import (
     build_system_messages_for_chat_track,
     build_system_messages_for_inner_tick_maintenance,
@@ -398,14 +398,6 @@ async def _run_bootstrap_track_sync_tool_loop(
         skip_final_transcript_assistant_row,
         last_interim_assistant_msg_uuid,
     )
-
-
-def _preview(s: str, max_len: int = 280) -> str:
-    one = s.replace("\n", " ").strip()
-    if len(one) <= max_len:
-        return one
-    return one[: max_len - 1] + "..."
-
 
 async def _await_tool_background_idle_if_configured(
     tool_bg_idle_event: threading.Event | None,
@@ -1104,54 +1096,6 @@ async def _run_companion_turn_core(
         turn_start_context_mode=context.context_mode,
         transcript_compaction=prompt_plan.transcript_compaction,
         transcript_user_content=transcript_user_content,
-    )
-
-
-async def run_turn(
-    user_text: str,
-    *,
-    store: MemoryStore,
-    llm_client: CompanionLLMClient,
-    inner_tick_turn: bool = False,
-    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
-    defer_memory_update: bool = True,
-    memory_config: MemoryPipelineConfig | None = None,
-    transcript_compaction: TranscriptCompactionConfig | None = None,
-    transcript_llm_window_max_messages: int | None = None,
-    repository_only_store_text: bool = False,
-    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
-    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
-    background_output_sink: BackgroundToolEventSink | None = None,
-    preset_user_msg_uuid: str | None = None,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    langsmith_parent_run_enabled: bool | None = None,
-    tool_bg_idle_event: threading.Event | None = None,
-) -> CompanionTurnResult:
-    """Legacy entry; prefer track-specific ``run_companion_*_turn`` functions."""
-    track = track_from_legacy_flags(
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_activity=inner_tick_activity,
-        implicit_signal_bundle=implicit_signal_bundle,
-    )
-    return await _run_companion_turn_core(
-        user_text,
-        track=track,
-        store=store,
-        llm_client=llm_client,
-        defer_memory_update=defer_memory_update,
-        memory_config=memory_config,
-        transcript_compaction=transcript_compaction,
-        transcript_llm_window_max_messages=transcript_llm_window_max_messages,
-        repository_only_store_text=repository_only_store_text,
-        memory_bootstrap_type=memory_bootstrap_type,
-        runtime_context=TurnRuntimeContext(
-            channel=runtime_channel,
-            implicit_signal_bundle=implicit_signal_bundle,
-        ),
-        background_output_sink=background_output_sink,
-        preset_user_msg_uuid=preset_user_msg_uuid,
-        langsmith_parent_run_enabled=langsmith_parent_run_enabled,
-        tool_bg_idle_event=tool_bg_idle_event,
     )
 
 
