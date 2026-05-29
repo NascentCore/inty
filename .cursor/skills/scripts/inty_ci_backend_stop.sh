@@ -59,10 +59,6 @@ if [ "$stopped" -gt 0 ]; then
   fi
   echo "backend.inty.main still on port ${port}; sending KILL" >&2
   stop_matching_pids KILL
-  if wait_inty_main_off_port; then
-    echo "No backend.inty.main listener on port ${port}."
-    exit 0
-  fi
 fi
 
 if inty_main_still_on_port; then

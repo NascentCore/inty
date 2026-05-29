@@ -86,9 +86,11 @@ from backend.ops.weixin_channel.ilink_qr_client import (
 # Ops rewrites the line and schedules bridge teardown (disconnect, no 10-minute retry).
 _HERMES_WEIXIN_LOGGER = logging.getLogger("gateway.platforms.weixin")
 _HERMES_SESSION_EXPIRED_PAUSE_SUBSTR = "Session expired; pausing for 10 minutes"
-_weixin_transport_account_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "weixin_transport_account_id",
-    default=None,
+_weixin_transport_account_id: contextvars.ContextVar[str | None] = (
+    contextvars.ContextVar(
+        "weixin_transport_account_id",
+        default=None,
+    )
 )
 _weixin_hermes_log_filter_installed = False
 _ilink_session_expired_handlers: dict[str, Callable[[], Awaitable[None]]] = {}

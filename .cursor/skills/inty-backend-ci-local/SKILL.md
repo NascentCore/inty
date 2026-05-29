@@ -119,7 +119,7 @@ export PYTHONPATH=.
 ./backend/inty/start.sh --test >> inty_backend.log 2>&1 &
 backend_pid=$!
 export INTY_CI_BACKEND_STARTED=1
-# stop_ci_backend + trap EXIT：见上文「智能体必做」；勿仅用 kill $backend_pid（--reload 会留下子进程）
+# stop_ci_backend + trap EXIT：见上文「智能体必做」
 ```
 
 等待服务就绪（与 workflow 中循环等价）：
