@@ -582,7 +582,6 @@ def build_system_messages(
     tool_side_compact: bool = False,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
-    output_format_prompt_slice: str = "",
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(
         inner_tick_turn, inner_tick_activity
