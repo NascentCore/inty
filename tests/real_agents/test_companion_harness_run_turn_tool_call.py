@@ -1,5 +1,5 @@
 """
-Real LLM: companion run_turn must call memory_store_list_paths then answer.
+Real LLM: companion user chat turn must call memory_store_list_paths then answer.
 
 Enable: INTY_COMPANION_HARNESS_REAL_LLM_TEST=1 and OPENROUTER_API_KEY.
 Uses OpenRouter model nvidia/nemotron-3-super-120b-a12b:free.
@@ -17,7 +17,8 @@ from app.core.companion_harness.companion.llm_client import CompanionLLMClient, 
 from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.turn import run_turn
+from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
+from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 _OPENROUTER_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
@@ -96,12 +97,21 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
         "to list the MemoryStore scope root. Do not guess. After you receive the tool output, reply in one "
         "short English sentence. That sentence MUST contain the exact substring hello.txt."
     )
-    out = await run_turn(
+    out = await run_companion_user_chat_turn(
         user_prompt,
         store=store,
         llm_client=client,
         defer_memory_update=True,
         memory_config=mem_cfg,
+        transcript_compaction=None,
+        transcript_llm_window_max_messages=None,
+        repository_only_store_text=False,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        background_output_sink=None,
+        preset_user_msg_uuid=None,
+        implicit_signal_bundle=None,
+        langsmith_parent_run_enabled=None,
+        tool_bg_idle_event=None,
     )
 
     assert client.saw_assistant_tool_calls, "model never returned tool_calls"

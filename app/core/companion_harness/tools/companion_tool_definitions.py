@@ -117,6 +117,14 @@ SET_BOOTSTRAP_COMPLETE_TOOL = LlmFunctionTool(
     },
 )
 
+_SELECTABLE_EXPERIENCE_PROFILE_IDS: tuple[str, ...] = tuple(
+    sorted(
+        m.value
+        for m in ExperienceContextMode
+        if m != ExperienceContextMode.BOOTSTRAP
+    )
+)
+
 SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
     name=CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
     description=(
@@ -576,6 +584,7 @@ TOOL_NAMES_BOOTSTRAP_APPENDED: tuple[CompanionToolName, ...] = (
 
 BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE,
+    CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
     CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
 )
 

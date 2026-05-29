@@ -9,6 +9,10 @@ import pytest
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
 from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 
@@ -42,12 +46,18 @@ async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle
         result = await manager.run_implicit_sign_on_greeting_turn(
             session,
             "hi",
-            implicit_signal_bundle=bundle,
+            runtime_context=TurnRuntimeContext(
+                channel=CompanionRuntimeChannel.APP,
+                implicit_signal_bundle=bundle,
+            ),
         )
 
     assert result is stub
     assert track_mock.await_args is not None
     assert track_mock.await_args.args[0] == "hi"
-    assert track_mock.await_args.kwargs["implicit_signal_bundle"] is bundle
+    assert (
+        track_mock.await_args.kwargs["runtime_context"].implicit_signal_bundle
+        is bundle
+    )
     assert "bootstrap_interim_output_sink" not in track_mock.await_args.kwargs
 

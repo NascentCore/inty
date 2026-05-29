@@ -182,6 +182,7 @@ async def try_fire_scheduled_inner_tick(
                 background_output_sink=None,
                 preset_user_msg_uuid=preset_uid,
                 implicit_signal_bundle=ws_implicit,
+                runtime_channel=delivery.runtime_channel,
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):
@@ -447,6 +448,7 @@ async def try_fire_proactive_chat_inner_tick(
             background_output_sink=None,
             preset_user_msg_uuid=preset_uid,
             implicit_signal_bundle=ws_implicit,
+            runtime_channel=delivery.runtime_channel,
         )
         hb_user_text = (
             companion_turn.transcript_user_content
@@ -733,6 +735,7 @@ async def try_fire_maintenance_inner_tick(
                 background_output_sink=coordinator.background_sink,
                 preset_user_msg_uuid=preset_uid,
                 implicit_signal_bundle=ws_implicit,
+                runtime_channel=delivery.runtime_channel,
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):

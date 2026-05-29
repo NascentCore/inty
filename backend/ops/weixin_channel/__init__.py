@@ -9,6 +9,12 @@ iLink: QR poll token expires via ``status=expired``; bridge ``bot_token`` ends o
 via ``WeixinInprocessPresence`` (no ``/api/v1/chat/ws`` loopback). iLink cannot
 report WeChat user presence (open app / open DM); see ``ilink_qr_client``, ``transport``.
 
+Outbound: Inty gives Hermes one assistant string. Hermes may split that string into several WeChat bubbles when sending.
+Depending on heuristics (message length, line breaks);
+and ``weixin_channel.split_multiline_messages`` force splitting text into multiple lines,
+each of the lines becomes a separate WeChat bubble.
+See ``transport`` for the detailed sending model.
+
 ``chat_ws_wire`` holds shared ``/api/v1/chat/ws`` response parsing helpers.
 
 Upstream parity: ``ilink_qr_client`` TODO(weixin-upstream-parity); adapter

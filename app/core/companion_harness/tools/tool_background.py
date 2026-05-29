@@ -27,7 +27,6 @@ from typing import Any, Callable, Protocol
 from loguru import logger
 from openai import BadRequestError
 
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel
 
@@ -65,6 +64,10 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.companion.prompt_stack import (
     refresh_companion_turn_prompt_stack,
+)
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.runtime_events import (
     append_runtime_event,
@@ -123,12 +126,6 @@ class ToolBackgroundTraceHooks(Protocol):
         scope_registry_key: str,
         trace_id: str | None,
     ) -> None: ...
-
-
-def mark_tool_background_aborted(user_msg_uuid: str) -> None:
-    """Foreground REPL superseded this turn: background job must not append transcript or events."""
-    with _ABORT_TOOL_BG_LOCK:
-        _ABORTED_TOOL_BG_USER_MSG_UUIDS.add(user_msg_uuid)
 
 
 def is_tool_background_aborted(user_msg_uuid: str) -> bool:
@@ -338,38 +335,8 @@ def output_queue() -> queue.Queue[ToolOutputEvent]:
         return _OUTPUT_QUEUE
 
 
-def clear_output_queue() -> None:
-    q = output_queue()
-    while True:
-        try:
-            q.get_nowait()
-        except queue.Empty:
-            return
-
-
 def push_output_event(event: ToolOutputEvent) -> None:
     output_queue().put(event)
-
-
-def pop_output_events_nowait(
-    *, scope_registry_key: str
-) -> list[ToolOutputEvent]:
-    want = scope_registry_key.strip()
-    out: list[ToolOutputEvent] = []
-    q = output_queue()
-    parked: list[ToolOutputEvent] = []
-    while True:
-        try:
-            ev = q.get_nowait()
-        except queue.Empty:
-            break
-        if ev.scope_registry_key == want:
-            out.append(ev)
-        else:
-            parked.append(ev)
-    for ev in parked:
-        q.put(ev)
-    return out
 
 
 def _register_thread(worker: threading.Thread) -> None:
@@ -380,11 +347,6 @@ def _register_thread(worker: threading.Thread) -> None:
 def _unregister_thread(worker: threading.Thread) -> None:
     with _ACTIVE_THREADS_LOCK:
         _ACTIVE_THREADS.discard(worker)
-
-
-def background_tasks_count() -> int:
-    with _ACTIVE_THREADS_LOCK:
-        return len(_ACTIVE_THREADS)
 
 
 def _assistant_text_from_completion_response(resp: Any) -> str:
@@ -579,7 +541,10 @@ async def _run_background_tool_loop(
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+        channel=CompanionRuntimeChannel.APP,
+        implicit_signal_bundle=None,
+    ),
     force_tools_first_round: bool = True,
 ) -> None:
     scope_registry_key = memory_store.scope.registry_key()
@@ -753,8 +718,8 @@ async def _run_background_tool_loop(
                 inner_tick_turn=inner_tick_turn,
                 inner_tick_activity=inner_tick_activity,
                 messages=messages_with_tool_results,
-                implicit_signal_bundle=implicit_signal_bundle,
                 track=companion_turn_track,
+                runtime_context=runtime_context,
             )
 
         try:
@@ -984,7 +949,10 @@ def start_tool_background_job(
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    runtime_context: TurnRuntimeContext = TurnRuntimeContext(
+        channel=CompanionRuntimeChannel.APP,
+        implicit_signal_bundle=None,
+    ),
     tool_bg_idle_event: threading.Event | None = None,
     force_tools_first_round: bool = True,
 ) -> None:
@@ -1031,7 +999,7 @@ def start_tool_background_job(
                     memory_bootstrap_type=memory_bootstrap_type,
                     inner_tick_turn=inner_tick_turn,
                     inner_tick_activity=inner_tick_activity,
-                    implicit_signal_bundle=implicit_signal_bundle,
+                    runtime_context=runtime_context,
                     companion_turn_track=companion_turn_track,
                     force_tools_first_round=force_tools_first_round,
                 )

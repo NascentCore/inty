@@ -11,6 +11,7 @@ def test_selectable_experience_profile_ids_matches_non_bootstrap_enum_members() 
         "interactive_fiction",
         "intimate",
         "public",
+        "remote_lover",
         "roleplay",
         "unspecific",
     )

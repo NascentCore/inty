@@ -23,14 +23,25 @@ SSRF (separate concern): when the adapter downloads media from a URL supplied in
 message content, it rejects private/internal targets so a peer cannot trick the
 gateway into probing ``localhost`` or RFC1918 addresses.
 
+NOTE(weixin-voice-hermes): Voice readability on the companion path is decided in
+Hermes before Inty sees ``MessageEvent``: ``_extract_text`` prefers
+``voice_item.text``; ``_download_voice`` runs only when that field is empty.
+Our bridge never re-fetches or transcribes audio—only forwards Hermes ``text`` or
+answers with a fallback when Hermes surfaced ``audio/silk`` without text.
+
 Inbound — what ``WeixinAdapter`` does with user attachments (before our bridge
 sees ``MessageEvent.text`` only for the text path we wire today):
 
 - Images — fetch from CDN, decrypt, cache locally as JPEG for downstream use.
 - Video — decrypt from CDN, cache as MP4.
 - Files — decrypt, cache; original filename preserved when the payload allows.
-- Voice — if WeChat provides a text transcription, the adapter prefers that text;
-  otherwise download/decrypt audio and cache as SILK for further handling.
+- Voice — if WeChat provides a text transcription, the adapter prefers that text
+  and our bridge forwards it to the companion like any text DM; otherwise
+  download/decrypt audio and cache as SILK, and the bridge replies with a
+  voice-specific fallback (no Inty SILK/ASR yet).
+  TODO(weixin-voice-asr): Decode Hermes-cached SILK from ``media_paths`` and run
+  batch ASR (e.g. Gemini) so untranscribed voice DMs reach the companion without
+  relying on WeChat ``voice_item.text``.
 - Quoted / reply-to messages — media referenced inside quotes may be extracted so
   the agent sees what the user is replying to.
 
@@ -48,6 +59,38 @@ Outbound — Hermes adapter entry points (this module only calls ``send`` today)
   send reference.
 - ``send_document`` — file attachment: same encrypted CDN upload flow.
 - ``send_video`` — video message: same encrypted CDN upload flow.
+
+Outbound text - what the user sees in WeChat:
+
+Inty always creates one assistant text string per downlink (see
+``weixin_downlink`` and ``WeixinInprocessPresence.handle_user_text``). This module
+passes that one string to Hermes. Hermes ``WeixinAdapter.send`` may then split it
+into chunks, and each chunk becomes one iLink ``sendmessage`` call and one white
+bubble in the WeChat chat UI.
+
+This means LangSmith can show one assistant message with embedded newlines while
+WeChat shows several bubbles. The split happens in upstream
+``gateway.platforms.weixin``, not in this repo.
+
+``WeixinTransport.run_until_stopped`` forwards
+``weixin_channel.split_multiline_messages`` from ``config.yaml`` through
+``PlatformConfig.extra`` so Ops can tune Hermes without changing upstream code:
+
+- **``false`` (default, compact)** - Hermes sends one bubble when the whole reply
+  fits under its text limit. It can still split a short casual reply, roughly
+  2-6 short non-empty lines that do not look like markdown headings, lists, or
+  tables. This is why a three-line companion reply can become three WeChat
+  bubbles even when the flag is off.
+- **``true`` (legacy per_line)** - each top-level line break becomes a separate
+  bubble.
+- **Long replies** - Hermes packs or truncates by markdown blocks regardless of
+  this flag.
+
+Between chunks Hermes sleeps ``send_chunk_delay_seconds`` (about 1.5 seconds by
+default) so bubbles do not arrive in one burst. Hermes may still honor
+``WEIXIN_SPLIT_MULTILINE_MESSAGES`` when that environment variable is set; Inty
+injects the yaml value through ``PlatformConfig.extra`` when the adapter connects.
+
 Long-poll/send use ``weixin_token`` (iLink ``bot_token``). When iLink session ends,
 ``getupdates`` / ``sendmessage`` return ``errcode=-14`` (session expired; **not**
 “14 minutes”). ``on_ilink_session_expired`` disconnects Hermes, fails the demo session,
@@ -177,8 +220,12 @@ class WeixinInboundMessage:
 
     account_id: str
     peer_id: str
+    # User-visible text; for voice DMs Hermes sets this from WeChat ``voice_item.text``
+    # when present, else empty and ``media_paths`` / ``media_types`` carry SILK.
     text: str
     # Hermes WeixinAdapter local cache paths + MIME types (image-only DMs have empty text).
+    # TODO(weixin-voice-asr): ``audio/silk`` paths here are the ASR input when WeChat
+    # omits ``voice_item.text``; today only ``media_types`` gates the bridge fallback.
     media_paths: tuple[str, ...]
     media_types: tuple[str, ...]
 
@@ -205,6 +252,8 @@ class WeixinTransport:
         self._stop = asyncio.Event()
 
     async def run_until_stopped(self) -> None:
+        from app.core.config import global_config_loaded_from_config_yaml
+
         config = PlatformConfig(
             enabled=True,
             token=self._cred.token,
@@ -213,6 +262,10 @@ class WeixinTransport:
                 "base_url": self._cred.base_url,
                 "dm_policy": "open",
                 "group_policy": "disabled",
+                # Hermes outbound bubble splitting; see module docstring.
+                "split_multiline_messages": (
+                    global_config_loaded_from_config_yaml.weixin_channel.split_multiline_messages
+                ),
             },
         )
         # TODO(weixin-adapter-parity): If we replace ``WeixinAdapter``, re-audit
@@ -223,6 +276,8 @@ class WeixinTransport:
         async def handle_weixin_message(event: MessageEvent) -> str:
             # TODO(wechat-demo-ws-disconnect-hermes-wording): return-value path only; raises
             # from ``_inbound_handler`` become Hermes generic error DM to the peer.
+            # Voice ``event.text`` is whatever Hermes extracted (WeChat transcription or
+            # empty); we do not inspect raw iLink ``item_list`` here.
             peer_id = event.source.chat_id
             assert peer_id != ""
             inbound = WeixinInboundMessage(
@@ -251,7 +306,7 @@ class WeixinTransport:
             _weixin_transport_account_id.reset(account_ctx)
 
     async def send_text(self, peer_id: str, text: str) -> None:
-        # Text-only path; image/file/video use adapter ``send_*`` (see module doc).
+        # One Inty string can become several WeChat bubbles; see module docstring.
         assert peer_id != ""
         assert text != ""
         adapter = self._adapter

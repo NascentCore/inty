@@ -38,7 +38,6 @@ from app.core.companion_harness.experience_profile import (
     experience_profile_system_clause,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.ai_private_prompt import (
@@ -272,6 +271,21 @@ def _repl_online_ack_clause() -> str:
         "本轮（REPL 会话恢复）\n\n"
         "用户刚回到本对话窗口。请结合上文**承接**同一语境；若尚无比拼的上下文则简短自然问候；"
         "可正常调用工具。勿提系统、上线或主动聊天机制。"
+    )
+
+
+def weixin_clawbot_contact_alias_system_message() -> dict[str, Any]:
+    """Channel-specific system message for Weixin-visible ClawBot contact naming."""
+
+    return (
+        _system_message(
+            "Weixin / ClawBot 联系人显示名\n\n"
+            "当前 Weixin iLink / ClawBot 通道不提供从 Inty 修改 Weixin 可见 bot 昵称或头像的能力；"
+            "Weixin 里看到的名称只能由用户在联系人资料页通过「备注/标签/备注名」本地改。"
+            "当用户在 Weixin 场景里提到名字、找不到你、ClawBot 显示名困惑、或关系进入适合建立专属称呼的时刻，"
+            "可低频、自然地提醒用户给这个 ClawBot 联系人设置一个只属于你们的 Weixin 备注；"
+            "不要频繁催促，不要声称已替用户改名，也不要把 `botAgent`、`agent_id` 或 Inty 内部 nickname 说成 Weixin 可见名称。"
+        )
     )
 
 
@@ -551,6 +565,7 @@ def _contextual_system_messages(
     return out
 
 
+# TODO(track-driven-system-messages-building): Inline calling of this function in the callers.
 def build_system_messages(
     bundle: PromptBundle,
     context: ContextMeta,
@@ -565,7 +580,6 @@ def build_system_messages(
     tool_side_compact: bool = False,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
-    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(
         inner_tick_turn, inner_tick_activity

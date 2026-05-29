@@ -8,7 +8,6 @@ import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.api.model.shouldDeferChatResponseParsing
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.di.HttpClientProvider
-import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
@@ -30,7 +29,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val CHAT_WEBSOCKET_PATH = "api/v1/chat/ws"
-private const val CHAT_WEBSOCKET_VERIFY_PATH = "api/v1/chat/ws/verify"
 private const val PING_INTERVAL_MS = 25_000L
 
 /**
@@ -123,11 +121,7 @@ object MainRemoteDataSource {
                 httpBase.startsWith("http://") -> "ws://${httpBase.removePrefix("http://")}"
                 else -> httpBase
             }
-        val path =
-            if (DebugBackendEndpointStore.getChatWebSocketUseVerifyPath())
-                CHAT_WEBSOCKET_VERIFY_PATH
-            else CHAT_WEBSOCKET_PATH
         val wsConnId = UUID.randomUUID().toString()
-        return "$websocketBase/$path?ws_conn_id=$wsConnId"
+        return "$websocketBase/$CHAT_WEBSOCKET_PATH?ws_conn_id=$wsConnId"
     }
 }

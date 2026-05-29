@@ -14,7 +14,6 @@ from app.core.companion_harness.companion.turn_pipeline import resolve_turn_runt
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
-from app.schemas.chat import UserTimeContext
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 
@@ -68,14 +67,10 @@ def test_build_system_messages_does_not_inject_user_time_context_system_slice() 
         memory_md="",
     )
     ctx = ContextMeta(context_mode="intimate")
-    implicit = ImplicitSignalBundle(
-        client_time=UserTimeContext(local_time="2026-05-01T12:00:00Z"),
-    )
     msgs = build_system_messages(
         bundle,
         ctx,
         enable_tools=False,
-        implicit_signal_bundle=implicit,
     )
     joined = "\n".join(m.get("content") or "" for m in msgs if m.get("role") == "system")
     assert "##User Time Context" not in joined

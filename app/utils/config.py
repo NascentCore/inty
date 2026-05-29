@@ -172,6 +172,9 @@ class CompanionMemoryBootstrapType(StrEnum):
 class FeaturesConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    class CompanionHarnessConfig(BaseModel):
+        dreaming_idle_seconds: int = Field(default=7200, ge=1)
+
     experimental_enable_chat_with_user_time_context: bool = True
     # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
     enable_selfie_persona_summary: bool = True
@@ -222,6 +225,10 @@ class FeaturesConfig(BaseModel):
     companion_implicit_sign_on_greeting_llm_timeout_sec: float = 12.0
     # Max LLM attempts for that greeting (includes the first call; 2 = one retry).
     companion_implicit_sign_on_greeting_llm_max_attempts: int = 2
+    # TODO: Move existing companion harness configs into CompanionHarnessConfig.
+    companion_harness: CompanionHarnessConfig = Field(
+        default_factory=CompanionHarnessConfig
+    )
 
     @model_validator(mode="after")
     def normalize_companion_fields(self) -> "FeaturesConfig":
@@ -268,8 +275,9 @@ class AppConfig:
     )
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
 
-    @dataclass
-    class LimitsConfig:
+    class LimitsConfig(BaseModel):
+        model_config = ConfigDict(extra="ignore")
+
         # Maximal image size in MB, for any uploaded images.
         max_image_size_mb: int = 4
         # DEPRECATED: Use free_user_image_gen_24h_limit instead
@@ -293,7 +301,7 @@ class AppConfig:
         subscribed_user_music_gen_24h_limit: int = 6
         image_compression_threshold_size_kb: int = 500
 
-    limits: LimitsConfig = None
+    limits: LimitsConfig = field(default_factory=LimitsConfig)
 
     def __post_init__(self):
         if self.limits is None:
@@ -716,6 +724,16 @@ class TTSConfig(BaseModel):
     enable_gemini_tts_then_elevenlabs_voice_changer_for_imate: bool = False
 
 
+class WeixinChannelConfig(BaseModel):
+    """Ops WeChat demo bridge behavior flags."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    # True: Hermes legacy per_line — top-level line breaks become separate WeChat DMs.
+    # False (default): compact — single bubble unless short chatty multiline heuristic fires.
+    split_multiline_messages: bool = False
+
+
 @dataclass
 class Config:
     app: AppConfig
@@ -745,6 +763,7 @@ class Config:
     surprise_snap: SurpriseSnapConfig = field(
         default_factory=lambda: SurpriseSnapConfig()
     )
+    weixin_channel: WeixinChannelConfig = field(default_factory=WeixinChannelConfig)
 
 
 # TODO(INTY_CONFIG_YAML): add resolve_inty_config_yaml_path() — INTY_CONFIG_YAML or config.yaml;
@@ -769,7 +788,9 @@ def load_config(path: str) -> Config:
     # Handle nested app config with limits
     app_data = data.get("app", {})
     if "limits" in app_data and isinstance(app_data["limits"], dict):
-        app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
+        app_data["limits"] = AppConfig.LimitsConfig.model_validate(
+            app_data["limits"]
+        )
     if "features" in app_data and isinstance(app_data["features"], dict):
         app_data["features"] = FeaturesConfig.model_validate(
             app_data["features"]
@@ -825,6 +846,9 @@ def load_config(path: str) -> Config:
         phone_call=PhoneCallConfig(**(data.get("phone_call") or {})),
         tts=TTSConfig.model_validate(data.get("tts") or {}),
         surprise_snap=_parse_surprise_snap_config(data),
+        weixin_channel=WeixinChannelConfig.model_validate(
+            data.get("weixin_channel") or {}
+        ),
     )
 
 

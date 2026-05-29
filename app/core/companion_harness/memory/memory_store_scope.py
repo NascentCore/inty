@@ -21,6 +21,7 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
         "BOOTSTRAP.md",
         "CHANNELS.md",
         "INTY.md",
+        "OUTPUT_FORMAT_WECHAT_WEIXIN.md",
         "SAFETY.md",
         "TOOLS.md",
         "SIGNIFICANCE_PERCEPTION.md",
@@ -153,6 +154,10 @@ class MemoryStoreScopePaths:
     @property
     def schedule_queue_json(self) -> str:
         return f"{self.state_file_prefix}_schedule_tasks.json"
+
+    @property
+    def dreaming_state_json(self) -> str:
+        return f"{self.state_file_prefix}_dreaming_state.json"
 
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()

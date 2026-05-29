@@ -41,6 +41,10 @@ class PromptBundle(BaseModel):
         default="",
         description="Channel capability contract: CHANNELS.md body for Capability system injection.",
     )
+    output_format_wechat_weixin_md: str = Field(
+        default="",
+        description="Channel output-format slice for WeChat/Weixin DM delivery.",
+    )
     tools_md: str = ""
     memory_raw_diary_today_md: str = Field(
         default="",

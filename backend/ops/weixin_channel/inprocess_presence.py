@@ -19,6 +19,9 @@ from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
 from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
 from app.services import chat_service, companion_chat_service
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.downlink import tool_background_downlink
@@ -130,7 +133,12 @@ class WeixinInprocessPresence:
         self._inty_user_id = None
 
     async def handle_user_text(self, user_text: str) -> str:
-        """Run one foreground user-chat turn; return assistant plain text for Hermes."""
+        """Run one foreground user-chat turn; return one assistant string for Hermes.
+
+        Hermes may split that string into several WeChat bubbles when sending.
+        Inty does not split here; see ``transport`` and
+        ``config.yaml`` ``weixin_channel.split_multiline_messages``.
+        """
         stripped = user_text.strip()
         assert stripped
         if self._inty_user_id is None:
@@ -203,6 +211,7 @@ class WeixinInprocessPresence:
                     background_output_sink=self._coordinator.background_sink,
                     preset_user_msg_uuid=preset_uid,
                     implicit_signal_bundle=implicit_bundle,
+                    runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
                 )
             if not turn.tool_background_started:
                 self._coordinator.remove_foreground_pending(preset_uid)

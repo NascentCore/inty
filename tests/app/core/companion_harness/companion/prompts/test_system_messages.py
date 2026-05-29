@@ -1,9 +1,32 @@
 from __future__ import annotations
 
-from app.core.companion_harness.companion.models import ContextMeta
+import inspect
+
+from app.core.companion_harness.companion.models import (
+    OUTPUT_FORMAT_WECHAT_WEIXIN_MD,
+    ContextMeta,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
+    build_system_messages_for_bootstrap_track,
+    build_system_messages_for_chat_track,
+    build_system_messages_for_implicit_sign_on_greeting,
+    build_system_messages_for_inner_tick_maintenance,
+    build_system_messages_for_inner_tick_proactive_chat,
+    build_system_messages_for_inner_tick_scheduled,
+    build_system_messages_for_tool_track,
+)
+from app.core.companion_harness.companion.prompt_stack import (
+    append_runtime_output_format_system_message,
+    output_format_prompt_slice_for_runtime_channel,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    load_template_seed_text,
+)
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
 )
 
 
@@ -26,3 +49,99 @@ def test_doctrine_system_prefix_excludes_subconscious_prompt() -> None:
         "# Safety - 安全预防",
     ]
     assert all("SUBCONSCIOUS" not in str(message["content"]) for message in messages)
+
+
+def test_wechat_weixin_output_format_slice_is_appended_by_runtime_decorator() -> None:
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+        output_format_wechat_weixin_md=load_template_seed_text(
+            OUTPUT_FORMAT_WECHAT_WEIXIN_MD
+        ),
+    )
+    messages = build_system_messages(
+        bundle,
+        ContextMeta(),
+        enable_tools=True,
+        async_foreground_chat_stack=True,
+        include_significance_perception_slice=True,
+    )
+    messages = append_runtime_output_format_system_message(
+        system_messages=messages,
+        bundle=bundle,
+        runtime_context=TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+            implicit_signal_bundle=None,
+        ),
+    )
+    contents = [str(message["content"]) for message in messages]
+    first_lines = [content.split("\n")[0] for content in contents]
+    mirrored_tools_index = first_lines.index(
+        "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致"
+    )
+    wechat_index = first_lines.index("# Output format: WeChat / Weixin DM")
+    envelope_index = first_lines.index(
+        "## Dual-LLM chat branch: structured reply envelope"
+    )
+
+    assert mirrored_tools_index < envelope_index < wechat_index
+    assert contents[wechat_index].split("\n") == [
+        "# Output format: WeChat / Weixin DM",
+        "",
+        "The visible reply is written into a WeChat/Weixin one-to-one chat thread.",
+        "",
+        "- Output plain natural-language chat text only; do not use Markdown headings, tables, code fences, JSON, XML, or bullet-heavy layouts unless the user explicitly asks for structured content.",
+        "- Keep each visible message compact and DM-like: usually one short paragraph, up to two short paragraphs when warmth or clarity needs it.",
+        "- Preserve intimacy and immediacy: write as if texting the user directly, not as an app assistant or system.",
+        "- Do not mention WeChat, Weixin, iLink, Hermes, transport adapters, prompt slices, tool routes, or delivery mechanics.",
+        "- If the model response must use a structured envelope, apply this format only inside user-facing natural-language fields such as `user_facing_reply`; keep the envelope itself valid.",
+    ]
+    assert CompanionRuntimeChannel.WECHAT_WEIXIN.value == "wechat_weixin"
+
+
+def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() -> None:
+    builders = [
+        build_system_messages,
+        build_system_messages_for_bootstrap_track,
+        build_system_messages_for_chat_track,
+        build_system_messages_for_tool_track,
+        build_system_messages_for_inner_tick_maintenance,
+        build_system_messages_for_inner_tick_proactive_chat,
+        build_system_messages_for_inner_tick_scheduled,
+        build_system_messages_for_implicit_sign_on_greeting,
+    ]
+
+    for builder in builders:
+        assert "output_format_prompt_slice" not in inspect.signature(
+            builder
+        ).parameters
+
+
+def test_output_format_slice_resolves_from_runtime_channel() -> None:
+    body = load_template_seed_text(OUTPUT_FORMAT_WECHAT_WEIXIN_MD)
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+        output_format_wechat_weixin_md=body,
+    )
+
+    assert (
+        output_format_prompt_slice_for_runtime_channel(
+            bundle=bundle,
+            runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+        )
+        == body
+    )
+    assert (
+        output_format_prompt_slice_for_runtime_channel(
+            bundle=bundle,
+            runtime_channel=CompanionRuntimeChannel.APP,
+        )
+        == ""
+    )

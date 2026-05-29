@@ -277,6 +277,11 @@ def test_features_config_companion_transcript_compaction_null_disables():
     assert f.companion_transcript_compaction is None
 
 
+def test_features_config_companion_harness_dreaming_idle_seconds() -> None:
+    f = FeaturesConfig(companion_harness={"dreaming_idle_seconds": 33})
+    assert f.companion_harness.dreaming_idle_seconds == 33
+
+
 def test_features_config_uses_pydantic_validation():
     f = FeaturesConfig.model_validate(
         {
@@ -427,6 +432,20 @@ def test_chat_messages_window_limit_defaults():
 
     assert limits.free_user_chat_messages_limit == 10
     assert limits.sub_user_chat_messages_limit == 1000
+
+
+def test_app_limits_config_model_validate_ignores_unknown_keys():
+    limits = AppConfig.LimitsConfig.model_validate(
+        {
+            "free_user_chat_24h_limit": 42,
+            "guest_user_voice_24h_limit": 7,
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert limits.free_user_chat_24h_limit == 42
+    assert limits.guest_user_voice_24h_limit == 7
+    assert not hasattr(limits, "unknown_key")
 
 
 def test_database_settings_model_validate_preserves_database_urls():
@@ -906,6 +925,29 @@ def test_load_config_api_endpoints_uses_pydantic_validation():
     assert cfg.app.api_endpoints.disable_api_v1_chat_completions is True
 
 
+def test_load_config_app_limits_uses_pydantic_validation():
+    yaml_text = _minimal_yaml_for_load_config(
+        "\n".join(
+            [
+                "    companion_memory_bootstrap_type: USER_INTERACTIVE",
+                "  limits:",
+                "    guest_user_chat_24h_limit: 3",
+                "    guest_user_voice_24h_limit: 3",
+                "    unknown_key: ignored",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+
+    assert cfg.app.limits.guest_user_chat_24h_limit == 3
+    assert cfg.app.limits.guest_user_voice_24h_limit == 3
+    assert not hasattr(cfg.app.limits, "unknown_key")
+
+
 def test_load_config_embedding_uses_pydantic_validation():
     yaml_text = _minimal_yaml_for_load_config(
         "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
@@ -1164,3 +1206,35 @@ def test_load_config_tts_uses_pydantic_validation():
         cfg.tts.voice_message_narration_mode
         == "dialogue_and_stage_directions"
     )
+
+
+def test_load_config_weixin_channel_split_multiline_default_false() -> None:
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+    assert cfg.weixin_channel.split_multiline_messages is False
+
+
+def test_load_config_weixin_channel_split_multiline_true() -> None:
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+    ).replace(
+        "elevenlabs:\n",
+        "\n".join(
+            [
+                "weixin_channel:",
+                "  split_multiline_messages: true",
+                "elevenlabs:",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+    assert cfg.weixin_channel.split_multiline_messages is True
