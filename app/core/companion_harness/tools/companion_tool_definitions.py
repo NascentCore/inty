@@ -117,10 +117,6 @@ SET_BOOTSTRAP_COMPLETE_TOOL = LlmFunctionTool(
     },
 )
 
-_SELECTABLE_EXPERIENCE_PROFILE_IDS: tuple[str, ...] = tuple(
-    sorted(m.value for m in ExperienceContextMode)
-)
-
 SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
     name=CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
     description=(
