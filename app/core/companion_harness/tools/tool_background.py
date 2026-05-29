@@ -125,12 +125,6 @@ class ToolBackgroundTraceHooks(Protocol):
     ) -> None: ...
 
 
-def mark_tool_background_aborted(user_msg_uuid: str) -> None:
-    """Foreground REPL superseded this turn: background job must not append transcript or events."""
-    with _ABORT_TOOL_BG_LOCK:
-        _ABORTED_TOOL_BG_USER_MSG_UUIDS.add(user_msg_uuid)
-
-
 def is_tool_background_aborted(user_msg_uuid: str) -> bool:
     with _ABORT_TOOL_BG_LOCK:
         return user_msg_uuid in _ABORTED_TOOL_BG_USER_MSG_UUIDS
@@ -338,38 +332,8 @@ def output_queue() -> queue.Queue[ToolOutputEvent]:
         return _OUTPUT_QUEUE
 
 
-def clear_output_queue() -> None:
-    q = output_queue()
-    while True:
-        try:
-            q.get_nowait()
-        except queue.Empty:
-            return
-
-
 def push_output_event(event: ToolOutputEvent) -> None:
     output_queue().put(event)
-
-
-def pop_output_events_nowait(
-    *, scope_registry_key: str
-) -> list[ToolOutputEvent]:
-    want = scope_registry_key.strip()
-    out: list[ToolOutputEvent] = []
-    q = output_queue()
-    parked: list[ToolOutputEvent] = []
-    while True:
-        try:
-            ev = q.get_nowait()
-        except queue.Empty:
-            break
-        if ev.scope_registry_key == want:
-            out.append(ev)
-        else:
-            parked.append(ev)
-    for ev in parked:
-        q.put(ev)
-    return out
 
 
 def _register_thread(worker: threading.Thread) -> None:
@@ -380,11 +344,6 @@ def _register_thread(worker: threading.Thread) -> None:
 def _unregister_thread(worker: threading.Thread) -> None:
     with _ACTIVE_THREADS_LOCK:
         _ACTIVE_THREADS.discard(worker)
-
-
-def background_tasks_count() -> int:
-    with _ACTIVE_THREADS_LOCK:
-        return len(_ACTIVE_THREADS)
 
 
 def _assistant_text_from_completion_response(resp: Any) -> str:

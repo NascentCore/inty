@@ -380,14 +380,6 @@ async def _run_bootstrap_track_sync_tool_loop(
         last_interim_assistant_msg_uuid,
     )
 
-
-def _preview(s: str, max_len: int = 280) -> str:
-    one = s.replace("\n", " ").strip()
-    if len(one) <= max_len:
-        return one
-    return one[: max_len - 1] + "..."
-
-
 async def _await_tool_background_idle_if_configured(
     tool_bg_idle_event: threading.Event | None,
     *,

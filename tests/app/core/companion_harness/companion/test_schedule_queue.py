@@ -9,7 +9,6 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
     _schedule_document_rel,
     add_schedule_task,
-    get_due_tasks,
     mark_task_fired,
     next_due_task_for_execution,
 )
@@ -22,14 +21,14 @@ def _store(tmp: Path):
     )
 
 
-def test_add_and_get_due_tasks(tmp_path: Path) -> None:
+def test_add_and_next_due_task(tmp_path: Path) -> None:
     store = _store(tmp_path)
     past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
     tid = add_schedule_task(store, exec_time_utc=past, task_text="remind me")
-    due = get_due_tasks(store)
-    assert len(due) == 1
-    assert due[0]["id"] == tid
-    assert due[0]["task_text"] == "remind me"
+    due = next_due_task_for_execution(store)
+    assert due is not None
+    assert due.id == tid
+    assert due.task_text == "remind me"
 
 
 def test_next_due_task_for_execution_picks_earliest_ready(tmp_path: Path) -> None:
