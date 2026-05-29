@@ -634,6 +634,7 @@ def _output_system_messages(
     return out
 
 
+# TODO(structual-simplicity): Dissolve this function, the caller calls the body based on the provided arguments.
 def _contextual_system_messages(
     *,
     context: ContextMeta,
