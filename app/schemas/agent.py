@@ -2,10 +2,12 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from loguru import logger
 from pydantic import (
     AliasChoices,
     BaseModel,
     Field,
+    ValidationError,
     field_serializer,
     field_validator,
 )
@@ -402,8 +404,11 @@ class Agent(AgentInDB):
                 # 将settings中的llm_config转换为ModelConfig对象
                 try:
                     return ModelConfig(**settings_llm_config)
-                except Exception:
-                    # 如果转换失败，返回None
+                except (TypeError, ValidationError) as e:
+                    logger.bind(
+                        agent_id=getattr(self, "id", "unknown"),
+                        field="llm_config",
+                    ).warning("Failed to serialize agent settings model: {}", e)
                     return None
 
         return None
@@ -480,13 +485,11 @@ class Agent(AgentInDB):
 
             return avatar
 
-        except Exception as e:
-            # 记录错误但不抛出异常，返回原始avatar
-            from loguru import logger
-
-            logger.warning(
-                f"Failed to serialize avatar for agent {getattr(self, 'id', 'unknown')}: {str(e)}"
-            )
+        except (ImportError, AttributeError, TypeError, ValueError) as e:
+            logger.bind(
+                agent_id=getattr(self, "id", "unknown"),
+                field="avatar",
+            ).warning("Failed to serialize agent image URL: {}", e)
             return avatar
 
     @field_serializer("background")
@@ -500,7 +503,11 @@ class Agent(AgentInDB):
             )
 
             return image_transform_service.transform_desktop(background)
-        except Exception:
+        except (ImportError, AttributeError, TypeError, ValueError) as e:
+            logger.bind(
+                agent_id=getattr(self, "id", "unknown"),
+                field="background",
+            ).warning("Failed to serialize agent image URL: {}", e)
             return background
 
     @field_serializer("background_images")
@@ -518,7 +525,11 @@ class Agent(AgentInDB):
             return image_transform_service.transform_url_list(
                 background_images, "desktop"
             )
-        except Exception:
+        except (ImportError, AttributeError, TypeError, ValueError) as e:
+            logger.bind(
+                agent_id=getattr(self, "id", "unknown"),
+                field="background_images",
+            ).warning("Failed to serialize agent image URL: {}", e)
             return background_images
 
     @field_serializer("background_animated")
@@ -536,7 +547,11 @@ class Agent(AgentInDB):
             return image_transform_service.transform_desktop(
                 background_animated
             )
-        except Exception:
+        except (ImportError, AttributeError, TypeError, ValueError) as e:
+            logger.bind(
+                agent_id=getattr(self, "id", "unknown"),
+                field="background_animated",
+            ).warning("Failed to serialize agent image URL: {}", e)
             return background_animated
 
     @field_serializer("photos")
@@ -552,7 +567,11 @@ class Agent(AgentInDB):
             )
 
             return image_transform_service.transform_url_list(photos, "mobile")
-        except Exception:
+        except (ImportError, AttributeError, TypeError, ValueError) as e:
+            logger.bind(
+                agent_id=getattr(self, "id", "unknown"),
+                field="photos",
+            ).warning("Failed to serialize agent image URL: {}", e)
             return photos
 
     @field_serializer("meta_data")
@@ -573,8 +592,11 @@ class Agent(AgentInDB):
         ):
             try:
                 return AgentMetaData(**self.meta_data)
-            except Exception:
-                # 如果转换失败，返回None
+            except (TypeError, ValidationError) as e:
+                logger.bind(
+                    agent_id=getattr(self, "id", "unknown"),
+                    field="meta_data",
+                ).warning("Failed to serialize agent metadata model: {}", e)
                 return None
 
         return None
