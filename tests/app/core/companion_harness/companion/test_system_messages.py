@@ -6,6 +6,11 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
     build_system_messages_for_bootstrap_track,
 )
+from app.core.companion_harness.companion.prompt_stack import (
+    companion_system_messages_for_track,
+)
+from app.core.companion_harness.companion.models import CompanionTurnTrack
+from app.core.companion_harness.companion.turn_routes import TurnRouteMode
 from app.schemas.implicit_signals import HumanChannel, ImplicitSignalBundle
 
 
@@ -75,18 +80,23 @@ def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> No
         memory_md="memory",
     )
 
-    system_text = "\n".join(
-        _system_contents(
-            build_system_messages(
-                bundle,
-                ContextMeta(),
-                implicit_signal_bundle=ImplicitSignalBundle(
-                    human_channel=HumanChannel.WEIXIN,
-                ),
-            )
+    context = ContextMeta()
+    contents = _system_contents(
+        companion_system_messages_for_track(
+            store=None,  # type: ignore[arg-type]
+            bundle=bundle,
+            context=context,
+            memory_bootstrap_type="none",
+            track=CompanionTurnTrack.USER_CHAT,
+            route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
+            implicit_signal_bundle=ImplicitSignalBundle(
+                human_channel=HumanChannel.WEIXIN
+            ),
         )
     )
+    system_text = "\n".join(contents)
 
     assert "Weixin / ClawBot 联系人显示名" in system_text
     assert "Weixin 里看到的名称" in system_text
     assert "不要声称已替用户改名" in system_text
+    assert contents[-1].startswith("Weixin / ClawBot")

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.schemas.implicit_signals import HumanChannel, ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.bootstrap import (
@@ -36,6 +36,7 @@ from .prompts.system_messages import (
     build_system_messages_for_inner_tick_proactive_chat,
     build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
+    weixin_clawbot_contact_alias_system_message,
 )
 from app.core.companion_harness.tools.companion_tools import (
     build_companion_tools,
@@ -102,20 +103,15 @@ def companion_system_messages_for_track(
     """Pick the scenario wrapper from ``CompanionTurnTrack`` (see ``system_messages`` docstring)."""
     match track:
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
-            return build_system_messages_for_implicit_sign_on_greeting(
+            out = build_system_messages_for_implicit_sign_on_greeting(
                 bundle,
                 context,
                 memory_bootstrap_type,
-                implicit_signal_bundle=implicit_signal_bundle,
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
-            return build_system_messages_for_inner_tick_proactive_chat(
-                bundle, context, implicit_signal_bundle=implicit_signal_bundle
-            )
+            out = build_system_messages_for_inner_tick_proactive_chat(bundle, context)
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
-            return build_system_messages_for_inner_tick_scheduled(
-                bundle, context, implicit_signal_bundle=implicit_signal_bundle
-            )
+            out = build_system_messages_for_inner_tick_scheduled(bundle, context)
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             if (
                 route_mode
@@ -125,16 +121,11 @@ def companion_system_messages_for_track(
                     "inner_tick_maintenance track requires ASYNC route, got "
                     f"{route_mode.value}"
                 )
-            return build_system_messages_for_inner_tick_maintenance(
-                bundle,
-                context,
-                store,
-                implicit_signal_bundle=implicit_signal_bundle,
+            out = build_system_messages_for_inner_tick_maintenance(
+                bundle, context, store
             )
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            return build_system_messages_for_bootstrap_track(
-                bundle, context, implicit_signal_bundle=implicit_signal_bundle
-            )
+            out = build_system_messages_for_bootstrap_track(bundle, context)
         case CompanionTurnTrack.USER_CHAT:
             if (
                 route_mode
@@ -144,12 +135,17 @@ def companion_system_messages_for_track(
                     "user_chat track requires ASYNC route, got "
                     f"{route_mode.value}"
                 )
-            return build_system_messages_for_chat_track(
+            out = build_system_messages_for_chat_track(
                 bundle,
                 context,
                 memory_bootstrap_type,
-                implicit_signal_bundle=implicit_signal_bundle,
             )
+    if (
+        implicit_signal_bundle is not None
+        and implicit_signal_bundle.human_channel == HumanChannel.WEIXIN
+    ):
+        out.append(weixin_clawbot_contact_alias_system_message())
+    return out
 
 
 def companion_turn_tools_and_system_messages(
@@ -238,26 +234,21 @@ def refresh_companion_turn_prompt_stack(
                 refreshed = build_system_messages_for_bootstrap_track(
                     bundle,
                     context,
-                    implicit_signal_bundle=implicit_signal_bundle,
                 )
             else:
                 refreshed = build_system_messages_for_chat_track(
                     bundle,
                     context,
                     memory_bootstrap_type,
-                    implicit_signal_bundle=implicit_signal_bundle,
                 )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             refreshed = build_system_messages_for_inner_tick_maintenance(
                 bundle,
                 context,
                 store,
-                implicit_signal_bundle=implicit_signal_bundle,
             )
         case CompanionTurnTrack.USER_CHAT:
-            refreshed = build_system_messages_for_tool_track(
-                bundle, context, implicit_signal_bundle=implicit_signal_bundle
-            )
+            refreshed = build_system_messages_for_tool_track(bundle, context)
         case (
             CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
             | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
@@ -267,5 +258,10 @@ def refresh_companion_turn_prompt_stack(
                 "refresh_companion_turn_prompt_stack unsupported track="
                 f"{track.value}"
             )
+    if (
+        implicit_signal_bundle is not None
+        and implicit_signal_bundle.human_channel == HumanChannel.WEIXIN
+    ):
+        refreshed.append(weixin_clawbot_contact_alias_system_message())
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn
