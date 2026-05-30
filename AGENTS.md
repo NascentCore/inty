@@ -127,10 +127,6 @@ You should only changes and use code in the following dirs:
 
 ## Agent skills
 
-mattpocock/skills 已安装于 `.agents/skills/`（`skills-lock.json`）；Inty 自有 skill 在 `.cursor/skills/`。
+Inty 自有 skill 在 `.cursor/skills/`。
 
-### Setup 状态
-
-**暂不运行** `/setup-matt-pocock-skills`：人类队友要先试用 skill。决策记录见 [.agents/work_logs/2026-05-25/mattpocock-skills-defer-setup.md](/.agents/work_logs/2026-05-25/mattpocock-skills-defer-setup.md)。
-
-在未 setup 前，`docs/agents/` 不存在；依赖该目录的 engineering skill（`to-issues`、`to-prd`、`triage` 等）缺少本仓库上下文。productivity skill 与部分 engineering skill 可直接试用。
+mattpocock/skills 已于 2026-05-30 卸载（移除 `.agents/skills/` 与 `skills-lock.json`），决策记录见 [.agents/work_logs/2026-05-30/uninstall-mattpocock-skills.md](/.agents/work_logs/2026-05-30/uninstall-mattpocock-skills.md)。
