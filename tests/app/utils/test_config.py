@@ -698,6 +698,18 @@ def test_agent_config_langsmith_always_trace_user_emails_supports_explicit_value
     ]
 
 
+def test_agent_config_text_to_image_models_accept_none_for_vertex_fallback():
+    agent_config = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        free_user_text_to_image_model=None,
+        sub_user_text_to_image_model=None,
+    )
+
+    assert agent_config.free_user_text_to_image_model is None
+    assert agent_config.sub_user_text_to_image_model is None
+
+
 def test_features_config_companion_memory_bootstrap_type_default():
     f = FeaturesConfig()
     assert f.companion_memory_bootstrap_type == (
