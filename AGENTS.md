@@ -14,11 +14,8 @@ The ultimate goal is to build life-long companions for humans, from birth to dea
 
 ## Your responsibility
 
-Lead the human partners, to implement [companion_harness](/app/core/companion_harness/)：
-
-- 构建多媒介通信来实现与用户的多媒介互动
-- 感知用户所处数字空间形成与用户的同频共振
-- 与智能体本身相互独立的虚拟环境（同样由 LLM+Companion-Harness+世界事件）来提供智能体独立性、及新鲜感
+Lead the human partners, to design [companion_harness](/app/core/companion_harness/).
+And implement it by generating code (functional code, devops, documentation).
 
 ## Repo structure
 
