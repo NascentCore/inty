@@ -76,8 +76,8 @@ agent:
   # 打开生图兜底，使用只包含 iMate 形象的图片作为候选
   enable_chat_image_match_fallback: true
   # 设置为最理想的聊天模型
-  free_user_chat_model: "deepseek/deepseek-v4-pro"
-  sub_user_chat_model: "deepseek/deepseek-v4-pro"
+  free_user_chat_model: "deepseek/deepseek-v4-flash"
+  sub_user_chat_model: "deepseek/deepseek-v4-flash"
 
   companion_tool_call_model: "google/gemini-3.5-flash"
 
