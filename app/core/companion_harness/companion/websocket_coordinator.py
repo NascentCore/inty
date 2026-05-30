@@ -4,9 +4,13 @@
 with WS-only bootstrap deliver context and outbound queue binding. Channel-agnostic
 state lives in ``app.services.agentic_companion.session``.
 
-TODO(ws-disconnect-lifecycle): On server shutdown or WebSocket session end, do not cancel
-in-flight companion turns. Let background tasks finish, persist produced messages to storage,
-and mark them undelivered so the client can receive them after ``user_signed_on``.
+Each ``chat_completions_websocket`` accept creates a **new** coordinator instance ⇒ a new
+**presence-level** ``turn_lock``. Scope-level ``CompanionActivityGate`` lives on
+``CompanionSession`` instead (shared across tabs). See ``session.Coordinator`` module docstring.
+
+TODO(ws-disconnect-lifecycle): https://github.com/NascentCore/inty/issues/3256 — on shutdown
+or WebSocket session end, do not cancel in-flight turns; persist-first with delivery state,
+mark undelivered, replay after ``user_signed_on``.
 """
 
 from __future__ import annotations
@@ -88,7 +92,7 @@ class ChatWsInflightTurnTracker:
         return task
 
     async def cancel_all(self) -> None:
-        # TODO(ws-disconnect-lifecycle): replace cancel with detach + undelivered persistence (see module docstring).
+        # TODO(ws-disconnect-lifecycle): #3256 — replace cancel with detach + persist-first delivery state.
         pending = [t for t in list(self._tasks) if not t.done()]
         for task in pending:
             task.cancel()

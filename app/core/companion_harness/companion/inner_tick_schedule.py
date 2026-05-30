@@ -1,5 +1,9 @@
 """Maintenance and REPL-prototype inner-tick wait helpers (poll chunk + min gap).
 
+TODO(inner-tick-autonomy): Rename maintenance scheduling to autonomy after inner-tick scope shrinks
+to ai_private-only; align ``companion_ws_maintenance_inner_tick_*`` config keys and coordinator
+monotonic fields.
+
 WebSocket **proactive chat rhythm** lives in ``proactive_chat.py``;
 the unified WS worker fires scheduled / proactive / maintenance
 on ``companion_ws_proactive_chat_poll_seconds``.
@@ -91,7 +95,8 @@ def maintenance_transcript_line_count(store: MemoryStore) -> int:
 def transcript_tail_message_uuid(store: MemoryStore) -> str | None:
     """``uuid`` of the last ``transcript.jsonl`` row in the maintenance gate view.
 
-    Maintenance turns persist to ``transcript_inner_tick.jsonl``; this reflects main-track
+    Maintenance turns persist to ``transcript_inner_tick.jsonl``
+    (TODO(rename-memory-doc): ``transcript_inner_tick_maintenance.jsonl``); this reflects main-track
     state only (same source as ``next_inner_tick_wait_seconds``).
     """
     msgs = _maintenance_transcript_messages(store)

@@ -225,6 +225,17 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
     )
 
     source: Optional[str] = None
+    official_helper_reason: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "officialHelperReason", "official_helper_reason"
+        ),
+        serialization_alias="officialHelperReason",
+        description=(
+            "When ``source`` is ``official_helper``, why the companion path was bypassed "
+            "(e.g. ``dreaming``)."
+        ),
+    )
     bootstrap_round_index: Optional[int] = Field(
         default=None,
         validation_alias=AliasChoices(

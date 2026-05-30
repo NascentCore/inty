@@ -5,6 +5,31 @@ inner-tick coordinates, and overlap guards (channel-agnostic). ``Session``
 binds a :class:`~app.services.agentic_companion.downlink.ChannelDownlink` and
 runs the inner-tick poll worker skeleton; transport adapters materialize
 :class:`~app.services.agentic_companion.downlink.Downlink` events.
+
+Production companion user paths: **WebSocket + Weixin only**; no HTTP chat unless
+explicitly added later (must share scope turn serialization if it is).
+Design focus: coherent scope state + behavior display (text / image / voice-audio).
+
+Concurrency vocabulary (human terms — three layers, not interchangeable):
+
+- **Scope** — one chat archive: ``(user_id, agent_id, chat_id)``. One ``CompanionSession``
+  and one ``MemoryStore`` per scope in-process, regardless of how many tabs are open.
+- **Presence** — one live wire to the user (a WebSocket accept or Weixin in-process session).
+  Each presence gets its own ``Coordinator`` (and its own ``turn_lock`` below).
+- **``turn_lock`` (connection / presence level)** — "on this phone line, handle one turn at
+  a time": user message, greeting, inner-tick fire, tool-background downlink. Two tabs ⇒ two
+  lines ⇒ two independent locks; they do not see each other.
+  Scope-level dreaming vs chat is *not* governed here — see ``CompanionActivityGate`` on
+  ``CompanionSession`` in ``companion.manager``.
+- **``CompanionActivityGate`` (scope level)** — "this chat room is asleep consolidating
+  memory or awake talking": background dreaming and awake companion turns coordinate here
+  across wires and the dreaming scheduler thread.
+- **Postgres advisory lock (scope + cluster level)** — dreaming scheduler only; prevents
+  two backend processes from dreaming the same scope at once. See ``dreaming_scheduler.py``.
+
+Planned direction: ``InnerTickActivity.DREAMING`` on the inner-tick poll path, drop gate and
+background scheduler, hoist ``turn_lock`` to scope (after single-presence or shared lock on
+``CompanionSession``). See ``chat_ws`` TODO(companion-ws-single-presence).
 """
 
 from __future__ import annotations
@@ -65,8 +90,9 @@ class Coordinator:
     """Channel-agnostic companion invariants for one signed-on (user, agent, chat) presence."""
 
     loop: asyncio.AbstractEventLoop
-    # TODO(tool-bg-idle-starves-user-chat): Serializes greeting, user chat, and inner-tick on
-    # one presence. See companion websocket_coordinator module docstring / issues #3113 #3123.
+    # Presence-level turn serializer (one asyncio.Lock per WS / Weixin connection).
+    # Holds while one turn runs on *this wire*; does not serialize another tab on the same scope.
+    # TODO(tool-bg-idle-starves-user-chat): See websocket_coordinator / issues #3113 #3123.
     turn_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     background_events: asyncio.Queue[ToolOutputEvent] = field(
         default_factory=asyncio.Queue

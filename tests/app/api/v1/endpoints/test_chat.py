@@ -169,7 +169,12 @@ def _stub_chat_completion_dependencies(monkeypatch: pytest.MonkeyPatch):
         return SimpleNamespace(id="chat-1", agent_id=agent_id)
 
     async def fake_get_agent_for_chat(db, agent_id):
-        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+        return {
+            "id": agent_id,
+            "name": "Luna",
+            "voice_id": "voice-1",
+            "gender": "FEMALE",
+        }
 
     class DummyAgent:
         async def chat(self, *args, **kwargs):  # pragma: no cover - not reached
@@ -217,7 +222,12 @@ def _stub_chat_completion_dependencies_capture_user_save(
         return SimpleNamespace(id="chat-1", agent_id=agent_id)
 
     async def fake_get_agent_for_chat(db, agent_id):
-        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+        return {
+            "id": agent_id,
+            "name": "Luna",
+            "voice_id": "voice-1",
+            "gender": "FEMALE",
+        }
 
     class DummyAgent:
         async def chat(self, *args, **kwargs):  # pragma: no cover - not reached
@@ -266,7 +276,12 @@ def _stub_success_chat_completion_with_premium_preview(
         return SimpleNamespace(id="chat-1", agent_id=agent_id)
 
     async def fake_get_agent_for_chat(db, agent_id):
-        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+        return {
+            "id": agent_id,
+            "name": "Luna",
+            "voice_id": "voice-1",
+            "gender": "FEMALE",
+        }
 
     class DummyAgent:
         async def chat(self, *args, **kwargs):
@@ -395,7 +410,12 @@ def _stub_success_chat_completion_with_multimodal(
         return SimpleNamespace(id="chat-1", agent_id=agent_id)
 
     async def fake_get_agent_for_chat(db, agent_id):
-        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+        return {
+            "id": agent_id,
+            "name": "Luna",
+            "voice_id": "voice-1",
+            "gender": "FEMALE",
+        }
 
     class DummyAgent:
         async def chat(self, *args, **kwargs):
@@ -503,7 +523,12 @@ def _stub_success_chat_completion_with_multimodal_response(
         return SimpleNamespace(id="chat-1", agent_id=agent_id)
 
     async def fake_get_agent_for_chat(db, agent_id):
-        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+        return {
+            "id": agent_id,
+            "name": "Luna",
+            "voice_id": "voice-1",
+            "gender": "FEMALE",
+        }
 
     class DummyAgent:
         async def chat(self, *args, **kwargs):
@@ -904,7 +929,12 @@ def _setup_companion_ws_chat_test_env(
         return SimpleNamespace(id=chat_id, agent_id=agent_id)
 
     async def fake_get_agent_for_chat(db, agent_id=None, **_kwargs):
-        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+        return {
+            "id": agent_id,
+            "name": "Luna",
+            "voice_id": "voice-1",
+            "gender": "FEMALE",
+        }
 
     class DummyAgent:
         async def chat(self, *args, **kwargs):
@@ -1083,7 +1113,12 @@ def _setup_companion_ws_chat_test_env_with_postgres(
         return SimpleNamespace(id=chat_id, agent_id=agent_id)
 
     async def fake_get_agent_for_chat(db, agent_id=None, **_kwargs):
-        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+        return {
+            "id": agent_id,
+            "name": "Luna",
+            "voice_id": "voice-1",
+            "gender": "FEMALE",
+        }
 
     async def fake_get_or_create_chat_settings(
         db, chat_id_arg, user_id=None, agent_id=None, **_kwargs
@@ -1186,7 +1221,12 @@ def test_chat_completions_companion_kernel_branch_writes_history(
         return SimpleNamespace(id="chat-42", agent_id=agent_id)
 
     async def fake_get_agent_for_chat(db, agent_id):
-        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+        return {
+            "id": agent_id,
+            "name": "Luna",
+            "voice_id": "voice-1",
+            "gender": "FEMALE",
+        }
 
     class DummyAgent:
         async def chat(self, *args, **kwargs):
@@ -1365,7 +1405,12 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
         return SimpleNamespace(id="chat-ws-1", agent_id=agent_id)
 
     async def fake_get_agent_for_chat(db, agent_id):
-        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+        return {
+            "id": agent_id,
+            "name": "Luna",
+            "voice_id": "voice-1",
+            "gender": "FEMALE",
+        }
 
     class DummyAgent:
         async def chat(self, *args, **kwargs):

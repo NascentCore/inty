@@ -77,12 +77,15 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         None,
     ),
     "transcript.jsonl": (CompanionMemoryDocumentKind.TRANSCRIPT, None),
+    # TODO(rename-memory-doc): transcript_inner_tick_maintenance.jsonl (with scope path + migration).
     "transcript_inner_tick.jsonl": (
         CompanionMemoryDocumentKind.TRANSCRIPT_INNER_TICK,
         None,
     ),
     "context.json": (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
     "ai_private.md": (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
+    # TODO(inner-tick-autonomy): append tool for autonomy inner-tick; read-only injection today.
+    # The injected tools are for the agent to perform actions during "autonomous activity" (as part of inner-tick).
     "ai_private.jsonl": (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
     "tool_background.jsonl": (
         CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL,

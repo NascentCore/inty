@@ -1,8 +1,8 @@
 """Sleeping-state dreaming for turning recent chat into memory.
 
-Dreaming is Inty's sleeping-state memory activity. When the user has not sent
-messages for more than two hours, the background dreaming scheduler reviews the
-chat since the previous dream and settles it into applicable MemoryDocs.
+Dreaming is Inty's sleeping-state memory activity. When the configured idle
+period passes with no user messages, the background dreaming scheduler reviews
+the chat since the previous dream and settles it into applicable MemoryDocs.
 
 If there has never been a previous dream, Inty only looks back over the last
 24 hours so the first dream does not reopen an unbounded history.
@@ -16,6 +16,11 @@ long-term memory, user understanding, communication style, and durable
 relationship/personality boundaries. After a dream succeeds, Inty records a
 checkpoint so future LLM calls do not carry raw chat before that checkpoint;
 the next conversation continues from the consolidated memories instead.
+
+Concurrency: execution is gated by ``CompanionActivityGate`` on ``CompanionSession``
+(scope — "room asleep"), not by ``Coordinator.turn_lock`` (presence — "one phone line").
+Background path: ``CompanionDreamingScheduler`` + Postgres advisory lock per scope.
+Planned: ``InnerTickActivity.DREAMING`` on inner-tick poll under hoisted ``turn_lock``.
 """
 
 from __future__ import annotations
@@ -35,7 +40,6 @@ from .models import (
     ChatMessage,
     load_context_meta,
     load_transcript_from_store,
-    transcript_rows_for_public_chat_llm,
     transcript_without_trailing_presence_signals,
 )
 
@@ -153,24 +157,21 @@ def dreaming_candidate_slice(
             if parse_transcript_datetime(raw_rows[start_idx].ts) >= cutoff:
                 break
             start_idx += 1
-    candidate_raw = raw_rows[start_idx:]
-    if not candidate_raw:
+    candidate_rows = raw_rows[start_idx:]
+    if not candidate_rows:
         return None
-    candidate_public = transcript_rows_for_public_chat_llm(candidate_raw)
-    if not candidate_public:
-        return None
-    real_users = [m for m in candidate_public if is_real_user_message(m)]
+    real_users = [m for m in candidate_rows if is_real_user_message(m)]
     if not real_users:
         return None
     latest_user_ts = max(parse_transcript_datetime(m.ts) for m in real_users)
-    boundary = candidate_public[-1]
+    boundary = candidate_rows[-1]
     boundary_uuid = boundary.uuid or ""
     if not boundary_uuid:
         return None
     return DreamingCandidate(
-        rows=candidate_public,
+        rows=candidate_rows,
         latest_user_ts=latest_user_ts,
-        boundary_line_count=start_idx + len(candidate_raw),
+        boundary_line_count=start_idx + len(candidate_rows),
         boundary_uuid=boundary_uuid,
     )
 
@@ -181,16 +182,35 @@ def dreaming_due(
     now: datetime,
     dreaming_idle_seconds: int,
 ) -> DreamingCandidate | None:
-    """Return a candidate only when the scope is in sleeping-state idle."""
+    """Return a candidate only when the scope is in sleeping-state.
+
+    Note that we do not always know user/client's timezone.
+    Here we use UTC.
+
+    Arguments:
+        store: The memory store to load the dreaming state from.
+        now: The current time.
+        dreaming_idle_seconds: The number of seconds to wait before dreaming and after the last user message.
+    """
     assert dreaming_idle_seconds > 0
+    now_utc = _aware_utc(now)
     if not load_context_meta(
         store=store
     ).workspace_bootstrap_user_interactive_completed:
         return None
+    state = load_dreaming_state(store)
+    if (
+        state is not None
+        and state.last_processed_calendar_date.date() == now_utc.date()
+    ):
+        # Based on utc timezone, dreaming happens only once per day.
+        # TODO(user-feature): Use user/client's timezone instead of UTC,
+        # which is more consistent with user/client's perception.
+        return None
     candidate = dreaming_candidate_slice(store, now=now)
     if candidate is None:
         return None
-    idle = _aware_utc(now) - candidate.latest_user_ts
+    idle = now_utc - candidate.latest_user_ts
     if idle.total_seconds() < dreaming_idle_seconds:
         return None
     return candidate

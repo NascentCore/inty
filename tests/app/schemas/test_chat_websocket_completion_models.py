@@ -93,10 +93,22 @@ INNER_TICK_META = {
     "proactive_chat": True,
 }
 
+OFFICIAL_HELPER_META = {
+    "source": "official_helper",
+    "officialHelperReason": "dreaming",
+    "user_msg_uuid": "550e8400-e29b-41d4-a716-446655440000",
+}
+
 
 @pytest.mark.parametrize(
     "meta",
-    [FOREGROUND_CHAT_META, TOOL_BG_META, BOOTSTRAP_INTERIM_META, INNER_TICK_META],
+    [
+        FOREGROUND_CHAT_META,
+        TOOL_BG_META,
+        BOOTSTRAP_INTERIM_META,
+        INNER_TICK_META,
+        OFFICIAL_HELPER_META,
+    ],
 )
 def test_chat_websocket_queued_success_frame_model_validate(meta: dict[str, Any]) -> None:
     frame = ChatWebSocketQueuedSuccessFrame.model_validate(_queued_success_frame(meta))

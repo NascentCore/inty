@@ -1,4 +1,17 @@
-"""Sleeping-state companion dreaming scheduler, separate from inner tick."""
+"""Sleeping-state companion dreaming scheduler, separate from inner tick.
+
+Runs without a signed-on WebSocket: scans Postgres for scopes with a transcript, then
+calls ``companion_chat_service.run_companion_dreaming_for_api`` (uses ``CompanionActivityGate``
+on the scope — not ``Coordinator.turn_lock``).
+
+Cluster mutex: ``pg_try_advisory_lock(hashtextextended(lock_key))`` per scope
+(``companion-dreaming:{user}:{companion}:{chat}``) so two backend workers do not dream the
+same archive concurrently. This is scope + process-cluster level; unrelated to per-tab
+``turn_lock``.
+
+Planned removal: ``InnerTickActivity.DREAMING`` on the inner-tick poll path only (presence
+required); offline consolidation tracked in #3255.
+"""
 
 from __future__ import annotations
 
@@ -26,7 +39,7 @@ _DREAMING_SCAN_INTERVAL_SECONDS = 300
 
 @dataclass(frozen=True)
 class DreamingScope:
-    """A companion MemoryStore scope with a persisted main transcript."""
+    """One scope (user + companion + chat) eligible for background dreaming."""
 
     user_id: str
     companion_id: str
@@ -34,11 +47,12 @@ class DreamingScope:
 
     @property
     def lock_key(self) -> str:
+        """Postgres advisory lock id — scope-wide, all backend instances."""
         return f"companion-dreaming:{self.user_id}:{self.companion_id}:{self.chat_id}"
 
 
 class CompanionDreamingScheduler:
-    """Process sleeping companion scopes without using WebSocket inner tick."""
+    """Background scan for due dreams; does not use inner-tick poll or ``turn_lock``."""
 
     def __init__(self) -> None:
         self._scheduler: AsyncIOScheduler | None = None

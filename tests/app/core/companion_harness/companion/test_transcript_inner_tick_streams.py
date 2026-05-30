@@ -5,58 +5,7 @@ from app.core.companion_harness.companion.models import (
     InnerTickActivity,
     merge_transcripts_by_ts,
     transcript_relative_path_for_turn_persistence,
-    transcript_rows_for_public_chat_llm,
 )
-
-
-def test_transcript_rows_for_public_chat_llm_drops_maintenance_inner_tick() -> None:
-    uid_m = "maint-user-1"
-    uid_real = "real-user-1"
-    rows = [
-        ChatMessage(role="user", content="hello", ts="2026-05-01T00:00:01Z", uuid=uid_real),
-        ChatMessage(role="assistant", content="hi", ts="2026-05-01T00:00:02Z", reply_to=uid_real),
-        ChatMessage(
-            role="user",
-            content="（内在节拍）",
-            ts="2026-05-01T00:00:03Z",
-            uuid=uid_m,
-            inner_tick=True,
-        ),
-        ChatMessage(
-            role="assistant",
-            content="internal",
-            ts="2026-05-01T00:00:04Z",
-            reply_to=uid_m,
-            source="inner_tick",
-        ),
-    ]
-    pub = transcript_rows_for_public_chat_llm(rows)
-    assert len(pub) == 2
-    assert pub[0].uuid == uid_real
-    assert pub[1].reply_to == uid_real
-
-
-def test_transcript_rows_for_public_chat_llm_keeps_proactive_chat_inner_tick() -> None:
-    uid_pc = "pc-user-1"
-    rows = [
-        ChatMessage(
-            role="user",
-            content="（陪伴主动聊天）",
-            ts="2026-05-01T00:00:01Z",
-            uuid=uid_pc,
-            inner_tick=True,
-            proactive_chat=True,
-        ),
-        ChatMessage(
-            role="assistant",
-            content="hey",
-            ts="2026-05-01T00:00:02Z",
-            reply_to=uid_pc,
-            source="inner_tick",
-        ),
-    ]
-    pub = transcript_rows_for_public_chat_llm(rows)
-    assert len(pub) == 2
 
 
 def test_merge_transcripts_by_ts_orders_then_stable_tiebreak() -> None:

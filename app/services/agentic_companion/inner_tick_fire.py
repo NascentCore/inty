@@ -2,12 +2,28 @@
 
 Persists chat history and delivers assistant output via :class:`InnerTickDelivery`.
 WS wire envelopes are built here; Weixin receives plain text through the same path.
+
+Locking on the fire path (full vocabulary: ``session.Coordinator`` module docstring):
+
+- ``_inner_tick_turn_scope`` acquires **presence** ``coordinator.turn_lock`` first, then
+  checks **scope** ``activity_gate.dreaming_active()`` via ``companion_session_dreaming_active``.
+  User chat on the same wire also holds ``turn_lock`` — inner ticks and user messages queue
+  on one connection; dreaming still blocks via the gate even when not holding ``turn_lock``.
+- Multi-tab: each tab has its own ``turn_lock``; only ``activity_gate`` is shared per scope.
+  Another tab can user-chat while this wire's inner tick waits — a known gap until
+  single-presence or scope-hoisted ``turn_lock``.
+
+TODO(product-billing): Companion inner-tick paths (including maintenance) do not call
+``SubscriptionService.check_chat_limit`` / ``record_usage`` for now — no usage accounting
+or charging until product re-enables it.
 """
 
 from __future__ import annotations
 
 import time
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any, Optional
 
 from loguru import logger
@@ -66,6 +82,67 @@ from app.services.agentic_companion.ws_implicit_signals import (
 from app.services.subscription_service import SubscriptionService
 
 
+def _inner_tick_skipped_by_dreaming(
+    *,
+    label: str,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: Any,
+    ws_conn_id: str,
+) -> bool:
+    """Skip companion-initiated turns during exclusive dreaming."""
+    if not companion_chat_service.companion_session_dreaming_active(
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+    ):
+        return False
+    logger.info(
+        "{} skipped dreaming_active ws_conn_id={} user={} agent={} chat={}",
+        label,
+        ws_conn_id,
+        user_id,
+        agent_id,
+        chat_id,
+    )
+    return True
+
+
+@asynccontextmanager
+async def _inner_tick_turn_scope(
+    *,
+    coordinator: Coordinator,
+    label: str,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: Any,
+    ws_conn_id: str,
+) -> AsyncIterator[bool]:
+    """Acquire presence ``turn_lock``; skip if scope dreaming is active.
+
+    ``turn_lock`` = this connection only. ``dreaming_active`` = whole chat scope
+    (background scheduler or future ``InnerTickActivity.DREAMING``).
+    """
+    async with coordinator.turn_lock:
+        if _inner_tick_skipped_by_dreaming(
+            label=label,
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            resolved_chat_model=resolved_chat_model,
+            ws_conn_id=ws_conn_id,
+        ):
+            yield False
+            return
+        yield True
+
+
+# TODO(code-abstractions): This function should be abstracted at a much higher level,
+# in order to use more abstract classes and interfaces.
+# Do not always use primitive types.
 async def try_fire_scheduled_inner_tick(
     *,
     delivery: InnerTickDelivery,
@@ -151,7 +228,17 @@ async def try_fire_scheduled_inner_tick(
     preset_uid = str(uuid.uuid4())
 
     ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
-    async with coordinator.turn_lock:
+    async with _inner_tick_turn_scope(
+        coordinator=coordinator,
+        label="companion_ws_scheduled_reminder",
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_row_id,
+        resolved_chat_model=model_override,
+        ws_conn_id=ws_conn_id,
+    ) as proceed:
+        if not proceed:
+            return
         if coordinator.inner_tick_maintenance_foreground_pending():
             logger.debug(
                 "companion_ws_scheduled_reminder skipped prev_maintenance_pending "
@@ -428,7 +515,17 @@ async def try_fire_proactive_chat_inner_tick(
         preset_uid = str(uuid.uuid4())
 
     ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
-    async with coordinator.turn_lock:
+    async with _inner_tick_turn_scope(
+        coordinator=coordinator,
+        label="companion_ws_proactive_chat",
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_row_id,
+        resolved_chat_model=model_override,
+        ws_conn_id=ws_conn_id,
+    ) as proceed:
+        if not proceed:
+            return
         coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
         if coordinator.inner_tick_proactive_tool_bg_still_running():
             logger.debug(
@@ -603,7 +700,11 @@ async def try_fire_maintenance_inner_tick(
     ws_conn_id: str,
     tc_box: list[Optional[dict]],
 ) -> None:
-    """If companion transcript says maintenance inner-tick is due, run one MAINTENANCE turn and queue WS."""
+    """If companion transcript says maintenance inner-tick is due, run one MAINTENANCE turn and queue WS.
+
+    TODO(inner-tick-autonomy): Rename to ``try_fire_autonomy_inner_tick``; turn only appends
+    ``ai_private.jsonl`` (no MD/profile/techno_core tools). Memory consistency → dreaming.
+    """
     # TODO(tool-bg-idle-starves-user-chat): Foreground often returns tool_bg_only while session
     # tool_bg_idle stays cleared until the bg thread finishes; proactive then holds turn_lock
     # inside run_turn idle wait and queues USER_MESSAGE with no chat reply.
@@ -673,19 +774,6 @@ async def try_fire_maintenance_inner_tick(
         if remain > 0:
             return
 
-        is_allowed, used_count, daily_limit = (
-            await subscription_svc.check_chat_limit(pre_db, current_user)
-        )
-        if not is_allowed:
-            logger.info(
-                "companion_ws_maintenance_inner_tick skipped subscription ws_conn_id={} user={} used={} limit={}",
-                ws_conn_id,
-                user_id,
-                used_count,
-                daily_limit,
-            )
-            return
-
         chat_row_id = chat.id
         chat_row_agent_id = chat.agent_id
         session_id = generate_session_id(str(chat_row_id))
@@ -704,7 +792,17 @@ async def try_fire_maintenance_inner_tick(
         user_time_context=stub_utc,
     )
 
-    async with coordinator.turn_lock:
+    async with _inner_tick_turn_scope(
+        coordinator=coordinator,
+        label="companion_ws_maintenance_inner_tick",
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_row_id,
+        resolved_chat_model=model_override,
+        ws_conn_id=ws_conn_id,
+    ) as proceed:
+        if not proceed:
+            return
         if coordinator.inner_tick_maintenance_foreground_pending():
             logger.debug(
                 "companion_ws_maintenance_inner_tick skipped prev_inner_tick_pending "
@@ -797,25 +895,6 @@ async def try_fire_maintenance_inner_tick(
             )
 
         async with AsyncSessionLocal() as post_db:
-            try:
-                await subscription_svc.record_usage(
-                    post_db,
-                    user_id,
-                    "chat",
-                    1,
-                    extra_data={
-                        "agent_id": agent_id,
-                        "message_length": 0,
-                        "companion_ws_maintenance_inner_tick": True,
-                    },
-                )
-            except Exception as e:
-                logger.warning(
-                    "companion_ws_maintenance_inner_tick record_usage failed ws_conn_id={}: {}",
-                    ws_conn_id,
-                    str(e),
-                )
-
             if reply_stripped:
                 (
                     response_text_content,

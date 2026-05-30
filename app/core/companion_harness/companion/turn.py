@@ -503,6 +503,9 @@ async def _run_companion_turn_core(
         idle_wait_timeout_sec = float(
             llm_client.config.async_chat_front_timeout_sec
         )
+    # TODO(tool-bg-idle-starves-user-chat): Maintenance often ends with tool_background still running;
+    # the next turn waits on ``tool_bg_idle`` here while holding WS ``turn_lock``.
+    # https://github.com/NascentCore/inty/issues/3123
     await _await_tool_background_idle_if_configured(
         tool_bg_idle_event,
         idle_wait_timeout_sec=idle_wait_timeout_sec,

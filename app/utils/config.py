@@ -346,13 +346,17 @@ class AgentConfig:
     # 下面的代码文件不需要检测订阅状态，因为 evaluation 是做评测，不部面向用户
     # - app/services/evaluation_service.py (updated to use select_chat_model)
     # OpenAI-compatible endpoint; use OPENROUTER_BASE_URL to invoke e.g. google/gemini-2.5-flash-lite via OpenRouter.
+    # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     base_url: str = OPENROUTER_BASE_URL
     # Telegram Bot token for public iMate provisioning flow.
     telegram_bot_token: str = ""
     # Chat 专用 LLM 端点（可选）。若两者均配置则 Agent 聊天使用此端点，否则使用 base_url + api_key。记忆抽取始终使用 base_url + api_key。
+    # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     chat_llm_base_url: Optional[str] = None
+    # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     chat_llm_api_key: Optional[str] = None
     # Chat 使用的 LLM 网关标识，用于 meta_data.llm_provider；可选值为 openrouter / litellm。
+    # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     chat_llm_provider: str = "openrouter"
     temperature: float = 0.7
     max_tokens: int = 1000

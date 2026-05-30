@@ -111,8 +111,8 @@ _USER_PROFILE_SECTION = "## 身份信息"
 # ``TOOL_TAG_GENERATION`` / memory-store caps / allowlist: ``companion_tool_definitions``.
 
 
-# TODO(product): ai_private.jsonl is ORM-mapped but not in MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST; model
-# cannot memory_store_write_document it until allowlist or a dedicated append tool exists.
+# TODO(inner-tick-autonomy): ai_private.jsonl append-only tool for autonomy inner-tick; drop
+# UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (记忆一致性 → dreaming).
 
 
 def _latest_generated_image_http_url_from_index(
@@ -222,7 +222,7 @@ def append_user_profile_facts_to_user_md(
     return "\n".join(lines) + "\n"
 
 
-def tool_user_profile_record(
+def tool_update_user_md(
     store: MemoryStore, items: list[dict[str, Any]]
 ) -> str:
     """
@@ -556,6 +556,8 @@ def build_openai_repl_tools(
 def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     """
     内在节拍：USER 档案、LivingSphere/TechnoCore 事件日志、工作区读写；不含定时、联网、生图/改图。
+
+    TODO(inner-tick-autonomy): Autonomy inner-tick — ai_private.jsonl append only; see INNER_TICK_TOOL_NAMES.
     """
     return prepare_openai_tools_for_chat_completions(
         openai_tools_for_names(
@@ -604,7 +606,7 @@ async def _dispatch(
         tool_memory_store_read_document=tool_memory_store_read_document,
         tool_memory_store_write_document=tool_memory_store_write_document,
         tool_memory_store_mkdir=tool_memory_store_mkdir,
-        tool_user_profile_record=tool_user_profile_record,
+        tool_update_user_md=tool_update_user_md,
         parse_optional_max_chars=_parse_optional_max_chars,
         write_document_allowlist_reject=_memory_store_write_document_allowlist_reject,
     )

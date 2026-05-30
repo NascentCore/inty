@@ -27,6 +27,8 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 ``build_system_messages`` is the internal combiner; tests may call it directly.
 
 Post-transcript slices (e.g. ``## user-time-context`` in ``turn_pipeline``) are not built here.
+
+TODO(code-consistency): All tool name should be template swapped with LllmFunctionTool.name.
 """
 
 from __future__ import annotations
@@ -193,7 +195,7 @@ def _output_contract_text_with_tools(
     base = (
         "输出与工具："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        + "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
+        + "（1）用户自愿透露、适合长期保存的基本事实，可调用 update_user_md 写入 USER 档案；"
         "（1.1）当用户明确提出未来提醒（如「两小时后提醒我」「明早八点叫我」），"
         "必须先调用 schedule_task 写入定时队列；exec_time_utc 需给绝对时间（ISO8601，带时区），"
         "task_text 写提醒内容；禁止只口头答应而不写入定时队列。"
@@ -239,7 +241,7 @@ def _output_contract_text_interactive_bootstrap_tools(
         "（TOOLS 操作说明与 significance 评分引导为包内固定模版，不由本工具写入。）"
         "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须**调用 "
         "**companion_bootstrap_user_interactive_complete**（可选短 note）；未调用该工具前不要声称阶段已结束。"
-        "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
+        "（1）用户自愿透露、适合长期保存的基本事实，可调用 update_user_md 写入 USER 档案；"
         "（1.1）当用户明确提出未来提醒，必须先调用 schedule_task；exec_time_utc 须为带时区的 ISO8601。"
         "（2）确有核对持久化约定稿需求时可用 memory_store_list_paths / memory_store_read_document；勿编造内容。"
         "列表目录约束与上文「输出与工具」一致：勿为闲聊列根目录。"
@@ -294,42 +296,61 @@ def _inner_tick_ai_private_section(ai_private_text: str) -> str:
     return "内在活动（ai_private）\n\n" + ap
 
 
+__INNER_TICK_SCENE_ADVANCING = (
+    "本轮（内在节拍）\n\n"
+    "**意图**：模拟一次拟人的、向内的思考节拍，而不是为了往 REPL 里「找话说」。"
+    "默认假设用户没有在看你这条输出。\n\n"
+    "**场景演化（与内向整理并列）**：\n"
+    "- 读清 transcript 里**当前在演什么**（地点、关系张力、未决小事、情绪温度），"
+    "在不大改人设与 SOUL/USER 边界的前提下，为互动**轻推下一拍**："
+    "可以是时间或空间上的微小推进、一句未说完的话的自然收口、关系里的一小步试探或缓和，"
+    "或把悬着的事往前挪一丁点；避免为刷存在感而硬塞新剧情或大段独白。\n"
+    "- **转场**：若上一拍已自然落地、明显冷场收束、或继续硬撑会显得拖沓，"
+    "可做一次**软转场**（时间略过、换地点/换活动、换话题锚点），进入下一情境；"
+    "转场须与上文有因果或情绪上的黏连，禁止像新开存档、禁止元叙述解释「换场景了」。\n"
+    "- 若本轮以外显正文推进或转场，仍优先**一句为度**；更长只在「收束+转场」一体且仍保持克制时使用。\n\n"
+)
+
+
+__CONFESS_TO_USER = (
+    "**可见回复（对用户）**：\n"
+    "- 默认 **不向用户发起可见闲聊**：若没有强烈的、此刻非说不可的一点点外显念头，"
+    "请让**面向用户的正文为空或极短**（例如空字符串，或一句不引入新剧情负担的轻声旁白）。\n"
+    "- 若确有外显（含为「下一拍」或软转场所需）：只输出**一句**自然语言为主，"
+    "须与当前场景与语气连续，不要换风格、不要像新开一局；"
+    "不要元叙述（不要提「我在想」「系统让我」等）。\n\n"
+    "**工具（允许且鼓励在需要时使用）**：\n"
+    "- 为维护**记忆与档案一致性**：例如将此刻值得长期保留的事实写入 USER 档案（`update_user_md`）、"
+    "在确有必要时读写持久化约定稿与 `memory/` 下文档（`memory_store_read_document` / `memory_store_write_document` 等，"
+    "以包内 TOOLS 模版与路径工具规则为准；路径指向 MemoryStore）。\n"
+)
+
+
+__EASE_CONTEXT_PRESSURE = (
+    "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
+    "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"
+    "**不要**假设存在未在工具列表中出现的 API）。\n"
+    "- **不要做**与「内在整理」无关的炫技：除非与已悬而未决且对话中已明确需要的任务强相关，"
+    "否则本节拍**不要**生图、不要联网检索、不要安排与用户无关的定时提醒。\n\n"
+    "**与 ai_private**：内在节拍轮从 MemoryStore `ai_private.jsonl` 注入；"
+    "维护方 append JSON 行工具尚未接入，当前无法经工具写回 ai_private。"
+    "本节拍仅用允许的工具维护持久化档案与 USER 档案一致，勿编造不存在的工具名。"
+    "（TODO(inner-tick-autonomy): 上句「档案一致」将删除；本节拍仅写 ai_private，档案由 dreaming 维护。）"
+)
+
+
 def _inner_tick_turn_section() -> str:
-    return (
-        "本轮（内在节拍）\n\n"
-        "**意图**：模拟一次拟人的、向内的思考节拍，而不是为了往 REPL 里「找话说」。"
-        "默认假设用户没有在看你这条输出。\n\n"
-        "**场景演化（与内向整理并列）**：\n"
-        "- 读清 transcript 里**当前在演什么**（地点、关系张力、未决小事、情绪温度），"
-        "在不大改人设与 SOUL/USER 边界的前提下，为互动**轻推下一拍**："
-        "可以是时间或空间上的微小推进、一句未说完的话的自然收口、关系里的一小步试探或缓和，"
-        "或把悬着的事往前挪一丁点；避免为刷存在感而硬塞新剧情或大段独白。\n"
-        "- **转场**：若上一拍已自然落地、明显冷场收束、或继续硬撑会显得拖沓，"
-        "可做一次**软转场**（时间略过、换地点/换活动、换话题锚点），进入下一情境；"
-        "转场须与上文有因果或情绪上的黏连，禁止像新开存档、禁止元叙述解释「换场景了」。\n"
-        "- 若本轮以外显正文推进或转场，仍优先**一句为度**；更长只在「收束+转场」一体且仍保持克制时使用。\n\n"
-        + INNER_TICK_LS_TC_AUTONOMY_SECTION
-        + (
-            "**可见回复（对用户）**：\n"
-            "- 默认 **不向用户发起可见闲聊**：若没有强烈的、此刻非说不可的一点点外显念头，"
-            "请让**面向用户的正文为空或极短**（例如空字符串，或一句不引入新剧情负担的轻声旁白）。\n"
-            "- 若确有外显（含为「下一拍」或软转场所需）：只输出**一句**自然语言为主，"
-            "须与当前场景与语气连续，不要换风格、不要像新开一局；"
-            "不要元叙述（不要提「我在想」「系统让我」等）。\n\n"
-            "**工具（允许且鼓励在需要时使用）**：\n"
-            "- 为维护**记忆与档案一致性**：例如将此刻值得长期保留的事实写入 USER 档案（`user_profile_record`）、"
-            "在确有必要时读写持久化约定稿与 `memory/` 下文档（`memory_store_read_document` / `memory_store_write_document` 等，"
-            "以包内 TOOLS 模版与路径工具规则为准；路径指向 MemoryStore）。\n"
-        )
-        + INNER_TICK_LS_TC_TOOL_BULLET
-        + "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
-        "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"
-        "**不要**假设存在未在工具列表中出现的 API）。\n"
-        "- **不要做**与「内在整理」无关的炫技：除非与已悬而未决且对话中已明确需要的任务强相关，"
-        "否则本节拍**不要**生图、不要联网检索、不要安排与用户无关的定时提醒。\n\n"
-        "**与 ai_private**：内在节拍轮从 MemoryStore `ai_private.jsonl` 注入（维护方可 append JSON 行）；"
-        "本节拍仅用允许的工具维护持久化档案与 USER 档案一致，勿编造不存在的工具名。"
-    )
+    # TODO(inner-tick-autonomy): Replace this slice — autonomy inner-tick should only instruct
+    # appending hallucinated beats to ai_private.jsonl; remove 记忆一致性 / memory_store / update_user_md
+    # bullets (dreaming owns MD/profile sync). Drop LS/TC ``techno_core_record_event`` from inner-tick
+    # tools. Rename maintenance → autonomy across prompt copy after implementation.
+    return "\n".join([
+        __INNER_TICK_SCENE_ADVANCING,
+        INNER_TICK_LS_TC_AUTONOMY_SECTION,
+        __CONFESS_TO_USER,
+        INNER_TICK_LS_TC_TOOL_BULLET,
+        __EASE_CONTEXT_PRESSURE,
+    ])
 
 
 def _living_sphere_persistence_clause() -> str:
@@ -387,7 +408,7 @@ def _tool_background_final_json_routing_contract_text() -> str:
         "按 significance 规则为本轮工具收尾打分。\n"
         "- `output_to_user`（布尔）：用户是否还应收到一条**额外**后续气泡，用于总结本轮工具可读结果"
         "（读档、列目录、联网检索、状态行等）。"
-        "若本轮仅为静默持久化（如 user_profile_record、SOUL/MEMORY 写回）且无需对用户追加说明，设为 false。\n"
+        "若本轮仅为静默持久化（如 update_user_md、SOUL/MEMORY 写回）且无需对用户追加说明，设为 false。\n"
         "**生图 / 改图**：若 `generate_image` 或 `modify_image` **成功**产出路径，系统仍会向用户投递产物；"
         "`output_to_user` 不能否决成功产物投递，只控制是否额外附文字。\n"
         "若你无法产出合法 JSON，后端会追加一次 **同一 schema**、无 tools 的补解析请求。\n"
@@ -712,7 +733,11 @@ def build_system_messages_for_inner_tick_maintenance(
     context: ContextMeta,
     store: MemoryStore,
 ) -> list[dict[str, Any]]:
-    """ASYNC maintenance inner tick: plan prefix and tool leg (no foreground envelope)."""
+    """ASYNC maintenance inner tick: plan prefix and tool leg (no foreground envelope).
+
+    TODO(inner-tick-autonomy): Rename to ``build_system_messages_for_inner_tick_autonomy``;
+    ai_private-only prompt + append tool; no 记忆一致性 / LS-TC slices.
+    """
     ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
     return build_system_messages(
         bundle,

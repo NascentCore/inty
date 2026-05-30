@@ -1,4 +1,8 @@
-"""Route selected chat traffic through the agentic companion kernel (same as inty v2 REPL)."""
+"""Route selected chat traffic through the agentic companion kernel (same as inty v2 REPL).
+
+Companion concurrency (scope vs presence vs cluster): documented on
+``app.services.agentic_companion.session.Coordinator`` and ``companion.manager.CompanionActivityGate``.
+"""
 
 from __future__ import annotations
 
@@ -43,6 +47,7 @@ from app.core.companion_harness.companion.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
 from app.core.companion_harness.companion.models import (
+    CompanionIdentity,
     CompanionTurnResult,
     InnerTickActivity,
 )
@@ -99,19 +104,24 @@ def companion_memory_store_if_ready(
     return session.store
 
 
-def companion_bootstrap_interim_ws_enabled(
+def companion_session_dreaming_active(
     *,
     user_id: str,
     agent_id: str,
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
 ) -> bool:
-    """Whether this chat should stream bootstrap sync tool-loop rounds over WebSocket."""
-    from app.core.companion_harness.companion.bootstrap_user_interactive import (
-        interactive_bootstrap_active,
-    )
-    from app.core.companion_harness.companion.models import load_context_meta
+    """Return whether this companion scope is in exclusive dreaming (``activity_gate``).
 
+    Scope-level flag — true for any presence while ``run_companion_dreaming_for_api`` or
+    future inner-tick ``DREAMING`` holds the gate. Does not reflect ``turn_lock`` state.
+    """
+    # TODO(obscure-abstraction): This is a high-level API, but it uses primitive data to retrieve
+    # high-level abstraction classes. This violates layering principle.
+    # This function is forced to exist because the caller does not properly setup high-level
+    # abstraction classes.
+    assert user_id
+    assert agent_id
     chat_api_id = resolved_chat_model.id_on_provider
     tool_api_id = _companion_tool_model_api_id(chat_api_id)
     manager = _companion_manager_for_resolved_model(
@@ -120,15 +130,7 @@ def companion_bootstrap_interim_ws_enabled(
         _companion_runtime_config_fingerprint(),
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
-    if not session.is_initialized:
-        return False
-    if (
-        session.config.memory_bootstrap_type
-        != CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-    ):
-        return False
-    meta = load_context_meta(store=session.store)
-    return interactive_bootstrap_active(feature_enabled=True, meta=meta)
+    return session.activity_gate.dreaming_active()
 
 
 def companion_session_tool_bg_idle_event(
@@ -138,7 +140,12 @@ def companion_session_tool_bg_idle_event(
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
 ) -> threading.Event:
-    """Return ``CompanionSession.tool_bg_idle`` for WebSocket inner-tick overlap checks."""
+    """Return ``CompanionSession.tool_bg_idle`` for WebSocket inner-tick overlap checks.
+
+    TODO(tool-bg-idle-starves-user-chat): Hung maintenance ``tool_background`` clears this event;
+    the next user or proactive turn blocks in ``run_turn`` while holding ``turn_lock``.
+    https://github.com/NascentCore/inty/issues/3123
+    """
     chat_api_id = resolved_chat_model.id_on_provider
     tool_api_id = _companion_tool_model_api_id(chat_api_id)
     manager = _companion_manager_for_resolved_model(
@@ -158,7 +165,12 @@ def run_companion_dreaming_for_api(
     resolved_chat_model: GenAIModel,
     dreaming_idle_seconds: int,
 ) -> bool:
-    """Run one sleeping-state dreaming batch for a ready companion scope."""
+    """Run one sleeping-state dreaming batch for a ready companion scope.
+
+    Uses ``CompanionActivityGate.enter_dreaming`` (scope level), not ``Coordinator.turn_lock``.
+    Typically invoked from ``CompanionDreamingScheduler`` without an open WebSocket.
+    Awake turns on any wire block in ``CompanionManager._awake_activity`` until exit.
+    """
     chat_api_id = resolved_chat_model.id_on_provider
     tool_api_id = _companion_tool_model_api_id(chat_api_id)
     manager = _companion_manager_for_resolved_model(
@@ -179,35 +191,47 @@ def run_companion_dreaming_for_api(
     if candidate is None:
         return False
 
-    def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
-        return session.llm_client.complete_text(messages, model_role=role)
+    session.activity_gate.enter_dreaming()
+    try:
+        candidate = dreaming_due(
+            session.store,
+            now=datetime.now(timezone.utc),
+            dreaming_idle_seconds=dreaming_idle_seconds,
+        )
+        if candidate is None:
+            return False
 
-    memory_update_after_dreaming(
-        session.store,
-        candidate.rows,
-        _complete_fn,
-        tool_bg_idle_event=session.tool_bg_idle,
-    )
-    if not dreaming_race_guard_matches(session.store, candidate):
+        def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
+            return session.llm_client.complete_text(messages, model_role=role)
+
+        memory_update_after_dreaming(
+            session.store,
+            candidate.rows,
+            _complete_fn,
+            tool_bg_idle_event=session.tool_bg_idle,
+        )
+        if not dreaming_race_guard_matches(session.store, candidate):
+            logger.info(
+                "companion_dreaming checkpoint_skipped_race user={} agent={} chat={}",
+                user_id,
+                agent_id,
+                chat_id,
+            )
+            return False
+        state = dreaming_state_from_candidate(
+            candidate, processed_at=datetime.now(timezone.utc)
+        )
+        save_dreaming_state(session.store, state)
         logger.info(
-            "companion_dreaming checkpoint_skipped_race user={} agent={} chat={}",
+            "companion_dreaming checkpoint_saved user={} agent={} chat={} rows={}",
             user_id,
             agent_id,
             chat_id,
+            len(candidate.rows),
         )
-        return False
-    state = dreaming_state_from_candidate(
-        candidate, processed_at=datetime.now(timezone.utc)
-    )
-    save_dreaming_state(session.store, state)
-    logger.info(
-        "companion_dreaming checkpoint_saved user={} agent={} chat={} rows={}",
-        user_id,
-        agent_id,
-        chat_id,
-        len(candidate.rows),
-    )
-    return True
+        return True
+    finally:
+        session.activity_gate.exit_dreaming()
 
 
 def append_companion_ws_runtime_event(
@@ -265,8 +289,9 @@ def _companion_manager_for_resolved_model(
     _ = runtime_fingerprint
     cfg = global_config_loaded_from_config_yaml
     feats = cfg.app.features
-    api_key = (cfg.agent.chat_llm_api_key or "").strip() or cfg.agent.api_key
+    api_key = cfg.agent.chat_llm_api_key or cfg.agent.api_key
     timeout_raw = os.getenv(
+        # TODO(app-config-centralization): Move this to app.core.config, and do not use env var.
         "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600"
     ).strip()
     try:
@@ -277,10 +302,7 @@ def _companion_manager_for_resolved_model(
     tool_m = resolve_chat_text_model(tool_model_api_id)
     llm = CompanionLLMConfig(
         api_key=api_key,
-        api_base=(
-            cfg.agent.chat_llm_base_url or cfg.agent.base_url or ""
-        ).strip()
-        or "https://openrouter.ai/api/v1",
+        api_base=cfg.agent.chat_llm_base_url or cfg.agent.base_url,
         default_model=chat_m,
         chat_model=chat_m,
         tool_model=tool_m,
@@ -524,10 +546,12 @@ async def _run_companion_api_track_turn(
 async def run_user_chat(
     *,
     user_id: str,
+    # TODO(cleanup): Move agent_id to CompanionIdentity.
     agent_id: str,
     chat_id: str | int,
     user_text: str,
     resolved_chat_model: GenAIModel,
+    companion_identity: CompanionIdentity,
     defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
@@ -536,28 +560,61 @@ async def run_user_chat(
     runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
 ) -> CompanionTurnResult:
-    return await _run_companion_api_track_turn(
+    cfg = global_config_loaded_from_config_yaml
+    agent_cfg = cfg.agent
+    api_base = (
+        agent_cfg.chat_llm_base_url or agent_cfg.base_url or ""
+    ).strip() or "https://openrouter.ai/api/v1"
+    chat_api_id = resolved_chat_model.id_on_provider
+    t0 = time.perf_counter()
+    logger.debug(
+        "companion_chat_turn start path={} user={} agent={} chat={} model={} api_base={} defer_memory={}",
+        "user_chat",
+        user_id,
+        agent_id,
+        chat_id,
+        chat_api_id,
+        api_base,
+        defer_memory_update,
+    )
+    manager, session, chat_api_id, manager_session_ms, ws_system_ms = (
+        await _companion_session_for_api_turn(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            resolved_chat_model=resolved_chat_model,
+            session_id=session_id,
+        )
+    )
+    t_rt0 = time.perf_counter()
+    out = await manager.run_user_chat_turn(
+        session,
+        user_text,
+        defer_memory_update=defer_memory_update,
+        background_output_sink=background_output_sink,
+        preset_user_msg_uuid=preset_user_msg_uuid,
+        runtime_context=TurnRuntimeContext(
+            channel=runtime_channel,
+            implicit_signal_bundle=implicit_signal_bundle,
+        ),
+        bootstrap_interim_output_sink=bootstrap_interim_output_sink,
+    )
+    run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
+    _log_companion_api_turn_finished(
         track_path="user_chat",
         user_id=user_id,
         agent_id=agent_id,
         chat_id=chat_id,
-        resolved_chat_model=resolved_chat_model,
+        chat_api_id=chat_api_id,
+        t0=t0,
+        manager_session_ms=manager_session_ms,
+        ws_system_ms=ws_system_ms,
+        run_turn_ms=run_turn_ms,
         user_chars=len(user_text),
         defer_memory_update=defer_memory_update,
-        session_id=session_id,
-        run_track=lambda manager, session: manager.run_user_chat_turn(
-            session,
-            user_text,
-            defer_memory_update=defer_memory_update,
-            background_output_sink=background_output_sink,
-            preset_user_msg_uuid=preset_user_msg_uuid,
-            runtime_context=TurnRuntimeContext(
-                channel=runtime_channel,
-                implicit_signal_bundle=implicit_signal_bundle,
-            ),
-            bootstrap_interim_output_sink=bootstrap_interim_output_sink,
-        ),
+        out=out,
     )
+    return out
 
 
 async def run_companion_implicit_sign_on_greeting_turn_for_api(
@@ -710,10 +767,12 @@ async def run_companion_inner_tick_maintenance_turn_for_api(
 async def run_companion_chat_turn_for_api(
     *,
     user_id: str,
+    # TODO(cleanup): Move agent_id to CompanionIdentity.
     agent_id: str,
     chat_id: str | int,
     user_text: str,
     resolved_chat_model: GenAIModel,
+    companion_identity: CompanionIdentity,
     defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
@@ -759,5 +818,6 @@ async def run_companion_chat_turn_for_api(
         )
     return await run_user_chat(
         user_text=user_text,
+        companion_identity=companion_identity,
         **common,
     )

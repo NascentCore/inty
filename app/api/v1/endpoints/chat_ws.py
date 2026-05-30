@@ -32,6 +32,7 @@ from app.core.companion_harness.companion.llm_inference_errors import (
 from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
+from app.core.companion_harness.companion.models import CompanionIdentity
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutputSink,
 )
@@ -473,7 +474,7 @@ async def _try_handle_ws_user_signed_out_frame(
         )
         recv_msg_uuid = (frame.message_id or "").strip()
         uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
-        # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
+        # TODO(ws-disconnect-lifecycle): #3256 — persist-first; finish turns; mark undelivered.
         await inflight_turn_tracker.cancel_all()
         companion_ws.inner_tick_context.clear()
         companion_chat_service.append_companion_ws_runtime_event(
@@ -1105,6 +1106,9 @@ async def _agent_chat_ws_completions_impl(
                                 chat_id=chat.id,
                                 user_text=last_user_text,
                                 resolved_chat_model=model_override,
+                                companion_identity=CompanionIdentity(
+                                    display_name=str(agent_data["name"]),
+                                ),
                                 defer_memory_update=True,
                                 session_id=session_id,
                                 background_output_sink=companion_background_sink,
@@ -1311,6 +1315,15 @@ async def chat_completions_websocket(
     ),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
+    # Concurrency (see ``session.Coordinator`` module docstring):
+    # - Each ``accept()`` creates a new ``CompanionWebSocketCoordinator`` ⇒ its own
+    #   **presence-level** ``turn_lock`` (user chat + inner-tick on this wire).
+    # - ``CompanionActivityGate`` on ``CompanionSession`` is **scope-level** (shared if
+    #   multi-tab); background dreaming uses the gate, not ``turn_lock``.
+    # TODO(companion-ws-single-presence): One signed-on WS per (user_id, agent_id) so
+    # ``turn_lock`` can be hoisted to scope when gate + scheduler are removed.
+    # TODO(multi-backend-scope-lock): Far future — cluster-wide single writer per scope
+    # when horizontally scaled (sticky session or PG advisory); not required until then.
     await websocket.accept()
     ws_conn_id = _resolve_ws_conn_id_from_websocket(websocket)
     current_user = await _get_current_user_from_websocket(websocket, db)
@@ -1620,7 +1633,7 @@ async def chat_completions_websocket(
             await bootstrap_interim_consumer_task
         except asyncio.CancelledError:
             pass
-        # TODO(ws-disconnect-lifecycle): do not cancel on disconnect; finish turns and mark chat_history undelivered.
+        # TODO(ws-disconnect-lifecycle): #3256 — persist-first; finish turns; mark undelivered.
         await inflight_turn_tracker.cancel_all()
         ChatWsInflightShutdownRegistry.unregister(inflight_turn_tracker)
         await _shutdown_chat_ws_outbound_pump(pump_task)

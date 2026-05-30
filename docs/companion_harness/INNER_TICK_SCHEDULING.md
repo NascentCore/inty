@@ -25,7 +25,7 @@ sequenceDiagram
 | **唤醒周期** | `poll = companion_ws_proactive_chat_poll_seconds`（`config.yaml`），默认 **60s**。不是「到点唤醒」；rhythm 归零后仍可能多等接近一整轮 poll。 |
 | **每轮顺序** | scheduled → proactive → maintenance（同一次 wake 内依次尝试）。 |
 | **坐标** | 无 `user_signed_on` 武装的 snapshot 时，整轮跳过（日志 `no_inner_tick_coords` / 历史别名 `no_heartbeat_coords`）。 |
-| **串行** | 用户轮、greeting、inner-tick、tool background 补帧组装共用连接级 `turn_lock`；inner-tick 还会看 session 级 `tool_bg_idle`，避免与上一轮 proactive 的 tool background 重叠。 |
+| **串行** | 用户轮、greeting、inner-tick、tool background 补帧组装共用 **连接级** `turn_lock`（每条 WS 一把锁；多 tab = 多把锁）。scope 级 dreaming 用 `CompanionActivityGate`；后台 scheduler 还用 PG advisory lock — 见 `app/services/agentic_companion/session.py` 模块 docstring。inner-tick 还会看 session 级 `tool_bg_idle`，避免与上一轮 proactive 的 tool background 重叠。 |
 
 ## Proactive chat rhythm
 
