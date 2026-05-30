@@ -56,10 +56,10 @@ def test_experience_profile_system_clause_public() -> None:
     assert "public。不注入私人记忆层" in out
 
 
-def test_experience_profile_system_clause_bootstrap() -> None:
+def test_experience_profile_system_clause_bootstrap_is_unknown_profile() -> None:
     out = experience_profile_system_clause("bootstrap")
     _assert_clause_heading(out)
-    assert "交互式关系建立（bootstrap）" in out
+    assert "bootstrap。不注入私人记忆层" in out
 
 
 def test_experience_profile_system_clause_unknown_mode() -> None:
@@ -83,5 +83,5 @@ def test_experience_profile_injects_private_memory_covers_known_ids() -> None:
     assert experience_profile_injects_private_memory("remote_lover") is True
     assert experience_profile_injects_private_memory("unspecific") is True
     assert experience_profile_injects_private_memory("emotional_companion") is True
-    assert experience_profile_injects_private_memory("bootstrap") is True
+    assert experience_profile_injects_private_memory("bootstrap") is False
     assert experience_profile_injects_private_memory("public") is False

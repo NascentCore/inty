@@ -13,9 +13,6 @@ import os
 import time
 from dataclasses import dataclass
 
-from app.core.companion_harness.experience_profile.context_mode import (
-    experience_profile_allows_maintenance_inner_tick,
-)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import (
     ChatMessage,
@@ -120,9 +117,9 @@ def next_inner_tick_wait_seconds(
     if not enabled:
         return _DISABLED_INNER_TICK_WAIT_SEC
 
-    if not experience_profile_allows_maintenance_inner_tick(
-        load_context_meta(store=store).context_mode
-    ):
+    if not load_context_meta(
+        store=store
+    ).workspace_bootstrap_user_interactive_completed:
         return _DISABLED_INNER_TICK_WAIT_SEC
 
     now = now_monotonic if now_monotonic is not None else time.monotonic()

@@ -104,7 +104,7 @@ async def test_user_chat_turn_selects_bootstrap_track_when_incomplete(
         "context.json",
         json.dumps(
             {
-                "context_mode": "bootstrap",
+                "context_mode": "unspecific",
                 "user_id": "u",
                 "companion_id": "a",
                 "chat_id": "c",
@@ -147,7 +147,7 @@ async def test_user_chat_turn_plumbs_bootstrap_interim_output_sink(tmp_path) -> 
         "context.json",
         json.dumps(
             {
-                "context_mode": "bootstrap",
+                "context_mode": "unspecific",
                 "user_id": "u",
                 "companion_id": "a",
                 "chat_id": "c",

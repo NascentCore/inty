@@ -52,46 +52,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 
 
-def _migrate_interactive_bootstrap_context_if_needed(
-    store: MemoryStore,
-    parsed_ctx: dict[str, object],
-    *,
-    default_context_mode: str,
-) -> None:
-    if (
-        parsed_ctx.get("workspace_bootstrap_user_interactive_completed")
-        is not False
-    ):
-        return
-    fixed = dict(parsed_ctx)
-    bootstrap_id = ExperienceContextMode.BOOTSTRAP.value
-    try:
-        cm = normalize_experience_profile_id(str(fixed.get("context_mode", "")))
-    except ValueError:
-        cm = ""
-    if cm != bootstrap_id:
-        fixed["context_mode"] = bootstrap_id
-    pb_raw = str(fixed.get("post_bootstrap_context_mode", "")).strip()
-    if not pb_raw:
-        fixed["post_bootstrap_context_mode"] = default_context_mode
-    else:
-        try:
-            pbn = normalize_experience_profile_id(pb_raw)
-        except ValueError:
-            fixed["post_bootstrap_context_mode"] = default_context_mode
-        else:
-            if pbn == bootstrap_id:
-                fixed["post_bootstrap_context_mode"] = default_context_mode
-            else:
-                fixed["post_bootstrap_context_mode"] = pbn
-    if json.dumps(fixed, sort_keys=True) != json.dumps(
-        parsed_ctx, sort_keys=True
-    ):
-        store.write_document(
-            "context.json",
-            json.dumps(fixed, indent=2, ensure_ascii=False) + "\n",
-        )
-
 
 class CompanionConfig(BaseModel):
     """集中管理 companion 所有可调参数。"""
@@ -130,8 +90,6 @@ class CompanionConfig(BaseModel):
     @classmethod
     def _validate_default_context_mode(cls, v: str) -> str:
         n = normalize_experience_profile_id(v)
-        if n == ExperienceContextMode.BOOTSTRAP:
-            raise ValueError("default_context_mode cannot be 'bootstrap'")
         return n
 
 
@@ -231,10 +189,7 @@ class CompanionManager:
                 }
                 if user_interactive:
                     context_data["context_mode"] = (
-                        ExperienceContextMode.BOOTSTRAP.value
-                    )
-                    context_data["post_bootstrap_context_mode"] = (
-                        self._config.default_context_mode
+                        ExperienceContextMode.UNSPECIFIC.value
                     )
                     context_data[
                         "workspace_bootstrap_user_interactive_completed"
@@ -249,13 +204,6 @@ class CompanionManager:
                     + "\n"
                 )
                 store.write_document("context.json", context_json)
-            elif user_interactive and isinstance(parsed_ctx, dict):
-                _migrate_interactive_bootstrap_context_if_needed(
-                    store,
-                    parsed_ctx,
-                    default_context_mode=self._config.default_context_mode,
-                )
-
             ensure_minimal_documents_in_store(store)
             ensure_techno_core_seeded(store)
             ensure_living_sphere_seeded(store)

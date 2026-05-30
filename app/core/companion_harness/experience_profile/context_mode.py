@@ -3,17 +3,12 @@
 ``context_mode`` is the product-facing switch that controls two prompt-time
 decisions: which system clause describes the active relationship mode, and
 whether the private memory layers are injected into the turn.  Interactive
-bootstrap also writes ``post_bootstrap_context_mode`` in ``context.json``; this
-module only validates and describes ids, while the bootstrap tool performs the
-state transition after the user-facing setup finishes.
+bootstrap is a session phase tracked separately from this profile id.
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
-
-# Reserved profile for interactive bootstrap before the user-facing experience id is chosen.
-EXPERIENCE_PROFILE_ID_BOOTSTRAP = "bootstrap"
 
 
 class ExperienceContextMode(StrEnum):
@@ -23,7 +18,6 @@ class ExperienceContextMode(StrEnum):
     INTIMATE = "intimate"
     REMOTE_LOVER = "remote_lover"
     EMOTIONAL_COMPANION = "emotional_companion"
-    BOOTSTRAP = "bootstrap"
     ROLEPLAY = "roleplay"
     INTERACTIVE_FICTION = "interactive_fiction"
     PUBLIC = "public"
@@ -35,7 +29,6 @@ _PRIVATE_MEMORY_PROFILE_IDS = frozenset(
         ExperienceContextMode.INTIMATE,
         ExperienceContextMode.REMOTE_LOVER,
         ExperienceContextMode.EMOTIONAL_COMPANION,
-        ExperienceContextMode.BOOTSTRAP,
     }
 )
 
@@ -74,14 +67,6 @@ def experience_profile_injects_private_memory(profile_id: str) -> bool:
     )
 
 
-def experience_profile_allows_maintenance_inner_tick(context_mode: str) -> bool:
-    """LivingSphere / TechnoCore maintenance inner-tick is off during interactive bootstrap."""
-    return (
-        normalize_experience_profile_id(context_mode)
-        != ExperienceContextMode.BOOTSTRAP
-    )
-
-
 def experience_profile_system_clause(context_mode: str) -> str:
     """Build the prompt clause that explains the current relationship mode.
 
@@ -94,13 +79,6 @@ def experience_profile_system_clause(context_mode: str) -> str:
     if not raw:
         raise ValueError("context_mode must be non-empty")
     n = normalize_experience_profile_id(raw)
-    if n == ExperienceContextMode.BOOTSTRAP:
-        return _experience_profile_clause(
-            "交互式关系建立（bootstrap）。本阶段以初始化 SOUL 等与用户的最底层约定为主；"
-            "仍可加载私人记忆与日程记忆层以承接已有档案与会话上下文；"
-            "语气与边界仍须遵守安全与同意条款。"
-            "完成引导后将恢复到常规体验配置（由会话快照或产品默认决定）。"
-        )
     if n in _PRIVATE_MEMORY_PROFILE_IDS:
         if n == ExperienceContextMode.INTIMATE:
             return _experience_profile_clause(
@@ -136,11 +114,6 @@ def experience_profile_system_clause(context_mode: str) -> str:
     if n == ExperienceContextMode.PUBLIC:
         return _experience_profile_clause(
             "public。不注入私人记忆层；根据场景保持得体与安全的表达。"
-        )
-    if n == EXPERIENCE_PROFILE_ID_BOOTSTRAP:
-        return _experience_profile_clause(
-            "bootstrap（交互式关系建立阶段）。"
-            "不注入长期私人记忆与当日日记类材料；专注关系初始化与 SOUL 共建；仍须遵守安全与同意边界。"
         )
     return _experience_profile_clause(
         f"{raw}。不注入私人记忆层；"

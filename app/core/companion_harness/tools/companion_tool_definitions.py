@@ -21,10 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.companion_harness.companion.prompt_slices import (
     PROMPT_SLICE_TO_REL,
 )
-from app.core.companion_harness.experience_profile import (
-    EXPERIENCE_PROFILE_ID_BOOTSTRAP,
-    ExperienceContextMode,
-)
+from app.core.companion_harness.experience_profile import ExperienceContextMode
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
@@ -57,11 +54,7 @@ _PROMPT_SLICE_ENUM: tuple[str, ...] = tuple(
 )
 
 _SELECTABLE_EXPERIENCE_PROFILE_IDS: tuple[str, ...] = tuple(
-    sorted(
-        m.value
-        for m in ExperienceContextMode
-        if m.value != EXPERIENCE_PROFILE_ID_BOOTSTRAP
-    )
+    sorted(m.value for m in ExperienceContextMode)
 )
 
 assert TECHNO_CORE_RECORD_EVENT_TOOL_NAME == "techno_core_record_event"
@@ -574,9 +567,15 @@ TOOL_NAMES_APPENDED: tuple[CompanionToolName, ...] = (
     CompanionToolName.MODIFY_IMAGE,
 )
 
+TOOL_NAMES_BOOTSTRAP_APPENDED: tuple[CompanionToolName, ...] = (
+    CompanionToolName.GOOGLE_WEB_SEARCH,
+    CompanionToolName.READ_WEB_PAGE,
+    CompanionToolName.GENERATE_IMAGE,
+    CompanionToolName.MODIFY_IMAGE,
+)
+
 BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE,
-    CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
     CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
 )
 

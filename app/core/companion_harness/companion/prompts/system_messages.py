@@ -34,10 +34,8 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.companion_harness.experience_profile import (
-    ExperienceContextMode,
     experience_profile_injects_private_memory,
     experience_profile_system_clause,
-    normalize_experience_profile_id,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.utils.config import CompanionMemoryBootstrapType
@@ -752,11 +750,6 @@ def _greeting_omit_capability_system_slices(
     context: ContextMeta,
     memory_bootstrap_type: str,
 ) -> bool:
-    if (
-        normalize_experience_profile_id(context.context_mode)
-        == ExperienceContextMode.BOOTSTRAP
-    ):
-        return True
     return interactive_bootstrap_active(
         feature_enabled=(
             memory_bootstrap_type

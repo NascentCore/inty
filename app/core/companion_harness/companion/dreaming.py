@@ -26,9 +26,6 @@ from datetime import datetime, timedelta, timezone
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.core.companion_harness.experience_profile.context_mode import (
-    experience_profile_allows_maintenance_inner_tick,
-)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
@@ -186,9 +183,9 @@ def dreaming_due(
 ) -> DreamingCandidate | None:
     """Return a candidate only when the scope is in sleeping-state idle."""
     assert dreaming_idle_seconds > 0
-    if not experience_profile_allows_maintenance_inner_tick(
-        load_context_meta(store=store).context_mode
-    ):
+    if not load_context_meta(
+        store=store
+    ).workspace_bootstrap_user_interactive_completed:
         return None
     candidate = dreaming_candidate_slice(store, now=now)
     if candidate is None:

@@ -16,7 +16,6 @@ from pydantic import (
 )
 
 from app.core.companion_harness.experience_profile import (
-    ExperienceContextMode,
     experience_profile_injects_private_memory,
     normalize_experience_profile_id,
 )
@@ -198,25 +197,10 @@ class ContextMeta(BaseModel):
     # Legacy JSON flag from older workspaces; WebSocket connect-time kickoff was removed. Default True
     # means "nothing to do"; omit key in new USER_INTERACTIVE seeds.
     companion_ws_interactive_kickoff_sent: bool = True
-    # USER_INTERACTIVE seeds only: experience profile to apply after bootstrap completes.
-    post_bootstrap_context_mode: str | None = None
-
     @field_validator("context_mode")
     @classmethod
     def _validate_context_mode(cls, v: str) -> str:
         return normalize_experience_profile_id(v)
-
-    @field_validator("post_bootstrap_context_mode")
-    @classmethod
-    def _validate_post_bootstrap_context_mode(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        n = normalize_experience_profile_id(v)
-        if n == ExperienceContextMode.BOOTSTRAP:
-            raise ValueError(
-                "post_bootstrap_context_mode cannot be 'bootstrap'"
-            )
-        return n
 
 
 def load_prompt_bundle(
