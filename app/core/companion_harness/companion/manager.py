@@ -52,7 +52,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 
 
-
 class CompanionConfig(BaseModel):
     """集中管理 companion 所有可调参数。"""
 
