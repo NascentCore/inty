@@ -28,6 +28,12 @@ such experience is between human users and AI, but they have real-world patterns
 - 拟人的独立与互联网互动（与用户共享）
 - 拟人的与 LivingSphere & TechnoCore 互动的能力 [1]
 
+The above capability requires:
+
+- 构建多媒介通信来实现与用户的多媒介互动
+- 感知用户所处数字空间形成与用户的同频共振
+- 与智能体本身相互独立的虚拟环境（同样由 LLM+Companion-Harness+世界事件）来提供智能体独立性、及新鲜感
+
 ## Hermes agent wechat/weixin adapater
 
 - We only use wechat/weixin communication protocol, do not allow hermes code to use local filesystem.
