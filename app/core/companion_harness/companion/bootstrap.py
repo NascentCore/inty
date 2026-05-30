@@ -20,7 +20,9 @@ from typing import Any, Final
 
 from loguru import logger
 
-from app.core.companion_harness.experience_profile import normalize_experience_profile_id
+from app.core.companion_harness.experience_profile import (
+    normalize_experience_profile_id,
+)
 
 from app.core.companion_harness.memory.memory_store import (
     MemoryStore,
