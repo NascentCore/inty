@@ -5,6 +5,8 @@
 Use LLMs and companion harness to simulate a living person one can only interact through defined medium (app, wechat/weixin, sms, phone-call etc.)
 
 - companion-harness (memories, tools, seeded static prompt slices, etc.) to simulate human emotional behaviors in modality in text (and then audio image video in the future) by dynamically and in a human-like manner to assemble into LLM prompt.
+- Companion harness is persistent, and serving a particular user.
+  This is different than other types of task-oriented agents, which are ephemeral and for different users and tasks.
 
 ## Objectives
 
