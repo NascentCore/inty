@@ -392,8 +392,8 @@ class AgentConfig:
     # TODO: 这是做什么的？
     vertex_image_model: str = VERTEX_AI_IMAGEN_4_FAST
 
-    free_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_FAST
-    sub_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4
+    free_user_text_to_image_model: Optional[str] = VERTEX_AI_IMAGEN_4_FAST
+    sub_user_text_to_image_model: Optional[str] = VERTEX_AI_IMAGEN_4
     force_default_prompts: bool = (
         False  # 强制使用默认提示词，忽略Agent自定义提示词
     )

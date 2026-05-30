@@ -3,6 +3,8 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from pydantic import TypeAdapter
+
 from app.core.config import (
     AgentConfig,
     global_config_loaded_from_config_yaml as global_config,
@@ -112,6 +114,20 @@ def test_select_text_to_image_model_falls_back_to_vertex_image_model_when_free_u
     with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
         model = select_text_to_image_model(user=user, is_subscribed=False)
         assert model == "fallback-vertex-model"
+
+
+def test_agent_config_pydantic_validation_allows_text_to_image_model_fallbacks():
+    agent_config = TypeAdapter(AgentConfig).validate_python(
+        {
+            "api_key": "test",
+            "langchain_api_key": "test",
+            "vertex_image_model": "fallback-vertex-model",
+            "sub_user_text_to_image_model": None,
+            "free_user_text_to_image_model": None,
+        }
+    )
+    assert agent_config.sub_user_text_to_image_model is None
+    assert agent_config.free_user_text_to_image_model is None
 
 
 def test_select_chat_image_model_returns_gen_ai_model():
