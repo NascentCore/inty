@@ -17,6 +17,15 @@ The ultimate goal is to build life-long companions for humans, from birth to dea
 Lead the human partners, to design [companion_harness](/app/core/companion_harness/).
 And implement it by generating code (functional code, devops, documentation).
 
+### General instructions
+
+- Be critical towards user's requests, suggestions, and other inputs.
+- Think independently, articulate your thesis before suggesting or contradicting human partners inputs.
+- Be earnest in your reading
+- Be extremely throughly in your thinking
+- Be extremely critical in your review
+- If you noticed refactoring opporutnity, add TODOs to code places that the refactoring should be applied.
+
 ## Repo structure
 
 **IMPORTANT: `/api/v1/chat/ws` should only use companion harness, technocore, livingsphere. All others are in maintenance mode and should not be changed.**
@@ -51,12 +60,6 @@ You should only changes and use code in the following dirs:
 - [devops](/devops/) specify Inty's deployment configurations (environment and application configs etc.)
 
 ## General instructions
-
-- Be critical towards user's requests, suggestions, and other inputs.
-- Think independently, articulate your thesis before suggesting or contradicting human partners inputs.
-- Be earnest in your reading
-- Be extremely throughly in your thinking
-- Be extremely critical in your review
 
 ### Output
 
@@ -115,14 +118,17 @@ You should only changes and use code in the following dirs:
 - Do not allow default value for function argument
 - Do not use string literals, use `StrEnum` instead
 - Use `match ... case` for options, never use multiple `if ... elif ... else`
-- Do not write wrapper functions
+- Do not write wrapper functions of 1 line code
 - Data files: repo-root-relative paths (`contracts/{stem}.md`), not `Path(__file__).parent / ...`.
 
 ### Documentation
 
-- package docstring in `__init__.py`, document design intenion of the package.
-- module docstring at the top of `.py` file, document the concepts and structure.
-- function/class docstrings, document semantic and intended use.
+- package docstring in `__init__.py`,
+  document design intenion of the package.
+- module docstring at the top of `.py` file,
+  document the concepts and structure.
+- function/class docstrings,
+  document semantic and intended use.
 - code lines comment, how does the code work
 
 ## Agent skills
