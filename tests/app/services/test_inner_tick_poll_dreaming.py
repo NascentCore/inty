@@ -26,7 +26,6 @@ async def test_run_inner_tick_poll_skips_all_actions_when_dreaming() -> None:
     coordinator = MagicMock()
     subscription_svc = MagicMock()
     feats = MagicMock()
-    feats.companion_ws_maintenance_inner_tick_enabled = True
 
     with (
         patch(
