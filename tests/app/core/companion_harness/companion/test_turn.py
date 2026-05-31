@@ -116,7 +116,9 @@ def test_run_turn_inner_tick_scheduled_semantics(
     assert llm_msgs[-1]["role"] == "user"
     user_tail = llm_msgs[-1]["content"] or ""
     assert "提醒事项" in user_tail
-    assert scheduled_text == user_tail
+    assert scheduled_text in user_tail
+    assert user_tail.startswith("[")
+    assert user_tail.endswith(f"] {scheduled_text}")
     assert "[SYSTEM PROACTIVE CHAT]" not in user_tail
     assert out.transcript_user_content == scheduled_text
 

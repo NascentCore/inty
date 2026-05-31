@@ -62,6 +62,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from .turn_routes import TurnRouteMode
+from .utc import transcript_message_content_for_llm
 from .user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
 )
@@ -149,11 +150,13 @@ def _companion_tail_user_body_for_llm(
     *,
     user_text: str,
     implicit_sign_on_turn: bool,
+    tail_user_ts: str,
 ) -> str:
-    """Tail **user** message body only (no wall-clock lines; those go in a separate system slice)."""
-    return (
+    """Tail **user** message with optional per-message UTC prefix for the LLM."""
+    body = (
         USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
     )
+    return transcript_message_content_for_llm(content=body, ts=tail_user_ts)
 
 
 def _companion_user_time_context_system_for_llm(
@@ -220,6 +223,7 @@ def build_companion_turn_prompt_plan(
     store: MemoryStore,
     loaded_state: CompanionTurnLoadedState,
     user_text: str,
+    tail_user_ts: str,
     memory_bootstrap_type: str,
     track: CompanionTurnTrack,
     tick_proactive: bool,
@@ -290,8 +294,9 @@ def build_companion_turn_prompt_plan(
             )
     else:
         messages = list(system_messages)
-        for m in loaded_state.transcript_window:
-            messages.append({"role": m.role, "content": m.content})
+        messages.extend(
+            transcript_rows_to_openai_dialogue(loaded_state.transcript_window)
+        )
 
     if tick_proactive:
         messages.append(
@@ -308,6 +313,7 @@ def build_companion_turn_prompt_plan(
     tail_user = _companion_tail_user_body_for_llm(
         user_text=user_text,
         implicit_sign_on_turn=implicit_sign_on_turn,
+        tail_user_ts=tail_user_ts,
     )
     messages.append({"role": "user", "content": tail_user})
 

@@ -332,11 +332,23 @@ def save_compaction_state_to_store(
 def transcript_rows_to_openai_dialogue(
     rows: list[ChatMessage],
 ) -> list[dict[str, Any]]:
+    from app.core.companion_harness.companion.utc import (
+        transcript_message_content_for_llm,
+    )
+
     out: list[dict[str, Any]] = []
     for m in rows:
         if m.role not in ("user", "assistant", "system"):
             continue
-        out.append({"role": m.role, "content": m.content})
+        out.append(
+            {
+                "role": m.role,
+                "content": transcript_message_content_for_llm(
+                    content=m.content,
+                    ts=m.ts,
+                ),
+            }
+        )
     return out
 
 

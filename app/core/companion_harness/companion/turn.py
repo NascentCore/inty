@@ -521,10 +521,12 @@ async def _run_companion_turn_core(
         )
     context = loaded_state.context
     bundle = loaded_state.bundle
+    ts_user = utc_iso_ts()
     prompt_plan = build_companion_turn_prompt_plan(
         store=store,
         loaded_state=loaded_state,
         user_text=user_text,
+        tail_user_ts=ts_user,
         memory_bootstrap_type=memory_bootstrap_type,
         track=track,
         tick_proactive=tick_proactive,
@@ -539,8 +541,6 @@ async def _run_companion_turn_core(
     user_msg_uuid = (
         preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
     )
-
-    ts_user = utc_iso_ts()
     trace_id = str(uuid.uuid4())
     langsmith_trace_acc = ""
     langsmith_llm_run_acc = ""
