@@ -1,6 +1,8 @@
-"""``record_user_feedback`` tool: persist companion-behavior feedback to Postgres.
+"""User feedback related tools
 
-Runs in the inner-tick maintenance track only. The maintenance LLM reflects over the
+``record_user_feedback`` tool: persist companion-behavior feedback to Postgres.
+
+Included in the inner-tick maintenance track only. The maintenance LLM reflects over the
 recent conversation, infers feedback about the companion's behavior across multiple
 messages, and calls this tool. Reproduction context (scope ids, recording-run
 ``trace_id``/``user_msg_uuid``, verbatim quotes) is captured alongside the feedback.
