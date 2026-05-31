@@ -86,6 +86,10 @@ from .companion_tool_runtime import (
     tool_requires_client_delivery_on_success,
 )
 from .image_gate import list_image_asset_records
+from .tool_bg_memory_write_gap import (
+    tool_bg_missing_required_memory_write,
+    tool_bg_persistence_write_nudge_text,
+)
 from .tool_bg_routing import resolve_tool_bg_routing_sync
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
@@ -754,6 +758,85 @@ async def _run_background_tool_loop(
             )
             return
 
+        base_snapshot_len = len(working_messages)
+        appended_turn_msgs = loop_result.messages[base_snapshot_len:]
+        tool_call_names = _extract_tool_call_names(appended_turn_msgs)
+        if tool_bg_missing_required_memory_write(
+            conversation_messages=list(loop_result.messages),
+            tool_call_names=tool_call_names,
+        ):
+            logger.info(
+                "repl.turn.bg persistence_write_nudge trace_id={} user_msg_uuid={}",
+                trace_id,
+                user_msg_uuid,
+            )
+            nudge_messages = deepcopy(loop_result.messages)
+            _insert_system_message(
+                nudge_messages, tool_bg_persistence_write_nudge_text()
+            )
+            nudge_payload = _openai_messages_payload(nudge_messages)
+            nudge_initial = await asyncio.to_thread(
+                chat_completion_sync,
+                resolved_client,
+                model=tool_api_id,
+                messages_payload=nudge_payload,
+                tools=tools,
+                langsmith_extra=tool_call_langsmith_extra(
+                    phase_suffix=SOURCE_TOOL_BACKGROUND_CONTINUE,
+                    extra_metadata={
+                        INTY_TOOL_BG_ROUND_METADATA_KEY: rounds_used + 1,
+                        "inty_tool_bg_persistence_write_nudge": True,
+                    },
+                ),
+                high_reasoning=True,
+            )
+            rounds_used += 1
+            active_round = rounds_used
+            _log_bg_llm_round_result(
+                round_idx=active_round,
+                model=tool_api_id,
+                resp=nudge_initial,
+                request_messages=deepcopy(nudge_messages),
+                scope_registry_key=scope_registry_key,
+                trace_id=trace_id,
+                trace_hooks=trace_hooks,
+            )
+            nudge_tool_calls = (
+                getattr(nudge_initial.choices[0].message, "tool_calls", None)
+                or []
+            )
+            total_tool_calls += len(nudge_tool_calls)
+            nudge_max_rounds = _BG_TOOL_MAX_ROUNDS - rounds_used
+            if nudge_max_rounds < 1:
+                raise RuntimeError(
+                    f"background tool loop exceeded max rounds: {_BG_TOOL_MAX_ROUNDS}"
+                )
+            try:
+                loop_result = await resolve_official_assistant_tool_loop_async(
+                    response=nudge_initial,
+                    openai_messages=nudge_messages,
+                    max_tool_call_rounds=nudge_max_rounds,
+                    execute_tool_call=execute_tool_call,
+                    continue_chat=continue_chat,
+                    build_assistant_tool_call_message=openai_assistant_message_dict,
+                    insert_system_message=_insert_system_message,
+                    initial_trace_id=None,
+                    after_tool_messages_appended=_after_tool_messages_appended,
+                )
+            except BackgroundToolLoopAborted:
+                logger.debug(
+                    "repl.turn.bg aborted in persistence nudge trace_id={} user_msg_uuid={}",
+                    trace_id,
+                    user_msg_uuid,
+                )
+                return
+            except ValueError as exc:
+                raise RuntimeError(
+                    f"background tool loop exceeded max rounds: {_BG_TOOL_MAX_ROUNDS}"
+                ) from exc
+            appended_turn_msgs = loop_result.messages[base_snapshot_len:]
+            tool_call_names = _extract_tool_call_names(appended_turn_msgs)
+
         raw_final = _assistant_text_from_completion_response(
             loop_result.response
         )
@@ -761,8 +844,6 @@ async def _run_background_tool_loop(
         bg_ls_llm_run = langsmith_llm_run_id_from_completion(
             loop_result.response
         )
-        appended_turn_msgs = loop_result.messages[len(working_messages) :]
-        tool_call_names = _extract_tool_call_names(appended_turn_msgs)
         image_paths = _local_paths_from_tool_messages(loop_result.messages)
         generation_deliver = _generation_tool_execution_deliver(
             appended_turn_msgs,

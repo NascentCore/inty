@@ -35,6 +35,9 @@ _UNIFIED_FALLBACK_SYSTEM_PROMPT = (
     "- `output_to_user` (boolean): **true** if the user should see a follow-up bubble with tool "
     "outcomes (read_file, list_dir, search, generated assets, etc.). **false** when "
     "only silent persistence ran and no recap is needed.\n"
+    "Set **false** only after `memory_store_write_document` (or other persistence tools) "
+    "actually ran when the user asked for a lasting preference change; do not claim "
+    "silent persistence without those tool calls.\n"
     "Successful image generation still delivers the asset; `output_to_user` only gates extra text.\n"
 )
 
