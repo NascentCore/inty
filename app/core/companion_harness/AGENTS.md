@@ -46,6 +46,11 @@ On top of this companion harness, we need to design product features to overcome
 the limitations of the inability of a virtual companion to have physical interactions.
 如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
 
+## Agentic mechanism design
+
+- Elicit desired behavior through composable prompts/tools and surrounding systems
+- Do not use keywords or regexp to hardcode rules
+
 ## Hermes agent wechat/weixin adapater
 
 - We only use wechat/weixin communication protocol, do not allow hermes code to use local filesystem.
