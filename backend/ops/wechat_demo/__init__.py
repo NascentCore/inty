@@ -1,4 +1,6 @@
-"""WeChat ↔ Inty self-service demo (Ops only; bridge state in Postgres).
+"""DEPRECATED - will be removed
+
+WeChat ↔ Inty self-service demo (Ops only; bridge state in Postgres).
 
 iLink session limits: QR poll budget 480s; each QR may ``expired`` (≤3 refresh).
 Bridge ``weixin_token`` lasts until iLink ``errcode=-14`` (negative fourteen — not
