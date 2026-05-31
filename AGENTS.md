@@ -75,6 +75,24 @@ You should only changes and use code in the following dirs:
 - Document your code as you go, not after.
 - A function should not have more than 5 arguments, beyond that, create input
 - Use constants whenever possible
+
+### Idiomatic patterns
+
+- Always prefer abstract data types over primitive ones:
+  `datetime` instead of `str`
+  `custom pydantic model type`
+  ```
+  @dataclass
+  class Input:
+    ...
+  def foo(input: Input):
+    ...
+  ```
+  instead of multiple primitive types:
+  ```
+  def foo(param1: str, param2: int):
+    ...
+  ```
 - Do not pass the variable down more than 3 layers of function calls.
   Below is a good example:
   ```python
