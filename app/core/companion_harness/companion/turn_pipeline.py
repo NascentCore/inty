@@ -8,6 +8,7 @@ be split without changing WebSocket, MemoryStore, or tool-background behavior.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from loguru import logger
@@ -62,7 +63,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from .turn_routes import TurnRouteMode
-from .utc import transcript_message_content_for_llm
+from .utc import transcript_message_content_for_llm_at
 from .user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
 )
@@ -150,13 +151,13 @@ def _companion_tail_user_body_for_llm(
     *,
     user_text: str,
     implicit_sign_on_turn: bool,
-    tail_user_ts: str,
+    tail_user_ts: datetime,
 ) -> str:
     """Tail **user** message with optional per-message UTC prefix for the LLM."""
     body = (
         USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
     )
-    return transcript_message_content_for_llm(content=body, ts=tail_user_ts)
+    return transcript_message_content_for_llm_at(content=body, at=tail_user_ts)
 
 
 def _companion_user_time_context_system_for_llm(
@@ -223,7 +224,7 @@ def build_companion_turn_prompt_plan(
     store: MemoryStore,
     loaded_state: CompanionTurnLoadedState,
     user_text: str,
-    tail_user_ts: str,
+    tail_user_ts: datetime,
     memory_bootstrap_type: str,
     track: CompanionTurnTrack,
     tick_proactive: bool,

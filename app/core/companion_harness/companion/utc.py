@@ -7,9 +7,14 @@ from datetime import datetime, timezone
 _LLM_TS_SUFFIX_UTC = " UTC"
 
 
+def utc_now() -> datetime:
+    """Current UTC wall time with second precision."""
+    return datetime.now(timezone.utc).replace(microsecond=0)
+
+
 def utc_iso_ts() -> str:
     """UTC ISO8601 with second precision for transcript persistence."""
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    return utc_now().isoformat()
 
 
 def utc_date_str() -> str:
@@ -24,6 +29,14 @@ def local_date_str() -> str:
     return datetime.now().astimezone().date().isoformat()
 
 
+def format_transcript_ts_for_llm_dt(dt: datetime) -> str:
+    """Human-readable UTC label from a timezone-aware or naive datetime."""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    dt_utc = dt.astimezone(timezone.utc).replace(microsecond=0)
+    return dt_utc.strftime("%Y-%m-%d %H:%M:%S") + _LLM_TS_SUFFIX_UTC
+
+
 def format_transcript_ts_for_llm(ts: str) -> str | None:
     """Human-readable UTC label for LLM message prefixes, or ``None`` if unparseable."""
     raw = ts
@@ -34,10 +47,7 @@ def format_transcript_ts_for_llm(ts: str) -> str | None:
         dt = datetime.fromisoformat(normalized)
     except ValueError:
         return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    dt_utc = dt.astimezone(timezone.utc).replace(microsecond=0)
-    return dt_utc.strftime("%Y-%m-%d %H:%M:%S") + _LLM_TS_SUFFIX_UTC
+    return format_transcript_ts_for_llm_dt(dt)
 
 
 def transcript_message_content_for_llm(*, content: str, ts: str) -> str:
@@ -45,4 +55,10 @@ def transcript_message_content_for_llm(*, content: str, ts: str) -> str:
     label = format_transcript_ts_for_llm(ts)
     if label is None:
         return content
+    return f"[{label}] {content}"
+
+
+def transcript_message_content_for_llm_at(*, content: str, at: datetime) -> str:
+    """Prefix ``content`` with ``at`` for the tail user message in one LLM turn."""
+    label = format_transcript_ts_for_llm_dt(at)
     return f"[{label}] {content}"

@@ -409,8 +409,12 @@ def _doctrine_system_messages() -> list[dict[str, Any]]:
         _system_message(get_imate_axiom_system_text()),
         _system_message(get_inty_facts_system_text()),
         _system_message(get_safety_system_text()),
-        _system_message(_TRANSCRIPT_TIMESTAMP_LLM_DIRECTIVE),
     ]
+
+
+def _auxiliary_system_messages() -> list[dict[str, Any]]:
+    """Harness mechanics not part of core doctrine (transcript timestamp contract, etc.)."""
+    return [_system_message(_TRANSCRIPT_TIMESTAMP_LLM_DIRECTIVE)]
 
 
 def _capability_system_messages(
@@ -602,6 +606,7 @@ def build_system_messages(
 
     out: list[dict[str, Any]] = []
     out.extend(_doctrine_system_messages())
+    out.extend(_auxiliary_system_messages())
     out.extend(
         _capability_system_messages(
             bundle=bundle,
