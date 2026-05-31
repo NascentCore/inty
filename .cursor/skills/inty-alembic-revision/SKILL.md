@@ -64,6 +64,8 @@ alembic revision --autogenerate -m "<short description>"
 
 生成后**人工检查**新生成的 `backend/alembic/versions/*.py`：删多余 op、补索引/约束说明，勿盲提交。
 
+CLI 生成的 revision 会带 **`INTY_REVISION_SOURCE = "alembic-cli"`** 与 docstring 行 `Revision source: alembic-cli`；**Agent 手写 migration 时不要复制该标记**——优先用本 skill 的 `alembic revision` 命令。
+
 ## 方式 B：空 revision（手写 upgrade/downgrade）
 
 不改模型、只写手工 SQL 或少量 op 时用：
