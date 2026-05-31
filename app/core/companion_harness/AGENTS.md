@@ -11,7 +11,8 @@ Companion Harness is agentic harness for simulating an autonomous Intelligence E
 
 ## Objectives
 
-Simulate diverse range of companionship towards human user without physical presence;
+Implement a singular agentic harness (without multi-instance, multi-channel)
+to simulate diverse range of companionship towards human user without physical presence;
 real-world inspirations can be any form of long-distance intimate relationship:
 
 - remote lovers
@@ -20,11 +21,24 @@ real-world inspirations can be any form of long-distance intimate relationship:
 换句话说，这个智能体能够：
 
 - 通过多媒介通信来实现与用户的多媒介互动 (weixin, app, sms, phone-call etc.)
+  At most 1 connection across multiple channels,
+  no need to consider multiplexing or channel swithcing.
 - 拟人的情感表达能力（喜怒哀乐、长期记忆、情感升华、幻想等等）
 - 感知用户所处数字空间形成与用户的同频共振
   拟人的独立与互联网互动（与用户共享）
 - 与智能体本身相互独立的虚拟环境（同样由 LLM+Companion-Harness+世界事件）来提供智能体独立性、及新鲜感
   拟人的与 LivingSphere & TechnoCore 互动的能力 [1]
+- Single instance deployment, do not worry horizontal scaling (a distant future TODO)
+- Be principled and straightforward in system architecture:
+  Interface design and spec
+  Database access
+  Code composability
+
+### Non-goals
+
+- Security
+- Commercialization (like usage counting)
+- Execution speed, resource utilization, optimization
 
 ### Product vision
 
