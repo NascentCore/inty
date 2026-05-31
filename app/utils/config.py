@@ -213,10 +213,6 @@ class FeaturesConfig(BaseModel):
     # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
     # See docs/companion_harness/INNER_TICK_SCHEDULING.md (worker poll).
     companion_ws_proactive_chat_poll_seconds: float = 60.0
-    # When True, the same worker may emit maintenance inner-tick turns (``InnerTickActivity.MAINTENANCE``).
-    # See docs/companion_harness/INNER_TICK_SCHEDULING.md.
-    # TODO: Remove this flag, and make maintenance inner-tick always on.
-    companion_ws_maintenance_inner_tick_enabled: bool = True
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
     # See docs/companion_harness/INNER_TICK_SCHEDULING.md (maintenance min_gap).
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
