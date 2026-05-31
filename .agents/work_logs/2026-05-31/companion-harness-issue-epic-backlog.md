@@ -21,7 +21,10 @@
 ## 执行
 
 ```bash
-uv run python .cursor/skills/scripts/create_companion_harness_issue_epics.py
+python3 .cursor/skills/scripts/create_companion_harness_issue_epics.py
+python3 .cursor/skills/scripts/create_companion_harness_issue_epics.py --dry-run  # 预览
 ```
 
-需 maintainer `gh` 具备 `issues:write`。创建后建议：给已有 open PR（#3224、#3237、#3250）comment 链到对应 epic；paused PR 加 `wontfix` 或 epic 链接避免误拾取。
+需 maintainer `gh` 具备 `issues:write`。Cloud Agent token **无** `issues:write` / `pull_requests:write`，无法在本环境直接 `gh issue create` 或 `gh pr edit`；issue 创建与 PR 描述更新均通过 **push 分支 commit** 完成。
+
+创建后建议：给已有 open PR（#3224、#3237、#3250）comment 链到对应 epic；paused PR 加 epic 链接避免误拾取。
