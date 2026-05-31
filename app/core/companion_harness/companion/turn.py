@@ -141,7 +141,7 @@ from .turn_routes import (
     BootstrapInterimOutputSink,
     TurnRouteMode,
 )
-from .utc import utc_iso_ts
+from .utc import utc_iso_ts, utc_now
 from .implicit_signal_messages import (
     MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
@@ -521,10 +521,12 @@ async def _run_companion_turn_core(
         )
     context = loaded_state.context
     bundle = loaded_state.bundle
+    ts_user = utc_now()
     prompt_plan = build_companion_turn_prompt_plan(
         store=store,
         loaded_state=loaded_state,
         user_text=user_text,
+        tail_user_ts=ts_user,
         memory_bootstrap_type=memory_bootstrap_type,
         track=track,
         tick_proactive=tick_proactive,
@@ -539,8 +541,6 @@ async def _run_companion_turn_core(
     user_msg_uuid = (
         preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
     )
-
-    ts_user = utc_iso_ts()
     trace_id = str(uuid.uuid4())
     langsmith_trace_acc = ""
     langsmith_llm_run_acc = ""
@@ -969,7 +969,7 @@ async def _run_companion_turn_core(
         sign_on_row: dict[str, Any] = {
             "role": "user",
             "content": USER_SIGNED_ON_TRIGGER_USER_TEXT,
-            "ts": ts_user,
+            "ts": ts_user.isoformat(),
             "uuid": user_msg_uuid,
             "trace_id": trace_id,
             "implicit_user_signed_on": True,
@@ -979,7 +979,7 @@ async def _run_companion_turn_core(
         user_row: dict[str, Any] = {
             "role": "user",
             "content": user_text,
-            "ts": ts_user,
+            "ts": ts_user.isoformat(),
             "uuid": user_msg_uuid,
         }
         if inner_tick_turn:

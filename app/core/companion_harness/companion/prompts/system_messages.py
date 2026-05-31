@@ -394,12 +394,25 @@ def _tool_background_final_json_routing_contract_text() -> str:
     )
 
 
+# Pairs with ``transcript_message_content_for_llm`` in companion ``utc.py``.
+_TRANSCRIPT_TIMESTAMP_LLM_DIRECTIVE = (
+    "Transcript messages may begin with a bracketed UTC timestamp "
+    "(e.g. [2026-05-30 13:09:06 UTC]). These prefixes are internal context "
+    "for timing only; never include them in replies to the user."
+)
+
+
 def _doctrine_system_messages() -> list[dict[str, Any]]:
     return [
         _system_message(get_imate_axiom_system_text()),
         _system_message(get_inty_facts_system_text()),
         _system_message(get_safety_system_text()),
     ]
+
+
+def _auxiliary_system_messages() -> list[dict[str, Any]]:
+    """Harness mechanics not part of core doctrine (transcript timestamp contract, etc.)."""
+    return [_system_message(_TRANSCRIPT_TIMESTAMP_LLM_DIRECTIVE)]
 
 
 def _capability_system_messages(
@@ -591,6 +604,7 @@ def build_system_messages(
 
     out: list[dict[str, Any]] = []
     out.extend(_doctrine_system_messages())
+    out.extend(_auxiliary_system_messages())
     out.extend(
         _capability_system_messages(
             bundle=bundle,

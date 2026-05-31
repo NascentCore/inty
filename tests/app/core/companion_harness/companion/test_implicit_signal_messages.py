@@ -75,3 +75,4 @@ def test_build_system_messages_does_not_inject_user_time_context_system_slice() 
     joined = "\n".join(m.get("content") or "" for m in msgs if m.get("role") == "system")
     assert "##User Time Context" not in joined
     assert "## user-time-context" not in joined
+    assert "never include them in replies to the user" in joined

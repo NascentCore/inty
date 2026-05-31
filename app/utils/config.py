@@ -177,7 +177,7 @@ class FeaturesConfig(BaseModel):
     class CompanionHarnessConfig(BaseModel):
         dreaming_idle_seconds: int = Field(default=7200, ge=1)
 
-    experimental_enable_chat_with_user_time_context: bool = True
+    experimental_enable_chat_with_user_time_context: bool = False
     # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
     enable_selfie_persona_summary: bool = True
     # Chat WebSocket: max seconds to wait for the next text frame before closing (ping/pong resets the wait).
