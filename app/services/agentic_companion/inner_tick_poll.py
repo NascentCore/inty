@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from app.core.config import global_config_loaded_from_config_yaml
 from app.services.agentic_companion import inner_tick_fire
 from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
 from app.services.agentic_companion.session import Coordinator
@@ -40,13 +39,11 @@ async def run_inner_tick_poll(
         ws_conn_id=ws_id,
         tc_box=tc,
     )
-    feats = global_config_loaded_from_config_yaml.app.features
-    if bool(feats.companion_ws_maintenance_inner_tick_enabled):
-        await inner_tick_fire.try_fire_maintenance_inner_tick(
-            delivery=delivery,
-            ctx=ctx,
-            subscription_svc=subscription_svc,
-            coordinator=coordinator,
-            ws_conn_id=ws_id,
-            tc_box=tc,
-        )
+    await inner_tick_fire.try_fire_maintenance_inner_tick(
+        delivery=delivery,
+        ctx=ctx,
+        subscription_svc=subscription_svc,
+        coordinator=coordinator,
+        ws_conn_id=ws_id,
+        tc_box=tc,
+    )
