@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Local Playground</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="playground" id="playground-root">
+      <header class="playground__header">
+        <h1 class="playground__title">AI Local Playground</h1>
+        <p class="playground__subtitle">
+          本地聚合页：OpenRouter 文本模型、fal GPT Image、Vertex Nano Banana 等。
+        </p>
+        <p class="playground__health" id="health-line" aria-live="polite"></p>
+      </header>
+
+      <nav class="playground__tabs" role="tablist">
+        <button
+          type="button"
+          class="playground__tab playground__tab--active"
+          role="tab"
+          aria-selected="true"
+          data-tab="text"
+          id="tab-text"
+        >
+          Text
+        </button>
+        <button
+          type="button"
+          class="playground__tab"
+          role="tab"
+          aria-selected="false"
+          data-tab="image"
+          id="tab-image"
+        >
+          Image
+        </button>
+      </nav>
+
+      <section class="playground__panel playground__panel--active" id="panel-text" role="tabpanel">
+        <label class="playground__field">
+          <span class="playground__label">Model</span>
+          <select id="text-model" class="playground__select"></select>
+        </label>
+        <label class="playground__field">
+          <span class="playground__label">System (optional)</span>
+          <textarea id="text-system" class="playground__textarea" rows="2"></textarea>
+        </label>
+        <label class="playground__field">
+          <span class="playground__label">User message</span>
+          <textarea id="text-user" class="playground__textarea" rows="6"></textarea>
+        </label>
+        <button type="button" class="playground__submit" id="text-run">Run</button>
+        <pre class="playground__output" id="text-output"></pre>
+      </section>
+
+      <section class="playground__panel" id="panel-image" role="tabpanel" hidden>
+        <label class="playground__field">
+          <span class="playground__label">Model</span>
+          <select id="image-model" class="playground__select"></select>
+          <span class="playground__hint" id="image-model-notes"></span>
+        </label>
+        <label class="playground__field">
+          <span class="playground__label">Prompt</span>
+          <textarea id="image-prompt" class="playground__textarea" rows="4"></textarea>
+        </label>
+        <label class="playground__field">
+          <span class="playground__label">Reference image URLs (one per line)</span>
+          <textarea
+            id="image-refs"
+            class="playground__textarea"
+            rows="3"
+            placeholder="https://..."
+          ></textarea>
+        </label>
+        <label class="playground__field">
+          <span class="playground__label">Gemini system instruction (optional)</span>
+          <textarea id="image-system" class="playground__textarea" rows="2"></textarea>
+        </label>
+        <div class="playground__row">
+          <label class="playground__field playground__field--inline">
+            <span class="playground__label">num_images</span>
+            <input
+              id="image-count"
+              class="playground__input"
+              type="number"
+              min="1"
+              max="4"
+              value="1"
+            />
+          </label>
+          <label class="playground__field playground__field--inline">
+            <span class="playground__label">input_fidelity (gpt-image edit)</span>
+            <select id="image-fidelity" class="playground__select">
+              <option value="low">low</option>
+              <option value="high">high</option>
+            </select>
+          </label>
+        </div>
+        <button type="button" class="playground__submit" id="image-run">Generate</button>
+        <pre class="playground__output" id="image-output"></pre>
+        <div class="playground__gallery" id="image-gallery"></div>
+      </section>
+    </div>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
