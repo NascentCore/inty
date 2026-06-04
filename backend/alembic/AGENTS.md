@@ -16,3 +16,9 @@
 ## 实操入口
 
 - 具体 `alembic.ini` 路径、`PYTHONPATH`、与 Postgres 基线等 **可复制命令** 见仓库技能 **inty-alembic-revision** 与 `backend/alembic` 旁维护说明；此处不重复长脚本块以免与真环境漂移。
+
+## Revision 来源标记
+
+- `alembic revision`（含 `--autogenerate`）经 `script.py.mako` 生成的文件会带 **`Revision source: alembic-cli`**（docstring）与 **`INTY_REVISION_SOURCE = "alembic-cli"`**（模块常量）。
+- **Agent 手写** migration 时 **禁止** 复制上述标记；优先走 CLI 生成后再人工审阅。
+- 审阅时可 `rg 'INTY_REVISION_SOURCE = "alembic-cli"' backend/alembic/versions/` 区分 CLI 与手写。
