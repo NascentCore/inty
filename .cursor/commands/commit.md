@@ -4,6 +4,26 @@
 
 Git commit changes in the current conversation.
 
+Use [Scoped Commits](https://scopedcommits.com/) to draft commit message.
+
+```
+<scope>: <description>
+
+[optional body]
+
+[optional trailer(s)]
+```
+
+Example:
+
+```
+auth: fix login bug
+
+This commit fixes the login bug by...
+
+issues/3211
+```
+
 ## Steps
 
 1. **Write 1 sentence commit title**
