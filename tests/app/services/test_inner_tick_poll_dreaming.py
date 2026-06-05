@@ -22,8 +22,9 @@ def _poll_delivery() -> InnerTickDelivery:
 
 @pytest.mark.asyncio
 async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
-    ctx = {"user_id": "u", "agent_id": "a", "chat_id": "c"}
+    live_ctx = {"user_id": "u", "agent_id": "a", "chat_id": "c"}
     coordinator = MagicMock()
+    coordinator.snapshot_inner_tick_coords.return_value = live_ctx
 
     with (
         patch.object(
@@ -49,7 +50,6 @@ async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
         ) as dreaming,
     ):
         await inner_tick_poll.run_inner_tick_poll(
-            ctx=ctx,
             delivery=_poll_delivery(),
             coordinator=coordinator,
             ws_conn_id="ws",
@@ -63,9 +63,38 @@ async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_inner_tick_poll_falls_through_to_dreaming() -> None:
-    ctx = {"user_id": "u", "agent_id": "a", "chat_id": "c"}
+async def test_run_inner_tick_poll_skips_when_coords_disarmed() -> None:
     coordinator = MagicMock()
+    coordinator.snapshot_inner_tick_coords.return_value = None
+
+    with (
+        patch.object(
+            inner_tick_poll.inner_tick_fire,
+            "try_fire_proactive_chat_inner_tick",
+            new_callable=AsyncMock,
+        ) as proactive,
+        patch.object(
+            inner_tick_poll.inner_tick_fire,
+            "try_fire_scheduled_inner_tick",
+            new_callable=AsyncMock,
+        ) as scheduled,
+    ):
+        await inner_tick_poll.run_inner_tick_poll(
+            delivery=_poll_delivery(),
+            coordinator=coordinator,
+            ws_conn_id="ws",
+            tc_box=[None],
+        )
+
+    proactive.assert_not_awaited()
+    scheduled.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_run_inner_tick_poll_falls_through_to_dreaming() -> None:
+    live_ctx = {"user_id": "u", "agent_id": "a", "chat_id": "c"}
+    coordinator = MagicMock()
+    coordinator.snapshot_inner_tick_coords.return_value = live_ctx
 
     with (
         patch.object(
@@ -94,7 +123,6 @@ async def test_run_inner_tick_poll_falls_through_to_dreaming() -> None:
         ) as dreaming,
     ):
         await inner_tick_poll.run_inner_tick_poll(
-            ctx=ctx,
             delivery=_poll_delivery(),
             coordinator=coordinator,
             ws_conn_id="ws",

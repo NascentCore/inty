@@ -102,9 +102,8 @@ class WeixinInprocessPresence:
             self._push_weixin_assistant_text
         )
 
-        async def _run_poll(ctx: dict) -> None:
+        async def _run_poll(_ctx: dict) -> None:
             await run_inner_tick_poll(
-                ctx=ctx,
                 delivery=delivery,
                 coordinator=self._coordinator,
                 ws_conn_id=None,
