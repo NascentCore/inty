@@ -103,6 +103,7 @@ from .turn_deps import CompanionTurnDeps
 from .turn_track import turn_flags_for_track
 from .prompts.system_messages import (
     build_system_messages_for_chat_track,
+    build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_maintenance,
     build_system_messages_for_tool_track,
 )
@@ -204,9 +205,22 @@ def _async_dual_llm_system_message_variants(
         and route_inner_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
-        tool_system_msgs = build_system_messages_for_inner_tick_maintenance(
-            bundle, context, store
-        )
+        match route_inner_activity:
+            case InnerTickActivity.MAINTENANCE:
+                tool_system_msgs = (
+                    build_system_messages_for_inner_tick_maintenance(
+                        bundle, context, store
+                    )
+                )
+            case InnerTickActivity.AUTONOMY:
+                tool_system_msgs = build_system_messages_for_inner_tick_autonomy(
+                    bundle, context, store
+                )
+            case _:
+                raise RuntimeError(
+                    "unexpected inner-tick activity for async tool path: "
+                    f"{route_inner_activity.value}"
+                )
     else:
         tool_system_msgs = build_system_messages_for_tool_track(bundle, context)
     chat_system_msgs = build_system_messages_for_chat_track(
@@ -1135,9 +1149,9 @@ async def run_inner_tick_autonomy(
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
     memory_bootstrap_type: str,
+    runtime_context: TurnRuntimeContext,
     background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
-    implicit_signal_bundle: ImplicitSignalBundle | None,
     langsmith_parent_run_enabled: bool | None,
     tool_bg_idle_event: threading.Event | None,
 ) -> CompanionTurnResult:
@@ -1159,9 +1173,9 @@ async def run_inner_tick_autonomy(
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
         memory_bootstrap_type=memory_bootstrap_type,
+        runtime_context=runtime_context,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
-        implicit_signal_bundle=implicit_signal_bundle,
         langsmith_parent_run_enabled=langsmith_parent_run_enabled,
         tool_bg_idle_event=tool_bg_idle_event,
     )

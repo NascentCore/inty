@@ -175,6 +175,7 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
     assert proactive_blocks == []
     maintenance_blocks = [c for c in contents if c.startswith("本轮（内在节拍）")]
     assert maintenance_blocks == []
+    assert not any(c.startswith("内在活动（ai_private）") for c in contents)
     autonomy_lines = autonomy_blocks[0].split("\n")
     assert "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；" in autonomy_lines[2]
     assert any("LIFE_CURRENTS.md" in line for line in autonomy_lines)
@@ -193,6 +194,7 @@ def test_build_system_messages_for_inner_tick_autonomy_is_production_builder(
     assert len(autonomy_blocks) == 1
     assert not any(c.startswith("本轮（内在节拍）") for c in contents)
     assert not any(c.startswith("本轮（陪伴主动聊天）") for c in contents)
+    assert not any(c.startswith("内在活动（ai_private）") for c in contents)
     assert all("## 工具环收尾：结构化信封" not in c for c in contents)
     assert all("系统仍会向用户投递产物" not in c for c in contents)
 

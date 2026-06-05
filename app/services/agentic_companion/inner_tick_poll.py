@@ -1,4 +1,4 @@
-"""Shared inner-tick poll: proactive, scheduled, maintenance, dreaming (WS or Weixin delivery).
+"""Shared inner-tick poll: proactive, scheduled, autonomy, maintenance, dreaming (WS or Weixin delivery).
 
 Requires signed-on presence coordinates on ``coordinator`` — poll runs on the same ``Coordinator``
 as user chat, so **one ``turn_lock`` per wire** serializes inner-tick activities when each

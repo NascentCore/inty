@@ -689,14 +689,14 @@ def _contextual_system_messages(
         if proactive_life_currents_block is not None:
             out.append(_system_message(proactive_life_currents_block))
     if inner_tick_turn and not tick_proactive:
-        out.append(
-            _system_message(_inner_tick_ai_private_section(ai_private_text))
-        )
         if tick_autonomy:
             out.append(
                 _system_message(_get_inner_tick_autonomy_prompt_slice())
             )
         else:
+            out.append(
+                _system_message(_inner_tick_ai_private_section(ai_private_text))
+            )
             out.append(_system_message(_inner_tick_turn_section()))
     return out
 
@@ -870,7 +870,6 @@ def build_system_messages_for_inner_tick_autonomy(
     the dedicated autonomy slice. No call to ``build_system_messages`` so that the
     autonomy assembly is the only source of truth for this track.
     """
-    ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
     out: list[dict[str, Any]] = []
     out.extend(_doctrine_system_messages())
     out.extend(
@@ -913,7 +912,7 @@ def build_system_messages_for_inner_tick_autonomy(
             tick_proactive=False,
             tick_autonomy=True,
             repl_online_ack_turn=False,
-            ai_private_text=ai_private_text,
+            ai_private_text="",
             proactive_life_currents_block=None,
         )
     )
