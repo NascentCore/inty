@@ -93,10 +93,14 @@ INNER_TICK_META = {
     "proactive_chat": True,
 }
 
-
 @pytest.mark.parametrize(
     "meta",
-    [FOREGROUND_CHAT_META, TOOL_BG_META, BOOTSTRAP_INTERIM_META, INNER_TICK_META],
+    [
+        FOREGROUND_CHAT_META,
+        TOOL_BG_META,
+        BOOTSTRAP_INTERIM_META,
+        INNER_TICK_META,
+    ],
 )
 def test_chat_websocket_queued_success_frame_model_validate(meta: dict[str, Any]) -> None:
     frame = ChatWebSocketQueuedSuccessFrame.model_validate(_queued_success_frame(meta))

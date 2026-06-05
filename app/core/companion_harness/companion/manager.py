@@ -1,7 +1,12 @@
 """CompanionManager: 管理 companion session 的生命周期。
 
-每个 ``CompanionSession`` 持有 ``tool_bg_idle``（``threading.Event``），用于在下一轮
-``run_turn`` 加载 transcript 之前等待上一轮异步 tool_background 线程结束。
+每个 ``CompanionSession`` 对应一个 **scope**（``user_id`` + ``companion_id`` + ``chat_id``）——
+一份 MemoryStore，进程内单例。Prototype 假定每个 paired user 仅一条 presence（单 tab /
+单 wire），见 ``companion_harness`` AGENTS.md「Concurrency (prototype)」。
+
+每个 ``CompanionSession`` 还持有 ``tool_bg_idle`` — 上一轮 tool_background 是否结束；
+下一轮 ``run_turn`` 加载 transcript 前等待。Dreaming 与用户 chat、inner-tick 在
+**presence** ``Coordinator.turn_lock`` 上串行（见 ``session.Coordinator``）。
 """
 
 from __future__ import annotations
@@ -50,7 +55,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
     ensure_minimal_documents_in_store,
     is_scope_initialized_in_store,
 )
-
 
 class CompanionConfig(BaseModel):
     """集中管理 companion 所有可调参数。"""
@@ -128,6 +132,9 @@ class CompanionManager:
         self._config = config
         self._sessions: dict[str, CompanionSession] = {}
         self._lock = threading.Lock()
+        # TODO(code-structure): This class holds too many objects, this llm client should not be a member of this class.
+        # Instead, this should focus on managing the session lifecycle.
+        # And let the caller to provide the llm client when needed.
         self._llm_client = CompanionLLMClient(config.llm)
 
     @staticmethod
@@ -273,18 +280,18 @@ class CompanionManager:
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_user_chat_turn(
-            user_text,
-            **{
-                **self._track_turn_kwargs(
-                    session,
-                    defer_memory_update=defer_memory_update,
-                    background_output_sink=background_output_sink,
-                    preset_user_msg_uuid=preset_user_msg_uuid,
-                    runtime_context=runtime_context,
-                ),
-                "bootstrap_interim_output_sink": bootstrap_interim_output_sink,
-            },
-        )
+                user_text,
+                **{
+                    **self._track_turn_kwargs(
+                        session,
+                        defer_memory_update=defer_memory_update,
+                        background_output_sink=background_output_sink,
+                        preset_user_msg_uuid=preset_user_msg_uuid,
+                        runtime_context=runtime_context,
+                    ),
+                    "bootstrap_interim_output_sink": bootstrap_interim_output_sink,
+                },
+            )
 
     async def run_implicit_sign_on_greeting_turn(
         self,
@@ -300,15 +307,15 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_companion_implicit_sign_on_greeting_turn(
-            user_text,
-            **self._track_turn_kwargs(
-                session,
-                defer_memory_update=defer_memory_update,
-                background_output_sink=background_output_sink,
-                preset_user_msg_uuid=preset_user_msg_uuid,
-                runtime_context=runtime_context,
-            ),
-        )
+                user_text,
+                **self._track_turn_kwargs(
+                    session,
+                    defer_memory_update=defer_memory_update,
+                    background_output_sink=background_output_sink,
+                    preset_user_msg_uuid=preset_user_msg_uuid,
+                    runtime_context=runtime_context,
+                ),
+            )
 
     async def run_inner_tick_proactive_chat_turn(
         self,
@@ -323,14 +330,14 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_proactive_chat_turn(
-            **self._track_turn_kwargs(
-                session,
-                defer_memory_update=defer_memory_update,
-                background_output_sink=background_output_sink,
-                preset_user_msg_uuid=preset_user_msg_uuid,
-                runtime_context=runtime_context,
-            ),
-        )
+                **self._track_turn_kwargs(
+                    session,
+                    defer_memory_update=defer_memory_update,
+                    background_output_sink=background_output_sink,
+                    preset_user_msg_uuid=preset_user_msg_uuid,
+                    runtime_context=runtime_context,
+                ),
+            )
 
     async def run_inner_tick_scheduled_turn(
         self,
@@ -346,15 +353,15 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_scheduled_turn(
-            scheduled_user_text,
-            **self._track_turn_kwargs(
-                session,
-                defer_memory_update=defer_memory_update,
-                background_output_sink=background_output_sink,
-                preset_user_msg_uuid=preset_user_msg_uuid,
-                runtime_context=runtime_context,
-            ),
-        )
+                scheduled_user_text,
+                **self._track_turn_kwargs(
+                    session,
+                    defer_memory_update=defer_memory_update,
+                    background_output_sink=background_output_sink,
+                    preset_user_msg_uuid=preset_user_msg_uuid,
+                    runtime_context=runtime_context,
+                ),
+            )
 
     async def run_inner_tick_maintenance_turn(
         self,
@@ -369,11 +376,11 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_maintenance_turn(
-            **self._track_turn_kwargs(
-                session,
-                defer_memory_update=defer_memory_update,
-                background_output_sink=background_output_sink,
-                preset_user_msg_uuid=preset_user_msg_uuid,
-                runtime_context=runtime_context,
-            ),
-        )
+                **self._track_turn_kwargs(
+                    session,
+                    defer_memory_update=defer_memory_update,
+                    background_output_sink=background_output_sink,
+                    preset_user_msg_uuid=preset_user_msg_uuid,
+                    runtime_context=runtime_context,
+                ),
+            )

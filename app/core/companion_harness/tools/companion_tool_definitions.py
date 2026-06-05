@@ -579,6 +579,8 @@ BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
 )
 
+# TODO(inner-tick-autonomy): Collapse to ai_private append-only (plus minimal read if needed);
+# remove UPDATE_USER_MD, TECHNO_CORE_RECORD_EVENT, memory_store_* — 记忆一致性 → dreaming.
 INNER_TICK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.UPDATE_USER_MD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,

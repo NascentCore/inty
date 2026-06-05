@@ -92,6 +92,122 @@ def test_dreaming_due_uses_idle_seconds(tmp_path: Path) -> None:
     assert dreaming_due(store, now=now, dreaming_idle_seconds=14400) is None
 
 
+def test_dreaming_due_skips_after_same_day_checkpoint(tmp_path: Path) -> None:
+    """Same UTC day after a successful dream: no second dream (expected product behavior)."""
+    store = _store(tmp_path)
+    _write_transcript(
+        store,
+        [
+            {
+                "role": "user",
+                "content": "morning",
+                "ts": "2026-01-02T09:00:00+00:00",
+                "uuid": "u1",
+            },
+            {
+                "role": "assistant",
+                "content": "morning reply",
+                "ts": "2026-01-02T09:01:00+00:00",
+                "uuid": "a1",
+            },
+            {
+                "role": "user",
+                "content": "evening",
+                "ts": "2026-01-02T18:00:00+00:00",
+                "uuid": "u2",
+            },
+            {
+                "role": "assistant",
+                "content": "evening reply",
+                "ts": "2026-01-02T18:01:00+00:00",
+                "uuid": "a2",
+            },
+        ],
+    )
+    save_dreaming_state(
+        store,
+        DreamingState(
+            last_processed_main_line_count=2,
+            last_processed_main_uuid="a1",
+            last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc),
+            last_processed_latest_user_ts=datetime(
+                2026, 1, 2, 9, 0, tzinfo=timezone.utc
+            ),
+            last_processed_calendar_date=datetime(
+                2026, 1, 2, 12, 0, tzinfo=timezone.utc
+            ),
+        ),
+    )
+
+    assert (
+        dreaming_due(
+            store,
+            now=datetime(2026, 1, 2, 23, 0, tzinfo=timezone.utc),
+            dreaming_idle_seconds=7200,
+        )
+        is None
+    )
+
+
+def test_dreaming_due_allows_next_day_after_checkpoint(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    _write_transcript(
+        store,
+        [
+            {
+                "role": "user",
+                "content": "morning",
+                "ts": "2026-01-02T09:00:00+00:00",
+                "uuid": "u1",
+            },
+            {
+                "role": "assistant",
+                "content": "morning reply",
+                "ts": "2026-01-02T09:01:00+00:00",
+                "uuid": "a1",
+            },
+            {
+                "role": "user",
+                "content": "evening",
+                "ts": "2026-01-02T18:00:00+00:00",
+                "uuid": "u2",
+            },
+            {
+                "role": "assistant",
+                "content": "evening reply",
+                "ts": "2026-01-02T18:01:00+00:00",
+                "uuid": "a2",
+            },
+        ],
+    )
+    save_dreaming_state(
+        store,
+        DreamingState(
+            last_processed_main_line_count=2,
+            last_processed_main_uuid="a1",
+            last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc),
+            last_processed_latest_user_ts=datetime(
+                2026, 1, 2, 9, 0, tzinfo=timezone.utc
+            ),
+            last_processed_calendar_date=datetime(
+                2026, 1, 2, 12, 0, tzinfo=timezone.utc
+            ),
+        ),
+    )
+
+    candidate = dreaming_due(
+        store,
+        now=datetime(2026, 1, 3, 9, 0, tzinfo=timezone.utc),
+        dreaming_idle_seconds=7200,
+    )
+
+    assert candidate is not None
+    assert [row.content for row in candidate.rows] == [
+        "evening",
+        "evening reply",
+    ]
+
+
 def test_dreaming_state_roundtrip_uses_datetime(tmp_path: Path) -> None:
     store = _store(tmp_path)
     state = DreamingState(

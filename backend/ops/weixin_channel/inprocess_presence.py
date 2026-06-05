@@ -22,7 +22,7 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.services import chat_service, companion_chat_service
+from app.services import agent_service, chat_service, companion_chat_service
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.downlink import tool_background_downlink
 from app.services.agentic_companion.inner_tick_delivery import (
@@ -106,7 +106,6 @@ class WeixinInprocessPresence:
             await run_inner_tick_poll(
                 ctx=ctx,
                 delivery=delivery,
-                subscription_svc=self._subscription_svc,
                 coordinator=self._coordinator,
                 ws_conn_id=None,
                 tc_box=None,
@@ -171,6 +170,9 @@ class WeixinInprocessPresence:
                     user=inty_user,
                     is_subscribed=bool(subscription),
                 )
+                agent_data = await agent_service.get_agent_for_chat(db, agent_id)
+                if agent_data is None:
+                    return "Companion not found for this bridge."
                 chat = await chat_service.get_or_create_chat_by_agent(
                     db=db,
                     user_id=user_id,

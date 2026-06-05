@@ -85,8 +85,6 @@ agent:
   # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本）
   free_user_chat_image_model: "Z Image Turbo Image to Image"
   sub_user_chat_image_model: "Z Image Turbo Image to Image"
-  # 本地开发环境流量小也需要完整追踪方便测试
-  langsmith_tracing_enabled: true
   langsmith_text_chat_sample_rate: 1.0
 
 google_play:

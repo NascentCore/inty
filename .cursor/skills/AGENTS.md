@@ -1,7 +1,15 @@
 # `.cursor/skills/`：可复用操作手册（Skills）
 
-**一句话**：把 **易错的多步流程**（本地 CI、LangSmith 导出、Alembic、后端排障等）沉淀成 **人类与智能体共用的小抄**；每个 SKILL 指向 **脚本或命令** 而非重复粘贴大段 shell。
-
 ## 维护方式
 
 - 若某技能需要 **可执行 helper**，优先把脚本落在 [`.cursor/skills/scripts/`](/.cursor/skills/scripts/)，在 SKILL 里 **链接与说明参数**。
+
+## mattpocock/skills 说明
+
+mattpocock/skills 已安装于 `.agents/skills/`（`skills-lock.json`）；Inty 自有 skill 在 `.cursor/skills/`。
+
+### Setup 状态
+
+**暂不运行** `/setup-matt-pocock-skills`：人类队友要先试用 skill。决策记录见 [.agents/work_logs/2026-05-25/mattpocock-skills-defer-setup.md](/.agents/work_logs/2026-05-25/mattpocock-skills-defer-setup.md)。
+
+在未 setup 前，`docs/agents/` 不存在；依赖该目录的 engineering skill（`to-issues`、`to-prd`、`triage` 等）缺少本仓库上下文。productivity skill 与部分 engineering skill 可直接试用。

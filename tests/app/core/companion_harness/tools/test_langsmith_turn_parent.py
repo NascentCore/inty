@@ -241,6 +241,35 @@ def test_create_companion_turn_root_run_inner_tick_proactive_lane(
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
+@patch(
+    "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    return_value=True,
+)
+@patch("langsmith.run_trees.RunTree")
+def test_create_companion_turn_root_run_inner_tick_dreaming_lane(
+    mock_rt_cls: MagicMock, _en: MagicMock
+) -> None:
+    mock_root = MagicMock()
+    mock_rt_cls.return_value = mock_root
+    create_companion_turn_root_run(
+        inty_trace_id="t1",
+        user_msg_uuid="boundary-u1",
+        chat_model=resolve_chat_text_model("stub/chat-route"),
+        tool_model=resolve_chat_text_model("stub/tool-route"),
+        user_id="u1",
+        companion_id="a1",
+        inner_tick_turn=True,
+        inner_tick_activity=InnerTickActivity.DREAMING,
+        transcript_newest_message_uuid="boundary-u1",
+    )
+    kwargs = mock_rt_cls.call_args.kwargs
+    assert kwargs["name"] == "agentic_companion_inner_tick dreaming user=u1 agent=a1"
+    assert kwargs["inputs"]["inner_tick_activity"] == "dreaming"
+    assert kwargs["inputs"]["transcript_newest_message_uuid"] == "boundary-u1"
+    assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "dreaming"
+    end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
+
+
 def test_companion_turn_langsmith_parent_trace_id_str_empty_for_none() -> None:
     assert companion_turn_langsmith_parent_trace_id_str(None) == ""
 

@@ -473,7 +473,7 @@ async def _try_handle_ws_user_signed_out_frame(
         )
         recv_msg_uuid = (frame.message_id or "").strip()
         uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
-        # TODO(ws-disconnect-lifecycle): do not cancel; finish turns and mark chat_history undelivered.
+        # TODO(ws-disconnect-lifecycle): #3256 — persist-first; finish turns; mark undelivered.
         await inflight_turn_tracker.cancel_all()
         companion_ws.inner_tick_context.clear()
         companion_chat_service.append_companion_ws_runtime_event(
@@ -1311,6 +1311,15 @@ async def chat_completions_websocket(
     ),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
+    # TODO(commercialization-cleanup): Companion subscription / ``record_usage`` / limit checks
+    # stay in this WS orchestration layer and ``inner_tick_fire.py`` — never in
+    # ``app/core/companion_harness`` (see harness AGENTS.md).
+    # Concurrency (see ``session.Coordinator``, ``companion_harness`` AGENTS.md):
+    # - Prototype: one signed-on presence per paired user (no multi-tab). Each ``accept()``
+    #   is that single wire ⇒ one ``turn_lock`` (user chat + inner-tick including dreaming).
+    # TODO(companion-ws-single-presence): #3272 — reject or supersede a second ``accept()``
+    # on (user_id, agent_id); then hoist ``turn_lock`` to ``CompanionSession``.
+    # https://github.com/NascentCore/inty/issues/3272
     await websocket.accept()
     ws_conn_id = _resolve_ws_conn_id_from_websocket(websocket)
     current_user = await _get_current_user_from_websocket(websocket, db)
@@ -1392,7 +1401,6 @@ async def chat_completions_websocket(
             await run_inner_tick_poll(
                 ctx=ctx,
                 delivery=ws_delivery,
-                subscription_svc=subscription_svc,
                 coordinator=companion_ws,
                 ws_conn_id=ws_conn_id,
                 tc_box=tc_box,
@@ -1620,7 +1628,7 @@ async def chat_completions_websocket(
             await bootstrap_interim_consumer_task
         except asyncio.CancelledError:
             pass
-        # TODO(ws-disconnect-lifecycle): do not cancel on disconnect; finish turns and mark chat_history undelivered.
+        # TODO(ws-disconnect-lifecycle): #3256 — persist-first; finish turns; mark undelivered.
         await inflight_turn_tracker.cancel_all()
         ChatWsInflightShutdownRegistry.unregister(inflight_turn_tracker)
         await _shutdown_chat_ws_outbound_pump(pump_task)

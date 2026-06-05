@@ -503,6 +503,9 @@ async def _run_companion_turn_core(
         idle_wait_timeout_sec = float(
             llm_client.config.async_chat_front_timeout_sec
         )
+    # TODO(tool-bg-idle-starves-user-chat): Maintenance often ends with tool_background still running;
+    # the next turn waits on ``tool_bg_idle`` here while holding WS ``turn_lock``.
+    # https://github.com/NascentCore/inty/issues/3123
     await _await_tool_background_idle_if_configured(
         tool_bg_idle_event,
         idle_wait_timeout_sec=idle_wait_timeout_sec,
@@ -952,6 +955,8 @@ async def _run_companion_turn_core(
             companion_llm_runtime_event_bind_ctx.reset(llm_runtime_bind_token)
 
     # 持久化 transcript
+    # TODO(code-path-straightforwardness): refactor this function to accept
+    # the transcript path (resolved at the time when turn track is determined) as an argument.
     rel_tr = (
         paths.transcript
         if implicit_sign_on_turn
