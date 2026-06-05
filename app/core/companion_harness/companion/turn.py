@@ -955,6 +955,8 @@ async def _run_companion_turn_core(
             companion_llm_runtime_event_bind_ctx.reset(llm_runtime_bind_token)
 
     # 持久化 transcript
+    # TODO(code-path-straightforwardness): refactor this function to accept
+    # the transcript path (resolved at the time when turn track is determined) as an argument.
     rel_tr = (
         paths.transcript
         if implicit_sign_on_turn

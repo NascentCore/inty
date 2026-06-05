@@ -19,7 +19,6 @@ from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.core.companion_harness.companion.models import CompanionIdentity
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
@@ -211,9 +210,6 @@ class WeixinInprocessPresence:
                     chat_id=chat_id,
                     user_text=stripped,
                     resolved_chat_model=model_override,
-                    companion_identity=CompanionIdentity(
-                        display_name=str(agent_data["name"]),
-                    ),
                     session_id=session_id,
                     background_output_sink=self._coordinator.background_sink,
                     preset_user_msg_uuid=preset_uid,

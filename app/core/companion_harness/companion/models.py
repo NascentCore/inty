@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -31,7 +30,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
 
-AssistantTurnSource = Literal["chat", "inner_tick", "greeting", "official_helper"]
+AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 
 
 class InnerTickActivity(StrEnum):
@@ -51,20 +50,6 @@ class InnerTickActivity(StrEnum):
 
     MAINTENANCE = "maintenance"
     PROACTIVE_CHAT = "proactive_chat"
-
-
-@dataclass(frozen=True)
-class CompanionIdentity:
-    """Companion-facing identity passed from API/Ops into companion chat service."""
-
-    # TODO: Add agent_id points to the abstract layer's agent's ID.
-    # That agent is for referencing storage layer & service layer, which refers to the persistent
-    # identifier for the "agent".
-
-    display_name: str
-
-    def __post_init__(self) -> None:
-        assert self.display_name
 
 
 class CompanionTurnTrack(StrEnum):
@@ -127,14 +112,6 @@ class CompanionTurnResult(BaseModel):
         ),
     )
     assistant_source: AssistantTurnSource = "chat"
-    official_helper_reason: str = Field(
-        default="",
-        description=(
-            "When ``assistant_source`` is ``official_helper``, the bypass reason "
-            "(``OfficialHelperReason`` value); mirrored to WS/HTTP "
-            "``meta_data.official_helper_reason``."
-        ),
-    )
     inner_tick_activity: str | None = Field(
         default=None,
         description=(

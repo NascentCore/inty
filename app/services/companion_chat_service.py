@@ -47,7 +47,6 @@ from app.core.companion_harness.companion.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
 from app.core.companion_harness.companion.models import (
-    CompanionIdentity,
     CompanionTurnResult,
     InnerTickActivity,
 )
@@ -546,12 +545,10 @@ async def _run_companion_api_track_turn(
 async def run_user_chat(
     *,
     user_id: str,
-    # TODO(cleanup): Move agent_id to CompanionIdentity.
     agent_id: str,
     chat_id: str | int,
     user_text: str,
     resolved_chat_model: GenAIModel,
-    companion_identity: CompanionIdentity,
     defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
@@ -767,12 +764,10 @@ async def run_companion_inner_tick_maintenance_turn_for_api(
 async def run_companion_chat_turn_for_api(
     *,
     user_id: str,
-    # TODO(cleanup): Move agent_id to CompanionIdentity.
     agent_id: str,
     chat_id: str | int,
     user_text: str,
     resolved_chat_model: GenAIModel,
-    companion_identity: CompanionIdentity,
     defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
@@ -818,6 +813,5 @@ async def run_companion_chat_turn_for_api(
         )
     return await run_user_chat(
         user_text=user_text,
-        companion_identity=companion_identity,
         **common,
     )

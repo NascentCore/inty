@@ -1,6 +1,8 @@
 # Companion Harness
 
 **DO NOT MAINTAIN BACKWARD COMPATIBILITY**
+**DO NOT CONSIDER DATABASE DATA VALIDITY AFTER BREAKING CHANGES**
+**AS WE DO NOT HAVE A PERSISTENT INSTANCE YET**
 
 Companion Harness is agentic harness for simulating an autonomous Intelligence Entity (Inty).
 

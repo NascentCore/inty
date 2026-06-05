@@ -25,7 +25,6 @@ async def test_run_inner_tick_poll_skips_all_actions_when_dreaming() -> None:
     ctx = {"user_id": "u", "agent_id": "a", "chat_id": "c"}
     coordinator = MagicMock()
     subscription_svc = MagicMock()
-    feats = MagicMock()
 
     with (
         patch(
@@ -48,11 +47,7 @@ async def test_run_inner_tick_poll_skips_all_actions_when_dreaming() -> None:
             "try_fire_maintenance_inner_tick",
             new_callable=AsyncMock,
         ) as maintenance,
-        patch(
-            "app.services.agentic_companion.inner_tick_poll.global_config_loaded_from_config_yaml"
-        ) as cfg,
     ):
-        cfg.app.features = feats
         await inner_tick_poll.run_inner_tick_poll(
             ctx=ctx,
             delivery=_poll_delivery(),

@@ -32,7 +32,6 @@ from app.core.companion_harness.companion.llm_inference_errors import (
 from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
-from app.core.companion_harness.companion.models import CompanionIdentity
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutputSink,
 )
@@ -1106,9 +1105,6 @@ async def _agent_chat_ws_completions_impl(
                                 chat_id=chat.id,
                                 user_text=last_user_text,
                                 resolved_chat_model=model_override,
-                                companion_identity=CompanionIdentity(
-                                    display_name=str(agent_data["name"]),
-                                ),
                                 defer_memory_update=True,
                                 session_id=session_id,
                                 background_output_sink=companion_background_sink,

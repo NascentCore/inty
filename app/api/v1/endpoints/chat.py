@@ -507,7 +507,6 @@ def _companion_ai_meta_from_turn_result(
         transcript_compaction=companion_turn.transcript_compaction,
         companion_scheduled_reminder=companion_scheduled_reminder,
         scheduled_task_id=scheduled_task_id,
-        official_helper_reason=companion_turn.official_helper_reason or None,
     )
     return dump_chat_ws_companion_wire_meta(meta)
 
