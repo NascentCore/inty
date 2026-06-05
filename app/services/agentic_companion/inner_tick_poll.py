@@ -30,14 +30,12 @@ from app.services.agentic_companion import inner_tick_fire
 from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
 from app.services.agentic_companion.inner_tick_fire import InnerTickFireInput
 from app.services.agentic_companion.session import Coordinator, InnerTickCoords
-from app.services.subscription_service import SubscriptionService
 
 
 async def run_inner_tick_poll(
     *,
     ctx: dict[str, Any],
     delivery: InnerTickDelivery,
-    subscription_svc: SubscriptionService,
     coordinator: Coordinator,
     ws_conn_id: str | None,
     tc_box: list[Optional[dict]] | None,
@@ -51,7 +49,6 @@ async def run_inner_tick_poll(
     fire_input = InnerTickFireInput(
         delivery=delivery,
         coords=poll_coords,
-        subscription_svc=subscription_svc,
         coordinator=coordinator,
         ws_conn_id=ws_id,
         tc_box=tc,

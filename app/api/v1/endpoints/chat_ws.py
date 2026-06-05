@@ -1401,7 +1401,6 @@ async def chat_completions_websocket(
             await run_inner_tick_poll(
                 ctx=ctx,
                 delivery=ws_delivery,
-                subscription_svc=subscription_svc,
                 coordinator=companion_ws,
                 ws_conn_id=ws_conn_id,
                 tc_box=tc_box,

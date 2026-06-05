@@ -24,7 +24,6 @@ def _poll_delivery() -> InnerTickDelivery:
 async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
     ctx = {"user_id": "u", "agent_id": "a", "chat_id": "c"}
     coordinator = MagicMock()
-    subscription_svc = MagicMock()
 
     with (
         patch.object(
@@ -52,7 +51,6 @@ async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
         await inner_tick_poll.run_inner_tick_poll(
             ctx=ctx,
             delivery=_poll_delivery(),
-            subscription_svc=subscription_svc,
             coordinator=coordinator,
             ws_conn_id="ws",
             tc_box=[None],
@@ -68,7 +66,6 @@ async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
 async def test_run_inner_tick_poll_falls_through_to_dreaming() -> None:
     ctx = {"user_id": "u", "agent_id": "a", "chat_id": "c"}
     coordinator = MagicMock()
-    subscription_svc = MagicMock()
 
     with (
         patch.object(
@@ -99,7 +96,6 @@ async def test_run_inner_tick_poll_falls_through_to_dreaming() -> None:
         await inner_tick_poll.run_inner_tick_poll(
             ctx=ctx,
             delivery=_poll_delivery(),
-            subscription_svc=subscription_svc,
             coordinator=coordinator,
             ws_conn_id="ws",
             tc_box=[None],

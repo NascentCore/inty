@@ -106,7 +106,6 @@ class WeixinInprocessPresence:
             await run_inner_tick_poll(
                 ctx=ctx,
                 delivery=delivery,
-                subscription_svc=self._subscription_svc,
                 coordinator=self._coordinator,
                 ws_conn_id=None,
                 tc_box=None,

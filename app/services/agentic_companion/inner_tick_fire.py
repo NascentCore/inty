@@ -14,11 +14,8 @@ dreaming batches — https://github.com/NascentCore/inty/issues/3271
 TODO(inner-tick-fire-delivery-dedup): Extract shared WS / chat_history response assembly
 for proactive, scheduled, and maintenance delivery tracks after #3255 scope/presence split.
 
-TODO(commercialization-cleanup): Usage accounting for companion WS lives here and in
-``chat_ws.py`` / ``subscription_service`` — not in ``companion_harness``. Maintenance
-already skips ``check_chat_limit`` / ``record_usage`` (P2). Remove or gate
-``check_chat_limit`` + ``record_usage`` on proactive/scheduled fire paths below when
-inner-tick should never charge; align module doc with actual call sites.
+Prototype: inner-tick fire paths do not call ``subscription_service`` (no
+``check_chat_limit`` / ``record_usage``). User chat billing stays in ``chat_ws.py``.
 """
 
 from __future__ import annotations
@@ -87,14 +84,13 @@ from app.services.agentic_companion.session import Coordinator, InnerTickCoords
 from app.services.agentic_companion.ws_implicit_signals import (
     implicit_signal_bundle_from_tc_box,
 )
-from app.services.subscription_service import SubscriptionService
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
 class InnerTickModelSource(StrEnum):
     """Which model id to bind when resolving scope for an inner-tick fire attempt."""
 
-    CHAT_SUBSCRIPTION = "chat_subscription"
+    CHAT_DEFAULT = "chat_default"
     DREAMING_HARNESS = "dreaming_harness"
 
 
@@ -104,7 +100,6 @@ class InnerTickFireInput:
 
     delivery: InnerTickDelivery
     coords: InnerTickCoords
-    subscription_svc: SubscriptionService
     coordinator: Coordinator
     ws_conn_id: str
     tc_box: list[Optional[dict]]
@@ -125,10 +120,8 @@ async def _resolve_inner_tick_scope_coords(
     fire_input: InnerTickFireInput,
     *,
     model_source: InnerTickModelSource,
-    check_chat_limit: bool,
 ) -> InnerTickScopeCoords | None:
     """Load user/chat and model for one inner-tick attempt."""
-    assert isinstance(check_chat_limit, bool)
     coords = fire_input.coords
     user_id = coords.user_id
     agent_id = coords.agent_id
@@ -158,32 +151,11 @@ async def _resolve_inner_tick_scope_coords(
                     global_config_loaded_from_config_yaml.app.features.companion_harness.dreaming_llm
                 )
                 model_override = resolve_chat_text_model(dreaming_llm)
-            case InnerTickModelSource.CHAT_SUBSCRIPTION:
-                subscription = (
-                    await fire_input.subscription_svc.get_user_current_subscription(
-                        pre_db, user_id
-                    )
-                )
-                is_subscribed = bool(subscription)
+            case InnerTickModelSource.CHAT_DEFAULT:
                 model_override = select_chat_model(
-                    user=current_user, is_subscribed=is_subscribed
+                    user=current_user,
+                    is_subscribed=False,
                 )
-
-        if check_chat_limit:
-            is_allowed, used_count, daily_limit = (
-                await fire_input.subscription_svc.check_chat_limit(
-                    pre_db, current_user
-                )
-            )
-            if not is_allowed:
-                logger.info(
-                    "inner_tick_scope skipped subscription ws_conn_id={} user={} used={} limit={}",
-                    fire_input.ws_conn_id,
-                    user_id,
-                    used_count,
-                    daily_limit,
-                )
-                return None
 
         return InnerTickScopeCoords(
             user_id=user_id,
@@ -216,8 +188,7 @@ async def try_fire_scheduled_inner_tick(
     # e.g. gate proactive chat while any future pending reminder exists.
     coords = await _resolve_inner_tick_scope_coords(
         fire_input,
-        model_source=InnerTickModelSource.CHAT_SUBSCRIPTION,
-        check_chat_limit=True,
+        model_source=InnerTickModelSource.CHAT_DEFAULT,
     )
     if coords is None:
         return False
@@ -231,7 +202,6 @@ async def try_fire_scheduled_inner_tick(
     coordinator = fire_input.coordinator
     delivery = fire_input.delivery
     tc_box = fire_input.tc_box
-    subscription_svc = fire_input.subscription_svc
 
     mem_store = companion_chat_service.companion_memory_store_if_ready(
         user_id=user_id,
@@ -355,27 +325,6 @@ async def try_fire_scheduled_inner_tick(
         mark_task_fired(mem_store, due_task_id)
 
         async with AsyncSessionLocal() as post_db:
-            try:
-                # TODO(commercialization-cleanup): Remove scheduled ``record_usage`` when
-                # inner-tick usage accounting is disabled (P2); keep billing in this layer only.
-                await subscription_svc.record_usage(
-                    post_db,
-                    user_id,
-                    "chat",
-                    1,
-                    extra_data={
-                        "agent_id": agent_id,
-                        "message_length": 0,
-                        "companion_ws_scheduled_reminder": True,
-                    },
-                )
-            except Exception as e:
-                logger.warning(
-                    "companion_ws_scheduled_reminder record_usage failed ws_conn_id={}: {}",
-                    ws_conn_id,
-                    str(e),
-                )
-
             stub_utc = ws_implicit.client_time if ws_implicit else None
             stub_request = ChatCompletionRequest(
                 messages=[
@@ -470,8 +419,7 @@ async def try_fire_proactive_chat_inner_tick(
     """If companion transcript says proactive chat is due, run one turn and queue WS payload."""
     coords = await _resolve_inner_tick_scope_coords(
         fire_input,
-        model_source=InnerTickModelSource.CHAT_SUBSCRIPTION,
-        check_chat_limit=False,
+        model_source=InnerTickModelSource.CHAT_DEFAULT,
     )
     if coords is None:
         return False
@@ -485,7 +433,6 @@ async def try_fire_proactive_chat_inner_tick(
     coordinator = fire_input.coordinator
     delivery = fire_input.delivery
     tc_box = fire_input.tc_box
-    subscription_svc = fire_input.subscription_svc
 
     async with AsyncSessionLocal() as pre_db:
         mem_store = companion_chat_service.companion_memory_store_if_ready(
@@ -577,27 +524,6 @@ async def try_fire_proactive_chat_inner_tick(
         )
 
         async with AsyncSessionLocal() as post_db:
-            try:
-                # TODO(commercialization-cleanup): Remove proactive ``record_usage`` when
-                # inner-tick usage accounting is disabled (P2); keep billing in this layer only.
-                await subscription_svc.record_usage(
-                    post_db,
-                    user_id,
-                    "chat",
-                    1,
-                    extra_data={
-                        "agent_id": agent_id,
-                        "message_length": 0,
-                        "companion_ws_proactive_chat": True,
-                    },
-                )
-            except Exception as e:
-                logger.warning(
-                    "companion_ws_proactive_chat record_usage failed ws_conn_id={}: {}",
-                    ws_conn_id,
-                    str(e),
-                )
-
             stub_utc = ws_implicit.client_time if ws_implicit else None
             stub_request = ChatCompletionRequest(
                 messages=[
@@ -699,8 +625,7 @@ async def try_fire_maintenance_inner_tick(
     # https://github.com/NascentCore/inty/issues/3123
     coords = await _resolve_inner_tick_scope_coords(
         fire_input,
-        model_source=InnerTickModelSource.CHAT_SUBSCRIPTION,
-        check_chat_limit=False,
+        model_source=InnerTickModelSource.CHAT_DEFAULT,
     )
     if coords is None:
         return False
@@ -961,7 +886,6 @@ async def try_fire_dreaming_inner_tick(
     coords = await _resolve_inner_tick_scope_coords(
         fire_input,
         model_source=InnerTickModelSource.DREAMING_HARNESS,
-        check_chat_limit=False,
     )
     if coords is None:
         return False
