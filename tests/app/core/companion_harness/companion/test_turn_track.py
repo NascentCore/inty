@@ -11,7 +11,6 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.companion.turn_track import (
     langsmith_inty_turn_lane_for_companion_track,
-    track_from_legacy_flags,
     turn_flags_for_track,
 )
 
@@ -60,17 +59,6 @@ def test_turn_flags_for_track(
     inner, activity = turn_flags_for_track(track)
     assert inner is expect_inner
     assert activity == expect_activity
-
-
-def test_autonomy_legacy_flags_roundtrip() -> None:
-    assert (
-        track_from_legacy_flags(
-            inner_tick_turn=True,
-            inner_tick_activity=InnerTickActivity.AUTONOMY,
-            implicit_signal_bundle=None,
-        )
-        == CompanionTurnTrack.INNER_TICK_AUTONOMY
-    )
 
 
 def test_autonomy_suppresses_user_delivery() -> None:
