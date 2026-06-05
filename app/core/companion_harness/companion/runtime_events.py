@@ -5,7 +5,8 @@ Known ``kind`` values include ``llm_inference_failure`` (every failed companion
 foreground timeouts when correlation ContextVar is bound), ``tool_background_failure`` (async tool
 loop thread in ``tool_background`` when the error is not already logged as an LLM inference failure),
 ``user_signed_out`` and ``ws_conn_dropped`` (WebSocket control-frame audit from ``chat.py``),
-and ad-hoc operator/test entries such as ``tool_timeout``.
+``inner_tick_dreaming`` (sleeping-state memory batch from inner-tick poll slot 4;
+see ``dreaming_observability``), and ad-hoc operator/test entries such as ``tool_timeout``.
 
 Events are stored as JSON lines at workspace-relative path ``.companion_runtime_events.jsonl``
 through :class:`~app.core.companion_harness.memory.memory_store.MemoryStore` only (never raw

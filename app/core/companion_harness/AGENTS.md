@@ -47,6 +47,8 @@ This agent can：
 - Commercialization (like usage counting)
 - Execution speed, resource utilization, optimization
 - Any other forms of speculative features
+- Production-grade quality & features
+  - Multi-tab & multi-presence
 
 ## Agentic mechanism design
 

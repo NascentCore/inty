@@ -1,23 +1,18 @@
 """CompanionManager: 管理 companion session 的生命周期。
 
 每个 ``CompanionSession`` 对应一个 **scope**（``user_id`` + ``companion_id`` + ``chat_id``）——
-一份 MemoryStore，进程内单例，与开了几个 WebSocket tab 无关。
+一份 MemoryStore，进程内单例。Prototype 假定每个 paired user 仅一条 presence（单 tab /
+单 wire），见 ``companion_harness`` AGENTS.md「Concurrency (prototype)」。
 
-每个 ``CompanionSession`` 还持有：
-
-- ``activity_gate`` — **scope 级**互斥：background dreaming 与 awake turn（user chat、
-  inner-tick 经 ``CompanionManager``）不能同时改记忆。与 **presence 级** ``Coordinator.turn_lock``
-  是两层锁；多 tab 时各 tab 各一把 ``turn_lock``，但共用本 scope 的 ``activity_gate``。
-- ``tool_bg_idle`` — 上一轮 tool_background 是否结束；下一轮 ``run_turn`` 加载 transcript 前等待。
+每个 ``CompanionSession`` 还持有 ``tool_bg_idle`` — 上一轮 tool_background 是否结束；
+下一轮 ``run_turn`` 加载 transcript 前等待。Dreaming 与用户 chat、inner-tick 在
+**presence** ``Coordinator.turn_lock`` 上串行（见 ``session.Coordinator``）。
 """
 
 from __future__ import annotations
 
-import asyncio
 import json
 import threading
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
@@ -61,9 +56,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
     is_scope_initialized_in_store,
 )
 
-ACTIVITY_GATE_CANCEL_POLL_SECONDS = 0.05
-
-
 class CompanionConfig(BaseModel):
     """集中管理 companion 所有可调参数。"""
 
@@ -104,69 +96,6 @@ class CompanionConfig(BaseModel):
         return n
 
 
-class CompanionActivityGate:
-    """Scope-level gate: one chat archive, all entry paths.
-
-    Human model: the *room* for this user+companion+chat — not a single phone line.
-    While ``dreaming_active``, awake work (WS user chat, inner-tick via manager) waits;
-    while awake turns hold ``_active_activities``, dreaming waits. Crosses the background
-    dreaming scheduler thread and any signed-on presence.
-
-    Not a substitute for ``Coordinator.turn_lock`` (per-connection ordering) or for the
-    Postgres advisory lock in ``dreaming_scheduler`` (multi-process dreaming).
-
-    Planned removal when ``DREAMING`` becomes an ``InnerTickActivity`` serialized on a
-    scope-hoisted ``turn_lock`` (see ``session.Coordinator`` module docstring).
-    """
-
-    def __init__(self) -> None:
-        self._condition = threading.Condition()
-        self._active_activities = 0
-        self._dreaming_active = False
-        self._dreaming_waiters = 0
-
-    def enter_activity_until_cancelled(
-        self, cancel_event: threading.Event
-    ) -> bool:
-        """Enter awake activity unless the async caller is cancelled first."""
-        with self._condition:
-            while self._dreaming_waiters > 0 or self._dreaming_active:
-                if cancel_event.is_set():
-                    return False
-                self._condition.wait(ACTIVITY_GATE_CANCEL_POLL_SECONDS)
-            if cancel_event.is_set():
-                return False
-            self._active_activities += 1
-            return True
-
-    def exit_activity(self) -> None:
-        with self._condition:
-            assert self._active_activities > 0
-            self._active_activities -= 1
-            if self._active_activities == 0:
-                self._condition.notify_all()
-
-    def enter_dreaming(self) -> None:
-        with self._condition:
-            self._dreaming_waiters += 1
-            try:
-                while self._active_activities > 0 or self._dreaming_active:
-                    self._condition.wait()
-                self._dreaming_active = True
-            finally:
-                self._dreaming_waiters -= 1
-
-    def exit_dreaming(self) -> None:
-        with self._condition:
-            assert self._dreaming_active
-            self._dreaming_active = False
-            self._condition.notify_all()
-
-    def dreaming_active(self) -> bool:
-        with self._condition:
-            return self._dreaming_active
-
-
 class CompanionSession:
     """封装单个 user+companion 会话的 runtime state。"""
 
@@ -190,8 +119,6 @@ class CompanionSession:
         # https://github.com/NascentCore/inty/issues/3123
         self.tool_bg_idle = threading.Event()
         self.tool_bg_idle.set()
-        # Scope-level dreaming ↔ awake coordination (see ``CompanionActivityGate``).
-        self.activity_gate = CompanionActivityGate()
 
     @property
     def is_initialized(self) -> bool:
@@ -311,35 +238,6 @@ class CompanionManager:
             else override
         )
 
-    @asynccontextmanager
-    async def _awake_activity(
-        self, session: CompanionSession
-    ) -> AsyncIterator[None]:
-        """Block until scope ``activity_gate`` allows awake work (dreaming not exclusive)."""
-        cancel_event = threading.Event()
-        entered = False
-        enter_task = asyncio.create_task(
-            asyncio.to_thread(
-                session.activity_gate.enter_activity_until_cancelled,
-                cancel_event,
-            )
-        )
-        try:
-            entered = await asyncio.shield(enter_task)
-            if not entered:
-                raise asyncio.CancelledError
-            yield
-        except asyncio.CancelledError:
-            cancel_event.set()
-            if not enter_task.done():
-                entered = await asyncio.shield(enter_task)
-            else:
-                entered = enter_task.result()
-            raise
-        finally:
-            if entered:
-                session.activity_gate.exit_activity()
-
     def _track_turn_kwargs(
         self,
         session: CompanionSession,
@@ -381,8 +279,7 @@ class CompanionManager:
         ),
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
     ) -> CompanionTurnResult:
-        async with self._awake_activity(session):
-            return await run_companion_user_chat_turn(
+        return await run_companion_user_chat_turn(
                 user_text,
                 **{
                     **self._track_turn_kwargs(
@@ -409,8 +306,7 @@ class CompanionManager:
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
-        async with self._awake_activity(session):
-            return await run_companion_implicit_sign_on_greeting_turn(
+        return await run_companion_implicit_sign_on_greeting_turn(
                 user_text,
                 **self._track_turn_kwargs(
                     session,
@@ -433,8 +329,7 @@ class CompanionManager:
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
-        async with self._awake_activity(session):
-            return await run_companion_inner_tick_proactive_chat_turn(
+        return await run_companion_inner_tick_proactive_chat_turn(
                 **self._track_turn_kwargs(
                     session,
                     defer_memory_update=defer_memory_update,
@@ -457,8 +352,7 @@ class CompanionManager:
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
-        async with self._awake_activity(session):
-            return await run_companion_inner_tick_scheduled_turn(
+        return await run_companion_inner_tick_scheduled_turn(
                 scheduled_user_text,
                 **self._track_turn_kwargs(
                     session,
@@ -481,8 +375,7 @@ class CompanionManager:
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
-        async with self._awake_activity(session):
-            return await run_companion_inner_tick_maintenance_turn(
+        return await run_companion_inner_tick_maintenance_turn(
                 **self._track_turn_kwargs(
                     session,
                     defer_memory_update=defer_memory_update,

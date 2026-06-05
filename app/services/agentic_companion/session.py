@@ -13,23 +13,20 @@ Design focus: coherent scope state + behavior display (text / image / voice-audi
 Concurrency vocabulary (human terms — three layers, not interchangeable):
 
 - **Scope** — one chat archive: ``(user_id, agent_id, chat_id)``. One ``CompanionSession``
-  and one ``MemoryStore`` per scope in-process, regardless of how many tabs are open.
+  and one ``MemoryStore`` per scope in-process.
 - **Presence** — one live wire to the user (a WebSocket accept or Weixin in-process session).
-  Each presence gets its own ``Coordinator`` (and its own ``turn_lock`` below).
-- **``turn_lock`` (connection / presence level)** — "on this phone line, handle one turn at
-  a time": user message, greeting, inner-tick fire, tool-background downlink. Two tabs ⇒ two
-  lines ⇒ two independent locks; they do not see each other.
-  Scope-level dreaming vs chat is *not* governed here — see ``CompanionActivityGate`` on
-  ``CompanionSession`` in ``companion.manager``.
-- **``CompanionActivityGate`` (scope level)** — "this chat room is asleep consolidating
-  memory or awake talking": background dreaming and awake companion turns coordinate here
-  across wires and the dreaming scheduler thread.
-- **Postgres advisory lock (scope + cluster level)** — dreaming scheduler only; prevents
-  two backend processes from dreaming the same scope at once. See ``dreaming_scheduler.py``.
+  Prototype (**``companion_harness`` AGENTS.md**): **one presence per paired user** — not
+  multiple tabs / multiple wires. Each presence has one ``Coordinator`` and one ``turn_lock``.
+- **``turn_lock`` (presence level)** — "on this phone line, handle one turn at a time": user
+  message, greeting, inner-tick fire (including dreaming), tool-background downlink. Prototype
+  does not model a second tab on the same scope; no extra scope mutex for cross-tab races.
 
-Planned direction: ``InnerTickActivity.DREAMING`` on the inner-tick poll path, drop gate and
-background scheduler, hoist ``turn_lock`` to scope (after single-presence or shared lock on
-``CompanionSession``). See ``chat_ws`` TODO(companion-ws-single-presence).
+Post-prototype: enforce single-presence on ``accept()`` (#3272 —
+https://github.com/NascentCore/inty/issues/3272) and hoist ``turn_lock`` to
+``CompanionSession`` — ``chat_ws`` TODO(companion-ws-single-presence). Scope-level inner-tick
+worker (dreaming + maintenance/autonomy without signed-on user): #3255 /
+TODO(scope-inner-tick-worker) in ``inner_tick_poll``. Presence poll keeps delivery tracks only
+(proactive, scheduled).
 """
 
 from __future__ import annotations
@@ -39,6 +36,8 @@ import threading
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
@@ -51,6 +50,30 @@ from app.services.agentic_companion.downlink import (
 )
 
 InnerTickPollRunner = Callable[[dict[str, Any]], Awaitable[None]]
+
+
+class InnerTickCoords(BaseModel):
+    """Signed-on inner-tick scope triple from ``Coordinator.inner_tick_context``."""
+
+    model_config = ConfigDict(frozen=True)
+
+    user_id: str = Field(min_length=1)
+    agent_id: str = Field(min_length=1)
+    chat_id: str = Field(min_length=1)
+
+    @classmethod
+    def from_context(cls, ctx: dict[str, Any]) -> InnerTickCoords | None:
+        """Parse poll coordinates; ``None`` when any required field is missing."""
+        user_id = str(ctx.get("user_id") or "").strip()
+        agent_id = str(ctx.get("agent_id") or "").strip()
+        chat_id_raw = ctx.get("chat_id")
+        if not user_id or not agent_id or chat_id_raw is None:
+            return None
+        return cls(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=str(chat_id_raw),
+        )
 
 
 def apply_inner_tick_coords(

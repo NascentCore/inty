@@ -1,86 +1,36 @@
-"""Shared inner-tick poll: scheduled, proactive, maintenance (WS or Weixin delivery).
+"""Shared inner-tick poll: proactive, scheduled, maintenance, dreaming (WS or Weixin delivery).
 
 Requires signed-on presence coordinates in ``ctx`` — poll runs on the same ``Coordinator``
-as user chat, so **one ``turn_lock`` per wire** serializes scheduled → proactive → maintenance
-when each ``try_fire_*`` runs (they do not overlap in time on that connection).
+as user chat, so **one ``turn_lock`` per wire** serializes inner-tick activities when each
+``try_fire_*`` runs (they do not overlap in time on that connection). Prototype assumes
+one wire per paired user; multiple tabs are out of scope (``companion_harness`` AGENTS.md).
 
-While scope dreaming is active (``activity_gate``), the whole poll cycle is skipped — inner
-ticks do not compete with background consolidation on the scope layer. Three lock layers
-(presence / scope / cluster): see ``session.Coordinator`` module docstring.
+Each poll wake tries at most one activity, in priority order:
+proactive → scheduled → maintenance → dreaming.
 
-Planned: add ``InnerTickActivity.DREAMING`` here; drop ``CompanionDreamingScheduler`` and gate;
-mutually exclusive activities per poll wake. Offline scopes: #3255.
+TODO(inner-tick-poll-multi-track): Try every **due** track per wake (e.g. scheduled must not
+be skipped when proactive fires) — product decision #3273
+https://github.com/NascentCore/inty/issues/3273
+
+TODO(scope-inner-tick-worker): Inner-tick is autonomous agent behavior and should not
+require the user on any channel (#3255 — https://github.com/NascentCore/inty/issues/3255).
+Split **scope** activities (dreaming, maintenance/autonomy — no user-visible delivery)
+from **presence** activities (proactive, scheduled — need ``InnerTickDelivery`` or
+undelivered queue). Run scope poll from a process worker keyed by
+``(user_id, agent_id, chat_id)`` with scope-level ``turn_lock`` on ``CompanionSession``;
+keep this presence poll only for delivery tracks until #3255 lands. See ``dreaming.py``,
+``session.Coordinator`` module docstring.
 """
 
 from __future__ import annotations
 
 from typing import Any, Optional
 
-from loguru import logger
-from sqlalchemy import select
-
-from app.core.model_selection import select_chat_model
-from app.db.session import AsyncSessionLocal
-from app.models.user import User
-from app.services import chat_service, companion_chat_service
 from app.services.agentic_companion import inner_tick_fire
 from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
-from app.services.agentic_companion.session import Coordinator
+from app.services.agentic_companion.inner_tick_fire import InnerTickFireInput
+from app.services.agentic_companion.session import Coordinator, InnerTickCoords
 from app.services.subscription_service import SubscriptionService
-
-
-async def _inner_tick_poll_skipped_by_dreaming(
-    *,
-    ctx: dict[str, Any],
-    subscription_svc: SubscriptionService,
-    ws_conn_id: str,
-) -> bool:
-    """Return whether this poll cycle should skip all companion-initiated inner ticks."""
-    user_id = str(ctx.get("user_id") or "").strip()
-    agent_id = str(ctx.get("agent_id") or "").strip()
-    chat_id_raw = ctx.get("chat_id")
-    if not user_id or not agent_id or chat_id_raw is None:
-        return False
-
-    async with AsyncSessionLocal() as pre_db:
-        r_user = await pre_db.execute(select(User).where(User.id == user_id))
-        current_user = r_user.scalar_one_or_none()
-        if current_user is None:
-            return False
-
-        chat = await chat_service.get_or_create_chat_by_agent(
-            db=pre_db,
-            user_id=user_id,
-            agent_id=agent_id,
-        )
-        if str(chat.id) != str(chat_id_raw):
-            return False
-
-        subscription = await subscription_svc.get_user_current_subscription(
-            pre_db,
-            user_id,
-        )
-        is_subscribed = bool(subscription)
-        model_override = select_chat_model(
-            user=current_user,
-            is_subscribed=is_subscribed,
-        )
-        if not companion_chat_service.companion_session_dreaming_active(
-            user_id=user_id,
-            agent_id=agent_id,
-            chat_id=chat.id,
-            resolved_chat_model=model_override,
-        ):
-            return False
-
-    logger.info(
-        "companion_inner_tick_poll skipped dreaming_active ws_conn_id={} user={} agent={} chat={}",
-        ws_conn_id,
-        user_id,
-        agent_id,
-        chat.id,
-    )
-    return True
 
 
 async def run_inner_tick_poll(
@@ -93,37 +43,24 @@ async def run_inner_tick_poll(
     tc_box: list[Optional[dict]] | None,
 ) -> None:
     """Run one inner-tick cycle when ``ctx`` has signed-on coordinates."""
+    poll_coords = InnerTickCoords.from_context(ctx)
+    if poll_coords is None:
+        return
     ws_id = ws_conn_id if ws_conn_id is not None else "weixin_presence"
     tc = tc_box if tc_box is not None else [None]
-
-    if await _inner_tick_poll_skipped_by_dreaming(
-        ctx=ctx,
+    fire_input = InnerTickFireInput(
+        delivery=delivery,
+        coords=poll_coords,
         subscription_svc=subscription_svc,
+        coordinator=coordinator,
         ws_conn_id=ws_id,
-    ):
+        tc_box=tc,
+    )
+    # TODO(inner-tick-poll-multi-track): #3273 — do not early-return; attempt each due track per wake.
+    if await inner_tick_fire.try_fire_proactive_chat_inner_tick(fire_input):
         return
-
-    await inner_tick_fire.try_fire_scheduled_inner_tick(
-        delivery=delivery,
-        ctx=ctx,
-        subscription_svc=subscription_svc,
-        coordinator=coordinator,
-        ws_conn_id=ws_id,
-        tc_box=tc,
-    )
-    await inner_tick_fire.try_fire_proactive_chat_inner_tick(
-        delivery=delivery,
-        ctx=ctx,
-        subscription_svc=subscription_svc,
-        coordinator=coordinator,
-        ws_conn_id=ws_id,
-        tc_box=tc,
-    )
-    await inner_tick_fire.try_fire_maintenance_inner_tick(
-        delivery=delivery,
-        ctx=ctx,
-        subscription_svc=subscription_svc,
-        coordinator=coordinator,
-        ws_conn_id=ws_id,
-        tc_box=tc,
-    )
+    if await inner_tick_fire.try_fire_scheduled_inner_tick(fire_input):
+        return
+    if await inner_tick_fire.try_fire_maintenance_inner_tick(fire_input):
+        return
+    await inner_tick_fire.try_fire_dreaming_inner_tick(fire_input)

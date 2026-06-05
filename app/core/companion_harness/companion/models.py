@@ -34,15 +34,15 @@ AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 
 
 class InnerTickActivity(StrEnum):
-    """Synthetic user-idle turns; serialized on presence ``turn_lock`` when fired from poll.
+    """Idle poll activities serialized on presence ``turn_lock``.
 
-    Today: ``MAINTENANCE``, ``PROACTIVE_CHAT``; ``INNER_TICK_SCHEDULED`` track still maps to
-    ``PROACTIVE_CHAT`` in ``turn_track`` — planned ``SCHEDULED`` enum value.
+    ``MAINTENANCE`` and ``PROACTIVE_CHAT`` are synthetic **turns** (``run_turn``,
+    ``CompanionTurnResult``, optional delivery). ``DREAMING`` is a **memory batch** only
+    (``memory_update_during_dreaming``; observability via ``dreaming_observability`` and
+    ``inner_tick_activity=dreaming`` on LangSmith / runtime events — not ``CompanionTurnResult``).
 
-    Planned: ``DREAMING`` (memory consolidation, no user-visible reply), mutually exclusive
-    with other activities per poll wake; replaces background scheduler + ``activity_gate``.
-    Lock layers: presence ``turn_lock``, scope ``activity_gate``, cluster PG advisory for
-    scheduler-only dreaming — see ``session.Coordinator`` module docstring.
+    Poll order per wake: proactive → scheduled → maintenance → dreaming (at most one fires;
+    see ``inner_tick_poll`` TODO inner-tick-poll-multi-track / #3273).
 
     TODO(inner-tick-autonomy): Narrow maintenance to autonomy-only — append ``ai_private.jsonl``;
     profile/MemoryDoc sync moves to dreaming. Rename ``MAINTENANCE`` → ``AUTONOMY``.
@@ -50,6 +50,7 @@ class InnerTickActivity(StrEnum):
 
     MAINTENANCE = "maintenance"
     PROACTIVE_CHAT = "proactive_chat"
+    DREAMING = "dreaming"
 
 
 class CompanionTurnTrack(StrEnum):
@@ -117,7 +118,8 @@ class CompanionTurnResult(BaseModel):
         description=(
             "When this turn is an inner-tick synthetic round, ``InnerTickActivity`` value "
             "(``proactive_chat`` / ``maintenance``); mirrored to API/WS "
-            "``meta_data.inner_tick_activity``. ``None`` for normal user-driven chat turns."
+            "``meta_data.inner_tick_activity``. ``dreaming`` is never set here — see "
+            "``dreaming_observability`` runtime events. ``None`` for normal user chat."
         ),
     )
     turn_start_context_mode: str = Field(

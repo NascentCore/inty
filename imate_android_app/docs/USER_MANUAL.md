@@ -41,7 +41,3 @@ _TODO: Screenshots and copy for each primary surface (navigation, chat, profile,
 - **Voice call cannot hear you**: grant Microphone permission in Android system Settings → Apps → iMate → Permissions.
 - **Voice call fails to connect**: check network connectivity and sign in again if your session has expired.
 - **No reply audio**: end the call and start again; realtime voice depends on the backend Live Chat service being available.
-
-## Contact and escalation
-
-_TODO: Tester channels, email, or ops process (keep in sync with team runbooks)._

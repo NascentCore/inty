@@ -175,7 +175,17 @@ class FeaturesConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     class CompanionHarnessConfig(BaseModel):
-        dreaming_idle_seconds: int = Field(default=7200, ge=1)
+        # TODO: Change to Chinese OSS model when releasing to prod.
+        dreaming_llm: str = "google/gemini-3.5-flash"
+        dreaming_idle_seconds: int = Field(
+            default=7200,
+            ge=1,
+            description=(
+                "Min seconds since the latest real user message before "
+                "``dreaming_due`` may run. Independent of the once-per-UTC-day cap "
+                "(see ``companion.dreaming`` module doc)."
+            ),
+        )
 
     experimental_enable_chat_with_user_time_context: bool = False
     # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）

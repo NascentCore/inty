@@ -93,6 +93,7 @@ def test_dreaming_due_uses_idle_seconds(tmp_path: Path) -> None:
 
 
 def test_dreaming_due_skips_after_same_day_checkpoint(tmp_path: Path) -> None:
+    """Same UTC day after a successful dream: no second dream (expected product behavior)."""
     store = _store(tmp_path)
     _write_transcript(
         store,

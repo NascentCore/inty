@@ -1314,15 +1314,12 @@ async def chat_completions_websocket(
     # TODO(commercialization-cleanup): Companion subscription / ``record_usage`` / limit checks
     # stay in this WS orchestration layer and ``inner_tick_fire.py`` — never in
     # ``app/core/companion_harness`` (see harness AGENTS.md).
-    # Concurrency (see ``session.Coordinator`` module docstring):
-    # - Each ``accept()`` creates a new ``CompanionWebSocketCoordinator`` ⇒ its own
-    #   **presence-level** ``turn_lock`` (user chat + inner-tick on this wire).
-    # - ``CompanionActivityGate`` on ``CompanionSession`` is **scope-level** (shared if
-    #   multi-tab); background dreaming uses the gate, not ``turn_lock``.
-    # TODO(companion-ws-single-presence): One signed-on WS per (user_id, agent_id) so
-    # ``turn_lock`` can be hoisted to scope when gate + scheduler are removed.
-    # TODO(multi-backend-scope-lock): Far future — cluster-wide single writer per scope
-    # when horizontally scaled (sticky session or PG advisory); not required until then.
+    # Concurrency (see ``session.Coordinator``, ``companion_harness`` AGENTS.md):
+    # - Prototype: one signed-on presence per paired user (no multi-tab). Each ``accept()``
+    #   is that single wire ⇒ one ``turn_lock`` (user chat + inner-tick including dreaming).
+    # TODO(companion-ws-single-presence): #3272 — reject or supersede a second ``accept()``
+    # on (user_id, agent_id); then hoist ``turn_lock`` to ``CompanionSession``.
+    # https://github.com/NascentCore/inty/issues/3272
     await websocket.accept()
     ws_conn_id = _resolve_ws_conn_id_from_websocket(websocket)
     current_user = await _get_current_user_from_websocket(websocket, db)
