@@ -665,9 +665,7 @@ async def try_fire_maintenance_inner_tick(
             min_gap_seconds=float(
                 feats.companion_ws_maintenance_inner_tick_min_gap_seconds
             ),
-            poll_seconds=float(
-                feats.companion_ws_proactive_chat_poll_seconds
-            ),
+            poll_seconds=float(feats.companion_ws_proactive_chat_poll_seconds),
         ),
     )
     if remain > 0:
