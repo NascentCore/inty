@@ -1,8 +1,9 @@
 # Companion Harness
 
+**CURRENTLY STATE: PROTOTYPE**
 **DO NOT MAINTAIN BACKWARD COMPATIBILITY**
-**DO NOT CONSIDER DATABASE DATA VALIDITY AFTER BREAKING CHANGES**
-**AS WE DO NOT HAVE A PERSISTENT INSTANCE YET**
+**DO NOT CONSIDER DATABASE DATA VALIDITY AFTER BREAKING CHANGES, AS WE ARE NOT RUNNING ANY PERSISTENT INSTANCE YET**
+**DO NOT INCLUDE COMMERCIALIZATION FEATURES, AS WE ARE BUILDING A PROTOTYPE**
 
 Companion Harness is agentic harness for simulating an autonomous Intelligence Entity (Inty).
 
@@ -20,7 +21,7 @@ real-world inspirations can be any form of long-distance intimate relationship:
 - remote lovers
 - remote confidant
 
-换句话说，这个智能体能够：
+This agent can：
 
 - 通过多媒介通信来实现与用户的多媒介互动 (weixin, app, sms, phone-call etc.)
   At most 1 connection across multiple channels,

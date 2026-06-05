@@ -1311,6 +1311,9 @@ async def chat_completions_websocket(
     ),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
+    # TODO(commercialization-cleanup): Companion subscription / ``record_usage`` / limit checks
+    # stay in this WS orchestration layer and ``inner_tick_fire.py`` — never in
+    # ``app/core/companion_harness`` (see harness AGENTS.md).
     # Concurrency (see ``session.Coordinator`` module docstring):
     # - Each ``accept()`` creates a new ``CompanionWebSocketCoordinator`` ⇒ its own
     #   **presence-level** ``turn_lock`` (user chat + inner-tick on this wire).

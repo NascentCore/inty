@@ -13,9 +13,11 @@ Locking on the fire path (full vocabulary: ``session.Coordinator`` module docstr
   Another tab can user-chat while this wire's inner tick waits — a known gap until
   single-presence or scope-hoisted ``turn_lock``.
 
-TODO(product-billing): Companion inner-tick paths (including maintenance) do not call
-``SubscriptionService.check_chat_limit`` / ``record_usage`` for now — no usage accounting
-or charging until product re-enables it.
+TODO(commercialization-cleanup): Usage accounting for companion WS lives here and in
+``chat_ws.py`` / ``subscription_service`` — not in ``companion_harness``. Maintenance
+already skips ``check_chat_limit`` / ``record_usage`` (P2). Remove or gate
+``check_chat_limit`` + ``record_usage`` on proactive/scheduled fire paths below when
+inner-tick should never charge; align module doc with actual call sites.
 """
 
 from __future__ import annotations
@@ -203,6 +205,8 @@ async def try_fire_scheduled_inner_tick(
         if due_task is None:
             return
 
+        # TODO(commercialization-cleanup): Drop scheduled inner-tick ``check_chat_limit`` when
+        # P2 extends to all inner-tick tracks (maintenance already exempt).
         is_allowed, used_count, daily_limit = (
             await subscription_svc.check_chat_limit(pre_db, current_user)
         )
@@ -338,6 +342,8 @@ async def try_fire_scheduled_inner_tick(
 
         async with AsyncSessionLocal() as post_db:
             try:
+                # TODO(commercialization-cleanup): Remove scheduled ``record_usage`` when
+                # inner-tick usage accounting is disabled (P2); keep billing in this layer only.
                 await subscription_svc.record_usage(
                     post_db,
                     user_id,
@@ -587,6 +593,8 @@ async def try_fire_proactive_chat_inner_tick(
 
         async with AsyncSessionLocal() as post_db:
             try:
+                # TODO(commercialization-cleanup): Remove proactive ``record_usage`` when
+                # inner-tick usage accounting is disabled (P2); keep billing in this layer only.
                 await subscription_svc.record_usage(
                     post_db,
                     user_id,

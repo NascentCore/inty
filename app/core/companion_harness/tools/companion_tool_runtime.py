@@ -94,6 +94,9 @@ from .companion_tool_definitions import (
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
 from app.core.config import global_config_loaded_from_config_yaml
+# TODO(commercialization-cleanup): Remove ``tool_phone_call_user`` and ``subscription_service`` /
+# ``phone_call_service`` imports from harness — tool is not registered in ``TOOL_NAMES_*``;
+# outbound call billing belongs in app orchestration (``phone_call.py``), not ``companion_harness``.
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.global_services import subscription_service
@@ -479,6 +482,8 @@ def tool_schedule_task(
 async def tool_phone_call_user(
     store: MemoryStore, phone_number: str, reason: str
 ) -> str:
+    # TODO(commercialization-cleanup): Delete this handler and ``execute_tool_call`` branch;
+    # see module-level TODO — prototype harness must not depend on ``SubscriptionService``.
     context = load_context_meta(store=store)
     user_id = context.user_id.strip()
     agent_id = context.companion_id.strip()

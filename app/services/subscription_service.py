@@ -1,4 +1,8 @@
-"""Subscription limits, purchases, and usage accounting."""
+"""Subscription limits, purchases, and usage accounting.
+
+TODO(commercialization-cleanup): Companion harness must not import this module; companion
+WS billing entry points are ``chat_ws.py`` and ``inner_tick_fire.py`` only.
+"""
 
 import os
 import uuid
