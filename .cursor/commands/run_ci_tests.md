@@ -4,8 +4,6 @@
 
 在本地复现 GitHub workflow **`CI - Inty 后端`**（[`.github/workflows/ci_backend.yaml`](/.github/workflows/ci_backend.yaml)）的检查序列，合并 PR 前或调试 CI 失败时使用。
 
-权威步骤、脚本路径与起停 backend 规则见 skill：[`.cursor/skills/inty-backend-ci-local/SKILL.md`](/.cursor/skills/inty-backend-ci-local/SKILL.md)。**必须先读该 skill，再按序执行。**
-
 ## Prerequisites
 
 - **Python 3.12**，当前工作目录为**仓库根目录**
