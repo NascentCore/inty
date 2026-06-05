@@ -8,9 +8,6 @@ used for trace filtering.
 
 from __future__ import annotations
 
-from app.schemas.implicit_signals import ImplicitSignalBundle
-
-from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .models import CompanionTurnTrack, InnerTickActivity
 
 

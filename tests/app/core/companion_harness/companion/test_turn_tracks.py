@@ -25,6 +25,7 @@ from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_proactive_chat_turn,
     run_companion_inner_tick_scheduled_turn,
     run_companion_user_chat_turn,
+    run_inner_tick_autonomy,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
@@ -294,3 +295,33 @@ async def test_maintenance_inner_tick_track() -> None:
         run_turn_mock.await_args.kwargs["track"]
         == CompanionTurnTrack.INNER_TICK_MAINTENANCE
     )
+
+
+@pytest.mark.asyncio
+async def test_autonomy_inner_tick_track_forwards_runtime_context() -> None:
+    stub = CompanionTurnResult(
+        trace_id="t",
+        user_msg_uuid="u",
+        assistant_text="",
+    )
+    bundle = ImplicitSignalBundle(user_signed_on=True)
+    kwargs = _minimal_turn_kwargs()
+    kwargs["runtime_context"] = TurnRuntimeContext(
+        channel=CompanionRuntimeChannel.APP,
+        implicit_signal_bundle=bundle,
+    )
+    with patch(
+        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        new_callable=AsyncMock,
+        return_value=stub,
+    ) as run_turn_mock:
+        await run_inner_tick_autonomy(**kwargs)
+    assert run_turn_mock.await_args is not None
+    assert run_turn_mock.await_args.args[0] == ""
+    assert (
+        run_turn_mock.await_args.kwargs["track"]
+        == CompanionTurnTrack.INNER_TICK_AUTONOMY
+    )
+    forwarded = run_turn_mock.await_args.kwargs["runtime_context"]
+    assert forwarded.implicit_signal_bundle is bundle
+    assert "implicit_signal_bundle" not in run_turn_mock.await_args.kwargs

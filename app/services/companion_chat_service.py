@@ -672,6 +672,7 @@ async def run_inner_tick_autonomy(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
 ) -> CompanionTurnResult:
     """AUTONOMY inner-tick: silent self-directed turn; assistant_text is not delivered to the user.
 
@@ -714,7 +715,7 @@ async def run_inner_tick_autonomy(
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=runtime_channel,
             implicit_signal_bundle=implicit_signal_bundle,
         ),
     )
