@@ -52,6 +52,9 @@ def get_ai_private_text_for_prompt(
     Kernel **maintenance** inner-tick turns inject ``ai_private.jsonl`` via
     ``get_ai_private_jsonl_text_for_prompt`` (see ``prompt_stack``). This function
     stays for tooling, tests, and ``get_ai_private_merged_text_for_prompt``.
+
+    TODO(inner-tick-autonomy): Pair read injection with append-only autonomy tool on ``ai_private.jsonl``;
+    inner-tick drops root MD / techno_core writes (``models.InnerTickActivity``); rename maintenance → autonomy.
     """
     body = store.read_document_if_exists(_AI_PRIVATE_MD_REL)
     s = body or ""

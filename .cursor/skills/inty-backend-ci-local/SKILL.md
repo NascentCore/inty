@@ -8,12 +8,12 @@ description: >-
   PR, or when debugging CI failures.
 ---
 
-# Run backend CI locally (mirror `ci_backend.yaml`)
+# Run Inty backend CI tests locally (mirror `ci_backend.yaml`)
 
 ## When to use
 
-- 合并 `main` 前想跑**与 `CI - Inty 后端` 同序**的检查
-- CI 红了你希望在本地**复现同一套步骤**
+- When users ask to run ci tests
+- When you want to verify your chagens by running the affected tests
 
 ## 前提
 

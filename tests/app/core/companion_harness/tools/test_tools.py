@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import date
 from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -99,3 +100,29 @@ def test_tool_memory_store_write_channels_not_mutable_during_chat(
     )
     assert out.startswith("ERROR:")
     assert st.read_document("CHANNELS.md") == "seed\n"
+
+
+def test_tool_update_user_md_appends_profile_facts(tmp_path: Path) -> None:
+    st = MemoryStore(
+        scope=CompanionScope("tools", "a", f"{tmp_path.name}-user-md"),
+        repository=None,
+    )
+    st.write_document("USER.md", "# USER.md - 关于你的用户\n\n## 身份信息\n\n")
+    out = _run_tool(
+        st,
+        "update_user_md",
+        json.dumps(
+            {"items": [{"label": "称呼偏好", "value": "叫我小宇"}]},
+            ensure_ascii=False,
+        ),
+    )
+    assert out == "OK appended 1 line(s) to USER.md"
+    user_md_lines = st.read_document("USER.md").split("\n")
+    assert user_md_lines == [
+        "# USER.md - 关于你的用户",
+        "",
+        "## 身份信息",
+        "",
+        f"- 称呼偏好：叫我小宇（记录日期 {date.today().isoformat()}）",
+        "",
+    ]

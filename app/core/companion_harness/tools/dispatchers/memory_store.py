@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    CompanionToolName,
+)
 
 
 def dispatch_memory_store_tool(
@@ -17,7 +20,7 @@ def dispatch_memory_store_tool(
     ],
     tool_memory_store_write_document: Callable[[MemoryStore, str, str], str],
     tool_memory_store_mkdir: Callable[[MemoryStore, str], str],
-    tool_user_profile_record: Callable[
+    tool_update_user_md: Callable[
         [MemoryStore, list[dict[str, Any]]], str
     ],
     parse_optional_max_chars: Callable[[Any], int | None],
@@ -52,9 +55,9 @@ def dispatch_memory_store_tool(
     if name == "memory_store_mkdir":
         rel = str(arguments.get("relative_path", ""))
         return tool_memory_store_mkdir(store, rel)
-    if name == "user_profile_record":
+    if name == CompanionToolName.UPDATE_USER_MD.value:
         raw_items = arguments.get("items")
         if not isinstance(raw_items, list):
             return "ERROR: items must be a JSON array"
-        return tool_user_profile_record(store, raw_items)
+        return tool_update_user_md(store, raw_items)
     return None

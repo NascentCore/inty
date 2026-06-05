@@ -34,10 +34,23 @@ AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 
 
 class InnerTickActivity(StrEnum):
-    """Synthetic user-idle turns: maintenance uses restricted tools; proactive_chat is no-tools."""
+    """Idle poll activities serialized on presence ``turn_lock``.
+
+    ``MAINTENANCE`` and ``PROACTIVE_CHAT`` are synthetic **turns** (``run_turn``,
+    ``CompanionTurnResult``, optional delivery). ``DREAMING`` is a **memory batch** only
+    (``memory_update_during_dreaming``; observability via ``dreaming_observability`` and
+    ``inner_tick_activity=dreaming`` on LangSmith / runtime events — not ``CompanionTurnResult``).
+
+    Poll order per wake: proactive → scheduled → maintenance → dreaming (at most one fires;
+    see ``inner_tick_poll`` TODO inner-tick-poll-multi-track / #3273).
+
+    TODO(inner-tick-autonomy): Narrow maintenance to autonomy-only — append ``ai_private.jsonl``;
+    profile/MemoryDoc sync moves to dreaming. Rename ``MAINTENANCE`` → ``AUTONOMY``.
+    """
 
     MAINTENANCE = "maintenance"
     PROACTIVE_CHAT = "proactive_chat"
+    DREAMING = "dreaming"
 
 
 class CompanionTurnTrack(StrEnum):
@@ -105,7 +118,8 @@ class CompanionTurnResult(BaseModel):
         description=(
             "When this turn is an inner-tick synthetic round, ``InnerTickActivity`` value "
             "(``proactive_chat`` / ``maintenance``); mirrored to API/WS "
-            "``meta_data.inner_tick_activity``. ``None`` for normal user-driven chat turns."
+            "``meta_data.inner_tick_activity``. ``dreaming`` is never set here — see "
+            "``dreaming_observability`` runtime events. ``None`` for normal user chat."
         ),
     )
     turn_start_context_mode: str = Field(
@@ -347,40 +361,6 @@ def transcript_for_llm_turn(
     return loaded[-cap:]
 
 
-def transcript_rows_for_public_chat_llm(
-    rows: list[ChatMessage],
-) -> list[ChatMessage]:
-    """Strip maintenance inner-tick turns from the stream fed to user-facing chat/tool LLM calls."""
-    excluded_user_uuids: set[str] = set()
-    for m in rows:
-        if (
-            m.role == "user"
-            and m.inner_tick is True
-            and m.proactive_chat is not True
-            and m.scheduled is not True
-        ):
-            uid = m.uuid
-            if uid:
-                excluded_user_uuids.add(uid)
-    out: list[ChatMessage] = []
-    for m in rows:
-        if (
-            m.role == "user"
-            and m.inner_tick is True
-            and m.proactive_chat is not True
-            and m.scheduled is not True
-        ):
-            continue
-        if (
-            m.role == "assistant"
-            and m.reply_to
-            and m.reply_to in excluded_user_uuids
-        ):
-            continue
-        out.append(m)
-    return out
-
-
 def merge_transcripts_by_ts(
     main_rows: list[ChatMessage], inner_rows: list[ChatMessage]
 ) -> list[ChatMessage]:
@@ -402,17 +382,23 @@ def companion_turn_transcript_loaded_messages(
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
 ) -> list[ChatMessage]:
-    """Transcript rows for assembling this turn's ``messages`` (public filter + inner file merge)."""
+    """Transcript rows for assembling this turn's ``messages``.
+
+    Maintenance inner-tick (``InnerTickActivity.MAINTENANCE``) persists only to
+    ``transcript_inner_tick.jsonl`` via ``transcript_relative_path_for_turn_persistence``;
+    it never appends to ``transcript.jsonl``. User chat and proactive/scheduled inner ticks
+    load ``transcript.jsonl`` as-is; maintenance turns merge the inner file for their own LLM
+    context.
+    """
     raw_main = load_transcript_from_store(store, rel_main_transcript)
     raw_inner = load_transcript_from_store(store, rel_inner_tick_transcript)
-    public_main = transcript_rows_for_public_chat_llm(raw_main)
     tick_proactive = (
         inner_tick_turn
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
-        return merge_transcripts_by_ts(public_main, raw_inner)
-    return public_main
+        return merge_transcripts_by_ts(raw_main, raw_inner)
+    return raw_main
 
 
 def transcript_relative_path_for_turn_persistence(
@@ -426,5 +412,7 @@ def transcript_relative_path_for_turn_persistence(
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
+        # TODO(rename-memory-doc): transcript_inner_tick_maintenance.jsonl (see memory_store_scope).
+        # TODO(inner-tick-autonomy): Revisit persistence — autonomy may only need ai_private.jsonl, not a full inner transcript JSONL.
         return "transcript_inner_tick.jsonl"
     return "transcript.jsonl"

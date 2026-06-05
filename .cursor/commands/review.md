@@ -25,6 +25,7 @@ code that changes together are not grouped together
 behaviors are not well abstracted
 - If code is difficult to described in much shorter documentation,
 that means the code lacks hierarchy.
+- If you noticed refactoring opporutnity, add TODOs to code places that the refactoring should be applied.
 
 ## Checklist
 

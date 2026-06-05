@@ -1,8 +1,8 @@
 """Sleeping-state dreaming for turning recent chat into memory.
 
-Dreaming is Inty's sleeping-state memory activity. When the user has not sent
-messages for more than two hours, the background dreaming scheduler reviews the
-chat since the previous dream and settles it into applicable MemoryDocs.
+Dreaming is Inty's sleeping-state memory activity. When the configured idle
+period passes with no user messages, a signed-on presence inner-tick poll may
+review the chat since the previous dream and settles it into applicable MemoryDocs.
 
 If there has never been a previous dream, Inty only looks back over the last
 24 hours so the first dream does not reopen an unbounded history.
@@ -16,6 +16,33 @@ long-term memory, user understanding, communication style, and durable
 relationship/personality boundaries. After a dream succeeds, Inty records a
 checkpoint so future LLM calls do not carry raw chat before that checkpoint;
 the next conversation continues from the consolidated memories instead.
+
+**Cadence (intentional):** at most **one successful dream per scope per UTC calendar
+day** (``dreaming_due`` compares ``DreamingState.last_processed_calendar_date`` to
+``now``). Same-day chat after a morning dream waits until the next UTC day even when
+``dreaming_idle_seconds`` is satisfied. User-local timezone for the day boundary is
+planned (``TODO(user-feature)``).
+
+Concurrency: ``InnerTickActivity.DREAMING`` runs on the inner-tick poll path under
+presence ``Coordinator.turn_lock`` (same wire as user chat and other inner ticks).
+Prototype assumes **single presence** per scope (``companion_harness`` AGENTS.md) — no
+``CompanionActivityGate`` or cross-tab scope mutex.
+
+TODO(scope-inner-tick-worker): Dreaming must run for idle scopes without signed-on
+presence (#3255 — https://github.com/NascentCore/inty/issues/3255). It is not a delivery
+track — hoist to scope-level inner-tick worker with ``CompanionSession`` ``turn_lock``
+(and cluster advisory lock for multi-process — #3271
+https://github.com/NascentCore/inty/issues/3271), not the per-wire poll in
+``inner_tick_poll.py``.
+
+Prototype invariant: ``transcript.jsonl`` must not change while a dreaming batch runs
+(``turn_lock`` + ``dreaming_idle_seconds`` ≫ tool_background timeouts; #3272 single
+presence; #3271 cluster lock). ``dreaming_race_guard_matches`` re-checks that invariant;
+``run_dreaming_batch_for_session`` raises on mismatch — not a soft retry path.
+
+TODO(dreaming-transcript-invariant): If ``dreaming_idle_seconds`` is lowered below
+tool_background worst-case runtime, gate dreaming on ``tool_bg_idle`` or revisit this
+assumption (see #3123).
 """
 
 from __future__ import annotations
@@ -35,7 +62,6 @@ from .models import (
     ChatMessage,
     load_context_meta,
     load_transcript_from_store,
-    transcript_rows_for_public_chat_llm,
     transcript_without_trailing_presence_signals,
 )
 
@@ -51,7 +77,12 @@ class DreamingState(BaseModel):
     last_processed_main_uuid: str
     last_processed_at: datetime
     last_processed_latest_user_ts: datetime
-    last_processed_calendar_date: datetime
+    last_processed_calendar_date: datetime = Field(
+        description=(
+            "UTC calendar date of the last successful dream; "
+            "``dreaming_due`` skips further dreams on the same UTC day (intentional)."
+        ),
+    )
 
     @field_validator(
         "last_processed_at",
@@ -153,24 +184,21 @@ def dreaming_candidate_slice(
             if parse_transcript_datetime(raw_rows[start_idx].ts) >= cutoff:
                 break
             start_idx += 1
-    candidate_raw = raw_rows[start_idx:]
-    if not candidate_raw:
+    candidate_rows = raw_rows[start_idx:]
+    if not candidate_rows:
         return None
-    candidate_public = transcript_rows_for_public_chat_llm(candidate_raw)
-    if not candidate_public:
-        return None
-    real_users = [m for m in candidate_public if is_real_user_message(m)]
+    real_users = [m for m in candidate_rows if is_real_user_message(m)]
     if not real_users:
         return None
     latest_user_ts = max(parse_transcript_datetime(m.ts) for m in real_users)
-    boundary = candidate_public[-1]
+    boundary = candidate_rows[-1]
     boundary_uuid = boundary.uuid or ""
     if not boundary_uuid:
         return None
     return DreamingCandidate(
-        rows=candidate_public,
+        rows=candidate_rows,
         latest_user_ts=latest_user_ts,
-        boundary_line_count=start_idx + len(candidate_raw),
+        boundary_line_count=start_idx + len(candidate_rows),
         boundary_uuid=boundary_uuid,
     )
 
@@ -181,26 +209,57 @@ def dreaming_due(
     now: datetime,
     dreaming_idle_seconds: int,
 ) -> DreamingCandidate | None:
-    """Return a candidate only when the scope is in sleeping-state idle."""
+    """Return a candidate only when the scope is in sleeping-state.
+
+    Gates (all must pass):
+
+    - Bootstrap complete.
+    - **At most one dream per UTC calendar day** when a checkpoint exists (expected
+      product behavior; not a bug).
+    - ``dreaming_idle_seconds`` elapsed since the latest real user message in the slice.
+    - Non-empty candidate slice after the last checkpoint.
+
+    Day boundary uses UTC because user/client timezone is not always known.
+    """
     assert dreaming_idle_seconds > 0
+    now_utc = _aware_utc(now)
     if not load_context_meta(
         store=store
     ).workspace_bootstrap_user_interactive_completed:
         return None
+    state = load_dreaming_state(store)
+    if (
+        state is not None
+        and state.last_processed_calendar_date.date() == now_utc.date()
+    ):
+        # Intentional: one successful dream per scope per UTC calendar day.
+        # TODO(user-feature): Use user/client's timezone for the day boundary.
+        return None
     candidate = dreaming_candidate_slice(store, now=now)
     if candidate is None:
         return None
-    idle = _aware_utc(now) - candidate.latest_user_ts
+    idle = now_utc - candidate.latest_user_ts
     if idle.total_seconds() < dreaming_idle_seconds:
         return None
     return candidate
+
+
+class DreamingTranscriptBoundaryMismatchError(RuntimeError):
+    """``transcript.jsonl`` boundary changed during a dreaming batch (invariant violation)."""
 
 
 def dreaming_race_guard_matches(
     store: MemoryStore,
     candidate: DreamingCandidate,
 ) -> bool:
-    """True when no later transcript row appeared after this dream input."""
+    """Return whether the dream-input slice boundary is unchanged since batch start.
+
+    Recomputes ``dreaming_candidate_slice`` and compares ``boundary_line_count``,
+    ``boundary_uuid``, and ``latest_user_ts`` to ``candidate``. Under prototype
+    assumptions (see module doc), this should always match after
+    ``memory_update_during_dreaming``; ``run_dreaming_batch_for_session`` raises
+    ``DreamingTranscriptBoundaryMismatchError`` when it does not.
+    """
     fresh = dreaming_candidate_slice(store, now=datetime.now(timezone.utc))
     if fresh is None:
         return False
@@ -208,6 +267,20 @@ def dreaming_race_guard_matches(
         fresh.boundary_line_count == candidate.boundary_line_count
         and fresh.boundary_uuid == candidate.boundary_uuid
         and fresh.latest_user_ts == candidate.latest_user_ts
+    )
+
+
+def assert_dreaming_transcript_boundary_unchanged(
+    store: MemoryStore,
+    candidate: DreamingCandidate,
+) -> None:
+    """Raise when ``transcript.jsonl`` changed during a dreaming batch."""
+    if dreaming_race_guard_matches(store, candidate):
+        return
+    raise DreamingTranscriptBoundaryMismatchError(
+        "transcript.jsonl boundary changed during dreaming batch "
+        f"boundary_uuid={candidate.boundary_uuid!r} "
+        f"boundary_line_count={candidate.boundary_line_count}"
     )
 
 

@@ -12,7 +12,7 @@
 ## 待澄清的方向决策（认领前必读）
 
 - **location source（最大 scope 驱动项）**：三选一或组合
-  - `USER.md` 身份信息（由 `user_profile_record` 工具写入，最轻量、结构化）
+  - `USER.md` 身份信息（由 `update_user_md` 工具写入，最轻量、结构化）
   - raw transcript 扫描（关键词/地名，无额外 LLM 成本，准确率低）
   - 独立 LLM inference step（最准，最贵，需控制触发频率）
 - **触发条件**：仅当 `client_time.timezone` 缺失时作为 fallback，避免覆盖 client 真实上报。

@@ -625,7 +625,7 @@ def memory_update_after_turn(
     return any_curation
 
 
-def memory_update_after_dreaming(
+def memory_update_during_dreaming(
     store: MemoryStore,
     rows: list[ChatMessage],
     complete_fn: Callable[[list[dict[str, Any]], str], str],

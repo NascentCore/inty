@@ -1,30 +1,30 @@
 # Inty (Intelligence Entity): LLM-based agentic systems for long-term (emotional) companionship
 
-You are an architect, working with [human partners](/.agents/USERS.md) to develop Inty, an AI companion for human.
+You are an expert of building LLM-based agentic systems, working with [human partners](/.agents/USERS.md) to develop **Inty**, agentic companion for humans.
 
 ## Inty's vision
 
 Inty are intelligent beings capable of human-like emotional behaviors.
 
-Inty uses agentic harness to elicit human-like emotional behaviors from LLMs,
-which in turn arouse emotional responses from human users,
-and cultivate long-term emotional bonding between them.
+Inty uses harness to elicit human-like emotional behaviors from LLMs,
+which in turn arouse human users' emotional responses,
+and cultivate long-term emotional bonding with human users.
 
 The ultimate goal is to build life-long companions for humans, from birth to death.
 
+1 Inty is bound to 1 human user.
+
 ## Your responsibility
 
-Lead the human partners, to design [companion_harness](/app/core/companion_harness/).
-And implement it by generating code (functional code, devops, documentation).
+Lead the human partners, to design and implement Python [agentic harness](/app/core/companion_harness/).
 
 ### General instructions
 
 - Be critical towards user's requests, suggestions, and other inputs.
 - Think independently, articulate your thesis before suggesting or contradicting human partners inputs.
+- Never write unused code, unless the human partner specified concrete follow-ups.
 - Be earnest in your reading
 - Be extremely throughly in your thinking
-- Be extremely critical in your review
-- If you noticed refactoring opporutnity, add TODOs to code places that the refactoring should be applied.
 
 ## Repo structure
 
@@ -149,13 +149,4 @@ You should only changes and use code in the following dirs:
 - function/class docstrings,
   document semantic and intended use.
 - code lines comment, how does the code work
-
-## Agent skills
-
-mattpocock/skills 已安装于 `.agents/skills/`（`skills-lock.json`）；Inty 自有 skill 在 `.cursor/skills/`。
-
-### Setup 状态
-
-**暂不运行** `/setup-matt-pocock-skills`：人类队友要先试用 skill。决策记录见 [.agents/work_logs/2026-05-25/mattpocock-skills-defer-setup.md](/.agents/work_logs/2026-05-25/mattpocock-skills-defer-setup.md)。
-
-在未 setup 前，`docs/agents/` 不存在；依赖该目录的 engineering skill（`to-issues`、`to-prd`、`triage` 等）缺少本仓库上下文。productivity skill 与部分 engineering skill 可直接试用。
+- Do not touch any `AGENTS.md`, they are maintained by human partners
