@@ -220,7 +220,19 @@ def dreaming_race_guard_matches(
     store: MemoryStore,
     candidate: DreamingCandidate,
 ) -> bool:
-    """True when no later transcript row appeared after this dream input."""
+    """Return whether the dream input slice is still safe to checkpoint.
+
+    ``memory_update_during_dreaming`` can run for a long time. Recompute
+    ``dreaming_candidate_slice`` and compare its boundary markers
+    (``boundary_line_count``, ``boundary_uuid``, ``latest_user_ts``) to the
+    ``candidate`` captured at dream start. A match means ``transcript.jsonl``
+    has not grown or gained a newer real-user message since that snapshot.
+
+    Used after memory consolidation and before ``save_dreaming_state`` (see
+    ``run_companion_dreaming_for_api``). When this returns ``False``, the caller
+    must not advance the dreaming checkpoint even though MemoryDocs may already
+    have been updated from the stale slice.
+    """
     fresh = dreaming_candidate_slice(store, now=datetime.now(timezone.utc))
     if fresh is None:
         return False

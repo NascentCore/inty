@@ -41,7 +41,7 @@ from app.core.companion_harness.memory.memory_registry import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_pipeline import (
-    memory_update_after_dreaming,
+    memory_update_during_dreaming,
 )
 from app.core.companion_harness.companion.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
@@ -203,7 +203,7 @@ def run_companion_dreaming_for_api(
         def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
             return session.llm_client.complete_text(messages, model_role=role)
 
-        memory_update_after_dreaming(
+        memory_update_during_dreaming(
             session.store,
             candidate.rows,
             _complete_fn,

@@ -6,7 +6,7 @@ from threading import Event
 from app.core.companion_harness.companion.models import ChatMessage
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_pipeline import (
-    memory_update_after_dreaming,
+    memory_update_during_dreaming,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
@@ -43,7 +43,7 @@ def test_memory_update_after_dreaming_curates_applicable_docs(
     tool_bg_idle = Event()
     tool_bg_idle.set()
     assert (
-        memory_update_after_dreaming(
+        memory_update_during_dreaming(
             store,
             rows,
             complete_fn,
