@@ -10,6 +10,8 @@ description: >-
 
 # Run backend CI locally (mirror `ci_backend.yaml`)
 
+在 Cursor 中可用 command **`/run_ci_tests`**（[`.cursor/commands/run_ci_tests.md`](/.cursor/commands/run_ci_tests.md)）触发本流程。
+
 ## When to use
 
 - 合并 `main` 前想跑**与 `CI - Inty 后端` 同序**的检查
