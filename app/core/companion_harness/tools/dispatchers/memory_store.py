@@ -20,9 +20,7 @@ def dispatch_memory_store_tool(
     ],
     tool_memory_store_write_document: Callable[[MemoryStore, str, str], str],
     tool_memory_store_mkdir: Callable[[MemoryStore, str], str],
-    tool_update_user_md: Callable[
-        [MemoryStore, list[dict[str, Any]]], str
-    ],
+    tool_update_user_md: Callable[[MemoryStore, list[dict[str, Any]]], str],
     parse_optional_max_chars: Callable[[Any], int | None],
     write_document_allowlist_reject: Callable[
         [MemoryStore, str, frozenset[str]], str | None

@@ -94,6 +94,7 @@ from .companion_tool_definitions import (
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
 from app.core.config import global_config_loaded_from_config_yaml
+
 # TODO(commercialization-cleanup): Remove ``tool_phone_call_user`` and ``subscription_service`` /
 # ``phone_call_service`` imports from harness — tool is not registered in ``TOOL_NAMES_*``;
 # outbound call billing belongs in app orchestration (``phone_call.py``), not ``companion_harness``.
@@ -225,9 +226,7 @@ def append_user_profile_facts_to_user_md(
     return "\n".join(lines) + "\n"
 
 
-def tool_update_user_md(
-    store: MemoryStore, items: list[dict[str, Any]]
-) -> str:
+def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
     """
     将用户自愿透露的基本信息追加写入 USER.md 的「身份信息」小节。
     items：每项含 label、value（均为非空短文本）。

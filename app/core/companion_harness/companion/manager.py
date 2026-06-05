@@ -56,6 +56,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     is_scope_initialized_in_store,
 )
 
+
 class CompanionConfig(BaseModel):
     """集中管理 companion 所有可调参数。"""
 
@@ -280,18 +281,18 @@ class CompanionManager:
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_user_chat_turn(
-                user_text,
-                **{
-                    **self._track_turn_kwargs(
-                        session,
-                        defer_memory_update=defer_memory_update,
-                        background_output_sink=background_output_sink,
-                        preset_user_msg_uuid=preset_user_msg_uuid,
-                        runtime_context=runtime_context,
-                    ),
-                    "bootstrap_interim_output_sink": bootstrap_interim_output_sink,
-                },
-            )
+            user_text,
+            **{
+                **self._track_turn_kwargs(
+                    session,
+                    defer_memory_update=defer_memory_update,
+                    background_output_sink=background_output_sink,
+                    preset_user_msg_uuid=preset_user_msg_uuid,
+                    runtime_context=runtime_context,
+                ),
+                "bootstrap_interim_output_sink": bootstrap_interim_output_sink,
+            },
+        )
 
     async def run_implicit_sign_on_greeting_turn(
         self,
@@ -307,15 +308,15 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_companion_implicit_sign_on_greeting_turn(
-                user_text,
-                **self._track_turn_kwargs(
-                    session,
-                    defer_memory_update=defer_memory_update,
-                    background_output_sink=background_output_sink,
-                    preset_user_msg_uuid=preset_user_msg_uuid,
-                    runtime_context=runtime_context,
-                ),
-            )
+            user_text,
+            **self._track_turn_kwargs(
+                session,
+                defer_memory_update=defer_memory_update,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                runtime_context=runtime_context,
+            ),
+        )
 
     async def run_inner_tick_proactive_chat_turn(
         self,
@@ -330,14 +331,14 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_proactive_chat_turn(
-                **self._track_turn_kwargs(
-                    session,
-                    defer_memory_update=defer_memory_update,
-                    background_output_sink=background_output_sink,
-                    preset_user_msg_uuid=preset_user_msg_uuid,
-                    runtime_context=runtime_context,
-                ),
-            )
+            **self._track_turn_kwargs(
+                session,
+                defer_memory_update=defer_memory_update,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                runtime_context=runtime_context,
+            ),
+        )
 
     async def run_inner_tick_scheduled_turn(
         self,
@@ -353,15 +354,15 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_scheduled_turn(
-                scheduled_user_text,
-                **self._track_turn_kwargs(
-                    session,
-                    defer_memory_update=defer_memory_update,
-                    background_output_sink=background_output_sink,
-                    preset_user_msg_uuid=preset_user_msg_uuid,
-                    runtime_context=runtime_context,
-                ),
-            )
+            scheduled_user_text,
+            **self._track_turn_kwargs(
+                session,
+                defer_memory_update=defer_memory_update,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                runtime_context=runtime_context,
+            ),
+        )
 
     async def run_inner_tick_maintenance_turn(
         self,
@@ -376,11 +377,11 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_maintenance_turn(
-                **self._track_turn_kwargs(
-                    session,
-                    defer_memory_update=defer_memory_update,
-                    background_output_sink=background_output_sink,
-                    preset_user_msg_uuid=preset_user_msg_uuid,
-                    runtime_context=runtime_context,
-                ),
-            )
+            **self._track_turn_kwargs(
+                session,
+                defer_memory_update=defer_memory_update,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                runtime_context=runtime_context,
+            ),
+        )

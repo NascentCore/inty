@@ -182,6 +182,7 @@ def run_dreaming_batch_for_session(
         candidate=candidate,
         parent_run_enabled=None,
     ) as langsmith_root_run:
+
         def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
             return session.llm_client.complete_text(messages, model_role=role)
 
@@ -288,7 +289,8 @@ def _companion_manager_for_resolved_model(
     api_key = cfg.agent.chat_llm_api_key or cfg.agent.api_key
     timeout_raw = os.getenv(
         # TODO(app-config-centralization): Move this to app.core.config, and do not use env var.
-        "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600"
+        "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC",
+        "600",
     ).strip()
     try:
         async_chat_timeout = float(timeout_raw) if timeout_raw else 600.0

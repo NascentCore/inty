@@ -170,7 +170,9 @@ class WeixinInprocessPresence:
                     user=inty_user,
                     is_subscribed=bool(subscription),
                 )
-                agent_data = await agent_service.get_agent_for_chat(db, agent_id)
+                agent_data = await agent_service.get_agent_for_chat(
+                    db, agent_id
+                )
                 if agent_data is None:
                     return "Companion not found for this bridge."
                 chat = await chat_service.get_or_create_chat_by_agent(

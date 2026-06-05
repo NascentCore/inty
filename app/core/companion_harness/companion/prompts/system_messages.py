@@ -344,13 +344,15 @@ def _inner_tick_turn_section() -> str:
     # appending hallucinated beats to ai_private.jsonl; remove 记忆一致性 / memory_store / update_user_md
     # bullets (dreaming owns MD/profile sync). Drop LS/TC ``techno_core_record_event`` from inner-tick
     # tools. Rename maintenance → autonomy across prompt copy after implementation.
-    return "\n".join([
-        __INNER_TICK_SCENE_ADVANCING,
-        INNER_TICK_LS_TC_AUTONOMY_SECTION,
-        __CONFESS_TO_USER,
-        INNER_TICK_LS_TC_TOOL_BULLET,
-        __EASE_CONTEXT_PRESSURE,
-    ])
+    return "\n".join(
+        [
+            __INNER_TICK_SCENE_ADVANCING,
+            INNER_TICK_LS_TC_AUTONOMY_SECTION,
+            __CONFESS_TO_USER,
+            INNER_TICK_LS_TC_TOOL_BULLET,
+            __EASE_CONTEXT_PRESSURE,
+        ]
+    )
 
 
 def _living_sphere_persistence_clause() -> str:
