@@ -7,16 +7,20 @@
 
 Companion Harness is agentic harness for simulating an autonomous Intelligence Entity (Inty).
 
-- companion-harness (memories, tools, seeded static prompt slices, etc.) to simulate human emotional behaviors in modality in text (and then audio image video in the future) by dynamically and in a human-like manner to assemble into LLM prompt.
-- Companion harness is persistent, and serving a particular user.
+- Companion-harness (tools, seeded static prompt slices), memory persistency & update, to simulate human emotional behaviors.
+- A companion is combo of LLM, companion-harness, memory
+- A companion and a human user are paired exclusively
   This is different than other types of task-oriented agents, which are ephemeral and for different users and tasks.
 - The user can only interact with this companion through defined medium (app, wechat/weixin, sms, phone-call etc.)
 
+## Deployment pattern
+
+- An agent is the unit of deployment, it includes all necessary code and data to serve the paired user.
+- The code must cleanly separate boundary
+
 ## Objectives
 
-Implement a singular agentic harness (without multi-instance, multi-channel)
-to simulate diverse range of companionship towards human user without physical presence;
-real-world inspirations can be any form of long-distance intimate relationship:
+An agent's real-world inspirations can be any form of long-distance relationship:
 
 - remote lovers
 - remote confidant
@@ -42,18 +46,14 @@ This agent can：
 - Security
 - Commercialization (like usage counting)
 - Execution speed, resource utilization, optimization
-
-### Product vision
-
-On top of this companion harness, we need to design product features to overcome
-the limitations of the inability of a virtual companion to have physical interactions.
-如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
+- Any other forms of speculative features
 
 ## Agentic mechanism design
 
-- Elicit desired behavior through composable prompts/tools and surrounding systems
+- Elicit desired behavior through composable prompts, tools, and dynamic memory extraction
 - Do not use keywords or regexp to hardcode rules
 
 ## Hermes agent wechat/weixin adapater
 
 - We only use wechat/weixin communication protocol, do not allow hermes code to use local filesystem.
+- Wrap hermes (and other 3rd party library) behind abstract interface to maintain boundary
