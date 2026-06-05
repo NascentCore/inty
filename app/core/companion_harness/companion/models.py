@@ -41,17 +41,26 @@ class InnerTickActivity(StrEnum):
     (``consolidate_memory_during_dreaming``; observability via ``dreaming_observability`` and
     ``inner_tick_activity=dreaming`` on LangSmith / runtime events — not ``CompanionTurnResult``).
 
-    Poll order per wake: proactive → scheduled → maintenance → dreaming (at most one fires;
-    see ``inner_tick_poll`` TODO inner-tick-poll-multi-track / #3273).
+    Poll order per wake: proactive → scheduled → autonomy → maintenance → dreaming
+    (at most one fires; see ``inner_tick_poll`` TODO inner-tick-poll-multi-track / #3273).
 
-    ``AUTONOMY`` advances ``ai_private.jsonl`` during idle inner-tick; profile/MemoryDoc sync
-    belongs in ``DREAMING`` (see TODO inner-tick-autonomy across harness).
+    ``AUTONOMY`` reads/writes ``LIFE_CURRENTS.md`` with an open tool set; never delivers
+    client-visible NL or images (see ``inner_tick_activity_suppresses_user_delivery``).
+    ``MAINTENANCE`` reorganizes memory on a restricted tool set; profile/MemoryDoc sync
+    belongs in ``DREAMING``.
     """
 
     MAINTENANCE = "maintenance"
     PROACTIVE_CHAT = "proactive_chat"
     AUTONOMY = "autonomy"
     DREAMING = "dreaming"
+
+
+def inner_tick_activity_suppresses_user_delivery(
+    inner_tick_activity: InnerTickActivity,
+) -> bool:
+    """True when inner-tick ``tool_background`` must not push NL or images to the client."""
+    return inner_tick_activity == InnerTickActivity.AUTONOMY
 
 
 class CompanionTurnTrack(StrEnum):
@@ -406,7 +415,6 @@ def transcript_relative_path_for_turn_persistence(
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
-        # TODO(rename-memory-doc): transcript_inner_tick_maintenance.jsonl (see memory_store_scope).
-        # TODO(inner-tick-autonomy): Revisit persistence — autonomy may only need ai_private.jsonl, not a full inner transcript JSONL.
+        # TODO(rename-memory-doc): split maintenance vs autonomy JSONL paths (see memory_store_scope).
         return "transcript_inner_tick.jsonl"
     return "transcript.jsonl"

@@ -15,6 +15,7 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
     build_system_messages_for_chat_track,
     build_system_messages_for_implicit_sign_on_greeting,
+    build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_maintenance,
     build_system_messages_for_inner_tick_proactive_chat,
     build_system_messages_for_inner_tick_scheduled,
@@ -112,6 +113,7 @@ def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() 
         build_system_messages_for_chat_track,
         build_system_messages_for_tool_track,
         build_system_messages_for_inner_tick_maintenance,
+        build_system_messages_for_inner_tick_autonomy,
         build_system_messages_for_inner_tick_proactive_chat,
         build_system_messages_for_inner_tick_scheduled,
         build_system_messages_for_implicit_sign_on_greeting,
@@ -176,6 +178,23 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
     autonomy_lines = autonomy_blocks[0].split("\n")
     assert "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；" in autonomy_lines[2]
     assert any("LIFE_CURRENTS.md" in line for line in autonomy_lines)
+
+
+def test_build_system_messages_for_inner_tick_autonomy_is_production_builder(
+    tmp_path,
+) -> None:
+    scope = CompanionScope("u-autonomy-builder", "a", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    messages = build_system_messages_for_inner_tick_autonomy(
+        _make_bundle(), ContextMeta(), store
+    )
+    contents = [str(m["content"]) for m in messages]
+    autonomy_blocks = [c for c in contents if c.startswith("本轮（AUTONOMY 自主活动）")]
+    assert len(autonomy_blocks) == 1
+    assert not any(c.startswith("本轮（内在节拍）") for c in contents)
+    assert not any(c.startswith("本轮（陪伴主动聊天）") for c in contents)
+    assert all("## 工具环收尾：结构化信封" not in c for c in contents)
+    assert all("系统仍会向用户投递产物" not in c for c in contents)
 
 
 def _make_bundle() -> PromptBundle:

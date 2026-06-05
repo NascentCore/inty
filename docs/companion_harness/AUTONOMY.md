@@ -73,7 +73,7 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 
 ## 与既有调度的关系
 
-- 复用 unified inner-tick worker（每条 WS 连接）的循环结构；调度顺序改为 `scheduled → proactive → autonomy → maintenance`。
+- 复用 unified inner-tick worker（每条 WS 连接）的循环结构；调度顺序为 `proactive → scheduled → autonomy → maintenance → dreaming`（与 ``inner_tick_poll`` 一致）。
 - 自有 `min_gap`，建议初值与 maintenance 相同（120s）。
 - 复用 `turn_lock` / `tool_bg_idle` 串行化各轨道。
 - **不进 chat 日限额**（autonomy 不发消息）；token 限额按 maintenance 同档计费。

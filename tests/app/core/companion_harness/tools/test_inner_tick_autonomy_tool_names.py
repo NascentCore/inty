@@ -1,0 +1,41 @@
+"""INNER_TICK_AUTONOMY tool set contract tests."""
+
+from __future__ import annotations
+
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    COMPANION_LLM_TOOLS_BY_NAME,
+    INNER_TICK_AUTONOMY_TOOL_NAMES,
+    INNER_TICK_TOOL_NAMES,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+    CompanionToolName,
+)
+
+
+def test_inner_tick_autonomy_excludes_user_visible_side_effect_tools() -> None:
+    names = {tool.value for tool in INNER_TICK_AUTONOMY_TOOL_NAMES}
+    assert CompanionToolName.SCHEDULE_TASK.value not in names
+    assert (
+        CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value not in names
+    )
+
+
+def test_inner_tick_autonomy_includes_open_work_tools() -> None:
+    names = {tool.value for tool in INNER_TICK_AUTONOMY_TOOL_NAMES}
+    assert CompanionToolName.GOOGLE_WEB_SEARCH.value in names
+    assert CompanionToolName.GENERATE_IMAGE.value in names
+    assert CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value in names
+
+
+def test_inner_tick_autonomy_is_superset_of_maintenance_inner_tick_tools() -> None:
+    maintenance_names = {tool.value for tool in INNER_TICK_TOOL_NAMES}
+    autonomy_names = {tool.value for tool in INNER_TICK_AUTONOMY_TOOL_NAMES}
+    assert maintenance_names.issubset(autonomy_names)
+
+
+def test_inner_tick_autonomy_tools_are_registered_openai_schemas() -> None:
+    for tool in INNER_TICK_AUTONOMY_TOOL_NAMES:
+        assert tool.value in COMPANION_LLM_TOOLS_BY_NAME
+
+
+def test_life_currents_on_memory_store_write_allowlist() -> None:
+    assert "LIFE_CURRENTS.md" in MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST

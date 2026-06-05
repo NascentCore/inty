@@ -442,10 +442,8 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
 
 
 def _inner_tick_turn_section() -> str:
-    # TODO(inner-tick-autonomy): Replace this slice — autonomy inner-tick should only instruct
-    # appending hallucinated beats to ai_private.jsonl; remove 记忆一致性 / memory_store / update_user_md
-    # bullets (dreaming owns MD/profile sync). Drop LS/TC ``techno_core_record_event`` from inner-tick
-    # tools. Rename maintenance → autonomy across prompt copy after implementation.
+    # TODO(narrow-maintenance): Maintenance-only slice; ``AUTONOMY`` uses
+    # ``build_system_messages_for_inner_tick_autonomy`` instead.
     return "\n".join(
         [
             __INNER_TICK_SCENE_ADVANCING,
@@ -845,11 +843,7 @@ def build_system_messages_for_inner_tick_maintenance(
     context: ContextMeta,
     store: MemoryStore,
 ) -> list[dict[str, Any]]:
-    """ASYNC maintenance inner tick: plan prefix and tool leg (no foreground envelope).
-
-    TODO(inner-tick-autonomy): Rename to ``build_system_messages_for_inner_tick_autonomy``;
-    ai_private-only prompt + append tool; no 记忆一致性 / LS-TC slices.
-    """
+    """ASYNC maintenance inner tick: plan prefix and tool leg (no foreground envelope)."""
     ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
     return build_system_messages(
         bundle,

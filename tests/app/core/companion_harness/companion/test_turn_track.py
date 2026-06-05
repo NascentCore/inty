@@ -7,6 +7,7 @@ import pytest
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     InnerTickActivity,
+    inner_tick_activity_suppresses_user_delivery,
 )
 from app.core.companion_harness.companion.turn_track import (
     langsmith_inty_turn_lane_for_companion_track,
@@ -69,6 +70,13 @@ def test_autonomy_legacy_flags_roundtrip() -> None:
             implicit_signal_bundle=None,
         )
         == CompanionTurnTrack.INNER_TICK_AUTONOMY
+    )
+
+
+def test_autonomy_suppresses_user_delivery() -> None:
+    assert inner_tick_activity_suppresses_user_delivery(InnerTickActivity.AUTONOMY)
+    assert not inner_tick_activity_suppresses_user_delivery(
+        InnerTickActivity.MAINTENANCE
     )
 
 

@@ -743,8 +743,7 @@ async def try_fire_maintenance_inner_tick(
 ) -> bool:
     """If companion transcript says maintenance inner-tick is due, run one MAINTENANCE turn and queue WS.
 
-    TODO(inner-tick-autonomy): Rename to ``try_fire_autonomy_inner_tick``; turn only appends
-    ``ai_private.jsonl`` (no MD/profile/techno_core tools). Memory consistency → dreaming.
+    Self-directed ``LIFE_CURRENTS.md`` work lives on ``try_fire_autonomy_inner_tick`` (``AUTONOMY`` track).
     """
     # TODO(tool-bg-idle-starves-user-chat): Foreground often returns tool_bg_only while session
     # tool_bg_idle stays cleared until the bg thread finishes; proactive then holds turn_lock
