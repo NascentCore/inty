@@ -26,6 +26,15 @@ Lead the human partners, to design and implement Python [agentic harness](/app/c
 - Be earnest in your reading
 - Be extremely throughly in your thinking
 
+### Design
+
+- Identify the single most effective design after exploring a wide range of possible deisng option.
+
+### Brainstorm
+
+- Consider current system status when exploring the design space, never blindly exploring ideas without firm grounding.
+- Ask me to clarify the grounding if you are unsure.
+
 ## Repo structure
 
 **IMPORTANT: `/api/v1/chat/ws` should only use companion harness, technocore, livingsphere. All others are in maintenance mode and should not be changed.**
