@@ -1,0 +1,37 @@
+[
+  {
+    "snippet_id": "snip_001",
+    "title": "Nucleotide salvage during hypoxia",
+    "keywords": ["nucleotide", "salvage", "hypoxia", "hypothermia"],
+    "entities": ["nucleotide_salvage", "IMP", "UMP"],
+    "summary": "Nucleotide salvage is an energy-efficient pathway that maintains ATP pools under hypoxia and hypothermia."
+  },
+  {
+    "snippet_id": "snip_002",
+    "title": "Purine recycling in torpor-like states",
+    "keywords": ["purine", "salvage", "torpor", "neuroprotection"],
+    "entities": ["nucleotide_salvage", "purine", "IMP"],
+    "summary": "Purine salvage increases phosphorylated nucleotide products while precursor bases decrease during torpor-like cooling."
+  },
+  {
+    "snippet_id": "snip_003",
+    "title": "Pyrimidine salvage in metabolic stress",
+    "keywords": ["pyrimidine", "salvage", "CMP", "UMP"],
+    "entities": ["nucleotide_salvage", "CMP", "UMP"],
+    "summary": "Pyrimidine salvage products CMP and UMP rise when de novo synthesis substrates are limited."
+  },
+  {
+    "snippet_id": "snip_004",
+    "title": "Pathway enrichment background",
+    "keywords": ["pathway", "enrichment", "metabolomics"],
+    "entities": ["nucleotide_metabolism"],
+    "summary": "Untargeted metabolomics often highlights nucleotide metabolism under energetic stress."
+  },
+  {
+    "snippet_id": "snip_005",
+    "title": "Precursor-product inversion pattern",
+    "keywords": ["precursor", "product", "inversion", "salvage"],
+    "entities": ["nucleotide_salvage", "adenine", "cytidine"],
+    "summary": "A precursor-to-product inversion pattern is a hallmark of activated salvage rather than de novo synthesis."
+  }
+]
