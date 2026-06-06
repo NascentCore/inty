@@ -1,0 +1,74 @@
+name: Fetch container logs (dispatch)
+
+on:
+  workflow_dispatch:
+    inputs:
+      container:
+        description: Docker container name (e.g. inty-ops-dev)
+        required: true
+        default: inty-ops-dev
+      tail_lines:
+        description: docker logs --tail N
+        required: true
+        default: "8000"
+      environment:
+        type: environment
+        description: Target deployment environment
+        required: true
+        default: dev
+
+jobs:
+  fetch-logs:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Pull docker logs over SSH
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 10
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            container="${{ inputs.container }}"
+            tail_n="${{ inputs.tail_lines }}"
+            out_dir="/tmp/inty-log-fetch-$$"
+            mkdir -p "${out_dir}"
+            echo "=== docker ps (all) ===" | tee "${out_dir}/meta.txt"
+            sudo docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | tee -a "${out_dir}/meta.txt"
+            if ! sudo docker ps -a --format '{{.Names}}' | grep -Fxq "${container}"; then
+              echo "Container not found: ${container}" | tee -a "${out_dir}/meta.txt"
+              exit 1
+            fi
+            sudo docker logs --tail "${tail_n}" "${container}" >"${out_dir}/full.log" 2>&1
+            grep -iE 'weixin|wechat|ilink|bridge|restore|errcode|-14|session expired|openclaw' \
+              "${out_dir}/full.log" >"${out_dir}/weixin-filtered.log" || true
+            wc -c "${out_dir}/full.log" "${out_dir}/weixin-filtered.log" | tee -a "${out_dir}/meta.txt"
+            tar -czf "/tmp/${container}-logs.tar.gz" -C "${out_dir}" .
+            echo "/tmp/${container}-logs.tar.gz"
+
+      - name: Download log tarball
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          source: "/tmp/${{ inputs.container }}-logs.tar.gz"
+          target: "logs/"
+          strip_components: 0
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.container }}-logs
+          path: logs/${{ inputs.container }}-logs.tar.gz
+          retention-days: 3
+
+      - name: Cleanup remote tarball
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: rm -f "/tmp/${{ inputs.container }}-logs.tar.gz"
