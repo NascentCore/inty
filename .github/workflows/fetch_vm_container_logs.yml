@@ -9,9 +9,9 @@ on:
         default: ops-dev
         type: string
       tail_lines:
-        description: Number of log lines to print
+        description: Number of log lines to print (workflow_dispatch only)
         required: true
-        default: "15000"
+        default: "500"
         type: string
   push:
     branches:
@@ -35,7 +35,7 @@ jobs:
           script: |
             set -euo pipefail
             input="${{ inputs.container || 'ops-dev' }}"
-            tail_lines="${{ inputs.tail_lines || '15000' }}"
+            tail_lines="${{ inputs.tail_lines || '500' }}"
             case "${input}" in
               ops-dev) container="inty-ops-dev" ;;
               ops-prod) container="inty-ops-prod" ;;
@@ -48,10 +48,11 @@ jobs:
             sudo docker ps -a --filter "name=${container}" || true
             echo "=== docker inspect state ==="
             sudo docker inspect "${container}" --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Error={{.State.Error}} Started={{.State.StartedAt}}' 2>/dev/null || true
-            echo "=== docker logs (tail ${tail_lines}) ==="
+            echo "=== bridge/weixin/ilink grep (full log, max 300 lines) ==="
+            sudo docker logs "${container}" 2>&1 \
+              | grep -iE 'weixin|wechat|ilink|bridge|restore|errcode|-14|session expired|getupdates|Connected account|Disconnected|wechat_demo|inprocess|gateway\.platforms\.weixin|Application startup|WeChat demo bridge' \
+              | tail -n 300 || true
+            echo "=== docker logs tail ${tail_lines} ==="
             sudo docker logs "${container}" 2>&1 | tail -n "${tail_lines}" || true
-            echo "=== weixin/ilink/bridge filtered (tail ${tail_lines}) ==="
-            sudo docker logs "${container}" 2>&1 | tail -n "${tail_lines}" \
-              | grep -iE 'weixin|wechat|ilink|bridge|restore|errcode|-14|session expired' || true
             echo "=== listening on 8001 ==="
             sudo ss -ltnp | grep ':8001' || true
