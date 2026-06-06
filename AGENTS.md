@@ -55,9 +55,11 @@ You should only changes and use code in the following dirs:
       - User states what they prefer from your suggested options
     - **DO NOT EDIT**: [Guidelines](/.agents/guidelines/) are guidelines in different scenarios
 
-## DevOps
+### Additional dirs
 
 - [devops](/devops/) specify Inty's deployment configurations (environment and application configs etc.)
+- [research projects](/research/) general research direct or possibility relevant to Inty
+- [experimental](/experimental/) experimental code of relevant open source library/systems.
 
 ## General instructions
 
