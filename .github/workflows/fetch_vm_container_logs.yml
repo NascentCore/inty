@@ -52,7 +52,7 @@ jobs:
             sudo docker logs "${container}" 2>&1 \
               | grep -iE 'weixin|wechat|ilink|bridge|restore|errcode|-14|session expired|getupdates|Connected account|Disconnected|wechat_demo|inprocess|gateway\.platforms\.weixin|Application startup|WeChat demo bridge' \
               | tail -n 300 || true
-            echo "=== docker logs tail ${tail_lines} (workflow_dispatch) ==="
+            echo "=== docker logs tail ${tail_lines} ==="
             sudo docker logs "${container}" 2>&1 | tail -n "${tail_lines}" || true
             echo "=== listening on 8001 ==="
             sudo ss -ltnp | grep ':8001' || true
