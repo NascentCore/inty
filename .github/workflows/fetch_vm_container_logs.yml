@@ -11,7 +11,7 @@ on:
       tail_lines:
         description: Number of log lines to print
         required: true
-        default: "200"
+        default: "15000"
         type: string
   push:
     branches:
@@ -35,7 +35,7 @@ jobs:
           script: |
             set -euo pipefail
             input="${{ inputs.container || 'ops-dev' }}"
-            tail_lines="${{ inputs.tail_lines || '300' }}"
+            tail_lines="${{ inputs.tail_lines || '15000' }}"
             case "${input}" in
               ops-dev) container="inty-ops-dev" ;;
               ops-prod) container="inty-ops-prod" ;;
