@@ -2060,7 +2060,8 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
             ticks["proactive"] = 0
             time.sleep(0.2)
             assert ticks["proactive"] == 0
-            websocket.close()
+
+    time.sleep(0.35)
 
     companion_chat_service.clear_companion_chat_service_caches()
 

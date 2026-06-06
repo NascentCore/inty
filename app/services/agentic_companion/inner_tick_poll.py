@@ -1,6 +1,6 @@
 """Shared inner-tick poll: proactive, scheduled, maintenance, dreaming (WS or Weixin delivery).
 
-Requires signed-on presence coordinates in ``ctx`` — poll runs on the same ``Coordinator``
+Requires signed-on presence coordinates on ``coordinator`` — poll runs on the same ``Coordinator``
 as user chat, so **one ``turn_lock`` per wire** serializes inner-tick activities when each
 ``try_fire_*`` runs (they do not overlap in time on that connection). Prototype assumes
 one wire per paired user; multiple tabs are out of scope (``companion_harness`` AGENTS.md).
@@ -34,14 +34,16 @@ from app.services.agentic_companion.session import Coordinator, InnerTickCoords
 
 async def run_inner_tick_poll(
     *,
-    ctx: dict[str, Any],
     delivery: InnerTickDelivery,
     coordinator: Coordinator,
     ws_conn_id: str | None,
     tc_box: list[Optional[dict]] | None,
 ) -> None:
-    """Run one inner-tick cycle when ``ctx`` has signed-on coordinates."""
-    poll_coords = InnerTickCoords.from_context(ctx)
+    """Run one inner-tick cycle when the coordinator still has signed-on coordinates."""
+    live_ctx = coordinator.snapshot_inner_tick_coords()
+    if live_ctx is None:
+        return
+    poll_coords = InnerTickCoords.from_context(live_ctx)
     if poll_coords is None:
         return
     ws_id = ws_conn_id if ws_conn_id is not None else "weixin_presence"

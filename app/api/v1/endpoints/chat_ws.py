@@ -1399,7 +1399,6 @@ async def chat_completions_websocket(
         inner_tick_user_for_log = ctx["user_id"]
         try:
             await run_inner_tick_poll(
-                ctx=ctx,
                 delivery=ws_delivery,
                 coordinator=companion_ws,
                 ws_conn_id=ws_conn_id,

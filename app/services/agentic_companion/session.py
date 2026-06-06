@@ -376,8 +376,7 @@ class Session:
     async def stop(self) -> None:
         self._inner_tick_stop.set()
         task = self._inner_tick_task
-        if task is not None and (not task.done()):
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
         self._inner_tick_task = None
+        if task is not None and (not task.done()):
+            await asyncio.gather(task, return_exceptions=True)
         await self.cancel_implicit_greeting_if_running()
