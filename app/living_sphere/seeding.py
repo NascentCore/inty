@@ -100,4 +100,6 @@ def ensure_living_sphere_seeded(store: LivingSphereStore) -> None:
     current = store.read_document_if_exists(LIVING_SPHERE_RELATIVE_PATH)
     if current is not None and current.strip():
         return
-    store.write_document(LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown())
+    store.write_document(
+        LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown()
+    )
