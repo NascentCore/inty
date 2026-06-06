@@ -6,13 +6,7 @@ import json
 
 import pytest
 
-from app.schemas.chat_websocket import ChatWsCompanionWireMessageMetaData, ChatWsPingFrame
-from backend.ops.weixin_channel.chat_ws_wire import (
-    CHAT_WS_CLIENT_PING_INTERVAL_SEC,
-    assistant_text_from_response_payload,
-    http_base_to_ws_chat_url,
-    is_proactive_chat_downlink,
-)
+from app.schemas.chat_websocket import ChatWsPingFrame
 from backend.ops.weixin_channel.session import (
     WeixinChannelBinding,
     WeixinChannelSession,
@@ -65,11 +59,6 @@ def test_weixin_adapter_split_multiline_reads_platform_extra() -> None:
     )
     assert adapter_false._split_multiline_messages is False
     assert adapter_true._split_multiline_messages is True
-
-def test_ws_ping_interval_below_server_idle_minimum() -> None:
-    assert CHAT_WS_CLIENT_PING_INTERVAL_SEC == 9.0
-    assert CHAT_WS_CLIENT_PING_INTERVAL_SEC < 10.0
-
 
 def test_ws_ping_frame_wire_json() -> None:
     payload = ChatWsPingFrame().model_dump_json()
@@ -236,42 +225,3 @@ async def test_handle_inbound_text_forwards_to_inprocess_presence() -> None:
     reply = await session._handle_inbound(inbound)
     assert presence.calls == ["hello"]
     assert reply == "companion reply"
-
-    url = http_base_to_ws_chat_url("http://127.0.0.1:8001", "conn-1")
-    assert url.startswith("ws://127.0.0.1:8001/api/v1/chat/ws?")
-    assert "ws_conn_id=conn-1" in url
-
-
-def test_is_proactive_chat_downlink_companion_flag() -> None:
-    meta = ChatWsCompanionWireMessageMetaData(companion_proactive_chat=True)
-    assert is_proactive_chat_downlink(meta) is True
-
-
-def test_is_proactive_chat_downlink_inner_tick_activity() -> None:
-    meta = ChatWsCompanionWireMessageMetaData(
-        inner_tick_activity="proactive_chat",
-    )
-    assert is_proactive_chat_downlink(meta) is True
-
-
-def test_is_proactive_chat_downlink_normal_reply() -> None:
-    meta = ChatWsCompanionWireMessageMetaData(source="companion")
-    assert is_proactive_chat_downlink(meta) is False
-
-
-def test_assistant_text_from_chat_ws_response() -> None:
-    raw = {
-        "code": 200,
-        "message": "success",
-        "data": {
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {"role": "assistant", "content": "hello"},
-                    "finish_reason": "stop",
-                }
-            ],
-        },
-        "agent_id": "agent-1",
-    }
-    assert assistant_text_from_response_payload(raw) == "hello"

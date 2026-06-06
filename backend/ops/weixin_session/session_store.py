@@ -1,35 +1,18 @@
-"""WeChat demo sessions: in-memory registry + Postgres-backed bridge resume.
-
-iLink limits: QR phase — ``WeixinQrFlow`` + ``WECHAT_DEMO_QR_LOGIN_POLL_TIMEOUT_SECONDS``
-(480s). Legacy demo: per-QR ``expired`` refresh (max 3). Onboard: ``expired`` fails (F5
-for new QR); POST blocks on ``WEIXIN_ONBOARD_QR_READY_TIMEOUT_SECONDS``. Bridge phase —
-``weixin_token`` until iLink
-``errcode=-14`` (re QR); **not** a fixed 14-minute QR validity (do not confuse with -14).
-"""
+"""Weixin onboard sessions: in-memory registry + Postgres-backed bridge resume."""
 
 from __future__ import annotations
 
 import asyncio
-import os
 import uuid
 from dataclasses import dataclass
 from enum import StrEnum
 
-from hermes_constants import get_hermes_home
 from loguru import logger
 
-from backend.ops.schemas.wechat_demo import (
-    WechatDemoSessionCreate,
-    WechatDemoSessionPhase,
-    WechatDemoSessionView,
+from backend.ops.schemas.weixin_session import (
     WeixinOnboardSessionCreate,
-)
-from backend.ops.wechat_demo.session_persistence import (
-    PersistedWechatDemoBridge,
-    delete_bridge,
-    list_bridges,
-    record_from_binding_fields,
-    upsert_bridge,
+    WeixinSessionPhase,
+    WeixinSessionView,
 )
 from backend.ops.weixin_channel.ilink_qr_client import (
     ILINK_SESSION_EXPIRED_USER_MESSAGE,
@@ -40,9 +23,16 @@ from backend.ops.weixin_channel.session import (
 )
 from backend.ops.weixin_channel.weixin_qr_flow import WeixinQrFlow
 from backend.ops.weixin_onboard.provision import provision_inty_for_ilink_user
+from backend.ops.weixin_session.session_persistence import (
+    PersistedWeixinBridge,
+    delete_bridge,
+    list_bridges,
+    record_from_binding_fields,
+    upsert_bridge,
+)
 
 # Client-side cap for QR poll loop (matches Hermes / openilink 8 min login budget).
-WECHAT_DEMO_QR_LOGIN_POLL_TIMEOUT_SECONDS = 480
+WEIXIN_QR_LOGIN_POLL_TIMEOUT_SECONDS = 480
 
 # Onboard POST blocks until first qrcode_url (not the full 480s login window).
 WEIXIN_ONBOARD_QR_READY_TIMEOUT_SECONDS = 60
@@ -60,7 +50,7 @@ class _StorePhase(StrEnum):
 
 
 @dataclass
-class _WechatDemoSession:
+class _WeixinSession:
     session_id: str
     inty_api_base_url: str
     inty_jwt: str
@@ -78,19 +68,19 @@ class _WechatDemoSession:
 
 
 _lock = asyncio.Lock()
-_sessions: dict[str, _WechatDemoSession] = {}
+_sessions: dict[str, _WeixinSession] = {}
 
 
 def _phase_blocks_lifecycle(phase: _StorePhase) -> bool:
     return phase in (_StorePhase.STOPPED, _StorePhase.FAILED)
 
 
-async def _session_lifecycle_may_continue(session: _WechatDemoSession) -> bool:
+async def _session_lifecycle_may_continue(session: _WeixinSession) -> bool:
     async with _lock:
         return not _phase_blocks_lifecycle(session.phase)
 
 
-def _view(session: _WechatDemoSession) -> WechatDemoSessionView:
+def _view(session: _WeixinSession) -> WeixinSessionView:
     qr_phase = None
     qrcode_url = None
     if session.qr_flow is not None:
@@ -106,9 +96,9 @@ def _view(session: _WechatDemoSession) -> WechatDemoSessionView:
         if session.agent_id:
             agent_id = session.agent_id
         is_new_user = session.is_new_user
-    return WechatDemoSessionView(
+    return WeixinSessionView(
         session_id=session.session_id,
-        phase=WechatDemoSessionPhase(session.phase.value),
+        phase=WeixinSessionPhase(session.phase.value),
         qr_phase=qr_phase,
         qrcode_url=qrcode_url,
         error=err,
@@ -118,13 +108,7 @@ def _view(session: _WechatDemoSession) -> WechatDemoSessionView:
     )
 
 
-def _hermes_home_str() -> str:
-    hermes_home = str(get_hermes_home())
-    os.makedirs(hermes_home, exist_ok=True)
-    return hermes_home
-
-
-async def _persist_bridge_session(session: _WechatDemoSession) -> None:
+async def _persist_bridge_session(session: _WeixinSession) -> None:
     channel = session.channel_session
     assert channel is not None
     binding = channel.binding
@@ -147,7 +131,7 @@ async def _clear_persisted_bridge(session_id: str) -> None:
 
 
 def _binding_from_qr_cred(
-    session: _WechatDemoSession,
+    session: _WeixinSession,
     cred: dict[str, str],
 ) -> WeixinChannelBinding:
     return WeixinChannelBinding(
@@ -162,7 +146,7 @@ def _binding_from_qr_cred(
 
 
 def _binding_from_persisted(
-    record: PersistedWechatDemoBridge,
+    record: PersistedWeixinBridge,
 ) -> WeixinChannelBinding:
     return WeixinChannelBinding(
         user_id=record.session_id,
@@ -178,14 +162,14 @@ def _binding_from_persisted(
 
 
 def _channel_for_session(
-    session: _WechatDemoSession,
+    session: _WeixinSession,
     binding: WeixinChannelBinding,
 ) -> WeixinChannelSession:
     async def on_binding_peer_updated(_binding: WeixinChannelBinding) -> None:
         await _persist_bridge_session(session)
 
     async def on_ilink_session_expired() -> None:
-        await fail_wechat_demo_ilink_session_expired(session.session_id)
+        await fail_weixin_ilink_session_expired(session.session_id)
 
     return WeixinChannelSession(
         binding=binding,
@@ -194,30 +178,11 @@ def _channel_for_session(
     )
 
 
-async def create_session(
-    body: WechatDemoSessionCreate,
-) -> WechatDemoSessionView:
-    session_id = str(uuid.uuid4())
-    session = _WechatDemoSession(
-        session_id=session_id,
-        inty_api_base_url=body.inty_api_base_url,
-        inty_jwt=body.inty_jwt,
-        agent_id=body.agent_id,
-    )
-    async with _lock:
-        _sessions[session_id] = session
-        session.orchestrator_task = asyncio.create_task(
-            _run_session_lifecycle(session),
-            name=f"wechat_demo_{session_id}",
-        )
-        return _view(session)
-
-
 async def create_onboard_session(
     body: WeixinOnboardSessionCreate,
-) -> WechatDemoSessionView:
+) -> WeixinSessionView:
     session_id = str(uuid.uuid4())
-    session = _WechatDemoSession(
+    session = _WeixinSession(
         session_id=session_id,
         inty_api_base_url=body.inty_api_base_url,
         inty_jwt="",
@@ -244,7 +209,7 @@ async def create_onboard_session(
         return _view(session)
 
 
-async def fail_wechat_demo_ilink_session_expired(session_id: str) -> None:
+async def fail_weixin_ilink_session_expired(session_id: str) -> None:
     """Tear down bridge after iLink ``errcode=-14`` (idempotent)."""
     assert session_id != ""
     async with _lock:
@@ -256,7 +221,7 @@ async def fail_wechat_demo_ilink_session_expired(session_id: str) -> None:
     await _fail_session(session, ILINK_SESSION_EXPIRED_USER_MESSAGE)
 
 
-async def get_session(session_id: str) -> WechatDemoSessionView | None:
+async def get_session(session_id: str) -> WeixinSessionView | None:
     async with _lock:
         session = _sessions.get(session_id)
         if session is None:
@@ -264,7 +229,7 @@ async def get_session(session_id: str) -> WechatDemoSessionView | None:
         return _view(session)
 
 
-async def stop_session(session_id: str) -> WechatDemoSessionView | None:
+async def stop_session(session_id: str) -> WeixinSessionView | None:
     async with _lock:
         session = _sessions.get(session_id)
         if session is None:
@@ -279,19 +244,19 @@ async def stop_session(session_id: str) -> WechatDemoSessionView | None:
 async def restore_persisted_sessions() -> None:
     """Reload Postgres-backed bridges after Ops restart (no QR).
 
-    TODO(wechat-demo-bridge-multi-replica): requires a single Ops runner; multiple Pods
+    TODO(weixin-bridge-multi-replica): requires a single Ops runner; multiple Pods
     would each restore every row and open duplicate Weixin connections.
 
-    Manual release smoke: ``.cursor/skills/wechat-demo-bridge-restore-smoke/SKILL.md``.
+    Manual release smoke: ``.cursor/skills/weixin-bridge-restore-smoke/SKILL.md``.
     """
     for record in await list_bridges():
         asyncio.create_task(
             _restore_persisted_session(record),
-            name=f"wechat_demo_restore_{record.session_id}",
+            name=f"weixin_restore_{record.session_id}",
         )
 
 
-async def _stop_session_tasks(session: _WechatDemoSession) -> None:
+async def _stop_session_tasks(session: _WeixinSession) -> None:
     async with _lock:
         orchestrator_task = session.orchestrator_task
         channel_session = session.channel_session
@@ -320,7 +285,7 @@ async def _stop_session_tasks(session: _WechatDemoSession) -> None:
 
 
 async def _set_session_qr_flow(
-    session: _WechatDemoSession,
+    session: _WeixinSession,
     qr_flow: WeixinQrFlow,
 ) -> bool:
     async with _lock:
@@ -330,7 +295,7 @@ async def _set_session_qr_flow(
         return True
 
 
-async def _fail_session(session: _WechatDemoSession, error: str) -> None:
+async def _fail_session(session: _WeixinSession, error: str) -> None:
     orchestrator_task: asyncio.Task[None] | None = None
     channel_session: WeixinChannelSession | None = None
     bridge_task: asyncio.Task[None] | None = None
@@ -360,7 +325,7 @@ async def _fail_session(session: _WechatDemoSession, error: str) -> None:
 
 
 async def _set_session_channel(
-    session: _WechatDemoSession,
+    session: _WeixinSession,
     channel_session: WeixinChannelSession,
 ) -> bool:
     async with _lock:
@@ -372,7 +337,7 @@ async def _set_session_channel(
 
 
 async def _set_session_bridge_task(
-    session: _WechatDemoSession,
+    session: _WeixinSession,
     bridge_task: asyncio.Task[None],
 ) -> bool:
     async with _lock:
@@ -383,7 +348,7 @@ async def _set_session_bridge_task(
 
 
 async def _mark_session_stopped_after_bridge(
-    session: _WechatDemoSession,
+    session: _WeixinSession,
 ) -> None:
     async with _lock:
         if session.phase == _StorePhase.BRIDGE_RUNNING:
@@ -392,7 +357,7 @@ async def _mark_session_stopped_after_bridge(
 
 
 async def _run_bridge_until_stopped(
-    session: _WechatDemoSession,
+    session: _WeixinSession,
     channel: WeixinChannelSession,
 ) -> None:
     if not await _set_session_channel(session, channel):
@@ -407,13 +372,13 @@ async def _run_bridge_until_stopped(
             raise
         except Exception as exc:
             logger.exception(
-                "wechat_demo bridge failed session_id={}", session.session_id
+                "weixin bridge failed session_id={}", session.session_id
             )
             await _fail_session(session, str(exc))
 
     bridge_task = asyncio.create_task(
         _bridge_loop(),
-        name=f"wechat_demo_bridge_{session.session_id}",
+        name=f"weixin_bridge_{session.session_id}",
     )
     if not await _set_session_bridge_task(session, bridge_task):
         bridge_task.cancel()
@@ -428,7 +393,7 @@ async def _run_bridge_until_stopped(
 
 
 def _onboard_same_weixin_identity(
-    other: _WechatDemoSession,
+    other: _WeixinSession,
     ilink_user_id: str,
     weixin_account_id: str,
 ) -> bool:
@@ -444,7 +409,7 @@ def _onboard_same_weixin_identity(
 
 
 async def _stop_other_onboard_sessions_for_same_weixin(
-    current: _WechatDemoSession,
+    current: _WeixinSession,
     cred: dict[str, str],
 ) -> None:
     """After new bridge started: stop prior onboard sessions for this WeChat identity only."""
@@ -471,7 +436,7 @@ async def _stop_other_onboard_sessions_for_same_weixin(
 
 
 async def _signal_qrcode_ready_while_running(
-    session: _WechatDemoSession,
+    session: _WeixinSession,
     qr_flow: WeixinQrFlow,
     qr_task: asyncio.Task[dict[str, str] | None],
 ) -> dict[str, str] | None:
@@ -485,25 +450,11 @@ async def _signal_qrcode_ready_while_running(
     return await qr_task
 
 
-def _qr_flow_for_session(session: _WechatDemoSession) -> WeixinQrFlow:
-    if session.onboard:
-        return WeixinQrFlow(
-            persist_hermes_account=False,
-            hermes_home="",
-            refresh_on_expired=False,
-        )
-    return WeixinQrFlow(
-        persist_hermes_account=True,
-        hermes_home=_hermes_home_str(),
-        refresh_on_expired=True,
-    )
-
-
 async def _restore_persisted_session(
-    record: PersistedWechatDemoBridge,
+    record: PersistedWeixinBridge,
 ) -> None:
     """Reattach bridge; register in-memory session before channel.start (poll 404 window)."""
-    session = _WechatDemoSession(
+    session = _WeixinSession(
         session_id=record.session_id,
         inty_api_base_url=record.inty_api_base_url,
         inty_jwt=record.inty_jwt,
@@ -519,7 +470,7 @@ async def _restore_persisted_session(
         await channel.start()
     except Exception:
         logger.exception(
-            "wechat_demo restore channel start failed session_id={}",
+            "weixin restore channel start failed session_id={}",
             record.session_id,
         )
         async with _lock:
@@ -529,12 +480,12 @@ async def _restore_persisted_session(
     await _run_bridge_until_stopped(session, channel)
 
 
-async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
-    qr_flow = _qr_flow_for_session(session)
+async def _run_session_lifecycle(session: _WeixinSession) -> None:
+    qr_flow = WeixinQrFlow()
     if not await _set_session_qr_flow(session, qr_flow):
         return
     qr_task = asyncio.create_task(
-        qr_flow.run(timeout_seconds=WECHAT_DEMO_QR_LOGIN_POLL_TIMEOUT_SECONDS),
+        qr_flow.run(timeout_seconds=WEIXIN_QR_LOGIN_POLL_TIMEOUT_SECONDS),
         name=f"weixin_qr_{session.session_id}",
     )
     try:
@@ -555,7 +506,7 @@ async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
         raise
     except Exception as exc:
         logger.exception(
-            "wechat_demo QR flow failed session_id={}", session.session_id
+            "weixin QR flow failed session_id={}", session.session_id
         )
         await _fail_session(session, str(exc))
         return
@@ -570,30 +521,26 @@ async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
     if not await _session_lifecycle_may_continue(session):
         return
 
-    if session.onboard:
-        # TODO(weixin-onboard-jwt-delivery): JWT for bridge only; client must not receive via poll.
-        ilink_user_id = str(cred.get("user_id") or "")
-        if not ilink_user_id:
-            await _fail_session(session, "confirmed but ilink_user_id missing")
-            return
-        try:
-            provision = await provision_inty_for_ilink_user(
-                ilink_user_id=ilink_user_id,
-            )
-        except Exception as exc:
-            logger.exception(
-                "weixin onboard provision failed session_id={}",
-                session.session_id,
-            )
-            await _fail_session(session, str(exc))
-            return
-        session.ilink_user_id = ilink_user_id
-        session.inty_jwt = provision.jwt
-        session.agent_id = provision.agent_id
-        session.is_new_user = provision.is_new_user
-    else:
-        assert session.inty_jwt != ""
-        assert session.agent_id != ""
+    # TODO(weixin-onboard-jwt-delivery): JWT for bridge only; client must not receive via poll.
+    ilink_user_id = str(cred.get("user_id") or "")
+    if not ilink_user_id:
+        await _fail_session(session, "confirmed but ilink_user_id missing")
+        return
+    try:
+        provision = await provision_inty_for_ilink_user(
+            ilink_user_id=ilink_user_id,
+        )
+    except Exception as exc:
+        logger.exception(
+            "weixin onboard provision failed session_id={}",
+            session.session_id,
+        )
+        await _fail_session(session, str(exc))
+        return
+    session.ilink_user_id = ilink_user_id
+    session.inty_jwt = provision.jwt
+    session.agent_id = provision.agent_id
+    session.is_new_user = provision.is_new_user
 
     if not await _session_lifecycle_may_continue(session):
         return
@@ -604,10 +551,9 @@ async def _run_session_lifecycle(session: _WechatDemoSession) -> None:
         await channel.start()
     except Exception as exc:
         logger.exception(
-            "wechat_demo channel start failed session_id={}", session.session_id
+            "weixin channel start failed session_id={}", session.session_id
         )
         await _fail_session(session, str(exc))
         return
-    if session.onboard:
-        await _stop_other_onboard_sessions_for_same_weixin(session, cred)
+    await _stop_other_onboard_sessions_for_same_weixin(session, cred)
     await _run_bridge_until_stopped(session, channel)

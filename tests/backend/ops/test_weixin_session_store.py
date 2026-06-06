@@ -1,4 +1,4 @@
-"""Regression tests for Ops WeChat demo session state handling."""
+"""Regression tests for Ops Weixin session state handling."""
 
 from __future__ import annotations
 
@@ -7,25 +7,15 @@ import asyncio
 import pytest
 from pydantic import ValidationError
 
-from backend.ops.schemas.wechat_demo import (
-    WechatDemoSessionCreate,
-    WechatDemoSessionView,
+from backend.ops.schemas.weixin_session import (
     WeixinOnboardSessionCreate,
+    WeixinSessionView,
 )
-from backend.ops.wechat_demo import session_store
+from backend.ops.weixin_session import session_store
 from backend.ops.weixin_channel.ilink_qr_client import ILINK_SESSION_EXPIRED_USER_MESSAGE
 from backend.ops.weixin_channel.session import WeixinChannelBinding, WeixinChannelSession
 from backend.ops.weixin_channel.weixin_qr_flow import WeixinQrFlow
 from app.db.session import async_engine
-
-
-def test_session_create_rejects_whitespace_only_credentials() -> None:
-    with pytest.raises(ValidationError):
-        WechatDemoSessionCreate(
-            inty_api_base_url="   ",
-            inty_jwt="   ",
-            agent_id="   ",
-        )
 
 
 def test_onboard_session_create_rejects_whitespace_api_base() -> None:
@@ -34,24 +24,11 @@ def test_onboard_session_create_rejects_whitespace_api_base() -> None:
 
 
 def test_session_view_has_no_jwt_field() -> None:
-    assert "inty_jwt" not in WechatDemoSessionView.model_fields
-
-
-def test_view_legacy_session_omits_onboard_fields() -> None:
-    session = session_store._WechatDemoSession(
-        session_id="session-legacy",
-        inty_api_base_url="http://127.0.0.1:8001",
-        inty_jwt="jwt",
-        agent_id="agent-legacy",
-        onboard=False,
-    )
-    view = session_store._view(session)
-    assert view.agent_id is None
-    assert view.is_new_user is None
+    assert "inty_jwt" not in WeixinSessionView.model_fields
 
 
 def test_view_onboard_session_exposes_provision_fields() -> None:
-    session = session_store._WechatDemoSession(
+    session = session_store._WeixinSession(
         session_id="session-onboard",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt-internal",
@@ -66,8 +43,8 @@ def test_view_onboard_session_exposes_provision_fields() -> None:
     assert view.bridge_running is True
 
 
-def _stopped_session() -> session_store._WechatDemoSession:
-    return session_store._WechatDemoSession(
+def _stopped_session() -> session_store._WeixinSession:
+    return session_store._WeixinSession(
         session_id="session-test",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt",
@@ -76,8 +53,8 @@ def _stopped_session() -> session_store._WechatDemoSession:
     )
 
 
-def _failed_session() -> session_store._WechatDemoSession:
-    return session_store._WechatDemoSession(
+def _failed_session() -> session_store._WeixinSession:
+    return session_store._WeixinSession(
         session_id="session-failed",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt",
@@ -145,9 +122,9 @@ class _RecordingChannel:
 
 
 @pytest.mark.asyncio
-async def test_fail_wechat_demo_ilink_session_expired_marks_failed() -> None:
+async def test_fail_weixin_ilink_session_expired_marks_failed() -> None:
     await async_engine.dispose()
-    session = session_store._WechatDemoSession(
+    session = session_store._WeixinSession(
         session_id="session-ilink-expired",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt",
@@ -156,7 +133,7 @@ async def test_fail_wechat_demo_ilink_session_expired_marks_failed() -> None:
     )
     async with session_store._lock:
         session_store._sessions["session-ilink-expired"] = session
-    await session_store.fail_wechat_demo_ilink_session_expired("session-ilink-expired")
+    await session_store.fail_weixin_ilink_session_expired("session-ilink-expired")
     assert session.phase == session_store._StorePhase.FAILED
     assert session.error == ILINK_SESSION_EXPIRED_USER_MESSAGE
     async with session_store._lock:
@@ -164,13 +141,13 @@ async def test_fail_wechat_demo_ilink_session_expired_marks_failed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_fail_wechat_demo_ilink_session_expired_stops_restore_like_channel() -> None:
+async def test_fail_weixin_ilink_session_expired_stops_restore_like_channel() -> None:
     await async_engine.dispose()
     channel = _RecordingChannel()
     session_id = "session-restore-like-expired"
     bridge_task = asyncio.create_task(asyncio.Event().wait())
 
-    session = session_store._WechatDemoSession(
+    session = session_store._WeixinSession(
         session_id=session_id,
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt",
@@ -181,7 +158,7 @@ async def test_fail_wechat_demo_ilink_session_expired_stops_restore_like_channel
     )
     async with session_store._lock:
         session_store._sessions[session_id] = session
-    await session_store.fail_wechat_demo_ilink_session_expired(session_id)
+    await session_store.fail_weixin_ilink_session_expired(session_id)
     assert channel.stop_called
     assert session.phase == session_store._StorePhase.FAILED
     assert session.error == ILINK_SESSION_EXPIRED_USER_MESSAGE
@@ -192,11 +169,11 @@ async def test_fail_wechat_demo_ilink_session_expired_stops_restore_like_channel
 
 
 @pytest.mark.asyncio
-async def test_fail_wechat_demo_ilink_session_expired_idempotent_on_stopped() -> None:
+async def test_fail_weixin_ilink_session_expired_idempotent_on_stopped() -> None:
     session = _stopped_session()
     async with session_store._lock:
         session_store._sessions[session.session_id] = session
-    await session_store.fail_wechat_demo_ilink_session_expired(session.session_id)
+    await session_store.fail_weixin_ilink_session_expired(session.session_id)
     assert session.phase == session_store._StorePhase.STOPPED
     assert session.error is None
     async with session_store._lock:
@@ -204,7 +181,7 @@ async def test_fail_wechat_demo_ilink_session_expired_idempotent_on_stopped() ->
 
 
 def test_onboard_same_weixin_identity_matches_ilink_user_id() -> None:
-    other = session_store._WechatDemoSession(
+    other = session_store._WeixinSession(
         session_id="old",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt",
@@ -234,7 +211,7 @@ def test_onboard_same_weixin_identity_matches_bridge_account_id() -> None:
         on_binding_peer_updated=None,
         on_ilink_session_expired=_noop_ilink_session_expired,
     )
-    other = session_store._WechatDemoSession(
+    other = session_store._WeixinSession(
         session_id="old",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt",
@@ -250,7 +227,7 @@ def test_onboard_same_weixin_identity_matches_bridge_account_id() -> None:
 
 
 def test_onboard_same_weixin_identity_rejects_different_user() -> None:
-    other = session_store._WechatDemoSession(
+    other = session_store._WeixinSession(
         session_id="other-user",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt",
@@ -268,7 +245,7 @@ def test_onboard_same_weixin_identity_rejects_different_user() -> None:
 @pytest.mark.asyncio
 async def test_fail_session_sets_qrcode_ready_event() -> None:
     await async_engine.dispose()
-    session = session_store._WechatDemoSession(
+    session = session_store._WeixinSession(
         session_id="session-ready",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="",
@@ -283,7 +260,7 @@ async def test_fail_session_sets_qrcode_ready_event() -> None:
 
 @pytest.mark.asyncio
 async def test_signal_qrcode_ready_while_running_sets_event() -> None:
-    session = session_store._WechatDemoSession(
+    session = session_store._WeixinSession(
         session_id="session-signal",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="",
@@ -291,11 +268,7 @@ async def test_signal_qrcode_ready_while_running_sets_event() -> None:
         onboard=True,
         qrcode_ready=asyncio.Event(),
     )
-    qr_flow = WeixinQrFlow(
-        persist_hermes_account=False,
-        hermes_home="",
-        refresh_on_expired=False,
-    )
+    qr_flow = WeixinQrFlow()
     qr_flow.qrcode_url = "https://qr.example/ready"
 
     async def slow_run() -> None:
@@ -318,7 +291,7 @@ async def test_stop_other_onboard_sessions_only_same_weixin(
 
     monkeypatch.setattr(session_store, "stop_session", fake_stop)
 
-    current = session_store._WechatDemoSession(
+    current = session_store._WeixinSession(
         session_id="current",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt-new",
@@ -327,7 +300,7 @@ async def test_stop_other_onboard_sessions_only_same_weixin(
         ilink_user_id="ilink-a",
         phase=session_store._StorePhase.BRIDGE_RUNNING,
     )
-    same_user = session_store._WechatDemoSession(
+    same_user = session_store._WeixinSession(
         session_id="same-user-old",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt-old",
@@ -336,7 +309,7 @@ async def test_stop_other_onboard_sessions_only_same_weixin(
         ilink_user_id="ilink-a",
         phase=session_store._StorePhase.BRIDGE_RUNNING,
     )
-    other_user = session_store._WechatDemoSession(
+    other_user = session_store._WeixinSession(
         session_id="other-user",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="jwt-b",
@@ -390,7 +363,7 @@ async def test_fail_session_cancels_orchestrator_when_called_externally(
             cancelled.set()
             raise
 
-    session = session_store._WechatDemoSession(
+    session = session_store._WeixinSession(
         session_id="session-cancel",
         inty_api_base_url="http://127.0.0.1:8001",
         inty_jwt="",

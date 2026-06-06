@@ -1,7 +1,7 @@
-"""CI tests for WeChat demo bridge restore (mock Weixin; no QR / Hermes).
+"""CI tests for Weixin bridge restore (mock Weixin; no QR / Hermes).
 
 Full QR + WeChat DM flow: manual release smoke in
-``.cursor/skills/wechat-demo-bridge-restore-smoke/SKILL.md``.
+``.cursor/skills/weixin-bridge-restore-smoke/SKILL.md``.
 """
 
 from __future__ import annotations
@@ -17,12 +17,12 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import async_engine
 from app.models.agent import Agent, AgentStatus
-from app.models.ops_wechat_demo_bridge import OpsWechatDemoBridge
+from app.models.ops_weixin_bridge import OpsWeixinBridge
 from app.models.registry import load_model_modules
 from app.models.user import AuthType, Gender, User
-from backend.ops.schemas.wechat_demo import WechatDemoSessionPhase
-from backend.ops.wechat_demo import session_store
-from backend.ops.wechat_demo.session_persistence import (
+from backend.ops.schemas.weixin_session import WeixinSessionPhase
+from backend.ops.weixin_session import session_store
+from backend.ops.weixin_session.session_persistence import (
     list_bridges,
     record_from_binding_fields,
     upsert_bridge,
@@ -76,17 +76,17 @@ def sync_db_session():
 
 @pytest.fixture(autouse=True)
 def clean_bridge_rows(sync_db_session):
-    sync_db_session.execute(delete(OpsWechatDemoBridge))
+    sync_db_session.execute(delete(OpsWeixinBridge))
     sync_db_session.commit()
     yield
-    sync_db_session.execute(delete(OpsWechatDemoBridge))
+    sync_db_session.execute(delete(OpsWeixinBridge))
     sync_db_session.commit()
 
 
 @pytest.fixture
 def agent_id(sync_db_session):
-    user_id = f"user-wechat-demo-{uuid.uuid4().hex[:8]}"
-    aid = f"agent-wechat-demo-{uuid.uuid4().hex[:8]}"
+    user_id = f"user-weixin-{uuid.uuid4().hex[:8]}"
+    aid = f"agent-weixin-{uuid.uuid4().hex[:8]}"
     sync_db_session.add(
         User(
             id=user_id,
@@ -98,7 +98,7 @@ def agent_id(sync_db_session):
     sync_db_session.add(
         Agent(
             id=aid,
-            name="WeChat Demo Restore Test Agent",
+            name="Weixin Restore Test Agent",
             gender=Gender.FEMALE,
             status=AgentStatus.APPROVED,
             creator_id=user_id,
@@ -107,7 +107,7 @@ def agent_id(sync_db_session):
     sync_db_session.commit()
     yield aid
     sync_db_session.execute(
-        delete(OpsWechatDemoBridge).where(OpsWechatDemoBridge.agent_id == aid)
+        delete(OpsWeixinBridge).where(OpsWeixinBridge.agent_id == aid)
     )
     sync_db_session.execute(delete(Agent).where(Agent.id == aid))
     sync_db_session.execute(delete(User).where(User.id == user_id))
@@ -115,7 +115,7 @@ def agent_id(sync_db_session):
 
 
 @pytest.fixture(autouse=True)
-async def reset_wechat_demo_store():
+async def reset_weixin_session_store():
     _FakeWeixinChannelSession.instances = []
     _FakeWeixinChannelSession.start_raises = False
     session_store._sessions.clear()
@@ -145,7 +145,7 @@ async def _wait_bridge_running(session_id: str) -> None:
     deadline = asyncio.get_running_loop().time() + 5.0
     while asyncio.get_running_loop().time() < deadline:
         view = await session_store.get_session(session_id)
-        if view is not None and view.phase == WechatDemoSessionPhase.BRIDGE_RUNNING:
+        if view is not None and view.phase == WeixinSessionPhase.BRIDGE_RUNNING:
             return
         await asyncio.sleep(0.05)
     raise AssertionError(f"session {session_id} did not reach bridge_running")
@@ -172,7 +172,7 @@ async def test_restore_scenarios(agent_id: str) -> None:
 
     stopped = await session_store.stop_session(session_id)
     assert stopped is not None
-    assert stopped.phase == WechatDemoSessionPhase.STOPPED
+    assert stopped.phase == WeixinSessionPhase.STOPPED
     assert await list_bridges() == []
 
     fail_session_id = f"sess-fail-{uuid.uuid4().hex[:8]}"

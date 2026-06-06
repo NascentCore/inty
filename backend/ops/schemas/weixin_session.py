@@ -1,4 +1,4 @@
-"""Pydantic models for Ops WeChat self-service demo API.
+"""Pydantic models for Ops Weixin onboard session API.
 
 TODO(weixin-onboard-jwt-delivery): Do not return long-lived JWT on public GET poll.
 Use one-time exchange code (POST redeem) or deliver after QR confirmed via WeChat DM only.
@@ -11,27 +11,11 @@ from enum import StrEnum
 from pydantic import BaseModel, Field, field_validator
 
 
-class WechatDemoSessionPhase(StrEnum):
+class WeixinSessionPhase(StrEnum):
     QR_LOGIN = "qr_login"
     BRIDGE_RUNNING = "bridge_running"
     STOPPED = "stopped"
     FAILED = "failed"
-
-
-class WechatDemoSessionCreate(BaseModel):
-    inty_api_base_url: str = Field(..., min_length=1)
-    inty_jwt: str = Field(..., min_length=1)
-    agent_id: str = Field(..., min_length=1)
-
-    @field_validator("inty_api_base_url", "inty_jwt", "agent_id", mode="before")
-    @classmethod
-    def _strip_required_text(cls, value: object) -> object:
-        if not isinstance(value, str):
-            return value
-        out = value.strip()
-        if not out:
-            raise ValueError("field must be non-empty")
-        return out
 
 
 class WeixinOnboardSessionCreate(BaseModel):
@@ -50,9 +34,9 @@ class WeixinOnboardSessionCreate(BaseModel):
         return out
 
 
-class WechatDemoSessionView(BaseModel):
+class WeixinSessionView(BaseModel):
     session_id: str
-    phase: WechatDemoSessionPhase
+    phase: WeixinSessionPhase
     qr_phase: str | None = None
     qrcode_url: str | None = None
     error: str | None = None

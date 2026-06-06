@@ -733,7 +733,7 @@ class TTSConfig(BaseModel):
 
 
 class WeixinChannelConfig(BaseModel):
-    """Ops WeChat demo bridge behavior flags."""
+    """Ops Weixin channel behavior flags."""
 
     model_config = ConfigDict(extra="ignore")
 
