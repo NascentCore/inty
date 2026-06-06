@@ -49,12 +49,12 @@ from app.core.companion_harness.memory.memory_store_document_mapping import (
 from app.core.companion_harness.companion.llm_runtime_events import (
     companion_llm_runtime_event_bind_ctx,
 )
-from living_sphere.models import (
+from app.living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
     LivingSphereUpdate,
 )
-from techno_core.models import (
+from app.techno_core.models import (
     Sphere,
     TechnoCoreEvent,
     TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,

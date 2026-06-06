@@ -18,11 +18,11 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.config import global_config_loaded_from_config_yaml
-from living_sphere.models import (
+from app.living_sphere.models import (
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
     LivingSphereUpdate,
 )
-from living_sphere.seeding import (
+from app.living_sphere.seeding import (
     LIVING_SPHERE_RELATIVE_PATH,
     ensure_living_sphere_seeded,
 )

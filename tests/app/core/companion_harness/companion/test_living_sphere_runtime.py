@@ -18,11 +18,11 @@ from app.core.companion_harness.tools.companion_tools import (
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,
 )
-from living_sphere.models import (
+from app.living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     LivingSphereUpdate,
 )
-from living_sphere.seeding import (
+from app.living_sphere.seeding import (
     LIVING_SPHERE_RELATIVE_PATH,
     ensure_living_sphere_seeded,
 )

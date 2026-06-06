@@ -46,14 +46,14 @@ flowchart TB
 
 ## 离线大规模 compact（后续专 PR）
 
-跨 scope 积压、全量 backfill 须独立 deployable + 云上调度（参考 `backend/push_worker`），**不是**拉长 `memory_pipeline` cron。复用 `living_sphere/curator.py` 合并语义；分片、锁与在线争用 DB 隔离单独设计。
+跨 scope 积压、全量 backfill 须独立 deployable + 云上调度（参考 `backend/push_worker`），**不是**拉长 `memory_pipeline` cron。复用 `app/core/companion_harness/memory/living_sphere_curator.py` 合并语义；分片、锁与在线争用 DB 隔离单独设计。
 
 ## 相关路径
 
 | 路径 | 角色 |
 | --- | --- |
-| `living_sphere/models.py` | `LivingSphereUpdate` 行模型与工具名常量 |
+| `app/living_sphere/models.py` | `LivingSphereUpdate` 行模型与工具名常量 |
 | `app/core/companion_harness/memory/living_sphere_curator.py` | jsonl → `LIVING_SPHERE.md` 合并 |
-| `living_sphere/seeding.py` | 会话 bootstrap 种子 |
+| `app/living_sphere/seeding.py` | 会话 bootstrap 种子 |
 | `app/core/companion_harness/tools/companion_tool_runtime.py` | `living_sphere_record_update` |
 | `app/core/companion_harness/memory/memory_pipeline.py` | 回合后 compact 挂钩 |

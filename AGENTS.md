@@ -26,6 +26,15 @@ Lead the human partners, to design and implement Python [agentic harness](/app/c
 - Be earnest in your reading
 - Be extremely throughly in your thinking
 
+### Design
+
+- Identify the single most effective design after exploring a wide range of possible deisng option.
+
+### Brainstorm
+
+- Consider current system status when exploring the design space, never blindly exploring ideas without firm grounding.
+- Ask me to clarify the grounding if you are unsure.
+
 ## Repo structure
 
 **IMPORTANT: `/api/v1/chat/ws` should only use companion harness, technocore, livingsphere. All others are in maintenance mode and should not be changed.**
@@ -55,9 +64,11 @@ You should only changes and use code in the following dirs:
       - User states what they prefer from your suggested options
     - **DO NOT EDIT**: [Guidelines](/.agents/guidelines/) are guidelines in different scenarios
 
-## DevOps
+### Additional dirs
 
 - [devops](/devops/) specify Inty's deployment configurations (environment and application configs etc.)
+- [research projects](/research/) general research direct or possibility relevant to Inty
+- [experimental](/experimental/) experimental code of relevant open source library/systems.
 
 ## General instructions
 

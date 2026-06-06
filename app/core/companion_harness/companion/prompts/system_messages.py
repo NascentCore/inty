@@ -59,7 +59,7 @@ from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
-from living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
+from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
