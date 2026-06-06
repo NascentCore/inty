@@ -9,7 +9,7 @@ from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
 from app.core.companion_harness.memory.memory_registry import shutdown_all_memory_stores
 from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
-from techno_core.models import (
+from app.techno_core.models import (
     TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
 )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from living_sphere.models import (
+from app.living_sphere.models import (
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
     LivingSphereUpdate,
 )

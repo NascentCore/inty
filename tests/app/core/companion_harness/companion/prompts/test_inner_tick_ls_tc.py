@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from techno_core.models import (
+from app.techno_core.models import (
     TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
 )

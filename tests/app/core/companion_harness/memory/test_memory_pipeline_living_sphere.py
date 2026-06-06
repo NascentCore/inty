@@ -14,8 +14,8 @@ from app.core.companion_harness.memory.memory_pipeline import (
     memory_update_after_turn,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from living_sphere.models import LivingSphereUpdate
-from living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown
+from app.living_sphere.models import LivingSphereUpdate
+from app.living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown
 
 
 def _idle_tool_bg() -> threading.Event:

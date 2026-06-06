@@ -51,9 +51,6 @@ fi
 
 COPY app/ app/
 COPY backend/ backend/
-# companion_harness 在 PYTHONPATH 根目录 import living_sphere / techno_core
-COPY living_sphere/ living_sphere/
-COPY techno_core/ techno_core/
 # 获取各个环节对应的配置文件，方便操作
 COPY devops/ devops/
 COPY tools/scripts/ tools/scripts/

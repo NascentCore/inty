@@ -30,4 +30,4 @@
 
 ## See also
 
-[LIVING_SPHERE.md](./LIVING_SPHERE.md) · [techno_core/DESIGN.md](../../techno_core/DESIGN.md) · [GLOSSARY.md](./GLOSSARY.md)
+[LIVING_SPHERE.md](./LIVING_SPHERE.md) · [techno_core/DESIGN.md](../../app/techno_core/DESIGN.md) · [GLOSSARY.md](./GLOSSARY.md)
