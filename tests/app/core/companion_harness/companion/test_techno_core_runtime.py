@@ -7,8 +7,8 @@ from app.core.companion_harness.memory.memory_registry import shutdown_all_memor
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
-from techno_core.models import Sphere, TechnoCoreEvent, Visibility
-from techno_core.seeding import (
+from app.techno_core.models import Sphere, TechnoCoreEvent, Visibility
+from app.techno_core.seeding import (
     TECHNO_CORE_RELATIVE_PATH,
     ensure_techno_core_seeded,
 )

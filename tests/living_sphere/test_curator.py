@@ -15,8 +15,8 @@ from app.core.companion_harness.memory.living_sphere_curator import (
     living_sphere_curator_output_rejection_reason,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from living_sphere.models import LivingSphereUpdate
-from living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown
+from app.living_sphere.models import LivingSphereUpdate
+from app.living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown
 
 
 def _valid_md(suffix: str = "") -> str:

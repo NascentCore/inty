@@ -103,7 +103,7 @@ It should be short, stable, and conceptual—not a map or lore generator.
 ## First Implementation Plan
 
 1. Define the package center.
-   - Keep `techno_core/__init__.py` docstring-only.
+   - Keep `app/techno_core/__init__.py` docstring-only.
    - State that TechnoCore is Inty's collective virtual residency layer, not a
      channel and not physical reality.
 

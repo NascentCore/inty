@@ -25,11 +25,11 @@ from app.core.companion_harness.experience_profile import ExperienceContextMode
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
-from living_sphere.models import (
+from app.living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
 )
-from techno_core.models import (
+from app.techno_core.models import (
     TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
 )

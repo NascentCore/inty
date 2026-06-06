@@ -15,11 +15,11 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_document_mapping import (
     CompanionMemoryDocumentKind,
 )
-from living_sphere.models import (
+from app.living_sphere.models import (
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
     LivingSphereUpdate,
 )
-from living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown
+from app.living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown
 
 
 def test_document_kind_for_living_sphere_updates_jsonl() -> None:

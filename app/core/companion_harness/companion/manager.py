@@ -22,8 +22,8 @@ from app.core.companion_harness.experience_profile import (
     normalize_experience_profile_id,
 )
 from app.utils.config import CompanionMemoryBootstrapType
-from living_sphere.seeding import ensure_living_sphere_seeded
-from techno_core.seeding import ensure_techno_core_seeded
+from app.living_sphere.seeding import ensure_living_sphere_seeded
+from app.techno_core.seeding import ensure_techno_core_seeded
 
 from .langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,

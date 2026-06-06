@@ -51,8 +51,8 @@ flowchart TB
     end
 
     subgraph Worlds["虚拟世界（合成刺激源）"]
-        LS["living_sphere/\n伴侣私人空间"]
-        TC["techno_core/\n集体虚拟世界"]
+        LS["app/living_sphere/\n伴侣私人空间"]
+        TC["app/techno_core/\n集体虚拟世界"]
     end
 
     subgraph Storage["持久化"]

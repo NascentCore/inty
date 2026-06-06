@@ -66,9 +66,7 @@ INTRA_REPO_PACKAGE_ROOTS = frozenset(
         "app",
         "backend",
         "experimental",
-        "living_sphere",
         "research",
-        "techno_core",
         "tests",
         "tools",
     }
@@ -78,8 +76,6 @@ INTRA_REPO_PACKAGE_ROOTS = frozenset(
 ALLOWED_INTRA_REPO_IMPORT_ROOTS = frozenset(
     {
         "app",
-        "living_sphere",
-        "techno_core",
     }
 )
 
@@ -181,7 +177,7 @@ def _intra_repo_import_rule(importer_label: str, module: str) -> str | None:
         if len(parts) >= 2 and parts[1] == "app":
             return None
     return (
-        f"{importer_label}/ must only depend on app/, living_sphere/, techno_core/, "
+        f"{importer_label}/ must only depend on app/ "
         f"and external packages; must not import intra-repo {root!r}."
     )
 
