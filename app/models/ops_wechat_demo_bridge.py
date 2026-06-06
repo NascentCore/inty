@@ -17,8 +17,8 @@ class OpsWechatDemoBridge(Base):
     ``weixin_token``: iLink bot_token after QR; no protocol TTL — ends at errcode=-14.
 
     TODO(wechat-demo-bridge-fk): evaluate agent_id FK ON DELETE CASCADE semantics.
-    TODO(wechat-demo-bridge-jwt): inty_jwt is static Bearer from Start QR UI; needs
-    user-auth binding + refresh — see plan Follow-up TODO.
+    TODO(wechat-demo-bridge-jwt): restore/persist remint in bridge_jwt; see
+    TODO(wechat-demo-bridge-jwt-periodic) for long-running bridges without DM.
     """
 
     __tablename__ = "ops_wechat_demo_bridges"

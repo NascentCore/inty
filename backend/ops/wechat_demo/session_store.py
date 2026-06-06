@@ -24,6 +24,11 @@ from backend.ops.schemas.wechat_demo import (
     WechatDemoSessionView,
     WeixinOnboardSessionCreate,
 )
+from backend.ops.wechat_demo.bridge_jwt import (
+    BridgeJwtRemintError,
+    BridgeJwtRemintInput,
+    remint_bridge_inty_jwt,
+)
 from backend.ops.wechat_demo.session_persistence import (
     PersistedWechatDemoBridge,
     delete_bridge,
@@ -124,9 +129,31 @@ def _hermes_home_str() -> str:
     return hermes_home
 
 
+async def _apply_fresh_bridge_jwt(session: _WechatDemoSession) -> None:
+    """Remint JWT from agent owner and sync session + live binding."""
+    fresh_jwt = await remint_bridge_inty_jwt(
+        BridgeJwtRemintInput(
+            agent_id=session.agent_id,
+            inty_jwt=session.inty_jwt,
+        )
+    )
+    session.inty_jwt = fresh_jwt
+    channel = session.channel_session
+    if channel is not None:
+        channel.binding.inty_jwt = fresh_jwt
+
+
 async def _persist_bridge_session(session: _WechatDemoSession) -> None:
     channel = session.channel_session
     assert channel is not None
+    try:
+        await _apply_fresh_bridge_jwt(session)
+    except BridgeJwtRemintError:
+        logger.exception(
+            "wechat_demo bridge jwt remint failed session_id={}",
+            session.session_id,
+        )
+        return
     binding = channel.binding
     record = record_from_binding_fields(
         session_id=session.session_id,
@@ -503,17 +530,32 @@ async def _restore_persisted_session(
     record: PersistedWechatDemoBridge,
 ) -> None:
     """Reattach bridge; register in-memory session before channel.start (poll 404 window)."""
+    try:
+        fresh_jwt = await remint_bridge_inty_jwt(
+            BridgeJwtRemintInput(
+                agent_id=record.agent_id,
+                inty_jwt=record.inty_jwt,
+            )
+        )
+    except BridgeJwtRemintError:
+        logger.exception(
+            "wechat_demo restore jwt remint failed session_id={}",
+            record.session_id,
+        )
+        await delete_bridge(record.session_id)
+        return
     session = _WechatDemoSession(
         session_id=record.session_id,
         inty_api_base_url=record.inty_api_base_url,
-        inty_jwt=record.inty_jwt,
+        inty_jwt=fresh_jwt,
         agent_id=record.agent_id,
     )
     async with _lock:
         if record.session_id in _sessions:
             return
         _sessions[record.session_id] = session
-    binding = _binding_from_persisted(record)
+    record_with_fresh_jwt = record.model_copy(update={"inty_jwt": fresh_jwt})
+    binding = _binding_from_persisted(record_with_fresh_jwt)
     channel = _channel_for_session(session, binding)
     try:
         await channel.start()

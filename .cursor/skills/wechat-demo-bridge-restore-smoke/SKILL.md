@@ -75,7 +75,7 @@ LIMIT 5;
 1. **只重启 Ops**（停掉 `backend/ops/start.sh` 起的 uvicorn 再启动；勿清 Postgres）。
 2. 启动日志应出现 **`WeChat demo bridge restore scheduled`**；restore 任务在 `startup_event` 里 `list_bridges()` 后 spawn。
 3. 若浏览器仍开着旧 `session_id`：poll 可能短暂 **404**（最多约 30s，页面 `POLL_404_GIVE_UP=15`、2s 间隔），随后应回到 **`bridge_running`**，**无需重新扫码**。
-4. 再发一条微信 DM：应仍能收到 companion 回复（依赖 JWT 未过期，见下节）。
+4. 再发一条微信 DM：应仍能收到 companion 回复（restore 会 remint `inty_jwt`，不依赖 DB 里旧 token 仍有效）。
 
 ### 4. 停止与清理
 
@@ -107,8 +107,8 @@ LIMIT 5;
 | 现象 | 可能原因 |
 |------|----------|
 | QR 后无 DB 行 | bridge 未进入 `BRIDGE_RUNNING`；看 Ops 日志 `wechat_demo` |
-| Ops 重启后一直 404 | restore `channel.start()` 失败（行会被 delete）；查 `wechat_demo restore channel start failed` |
-| DM 无回复 | `inty_jwt` 过期（`TODO(wechat-demo-bridge-jwt)`）、`inty_api_base_url` 指错端口、或 Inty WS 未起 |
+| Ops 重启后一直 404 | restore `channel.start()` 失败（行会被 delete）；查 `wechat_demo restore channel start failed` 或 `restore jwt remint failed` |
+| DM 无回复 | `inty_api_base_url` 指错端口、或 Inty WS 未起；长跑 bridge（>7d 无 DM）可能需 periodic remint（`TODO(wechat-demo-bridge-jwt-periodic)`） |
 | restore 后仍 `bridge_running` 但 DM 不通 | Postgres 行里是已失效 `bot_token`；应在数秒内变为 `phase=failed` 且 `error` 提示重新扫码，DB 行被删——若长期 `bridge_running` 查 Ops 日志 `weixin_ilink_expired` |
 | 多份 Weixin 连接 | 多个 Ops 实例同时 restore（违反单 runner） |
 

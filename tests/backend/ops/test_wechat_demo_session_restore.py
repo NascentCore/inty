@@ -8,13 +8,15 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
+from jose import jwt
 from sqlalchemy import delete
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.security import create_access_token
 from app.db.session import async_engine
 from app.models.agent import Agent, AgentStatus
 from app.models.ops_wechat_demo_bridge import OpsWechatDemoBridge
@@ -127,11 +129,15 @@ async def reset_wechat_demo_store():
     _FakeWeixinChannelSession.instances = []
 
 
-def _bridge_record(session_id: str, agent_id: str) -> object:
+def _bridge_record(
+    session_id: str,
+    agent_id: str,
+    inty_jwt: str = "jwt-restore-test",
+) -> object:
     return record_from_binding_fields(
         session_id=session_id,
         inty_api_base_url="http://127.0.0.1:8001",
-        inty_jwt="jwt-restore-test",
+        inty_jwt=inty_jwt,
         agent_id=agent_id,
         weixin_account_id="wx-restore-acct",
         weixin_token="tok-restore",
@@ -229,3 +235,34 @@ async def test_restore_scenarios(agent_id: str) -> None:
     assert listed == [updated]
     await delete_bridge(record.session_id)
     assert await list_bridges() == []
+
+
+@pytest.mark.asyncio
+async def test_restore_remints_expired_jwt(
+    agent_id: str,
+    sync_db_session,
+) -> None:
+    await async_engine.dispose()
+    agent = sync_db_session.get(Agent, agent_id)
+    assert agent is not None
+    expired_jwt = create_access_token(
+        agent.creator_id,
+        expires_delta=timedelta(seconds=-1),
+    )
+    session_id = f"sess-expired-jwt-{uuid.uuid4().hex[:8]}"
+    await upsert_bridge(_bridge_record(session_id, agent_id, inty_jwt=expired_jwt))
+    session_store.WeixinChannelSession = _FakeWeixinChannelSession
+    await session_store.restore_persisted_sessions()
+    await _wait_bridge_running(session_id)
+
+    rows = await list_bridges()
+    assert len(rows) == 1
+    assert rows[0].inty_jwt != expired_jwt
+    payload = jwt.decode(
+        rows[0].inty_jwt,
+        global_config_loaded_from_config_yaml.security.secret_key,
+        algorithms=[global_config_loaded_from_config_yaml.security.algorithm],
+    )
+    assert payload["exp"] > datetime.now(timezone.utc).timestamp()
+
+    await session_store.stop_session(session_id)

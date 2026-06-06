@@ -23,8 +23,9 @@ session ``error`` / ``FAILED``, not via WeChat bot DM.
 Manual release smoke (QR + WeChat DM + Ops restart): see
 ``.cursor/skills/wechat-demo-bridge-restore-smoke/SKILL.md``.
 
-TODO(wechat-demo-bridge-jwt): ``inty_jwt`` is static Bearer from Start QR UI; bind to
-user-auth + refresh instead — see plan Follow-up TODO.
+TODO(wechat-demo-bridge-jwt): restore/persist remint via ``bridge_jwt.remint_bridge_inty_jwt``
+(``Agent.creator_id``). TODO(wechat-demo-bridge-jwt-periodic): long-running bridge
+(>7d, no inbound DM) still needs periodic remint or remint-on-auth-failure.
 """
 
 from __future__ import annotations
