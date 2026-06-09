@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .models import CompanionTurnTrack
+from .turn_deps import CompanionTurnDeps
 from .turn import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
@@ -12,6 +13,7 @@ from .turn import (
 )
 
 __all__ = [
+    "CompanionTurnDeps",
     "CompanionTurnTrack",
     "run_companion_implicit_sign_on_greeting_turn",
     "run_companion_inner_tick_maintenance_turn",

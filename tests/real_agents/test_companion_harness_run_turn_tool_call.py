@@ -17,6 +17,11 @@ from app.core.companion_harness.companion.llm_client import CompanionLLMClient, 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
+from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
@@ -96,17 +101,23 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
     )
     out = await run_companion_user_chat_turn(
         user_prompt,
-        store=store,
-        llm_client=client,
-        transcript_compaction=None,
-        transcript_llm_window_max_messages=None,
-        repository_only_store_text=False,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
-        background_output_sink=None,
-        preset_user_msg_uuid=None,
-        implicit_signal_bundle=None,
-        langsmith_parent_run_enabled=None,
-        tool_bg_idle_event=None,
+        deps=CompanionTurnDeps(
+            store=store,
+            llm_client=client,
+            transcript_compaction=None,
+            transcript_llm_window_max_messages=None,
+            repository_only_store_text=False,
+            memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+            runtime_context=TurnRuntimeContext(
+                channel=CompanionRuntimeChannel.APP,
+                implicit_signal_bundle=None,
+            ),
+            background_output_sink=None,
+            preset_user_msg_uuid=None,
+            langsmith_parent_run_enabled=None,
+            tool_bg_idle_event=None,
+            bootstrap_interim_output_sink=None,
+        ),
     )
 
     assert client.saw_assistant_tool_calls, "model never returned tool_calls"

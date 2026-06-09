@@ -28,27 +28,38 @@ from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_proactive_chat_turn,
     run_companion_user_chat_turn,
 )
+from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
-def _default_turn_kwargs(**overrides: object) -> dict[str, object]:
-    kwargs: dict[str, object] = {
-        "transcript_compaction": None,
-        "transcript_llm_window_max_messages": None,
-        "repository_only_store_text": False,
-        "memory_bootstrap_type": CompanionMemoryBootstrapType.NONE.value,
-        "background_output_sink": None,
-        "preset_user_msg_uuid": None,
-        "runtime_context": TurnRuntimeContext(
+def _default_turn_deps(
+    store: MemoryStore,
+    llm_client: object,
+    **overrides: object,
+) -> CompanionTurnDeps:
+    deps = CompanionTurnDeps(
+        store=store,
+        llm_client=llm_client,  # type: ignore[arg-type]
+        transcript_compaction=None,
+        transcript_llm_window_max_messages=None,
+        repository_only_store_text=False,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        runtime_context=TurnRuntimeContext(
             channel=CompanionRuntimeChannel.APP,
             implicit_signal_bundle=None,
         ),
-        "langsmith_parent_run_enabled": None,
-        "tool_bg_idle_event": None,
-    }
-    kwargs.update(overrides)
-    return kwargs
+        background_output_sink=None,
+        preset_user_msg_uuid=None,
+        langsmith_parent_run_enabled=None,
+        tool_bg_idle_event=None,
+        bootstrap_interim_output_sink=None,
+    )
+    if overrides:
+        from dataclasses import replace
+
+        return replace(deps, **overrides)
+    return deps
 
 
 def _store(p: Path):
@@ -139,9 +150,11 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     client = _FakeAsyncDualLLMClient()
     out = await run_companion_user_chat_turn(
         "hello async dual",
-        store=store,
-        llm_client=client,  # type: ignore[arg-type]
-        **_default_turn_kwargs(tool_bg_idle_event=_idle_tool_bg()),
+        deps=_default_turn_deps(
+            store,
+            client,
+            tool_bg_idle_event=_idle_tool_bg(),
+        ),
     )
 
     assert out.tool_background_started is True
@@ -193,9 +206,7 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
 
     client = _FakeAsyncDualLLMClient()
     await run_companion_inner_tick_maintenance_turn(
-        store=store,
-        llm_client=client,  # type: ignore[arg-type]
-        **_default_turn_kwargs(),
+        deps=_default_turn_deps(store, client),
     )
 
     assert len(client.chat_calls) == 0
@@ -230,9 +241,7 @@ async def test_proactive_inner_tick_proactive_chat_sync_still_calls_llm(
 
     client = _FakeAsyncDualLLMClient()
     await run_companion_inner_tick_proactive_chat_turn(
-        store=store,
-        llm_client=client,  # type: ignore[arg-type]
-        **_default_turn_kwargs(),
+        deps=_default_turn_deps(store, client),
     )
 
     assert len(client.chat_calls) == 1
@@ -304,9 +313,11 @@ async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_injec
     client = _FakeAsyncDualLLMClientEmptyFg()
     await run_companion_user_chat_turn(
         "hello empty fg",
-        store=store,
-        llm_client=client,  # type: ignore[arg-type]
-        **_default_turn_kwargs(tool_bg_idle_event=_idle_tool_bg()),
+        deps=_default_turn_deps(
+            store,
+            client,
+            tool_bg_idle_event=_idle_tool_bg(),
+        ),
     )
 
     assert len(bg_jobs) == 1

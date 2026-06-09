@@ -21,6 +21,7 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import (
     run_companion_implicit_sign_on_greeting_turn,
 )
+from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.companion.websocket_coordinator import (
     CompanionWebSocketCoordinator,
 )
@@ -136,27 +137,28 @@ def _idle_tool_bg() -> threading.Event:
     return ev
 
 
-def _implicit_greeting_kwargs(
+def _implicit_greeting_deps(
     store: MemoryStore,
     client: _FakeLLMClient,
-) -> dict[str, object]:
+) -> CompanionTurnDeps:
     bundle = ImplicitSignalBundle(user_signed_on=True)
-    return {
-        "store": store,
-        "llm_client": client,
-        "runtime_context": TurnRuntimeContext(
+    return CompanionTurnDeps(
+        store=store,
+        llm_client=client,  # type: ignore[arg-type]
+        runtime_context=TurnRuntimeContext(
             channel=CompanionRuntimeChannel.APP,
             implicit_signal_bundle=bundle,
         ),
-        "transcript_compaction": None,
-        "transcript_llm_window_max_messages": None,
-        "repository_only_store_text": False,
-        "memory_bootstrap_type": "NONE",
-        "background_output_sink": None,
-        "preset_user_msg_uuid": None,
-        "langsmith_parent_run_enabled": False,
-        "tool_bg_idle_event": _idle_tool_bg(),
-    }
+        transcript_compaction=None,
+        transcript_llm_window_max_messages=None,
+        repository_only_store_text=False,
+        memory_bootstrap_type="NONE",
+        background_output_sink=None,
+        preset_user_msg_uuid=None,
+        langsmith_parent_run_enabled=False,
+        tool_bg_idle_event=_idle_tool_bg(),
+        bootstrap_interim_output_sink=None,
+    )
 
 
 def test_implicit_sign_on_greeting_llm_timeout_retries_then_raises(
@@ -185,7 +187,7 @@ def test_implicit_sign_on_greeting_llm_timeout_retries_then_raises(
         asyncio.run(
             run_companion_implicit_sign_on_greeting_turn(
                 "",
-                **_implicit_greeting_kwargs(store, client),
+                deps=_implicit_greeting_deps(store, client),
             )
         )
 
@@ -211,7 +213,7 @@ def test_implicit_sign_on_greeting_llm_retries_then_succeeds(
     out = asyncio.run(
         run_companion_implicit_sign_on_greeting_turn(
             "",
-            **_implicit_greeting_kwargs(store, client),
+            deps=_implicit_greeting_deps(store, client),
         )
     )
 
@@ -251,7 +253,7 @@ def test_implicit_sign_on_greeting_llm_cancelled_skips_further_attempts(
             with pytest.raises(asyncio.CancelledError):
                 await run_companion_implicit_sign_on_greeting_turn(
                     "",
-                    **_implicit_greeting_kwargs(store, client),
+                    deps=_implicit_greeting_deps(store, client),
                 )
 
     asyncio.run(_exercise())
