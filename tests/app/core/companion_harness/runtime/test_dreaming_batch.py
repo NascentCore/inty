@@ -10,8 +10,13 @@ from app.core.companion_harness.companion.dreaming import (
     DreamingCandidate,
     DreamingTranscriptBoundaryMismatchError,
 )
+from app.core.companion_harness.companion.dreaming_observability import (
+    DreamingBatchOutcome,
+)
 from app.core.companion_harness.companion.models import ChatMessage
-from app.services import companion_chat_service
+from app.core.companion_harness.runtime.dreaming_batch import (
+    run_dreaming_batch_if_due,
+)
 
 
 def _dreaming_candidate() -> DreamingCandidate:
@@ -48,58 +53,74 @@ def _noop_dreaming_observability(**_kwargs):
     yield None
 
 
-def test_run_dreaming_batch_for_session_skips_when_not_due() -> None:
+def test_run_dreaming_batch_if_due_skips_when_not_due() -> None:
     session = _session()
 
     with (
         patch(
-            "app.services.companion_chat_service.dreaming_due",
+            "app.core.companion_harness.runtime.dreaming_batch.dreaming_due",
             return_value=None,
         ) as dreaming_due,
         patch(
-            "app.services.companion_chat_service.consolidate_memory_during_dreaming"
+            "app.core.companion_harness.runtime.dreaming_batch.consolidate_memory_during_dreaming"
         ) as memory_update,
     ):
-        result = companion_chat_service.run_dreaming_batch_for_session(
+        result = run_dreaming_batch_if_due(
             session,
-            dreaming_idle_seconds=120,
+            idle_seconds=120,
         )
 
-    assert result is False
+    assert result == DreamingBatchOutcome.NOT_DUE
     dreaming_due.assert_called_once()
     memory_update.assert_not_called()
 
 
-def test_run_dreaming_batch_for_session_raises_on_boundary_mismatch() -> None:
+def test_run_dreaming_batch_if_due_skips_when_session_not_initialized() -> None:
+    session = _session()
+    session.is_initialized = False
+
+    with patch(
+        "app.core.companion_harness.runtime.dreaming_batch.dreaming_due",
+    ) as dreaming_due:
+        result = run_dreaming_batch_if_due(
+            session,
+            idle_seconds=120,
+        )
+
+    assert result == DreamingBatchOutcome.NOT_DUE
+    dreaming_due.assert_not_called()
+
+
+def test_run_dreaming_batch_if_due_raises_on_boundary_mismatch() -> None:
     session = _session()
 
     with (
         patch(
-            "app.services.companion_chat_service.dreaming_due",
+            "app.core.companion_harness.runtime.dreaming_batch.dreaming_due",
             return_value=_dreaming_candidate(),
         ),
         patch(
-            "app.services.companion_chat_service.dreaming_batch_langsmith_scope",
+            "app.core.companion_harness.runtime.dreaming_batch.dreaming_batch_langsmith_scope",
             _noop_dreaming_observability,
         ),
         patch(
-            "app.services.companion_chat_service.record_dreaming_batch_observability"
+            "app.core.companion_harness.runtime.dreaming_batch.record_dreaming_batch_observability"
         ) as record_obs,
         patch(
-            "app.services.companion_chat_service.consolidate_memory_during_dreaming"
+            "app.core.companion_harness.runtime.dreaming_batch.consolidate_memory_during_dreaming"
         ) as memory_update,
         patch(
-            "app.services.companion_chat_service.assert_dreaming_transcript_boundary_unchanged",
+            "app.core.companion_harness.runtime.dreaming_batch.assert_dreaming_transcript_boundary_unchanged",
             side_effect=DreamingTranscriptBoundaryMismatchError("mismatch"),
         ),
         patch(
-            "app.services.companion_chat_service.save_dreaming_state"
+            "app.core.companion_harness.runtime.dreaming_batch.save_dreaming_state"
         ) as save_dreaming_state,
     ):
         with pytest.raises(DreamingTranscriptBoundaryMismatchError):
-            companion_chat_service.run_dreaming_batch_for_session(
+            run_dreaming_batch_if_due(
                 session,
-                dreaming_idle_seconds=120,
+                idle_seconds=120,
             )
 
     memory_update.assert_called_once()
@@ -107,37 +128,37 @@ def test_run_dreaming_batch_for_session_raises_on_boundary_mismatch() -> None:
     record_obs.assert_not_called()
 
 
-def test_run_dreaming_batch_for_session_saves_checkpoint_after_update() -> None:
+def test_run_dreaming_batch_if_due_saves_checkpoint_after_update() -> None:
     session = _session()
 
     with (
         patch(
-            "app.services.companion_chat_service.dreaming_due",
+            "app.core.companion_harness.runtime.dreaming_batch.dreaming_due",
             return_value=_dreaming_candidate(),
         ),
         patch(
-            "app.services.companion_chat_service.dreaming_batch_langsmith_scope",
+            "app.core.companion_harness.runtime.dreaming_batch.dreaming_batch_langsmith_scope",
             _noop_dreaming_observability,
         ),
         patch(
-            "app.services.companion_chat_service.record_dreaming_batch_observability"
+            "app.core.companion_harness.runtime.dreaming_batch.record_dreaming_batch_observability"
         ) as record_obs,
         patch(
-            "app.services.companion_chat_service.consolidate_memory_during_dreaming"
+            "app.core.companion_harness.runtime.dreaming_batch.consolidate_memory_during_dreaming"
         ) as memory_update,
         patch(
-            "app.services.companion_chat_service.assert_dreaming_transcript_boundary_unchanged",
+            "app.core.companion_harness.runtime.dreaming_batch.assert_dreaming_transcript_boundary_unchanged",
         ),
         patch(
-            "app.services.companion_chat_service.save_dreaming_state"
+            "app.core.companion_harness.runtime.dreaming_batch.save_dreaming_state"
         ) as save_dreaming_state,
     ):
-        result = companion_chat_service.run_dreaming_batch_for_session(
+        result = run_dreaming_batch_if_due(
             session,
-            dreaming_idle_seconds=120,
+            idle_seconds=120,
         )
 
-    assert result is True
+    assert result == DreamingBatchOutcome.CHECKPOINT_SAVED
     memory_update.assert_called_once()
     save_dreaming_state.assert_called_once()
     record_obs.assert_called_once()

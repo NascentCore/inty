@@ -4,7 +4,7 @@ AwakeTurn — all ``CompanionTurnTrack`` entries via ``run_turn`` plus spawned
 ``tool_background`` — may only append transcript JSONL and run ``tool_background``
 side effects (incremental tool writes such as ``update_user_md``).
 
-DreamingBatch — ``run_dreaming_batch_for_session`` — MemoryDoc **batch curation**
+DreamingBatch — ``run_dreaming_batch_if_due`` — MemoryDoc **batch curation**
 must go only through ``consolidate_memory_during_dreaming`` (checkpoint and
 observability are orchestration, not curation).
 
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from .models import CompanionTurnTrack
 
-DREAMING_BATCH_ORCHESTRATOR = "run_dreaming_batch_for_session"
+DREAMING_BATCH_ORCHESTRATOR = "run_dreaming_batch_if_due"
 DREAMING_BATCH_CURATION_ENTRY = "consolidate_memory_during_dreaming"
 
 AWAKE_TURN_TRACKS: frozenset[CompanionTurnTrack] = frozenset(CompanionTurnTrack)
@@ -24,7 +24,7 @@ AWAKE_TURN_TRACKS: frozenset[CompanionTurnTrack] = frozenset(CompanionTurnTrack)
 CONSOLIDATE_MEMORY_DURING_DREAMING_IMPORT_ALLOWLIST: frozenset[str] = frozenset(
     {
         "app.core.companion_harness.memory.dreaming_consolidation",
-        "app.services.companion_chat_service",
+        "app.core.companion_harness.runtime.dreaming_batch",
     }
 )
 
