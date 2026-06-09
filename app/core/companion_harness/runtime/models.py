@@ -19,7 +19,7 @@ from app.core.companion_harness.experience_profile import (
     experience_profile_injects_private_memory,
     normalize_experience_profile_id,
 )
-from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.system_hierarchy.bundle import PromptBundle
 
 from app.core.companion_harness.runtime.utc import local_date_str
 from app.core.companion_harness.memory.memory_store_scope import (

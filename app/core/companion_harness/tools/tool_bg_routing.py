@@ -13,7 +13,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+from app.core.companion_harness.system_hierarchy.dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     DualLlmChatBranchEnvelope,
     parse_dual_llm_chat_envelope_from_message,

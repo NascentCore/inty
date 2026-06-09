@@ -14,7 +14,7 @@ from .memory_store import MemoryStore, normalize_memory_store_relative_path
 
 _MEMORY_PKG_DIR = Path(__file__).resolve().parent
 _TEMPLATES_DIR = _MEMORY_PKG_DIR / "templates"
-_PROMPTS_DIR = _MEMORY_PKG_DIR.parent / "companion" / "prompts"
+_PROMPTS_DIR = _MEMORY_PKG_DIR.parent / "system_hierarchy" / "prompts"
 _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
     {
         "AXIOM.md",

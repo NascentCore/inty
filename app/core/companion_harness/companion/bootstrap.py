@@ -33,7 +33,7 @@ from app.core.companion_harness.memory.memory_store import (
     normalize_memory_store_relative_path,
 )
 from app.core.companion_harness.runtime.models import ContextMeta
-from .prompt_slices import (
+from app.core.companion_harness.system_hierarchy.prompt_slices import (
     PROMPT_SLICE_TO_REL,
     SYSTEM_PROMPT_SLICE_SEPARATOR,
     PromptSliceId,

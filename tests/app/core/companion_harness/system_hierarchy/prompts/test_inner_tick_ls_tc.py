@@ -5,7 +5,7 @@ from app.techno_core.models import (
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
 )
 
-from app.core.companion_harness.companion.prompts.inner_tick_ls_tc import (
+from app.core.companion_harness.system_hierarchy.prompts.inner_tick_ls_tc import (
     INNER_TICK_LS_TC_AUTONOMY_SECTION,
     INNER_TICK_LS_TC_TOOL_BULLET,
 )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.system_hierarchy.bundle import PromptBundle
 
 
 def test_prompt_bundle_defaults() -> None:

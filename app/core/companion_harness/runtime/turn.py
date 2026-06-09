@@ -84,7 +84,7 @@ from app.core.companion_harness.companion.proactive_chat import (
 from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
 )
-from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.system_hierarchy.bundle import PromptBundle
 from .message_format import openai_assistant_message_dict
 from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
@@ -94,19 +94,19 @@ from app.core.companion_harness.runtime.models import (
     load_context_meta,
     transcript_relative_path_for_turn_persistence,
 )
-from app.core.companion_harness.companion.prompt_stack import (
+from app.core.companion_harness.system_hierarchy.prompt_stack import (
     append_runtime_output_format_system_message,
     refresh_companion_turn_prompt_stack,
 )
 from app.core.companion_harness.companion.runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
 from .turn_track import turn_flags_for_track
-from app.core.companion_harness.companion.prompts.system_messages import (
+from app.core.companion_harness.system_hierarchy.prompts.system_messages import (
     build_system_messages_for_chat_track,
     build_system_messages_for_inner_tick_maintenance,
     build_system_messages_for_tool_track,
 )
-from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+from app.core.companion_harness.system_hierarchy.dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
 )

@@ -18,7 +18,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.companion_harness.companion.prompt_slices import (
+from app.core.companion_harness.system_hierarchy.prompt_slices import (
     PROMPT_SLICE_TO_REL,
 )
 from app.core.companion_harness.experience_profile import ExperienceContextMode

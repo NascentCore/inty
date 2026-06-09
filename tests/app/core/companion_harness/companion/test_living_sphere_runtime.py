@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.companion_harness.runtime.models import load_context_meta, load_prompt_bundle
-from app.core.companion_harness.companion.prompts.system_messages import (
+from app.core.companion_harness.system_hierarchy.prompts.system_messages import (
     build_system_messages,
 )
 from app.core.companion_harness.runtime.scope import CompanionScope

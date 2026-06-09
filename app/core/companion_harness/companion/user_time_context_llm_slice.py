@@ -4,7 +4,7 @@ Delegates line formatting to :mod:`app.core.user_time_context_llm_meta` so the
 harness ``## user-time-context`` **system** slice matches the classic agent
 tail-user suffix contract.
 
-# TODO(code-structure): Move this to app.core.companion_harness.companion.prompts.user_time_context_slice.py
+# TODO(code-structure): Move this to app.core.companion_harness.system_hierarchy.prompts.user_time_context_slice.py
 """
 
 from __future__ import annotations

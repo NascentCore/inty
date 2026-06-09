@@ -17,7 +17,7 @@ from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.system_hierarchy.bundle import PromptBundle
 from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     ContextMeta,
@@ -26,8 +26,13 @@ from app.core.companion_harness.runtime.models import (
     load_prompt_bundle,
 )
 from app.core.companion_harness.runtime.turn_track import turn_flags_for_track
-from .implicit_signal_messages import implicit_user_signed_on_chat_turn
-from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
+from app.core.companion_harness.companion.implicit_signal_messages import (
+    implicit_user_signed_on_chat_turn,
+)
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from .prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
     build_system_messages_for_chat_track,

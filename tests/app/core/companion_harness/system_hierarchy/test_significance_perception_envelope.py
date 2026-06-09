@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+from app.core.companion_harness.system_hierarchy.dual_llm_chat_branch_envelope import (
     parse_dual_llm_chat_envelope_from_message,
     parse_dual_llm_chat_envelope_json,
     split_dual_llm_chat_branch_content,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.core.companion_harness.companion.prompt_slices import (
+from app.core.companion_harness.system_hierarchy.prompt_slices import (
     PROMPT_SLICE_TO_REL,
     PromptSliceId,
     parse_persistable_prompt_slice_id,

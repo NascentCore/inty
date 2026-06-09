@@ -9,11 +9,11 @@ from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     ContextMeta,
 )
-from app.core.companion_harness.companion.prompts.system_messages import (
+from app.core.companion_harness.system_hierarchy.prompts.system_messages import (
     build_system_messages,
 )
 from app.core.companion_harness.runtime.turn_pipeline import resolve_turn_runtime_flags
-from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.system_hierarchy.bundle import PromptBundle
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 

@@ -62,7 +62,7 @@ from app.core.companion_harness.runtime.models import (
     InnerTickActivity,
     transcript_relative_path_for_turn_persistence,
 )
-from app.core.companion_harness.companion.prompt_stack import (
+from app.core.companion_harness.system_hierarchy.prompt_stack import (
     refresh_companion_turn_prompt_stack,
 )
 from app.core.companion_harness.companion.runtime_channel import (
@@ -72,7 +72,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.runtime.runtime_events import (
     append_runtime_event,
 )
-from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+from app.core.companion_harness.system_hierarchy.dual_llm_chat_branch_envelope import (
     envelope_to_assistant_metadata_dict,
 )
 from app.core.companion_harness.runtime.utc import utc_iso_ts

@@ -30,7 +30,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
-from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.system_hierarchy.bundle import PromptBundle
 from app.core.companion_harness.runtime.models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -50,7 +50,7 @@ from app.core.companion_harness.runtime.dreaming import (
     apply_dreaming_checkpoint_to_prompt_rows,
     load_dreaming_state,
 )
-from app.core.companion_harness.companion.prompt_stack import companion_turn_tools_and_system_messages
+from app.core.companion_harness.system_hierarchy.prompt_stack import companion_turn_tools_and_system_messages
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
     ConversationCompactor,

@@ -42,7 +42,7 @@ from app.core.companion_harness.experience_profile import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.utils.config import CompanionMemoryBootstrapType
 
-from app.core.companion_harness.companion.ai_private_prompt import (
+from app.core.companion_harness.system_hierarchy.ai_private_prompt import (
     get_ai_private_jsonl_text_for_prompt,
 )
 from app.core.companion_harness.companion.bootstrap import (
@@ -62,7 +62,7 @@ from app.core.companion_harness.memory.memory_taxonomy import (
 )
 from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
-from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.system_hierarchy.bundle import PromptBundle
 
 from app.core.companion_harness.runtime.models import ContextMeta, InnerTickActivity
 from .inner_tick_ls_tc import (

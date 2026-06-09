@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.core.companion_harness.companion.ai_private_prompt import (
+from app.core.companion_harness.system_hierarchy.ai_private_prompt import (
     get_ai_private_jsonl_text_for_prompt,
     get_ai_private_merged_text_for_prompt,
     get_ai_private_text_for_prompt,

@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+from app.core.companion_harness.system_hierarchy.dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     _build_dual_llm_chat_response_format,
     parse_dual_llm_chat_envelope_json,
