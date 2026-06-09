@@ -44,17 +44,21 @@
 
 ### Phase 3：拆分旧 `companion/` 子包
 
+**执行清单**：[REFACTOR_PLAN_PHASE3_SLICES.md](./REFACTOR_PLAN_PHASE3_SLICES.md)（一 slice 一 PR；单 PR ≤35 files）。
+
 #### Phase 3.0：迁移规则
 
 - 先盘点 `app/core/companion_harness/companion/` 与对应测试，给每个文件确认唯一目标层；不把旧 `companion/` 当作长期 namespace 保留。
 - 每个切片只做同一层的 `git mv`、import 更新、测试路径更新、局部测试；切片之间不夹带行为重写。
+- **一 slice merge 后再开下一分支**；禁止多切片积压在单 PR（见切片文档硬约束）。
 - 每个新增或迁移后的 Python package 都补齐 `__init__.py` 包级 docstring；`__init__.py` 不放 re-export。
 - 包内资源读取必须同步改成新 package 路径，尤其是 prompt markdown、workspace template seed、工具 schema 相关路径。
+- import 替换用模块全路径 allowlist；勿对测试 helper 文件名做子串替换。
 - 每个切片完成后搜索旧路径引用：`app.core.companion_harness.companion`、`companion/`、`tests/app/core/companion_harness/companion`。
 
 #### Phase 3.1：拆出 `memory/`
 
-- 迁移 MemoryStore 及其边界：`memory_store.py`、`memory_registry.py`、`memory_store_scope.py`、`memory_store_document_mapping.py`、`memory_pipeline.py`、`memory_taxonomy.py`、`file_store.py`。
+- 迁移 MemoryStore 及其边界：`memory_store.py`、`memory_registry.py`、`memory_store_scope.py`、`memory_store_document_mapping.py`、`dreaming_consolidation.py`、`memory_taxonomy.py`、`file_store.py`。（Phase 3.1 **大部分完成**；`memory_pipeline` 已移除。）
 - 迁移与长期记忆强绑定的 transcript / document 辅助逻辑；若文件同时服务 runtime，由调用方向 `memory/` 依赖，不反向依赖 runtime。
 - 迁移 `templates/` 中作为 workspace 初始记忆种子的文档，并更新 `load_template_seed_text` 的资源读取。
 - 同步移动 `test_memory_*`、`test_transcript_compaction.py`、记忆管线相关测试到 `tests/app/core/companion_harness/memory/`。
@@ -77,6 +81,8 @@
 - 切片验收：OpenAI tool schema、tool background transcript、runtime inspect、媒体/搜索工具测试通过。
 
 #### Phase 3.4：拆出 `runtime/`
+
+> **进行中**：`runtime/dreaming_batch.py`（#3301）已落地；turn / manager / session 仍在 `companion/`。切片见 [REFACTOR_PLAN_PHASE3_SLICES.md](./REFACTOR_PLAN_PHASE3_SLICES.md) S1–S3c。
 
 - 迁移一轮对话编排：`turn.py`、`turn_engine.py`、`turn_pipeline.py`、`turn_routes.py`、`manager.py`、`websocket_coordinator.py`、`schedule_queue.py`。
 - 迁移运行时事件、消息格式与 session 模型：`runtime_events.py`、`llm_runtime_events.py`、`message_format.py`、`models.py`、`utc.py`。
