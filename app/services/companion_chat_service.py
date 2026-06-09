@@ -20,7 +20,7 @@ from loguru import logger
 from app.core.companion_harness.runtime.runtime_events import (
     append_runtime_event,
 )
-from app.core.companion_harness.companion.dreaming_observability import (
+from app.core.companion_harness.runtime.dreaming_observability import (
     DreamingBatchOutcome,
 )
 from app.core.companion_harness.runtime.dreaming_batch import (

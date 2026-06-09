@@ -13,13 +13,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from app.core.companion_harness.companion.dreaming import (
+from app.core.companion_harness.runtime.dreaming import (
     assert_dreaming_transcript_boundary_unchanged,
     dreaming_due,
     dreaming_state_from_candidate,
     save_dreaming_state,
 )
-from app.core.companion_harness.companion.dreaming_observability import (
+from app.core.companion_harness.runtime.dreaming_observability import (
     DreamingBatchOutcome,
     dreaming_batch_langsmith_scope,
     new_dreaming_batch_trace_id,

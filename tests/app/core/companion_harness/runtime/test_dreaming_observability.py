@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
-from app.core.companion_harness.companion.dreaming import DreamingCandidate
-from app.core.companion_harness.companion.dreaming_observability import (
+from app.core.companion_harness.runtime.dreaming import DreamingCandidate
+from app.core.companion_harness.runtime.dreaming_observability import (
     INNER_TICK_DREAMING_RUNTIME_EVENT_KIND,
     DreamingBatchOutcome,
     build_inner_tick_dreaming_runtime_event_record,
@@ -71,7 +71,7 @@ def test_build_inner_tick_dreaming_runtime_event_record_fields() -> None:
 def test_dreaming_batch_langsmith_scope_yields_none_when_parent_disabled(
     _create: MagicMock,
 ) -> None:
-    from app.core.companion_harness.companion.dreaming_observability import (
+    from app.core.companion_harness.runtime.dreaming_observability import (
         dreaming_batch_langsmith_scope,
     )
 

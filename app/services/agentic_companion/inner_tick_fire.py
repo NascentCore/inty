@@ -39,7 +39,7 @@ from app.api.v1.endpoints.chat import (
     _companion_ai_meta_from_turn_result,
     _normalize_chat_response_content,
 )
-from app.core.companion_harness.companion.dreaming_observability import (
+from app.core.companion_harness.runtime.dreaming_observability import (
     DreamingBatchOutcome,
 )
 from app.core.companion_harness.companion.inner_tick_schedule import (

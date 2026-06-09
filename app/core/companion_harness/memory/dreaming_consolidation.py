@@ -17,7 +17,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.companion.dreaming import parse_transcript_datetime
+from app.core.companion_harness.runtime.dreaming import parse_transcript_datetime
 from app.core.companion_harness.runtime.models import ChatMessage
 from app.core.companion_harness.runtime.utc import local_date_str
 

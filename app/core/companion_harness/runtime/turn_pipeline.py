@@ -46,7 +46,7 @@ from app.core.companion_harness.runtime.models import (
 )
 from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
 from .turn_track import turn_flags_for_track
-from app.core.companion_harness.companion.dreaming import (
+from app.core.companion_harness.runtime.dreaming import (
     apply_dreaming_checkpoint_to_prompt_rows,
     load_dreaming_state,
 )

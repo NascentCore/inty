@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Iterator
 
 from loguru import logger
 
-from app.core.companion_harness.companion.dreaming import DreamingCandidate
+from app.core.companion_harness.runtime.dreaming import DreamingCandidate
 from app.core.companion_harness.runtime.models import InnerTickActivity
 
 if TYPE_CHECKING:

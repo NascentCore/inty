@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.core.companion_harness.companion.dreaming import (
+from app.core.companion_harness.runtime.dreaming import (
     DreamingState,
     apply_dreaming_checkpoint_to_prompt_rows,
     dreaming_candidate_slice,

@@ -2,7 +2,7 @@
 
 This package holds scope-level execution seams (``run_turn`` tracks, DreamingBatch,
 WebSocket coordination) that wire memory, LLM, tools, and observability. Domain rules
-for sleeping-state dreaming live in ``companion.dreaming``; callers invoke runtime
+for sleeping-state dreaming live in ``runtime.dreaming``; callers invoke runtime
 entry points after resolving a ``CompanionSession``.
 
 **Lock contract (prototype):**

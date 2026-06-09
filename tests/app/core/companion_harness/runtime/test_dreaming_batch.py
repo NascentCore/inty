@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.core.companion_harness.companion.dreaming import (
+from app.core.companion_harness.runtime.dreaming import (
     DreamingCandidate,
     DreamingTranscriptBoundaryMismatchError,
 )
-from app.core.companion_harness.companion.dreaming_observability import (
+from app.core.companion_harness.runtime.dreaming_observability import (
     DreamingBatchOutcome,
 )
 from app.core.companion_harness.runtime.models import ChatMessage
