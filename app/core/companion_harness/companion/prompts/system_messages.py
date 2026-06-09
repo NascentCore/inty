@@ -379,6 +379,7 @@ __CONFESS_TO_USER = (
 )
 
 
+# TODO(narrow-maintenance): Drop 档案一致 / memory_store 写回 bullets below; ai_private append only; MemoryDoc → DREAMING.
 __EASE_CONTEXT_PRESSURE = (
     "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
     "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"
@@ -388,15 +389,14 @@ __EASE_CONTEXT_PRESSURE = (
     "**与 ai_private**：内在节拍轮从 MemoryStore `ai_private.jsonl` 注入；"
     "维护方 append JSON 行工具尚未接入，当前无法经工具写回 ai_private。"
     "本节拍仅用允许的工具维护持久化档案与 USER 档案一致，勿编造不存在的工具名。"
-    "（TODO(inner-tick-autonomy): 上句「档案一致」将删除；本节拍仅写 ai_private，档案由 dreaming 维护。）"
 )
 
 
 def _get_inner_tick_autonomy_prompt_slice() -> str:
-    """AUTONOMY 轨道的核心指令：读 LIFE_CURRENTS.md → 用开放工具真的去做 → 写回进展；绝不向用户发任何消息。
+    """AUTONOMY：虚拟空间/环境中的自主活动（``LIFE_CURRENTS.md``），不是对用户的心理独白（``ai_private.jsonl`` / MAINTENANCE）。
 
-    Memory doc filenames come from ``relative_path_for_kind(CompanionMemoryDocumentKind.*, None)``;
-    tool names come from ``CompanionToolName.*.value``. Single source of truth — rename-safe.
+    Read → open tools do real work → write progress back; never deliver to the user.
+    Memory doc filenames: ``relative_path_for_kind``; tool names: ``CompanionToolName.*.value``.
     """
     life_currents_md = relative_path_for_kind(
         CompanionMemoryDocumentKind.LIFE_CURRENTS, None
@@ -448,8 +448,8 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
 
 
 def _inner_tick_turn_section() -> str:
-    # TODO(narrow-maintenance): Maintenance-only slice; ``AUTONOMY`` uses
-    # ``build_system_messages_for_inner_tick_autonomy`` instead.
+    # TODO(narrow-maintenance): MAINTENANCE-only slice (ai_private + scene beat); drop 档案一致 /
+    # LS/TC / memory_store bullets. ``AUTONOMY`` → ``build_system_messages_for_inner_tick_autonomy``.
     return "\n".join(
         [
             __INNER_TICK_SCENE_ADVANCING,

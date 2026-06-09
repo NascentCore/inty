@@ -380,7 +380,6 @@ class CompanionManager:
         self,
         session: CompanionSession,
         *,
-        defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -389,11 +388,11 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_inner_tick_autonomy(
-            **self._track_turn_kwargs(
+            deps=self._build_turn_deps(
                 session,
-                defer_memory_update=defer_memory_update,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
+                bootstrap_interim_output_sink=None,
             ),
         )

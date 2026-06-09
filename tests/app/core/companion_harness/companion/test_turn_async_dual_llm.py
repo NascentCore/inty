@@ -254,9 +254,7 @@ async def test_async_dual_inner_tick_autonomy_uses_autonomy_system_messages(
 
     client = _FakeAsyncDualLLMClient()
     await run_inner_tick_autonomy(
-        store=store,
-        llm_client=client,  # type: ignore[arg-type]
-        **_default_turn_kwargs(),
+        deps=_default_turn_deps(store, client),
     )
 
     assert len(client.chat_calls) == 0

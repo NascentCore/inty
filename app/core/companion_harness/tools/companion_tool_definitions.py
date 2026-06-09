@@ -39,10 +39,13 @@ from app.techno_core.models import (
 
 MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 
+# TODO(ai-private-jsonl-write): ``ai_private.jsonl`` (inner thoughts *about the user*, MAINTENANCE)
+# is ORM-mapped but excluded here — not ``LIFE_CURRENTS.md`` (virtual-world activity, AUTONOMY).
+# Enable MAINTENANCE append via dedicated append-only tool (preferred) or allowlist + append-only runtime.
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
     {
         "IDENTITY.md",
-        "LIFE_CURRENTS.md",
+        "LIFE_CURRENTS.md",  # AUTONOMY: virtual-space activity (not ai_private user-directed thoughts)
         "MEMORY.md",
         "SOUL.md",
         "STYLE.md",
@@ -583,8 +586,9 @@ BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
 )
 
-# TODO(inner-tick-autonomy): Collapse to ai_private append-only (plus minimal read if needed);
-# remove UPDATE_USER_MD, TECHNO_CORE_RECORD_EVENT, memory_store_* — 记忆一致性 → dreaming.
+# TODO(narrow-maintenance): MAINTENANCE only — collapse to ``ai_private.jsonl`` append (+ minimal
+# read if needed). Drop UPDATE_USER_MD, TECHNO_CORE_RECORD_EVENT, memory_store_*; MemoryDoc
+# curation → DREAMING. AUTONOMY uses ``INNER_TICK_AUTONOMY_TOOL_NAMES`` (LIFE_CURRENTS + open tools).
 INNER_TICK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.UPDATE_USER_MD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,

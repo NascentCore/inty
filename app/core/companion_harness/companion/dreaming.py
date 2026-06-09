@@ -1,8 +1,16 @@
-"""Sleeping-state dreaming for turning recent chat into memory.
+"""Sleeping-state dreaming for end-of-day rollup into memory.
 
 Dreaming is Inty's sleeping-state memory activity. When the configured idle
 period passes with no user messages, a signed-on presence inner-tick poll may
-review the chat since the previous dream and settles it into applicable MemoryDocs.
+**summarize everything that happened during the day** since the previous dream
+checkpoint and settle it into applicable MemoryDocs: user-visible dialogue on
+``transcript.jsonl`` (``USER_CHAT``, ``PROACTIVE_CHAT``, ``SCHEDULED``) plus
+silent awake inner-tick footprints (``AUTONOMY``, ``MAINTENANCE`` — inner-tick
+transcript, ``LIFE_CURRENTS.md``, ``ai_private.jsonl``, related tool/jsonl traces).
+
+``TODO(dreaming-day-rollup)``: ``dreaming_candidate_slice`` today gates on
+``transcript.jsonl`` only; merge inner-tick / ai_private / LIFE_CURRENTS into
+``consolidate_memory_during_dreaming`` input.
 
 If there has never been a previous dream, Inty only looks back over the last
 24 hours so the first dream does not reopen an unbounded history.
@@ -169,8 +177,19 @@ def dreaming_candidate_slice(
     *,
     now: datetime,
 ) -> DreamingCandidate | None:
-    """Return checkpoint-after rows, or at most the last 24h when no checkpoint exists."""
+    """Return checkpoint-after rows for dreaming consolidation.
+
+    Today only ``transcript.jsonl`` (user-visible chat, proactive, scheduled).
+    TODO(dreaming-day-rollup): Merge same-day ``transcript_inner_tick.jsonl``
+    (AUTONOMY / MAINTENANCE), ``ai_private.jsonl``, and ``LIFE_CURRENTS.md``
+    (plus related tool/jsonl traces) into the candidate slice passed to
+    ``consolidate_memory_during_dreaming``; extend ``DreamingCandidate`` /
+    race guard if inner-tick boundaries need separate checkpoints.
+
+    Without checkpoint: at most the last 24h on the main transcript.
+    """
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    # TODO(dreaming-day-rollup): load and merge paths.transcript_inner_tick here.
     raw_rows = transcript_without_trailing_presence_signals(
         load_transcript_from_store(store, paths.transcript)
     )

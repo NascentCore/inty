@@ -667,74 +667,31 @@ async def run_inner_tick_autonomy(
     agent_id: str,
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
-    defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
 ) -> CompanionTurnResult:
-    """AUTONOMY inner-tick: silent self-directed turn; assistant_text is not delivered to the user.
-
-    Self-contained on the service side: opens the session, runs the kernel
-    autonomy turn via the manager, and emits the start/finish log line. No
-    indirection through ``_run_companion_api_track_turn`` / ``run_track``
-    lambda — this is the only entry the autonomy worker uses.
-    """
-    track_path = "inner_tick_autonomy"
-    cfg = global_config_loaded_from_config_yaml
-    agent_cfg = cfg.agent
-    api_base = (
-        agent_cfg.chat_llm_base_url or agent_cfg.base_url or ""
-    ).strip() or "https://openrouter.ai/api/v1"
-    chat_api_id = resolved_chat_model.id_on_provider
-    t0 = time.perf_counter()
-    logger.debug(
-        "companion_chat_turn start path={} user={} agent={} chat={} model={} api_base={} defer_memory={}",
-        track_path,
-        user_id,
-        agent_id,
-        chat_id,
-        chat_api_id,
-        api_base,
-        defer_memory_update,
-    )
-    manager, session, chat_api_id, manager_session_ms, ws_system_ms = (
-        await _companion_session_for_api_turn(
-            user_id=user_id,
-            agent_id=agent_id,
-            chat_id=chat_id,
-            resolved_chat_model=resolved_chat_model,
-            session_id=session_id,
-        )
-    )
-    t_rt0 = time.perf_counter()
-    out = await manager.run_inner_tick_autonomy_turn(
-        session,
-        defer_memory_update=defer_memory_update,
-        background_output_sink=background_output_sink,
-        preset_user_msg_uuid=preset_user_msg_uuid,
-        runtime_context=TurnRuntimeContext(
-            channel=runtime_channel,
-            implicit_signal_bundle=implicit_signal_bundle,
-        ),
-    )
-    run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
-    _log_companion_api_turn_finished(
-        track_path=track_path,
+    """AUTONOMY inner-tick: silent self-directed turn; assistant_text is not delivered to the user."""
+    return await _run_companion_api_track_turn(
+        track_path="inner_tick_autonomy",
         user_id=user_id,
         agent_id=agent_id,
         chat_id=chat_id,
-        chat_api_id=chat_api_id,
-        t0=t0,
-        manager_session_ms=manager_session_ms,
-        ws_system_ms=ws_system_ms,
-        run_turn_ms=run_turn_ms,
+        resolved_chat_model=resolved_chat_model,
         user_chars=0,
-        defer_memory_update=defer_memory_update,
-        out=out,
+        session_id=session_id,
+        run_track=lambda manager, session: manager.run_inner_tick_autonomy_turn(
+            session,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
+            runtime_context=TurnRuntimeContext(
+                channel=runtime_channel,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
+        ),
     )
-    return out
 
 
 async def run_companion_chat_turn_for_api(

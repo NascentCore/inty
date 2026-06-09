@@ -61,6 +61,7 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "STYLE.md": (CompanionMemoryDocumentKind.STYLE, None),
     "USER.md": (CompanionMemoryDocumentKind.USER, None),
     "MEMORY.md": (CompanionMemoryDocumentKind.MEMORY, None),
+    # Virtual-space activity state (AUTONOMY): what Inty is doing in the world—not inner thoughts about the user.
     "LIFE_CURRENTS.md": (CompanionMemoryDocumentKind.LIFE_CURRENTS, None),
     "CHANNELS.md": (CompanionMemoryDocumentKind.CHANNELS, None),
     "TECHNO_CORE.md": (CompanionMemoryDocumentKind.TECHNO_CORE, None),
@@ -86,8 +87,8 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     ),
     "context.json": (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
     "ai_private.md": (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
-    # TODO(inner-tick-autonomy): append tool for autonomy inner-tick; read-only injection today.
-    # The injected tools are for the agent to perform actions during "autonomous activity" (as part of inner-tick).
+    # Inner thoughts about the user (MAINTENANCE)—not LIFE_CURRENTS virtual-world activity.
+    # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today.
     "ai_private.jsonl": (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
     "tool_background.jsonl": (
         CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL,

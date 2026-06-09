@@ -50,6 +50,7 @@ import os
 import threading
 import time
 import uuid
+from datetime import datetime
 from contextlib import nullcontext
 from copy import deepcopy
 from typing import Any
@@ -250,15 +251,29 @@ async def _run_bootstrap_track_sync_tool_loop(
     memory_bootstrap_type: str,
     repository_only_store_text: bool,
     trace_id: str,
+    user_text: str,
+    ts_user: datetime,
     user_msg_uuid: str,
     transcript_rel: str,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
 ) -> tuple[str, str, str, bool, str | None]:
     """In-turn chat + tools for ``USER_CHAT_BOOTSTRAP`` (no dual-LLM / tool_background).
 
-    Non-empty assistant ``content`` from each LLM round may be pushed via
-    ``bootstrap_interim_output_sink`` and appended to ``transcript_rel`` before the turn ends.
+    Persists the user transcript row first, then non-empty assistant ``content`` from each LLM
+    round (via callback) so JSONL order is always user → assistant(s). Interim rounds with
+    ``tool_calls`` may also push via ``bootstrap_interim_output_sink``. Caller must not append
+    the user row again at turn end.
     """
+    store.append_jsonl_record(
+        transcript_rel,
+        {
+            "role": "user",
+            "content": user_text,
+            "ts": ts_user.isoformat(),
+            "uuid": user_msg_uuid,
+            "trace_id": trace_id,
+        },
+    )
     working_messages = deepcopy(messages)
     loop_tools = list(tools_for_turn)
     chat_model = llm_client.resolve_model("chat")
@@ -645,6 +660,8 @@ async def _run_companion_turn_core(
                         memory_bootstrap_type=memory_bootstrap_type,
                         repository_only_store_text=repository_only_store_text,
                         trace_id=trace_id,
+                        user_text=user_text,
+                        ts_user=ts_user,
                         user_msg_uuid=user_msg_uuid,
                         transcript_rel=rel_tr_bootstrap,
                         bootstrap_interim_output_sink=(
@@ -1006,7 +1023,8 @@ async def _run_companion_turn_core(
         if track == CompanionTurnTrack.INNER_TICK_SCHEDULED:
             user_row["scheduled"] = True
         user_row["trace_id"] = trace_id
-        store.append_jsonl_record(rel_tr, user_row)
+        if track != CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            store.append_jsonl_record(rel_tr, user_row)
     assistant_row: dict[str, Any] = {
         "role": "assistant",
         "content": last_text,
@@ -1141,19 +1159,7 @@ async def run_companion_inner_tick_maintenance_turn(
 
 async def run_inner_tick_autonomy(
     *,
-    store: MemoryStore,
-    llm_client: CompanionLLMClient,
-    defer_memory_update: bool,
-    memory_config: MemoryPipelineConfig | None,
-    transcript_compaction: TranscriptCompactionConfig | None,
-    transcript_llm_window_max_messages: int | None,
-    repository_only_store_text: bool,
-    memory_bootstrap_type: str,
-    runtime_context: TurnRuntimeContext,
-    background_output_sink: BackgroundToolEventSink | None,
-    preset_user_msg_uuid: str | None,
-    langsmith_parent_run_enabled: bool | None,
-    tool_bg_idle_event: threading.Event | None,
+    deps: CompanionTurnDeps,
 ) -> CompanionTurnResult:
     """AUTONOMY inner tick: open tool set, **never** delivers to the user.
 
@@ -1165,17 +1171,5 @@ async def run_inner_tick_autonomy(
     return await _run_companion_turn_core(
         "",
         track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
-        store=store,
-        llm_client=llm_client,
-        defer_memory_update=defer_memory_update,
-        memory_config=memory_config,
-        transcript_compaction=transcript_compaction,
-        transcript_llm_window_max_messages=transcript_llm_window_max_messages,
-        repository_only_store_text=repository_only_store_text,
-        memory_bootstrap_type=memory_bootstrap_type,
-        runtime_context=runtime_context,
-        background_output_sink=background_output_sink,
-        preset_user_msg_uuid=preset_user_msg_uuid,
-        langsmith_parent_run_enabled=langsmith_parent_run_enabled,
-        tool_bg_idle_event=tool_bg_idle_event,
+        deps=deps,
     )

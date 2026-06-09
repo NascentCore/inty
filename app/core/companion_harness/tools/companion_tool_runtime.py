@@ -116,8 +116,8 @@ _USER_PROFILE_SECTION = "## 身份信息"
 # ``TOOL_TAG_GENERATION`` / memory-store caps / allowlist: ``companion_tool_definitions``.
 
 
-# TODO(inner-tick-autonomy): ai_private.jsonl append-only tool for autonomy inner-tick; drop
-# UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (记忆一致性 → dreaming).
+# TODO(narrow-maintenance): ``ai_private.jsonl`` append tool for MAINTENANCE inner-tick; drop
+# UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (MemoryDoc → DREAMING).
 
 
 def _latest_generated_image_http_url_from_index(
@@ -560,9 +560,10 @@ def build_openai_repl_tools(
 
 def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     """
-    内在节拍：USER 档案、LivingSphere/TechnoCore 事件日志、工作区读写；不含定时、联网、生图/改图。
+    MAINTENANCE 内在节拍：USER 档案、TechnoCore 事件、MemoryStore 读写；不含定时、联网、生图/改图。
 
-    TODO(inner-tick-autonomy): Autonomy inner-tick — ai_private.jsonl append only; see INNER_TICK_TOOL_NAMES.
+    TODO(narrow-maintenance): 收成 ``ai_private.jsonl`` append-only；见 ``INNER_TICK_TOOL_NAMES``。
+    自主活动（``LIFE_CURRENTS``、开放 tools）在 ``build_openai_repl_tools_inner_tick_autonomy``。
     """
     return prepare_openai_tools_for_chat_completions(
         openai_tools_for_names(

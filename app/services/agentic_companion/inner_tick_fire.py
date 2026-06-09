@@ -694,7 +694,6 @@ async def try_fire_autonomy_inner_tick(
                 agent_id=agent_id,
                 chat_id=chat_row_id,
                 resolved_chat_model=model_override,
-                defer_memory_update=True,
                 session_id=session_id,
                 background_output_sink=coordinator.background_sink,
                 preset_user_msg_uuid=preset_uid,

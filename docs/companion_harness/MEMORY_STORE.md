@@ -15,19 +15,20 @@ MemoryStore 是 Companion Harness 的「工作区状态层」：人设、对话�
 
 MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口都是 POSIX 格式相对路径（对模型友好），权威存储在 Postgres `companion_memory_document_versions`，每条文档由 `document_kind` 标签分类。
 
-### 1. 人设根稿（IDENTITY / SOUL / USER / MEMORY）
+### 1. 人设根稿（IDENTITY / SOUL / USER / MEMORY / LIFE_CURRENTS）
 
 - companion 的身份、稳定边界、对用户的长期理解，以及跨日的语义记忆。
-- 由记忆管线与少量工具策展更新；通常只读注入到 system prompt。
-- 分层与触发机制详见 [`dreaming_consolidation`](/app/core/companion_harness/memory/dreaming_consolidation.py)，本文不重复。
+- **`LIFE_CURRENTS.md`**（AUTONOMY）：Inty 在 **虚拟空间/环境**中的自主活动状态（中期主题、当日兴致、进展）——**她在世界里做什么**，不是对用户的心理独白。与 `ai_private.jsonl` 分工见 [`AUTONOMY.md`](./AUTONOMY.md#ai_privatejsonl-vs-life_currentsmd核心区分)。
+- 由记忆管线与少量工具策展更新；通常只读注入到 system prompt（`LIFE_CURRENTS` 另由 AUTONOMY 写、PROACTIVE_CHAT 只读 hint）。
+- **DREAMING（sleeping）** 做 **当日汇总**：用户可见 `transcript.jsonl`（chat / proactive / scheduled）与沉默 awake 轨（autonomy / maintenance 的 inner-tick transcript、`LIFE_CURRENTS.md`、`ai_private.jsonl` 等）一并策展进 gist 与 semantic MemoryDoc。实现与 `TODO(dreaming-day-rollup)` 见 [`dreaming_consolidation`](/app/core/companion_harness/memory/dreaming_consolidation.py)、[`AUTONOMY.md`](./AUTONOMY.md)。
 
 ### 2. 对话轨迹（transcript / inner_tick / ai_private）
 
 - **`transcript.jsonl`**：用户可见对话主轨；每轮末追加 user / assistant，作为下一轮上下文与压实输入；体积大时带截窗读取。Proactive chat 也写本轨；**proactive rhythm** 以本轨**最后一条 assistant 的 `ts`** 为锚（见 [ARCH.md](./ARCH.md) 与 `proactive_chat.py`）。
-- **`transcript_inner_tick.jsonl`**：仅承载**维护型**内在节拍；与主 transcript 按时间合并后供 inner_tick scene；proactive heartbeat 仍写主轨。
-- **`ai_private.md` / `ai_private.jsonl`**：内在活动语料，供 inner-tick 等注入 `内在活动（ai_private）` system 块。
+- **`transcript_inner_tick.jsonl`**：沉默 inner-tick turn（`MAINTENANCE`、`AUTONOMY`）；与主 transcript 按时间合并后供 inner_tick scene；proactive / scheduled 仍写主轨。
+- **`ai_private.md` / `ai_private.jsonl`**：**对用户的心理独白**（情绪、未说出口的念头、关系场景里的内在节拍），供 MAINTENANCE inner-tick 注入 `内在活动（ai_private）` system 块。不是虚拟环境里的「动手做事」——后者见 `LIFE_CURRENTS.md`（AUTONOMY）。
   - **读**：由 `get_ai_private_jsonl_text_for_prompt` / `get_ai_private_text_for_prompt` 等从 MemoryStore 读取（实现见 `app/core/companion_harness/companion/ai_private_prompt.py`）。
-  - **写（当前事实）**：`ai_private.jsonl` 已映射到 ORM（`memory_store_document_mapping.py`），但伴侣工具链里 **`memory_store_write_document` 受 `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` 约束**（仅 `IDENTITY.md`、`MEMORY.md`、`SOUL.md`、`STYLE.md`、`USER.md`），**不含** `ai_private.jsonl`，故 **模型经工具默认不可写**该文件；运维/测试或代码内直接 `MemoryStore.write_document` 仍可写入。若产品要求「维护方仅 append JSONL」，需 **扩展白名单或专用 append 工具**（另行设计）。
+  - **写（当前事实）**：`ai_private.jsonl` 已映射到 ORM（`memory_store_document_mapping.py`），但伴侣工具链里 **`memory_store_write_document` 受 `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` 约束**（仅 allowlist 内 `.md`），**不含** `ai_private.jsonl`，故 **模型经工具默认不可写**该文件；运维/测试或代码内直接 `MemoryStore.write_document` / `append_jsonl_record` 仍可写入。TODO(`ai-private-jsonl-write`)：为 MAINTENANCE 接通 append（专用 append 工具优先，或 allowlist + runtime 仅 append）。
 
 ### LivingSphere 小家（`LIVING_SPHERE.md` + `living_sphere_updates.jsonl`）
 
