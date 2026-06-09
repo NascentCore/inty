@@ -25,10 +25,10 @@ from app.utils.config import CompanionMemoryBootstrapType
 from app.living_sphere.seeding import ensure_living_sphere_seeded
 from app.techno_core.seeding import ensure_techno_core_seeded
 
-from app.core.companion_harness.companion.langsmith_parent_policy import (
+from app.core.companion_harness.runtime.langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
-from app.core.companion_harness.companion.llm_client import (
+from app.core.companion_harness.runtime.llm_client import (
     CompanionLLMClient,
     CompanionLLMConfig,
 )
@@ -41,7 +41,7 @@ from app.core.companion_harness.memory.memory_registry import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult
-from app.core.companion_harness.companion.runtime_channel import (
+from app.core.companion_harness.runtime.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )

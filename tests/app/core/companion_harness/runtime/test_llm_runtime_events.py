@@ -4,10 +4,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.core.companion_harness.companion.llm_inference_errors import (
+from app.core.companion_harness.runtime.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
-from app.core.companion_harness.companion.llm_runtime_events import (
+from app.core.companion_harness.runtime.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
     exc_chain_includes_llm_inference_failure_root_causes,

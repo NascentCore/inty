@@ -45,7 +45,7 @@ from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.system_hierarchy.ai_private_prompt import (
     get_ai_private_jsonl_text_for_prompt,
 )
-from app.core.companion_harness.companion.bootstrap import (
+from app.core.companion_harness.runtime.bootstrap import (
     build_bootstrap_tool_call_section,
     build_interactive_bootstrap_template_reference_parts,
     interactive_bootstrap_active,

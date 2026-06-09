@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.companion_harness.companion.llm_inference_errors import (
+from app.core.companion_harness.runtime.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
 from app.core.companion_harness.tools.image_gate import (
@@ -40,7 +40,7 @@ from app.core.companion_harness.runtime.runtime_events import (
     build_user_signed_out_runtime_event_record,
     build_ws_conn_dropped_runtime_event_record,
 )
-from app.core.companion_harness.companion.websocket_coordinator import (
+from app.core.companion_harness.runtime.websocket_coordinator import (
     BootstrapInterimDeliverCtx,
     BootstrapInterimQueued,
     ChatWsInflightShutdownRegistry,

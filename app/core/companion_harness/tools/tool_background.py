@@ -45,14 +45,14 @@ from app.core.companion_harness.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
 
-from app.core.companion_harness.companion.llm_chat_runtime import (
+from app.core.companion_harness.runtime.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     end_companion_turn_root_run_safe,
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from app.core.companion_harness.companion.llm_client import LLM_SCENE_TOOL_CALL
-from app.core.companion_harness.companion.llm_runtime_events import (
+from app.core.companion_harness.runtime.llm_client import LLM_SCENE_TOOL_CALL
+from app.core.companion_harness.runtime.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
     exc_chain_includes_llm_inference_failure_root_causes,
@@ -65,7 +65,7 @@ from app.core.companion_harness.runtime.models import (
 from app.core.companion_harness.system_hierarchy.prompt_stack import (
     refresh_companion_turn_prompt_stack,
 )
-from app.core.companion_harness.companion.runtime_channel import (
+from app.core.companion_harness.runtime.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )

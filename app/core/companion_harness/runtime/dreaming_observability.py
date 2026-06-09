@@ -69,7 +69,7 @@ def dreaming_batch_langsmith_scope(
     parent_run_enabled: bool | None,
 ) -> Iterator[Any | None]:
     """Open a LangSmith parent run for one dreaming memory batch."""
-    from app.core.companion_harness.companion.llm_chat_runtime import (
+    from app.core.companion_harness.runtime.llm_chat_runtime import (
         create_companion_turn_root_run,
     )
 
@@ -109,7 +109,7 @@ def record_dreaming_batch_observability(
     TODO(dreaming-batch-langsmith-finally): Callers that raise before this runs leave the parent
     open — see ``run_dreaming_batch_if_due``; end parent in try/finally on failure paths.
     """
-    from app.core.companion_harness.companion.llm_chat_runtime import (
+    from app.core.companion_harness.runtime.llm_chat_runtime import (
         companion_turn_langsmith_parent_run_id_str,
         companion_turn_langsmith_parent_trace_id_str,
         end_companion_turn_root_run_safe,

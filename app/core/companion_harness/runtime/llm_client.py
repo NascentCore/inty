@@ -21,7 +21,7 @@ from app.core.companion_harness.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_sync_client,
 )
-from app.core.companion_harness.companion.llm_runtime_events import (
+from app.core.companion_harness.runtime.llm_runtime_events import (
     record_llm_inference_failure,
 )
 from app.utils.models_catalog import DEEPSEEK_V3_2, GenAIModel

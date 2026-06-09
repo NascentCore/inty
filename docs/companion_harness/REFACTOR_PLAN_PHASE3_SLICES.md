@@ -7,11 +7,11 @@
 | Phase | 目标包 | 状态 |
 |-------|--------|------|
 | 3.1 `memory/` | MemoryStore、scope、mapping、`dreaming_consolidation` | **大部分完成** |
-| 3.2 `system_hierarchy/` | prompts、system_messages、prompt_slices | **未开始**（仍在 `companion/` + 过渡包 `prompting/`） |
+| 3.2 `system_hierarchy/` | prompts、system_messages、prompt_slices | **完成**（S4+S5；`prompting/` 已退役） |
 | 3.3 `tools/` | tool runtime、background、dispatchers | **大部分完成** |
-| 3.4 `runtime/` | turn、manager、session、WS coordinator | **进行中**（`runtime/dreaming_batch.py`；S3 部分完成） |
-| 3.5 `environment/` | inner tick、dreaming 触发、implicit signals | **未开始** |
-| 3.6 清空 `companion/` | 无 `app.core.companion_harness.companion` import | **未开始** |
+| 3.4 `runtime/` | turn、manager、session、WS coordinator | **完成**（S1–S3b+S8） |
+| 3.5 `environment/` | inner tick、implicit signals、proactive chat | **完成**（S6） |
+| 3.6 清空 `companion/` | 无 `app.core.companion_harness.companion` import | **完成**（S8） |
 
 ## 原则（继承 Phase 3.0）
 

@@ -13,8 +13,8 @@ from unittest.mock import patch
 
 import pytest
 
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.llm_runtime_events import (
+from app.core.companion_harness.runtime.llm_client import CompanionLLMConfig
+from app.core.companion_harness.runtime.llm_runtime_events import (
     record_llm_inference_failure,
 )
 from app.core.companion_harness.runtime.scope import CompanionScope
@@ -22,10 +22,10 @@ from app.core.companion_harness.runtime.turn import (
     run_companion_implicit_sign_on_greeting_turn,
 )
 from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
-from app.core.companion_harness.companion.websocket_coordinator import (
+from app.core.companion_harness.runtime.websocket_coordinator import (
     CompanionWebSocketCoordinator,
 )
-from app.core.companion_harness.companion.runtime_channel import (
+from app.core.companion_harness.runtime.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
@@ -165,7 +165,7 @@ def test_implicit_sign_on_greeting_llm_timeout_retries_then_raises(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from app.core.companion_harness.companion import turn as turn_mod
+    from app.core.companion_harness.runtime import turn as turn_mod
 
     feats = turn_mod.global_config_loaded_from_config_yaml.app.features
     monkeypatch.setattr(
@@ -198,7 +198,7 @@ def test_implicit_sign_on_greeting_llm_retries_then_succeeds(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from app.core.companion_harness.companion import turn as turn_mod
+    from app.core.companion_harness.runtime import turn as turn_mod
 
     monkeypatch.setattr(
         turn_mod.global_config_loaded_from_config_yaml.app.features,
@@ -225,7 +225,7 @@ def test_implicit_sign_on_greeting_llm_cancelled_skips_further_attempts(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from app.core.companion_harness.companion import turn as turn_mod
+    from app.core.companion_harness.runtime import turn as turn_mod
 
     monkeypatch.setattr(
         turn_mod.global_config_loaded_from_config_yaml.app.features,
@@ -247,7 +247,7 @@ def test_implicit_sign_on_greeting_llm_cancelled_skips_further_attempts(
 
     async def _exercise() -> None:
         with patch(
-            "app.core.companion_harness.companion.llm_client.asyncio.wait_for",
+            "app.core.companion_harness.runtime.llm_client.asyncio.wait_for",
             side_effect=_counting_wait_for,
         ):
             with pytest.raises(asyncio.CancelledError):

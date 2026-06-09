@@ -24,7 +24,7 @@ from app.core.companion_harness.tools.dispatchers.memory_store import (
     dispatch_memory_store_tool,
 )
 
-from app.core.companion_harness.companion.bootstrap import (
+from app.core.companion_harness.runtime.bootstrap import (
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
@@ -46,7 +46,7 @@ from app.core.companion_harness.memory.memory_store import (
 from app.core.companion_harness.memory.memory_store_document_mapping import (
     parse_memory_store_relative_path,
 )
-from app.core.companion_harness.companion.llm_runtime_events import (
+from app.core.companion_harness.runtime.llm_runtime_events import (
     companion_llm_runtime_event_bind_ctx,
 )
 from app.living_sphere.models import (

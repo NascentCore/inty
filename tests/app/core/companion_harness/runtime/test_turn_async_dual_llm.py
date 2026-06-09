@@ -13,9 +13,9 @@ from unittest.mock import patch
 import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.companion_harness.runtime.llm_client import CompanionLLMConfig
 from app.core.companion_harness.runtime.models import InnerTickActivity
-from app.core.companion_harness.companion.runtime_channel import (
+from app.core.companion_harness.runtime.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )

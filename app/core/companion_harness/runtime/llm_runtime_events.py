@@ -18,7 +18,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.companion.llm_inference_errors import (
+from app.core.companion_harness.runtime.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore

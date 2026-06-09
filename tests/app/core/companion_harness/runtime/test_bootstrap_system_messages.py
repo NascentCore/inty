@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.core.companion_harness.companion.bootstrap import (
+from app.core.companion_harness.runtime.bootstrap import (
     build_bootstrap_tool_call_section,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
@@ -18,7 +18,7 @@ from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     ContextMeta,
 )
-from app.core.companion_harness.companion.runtime_channel import (
+from app.core.companion_harness.runtime.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )

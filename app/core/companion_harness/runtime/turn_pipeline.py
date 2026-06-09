@@ -44,7 +44,7 @@ from app.core.companion_harness.runtime.models import (
     load_prompt_bundle,
     transcript_for_llm_turn,
 )
-from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
+from app.core.companion_harness.runtime.runtime_channel import TurnRuntimeContext
 from .turn_track import turn_flags_for_track
 from app.core.companion_harness.runtime.dreaming import (
     apply_dreaming_checkpoint_to_prompt_rows,
@@ -61,7 +61,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
 )
 from .turn_routes import TurnRouteMode
 from .utc import transcript_message_content_for_llm_at
-from app.core.companion_harness.companion.user_time_context_llm_slice import (
+from app.core.companion_harness.runtime.user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
 )
 

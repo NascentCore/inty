@@ -15,11 +15,11 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.companion.llm_inference_errors import (
+from app.core.companion_harness.runtime.llm_inference_errors import (
     log_and_build_inference_error,
     raise_if_chat_completion_missing_choices,
 )
-from app.core.companion_harness.companion.llm_runtime_events import (
+from app.core.companion_harness.runtime.llm_runtime_events import (
     record_llm_inference_failure,
 )
 from app.core.companion_harness.llm.langsmith_completion_enrich import (

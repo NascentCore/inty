@@ -13,7 +13,7 @@ from typing import Any
 
 from app.utils.config import CompanionMemoryBootstrapType
 
-from app.core.companion_harness.companion.bootstrap import (
+from app.core.companion_harness.runtime.bootstrap import (
     interactive_bootstrap_active,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -29,7 +29,7 @@ from app.core.companion_harness.runtime.turn_track import turn_flags_for_track
 from app.core.companion_harness.environment.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
-from app.core.companion_harness.companion.runtime_channel import (
+from app.core.companion_harness.runtime.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )

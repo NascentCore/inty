@@ -26,7 +26,7 @@ from app.core.companion_harness.runtime.turn import (
     run_companion_inner_tick_scheduled_turn,
     run_companion_user_chat_turn,
 )
-from app.core.companion_harness.companion.runtime_channel import (
+from app.core.companion_harness.runtime.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )

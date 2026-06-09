@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
-from app.core.companion_harness.companion.llm_client import (
+from app.core.companion_harness.runtime.llm_client import (
     LLM_SCENE_CHAT,
     CompanionLLMConfig,
 )
@@ -29,11 +29,11 @@ from app.core.companion_harness.runtime.turn import (
     run_companion_inner_tick_scheduled_turn
 )
 from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
-from app.core.companion_harness.companion.runtime_channel import (
+from app.core.companion_harness.runtime.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
-from app.core.companion_harness.companion.user_time_context_llm_slice import (
+from app.core.companion_harness.runtime.user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
 )
 from app.schemas.chat import UserTimeContext

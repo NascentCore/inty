@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.companion_harness.runtime.llm_client import CompanionLLMConfig
 from app.core.companion_harness.runtime.manager import (
     CompanionConfig,
     CompanionManager,
 )
 from app.core.companion_harness.runtime.models import CompanionTurnResult
-from app.core.companion_harness.companion.runtime_channel import (
+from app.core.companion_harness.runtime.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )

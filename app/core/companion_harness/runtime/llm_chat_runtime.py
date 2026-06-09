@@ -24,7 +24,7 @@ from app.core.companion_harness.llm.langsmith_completion_enrich import (
 from app.core.companion_harness.llm.openrouter_tool_params import (
     tool_path_chat_completion_kwargs,
 )
-from app.core.companion_harness.companion.langsmith_parent_policy import (
+from app.core.companion_harness.runtime.langsmith_parent_policy import (
     companion_langsmith_parent_run_allowed,
     companion_turn_langsmith_parent_enabled_from_app_config,
 )

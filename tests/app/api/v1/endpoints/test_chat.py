@@ -24,7 +24,7 @@ from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.api.v1.endpoints import chat_ws as chat_ws_v1
 from app.core.agent import agent as agent_module
-from app.core.companion_harness.companion.llm_inference_errors import (
+from app.core.companion_harness.runtime.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
 from app.core.companion_harness.runtime.models import CompanionTurnResult

@@ -65,12 +65,12 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     invocation_extra,
 )
 
-from app.core.companion_harness.companion.llm_client import (
+from app.core.companion_harness.runtime.llm_client import (
     LLM_SCENE_CHAT,
     LLM_SCENE_INNER_TICK,
     CompanionLLMClient,
 )
-from app.core.companion_harness.companion.llm_runtime_events import (
+from app.core.companion_harness.runtime.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
     record_llm_inference_failure,
@@ -81,7 +81,7 @@ from app.core.companion_harness.environment.proactive_chat import (
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
     build_proactive_chat_transcript_user_marker,
 )
-from app.core.companion_harness.companion.bootstrap import (
+from app.core.companion_harness.runtime.bootstrap import (
     interactive_bootstrap_active,
 )
 from app.core.companion_harness.system_hierarchy.bundle import PromptBundle
@@ -98,7 +98,7 @@ from app.core.companion_harness.system_hierarchy.prompt_stack import (
     append_runtime_output_format_system_message,
     refresh_companion_turn_prompt_stack,
 )
-from app.core.companion_harness.companion.runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
+from app.core.companion_harness.runtime.runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
 from .turn_track import turn_flags_for_track
 from app.core.companion_harness.system_hierarchy.prompts.system_messages import (
@@ -147,7 +147,7 @@ from app.core.companion_harness.environment.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
 from app.core.companion_harness.environment.inner_tick_schedule import transcript_tail_message_uuid
-from app.core.companion_harness.companion.llm_chat_runtime import (
+from app.core.companion_harness.runtime.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
     end_companion_turn_root_run_safe,

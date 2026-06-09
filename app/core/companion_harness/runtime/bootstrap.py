@@ -45,8 +45,8 @@ from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
 
-_PKG_DIR = Path(__file__).resolve().parent
-_BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
+_HARNESS_DIR = Path(__file__).resolve().parent.parent
+_BOOTSTRAP_SPEC_PATH = _HARNESS_DIR / "system_hierarchy" / "prompts" / "BOOTSTRAP.md"
 
 _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
     "IDENTITY.md",

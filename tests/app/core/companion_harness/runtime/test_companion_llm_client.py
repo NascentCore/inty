@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from app.core.companion_harness.companion import llm_client as llm_client_module
-from app.core.companion_harness.companion.llm_client import (
+from app.core.companion_harness.runtime import llm_client as llm_client_module
+from app.core.companion_harness.runtime.llm_client import (
     CompanionLLMClient,
     CompanionLLMConfig,
 )

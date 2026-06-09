@@ -250,7 +250,7 @@ async def _preload_database_tables(db: AsyncSession):
 async def shutdown_event():
     """应用关闭事件"""
     try:
-        from app.core.companion_harness.companion.websocket_coordinator import (
+        from app.core.companion_harness.runtime.websocket_coordinator import (
             ChatWsInflightShutdownRegistry,
         )
 

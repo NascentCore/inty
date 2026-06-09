@@ -13,17 +13,17 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
-from app.core.companion_harness.companion.llm_chat_runtime import (
+from app.core.companion_harness.runtime.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
     end_companion_turn_root_run_safe,
 )
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.companion_harness.runtime.llm_client import CompanionLLMConfig
 from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )
-from app.core.companion_harness.companion.runtime_channel import (
+from app.core.companion_harness.runtime.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
@@ -43,7 +43,7 @@ def _idle_tool_bg() -> threading.Event:
 
 
 @patch(
-    "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    "app.core.companion_harness.runtime.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
     return_value=False,
 )
 def test_create_companion_turn_root_run_returns_none_when_disabled(_mock: MagicMock) -> None:
@@ -59,7 +59,7 @@ def test_create_companion_turn_root_run_returns_none_when_disabled(_mock: MagicM
 
 
 @patch(
-    "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    "app.core.companion_harness.runtime.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
     return_value=True,
 )
 def test_create_companion_turn_root_run_skips_kernel_placeholder_models(
@@ -77,7 +77,7 @@ def test_create_companion_turn_root_run_skips_kernel_placeholder_models(
 
 
 @patch(
-    "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    "app.core.companion_harness.runtime.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
     return_value=True,
 )
 @patch("langsmith.run_trees.RunTree")
@@ -123,7 +123,7 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
 
 
 @patch(
-    "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    "app.core.companion_harness.runtime.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
     return_value=True,
 )
 @patch("langsmith.run_trees.RunTree")
@@ -147,7 +147,7 @@ def test_create_companion_turn_root_run_name_uses_unknown_when_ids_empty(
 
 
 @patch(
-    "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    "app.core.companion_harness.runtime.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
     return_value=True,
 )
 @patch("langsmith.run_trees.RunTree")
@@ -180,7 +180,7 @@ def test_create_companion_turn_root_run_implicit_signed_on_lane(
 
 
 @patch(
-    "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    "app.core.companion_harness.runtime.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
     return_value=True,
 )
 @patch("langsmith.run_trees.RunTree")
@@ -213,7 +213,7 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
 
 
 @patch(
-    "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    "app.core.companion_harness.runtime.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
     return_value=True,
 )
 @patch("langsmith.run_trees.RunTree")
@@ -243,7 +243,7 @@ def test_create_companion_turn_root_run_inner_tick_proactive_lane(
 
 
 @patch(
-    "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    "app.core.companion_harness.runtime.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
     return_value=True,
 )
 @patch("langsmith.run_trees.RunTree")

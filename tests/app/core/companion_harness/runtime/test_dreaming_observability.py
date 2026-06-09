@@ -65,7 +65,7 @@ def test_build_inner_tick_dreaming_runtime_event_record_fields() -> None:
 
 
 @patch(
-    "app.core.companion_harness.companion.llm_chat_runtime.create_companion_turn_root_run",
+    "app.core.companion_harness.runtime.llm_chat_runtime.create_companion_turn_root_run",
     return_value=None,
 )
 def test_dreaming_batch_langsmith_scope_yields_none_when_parent_disabled(

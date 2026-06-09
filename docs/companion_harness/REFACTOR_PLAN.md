@@ -60,7 +60,7 @@
 - 同步移动 `test_memory_*`、`test_transcript_compaction.py`、记忆管线相关测试到 `tests/app/core/companion_harness/memory/`。
 - 切片验收：MemoryStore 读写、registry key、document kind mapping、template seed、transcript compaction 测试通过。
 
-#### Phase 3.2：拆出 `system_hierarchy/`
+#### Phase 3.2：拆出 `system_hierarchy/`（**完成**）
 
 - 迁移固定 system 层级资源：`prompts/AXIOM.md`、`BOOTSTRAP.md`、`TOOLS.md`、`SIGNIFICANCE_PERCEPTION.md` 与 `prompts/system_messages.py`。
 - 迁移 prompt 组装与切片：`prompt_slices.py`、`prompt_stack.py`、`ai_private_prompt.py`、`dual_llm_chat_branch_envelope.py`。
@@ -76,9 +76,9 @@
 - 同步移动 `test_tools.py`、`test_tool_*`、`test_openai_tools_prepare.py`、`test_read_web_page_tool.py`、`test_image_gate_generated_meta.py`、`test_companion_runtime_inspect_tool.py`。
 - 切片验收：OpenAI tool schema、tool background transcript、runtime inspect、媒体/搜索工具测试通过。（Phase 3.3 **大部分完成**。）
 
-#### Phase 3.4：拆出 `runtime/`
+#### Phase 3.4：拆出 `runtime/`（**完成**）
 
-> **进行中**：`runtime/dreaming_batch.py`（`run_dreaming_batch_if_due`）已落地；turn / manager / session 仍在 `companion/`。切片计划见 [REFACTOR_PLAN_PHASE3_SLICES.md](./REFACTOR_PLAN_PHASE3_SLICES.md)。
+> 切片执行见 [REFACTOR_PLAN_PHASE3_SLICES.md](./REFACTOR_PLAN_PHASE3_SLICES.md) S1–S3b+S8。
 
 - 迁移一轮对话编排：`turn.py`、`turn_engine.py`、`turn_pipeline.py`、`turn_routes.py`、`manager.py`、`websocket_coordinator.py`、`schedule_queue.py`。
 - 迁移运行时事件、消息格式与 session 模型：`runtime_events.py`、`llm_runtime_events.py`、`message_format.py`、`models.py`、`utc.py`。
@@ -87,14 +87,14 @@
 - 同步移动 `test_turn*`、`test_websocket_coordinator.py`、`test_schedule_queue.py`、`test_models.py`、`test_companion_llm_client.py`、`test_llm_runtime_events.py`、`test_bootstrap_user_interactive.py`。
 - 切片验收：`run_turn`、dual-LLM 前台/后台、WebSocket coordinator、schedule queue、LangSmith parent policy 测试通过。
 
-#### Phase 3.5：拆出 `environment/`
+#### Phase 3.5：拆出 `environment/`（**完成**）
 
 - 迁移环境刺激入口：`heartbeat.py`、`inner_tick_schedule.py`、`implicit_signal_messages.py`。
 - 将 LivingSphere / TechnoCore 触发到 companion turn 的适配边界归入 `environment/`；运行编排仍由 `runtime/` 承接。
 - 同步移动 `test_heartbeat.py`、`test_inner_tick_schedule.py`、`test_implicit_signal_messages.py`、`test_living_sphere_runtime.py`、`test_techno_core_runtime.py`。
 - 切片验收：maintenance inner tick、proactive chat heartbeat、implicit signal prompt 注入、LivingSphere / TechnoCore runtime 测试通过。
 
-#### Phase 3.6：清空旧 `companion/`
+#### Phase 3.6：清空旧 `companion/`（**完成**）
 
 - 迁移或删除 `companion/AGENTS.md`，把仍有效的层级说明拆到新 package 或 `docs/companion_harness/`。
 - 全仓替换生产代码、测试、文档、skills、REPL 对旧 `companion/` 子包的引用。
