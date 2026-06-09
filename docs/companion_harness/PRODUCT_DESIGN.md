@@ -18,3 +18,5 @@ Interaction container: Weixin, Telegram
 非目标（本阶段）：
 
 - 后端扩展（多用户、多实例）
+
+目标态扩展（多 agent 世界引擎、sub-agent）见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)。

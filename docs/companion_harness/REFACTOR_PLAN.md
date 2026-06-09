@@ -21,7 +21,7 @@
 - `app/core/companion_harness/system_hierarchy/`：AXIOM、BOOTSTRAP、TOOLS、SIGNIFICANCE、prompt slices、system messages。
 - `app/core/companion_harness/tools/`：工具定义、tool runtime、tool background、dispatcher。
 - `app/core/companion_harness/experience/`：experience profile、bootstrap、context mode。
-- `app/core/companion_harness/environment/`：LivingSphere、TechnoCore、heartbeat、inner tick、implicit signals。
+- `app/core/companion_harness/environment/`：LivingSphere、TechnoCore、heartbeat、inner tick、implicit signals、sub-agent clock 调度（目标态见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)）。
 - `app/core/companion_harness/contracts/`：turn contracts 与跨层 Pydantic contract。
 
 ## 分阶段迁移
