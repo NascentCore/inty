@@ -66,7 +66,7 @@ No full type signatures — placement and leverage only.
 
 Ordered list tied to plan phases. Each item:
 
-- **ID** — align with slice tracker if present (e.g. S2)
+- **ID** — plan phase or ordinal (e.g. 3.4, step 2)
 - **Title**
 - **Type** — AFK | HITL
 - **Blocked by**

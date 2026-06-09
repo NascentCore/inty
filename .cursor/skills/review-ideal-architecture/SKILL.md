@@ -18,7 +18,6 @@ Resolve in order; stop when a path is missing and ask the user.
 | Input | Inty default | Role |
 | --- | --- | --- |
 | Refactoring plan | `docs/companion_harness/REFACTOR_PLAN.md` | Target package tree, phases, out-of-scope |
-| Slice tracker (optional) | `docs/companion_harness/REFACTOR_PLAN_PHASE3_SLICES.md` | Done / partial / blocked granularity |
 | Domain glossary | `docs/companion_harness/GLOSSARY.md`, `ARCH.md` | Vocabulary + invariants |
 | ADRs | `docs/adr/` if present | Do not re-litigate recorded decisions |
 | Code root | `app/core/companion_harness/` | Snapshot boundary |

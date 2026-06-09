@@ -68,7 +68,6 @@ Re-run **`review-ideal-architecture`** when:
 | Artifact | Path |
 | --- | --- |
 | Refactoring plan | `docs/companion_harness/REFACTOR_PLAN.md` |
-| Phase 3 slices | `docs/companion_harness/REFACTOR_PLAN_PHASE3_SLICES.md` |
 | Architecture invariants | `docs/companion_harness/ARCH.md` |
 | Glossary | `docs/companion_harness/GLOSSARY.md` |
 | Code root | `app/core/companion_harness/` |
