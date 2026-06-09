@@ -3,6 +3,9 @@
 Batch-curates transcript slices into ``memory/daily/<date>.md`` (daily gist),
 ``MEMORY.md``, ``USER.md``, ``STYLE.md``, ``SOUL.md``, and ``LIVING_SPHERE.md``.
 Only invoked from the dreaming inner-tick path — no awake post-turn updates.
+
+Memory-phase invariant **DreamingBatch**: see ``companion.turn_invariants`` — batch
+curation entry is ``consolidate_memory_during_dreaming`` only.
 """
 
 from __future__ import annotations

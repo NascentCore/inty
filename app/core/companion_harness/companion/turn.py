@@ -1,5 +1,8 @@
 """Companion turn executor: 单轮对话的完整执行流程。
 
+Memory-phase invariant **AwakeTurn**: see ``companion.turn_invariants`` — this module
+only appends transcript JSONL on ``MemoryStore``; batch curation belongs in **DreamingBatch**.
+
 可选 ``tool_bg_idle_event``：在加载 transcript 之前等待上一轮异步 tool_background 线程收尾，
 保证主 ``transcript.jsonl``（或维护内在节拍用的 ``transcript_inner_tick.jsonl``）已含工具摘要后再组装本轮 chat/tool messages。
 

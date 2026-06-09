@@ -113,6 +113,10 @@ jobs:
         run: |
           python .cursor/skills/scripts/check_layer_dependencies.py
 
+      - name: Check companion turn invariants
+        run: |
+          python .cursor/skills/scripts/check_companion_turn_invariants.py
+
       - name: Ensure single alembic head
         run: |
           # TODO(INTY_CONFIG_YAML): env INTY_CONFIG_YAML=devops/config.yaml.test (alembic env.py import needs config)

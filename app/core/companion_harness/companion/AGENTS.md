@@ -13,6 +13,16 @@ chat not planned unless explicitly requested.
 - Maintenance: regular maintenance, background & hidden from users, to process & reorganize the chat messages.
   - TODO(inner-tick-autonomy): Replace with **Autonomy** — idle inner-tick only advances ``ai_private.jsonl`` (model-hallucinated intrinsic beats); profile/MemoryDoc consistency belongs in **dreaming**; rename track/activity/scheduling after scope cut (see ``models.InnerTickActivity``).
 
+## Memory phase invariants
+
+- **AwakeTurn** (all ``CompanionTurnTrack`` → ``run_turn`` + spawned ``tool_background``): only
+  append transcript JSONL and ``tool_background`` side effects — no MemoryDoc batch curation.
+- **DreamingBatch** (``run_dreaming_batch_for_session``): MemoryDoc batch curation only via
+  ``consolidate_memory_during_dreaming`` (checkpoint / observability are orchestration).
+
+Canonical constants and CI enforcement: ``turn_invariants.py``;
+``.cursor/skills/scripts/check_companion_turn_invariants.py``.
+
 ## Prototype notes
 
 For this prototype, **one presence** (single tab / wire) per paired user, no multi-presence.
