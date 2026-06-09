@@ -1,5 +1,7 @@
 # iMate智能体陪伴系统点子
 
+**Only for inspiration**
+
 **See also：** [会话智能 × 实时性对照网格](conversation_intelligence_realtime_grid.md) · [Companion 架构（WebSocket / run_turn）](ARCH.md) · [Wire → Turn → Persistence](WIRE_TURN_PERSISTENCE.md)
 
 1. [claude-mem](https://github.com/thedotmack/claude-mem)机制引入到Companion Harness，Claude Code上一种非常有效的记忆管理插件。
