@@ -6,7 +6,7 @@ from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.runtime.scope import CompanionScope
-from app.core.companion_harness.companion.schedule_queue import (
+from app.core.companion_harness.environment.schedule_queue import (
     _schedule_document_rel,
     add_schedule_task,
     mark_task_fired,

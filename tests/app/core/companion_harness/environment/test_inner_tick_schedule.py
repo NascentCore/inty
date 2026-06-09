@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.runtime.scope import CompanionScope
-from app.core.companion_harness.companion.inner_tick_schedule import (
+from app.core.companion_harness.environment.inner_tick_schedule import (
     InnerTickScheduleOverrides,
     inner_tick_enabled_from_env,
     next_inner_tick_wait_seconds,

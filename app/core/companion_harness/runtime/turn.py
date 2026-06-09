@@ -76,7 +76,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     record_llm_inference_failure,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.proactive_chat import (
+from app.core.companion_harness.environment.proactive_chat import (
     PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
     build_proactive_chat_transcript_user_marker,
@@ -141,12 +141,12 @@ from .turn_routes import (
     TurnRouteMode,
 )
 from .utc import utc_iso_ts, utc_now
-from app.core.companion_harness.companion.implicit_signal_messages import (
+from app.core.companion_harness.environment.implicit_signal_messages import (
     MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )
-from app.core.companion_harness.companion.inner_tick_schedule import transcript_tail_message_uuid
+from app.core.companion_harness.environment.inner_tick_schedule import transcript_tail_message_uuid
 from app.core.companion_harness.companion.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,

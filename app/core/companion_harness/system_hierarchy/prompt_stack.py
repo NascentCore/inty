@@ -26,7 +26,7 @@ from app.core.companion_harness.runtime.models import (
     load_prompt_bundle,
 )
 from app.core.companion_harness.runtime.turn_track import turn_flags_for_track
-from app.core.companion_harness.companion.implicit_signal_messages import (
+from app.core.companion_harness.environment.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
 from app.core.companion_harness.companion.runtime_channel import (

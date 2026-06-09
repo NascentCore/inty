@@ -14,7 +14,7 @@ from app.core.companion_harness.companion.llm_client import (
     CompanionLLMConfig,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.proactive_chat import (
+from app.core.companion_harness.environment.proactive_chat import (
     PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
 )
 from app.core.companion_harness.runtime.models import (
@@ -22,7 +22,7 @@ from app.core.companion_harness.runtime.models import (
     InnerTickActivity,
 )
 from app.core.companion_harness.runtime.scope import CompanionScope
-from app.core.companion_harness.companion.schedule_queue import (
+from app.core.companion_harness.environment.schedule_queue import (
     scheduled_task_synthetic_user_text,
 )
 from app.core.companion_harness.runtime.turn import (

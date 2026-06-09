@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.core.companion_harness.companion.implicit_signal_messages import (
+from app.core.companion_harness.environment.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
 from app.core.companion_harness.runtime.models import (

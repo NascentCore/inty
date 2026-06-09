@@ -18,11 +18,11 @@ from app.core.config import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
-from app.core.companion_harness.companion.proactive_chat import (
+from app.core.companion_harness.environment.proactive_chat import (
     PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
 )
-from app.core.companion_harness.companion.implicit_signal_messages import (
+from app.core.companion_harness.environment.implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )

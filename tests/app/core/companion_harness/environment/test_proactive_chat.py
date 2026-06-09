@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from app.core.companion_harness.companion.proactive_chat import (
+from app.core.companion_harness.environment.proactive_chat import (
     ProactiveChatConfig,
     next_proactive_chat_wait_seconds,
 )

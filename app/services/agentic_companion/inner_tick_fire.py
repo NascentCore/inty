@@ -42,7 +42,7 @@ from app.api.v1.endpoints.chat import (
 from app.core.companion_harness.runtime.dreaming_observability import (
     DreamingBatchOutcome,
 )
-from app.core.companion_harness.companion.inner_tick_schedule import (
+from app.core.companion_harness.environment.inner_tick_schedule import (
     InnerTickScheduleOverrides,
     maintenance_transcript_line_count,
     next_inner_tick_wait_seconds,
@@ -50,12 +50,12 @@ from app.core.companion_harness.companion.inner_tick_schedule import (
 from app.core.companion_harness.runtime.models import (
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
-from app.core.companion_harness.companion.proactive_chat import (
+from app.core.companion_harness.environment.proactive_chat import (
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
     ProactiveChatConfig,
     next_proactive_chat_wait_seconds,
 )
-from app.core.companion_harness.companion.schedule_queue import (
+from app.core.companion_harness.environment.schedule_queue import (
     mark_task_fired,
     mark_task_retry,
     next_due_task_for_execution,
