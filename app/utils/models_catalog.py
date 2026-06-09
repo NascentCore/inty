@@ -1085,7 +1085,7 @@ CHAT_IMAGE_FAL_MODELS = [SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO_IMAGE_TO_IMAGE]
 CHAT_IMAGE_FAL_IDS = tuple(m.id_on_provider for m in CHAT_IMAGE_FAL_MODELS)
 
 # TODO(companion-multimodal-user-turn): Phase 1a — add ``chat_model_accepts_image_input(model)``
-# https://github.com/NascentCore/inty/issues/ISSUE_TBD
+# https://github.com/NascentCore/inty/issues/3293
 # (``DataModality.IMAGE in model.modalities.inputs``); fix vision-capable ``CHAT_TEXT_MODELS``
 # entries (e.g. GEMINI_2_5_FLASH*) to declare IMAGE input. Gate multimodal user turns on
 # ``select_chat_model()`` result, not a separate vision/caption model.

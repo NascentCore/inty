@@ -434,7 +434,7 @@ async def _try_generate_premium_preview_choice(
 
 
 # TODO(companion-multimodal-user-turn): After Phase 1 harness gate exists, reject only when
-# https://github.com/NascentCore/inty/issues/ISSUE_TBD
+# https://github.com/NascentCore/inty/issues/3293
 # ``not chat_model_accepts_image_input(resolved_chat_model)`` (not blanket image reject).
 # Map ``ChatMessage`` → ``CompanionUserTurnInput`` before ``run_user_chat``.
 def _companion_rejects_multimodal_user_turn(

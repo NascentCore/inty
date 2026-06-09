@@ -59,7 +59,7 @@ def weixin_bridge_reply_for_inbound(
     )
     if has_image and not stripped:
         # TODO(weixin-inbound-image): Phase 2 — remove this fallback once companion accepts
-        # https://github.com/NascentCore/inty/issues/ISSUE_TBD
+        # https://github.com/NascentCore/inty/issues/3293
         # images: map Hermes ``media_paths`` → ``CompanionUserTurnInput`` via
         # ``weixin_inbound_media.weixin_inbound_to_user_turn`` and call
         # ``handle_user_turn``; companion gate raises when chat model lacks IMAGE input.
@@ -173,7 +173,7 @@ class WeixinChannelSession:
         if peer_updated is not None:
             await peer_updated(self.binding)
         # TODO(weixin-inbound-image): Phase 2 — ``weixin_inbound_to_user_turn(inbound)``
-        # https://github.com/NascentCore/inty/issues/ISSUE_TBD
+        # https://github.com/NascentCore/inty/issues/3293
         # → ``handle_user_turn(CompanionUserTurnInput)``; catch
         # ``CompanionMultimodalNotSupportedError`` for WeChat fallback (do not gate here).
         # TODO(weixin-voice-asr): Before gating, transcribe ``inbound.media_paths``

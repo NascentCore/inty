@@ -453,7 +453,7 @@ async def _run_companion_api_track_turn(
 
 
 # TODO(companion-multimodal-user-turn): Phase 1b — replace ``user_text: str`` with
-# https://github.com/NascentCore/inty/issues/ISSUE_TBD
+# https://github.com/NascentCore/inty/issues/3293
 # ``user_turn: CompanionUserTurnInput`` (text + image_data_urls). Gate at entry:
 # raise ``CompanionMultimodalNotSupportedError`` when images present but
 # ``not chat_model_accepts_image_input(resolved_chat_model)``. See

@@ -11,7 +11,7 @@ intentional—not accidentally weaker or stricter than today.
 TODO(weixin-inbound-image): Phase 2 — inbound images: Hermes caches JPEG in
 ``WeixinInboundMessage.media_paths``; adapter ``weixin_inbound_media`` maps to
 ``CompanionUserTurnInput`` for companion ``run_user_chat`` (Phase 1 multimodal).
-https://github.com/NascentCore/inty/issues/ISSUE_TBD
+https://github.com/NascentCore/inty/issues/3293
 
 Hermes Weixin user guide — media (plain language, aligned with upstream docs):
 

@@ -131,7 +131,7 @@ class WeixinInprocessPresence:
         self._inty_user_id = None
 
     # TODO(weixin-inbound-image): Phase 2 — rename to ``handle_user_turn``; accept
-    # https://github.com/NascentCore/inty/issues/ISSUE_TBD
+    # https://github.com/NascentCore/inty/issues/3293
     # ``CompanionUserTurnInput`` and call ``run_user_chat(user_turn=...)``. Image-only
     # turns need non-empty ``image_data_urls`` even when ``text`` is empty.
     async def handle_user_text(self, user_text: str) -> str:
