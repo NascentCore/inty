@@ -179,6 +179,11 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
     autonomy_lines = autonomy_blocks[0].split("\n")
     assert "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；" in autonomy_lines[2]
     assert any("LIFE_CURRENTS.md" in line for line in autonomy_lines)
+    autonomy_text = autonomy_blocks[0]
+    assert "与 ai_private 分工" in autonomy_text
+    assert "禁止写入" in autonomy_text
+    assert "成为他的知己" in autonomy_text
+    assert "只允许" in autonomy_text and "LIFE_CURRENTS.md" in autonomy_text
 
 
 def test_build_system_messages_for_inner_tick_autonomy_is_production_builder(

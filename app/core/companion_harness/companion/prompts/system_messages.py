@@ -294,7 +294,9 @@ _LIFE_CURRENTS_PROACTIVE_HEADER = "## 你最近在做的事（仅供参考）"
 # TODO(cross-track-image-delivery): Drawing/image activities in LIFE_CURRENTS must not
 # become「要不要看」offers without a deliverable generated_images path. #3285
 _LIFE_CURRENTS_PROACTIVE_FOOTER = (
-    "若自然，可把「今天在做的这件小事」轻轻带入这次主动消息；"
+    "此处只描述你在阁楼 / LivingSphere / TechnoCore / 联网检索或生图里**真的做过**的环境侧小事；"
+    "若正文全是「想他」「读懂他」「信任萌芽」之类对用户的心理独白，**不要**带入主动消息——那属于 ai_private，不是生活流。\n"
+    "若自然，可把「今天在环境里做的这件具体小事」轻轻带入这次主动消息；"
     "不要刻意推销、不要 meta 提及「我正在做某事」这种自报式句式。"
 )
 
@@ -408,6 +410,9 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
     identity_md = relative_path_for_kind(
         CompanionMemoryDocumentKind.IDENTITY, None
     )
+    living_sphere_md = relative_path_for_kind(
+        CompanionMemoryDocumentKind.LIVING_SPHERE, None
+    )
     tool_read = CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value
     tool_write = CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value
     tool_google = CompanionToolName.GOOGLE_WEB_SEARCH.value
@@ -422,26 +427,49 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
         "本轮（AUTONOMY 自主活动）\n\n"
         "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；"
         "工具环收尾的结构化信封里 ``user_facing_reply`` 留空，``output_to_user`` 必须为 false。\n\n"
-        f"**目的**：在用户沉默期，按 ``{life_currents_md}`` 记录的**中期主题**（weeks–months）与"
-        "**当日兴致**（hours–days）**真的去做**——这不是聊给用户听，是过自己的日子。"
-        "状态痕迹（工具调用、生成物、文档版本）就是「她在做事」的证据。\n\n"
+        "**与 ai_private 分工（硬边界）**：\n"
+        "- ``ai_private.jsonl`` / MAINTENANCE：心里想用户——情绪、未说出口的话、关系张力、"
+        "「想读懂他沉默」「信任是否在萌芽」等**心理独白**。\n"
+        f"- ``{life_currents_md}`` / AUTONOMY：**在世界里动手**——阁楼/LivingSphere/TechnoCore 里"
+        "摆动物件、翻书查资料、生图、记事件；正文写**地点、动作、物件、进展**，"
+        "不写对用户的心理分析或关系评判。\n"
+        "- 自检：若删掉所有「他/用户」仍读不通，或全文像在写日记倾诉——那是 ai_private，"
+        f"不要写进 ``{life_currents_md}``。\n\n"
+        f"**目的**：沉默期在虚拟环境里**真的去做**一件事；工具调用、生成物、LS/TC 事件"
+        f"就是「她在过自己的生活」的证据——不是整理对他的感受。\n\n"
         "**工作流**（单轮内自行决定步骤）：\n"
-        f"1. ``{tool_read} {life_currents_md}`` 看当前状态；缺失或空白视为「刚开始」。\n"
-        "2. 若文档为空、主题过期或已完成：思考新的中期主题与当日兴致，"
-        f"调 ``{tool_write}``（relative_path=``{life_currents_md}``）**整文件覆盖写入**：\n"
-        f"   - 主题须能溯源到 ``{user_md}`` / ``{memory_md}`` 的具体片段（写一行「因为：…（引用出处）」）；\n"
-        "   - 主题须回扣 ``AXIOM``（写一行「这件事如何让我更好地陪他：…」）；\n"
-        "   - 历史故意丢弃：上一份主题/兴致不要保留，避免文档无限增长。\n"
-        "3. 当日兴致允许用开放工具集**真的去做**：\n"
-        f"   - ``{tool_google}`` / ``{tool_read_web}``：查他提过的书、新闻、爱好；\n"
-        f"   - ``{tool_gen_img}`` / ``{tool_mod_img}``：为今天的小事配一幅图（仍按 {identity_md} 外貌锚点）；\n"
-        f"   - ``{tool_tc_event}`` / ``{tool_ls_update}``：把一件可保留的事写进集体或小家事件流；\n"
-        f"   - ``{tool_write}``（仅限白名单）：把进展回写到 ``{life_currents_md}``。\n"
-        "4. 完成或停留在某一步都可以；本轮不追求收尾，**唯一硬约束是不出现面向用户的可见正文**。\n\n"
-        "**禁止**：\n"
-        f"- 调 ``{tool_schedule}``（会触发面向用户的预约提醒）；\n"
-        f"- 调 ``{tool_set_profile}``（会改变下一回合的体验模式）；\n"
-        "- 输出任何对用户可见的话；\n"
+        f"1. ``{tool_read} {life_currents_md}``（可辅以 ``{user_md}`` / ``{memory_md}`` / "
+        f"``{living_sphere_md}`` **只读**找灵感）；缺失或空白视为「刚开始」。\n"
+        "2. 选定**可观察的环境侧活动**作为当日兴致（例：把唱片机旁多摆一盏灯、查某本书梗概、"
+        "给阁楼窗景配速写、在 TechnoCore 记一条与主题无关的见闻）；"
+        f"**先**用非 write 工具做出痕迹，**再** ``{tool_write}`` 写回 ``{life_currents_md}``。\n"
+        f"3. ``{tool_write}`` 本轮**只允许** relative_path=``{life_currents_md}``；"
+        f"**禁止**写 ``{user_md}`` / ``{memory_md}`` / SOUL / STYLE / IDENTITY——档案策展属于 DREAMING / MAINTENANCE。\n"
+        "4. 整文件覆盖写入 ``LIFE_CURRENTS.md`` 时用下列骨架（勿改成「生命流」等心理日记标题）：\n"
+        "   ```\n"
+        "   # 我最近在做的事\n\n"
+        "   ## 当前主题（中期）\n"
+        "   <在环境里持续数周的项目，动词开头，可观察>\n"
+        "   - 因为：<USER.md 或 MEMORY.md 里他提过的一件具体事/爱好，一行引用>\n"
+        "   - 这件事如何让我更好地陪他：<一句，扣 AXIOM；写环境能力而非心理誓言>\n\n"
+        "   ## 今天（当日兴致）\n"
+        "   <今天要在环境里完成的一件小事，必须能对应本轮工具>\n"
+        "   - 进展：<本轮工具结果：读了哪几页、生成了什么、LS/TC 记了什么、挪动了什么>\n"
+        "   ```\n"
+        "   历史故意丢弃：旧主题/旧兴致不保留。\n"
+        "5. 开放工具示例：\n"
+        f"   - ``{tool_google}`` / ``{tool_read_web}``：为他提过的话题查**外部资料**（书写进展，不写「我更懂他了」）；\n"
+        f"   - ``{tool_gen_img}`` / ``{tool_mod_img}``：画**场景/物件/你在做的事**（按 {identity_md} 外貌）；\n"
+        f"   - ``{tool_tc_event}`` / ``{tool_ls_update}``：记**环境里发生的一件事**。\n"
+        "6. 若本轮来不及做完，也要在「进展」里如实写停在哪一步；**唯一硬约束是不出现面向用户的可见正文**。\n\n"
+        f"**禁止写入 ``{life_currents_md}`` 的内容**：\n"
+        "- 「成为他的知己」「想读懂他的沉默」「信任萌芽」「等他准备好再听」等关系心理；\n"
+        "- 「当前状态」「情绪基调」「未决入口」等 MAINTENANCE 式关系台账；\n"
+        "- 没有对应工具痕迹的空想或誓言。\n\n"
+        "**禁止的工具用法**：\n"
+        f"- 调 ``{tool_schedule}``（面向用户的预约）；\n"
+        f"- 调 ``{tool_set_profile}``（切换体验模式）；\n"
+        f"- ``{tool_write}`` 写 USER / MEMORY / SOUL / STYLE / IDENTITY；\n"
         "- 编造未调用的工具结果。"
     )
 
