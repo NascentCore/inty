@@ -67,7 +67,9 @@ def tool_choice_attempt_metadata(tool_choice: str | None) -> dict[str, Any]:
     return {INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY: TOOL_CHOICE_ATTEMPT_AUTO}
 
 
-def dreaming_consolidation_langsmith_extra(*, model_role: str) -> dict[str, Any]:
+def dreaming_consolidation_langsmith_extra(
+    *, model_role: str
+) -> dict[str, Any]:
     """LangSmith extra for dreaming consolidation curator ``complete_text`` calls."""
     role = (model_role or "memory").strip() or "memory"
     source = f"dreaming_consolidation_{role}"

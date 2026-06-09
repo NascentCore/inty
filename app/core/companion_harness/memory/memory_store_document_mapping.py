@@ -35,8 +35,12 @@ class CompanionMemoryDocumentKind(str, Enum):
     AI_PRIVATE_JSONL = "ai_private_jsonl"
     TOOL_BACKGROUND_JSONL = "tool_background_jsonl"
     GENERATED_IMAGES_INDEX_JSONL = "generated_images_index_jsonl"
-    MEMORY_DAILY_RAW = "memory_daily_raw"  # daily gist: memory/daily/<date>.md (dreaming only)
-    COMPANION_LIVING_SPHERE_CURATOR_JSON = "companion_living_sphere_curator_json"
+    MEMORY_DAILY_RAW = (
+        "memory_daily_raw"  # daily gist: memory/daily/<date>.md (dreaming only)
+    )
+    COMPANION_LIVING_SPHERE_CURATOR_JSON = (
+        "companion_living_sphere_curator_json"
+    )
     COMPANION_CONTEXT_COMPACTION_STATE_JSON = (
         "companion_context_compaction_state_json"
     )
