@@ -6,10 +6,10 @@
 
 | Phase | 目标包 | 状态 |
 |-------|--------|------|
-| 3.1 `memory/` | MemoryStore、scope、mapping、`dreaming_consolidation` | **大部分完成**；文档仍写 `memory_pipeline.py` |
+| 3.1 `memory/` | MemoryStore、scope、mapping、`dreaming_consolidation` | **大部分完成** |
 | 3.2 `system_hierarchy/` | prompts、system_messages、prompt_slices | **未开始**（仍在 `companion/` + 过渡包 `prompting/`） |
 | 3.3 `tools/` | tool runtime、background、dispatchers | **大部分完成** |
-| 3.4 `runtime/` | turn、manager、session、WS coordinator | **未开始**（`runtime/` 目录不存在） |
+| 3.4 `runtime/` | turn、manager、session、WS coordinator | **进行中**（`runtime/dreaming_batch.py`；S3 部分完成） |
 | 3.5 `environment/` | inner tick、dreaming 触发、implicit signals | **未开始** |
 | 3.6 清空 `companion/` | 无 `app.core.companion_harness.companion` import | **未开始** |
 

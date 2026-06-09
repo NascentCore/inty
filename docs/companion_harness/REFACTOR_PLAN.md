@@ -17,7 +17,7 @@
 - `app/core/companion_harness/runtime/`：回合编排、session、WebSocket 协调、后台任务、运行时事件。
 - `app/core/companion_harness/llm/`：LLM 端口、chat completion、模型调用上下文、LangSmith enrich。
 - `app/core/companion_harness/providers/`：OpenAI-compatible、OpenRouter、Gemini 等 provider。
-- `app/core/companion_harness/memory/`：MemoryStore、registry、scope、document mapping、memory pipeline。
+- `app/core/companion_harness/memory/`：MemoryStore、registry、scope、document mapping、dreaming consolidation。
 - `app/core/companion_harness/system_hierarchy/`：AXIOM、BOOTSTRAP、TOOLS、SIGNIFICANCE、prompt slices、system messages。
 - `app/core/companion_harness/tools/`：工具定义、tool runtime、tool background、dispatcher。
 - `app/core/companion_harness/experience/`：experience profile、bootstrap、context mode。
@@ -54,7 +54,7 @@
 
 #### Phase 3.1：拆出 `memory/`
 
-- 迁移 MemoryStore 及其边界：`memory_store.py`、`memory_registry.py`、`memory_store_scope.py`、`memory_store_document_mapping.py`、`memory_pipeline.py`、`memory_taxonomy.py`、`file_store.py`。
+- 迁移 MemoryStore 及其边界：`memory_store.py`、`memory_registry.py`、`memory_store_scope.py`、`memory_store_document_mapping.py`、`dreaming_consolidation.py`、`memory_taxonomy.py`、`file_store.py`。（Phase 3.1 **大部分完成**。）
 - 迁移与长期记忆强绑定的 transcript / document 辅助逻辑；若文件同时服务 runtime，由调用方向 `memory/` 依赖，不反向依赖 runtime。
 - 迁移 `templates/` 中作为 workspace 初始记忆种子的文档，并更新 `load_template_seed_text` 的资源读取。
 - 同步移动 `test_memory_*`、`test_transcript_compaction.py`、记忆管线相关测试到 `tests/app/core/companion_harness/memory/`。
@@ -74,9 +74,11 @@
 - 迁移工具实现与工具侧辅助：`read_web_page.py`、`google_web_search.py`、`fal_z_image_tool.py`、`image_gate.py`、`runtime_inspect_tool.py`、`runtime_inspect_context.py`。
 - 对齐已存在的 `tools/runtime.py`、`tools/registry.py`、`tools/dispatchers/`，避免并存两套工具注册入口。
 - 同步移动 `test_tools.py`、`test_tool_*`、`test_openai_tools_prepare.py`、`test_read_web_page_tool.py`、`test_image_gate_generated_meta.py`、`test_companion_runtime_inspect_tool.py`。
-- 切片验收：OpenAI tool schema、tool background transcript、runtime inspect、媒体/搜索工具测试通过。
+- 切片验收：OpenAI tool schema、tool background transcript、runtime inspect、媒体/搜索工具测试通过。（Phase 3.3 **大部分完成**。）
 
 #### Phase 3.4：拆出 `runtime/`
+
+> **进行中**：`runtime/dreaming_batch.py`（`run_dreaming_batch_if_due`）已落地；turn / manager / session 仍在 `companion/`。切片计划见 [REFACTOR_PLAN_PHASE3_SLICES.md](./REFACTOR_PLAN_PHASE3_SLICES.md)。
 
 - 迁移一轮对话编排：`turn.py`、`turn_engine.py`、`turn_pipeline.py`、`turn_routes.py`、`manager.py`、`websocket_coordinator.py`、`schedule_queue.py`。
 - 迁移运行时事件、消息格式与 session 模型：`runtime_events.py`、`llm_runtime_events.py`、`message_format.py`、`models.py`、`utc.py`。

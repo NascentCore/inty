@@ -1,5 +1,7 @@
 # Companion 记忆管线综述（MemoryStore 路径）
 
+> **历史文档**：post-turn `memory_pipeline` 已移除；MemoryDoc 批量整理仅在 **dreaming** 时通过 `consolidate_memory_during_dreaming` 执行（见 `dreaming_consolidation.py`）。下文「每轮自动追加当日流水」等描述反映旧双轨设计，阅读时请对照 [REFACTOR_PLAN_PHASE3_SLICES.md](./REFACTOR_PLAN_PHASE3_SLICES.md) 与 `turn_invariants`（AwakeTurn 仅 append transcript）。
+
 ## 导读：是什么、和谁相关、何时读本文
 
 - **是什么**：在一段持续的关系里，Companion 把不断发生的对话沉淀成 **三个不同时间尺度** 的记忆——刚发生的当日流水、当天结束时的纪要、跨日的语义认知；同一套策展机制还维护两份 **长期画像**——关于用户的 USER 与关于 Companion 自身基调与边界的 SOUL。

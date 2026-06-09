@@ -47,7 +47,7 @@ PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STY
 
 - **表名**：`companion_memory_document_versions`
 - **ORM**：`/app/models/companion_memory_documents.py` · `CompanionMemoryDocumentVersion`
-- **自然键最新正文**：同一 `(user_id, companion_id, chat_id, document_kind[, calendar_date])` 下 **`sequence_id` 最大** 的一行。根目录稿（`IDENTITY.md`、`transcript.jsonl` 等）的 **`calendar_date` 为 NULL**；**`memory/daily/YYYY-MM-DD.md` / `memory/YYYY-MM-DD.md`** 对应 kind 为 **`memory_daily_raw` / `memory_day_summary`**，查最新版本时 **`WHERE calendar_date = DATE 'YYYY-MM-DD'`**（或与 ORM 一致的非空 `calendar_date`）。
+- **自然键最新正文**：同一 `(user_id, companion_id, chat_id, document_kind[, calendar_date])` 下 **`sequence_id` 最大** 的一行。根目录稿（`IDENTITY.md`、`transcript.jsonl` 等）的 **`calendar_date` 为 NULL**；**`memory/daily/YYYY-MM-DD.md`**（dreaming-written daily gist）对应 kind **`memory_daily_raw`**，查最新版本时 **`WHERE calendar_date = DATE 'YYYY-MM-DD'`**（或与 ORM 一致的非空 `calendar_date`）。已废弃 `memory/YYYY-MM-DD.md`（`memory_day_summary`）。
 - **`document_kind` ↔ 逻辑路径**：`/app/core/companion_harness/memory/memory_store_document_mapping.py`（例：`IDENTITY.md` → **`identity`**，`context_json` ↔ `context.json`，`transcript` ↔ `transcript.jsonl`）。
 
 ## 作用域三元组怎么对齐
