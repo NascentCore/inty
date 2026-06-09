@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from app.core.companion_harness.companion.models import ContextMeta
+from app.core.companion_harness.companion.bootstrap import (
+    build_bootstrap_tool_call_section,
+)
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    CompanionToolName,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
@@ -9,7 +14,10 @@ from app.core.companion_harness.companion.prompts.system_messages import (
 from app.core.companion_harness.companion.prompt_stack import (
     companion_system_messages_for_track,
 )
-from app.core.companion_harness.companion.models import CompanionTurnTrack
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    ContextMeta,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
@@ -38,6 +46,33 @@ def test_capability_group_injects_channels_before_tools() -> None:
     assert contents.index("# Channels\nchannel contract") < contents.index(
         "# Tools\ntool contract"
     )
+
+
+def test_bootstrap_track_injects_typed_tool_call_section() -> None:
+    bundle = PromptBundle(
+        identity="identity",
+        soul="soul",
+        user_md="user",
+        memory_md="",
+    )
+    contents = _system_contents(
+        build_system_messages_for_bootstrap_track(bundle, ContextMeta())
+    )
+    tool_section = build_bootstrap_tool_call_section()
+
+    assert tool_section in contents
+    bootstrap_spec_block = next(
+        content
+        for content in contents
+        if content.startswith("# Agentic 初始化执行规范（内部）")
+    )
+    assert contents.index(bootstrap_spec_block) < contents.index(tool_section)
+    for tool_name in (
+        CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE,
+        CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
+        CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
+    ):
+        assert tool_name.value in tool_section
 
 
 def test_bootstrap_omits_capability_package_slices() -> None:

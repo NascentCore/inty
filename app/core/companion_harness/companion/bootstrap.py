@@ -112,20 +112,13 @@ def interactive_bootstrap_active(
     )
 
 
-def build_interactive_bootstrap_system_message_parts(
+def build_interactive_bootstrap_template_reference_parts(
     *,
     max_chars_per_seed: int = 6000,
 ) -> list[str]:
-    """
-    Ordered system bodies while interactive bootstrap is active.
+    """Template seed bodies for writable bootstrap prompt slices."""
 
-    The first body is the bootstrap procedure; following bodies are template
-    references for the writable prompt slices.  Returning one string per future
-    system message keeps the procedure and examples from being collapsed into one
-    large block, which makes stack inspection and model weighting clearer.
-    """
-    spec = load_bootstrap_spec_text()
-    blocks: list[str] = [spec, build_bootstrap_tool_call_section()]
+    blocks: list[str] = []
     for rel in _INTERACTIVE_TEMPLATE_RELS:
         try:
             seed = load_template_seed_text(rel)
@@ -136,6 +129,26 @@ def build_interactive_bootstrap_system_message_parts(
             body = body[: max_chars_per_seed - 1] + "\n…[truncated]"
         blocks.append(f"## TEMPLATE_REFERENCE {rel}\n\n{body}")
     return blocks
+
+
+def build_interactive_bootstrap_system_message_parts(
+    *,
+    max_chars_per_seed: int = 6000,
+) -> list[str]:
+    """
+    Ordered system bodies while interactive bootstrap is active.
+
+    Returns ``BOOTSTRAP.md``, typed ``## 工具调用`` (``build_bootstrap_tool_call_section``),
+    then template references for writable prompt slices.  One string per system message
+    keeps stack inspection and model weighting clearer.
+    """
+    return [
+        load_bootstrap_spec_text(),
+        build_bootstrap_tool_call_section(),
+        *build_interactive_bootstrap_template_reference_parts(
+            max_chars_per_seed=max_chars_per_seed
+        ),
+    ]
 
 
 def build_interactive_bootstrap_system_append(
