@@ -25,7 +25,7 @@ from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
     scheduled_task_synthetic_user_text,
 )
-from app.core.companion_harness.companion.turn import (
+from app.core.companion_harness.runtime.turn import (
     run_companion_inner_tick_scheduled_turn
 )
 from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps

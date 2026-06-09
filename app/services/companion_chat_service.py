@@ -17,7 +17,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.companion.runtime_events import (
+from app.core.companion_harness.runtime.runtime_events import (
     append_runtime_event,
 )
 from app.core.companion_harness.companion.dreaming_observability import (
@@ -27,7 +27,7 @@ from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
 )
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.turn_routes import (
+from app.core.companion_harness.runtime.turn_routes import (
     BackgroundToolEventSink,
     BootstrapInterimOutputSink,
 )
@@ -276,7 +276,7 @@ async def _maybe_append_companion_ws_session_system(
     ):
         return
     from app.core.companion_harness.runtime.models import load_context_meta
-    from app.core.companion_harness.companion.utc import utc_iso_ts
+    from app.core.companion_harness.runtime.utc import utc_iso_ts
     from app.core.companion_harness.memory.memory_store_scope import (
         DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     )

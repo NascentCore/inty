@@ -332,7 +332,7 @@ def save_compaction_state_to_store(
 def transcript_rows_to_openai_dialogue(
     rows: list[ChatMessage],
 ) -> list[dict[str, Any]]:
-    from app.core.companion_harness.companion.utc import (
+    from app.core.companion_harness.runtime.utc import (
         transcript_message_content_for_llm,
     )
 

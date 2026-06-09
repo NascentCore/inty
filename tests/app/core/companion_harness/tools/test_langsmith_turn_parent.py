@@ -30,7 +30,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import start_tool_background_job
-from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
+from app.core.companion_harness.runtime.turn import run_companion_user_chat_turn
 from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
@@ -438,7 +438,7 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
         return sentinel
 
     monkeypatch.setattr(
-        "app.core.companion_harness.companion.turn.create_companion_turn_root_run",
+        "app.core.companion_harness.runtime.turn.create_companion_turn_root_run",
         _fake_create_root,
     )
 
@@ -448,7 +448,7 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
         bg_jobs.append(kwargs)
 
     monkeypatch.setattr(
-        "app.core.companion_harness.companion.turn.start_tool_background_job",
+        "app.core.companion_harness.runtime.turn.start_tool_background_job",
         _capture_bg,
     )
 

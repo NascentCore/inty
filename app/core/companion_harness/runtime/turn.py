@@ -65,18 +65,18 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     invocation_extra,
 )
 
-from .llm_client import (
+from app.core.companion_harness.companion.llm_client import (
     LLM_SCENE_CHAT,
     LLM_SCENE_INNER_TICK,
     CompanionLLMClient,
 )
-from .llm_runtime_events import (
+from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
     record_llm_inference_failure,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .proactive_chat import (
+from app.core.companion_harness.companion.proactive_chat import (
     PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
     build_proactive_chat_transcript_user_marker,
@@ -94,19 +94,19 @@ from app.core.companion_harness.runtime.models import (
     load_context_meta,
     transcript_relative_path_for_turn_persistence,
 )
-from .prompt_stack import (
+from app.core.companion_harness.companion.prompt_stack import (
     append_runtime_output_format_system_message,
     refresh_companion_turn_prompt_stack,
 )
-from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
 from .turn_track import turn_flags_for_track
-from .prompts.system_messages import (
+from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages_for_chat_track,
     build_system_messages_for_inner_tick_maintenance,
     build_system_messages_for_tool_track,
 )
-from .dual_llm_chat_branch_envelope import (
+from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
 )
@@ -141,13 +141,13 @@ from .turn_routes import (
     TurnRouteMode,
 )
 from .utc import utc_iso_ts, utc_now
-from .implicit_signal_messages import (
+from app.core.companion_harness.companion.implicit_signal_messages import (
     MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )
-from .inner_tick_schedule import transcript_tail_message_uuid
-from .llm_chat_runtime import (
+from app.core.companion_harness.companion.inner_tick_schedule import transcript_tail_message_uuid
+from app.core.companion_harness.companion.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
     end_companion_turn_root_run_safe,

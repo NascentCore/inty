@@ -16,10 +16,10 @@ from app.core.companion_harness.runtime.models import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.runtime.scope import CompanionScope
-from app.core.companion_harness.companion.turn_routes import (
+from app.core.companion_harness.runtime.turn_routes import (
     BootstrapInterimOutput,
 )
-from app.core.companion_harness.companion.turn import (
+from app.core.companion_harness.runtime.turn import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,
@@ -87,7 +87,7 @@ async def test_user_chat_track_passes_non_inner_tick_flags(tmp_path) -> None:
         memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
     )
     with patch(
-        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        "app.core.companion_harness.runtime.turn._run_companion_turn_core",
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
@@ -129,7 +129,7 @@ async def test_user_chat_turn_selects_bootstrap_track_when_incomplete(
         memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
     )
     with patch(
-        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        "app.core.companion_harness.runtime.turn._run_companion_turn_core",
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
@@ -177,7 +177,7 @@ async def test_user_chat_turn_plumbs_bootstrap_interim_output_sink(tmp_path) -> 
         bootstrap_interim_output_sink=_sink,
     )
     with patch(
-        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        "app.core.companion_harness.runtime.turn._run_companion_turn_core",
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
@@ -208,7 +208,7 @@ async def test_implicit_sign_on_track() -> None:
         assistant_text="",
     )
     with patch(
-        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        "app.core.companion_harness.runtime.turn._run_companion_turn_core",
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
@@ -238,7 +238,7 @@ async def test_proactive_inner_tick_track() -> None:
         assistant_text="",
     )
     with patch(
-        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        "app.core.companion_harness.runtime.turn._run_companion_turn_core",
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
@@ -260,7 +260,7 @@ async def test_scheduled_inner_tick_track() -> None:
     )
     scheduled_text = "（定时提醒触发）提醒事项：喝水"
     with patch(
-        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        "app.core.companion_harness.runtime.turn._run_companion_turn_core",
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
@@ -284,7 +284,7 @@ async def test_maintenance_inner_tick_track() -> None:
         assistant_text="",
     )
     with patch(
-        "app.core.companion_harness.companion.turn._run_companion_turn_core",
+        "app.core.companion_harness.runtime.turn._run_companion_turn_core",
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:

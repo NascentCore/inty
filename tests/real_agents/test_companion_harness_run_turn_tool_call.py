@@ -16,7 +16,7 @@ import pytest
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.runtime.scope import CompanionScope
-from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
+from app.core.companion_harness.runtime.turn import run_companion_user_chat_turn
 from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,

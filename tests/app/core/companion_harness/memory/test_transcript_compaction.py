@@ -14,7 +14,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from app.core.companion_harness.runtime.models import ChatMessage
-from app.core.companion_harness.companion.utc import (
+from app.core.companion_harness.runtime.utc import (
     format_transcript_ts_for_llm,
     transcript_message_content_for_llm,
     utc_iso_ts,

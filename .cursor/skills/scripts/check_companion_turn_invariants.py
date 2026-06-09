@@ -16,7 +16,7 @@ _REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT_FOR_IMPORT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT_FOR_IMPORT))
 
-from app.core.companion_harness.companion.turn_invariants import (  # noqa: E402
+from app.core.companion_harness.runtime.turn_invariants import (  # noqa: E402
     AWAKE_TURN_FORBIDDEN_STORE_MUTATIONS,
     AWAKE_TURN_ORCHESTRATOR_RELATIVE_PATHS,
     AWAKE_TURN_TRANSCRIPT_ONLY_RELATIVE_PATH,

@@ -12,7 +12,7 @@ from typing import Any, Literal
 from loguru import logger
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .utc import utc_iso_ts
+from app.core.companion_harness.runtime.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )

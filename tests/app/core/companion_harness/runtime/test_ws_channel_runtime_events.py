@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.core.companion_harness.companion.runtime_events import (
+from app.core.companion_harness.runtime.runtime_events import (
     USER_SIGNED_OUT_RUNTIME_EVENT_KIND,
     WS_CONN_DROPPED_RUNTIME_EVENT_KIND,
     append_runtime_event,

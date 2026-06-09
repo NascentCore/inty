@@ -39,7 +39,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.companion_harness.companion.turn_routes import (
+from app.core.companion_harness.runtime.turn_routes import (
     BootstrapInterimOutput,
     BootstrapInterimOutputSink,
 )

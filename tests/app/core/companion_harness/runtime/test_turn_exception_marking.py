@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.core.companion_harness.companion.turn import (
+from app.core.companion_harness.runtime.turn import (
     CompanionToolBackgroundStartedError,
 )
 

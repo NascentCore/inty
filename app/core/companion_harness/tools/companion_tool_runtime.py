@@ -29,7 +29,7 @@ from app.core.companion_harness.companion.bootstrap import (
     tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
 )
-from app.core.companion_harness.companion.message_format import (
+from app.core.companion_harness.runtime.message_format import (
     openai_assistant_message_dict,
 )
 from app.core.companion_harness.runtime.models import (

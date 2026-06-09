@@ -25,7 +25,7 @@ from app.core.companion_harness.runtime.models import (
     load_context_meta,
     load_prompt_bundle,
 )
-from .turn_track import turn_flags_for_track
+from app.core.companion_harness.runtime.turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from .prompts.system_messages import (
@@ -43,7 +43,10 @@ from app.core.companion_harness.tools.companion_tools import (
     build_openai_bootstrap_track_tools,
     build_openai_repl_tools_inner_tick,
 )
-from .turn_routes import TurnRouteMode, resolve_turn_route_mode
+from app.core.companion_harness.runtime.turn_routes import (
+    TurnRouteMode,
+    resolve_turn_route_mode,
+)
 
 
 def replace_leading_system_messages_inplace(

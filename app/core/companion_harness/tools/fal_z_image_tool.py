@@ -18,7 +18,7 @@ from typing import Any
 import fal_client
 
 from app.core.companion_harness.companion.env_flags import env_flag_enabled
-from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.runtime.utc import utc_iso_ts
 
 from .image_gate import (
     append_image_asset_record,

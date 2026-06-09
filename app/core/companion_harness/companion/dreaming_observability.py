@@ -19,10 +19,10 @@ from app.core.companion_harness.runtime.models import InnerTickActivity
 
 if TYPE_CHECKING:
     from app.core.companion_harness.runtime.manager import CompanionSession
-from app.core.companion_harness.companion.runtime_events import (
+from app.core.companion_harness.runtime.runtime_events import (
     append_runtime_event,
 )
-from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.runtime.utc import utc_iso_ts
 
 INNER_TICK_DREAMING_RUNTIME_EVENT_KIND = "inner_tick_dreaming"
 

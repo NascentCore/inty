@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.runtime.scope import CompanionScope
-from app.core.companion_harness.companion.turn_engine import persist_repl_turn_transcript_rows
+from app.core.companion_harness.runtime.turn_engine import persist_repl_turn_transcript_rows
 
 
 def _scope(tmp: Path) -> CompanionScope:

@@ -28,7 +28,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
 
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient
 from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
-from app.core.companion_harness.companion.turn_routes import (
+from app.core.companion_harness.runtime.turn_routes import (
     BackgroundToolEventSink,
     BootstrapInterimOutputSink,
 )

@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.runtime.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
 _MEMORY_REL = "MEMORY.md"

@@ -22,7 +22,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
-from app.core.companion_harness.companion.turn import (
+from app.core.companion_harness.runtime.turn import (
     CHAT_TRACK_RESPONSE_MESSAGE_TITLE,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,
@@ -143,7 +143,7 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
         bg_jobs.append(kwargs)
 
     monkeypatch.setattr(
-        "app.core.companion_harness.companion.turn.start_tool_background_job",
+        "app.core.companion_harness.runtime.turn.start_tool_background_job",
         _capture_bg,
     )
 
@@ -200,7 +200,7 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
         bg_jobs.append(kwargs)
 
     monkeypatch.setattr(
-        "app.core.companion_harness.companion.turn.start_tool_background_job",
+        "app.core.companion_harness.runtime.turn.start_tool_background_job",
         _capture_bg,
     )
 
@@ -306,7 +306,7 @@ async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_injec
         bg_jobs.append(kwargs)
 
     monkeypatch.setattr(
-        "app.core.companion_harness.companion.turn.start_tool_background_job",
+        "app.core.companion_harness.runtime.turn.start_tool_background_job",
         _capture_bg,
     )
 

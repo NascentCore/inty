@@ -21,7 +21,7 @@ from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from app.core.companion_harness.companion.turn_routes import (
+from app.core.companion_harness.runtime.turn_routes import (
     BootstrapInterimOutput,
     BootstrapInterimOutputSink,
 )

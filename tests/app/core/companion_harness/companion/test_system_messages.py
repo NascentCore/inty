@@ -22,7 +22,7 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
-from app.core.companion_harness.companion.turn_routes import TurnRouteMode
+from app.core.companion_harness.runtime.turn_routes import TurnRouteMode
 
 
 def _system_contents(messages: list[dict[str, object]]) -> list[str]:

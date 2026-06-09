@@ -10,7 +10,7 @@ from app.services.agentic_companion.downlink import (
     proactive_downlink,
     tool_background_downlink,
 )
-from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
+from app.core.companion_harness.runtime.turn_routes import BootstrapInterimOutput
 from backend.ops.weixin_channel.weixin_downlink import WeixinDownlink
 
 

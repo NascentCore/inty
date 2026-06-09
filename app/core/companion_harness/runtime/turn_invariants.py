@@ -30,8 +30,8 @@ CONSOLIDATE_MEMORY_DURING_DREAMING_IMPORT_ALLOWLIST: frozenset[str] = frozenset(
 
 AWAKE_TURN_ORCHESTRATOR_RELATIVE_PATHS: frozenset[str] = frozenset(
     {
-        "app/core/companion_harness/companion/turn.py",
-        "app/core/companion_harness/companion/turn_pipeline.py",
+        "app/core/companion_harness/runtime/turn.py",
+        "app/core/companion_harness/runtime/turn_pipeline.py",
         "app/core/companion_harness/tools/tool_background.py",
     }
 )
@@ -64,7 +64,7 @@ FORBIDDEN_LEGACY_MEMORY_SYMBOLS: frozenset[str] = frozenset(
 )
 
 AWAKE_TURN_TRANSCRIPT_ONLY_RELATIVE_PATH: str = (
-    "app/core/companion_harness/companion/turn.py"
+    "app/core/companion_harness/runtime/turn.py"
 )
 
 AWAKE_TURN_ALLOWED_STORE_MUTATIONS: frozenset[str] = frozenset(

@@ -19,7 +19,7 @@ from loguru import logger
 
 from app.core.companion_harness.companion.dreaming import parse_transcript_datetime
 from app.core.companion_harness.runtime.models import ChatMessage
-from app.core.companion_harness.companion.utc import local_date_str
+from app.core.companion_harness.runtime.utc import local_date_str
 
 from .living_sphere_curator import compact_living_sphere_if_pending
 from .memory_store import MemoryStore

@@ -47,11 +47,11 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from .scope import CompanionScope
 from .turn_deps import CompanionTurnDeps
-from app.core.companion_harness.companion.turn_routes import (
+from app.core.companion_harness.runtime.turn_routes import (
     BackgroundToolEventSink,
     BootstrapInterimOutputSink,
 )
-from app.core.companion_harness.companion.turn_tracks import (
+from app.core.companion_harness.runtime.turn_tracks import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.core.companion_harness.runtime.models import CompanionTurnResult
-from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
+from app.core.companion_harness.runtime.turn_routes import BootstrapInterimOutput
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.services.agentic_companion.downlink import (
     DownlinkKind,

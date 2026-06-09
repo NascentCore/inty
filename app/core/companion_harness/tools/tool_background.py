@@ -69,13 +69,13 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
-from app.core.companion_harness.companion.runtime_events import (
+from app.core.companion_harness.runtime.runtime_events import (
     append_runtime_event,
 )
 from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     envelope_to_assistant_metadata_dict,
 )
-from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.runtime.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
 from .companion_tool_runtime import (

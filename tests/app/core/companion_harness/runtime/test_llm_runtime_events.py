@@ -14,7 +14,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     record_llm_inference_failure,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.runtime_events import read_runtime_events
+from app.core.companion_harness.runtime.runtime_events import read_runtime_events
 from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.llm.chat_completions import (
     OpenRouterInvalidJsonError,

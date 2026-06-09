@@ -18,11 +18,11 @@ from app.core.config import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
-from .proactive_chat import (
+from app.core.companion_harness.companion.proactive_chat import (
     PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
 )
-from .implicit_signal_messages import (
+from app.core.companion_harness.companion.implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )
@@ -44,13 +44,13 @@ from app.core.companion_harness.runtime.models import (
     load_prompt_bundle,
     transcript_for_llm_turn,
 )
-from .runtime_channel import TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
 from .turn_track import turn_flags_for_track
-from .dreaming import (
+from app.core.companion_harness.companion.dreaming import (
     apply_dreaming_checkpoint_to_prompt_rows,
     load_dreaming_state,
 )
-from .prompt_stack import companion_turn_tools_and_system_messages
+from app.core.companion_harness.companion.prompt_stack import companion_turn_tools_and_system_messages
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
     ConversationCompactor,
@@ -61,7 +61,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
 )
 from .turn_routes import TurnRouteMode
 from .utc import transcript_message_content_for_llm_at
-from .user_time_context_llm_slice import (
+from app.core.companion_harness.companion.user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
 )
 

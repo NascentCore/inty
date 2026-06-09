@@ -32,7 +32,7 @@ from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )
-from app.core.companion_harness.companion.turn_track import (
+from app.core.companion_harness.runtime.turn_track import (
     langsmith_inty_turn_lane_for_companion_track,
     turn_flags_for_track,
 )

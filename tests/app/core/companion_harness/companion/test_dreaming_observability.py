@@ -11,7 +11,7 @@ from app.core.companion_harness.companion.dreaming_observability import (
     record_dreaming_batch_observability,
 )
 from app.core.companion_harness.runtime.models import ChatMessage, InnerTickActivity
-from app.core.companion_harness.companion.runtime_events import read_runtime_events
+from app.core.companion_harness.runtime.runtime_events import read_runtime_events
 from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 

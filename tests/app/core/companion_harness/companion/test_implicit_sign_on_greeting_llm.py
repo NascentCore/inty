@@ -18,7 +18,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     record_llm_inference_failure,
 )
 from app.core.companion_harness.runtime.scope import CompanionScope
-from app.core.companion_harness.companion.turn import (
+from app.core.companion_harness.runtime.turn import (
     run_companion_implicit_sign_on_greeting_turn,
 )
 from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
