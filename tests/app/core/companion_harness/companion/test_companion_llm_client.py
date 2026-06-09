@@ -45,7 +45,7 @@ def test_companion_llm_clients_use_distinct_langsmith_chat_names(
     assert len(set(chat_names)) == len(chat_names)
 
 
-def test_complete_text_passes_memory_pipeline_langsmith_extra(
+def test_complete_text_passes_dreaming_consolidation_langsmith_extra(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured: dict[str, Any] = {}
@@ -87,9 +87,9 @@ def test_complete_text_passes_memory_pipeline_langsmith_extra(
     )
     assert out == "curated"
     extra = captured.get("langsmith_extra") or {}
-    assert extra.get("name") == "agentic_companion_memory_pipeline-day_summary"
+    assert extra.get("name") == "agentic_companion_dreaming_consolidation-day_summary"
     meta = extra.get("metadata") or {}
-    assert meta.get("inty_llm_source") == "memory_pipeline_day_summary"
+    assert meta.get("inty_llm_source") == "dreaming_consolidation_day_summary"
 
 
 def _ok_completion() -> Any:

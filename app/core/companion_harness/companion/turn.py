@@ -72,11 +72,6 @@ from .llm_runtime_events import (
     companion_llm_runtime_event_bind_ctx,
     record_llm_inference_failure,
 )
-from app.core.companion_harness.memory.memory_pipeline import (
-    MemoryPipelineConfig,
-    memory_update_after_turn,
-    schedule_memory_update_after_turn,
-)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .proactive_chat import (
     PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
@@ -426,8 +421,6 @@ async def _run_companion_turn_core(
     track: CompanionTurnTrack,
     store: MemoryStore,
     llm_client: CompanionLLMClient,
-    defer_memory_update: bool = True,
-    memory_config: MemoryPipelineConfig | None = None,
     transcript_compaction: TranscriptCompactionConfig | None = None,
     transcript_llm_window_max_messages: int | None = None,
     repository_only_store_text: bool = False,
@@ -452,7 +445,6 @@ async def _run_companion_turn_core(
       **维护性 inner tick**（``inner_tick_turn`` 且非 proactive）在该路由下**始终**跳过前台 envelope，
       直接 ``start_tool_background_job``（``force_tools_first_round=True``））。
     - 持久化 transcript
-    - 调度记忆管线
 
     返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
     有工具且走上述异步路由时：普通用户轮的 ``assistant_text`` 仅反映**已结束的前台** envelope，**不等待**
@@ -460,7 +452,6 @@ async def _run_companion_turn_core(
     """
     t0 = time.perf_counter()
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    mem_cfg = memory_config or MemoryPipelineConfig()
     inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
     implicit_signal_bundle = runtime_context.implicit_signal_bundle
 
@@ -475,13 +466,12 @@ async def _run_companion_turn_core(
     implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
 
     logger.info(
-        "run_turn start scope={} track={} user_chars={} inner_tick_turn={} inner_tick_activity={} defer_memory={}",
+        "run_turn start scope={} track={} user_chars={} inner_tick_turn={} inner_tick_activity={}",
         store.scope.registry_key(),
         track.value,
         len(user_text),
         inner_tick_turn,
         route_inner_activity.value if inner_tick_turn else "-",
-        defer_memory_update,
     )
     logger.debug(
         "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm=True",
@@ -996,11 +986,6 @@ async def _run_companion_turn_core(
             user_row["scheduled"] = True
         user_row["trace_id"] = trace_id
         store.append_jsonl_record(rel_tr, user_row)
-    memory_user_text = (
-        MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON
-        if implicit_sign_on_turn
-        else user_text
-    )
     assistant_row: dict[str, Any] = {
         "role": "assistant",
         "content": last_text,
@@ -1014,59 +999,6 @@ async def _run_companion_turn_core(
         assistant_row["significance_perception"] = significance_meta
     if not bootstrap_skip_final_transcript_assistant_row:
         store.append_jsonl_record(rel_tr, assistant_row)
-
-    # 记忆管线
-    if inner_tick_turn:
-        logger.debug(
-            "run_turn memory_pipeline=skipped (inner_tick_turn) mode={}",
-            route_inner_activity.value,
-        )
-    else:
-        assert tool_bg_idle_event is not None
-        if defer_memory_update:
-
-            def _complete_fn(
-                msgs: list[dict[str, Any]], model_role: str
-            ) -> str:
-                return llm_client.complete_text(msgs, model_role=model_role)
-
-            schedule_memory_update_after_turn(
-                store,
-                user_text=memory_user_text,
-                assistant_text=last_text,
-                complete_fn=_complete_fn,
-                config=mem_cfg,
-                trace_id=trace_id,
-                user_msg_uuid=user_msg_uuid,
-                tool_bg_idle_event=tool_bg_idle_event,
-            )
-        else:
-            _mem_sync_tok = companion_llm_runtime_event_bind_ctx.set(
-                LlmRuntimeEventBind(
-                    memory_store=store,
-                    trace_id=trace_id,
-                    user_msg_uuid=user_msg_uuid,
-                    phase="memory_pipeline",
-                    scene=None,
-                )
-            )
-            try:
-
-                def _complete_fn_sync(
-                    msgs: list[dict[str, Any]], model_role: str
-                ) -> str:
-                    return llm_client.complete_text(msgs, model_role=model_role)
-
-                memory_update_after_turn(
-                    store,
-                    user_text=memory_user_text,
-                    assistant_text=last_text,
-                    complete_fn=_complete_fn_sync,
-                    config=mem_cfg,
-                    tool_bg_idle_event=tool_bg_idle_event,
-                )
-            finally:
-                companion_llm_runtime_event_bind_ctx.reset(_mem_sync_tok)
 
     logger.info(
         "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "
@@ -1105,8 +1037,6 @@ async def run_companion_user_chat_turn(
     *,
     store: MemoryStore,
     llm_client: CompanionLLMClient,
-    defer_memory_update: bool,
-    memory_config: MemoryPipelineConfig | None,
     transcript_compaction: TranscriptCompactionConfig | None,
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
@@ -1146,8 +1076,6 @@ async def run_companion_user_chat_turn(
         track=track,
         store=store,
         llm_client=llm_client,
-        defer_memory_update=defer_memory_update,
-        memory_config=memory_config,
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
@@ -1166,8 +1094,6 @@ async def run_companion_implicit_sign_on_greeting_turn(
     *,
     store: MemoryStore,
     llm_client: CompanionLLMClient,
-    defer_memory_update: bool,
-    memory_config: MemoryPipelineConfig | None,
     transcript_compaction: TranscriptCompactionConfig | None,
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
@@ -1189,8 +1115,6 @@ async def run_companion_implicit_sign_on_greeting_turn(
         track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
         store=store,
         llm_client=llm_client,
-        defer_memory_update=defer_memory_update,
-        memory_config=memory_config,
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
@@ -1207,8 +1131,6 @@ async def run_companion_inner_tick_proactive_chat_turn(
     *,
     store: MemoryStore,
     llm_client: CompanionLLMClient,
-    defer_memory_update: bool,
-    memory_config: MemoryPipelineConfig | None,
     transcript_compaction: TranscriptCompactionConfig | None,
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
@@ -1224,8 +1146,6 @@ async def run_companion_inner_tick_proactive_chat_turn(
         track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
         store=store,
         llm_client=llm_client,
-        defer_memory_update=defer_memory_update,
-        memory_config=memory_config,
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
@@ -1243,8 +1163,6 @@ async def run_companion_inner_tick_scheduled_turn(
     *,
     store: MemoryStore,
     llm_client: CompanionLLMClient,
-    defer_memory_update: bool,
-    memory_config: MemoryPipelineConfig | None,
     transcript_compaction: TranscriptCompactionConfig | None,
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
@@ -1263,8 +1181,6 @@ async def run_companion_inner_tick_scheduled_turn(
         track=CompanionTurnTrack.INNER_TICK_SCHEDULED,
         store=store,
         llm_client=llm_client,
-        defer_memory_update=defer_memory_update,
-        memory_config=memory_config,
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,
@@ -1281,8 +1197,6 @@ async def run_companion_inner_tick_maintenance_turn(
     *,
     store: MemoryStore,
     llm_client: CompanionLLMClient,
-    defer_memory_update: bool,
-    memory_config: MemoryPipelineConfig | None,
     transcript_compaction: TranscriptCompactionConfig | None,
     transcript_llm_window_max_messages: int | None,
     repository_only_store_text: bool,
@@ -1298,8 +1212,6 @@ async def run_companion_inner_tick_maintenance_turn(
         track=CompanionTurnTrack.INNER_TICK_MAINTENANCE,
         store=store,
         llm_client=llm_client,
-        defer_memory_update=defer_memory_update,
-        memory_config=memory_config,
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
         repository_only_store_text=repository_only_store_text,

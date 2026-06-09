@@ -139,15 +139,13 @@ class MemoryStoreScopePaths:
     def memory_daily_dir(self) -> str:
         return "memory/daily"
 
-    def memory_raw_diary(self, day: str) -> str:
+    def memory_daily_gist(self, day: str) -> str:
+        """Daily gist path (``memory/daily/<date>.md``); written only by dreaming consolidation."""
         return f"memory/daily/{day}.md"
 
-    def memory_day_summary(self, day: str) -> str:
-        return f"memory/{day}.md"
-
     @property
-    def memory_pipeline_state_json(self) -> str:
-        return f"{self.state_file_prefix}_memory_pipeline.json"
+    def living_sphere_curator_state_json(self) -> str:
+        return f"{self.state_file_prefix}_living_sphere_curator.json"
 
     @property
     def context_compaction_state_json(self) -> str:

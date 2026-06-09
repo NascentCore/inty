@@ -14,7 +14,6 @@ from typing import Any
 import pytest
 
 from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
-from app.core.companion_harness.memory.memory_pipeline import MemoryPipelineConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
@@ -90,8 +89,6 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
         tool_model=resolve_chat_text_model(_OPENROUTER_MODEL),
     )
     client = _InstrumentedCompanionLLMClient(cfg)
-
-    mem_cfg = MemoryPipelineConfig(memory_update_every_n_turns=999)
     user_prompt = (
         "You MUST call the memory_store_list_paths tool first with relative_path \"\" (empty string) "
         "to list the MemoryStore scope root. Do not guess. After you receive the tool output, reply in one "
@@ -101,8 +98,6 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
         user_prompt,
         store=store,
         llm_client=client,
-        defer_memory_update=True,
-        memory_config=mem_cfg,
         transcript_compaction=None,
         transcript_llm_window_max_messages=None,
         repository_only_store_text=False,

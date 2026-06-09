@@ -10,9 +10,6 @@ from typing import Final
 _MEMORY_DAILY_RE: Final[re.Pattern[str]] = re.compile(
     r"^memory/daily/(\d{4}-\d{2}-\d{2})\.md$", re.IGNORECASE
 )
-_MEMORY_SUMMARY_RE: Final[re.Pattern[str]] = re.compile(
-    r"^memory/(\d{4}-\d{2}-\d{2})\.md$", re.IGNORECASE
-)
 
 
 class CompanionMemoryDocumentKind(str, Enum):
@@ -38,16 +35,15 @@ class CompanionMemoryDocumentKind(str, Enum):
     AI_PRIVATE_JSONL = "ai_private_jsonl"
     TOOL_BACKGROUND_JSONL = "tool_background_jsonl"
     GENERATED_IMAGES_INDEX_JSONL = "generated_images_index_jsonl"
-    MEMORY_DAILY_RAW = "memory_daily_raw"  # episodic: memory/daily/<date>.md
-    MEMORY_DAY_SUMMARY = "memory_day_summary"  # gist: memory/<date>.md
-    COMPANION_MEMORY_PIPELINE_JSON = "companion_memory_pipeline_json"
+    MEMORY_DAILY_RAW = "memory_daily_raw"  # daily gist: memory/daily/<date>.md (dreaming only)
+    COMPANION_LIVING_SPHERE_CURATOR_JSON = "companion_living_sphere_curator_json"
     COMPANION_CONTEXT_COMPACTION_STATE_JSON = (
         "companion_context_compaction_state_json"
     )
     COMPANION_SCHEDULE_TASKS_JSON = "companion_schedule_tasks_json"
     COMPANION_RUNTIME_EVENTS_JSONL = "companion_runtime_events_jsonl"
     COMPANION_DREAMING_STATE_JSON = "companion_dreaming_state_json"
-    INTY_V2_MEMORY_PIPELINE_JSON = "inty_v2_memory_pipeline_json"
+    INTY_V2_LIVING_SPHERE_CURATOR_JSON = "inty_v2_living_sphere_curator_json"
     INTY_V2_CONTEXT_COMPACTION_STATE_JSON = (
         "inty_v2_context_compaction_state_json"
     )
@@ -95,8 +91,8 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         CompanionMemoryDocumentKind.GENERATED_IMAGES_INDEX_JSONL,
         None,
     ),
-    ".companion_memory_pipeline.json": (
-        CompanionMemoryDocumentKind.COMPANION_MEMORY_PIPELINE_JSON,
+    ".companion_living_sphere_curator.json": (
+        CompanionMemoryDocumentKind.COMPANION_LIVING_SPHERE_CURATOR_JSON,
         None,
     ),
     ".companion_context_compaction_state.json": (
@@ -115,8 +111,8 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         CompanionMemoryDocumentKind.COMPANION_DREAMING_STATE_JSON,
         None,
     ),
-    ".inty_v2_memory_pipeline.json": (
-        CompanionMemoryDocumentKind.INTY_V2_MEMORY_PIPELINE_JSON,
+    ".inty_v2_living_sphere_curator.json": (
+        CompanionMemoryDocumentKind.INTY_V2_LIVING_SPHERE_CURATOR_JSON,
         None,
     ),
     ".inty_v2_context_compaction_state.json": (
@@ -142,25 +138,16 @@ def parse_memory_store_relative_path(
     if m_daily:
         d = date.fromisoformat(m_daily.group(1))
         return (CompanionMemoryDocumentKind.MEMORY_DAILY_RAW, d)
-    m_sum = _MEMORY_SUMMARY_RE.match(rel)
-    if m_sum:
-        d = date.fromisoformat(m_sum.group(1))
-        return (CompanionMemoryDocumentKind.MEMORY_DAY_SUMMARY, d)
     raise ValueError(f"unsupported memory store document path for ORM: {rel!r}")
 
 
 def relative_path_for_kind(
     kind: CompanionMemoryDocumentKind, calendar_date: date | None
 ) -> str:
-    if kind in (
-        CompanionMemoryDocumentKind.MEMORY_DAILY_RAW,
-        CompanionMemoryDocumentKind.MEMORY_DAY_SUMMARY,
-    ):
+    if kind == CompanionMemoryDocumentKind.MEMORY_DAILY_RAW:
         if calendar_date is None:
             raise ValueError(f"calendar_date required for {kind}")
-        if kind == CompanionMemoryDocumentKind.MEMORY_DAILY_RAW:
-            return f"memory/daily/{calendar_date.isoformat()}.md"
-        return f"memory/{calendar_date.isoformat()}.md"
+        return f"memory/daily/{calendar_date.isoformat()}.md"
     if calendar_date is not None:
         raise ValueError(f"calendar_date must be null for {kind}")
     for rel, (k, cd) in _REL_TO_KIND.items():

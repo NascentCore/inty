@@ -46,8 +46,8 @@ from app.core.companion_harness.memory.memory_registry import (
     MEMORY_STORE_REGISTRY_REQUIRES_DSN,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_pipeline import (
-    memory_update_during_dreaming,
+from app.core.companion_harness.memory.dreaming_consolidation import (
+    consolidate_memory_during_dreaming,
 )
 from app.core.companion_harness.companion.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
@@ -146,7 +146,7 @@ def run_dreaming_batch_for_session(
     Caller must hold presence ``turn_lock`` (or equivalent single-writer exclusion).
     Re-checks ``dreaming_due`` inside the lock so conditions may change while waiting.
     Prototype: ``transcript.jsonl`` must not change during the batch; mismatch after
-    ``memory_update_during_dreaming`` raises ``DreamingTranscriptBoundaryMismatchError``
+    ``consolidate_memory_during_dreaming`` raises ``DreamingTranscriptBoundaryMismatchError``
     (see ``companion.dreaming`` module doc — #3272, #3271, tool_bg timing TODO).
 
     TODO(dreaming-cluster-lock): Postgres advisory lock per scope when running multi-process
@@ -186,7 +186,7 @@ def run_dreaming_batch_for_session(
         def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
             return session.llm_client.complete_text(messages, model_role=role)
 
-        memory_update_during_dreaming(
+        consolidate_memory_during_dreaming(
             session.store,
             candidate.rows,
             _complete_fn,
@@ -457,13 +457,12 @@ def _log_companion_api_turn_finished(
     ws_system_ms: float,
     run_turn_ms: float,
     user_chars: int,
-    defer_memory_update: bool,
     out: CompanionTurnResult,
 ) -> None:
     logger.info(
         "companion_chat_turn finished path={} user={} agent={} chat={} model={} "
         "total_ms={:.0f} manager_session_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f} "
-        "user_chars={} defer_memory={} inty_trace_id={} user_msg_uuid={} "
+        "user_chars={} inty_trace_id={} user_msg_uuid={} "
         "langsmith_trace_id={} langsmith_run_id={}",
         track_path,
         user_id,
@@ -475,7 +474,6 @@ def _log_companion_api_turn_finished(
         ws_system_ms,
         run_turn_ms,
         user_chars,
-        defer_memory_update,
         out.trace_id,
         out.user_msg_uuid,
         out.langsmith_trace_id or "",
@@ -491,7 +489,6 @@ async def _run_companion_api_track_turn(
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
     user_chars: int,
-    defer_memory_update: bool,
     session_id: str | None,
     run_track,
 ) -> CompanionTurnResult:
@@ -503,14 +500,13 @@ async def _run_companion_api_track_turn(
     chat_api_id = resolved_chat_model.id_on_provider
     t0 = time.perf_counter()
     logger.debug(
-        "companion_chat_turn start path={} user={} agent={} chat={} model={} api_base={} defer_memory={}",
+        "companion_chat_turn start path={} user={} agent={} chat={} model={} api_base={}",
         track_path,
         user_id,
         agent_id,
         chat_id,
         chat_api_id,
         api_base,
-        defer_memory_update,
     )
     manager, session, chat_api_id, manager_session_ms, ws_system_ms = (
         await _companion_session_for_api_turn(
@@ -535,7 +531,6 @@ async def _run_companion_api_track_turn(
         ws_system_ms=ws_system_ms,
         run_turn_ms=run_turn_ms,
         user_chars=user_chars,
-        defer_memory_update=defer_memory_update,
         out=out,
     )
     return out
@@ -548,7 +543,6 @@ async def run_user_chat(
     chat_id: str | int,
     user_text: str,
     resolved_chat_model: GenAIModel,
-    defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
@@ -564,14 +558,13 @@ async def run_user_chat(
     chat_api_id = resolved_chat_model.id_on_provider
     t0 = time.perf_counter()
     logger.debug(
-        "companion_chat_turn start path={} user={} agent={} chat={} model={} api_base={} defer_memory={}",
+        "companion_chat_turn start path={} user={} agent={} chat={} model={} api_base={}",
         "user_chat",
         user_id,
         agent_id,
         chat_id,
         chat_api_id,
         api_base,
-        defer_memory_update,
     )
     manager, session, chat_api_id, manager_session_ms, ws_system_ms = (
         await _companion_session_for_api_turn(
@@ -586,7 +579,6 @@ async def run_user_chat(
     out = await manager.run_user_chat_turn(
         session,
         user_text,
-        defer_memory_update=defer_memory_update,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         runtime_context=TurnRuntimeContext(
@@ -607,7 +599,6 @@ async def run_user_chat(
         ws_system_ms=ws_system_ms,
         run_turn_ms=run_turn_ms,
         user_chars=len(user_text),
-        defer_memory_update=defer_memory_update,
         out=out,
     )
     return out
@@ -621,7 +612,6 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
     user_text: str,
     resolved_chat_model: GenAIModel,
     implicit_signal_bundle: ImplicitSignalBundle,
-    defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
@@ -634,12 +624,10 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
         chat_id=chat_id,
         resolved_chat_model=resolved_chat_model,
         user_chars=len(user_text),
-        defer_memory_update=defer_memory_update,
         session_id=session_id,
         run_track=lambda manager, session: manager.run_implicit_sign_on_greeting_turn(
             session,
             user_text,
-            defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
@@ -656,7 +644,6 @@ async def run_companion_inner_tick_proactive_chat_turn_for_api(
     agent_id: str,
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
-    defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
@@ -670,11 +657,9 @@ async def run_companion_inner_tick_proactive_chat_turn_for_api(
         chat_id=chat_id,
         resolved_chat_model=resolved_chat_model,
         user_chars=0,
-        defer_memory_update=defer_memory_update,
         session_id=session_id,
         run_track=lambda manager, session: manager.run_inner_tick_proactive_chat_turn(
             session,
-            defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
@@ -692,7 +677,6 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
     agent_id: str,
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
-    defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
@@ -709,12 +693,10 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
         chat_id=chat_id,
         resolved_chat_model=resolved_chat_model,
         user_chars=len(scheduled_user_text),
-        defer_memory_update=defer_memory_update,
         session_id=session_id,
         run_track=lambda manager, session: manager.run_inner_tick_scheduled_turn(
             session,
             scheduled_user_text,
-            defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
@@ -731,7 +713,6 @@ async def run_companion_inner_tick_maintenance_turn_for_api(
     agent_id: str,
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
-    defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
@@ -745,11 +726,9 @@ async def run_companion_inner_tick_maintenance_turn_for_api(
         chat_id=chat_id,
         resolved_chat_model=resolved_chat_model,
         user_chars=0,
-        defer_memory_update=defer_memory_update,
         session_id=session_id,
         run_track=lambda manager, session: manager.run_inner_tick_maintenance_turn(
             session,
-            defer_memory_update=defer_memory_update,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
@@ -767,7 +746,6 @@ async def run_companion_chat_turn_for_api(
     chat_id: str | int,
     user_text: str,
     resolved_chat_model: GenAIModel,
-    defer_memory_update: bool = True,
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
@@ -782,7 +760,6 @@ async def run_companion_chat_turn_for_api(
         "agent_id": agent_id,
         "chat_id": chat_id,
         "resolved_chat_model": resolved_chat_model,
-        "defer_memory_update": defer_memory_update,
         "session_id": session_id,
         "background_output_sink": background_output_sink,
         "preset_user_msg_uuid": preset_user_msg_uuid,

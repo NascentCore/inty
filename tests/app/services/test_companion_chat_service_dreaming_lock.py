@@ -57,7 +57,7 @@ def test_run_dreaming_batch_for_session_skips_when_not_due() -> None:
             return_value=None,
         ) as dreaming_due,
         patch(
-            "app.services.companion_chat_service.memory_update_during_dreaming"
+            "app.services.companion_chat_service.consolidate_memory_during_dreaming"
         ) as memory_update,
     ):
         result = companion_chat_service.run_dreaming_batch_for_session(
@@ -86,7 +86,7 @@ def test_run_dreaming_batch_for_session_raises_on_boundary_mismatch() -> None:
             "app.services.companion_chat_service.record_dreaming_batch_observability"
         ) as record_obs,
         patch(
-            "app.services.companion_chat_service.memory_update_during_dreaming"
+            "app.services.companion_chat_service.consolidate_memory_during_dreaming"
         ) as memory_update,
         patch(
             "app.services.companion_chat_service.assert_dreaming_transcript_boundary_unchanged",
@@ -123,7 +123,7 @@ def test_run_dreaming_batch_for_session_saves_checkpoint_after_update() -> None:
             "app.services.companion_chat_service.record_dreaming_batch_observability"
         ) as record_obs,
         patch(
-            "app.services.companion_chat_service.memory_update_during_dreaming"
+            "app.services.companion_chat_service.consolidate_memory_during_dreaming"
         ) as memory_update,
         patch(
             "app.services.companion_chat_service.assert_dreaming_transcript_boundary_unchanged",

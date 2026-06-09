@@ -2,7 +2,7 @@
 so production traces stay readable and easy to slice in the LangSmith UI.
 
 The module separates three observability concerns—foreground user-facing envelope completions,
-background tool-model phases, and post-turn memory curation—each with naming and tagging
+background tool-model phases, and dreaming memory consolidation—each with naming and tagging
 appropriate to how operators and engineers look for them, without mixing semantics across flows.
 """
 
@@ -24,7 +24,9 @@ SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK = "tool_background_routing_fallback"
 TOOL_CHOICE_ATTEMPT_REQUIRED = "required"
 TOOL_CHOICE_ATTEMPT_AUTO = "auto"
 
-LANGSMITH_RUN_NAME_MEMORY_PIPELINE_BASE = "agentic_companion_memory_pipeline"
+LANGSMITH_RUN_NAME_DREAMING_CONSOLIDATION_BASE = (
+    "agentic_companion_dreaming_consolidation"
+)
 
 
 def invocation_extra(
@@ -65,11 +67,11 @@ def tool_choice_attempt_metadata(tool_choice: str | None) -> dict[str, Any]:
     return {INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY: TOOL_CHOICE_ATTEMPT_AUTO}
 
 
-def memory_pipeline_langsmith_extra(*, model_role: str) -> dict[str, Any]:
-    """LangSmith extra for post-turn memory curator ``complete_text`` calls."""
+def dreaming_consolidation_langsmith_extra(*, model_role: str) -> dict[str, Any]:
+    """LangSmith extra for dreaming consolidation curator ``complete_text`` calls."""
     role = (model_role or "memory").strip() or "memory"
-    source = f"memory_pipeline_{role}"
+    source = f"dreaming_consolidation_{role}"
     return invocation_extra(
         source=source,
-        run_name=f"{LANGSMITH_RUN_NAME_MEMORY_PIPELINE_BASE}-{role}",
+        run_name=f"{LANGSMITH_RUN_NAME_DREAMING_CONSOLIDATION_BASE}-{role}",
     )

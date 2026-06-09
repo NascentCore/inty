@@ -55,7 +55,7 @@ def test_curator_merges_pending_into_living_sphere_md(tmp_path: Path) -> None:
     idle = _idle_tool_bg()
     assert compact_living_sphere_if_pending(store, fake_complete, tool_bg_idle_event=idle) is True
     assert "台灯" in store.read_document(LIVING_SPHERE_RELATIVE_PATH)
-    state = json.loads(store.read_document(".companion_memory_pipeline.json"))
+    state = json.loads(store.read_document(".companion_living_sphere_curator.json"))
     assert state["living_sphere_curated_through_update_id"] == u2.update_id
     assert compact_living_sphere_if_pending(store, fake_complete, tool_bg_idle_event=idle) is False
 
@@ -86,7 +86,7 @@ def test_curator_drains_more_than_batch_cap_without_skipping(tmp_path: Path) -> 
     idle = _idle_tool_bg()
     assert compact_living_sphere_if_pending(store, fake_complete, tool_bg_idle_event=idle) is True
     assert calls == 2
-    state = json.loads(store.read_document(".companion_memory_pipeline.json"))
+    state = json.loads(store.read_document(".companion_living_sphere_curator.json"))
     assert state["living_sphere_curated_through_update_id"] == updates[-1].update_id
     assert compact_living_sphere_if_pending(store, fake_complete, tool_bg_idle_event=idle) is False
 
@@ -115,7 +115,7 @@ def test_curator_rejects_bad_output_without_advancing_cursor(tmp_path: Path) -> 
             store, fake_complete, tool_bg_idle_event=_idle_tool_bg()
         )
     assert store.read_document(LIVING_SPHERE_RELATIVE_PATH) == original
-    raw = store.read_document_if_exists(".companion_memory_pipeline.json")
+    raw = store.read_document_if_exists(".companion_living_sphere_curator.json")
     assert raw is None or "living_sphere_curated_through_update_id" not in raw
 
 

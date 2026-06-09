@@ -18,9 +18,6 @@ def test_parse_identity_and_daily() -> None:
     k2, d2 = parse_memory_store_relative_path("memory/daily/2026-03-01.md")
     assert k2 == CompanionMemoryDocumentKind.MEMORY_DAILY_RAW
     assert d2 == datetime.date(2026, 3, 1)
-    k3, d3 = parse_memory_store_relative_path("memory/2026-03-01.md")
-    assert k3 == CompanionMemoryDocumentKind.MEMORY_DAY_SUMMARY
-    assert d3 == datetime.date(2026, 3, 1)
 
 
 def test_roundtrip_static_paths() -> None:
@@ -31,7 +28,7 @@ def test_roundtrip_static_paths() -> None:
         "transcript.jsonl",
         "transcript_inner_tick.jsonl",
         "tool_background.jsonl",
-        ".companion_memory_pipeline.json",
+        ".companion_living_sphere_curator.json",
         ".companion_runtime_events.jsonl",
         ".companion_dreaming_state.json",
         "generated_images/index.jsonl",

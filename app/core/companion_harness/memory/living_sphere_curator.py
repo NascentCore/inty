@@ -1,4 +1,4 @@
-"""Merge ``living_sphere_updates.jsonl`` into ``LIVING_SPHERE.md`` (companion memory pipeline)."""
+"""Merge ``living_sphere_updates.jsonl`` into ``LIVING_SPHERE.md`` during dreaming consolidation."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from app.living_sphere.seeding import (
 
 # TODO(offline-batch): Large-scale LivingSphere compact (cross-scope backfill / backlog) must be a
 # separate deployable + managed cloud offline executor (cf. backend/push_worker)—NOT a longer cron
-# on memory_pipeline. Reuse compact_* merge semantics only; batching, sharding, and cursor locking
+# on awake turns. Reuse compact_* merge semantics only; batching, sharding, and cursor locking
 # are offline concerns. Do not treat offline as a simple extension of per-turn online compact.
 
 _PIPELINE_CURSOR_KEY = "living_sphere_curated_through_update_id"
@@ -99,8 +99,8 @@ def wait_for_tool_background_before_living_sphere_compact(
         )
 
 
-def _load_pipeline_state(store: MemoryStore) -> dict[str, object]:
-    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_pipeline_state_json
+def _load_curator_state(store: MemoryStore) -> dict[str, object]:
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_curator_state_json
     raw = store.read_document_if_exists(rel)
     if raw is None or not raw.strip():
         return {}
@@ -110,14 +110,14 @@ def _load_pipeline_state(store: MemoryStore) -> dict[str, object]:
     return loaded
 
 
-def _write_pipeline_state(store: MemoryStore, data: dict[str, object]) -> None:
-    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_pipeline_state_json
+def _write_curator_state(store: MemoryStore, data: dict[str, object]) -> None:
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_curator_state_json
     store.write_document(
         rel, json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     )
 
 
-def _pipeline_curated_through_update_id(state: dict[str, object]) -> str:
+def _curator_curated_through_update_id(state: dict[str, object]) -> str:
     """Last ``LivingSphereUpdate.update_id`` merged into LIVING_SPHERE.md; ``""`` if never compacted."""
     cursor_raw = state.get(_PIPELINE_CURSOR_KEY)
     if isinstance(cursor_raw, str):
@@ -148,7 +148,7 @@ def _pending_updates_after_cursor(
     """Rows not yet merged into LIVING_SPHERE.md, in jsonl file order.
 
     ``curated_through_update_id`` is the last ``update_id`` written by a successful compact
-    (stored in ``.companion_memory_pipeline.json`` as ``living_sphere_curated_through_update_id``).
+    (stored in ``.companion_living_sphere_curator.json`` as ``living_sphere_curated_through_update_id``).
     Use ``""`` when no compact has run yet—all rows are pending.
 
     Returns ``(pending_rows, cursor_missing)``. ``cursor_missing`` is True when
@@ -214,8 +214,8 @@ def compact_living_sphere_if_pending(
     scope = store.scope.registry_key()
     for _ in range(_MAX_COMPACT_BATCHES_PER_TURN):
         rows = _read_all_updates(store)
-        state = _load_pipeline_state(store)
-        cursor = _pipeline_curated_through_update_id(state)
+        state = _load_curator_state(store)
+        cursor = _curator_curated_through_update_id(state)
         pending, cursor_missing = _pending_updates_after_cursor(
             rows, curated_through_update_id=cursor
         )
@@ -230,14 +230,14 @@ def compact_living_sphere_if_pending(
         batch = pending[:_PENDING_UPDATES_BATCH_CAP]
         last_id = compact_living_sphere_batch(store, batch, complete_fn)
         state[_PIPELINE_CURSOR_KEY] = last_id
-        _write_pipeline_state(store, state)
+        _write_curator_state(store, state)
         any_ran = True
         if len(pending) <= _PENDING_UPDATES_BATCH_CAP:
             break
     else:
         rows_after = _read_all_updates(store)
-        state_after = _load_pipeline_state(store)
-        cursor_after = _pipeline_curated_through_update_id(state_after)
+        state_after = _load_curator_state(store)
+        cursor_after = _curator_curated_through_update_id(state_after)
         still_pending, _ = _pending_updates_after_cursor(
             rows_after, curated_through_update_id=cursor_after
         )

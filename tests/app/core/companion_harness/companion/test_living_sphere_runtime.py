@@ -9,9 +9,9 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.memory.memory_pipeline import (
-    MemoryPipelineConfig,
-    memory_update_after_turn,
+from app.core.companion_harness.companion.models import ChatMessage
+from app.core.companion_harness.memory.dreaming_consolidation import (
+    consolidate_memory_during_dreaming,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tools import (
@@ -104,12 +104,14 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
 
     idle = threading.Event()
     idle.set()
-    memory_update_after_turn(
+    rows = [
+        ChatMessage(role="user", content="加灯", ts="2026-01-02T09:00:00+00:00", uuid="u"),
+        ChatMessage(role="assistant", content="好", ts="2026-01-02T09:01:00+00:00", uuid="a"),
+    ]
+    consolidate_memory_during_dreaming(
         store,
-        "加灯",
-        "好",
+        rows,
         fake_complete,
-        MemoryPipelineConfig(memory_update_every_n_turns=999),
         tool_bg_idle_event=idle,
     )
     context = load_context_meta(store=store)

@@ -93,8 +93,6 @@ def test_run_turn_inner_tick_scheduled_semantics(
             scheduled_text,
             store=store,
             llm_client=client,  # type: ignore[arg-type]
-            defer_memory_update=True,
-            memory_config=None,
             transcript_compaction=None,
             transcript_llm_window_max_messages=None,
             repository_only_store_text=False,

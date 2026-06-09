@@ -14,7 +14,7 @@ from app.core.companion_harness.llm.chat_completions import (
     create_chat_completion_sync,
 )
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    memory_pipeline_langsmith_extra,
+    dreaming_consolidation_langsmith_extra,
 )
 from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
 from app.core.companion_harness.providers.openai_compatible_clients import (
@@ -297,7 +297,7 @@ class CompanionLLMClient:
             model=api_model,
             messages_payload=messages,
             tools=[],
-            langsmith_extra=memory_pipeline_langsmith_extra(
+            langsmith_extra=dreaming_consolidation_langsmith_extra(
                 model_role=model_role
             ),
         )
