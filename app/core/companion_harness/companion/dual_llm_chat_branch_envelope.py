@@ -23,9 +23,9 @@ companion turn pipeline.
   may be ``None`` if parse failed.
 - **Transcript**: ``turn.run_turn`` JSONL assistant row; ``turn_engine.persist_repl_turn_transcript_rows``
   for REPL paths.
-- **Product DB / WS**: ``app/api/v1/endpoints/chat._companion_ai_meta_from_turn_result`` mirrors into
+- **Product DB / WS**: ``app/api/v1/endpoints/chat_ws_companion_support._companion_ai_meta_from_turn_result`` mirrors into
   ``chat_history`` / WS. Async ``tool_bg``: ``ToolOutputEvent.significance_perception`` via
-  ``tool_bg_routing`` → ``chat._build_companion_tool_background_ws_payload``.
+  ``tool_bg_routing`` → ``chat_ws._build_companion_tool_background_ws_payload``.
 - **Memory extraction (optional)**: ``memory_extraction.use_significance_perception_in_extraction`` →
   ``memory_extraction_service`` sorts by ``meta_data.significance_perception.importance_round``.
 
