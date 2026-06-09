@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -38,13 +37,13 @@ class _FakeLLMClient:
         self.config = CompanionLLMConfig(api_base="https://example.invalid/v1")
         self.calls: list[dict[str, Any]] = []
 
-    def sync_client_for_route(self, route: str) -> object:
+    def async_client_for_route(self, route: str) -> object:
         return object()
 
     def resolve_model(self, role: str) -> GenAIModel:
         return resolve_chat_text_model(f"test/{role}")
 
-    def chat_completion(self, **kwargs: Any) -> Any:
+    async def chat_completion(self, **kwargs: Any) -> Any:
         rec = dict(kwargs)
         if isinstance(rec.get("messages"), list):
             rec["messages"] = list(rec["messages"])
@@ -73,9 +72,7 @@ class _FakeLLMClient:
         for attempt in range(1, max_attempts + 1):
             try:
                 resp = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        lambda: self.chat_completion(model=resolved, **kwargs)
-                    ),
+                    self.chat_completion(model=resolved, **kwargs),
                     timeout=per_attempt_timeout_sec,
                 )
                 break
@@ -99,12 +96,12 @@ class _FlakyLLMClient(_FakeLLMClient):
         self._failures_remaining = 1
         self.chat_completion_invocations = 0
 
-    def chat_completion(self, **kwargs: Any) -> Any:
+    async def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_completion_invocations += 1
         if self._failures_remaining > 0:
             self._failures_remaining -= 1
             raise RuntimeError("transient provider error")
-        return super().chat_completion(**kwargs)
+        return await super().chat_completion(**kwargs)
 
 
 class _SlowLLMClient(_FakeLLMClient):
@@ -113,10 +110,10 @@ class _SlowLLMClient(_FakeLLMClient):
         self._block_sec = block_sec
         self.chat_completion_invocations = 0
 
-    def chat_completion(self, **kwargs: Any) -> Any:
+    async def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_completion_invocations += 1
-        time.sleep(self._block_sec)
-        return super().chat_completion(**kwargs)
+        await asyncio.sleep(self._block_sec)
+        return await super().chat_completion(**kwargs)
 
 
 def _seed_workspace(store: MemoryStore) -> None:

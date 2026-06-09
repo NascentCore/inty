@@ -30,8 +30,8 @@ from app.api.utils.feature_gating import (
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.companion_harness.companion.llm_inference_errors import (
-    CompanionLLMInferenceBackendError,
+from app.infra.openai_compatible.inference_errors import (
+    OpenAICompatibleInferenceBackendError,
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.model_selection import select_chat_model
@@ -787,7 +787,7 @@ async def _agent_chat_completions_impl(
 
         except HTTPException:
             raise
-        except CompanionLLMInferenceBackendError:
+        except OpenAICompatibleInferenceBackendError:
             raise
         except Exception as e:
             logger.error(f"Agent聊天处理失败: {str(e)}")
@@ -991,7 +991,7 @@ async def _agent_chat_completions_impl(
 
     except HTTPException:
         raise
-    except CompanionLLMInferenceBackendError as exc:
+    except OpenAICompatibleInferenceBackendError as exc:
         logger.error(
             "Companion LLM inference backend error provider_http_status={} message={!r}",
             exc.provider_http_status,

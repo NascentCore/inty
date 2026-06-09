@@ -176,6 +176,8 @@ def run_dreaming_batch_for_session(
     # is skipped — LangSmith parent may not get ``end_companion_turn_root_run_safe``. Use try/finally
     # to always end the parent (failure outcome + optional runtime event) before re-raise.
 
+    import asyncio
+
     with dreaming_batch_langsmith_scope(
         session=session,
         inty_trace_id=inty_trace_id,
@@ -183,15 +185,22 @@ def run_dreaming_batch_for_session(
         parent_run_enabled=None,
     ) as langsmith_root_run:
 
-        def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
-            return session.llm_client.complete_text(messages, model_role=role)
+        async def _run_dreaming_memory_update() -> None:
+            async def _complete_fn(
+                messages: list[dict[str, Any]], role: str
+            ) -> str:
+                return await session.llm_client.complete_text(
+                    messages, model_role=role
+                )
 
-        memory_update_during_dreaming(
-            session.store,
-            candidate.rows,
-            _complete_fn,
-            tool_bg_idle_event=session.tool_bg_idle,
-        )
+            await memory_update_during_dreaming(
+                session.store,
+                candidate.rows,
+                _complete_fn,
+                tool_bg_idle_event=session.tool_bg_idle,
+            )
+
+        asyncio.run(_run_dreaming_memory_update())
         assert_dreaming_transcript_boundary_unchanged(session.store, candidate)
         state = dreaming_state_from_candidate(
             candidate, processed_at=datetime.now(timezone.utc)

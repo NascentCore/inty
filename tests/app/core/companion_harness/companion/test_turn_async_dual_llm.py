@@ -12,7 +12,9 @@ from unittest.mock import patch
 
 import pytest
 
-from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
+from app.core.companion_harness.companion.llm_completion_adapter import (
+    create_chat_completion,
+)
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.companion.runtime_channel import (
@@ -88,7 +90,7 @@ class _FakeAsyncDualLLMClient:
     def resolve_model(self, role: str) -> GenAIModel:
         return resolve_chat_text_model(f"m/{role}")
 
-    def chat_completion(self, **kwargs: Any) -> Any:
+    async def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_calls.append(kwargs)
         env = {
             "user_facing_reply": "foreground ok",
@@ -102,12 +104,12 @@ class _FakeAsyncDualLLMClient:
         )
         return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
 
-    def sync_client_for_route(self, route: str) -> object:
+    def async_client_for_route(self, route: str) -> object:
         return object()
 
     @property
-    def chat_completions_sync(self):
-        return create_chat_completion_sync
+    def chat_completions(self):
+        return create_chat_completion
 
     def complete_text(
         self, messages: list[dict[str, Any]], *, model_role: str = "memory"
@@ -156,7 +158,7 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert any(str(m.get("content") or "").strip() == "id" for m in fg_system)
     assert any(str(m.get("content") or "").strip() == "s" for m in fg_system)
     assert len(bg_jobs) == 1
-    assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
+    assert bg_jobs[0]["chat_completion"] is client.chat_completions
     bg_msgs = bg_jobs[0]["request_messages"]
     bg_system = [m for m in bg_msgs if m.get("role") == "system"]
     assert len(bg_system) >= 2, "background tool path should use multiple system messages"
@@ -254,7 +256,7 @@ class _FakeAsyncDualLLMClientEmptyFg:
     def resolve_model(self, role: str) -> GenAIModel:
         return resolve_chat_text_model(f"m/{role}")
 
-    def chat_completion(self, **kwargs: Any) -> Any:
+    async def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_calls.append(kwargs)
         env = {
             "user_facing_reply": "",
@@ -268,12 +270,12 @@ class _FakeAsyncDualLLMClientEmptyFg:
         )
         return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
 
-    def sync_client_for_route(self, route: str) -> object:
+    def async_client_for_route(self, route: str) -> object:
         return object()
 
     @property
-    def chat_completions_sync(self):
-        return create_chat_completion_sync
+    def chat_completions(self):
+        return create_chat_completion
 
     def complete_text(
         self, messages: list[dict[str, Any]], *, model_role: str = "memory"

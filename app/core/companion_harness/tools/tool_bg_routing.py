@@ -19,7 +19,7 @@ from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     parse_dual_llm_chat_envelope_from_message,
     parse_dual_llm_chat_envelope_json,
 )
-from app.core.companion_harness.llm.langsmith_invocation_extra import (
+from app.core.companion_harness.companion.langsmith_invocation_extra import (
     SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
     tool_call_langsmith_extra,
 )
@@ -49,11 +49,11 @@ def _conservative_tool_finish_envelope() -> DualLlmChatBranchEnvelope:
     )
 
 
-def resolve_tool_bg_routing_sync(
+async def resolve_tool_bg_routing(
     *,
     client: Any,
     model: str,
-    create_completion_sync: Any,
+    create_completion: Any,
     conversation_messages: list[dict[str, Any]],
     final_assistant_content: str,
     trace_id: str | None = None,
@@ -88,7 +88,7 @@ def resolve_tool_bg_routing_sync(
         for m in conversation_messages
     ]
     payload.extend(routing_tail)
-    resp = create_completion_sync(
+    resp = await create_completion(
         client,
         model=model,
         messages_payload=payload,

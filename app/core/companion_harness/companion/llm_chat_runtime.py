@@ -1,7 +1,7 @@
 """Companion LangSmith parent runs and re-exports for chat completion helpers.
 
-Chat completion sync calls, OpenRouter tool-path kwargs, and LangSmith completion
-enrichment live under ``app.core.companion_harness.llm``; this module keeps the
+Chat completion async calls, OpenRouter tool-path kwargs, and LangSmith completion
+enrichment live under ``app.infra.openai_compatible``; this module keeps the
 companion turn parent ``RunTree`` lifecycle and stable import paths for callers.
 """
 
@@ -13,15 +13,17 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.llm.chat_completions import (
-    OpenRouterInvalidJsonError,
-    create_chat_completion_sync,
+from app.core.companion_harness.companion.llm_completion_adapter import (
+    create_chat_completion,
 )
-from app.core.companion_harness.llm.langsmith_completion_enrich import (
+from app.infra.openai_compatible.chat_completions import (
+    OpenRouterInvalidJsonError,
+)
+from app.infra.openai_compatible.langsmith_completion_enrich import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from app.core.companion_harness.llm.openrouter_tool_params import (
+from app.infra.openai_compatible.openrouter_tool_params import (
     tool_path_chat_completion_kwargs,
 )
 from app.core.companion_harness.companion.langsmith_parent_policy import (
@@ -412,7 +414,7 @@ __all__ = [
     "companion_turn_langsmith_parent_enabled_from_app_config",
     "companion_turn_langsmith_parent_run_id_str",
     "companion_turn_langsmith_parent_trace_id_str",
-    "create_chat_completion_sync",
+    "create_chat_completion",
     "create_companion_turn_root_run",
     "end_companion_turn_root_run_safe",
     "langsmith_llm_run_id_from_completion",

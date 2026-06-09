@@ -12,7 +12,10 @@ from app.core.companion_harness.companion.llm_client import (
     CompanionLLMClient,
     CompanionLLMConfig,
 )
-from app.core.companion_harness.providers.openai_compatible_clients import OpenAICompatibleClientOptions
+from app.infra.openai_compatible.client_cache import (
+    OpenAICompatibleClientOptions,
+    get_openai_compatible_async_client,
+)
 
 
 def test_companion_llm_clients_use_distinct_langsmith_chat_names(
@@ -26,14 +29,14 @@ def test_companion_llm_clients_use_distinct_langsmith_chat_names(
 
     monkeypatch.setattr(
         llm_client_module,
-        "get_openai_compatible_sync_client",
+        "get_openai_compatible_async_client",
         _fake_get_client,
     )
 
     client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
-    client.sync_client_for_route("chat")
-    client.sync_client_for_route("tool")
-    client.sync_client_for_route("inner_tick")
+    client.async_client_for_route("chat")
+    client.async_client_for_route("tool")
+    client.async_client_for_route("inner_tick")
 
     chat_names = [options.chat_name for options in captured_options]
     assert chat_names == [
@@ -45,12 +48,13 @@ def test_companion_llm_clients_use_distinct_langsmith_chat_names(
     assert len(set(chat_names)) == len(chat_names)
 
 
-def test_complete_text_passes_memory_pipeline_langsmith_extra(
+@pytest.mark.asyncio
+async def test_complete_text_passes_memory_pipeline_langsmith_extra(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured: dict[str, Any] = {}
 
-    def _fake_sync(
+    async def _fake_create(
         client: Any,
         *,
         model: str,
@@ -59,6 +63,9 @@ def test_complete_text_passes_memory_pipeline_langsmith_extra(
         tool_choice: str | None = None,
         response_format: dict | None = None,
         langsmith_extra: dict[str, Any] | None = None,
+        high_reasoning: bool = False,
+        on_inference_failure: Any = None,
+        provider_kwargs: dict[str, Any] | None = None,
     ) -> Any:
         captured["langsmith_extra"] = langsmith_extra
 
@@ -73,15 +80,15 @@ def test_complete_text_passes_memory_pipeline_langsmith_extra(
 
         return _Resp()
 
-    monkeypatch.setattr(llm_client_module, "create_chat_completion_sync", _fake_sync)
+    monkeypatch.setattr(llm_client_module, "create_chat_completion", _fake_create)
     monkeypatch.setattr(
         llm_client_module,
-        "get_openai_compatible_sync_client",
+        "get_openai_compatible_async_client",
         lambda *_a, **_k: object(),
     )
 
     client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
-    out = client.complete_text(
+    out = await client.complete_text(
         [{"role": "user", "content": "hello"}],
         model_role="day_summary",
     )
@@ -104,7 +111,7 @@ async def test_chat_completion_with_retrial_succeeds_after_transient_error(
     client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
     calls = 0
 
-    def _flaky(**_kwargs: Any) -> Any:
+    async def _flaky(**_kwargs: Any) -> Any:
         nonlocal calls
         calls += 1
         if calls == 1:
@@ -138,10 +145,10 @@ async def test_chat_completion_with_retrial_times_out_per_attempt(
     client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
     calls = 0
 
-    def _slow(**_kwargs: Any) -> Any:
+    async def _slow(**_kwargs: Any) -> Any:
         nonlocal calls
         calls += 1
-        time.sleep(0.25)
+        await asyncio.sleep(0.25)
         return _ok_completion()
 
     monkeypatch.setattr(client, "chat_completion", _slow)
@@ -165,8 +172,8 @@ async def test_chat_completion_with_retrial_times_out_per_attempt(
 
 
 @pytest.mark.asyncio
-async def test_create_chat_completion_sync_json_retry_is_separate() -> None:
+async def test_create_chat_completion_json_retry_is_separate() -> None:
     """OpenAI path retries JSONDecodeError only; not a substitute for with_retrial."""
-    from app.core.companion_harness.llm import chat_completions as cc_mod
+    from app.infra.openai_compatible import chat_completions as cc_mod
 
     assert cc_mod._OPENROUTER_JSON_MAX_ATTEMPTS == 3

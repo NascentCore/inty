@@ -3,12 +3,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import queue
 import threading
 import time
 from threading import Event
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from loguru import logger
@@ -123,6 +124,9 @@ Rules:
 
 class MemoryPipelineConfig(BaseModel):
     memory_update_every_n_turns: int = Field(default=100, ge=1)
+
+
+MemoryCompleteFn = Callable[[list[dict[str, Any]], str], Awaitable[str]]
 
 
 def _bump_memory_pipeline_turn(store: MemoryStore) -> int:
@@ -275,12 +279,12 @@ def _dreaming_transcript_block(rows: list[ChatMessage]) -> str:
     return "\n".join(lines)
 
 
-def _rewrite_day_summary_md(
+async def _rewrite_day_summary_md(
     store: MemoryStore,
     *,
     user_text: str,
     assistant_text: str,
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: MemoryCompleteFn,
 ) -> None:
     day = local_date_str()
     raw_full = store.read_document_if_exists(f"memory/daily/{day}.md") or ""
@@ -295,16 +299,16 @@ def _rewrite_day_summary_md(
         {"role": "system", "content": _DAY_SUMMARY_SYSTEM},
         {"role": "user", "content": user_block},
     ]
-    new_body = complete_fn(messages, "day_summary")
+    new_body = await complete_fn(messages, "day_summary")
     store.write_document(f"memory/{day}.md", new_body.strip() + "\n")
 
 
-def _rewrite_dreaming_day_summary_md(
+async def _rewrite_dreaming_day_summary_md(
     store: MemoryStore,
     *,
     day: str,
     rows: list[ChatMessage],
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: MemoryCompleteFn,
 ) -> None:
     raw_full = store.read_document_if_exists(f"memory/daily/{day}.md") or ""
     prev_summary = store.read_document_if_exists(f"memory/{day}.md") or ""
@@ -318,16 +322,16 @@ def _rewrite_dreaming_day_summary_md(
         {"role": "system", "content": _DAY_SUMMARY_SYSTEM},
         {"role": "user", "content": user_block},
     ]
-    new_body = complete_fn(messages, "dreaming_day_summary")
+    new_body = await complete_fn(messages, "dreaming_day_summary")
     store.write_document(f"memory/{day}.md", new_body.strip() + "\n")
 
 
-def _rewrite_memory_md(
+async def _rewrite_memory_md(
     store: MemoryStore,
     *,
     user_text: str,
     assistant_text: str,
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: MemoryCompleteFn,
 ) -> None:
     day = local_date_str()
     day_summary_ctx = ""
@@ -347,16 +351,16 @@ def _rewrite_memory_md(
         {"role": "system", "content": _MEMORY_CURATOR_SYSTEM},
         {"role": "user", "content": user_block},
     ]
-    new_body = complete_fn(messages, "memory")
+    new_body = await complete_fn(messages, "memory")
     store.write_document("MEMORY.md", new_body.strip() + "\n")
 
 
-def _rewrite_user_md(
+async def _rewrite_user_md(
     store: MemoryStore,
     *,
     user_text: str,
     assistant_text: str,
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: MemoryCompleteFn,
 ) -> None:
     user_body = store.read_document("USER.md")
     memory_body = store.read_document("MEMORY.md")
@@ -373,16 +377,16 @@ def _rewrite_user_md(
         {"role": "system", "content": _USER_CURATOR_SYSTEM},
         {"role": "user", "content": user_block},
     ]
-    new_body = complete_fn(messages, "user")
+    new_body = await complete_fn(messages, "user")
     store.write_document("USER.md", new_body.strip() + "\n")
 
 
-def _rewrite_style_md(
+async def _rewrite_style_md(
     store: MemoryStore,
     *,
     user_text: str,
     assistant_text: str,
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: MemoryCompleteFn,
 ) -> None:
     style_body = store.read_document("STYLE.md")
     memory_body = store.read_document("MEMORY.md")
@@ -399,16 +403,16 @@ def _rewrite_style_md(
         {"role": "system", "content": _STYLE_CURATOR_SYSTEM},
         {"role": "user", "content": user_block},
     ]
-    new_body = complete_fn(messages, "style")
+    new_body = await complete_fn(messages, "style")
     store.write_document("STYLE.md", new_body.strip() + "\n")
 
 
-def _rewrite_soul_md(
+async def _rewrite_soul_md(
     store: MemoryStore,
     *,
     user_text: str,
     assistant_text: str,
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: MemoryCompleteFn,
 ) -> None:
     soul_body = store.read_document("SOUL.md")
     curator_doc, frozen_appearance = _split_soul_appearance_section(soul_body)
@@ -426,7 +430,7 @@ def _rewrite_soul_md(
         {"role": "system", "content": _SOUL_CURATOR_SYSTEM},
         {"role": "user", "content": user_block},
     ]
-    new_body = complete_fn(messages, "soul")
+    new_body = await complete_fn(messages, "soul")
     new_body = new_body.strip()
     if frozen_appearance is not None:
         new_body = _merge_soul_frozen_appearance(new_body, frozen_appearance)
@@ -448,11 +452,11 @@ def _rewrite_soul_md(
 # raw chat should stay auditably preserved in transcript, raw diary can be
 # appended promptly, and checkpoint advancement must happen only after dreaming
 # has successfully consolidated the slice.
-def memory_update_after_turn(
+async def memory_update_after_turn(
     store: MemoryStore,
     user_text: str,
     assistant_text: str,
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: MemoryCompleteFn,
     config: MemoryPipelineConfig,
     *,
     tool_bg_idle_event: Event,
@@ -491,7 +495,7 @@ def memory_update_after_turn(
 
     t = time.perf_counter()
     if curation_turn:
-        _rewrite_day_summary_md(
+        await _rewrite_day_summary_md(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
@@ -511,7 +515,7 @@ def memory_update_after_turn(
 
     t = time.perf_counter()
     if curation_turn:
-        _rewrite_memory_md(
+        await _rewrite_memory_md(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
@@ -531,7 +535,7 @@ def memory_update_after_turn(
 
     t = time.perf_counter()
     if curation_turn:
-        _rewrite_user_md(
+        await _rewrite_user_md(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
@@ -551,7 +555,7 @@ def memory_update_after_turn(
 
     t = time.perf_counter()
     if curation_turn:
-        _rewrite_style_md(
+        await _rewrite_style_md(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
@@ -571,7 +575,7 @@ def memory_update_after_turn(
 
     t = time.perf_counter()
     if curation_turn:
-        _rewrite_soul_md(
+        await _rewrite_soul_md(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
@@ -590,7 +594,7 @@ def memory_update_after_turn(
         )
 
     t = time.perf_counter()
-    if compact_living_sphere_if_pending(
+    if await compact_living_sphere_if_pending(
         store, complete_fn, tool_bg_idle_event=tool_bg_idle_event
     ):
         _log_memory_pipeline_curated(
@@ -625,10 +629,10 @@ def memory_update_after_turn(
     return any_curation
 
 
-def memory_update_during_dreaming(
+async def memory_update_during_dreaming(
     store: MemoryStore,
     rows: list[ChatMessage],
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: MemoryCompleteFn,
     *,
     tool_bg_idle_event: Event,
 ) -> bool:
@@ -653,7 +657,7 @@ def memory_update_during_dreaming(
 
     for day, day_rows in sorted(rows_by_day.items()):
         t = time.perf_counter()
-        _rewrite_dreaming_day_summary_md(
+        await _rewrite_dreaming_day_summary_md(
             store,
             day=day,
             rows=day_rows,
@@ -676,7 +680,7 @@ def memory_update_during_dreaming(
         ("dreaming_soul_md", _rewrite_soul_md),
     ):
         t = time.perf_counter()
-        rewrite_fn(
+        await rewrite_fn(
             store,
             user_text=user_text,
             assistant_text=assistant_text,
@@ -691,7 +695,7 @@ def memory_update_during_dreaming(
         )
 
     t = time.perf_counter()
-    if compact_living_sphere_if_pending(
+    if await compact_living_sphere_if_pending(
         store, complete_fn, tool_bg_idle_event=tool_bg_idle_event
     ):
         any_curation = True
@@ -731,7 +735,7 @@ _memory_queue: (
             MemoryStore,
             str,
             str,
-            Callable[[list[dict[str, Any]], str], str],
+            MemoryCompleteFn,
             MemoryPipelineConfig,
             str,
             str,
@@ -741,6 +745,25 @@ _memory_queue: (
     | None
 ) = None
 _worker_lock = threading.Lock()
+
+
+async def _process_memory_job_async(
+    store: MemoryStore,
+    user_text: str,
+    assistant_text: str,
+    complete_fn: MemoryCompleteFn,
+    config: MemoryPipelineConfig,
+    *,
+    tool_bg_idle_event: Event,
+) -> bool:
+    return await memory_update_after_turn(
+        store,
+        user_text,
+        assistant_text,
+        complete_fn,
+        config,
+        tool_bg_idle_event=tool_bg_idle_event,
+    )
 
 
 def _memory_worker_loop() -> None:
@@ -776,13 +799,15 @@ def _memory_worker_loop() -> None:
         try:
             curated = False
             try:
-                curated = memory_update_after_turn(
-                    store,
-                    user_text,
-                    assistant_text,
-                    complete_fn,
-                    config,
-                    tool_bg_idle_event=tool_bg_idle_event,
+                curated = asyncio.run(
+                    _process_memory_job_async(
+                        store,
+                        user_text,
+                        assistant_text,
+                        complete_fn,
+                        config,
+                        tool_bg_idle_event=tool_bg_idle_event,
+                    )
                 )
             except _MEMORY_WORKER_ERRORS:
                 logger.exception("memory_update_after_turn failed")
@@ -809,7 +834,7 @@ def schedule_memory_update_after_turn(
     store: MemoryStore,
     user_text: str,
     assistant_text: str,
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: MemoryCompleteFn,
     config: MemoryPipelineConfig,
     *,
     trace_id: str = "",

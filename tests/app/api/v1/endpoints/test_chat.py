@@ -24,8 +24,8 @@ from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.api.v1.endpoints import chat_ws as chat_ws_v1
 from app.core.agent import agent as agent_module
-from app.core.companion_harness.companion.llm_inference_errors import (
-    CompanionLLMInferenceBackendError,
+from app.infra.openai_compatible.inference_errors import (
+    OpenAICompatibleInferenceBackendError,
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
@@ -1670,7 +1670,7 @@ def test_chat_websocket_companion_llm_inference_backend_error_frame(
     """When the companion kernel reports an upstream LLM API failure, the client gets a tagged error frame."""
 
     async def fake_run_companion(**_kwargs):
-        raise CompanionLLMInferenceBackendError(
+        raise OpenAICompatibleInferenceBackendError(
             client_message_en=(
                 "The AI inference provider rejected this request due to insufficient credits, quota, "
                 "or token limits on the service side. Please try again later."

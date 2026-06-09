@@ -1,4 +1,4 @@
-"""Companion LLM client: chat completions + plain text completions for curators."""
+"""Companion LLM client: async chat completions + plain text completions for curators."""
 
 from __future__ import annotations
 
@@ -10,20 +10,20 @@ from typing import Any, Literal
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.companion_harness.llm.chat_completions import (
-    create_chat_completion_sync,
-)
-from app.core.companion_harness.llm.langsmith_invocation_extra import (
+from app.core.companion_harness.companion.langsmith_invocation_extra import (
     memory_pipeline_langsmith_extra,
 )
-from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
-from app.core.companion_harness.providers.openai_compatible_clients import (
-    OpenAICompatibleClientOptions,
-    get_openai_compatible_sync_client,
+from app.core.companion_harness.companion.llm_completion_adapter import (
+    create_chat_completion,
 )
 from app.core.companion_harness.companion.llm_runtime_events import (
     record_llm_inference_failure,
 )
+from app.infra.openai_compatible.client_cache import (
+    OpenAICompatibleClientOptions,
+    get_openai_compatible_async_client,
+)
+from app.infra.openai_compatible.ports import ChatCompletionsPort
 from app.utils.models_catalog import DEEPSEEK_V3_2, GenAIModel
 
 LLM_SCENE_CHAT = "chat"
@@ -50,12 +50,7 @@ class CompanionLLMConfig(BaseModel):
 
     @classmethod
     def from_openrouter_env(cls) -> CompanionLLMConfig:
-        """Load credentials and HTTP timeout from the process environment.
-
-        Model identifiers are **not** read from the environment; production and
-        scripts should set ``default_model`` / role models via ``config.yaml`` or
-        explicit ``CompanionLLMConfig(...)`` construction.
-        """
+        """Load credentials and HTTP timeout from the process environment."""
         key = (
             os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
         ).strip()
@@ -78,11 +73,11 @@ class CompanionLLMConfig(BaseModel):
 
 
 class CompanionLLMClient:
-    """Manages OpenAI-compatible clients for companion interactions."""
+    """Manages OpenAI-compatible async clients for companion interactions."""
 
     def __init__(self, config: CompanionLLMConfig) -> None:
         self._config = config
-        self._client = get_openai_compatible_sync_client(
+        self._client = get_openai_compatible_async_client(
             OpenAICompatibleClientOptions(
                 api_key=config.api_key or None,
                 base_url=config.api_base or None,
@@ -99,13 +94,13 @@ class CompanionLLMClient:
         return self._config
 
     @property
-    def chat_completions_sync(self) -> ChatCompletionsSyncPort:
+    def chat_completions(self) -> ChatCompletionsPort:
         """Same implementation as foreground ``chat_completion``; inject into tool_background."""
-        return create_chat_completion_sync
+        return create_chat_completion
 
     def _ensure_dual_chat_client(self) -> Any:
         if self._client_dual_chat is None:
-            self._client_dual_chat = get_openai_compatible_sync_client(
+            self._client_dual_chat = get_openai_compatible_async_client(
                 OpenAICompatibleClientOptions(
                     api_key=self._config.api_key or None,
                     base_url=self._config.api_base or None,
@@ -119,7 +114,7 @@ class CompanionLLMClient:
 
     def _ensure_dual_tool_client(self) -> Any:
         if self._client_dual_tool is None:
-            self._client_dual_tool = get_openai_compatible_sync_client(
+            self._client_dual_tool = get_openai_compatible_async_client(
                 OpenAICompatibleClientOptions(
                     api_key=self._config.api_key or None,
                     base_url=self._config.api_base or None,
@@ -133,7 +128,7 @@ class CompanionLLMClient:
 
     def _ensure_inner_tick_client(self) -> Any:
         if self._client_inner_tick is None:
-            self._client_inner_tick = get_openai_compatible_sync_client(
+            self._client_inner_tick = get_openai_compatible_async_client(
                 OpenAICompatibleClientOptions(
                     api_key=self._config.api_key or None,
                     base_url=self._config.api_base or None,
@@ -145,7 +140,7 @@ class CompanionLLMClient:
             )
         return self._client_inner_tick
 
-    def sync_client_for_route(
+    def async_client_for_route(
         self, route: Literal["unified", "chat", "tool", "inner_tick"]
     ) -> Any:
         if route == "chat":
@@ -157,11 +152,11 @@ class CompanionLLMClient:
         return self._client
 
     def resolve_model(self, role: str) -> GenAIModel:
-        """Return catalog model for a config role (``chat``, ``tool``, ``memory``, ...), else ``default_model``."""
+        """Return catalog model for a config role, else ``default_model``."""
         m: GenAIModel | None = getattr(self._config, f"{role}_model", None)
         return m if m is not None else self._config.default_model
 
-    def chat_completion(
+    async def chat_completion(
         self,
         *,
         messages: list[dict[str, Any]],
@@ -189,7 +184,7 @@ class CompanionLLMClient:
             client = self._ensure_dual_chat_client()
             m = model or self.resolve_model("chat")
         api_model = m.id_on_provider
-        return self.chat_completions_sync(
+        return await create_chat_completion(
             client,
             model=api_model,
             messages_payload=messages,
@@ -224,17 +219,15 @@ class CompanionLLMClient:
         for attempt in range(1, max_attempts + 1):
             try:
                 resp = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        lambda: self.chat_completion(
-                            messages=messages,
-                            model=resolved,
-                            tools=tools,
-                            tool_choice=tool_choice,
-                            response_format=response_format,
-                            scene=scene,
-                            langsmith_extra=langsmith_extra,
-                            high_reasoning=high_reasoning,
-                        )
+                    self.chat_completion(
+                        messages=messages,
+                        model=resolved,
+                        tools=tools,
+                        tool_choice=tool_choice,
+                        response_format=response_format,
+                        scene=scene,
+                        langsmith_extra=langsmith_extra,
+                        high_reasoning=high_reasoning,
                     ),
                     timeout=per_attempt_timeout_sec,
                 )
@@ -261,7 +254,7 @@ class CompanionLLMClient:
         assert resp is not None
         return resp
 
-    def chat_completion_unified(
+    async def chat_completion_unified(
         self,
         *,
         messages: list[dict[str, Any]],
@@ -273,7 +266,7 @@ class CompanionLLMClient:
         """Single client path (no dual routing), for bootstrap or tests."""
         m = model or self.resolve_model("tool" if tools else "chat")
         api_model = m.id_on_provider
-        return self.chat_completions_sync(
+        return await create_chat_completion(
             self._client,
             model=api_model,
             messages_payload=messages,
@@ -282,7 +275,7 @@ class CompanionLLMClient:
             high_reasoning=high_reasoning,
         )
 
-    def complete_text(
+    async def complete_text(
         self,
         messages: list[dict[str, Any]],
         *,
@@ -292,7 +285,7 @@ class CompanionLLMClient:
         api_model = m.id_on_provider
         approx_chars = sum(len(str(x.get("content") or "")) for x in messages)
         t_api = time.perf_counter()
-        resp = self.chat_completions_sync(
+        resp = await create_chat_completion(
             self._client,
             model=api_model,
             messages_payload=messages,

@@ -8,7 +8,9 @@ from typing import Any
 
 import pytest
 
-from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
+from app.core.companion_harness.companion.llm_completion_adapter import (
+    create_chat_completion,
+)
 from app.core.companion_harness.companion.llm_client import (
     LLM_SCENE_CHAT,
     CompanionLLMConfig,
@@ -45,17 +47,17 @@ class _FakeLLMClient:
         self.config = CompanionLLMConfig(api_base="https://example.invalid/v1")
         self.calls: list[dict[str, Any]] = []
 
-    def sync_client_for_route(self, route: str) -> object:
+    def async_client_for_route(self, route: str) -> object:
         return object()
 
     @property
-    def chat_completions_sync(self):
-        return create_chat_completion_sync
+    def chat_completions(self):
+        return create_chat_completion
 
     def resolve_model(self, role: str) -> GenAIModel:
         return resolve_chat_text_model(f"test/{role}")
 
-    def chat_completion(self, **kwargs: Any) -> Any:
+    async def chat_completion(self, **kwargs: Any) -> Any:
         rec = dict(kwargs)
         if isinstance(rec.get("messages"), list):
             rec["messages"] = list(rec["messages"])

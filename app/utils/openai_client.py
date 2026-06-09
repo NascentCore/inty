@@ -8,17 +8,12 @@ default/extraction. When agent.chat_llm_base_url and agent.chat_llm_api_key are 
 chat uses that endpoint (e.g. LiteLLM); otherwise chat uses base_url + api_key.
 
 LangSmith tracing is done at call site (e.g. agent._call_openai_api_with_retry),
-not via client wrapping.
+not via client wrapping. Memory extraction uses ``app.infra.openai_compatible`` pipeline.
 """
 
 # LLM provider 标识，用于 meta_data.llm_provider（openrouter / litellm）
 LLM_PROVIDER_OPENROUTER = "openrouter"
 LLM_PROVIDER_LITELLM = "litellm"
-
-# TODO: 写一个 Wrapper 来完成常见功能，包括：
-# 1. structured output
-# 2. system_prompt, prompt, 单一 text 输出及结构和输出
-# 之前尝试：https://github.com/NascentCore/inty/pull/2310 没有完成
 
 import os
 from enum import StrEnum
@@ -29,11 +24,12 @@ from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 
 from app.api.types.llm_config import LLMConfig
-from app.core.companion_harness.providers.openai_compatible_clients import (
+from app.infra.openai_compatible.client_cache import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_async_client,
     get_openai_compatible_sync_client,
 )
+from app.infra.openai_compatible.chat_completions import create_chat_completion
 from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
 
@@ -213,12 +209,20 @@ async def chat_completion_for_extraction(
     )
     client = get_async_openai_client()
     create_kwargs = _llm_config_to_create_kwargs(cfg)
+    provider_kwargs = {
+        key: value
+        for key, value in create_kwargs.items()
+        if key != "model"
+    }
     if response_format is not None:
-        create_kwargs["response_format"] = response_format
+        provider_kwargs["response_format"] = response_format
 
-    response = await client.chat.completions.create(
-        messages=[{"role": "user", "content": prompt}],
-        **create_kwargs,
+    response = await create_chat_completion(
+        client,
+        model=create_kwargs["model"],
+        messages_payload=[{"role": "user", "content": prompt}],
+        tools=[],
+        provider_kwargs=provider_kwargs or None,
     )
     content = (
         (response.choices[0].message.content or "") if response.choices else ""

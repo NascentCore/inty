@@ -78,7 +78,7 @@ def langsmith_llm_run_id_from_completion(resp: Any) -> str:
 
 
 def langsmith_trace_id_from_completion(resp: Any) -> str:
-    """Reads optional ``langsmith_trace_id`` copied onto the ChatCompletion by ``create_chat_completion_sync``."""
+    """Reads optional ``langsmith_trace_id`` copied onto the ChatCompletion by ``create_chat_completion``."""
     try:
         v = getattr(resp, "langsmith_trace_id", None)
         if v is None:

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from app.core.companion_harness.tools.tool_bg_routing import (
-    resolve_tool_bg_routing_sync,
+    resolve_tool_bg_routing,
 )
 
 
@@ -35,62 +37,66 @@ def _valid_envelope_dict() -> dict:
     }
 
 
-def test_resolve_tool_bg_routing_uses_final_assistant_json() -> None:
+@pytest.mark.asyncio
+async def test_resolve_tool_bg_routing_uses_final_assistant_json() -> None:
     inner = json.dumps(_valid_envelope_dict(), ensure_ascii=False)
-    create_sync = MagicMock()
-    out = resolve_tool_bg_routing_sync(
+    create_completion = AsyncMock()
+    out = await resolve_tool_bg_routing(
         client=None,
         model="m",
-        create_completion_sync=create_sync,
+        create_completion=create_completion,
         conversation_messages=[],
         final_assistant_content=inner,
     )
     assert out.user_facing_reply == "hello"
     assert out.output_to_user is True
-    create_sync.assert_not_called()
+    create_completion.assert_not_called()
 
 
-def test_resolve_tool_bg_routing_strips_json_fence() -> None:
+@pytest.mark.asyncio
+async def test_resolve_tool_bg_routing_strips_json_fence() -> None:
     inner = json.dumps(_valid_envelope_dict(), ensure_ascii=False)
     raw = f"```json\n{inner}\n```"
-    create_sync = MagicMock()
-    out = resolve_tool_bg_routing_sync(
+    create_completion = AsyncMock()
+    out = await resolve_tool_bg_routing(
         client=None,
         model="m",
-        create_completion_sync=create_sync,
+        create_completion=create_completion,
         conversation_messages=[],
         final_assistant_content=raw,
     )
     assert out.user_facing_reply == "hello"
-    create_sync.assert_not_called()
+    create_completion.assert_not_called()
 
 
-def test_resolve_tool_bg_routing_fallback_on_invalid_then_conservative() -> None:
-    create_sync = MagicMock(return_value=_completion_response("not json"))
-    out = resolve_tool_bg_routing_sync(
+@pytest.mark.asyncio
+async def test_resolve_tool_bg_routing_fallback_on_invalid_then_conservative() -> None:
+    create_completion = AsyncMock(return_value=_completion_response("not json"))
+    out = await resolve_tool_bg_routing(
         client=None,
         model="m",
-        create_completion_sync=create_sync,
+        create_completion=create_completion,
         conversation_messages=[{"role": "user", "content": "hi"}],
         final_assistant_content="not envelope",
     )
-    create_sync.assert_called_once()
+    create_completion.assert_called_once()
     assert out.output_to_user is False
     assert out.user_facing_reply == ""
     assert out.importance_round == 5
 
 
-def test_resolve_tool_bg_routing_fallback_returns_parsed_envelope() -> None:
+@pytest.mark.asyncio
+async def test_resolve_tool_bg_routing_fallback_returns_parsed_envelope() -> None:
     fb = _valid_envelope_dict()
     fb["output_to_user"] = False
     fb["user_facing_reply"] = "done"
-    create_sync = MagicMock(
+    create_completion = AsyncMock(
         return_value=_completion_response(json.dumps(fb, ensure_ascii=False))
     )
-    out = resolve_tool_bg_routing_sync(
+    out = await resolve_tool_bg_routing(
         client=None,
         model="m",
-        create_completion_sync=create_sync,
+        create_completion=create_completion,
         conversation_messages=[],
         final_assistant_content="{",
     )
@@ -98,19 +104,20 @@ def test_resolve_tool_bg_routing_fallback_returns_parsed_envelope() -> None:
     assert out.output_to_user is False
 
 
-def test_resolve_tool_bg_routing_fallback_reads_reasoning_envelope() -> None:
+@pytest.mark.asyncio
+async def test_resolve_tool_bg_routing_fallback_reads_reasoning_envelope() -> None:
     fb = _valid_envelope_dict()
     fb["user_facing_reply"] = "done from reasoning"
-    create_sync = MagicMock(
+    create_completion = AsyncMock(
         return_value=_completion_response(
             None,
             reasoning=json.dumps(fb, ensure_ascii=False),
         )
     )
-    out = resolve_tool_bg_routing_sync(
+    out = await resolve_tool_bg_routing(
         client=None,
         model="m",
-        create_completion_sync=create_sync,
+        create_completion=create_completion,
         conversation_messages=[],
         final_assistant_content="{",
     )

@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.core.companion_harness.companion.llm_inference_errors import (
-    CompanionLLMInferenceBackendError,
+from app.core.companion_harness.companion.llm_completion_adapter import (
+    create_chat_completion,
 )
 from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
@@ -16,9 +16,9 @@ from app.core.companion_harness.companion.llm_runtime_events import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.runtime_events import read_runtime_events
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.llm.chat_completions import (
-    OpenRouterInvalidJsonError,
-    create_chat_completion_sync,
+from app.infra.openai_compatible.chat_completions import OpenRouterInvalidJsonError
+from app.infra.openai_compatible.inference_errors import (
+    OpenAICompatibleInferenceBackendError,
 )
 
 
@@ -27,14 +27,17 @@ def test_record_llm_inference_failure_skips_without_bind(tmp_path) -> None:
     store = MemoryStore(scope=scope, repository=None)
     record_llm_inference_failure(
         model="m/a",
-        exc=CompanionLLMInferenceBackendError(
+        exc=OpenAICompatibleInferenceBackendError(
             client_message_en="x", provider_http_status=503
         ),
     )
     assert read_runtime_events(store, kinds={"llm_inference_failure"}, limit=5) == []
 
 
-def test_create_chat_completion_sync_writes_llm_inference_failure(tmp_path) -> None:
+@pytest.mark.asyncio
+async def test_create_chat_completion_writes_llm_inference_failure(
+    tmp_path,
+) -> None:
     scope = CompanionScope("lr", "a", f"{tmp_path.name}-ev")
     store = MemoryStore(scope=scope, repository=None)
     bind = LlmRuntimeEventBind(
@@ -48,12 +51,12 @@ def test_create_chat_completion_sync_writes_llm_inference_failure(tmp_path) -> N
 
         class _ChatCompletions:
             @staticmethod
-            def create(**kw):
+            async def create(**kw):
                 raise RuntimeError("simulated transport failure")
 
         client = SimpleNamespace(chat=SimpleNamespace(completions=_ChatCompletions))
-        with pytest.raises(CompanionLLMInferenceBackendError):
-            create_chat_completion_sync(
+        with pytest.raises(OpenAICompatibleInferenceBackendError):
+            await create_chat_completion(
                 client,
                 model="model/ev-test",
                 messages_payload=[{"role": "user", "content": "hi"}],
@@ -69,11 +72,11 @@ def test_create_chat_completion_sync_writes_llm_inference_failure(tmp_path) -> N
     assert rows[0]["user_msg_uuid"] == "um-ev-1"
     assert rows[0]["phase"] == "foreground_chat"
     assert rows[0]["model"] == "model/ev-test"
-    assert rows[0]["error_type"] == "CompanionLLMInferenceBackendError"
+    assert rows[0]["error_type"] == "OpenAICompatibleInferenceBackendError"
 
 
 def test_exc_chain_detects_inference_errors() -> None:
-    root = CompanionLLMInferenceBackendError(
+    root = OpenAICompatibleInferenceBackendError(
         client_message_en="e", provider_http_status=502
     )
     assert exc_chain_includes_llm_inference_failure_root_causes(root) is True

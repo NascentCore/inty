@@ -1,14 +1,4 @@
-"""Correlation ContextVar + append path for companion LLM failures in runtime events.
-
-Invoked from :mod:`app.core.companion_harness.llm.chat_completions` on every failed
-``chat.completions`` attempt (after normalization) and from :mod:`turn` on structured-chat
-foreground timeouts. Production call sites **set** :data:`companion_llm_runtime_event_bind_ctx`
-around LLM work (including ``asyncio.to_thread`` and dedicated worker threads); tests may omit
-the bind so recording is a no-op.
-
-Do not add unrelated companion imports here—keep this module as the single narrow bridge from
-``llm.chat_completions`` into MemoryStore-backed runtime JSONL.
-"""
+"""Correlation ContextVar + append path for companion LLM failures in runtime events."""
 
 from __future__ import annotations
 
@@ -18,14 +8,14 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.companion.llm_inference_errors import (
-    CompanionLLMInferenceBackendError,
-)
-from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.runtime_events import (
     append_runtime_event,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.infra.openai_compatible.inference_errors import (
+    OpenAICompatibleInferenceBackendError,
+)
 
 LLM_INFERENCE_FAILURE_KIND = "llm_inference_failure"
 
@@ -45,17 +35,17 @@ companion_llm_runtime_event_bind_ctx: contextvars.ContextVar[
 
 
 def _is_openrouter_invalid_json_error(exc: BaseException) -> bool:
-    """Avoid importing ``OpenRouterInvalidJsonError`` from ``llm.chat_completions`` (cycle-safe)."""
+    """Avoid importing ``OpenRouterInvalidJsonError`` from chat_completions (cycle-safe)."""
     t = type(exc)
     return t.__name__ == "OpenRouterInvalidJsonError" and t.__module__ in (
-        "app.core.companion_harness.llm.chat_completions",
+        "app.infra.openai_compatible.chat_completions",
     )
 
 
 def exc_chain_includes_llm_inference_failure_root_causes(
     exc: BaseException,
 ) -> bool:
-    """True if ``exc`` or ``__cause__`` / ``__context__`` chain carries kernel inference errors."""
+    """True if ``exc`` chain carries OpenAI-compatible inference errors."""
     seen: set[int] = set()
     stack: list[BaseException] = [exc]
     while stack:
@@ -63,7 +53,7 @@ def exc_chain_includes_llm_inference_failure_root_causes(
         if id(cur) in seen:
             continue
         seen.add(id(cur))
-        if isinstance(cur, CompanionLLMInferenceBackendError):
+        if isinstance(cur, OpenAICompatibleInferenceBackendError):
             return True
         if _is_openrouter_invalid_json_error(cur):
             return True
@@ -104,7 +94,7 @@ def record_llm_inference_failure(
         record["scene"] = bind.scene
     if foreground_timeout_sec is not None:
         record["foreground_timeout_sec"] = foreground_timeout_sec
-    if isinstance(exc, CompanionLLMInferenceBackendError):
+    if isinstance(exc, OpenAICompatibleInferenceBackendError):
         record["client_message_en"] = exc.client_message_en
         if exc.provider_http_status is not None:
             record["provider_http_status"] = exc.provider_http_status

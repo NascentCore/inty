@@ -56,7 +56,7 @@ from loguru import logger
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
-from app.core.companion_harness.llm.langsmith_invocation_extra import (
+from .langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
     SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
     invocation_extra,
@@ -251,20 +251,13 @@ async def _run_bootstrap_track_sync_tool_loop(
     chat_model = llm_client.resolve_model("chat")
     allow = MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
 
-    def _chat_sync(
-        msgs: list[dict[str, Any]], tools: list[dict[str, Any]]
-    ) -> Any:
-        return llm_client.chat_completion(
-            messages=msgs,
-            model=chat_model,
-            tools=tools,
-            scene=LLM_SCENE_CHAT,
-            langsmith_extra=invocation_extra(source=SOURCE_BOOTSTRAP_TRACK),
-        )
-
     t_api = time.perf_counter()
-    initial_resp = await asyncio.to_thread(
-        _chat_sync, working_messages, loop_tools
+    initial_resp = await llm_client.chat_completion(
+        messages=working_messages,
+        model=chat_model,
+        tools=loop_tools,
+        scene=LLM_SCENE_CHAT,
+        langsmith_extra=invocation_extra(source=SOURCE_BOOTSTRAP_TRACK),
     )
     langsmith_trace_acc = langsmith_trace_id_from_completion(initial_resp) or ""
     langsmith_llm_run_acc = (
@@ -287,8 +280,12 @@ async def _run_bootstrap_track_sync_tool_loop(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> tuple[Any, str | None]:
         nonlocal loop_tools
-        next_resp = await asyncio.to_thread(
-            _chat_sync, messages_with_tool_results, loop_tools
+        next_resp = await llm_client.chat_completion(
+            messages=messages_with_tool_results,
+            model=chat_model,
+            tools=loop_tools,
+            scene=LLM_SCENE_CHAT,
+            langsmith_extra=invocation_extra(source=SOURCE_BOOTSTRAP_TRACK),
         )
         nonlocal langsmith_trace_acc, langsmith_llm_run_acc
         tid = langsmith_trace_id_from_completion(next_resp)
@@ -702,8 +699,8 @@ async def _run_companion_turn_core(
                         t_api = time.perf_counter()
                         try:
 
-                            def _chat_sync() -> Any:
-                                return llm_client.chat_completion(
+                            resp = await asyncio.wait_for(
+                                llm_client.chat_completion(
                                     messages=chat_msgs,
                                     model=chat_model,
                                     tools=None,
@@ -713,10 +710,7 @@ async def _run_companion_turn_core(
                                         source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
                                     ),
                                     high_reasoning=tick_proactive,
-                                )
-
-                            resp = await asyncio.wait_for(
-                                asyncio.to_thread(_chat_sync),
+                                ),
                                 timeout=llm_client.config.async_chat_front_timeout_sec,
                             )
                             langsmith_trace_acc = (
@@ -786,8 +780,8 @@ async def _run_companion_turn_core(
                         tools=tools_for_turn,
                         on_event=_kernel_bg_on_event,
                         execute_tool_call_fn=repl_execute_tool_call,
-                        client=llm_client.sync_client_for_route("tool"),
-                        chat_completions_sync=llm_client.chat_completions_sync,
+                        client=llm_client.async_client_for_route("tool"),
+                        chat_completion=llm_client.chat_completions,
                         write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
                         repository_only_store_text=repository_only_store_text,
                         main_event_loop=asyncio.get_running_loop(),
@@ -859,7 +853,7 @@ async def _run_companion_turn_core(
                             attempt_log_label="implicit_sign_on_greeting",
                         )
                     else:
-                        resp = llm_client.chat_completion(
+                        resp = await llm_client.chat_completion(
                             messages=messages,
                             model=resolved_model,
                             tools=None,
@@ -1025,10 +1019,10 @@ async def _run_companion_turn_core(
         assert tool_bg_idle_event is not None
         if defer_memory_update:
 
-            def _complete_fn(
+            async def _complete_fn(
                 msgs: list[dict[str, Any]], model_role: str
             ) -> str:
-                return llm_client.complete_text(msgs, model_role=model_role)
+                return await llm_client.complete_text(msgs, model_role=model_role)
 
             schedule_memory_update_after_turn(
                 store,
@@ -1052,12 +1046,12 @@ async def _run_companion_turn_core(
             )
             try:
 
-                def _complete_fn_sync(
+                async def _complete_fn_sync(
                     msgs: list[dict[str, Any]], model_role: str
                 ) -> str:
-                    return llm_client.complete_text(msgs, model_role=model_role)
+                    return await llm_client.complete_text(msgs, model_role=model_role)
 
-                memory_update_after_turn(
+                await memory_update_after_turn(
                     store,
                     user_text=memory_user_text,
                     assistant_text=last_text,

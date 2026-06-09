@@ -98,21 +98,12 @@ class _FakeCompletionsAPI:
     def __init__(self, client: "FakeOpenAI") -> None:
         self._client = client
 
-    def create(
+    def _build_response(
         self,
         *,
         messages: List[Dict[str, Any]],
         model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-        top_p: Optional[float] = None,
-        stream: bool = False,
-        **kwargs: Any,
     ) -> FakeChatCompletionResponse:
-        if stream:
-            raise NotImplementedError("FakeOpenAI does not support streaming.")
-
-        # Lookup specific response or fall back to random
         key = _make_request_key(messages, model)
         if (
             key in self._client._responses_by_request
@@ -121,11 +112,9 @@ class _FakeCompletionsAPI:
         else:
             content = self._client._random_content()
 
-        # Minimal yet OpenAI-like response structure
         message = FakeChatMessage(role="assistant", content=content)
         choice = FakeChatChoice(index=0, message=message)
 
-        # Naive token accounting based on character length (sufficient for tests)
         prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
         completion_chars = len(content)
         usage = FakeChatUsage(
@@ -141,6 +130,42 @@ class _FakeCompletionsAPI:
             object=CHAT_COMPLETION_OBJECT,
             choices=[choice],
             usage=usage,
+        )
+
+    def create(
+        self,
+        *,
+        messages: List[Dict[str, Any]],
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        top_p: Optional[float] = None,
+        stream: bool = False,
+        **kwargs: Any,
+    ) -> FakeChatCompletionResponse:
+        if stream:
+            raise NotImplementedError("FakeOpenAI does not support streaming.")
+        return self._build_response(messages=messages, model=model)
+
+    async def acreate(
+        self,
+        *,
+        messages: List[Dict[str, Any]],
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        top_p: Optional[float] = None,
+        stream: bool = False,
+        **kwargs: Any,
+    ) -> FakeChatCompletionResponse:
+        return self.create(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stream=stream,
+            **kwargs,
         )
 
 

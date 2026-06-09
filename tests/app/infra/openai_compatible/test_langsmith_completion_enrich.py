@@ -7,7 +7,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.llm.langsmith_completion_enrich import (
+from app.infra.openai_compatible.langsmith_completion_enrich import (
     _LS_WRAPPED_LLM_RUN_ID,
     completion_with_langsmith_trace_id,
     langsmith_llm_run_id_from_completion,

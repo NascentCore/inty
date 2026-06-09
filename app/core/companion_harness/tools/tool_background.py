@@ -30,17 +30,17 @@ from openai import BadRequestError
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel
 
-from app.core.companion_harness.llm.chat_completions import (
-    create_chat_completion_sync,
-)
-from app.core.companion_harness.llm.langsmith_invocation_extra import (
+from app.core.companion_harness.companion.langsmith_invocation_extra import (
     INTY_TOOL_BG_ROUND_METADATA_KEY,
     SOURCE_TOOL_BACKGROUND_CONTINUE,
     SOURCE_TOOL_BACKGROUND_INITIAL,
     tool_call_langsmith_extra,
     tool_choice_attempt_metadata,
 )
-from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
+from app.core.companion_harness.companion.llm_completion_adapter import (
+    create_chat_completion,
+)
+from app.infra.openai_compatible.ports import ChatCompletionsPort
 from app.core.companion_harness.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
@@ -86,7 +86,7 @@ from .companion_tool_runtime import (
     tool_requires_client_delivery_on_success,
 )
 from .image_gate import list_image_asset_records
-from .tool_bg_routing import resolve_tool_bg_routing_sync
+from .tool_bg_routing import resolve_tool_bg_routing
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
 _OUTPUT_QUEUE_LOCK = threading.Lock()
@@ -381,9 +381,9 @@ class _InitialToolBgCompletionMeta:
     tool_choice: str | None
 
 
-def _initial_tool_bg_completion_with_fallbacks(
+async def _initial_tool_bg_completion_with_fallbacks(
     client: Any,
-    chat_completion_sync: ChatCompletionsSyncPort,
+    chat_completion: ChatCompletionsPort,
     *,
     model: str,
     messages_payload: list[dict[str, Any]],
@@ -403,7 +403,7 @@ def _initial_tool_bg_completion_with_fallbacks(
     last_br: BadRequestError | None = None
     for tc in attempts:
         try:
-            resp = chat_completion_sync(
+            resp = await chat_completion(
                 client,
                 model=model,
                 messages_payload=messages_payload,
@@ -533,7 +533,7 @@ async def _run_background_tool_loop(
     on_event: Callable[[ToolOutputEvent], None],
     execute_tool_call_fn: Callable[..., Any],
     client: Any,
-    chat_completion_sync: ChatCompletionsSyncPort,
+    chat_completion: ChatCompletionsPort,
     companion_turn_track: CompanionTurnTrack,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
@@ -573,10 +573,9 @@ async def _run_background_tool_loop(
         request_snapshot = deepcopy(working_messages)
         payload = _openai_messages_payload(working_messages)
         force_tools = bool(tools) and force_tools_first_round
-        initial_response, initial_meta = await asyncio.to_thread(
-            _initial_tool_bg_completion_with_fallbacks,
+        initial_response, initial_meta = await _initial_tool_bg_completion_with_fallbacks(
             resolved_client,
-            chat_completion_sync,
+            chat_completion,
             model=tool_api_id,
             messages_payload=payload,
             tools=tools,
@@ -677,8 +676,7 @@ async def _run_background_tool_loop(
             active_round = rounds_used
             request_snapshot_inner = deepcopy(messages_with_tool_results)
             inner_payload = _openai_messages_payload(messages_with_tool_results)
-            next_resp = await asyncio.to_thread(
-                chat_completion_sync,
+            next_resp = await chat_completion(
                 resolved_client,
                 model=tool_api_id,
                 messages_payload=inner_payload,
@@ -769,10 +767,10 @@ async def _run_background_tool_loop(
             tool_call_names,
             image_paths,
         )
-        routing = resolve_tool_bg_routing_sync(
+        routing = await resolve_tool_bg_routing(
             client=resolved_client,
             model=tool_api_id,
-            create_completion_sync=chat_completion_sync,
+            create_completion=chat_completion,
             conversation_messages=list(loop_result.messages),
             final_assistant_content=raw_final,
             trace_id=trace_id,
@@ -940,7 +938,7 @@ def start_tool_background_job(
     execute_tool_call_fn: Callable[..., Any] = execute_tool_call,
     client: Any,
     companion_turn_track: CompanionTurnTrack,
-    chat_completions_sync: ChatCompletionsSyncPort | None = None,
+    chat_completion: ChatCompletionsPort | None = None,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_store_text: bool = False,
@@ -956,7 +954,7 @@ def start_tool_background_job(
     tool_bg_idle_event: threading.Event | None = None,
     force_tools_first_round: bool = True,
 ) -> None:
-    sync_port = chat_completions_sync or create_chat_completion_sync
+    async_port = chat_completion or create_chat_completion
 
     def _effective_on_event(ev: ToolOutputEvent) -> None:
         if on_event is not None:
@@ -992,7 +990,7 @@ def start_tool_background_job(
                     on_event=_effective_on_event,
                     execute_tool_call_fn=execute_tool_call_fn,
                     client=client,
-                    chat_completion_sync=sync_port,
+                    chat_completion=async_port,
                     trace_hooks=trace_hooks,
                     write_allowlist=write_allowlist,
                     repository_only_store_text=repository_only_store_text,

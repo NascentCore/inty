@@ -12,7 +12,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
+from app.core.companion_harness.companion.llm_completion_adapter import (
+    create_chat_completion,
+)
 from app.core.companion_harness.companion.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
@@ -389,7 +391,7 @@ class _FakeAsyncDualLLMClient:
     def resolve_model(self, role: str) -> GenAIModel:
         return resolve_chat_text_model(f"m/{role}")
 
-    def chat_completion(self, **kwargs: Any) -> Any:
+    async def chat_completion(self, **kwargs: Any) -> Any:
         self.chat_calls.append(kwargs)
         env = {
             "user_facing_reply": "foreground ok",
@@ -403,12 +405,12 @@ class _FakeAsyncDualLLMClient:
         )
         return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
 
-    def sync_client_for_route(self, route: str) -> object:
+    def async_client_for_route(self, route: str) -> object:
         return object()
 
     @property
-    def chat_completions_sync(self):
-        return create_chat_completion_sync
+    def chat_completions(self):
+        return create_chat_completion
 
     def complete_text(
         self, messages: list[dict[str, Any]], *, model_role: str = "memory"
@@ -474,4 +476,4 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
 
     assert len(bg_jobs) == 1
     assert bg_jobs[0]["langsmith_parent_run"] is sentinel
-    assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
+    assert bg_jobs[0]["chat_completion"] is client.chat_completions

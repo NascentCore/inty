@@ -6,7 +6,7 @@ import threading
 from dataclasses import dataclass
 from typing import Any
 
-from app.core.companion_harness.providers.openai_compatible import (
+from app.infra.openai_compatible.client import (
     OpenAICompatibleAsyncOptions,
     OpenAICompatibleSyncOptions,
     create_async_client,
@@ -100,6 +100,9 @@ def _build_openai_compatible_async_client(
             api_key=options.api_key,
             default_headers=options.default_headers,
             timeout=options.timeout,
+            wrap_langsmith=options.wrap_langsmith,
+            chat_name=options.chat_name,
+            completions_name=options.completions_name,
             use_fake_openai=options.use_fake_openai,
         )
     )

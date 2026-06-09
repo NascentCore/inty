@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from loguru import logger
@@ -26,6 +26,8 @@ from app.living_sphere.seeding import (
     LIVING_SPHERE_RELATIVE_PATH,
     ensure_living_sphere_seeded,
 )
+
+LivingSphereCompleteFn = Callable[[list[dict[str, Any]], str], Awaitable[str]]
 
 # TODO(offline-batch): Large-scale LivingSphere compact (cross-scope backfill / backlog) must be a
 # separate deployable + managed cloud offline executor (cf. backend/push_worker)—NOT a longer cron
@@ -172,10 +174,10 @@ def _pending_updates_after_cursor(
     return pending, False
 
 
-def compact_living_sphere_batch(
+async def compact_living_sphere_batch(
     store: MemoryStore,
     batch: list[LivingSphereUpdate],
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: LivingSphereCompleteFn,
 ) -> str:
     """Run curator LLM for one batch; write LIVING_SPHERE.md; return last merged update_id."""
     ensure_living_sphere_seeded(store)
@@ -191,7 +193,7 @@ def compact_living_sphere_batch(
         {"role": "system", "content": _LIVING_SPHERE_CURATOR_SYSTEM},
         {"role": "user", "content": user_block},
     ]
-    new_body = complete_fn(messages, "memory").strip()
+    new_body = (await complete_fn(messages, "memory")).strip()
     reject = living_sphere_curator_output_rejection_reason(new_body)
     if reject is not None:
         raise LivingSphereCuratorOutputRejected(reject)
@@ -199,9 +201,9 @@ def compact_living_sphere_batch(
     return batch[-1].update_id
 
 
-def compact_living_sphere_if_pending(
+async def compact_living_sphere_if_pending(
     store: MemoryStore,
-    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    complete_fn: LivingSphereCompleteFn,
     *,
     tool_bg_idle_event: threading.Event,
 ) -> bool:
@@ -228,7 +230,7 @@ def compact_living_sphere_if_pending(
         if not pending:
             break
         batch = pending[:_PENDING_UPDATES_BATCH_CAP]
-        last_id = compact_living_sphere_batch(store, batch, complete_fn)
+        last_id = await compact_living_sphere_batch(store, batch, complete_fn)
         state[_PIPELINE_CURSOR_KEY] = last_id
         _write_pipeline_state(store, state)
         any_ran = True
