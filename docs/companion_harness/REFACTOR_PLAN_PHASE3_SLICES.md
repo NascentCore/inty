@@ -51,7 +51,7 @@ flowchart LR
 | S3 | 拆出 `runtime/`：dreaming 编排 seam | AFK | S1 | `dreaming*`；收敛 `companion_chat_service` 单入口文档 |
 | S4 | 拆出 `system_hierarchy/`：静态 prompt 资源 | AFK | S2 | `companion/prompts/`、`system_messages` |
 | S5 | 拆出 `system_hierarchy/`：prompt 组装 | AFK | S4 | `prompt_slices`、`prompt_stack`、`prompting/bundle` |
-| S6 | 拆出 `environment/`：idle / inner-tick 刺激 | AFK | S2 | `inner_tick_schedule`、`implicit_signal*`、`proactive_chat` |
+| S6 | 拆出 `environment/`：idle / inner-tick 刺激 | AFK | S2 | `inner_tick_schedule`、`implicit_signal*`、`proactive_chat`；远期 sub-agent clock 见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) |
 | S7 | `memory/`：MemoryDocumentCatalog 单表 | AFK | S4 | scope + mapping + bundle 字段一致性测试 |
 | S8 | Phase 3.6：退役 `companion/` namespace | AFK | S3,S5,S6,S7 | 全仓 grep + 删空目录 |
 

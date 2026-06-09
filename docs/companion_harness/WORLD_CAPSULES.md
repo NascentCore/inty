@@ -30,4 +30,6 @@
 
 ## See also
 
-[LIVING_SPHERE.md](./LIVING_SPHERE.md) · [techno_core/DESIGN.md](../../app/techno_core/DESIGN.md) · [GLOSSARY.md](./GLOSSARY.md)
+[LIVING_SPHERE.md](./LIVING_SPHERE.md) · [techno_core/DESIGN.md](../../techno_core/DESIGN.md) · [GLOSSARY.md](./GLOSSARY.md)
+
+**与 World Engine 的边界**：胶囊管**设定巩固**（lore 如何从对话沉入 LivingSphere/TechnoCore）；[FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) 管**运行时多 agent**（companion 与 sub-agent 的 clock、mailbox、hidden state）。二者正交，可独立推进。

@@ -27,3 +27,5 @@
    智能体人物画像（设定信息、人格）
 3. Conversation Orchestrator（统一会话编排）：如何处理各类消息、如何将信息显示给用户、如何在这个过程中保持一致性，等等
 4. MemoryStore（记忆存储与持久化、动态更新）
+
+目标态扩展（多 agent 世界引擎、sub-agent）见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)。

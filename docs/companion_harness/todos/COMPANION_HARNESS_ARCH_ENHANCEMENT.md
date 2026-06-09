@@ -60,3 +60,7 @@ SessionBinding
 | `workspace` / `workspace_path` | 实现泄漏；目标语义拆成 Binding + Corpus (+ Sidecar) |
 | `workspace_root`（MemoryStore） | Corpus 访问上下文的遗留挂载或逻辑根；长期可向 binding 键收敛 |
 | `CompanionScope` | `SessionBinding` 同构 |
+
+## 9. 与 World Engine 的收敛（计划）
+
+[FR_WORLD_ENGINE.md](../FR_WORLD_ENGINE.md) 将把 MemoryStore 分区键从 companion-only 泛化为 **`agent_id`**（companion 与 sub-agent 各一 scope）。`SessionBinding` 仍锚定 **user↔companion** 长期关系；sub-agent scope 挂在同一 binding 下的 spawn registry，不引入 user-facing 第二 binding。
