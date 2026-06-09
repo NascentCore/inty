@@ -1,18 +1,7 @@
----
-description:
-alwaysApply: true
----
+# iMate (Android): Maintenance mode, do not change
 
-# iMate（Android）：主力客户端之一
+This is the new Android app for connecting with the agentic companion backend.
+It was creaed as a demo, and it's now in maintenance mode:
 
-**一句话**：这是 **面向终端用户的 Android 伴侣 App**；与仓库 CI、产品文档、变更说明联动，**Material 3 优先** 做 UI 决策。
-
-## 读者
-
-- 修改 iMate Android 功能、CI 门禁或用户可见文案的工程师与编码智能体。
-
-## 协作要点
-
-- **合并门禁**：变更本目录会触发专用 CI 工作流做 **Debug 构建**；合入前确保能通过。
-- **计划与对外说明**：路线图、用户向变更记录与用户手册见仓库 `docs/` 与本应用 `docs/` 下既有文档；保持 **与 legacy `android_app` 文档体系** 的对齐方式（若仍有交叉引用）。
-- **视觉体系**：尽量使用 **Material 3 主题 token**（颜色、字体、形状），避免散落魔法数；若设计稿引入新色，集中在主题模块扩展并 **在评审中显式说明**。
+- Do not read or touch code here, as agentic companion has not been done yet.
+- It's created to demo the experience of an agentic compaion from Android platform.
