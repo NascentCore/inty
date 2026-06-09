@@ -59,11 +59,8 @@ async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle
     assert result is stub
     assert track_mock.await_args is not None
     assert track_mock.await_args.args[0] == "hi"
-    assert (
-        track_mock.await_args.kwargs["runtime_context"].implicit_signal_bundle
-        is bundle
-    )
-    assert "bootstrap_interim_output_sink" not in track_mock.await_args.kwargs
+    assert track_mock.await_args.kwargs["deps"].runtime_context.implicit_signal_bundle is bundle
+    assert track_mock.await_args.kwargs["deps"].bootstrap_interim_output_sink is None
 
 
 @pytest.mark.asyncio

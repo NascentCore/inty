@@ -40,6 +40,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult
 from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from .scope import CompanionScope
+from .turn_deps import CompanionTurnDeps
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 from .turn_tracks import (
     run_companion_implicit_sign_on_greeting_turn,
@@ -233,29 +234,31 @@ class CompanionManager:
             else override
         )
 
-    def _track_turn_kwargs(
+    def _build_turn_deps(
         self,
         session: CompanionSession,
         *,
         background_output_sink: BackgroundToolEventSink | None,
         preset_user_msg_uuid: str | None,
         runtime_context: TurnRuntimeContext,
-    ) -> dict[str, object]:
-        return {
-            "store": session.store,
-            "llm_client": session.llm_client,
-            "transcript_compaction": session.config.transcript_compaction,
-            "transcript_llm_window_max_messages": session.config.transcript_llm_window_max_messages,
-            "repository_only_store_text": session.config.repository_only_store_text,
-            "memory_bootstrap_type": session.config.memory_bootstrap_type,
-            "background_output_sink": background_output_sink,
-            "preset_user_msg_uuid": preset_user_msg_uuid,
-            "runtime_context": runtime_context,
-            "langsmith_parent_run_enabled": self._langsmith_parent_run_enabled(
+        bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
+    ) -> CompanionTurnDeps:
+        return CompanionTurnDeps(
+            store=session.store,
+            llm_client=session.llm_client,
+            transcript_compaction=session.config.transcript_compaction,
+            transcript_llm_window_max_messages=session.config.transcript_llm_window_max_messages,
+            repository_only_store_text=session.config.repository_only_store_text,
+            memory_bootstrap_type=session.config.memory_bootstrap_type,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
+            runtime_context=runtime_context,
+            langsmith_parent_run_enabled=self._langsmith_parent_run_enabled(
                 session
             ),
-            "tool_bg_idle_event": session.tool_bg_idle,
-        }
+            tool_bg_idle_event=session.tool_bg_idle,
+            bootstrap_interim_output_sink=bootstrap_interim_output_sink,
+        )
 
     async def run_user_chat_turn(
         self,
@@ -272,15 +275,13 @@ class CompanionManager:
     ) -> CompanionTurnResult:
         return await run_companion_user_chat_turn(
             user_text,
-            **{
-                **self._track_turn_kwargs(
-                    session,
-                    background_output_sink=background_output_sink,
-                    preset_user_msg_uuid=preset_user_msg_uuid,
-                    runtime_context=runtime_context,
-                ),
-                "bootstrap_interim_output_sink": bootstrap_interim_output_sink,
-            },
+            deps=self._build_turn_deps(
+                session,
+                background_output_sink=background_output_sink,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                runtime_context=runtime_context,
+                bootstrap_interim_output_sink=bootstrap_interim_output_sink,
+            ),
         )
 
     async def run_implicit_sign_on_greeting_turn(
@@ -297,11 +298,12 @@ class CompanionManager:
     ) -> CompanionTurnResult:
         return await run_companion_implicit_sign_on_greeting_turn(
             user_text,
-            **self._track_turn_kwargs(
+            deps=self._build_turn_deps(
                 session,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
+                bootstrap_interim_output_sink=None,
             ),
         )
 
@@ -317,11 +319,12 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_proactive_chat_turn(
-            **self._track_turn_kwargs(
+            deps=self._build_turn_deps(
                 session,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
+                bootstrap_interim_output_sink=None,
             ),
         )
 
@@ -339,11 +342,12 @@ class CompanionManager:
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_scheduled_turn(
             scheduled_user_text,
-            **self._track_turn_kwargs(
+            deps=self._build_turn_deps(
                 session,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
+                bootstrap_interim_output_sink=None,
             ),
         )
 
@@ -359,10 +363,11 @@ class CompanionManager:
         ),
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_maintenance_turn(
-            **self._track_turn_kwargs(
+            deps=self._build_turn_deps(
                 session,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
+                bootstrap_interim_output_sink=None,
             ),
         )

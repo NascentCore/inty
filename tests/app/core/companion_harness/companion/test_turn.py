@@ -28,6 +28,7 @@ from app.core.companion_harness.companion.schedule_queue import (
 from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_scheduled_turn
 )
+from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
@@ -91,20 +92,23 @@ def test_run_turn_inner_tick_scheduled_semantics(
     out = asyncio.run(
         run_companion_inner_tick_scheduled_turn(
             scheduled_text,
-            store=store,
-            llm_client=client,  # type: ignore[arg-type]
-            transcript_compaction=None,
-            transcript_llm_window_max_messages=None,
-            repository_only_store_text=False,
-            memory_bootstrap_type="NONE",
-            background_output_sink=None,
-            preset_user_msg_uuid=None,
-            runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.APP,
-                implicit_signal_bundle=None,
+            deps=CompanionTurnDeps(
+                store=store,
+                llm_client=client,  # type: ignore[arg-type]
+                transcript_compaction=None,
+                transcript_llm_window_max_messages=None,
+                repository_only_store_text=False,
+                memory_bootstrap_type="NONE",
+                runtime_context=TurnRuntimeContext(
+                    channel=CompanionRuntimeChannel.APP,
+                    implicit_signal_bundle=None,
+                ),
+                background_output_sink=None,
+                preset_user_msg_uuid=None,
+                langsmith_parent_run_enabled=False,
+                tool_bg_idle_event=None,
+                bootstrap_interim_output_sink=None,
             ),
-            langsmith_parent_run_enabled=False,
-            tool_bg_idle_event=None,
         )
     )
 
