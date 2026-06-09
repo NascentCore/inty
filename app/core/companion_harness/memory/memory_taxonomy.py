@@ -1,7 +1,8 @@
 """Memory path labels for companion MemoryStore (psych-style naming).
 
 Maps logical paths to daily gist / semantic terminology used in system injection
-headings and docs. Daily gist lives at ``memory/daily/{date}.md``; semantic at ``MEMORY.md``."""
+headings and docs. Daily gist lives at ``memory/daily/{date}.md``; semantic at ``MEMORY.md``.
+"""
 
 from __future__ import annotations
 

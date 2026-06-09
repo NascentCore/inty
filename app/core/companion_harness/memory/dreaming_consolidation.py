@@ -17,7 +17,9 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.companion.dreaming import parse_transcript_datetime
+from app.core.companion_harness.companion.dreaming import (
+    parse_transcript_datetime,
+)
 from app.core.companion_harness.companion.models import ChatMessage
 from app.core.companion_harness.companion.utc import local_date_str
 
@@ -143,7 +145,9 @@ def _merge_soul_frozen_appearance(curator_out: str, frozen: str) -> str:
     )
 
 
-def _log_dreaming_consolidation_curated(*, step: str, ws: str, ms: float) -> None:
+def _log_dreaming_consolidation_curated(
+    *, step: str, ws: str, ms: float
+) -> None:
     logger.info(
         "dreaming_consolidation curated step={} ms={:.0f} ws={}",
         step,
