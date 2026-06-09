@@ -17,18 +17,18 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.proactive_chat import (
     PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
 )
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     InnerTickActivity,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
     scheduled_task_synthetic_user_text,
 )
 from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_scheduled_turn
 )
-from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
+from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,

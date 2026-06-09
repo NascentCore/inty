@@ -86,7 +86,7 @@ from app.core.companion_harness.companion.bootstrap import (
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from .message_format import openai_assistant_message_dict
-from .models import (
+from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     CompanionTurnResult,
     ContextMeta,
@@ -99,7 +99,7 @@ from .prompt_stack import (
     refresh_companion_turn_prompt_stack,
 )
 from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
-from .turn_deps import CompanionTurnDeps
+from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
 from .turn_track import turn_flags_for_track
 from .prompts.system_messages import (
     build_system_messages_for_chat_track,

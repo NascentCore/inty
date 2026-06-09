@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     ChatMessage,
     InnerTickActivity,
     merge_transcripts_by_ts,

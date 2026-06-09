@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
 from app.core.companion_harness.tools.companion_tools import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,

@@ -9,7 +9,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     is_scope_initialized_in_store,
     is_scope_initialized_on_disk,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 
 
 def test_memory_store_scope_paths_properties() -> None:

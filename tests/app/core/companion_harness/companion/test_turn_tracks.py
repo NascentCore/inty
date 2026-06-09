@@ -10,12 +10,12 @@ import pytest
 
 from app.utils.config import CompanionMemoryBootstrapType
 
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     CompanionTurnResult,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
 )
@@ -30,7 +30,7 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
-from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
+from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 

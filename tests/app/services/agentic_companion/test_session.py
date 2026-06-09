@@ -7,7 +7,7 @@ import threading
 
 import pytest
 
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent

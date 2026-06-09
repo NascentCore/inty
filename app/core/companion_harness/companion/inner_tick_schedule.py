@@ -18,7 +18,7 @@ import time
 from dataclasses import dataclass
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .models import (
+from app.core.companion_harness.runtime.models import (
     ChatMessage,
     load_context_meta,
     load_transcript_from_store,

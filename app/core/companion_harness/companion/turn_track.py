@@ -8,7 +8,7 @@ used for trace filtering.
 
 from __future__ import annotations
 
-from .models import CompanionTurnTrack, InnerTickActivity
+from app.core.companion_harness.runtime.models import CompanionTurnTrack, InnerTickActivity
 
 
 def turn_flags_for_track(

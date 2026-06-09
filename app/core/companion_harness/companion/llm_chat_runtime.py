@@ -28,7 +28,7 @@ from app.core.companion_harness.companion.langsmith_parent_policy import (
     companion_langsmith_parent_run_allowed,
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )

@@ -13,7 +13,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
     save_compaction_state_to_store,
     transcript_rows_to_openai_dialogue,
 )
-from app.core.companion_harness.companion.models import ChatMessage
+from app.core.companion_harness.runtime.models import ChatMessage
 from app.core.companion_harness.companion.utc import (
     format_transcript_ts_for_llm,
     transcript_message_content_for_llm,
@@ -64,7 +64,7 @@ def test_transcript_rows_to_openai_dialogue_includes_system() -> None:
 
 
 def test_compaction_state_roundtrip_via_memory_store(tmp_path: Path) -> None:
-    from app.core.companion_harness.companion.scope import CompanionScope
+    from app.core.companion_harness.runtime.scope import CompanionScope
 
     store = MemoryStore(
         scope=CompanionScope("tc", "a", tmp_path.name),

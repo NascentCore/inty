@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any, Protocol
 
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.companion.utc import utc_iso_ts
 
 from .memory_store_document_mapping import (

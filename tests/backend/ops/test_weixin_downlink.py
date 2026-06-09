@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.core.companion_harness.runtime.models import CompanionTurnResult
 from app.services.agentic_companion.downlink import (
     bootstrap_interim_downlink,
     proactive_downlink,
@@ -72,7 +72,7 @@ async def test_weixin_downlink_skips_bootstrap_interim() -> None:
 
 @pytest.mark.asyncio
 async def test_weixin_downlink_skips_suppressed_tool_background() -> None:
-    from app.core.companion_harness.companion.scope import CompanionScope
+    from app.core.companion_harness.runtime.scope import CompanionScope
     from app.core.companion_harness.memory.memory_store import MemoryStore
     from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 

@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.services.agentic_companion.downlink import tool_background_downlink

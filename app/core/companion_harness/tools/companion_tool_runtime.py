@@ -32,7 +32,7 @@ from app.core.companion_harness.companion.bootstrap import (
 from app.core.companion_harness.companion.message_format import (
     openai_assistant_message_dict,
 )
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     ChatMessage,
     load_context_meta,
 )

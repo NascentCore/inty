@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 
 from .memory_store import MemoryStore, SqlAlchemyMemoryRepository
 

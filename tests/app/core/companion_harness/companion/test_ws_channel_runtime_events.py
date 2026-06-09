@@ -8,7 +8,7 @@ from app.core.companion_harness.companion.runtime_events import (
     build_ws_conn_dropped_runtime_event_record,
     read_runtime_events,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
 

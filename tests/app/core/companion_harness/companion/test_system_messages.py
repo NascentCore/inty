@@ -14,7 +14,7 @@ from app.core.companion_harness.companion.prompts.system_messages import (
 from app.core.companion_harness.companion.prompt_stack import (
     companion_system_messages_for_track,
 )
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     ContextMeta,
 )

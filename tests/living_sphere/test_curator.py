@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.living_sphere_curator import (
     LivingSphereCuratorOutputRejected,
     compact_living_sphere_batch,

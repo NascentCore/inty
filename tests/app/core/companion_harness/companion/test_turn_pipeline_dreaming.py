@@ -8,8 +8,8 @@ from app.core.companion_harness.companion.dreaming import (
     DreamingState,
     save_dreaming_state,
 )
-from app.core.companion_harness.companion.models import InnerTickActivity
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.models import InnerTickActivity
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.companion.turn_pipeline import (
     load_companion_turn_state,
 )

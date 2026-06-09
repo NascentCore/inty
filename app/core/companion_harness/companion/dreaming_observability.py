@@ -15,10 +15,10 @@ from typing import TYPE_CHECKING, Any, Iterator
 from loguru import logger
 
 from app.core.companion_harness.companion.dreaming import DreamingCandidate
-from app.core.companion_harness.companion.models import InnerTickActivity
+from app.core.companion_harness.runtime.models import InnerTickActivity
 
 if TYPE_CHECKING:
-    from app.core.companion_harness.companion.manager import CompanionSession
+    from app.core.companion_harness.runtime.manager import CompanionSession
 from app.core.companion_harness.companion.runtime_events import (
     append_runtime_event,
 )

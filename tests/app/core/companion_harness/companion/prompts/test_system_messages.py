@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     OUTPUT_FORMAT_WECHAT_WEIXIN_MD,
     ContextMeta,
 )

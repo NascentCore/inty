@@ -64,7 +64,7 @@ from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
-from ..models import ContextMeta, InnerTickActivity
+from app.core.companion_harness.runtime.models import ContextMeta, InnerTickActivity
 from .inner_tick_ls_tc import (
     INNER_TICK_LS_TC_AUTONOMY_SECTION,
     INNER_TICK_LS_TC_TOOL_BULLET,

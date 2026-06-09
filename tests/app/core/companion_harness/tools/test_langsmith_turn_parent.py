@@ -19,7 +19,7 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
     end_companion_turn_root_run_safe,
 )
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )
@@ -28,10 +28,10 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import start_tool_background_job
 from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
-from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
+from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 

@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.tools.read_web_page import run_read_web_page_sync
 
 _HTML = """<!DOCTYPE html>

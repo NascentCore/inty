@@ -31,7 +31,7 @@ from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
     BootstrapInterimOutputSink,
 )
-from app.core.companion_harness.companion.manager import (
+from app.core.companion_harness.runtime.manager import (
     CompanionConfig,
     CompanionManager,
     CompanionSession,
@@ -43,7 +43,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     CompanionTurnResult,
     InnerTickActivity,
 )
@@ -275,7 +275,7 @@ async def _maybe_append_companion_ws_session_system(
         != CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     ):
         return
-    from app.core.companion_harness.companion.models import load_context_meta
+    from app.core.companion_harness.runtime.models import load_context_meta
     from app.core.companion_harness.companion.utc import utc_iso_ts
     from app.core.companion_harness.memory.memory_store_scope import (
         DEFAULT_MEMORY_STORE_SCOPE_PATHS,

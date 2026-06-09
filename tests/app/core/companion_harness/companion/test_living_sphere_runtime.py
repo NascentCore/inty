@@ -4,12 +4,12 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from app.core.companion_harness.companion.models import load_context_meta, load_prompt_bundle
+from app.core.companion_harness.runtime.models import load_context_meta, load_prompt_bundle
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.models import ChatMessage
+from app.core.companion_harness.runtime.scope import CompanionScope
+from app.core.companion_harness.runtime.models import ChatMessage
 from app.core.companion_harness.memory.dreaming_consolidation import (
     consolidate_memory_during_dreaming,
 )

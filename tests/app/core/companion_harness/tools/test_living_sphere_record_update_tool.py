@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
 from app.living_sphere.models import (

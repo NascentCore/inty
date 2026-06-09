@@ -33,7 +33,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
-from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.core.companion_harness.runtime.models import CompanionTurnResult
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage

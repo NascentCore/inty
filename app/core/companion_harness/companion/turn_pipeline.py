@@ -31,7 +31,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
-from .models import (
+from app.core.companion_harness.runtime.models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     AssistantTurnSource,

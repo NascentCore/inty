@@ -27,7 +27,7 @@ from app.core.agent import agent as agent_module
 from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
-from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.core.companion_harness.runtime.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import get_new_user_id
 from app.models.chat_history import ChatHistory

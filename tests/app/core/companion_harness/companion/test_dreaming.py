@@ -12,8 +12,8 @@ from app.core.companion_harness.companion.dreaming import (
     load_dreaming_state,
     save_dreaming_state,
 )
-from app.core.companion_harness.companion.models import ChatMessage
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.models import ChatMessage
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
 

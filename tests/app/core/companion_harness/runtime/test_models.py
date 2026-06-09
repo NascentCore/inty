@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.scope import CompanionScope
+from app.core.companion_harness.runtime.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     ContextMeta,

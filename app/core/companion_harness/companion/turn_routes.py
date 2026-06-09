@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable
 
 from pydantic import BaseModel, ConfigDict
 
-from .models import InnerTickActivity
+from app.core.companion_harness.runtime.models import InnerTickActivity
 
 if TYPE_CHECKING:
     from app.core.companion_harness.tools.tool_background import ToolOutputEvent

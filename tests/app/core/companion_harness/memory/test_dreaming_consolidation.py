@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from threading import Event
 
-from app.core.companion_harness.companion.models import ChatMessage
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.models import ChatMessage
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.dreaming_consolidation import (
     consolidate_memory_during_dreaming,
 )

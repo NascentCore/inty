@@ -25,7 +25,7 @@ from app.core.companion_harness.companion.dreaming_observability import (
     new_dreaming_batch_trace_id,
     record_dreaming_batch_observability,
 )
-from app.core.companion_harness.companion.manager import CompanionSession
+from app.core.companion_harness.runtime.manager import CompanionSession
 from app.core.companion_harness.memory.dreaming_consolidation import (
     consolidate_memory_during_dreaming,
 )

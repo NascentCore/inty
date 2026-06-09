@@ -47,7 +47,7 @@ from app.core.companion_harness.companion.inner_tick_schedule import (
     maintenance_transcript_line_count,
     next_inner_tick_wait_seconds,
 )
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
 from app.core.companion_harness.companion.proactive_chat import (

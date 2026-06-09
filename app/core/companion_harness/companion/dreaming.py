@@ -58,7 +58,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
-from .models import (
+from app.core.companion_harness.runtime.models import (
     ChatMessage,
     load_context_meta,
     load_transcript_from_store,

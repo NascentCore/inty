@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.core.companion_harness.runtime.models import CompanionTurnResult
 from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.services.agentic_companion.downlink import (
@@ -78,7 +78,7 @@ def test_bootstrap_interim_downlink() -> None:
 
 
 def _tool_event(*, output_to_user: bool, text: str) -> ToolOutputEvent:
-    from app.core.companion_harness.companion.scope import CompanionScope
+    from app.core.companion_harness.runtime.scope import CompanionScope
     from app.core.companion_harness.memory.memory_store import MemoryStore
 
     store = MemoryStore(

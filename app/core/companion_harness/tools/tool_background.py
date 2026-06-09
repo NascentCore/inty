@@ -57,7 +57,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     companion_llm_runtime_event_bind_ctx,
     exc_chain_includes_llm_inference_failure_root_causes,
 )
-from app.core.companion_harness.companion.models import (
+from app.core.companion_harness.runtime.models import (
     CompanionTurnTrack,
     InnerTickActivity,
     transcript_relative_path_for_turn_persistence,

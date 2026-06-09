@@ -8,7 +8,7 @@ from app.core.companion_harness.companion.ai_private_prompt import (
     get_ai_private_text_for_prompt,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 
 
 def test_get_ai_private_text_md_only(tmp_path: Path) -> None:

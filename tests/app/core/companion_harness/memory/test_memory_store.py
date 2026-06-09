@@ -8,7 +8,7 @@ from app.core.companion_harness.memory.memory_store import (
     MemoryStore,
     normalize_memory_store_relative_path,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 
 
 def _scope(tmp_name: str) -> CompanionScope:

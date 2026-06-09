@@ -13,7 +13,7 @@ from app.core.companion_harness.companion.dreaming import (
 from app.core.companion_harness.companion.dreaming_observability import (
     DreamingBatchOutcome,
 )
-from app.core.companion_harness.companion.models import ChatMessage
+from app.core.companion_harness.runtime.models import ChatMessage
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
 )

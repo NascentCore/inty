@@ -14,7 +14,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.companion_harness.companion.models import ChatMessage
+from app.core.companion_harness.runtime.models import ChatMessage
 
 from .memory_store import MemoryStore
 

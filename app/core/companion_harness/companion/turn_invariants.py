@@ -13,7 +13,7 @@ Architecture enforcement: ``.cursor/skills/scripts/check_companion_turn_invarian
 
 from __future__ import annotations
 
-from .models import CompanionTurnTrack
+from app.core.companion_harness.runtime.models import CompanionTurnTrack
 
 DREAMING_BATCH_ORCHESTRATOR = "run_dreaming_batch_if_due"
 DREAMING_BATCH_CURATION_ENTRY = "consolidate_memory_during_dreaming"

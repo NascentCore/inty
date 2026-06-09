@@ -9,7 +9,7 @@ from app.core.companion_harness.companion.proactive_chat import (
     ProactiveChatConfig,
     next_proactive_chat_wait_seconds,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
 

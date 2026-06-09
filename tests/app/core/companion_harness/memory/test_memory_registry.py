@@ -9,7 +9,7 @@ from app.core.companion_harness.memory.memory_registry import (
     shutdown_all_memory_stores,
     shutdown_memory_store,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 
 from tests.app.core.companion_harness.companion_memory_registry_dsn import (
     companion_memory_registry_dsn,

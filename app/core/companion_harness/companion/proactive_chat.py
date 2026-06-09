@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .models import ChatMessage, load_transcript_from_store
+from app.core.companion_harness.runtime.models import ChatMessage, load_transcript_from_store
 
 PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
     "## Proactive Messaging\n"

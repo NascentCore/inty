@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.living_sphere_curator import (
     compact_living_sphere_if_pending,
     document_kind_for_living_sphere_updates_jsonl,

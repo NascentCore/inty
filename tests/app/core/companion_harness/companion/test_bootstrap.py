@@ -11,12 +11,12 @@ from app.core.companion_harness.companion.bootstrap import (
     tool_companion_update_prompt_slice,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.models import ContextMeta
+from app.core.companion_harness.runtime.models import ContextMeta
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
     tool_memory_store_write_document,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tools import build_companion_tools
 
 

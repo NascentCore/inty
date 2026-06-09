@@ -8,11 +8,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.manager import (
+from app.core.companion_harness.runtime.manager import (
     CompanionConfig,
     CompanionManager,
 )
-from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.core.companion_harness.runtime.models import CompanionTurnResult
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
@@ -43,7 +43,7 @@ async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle
     session = _minimal_manager_session()
 
     with patch(
-        "app.core.companion_harness.companion.manager.run_companion_implicit_sign_on_greeting_turn",
+        "app.core.companion_harness.runtime.manager.run_companion_implicit_sign_on_greeting_turn",
         new_callable=AsyncMock,
         return_value=stub,
     ) as track_mock:
@@ -86,7 +86,7 @@ async def test_manager_turns_do_not_serialize_without_dreaming() -> None:
         )
 
     with patch(
-        "app.core.companion_harness.companion.manager.run_companion_implicit_sign_on_greeting_turn",
+        "app.core.companion_harness.runtime.manager.run_companion_implicit_sign_on_greeting_turn",
         side_effect=_track_turn,
     ):
         task_a = asyncio.create_task(

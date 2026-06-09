@@ -25,10 +25,13 @@ from app.utils.config import CompanionMemoryBootstrapType
 from app.living_sphere.seeding import ensure_living_sphere_seeded
 from app.techno_core.seeding import ensure_techno_core_seeded
 
-from .langsmith_parent_policy import (
+from app.core.companion_harness.companion.langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
-from .llm_client import CompanionLLMClient, CompanionLLMConfig
+from app.core.companion_harness.companion.llm_client import (
+    CompanionLLMClient,
+    CompanionLLMConfig,
+)
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig,
 )
@@ -38,11 +41,17 @@ from app.core.companion_harness.memory.memory_registry import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult
-from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from .scope import CompanionScope
 from .turn_deps import CompanionTurnDeps
-from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
-from .turn_tracks import (
+from app.core.companion_harness.companion.turn_routes import (
+    BackgroundToolEventSink,
+    BootstrapInterimOutputSink,
+)
+from app.core.companion_harness.companion.turn_tracks import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,

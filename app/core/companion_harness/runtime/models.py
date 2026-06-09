@@ -21,7 +21,7 @@ from app.core.companion_harness.experience_profile import (
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
-from .utc import local_date_str
+from app.core.companion_harness.companion.utc import local_date_str
 from app.core.companion_harness.memory.memory_store_scope import (
     ensure_template_seeded_core_documents_in_store,
     load_template_seed_text,

@@ -6,7 +6,7 @@ import uuid
 from typing import Any
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .models import (
+from app.core.companion_harness.runtime.models import (
     InnerTickActivity,
     transcript_relative_path_for_turn_persistence,
 )

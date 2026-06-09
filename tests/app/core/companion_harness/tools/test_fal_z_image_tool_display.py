@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools import fal_z_image_tool as fal_z_image_tool_mod
 from app.core.companion_harness.tools.image_gate import list_image_asset_records

@@ -14,12 +14,12 @@ import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.models import InnerTickActivity
+from app.core.companion_harness.runtime.models import InnerTickActivity
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.runtime.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
 from app.core.companion_harness.companion.turn import (
@@ -28,7 +28,7 @@ from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_proactive_chat_turn,
     run_companion_user_chat_turn,
 )
-from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
+from app.core.companion_harness.runtime.turn_deps import CompanionTurnDeps
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
