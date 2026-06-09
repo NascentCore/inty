@@ -84,6 +84,10 @@ from app.services.agentic_companion.inner_tick_delivery import (
 from app.services.agentic_companion.inner_tick_poll import (
     run_inner_tick_poll,
 )
+from app.services.agentic_companion.presence_registry import (
+    PresenceBusyError,
+    companion_presence_registry,
+)
 from app.services.agentic_companion.session import (
     Coordinator,
     Session,
@@ -314,6 +318,7 @@ async def _try_handle_ws_user_signed_on_frame(
     companion_ws: CompanionWebSocketCoordinator,
     inflight_turn_tracker: ChatWsInflightTurnTracker,
     ws_conn_id: str,
+    ws_leased_agent_id_box: list[Optional[str]],
     outbound_queue: asyncio.Queue[WsOutboundPayload],
     tc_box: list[Optional[dict]],
     subscription_svc: SubscriptionService,
@@ -361,11 +366,32 @@ async def _try_handle_ws_user_signed_on_frame(
             ).model_dump(exclude_none=True)
         )
         return True
+    presence_registry = companion_presence_registry()
+    prior_leased_agent_id = ws_leased_agent_id_box[0]
+    if prior_leased_agent_id is not None and prior_leased_agent_id != agent_id:
+        presence_registry.release(
+            current_user.id,
+            prior_leased_agent_id,
+            ws_conn_id,
+        )
+    try:
+        presence_registry.try_register(current_user.id, agent_id, ws_conn_id)
+    except PresenceBusyError:
+        await websocket.send_json(
+            ChatWsUserSignedOnAckFrame(
+                ok=False,
+                reason="presence_busy",
+            ).model_dump(exclude_none=True)
+        )
+        return True
+    ws_leased_agent_id_box[0] = agent_id
     try:
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
         if chat.agent_id != agent_id:
+            presence_registry.release(current_user.id, agent_id, ws_conn_id)
+            ws_leased_agent_id_box[0] = None
             await websocket.send_json(
                 ChatWsUserSignedOnAckFrame(
                     ok=False,
@@ -407,6 +433,8 @@ async def _try_handle_ws_user_signed_on_frame(
             preset_mid,
         )
     except Exception:
+        presence_registry.release(current_user.id, agent_id, ws_conn_id)
+        ws_leased_agent_id_box[0] = None
         logger.exception(
             "chat_ws user_signed_on failed ws_conn_id={} agent_id={}",
             ws_conn_id,
@@ -431,6 +459,7 @@ async def _try_handle_ws_user_signed_out_frame(
     inflight_turn_tracker: ChatWsInflightTurnTracker,
     subscription_svc: SubscriptionService,
     ws_conn_id: str,
+    ws_leased_agent_id_box: list[Optional[str]],
 ) -> bool:
     """
     Consume ``{"type":"user_signed_out","agent_id":...}``.
@@ -473,6 +502,13 @@ async def _try_handle_ws_user_signed_out_frame(
         )
         recv_msg_uuid = (frame.message_id or "").strip()
         uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
+        if ws_leased_agent_id_box[0] == agent_id:
+            companion_presence_registry().release(
+                current_user.id,
+                agent_id,
+                ws_conn_id,
+            )
+            ws_leased_agent_id_box[0] = None
         # TODO(ws-disconnect-lifecycle): #3256 — persist-first; finish turns; mark undelivered.
         await inflight_turn_tracker.cancel_all()
         companion_ws.inner_tick_context.clear()
@@ -1366,6 +1402,7 @@ async def chat_completions_websocket(
     )
     inflight_turn_tracker = ChatWsInflightTurnTracker()
     ChatWsInflightShutdownRegistry.register(inflight_turn_tracker)
+    ws_leased_agent_id_box: list[Optional[str]] = [None]
     ws_delivery = inner_tick_delivery_for_ws(outbound_queue)
 
     async def _ws_tool_background_materializer(
@@ -1503,6 +1540,7 @@ async def chat_completions_websocket(
                 companion_ws=companion_ws,
                 inflight_turn_tracker=inflight_turn_tracker,
                 ws_conn_id=ws_conn_id,
+                ws_leased_agent_id_box=ws_leased_agent_id_box,
                 outbound_queue=outbound_queue,
                 tc_box=tc_box,
                 subscription_svc=subscription_svc,
@@ -1519,6 +1557,7 @@ async def chat_completions_websocket(
                 inflight_turn_tracker=inflight_turn_tracker,
                 subscription_svc=subscription_svc,
                 ws_conn_id=ws_conn_id,
+                ws_leased_agent_id_box=ws_leased_agent_id_box,
             ):
                 continue
             if await _try_handle_ws_ws_conn_dropped_frame(
@@ -1562,6 +1601,8 @@ async def chat_completions_websocket(
                 tc_box[0],
             )
             try:
+                # TODO(companion-presence-chat-gate): reject chat turns when this ws_conn_id
+                # does not hold the (user_id, agent_id) lease (clients without user_signed_on).
                 # TODO(tool-bg-idle-starves-user-chat): USER_MESSAGE waits on turn_lock after
                 # inner-tick workers; if proactive/maintenance holds the lock on tool_bg_idle,
                 # the frame is accepted but no chat response is sent (REPL: user-input only).
@@ -1621,6 +1662,14 @@ async def chat_completions_websocket(
             ws_conn_id,
             current_user.id,
         )
+        leased_agent_id = ws_leased_agent_id_box[0]
+        if leased_agent_id is not None:
+            companion_presence_registry().release(
+                current_user.id,
+                leased_agent_id,
+                ws_conn_id,
+            )
+            ws_leased_agent_id_box[0] = None
         await presence.stop()
         bootstrap_interim_consumer_task.cancel()
         try:
