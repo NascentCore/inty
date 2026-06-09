@@ -26,9 +26,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.companion_harness.companion.llm_inference_errors import (
-    CompanionLLMInferenceBackendError,
-)
 from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
@@ -109,12 +106,15 @@ from app.utils.timing import Timer, log_time
 from app.schemas.user import User as UserSchema
 
 from app.api.v1.endpoints.chat import (
-    CompanionInferenceUpstreamHTTPException,
     _agent_status_line_for_chat_header,
     _build_chat_response,
+    _normalize_chat_response_content,
+)
+from app.api.v1.endpoints.chat_ws_companion_support import (
+    CompanionInferenceUpstreamHTTPException,
+    CompanionLLMInferenceBackendError,
     _companion_ai_meta_from_turn_result,
     _companion_rejects_multimodal_user_turn,
-    _normalize_chat_response_content,
     _persist_companion_user_message_for_bg,
     _require_websocket_companion_message_id_uuid,
 )

@@ -30,17 +30,12 @@ from app.api.utils.feature_gating import (
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.companion_harness.companion.llm_inference_errors import (
-    CompanionLLMInferenceBackendError,
-)
-from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
-from app.schemas.chat import ChatCompletionRequest, ChatMessage
+from app.schemas.chat import ChatCompletionRequest
 from app.schemas.chat_websocket import (
     ChatWsCompanionWireMessageMetaData,
     dump_chat_ws_companion_wire_meta,
-    normalize_websocket_companion_message_id_uuid,
 )
 from app.schemas.response import (
     BizError,
@@ -84,20 +79,6 @@ from app.schemas.response import APIResponse
 from app.schemas.user import User as UserSchema
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
-
-
-class CompanionInferenceUpstreamHTTPException(HTTPException):
-    """HTTPException with optional fields merged into ``/chat/ws`` error JSON frames."""
-
-    def __init__(
-        self,
-        *,
-        status_code: int,
-        detail: str,
-        ws_extra: dict[str, Any] | None = None,
-    ) -> None:
-        super().__init__(status_code=status_code, detail=detail)
-        self.ws_extra = ws_extra or {}
 
 
 async def _handle_subscription_limit_error(
@@ -433,88 +414,6 @@ async def _try_generate_premium_preview_choice(
     return _build_premium_preview_choice(preview_content)
 
 
-# TODO(companion-multimodal-user-turn): After Phase 1 harness gate exists, reject only when
-# https://github.com/NascentCore/inty/issues/3293
-# ``not chat_model_accepts_image_input(resolved_chat_model)`` (not blanket image reject).
-# Map ``ChatMessage`` → ``CompanionUserTurnInput`` before ``run_user_chat``.
-def _companion_rejects_multimodal_user_turn(
-    last_user_message: ChatMessage,
-) -> bool:
-    return last_user_message.has_image_content_part()
-
-
-async def _persist_companion_user_message_for_bg(
-    *,
-    session_id: str,
-    last_user_message: ChatMessage,
-    effective_local_id: Optional[str],
-    implicit_greeting_turn: bool,
-) -> Optional[int]:
-    """Write user message into ``chat_history`` for one companion turn (success or bg-survives-fg-fail).
-
-    After dual-LLM foreground-before-background dispatch, ``bg-survives-fg-fail`` should not occur;
-    this helper remains as a defensive path for any future or alternate companion wiring.
-
-    Mirrors the success-path branching:
-    - ``implicit_greeting_turn`` -> no row written; returns ``None`` (protocol skips user history).
-    - ``effective_local_id`` -> row with ``meta_data.localId``.
-    - else -> plain row.
-    """
-    if implicit_greeting_turn:
-        return None
-    if effective_local_id:
-        return await chat_history_service.add_user_message_async(
-            session_id,
-            last_user_message,
-            meta_data=dump_chat_ws_companion_wire_meta(
-                ChatWsCompanionWireMessageMetaData(local_id=effective_local_id)
-            ),
-        )
-    return await chat_history_service.add_user_message_async(
-        session_id, last_user_message
-    )
-
-
-def _require_websocket_companion_message_id_uuid(
-    request: ChatCompletionRequest,
-) -> str:
-    """WebSocket companion turns require a client ``message_id`` that parses as UUID."""
-    try:
-        return normalize_websocket_companion_message_id_uuid(request.message_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-def _companion_ai_meta_from_turn_result(
-    companion_turn: CompanionTurnResult,
-    *,
-    companion_scheduled_reminder: bool | None = None,
-    scheduled_task_id: str | None = None,
-) -> dict[str, Any]:
-    """Build assistant ``meta_data`` for chat_history / WS from one companion kernel turn."""
-    # TODO(issue#3208): return ChatWsCompanionWireMessageMetaData; persist via dump_chat_ws_companion_wire_meta.
-    sp = companion_turn.significance_perception
-    significance = sp if isinstance(sp, dict) and sp else None
-    meta = ChatWsCompanionWireMessageMetaData(
-        source=companion_turn.assistant_source,
-        inner_tick_activity=companion_turn.inner_tick_activity,
-        trace_id=companion_turn.trace_id or None,
-        user_msg_uuid=companion_turn.user_msg_uuid or None,
-        assistant_msg_uuid=companion_turn.assistant_msg_uuid or None,
-        langsmith_trace_id=companion_turn.langsmith_trace_id or None,
-        langsmith_run_id=companion_turn.langsmith_run_id or None,
-        significance_perception=significance,
-        tool_background_started=(
-            True if companion_turn.tool_background_started else None
-        ),
-        context_mode=companion_turn.turn_start_context_mode or None,
-        transcript_compaction=companion_turn.transcript_compaction,
-        companion_scheduled_reminder=companion_scheduled_reminder,
-        scheduled_task_id=scheduled_task_id,
-    )
-    return dump_chat_ws_companion_wire_meta(meta)
-
-
 async def _agent_status_line_for_chat_header(
     db: AsyncSession, agent_id: str
 ) -> Optional[str]:
@@ -695,12 +594,20 @@ async def _agent_chat_completions_impl(
                             },
                         }
 
-                    await _persist_companion_user_message_for_bg(
-                        session_id=session_id,
-                        last_user_message=last_user_message,
-                        effective_local_id=effective_local_id,
-                        implicit_greeting_turn=False,
-                    )
+                    if effective_local_id:
+                        await chat_history_service.add_user_message_async(
+                            session_id,
+                            last_user_message,
+                            meta_data=dump_chat_ws_companion_wire_meta(
+                                ChatWsCompanionWireMessageMetaData(
+                                    local_id=effective_local_id
+                                )
+                            ),
+                        )
+                    else:
+                        await chat_history_service.add_user_message_async(
+                            session_id, last_user_message
+                        )
                     ai_message_id = await chat_history_service.add_ai_message_sync_async(
                         session_id,
                         response_text_content,
@@ -790,8 +697,6 @@ async def _agent_chat_completions_impl(
                 )
 
         except HTTPException:
-            raise
-        except CompanionLLMInferenceBackendError:
             raise
         except Exception as e:
             logger.error(f"Agent聊天处理失败: {str(e)}")
@@ -995,20 +900,6 @@ async def _agent_chat_completions_impl(
 
     except HTTPException:
         raise
-    except CompanionLLMInferenceBackendError as exc:
-        logger.error(
-            "Companion LLM inference backend error provider_http_status={} message={!r}",
-            exc.provider_http_status,
-            exc.client_message_en,
-        )
-        raise CompanionInferenceUpstreamHTTPException(
-            status_code=502,
-            detail=exc.client_message_en,
-            ws_extra={
-                "error_kind": "llm_inference_backend",
-                "llm_provider_http_status": exc.provider_http_status,
-            },
-        ) from exc
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
         logger.exception("聊天请求异常详细信息:")

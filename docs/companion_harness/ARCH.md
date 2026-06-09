@@ -95,10 +95,10 @@ flowchart TD
 
 ## 记忆模型
 
-当前 companion 的“世界”主要由 MemoryStore 中的一组版本化 markdown 文档、transcript 和工具副作用构成，
-还不是独立 world engine。
-其中记忆分三层：episodic、gist、semantic 通过 MemoryPiplein 更新；
-详见 `/docs/companion_harness/MEMORY_PIPELINE.md`。
+当前 companion 的「世界」主要由 MemoryStore 中的一组版本化 markdown 文档、transcript 和工具副作用构成，
+**还不是独立 world engine**（目标态见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)）。
+
+记忆分 episodic / gist / semantic；慢路径巩固见 [`dreaming_consolidation`](../../app/core/companion_harness/memory/dreaming_consolidation.py) 与 [MEMORY_STORE.md](./MEMORY_STORE.md)。
 
 ## Websocket 上下行传输
 
@@ -185,3 +185,10 @@ flowchart TD
 - 标准库 logging（结构化 key-value 风格）。
 - 指标维度：inbound latency、LLM latency、dispatch latency、retry count、drop count。
 - 错误分级：transient vs terminal。
+
+## See also
+
+- [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — 多 agent 虚拟世界、共享 AgentHarness、sub-agent（firefly）目标态与两期交付
+- [REFACTOR_PLAN.md](./REFACTOR_PLAN.md) — 包拆分与 `runtime/` / `environment/` 目标结构
+- [AUTONOMY.md](./AUTONOMY.md) · [PRODUCT_DESIGN.md](./PRODUCT_DESIGN.md)
+- [GLOSSARY.md](./GLOSSARY.md) · [MEMORY_STORE.md](./MEMORY_STORE.md)
