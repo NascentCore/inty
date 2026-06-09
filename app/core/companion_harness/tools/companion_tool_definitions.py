@@ -53,6 +53,11 @@ MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
     }
 )
 
+# AUTONOMY inner-tick: only LIFE_CURRENTS.md (profile curation → DREAMING / MAINTENANCE).
+MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY: frozenset[str] = frozenset(
+    {"LIFE_CURRENTS.md"}
+)
+
 TOOL_TAG_GENERATION = "GENERATION"
 
 
@@ -654,6 +659,24 @@ def _repl_description_overrides() -> dict[CompanionToolName, str]:
 
 REPL_DESCRIPTION_OVERRIDES: dict[CompanionToolName, str] = (
     _repl_description_overrides()
+)
+
+
+def _repl_description_overrides_autonomy() -> dict[CompanionToolName, str]:
+    """AUTONOMY tool leg: ``memory_store_write_document`` may only touch ``LIFE_CURRENTS.md``."""
+    out = dict(_repl_description_overrides())
+    only_csv = ", ".join(sorted(MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY))
+    out[CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT] = (
+        "Create or overwrite LIFE_CURRENTS.md in MemoryStore (AUTONOMY virtual-environment activity). "
+        f"Only writable path via this tool: {only_csv}. "
+        "Record mid-term theme, today's observable task, and tool progress—not relationship psychology. "
+        "Read USER.md / MEMORY.md for inspiration only; do not write them here."
+    )
+    return out
+
+
+REPL_DESCRIPTION_OVERRIDES_AUTONOMY: dict[CompanionToolName, str] = (
+    _repl_description_overrides_autonomy()
 )
 
 

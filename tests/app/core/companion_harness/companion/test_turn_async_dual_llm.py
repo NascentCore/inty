@@ -21,7 +21,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.tools.companion_tools import (
+from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_repl_tools_inner_tick,
     build_openai_repl_tools_inner_tick_autonomy,
 )

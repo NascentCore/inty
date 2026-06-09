@@ -614,7 +614,6 @@ def _persona_system_messages(
     skip_memory_blocks: bool,
     include_significance_perception_slice: bool,
     interactive_bootstrap_active: bool,
-    tools_on: bool,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = [
         _system_message(bundle.identity.strip()),
@@ -786,7 +785,6 @@ def build_system_messages(
             skip_memory_blocks=skip_memory_blocks,
             include_significance_perception_slice=include_significance_perception_slice,
             interactive_bootstrap_active=interactive_bootstrap_active,
-            tools_on=tools_on,
         )
     )
     out.extend(
@@ -924,7 +922,6 @@ def build_system_messages_for_inner_tick_autonomy(
             skip_memory_blocks=False,
             include_significance_perception_slice=False,
             interactive_bootstrap_active=False,
-            tools_on=True,
         )
     )
     out.extend(

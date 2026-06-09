@@ -99,7 +99,7 @@ from .prompt_stack import (
     append_runtime_output_format_system_message,
     refresh_companion_turn_prompt_stack,
 )
-from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
+from .runtime_channel import TurnRuntimeContext
 from .turn_deps import CompanionTurnDeps
 from .turn_track import turn_flags_for_track
 from .prompts.system_messages import (
@@ -112,20 +112,17 @@ from .dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
 )
-from app.core.companion_harness.memory.transcript_compaction import (
-    CompactionConfig as TranscriptCompactionConfig,
-)
 from .turn_pipeline import (
     build_companion_turn_prompt_plan,
     load_companion_turn_state,
     resolve_turn_runtime_flags,
 )
-from app.core.companion_harness.tools.companion_tool_runtime import (
-    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
-    execute_tool_call as repl_execute_tool_call,
-)
-from app.core.companion_harness.tools.companion_tools import (
+from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
+)
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    execute_tool_call as repl_execute_tool_call,
 )
 from app.core.companion_harness.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
@@ -137,14 +134,12 @@ from app.core.companion_harness.tools.tool_background import (
     start_tool_background_job,
 )
 from .turn_routes import (
-    BackgroundToolEventSink,
     BootstrapInterimOutput,
     BootstrapInterimOutputSink,
     TurnRouteMode,
 )
 from .utc import utc_iso_ts, utc_now
 from .implicit_signal_messages import (
-    MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )
@@ -816,7 +811,11 @@ async def _run_companion_turn_core(
                         execute_tool_call_fn=repl_execute_tool_call,
                         client=llm_client.sync_client_for_route("tool"),
                         chat_completions_sync=llm_client.chat_completions_sync,
-                        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+                        write_allowlist=(
+                            MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
+                            if track == CompanionTurnTrack.INNER_TICK_AUTONOMY
+                            else MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
+                        ),
                         repository_only_store_text=repository_only_store_text,
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,

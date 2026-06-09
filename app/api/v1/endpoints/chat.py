@@ -11,10 +11,8 @@ from typing import Any, List, Optional, TypeAlias, Union
 from fastapi import APIRouter, Depends, Header, HTTPException
 from langchain_core.messages import HumanMessage
 from loguru import logger
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.agent import Agent
 from app.models.chat_settings import ChatSettings
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
@@ -31,7 +29,7 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_chat_model
-from app.models.user import AuthType, User
+from app.models.user import AuthType
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.chat_websocket import (
     ChatWsCompanionWireMessageMetaData,
@@ -49,7 +47,6 @@ from app.services.memory_service import (
     deliver_daily_memories_for_user_agent,
     deliver_festival_memories_for_user_agent,
 )
-from app.db.session import AsyncSessionLocal
 from app.services.phone_call_service import (
     PhoneCallConfigError,
     PhoneCallLimitError,
@@ -64,12 +61,7 @@ from app.services.surprise_snap_service import (
 from app.services.push_notification_service import (
     mark_user_push_notifications_as_read,
 )
-from app.services.voice_service import (
-    GENDER_VOICE_MAPPING,
-    VoiceService,
-    get_voice_message_narration_mode_from_agent_settings,
-    voice_service as default_voice_service,
-)
+from app.services.voice_service import VoiceService
 from app.utils.timing import Timer, log_time
 from app.schemas.chat import ChatImageGenerationRequest
 from app.schemas.chat import ChatImageGenerationResponse
@@ -703,9 +695,8 @@ async def _agent_chat_completions_impl(
             raise
 
         audio_url = None
-        audio_duration = None
         try:
-            audio_url, audio_duration = await synthesize_chat_assistant_audio(
+            audio_url, _ = await synthesize_chat_assistant_audio(
                 db=db,
                 session_id=session_id,
                 ai_message_id=ai_message_id,

@@ -11,6 +11,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    build_openai_bootstrap_track_tools,
+    build_openai_repl_tools,
+    build_openai_repl_tools_inner_tick,
+    build_openai_repl_tools_inner_tick_autonomy,
+)
 from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.bootstrap import (
@@ -38,12 +44,6 @@ from .prompts.system_messages import (
     build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
     weixin_clawbot_contact_alias_system_message,
-)
-from app.core.companion_harness.tools.companion_tools import (
-    build_companion_tools,
-    build_openai_bootstrap_track_tools,
-    build_openai_repl_tools_inner_tick,
-    build_openai_repl_tools_inner_tick_autonomy,
 )
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
 
@@ -119,7 +119,7 @@ def companion_tools_for_turn(
                 else (
                     build_openai_repl_tools_inner_tick()
                     if inner_tick_turn
-                    else build_companion_tools(
+                    else build_openai_repl_tools(
                         interactive_bootstrap_active=False
                     )
                 )
