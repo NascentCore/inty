@@ -11,12 +11,12 @@ from fastapi import APIRouter, HTTPException
 
 from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
-from backend.ops.schemas.wechat_demo import (
-    WechatDemoSessionView,
+from backend.ops.schemas.weixin_session import (
     WeixinOnboardSessionCreate,
+    WeixinSessionView,
 )
-from backend.ops.wechat_demo import session_store
-from backend.ops.wechat_demo.session_store import OnboardQrReadyTimeoutError
+from backend.ops.weixin_session import session_store
+from backend.ops.weixin_session.session_store import OnboardQrReadyTimeoutError
 
 router = APIRouter(
     prefix="/weixin",
@@ -27,7 +27,7 @@ router = APIRouter(
 
 @router.post(
     "/sessions",
-    response_model=APIResponse[WechatDemoSessionView],
+    response_model=APIResponse[WeixinSessionView],
     summary="Start Weixin onboard session (QR login + auto provision)",
 )
 async def create_weixin_onboard_session(
@@ -44,7 +44,7 @@ async def create_weixin_onboard_session(
 
 @router.get(
     "/sessions/{session_id}",
-    response_model=APIResponse[WechatDemoSessionView],
+    response_model=APIResponse[WeixinSessionView],
     summary="Poll Weixin onboard session status",
 )
 async def get_weixin_onboard_session(session_id: str) -> Any:
@@ -56,7 +56,7 @@ async def get_weixin_onboard_session(session_id: str) -> Any:
 
 @router.post(
     "/sessions/{session_id}/stop",
-    response_model=APIResponse[WechatDemoSessionView],
+    response_model=APIResponse[WeixinSessionView],
     summary="Stop Weixin onboard bridge and QR login",
 )
 async def stop_weixin_onboard_session(session_id: str) -> Any:

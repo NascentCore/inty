@@ -93,16 +93,16 @@ injects the yaml value through ``PlatformConfig.extra`` when the adapter connect
 
 Long-poll/send use ``weixin_token`` (iLink ``bot_token``). When iLink session ends,
 ``getupdates`` / ``sendmessage`` return ``errcode=-14`` (session expired; **not**
-“14 minutes”). ``on_ilink_session_expired`` disconnects Hermes, fails the demo session,
+“14 minutes”). ``on_ilink_session_expired`` disconnects Hermes, fails the Weixin session,
 and deletes the Postgres bridge row (no 10-minute poll retry).
 
-TODO(wechat-demo-ilink-session-expired-user-notify): After ``-14`` the ``bot_token`` cannot
+TODO(weixin-ilink-session-expired-user-notify): After ``-14`` the ``bot_token`` cannot
 send WeChat DMs, so **cannot** ask the chatter to re-scan QR inside WeChat chat; re-auth is
-QR on Ops ``/wechat-demo``. Optional: restore-time ``getupdates`` probe before connect;
+QR on Ops ``/weixin``. Optional: restore-time ``getupdates`` probe before connect;
 one-shot DM to ``last_peer_id`` with Ops re-login URL while token is still valid.
 
-TODO(wechat-demo-ws-disconnect-hermes-wording): ``inbound_handler`` exceptions (e.g.
-Inty WS ``ConnectionClosedError``) are caught by Hermes ``BasePlatformAdapter`` and
+TODO(weixin-ws-disconnect-hermes-wording): ``inbound_handler`` exceptions (e.g.
+companion path errors) are caught by Hermes ``BasePlatformAdapter`` and
 replied to WeChat with "use /reset"—Hermes CLI wording, not an Inty slash command.
 """
 
@@ -187,8 +187,8 @@ class WeixinIlinkSessionExpiredLogFilter(logging.Filter):
             return True
         account_id = _weixin_transport_account_id.get() or "unknown"
         record.msg = (
-            "[weixin] iLink bot_token 已失效（errcode=%s）：WeChat demo 桥接 "
-            "account_id=%s 无法收发消息；正在断开 Hermes 并清理 bridge——请在 Ops /wechat-demo "
+            "[weixin] iLink bot_token 已失效（errcode=%s）：Weixin 桥接 "
+            "account_id=%s 无法收发消息；正在断开 Hermes 并清理 bridge——请在 Ops /weixin "
             "重新扫码登录"
         )
         record.args = (ILINK_SESSION_EXPIRED_ERRCODE, account_id)
@@ -274,7 +274,7 @@ class WeixinTransport:
         adapter = WeixinAdapter(config)
 
         async def handle_weixin_message(event: MessageEvent) -> str:
-            # TODO(wechat-demo-ws-disconnect-hermes-wording): return-value path only; raises
+            # TODO(weixin-ws-disconnect-hermes-wording): return-value path only; raises
             # from ``_inbound_handler`` become Hermes generic error DM to the peer.
             # Voice ``event.text`` is whatever Hermes extracted (WeChat transcription or
             # empty); we do not inspect raw iLink ``item_list`` here.

@@ -59,7 +59,7 @@ def weixin_bridge_reply_for_inbound(
     )
     if has_image and not stripped:
         return (
-            "This WeChat demo bridge can only forward text right now. "
+            "This Weixin bridge can only forward text right now. "
             "Please send your message as text (images are not passed through to the companion yet)."
         )
     has_voice = any(
@@ -88,10 +88,10 @@ class WeixinChannelBinding:
     ``weixin_token`` is iLink ``bot_token`` after QR confirm. No API TTL field — session
     ends at ``errcode=-14`` (``ILINK_SESSION_EXPIRED_ERRCODE``); then re-scan QR.
 
-    TODO(weixin-1to1-binding): Ops wechat-demo rule — one agent ↔ one Inty user_id ↔
+    TODO(weixin-1to1-binding): Ops Weixin rule — one agent ↔ one Inty user_id ↔
     one WeChat peer_id; reject a second peer or user on the same agent. Persist and
-    enforce at bind time (not via last_peer_id heuristics). Registry/API likely in
-    wechat_demo session_store plus Ops wechat-demo routes.
+    enforce at bind time (not via last_peer_id heuristics). Registry/API in
+    weixin_session session_store plus Ops ``/weixin`` routes.
     """
 
     # Demo session UUID today; not the enforced 1:1 Inty user until binding is implemented.

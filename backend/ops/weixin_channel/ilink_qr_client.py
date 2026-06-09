@@ -13,8 +13,8 @@ iLink time limits (not documented as a fixed wall-clock TTL on the wire):
 
 - **QR poll token** (``qrcode`` query param): short-lived; ``get_qrcode_status`` may
   return ``status=expired`` (refresh ``get_bot_qrcode``). No ``14``-minute field.
-- **QR login client budget**: callers pass ``timeout_seconds`` (wechat-demo uses
-  ``WECHAT_DEMO_QR_LOGIN_POLL_TIMEOUT_SECONDS`` = 480s / 8 min).
+- **QR login client budget**: callers pass ``timeout_seconds`` (onboard uses
+  ``WEIXIN_QR_LOGIN_POLL_TIMEOUT_SECONDS`` = 480s / 8 min).
 - **Post-login ``bot_token``** (bridge ``weixin_token``), after QR ``status=confirmed``:
   iLink does **not** return ``expires_in``, ``valid_until``, or any TTL. There is no
   documented wall-clock lifetime (not 14 minutes — do not confuse with ``errcode=-14``).
@@ -22,7 +22,7 @@ iLink time limits (not documented as a fixed wall-clock TTL on the wire):
   ``errcode=-14`` (session expired); then re-scan QR. Hermes: ``SESSION_EXPIRED_ERRCODE``.
   Empirical lifetime varies (hours to days reported); Ops must not assume a fixed duration.
 - **User re-login after ``-14``**: cannot push re-scan QR through WeChat DM (token dead);
-  see ``TODO(wechat-demo-ilink-session-expired-user-notify)`` in ``transport`` module doc.
+  see ``TODO(weixin-ilink-session-expired-user-notify)`` in ``transport`` module doc.
 - **WeChat user presence**: the iLink Bot API exposed here (``getupdates``,
   ``sendmessage``, QR login, etc.) does **not** report whether a chatter opened WeChat,
   opened the bot DM thread, or is online. Inbound activity is DM payloads only; there is
@@ -50,9 +50,9 @@ QR_TIMEOUT_MS = 35_000
 ILINK_SESSION_EXPIRED_ERRCODE = -14
 ILINK_RATE_LIMIT_ERRCODE = -2
 
-# Shown on wechat-demo session poll when bridge tears down after iLink session end.
+# Shown on Weixin session poll when bridge tears down after iLink session end.
 ILINK_SESSION_EXPIRED_USER_MESSAGE = (
-    "iLink session expired (errcode=-14). Re-scan QR at Ops /wechat-demo."
+    "iLink session expired (errcode=-14). Re-scan QR at Ops /weixin."
 )
 
 
