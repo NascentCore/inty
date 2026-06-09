@@ -2,18 +2,14 @@
 
 Companion Harness is agentic harness for simulating an autonomous Intelligence Entity (Inty).
 
-- **CURRENTLY STATE: PROTOTYPE**
+- **CURRENT STATE: PROTOTYPE**
+- **CURRENT FOCUS: CRAFT A HUMAN-LIKE COMPANION CAN DO TEXT CHAT**
+
+## Instructions
+
 - **DO NOT MAINTAIN BACKWARD COMPATIBILITY**
 - **DO NOT CONSIDER DATABASE DATA VALIDITY AFTER BREAKING CHANGES, AS WE ARE NOT RUNNING ANY PERSISTENT INSTANCE YET**
 - **DO NOT INCLUDE COMMERCIALIZATION FEATURES, AS WE ARE BUILDING A PROTOTYPE**
-
-## Summary
-
-- Companion-harness (tools, seeded static prompt slices), memory persistency & update, to simulate human emotional behaviors.
-- A companion is combo of LLM, companion-harness, memory
-- A companion and a human user are paired exclusively
-  This is different than other types of task-oriented agents, which are ephemeral and for different users and tasks.
-- The user can only interact with this companion through defined medium (app, wechat/weixin, sms, phone-call etc.)
 
 ## Objectives
 
