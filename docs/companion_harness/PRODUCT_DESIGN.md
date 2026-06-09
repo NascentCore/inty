@@ -1,4 +1,9 @@
-# 陪伴智能体设计：如何用 LLM 维护一个“虚拟的活人”
+# 陪伴智能体设计：如何用智能体模拟一个“虚拟的活人”
+
+[ARCH.md](/docs/companion_harness/ARCH.md) describes the underlying mechanism of the agent.
+Agent's capability and this doc shape each other.
+
+Interaction container: Weixin, Telegram
 
 这个设计的具体内容，可以称为用于情感陪伴的智能体 Harness，就是围绕 LLM 周围快、慢周期，外部刺激，人格模型，等等；
 组合在一起，能在体感上模拟一个“虚拟的活人”。
@@ -12,20 +17,6 @@
 
 非目标（本阶段）：
 
-- 多媒介沟通
 - 后端扩展（多用户、多实例）
-
-## 概念上的分层架构
-
-1. 提示词切片、快慢更新：
-   对话消息（当前对话窗口中的给用户原始可见的消息）
-   上下文信息（当前时间等）
-   环境信息（LivingSphere、用户状态）
-   Episodic memory
-   Semantic memory
-   用户画像（事实信息、人格）
-   智能体人物画像（设定信息、人格）
-3. Conversation Orchestrator（统一会话编排）：如何处理各类消息、如何将信息显示给用户、如何在这个过程中保持一致性，等等
-4. MemoryStore（记忆存储与持久化、动态更新）
 
 目标态扩展（多 agent 世界引擎、sub-agent）见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)。

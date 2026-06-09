@@ -1,11 +1,13 @@
 # Companion Harness
 
-**CURRENTLY STATE: PROTOTYPE**
-**DO NOT MAINTAIN BACKWARD COMPATIBILITY**
-**DO NOT CONSIDER DATABASE DATA VALIDITY AFTER BREAKING CHANGES, AS WE ARE NOT RUNNING ANY PERSISTENT INSTANCE YET**
-**DO NOT INCLUDE COMMERCIALIZATION FEATURES, AS WE ARE BUILDING A PROTOTYPE**
-
 Companion Harness is agentic harness for simulating an autonomous Intelligence Entity (Inty).
+
+- **CURRENTLY STATE: PROTOTYPE**
+- **DO NOT MAINTAIN BACKWARD COMPATIBILITY**
+- **DO NOT CONSIDER DATABASE DATA VALIDITY AFTER BREAKING CHANGES, AS WE ARE NOT RUNNING ANY PERSISTENT INSTANCE YET**
+- **DO NOT INCLUDE COMMERCIALIZATION FEATURES, AS WE ARE BUILDING A PROTOTYPE**
+
+## Summary
 
 - Companion-harness (tools, seeded static prompt slices), memory persistency & update, to simulate human emotional behaviors.
 - A companion is combo of LLM, companion-harness, memory
@@ -13,14 +15,17 @@ Companion Harness is agentic harness for simulating an autonomous Intelligence E
   This is different than other types of task-oriented agents, which are ephemeral and for different users and tasks.
 - The user can only interact with this companion through defined medium (app, wechat/weixin, sms, phone-call etc.)
 
-## Deployment pattern
-
-- An agent is the unit of deployment, it includes all necessary code and data to serve the paired user.
-- The code must cleanly separate boundary
-
 ## Objectives
 
-An agent's real-world inspirations can be any form of long-distance relationship:
+Continue to evolve the following architecture pattern for companion harness and the whole agentic companion,
+to support a satisfactory personal companion experience.
+
+### Architecture pattern
+
+- A companion is an agent, an agent is llm+harness+memory+channels
+- An agent is the core abstraction, it includes all necessary code and data to serve the paired user.
+
+An agent's real-world inspirations include any form of long-distance relationship:
 
 - remote lovers
 - remote confidant
@@ -43,11 +48,12 @@ This agent can：
 
 ### Non-goals
 
-- Security
-- Commercialization (like usage counting)
-- Execution speed, resource utilization, optimization
-- Any other forms of speculative features
+Any forms of speculative features that does not fit the current prototype state.
+
 - Production-grade quality & features
+  - Security
+  - Commercialization (like usage counting)
+  - Runtime execution speed, resource utilization, optimization, etc.
   - Multi-tab & multi-presence
 
 ## Agentic mechanism design

@@ -36,8 +36,10 @@ from sqlalchemy import select
 from app.api.v1.endpoints.chat import (
     _agent_status_line_for_chat_header,
     _build_chat_response,
-    _companion_ai_meta_from_turn_result,
     _normalize_chat_response_content,
+)
+from app.api.v1.endpoints.chat_ws_companion_support import (
+    _companion_ai_meta_from_turn_result,
 )
 from app.core.companion_harness.companion.dreaming_observability import (
     DreamingBatchOutcome,

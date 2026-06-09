@@ -114,6 +114,6 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 ## See also
 
 - [`AXIOM.md`](../../app/core/companion_harness/companion/prompts/AXIOM.md)：长期项目（唯一）
-- [`INNER_TICK_SCHEDULING.md`](./INNER_TICK_SCHEDULING.md)：worker / proactive rhythm / maintenance 节流
+- [`ARCH.md`](./ARCH.md)：inner-tick worker、proactive rhythm、maintenance 与 transport 关系
 - [`MEMORY_STORE.md`](./MEMORY_STORE.md)：`document_kind` / 写入白名单机制
 - [`FR_WORLD_ENGINE.md`](./FR_WORLD_ENGINE.md)：sub-agent 与 mailbox 交往（**他者**）；本设计是 companion **对自己**的 `LIFE_CURRENTS` 自主轨道——互补，非替代

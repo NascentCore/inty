@@ -1,14 +1,15 @@
 # FR：World Engine（多 agent 虚拟世界）
 
 > **Generated entirely by Cursor Cloud Agent** from companion harness + sub-agent (firefly) design sessions.  
-> 对齐 `main` @ `842eda30b`。本文是**概念与逻辑设计**；实现切片见 §9，不含 token 计费细节。
+> 对齐 `main` @ `858f5d830`（#3306 文档精简之后）。本文是**概念与逻辑设计**；实现切片见 §9，不含 token 计费细节。
 
 **一句话**：以 **bounded-coherent evolvable hidden state** 为地基，把 companion harness 建成 **actor supervisor**，用共享 **AgentHarness** 驱动 per-agent clock 的 companion 与 sub-agent（firefly 为首例）；**human 仅经 companion 触达世界**。
 
 ## See also
 
 - [ARCH.md](./ARCH.md) — 当前生产架构与 transport 边界
-- [REFACTOR_PLAN.md](./REFACTOR_PLAN.md) · [REFACTOR_PLAN_PHASE3_SLICES.md](./REFACTOR_PLAN_PHASE3_SLICES.md) — `runtime/` / `environment/` 与共享 spine 的涌现方向
+- [REFACTOR_PLAN.md](./REFACTOR_PLAN.md) — `runtime/` / `environment/` 与共享 spine 的涌现方向（Phase 3）
+- [PRODUCT_DESIGN.md](./PRODUCT_DESIGN.md) — 产品层「虚拟活人」目标
 - [AUTONOMY.md](./AUTONOMY.md) — companion 自主轨道（`LIFE_CURRENTS.md`）；与 sub-agent 世界互补，非替代
 - [WORLD_CAPSULES.md](./WORLD_CAPSULES.md) — 共同想象设定巩固；与本 FR 的 agent 交往层正交
 - [techno_core/DESIGN.md](../../techno_core/DESIGN.md) · [LIVING_SPHERE.md](./LIVING_SPHERE.md)
