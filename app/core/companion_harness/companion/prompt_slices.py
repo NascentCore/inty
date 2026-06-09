@@ -1,7 +1,7 @@
 """Prompt slice ids (filename stem, no .md) for system injection and companion_update_prompt_slice.
 
-``PromptSliceId.MEMORY`` maps to ``MEMORY.md`` (semantic memory). Episodic and gist layers live under
-``memory/daily/<date>.md`` and ``memory/<date>.md`` instead; see ``memory_taxonomy``.
+``PromptSliceId.MEMORY`` maps to ``MEMORY.md`` (semantic memory). Daily gist lives under
+``memory/daily/<date>.md`` (dreaming-written); see ``memory_taxonomy``.
 """
 
 from __future__ import annotations

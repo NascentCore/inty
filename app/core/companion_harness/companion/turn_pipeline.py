@@ -26,9 +26,6 @@ from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )
-from app.core.companion_harness.memory.memory_pipeline import (
-    MemoryPipelineConfig,
-)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,

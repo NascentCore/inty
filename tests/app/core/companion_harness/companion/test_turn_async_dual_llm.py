@@ -34,8 +34,6 @@ from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 def _default_turn_kwargs(**overrides: object) -> dict[str, object]:
     kwargs: dict[str, object] = {
-        "defer_memory_update": True,
-        "memory_config": None,
         "transcript_compaction": None,
         "transcript_llm_window_max_messages": None,
         "repository_only_store_text": False,

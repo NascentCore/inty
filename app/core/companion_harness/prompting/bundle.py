@@ -46,11 +46,7 @@ class PromptBundle(BaseModel):
         description="Channel output-format slice for WeChat/Weixin DM delivery.",
     )
     tools_md: str = ""
-    memory_raw_diary_today_md: str = Field(
+    memory_daily_today_md: str = Field(
         default="",
-        description="episodic memory: memory/daily/<date>.md tail for system injection.",
-    )
-    memory_day_summary_today_md: str = Field(
-        default="",
-        description="gist memory: memory/<date>.md for system injection.",
+        description="daily gist: memory/daily/<date>.md for system injection (dreaming-written).",
     )

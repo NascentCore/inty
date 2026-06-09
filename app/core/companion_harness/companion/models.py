@@ -38,7 +38,7 @@ class InnerTickActivity(StrEnum):
 
     ``MAINTENANCE`` and ``PROACTIVE_CHAT`` are synthetic **turns** (``run_turn``,
     ``CompanionTurnResult``, optional delivery). ``DREAMING`` is a **memory batch** only
-    (``memory_update_during_dreaming``; observability via ``dreaming_observability`` and
+    (``consolidate_memory_during_dreaming``; observability via ``dreaming_observability`` and
     ``inner_tick_activity=dreaming`` on LangSmith / runtime events — not ``CompanionTurnResult``).
 
     Poll order per wake: proactive → scheduled → maintenance → dreaming (at most one fires;
@@ -166,8 +166,7 @@ class ChatMessage(BaseModel):
 
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000
-_MEMORY_RAW_INJECT_MAX_CHARS = 16_000
-_MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS = 12_000
+_MEMORY_DAILY_GIST_INJECT_MAX_CHARS = 12_000
 OUTPUT_FORMAT_WECHAT_WEIXIN_MD = "OUTPUT_FORMAT_WECHAT_WEIXIN.md"
 
 
@@ -225,27 +224,21 @@ def load_prompt_bundle(
 ) -> PromptBundle:
     """从 MemoryStore 读取组装 PromptBundle 所需的语义文档。
 
-    私人记忆三层（见 ``memory_taxonomy``）：``memory/daily/<日期>.md`` 情景记忆 episodic，
-    ``memory/<日期>.md`` gist 单日摘要，``MEMORY.md`` semantic 语义记忆。
-    未启用私人记忆的体验配置时不读取上述日程路径且将 ``MEMORY.md`` 注入留空。"""
+    私人记忆两层（见 ``memory_taxonomy``）：``memory/daily/<日期>.md`` daily gist（dreaming 写入），
+    ``MEMORY.md`` semantic 语义记忆。
+    未启用私人记忆的体验配置时不读取日程路径且将 ``MEMORY.md`` 注入留空。"""
     ensure_template_seeded_core_documents_in_store(store)
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
     inject_private = experience_profile_injects_private_memory(m.context_mode)
 
-    raw_md = ""
-    summary_md = ""
+    daily_md = ""
     memory_long = _read_memory_document_required(store, "MEMORY.md")
     if inject_private:
-        raw_md = _read_memory_document_optional(
+        daily_md = _read_memory_document_optional(
             store,
             f"memory/daily/{day}.md",
-            max_chars=_MEMORY_RAW_INJECT_MAX_CHARS,
-        )
-        summary_md = _read_memory_document_optional(
-            store,
-            f"memory/{day}.md",
-            max_chars=_MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS,
+            max_chars=_MEMORY_DAILY_GIST_INJECT_MAX_CHARS,
         )
     else:
         memory_long = ""
@@ -271,8 +264,7 @@ def load_prompt_bundle(
             OUTPUT_FORMAT_WECHAT_WEIXIN_MD,
             max_chars=_OPTIONAL_DOC_MAX_CHARS,
         ),
-        memory_raw_diary_today_md=raw_md,
-        memory_day_summary_today_md=summary_md,
+        memory_daily_today_md=daily_md,
     )
 
 

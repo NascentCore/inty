@@ -5,13 +5,13 @@ from threading import Event
 
 from app.core.companion_harness.companion.models import ChatMessage
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.memory.memory_pipeline import (
-    memory_update_during_dreaming,
+from app.core.companion_harness.memory.dreaming_consolidation import (
+    consolidate_memory_during_dreaming,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
 
-def test_memory_update_after_dreaming_curates_applicable_docs(
+def test_consolidate_memory_during_dreaming_curates_applicable_docs(
     tmp_path: Path,
 ) -> None:
     store = MemoryStore(
@@ -43,7 +43,7 @@ def test_memory_update_after_dreaming_curates_applicable_docs(
     tool_bg_idle = Event()
     tool_bg_idle.set()
     assert (
-        memory_update_during_dreaming(
+        consolidate_memory_during_dreaming(
             store,
             rows,
             complete_fn,
@@ -58,10 +58,9 @@ def test_memory_update_after_dreaming_curates_applicable_docs(
         "style",
         "soul",
     ]
-    assert "I like quiet mornings" in store.read_document(
-        "memory/daily/2026-01-02.md"
-    )
-    assert store.read_document("memory/2026-01-02.md") == "dreaming_day_summary curated\n"
+    daily = store.read_document("memory/daily/2026-01-02.md")
+    assert daily == "dreaming_day_summary curated\n"
+    assert store.read_document_if_exists("memory/2026-01-02.md") is None
     assert store.read_document("MEMORY.md") == "memory curated\n"
     assert store.read_document("USER.md") == "user curated\n"
     assert store.read_document("STYLE.md") == "style curated\n"

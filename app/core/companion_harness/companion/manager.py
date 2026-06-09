@@ -29,9 +29,6 @@ from .langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
-from app.core.companion_harness.memory.memory_pipeline import (
-    MemoryPipelineConfig,
-)
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig,
 )
@@ -62,9 +59,6 @@ class CompanionConfig(BaseModel):
 
     # LLM 配置
     llm: CompanionLLMConfig = Field(default_factory=CompanionLLMConfig)
-
-    # 记忆管线配置
-    memory: MemoryPipelineConfig = Field(default_factory=MemoryPipelineConfig)
 
     # PostgreSQL: non-empty DSN enables ORM-backed MemoryStore (companion_memory_document_versions).
     memory_pg_dsn: str = ""
@@ -243,7 +237,6 @@ class CompanionManager:
         self,
         session: CompanionSession,
         *,
-        defer_memory_update: bool,
         background_output_sink: BackgroundToolEventSink | None,
         preset_user_msg_uuid: str | None,
         runtime_context: TurnRuntimeContext,
@@ -251,8 +244,6 @@ class CompanionManager:
         return {
             "store": session.store,
             "llm_client": session.llm_client,
-            "defer_memory_update": defer_memory_update,
-            "memory_config": session.config.memory,
             "transcript_compaction": session.config.transcript_compaction,
             "transcript_llm_window_max_messages": session.config.transcript_llm_window_max_messages,
             "repository_only_store_text": session.config.repository_only_store_text,
@@ -271,7 +262,6 @@ class CompanionManager:
         session: CompanionSession,
         user_text: str,
         *,
-        defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -285,7 +275,6 @@ class CompanionManager:
             **{
                 **self._track_turn_kwargs(
                     session,
-                    defer_memory_update=defer_memory_update,
                     background_output_sink=background_output_sink,
                     preset_user_msg_uuid=preset_user_msg_uuid,
                     runtime_context=runtime_context,
@@ -299,7 +288,6 @@ class CompanionManager:
         session: CompanionSession,
         user_text: str,
         *,
-        defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -311,7 +299,6 @@ class CompanionManager:
             user_text,
             **self._track_turn_kwargs(
                 session,
-                defer_memory_update=defer_memory_update,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
@@ -322,7 +309,6 @@ class CompanionManager:
         self,
         session: CompanionSession,
         *,
-        defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -333,7 +319,6 @@ class CompanionManager:
         return await run_companion_inner_tick_proactive_chat_turn(
             **self._track_turn_kwargs(
                 session,
-                defer_memory_update=defer_memory_update,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
@@ -345,7 +330,6 @@ class CompanionManager:
         session: CompanionSession,
         scheduled_user_text: str,
         *,
-        defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -357,7 +341,6 @@ class CompanionManager:
             scheduled_user_text,
             **self._track_turn_kwargs(
                 session,
-                defer_memory_update=defer_memory_update,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
@@ -368,7 +351,6 @@ class CompanionManager:
         self,
         session: CompanionSession,
         *,
-        defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -379,7 +361,6 @@ class CompanionManager:
         return await run_companion_inner_tick_maintenance_turn(
             **self._track_turn_kwargs(
                 session,
-                defer_memory_update=defer_memory_update,
                 background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,

@@ -36,8 +36,6 @@ def _minimal_turn_kwargs() -> dict[str, object]:
     return {
         "store": MagicMock(),
         "llm_client": MagicMock(),
-        "defer_memory_update": True,
-        "memory_config": None,
         "transcript_compaction": None,
         "transcript_llm_window_max_messages": None,
         "repository_only_store_text": True,

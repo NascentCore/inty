@@ -55,8 +55,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     get_safety_system_text,
 )
 from app.core.companion_harness.memory.memory_taxonomy import (
-    MEMORY_SYSTEM_HEADING_EPISODIC,
-    MEMORY_SYSTEM_HEADING_GIST,
+    MEMORY_SYSTEM_HEADING_DAILY_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
 from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
@@ -497,21 +496,11 @@ def _persona_system_messages(
     if include_significance_perception_slice and not inner_tick_turn:
         out.append(_system_message(bundle.significance_perception_md.strip()))
     if experience_profile_injects_private_memory(context.context_mode):
-        if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():
+        if not skip_memory_blocks and bundle.memory_daily_today_md.strip():
             out.append(
                 _system_message(
-                    MEMORY_SYSTEM_HEADING_EPISODIC
-                    + bundle.memory_raw_diary_today_md.strip()
-                )
-            )
-        if (
-            not skip_memory_blocks
-            and bundle.memory_day_summary_today_md.strip()
-        ):
-            out.append(
-                _system_message(
-                    MEMORY_SYSTEM_HEADING_GIST
-                    + bundle.memory_day_summary_today_md.strip()
+                    MEMORY_SYSTEM_HEADING_DAILY_GIST
+                    + bundle.memory_daily_today_md.strip()
                 )
             )
         if not skip_memory_blocks and bundle.memory_md.strip():

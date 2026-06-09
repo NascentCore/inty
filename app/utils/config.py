@@ -227,7 +227,7 @@ class FeaturesConfig(BaseModel):
     # See docs/companion_harness/INNER_TICK_SCHEDULING.md (maintenance min_gap).
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
     # Seconds to wait on ``CompanionSession.tool_bg_idle`` before LivingSphere jsonl compact
-    # (memory worker after user turns with defer_memory_update).
+    # (dreaming consolidation LivingSphere compact waits for tool_background idle).
     companion_tool_bg_idle_wait_timeout_sec: float = 120.0
     # Implicit ``user_signed_on`` greeting: per-attempt LLM wait (``CHAT_ONLY_SYNC`` path).
     companion_implicit_sign_on_greeting_llm_timeout_sec: float = 12.0

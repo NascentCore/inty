@@ -257,7 +257,7 @@ def dreaming_race_guard_matches(
     Recomputes ``dreaming_candidate_slice`` and compares ``boundary_line_count``,
     ``boundary_uuid``, and ``latest_user_ts`` to ``candidate``. Under prototype
     assumptions (see module doc), this should always match after
-    ``memory_update_during_dreaming``; ``run_dreaming_batch_for_session`` raises
+    ``consolidate_memory_during_dreaming``; ``run_dreaming_batch_for_session`` raises
     ``DreamingTranscriptBoundaryMismatchError`` when it does not.
     """
     fresh = dreaming_candidate_slice(store, now=datetime.now(timezone.utc))

@@ -2,7 +2,7 @@
 
 *我们的对话与时刻，所有不该被遗忘的瞬间和回想中沉淀的痕迹。*
 
-（本文件为 **语义记忆 semantic memory / MEMORY.md**；当日流水见 ``memory/daily/<日期>.md`` episodic，当日摘要见 ``memory/<日期>.md`` gist。）
+（本文件为 **语义记忆 semantic memory / MEMORY.md**；当日摘要见 ``memory/daily/<日期>.md`` daily gist，由 dreaming 写入。）
 
 ## 近期对话摘要
 - 暂无；随对话积累后由记忆策展整理写入。
