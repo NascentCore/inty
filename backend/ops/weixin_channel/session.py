@@ -58,6 +58,10 @@ def weixin_bridge_reply_for_inbound(
         media_type.startswith("image/") for media_type in media_types
     )
     if has_image and not stripped:
+        # TODO(weixin-inbound-image): Phase 2 — remove this fallback once companion accepts
+        # images: map Hermes ``media_paths`` → ``CompanionUserTurnInput`` via
+        # ``weixin_inbound_media.weixin_inbound_to_user_turn`` and call
+        # ``handle_user_turn``; companion gate raises when chat model lacks IMAGE input.
         return (
             "This Weixin bridge can only forward text right now. "
             "Please send your message as text (images are not passed through to the companion yet)."
@@ -167,6 +171,9 @@ class WeixinChannelSession:
         peer_updated = self._on_binding_peer_updated
         if peer_updated is not None:
             await peer_updated(self.binding)
+        # TODO(weixin-inbound-image): Phase 2 — ``weixin_inbound_to_user_turn(inbound)``
+        # → ``handle_user_turn(CompanionUserTurnInput)``; catch
+        # ``CompanionMultimodalNotSupportedError`` for WeChat fallback (do not gate here).
         # TODO(weixin-voice-asr): Before gating, transcribe ``inbound.media_paths``
         # when ``audio/*`` and ``inbound.text`` is empty; set text from ASR result.
         bridge_reply = weixin_bridge_reply_for_inbound(

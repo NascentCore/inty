@@ -144,6 +144,11 @@ def resolve_turn_runtime_flags(
     )
 
 
+# TODO(companion-multimodal-user-turn): Phase 1c — add ``_companion_tail_user_content_for_llm``
+# returning ``str | list[dict]``: when ``user_turn.image_data_urls`` non-empty and
+# ``chat_model_accepts_image_input(chat_model)``, emit OpenAI content parts (text +
+# ``image_url``); else str tail only. Replace ``messages.append({"role":"user","content":...})``
+# below to use multimodal content when applicable.
 def _companion_tail_user_body_for_llm(
     *,
     user_text: str,

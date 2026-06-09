@@ -8,6 +8,10 @@ URLs. This Ops bridge currently surfaces text DMs only; dropping Hermes for a
 custom iLink client requires an explicit decision per behavior so Inty UX stays
 intentional—not accidentally weaker or stricter than today.
 
+TODO(weixin-inbound-image): Phase 2 — inbound images: Hermes caches JPEG in
+``WeixinInboundMessage.media_paths``; adapter ``weixin_inbound_media`` maps to
+``CompanionUserTurnInput`` for companion ``run_user_chat`` (Phase 1 multimodal).
+
 Hermes Weixin user guide — media (plain language, aligned with upstream docs):
 
 Transport mental model — WeChat/iLink does not give a permanent public raw file
