@@ -46,8 +46,10 @@ from app.core.companion_harness.companion.ai_private_prompt import (
     get_ai_private_jsonl_text_for_prompt,
 )
 from app.core.companion_harness.companion.bootstrap import (
-    build_interactive_bootstrap_system_message_parts,
+    build_bootstrap_tool_call_section,
+    build_interactive_bootstrap_template_reference_parts,
     interactive_bootstrap_active,
+    load_bootstrap_spec_text,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
@@ -510,7 +512,9 @@ def _persona_system_messages(
                 )
             )
     if interactive_bootstrap_active and not inner_tick_turn:
-        for block in build_interactive_bootstrap_system_message_parts():
+        out.append(_system_message(load_bootstrap_spec_text()))
+        out.append(_system_message(build_bootstrap_tool_call_section()))
+        for block in build_interactive_bootstrap_template_reference_parts():
             out.append(_system_message(block))
     return out
 

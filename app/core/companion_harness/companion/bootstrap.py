@@ -21,7 +21,11 @@ from typing import Any, Final
 from loguru import logger
 
 from app.core.companion_harness.experience_profile import (
+    ExperienceContextMode,
     normalize_experience_profile_id,
+)
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    CompanionToolName,
 )
 
 from app.core.companion_harness.memory.memory_store import (
@@ -35,6 +39,7 @@ from .prompt_slices import (
     PromptSliceId,
     parse_persistable_prompt_slice_id,
     persistable_slice_names_csv,
+    slice_to_workspace_rel,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
@@ -50,6 +55,33 @@ _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
     "USER.md",
     "MEMORY.md",
 )
+
+_BOOTSTRAP_TOOL_SLICE_IDS: Final[tuple[PromptSliceId, ...]] = (
+    PromptSliceId.IDENTITY,
+    PromptSliceId.SOUL,
+    PromptSliceId.STYLE,
+    PromptSliceId.USER,
+)
+
+
+def build_bootstrap_tool_call_section() -> str:
+    """工具调用 section rendered from typed tool/slice/profile names; accompanies BOOTSTRAP.md."""
+
+    slices = " / ".join(
+        slice_to_workspace_rel(sid) for sid in _BOOTSTRAP_TOOL_SLICE_IDS
+    )
+    return "\n".join(
+        [
+            "## 工具调用",
+            "",
+            "- Bootstrap only done once",
+            f"- Call **{CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE.value}** to update **{slices}** prompt slices",
+            f"- Call **{CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value}** when the user picks a built-in companionship pattern "
+            f"(e.g. `{ExperienceContextMode.REMOTE_LOVER.value}` for 异地爱人, `{ExperienceContextMode.INTIMATE.value}`, `{ExperienceContextMode.EMOTIONAL_COMPANION.value}`)",
+            f"- Call **{CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE.value}** to conclude bootstrap",
+            "- 不向用户说「初始化完成」「已同步」等工程话术；用关系语境带过即可。",
+        ]
+    )
 
 
 def load_bootstrap_spec_text() -> str:
@@ -80,20 +112,13 @@ def interactive_bootstrap_active(
     )
 
 
-def build_interactive_bootstrap_system_message_parts(
+def build_interactive_bootstrap_template_reference_parts(
     *,
     max_chars_per_seed: int = 6000,
 ) -> list[str]:
-    """
-    Ordered system bodies while interactive bootstrap is active.
+    """Template seed bodies for writable bootstrap prompt slices."""
 
-    The first body is the bootstrap procedure; following bodies are template
-    references for the writable prompt slices.  Returning one string per future
-    system message keeps the procedure and examples from being collapsed into one
-    large block, which makes stack inspection and model weighting clearer.
-    """
-    spec = load_bootstrap_spec_text()
-    blocks: list[str] = [spec]
+    blocks: list[str] = []
     for rel in _INTERACTIVE_TEMPLATE_RELS:
         try:
             seed = load_template_seed_text(rel)
@@ -104,6 +129,26 @@ def build_interactive_bootstrap_system_message_parts(
             body = body[: max_chars_per_seed - 1] + "\n…[truncated]"
         blocks.append(f"## TEMPLATE_REFERENCE {rel}\n\n{body}")
     return blocks
+
+
+def build_interactive_bootstrap_system_message_parts(
+    *,
+    max_chars_per_seed: int = 6000,
+) -> list[str]:
+    """
+    Ordered system bodies while interactive bootstrap is active.
+
+    Returns ``BOOTSTRAP.md``, typed ``## 工具调用`` (``build_bootstrap_tool_call_section``),
+    then template references for writable prompt slices.  One string per system message
+    keeps stack inspection and model weighting clearer.
+    """
+    return [
+        load_bootstrap_spec_text(),
+        build_bootstrap_tool_call_section(),
+        *build_interactive_bootstrap_template_reference_parts(
+            max_chars_per_seed=max_chars_per_seed
+        ),
+    ]
 
 
 def build_interactive_bootstrap_system_append(
