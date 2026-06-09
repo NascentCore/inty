@@ -38,7 +38,7 @@ https://github.com/NascentCore/inty/issues/3271), not the per-wire poll in
 Prototype invariant: ``transcript.jsonl`` must not change while a dreaming batch runs
 (``turn_lock`` + ``dreaming_idle_seconds`` ≫ tool_background timeouts; #3272 single
 presence; #3271 cluster lock). ``dreaming_race_guard_matches`` re-checks that invariant;
-``run_dreaming_batch_for_session`` raises on mismatch — not a soft retry path.
+``run_dreaming_batch_if_due`` raises on mismatch — not a soft retry path.
 
 TODO(dreaming-transcript-invariant): If ``dreaming_idle_seconds`` is lowered below
 tool_background worst-case runtime, gate dreaming on ``tool_bg_idle`` or revisit this
@@ -257,7 +257,7 @@ def dreaming_race_guard_matches(
     Recomputes ``dreaming_candidate_slice`` and compares ``boundary_line_count``,
     ``boundary_uuid``, and ``latest_user_ts`` to ``candidate``. Under prototype
     assumptions (see module doc), this should always match after
-    ``consolidate_memory_during_dreaming``; ``run_dreaming_batch_for_session`` raises
+    ``consolidate_memory_during_dreaming``; ``run_dreaming_batch_if_due`` raises
     ``DreamingTranscriptBoundaryMismatchError`` when it does not.
     """
     fresh = dreaming_candidate_slice(store, now=datetime.now(timezone.utc))

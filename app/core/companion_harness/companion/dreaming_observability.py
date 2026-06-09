@@ -28,8 +28,9 @@ INNER_TICK_DREAMING_RUNTIME_EVENT_KIND = "inner_tick_dreaming"
 
 
 class DreamingBatchOutcome(StrEnum):
-    """Result of one observed dreaming batch under ``turn_lock``."""
+    """Result of one dreaming batch attempt under ``turn_lock``."""
 
+    NOT_DUE = "not_due"
     CHECKPOINT_SAVED = "checkpoint_saved"
 
 
@@ -106,7 +107,7 @@ def record_dreaming_batch_observability(
     """Persist runtime event and close LangSmith parent for one dreaming batch.
 
     TODO(dreaming-batch-langsmith-finally): Callers that raise before this runs leave the parent
-    open — see ``run_dreaming_batch_for_session``; end parent in try/finally on failure paths.
+    open — see ``run_dreaming_batch_if_due``; end parent in try/finally on failure paths.
     """
     from app.core.companion_harness.companion.llm_chat_runtime import (
         companion_turn_langsmith_parent_run_id_str,
