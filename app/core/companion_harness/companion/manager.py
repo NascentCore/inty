@@ -260,6 +260,9 @@ class CompanionManager:
             bootstrap_interim_output_sink=bootstrap_interim_output_sink,
         )
 
+    # TODO(companion-multimodal-user-turn): Phase 1c — accept ``CompanionUserTurnInput``
+    # https://github.com/NascentCore/inty/issues/3293
+    # instead of ``user_text: str``; forward to ``run_companion_user_chat_turn``.
     async def run_user_chat_turn(
         self,
         session: CompanionSession,

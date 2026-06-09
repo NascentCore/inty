@@ -452,6 +452,12 @@ async def _run_companion_api_track_turn(
     return out
 
 
+# TODO(companion-multimodal-user-turn): Phase 1b — replace ``user_text: str`` with
+# https://github.com/NascentCore/inty/issues/3293
+# ``user_turn: CompanionUserTurnInput`` (text + image_data_urls). Gate at entry:
+# raise ``CompanionMultimodalNotSupportedError`` when images present but
+# ``not chat_model_accepts_image_input(resolved_chat_model)``. See
+# ``companion/user_turn_input.py`` (new) and turn_pipeline multimodal tail assembly.
 async def run_user_chat(
     *,
     user_id: str,

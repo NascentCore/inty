@@ -418,6 +418,11 @@ async def _await_tool_background_idle_if_configured(
         )
 
 
+# TODO(companion-multimodal-user-turn): Phase 1c — ``user_turn: CompanionUserTurnInput``
+# https://github.com/NascentCore/inty/issues/3293
+# through turn core; transcript user row uses ``user_turn.to_transcript_text()`` (caption
+# or ``"[image]"``); memory pipeline stays text-only. LLM tail content assembled in
+# turn_pipeline when chat model accepts IMAGE input.
 # TODO(track-driven-system-messages-building): Inline calling of this function in the callers.
 async def _run_companion_turn_core(
     user_text: str,

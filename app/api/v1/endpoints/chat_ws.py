@@ -983,6 +983,10 @@ async def _agent_chat_ws_completions_impl(
                     is_subscribed,
                     _chat_llm_base,
                 )
+                # TODO(companion-multimodal-user-turn): After Phase 1, map ``ChatMessage`` content
+                # https://github.com/NascentCore/inty/issues/3293
+                # parts to ``CompanionUserTurnInput`` and gate on
+                # ``chat_model_accepts_image_input(model_override)`` instead of blanket reject.
                 if (
                     not implicit_greeting_ws
                     and _companion_rejects_multimodal_user_turn(

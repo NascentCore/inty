@@ -400,6 +400,10 @@ class CompanionChatTurnMessageType(str, enum.Enum):
     USER_MESSAGE = "USER_MESSAGE"
 
 
+# TODO(companion-multimodal-user-turn): Phase 1 wire DTO — WS/HTTP map ``ChatMessage.content``
+# https://github.com/NascentCore/inty/issues/3293
+# parts (``image_url``) to harness ``CompanionUserTurnInput``; companion harness keeps its
+# own immutable in-process type (see ``companion/user_turn_input.py``).
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
     content: str | List[ChatMessageContentPart]
