@@ -152,6 +152,8 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
     )
 
 
+# TODO(cross-track-image-delivery): Foreground still denies generate_image despite this
+# contract; enforce or route image intent to tool leg only. #3285
 def _output_contract_text_chat_branch_mirrored_tools() -> str:
     return (
         "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致\n\n"
@@ -274,6 +276,8 @@ def _output_contract_text_interactive_bootstrap_tools(
     return base
 
 
+# TODO(cross-track-image-delivery): Proactive has no tools — must not offer to show
+# sketches/images; align with LIFE_CURRENTS + AUTONOMY silent assets. #3285
 def _proactive_chat_clause() -> str:
     return (
         "本轮（陪伴主动聊天）\n"
@@ -287,6 +291,8 @@ def _proactive_chat_clause() -> str:
 
 
 _LIFE_CURRENTS_PROACTIVE_HEADER = "## 你最近在做的事（仅供参考）"
+# TODO(cross-track-image-delivery): Drawing/image activities in LIFE_CURRENTS must not
+# become「要不要看」offers without a deliverable generated_images path. #3285
 _LIFE_CURRENTS_PROACTIVE_FOOTER = (
     "若自然，可把「今天在做的这件小事」轻轻带入这次主动消息；"
     "不要刻意推销、不要 meta 提及「我正在做某事」这种自报式句式。"
@@ -517,11 +523,11 @@ def _tool_background_final_json_routing_contract_text() -> str:
     )
 
 
-# Pairs with ``transcript_message_content_for_llm`` in companion ``utc.py``.
 _TRANSCRIPT_TIMESTAMP_LLM_DIRECTIVE = (
     "Transcript messages may begin with a bracketed UTC timestamp "
-    "(e.g. [2026-05-30 13:09:06 UTC]). These prefixes are internal context "
-    "for timing only; never include them in replies to the user."
+    "(e.g. [2026-05-30 13:09:06 UTC]). "
+    "These prefixes are internal context for you to infer the timing of the message;"
+    "never include them in replies to the user."
 )
 
 
