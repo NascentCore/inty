@@ -1,15 +1,17 @@
 """Memory path labels for companion MemoryStore (psych-style naming).
 
-Maps logical paths to daily gist / semantic terminology used in system injection
-headings and docs. Daily gist lives at ``memory/daily/{date}.md``; semantic at ``MEMORY.md``.
-"""
+Injection headings derive from ``memory_document_catalog`` so path / bundle / taxonomy stay aligned."""
 
 from __future__ import annotations
 
-# System injection section lead-in (plain text, no markdown H2; kept stable for tests).
-MEMORY_SYSTEM_HEADING_DAILY_GIST = (
-    "MEMORY — daily gist / 单日摘要（memory/daily/{date}.md）\n\n"
+from .memory_document_catalog import (
+    MemoryInjectionSlot,
+    memory_injection_heading,
 )
-MEMORY_SYSTEM_HEADING_SEMANTIC = (
-    "MEMORY — semantic memory / 语义记忆（MEMORY.md）\n\n"
+
+MEMORY_SYSTEM_HEADING_DAILY_GIST = memory_injection_heading(
+    MemoryInjectionSlot.MEMORY_DAILY_GIST
+)
+MEMORY_SYSTEM_HEADING_SEMANTIC = memory_injection_heading(
+    MemoryInjectionSlot.MEMORY_SEMANTIC
 )

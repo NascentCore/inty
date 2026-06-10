@@ -10,6 +10,11 @@ from typing import Final
 from loguru import logger
 
 from .file_store import read_text
+from .memory_document_catalog import (
+    MEMORY_DAILY_DIR_RELATIVE_PATH,
+    MEMORY_DIR_RELATIVE_PATH,
+    scope_relative_path,
+)
 from .memory_store import MemoryStore, normalize_memory_store_relative_path
 
 _MEMORY_PKG_DIR = Path(__file__).resolve().parent
@@ -69,95 +74,102 @@ class MemoryStoreScopePaths:
 
     state_file_prefix: str = ".companion"
 
+    def _path(self, scope_attr: str, *, day: str | None = None) -> str:
+        return scope_relative_path(
+            scope_attr,
+            state_prefix=self.state_file_prefix,
+            day=day,
+        )
+
     @property
     def identity(self) -> str:
-        return "IDENTITY.md"
+        return self._path("identity")
 
     @property
     def soul(self) -> str:
-        return "SOUL.md"
+        return self._path("soul")
 
     @property
     def style_md(self) -> str:
-        return "STYLE.md"
+        return self._path("style_md")
 
     @property
     def user_md(self) -> str:
-        return "USER.md"
+        return self._path("user_md")
 
     @property
     def memory_md(self) -> str:
-        return "MEMORY.md"
+        return self._path("memory_md")
 
     @property
     def channels_md(self) -> str:
-        return "CHANNELS.md"
+        return self._path("channels_md")
 
     @property
     def techno_core_md(self) -> str:
-        return "TECHNO_CORE.md"
+        return self._path("techno_core_md")
 
     @property
     def living_sphere_md(self) -> str:
-        return "LIVING_SPHERE.md"
+        return self._path("living_sphere_md")
 
     @property
     def tools_md(self) -> str:
-        return "TOOLS.md"
+        return self._path("tools_md")
 
     @property
     def significance_perception_md(self) -> str:
-        return "SIGNIFICANCE_PERCEPTION.md"
+        return self._path("significance_perception_md")
 
     @property
     def transcript(self) -> str:
-        return "transcript.jsonl"
+        return self._path("transcript")
 
     @property
     def transcript_inner_tick(self) -> str:
         # TODO(rename-memory-doc): Rename to transcript_inner_tick_maintenance.jsonl
-        # (maintenance-only inner tick; update ORM mapping + migrations together).
-        return "transcript_inner_tick.jsonl"
+        # (maintenance-only inner tick; update catalog + migrations together).
+        return self._path("transcript_inner_tick")
 
     @property
     def ai_private_md(self) -> str:
-        return "ai_private.md"
+        return self._path("ai_private_md")
 
     @property
     def ai_private_jsonl(self) -> str:
-        return "ai_private.jsonl"
+        return self._path("ai_private_jsonl")
 
     @property
     def context_json(self) -> str:
-        return "context.json"
+        return self._path("context_json")
 
     @property
     def memory_dir(self) -> str:
-        return "memory"
+        return MEMORY_DIR_RELATIVE_PATH
 
     @property
     def memory_daily_dir(self) -> str:
-        return "memory/daily"
+        return MEMORY_DAILY_DIR_RELATIVE_PATH
 
     def memory_daily_gist(self, day: str) -> str:
-        """Daily gist path (``memory/daily/<date>.md``); written only by dreaming consolidation."""
-        return f"memory/daily/{day}.md"
+        """Daily gist path; written only by dreaming consolidation."""
+        return self._path("memory_daily_gist", day=day)
 
     @property
     def living_sphere_curator_state_json(self) -> str:
-        return f"{self.state_file_prefix}_living_sphere_curator.json"
+        return self._path("living_sphere_curator_state_json")
 
     @property
     def context_compaction_state_json(self) -> str:
-        return f"{self.state_file_prefix}_context_compaction_state.json"
+        return self._path("context_compaction_state_json")
 
     @property
     def schedule_queue_json(self) -> str:
-        return f"{self.state_file_prefix}_schedule_tasks.json"
+        return self._path("schedule_queue_json")
 
     @property
     def dreaming_state_json(self) -> str:
-        return f"{self.state_file_prefix}_dreaming_state.json"
+        return self._path("dreaming_state_json")
 
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()

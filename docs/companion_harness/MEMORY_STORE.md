@@ -50,4 +50,21 @@ MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口
 
 ## References
 
+### MemoryDoc registration checklist
+
+新增或调整注入型 MemoryDoc 时，按以下顺序改一处、测一处：
+
+1. 在 ``memory_document_catalog.py`` 增加或修改 ``MEMORY_DOCUMENT_CATALOG`` 行（date-parametric daily gist 用 ``MEMORY_DAILY_GIST_ENTRY`` 模式）。
+2. 若需注入 system prompt，在 ``prompting/bundle.py`` 增加对应 ``PromptBundle`` 字段（``output_format_wechat_weixin_md`` 等非 catalog 字段除外）。
+3. **显式编辑** ``companion/models.py`` 的 ``load_prompt_bundle`` 与 ``companion/prompts/system_messages.py`` 的 ``_persona_system_messages`` / ``_capability_system_messages``（或对应 track builder）。
+4. 运行 ``tests/app/core/companion_harness/memory/test_memory_document_catalog.py`` 与 ``tests/app/core/companion_harness/companion/prompts/test_system_messages.py``。
+
+| Catalog 列 | 驱动 |
+| --- | --- |
+| ``relative_path`` / ``scope_attr`` | ORM mapping、``MemoryStoreScopePaths`` |
+| ``bundle_field`` | ``PromptBundle`` 字段名、一致性测试 |
+| ``injection_slot`` | ``memory_taxonomy`` system 注入标题 |
+| ``tool_writable`` | ``MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST`` |
+| ``writer`` | AwakeTurn / DreamingBatch 文档（``runtime/dreaming_batch.py`` → ``consolidate_memory_during_dreaming``） |
+
 [Future ideas](/docs/companion_harness/todos/MEMORY_STORE.md)

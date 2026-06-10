@@ -19,13 +19,14 @@ from app.core.companion_harness.experience_profile import (
     experience_profile_injects_private_memory,
     normalize_experience_profile_id,
 )
-from app.core.companion_harness.prompting.bundle import PromptBundle
-
-from .utc import local_date_str
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     ensure_template_seeded_core_documents_in_store,
     load_template_seed_text,
 )
+from app.core.companion_harness.prompting.bundle import PromptBundle
+
+from .utc import local_date_str
 
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -224,41 +225,41 @@ def load_prompt_bundle(
 ) -> PromptBundle:
     """从 MemoryStore 读取组装 PromptBundle 所需的语义文档。
 
-    私人记忆两层（见 ``memory_taxonomy``）：``memory/daily/<日期>.md`` daily gist（dreaming 写入），
-    ``MEMORY.md`` semantic 语义记忆。
-    未启用私人记忆的体验配置时不读取日程路径且将 ``MEMORY.md`` 注入留空。"""
+    私人记忆两层（见 ``memory_document_catalog``）：daily gist（dreaming 写入）与 semantic 语义记忆。
+    未启用私人记忆的体验配置时不读取日程路径且将 semantic 注入留空。"""
     ensure_template_seeded_core_documents_in_store(store)
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
     inject_private = experience_profile_injects_private_memory(m.context_mode)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
     daily_md = ""
-    memory_long = _read_memory_document_required(store, "MEMORY.md")
+    memory_long = _read_memory_document_required(store, paths.memory_md)
     if inject_private:
         daily_md = _read_memory_document_optional(
             store,
-            f"memory/daily/{day}.md",
+            paths.memory_daily_gist(day),
             max_chars=_MEMORY_DAILY_GIST_INJECT_MAX_CHARS,
         )
     else:
         memory_long = ""
 
     return PromptBundle(
-        identity=_read_memory_document_required(store, "IDENTITY.md"),
-        soul=_read_memory_document_required(store, "SOUL.md"),
-        style_md=_read_memory_document_required(store, "STYLE.md"),
-        user_md=_read_memory_document_required(store, "USER.md"),
+        identity=_read_memory_document_required(store, paths.identity),
+        soul=_read_memory_document_required(store, paths.soul),
+        style_md=_read_memory_document_required(store, paths.style_md),
+        user_md=_read_memory_document_required(store, paths.user_md),
         memory_md=memory_long,
-        techno_core_md=_read_memory_document_optional(store, "TECHNO_CORE.md"),
+        techno_core_md=_read_memory_document_optional(store, paths.techno_core_md),
         living_sphere_md=_read_memory_document_optional(
-            store, "LIVING_SPHERE.md"
+            store, paths.living_sphere_md
         ),
         tools_md=_template_doc_truncated(
-            "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
+            paths.tools_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
-        channels_md=_read_memory_document_required(store, "CHANNELS.md"),
+        channels_md=_read_memory_document_required(store, paths.channels_md),
         significance_perception_md=_template_doc_truncated(
-            "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
+            paths.significance_perception_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         output_format_wechat_weixin_md=_template_doc_truncated(
             OUTPUT_FORMAT_WECHAT_WEIXIN_MD,

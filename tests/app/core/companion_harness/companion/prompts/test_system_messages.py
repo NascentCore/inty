@@ -145,3 +145,4 @@ def test_output_format_slice_resolves_from_runtime_channel() -> None:
         )
         == ""
     )
+

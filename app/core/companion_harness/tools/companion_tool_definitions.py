@@ -21,6 +21,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.companion_harness.companion.prompt_slices import (
     PROMPT_SLICE_TO_REL,
 )
+from app.core.companion_harness.memory.memory_document_catalog import (
+    catalog_tool_writable_paths,
+)
 from app.core.companion_harness.experience_profile import ExperienceContextMode
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
@@ -36,15 +39,7 @@ from app.techno_core.models import (
 
 MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 
-MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
-    {
-        "IDENTITY.md",
-        "MEMORY.md",
-        "SOUL.md",
-        "STYLE.md",
-        "USER.md",
-    }
-)
+MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = catalog_tool_writable_paths()
 
 TOOL_TAG_GENERATION = "GENERATION"
 

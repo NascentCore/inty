@@ -9,44 +9,42 @@ class PromptBundle(BaseModel):
     """
     Prompt bundle for system prompt messages injection.
     Each document is inserted as a system prompt message into the prompt of llm invocation.
+    Field semantics and paths are owned by ``memory_document_catalog``.
     """
 
     identity: str
     soul: str
     style_md: str = Field(
         default="",
-        description="Communication style: STYLE.md body for system injection (tone, pacing, expression boundaries).",
+        description="Communication style body; catalog bundle_field style_md.",
     )
     user_md: str
     memory_md: str = Field(
         ...,
-        description="semantic memory: MEMORY.md body for system injection when private memory is on.",
+        description="Semantic memory body; catalog bundle_field memory_md.",
     )
     techno_core_md: str = Field(
         default="",
-        description="TechnoCore virtual residency constitution for autonomy boundaries.",
+        description="TechnoCore constitution; catalog bundle_field techno_core_md.",
     )
     living_sphere_md: str = Field(
         default="",
-        description="Stable virtual home anchor seeded by living_sphere for TechnoCore presence.",
+        description="LivingSphere snapshot; catalog bundle_field living_sphere_md.",
     )
     significance_perception_md: str = Field(
         default="",
-        description=(
-            "Operator guidance for 1-10 importance scoring; injected when "
-            "include_significance_perception_slice is true (package prompts/SIGNIFICANCE_PERCEPTION.md)."
-        ),
+        description="Significance scoring guidance; catalog bundle_field significance_perception_md.",
     )
     channels_md: str = Field(
         default="",
-        description="Channel capability contract: CHANNELS.md body for Capability system injection.",
+        description="Channel capability contract; catalog bundle_field channels_md.",
     )
     output_format_wechat_weixin_md: str = Field(
         default="",
-        description="Channel output-format slice for WeChat/Weixin DM delivery.",
+        description="Non-catalog runtime channel output-format slice (WeChat/Weixin DM).",
     )
     tools_md: str = ""
     memory_daily_today_md: str = Field(
         default="",
-        description="daily gist: memory/daily/<date>.md for system injection (dreaming-written).",
+        description="Daily gist body; catalog bundle_field memory_daily_today_md.",
     )
