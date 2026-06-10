@@ -406,20 +406,6 @@ async def _try_generate_premium_preview_choice(
     return _build_premium_preview_choice(preview_content)
 
 
-async def _agent_status_line_for_chat_header(
-    db: AsyncSession, agent_id: str
-) -> Optional[str]:
-    r = await db.execute(
-        select(Agent.status_line).where(
-            Agent.id == agent_id,
-            Agent.deleted_at.is_(None),
-        )
-    )
-    raw = r.scalar_one_or_none()
-    text = (raw or "").strip()
-    return text if text else None
-
-
 async def _agent_chat_completions_impl(
     *,
     db: AsyncSession,

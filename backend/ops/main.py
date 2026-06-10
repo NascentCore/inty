@@ -10,6 +10,7 @@ from fastapi.openapi.utils import get_openapi
 from jose.exceptions import JWTError
 from loguru import logger
 from pydantic import ValidationError
+from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +33,9 @@ from app.middleware.error_handler import (
     validation_error_handler,
     validation_exception_handler,
 )
+from app.models.agent import Agent
+from app.models.chat import Chat
+from app.models.user import User
 from app.schemas.health import HealthCheckData
 from app.schemas.response import APIResponse
 
@@ -146,8 +150,6 @@ async def _preload_database_connections():
 
 async def _preload_database_tables(db: AsyncSession):
     try:
-        from sqlalchemy import select, text
-
         await db.execute(select(Chat).limit(1))
         await db.execute(select(Agent).limit(1))
         await db.execute(select(User).limit(1))

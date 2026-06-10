@@ -386,9 +386,12 @@ def main(
         Path,
         cyclopts.Parameter(
             "--config",
-            help="Inty config.yaml: LANGCHAIN_API_KEY, LANGSMITH_PROJECT, LANGSMITH_TRACING_V2.",
+            help=(
+                "Inty YAML for LANGCHAIN_API_KEY, LANGSMITH_PROJECT, LANGSMITH_TRACING_V2 "
+                "(default: devops/config.yaml.local for local Ops companion traces)."
+            ),
         ),
-    ] = Path("config.yaml"),
+    ] = Path("devops/config.yaml.local"),
     verbose: Annotated[
         bool,
         cyclopts.Parameter(

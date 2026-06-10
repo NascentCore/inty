@@ -23,6 +23,7 @@ from sqlalchemy.orm import sessionmaker
 from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.api.v1.endpoints import chat_ws as chat_ws_v1
+from app.core.agent import status_line as agent_status_line_module
 from app.core.agent import agent as agent_module
 from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
@@ -1084,7 +1085,7 @@ def _setup_companion_ws_chat_test_env(
         return None
 
     monkeypatch.setattr(
-        chat_ws_v1,
+        agent_status_line_module,
         "_agent_status_line_for_chat_header",
         fake_agent_status_line,
     )
@@ -1198,7 +1199,7 @@ def _setup_companion_ws_chat_test_env_with_postgres(
         return None
 
     monkeypatch.setattr(
-        chat_ws_v1,
+        agent_status_line_module,
         "_agent_status_line_for_chat_header",
         fake_agent_status_line,
     )
@@ -1561,7 +1562,7 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
         return None
 
     monkeypatch.setattr(
-        chat_ws_v1,
+        agent_status_line_module,
         "_agent_status_line_for_chat_header",
         fake_agent_status_line,
     )

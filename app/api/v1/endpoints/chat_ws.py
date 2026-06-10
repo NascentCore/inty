@@ -101,10 +101,10 @@ from app.utils.timing import Timer, log_time
 from app.schemas.user import User as UserSchema
 
 from app.api.v1.endpoints.chat import (
-    _agent_status_line_for_chat_header,
     _build_chat_response,
     _normalize_chat_response_content,
 )
+from app.core.agent.status_line import _agent_status_line_for_chat_header
 from app.api.v1.endpoints.chat_ws_companion_support import (
     CompanionInferenceUpstreamHTTPException,
     CompanionLLMInferenceBackendError,
