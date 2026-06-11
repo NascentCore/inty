@@ -14,7 +14,7 @@ Companion Harness is agentic harness for simulating an autonomous Intelligence E
 
 ## Objectives
 
-Continue to evolve the following architecture pattern for companion harness and the whole agentic companion,
+Evolve the following architecture pattern for companion harness and the whole agentic companion,
 to support a satisfactory personal companion experience.
 
 ### Architecture pattern
@@ -56,9 +56,9 @@ Any forms of speculative features that does not fit the current prototype state.
 ## Agentic mechanism design
 
 - Elicit desired behavior through composable prompts, tools, and dynamic memory extraction
-- Do not use keywords or regexp to hardcode rules
+- Do not use hardcoded rules to force agent's behavior, like "generate image if user message has 'generate image'"
 
-## Hermes agent wechat/weixin adapater
+## Python coding guidelines
 
-- We only use wechat/weixin communication protocol, do not allow hermes code to use local filesystem.
-- Wrap hermes (and other 3rd party library) behind abstract interface to maintain boundary
+- All external system dependencies should be wrapped in custom class to hide all interfaces and only expose needed ones.
+- Use named `dataclass` types to pass data between functions
