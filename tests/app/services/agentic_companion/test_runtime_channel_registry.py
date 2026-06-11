@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from backend.ops.telegram_demo.channel_registry import (
+from app.services.agentic_companion.runtime_channel_registry import (
     ActiveRuntimeChannel,
     clear_all_for_tests,
     other_active_channel,

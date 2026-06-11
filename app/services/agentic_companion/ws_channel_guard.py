@@ -1,13 +1,15 @@
-"""Reject companion WebSocket when telegram-demo already holds the user's channel.
+"""Reject companion WebSocket when another runtime channel already holds the user.
 
 TODO(telegram-demo-ws-guard): Extend to Weixin bridge and cross-process registry when needed.
 """
 
 from __future__ import annotations
 
-from backend.ops.telegram_demo.channel_registry import (
+from app.services.agentic_companion.runtime_channel_registry import (
     ActiveRuntimeChannel,
     other_active_channel,
+    register_active_channel,
+    unregister_active_channel,
 )
 
 
@@ -27,12 +29,8 @@ def ws_reject_reason_if_telegram_active(*, user_id: str) -> str | None:
 
 
 def register_app_ws_channel(*, user_id: str) -> None:
-    from backend.ops.telegram_demo.channel_registry import register_active_channel
-
     register_active_channel(user_id=user_id, channel=ActiveRuntimeChannel.APP)
 
 
 def unregister_app_ws_channel(*, user_id: str) -> None:
-    from backend.ops.telegram_demo.channel_registry import unregister_active_channel
-
     unregister_active_channel(user_id=user_id, channel=ActiveRuntimeChannel.APP)

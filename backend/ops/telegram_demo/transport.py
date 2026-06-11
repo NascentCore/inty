@@ -13,9 +13,8 @@ from app.external_services.telegram_bot_api import (
     TelegramBotApi,
     TelegramIncomingMessage,
 )
-from backend.ops.telegram_demo.binding import parse_start_agent_id
-from backend.ops.telegram_demo.binding import TelegramDemoBinding
-from backend.ops.telegram_demo.channel_registry import (
+from backend.ops.telegram_demo.binding import TelegramDemoBinding, parse_start_agent_id
+from app.services.agentic_companion.runtime_channel_registry import (
     ActiveRuntimeChannel,
     other_active_channel,
     register_active_channel,
