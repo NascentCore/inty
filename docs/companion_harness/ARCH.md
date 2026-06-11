@@ -8,6 +8,11 @@ Companion Harness 是陪伴智能体的工作框架：以会话上下文、长�
 
 - [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）
 
+### 更稳固健壮的移步多层级任务执行系统
+
+- [ ] agent's sub-tasks, fan-in & fan-out, async & parallel execution
+- [ ] agent's sub-agents, fan-in & fan-out, etc.
+
 ## 目标态
 
 Companion Harness 的目标是为用户提供长期关系中的“虚拟活人”体验。后端内核必须把以下能力视为一套连续系统：
