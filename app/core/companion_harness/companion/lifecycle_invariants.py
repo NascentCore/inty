@@ -63,7 +63,9 @@ DREAMING_BATCH_ORCHESTRATOR_MODULE_PATH: Final[str] = (
 
 DREAMING_BATCH_ORCHESTRATOR_FUNCTION: Final[str] = "run_dreaming_batch_if_due"
 
-DREAMING_MEMORY_CURATION_ENTRY: Final[str] = "consolidate_memory_during_dreaming"
+DREAMING_MEMORY_CURATION_ENTRY: Final[str] = (
+    "consolidate_memory_during_dreaming"
+)
 
 DREAMING_MEMORY_CURATION_MODULE_PATH: Final[str] = (
     "app/core/companion_harness/memory/dreaming_consolidation.py"

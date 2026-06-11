@@ -13,7 +13,10 @@ from app.external_services.telegram_bot_api import (
     TelegramBotApi,
     TelegramIncomingMessage,
 )
-from backend.ops.telegram_demo.binding import TelegramDemoBinding, parse_start_agent_id
+from backend.ops.telegram_demo.binding import (
+    TelegramDemoBinding,
+    parse_start_agent_id,
+)
 from app.services.agentic_companion.runtime_channel_registry import (
     ActiveRuntimeChannel,
     other_active_channel,
@@ -119,5 +122,7 @@ class TelegramTransport:
         await presence.start()
         welcome = "已绑定 companion，可以直接发消息聊天。"
         if provision.is_new_user:
-            welcome = "欢迎！已为你创建访客账号并绑定 companion，可以直接发中文消息。"
+            welcome = (
+                "欢迎！已为你创建访客账号并绑定 companion，可以直接发中文消息。"
+            )
         return welcome

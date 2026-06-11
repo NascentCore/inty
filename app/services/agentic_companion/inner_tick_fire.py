@@ -666,9 +666,7 @@ async def try_fire_autonomy_inner_tick(
             min_gap_seconds=float(
                 feats.companion_ws_maintenance_inner_tick_min_gap_seconds
             ),
-            poll_seconds=float(
-                feats.companion_ws_proactive_chat_poll_seconds
-            ),
+            poll_seconds=float(feats.companion_ws_proactive_chat_poll_seconds),
         ),
     )
     if remain > 0:
@@ -689,15 +687,17 @@ async def try_fire_autonomy_inner_tick(
             )
             return False
         try:
-            companion_turn = await companion_chat_service.run_inner_tick_autonomy(
-                user_id=user_id,
-                agent_id=agent_id,
-                chat_id=chat_row_id,
-                resolved_chat_model=model_override,
-                session_id=session_id,
-                background_output_sink=coordinator.background_sink,
-                preset_user_msg_uuid=preset_uid,
-                implicit_signal_bundle=ws_implicit,
+            companion_turn = (
+                await companion_chat_service.run_inner_tick_autonomy(
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    chat_id=chat_row_id,
+                    resolved_chat_model=model_override,
+                    session_id=session_id,
+                    background_output_sink=coordinator.background_sink,
+                    preset_user_msg_uuid=preset_uid,
+                    implicit_signal_bundle=ws_implicit,
+                )
             )
         except Exception as exc:
             logger.warning(

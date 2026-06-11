@@ -7,8 +7,9 @@ TODO(telegram-demo-binding-not-persisted): Ops restart drops bindings; user must
 from __future__ import annotations
 
 from backend.ops.telegram_demo.binding import TelegramDemoBinding
-from backend.ops.telegram_demo.inprocess_presence import TelegramInprocessPresence
-
+from backend.ops.telegram_demo.inprocess_presence import (
+    TelegramInprocessPresence,
+)
 
 _bindings_by_chat_id: dict[str, TelegramDemoBinding] = {}
 _presences_by_chat_id: dict[str, TelegramInprocessPresence] = {}

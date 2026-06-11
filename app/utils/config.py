@@ -341,7 +341,9 @@ class AgentChannelsConfig(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    telegram: TelegramChannelConfig = Field(default_factory=TelegramChannelConfig)
+    telegram: TelegramChannelConfig = Field(
+        default_factory=TelegramChannelConfig
+    )
     # TODO(telegram-demo-config-weixin): move root ``weixin_channel`` (WeixinChannelConfig)
     # under ``agent.channels.weixin`` for symmetry.
 

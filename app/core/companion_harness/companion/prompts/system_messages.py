@@ -91,10 +91,7 @@ def _inner_tick_proactive_chat(
 def _inner_tick_autonomy(
     inner_tick_turn: bool, inner_tick_activity: InnerTickActivity
 ) -> bool:
-    return (
-        inner_tick_turn
-        and inner_tick_activity == InnerTickActivity.AUTONOMY
-    )
+    return inner_tick_turn and inner_tick_activity == InnerTickActivity.AUTONOMY
 
 
 # 与 memory_store_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
@@ -404,9 +401,7 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
         CompanionMemoryDocumentKind.LIFE_CURRENTS, None
     )
     user_md = relative_path_for_kind(CompanionMemoryDocumentKind.USER, None)
-    memory_md = relative_path_for_kind(
-        CompanionMemoryDocumentKind.MEMORY, None
-    )
+    memory_md = relative_path_for_kind(CompanionMemoryDocumentKind.MEMORY, None)
     identity_md = relative_path_for_kind(
         CompanionMemoryDocumentKind.IDENTITY, None
     )
@@ -472,7 +467,6 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
         f"- ``{tool_write}`` 写 USER / MEMORY / SOUL / STYLE / IDENTITY；\n"
         "- 编造未调用的工具结果。"
     )
-
 
 
 def _inner_tick_turn_section() -> str:
@@ -723,9 +717,7 @@ def _contextual_system_messages(
             out.append(_system_message(proactive_life_currents_block))
     if inner_tick_turn and not tick_proactive:
         if tick_autonomy:
-            out.append(
-                _system_message(_get_inner_tick_autonomy_prompt_slice())
-            )
+            out.append(_system_message(_get_inner_tick_autonomy_prompt_slice()))
         else:
             out.append(
                 _system_message(_inner_tick_ai_private_section(ai_private_text))
@@ -754,9 +746,7 @@ def build_system_messages(
     tick_proactive = _inner_tick_proactive_chat(
         inner_tick_turn, inner_tick_activity
     )
-    tick_autonomy = _inner_tick_autonomy(
-        inner_tick_turn, inner_tick_activity
-    )
+    tick_autonomy = _inner_tick_autonomy(inner_tick_turn, inner_tick_activity)
     tools_on = enable_tools or enable_user_profile_tool
     # Dual-LLM foreground completion: tools exist in product, but this request omits OpenAI ``tools=``.
     chat_branch_no_tool_api = (

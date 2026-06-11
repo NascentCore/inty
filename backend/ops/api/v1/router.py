@@ -4,7 +4,12 @@ from fastapi import APIRouter
 
 from app.api.constants import API_V1_PREFIX
 
-from backend.ops.api.v1 import evaluation, festival_memory, telegram_demo, weixin
+from backend.ops.api.v1 import (
+    evaluation,
+    festival_memory,
+    telegram_demo,
+    weixin,
+)
 from backend.ops.api.v1.shared import shared_router
 
 api_router = APIRouter(prefix=API_V1_PREFIX)

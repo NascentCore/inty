@@ -429,7 +429,10 @@ class Session:
                         # completed background work should prune itself via registry callbacks.
                         self.coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
                         self.coordinator.clear_inner_tick_autonomy_tool_bg_idle_if_idle()
-                if inner_tick_snapshot is None or self._inner_tick_stop.is_set():
+                if (
+                    inner_tick_snapshot is None
+                    or self._inner_tick_stop.is_set()
+                ):
                     continue
                 await run_one_poll(inner_tick_snapshot)
 
