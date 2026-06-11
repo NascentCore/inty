@@ -209,8 +209,10 @@ def _async_dual_llm_system_message_variants(
                     )
                 )
             case InnerTickActivity.AUTONOMY:
-                tool_system_msgs = build_system_messages_for_inner_tick_autonomy(
-                    bundle, context, store
+                tool_system_msgs = (
+                    build_system_messages_for_inner_tick_autonomy(
+                        bundle, context, store
+                    )
                 )
             case _:
                 raise RuntimeError(
