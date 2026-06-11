@@ -106,7 +106,7 @@ from app.utils.timing import Timer, log_time
 from app.schemas.user import User as UserSchema
 
 from app.services.chat_completion_wire import (
-    _build_chat_response,
+    build_companion_ws_completion_data,
     _normalize_chat_response_content,
 )
 from app.services.agent_status_line import (
@@ -726,7 +726,7 @@ async def _build_companion_tool_background_ws_payload(
     effective_local_id: Optional[str],
     foreground_user_message_id: Optional[int] = None,
 ) -> WsOutboundPayload:
-    # TODO(issue#3208): emit ChatWebSocketQueuedSuccessFrame via typed builder.
+    # TODO(issue#3208): wrap ``build_companion_ws_completion_data`` in ChatWebSocketQueuedSuccessFrame.
     gi = generated_image_meta_from_index_slice(
         ev.memory_store, ev.image_asset_baseline
     )
@@ -778,19 +778,19 @@ async def _build_companion_tool_background_ws_payload(
     subscription_actions = [
         BizAction(action_type=ActionType.NONE, message=""),
     ]
-    data = _build_chat_response(
-        ev.text,
-        None,
-        "",
-        latest_message_info,
-        None,
-        request,
+    completion = build_companion_ws_completion_data(
+        response_text_content=ev.text,
+        response_content_parts=None,
+        last_user_text="",
+        latest_message_info=latest_message_info,
+        audio_url=None,
+        request=request,
         source_imate_id=request.target_imate_id,
         user_message_id=user_message_id,
         subscription_actions=subscription_actions,
         client_local_id=effective_local_id,
     )
-    payload = APIResponse.success(data=data)
+    payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
     out = payload.model_dump(exclude_none=True)
     out["agent_id"] = agent_id
     out["status_line"] = await _agent_status_line_for_chat_header(db, agent_id)
@@ -836,19 +836,19 @@ async def _deliver_bootstrap_interim_queued(
     subscription_actions = [
         BizAction(action_type=ActionType.NONE, message=""),
     ]
-    data = _build_chat_response(
-        ev.text,
-        None,
-        ctx.last_user_text,
-        latest_message_info,
-        None,
-        ctx.request,
+    completion = build_companion_ws_completion_data(
+        response_text_content=ev.text,
+        response_content_parts=None,
+        last_user_text=ctx.last_user_text,
+        latest_message_info=latest_message_info,
+        audio_url=None,
+        request=ctx.request,
         source_imate_id=ctx.request.target_imate_id,
         user_message_id=None,
         subscription_actions=subscription_actions,
         client_local_id=ctx.effective_local_id,
     )
-    payload = APIResponse.success(data=data)
+    payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
     out = payload.model_dump(exclude_none=True)
     out["agent_id"] = ctx.agent_id
     out["status_line"] = await _agent_status_line_for_chat_header(
@@ -891,7 +891,7 @@ async def _agent_chat_ws_completions_impl(
     surprise snap, in-frame memory prompts) stay on ``_agent_chat_completions_impl`` or other routes.
     """
     # TODO(cleanup-ws-http-chat-impl): Deduplicate post-turn finalize with HTTP impl where shared.
-    # TODO(issue#3208): return ChatWebSocketQueuedSuccessFrame via typed builder.
+    # TODO(issue#3208): wrap ``build_companion_ws_completion_data`` in ChatWebSocketQueuedSuccessFrame.
     assert voice_svc is not None
     try:
         request_handling_timer = Timer("请求处理")
@@ -1200,7 +1200,9 @@ async def _agent_chat_ws_completions_impl(
                             companion_ws.clear_bootstrap_interim_deliver_ctx()
                     companion_reply = companion_turn.assistant_text
                     companion_ai_meta = _companion_ai_meta_from_turn_result(
-                        companion_turn
+                        companion_turn,
+                        companion_scheduled_reminder=None,
+                        scheduled_task_id=None,
                     )
                     companion_user_row_id = (
                         await _persist_companion_user_message_for_bg(
@@ -1295,13 +1297,13 @@ async def _agent_chat_ws_completions_impl(
         except Exception as e:
             logger.warning(f"获取最新用户消息ID失败: {str(e)}")
 
-        data = _build_chat_response(
-            response_text_content,
-            response_content_parts,
-            last_user_text,
-            latest_message_info,
-            None,
-            request,
+        completion = build_companion_ws_completion_data(
+            response_text_content=response_text_content,
+            response_content_parts=response_content_parts,
+            last_user_text=last_user_text,
+            latest_message_info=latest_message_info,
+            audio_url=None,
+            request=request,
             source_imate_id=request.target_imate_id,
             user_message_id=user_message_id,
             subscription_actions=None,
@@ -1311,7 +1313,7 @@ async def _agent_chat_ws_completions_impl(
         timing_message = request_handling_timer.stop()
         logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")
 
-        payload = APIResponse.success(data=data)
+        payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
         sl = await _agent_status_line_for_chat_header(db, agent_id)
         out = payload.model_dump(exclude_none=True)
         out["status_line"] = sl

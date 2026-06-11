@@ -7,9 +7,19 @@ import uuid
 from typing import Any, List, Optional
 
 from loguru import logger
+from pydantic import TypeAdapter
 
 from app.schemas.biz_action import ActionType, BizAction
-from app.schemas.chat import ChatCompletionRequest
+from app.schemas.chat import ChatCompletionRequest, ChatMessageContentPart
+from app.schemas.chat_websocket import (
+    ChatWsAssistantMessage,
+    ChatWsCompletionChoice,
+    ChatWsCompletionData,
+    ChatWsCompletionUsage,
+    ChatWsCompanionWireMessageMetaData,
+)
+
+_content_part_adapter = TypeAdapter(ChatMessageContentPart)
 
 
 def _normalize_response_content_part(part: Any) -> Optional[dict[str, Any]]:
@@ -66,6 +76,103 @@ def _normalize_chat_response_content(
     return str(response_content), None
 
 
+def _content_parts_from_wire_dicts(
+    response_content_parts: Optional[List[dict[str, Any]]],
+) -> Optional[list[ChatMessageContentPart]]:
+    if response_content_parts is None or len(response_content_parts) == 0:
+        return None
+    return [
+        _content_part_adapter.validate_python(part)
+        for part in response_content_parts
+    ]
+
+
+def _assistant_message_for_ws_completion(
+    *,
+    response_text_content: str,
+    response_content_parts: Optional[List[dict[str, Any]]],
+    latest_message_info: Optional[dict],
+    audio_url: Optional[str],
+) -> ChatWsAssistantMessage:
+    content_parts = _content_parts_from_wire_dicts(response_content_parts)
+    if latest_message_info:
+        meta_raw = latest_message_info.get("meta_data")
+        meta = (
+            ChatWsCompanionWireMessageMetaData.model_validate(meta_raw)
+            if meta_raw
+            else None
+        )
+        return ChatWsAssistantMessage(
+            content=response_text_content,
+            content_parts=content_parts,
+            id=latest_message_info.get("id"),
+            meta_data=meta,
+            timestamp=latest_message_info.get("timestamp"),
+            audio_url=latest_message_info.get("audio_url") or audio_url,
+        )
+    if audio_url:
+        return ChatWsAssistantMessage(
+            content=response_text_content,
+            content_parts=content_parts,
+            audio_url=audio_url,
+        )
+    return ChatWsAssistantMessage(
+        content=response_text_content,
+        content_parts=content_parts,
+    )
+
+
+def build_companion_ws_completion_data(
+    *,
+    response_text_content: str,
+    response_content_parts: Optional[List[dict[str, Any]]],
+    last_user_text: str,
+    latest_message_info: Optional[dict],
+    audio_url: Optional[str],
+    request: ChatCompletionRequest,
+    source_imate_id: Optional[str],
+    user_message_id: Optional[int],
+    subscription_actions: Optional[List[BizAction]],
+    client_local_id: Optional[str],
+) -> ChatWsCompletionData:
+    """Build typed companion WS completion ``data`` (issue #3208)."""
+    actions = subscription_actions
+    if actions is None or len(actions) == 0:
+        actions = [BizAction(action_type=ActionType.NONE, message="")]
+
+    assistant = _assistant_message_for_ws_completion(
+        response_text_content=response_text_content,
+        response_content_parts=response_content_parts,
+        latest_message_info=latest_message_info,
+        audio_url=audio_url,
+    )
+    if assistant.audio_url:
+        logger.debug(f"响应包含语音URL: {assistant.audio_url}")
+
+    return ChatWsCompletionData(
+        id=f"chatcmpl-{uuid.uuid4().hex[:12]}",
+        created=int(time.time()),
+        model=request.model,
+        user_message_id=user_message_id,
+        business_actions=actions,
+        choices=[
+            ChatWsCompletionChoice(
+                index=0,
+                message=assistant,
+                finish_reason="stop",
+            )
+        ],
+        usage=ChatWsCompletionUsage(
+            prompt_tokens=len(last_user_text.split()),
+            completion_tokens=len(response_text_content.split()),
+            total_tokens=len(last_user_text.split())
+            + len(response_text_content.split()),
+        ),
+        local_id=client_local_id,
+        source_imate_id=source_imate_id,
+    )
+
+
 def _build_chat_response(
     response_text_content: str,
     response_content_parts: Optional[List[dict[str, Any]]],
@@ -78,44 +185,17 @@ def _build_chat_response(
     subscription_actions: Optional[List[BizAction]] = None,
     client_local_id: Optional[str] = None,
 ) -> dict:
-    """Build OpenAI-style chat completion payload for WS and REST clients."""
-    # TODO(issue#3208): WS paths call build_companion_ws_completion_data (ChatWsCompletionData).
-    message = {"role": "assistant", "content": response_text_content}
-    if response_content_parts is not None and len(response_content_parts) > 0:
-        message["content_parts"] = response_content_parts
-    if subscription_actions is None or len(subscription_actions) == 0:
-        subscription_actions = [
-            BizAction(action_type=ActionType.NONE, message=""),
-        ]
-
-    if latest_message_info:
-        message["id"] = latest_message_info["id"]
-        message["meta_data"] = latest_message_info["meta_data"]
-        message["timestamp"] = latest_message_info["timestamp"]
-        message["audio_url"] = latest_message_info["audio_url"] or audio_url
-    elif audio_url:
-        message["audio_url"] = audio_url
-
-    if message.get("audio_url"):
-        logger.debug(f"响应包含语音URL: {message['audio_url']}")
-
-    response = {
-        "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
-        "object": "chat.completion",
-        "created": int(time.time()),
-        "model": request.model,
-        "user_message_id": user_message_id,
-        "business_actions": [a.model_dump() for a in subscription_actions],
-        "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
-        "usage": {
-            "prompt_tokens": len(last_user_text.split()),
-            "completion_tokens": len(response_text_content.split()),
-            "total_tokens": len(last_user_text.split())
-            + len(response_text_content.split()),
-        },
-    }
-    if source_imate_id is not None:
-        response["source_imate_id"] = source_imate_id
-    if client_local_id:
-        response["local_id"] = client_local_id
-    return response
+    """Maintenance REST ``/chat/completions`` only; companion WS uses ``build_companion_ws_completion_data``."""
+    completion = build_companion_ws_completion_data(
+        response_text_content=response_text_content,
+        response_content_parts=response_content_parts,
+        last_user_text=last_user_text,
+        latest_message_info=latest_message_info,
+        audio_url=audio_url,
+        request=request,
+        source_imate_id=source_imate_id,
+        user_message_id=user_message_id,
+        subscription_actions=subscription_actions,
+        client_local_id=client_local_id,
+    )
+    return completion.model_dump(exclude_none=True)
