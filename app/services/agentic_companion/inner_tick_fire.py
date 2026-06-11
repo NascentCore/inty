@@ -12,7 +12,8 @@ TODO(dreaming-cluster-lock): Multi-process backend needs Postgres advisory lock 
 dreaming batches — https://github.com/NascentCore/inty/issues/3271
 
 TODO(inner-tick-fire-delivery-dedup): Extract shared WS / chat_history response assembly
-for proactive, scheduled, and maintenance delivery tracks after #3255 scope/presence split.
+for proactive, scheduled, and maintenance delivery tracks; turn meta lives in
+``ws_turn_support`` (#3255).
 
 Prototype: inner-tick fire paths do not call ``subscription_service`` (no
 ``check_chat_limit`` / ``record_usage``). User chat billing stays in ``chat_ws.py``.
@@ -33,13 +34,15 @@ from typing import Optional
 from loguru import logger
 from sqlalchemy import select
 
-from app.api.v1.endpoints.chat import (
-    _build_chat_response,
+from app.services.chat_completion_wire import (
+    build_companion_ws_completion_data,
     _normalize_chat_response_content,
 )
-from app.core.agent.status_line import _agent_status_line_for_chat_header
-from app.api.v1.endpoints.chat_ws_companion_support import (
-    _companion_ai_meta_from_turn_result,
+from app.services.agent_status_line import (
+    agent_status_line_for_chat_header as _agent_status_line_for_chat_header,
+)
+from app.services.agentic_companion.ws_turn_support import (
+    companion_ai_meta_from_turn_result,
 )
 from app.core.companion_harness.companion.dreaming_observability import (
     DreamingBatchOutcome,
@@ -313,7 +316,7 @@ async def try_fire_scheduled_inner_tick(
             meta_data=user_meta,
         )
 
-        companion_ai_meta = _companion_ai_meta_from_turn_result(
+        companion_ai_meta = companion_ai_meta_from_turn_result(
             companion_turn,
             companion_scheduled_reminder=True,
             scheduled_task_id=due_task_id,
@@ -382,19 +385,21 @@ async def try_fire_scheduled_inner_tick(
             subscription_actions = [
                 BizAction(action_type=ActionType.NONE, message=""),
             ]
-            data = _build_chat_response(
-                response_text_content,
-                response_content_parts,
-                synthetic_user_text,
-                latest_message_info,
-                None,
-                stub_request,
+            completion = build_companion_ws_completion_data(
+                response_text_content=response_text_content,
+                response_content_parts=response_content_parts,
+                last_user_text=synthetic_user_text,
+                latest_message_info=latest_message_info,
+                audio_url=None,
+                request=stub_request,
                 source_imate_id=None,
                 user_message_id=user_message_id,
                 subscription_actions=subscription_actions,
                 client_local_id=None,
             )
-            payload = APIResponse.success(data=data)
+            payload = APIResponse.success(
+                data=completion.model_dump(exclude_none=True)
+            )
             out = payload.model_dump(exclude_none=True)
             out["agent_id"] = agent_id
             out["status_line"] = await _agent_status_line_for_chat_header(
@@ -516,7 +521,11 @@ async def try_fire_proactive_chat_inner_tick(
             meta_data=user_meta,
         )
 
-        companion_ai_meta = _companion_ai_meta_from_turn_result(companion_turn)
+        companion_ai_meta = companion_ai_meta_from_turn_result(
+            companion_turn,
+            companion_scheduled_reminder=None,
+            scheduled_task_id=None,
+        )
 
         ai_message_id = await chat_history_service.add_ai_message_sync_async(
             session_id,
@@ -580,19 +589,21 @@ async def try_fire_proactive_chat_inner_tick(
             subscription_actions = [
                 BizAction(action_type=ActionType.NONE, message=""),
             ]
-            data = _build_chat_response(
-                response_text_content,
-                response_content_parts,
-                hb_user_text,
-                latest_message_info,
-                None,
-                stub_request,
+            completion = build_companion_ws_completion_data(
+                response_text_content=response_text_content,
+                response_content_parts=response_content_parts,
+                last_user_text=hb_user_text,
+                latest_message_info=latest_message_info,
+                audio_url=None,
+                request=stub_request,
                 source_imate_id=None,
                 user_message_id=user_message_id,
                 subscription_actions=subscription_actions,
                 client_local_id=None,
             )
-            payload = APIResponse.success(data=data)
+            payload = APIResponse.success(
+                data=completion.model_dump(exclude_none=True)
+            )
             out = payload.model_dump(exclude_none=True)
             out["agent_id"] = agent_id
             out["status_line"] = await _agent_status_line_for_chat_header(
@@ -890,8 +901,10 @@ async def try_fire_maintenance_inner_tick(
 
         ai_message_id = None
         if reply_stripped:
-            companion_ai_meta = _companion_ai_meta_from_turn_result(
-                companion_turn
+            companion_ai_meta = companion_ai_meta_from_turn_result(
+                companion_turn,
+                companion_scheduled_reminder=None,
+                scheduled_task_id=None,
             )
 
             ai_message_id = (
@@ -944,19 +957,21 @@ async def try_fire_maintenance_inner_tick(
                 subscription_actions = [
                     BizAction(action_type=ActionType.NONE, message=""),
                 ]
-                data = _build_chat_response(
-                    response_text_content,
-                    response_content_parts,
-                    MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
-                    latest_message_info,
-                    None,
-                    stub_request,
+                completion = build_companion_ws_completion_data(
+                    response_text_content=response_text_content,
+                    response_content_parts=response_content_parts,
+                    last_user_text=MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+                    latest_message_info=latest_message_info,
+                    audio_url=None,
+                    request=stub_request,
                     source_imate_id=None,
                     user_message_id=user_message_id,
                     subscription_actions=subscription_actions,
                     client_local_id=None,
                 )
-                payload = APIResponse.success(data=data)
+                payload = APIResponse.success(
+                    data=completion.model_dump(exclude_none=True)
+                )
                 out = payload.model_dump(exclude_none=True)
                 out["agent_id"] = agent_id
                 out["status_line"] = await _agent_status_line_for_chat_header(

@@ -1,8 +1,4 @@
-"""Companion WebSocket turn helpers shared by ``chat_ws.py`` and inner-tick delivery.
-
-Generated entirely by Cursor agent for decoupling maintenance-mode ``chat.py`` from
-``companion_harness``.
-"""
+"""Companion WebSocket endpoint helpers (HTTP errors, turn I/O at the wire boundary)."""
 
 from typing import Any, Optional
 
@@ -11,7 +7,6 @@ from fastapi import HTTPException
 from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
-from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
 from app.schemas.chat_websocket import (
     ChatWsCompanionWireMessageMetaData,
@@ -19,6 +14,9 @@ from app.schemas.chat_websocket import (
     normalize_websocket_companion_message_id_uuid,
 )
 from app.services import chat_history_service
+from app.services.agentic_companion.ws_turn_support import (
+    companion_ai_meta_from_turn_result as _companion_ai_meta_from_turn_result,
+)
 
 __all__ = [
     "CompanionInferenceUpstreamHTTPException",
@@ -87,32 +85,3 @@ def _require_websocket_companion_message_id_uuid(
         return normalize_websocket_companion_message_id_uuid(request.message_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-def _companion_ai_meta_from_turn_result(
-    companion_turn: CompanionTurnResult,
-    *,
-    companion_scheduled_reminder: bool | None = None,
-    scheduled_task_id: str | None = None,
-) -> dict[str, Any]:
-    """Build assistant ``meta_data`` for chat_history / WS from one companion kernel turn."""
-    sp = companion_turn.significance_perception
-    significance = sp if isinstance(sp, dict) and sp else None
-    meta = ChatWsCompanionWireMessageMetaData(
-        source=companion_turn.assistant_source,
-        inner_tick_activity=companion_turn.inner_tick_activity,
-        trace_id=companion_turn.trace_id or None,
-        user_msg_uuid=companion_turn.user_msg_uuid or None,
-        assistant_msg_uuid=companion_turn.assistant_msg_uuid or None,
-        langsmith_trace_id=companion_turn.langsmith_trace_id or None,
-        langsmith_run_id=companion_turn.langsmith_run_id or None,
-        significance_perception=significance,
-        tool_background_started=(
-            True if companion_turn.tool_background_started else None
-        ),
-        context_mode=companion_turn.turn_start_context_mode or None,
-        transcript_compaction=companion_turn.transcript_compaction,
-        companion_scheduled_reminder=companion_scheduled_reminder,
-        scheduled_task_id=scheduled_task_id,
-    )
-    return dump_chat_ws_companion_wire_meta(meta)
