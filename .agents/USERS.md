@@ -9,6 +9,8 @@
 
 ## 人类队友（Human Partners）
 
+使用 github cli gh 来探测 github credentials，然后匹配下面的 github 用户名
+
 ### 赵亚雄/yxzhao6
 
 - Companion Harness 开发者，Inty 构思者，1984 年出生，计算机科学博士，14 年专业工作经验（Amazon、Google、AI startups）
