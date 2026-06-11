@@ -58,10 +58,10 @@ AWAKE_TURN_KERNEL_FORBIDDEN_STORE_METHODS: Final[frozenset[str]] = frozenset(
 )
 
 DREAMING_BATCH_ORCHESTRATOR_MODULE_PATH: Final[str] = (
-    "app/services/companion_chat_service.py"
+    "app/core/companion_harness/runtime/dreaming_batch.py"
 )
 
-DREAMING_BATCH_ORCHESTRATOR_FUNCTION: Final[str] = "run_dreaming_batch_for_session"
+DREAMING_BATCH_ORCHESTRATOR_FUNCTION: Final[str] = "run_dreaming_batch_if_due"
 
 DREAMING_MEMORY_CURATION_ENTRY: Final[str] = "consolidate_memory_during_dreaming"
 
@@ -74,8 +74,6 @@ DREAMING_CONSOLIDATION_REFERENCE_ALLOWLIST: Final[frozenset[str]] = frozenset(
     {
         DREAMING_BATCH_ORCHESTRATOR_MODULE_PATH,
         DREAMING_MEMORY_CURATION_MODULE_PATH,
-        "app/core/companion_harness/companion/llm_client.py",
-        "app/core/companion_harness/llm/langsmith_invocation_extra.py",
     }
 )
 
