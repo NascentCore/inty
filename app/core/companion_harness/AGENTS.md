@@ -4,6 +4,7 @@ Companion Harness is agentic harness for simulating an autonomous Intelligence E
 
 - **CURRENT STATE: PROTOTYPE**
 - **CURRENT FOCUS: CRAFT A HUMAN-LIKE COMPANION CAN DO TEXT CHAT**
+- **CURRENT PRIORITY: AGENTIC HARNESS MECHANISMS** Do not consider deep user experience features yet
 
 ## Instructions
 

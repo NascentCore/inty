@@ -10,6 +10,12 @@ Companion Harness 是陪伴智能体的工作框架：以会话上下文、长�
 
 - [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）
 
+### 推理编排显式化（参考 [Pie](https://pie-project.org/) 研究）
+
+- [ ] 把各 `CompanionTurnTrack` 收成可组合的 **turn program spec**（允许的 LLM 调用序列、可写 memory 范围、与 `AwakeTurn` / `DreamingBatch` 相位对齐），减少 `run_turn` / `prompt_stack` 隐式分支
+- [ ] 在 `prompt_stack` 层区分 **stable prefix**（SOUL / IDENTITY / STYLE / 长期 MemoryDoc）与 **volatile suffix**（近期 transcript / tool delta），为 provider prefix caching 与远期 KV 复用预留 seam
+- [ ] 为 `tool_background` 引入 per-session **scratch working memory**（MemoryStore 文档或 JSONL delta），避免每轮 tool loop 重读整段 transcript
+
 ### 更稳固健壮的异步多层级任务执行系统
 
 - [ ] agent's sub-tasks, fan-in & fan-out, async & parallel execution
@@ -308,8 +314,19 @@ Weixin 路径不经 `/api/v1/chat/ws`，由 `backend/ops/weixin_channel/` 适配
 - 双 LLM chat branch + 后台工具：`turn_routes.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`。
 - Weixin 与 App 共用内核，channel 由 `TurnRuntimeContext` 区分。
 
+## 推理编排与外部参考（Pie）
+
+[Pie](https://pie-project.org/)（[arXiv:2510.24051](https://arxiv.org/html/2510.24051v1)）在 **inference 层**用 inferlet 编排 KV cache、decode 与 tool I/O；Inty 在 **应用层**用 `CompanionTurnTrack` + `TurnRouteMode` + `run_turn` 编排远程 API。二者「Serve programs, not prompts」同构，**当前不部署 Pie**。
+
+- **已对齐**：多 track、`ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL` 前后台分叉、`AwakeTurn` / `DreamingBatch` 相位分离。
+- **近期**（见上文 checklist）：turn program spec、stable/volatile prompt 分层、tool scratch memory。
+- **远期**（自托管时）：prefix KV 复用、引擎内 tool loop（免每轮 re-prefill）。
+- **非目标**：Pie server、Wasm inferlet、ToT/MCTS、KV rewind。
+
 ## See also
 
+- [Pie](https://pie-project.org/) · [arXiv:2510.24051](https://arxiv.org/html/2510.24051v1) — 可编程 LLM serving 参考
+- [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — 其他灵感条目
 - [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — 多 agent 虚拟世界、共享 AgentHarness、sub-agent（firefly）目标态与两期交付
 - [REFACTORING_PLAN.md](./REFACTORING_PLAN.md) — 包拆分与 `runtime/` / `environment/` 目标结构
 - [AUTONOMY.md](./AUTONOMY.md) · [PRODUCT_DESIGN.md](./PRODUCT_DESIGN.md)
