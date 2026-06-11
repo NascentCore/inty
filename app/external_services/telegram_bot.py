@@ -27,6 +27,10 @@ class TelegramBotProvisionResult:
         }
 
 
+# TODO(telegram-demo): Ops telegram-demo long-poll uses ``telegram_bot_api``; this service
+# remains for public-agent promotion deep links only.
+
+
 @dataclass
 class TelegramBotService:
     bot_token: str

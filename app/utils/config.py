@@ -328,6 +328,32 @@ class EmbeddingConfig(BaseModel):
     model: str = "DMetaSoul/Dmeta-embedding-zh-small"
 
 
+class TelegramChannelConfig(BaseModel):
+    """Ops telegram-demo Bot API credentials."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    bot_token: str = ""
+
+
+class AgentChannelsConfig(BaseModel):
+    """Per-channel settings under agent (prototype: telegram only + weixin TODO)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    telegram: TelegramChannelConfig = Field(default_factory=TelegramChannelConfig)
+    # TODO(telegram-demo-config-weixin): move root ``weixin_channel`` (WeixinChannelConfig)
+    # under ``agent.channels.weixin`` for symmetry.
+
+
+def resolved_telegram_bot_token(agent: "AgentConfig") -> str:
+    """Prefer ``agent.channels.telegram.bot_token``; fall back to legacy field."""
+    nested = agent.channels.telegram.bot_token.strip()
+    if nested:
+        return nested
+    return agent.telegram_bot_token.strip()
+
+
 @dataclass
 class AgentConfig:
     # OpenRouter API key; chat is invoked via OpenAI client (app.utils.openai_client) against base_url.
@@ -358,7 +384,9 @@ class AgentConfig:
     # OpenAI-compatible endpoint; use OPENROUTER_BASE_URL to invoke e.g. google/gemini-2.5-flash-lite via OpenRouter.
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     base_url: str = OPENROUTER_BASE_URL
+    channels: AgentChannelsConfig = field(default_factory=AgentChannelsConfig)
     # Telegram Bot token for public iMate provisioning flow.
+    # TODO(telegram-demo-config-deprecate): remove after ``agent.channels.telegram.bot_token`` migration.
     telegram_bot_token: str = ""
     # Chat 专用 LLM 端点（可选）。若两者均配置则 Agent 聊天使用此端点，否则使用 base_url + api_key。记忆抽取始终使用 base_url + api_key。
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
@@ -816,6 +844,12 @@ def load_config(path: str) -> Config:
     if "environment" in app_data and isinstance(app_data["environment"], str):
         app_data["environment"] = Environment(app_data["environment"])
 
+    agent_data = dict(data.get("agent", {}))
+    if "channels" in agent_data and isinstance(agent_data["channels"], dict):
+        agent_data["channels"] = AgentChannelsConfig.model_validate(
+            agent_data["channels"]
+        )
+
     return Config(
         app=AppConfig(**app_data),
         security=SecurityConfig.model_validate(data.get("security") or {}),
@@ -828,7 +862,7 @@ def load_config(path: str) -> Config:
         ),
         logging=LoggingConfig.model_validate(data.get("logging") or {}),
         embedding=EmbeddingConfig.model_validate(data.get("embedding") or {}),
-        agent=AgentConfig(**data.get("agent", {})),
+        agent=AgentConfig(**agent_data),
         gcs=GCSConfig.model_validate(data.get("gcs") or {}),
         firebase=FirebaseConfig.model_validate(data.get("firebase") or {}),
         google_play=GooglePlayConfig.model_validate(

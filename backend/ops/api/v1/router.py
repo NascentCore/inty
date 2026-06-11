@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from app.api.constants import API_V1_PREFIX
 
-from backend.ops.api.v1 import evaluation, festival_memory, weixin
+from backend.ops.api.v1 import evaluation, festival_memory, telegram_demo, weixin
 from backend.ops.api.v1.shared import shared_router
 
 api_router = APIRouter(prefix=API_V1_PREFIX)
@@ -23,5 +23,10 @@ api_router.include_router(
 api_router.include_router(
     weixin.router,
     tags=["weixin-onboard"],
+    include_in_schema=False,
+)
+api_router.include_router(
+    telegram_demo.router,
+    tags=["telegram-demo"],
     include_in_schema=False,
 )
