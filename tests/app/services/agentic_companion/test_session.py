@@ -101,6 +101,30 @@ async def test_presence_coordinator_inner_tick_overlap_flags() -> None:
 
 
 @pytest.mark.asyncio
+async def test_presence_coordinator_autonomy_throttle_and_overlap_flags() -> None:
+    coordinator = Coordinator.for_current_loop()
+    coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
+    assert coordinator.last_autonomy_inner_tick_monotonic() is None
+    assert coordinator.last_autonomy_transcript_line_count() is None
+    assert not coordinator.inner_tick_autonomy_tool_bg_still_running()
+    coordinator.mark_autonomy_inner_tick_fired(222.5, 11)
+    assert coordinator.last_autonomy_inner_tick_monotonic() == 222.5
+    assert coordinator.last_autonomy_transcript_line_count() == 11
+    coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
+    assert coordinator.last_autonomy_inner_tick_monotonic() == 222.5
+    assert coordinator.last_autonomy_transcript_line_count() == 11
+    coordinator.store_inner_tick_coords(user_id="u2", agent_id="a1", chat_id=10)
+    assert coordinator.last_autonomy_inner_tick_monotonic() is None
+    assert coordinator.last_autonomy_transcript_line_count() is None
+    ev = threading.Event()
+    coordinator.bind_inner_tick_autonomy_tool_bg_idle(ev)
+    assert coordinator.inner_tick_autonomy_tool_bg_still_running()
+    ev.set()
+    coordinator.clear_inner_tick_autonomy_tool_bg_idle_if_idle()
+    assert not coordinator.inner_tick_autonomy_tool_bg_still_running()
+
+
+@pytest.mark.asyncio
 async def test_presence_session_deliver_bootstrap_interim() -> None:
     downlink = _RecordingDownlink()
     loop = asyncio.get_running_loop()

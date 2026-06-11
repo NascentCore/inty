@@ -17,7 +17,6 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
     tool_memory_store_write_document,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.tools.companion_tools import build_companion_tools
 
 
 def _store(root: Path):
@@ -40,14 +39,6 @@ def test_interactive_bootstrap_active_requires_flag_and_incomplete_meta() -> Non
         feature_enabled=True,
         meta=ContextMeta(workspace_bootstrap_user_interactive_completed=False),
     )
-
-
-def test_build_companion_tools_interactive_excludes_memory_store_write(tmp_path: Path) -> None:
-    names = [t["function"]["name"] for t in build_companion_tools(interactive_bootstrap_active=True)]
-    assert "memory_store_write_document" not in names
-    assert "companion_update_prompt_slice" in names
-    assert "companion_bootstrap_user_interactive_complete" in names
-    assert "companion_set_experience_profile" not in names
 
 
 def test_tool_companion_set_experience_profile_updates_context(tmp_path: Path) -> None:

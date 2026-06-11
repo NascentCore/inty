@@ -60,6 +60,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     InnerTickActivity,
+    inner_tick_activity_suppresses_user_delivery,
     transcript_relative_path_for_turn_persistence,
 )
 from app.core.companion_harness.companion.prompt_stack import (
@@ -284,6 +285,21 @@ def _generation_tool_execution_deliver(
         if content:
             return True
     return False
+
+
+def tool_background_should_deliver_to_user(
+    *,
+    inner_tick_turn: bool,
+    inner_tick_activity: InnerTickActivity,
+    generation_deliver: bool,
+    output_to_user: bool,
+) -> bool:
+    """Whether ``tool_background`` may emit a client-visible ``ToolOutputEvent``."""
+    if inner_tick_turn and inner_tick_activity_suppresses_user_delivery(
+        inner_tick_activity
+    ):
+        return False
+    return generation_deliver or output_to_user
 
 
 def _insert_system_message(
@@ -778,10 +794,12 @@ async def _run_background_tool_loop(
             trace_id=trace_id,
         )
         output_to_user_flag = routing.output_to_user
-        # TODO(product): If InnerTickActivity.MAINTENANCE must never deliver client-visible NL, gate
-        # should_push here (and/or output_to_user interpretation) before emitting ToolOutputEvent;
-        # document decision in docs/companion_harness/ARCH.md. Current: same should_push as chat.
-        should_push = generation_deliver or output_to_user_flag
+        should_push = tool_background_should_deliver_to_user(
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_activity=inner_tick_activity,
+            generation_deliver=generation_deliver,
+            output_to_user=output_to_user_flag,
+        )
         base_nl = (routing.user_facing_reply or "").strip()
         significance_meta = envelope_to_assistant_metadata_dict(routing)
         if output_to_user_flag and not base_nl:

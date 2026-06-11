@@ -50,6 +50,7 @@ import os
 import threading
 import time
 import uuid
+from datetime import datetime
 from contextlib import nullcontext
 from copy import deepcopy
 from typing import Any
@@ -98,11 +99,12 @@ from .prompt_stack import (
     append_runtime_output_format_system_message,
     refresh_companion_turn_prompt_stack,
 )
-from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
+from .runtime_channel import TurnRuntimeContext
 from .turn_deps import CompanionTurnDeps
 from .turn_track import turn_flags_for_track
 from .prompts.system_messages import (
     build_system_messages_for_chat_track,
+    build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_maintenance,
     build_system_messages_for_tool_track,
 )
@@ -110,20 +112,17 @@ from .dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
 )
-from app.core.companion_harness.memory.transcript_compaction import (
-    CompactionConfig as TranscriptCompactionConfig,
-)
 from .turn_pipeline import (
     build_companion_turn_prompt_plan,
     load_companion_turn_state,
     resolve_turn_runtime_flags,
 )
-from app.core.companion_harness.tools.companion_tool_runtime import (
-    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
-    execute_tool_call as repl_execute_tool_call,
-)
-from app.core.companion_harness.tools.companion_tools import (
+from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
+)
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    execute_tool_call as repl_execute_tool_call,
 )
 from app.core.companion_harness.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
@@ -135,14 +134,12 @@ from app.core.companion_harness.tools.tool_background import (
     start_tool_background_job,
 )
 from .turn_routes import (
-    BackgroundToolEventSink,
     BootstrapInterimOutput,
     BootstrapInterimOutputSink,
     TurnRouteMode,
 )
 from .utc import utc_iso_ts, utc_now
 from .implicit_signal_messages import (
-    MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
 )
@@ -204,9 +201,22 @@ def _async_dual_llm_system_message_variants(
         and route_inner_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
-        tool_system_msgs = build_system_messages_for_inner_tick_maintenance(
-            bundle, context, store
-        )
+        match route_inner_activity:
+            case InnerTickActivity.MAINTENANCE:
+                tool_system_msgs = (
+                    build_system_messages_for_inner_tick_maintenance(
+                        bundle, context, store
+                    )
+                )
+            case InnerTickActivity.AUTONOMY:
+                tool_system_msgs = build_system_messages_for_inner_tick_autonomy(
+                    bundle, context, store
+                )
+            case _:
+                raise RuntimeError(
+                    "unexpected inner-tick activity for async tool path: "
+                    f"{route_inner_activity.value}"
+                )
     else:
         tool_system_msgs = build_system_messages_for_tool_track(bundle, context)
     chat_system_msgs = build_system_messages_for_chat_track(
@@ -236,15 +246,29 @@ async def _run_bootstrap_track_sync_tool_loop(
     memory_bootstrap_type: str,
     repository_only_store_text: bool,
     trace_id: str,
+    user_text: str,
+    ts_user: datetime,
     user_msg_uuid: str,
     transcript_rel: str,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
 ) -> tuple[str, str, str, bool, str | None]:
     """In-turn chat + tools for ``USER_CHAT_BOOTSTRAP`` (no dual-LLM / tool_background).
 
-    Non-empty assistant ``content`` from each LLM round may be pushed via
-    ``bootstrap_interim_output_sink`` and appended to ``transcript_rel`` before the turn ends.
+    Persists the user transcript row first, then non-empty assistant ``content`` from each LLM
+    round (via callback) so JSONL order is always user → assistant(s). Interim rounds with
+    ``tool_calls`` may also push via ``bootstrap_interim_output_sink``. Caller must not append
+    the user row again at turn end.
     """
+    store.append_jsonl_record(
+        transcript_rel,
+        {
+            "role": "user",
+            "content": user_text,
+            "ts": ts_user.isoformat(),
+            "uuid": user_msg_uuid,
+            "trace_id": trace_id,
+        },
+    )
     working_messages = deepcopy(messages)
     loop_tools = list(tools_for_turn)
     chat_model = llm_client.resolve_model("chat")
@@ -631,6 +655,8 @@ async def _run_companion_turn_core(
                         memory_bootstrap_type=memory_bootstrap_type,
                         repository_only_store_text=repository_only_store_text,
                         trace_id=trace_id,
+                        user_text=user_text,
+                        ts_user=ts_user,
                         user_msg_uuid=user_msg_uuid,
                         transcript_rel=rel_tr_bootstrap,
                         bootstrap_interim_output_sink=(
@@ -785,7 +811,11 @@ async def _run_companion_turn_core(
                         execute_tool_call_fn=repl_execute_tool_call,
                         client=llm_client.sync_client_for_route("tool"),
                         chat_completions_sync=llm_client.chat_completions_sync,
-                        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+                        write_allowlist=(
+                            MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
+                            if track == CompanionTurnTrack.INNER_TICK_AUTONOMY
+                            else MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
+                        ),
                         repository_only_store_text=repository_only_store_text,
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
@@ -992,7 +1022,8 @@ async def _run_companion_turn_core(
         if track == CompanionTurnTrack.INNER_TICK_SCHEDULED:
             user_row["scheduled"] = True
         user_row["trace_id"] = trace_id
-        store.append_jsonl_record(rel_tr, user_row)
+        if track != CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            store.append_jsonl_record(rel_tr, user_row)
     assistant_row: dict[str, Any] = {
         "role": "assistant",
         "content": last_text,
@@ -1121,5 +1152,23 @@ async def run_companion_inner_tick_maintenance_turn(
     return await _run_companion_turn_core(
         "",
         track=CompanionTurnTrack.INNER_TICK_MAINTENANCE,
+        deps=deps,
+    )
+
+
+async def run_inner_tick_autonomy(
+    *,
+    deps: CompanionTurnDeps,
+) -> CompanionTurnResult:
+    """AUTONOMY inner tick: open tool set, **never** delivers to the user.
+
+    Same async foreground/tool-background lifecycle as maintenance, but with
+    an open tool set and the autonomy system prompt slice that instructs the
+    model to read ``LIFE_CURRENTS.md``, do real work (web, image, MemoryStore
+    writes), and write progress back — all silently.
+    """
+    return await _run_companion_turn_core(
+        "",
+        track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
         deps=deps,
     )

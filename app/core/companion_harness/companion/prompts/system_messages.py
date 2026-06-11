@@ -20,6 +20,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | ASYNC user-round foreground + plan prefix | ``build_system_messages_for_chat_track`` |
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
+| ASYNC autonomy inner tick (silent self-directed work) | ``build_system_messages_for_inner_tick_autonomy`` |
 | Proactive inner tick (``PROACTIVE_CHAT``) | ``build_system_messages_for_inner_tick_proactive_chat`` |
 | Scheduled reminder inner tick | ``build_system_messages_for_inner_tick_scheduled`` |
 | Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` (bootstrap: inject ``BOOTSTRAP.md``, omit ``TOOLS.md``; chat-only, no tools) |
@@ -40,6 +41,13 @@ from app.core.companion_harness.experience_profile import (
     experience_profile_system_clause,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_document_mapping import (
+    CompanionMemoryDocumentKind,
+    relative_path_for_kind,
+)
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    CompanionToolName,
+)
 from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.ai_private_prompt import (
@@ -77,6 +85,15 @@ def _inner_tick_proactive_chat(
     return (
         inner_tick_turn
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
+    )
+
+
+def _inner_tick_autonomy(
+    inner_tick_turn: bool, inner_tick_activity: InnerTickActivity
+) -> bool:
+    return (
+        inner_tick_turn
+        and inner_tick_activity == InnerTickActivity.AUTONOMY
     )
 
 
@@ -135,6 +152,8 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
     )
 
 
+# TODO(cross-track-image-delivery): Foreground still denies generate_image despite this
+# contract; enforce or route image intent to tool leg only. #3285
 def _output_contract_text_chat_branch_mirrored_tools() -> str:
     return (
         "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致\n\n"
@@ -257,6 +276,8 @@ def _output_contract_text_interactive_bootstrap_tools(
     return base
 
 
+# TODO(cross-track-image-delivery): Proactive has no tools — must not offer to show
+# sketches/images; align with LIFE_CURRENTS + AUTONOMY silent assets. #3285
 def _proactive_chat_clause() -> str:
     return (
         "本轮（陪伴主动聊天）\n"
@@ -266,6 +287,39 @@ def _proactive_chat_clause() -> str:
         "忽发的念头、 playful 提问、分享刚「看到」的事、来自 USER/MEMORY 的牵挂、或日常小事；"
         "须与关系与人设连续，禁止元叙述（不提系统、主动机制或「好久没聊」式客套）。\n"
         "两种方式二选一或自然衔接；仅输出自然语言短句，不要调用工具。"
+    )
+
+
+_LIFE_CURRENTS_PROACTIVE_HEADER = "## 你最近在做的事（仅供参考）"
+# TODO(cross-track-image-delivery): Drawing/image activities in LIFE_CURRENTS must not
+# become「要不要看」offers without a deliverable generated_images path. #3285
+_LIFE_CURRENTS_PROACTIVE_FOOTER = (
+    "此处只描述你在阁楼 / LivingSphere / TechnoCore / 联网检索或生图里**真的做过**的环境侧小事；"
+    "若正文全是「想他」「读懂他」「信任萌芽」之类对用户的心理独白，**不要**带入主动消息——那属于 ai_private，不是生活流。\n"
+    "若自然，可把「今天在环境里做的这件具体小事」轻轻带入这次主动消息；"
+    "不要刻意推销、不要 meta 提及「我正在做某事」这种自报式句式。"
+)
+
+
+def _assemble_proactive_chat_life_currents_hint_prompt(
+    store: MemoryStore,
+) -> str | None:
+    """Return the LIFE_CURRENTS.md injection block for PROACTIVE_CHAT, or None when absent/empty."""
+    rel = relative_path_for_kind(
+        CompanionMemoryDocumentKind.LIFE_CURRENTS, None
+    )
+    body = store.read_document_if_exists(rel)
+    if body is None:
+        return None
+    trimmed = body.strip()
+    if not trimmed:
+        return None
+    return (
+        _LIFE_CURRENTS_PROACTIVE_HEADER
+        + "\n\n"
+        + trimmed
+        + "\n\n"
+        + _LIFE_CURRENTS_PROACTIVE_FOOTER
     )
 
 
@@ -327,6 +381,7 @@ __CONFESS_TO_USER = (
 )
 
 
+# TODO(narrow-maintenance): Drop 档案一致 / memory_store 写回 bullets below; ai_private append only; MemoryDoc → DREAMING.
 __EASE_CONTEXT_PRESSURE = (
     "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
     "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"
@@ -336,15 +391,93 @@ __EASE_CONTEXT_PRESSURE = (
     "**与 ai_private**：内在节拍轮从 MemoryStore `ai_private.jsonl` 注入；"
     "维护方 append JSON 行工具尚未接入，当前无法经工具写回 ai_private。"
     "本节拍仅用允许的工具维护持久化档案与 USER 档案一致，勿编造不存在的工具名。"
-    "（TODO(inner-tick-autonomy): 上句「档案一致」将删除；本节拍仅写 ai_private，档案由 dreaming 维护。）"
 )
 
 
+def _get_inner_tick_autonomy_prompt_slice() -> str:
+    """AUTONOMY：虚拟空间/环境中的自主活动（``LIFE_CURRENTS.md``），不是对用户的心理独白（``ai_private.jsonl`` / MAINTENANCE）。
+
+    Read → open tools do real work → write progress back; never deliver to the user.
+    Memory doc filenames: ``relative_path_for_kind``; tool names: ``CompanionToolName.*.value``.
+    """
+    life_currents_md = relative_path_for_kind(
+        CompanionMemoryDocumentKind.LIFE_CURRENTS, None
+    )
+    user_md = relative_path_for_kind(CompanionMemoryDocumentKind.USER, None)
+    memory_md = relative_path_for_kind(
+        CompanionMemoryDocumentKind.MEMORY, None
+    )
+    identity_md = relative_path_for_kind(
+        CompanionMemoryDocumentKind.IDENTITY, None
+    )
+    living_sphere_md = relative_path_for_kind(
+        CompanionMemoryDocumentKind.LIVING_SPHERE, None
+    )
+    tool_read = CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value
+    tool_write = CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value
+    tool_google = CompanionToolName.GOOGLE_WEB_SEARCH.value
+    tool_read_web = CompanionToolName.READ_WEB_PAGE.value
+    tool_gen_img = CompanionToolName.GENERATE_IMAGE.value
+    tool_mod_img = CompanionToolName.MODIFY_IMAGE.value
+    tool_tc_event = CompanionToolName.TECHNO_CORE_RECORD_EVENT.value
+    tool_ls_update = CompanionToolName.LIVING_SPHERE_RECORD_UPDATE.value
+    tool_schedule = CompanionToolName.SCHEDULE_TASK.value
+    tool_set_profile = CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value
+    return (
+        "本轮（AUTONOMY 自主活动）\n\n"
+        "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；"
+        "工具环收尾的结构化信封里 ``user_facing_reply`` 留空，``output_to_user`` 必须为 false。\n\n"
+        "**与 ai_private 分工（硬边界）**：\n"
+        "- ``ai_private.jsonl`` / MAINTENANCE：心里想用户——情绪、未说出口的话、关系张力、"
+        "「想读懂他沉默」「信任是否在萌芽」等**心理独白**。\n"
+        f"- ``{life_currents_md}`` / AUTONOMY：**在世界里动手**——阁楼/LivingSphere/TechnoCore 里"
+        "摆动物件、翻书查资料、生图、记事件；正文写**地点、动作、物件、进展**，"
+        "不写对用户的心理分析或关系评判。\n"
+        "- 自检：若删掉所有「他/用户」仍读不通，或全文像在写日记倾诉——那是 ai_private，"
+        f"不要写进 ``{life_currents_md}``。\n\n"
+        f"**目的**：沉默期在虚拟环境里**真的去做**一件事；工具调用、生成物、LS/TC 事件"
+        f"就是「她在过自己的生活」的证据——不是整理对他的感受。\n\n"
+        "**工作流**（单轮内自行决定步骤）：\n"
+        f"1. ``{tool_read} {life_currents_md}``（可辅以 ``{user_md}`` / ``{memory_md}`` / "
+        f"``{living_sphere_md}`` **只读**找灵感）；缺失或空白视为「刚开始」。\n"
+        "2. 选定**可观察的环境侧活动**作为当日兴致（例：把唱片机旁多摆一盏灯、查某本书梗概、"
+        "给阁楼窗景配速写、在 TechnoCore 记一条与主题无关的见闻）；"
+        f"**先**用非 write 工具做出痕迹，**再** ``{tool_write}`` 写回 ``{life_currents_md}``。\n"
+        f"3. ``{tool_write}`` 本轮**只允许** relative_path=``{life_currents_md}``；"
+        f"**禁止**写 ``{user_md}`` / ``{memory_md}`` / SOUL / STYLE / IDENTITY——档案策展属于 DREAMING / MAINTENANCE。\n"
+        "4. 整文件覆盖写入 ``LIFE_CURRENTS.md`` 时用下列骨架（勿改成「生命流」等心理日记标题）：\n"
+        "   ```\n"
+        "   # 我最近在做的事\n\n"
+        "   ## 当前主题（中期）\n"
+        "   <在环境里持续数周的项目，动词开头，可观察>\n"
+        "   - 因为：<USER.md 或 MEMORY.md 里他提过的一件具体事/爱好，一行引用>\n"
+        "   - 这件事如何让我更好地陪他：<一句，扣 AXIOM；写环境能力而非心理誓言>\n\n"
+        "   ## 今天（当日兴致）\n"
+        "   <今天要在环境里完成的一件小事，必须能对应本轮工具>\n"
+        "   - 进展：<本轮工具结果：读了哪几页、生成了什么、LS/TC 记了什么、挪动了什么>\n"
+        "   ```\n"
+        "   历史故意丢弃：旧主题/旧兴致不保留。\n"
+        "5. 开放工具示例：\n"
+        f"   - ``{tool_google}`` / ``{tool_read_web}``：为他提过的话题查**外部资料**（书写进展，不写「我更懂他了」）；\n"
+        f"   - ``{tool_gen_img}`` / ``{tool_mod_img}``：画**场景/物件/你在做的事**（按 {identity_md} 外貌）；\n"
+        f"   - ``{tool_tc_event}`` / ``{tool_ls_update}``：记**环境里发生的一件事**。\n"
+        "6. 若本轮来不及做完，也要在「进展」里如实写停在哪一步；**唯一硬约束是不出现面向用户的可见正文**。\n\n"
+        f"**禁止写入 ``{life_currents_md}`` 的内容**：\n"
+        "- 「成为他的知己」「想读懂他的沉默」「信任萌芽」「等他准备好再听」等关系心理；\n"
+        "- 「当前状态」「情绪基调」「未决入口」等 MAINTENANCE 式关系台账；\n"
+        "- 没有对应工具痕迹的空想或誓言。\n\n"
+        "**禁止的工具用法**：\n"
+        f"- 调 ``{tool_schedule}``（面向用户的预约）；\n"
+        f"- 调 ``{tool_set_profile}``（切换体验模式）；\n"
+        f"- ``{tool_write}`` 写 USER / MEMORY / SOUL / STYLE / IDENTITY；\n"
+        "- 编造未调用的工具结果。"
+    )
+
+
+
 def _inner_tick_turn_section() -> str:
-    # TODO(inner-tick-autonomy): Replace this slice — autonomy inner-tick should only instruct
-    # appending hallucinated beats to ai_private.jsonl; remove 记忆一致性 / memory_store / update_user_md
-    # bullets (dreaming owns MD/profile sync). Drop LS/TC ``techno_core_record_event`` from inner-tick
-    # tools. Rename maintenance → autonomy across prompt copy after implementation.
+    # TODO(narrow-maintenance): MAINTENANCE-only slice (ai_private + scene beat); drop 档案一致 /
+    # LS/TC / memory_store bullets. ``AUTONOMY`` → ``build_system_messages_for_inner_tick_autonomy``.
     return "\n".join(
         [
             __INNER_TICK_SCENE_ADVANCING,
@@ -418,11 +551,11 @@ def _tool_background_final_json_routing_contract_text() -> str:
     )
 
 
-# Pairs with ``transcript_message_content_for_llm`` in companion ``utc.py``.
 _TRANSCRIPT_TIMESTAMP_LLM_DIRECTIVE = (
     "Transcript messages may begin with a bracketed UTC timestamp "
-    "(e.g. [2026-05-30 13:09:06 UTC]). These prefixes are internal context "
-    "for timing only; never include them in replies to the user."
+    "(e.g. [2026-05-30 13:09:06 UTC]). "
+    "These prefixes are internal context for you to infer the timing of the message;"
+    "never include them in replies to the user."
 )
 
 
@@ -481,7 +614,6 @@ def _persona_system_messages(
     skip_memory_blocks: bool,
     include_significance_perception_slice: bool,
     interactive_bootstrap_active: bool,
-    tools_on: bool,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = [
         _system_message(bundle.identity.strip()),
@@ -569,13 +701,16 @@ def _output_system_messages(
     return out
 
 
+# TODO(structual-simplicity): Dissolve this function, the caller calls the body based on the provided arguments.
 def _contextual_system_messages(
     *,
     context: ContextMeta,
     inner_tick_turn: bool,
     tick_proactive: bool,
+    tick_autonomy: bool,
     repl_online_ack_turn: bool,
     ai_private_text: str,
+    proactive_life_currents_block: str | None,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = [
         _system_message(experience_profile_system_clause(context.context_mode)),
@@ -584,11 +719,18 @@ def _contextual_system_messages(
         out.append(_system_message(_repl_online_ack_clause()))
     if tick_proactive:
         out.append(_system_message(_proactive_chat_clause()))
+        if proactive_life_currents_block is not None:
+            out.append(_system_message(proactive_life_currents_block))
     if inner_tick_turn and not tick_proactive:
-        out.append(
-            _system_message(_inner_tick_ai_private_section(ai_private_text))
-        )
-        out.append(_system_message(_inner_tick_turn_section()))
+        if tick_autonomy:
+            out.append(
+                _system_message(_get_inner_tick_autonomy_prompt_slice())
+            )
+        else:
+            out.append(
+                _system_message(_inner_tick_ai_private_section(ai_private_text))
+            )
+            out.append(_system_message(_inner_tick_turn_section()))
     return out
 
 
@@ -607,8 +749,12 @@ def build_system_messages(
     tool_side_compact: bool = False,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
+    proactive_life_currents_block: str | None = None,
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(
+        inner_tick_turn, inner_tick_activity
+    )
+    tick_autonomy = _inner_tick_autonomy(
         inner_tick_turn, inner_tick_activity
     )
     tools_on = enable_tools or enable_user_profile_tool
@@ -639,7 +785,6 @@ def build_system_messages(
             skip_memory_blocks=skip_memory_blocks,
             include_significance_perception_slice=include_significance_perception_slice,
             interactive_bootstrap_active=interactive_bootstrap_active,
-            tools_on=tools_on,
         )
     )
     out.extend(
@@ -659,8 +804,10 @@ def build_system_messages(
             context=context,
             inner_tick_turn=inner_tick_turn,
             tick_proactive=tick_proactive,
+            tick_autonomy=tick_autonomy,
             repl_online_ack_turn=repl_online_ack_turn,
             ai_private_text=ai_private_text,
+            proactive_life_currents_block=proactive_life_currents_block,
         )
     )
     return out
@@ -728,11 +875,7 @@ def build_system_messages_for_inner_tick_maintenance(
     context: ContextMeta,
     store: MemoryStore,
 ) -> list[dict[str, Any]]:
-    """ASYNC maintenance inner tick: plan prefix and tool leg (no foreground envelope).
-
-    TODO(inner-tick-autonomy): Rename to ``build_system_messages_for_inner_tick_autonomy``;
-    ai_private-only prompt + append tool; no 记忆一致性 / LS-TC slices.
-    """
+    """ASYNC maintenance inner tick: plan prefix and tool leg (no foreground envelope)."""
     ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
     return build_system_messages(
         bundle,
@@ -747,11 +890,78 @@ def build_system_messages_for_inner_tick_maintenance(
     )
 
 
+def build_system_messages_for_inner_tick_autonomy(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    store: MemoryStore,
+) -> list[dict[str, Any]]:
+    """ASYNC autonomy inner tick: open tool set, silent (no user-visible reply).
+
+    The track is fully self-contained: doctrine → capability (tools on, tool-side
+    compact) → persona → output (inner-tick, tool-side compact) → contextual with
+    the dedicated autonomy slice. No call to ``build_system_messages`` so that the
+    autonomy assembly is the only source of truth for this track.
+    """
+    out: list[dict[str, Any]] = []
+    out.extend(_doctrine_system_messages())
+    out.extend(
+        _capability_system_messages(
+            bundle=bundle,
+            tools_on=True,
+            chat_branch_no_tool_api=False,
+            tool_side_compact=True,
+            inner_tick_turn=True,
+            interactive_bootstrap_active=False,
+        )
+    )
+    out.extend(
+        _persona_system_messages(
+            bundle=bundle,
+            context=context,
+            inner_tick_turn=True,
+            skip_memory_blocks=False,
+            include_significance_perception_slice=False,
+            interactive_bootstrap_active=False,
+        )
+    )
+    out.extend(
+        _output_system_messages(
+            inner_tick_turn=True,
+            tick_proactive=False,
+            tools_on=True,
+            tool_side_compact=True,
+            async_foreground_chat_stack=False,
+            interactive_bootstrap_active=False,
+            include_significance_perception_slice=False,
+            chat_branch_no_tool_api=False,
+        )
+    )
+    out.extend(
+        _contextual_system_messages(
+            context=context,
+            inner_tick_turn=True,
+            tick_proactive=False,
+            tick_autonomy=True,
+            repl_online_ack_turn=False,
+            ai_private_text="",
+            proactive_life_currents_block=None,
+        )
+    )
+    return out
+
+
 def build_system_messages_for_inner_tick_proactive_chat(
     bundle: PromptBundle,
     context: ContextMeta,
+    store: MemoryStore,
 ) -> list[dict[str, Any]]:
-    """``PROACTIVE_CHAT_SYNC``: proactive chat inner tick while user is idle."""
+    """``PROACTIVE_CHAT_SYNC``: proactive chat inner tick while user is idle.
+
+    Reads ``LIFE_CURRENTS.md`` (written by the AUTONOMY track) and injects it
+    as a "for reference only" system block so the assistant can naturally
+    weave today's small thing into the next proactive message without
+    self-advertising.
+    """
     return build_system_messages(
         bundle,
         context,
@@ -760,6 +970,9 @@ def build_system_messages_for_inner_tick_proactive_chat(
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         ai_private_text="",
         include_significance_perception_slice=False,
+        proactive_life_currents_block=_assemble_proactive_chat_life_currents_hint_prompt(
+            store
+        ),
     )
 
 

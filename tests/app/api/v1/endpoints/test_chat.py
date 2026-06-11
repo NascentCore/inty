@@ -2025,6 +2025,11 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
         "try_fire_dreaming_inner_tick",
         spy_dreaming,
     )
+    monkeypatch.setattr(
+        companion_chat_service,
+        "append_companion_ws_runtime_event",
+        lambda **_kwargs: None,
+    )
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
@@ -2060,6 +2065,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
             ticks["proactive"] = 0
             time.sleep(0.2)
             assert ticks["proactive"] == 0
+            websocket.close()
 
     time.sleep(0.35)
 

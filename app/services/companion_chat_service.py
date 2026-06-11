@@ -661,6 +661,39 @@ async def run_companion_inner_tick_maintenance_turn_for_api(
     )
 
 
+async def run_inner_tick_autonomy(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model: GenAIModel,
+    session_id: str | None = None,
+    background_output_sink: BackgroundToolEventSink | None = None,
+    preset_user_msg_uuid: str | None = None,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
+) -> CompanionTurnResult:
+    """AUTONOMY inner-tick: silent self-directed turn; assistant_text is not delivered to the user."""
+    return await _run_companion_api_track_turn(
+        track_path="inner_tick_autonomy",
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_id,
+        resolved_chat_model=resolved_chat_model,
+        user_chars=0,
+        session_id=session_id,
+        run_track=lambda manager, session: manager.run_inner_tick_autonomy_turn(
+            session,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
+            runtime_context=TurnRuntimeContext(
+                channel=runtime_channel,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
+        ),
+    )
+
+
 async def run_companion_chat_turn_for_api(
     *,
     user_id: str,
@@ -700,6 +733,8 @@ async def run_companion_chat_turn_for_api(
                 return await run_companion_inner_tick_maintenance_turn_for_api(
                     **common,
                 )
+            case InnerTickActivity.AUTONOMY:
+                return await run_inner_tick_autonomy(**common)
     if implicit_user_signed_on_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         inner_tick_turn=False,

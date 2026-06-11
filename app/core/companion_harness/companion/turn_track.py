@@ -29,6 +29,8 @@ def turn_flags_for_track(
             return True, InnerTickActivity.PROACTIVE_CHAT
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             return True, InnerTickActivity.MAINTENANCE
+        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
+            return True, InnerTickActivity.AUTONOMY
 
 
 def langsmith_inty_turn_lane_for_companion_track(
@@ -48,5 +50,6 @@ def langsmith_inty_turn_lane_for_companion_track(
             CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
             | CompanionTurnTrack.INNER_TICK_SCHEDULED
             | CompanionTurnTrack.INNER_TICK_MAINTENANCE
+            | CompanionTurnTrack.INNER_TICK_AUTONOMY
         ):
             return "inner_tick"

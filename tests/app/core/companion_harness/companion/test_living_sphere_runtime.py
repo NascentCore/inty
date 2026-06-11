@@ -14,7 +14,7 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
     consolidate_memory_during_dreaming,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.tools.companion_tools import (
+from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,
 )

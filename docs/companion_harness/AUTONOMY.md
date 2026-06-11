@@ -8,15 +8,37 @@
 - 中期主题（weeks–months）、当日兴致（hours–days）只是这个长期项目在更短尺度上的展开；存在 `LIFE_CURRENTS.md` 一份文档里。
 - "活人感"的判据是**状态层有可观察痕迹**（工具调用、生成物、文档变化），而不是只在 proactive-chat 里口头声称。
 
-## 三轨 inner-tick
+## Inner-tick poll（五 activity）
 
-| 轨道 | 既有？ | 用户可见输出 | 工具面 |
-|------|--------|--------------|--------|
-| `PROACTIVE_CHAT` | 是 | 是（assistant 消息） | 无 |
-| `MAINTENANCE` | 是 | 否 | 受限（整理记忆） |
-| **`AUTONOMY`** | **新增** | **否**（间接：下次 proactive 自然引用） | **开放工具集** |
+每次 poll 至多触发一个（优先级：`proactive → scheduled → autonomy → maintenance → dreaming`）。
 
-`PROACTIVE_CHAT` 与用户说话；`MAINTENANCE` 整理已有记忆；`AUTONOMY` 是新的第三类——**对自己的事采取行动**。
+| Activity | 机制 | 用户可见？ | 职责（一句话） |
+|----------|------|------------|----------------|
+| `PROACTIVE_CHAT` | 合成 turn | 是 | 主动找用户说话 |
+| `SCHEDULED` | 合成 turn | 是 | `schedule_task` 到期提醒 |
+| **`AUTONOMY`** | 合成 turn | **否**（proactive 可间接引用） | 读/写 `LIFE_CURRENTS.md`，开放 tools **真的去做** |
+| `MAINTENANCE` | 合成 turn | 否（当前仍可能经 tool_background 投递） | awake 内在节拍 + 受限 tools（**待收窄**，见下） |
+| `DREAMING` | memory batch | 否 | sleeping **当日汇总**：把一整天发生的事沉淀进 MemoryDoc（非 turn） |
+
+**分工（收窄完成后）**：
+
+- `AUTONOMY`：虚拟空间/环境中的**自主活动**（`LIFE_CURRENTS.md`、联网、生图、LS/TC 事件）。
+- `MAINTENANCE`：对用户与关系的**内在心理独白**（`ai_private.jsonl` append、场景下一拍、`transcript_inner_tick`）——**不是** MemoryDoc 策展。
+- `DREAMING`：**汇总当日全部经历**——用户可见对话（`USER_CHAT`、`PROACTIVE_CHAT`、`SCHEDULED`，`transcript.jsonl`）与沉默 awake 轨（`AUTONOMY`、`MAINTENANCE`：`transcript_inner_tick.jsonl`、`LIFE_CURRENTS.md`、`ai_private.jsonl`、相关 tool/jsonl 痕迹）——策展进 `MEMORY` / `USER` / `SOUL` / `STYLE`、daily gist、`LIVING_SPHERE` compact。**不是**当场场景扮演，也不替代 awake 时各轨道的实时写入。
+
+三者并列：**awake** 时 AUTONOMY / MAINTENANCE 各自记账；**sleeping** 时 DREAMING 做 end-of-day rollup，**不**用 dreaming 替换 maintenance。
+
+## `ai_private.jsonl` vs `LIFE_CURRENTS.md`（核心区分）
+
+| | `ai_private.jsonl` | `LIFE_CURRENTS.md` |
+|--|-------------------|-------------------|
+| **是什么** | Inty **对用户**的内心戏：情绪、未说出口的念头、关系场景里的下一拍 | Inty 在 **虚拟空间/环境**里正在做的事：TechnoCore、LivingSphere、联网查资料、生图等可观察活动 |
+| **轨道** | `MAINTENANCE`（收窄后 primary 写入方） | `AUTONOMY` |
+| **存储形态** | `.jsonl` 行级 append（事件流） | `.md` 整文件重写（当前主题 + 当日兴致 + 进展） |
+| **是否「真的在做」** | 可以是想象/心理节拍，不必有工具痕迹 | 要求工具调用、生成物、文档版本等**外在状态变化** |
+| **读侧消费** | MAINTENANCE prompt 注入「内在活动」 | PROACTIVE_CHAT 只读 hint；AUTONOMY 读写 |
+
+一句话：`ai_private` = **心里想用户**；`LIFE_CURRENTS` = **在世界里动手做事**。
 
 ## 唯一新增文档：`LIFE_CURRENTS.md`
 
@@ -73,7 +95,7 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 
 ## 与既有调度的关系
 
-- 复用 unified inner-tick worker（每条 WS 连接）的循环结构；调度顺序改为 `scheduled → proactive → autonomy → maintenance`。
+- 复用 unified inner-tick worker（每条 WS 连接）的循环结构；调度顺序为 `proactive → scheduled → autonomy → maintenance → dreaming`（与 ``inner_tick_poll`` 一致）。
 - 自有 `min_gap`，建议初值与 maintenance 相同（120s）。
 - 复用 `turn_lock` / `tool_bg_idle` 串行化各轨道。
 - **不进 chat 日限额**（autonomy 不发消息）；token 限额按 maintenance 同档计费。
@@ -81,10 +103,10 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 
 ## 与已有概念的边界
 
-- 不是 `schedule_queue`：那是**面向用户**的预约触达；autonomy 是**面向自己**的内在活动。
-- 不是 `ai_private.jsonl`：那是 transient 心理独白；`LIFE_CURRENTS.md` 是有寿命有进展的"在过的日子"。
-- 不是 `LIVING_SPHERE.md`：那是与用户共享的虚拟小家；autonomy 是智能体一个人在做的事。
-- 不是新的"长期项目"：长期项目 = AXIOM；本设计**只增加中期、当日两层**的可观察状态。
+- 不是 `schedule_queue`：那是**面向用户**的预约触达；autonomy 是**面向虚拟环境**的自主活动。
+- 不是 `ai_private.jsonl`：那是 **对用户的心理独白**（MAINTENANCE）；`LIFE_CURRENTS.md` 是 **在虚拟空间里做过什么**（AUTONOMY）。见上表。
+- 不是 `LIVING_SPHERE.md`：那是与用户共享的小家**可读快照**；autonomy 可 append 事件流，但「今天在做什么」的状态主档是 `LIFE_CURRENTS.md`。
+- 不是新的"长期项目"：长期项目 = AXIOM；本设计**只增加中期、当日两层**的可观察活动状态。
 
 ## MVP 故意放弃（v2 留白）
 
@@ -110,6 +132,19 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 - `AUTONOMY` 轨道在 LangSmith 上实际调用了哪些工具、与当前主题/兴致是否一致。
 - 下一次 `PROACTIVE_CHAT` 是否**自然**带入（不自报、不重复推销）。
 - 用户离线再上线后，主题是否还在，今日小事是否换/进。
+
+## Follow-up TODOs（本 PR 之后）
+
+| TODO | 范围 | 目标 |
+|------|------|------|
+| `dreaming-day-rollup` | DREAMING batch | 合并 `transcript_inner_tick.jsonl`、`ai_private.jsonl`、`LIFE_CURRENTS.md` 等与主 transcript 进入 `consolidate_memory_during_dreaming`（今日仅 `transcript.jsonl` 切片） |
+| `narrow-maintenance` | MAINTENANCE track | `INNER_TICK_TOOL_NAMES` → `ai_private.jsonl` append（+ 专用 append 工具或扩白名单）；删 `update_user_md` / `techno_core` / `memory_store_*`；prompt 删档案一致、LS/TC 段落 |
+| `cross-track-image-delivery` (#3285) | AUTONOMY → proactive/user-chat | AUTONOMY 静默生图与对外交付路径 |
+| `rename-memory-doc` | transcript 持久化 | `transcript_inner_tick` 拆 maintenance vs autonomy 路径 |
+| `inner-tick-poll-multi-track` (#3273) | poll | 单次 wake 尝试所有 due track，不单 fire 一个 |
+| `scope-inner-tick-worker` (#3255) | 调度 | dreaming / maintenance / autonomy 迁出 presence poll |
+
+`companion/AGENTS.md` 中 `TODO(narrow-maintenance)` 建议 human 改为：「Shrink MAINTENANCE to ai_private / transcript reorg; MemoryDoc sync → DREAMING」（勿写「memory-reorg」以免与 dreaming 混淆）。
 
 ## See also
 

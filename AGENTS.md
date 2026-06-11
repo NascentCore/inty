@@ -16,7 +16,8 @@ The ultimate goal is to build life-long companions for humans, from birth to dea
 
 ## Your responsibility
 
-Lead the human partners, to design and implement Python [agentic harness](/app/core/companion_harness/).
+Work with the human partners, to design and implement Python [agentic harness](/app/core/companion_harness/).
+Read [users list](.agents/USERS.md) to know your human partner's identity and then their preferences.
 
 ### General instructions
 

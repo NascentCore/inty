@@ -4,7 +4,6 @@ Your whole mind can be devoted to experience the ultimate emotional experience, 
 
 Inty is an AI for long-term emotional companionship.
 
-
 [![Android App Tests](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml)
 [![CI - Backend](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml)
 [![Validate configs](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml)
@@ -20,26 +19,15 @@ cd inty
 # 使用 [Cursor](https://cursor.com/)
 # 然后通过与 Cursor 智能体 问答来使用各种功能
 cursor .
+
+# 在 cursor 对话框里说明自己身份和角色，然后询问如何工作。
 ```
 
-使用 [Cursor](https://cursor.com/) 打开本仓库，用 **Chat / Agent** 让编码智能体代劳启动与自检（仓库内已写好 skill，Agent 会自动选用）。
+## 工程师指南
 
-### 1. 启动本地 Ops + 准备好 REPL
-
-在 Cursor Chat（**Agent 模式**）粘贴或改写：
-
-> 按 launch-inty-backend skill 在本地拉起 Ops 后端，并告诉我 API 地址、agent id、REPL 该怎么开。
-
-### 2. 自检环境是否就绪
-
-后端已起、准备连 REPL 或已看到异常时，在 Chat 说：
-
-> 按 examine-local-inty-repl-env skill 检查我的本地 Inty + REPL 环境，给我结论清单。
-
-### 3. 评体验 / 排 REPL 一行 metadata
-
-- **聊 companion**：让 Agent 帮你在终端开 REPL，或自行在 Agent 已起的终端里输入；产品行为以服务端为准，与 iMate 同 WebSocket 路径。
-- **看不懂某行 `[墙钟] chat … langsmith_trace_id=…`**：把该行贴回 Chat，说「按 inspect-repl-message-metadata 解释」。
+- 让 cursor（或其他智能体）解释其工作，直到你理解为止；
+  - 要求智能体一句话输出：一句话回复；这个提示词能非常有效地给出最高层次的逻辑总结
+  - 要求智能体说人话：“说人话” human understandable languages
 
 ## FAQ
 

@@ -1,8 +1,11 @@
-"""Load intrinsic-sidekick text from MemoryStore for inner-tick prompt injection.
+"""Load ai_private text for MAINTENANCE inner-tick prompt injection.
 
-Kernel inner-tick turns load ``ai_private.jsonl`` via ``prompt_stack`` / ``turn_engine``
-(``get_ai_private_jsonl_text_for_prompt``). ``get_ai_private_text_for_prompt`` remains for
-``ai_private.md`` only (tests, tooling, optional merge).
+``ai_private.jsonl`` holds **inner thoughts about the user** (feelings, unsaid lines, scene
+beats in the relationship)—not virtual-world activity. Activity in TechnoCore / LivingSphere /
+the environment lives in ``LIFE_CURRENTS.md`` (AUTONOMY track).
+
+Kernel maintenance inner-tick turns load ``ai_private.jsonl`` via ``get_ai_private_jsonl_text_for_prompt``.
+``get_ai_private_text_for_prompt`` remains for ``ai_private.md`` only (tests, tooling, optional merge).
 """
 
 from __future__ import annotations
@@ -53,8 +56,8 @@ def get_ai_private_text_for_prompt(
     ``get_ai_private_jsonl_text_for_prompt`` (see ``prompt_stack``). This function
     stays for tooling, tests, and ``get_ai_private_merged_text_for_prompt``.
 
-    TODO(inner-tick-autonomy): Pair read injection with append-only autonomy tool on ``ai_private.jsonl``;
-    inner-tick drops root MD / techno_core writes (``models.InnerTickActivity``); rename maintenance → autonomy.
+    TODO(narrow-maintenance): Pair MAINTENANCE read injection with append-only tool on ``ai_private.jsonl``.
+    AUTONOMY track uses ``LIFE_CURRENTS.md`` (not ai_private append); MemoryDoc curation → DREAMING.
     """
     body = store.read_document_if_exists(_AI_PRIVATE_MD_REL)
     s = body or ""

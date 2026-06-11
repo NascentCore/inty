@@ -9,6 +9,9 @@ New tool checklist:
 3. Update REPL / inner-tick name tuples if the tool appears there
 4. Add ``_dispatch`` branch in ``companion_tool_runtime``
 5. Run ``test_companion_tool_definitions.py``
+
+TODO(abstraction): Group tools by defining tuple of LlmFunctionTool data objects.
+Do not group by tool names.
 """
 
 from __future__ import annotations
@@ -36,14 +39,23 @@ from app.techno_core.models import (
 
 MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 
+# TODO(ai-private-jsonl-write): ``ai_private.jsonl`` (inner thoughts *about the user*, MAINTENANCE)
+# is ORM-mapped but excluded here — not ``LIFE_CURRENTS.md`` (virtual-world activity, AUTONOMY).
+# Enable MAINTENANCE append via dedicated append-only tool (preferred) or allowlist + append-only runtime.
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
     {
         "IDENTITY.md",
+        "LIFE_CURRENTS.md",  # AUTONOMY: virtual-space activity (not ai_private user-directed thoughts)
         "MEMORY.md",
         "SOUL.md",
         "STYLE.md",
         "USER.md",
     }
+)
+
+# AUTONOMY inner-tick: only LIFE_CURRENTS.md (profile curation → DREAMING / MAINTENANCE).
+MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY: frozenset[str] = frozenset(
+    {"LIFE_CURRENTS.md"}
 )
 
 TOOL_TAG_GENERATION = "GENERATION"
@@ -579,14 +591,33 @@ BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
 )
 
-# TODO(inner-tick-autonomy): Collapse to ai_private append-only (plus minimal read if needed);
-# remove UPDATE_USER_MD, TECHNO_CORE_RECORD_EVENT, memory_store_* — 记忆一致性 → dreaming.
+# TODO(narrow-maintenance): MAINTENANCE only — collapse to ``ai_private.jsonl`` append (+ minimal
+# read if needed). Drop UPDATE_USER_MD, TECHNO_CORE_RECORD_EVENT, memory_store_*; MemoryDoc
+# curation → DREAMING. AUTONOMY uses ``INNER_TICK_AUTONOMY_TOOL_NAMES`` (LIFE_CURRENTS + open tools).
 INNER_TICK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.UPDATE_USER_MD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     CompanionToolName.MEMORY_STORE_LIST_PATHS,
     CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
     CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
+)
+
+# AUTONOMY inner-tick (silent self-directed work): open tool set so the model
+# can read MemoryStore, browse the web, generate/modify images, and rewrite
+# LIFE_CURRENTS.md / MEMORY.md etc. SCHEDULE_TASK and COMPANION_SET_EXPERIENCE_PROFILE
+# are excluded because they produce user-visible side effects, which would
+# break "do not send anything to the user" for this track.
+INNER_TICK_AUTONOMY_TOOL_NAMES: tuple[CompanionToolName, ...] = (
+    CompanionToolName.UPDATE_USER_MD,
+    CompanionToolName.TECHNO_CORE_RECORD_EVENT,
+    CompanionToolName.LIVING_SPHERE_RECORD_UPDATE,
+    CompanionToolName.MEMORY_STORE_LIST_PATHS,
+    CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
+    CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
+    CompanionToolName.GOOGLE_WEB_SEARCH,
+    CompanionToolName.READ_WEB_PAGE,
+    CompanionToolName.GENERATE_IMAGE,
+    CompanionToolName.MODIFY_IMAGE,
 )
 
 _EMPTY_DESCRIPTION_OVERRIDES: dict[CompanionToolName, str] = {}
@@ -628,6 +659,24 @@ def _repl_description_overrides() -> dict[CompanionToolName, str]:
 
 REPL_DESCRIPTION_OVERRIDES: dict[CompanionToolName, str] = (
     _repl_description_overrides()
+)
+
+
+def _repl_description_overrides_autonomy() -> dict[CompanionToolName, str]:
+    """AUTONOMY tool leg: ``memory_store_write_document`` may only touch ``LIFE_CURRENTS.md``."""
+    out = dict(_repl_description_overrides())
+    only_csv = ", ".join(sorted(MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY))
+    out[CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT] = (
+        "Create or overwrite LIFE_CURRENTS.md in MemoryStore (AUTONOMY virtual-environment activity). "
+        f"Only writable path via this tool: {only_csv}. "
+        "Record mid-term theme, today's observable task, and tool progress—not relationship psychology. "
+        "Read USER.md / MEMORY.md for inspiration only; do not write them here."
+    )
+    return out
+
+
+REPL_DESCRIPTION_OVERRIDES_AUTONOMY: dict[CompanionToolName, str] = (
+    _repl_description_overrides_autonomy()
 )
 
 

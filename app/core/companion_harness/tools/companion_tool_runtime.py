@@ -79,10 +79,13 @@ from .companion_tool_definitions import (
     COMPANION_LLM_TOOLS_BY_NAME,
     BOOTSTRAP_TRACK_TOOL_NAMES,
     CompanionToolName,
+    INNER_TICK_AUTONOMY_TOOL_NAMES,
     INNER_TICK_TOOL_NAMES,
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
     REPL_DESCRIPTION_OVERRIDES,
+    REPL_DESCRIPTION_OVERRIDES_AUTONOMY,
     TOOL_NAMES_APPENDED,
     TOOL_NAMES_BOOTSTRAP_APPENDED,
     TOOL_NAMES_NON_BOOTSTRAP_TAIL,
@@ -115,8 +118,8 @@ _USER_PROFILE_SECTION = "## 身份信息"
 # ``TOOL_TAG_GENERATION`` / memory-store caps / allowlist: ``companion_tool_definitions``.
 
 
-# TODO(inner-tick-autonomy): ai_private.jsonl append-only tool for autonomy inner-tick; drop
-# UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (记忆一致性 → dreaming).
+# TODO(narrow-maintenance): ``ai_private.jsonl`` append tool for MAINTENANCE inner-tick; drop
+# UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (MemoryDoc → DREAMING).
 
 
 def _latest_generated_image_http_url_from_index(
@@ -559,14 +562,34 @@ def build_openai_repl_tools(
 
 def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     """
-    内在节拍：USER 档案、LivingSphere/TechnoCore 事件日志、工作区读写；不含定时、联网、生图/改图。
+    MAINTENANCE 内在节拍：USER 档案、TechnoCore 事件、MemoryStore 读写；不含定时、联网、生图/改图。
 
-    TODO(inner-tick-autonomy): Autonomy inner-tick — ai_private.jsonl append only; see INNER_TICK_TOOL_NAMES.
+    TODO(narrow-maintenance): 收成 ``ai_private.jsonl`` append-only；见 ``INNER_TICK_TOOL_NAMES``。
+    自主活动（``LIFE_CURRENTS``、开放 tools）在 ``build_openai_repl_tools_inner_tick_autonomy``。
     """
     return prepare_openai_tools_for_chat_completions(
         openai_tools_for_names(
             INNER_TICK_TOOL_NAMES,
             description_overrides=REPL_DESCRIPTION_OVERRIDES,
+        )
+    )
+
+
+def build_openai_repl_tools_inner_tick_autonomy() -> list[dict[str, Any]]:
+    """
+    AUTONOMY 内在节拍：开放工具集让 Inty 真的去做 LIFE_CURRENTS.md 里的中期主题与当日兴致。
+
+    含联网（google_web_search / read_web_page）、生图/改图、LivingSphere/TechnoCore 事件，
+    与 MemoryStore 整文件读写（AUTONOMY 写入仅限 ``MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY``，
+    即 ``LIFE_CURRENTS.md``  alone）。
+
+    故意不含 ``schedule_task``（面向用户预约）与 ``companion_set_experience_profile``
+    （切换会话模式），因为这两者会产生用户可见副作用，违背 autonomy "不向用户发任何消息"。
+    """
+    return prepare_openai_tools_for_chat_completions(
+        openai_tools_for_names(
+            INNER_TICK_AUTONOMY_TOOL_NAMES,
+            description_overrides=REPL_DESCRIPTION_OVERRIDES_AUTONOMY,
         )
     )
 

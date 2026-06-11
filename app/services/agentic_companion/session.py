@@ -91,6 +91,12 @@ def apply_inner_tick_coords(
     prev_line_count = inner_tick_ctx.get(
         "_last_maintenance_transcript_line_count"
     )
+    prev_autonomy_mono = inner_tick_ctx.get(
+        "_last_autonomy_inner_tick_monotonic"
+    )
+    prev_autonomy_line_count = inner_tick_ctx.get(
+        "_last_autonomy_transcript_line_count"
+    )
     inner_tick_ctx.clear()
     inner_tick_ctx.update(
         {"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id}
@@ -105,6 +111,14 @@ def apply_inner_tick_coords(
     if same_coords and prev_line_count is not None:
         inner_tick_ctx["_last_maintenance_transcript_line_count"] = (
             prev_line_count
+        )
+    if same_coords and prev_autonomy_mono is not None:
+        inner_tick_ctx["_last_autonomy_inner_tick_monotonic"] = (
+            prev_autonomy_mono
+        )
+    if same_coords and prev_autonomy_line_count is not None:
+        inner_tick_ctx["_last_autonomy_transcript_line_count"] = (
+            prev_autonomy_line_count
         )
 
 
@@ -128,7 +142,12 @@ class Coordinator:
     foreground_pending: dict[str, dict[str, Any]] = field(default_factory=dict)
     # TODO(data-type-abstraction): Change this to a dataclass.
     inner_tick_context: dict[str, Any] = field(default_factory=dict)
+    # TODO(#3314): Replace per-track lingering-work fields with one lifecycle-owned
+    # background work registry / structured-concurrency scope.
     _inner_tick_proactive_tool_bg_idle: threading.Event | None = field(
+        default=None, repr=False
+    )
+    _inner_tick_autonomy_tool_bg_idle: threading.Event | None = field(
         default=None, repr=False
     )
     _implicit_greeting_turn_task: asyncio.Task[Any] | None = field(
@@ -238,6 +257,46 @@ class Coordinator:
     def inner_tick_proactive_tool_bg_still_running(self) -> bool:
         idle_ev = self._inner_tick_proactive_tool_bg_idle
         return idle_ev is not None and (not idle_ev.is_set())
+
+    def bind_inner_tick_autonomy_tool_bg_idle(
+        self, ev: threading.Event | None
+    ) -> None:
+        """Track ``CompanionSession.tool_bg_idle`` after autonomy inner-tick starts async tool_bg."""
+        self._inner_tick_autonomy_tool_bg_idle = ev
+
+    def clear_inner_tick_autonomy_tool_bg_idle_if_idle(self) -> None:
+        idle_ev = self._inner_tick_autonomy_tool_bg_idle
+        if idle_ev is not None and idle_ev.is_set():
+            self._inner_tick_autonomy_tool_bg_idle = None
+
+    def inner_tick_autonomy_tool_bg_still_running(self) -> bool:
+        idle_ev = self._inner_tick_autonomy_tool_bg_idle
+        return idle_ev is not None and (not idle_ev.is_set())
+
+    def last_autonomy_inner_tick_monotonic(self) -> Any:
+        return self.inner_tick_context.get(
+            "_last_autonomy_inner_tick_monotonic"
+        )
+
+    def last_autonomy_transcript_line_count(self) -> int | None:
+        raw = self.inner_tick_context.get(
+            "_last_autonomy_transcript_line_count"
+        )
+        if raw is None:
+            return None
+        return int(raw)
+
+    def mark_autonomy_inner_tick_fired(
+        self,
+        monotonic_time: float,
+        transcript_line_count: int,
+    ) -> None:
+        self.inner_tick_context["_last_autonomy_inner_tick_monotonic"] = (
+            monotonic_time
+        )
+        self.inner_tick_context["_last_autonomy_transcript_line_count"] = (
+            transcript_line_count
+        )
 
     def inner_tick_maintenance_foreground_pending(self) -> bool:
         return any(
@@ -356,14 +415,21 @@ class Session:
                     break
                 except asyncio.TimeoutError:
                     pass
+                if self._inner_tick_stop.is_set():
+                    break
                 inner_tick_snapshot: dict[str, Any] | None = None
                 async with self.coordinator.turn_lock:
+                    if self._inner_tick_stop.is_set():
+                        break
                     inner_tick_snapshot = (
                         self.coordinator.snapshot_inner_tick_coords()
                     )
                     if inner_tick_snapshot is not None:
+                        # TODO(#3314): Move opportunistic cleanup out of the poll loop;
+                        # completed background work should prune itself via registry callbacks.
                         self.coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
-                if inner_tick_snapshot is None:
+                        self.coordinator.clear_inner_tick_autonomy_tool_bg_idle_if_idle()
+                if inner_tick_snapshot is None or self._inner_tick_stop.is_set():
                     continue
                 await run_one_poll(inner_tick_snapshot)
 
@@ -379,4 +445,6 @@ class Session:
         self._inner_tick_task = None
         if task is not None and (not task.done()):
             await asyncio.gather(task, return_exceptions=True)
+        # TODO(#3314): Session shutdown should cancel/drain every registered
+        # lifecycle child, not only the poll worker and implicit greeting task.
         await self.cancel_implicit_greeting_if_running()

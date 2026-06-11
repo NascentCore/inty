@@ -36,21 +36,39 @@ AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 class InnerTickActivity(StrEnum):
     """Idle poll activities serialized on presence ``turn_lock``.
 
-    ``MAINTENANCE`` and ``PROACTIVE_CHAT`` are synthetic **turns** (``run_turn``,
-    ``CompanionTurnResult``, optional delivery). ``DREAMING`` is a **memory batch** only
+    ``MAINTENANCE``, ``PROACTIVE_CHAT``, and ``AUTONOMY`` are synthetic **turns**
+    (``run_turn``, ``CompanionTurnResult``, optional delivery). ``DREAMING`` is a **memory batch** only
     (``consolidate_memory_during_dreaming``; observability via ``dreaming_observability`` and
     ``inner_tick_activity=dreaming`` on LangSmith / runtime events — not ``CompanionTurnResult``).
 
-    Poll order per wake: proactive → scheduled → maintenance → dreaming (at most one fires;
-    see ``inner_tick_poll`` TODO inner-tick-poll-multi-track / #3273).
+    Poll order per wake: proactive → scheduled → autonomy → maintenance → dreaming
+    (at most one fires; see ``inner_tick_poll`` TODO inner-tick-poll-multi-track / #3273).
 
-    TODO(inner-tick-autonomy): Narrow maintenance to autonomy-only — append ``ai_private.jsonl``;
-    profile/MemoryDoc sync moves to dreaming. Rename ``MAINTENANCE`` → ``AUTONOMY``.
+    ``AUTONOMY`` reads/writes ``LIFE_CURRENTS.md`` with an open tool set; never delivers
+    client-visible NL or images (see ``inner_tick_activity_suppresses_user_delivery``).
+    ``MAINTENANCE`` (awake inner-tick turn) still uses a restricted tool set today;
+    ``TODO(narrow-maintenance)`` targets ai_private / transcript reorg only.
+    ``DREAMING`` (sleeping batch, not a turn) **rolls up the whole day**: user-visible
+    chat plus scheduled / proactive on ``transcript.jsonl``, and silent ``AUTONOMY`` /
+    ``MAINTENANCE`` traces — into MemoryDoc curation (``TODO(dreaming-day-rollup)``:
+    inner-tick / ai_private / LIFE_CURRENTS not yet merged into consolidation input).
     """
 
     MAINTENANCE = "maintenance"
     PROACTIVE_CHAT = "proactive_chat"
+    AUTONOMY = "autonomy"
     DREAMING = "dreaming"
+
+
+def inner_tick_activity_suppresses_user_delivery(
+    inner_tick_activity: InnerTickActivity,
+) -> bool:
+    """True when inner-tick ``tool_background`` must not push NL or images to the client.
+
+    TODO(cross-track-image-delivery): AUTONOMY may generate_images silently; proactive
+    / user-chat need a coherent path to reference or deliver those assets. #3285
+    """
+    return inner_tick_activity == InnerTickActivity.AUTONOMY
 
 
 class CompanionTurnTrack(StrEnum):
@@ -62,6 +80,7 @@ class CompanionTurnTrack(StrEnum):
     INNER_TICK_PROACTIVE_CHAT = "inner_tick_proactive_chat"
     INNER_TICK_SCHEDULED = "inner_tick_scheduled"
     INNER_TICK_MAINTENANCE = "inner_tick_maintenance"
+    INNER_TICK_AUTONOMY = "inner_tick_autonomy"
 
 
 PresenceSignal = Literal["repl_online", "repl_offline"]
@@ -404,7 +423,6 @@ def transcript_relative_path_for_turn_persistence(
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
-        # TODO(rename-memory-doc): transcript_inner_tick_maintenance.jsonl (see memory_store_scope).
-        # TODO(inner-tick-autonomy): Revisit persistence — autonomy may only need ai_private.jsonl, not a full inner transcript JSONL.
+        # TODO(rename-memory-doc): split maintenance vs autonomy JSONL paths (see memory_store_scope).
         return "transcript_inner_tick.jsonl"
     return "transcript.jsonl"
