@@ -9,6 +9,10 @@ from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.chat import Chat
+from app.models.agent import Agent
+from app.models.user import User
+
 # 系统级别行为配置通过环境变量配置，比如日志级别、LangSmith追踪等。
 load_dotenv()
 
@@ -230,6 +234,10 @@ async def _preload_database_tables(db: AsyncSession):
 
         # 预热聊天表查询，确保表结构已加载
         from sqlalchemy import select
+
+        from app.models.agent import Agent
+        from app.models.chat import Chat
+        from app.models.user import User
 
         # 执行一个简单的查询来预热表结构
         await db.execute(select(Chat).limit(1))

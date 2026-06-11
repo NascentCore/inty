@@ -1,4 +1,4 @@
-"""Shared inner-tick poll: proactive, scheduled, maintenance, dreaming (WS or Weixin delivery).
+"""Shared inner-tick poll: proactive, scheduled, autonomy, maintenance, dreaming (WS or Weixin delivery).
 
 Requires signed-on presence coordinates on ``coordinator`` — poll runs on the same ``Coordinator``
 as user chat, so **one ``turn_lock`` per wire** serializes inner-tick activities when each
@@ -6,7 +6,7 @@ as user chat, so **one ``turn_lock`` per wire** serializes inner-tick activities
 one wire per paired user; multiple tabs are out of scope (``companion_harness`` AGENTS.md).
 
 Each poll wake tries at most one activity, in priority order:
-proactive → scheduled → maintenance → dreaming.
+proactive → scheduled → autonomy → maintenance → dreaming.
 
 TODO(inner-tick-poll-multi-track): Try every **due** track per wake (e.g. scheduled must not
 be skipped when proactive fires) — product decision #3273
@@ -59,6 +59,8 @@ async def run_inner_tick_poll(
     if await inner_tick_fire.try_fire_proactive_chat_inner_tick(fire_input):
         return
     if await inner_tick_fire.try_fire_scheduled_inner_tick(fire_input):
+        return
+    if await inner_tick_fire.try_fire_autonomy_inner_tick(fire_input):
         return
     if await inner_tick_fire.try_fire_maintenance_inner_tick(fire_input):
         return

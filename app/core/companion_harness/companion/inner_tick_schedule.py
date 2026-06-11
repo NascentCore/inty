@@ -1,11 +1,10 @@
 """Maintenance and REPL-prototype inner-tick wait helpers (poll chunk + min gap).
 
-TODO(inner-tick-autonomy): Rename maintenance scheduling to autonomy after inner-tick scope shrinks
-to ai_private-only; align ``companion_ws_maintenance_inner_tick_*`` config keys and coordinator
-monotonic fields.
+``AUTONOMY`` reuses the same wait gate as maintenance but throttles via coordinator
+``last_autonomy_*`` fields (see ``try_fire_autonomy_inner_tick``).
 
 WebSocket **proactive chat rhythm** lives in ``proactive_chat.py``;
-the unified WS worker fires scheduled / proactive / maintenance
+the unified WS worker fires proactive / scheduled / autonomy / maintenance
 on ``companion_ws_proactive_chat_poll_seconds``.
 
 See ``docs/companion_harness/ARCH.md`` for scheduling semantics and transport boundaries.

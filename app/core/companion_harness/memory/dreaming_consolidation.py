@@ -1,7 +1,10 @@
-"""Sleeping-state dreaming memory consolidation.
+"""Sleeping-state dreaming memory consolidation (end-of-day rollup).
 
-Batch-curates transcript slices into ``memory/daily/<date>.md`` (daily gist),
-``MEMORY.md``, ``USER.md``, ``STYLE.md``, ``SOUL.md``, and ``LIVING_SPHERE.md``.
+Batch-curates **the day's full arc** into ``memory/daily/<date>.md`` (daily gist),
+``MEMORY.md``, ``USER.md``, ``STYLE.md``, ``SOUL.md``, and ``LIVING_SPHERE.md`` —
+user-visible ``transcript.jsonl`` (chat, proactive, scheduled) plus silent awake
+inner-tick material (autonomy, maintenance) once ``TODO(dreaming-day-rollup)``
+merges inner-tick / ``ai_private.jsonl`` / ``LIFE_CURRENTS.md`` into the slice.
 Only invoked from the dreaming inner-tick path — no awake post-turn updates.
 
 Memory-phase invariant **DreamingBatch**: see ``companion.turn_invariants`` — batch
@@ -157,7 +160,11 @@ def _log_dreaming_consolidation_curated(
 
 
 def _dreaming_transcript_block(rows: list[ChatMessage]) -> str:
-    """Render a compact transcript block for batch curation prompts."""
+    """Render a compact transcript block for batch curation prompts.
+
+    TODO(dreaming-day-rollup): append inner-tick / ai_private / LIFE_CURRENTS
+    sections when ``dreaming_candidate_slice`` supplies them.
+    """
     lines: list[str] = []
     for row in rows:
         role = "User" if row.role == "user" else "Assistant"
@@ -305,7 +312,13 @@ def consolidate_memory_during_dreaming(
     *,
     tool_bg_idle_event: Event,
 ) -> bool:
-    """Batch-curate all applicable memory docs from a sleeping-state transcript slice."""
+    """Batch-curate all applicable memory docs from a sleeping-state transcript slice.
+
+    ``rows`` come from ``dreaming_candidate_slice`` (main ``transcript.jsonl`` only
+    today). TODO(dreaming-day-rollup): curator prompts must also ingest merged
+    inner-tick transcript, ``ai_private.jsonl``, and ``LIFE_CURRENTS.md`` for the
+    same calendar day so DREAMING rolls up AUTONOMY / MAINTENANCE awake activity.
+    """
     assert rows
     t_all = time.perf_counter()
     ws = store.scope.registry_key()

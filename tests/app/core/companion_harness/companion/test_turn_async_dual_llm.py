@@ -21,12 +21,16 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.tools.companion_tools import build_openai_repl_tools_inner_tick
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    build_openai_repl_tools_inner_tick,
+    build_openai_repl_tools_inner_tick_autonomy,
+)
 from app.core.companion_harness.companion.turn import (
     CHAT_TRACK_RESPONSE_MESSAGE_TITLE,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,
     run_companion_user_chat_turn,
+    run_inner_tick_autonomy,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.utils.config import CompanionMemoryBootstrapType
@@ -224,6 +228,64 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
     assert job["force_tools_first_round"] is True
     _assert_no_adjacent_user_roles(bg_msgs)
     assert bg_msgs[-1].get("role") != "assistant"
+
+
+@pytest.mark.asyncio
+async def test_async_dual_inner_tick_autonomy_uses_autonomy_system_messages(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = _store(tmp_path)
+    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document("IDENTITY.md", "id\n")
+    store.write_document("SOUL.md", "s\n")
+    store.write_document("USER.md", "u\n")
+    store.write_document("MEMORY.md", "m\n")
+    store.write_document("transcript.jsonl", "")
+
+    bg_jobs: list[dict[str, Any]] = []
+
+    def _capture_bg(**kwargs: Any) -> None:
+        bg_jobs.append(kwargs)
+
+    monkeypatch.setattr(
+        "app.core.companion_harness.companion.turn.start_tool_background_job",
+        _capture_bg,
+    )
+
+    client = _FakeAsyncDualLLMClient()
+    await run_inner_tick_autonomy(
+        deps=_default_turn_deps(store, client),
+    )
+
+    assert len(client.chat_calls) == 0
+    assert len(bg_jobs) == 1
+    job = bg_jobs[0]
+    assert job["inner_tick_turn"] is True
+    assert job["inner_tick_activity"] == InnerTickActivity.AUTONOMY
+    expected = {
+        t["function"]["name"]
+        for t in build_openai_repl_tools_inner_tick_autonomy()
+    }
+    got = {t["function"]["name"] for t in job["tools"]}
+    assert got == expected
+    assert "generate_image" in got
+    bg_system = [
+        str(m.get("content") or "")
+        for m in job["request_messages"]
+        if m.get("role") == "system"
+    ]
+    autonomy_blocks = [
+        c for c in bg_system if c.startswith("本轮（AUTONOMY 自主活动）")
+    ]
+    maintenance_blocks = [
+        c for c in bg_system if c.startswith("本轮（内在节拍）")
+    ]
+    ai_private_blocks = [
+        c for c in bg_system if c.startswith("内在活动（ai_private）")
+    ]
+    assert len(autonomy_blocks) == 1
+    assert maintenance_blocks == []
+    assert ai_private_blocks == []
 
 
 @pytest.mark.asyncio

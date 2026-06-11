@@ -15,12 +15,14 @@ description: >-
 
 - Install `langsmith` and `PyYAML` (repo root `requirements.txt` already pins both).
 
-### What `config.yaml` drives (aligned with backend)
+### What `devops/config.yaml.local` drives (aligned with local Ops backend)
+
+Default **`--config`** is [`devops/config.yaml.local`](../../../devops/config.yaml.local) — same file as **`INTY_CONFIG_YAML=devops/config.yaml.local`** when launching Ops locally (see [`launch-inty-backend`](../launch-inty-backend/SKILL.md)). Repo-root **`config.yaml`** is often **`devops/config.yaml.test`** for pytest and uses a different LangSmith key/project; do not use it for companion REPL traces unless you override **`--config`**.
 
 The helper script applies the same LangSmith-related process env as [`app/core/config.py`](../../../app/core/config.py) `set_langsmith_environment_variables`:
 
-| Process env | Source in `config.yaml` |
-|-------------|-------------------------|
+| Process env | Source in YAML |
+|-------------|----------------|
 | `LANGCHAIN_API_KEY` | `agent.langchain_api_key`, else shell `LANGCHAIN_API_KEY` / `LANGSMITH_API_KEY` |
 | `LANGSMITH_PROJECT` | `{app.name}-{app.environment}`, plus `-{local_username_slug}` when `app.environment` is `local`; defaults mirror [`AppConfig`](../../../app/utils/config.py): `name` defaults to `inty-backend`, `environment` to `dev` if omitted |
 | `LANGSMITH_TRACING_V2` | `true` / `false` from `agent.langsmith_tracing_enabled` (default `true` if omitted) |
@@ -29,7 +31,7 @@ Inty YAML does **not** define LangSmith API host; for EU / self-hosted, set **`L
 
 ## Preferred: repo helper script
 
-Helper: [`.cursor/skills/scripts/download_run.py`](../scripts/download_run.py)（**Cyclopts** CLI）。在**仓库根**执行，以便默认 **`--config config.yaml`** 能解析。
+Helper: [`.cursor/skills/scripts/download_run.py`](../scripts/download_run.py)（**Cyclopts** CLI）。在**仓库根**执行，以便默认 **`--config devops/config.yaml.local`** 能解析。
 
 **智能体查路径与默认值**：先执行 **`python .cursor/skills/scripts/download_run.py --help`**（说明省略 **`-o`/`--output`** 时写入 **`./.inty/`**；**`-o -`** 为 stdout）。**`RUN_ID`** 可位置参数传入，也可用显式参数（见 `--help`）。
 
@@ -45,7 +47,7 @@ python .cursor/skills/scripts/download_run.py "<RUN_ID>"
 
 **`--load-child-runs`**：仅单 run 的 `read_run`；勿与 `--trace-id` / `--entire-trace` 同用。
 
-**Trace 模式**（`--trace-id` 或 `--entire-trace`）：可选 **`--project-name`** 覆盖 `LANGSMITH_PROJECT`（**若 trace 实际落在别的 project**——例如元数据里的 `inty-backend-local-<user>`——而 `config.yaml` 推出的是 `inty-backend-test` 等，则必须指定，否则 `list_runs` 可能 0 条）。省略 **`--max-runs`** 时由 LangSmith SDK **cursor 分页拉全 trace**；仅调试或限流时传 **`--max-runs N`** 做总条数上限。
+**Trace 模式**（`--trace-id` 或 `--entire-trace`）：可选 **`--project-name`** 覆盖 `LANGSMITH_PROJECT`（**若 trace 落在别的 project**——例如同事的 `inty-backend-local-<user>`——则必须指定，否则 `list_runs` 可能 0 条）。用默认 `devops/config.yaml.local` 时 project 应为 `inty-backend-local-<你的用户名>`，与 REPL metadata / Ops tracing 一致。省略 **`--max-runs`** 时由 LangSmith SDK **cursor 分页拉全 trace**；仅调试或限流时传 **`--max-runs N`** 做总条数上限。
 
 Trace 模式输出 JSON 形状：
 
@@ -67,7 +69,7 @@ from pathlib import Path
 import yaml
 from langsmith import Client
 
-# After loading config.yaml, set os.environ["LANGCHAIN_API_KEY"], LANGSMITH_PROJECT,
+# After loading devops/config.yaml.local, set os.environ["LANGCHAIN_API_KEY"], LANGSMITH_PROJECT,
 # LANGSMITH_TRACING_V2 the same way as app/core/config.py:set_langsmith_environment_variables,
 # then:
 run_id = "..."
@@ -81,7 +83,7 @@ For trace-wide listing in custom code, mirror this script: `Client.list_runs(tra
 ## Troubleshooting
 
 - **`read_run` / trace fetch exits 1**: script prints the LangSmith error to stderr (no Python traceback).
-- **401 / unauthorized**: wrong or empty `agent.langchain_api_key` in `config.yaml`, or env fallback key does not match the LangSmith workspace for this run.
+- **401 / unauthorized**: wrong or empty `agent.langchain_api_key` in `devops/config.yaml.local` (or your `--config` file), or env fallback key does not match the LangSmith workspace for this run.
 - **404**: wrong run id, different workspace/project than the key, or run expired per org retention.
 - **Incomplete trace / 0 runs**：若传了 **`--max-runs`** 且 **`run_count`** 仍小于预期，是人为上限；若未传 **`--max-runs`** 仍偏少，核对 **`--project-name`** 是否与该 trace 所在 LangSmith 项目一致。
 - **管道 / 只要 stdout**：显式 **`-o -`**（省略 `-o` 时会写入 `.inty/` 下默认文件）。

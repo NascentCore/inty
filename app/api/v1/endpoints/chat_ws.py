@@ -7,7 +7,6 @@ Wire frames: ``app/schemas/chat_websocket.py``; outbound pump: ``app/services/ch
 
 import asyncio
 import json
-import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
@@ -85,12 +84,8 @@ from app.services.agentic_companion.presence_registry import (
     PresenceBusyError,
     companion_presence_registry,
 )
-from app.services.agentic_companion.session import (
-    Coordinator,
-    Session,
-)
+from app.services.agentic_companion.session import Session
 from app.services.agentic_companion.ws_downlink import WebSocketDownlink
-from app.db.session import AsyncSessionLocal
 from app.services.phone_call_service import (
     PhoneCallConfigError,
     PhoneCallLimitError,
@@ -106,10 +101,10 @@ from app.utils.timing import Timer, log_time
 from app.schemas.user import User as UserSchema
 
 from app.api.v1.endpoints.chat import (
-    _agent_status_line_for_chat_header,
     _build_chat_response,
     _normalize_chat_response_content,
 )
+from app.core.agent.status_line import _agent_status_line_for_chat_header
 from app.api.v1.endpoints.chat_ws_companion_support import (
     CompanionInferenceUpstreamHTTPException,
     CompanionLLMInferenceBackendError,
@@ -210,7 +205,6 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
     agent_id: str,
     preset_message_id: str,
     current_user: UserSchema,
-    app_version_code: Optional[int],
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService,
     companion_ws: CompanionWebSocketCoordinator,
@@ -410,7 +404,6 @@ async def _try_handle_ws_user_signed_on_frame(
                 agent_id=agent_id,
                 preset_message_id=preset_mid,
                 current_user=current_user,
-                app_version_code=app_version_code,
                 subscription_svc=subscription_svc,
                 voice_svc=voice_svc,
                 companion_ws=companion_ws,
@@ -557,7 +550,6 @@ async def _try_handle_ws_ws_conn_dropped_frame(
     *,
     db: AsyncSession,
     current_user: UserSchema,
-    companion_ws: CompanionWebSocketCoordinator,
     subscription_svc: SubscriptionService,
     ws_conn_id: str,
 ) -> bool:
@@ -1567,7 +1559,6 @@ async def chat_completions_websocket(
                 data,
                 db=db,
                 current_user=current_user,
-                companion_ws=companion_ws,
                 subscription_svc=subscription_svc,
                 ws_conn_id=ws_conn_id,
             ):

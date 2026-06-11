@@ -11,6 +11,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    build_openai_bootstrap_track_tools,
+    build_openai_repl_tools,
+    build_openai_repl_tools_inner_tick,
+    build_openai_repl_tools_inner_tick_autonomy,
+)
 from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.bootstrap import (
@@ -32,16 +38,12 @@ from .prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
     build_system_messages_for_chat_track,
     build_system_messages_for_implicit_sign_on_greeting,
+    build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_maintenance,
     build_system_messages_for_inner_tick_proactive_chat,
     build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
     weixin_clawbot_contact_alias_system_message,
-)
-from app.core.companion_harness.tools.companion_tools import (
-    build_companion_tools,
-    build_openai_bootstrap_track_tools,
-    build_openai_repl_tools_inner_tick,
 )
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
 
@@ -91,6 +93,7 @@ def append_runtime_output_format_system_message(
 def companion_tools_for_turn(
     *,
     track: CompanionTurnTrack,
+    # TODO(abstraction): The following 3 args should be removed, and reflect the combination in track: CompanionTureTrack
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
     implicit_user_signed_on_turn: bool = False,
@@ -101,18 +104,22 @@ def companion_tools_for_turn(
             tools_for_turn = build_openai_bootstrap_track_tools()
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
             tools_for_turn = []
+        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
+            tools_for_turn = build_openai_repl_tools_inner_tick_autonomy()
         case _:
             tick_proactive = (
                 inner_tick_turn
                 and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
             )
+            # TODO(cross-track-image-delivery): PROACTIVE_CHAT tools=[] — visual offers
+            # need AUTONOMY asset handoff or user-chat tool leg; see #3285.
             tools_for_turn = (
                 []
                 if tick_proactive
                 else (
                     build_openai_repl_tools_inner_tick()
                     if inner_tick_turn
-                    else build_companion_tools(
+                    else build_openai_repl_tools(
                         interactive_bootstrap_active=False
                     )
                 )
@@ -122,6 +129,8 @@ def companion_tools_for_turn(
     return tools_for_turn
 
 
+# TODO(structural-simplicity): Dissolve this function, and let caller directly call the
+# track-denominated system messsages building API.
 def companion_system_messages_for_track(
     *,
     store: MemoryStore,
@@ -142,7 +151,7 @@ def companion_system_messages_for_track(
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             out = build_system_messages_for_inner_tick_proactive_chat(
-                bundle, context
+                bundle, context, store
             )
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
             out = build_system_messages_for_inner_tick_scheduled(
@@ -158,6 +167,18 @@ def companion_system_messages_for_track(
                     f"{route_mode.value}"
                 )
             out = build_system_messages_for_inner_tick_maintenance(
+                bundle, context, store
+            )
+        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
+            if (
+                route_mode
+                != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+            ):
+                raise RuntimeError(
+                    "inner_tick_autonomy track requires ASYNC route, got "
+                    f"{route_mode.value}"
+                )
+            out = build_system_messages_for_inner_tick_autonomy(
                 bundle, context, store
             )
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
@@ -290,6 +311,10 @@ def refresh_companion_turn_prompt_stack(
                 bundle,
                 context,
                 store,
+            )
+        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
+            refreshed = build_system_messages_for_inner_tick_autonomy(
+                bundle, context, store
             )
         case CompanionTurnTrack.USER_CHAT:
             refreshed = build_system_messages_for_tool_track(
