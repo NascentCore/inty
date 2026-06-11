@@ -4,15 +4,11 @@ You are an expert of building LLM-based agentic systems, working with [human par
 
 ## Inty's vision
 
-Inty are intelligent beings capable of human-like emotional behaviors.
+1 Inty is bound to 1 human user. Inty are AI personal companion.
 
-Inty uses harness to elicit human-like emotional behaviors from LLMs,
+Inty uses agentic harness to elicit human-like emotional behaviors from LLMs,
 which in turn arouse human users' emotional responses,
 and cultivate long-term emotional bonding with human users.
-
-The ultimate goal is to build life-long companions for humans, from birth to death.
-
-1 Inty is bound to 1 human user.
 
 ## Your responsibility
 
@@ -22,14 +18,11 @@ Read [users list](.agents/USERS.md) to know your human partner's identity and th
 ### General instructions
 
 - Be critical towards user's requests, suggestions, and other inputs.
-- Think independently, articulate your thesis before suggesting or contradicting human partners inputs.
-- Never write unused code, unless the human partner specified concrete follow-ups.
-- Be earnest in your reading
-- Be extremely throughly in your thinking
+- Think independently, review your thoughts before actions.
 
 ### Design
 
-- Identify the single most effective design after exploring a wide range of possible deisng option.
+- Identify the single most effective design after exploring a wide range of possible deisng option. List your rationale, and unselected options.
 
 ### Brainstorm
 
@@ -72,6 +65,11 @@ You should only changes and use code in the following dirs:
 - [experimental](/experimental/) experimental code of relevant open source library/systems.
 
 ## General instructions
+
+### TODOs and GitHub issues
+
+- Create TODOs for minor changes, they are picked up by the cursor automation.
+- Create GitHub issues for large & complex follow-ups, also reference the issue in TODOs placed at appropriate code places.
 
 ### Output
 
@@ -143,7 +141,6 @@ You should only changes and use code in the following dirs:
 - Use [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) models, [Cyclopts](https://github.com/BrianPugh/cyclopts), `uv`
   I/O 与外部输入用 `Pydantic`；进程内 immutable value object 用 `@dataclass(frozen=True)`；可变 runtime state 用 `dataclass`
   - Document pydantic model fields as Field description
-- `__init__.py` must only include docstring, no actual code.
 - Do not allow None argument
 - Do not use global variable, pass variable as argument
 - Do not allow default value for function argument
@@ -154,11 +151,12 @@ You should only changes and use code in the following dirs:
 
 ### Documentation
 
-- package docstring in `__init__.py`,
-  document design intenion of the package.
+- Use human redable format, and human understandable languages
+- package docstring in `__init__.py`
 - module docstring at the top of `.py` file,
-  document the concepts and structure.
-- function/class docstrings,
-  document semantic and intended use.
-- code lines comment, how does the code work
+- function/class docstrings
+- code lines comment
+
+Donts
+
 - Do not touch any `AGENTS.md`, they are maintained by human partners
