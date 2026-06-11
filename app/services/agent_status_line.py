@@ -1,11 +1,16 @@
+"""Read ``agents.status_line`` for chat completion wire headers."""
+
+from __future__ import annotations
+
 from typing import Optional
+
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.agent import Agent
 
 
-async def _agent_status_line_for_chat_header(
+async def agent_status_line_for_chat_header(
     db: AsyncSession, agent_id: str
 ) -> Optional[str]:
     r = await db.execute(
