@@ -87,7 +87,7 @@ from .companion_tool_runtime import (
     tool_requires_client_delivery_on_success,
 )
 from .image_gate import list_image_asset_records
-from .tool_bg_routing import resolve_tool_bg_routing_sync
+from .tool_bg_routing import resolve_tool_background_finish_envelope
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
 _OUTPUT_QUEUE_LOCK = threading.Lock()
@@ -785,7 +785,9 @@ async def _run_background_tool_loop(
             tool_call_names,
             image_paths,
         )
-        routing = resolve_tool_bg_routing_sync(
+        routing = resolve_tool_background_finish_envelope(
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_activity=inner_tick_activity,
             client=resolved_client,
             model=tool_api_id,
             create_completion_sync=chat_completion_sync,

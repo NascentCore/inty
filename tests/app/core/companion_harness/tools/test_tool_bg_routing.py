@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
+from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.tools.tool_bg_routing import (
+    resolve_tool_background_finish_envelope,
     resolve_tool_bg_routing_sync,
 )
 
@@ -33,6 +35,38 @@ def _valid_envelope_dict() -> dict:
         "importance_assistant_message": 6,
         "output_to_user": True,
     }
+
+
+def test_resolve_tool_background_finish_envelope_skips_routing_for_autonomy() -> None:
+    create_sync = MagicMock()
+    out = resolve_tool_background_finish_envelope(
+        inner_tick_turn=True,
+        inner_tick_activity=InnerTickActivity.AUTONOMY,
+        client=None,
+        model="m",
+        create_completion_sync=create_sync,
+        conversation_messages=[],
+        final_assistant_content="无",
+    )
+    create_sync.assert_not_called()
+    assert out.output_to_user is False
+    assert out.user_facing_reply == ""
+    assert out.importance_round == 5
+
+
+def test_resolve_tool_background_finish_envelope_routes_for_maintenance() -> None:
+    create_sync = MagicMock(return_value=_completion_response("not json"))
+    out = resolve_tool_background_finish_envelope(
+        inner_tick_turn=True,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        client=None,
+        model="m",
+        create_completion_sync=create_sync,
+        conversation_messages=[],
+        final_assistant_content="not envelope",
+    )
+    create_sync.assert_called_once()
+    assert out.output_to_user is False
 
 
 def test_resolve_tool_bg_routing_uses_final_assistant_json() -> None:

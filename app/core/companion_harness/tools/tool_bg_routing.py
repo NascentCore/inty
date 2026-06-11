@@ -19,6 +19,10 @@ from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     parse_dual_llm_chat_envelope_from_message,
     parse_dual_llm_chat_envelope_json,
 )
+from app.core.companion_harness.companion.models import (
+    InnerTickActivity,
+    inner_tick_activity_suppresses_user_delivery,
+)
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
     tool_call_langsmith_extra,
@@ -46,6 +50,43 @@ def _conservative_tool_finish_envelope() -> DualLlmChatBranchEnvelope:
         importance_user_message=5,
         importance_assistant_message=5,
         output_to_user=False,
+    )
+
+
+def resolve_tool_background_finish_envelope(
+    *,
+    inner_tick_turn: bool,
+    inner_tick_activity: InnerTickActivity,
+    client: Any,
+    model: str,
+    create_completion_sync: Any,
+    conversation_messages: list[dict[str, Any]],
+    final_assistant_content: str,
+    trace_id: str | None = None,
+) -> DualLlmChatBranchEnvelope:
+    """Resolve tool_background finish envelope.
+
+    Inner-tick activities that suppress client delivery (``AUTONOMY``) never need
+    routing LLM: ``output_to_user`` and recap text do not affect WS or transcript policy.
+    """
+    tid = trace_id or "-"
+    if inner_tick_turn and inner_tick_activity_suppresses_user_delivery(
+        inner_tick_activity
+    ):
+        logger.debug(
+            "tool_bg_routing trace_id={} source=delivery_suppressed_skip_routing "
+            "inner_tick_activity={}",
+            tid,
+            inner_tick_activity.value,
+        )
+        return _conservative_tool_finish_envelope()
+    return resolve_tool_bg_routing_sync(
+        client=client,
+        model=model,
+        create_completion_sync=create_completion_sync,
+        conversation_messages=conversation_messages,
+        final_assistant_content=final_assistant_content,
+        trace_id=trace_id,
     )
 
 
