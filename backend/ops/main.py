@@ -22,7 +22,9 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.api.deps import get_async_db
 from app.api.utils.health_check_payload import build_health_check_data
 from backend.ops.api.evaluation_web import configure_evaluation_web_routes
+from backend.ops.api.telegram_demo_web import configure_telegram_demo_web_routes
 from backend.ops.api.weixin_web import configure_weixin_web_routes
+from backend.ops.telegram_demo import start_telegram_demo, stop_telegram_demo
 from backend.ops.weixin_session.session_store import restore_persisted_sessions
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
@@ -102,6 +104,7 @@ configure_evaluation_web_routes(
     api_only_mode_enabled=False,
 )
 configure_weixin_web_routes(app=app)
+configure_telegram_demo_web_routes(app=app)
 
 init_firebase()
 
@@ -128,6 +131,8 @@ async def startup_event():
         logger.info("Ops Agent 初始化完成")
         await restore_persisted_sessions()
         logger.info("Weixin bridge restore scheduled")
+        await start_telegram_demo()
+        logger.info("Telegram demo poll scheduled")
     except Exception as e:
         logger.error(f"Ops 应用启动过程中出错: {str(e)}")
 
@@ -177,6 +182,7 @@ async def _preload_popular_agent_data(db: AsyncSession):
 @app.on_event("shutdown")
 async def shutdown_event():
     try:
+        await stop_telegram_demo()
         from app.core.companion_harness.companion.websocket_coordinator import (
             ChatWsInflightShutdownRegistry,
         )

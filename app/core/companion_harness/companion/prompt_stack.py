@@ -67,7 +67,7 @@ def output_format_prompt_slice_for_runtime_channel(
     match runtime_channel:
         case CompanionRuntimeChannel.WECHAT_WEIXIN:
             return bundle.output_format_wechat_weixin_md
-        case CompanionRuntimeChannel.APP:
+        case CompanionRuntimeChannel.APP | CompanionRuntimeChannel.TELEGRAM:
             return ""
 
 

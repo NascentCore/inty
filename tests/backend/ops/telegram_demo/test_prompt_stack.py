@@ -1,0 +1,59 @@
+"""Tests for TELEGRAM runtime channel prompt stack."""
+
+from __future__ import annotations
+
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    ContextMeta,
+)
+from app.core.companion_harness.companion.prompt_stack import (
+    companion_system_messages_for_track,
+    output_format_prompt_slice_for_runtime_channel,
+)
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
+from app.core.companion_harness.companion.turn_routes import TurnRouteMode
+from app.core.companion_harness.prompting.bundle import PromptBundle
+
+
+def _bundle() -> PromptBundle:
+    return PromptBundle(
+        identity="identity",
+        soul="soul",
+        style_md="style",
+        user_md="user",
+        memory_md="memory",
+    )
+
+
+def test_telegram_output_format_empty_like_app() -> None:
+    bundle = _bundle()
+    assert (
+        output_format_prompt_slice_for_runtime_channel(
+            bundle=bundle,
+            runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+        )
+        == ""
+    )
+
+
+def test_telegram_system_messages_exclude_weixin_alias() -> None:
+    bundle = _bundle()
+    messages = companion_system_messages_for_track(
+        store=None,  # type: ignore[arg-type]
+        bundle=bundle,
+        context=ContextMeta(),
+        memory_bootstrap_type="none",
+        track=CompanionTurnTrack.USER_CHAT,
+        route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
+        runtime_context=TurnRuntimeContext(
+            channel=CompanionRuntimeChannel.TELEGRAM,
+            implicit_signal_bundle=None,
+        ),
+    )
+    system_text = "\n".join(
+        str(m.get("content", "")) for m in messages if m.get("role") == "system"
+    )
+    assert "Weixin / ClawBot 联系人显示名" not in system_text

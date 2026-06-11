@@ -85,6 +85,11 @@ from app.services.agentic_companion.presence_registry import (
     companion_presence_registry,
 )
 from app.services.agentic_companion.session import Session
+from app.services.agentic_companion.ws_channel_guard import (
+    register_app_ws_channel,
+    unregister_app_ws_channel,
+    ws_reject_reason_if_telegram_active,
+)
 from app.services.agentic_companion.ws_downlink import WebSocketDownlink
 from app.services.phone_call_service import (
     PhoneCallConfigError,
@@ -1363,6 +1368,14 @@ async def chat_completions_websocket(
         db=db,
     )
 
+    telegram_ws_reject = ws_reject_reason_if_telegram_active(
+        user_id=str(current_user.id)
+    )
+    if telegram_ws_reject is not None:
+        await websocket.close(code=4003, reason=telegram_ws_reject[:123])
+        return
+    register_app_ws_channel(user_id=str(current_user.id))
+
     app_version_code_header = websocket.headers.get("appVersionCode")
     app_version_code = (
         int(app_version_code_header)
@@ -1650,6 +1663,7 @@ async def chat_completions_websocket(
     except WebSocketDisconnect:
         return
     finally:
+        unregister_app_ws_channel(user_id=str(current_user.id))
         logger.info(
             "chat_ws session_end ws_conn_id={} user={}",
             ws_conn_id,

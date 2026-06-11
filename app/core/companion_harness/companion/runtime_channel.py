@@ -13,6 +13,7 @@ class CompanionRuntimeChannel(StrEnum):
 
     APP = "app"
     WECHAT_WEIXIN = "wechat_weixin"
+    TELEGRAM = "telegram"
 
 
 @dataclass(frozen=True)
