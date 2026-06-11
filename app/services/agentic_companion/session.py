@@ -356,14 +356,18 @@ class Session:
                     break
                 except asyncio.TimeoutError:
                     pass
+                if self._inner_tick_stop.is_set():
+                    break
                 inner_tick_snapshot: dict[str, Any] | None = None
                 async with self.coordinator.turn_lock:
+                    if self._inner_tick_stop.is_set():
+                        break
                     inner_tick_snapshot = (
                         self.coordinator.snapshot_inner_tick_coords()
                     )
                     if inner_tick_snapshot is not None:
                         self.coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
-                if inner_tick_snapshot is None:
+                if inner_tick_snapshot is None or self._inner_tick_stop.is_set():
                     continue
                 await run_one_poll(inner_tick_snapshot)
 
