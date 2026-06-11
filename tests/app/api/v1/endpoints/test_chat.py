@@ -319,7 +319,7 @@ def _stub_success_chat_completion_with_premium_preview(
         return {
             "id": message_id,
             "meta_data": {"source": "unit-test"},
-            "timestamp": 1735689600000,
+            "timestamp": "2025-01-01T00:00:00+00:00",
             "audio_url": None,
         }
 
@@ -980,7 +980,7 @@ def _setup_companion_ws_chat_test_env(
         return {
             "id": message_id,
             "meta_data": md,
-            "timestamp": 1735689600000,
+            "timestamp": "2025-01-01T00:00:00+00:00",
             "audio_url": None,
         }
 
@@ -1268,7 +1268,7 @@ def test_chat_completions_companion_kernel_branch_writes_history(
         return {
             "id": message_id,
             "meta_data": {},
-            "timestamp": 1735689600000,
+            "timestamp": "2025-01-01T00:00:00+00:00",
             "audio_url": None,
         }
 
@@ -1457,7 +1457,7 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
         return {
             "id": message_id,
             "meta_data": dict(captured.get("last_ai_meta") or {}),
-            "timestamp": 1735689600000,
+            "timestamp": "2025-01-01T00:00:00+00:00",
             "audio_url": None,
         }
 
