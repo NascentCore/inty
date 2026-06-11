@@ -128,6 +128,8 @@ class Coordinator:
     foreground_pending: dict[str, dict[str, Any]] = field(default_factory=dict)
     # TODO(data-type-abstraction): Change this to a dataclass.
     inner_tick_context: dict[str, Any] = field(default_factory=dict)
+    # TODO(#3314): Replace per-track lingering-work fields with one lifecycle-owned
+    # background work registry / structured-concurrency scope.
     _inner_tick_proactive_tool_bg_idle: threading.Event | None = field(
         default=None, repr=False
     )
@@ -366,6 +368,8 @@ class Session:
                         self.coordinator.snapshot_inner_tick_coords()
                     )
                     if inner_tick_snapshot is not None:
+                        # TODO(#3314): Move opportunistic cleanup out of the poll loop;
+                        # completed background work should prune itself via registry callbacks.
                         self.coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
                 if inner_tick_snapshot is None or self._inner_tick_stop.is_set():
                     continue
@@ -383,4 +387,6 @@ class Session:
         self._inner_tick_task = None
         if task is not None and (not task.done()):
             await asyncio.gather(task, return_exceptions=True)
+        # TODO(#3314): Session shutdown should cancel/drain every registered
+        # lifecycle child, not only the poll worker and implicit greeting task.
         await self.cancel_implicit_greeting_if_running()
