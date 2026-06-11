@@ -8,6 +8,12 @@ Companion Harness 是陪伴智能体的工作框架：以会话上下文、长�
 
 - [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）
 
+### 推理编排显式化（参考 [Pie](https://pie-project.org/) 研究）
+
+- [ ] 把各 `CompanionTurnTrack` 收成可组合的 **turn program spec**（允许的 LLM 调用序列、可写 memory 范围、与 `AwakeTurn` / `DreamingBatch` 相位对齐），减少 `run_turn` / `prompt_stack` 隐式分支
+- [ ] 在 `prompt_stack` 层区分 **stable prefix**（SOUL / IDENTITY / STYLE / 长期 MemoryDoc）与 **volatile suffix**（近期 transcript / tool delta），为 provider prefix caching 与远期 KV 复用预留 seam
+- [ ] 为 `tool_background` 引入 per-session **scratch working memory**（MemoryStore 文档或 JSONL delta），避免每轮 tool loop 重读整段 transcript
+
 ## 目标态
 
 Companion Harness 的目标是为用户提供长期关系中的“虚拟活人”体验。后端内核必须把以下能力视为一套连续系统：
@@ -192,8 +198,53 @@ flowchart TD
 - 指标维度：inbound latency、LLM latency、dispatch latency、retry count、drop count。
 - 错误分级：transient vs terminal。
 
+## 推理编排与外部参考（Pie）
+
+[Pie](https://pie-project.org/)（*A Programmable Serving System for Emerging LLM Applications*，[arXiv:2510.24051](https://arxiv.org/html/2510.24051v1)）主张 **「Serve programs, not prompts」**：把传统 monolithic decode loop 拆成细粒度 handler（embed / forward / sample / KV-page alloc），由用户程序 **inferlet**（Wasm）在 serving 引擎内编排 KV cache、forward pass 与 I/O。Pie 是 **自托管 GPU inference 基础设施**；Inty companion harness 是 **远程 OpenAI-compatible API + Python 编排应用层**——层级不同，但编排哲学与 harness 多 track 设计同构，下列对照用于指导演进方向，**不表示当前应部署 Pie server**。
+
+### 层级对照
+
+| Pie 概念 | Inty 现状 | 契合度 |
+| --- | --- | --- |
+| inferlet = 用户定义的推理程序 | `CompanionTurnTrack` + `TurnRouteMode` + `run_turn` | 高（应用层已在实践） |
+| KV cache `fork` / `rewind` / prefix sharing | 每轮重建 `prompt_stack`，全量 `messages` 重发远程 API | 低（无 KV 控制） |
+| 引擎内 integrated tool loop | `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`：foreground chat + `tool_background` 线程 | 中（用户感知延迟 trade-off 一致，实现跨进程/HTTP） |
+| grammar / logit mask 约束 decode | `DualLlmChatBranchEnvelope` + `response_format` JSON schema | 中（schema 层；模型仍可能 drift） |
+| cache as session | `MemoryStore` + transcript JSONL + MemoryDoc 版本表 | 中（语义层 session，非物理 KV） |
+| 多 inferlet pub/sub | LivingSphere / TechnoCore 独立 runtime | 低（尚无统一 harness 间 event bus） |
+
+### 已与 Pie 哲学对齐的现有设计
+
+- **可编程 workflow，非固定 pipeline**：`turn_routes.py` 按 track 解析 `TurnRouteMode`；tools 启用时固定走 foreground envelope + background tool 分叉，而非单一 chat completion 黑盒。
+- **低延迟与慢思考并存**：foreground 先返回 `user_facing_reply`；`tool_background` 在独立线程跑 tool-model loop，结果经 transcript digest 与可见 WS 补帧进入下一轮上下文（见 `turn.py` 模块说明）。
+- **记忆相位不变量**：`AwakeTurn` 只 append transcript / tool 副作用；`DreamingBatch` 才 batch 策展 MemoryDoc——等价于 Pie 式「热路径 append-only、冷路径 consolidate」，只是实现落在应用 memory phase 而非 KV rewind。
+- **多 invocation track**：user chat、bootstrap、greeting、proactive chat、inner-tick maintenance、dreaming 共享 companion scope，但 prompt 入口与持久化轨不同（见 `companion/AGENTS.md`）。
+
+### 应用层可演进方向（不依赖 Pie / 自托管）
+
+1. **Turn program spec**：把各 track 的 LLM 调用序列、可写 memory 范围、是否允许 `tool_background` 写成显式 contract，收敛本文「非目标」里「不把 `run_turn` 分支当最终编排抽象」的缺口。
+2. **Stable / volatile prompt 分层**：stable prefix 跨轮不变（人格 + 长期 MemoryDoc）；volatile suffix 只携带近期 transcript 与 tool delta。关系越长，越能降低重复 token 成本并为将来 prefix caching 留接口。
+3. **Scratch working memory**：为 `tool_background` 维护 per-session 工作区文档（类比 Pie `/scratch`），tool 结果写 delta 而非每轮重灌整段 history。
+4. **Logical context fork**：用户 chat 进行中，maintenance / dreaming 可在「共享人格 prefix、独立 suffix」的逻辑分支上推进 `ai_private.jsonl` 或 MemoryDoc 策展，而不阻塞 foreground `turn_lock`——编排层概念，非 Pie 物理 KV `fork()`。
+5. **Harness 间 event bus**：LivingSphere / TechnoCore 与 companion 核心通过 topic contract 交换世界事件，替代零散跨模块调用（对齐 Pie 多 inferlet messaging，见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)）。
+
+### 远期选项（自托管或专用 inference endpoint 时）
+
+- **Prefix KV cache**：1:1 用户–companion 长关系中，SOUL / IDENTITY / STYLE 的 KV 态跨轮复用，显著降低 prefill 成本。
+- **Integrated tool loop**：tool 调用后不 re-prefill 全量 history，在单 inference session 内继续 decode——直接缓解 `tool_background` 多轮 HTTP round-trip 延迟（Pie 论文 agentic workflow 1.3×–3.4× 收益主要来源）。
+- **Token-level envelope 约束**：对 `DualLlmChatBranchEnvelope` 在 decode 层硬约束 JSON，降低 `output_to_user` drift 与 parse 失败率。
+
+### 现阶段非目标（prototype 对齐 `companion_harness/AGENTS.md`）
+
+- 部署 Pie server 或替换当前 OpenRouter / Gemini 远程 API 路线。
+- Tree-of-Thought、MCTS、speculative decoding 等推理 benchmark 优化。
+- Wasm inferlet 沙箱——Inty harness 以 Python + Pydantic 契约为真源。
+- KV `rewind` 做「后悔 / 重说」——长期伴侣需要 continuity，而非游戏式分支回滚。
+
 ## See also
 
+- [Pie](https://pie-project.org/) · [arXiv:2510.24051](https://arxiv.org/html/2510.24051v1) — 可编程 LLM serving 参考
+- [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — 其他灵感条目
 - [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — 多 agent 虚拟世界、共享 AgentHarness、sub-agent（firefly）目标态与两期交付
 - [REFACTOR_PLAN.md](./REFACTOR_PLAN.md) — 包拆分与 `runtime/` / `environment/` 目标结构
 - [AUTONOMY.md](./AUTONOMY.md) · [PRODUCT_DESIGN.md](./PRODUCT_DESIGN.md)
