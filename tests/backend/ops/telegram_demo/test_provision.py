@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 import pytest
@@ -134,3 +135,34 @@ async def test_provision_onboard_rejects_channel_user_id_mismatch() -> None:
             channel_user_id=f"other-{uuid.uuid4().hex}",
         )
     await _cleanup_user(first.scope.user_id)
+
+
+@pytest.mark.asyncio
+async def test_concurrent_provision_single_endpoint_no_orphan_users() -> None:
+    address = f"tg-{uuid.uuid4().hex}"
+    channel_user_id = f"tu-{uuid.uuid4().hex}"
+    results = await asyncio.gather(
+        provision_agent_for_channel_onboard(
+            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel_address=address,
+            channel_user_id=channel_user_id,
+        ),
+        provision_agent_for_channel_onboard(
+            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel_address=address,
+            channel_user_id=channel_user_id,
+        ),
+    )
+    assert results[0].scope == results[1].scope
+    assert sum(1 for r in results if r.is_new_user) == 1
+    async with AsyncSessionLocal() as db:
+        endpoint_rows = await db.execute(
+            select(AgentChannelEndpoint).where(
+                AgentChannelEndpoint.channel_address == address
+            )
+        )
+        endpoints = endpoint_rows.scalars().all()
+        assert len(endpoints) == 1
+        assert endpoints[0].user_id == results[0].scope.user_id
+        assert endpoints[0].agent_id == results[0].scope.agent_id
+    await _cleanup_user(results[0].scope.user_id)

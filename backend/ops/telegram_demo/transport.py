@@ -172,6 +172,13 @@ class TelegramTransport:
             )
         except (ValueError, ChannelEndpointConflictError) as exc:
             return str(exc)
+        if not provision.is_new_user:
+            await self._ensure_active(
+                inbound=inbound,
+                scope=provision.scope,
+                reason="onboard_returning",
+            )
+            return _WELCOME_RETURNING
         return await self._activate_provision(
             inbound=inbound,
             provision=provision,
@@ -195,7 +202,6 @@ class TelegramTransport:
             api=self._api,
             reason="onboard",
         )
-        assert provision.is_new_user is True
         return _WELCOME_NEW
 
     async def _ensure_active(

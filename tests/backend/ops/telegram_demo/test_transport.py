@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 import uuid
@@ -25,6 +26,7 @@ from app.models.agent_channel_endpoint import AgentChannelEndpoint
 from app.models.registry import load_model_modules
 from app.models.user import User
 from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
+from app.services.agentic_channel.endpoints import resolve_scope
 from app.services.agentic_channel.presence import clear_presences_for_tests
 from app.services.agentic_channel.provision import provision_agent_for_channel_onboard
 from backend.ops.telegram_demo import session_store
@@ -140,3 +142,30 @@ async def test_handle_inbound_unknown_chat_prompts_onboard() -> None:
     )
     reply = await transport._handle_inbound(inbound)
     assert "onboard" in reply
+
+
+@pytest.mark.asyncio
+async def test_concurrent_onboard_both_welcome_without_assert() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-race-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    api = TelegramBotApi(bot_token="race-test-token", urlopen=_fake_urlopen)
+    transport = TelegramTransport(api=api)
+    inbound = TelegramIncomingMessage(
+        update_id=10,
+        chat_id=telegram_chat_id,
+        channel_user_id=channel_user_id,
+        text="/start onboard",
+        local_received_at=time.time(),
+    )
+    replies = await asyncio.gather(
+        transport._handle_onboard(inbound=inbound),
+        transport._handle_onboard(inbound=inbound),
+    )
+    assert all("欢迎" in reply for reply in replies)
+    scope = await resolve_scope(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=telegram_chat_id,
+    )
+    assert scope is not None
+    await _cleanup_scope(scope)

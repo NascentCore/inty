@@ -6,6 +6,7 @@ import uuid
 from dataclasses import dataclass
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
@@ -16,14 +17,13 @@ from app.core.model_selection import select_chat_model
 from app.core.uuid import get_new_user_id
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent, AgentVisibility
-from app.models.user import AuthType, User
+from app.models.user import AuthType, Gender, User
 from app.schemas.agent import AgentCreate
-from app.services import agent_service
 from app.services.agentic_channel.endpoints import (
     assert_inbound_endpoint_identity,
-    bind_endpoint,
     resolve_scope,
     resolve_scope_by_channel_user_id,
+    upsert_endpoint_in_session,
 )
 from app.services.agentic_channel.errors import ChannelEndpointConflictError
 from app.services.agentic_channel.turn import ensure_memory_store_session
@@ -51,7 +51,7 @@ def _default_agent_create(*, tag: str) -> AgentCreate:
     )
 
 
-async def _create_guest_user(db: AsyncSession) -> User:
+async def _add_guest_user(db: AsyncSession) -> User:
     user_id = get_new_user_id()
     readable_id = await generate_next_readable_id(db)
     suffix = user_id[-8:]
@@ -63,9 +63,34 @@ async def _create_guest_user(db: AsyncSession) -> User:
         meta_data={"agent_channel": True},
     )
     db.add(user)
-    await db.commit()
-    await db.refresh(user)
     return user
+
+
+async def _add_channel_agent(
+    db: AsyncSession,
+    *,
+    user_id: str,
+    tag: str,
+) -> Agent:
+    assert user_id != ""
+    assert tag != ""
+    agent_in = _default_agent_create(tag=tag)
+    agent_id = str(uuid.uuid4())
+    readable_id = await generate_next_readable_id(db)
+    agent = Agent(
+        id=agent_id,
+        readable_id=readable_id,
+        name=agent_in.name,
+        gender=Gender.FEMALE,
+        intro=agent_in.intro,
+        opening=agent_in.opening,
+        personality=agent_in.personality,
+        scenario=agent_in.scenario,
+        visibility=AgentVisibility.PRIVATE,
+        creator_id=user_id,
+    )
+    db.add(agent)
+    return agent
 
 
 async def _first_private_agent_for_user(
@@ -84,6 +109,38 @@ async def _first_private_agent_for_user(
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def _provision_result_after_bind_race(
+    *,
+    channel: CompanionRuntimeChannel,
+    channel_address: str,
+    channel_user_id: str,
+) -> ChannelProvisionResult:
+    """Return existing scope when a concurrent transaction won the endpoint insert."""
+    raced = await resolve_scope(
+        channel=channel, channel_address=channel_address
+    )
+    if raced is None:
+        raced = await resolve_scope_by_channel_user_id(
+            channel=channel, channel_user_id=channel_user_id
+        )
+    if raced is None:
+        raise ChannelEndpointConflictError(
+            "endpoint bind violates unique constraint"
+        )
+    await assert_inbound_endpoint_identity(
+        channel=channel,
+        channel_address=channel_address,
+        channel_user_id=channel_user_id,
+    )
+    await ensure_memory_store_session(raced)
+    return ChannelProvisionResult(
+        scope=raced,
+        is_new_user=False,
+        channel_address=channel_address,
+        channel_user_id=channel_user_id,
+    )
 
 
 async def provision_agent_for_channel_onboard(
@@ -135,26 +192,34 @@ async def provision_agent_for_channel_onboard(
         )
 
     async with AsyncSessionLocal() as db:
-        user = await _create_guest_user(db)
-        is_new_user = True
-        tag = uuid.uuid4().hex[:10]
-        agent = await agent_service.create_agent(
-            db,
-            agent_in=_default_agent_create(tag=tag),
-            user_id=user.id,
-        )
-        scope = AgentScope(user_id=user.id, agent_id=agent.id)
+        try:
+            user = await _add_guest_user(db)
+            tag = uuid.uuid4().hex[:10]
+            agent = await _add_channel_agent(db, user_id=user.id, tag=tag)
+            scope = AgentScope(user_id=user.id, agent_id=agent.id)
+            await upsert_endpoint_in_session(
+                db,
+                scope,
+                channel=channel,
+                channel_address=channel_address,
+                channel_user_id=channel_user_id,
+            )
+            await db.commit()
+        except ChannelEndpointConflictError:
+            await db.rollback()
+            raise
+        except IntegrityError as exc:
+            await db.rollback()
+            return await _provision_result_after_bind_race(
+                channel=channel,
+                channel_address=channel_address,
+                channel_user_id=channel_user_id,
+            )
 
-    await bind_endpoint(
-        scope,
-        channel=channel,
-        channel_address=channel_address,
-        channel_user_id=channel_user_id,
-    )
     await ensure_memory_store_session(scope)
     return ChannelProvisionResult(
         scope=scope,
-        is_new_user=is_new_user,
+        is_new_user=True,
         channel_address=channel_address,
         channel_user_id=channel_user_id,
     )
@@ -194,15 +259,28 @@ async def provision_agent_for_existing_agent(
         if agent is None:
             raise ValueError(f"companion agent not found: {agent_id}")
 
-        user = await _create_guest_user(db)
-        scope = AgentScope(user_id=user.id, agent_id=agent_id)
+        try:
+            user = await _add_guest_user(db)
+            scope = AgentScope(user_id=user.id, agent_id=agent_id)
+            await upsert_endpoint_in_session(
+                db,
+                scope,
+                channel=channel,
+                channel_address=channel_address,
+                channel_user_id=channel_user_id,
+            )
+            await db.commit()
+        except ChannelEndpointConflictError:
+            await db.rollback()
+            raise
+        except IntegrityError:
+            await db.rollback()
+            return await _provision_result_after_bind_race(
+                channel=channel,
+                channel_address=channel_address,
+                channel_user_id=channel_user_id,
+            )
 
-    await bind_endpoint(
-        scope,
-        channel=channel,
-        channel_address=channel_address,
-        channel_user_id=channel_user_id,
-    )
     await ensure_memory_store_session(scope)
     return ChannelProvisionResult(
         scope=scope,

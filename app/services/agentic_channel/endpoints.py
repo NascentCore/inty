@@ -121,6 +121,58 @@ def _assert_bind_compatible(
             )
 
 
+async def upsert_endpoint_in_session(
+    db: AsyncSession,
+    scope: AgentScope,
+    *,
+    channel: CompanionRuntimeChannel,
+    channel_address: str,
+    channel_user_id: str,
+) -> AgentChannelEndpoint:
+    """Upsert endpoint row in ``db`` without committing."""
+    assert scope.user_id != ""
+    assert scope.agent_id != ""
+    assert channel_address != ""
+    assert channel_user_id != ""
+
+    by_address = await _find_by_address(
+        db, channel=channel, channel_address=channel_address
+    )
+    by_user = await _find_by_channel_user_id(
+        db, channel=channel, channel_user_id=channel_user_id
+    )
+    by_agent = await _find_by_agent_channel(
+        db, agent_id=scope.agent_id, channel=channel
+    )
+    _assert_bind_compatible(
+        scope=scope,
+        channel=channel,
+        channel_address=channel_address,
+        channel_user_id=channel_user_id,
+        by_address=by_address,
+        by_user=by_user,
+        by_agent=by_agent,
+    )
+
+    row = by_agent or by_address or by_user
+    if row is None:
+        row = AgentChannelEndpoint(
+            id=str(uuid.uuid4()),
+            user_id=scope.user_id,
+            agent_id=scope.agent_id,
+            channel=channel.value,
+            channel_address=channel_address,
+            channel_user_id=channel_user_id,
+        )
+        db.add(row)
+    else:
+        row.user_id = scope.user_id
+        row.agent_id = scope.agent_id
+        row.channel_address = channel_address
+        row.channel_user_id = channel_user_id
+    return row
+
+
 async def bind_endpoint(
     scope: AgentScope,
     *,
@@ -129,48 +181,14 @@ async def bind_endpoint(
     channel_user_id: str,
 ) -> EndpointRecord:
     """Upsert endpoint for ``scope``; enforce channel human ↔ Inty user 1:1."""
-    assert scope.user_id != ""
-    assert scope.agent_id != ""
-    assert channel_address != ""
-    assert channel_user_id != ""
-
     async with AsyncSessionLocal() as db:
-        by_address = await _find_by_address(
-            db, channel=channel, channel_address=channel_address
-        )
-        by_user = await _find_by_channel_user_id(
-            db, channel=channel, channel_user_id=channel_user_id
-        )
-        by_agent = await _find_by_agent_channel(
-            db, agent_id=scope.agent_id, channel=channel
-        )
-        _assert_bind_compatible(
-            scope=scope,
+        row = await upsert_endpoint_in_session(
+            db,
+            scope,
             channel=channel,
             channel_address=channel_address,
             channel_user_id=channel_user_id,
-            by_address=by_address,
-            by_user=by_user,
-            by_agent=by_agent,
         )
-
-        row = by_agent or by_address or by_user
-        if row is None:
-            row = AgentChannelEndpoint(
-                id=str(uuid.uuid4()),
-                user_id=scope.user_id,
-                agent_id=scope.agent_id,
-                channel=channel.value,
-                channel_address=channel_address,
-                channel_user_id=channel_user_id,
-            )
-            db.add(row)
-        else:
-            row.user_id = scope.user_id
-            row.agent_id = scope.agent_id
-            row.channel_address = channel_address
-            row.channel_user_id = channel_user_id
-
         try:
             await db.commit()
             await db.refresh(row)
