@@ -47,9 +47,9 @@ _TELEGRAM_DEMO_HTML = """<!DOCTYPE html>
       const imgUrl = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data="
         + encodeURIComponent(url);
       document.getElementById("qr").innerHTML =
-        "<p>团队 QR / 链接：</p>"
-        + "<p><a href=\"" + url + "\" target=\"_blank\" rel=\"noopener\">" + url + "</a></p>"
-        + "<img alt=\"QR\" src=\"" + imgUrl + "\" />";
+        '<p>团队 QR / 链接：</p>'
+        + '<p><a href="' + url + '" target="_blank" rel="noopener">' + url + '</a></p>'
+        + '<img alt="QR" src="' + imgUrl + '" />';
     }
 
     async function loadBotInfo() {

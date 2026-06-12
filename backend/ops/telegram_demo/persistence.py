@@ -66,6 +66,7 @@ async def upsert_binding(binding: TelegramDemoBinding) -> None:
             raise
 
 
+# TODO(telegram-demo-unbind): Wire to transport unbind + stop presence — #3340
 async def delete_binding(telegram_chat_id: str) -> None:
     assert telegram_chat_id != ""
     async with AsyncSessionLocal() as db:

@@ -38,12 +38,15 @@ async def put_binding(binding: TelegramDemoBinding) -> None:
     await persist_binding_row(binding)
 
 
+# TODO(telegram-demo-unbind): call from transport unbind before ``delete_binding`` — #3340
 def remove_binding(telegram_chat_id: str) -> None:
     assert telegram_chat_id != ""
     _bindings_by_chat_id.pop(telegram_chat_id, None)
     _presences_by_chat_id.pop(telegram_chat_id, None)
 
 
+# TODO(telegram-demo-ensure-presence): Replace with ``ensure_presence``; uninited return breaks
+# inner-tick/tool_bg — #3338
 def get_or_create_presence(
     binding: TelegramDemoBinding,
 ) -> TelegramInprocessPresence:
@@ -56,6 +59,7 @@ def get_or_create_presence(
     return presence
 
 
+# TODO(telegram-demo-ensure-presence): Merge into single ``ensure_presence`` entry — #3338
 async def start_presence(
     binding: TelegramDemoBinding,
     *,
@@ -83,6 +87,8 @@ async def stop_all_presences() -> None:
 async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
     """Reload Postgres bindings and restart presences after Ops restart."""
     assert api is not None
+    # TODO(telegram-demo-restore-parallel): ``create_task`` per binding like Weixin — #3339
+    # TODO(telegram-demo-ensure-presence): do not ``_put_binding_memory`` until presence starts — #3338
     records = await list_bindings()
     for record in records:
         binding = record.to_demo_binding()

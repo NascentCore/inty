@@ -119,12 +119,14 @@ class TelegramTransport:
                 "请先打开 Ops /telegram-demo 页面扫码，"
                 "或在对话中发送 /start onboard 完成绑定。"
             )
+        # TODO(telegram-demo-ensure-presence): ``await ensure_presence(binding, api)`` — #3338
         presence = get_or_create_presence(binding)
         return await presence.handle_user_text(inbound.text)
 
     async def _handle_onboard(self, *, telegram_chat_id: str) -> str:
         existing = get_binding(telegram_chat_id)
         if existing is not None:
+            # TODO(telegram-demo-ensure-presence): heal dead presence via ``ensure_presence`` — #3338
             return "欢迎回来！已绑定 companion，可以直接发消息聊天。"
         try:
             provision = await provision_inty_for_telegram_onboard(
@@ -182,6 +184,7 @@ class TelegramTransport:
             user_id=provision.user_id,
             channel=ActiveRuntimeChannel.TELEGRAM,
         )
+        # TODO(telegram-demo-ensure-presence): ``await ensure_presence(binding, api)`` — #3338
         await start_presence(binding, api=self._api)
         if provision.is_new_user:
             return (
