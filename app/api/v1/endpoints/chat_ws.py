@@ -1313,7 +1313,9 @@ async def _agent_chat_ws_completions_impl(
         timing_message = request_handling_timer.stop()
         logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")
 
-        payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
+        payload = APIResponse.success(
+            data=completion.model_dump(exclude_none=True)
+        )
         sl = await _agent_status_line_for_chat_header(db, agent_id)
         out = payload.model_dump(exclude_none=True)
         out["status_line"] = sl

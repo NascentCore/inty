@@ -103,12 +103,18 @@ def _assert_bind_compatible(
             f"channel_user_id already bound to another Inty user on {channel.value}"
         )
     if by_address is not None:
-        if by_address.user_id != scope.user_id or by_address.agent_id != scope.agent_id:
+        if (
+            by_address.user_id != scope.user_id
+            or by_address.agent_id != scope.agent_id
+        ):
             raise ChannelEndpointConflictError(
                 f"channel_address already bound to another scope on {channel.value}"
             )
     if by_agent is not None:
-        if by_agent.user_id != scope.user_id or by_agent.agent_id != scope.agent_id:
+        if (
+            by_agent.user_id != scope.user_id
+            or by_agent.agent_id != scope.agent_id
+        ):
             raise ChannelEndpointConflictError(
                 f"agent already has a different endpoint on {channel.value}"
             )

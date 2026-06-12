@@ -58,7 +58,9 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(["agent_id"], ["agents.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["agent_id"], ["agents.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["chat_id"], ["chats.id"]),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
         sa.PrimaryKeyConstraint("telegram_chat_id"),

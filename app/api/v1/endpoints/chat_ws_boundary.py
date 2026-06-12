@@ -89,7 +89,10 @@ def module_app_core_imports_outside_allowlist(
     for mod in module_import_module_names(relative_path):
         if not mod.startswith("app.core."):
             continue
-        if any(mod.startswith(prefix) for prefix in CHAT_WS_ALLOWED_APP_CORE_PREFIXES):
+        if any(
+            mod.startswith(prefix)
+            for prefix in CHAT_WS_ALLOWED_APP_CORE_PREFIXES
+        ):
             continue
         hits.append(mod)
     return sorted(set(hits))

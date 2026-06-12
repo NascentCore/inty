@@ -31,7 +31,9 @@ class TelegramBindingRow(BaseModel):
 
 class TelegramBindingsData(BaseModel):
     count: int = Field(description="Number of persisted bindings")
-    bindings: list[TelegramBindingRow] = Field(description="Active binding rows")
+    bindings: list[TelegramBindingRow] = Field(
+        description="Active binding rows"
+    )
 
 
 @router.get("/bot-info", response_model=APIResponse[TelegramBotInfoData])

@@ -16,7 +16,9 @@ from app.external_services.telegram_bot_api import (
     TelegramBotApi,
     TelegramIncomingMessage,
 )
-from app.services.agentic_channel.adapters.telegram import TelegramChannelAdapter
+from app.services.agentic_channel.adapters.telegram import (
+    TelegramChannelAdapter,
+)
 from app.services.agentic_channel.channel_runtime import turn_channel_up
 from app.services.agentic_channel.endpoints import (
     EndpointRecord,

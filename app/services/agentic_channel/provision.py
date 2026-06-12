@@ -287,7 +287,9 @@ async def provision_agent_for_existing_agent(
 async def resolve_chat_model_for_scope(scope: AgentScope):
     """Select chat model for a guest scope (subscription-aware)."""
     async with AsyncSessionLocal() as db:
-        user_row = await db.execute(select(User).where(User.id == scope.user_id))
+        user_row = await db.execute(
+            select(User).where(User.id == scope.user_id)
+        )
         user = user_row.scalar_one_or_none()
         if user is None:
             raise ValueError(f"user not found: {scope.user_id}")

@@ -33,7 +33,9 @@ from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel
 
 
-def _mark_agent_channel_session_system_written(session: CompanionSession) -> None:
+def _mark_agent_channel_session_system_written(
+    session: CompanionSession,
+) -> None:
     rel = "context.json"
     raw = session.store.read_document_if_exists(rel)
     if raw is None or not str(raw).strip():
@@ -139,7 +141,9 @@ async def ensure_memory_store_session(scope: AgentScope) -> CompanionSession:
     from app.services.global_services import subscription_service
 
     async with AsyncSessionLocal() as db:
-        user_row = await db.execute(select(User).where(User.id == scope.user_id))
+        user_row = await db.execute(
+            select(User).where(User.id == scope.user_id)
+        )
         user = user_row.scalar_one_or_none()
         if user is None:
             raise ValueError(f"user not found: {scope.user_id}")
