@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 _LLM_TS_SUFFIX_UTC = " UTC"
+_TRANSCRIPT_TIMESTAMP_PREFIX_RE = re.compile(
+    r"^(?:\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC\] )+"
+)
 
 
 def utc_now() -> datetime:
@@ -50,15 +54,22 @@ def format_transcript_ts_for_llm(ts: str) -> str | None:
     return format_transcript_ts_for_llm_dt(dt)
 
 
+def strip_leading_transcript_timestamp_prefixes(content: str) -> str:
+    """Remove harness LLM-only ``[YYYY-MM-DD HH:MM:SS UTC]`` prefixes from visible text."""
+    return _TRANSCRIPT_TIMESTAMP_PREFIX_RE.sub("", content)
+
+
 def transcript_message_content_for_llm(*, content: str, ts: str) -> str:
     """Prefix transcript ``content`` for LLM prompts only; stored rows stay bare."""
+    bare = strip_leading_transcript_timestamp_prefixes(content)
     label = format_transcript_ts_for_llm(ts)
     if label is None:
-        return content
-    return f"[{label}] {content}"
+        return bare
+    return f"[{label}] {bare}"
 
 
 def transcript_message_content_for_llm_at(*, content: str, at: datetime) -> str:
     """Prefix ``content`` with ``at`` for the tail user message in one LLM turn."""
+    bare = strip_leading_transcript_timestamp_prefixes(content)
     label = format_transcript_ts_for_llm_dt(at)
-    return f"[{label}] {content}"
+    return f"[{label}] {bare}"

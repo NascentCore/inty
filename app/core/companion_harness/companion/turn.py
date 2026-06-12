@@ -138,7 +138,11 @@ from .turn_routes import (
     BootstrapInterimOutputSink,
     TurnRouteMode,
 )
-from .utc import utc_iso_ts, utc_now
+from .utc import (
+    strip_leading_transcript_timestamp_prefixes,
+    utc_iso_ts,
+    utc_now,
+)
 from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
@@ -1026,6 +1030,7 @@ async def _run_companion_turn_core(
         user_row["trace_id"] = trace_id
         if track != CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             store.append_jsonl_record(rel_tr, user_row)
+    last_text = strip_leading_transcript_timestamp_prefixes(last_text)
     assistant_row: dict[str, Any] = {
         "role": "assistant",
         "content": last_text,

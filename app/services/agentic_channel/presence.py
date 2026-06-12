@@ -14,6 +14,9 @@ from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
+from app.core.companion_harness.companion.utc import (
+    strip_leading_transcript_timestamp_prefixes,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
@@ -196,17 +199,16 @@ class AgentChannelPresence:
                     implicit_signal_bundle=implicit_bundle,
                 )
             assert isinstance(turn, CompanionTurnResult)
-            reply = turn.assistant_text.strip()
-            if reply:
+            if not turn.tool_background_started:
                 self._coordinator.remove_foreground_pending(preset_uid)
+            reply = strip_leading_transcript_timestamp_prefixes(
+                turn.assistant_text.strip()
+            )
+            if reply:
                 return reply
             if turn.tool_background_started:
-                ev = await self._coordinator.background_events.get()
-                self._coordinator.pop_foreground_pending(ev.user_msg_uuid)
-                tool_reply = ev.text.strip()
-                if tool_reply:
-                    return tool_reply
-            self._coordinator.remove_foreground_pending(preset_uid)
+                # Tool output is delivered by _tool_background_consumer via downlink.
+                return ""
             return "（没有回复内容）"
         except Exception:
             logger.exception(

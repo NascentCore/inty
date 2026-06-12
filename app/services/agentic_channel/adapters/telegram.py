@@ -8,6 +8,9 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
+from app.core.companion_harness.companion.utc import (
+    strip_leading_transcript_timestamp_prefixes,
+)
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.services.agentic_companion.downlink import (
     ChannelDownlink,
@@ -72,7 +75,9 @@ class _TelegramChannelDownlink:
             return
         if not downlink_delivers_user_visible_text(event):
             return
-        text = event.assistant_text.strip()
+        text = strip_leading_transcript_timestamp_prefixes(
+            event.assistant_text.strip()
+        )
         if not text:
             return
         await asyncio.to_thread(
