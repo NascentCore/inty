@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.constants import API_V1_PREFIX
 
 from backend.ops.api.v1 import (
+    agent_channel,
     evaluation,
     festival_memory,
     telegram_demo,
@@ -33,5 +34,10 @@ api_router.include_router(
 api_router.include_router(
     telegram_demo.router,
     tags=["telegram-demo"],
+    include_in_schema=False,
+)
+api_router.include_router(
+    agent_channel.router,
+    tags=["agent-channel"],
     include_in_schema=False,
 )

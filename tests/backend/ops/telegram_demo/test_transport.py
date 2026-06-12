@@ -1,23 +1,35 @@
-"""TelegramTransport routes inbound text by telegram chat_id."""
+"""TelegramTransport routes inbound text by telegram channel_address."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
+import uuid
 from io import BytesIO
 from urllib.error import HTTPError
 
 import pytest
+from sqlalchemy import delete
 
-from app.db.session import async_engine
+from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
+from app.db.session import AsyncSessionLocal, async_engine
 from app.external_services.telegram_bot_api import (
     TelegramBotApi,
     TelegramIncomingMessage,
 )
+from app.models.agent import Agent
+from app.models.agent_channel_endpoint import AgentChannelEndpoint
 from app.models.registry import load_model_modules
+from app.models.user import User
+from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
+from app.services.agentic_channel.endpoints import resolve_scope
+from app.services.agentic_channel.presence import clear_presences_for_tests
+from app.services.agentic_channel.provision import provision_agent_for_channel_onboard
 from backend.ops.telegram_demo import session_store
-from backend.ops.telegram_demo.binding import TelegramDemoBinding
-from backend.ops.telegram_demo.session_store import clear_all_for_tests
 from backend.ops.telegram_demo.transport import TelegramTransport
 
 
@@ -53,37 +65,68 @@ def _fake_urlopen(request, timeout=15):
 
 @pytest.fixture(autouse=True)
 async def _reset_transport_store() -> None:
-    clear_all_for_tests()
-    yield
-    clear_all_for_tests()
+    session_store.clear_all_for_tests()
+    clear_registries_for_tests()
+    clear_presences_for_tests()
+    load_model_modules()
     await async_engine.dispose()
+    yield
+    session_store.clear_all_for_tests()
+    clear_registries_for_tests()
+    clear_presences_for_tests()
+    await async_engine.dispose()
+
+
+async def _cleanup_scope(scope: AgentScope) -> None:
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            delete(AgentChannelEndpoint).where(
+                AgentChannelEndpoint.user_id == scope.user_id
+            )
+        )
+        await db.execute(delete(Agent).where(Agent.creator_id == scope.user_id))
+        await db.execute(delete(User).where(User.id == scope.user_id))
+        await db.commit()
 
 
 @pytest.mark.asyncio
-async def test_handle_inbound_routes_text_to_binding_chat_id() -> None:
-    """Uses real ``get_or_create_presence``; fails fast when Inty user row is missing."""
-    load_model_modules()
-    await async_engine.dispose()
-    telegram_chat_id = "5078060274"
-    binding = TelegramDemoBinding(
-        telegram_chat_id=telegram_chat_id,
-        user_id="missing-user-id",
-        agent_id="missing-agent-id",
-        chat_id="missing-chat-id",
+async def test_handle_inbound_channel_user_id_mismatch_notifies() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-chat-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
     )
-    session_store._bindings_by_chat_id[binding.telegram_chat_id] = binding
-
     api = TelegramBotApi(bot_token="route-test-token", urlopen=_fake_urlopen)
     transport = TelegramTransport(api=api)
     inbound = TelegramIncomingMessage(
         update_id=1,
         chat_id=telegram_chat_id,
+        channel_user_id="wrong-user-id",
         text="你好",
         local_received_at=time.time(),
     )
     reply = await transport._handle_inbound(inbound)
+    assert "身份" in reply
+    assert reply != ""
+    await _cleanup_scope(provision.scope)
 
-    assert reply == "无法找到你的 Inty 用户，请重新 /start。"
+
+@pytest.mark.asyncio
+async def test_handle_inbound_unknown_start_token_prompts_onboard() -> None:
+    api = TelegramBotApi(bot_token="route-test-token", urlopen=_fake_urlopen)
+    transport = TelegramTransport(api=api)
+    inbound = TelegramIncomingMessage(
+        update_id=3,
+        chat_id="999",
+        channel_user_id="888",
+        text="/start agent_some-id",
+        local_received_at=time.time(),
+    )
+    reply = await transport._handle_inbound(inbound)
+    assert "onboard" in reply
 
 
 @pytest.mark.asyncio
@@ -93,8 +136,36 @@ async def test_handle_inbound_unknown_chat_prompts_onboard() -> None:
     inbound = TelegramIncomingMessage(
         update_id=2,
         chat_id="999",
+        channel_user_id="888",
         text="hello",
         local_received_at=time.time(),
     )
     reply = await transport._handle_inbound(inbound)
     assert "onboard" in reply
+
+
+@pytest.mark.asyncio
+async def test_concurrent_onboard_both_welcome_without_assert() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-race-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    api = TelegramBotApi(bot_token="race-test-token", urlopen=_fake_urlopen)
+    transport = TelegramTransport(api=api)
+    inbound = TelegramIncomingMessage(
+        update_id=10,
+        chat_id=telegram_chat_id,
+        channel_user_id=channel_user_id,
+        text="/start onboard",
+        local_received_at=time.time(),
+    )
+    replies = await asyncio.gather(
+        transport._handle_onboard(inbound=inbound),
+        transport._handle_onboard(inbound=inbound),
+    )
+    assert all("欢迎" in reply for reply in replies)
+    scope = await resolve_scope(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=telegram_chat_id,
+    )
+    assert scope is not None
+    await _cleanup_scope(scope)

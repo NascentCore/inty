@@ -157,11 +157,12 @@ You should only changes and use code in the following dirs:
 ### Documentation
 
 - Use human redable format, and human understandable languages
-- package docstring in `__init__.py`
-- module docstring at the top of `.py` file,
-- function/class docstrings
-- code lines comment
+- Package docstring in `__init__.py`, `__init__.py` should only has docstring, do not include any code
+- Module docstring at the top of `.py` file
+- Function/class docstring include intention, purpose
+- Code lines comment
 
 Donts
 
 - Do not touch any `AGENTS.md`, they are maintained by human partners
+- Do not use double-tick quote names ``channel_runtime``

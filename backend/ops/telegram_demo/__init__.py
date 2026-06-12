@@ -12,8 +12,8 @@ from app.utils.config import resolved_telegram_bot_token
 
 from backend.ops.telegram_demo.session_store import (
     restore_persisted_bindings,
-    stop_all_presences,
 )
+from app.services.agentic_channel.presence import stop_all_presences
 from backend.ops.telegram_demo.transport import TelegramTransport
 
 _poll_task: asyncio.Task[None] | None = None

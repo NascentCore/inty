@@ -36,6 +36,6 @@ See ``TelegramTransport`` class docstring.
 
 - Binding + poll offset in Postgres; **single Ops replica** (no multi-pod long-poll) — #3347.
 - Text inbound only; no image/voice yet — #3349.
-- Legacy ``/start agent_{id}`` kept for tests; UI promotes ``onboard`` only.
+- Production ``/start`` accepts ``onboard`` only; bind-to-existing-agent tests call ``provision_agent_for_existing_agent`` directly.
 
 Manual restore smoke: ``.cursor/skills/telegram-demo-restore-smoke/SKILL.md``.

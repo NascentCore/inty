@@ -5,11 +5,14 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.schemas.response import APIResponse
 from app.utils.config import resolved_telegram_bot_token
-from backend.ops.telegram_demo.persistence import list_bindings
+from app.services.agentic_channel.endpoints import list_endpoints_for_channel
 
 router = APIRouter(prefix="/telegram-demo", tags=["telegram-demo"])
 
@@ -20,10 +23,10 @@ class TelegramBotInfoData(BaseModel):
 
 
 class TelegramBindingRow(BaseModel):
-    telegram_chat_id: str = Field(description="Telegram DM chat id")
+    channel_address: str = Field(description="Telegram DM chat id")
+    channel_user_id: str = Field(description="Telegram User id")
     user_id: str = Field(description="Inty guest user id")
     agent_id: str = Field(description="Companion agent id")
-    chat_id: str = Field(description="Inty chat id")
 
 
 class TelegramBindingsData(BaseModel):
@@ -60,17 +63,19 @@ async def telegram_demo_bot_info() -> APIResponse[TelegramBotInfoData]:
     include_in_schema=False,
 )
 async def telegram_demo_bindings() -> APIResponse[TelegramBindingsData]:
-    """Debug: list Postgres-persisted Telegram demo bindings (no secrets)."""
-    rows = await list_bindings()
+    """Debug: list Postgres-persisted Telegram agent_channel endpoints."""
+    rows = await list_endpoints_for_channel(
+        channel=CompanionRuntimeChannel.TELEGRAM
+    )
     return APIResponse.success(
         data=TelegramBindingsData(
             count=len(rows),
             bindings=[
                 TelegramBindingRow(
-                    telegram_chat_id=row.telegram_chat_id,
+                    channel_address=row.channel_address,
+                    channel_user_id=row.channel_user_id,
                     user_id=row.user_id,
                     agent_id=row.agent_id,
-                    chat_id=row.chat_id,
                 )
                 for row in rows
             ],

@@ -28,7 +28,10 @@ cd /path/to/repo-root
 source .venv/bin/activate
 export PYTHONPATH=.
 export ALEMBIC_CONFIG=backend/alembic/alembic.ini
+export INTY_CONFIG_YAML=devops/config.yaml.test
 ```
+
+**不要** `cp devops/config.yaml.test config.yaml`——会覆盖仓库根 `config.yaml`（本地 Ops 常用 `devops/config.yaml.local`）。
 
 可选等价写法（不显式 export ini）：
 
@@ -36,16 +39,11 @@ export ALEMBIC_CONFIG=backend/alembic/alembic.ini
 python -m alembic -c backend/alembic/alembic.ini <subcommand> ...
 ```
 
-默认：`config.yaml` 在仓库根，`backend/alembic/env.py` 通过 `app.core.config` 读库 URL。生成迁移前通常：
+`backend/alembic/env.py` 经 `app.core.config` 读库 URL；路径由 `INTY_CONFIG_YAML` 决定（未设则回落 `config.yaml`）。按需改 yaml 里 `database.host` 等为可连的 Postgres（本地多为 `localhost`）。
 
-```bash
-# TODO(INTY_CONFIG_YAML): prefer export INTY_CONFIG_YAML=devops/config.yaml.test
-cp devops/config.yaml.test config.yaml
-```
+非 test 配置时改 `INTY_CONFIG_YAML`，例如 `export INTY_CONFIG_YAML=devops/config.yaml.local`。
 
-按需改 `database.host` 等为可连的 Postgres（本地多为 `localhost`）。
-
-不换文件名时可用自定义路径（见 `backend/alembic/env.py`）：
+也可用 Alembic `-x config=`（绝对路径），绕过 `app.core.config`（见 `backend/alembic/env.py`）：
 
 ```bash
 python -m alembic -c backend/alembic/alembic.ini -x config=/abs/path/to.yaml revision --autogenerate -m "<msg>"

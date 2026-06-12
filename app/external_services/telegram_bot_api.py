@@ -28,6 +28,7 @@ def format_epoch_for_local_log(
 class TelegramIncomingMessage:
     update_id: int
     chat_id: str
+    channel_user_id: str
     text: str
     local_received_at: float
     message_date_unix: int | None = None
@@ -106,12 +107,18 @@ class TelegramBotApi:
             if not text:
                 continue
             chat_id = str(message["chat"]["id"])
+            from_user = message.get("from") or {}
+            raw_from_id = from_user.get("id")
+            if raw_from_id is None:
+                continue
+            channel_user_id = str(raw_from_id)
             raw_date = message.get("date")
             message_date_unix = int(raw_date) if raw_date is not None else None
             messages.append(
                 TelegramIncomingMessage(
                     update_id=update_id,
                     chat_id=chat_id,
+                    channel_user_id=channel_user_id,
                     text=text,
                     local_received_at=local_received_at,
                     message_date_unix=message_date_unix,
