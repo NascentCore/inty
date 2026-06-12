@@ -186,7 +186,7 @@ class ChatMessage(BaseModel):
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000
 _MEMORY_DAILY_GIST_INJECT_MAX_CHARS = 12_000
-OUTPUT_FORMAT_WECHAT_WEIXIN_MD = "OUTPUT_FORMAT_WECHAT_WEIXIN.md"
+OUTPUT_FORMAT_IM_DM_MD = "OUTPUT_FORMAT_IM_DM.md"
 
 
 def _read_memory_document_optional(
@@ -279,8 +279,8 @@ def load_prompt_bundle(
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
-        output_format_wechat_weixin_md=_template_doc_truncated(
-            OUTPUT_FORMAT_WECHAT_WEIXIN_MD,
+        output_format_im_dm_md=_template_doc_truncated(
+            OUTPUT_FORMAT_IM_DM_MD,
             max_chars=_OPTIONAL_DOC_MAX_CHARS,
         ),
         memory_daily_today_md=daily_md,

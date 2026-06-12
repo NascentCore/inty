@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 
 from app.core.companion_harness.companion.models import (
-    OUTPUT_FORMAT_WECHAT_WEIXIN_MD,
+    OUTPUT_FORMAT_IM_DM_MD,
     ContextMeta,
     InnerTickActivity,
 )
@@ -55,15 +55,15 @@ def test_doctrine_system_prefix_excludes_subconscious_prompt() -> None:
     assert all("SUBCONSCIOUS" not in str(message["content"]) for message in messages)
 
 
-def test_wechat_weixin_output_format_slice_is_appended_by_runtime_decorator() -> None:
+def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
         style_md="style\n",
         user_md="user\n",
         memory_md="memory\n",
-        output_format_wechat_weixin_md=load_template_seed_text(
-            OUTPUT_FORMAT_WECHAT_WEIXIN_MD
+        output_format_im_dm_md=load_template_seed_text(
+            OUTPUT_FORMAT_IM_DM_MD
         ),
     )
     messages = build_system_messages(
@@ -86,21 +86,22 @@ def test_wechat_weixin_output_format_slice_is_appended_by_runtime_decorator() ->
     mirrored_tools_index = first_lines.index(
         "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致"
     )
-    wechat_index = first_lines.index("# Output format: WeChat / Weixin DM")
+    im_index = first_lines.index("# Output format: IM direct message")
     envelope_index = first_lines.index(
         "## Dual-LLM chat branch: structured reply envelope"
     )
 
-    assert mirrored_tools_index < envelope_index < wechat_index
-    assert contents[wechat_index].split("\n") == [
-        "# Output format: WeChat / Weixin DM",
+    assert mirrored_tools_index < envelope_index < im_index
+    assert contents[im_index].split("\n") == [
+        "# Output format: IM direct message",
         "",
-        "The visible reply is written into a WeChat/Weixin one-to-one chat thread.",
+        "The visible reply is written into a one-to-one instant-messaging chat thread (WeChat, Telegram, or similar).",
         "",
         "- Output plain natural-language chat text only; do not use Markdown headings, tables, code fences, JSON, XML, or bullet-heavy layouts unless the user explicitly asks for structured content.",
-        "- Keep each visible message compact and DM-like: usually one short paragraph, up to two short paragraphs when warmth or clarity needs it.",
+        "- Keep each visible message short and DM-like: usually 1–3 short sentences; avoid essay-style blocks.",
+        "- When a thought needs more room, split it across line breaks into several short lines (like sending a few quick texts), not one dense paragraph.",
         "- Preserve intimacy and immediacy: write as if texting the user directly, not as an app assistant or system.",
-        "- Do not mention WeChat, Weixin, iLink, Hermes, transport adapters, prompt slices, tool routes, or delivery mechanics.",
+        "- Do not mention WeChat, Weixin, Telegram, iLink, Hermes, transport adapters, prompt slices, tool routes, or delivery mechanics.",
         "- If the model response must use a structured envelope, apply this format only inside user-facing natural-language fields such as `user_facing_reply`; keep the envelope itself valid.",
     ]
     assert CompanionRuntimeChannel.WECHAT_WEIXIN.value == "wechat_weixin"
@@ -126,20 +127,27 @@ def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() 
 
 
 def test_output_format_slice_resolves_from_runtime_channel() -> None:
-    body = load_template_seed_text(OUTPUT_FORMAT_WECHAT_WEIXIN_MD)
+    body = load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD)
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
         style_md="style\n",
         user_md="user\n",
         memory_md="memory\n",
-        output_format_wechat_weixin_md=body,
+        output_format_im_dm_md=body,
     )
 
     assert (
         output_format_prompt_slice_for_runtime_channel(
             bundle=bundle,
             runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+        )
+        == body
+    )
+    assert (
+        output_format_prompt_slice_for_runtime_channel(
+            bundle=bundle,
+            runtime_channel=CompanionRuntimeChannel.TELEGRAM,
         )
         == body
     )

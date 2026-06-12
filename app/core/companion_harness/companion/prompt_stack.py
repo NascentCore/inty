@@ -33,7 +33,11 @@ from .models import (
 )
 from .turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
-from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
+from .runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+    is_im_runtime_channel,
+)
 from .prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
     build_system_messages_for_chat_track,
@@ -65,9 +69,9 @@ def output_format_prompt_slice_for_runtime_channel(
 ) -> str:
     """Resolve channel output-format text from the runtime communication medium."""
     match runtime_channel:
-        case CompanionRuntimeChannel.WECHAT_WEIXIN:
-            return bundle.output_format_wechat_weixin_md
-        case CompanionRuntimeChannel.APP | CompanionRuntimeChannel.TELEGRAM:
+        case channel if is_im_runtime_channel(channel):
+            return bundle.output_format_im_dm_md
+        case CompanionRuntimeChannel.APP:
             return ""
 
 

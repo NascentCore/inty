@@ -16,6 +16,15 @@ class CompanionRuntimeChannel(StrEnum):
     TELEGRAM = "telegram"
 
 
+def is_im_runtime_channel(channel: CompanionRuntimeChannel) -> bool:
+    """True when the turn is delivered on an instant-messaging surface (not the app)."""
+    match channel:
+        case CompanionRuntimeChannel.WECHAT_WEIXIN | CompanionRuntimeChannel.TELEGRAM:
+            return True
+        case CompanionRuntimeChannel.APP:
+            return False
+
+
 @dataclass(frozen=True)
 class TurnRuntimeContext:
     """Runtime facts for one companion turn, separate from prompt documents."""

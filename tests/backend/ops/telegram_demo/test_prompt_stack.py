@@ -5,6 +5,7 @@ from __future__ import annotations
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     ContextMeta,
+    OUTPUT_FORMAT_IM_DM_MD,
 )
 from app.core.companion_harness.companion.prompt_stack import (
     companion_system_messages_for_track,
@@ -15,6 +16,9 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.turn_routes import TurnRouteMode
+from app.core.companion_harness.memory.memory_store_scope import (
+    load_template_seed_text,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
 
@@ -28,14 +32,22 @@ def _bundle() -> PromptBundle:
     )
 
 
-def test_telegram_output_format_empty_like_app() -> None:
-    bundle = _bundle()
+def test_telegram_output_format_uses_im_dm_slice() -> None:
+    im_body = load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD)
+    bundle = PromptBundle(
+        identity="identity",
+        soul="soul",
+        style_md="style",
+        user_md="user",
+        memory_md="memory",
+        output_format_im_dm_md=im_body,
+    )
     assert (
         output_format_prompt_slice_for_runtime_channel(
             bundle=bundle,
             runtime_channel=CompanionRuntimeChannel.TELEGRAM,
         )
-        == ""
+        == im_body
     )
 
 

@@ -21,7 +21,7 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
         "BOOTSTRAP.md",
         "CHANNELS.md",
         "INTY.md",
-        "OUTPUT_FORMAT_WECHAT_WEIXIN.md",
+        "OUTPUT_FORMAT_IM_DM.md",
         "SAFETY.md",
         "TOOLS.md",
         "SIGNIFICANCE_PERCEPTION.md",
