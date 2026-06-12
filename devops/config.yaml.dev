@@ -85,6 +85,10 @@ agent:
   enable_free_user_premium_preview: true
   free_user_premium_preview_every_n_messages: 10
   free_user_premium_preview_max_chars: 200
+  channels:
+    telegram:
+      # Yaxiong's personal telegram account's bot Fairy.
+      bot_token: "8948082813:AAH0VqLbfi52thLv_V0EgjvDrVsYXVMigN4"
 
 google_play:
   package_name: "com.ai.intellimate"
