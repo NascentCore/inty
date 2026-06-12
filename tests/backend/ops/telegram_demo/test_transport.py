@@ -89,8 +89,9 @@ async def _cleanup_scope(scope: AgentScope) -> None:
 
 @pytest.mark.asyncio
 async def test_handle_inbound_channel_user_id_mismatch_notifies() -> None:
-    telegram_chat_id = f"5078060274-{uuid.uuid4().hex[:6]}"
-    channel_user_id = "5078060274"
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-chat-{tag}"
+    channel_user_id = f"tg-user-{tag}"
     provision = await provision_agent_for_channel_onboard(
         channel=CompanionRuntimeChannel.TELEGRAM,
         channel_address=telegram_chat_id,
