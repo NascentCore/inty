@@ -1,7 +1,4 @@
-"""In-process companion presence for Telegram demo (no inner-tick, no persistent tool_bg).
-
-TODO(telegram-demo-no-proactive): No proactive / maintenance inner-tick on Telegram path.
-"""
+"""In-process companion presence for Telegram demo (inner-tick + tool_bg downlink)."""
 
 from __future__ import annotations
 
@@ -12,8 +9,10 @@ from datetime import datetime, timezone
 from loguru import logger
 from sqlalchemy import select
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
+from app.external_services.telegram_bot_api import TelegramBotApi
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -22,24 +21,36 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.services import agent_service, chat_service, companion_chat_service
 from app.services.chat_service import generate_session_id
-from app.services.agentic_companion.session import Coordinator
+from app.services.agentic_companion.downlink import tool_background_downlink
+from app.services.agentic_companion.inner_tick_delivery import (
+    inner_tick_delivery_for_telegram,
+)
+from app.services.agentic_companion.inner_tick_poll import run_inner_tick_poll
+from app.services.agentic_companion.session import Coordinator, Session
 from app.services.global_services import subscription_service
 from backend.ops.telegram_demo.binding import TelegramDemoBinding
+from backend.ops.telegram_demo.telegram_downlink import TelegramDownlink
 
 
 class TelegramInprocessPresence:
-    """One Telegram chat binding: companion coordinator + dumb sendMessage pipe."""
+    """One Telegram chat binding: companion coordinator + Telegram sendMessage pipe."""
 
     def __init__(self, binding: TelegramDemoBinding) -> None:
         assert binding is not None
         self._binding = binding
         self._loop = asyncio.get_running_loop()
         self._coordinator = Coordinator.for_loop(self._loop)
+        self._downlink: TelegramDownlink | None = None
+        self._presence: Session | None = None
+        self._tool_bg_task: asyncio.Task[None] | None = None
         self._subscription_svc = subscription_service
         self._inty_user_id: str | None = None
 
-    async def start(self) -> None:
-        """Store inner-tick coords for harness bookkeeping (no poll worker started)."""
+    async def start(self, *, api: TelegramBotApi) -> None:
+        """Store inner-tick coords, start poll worker, and tool_bg consumer."""
+        assert api is not None
+        if self._presence is not None:
+            return
         user_id = self._binding.user_id
         agent_id = self._binding.agent_id
         async with AsyncSessionLocal() as db:
@@ -56,8 +67,49 @@ class TelegramInprocessPresence:
             agent_id=agent_id,
             chat_id=chat_id,
         )
+        chat_id_fixed = self._binding.telegram_chat_id
+        self._downlink = TelegramDownlink(
+            api=api,
+            chat_id_resolver=lambda: chat_id_fixed,
+        )
+        self._presence = Session.from_coordinator(
+            downlink=self._downlink,
+            coordinator=self._coordinator,
+        )
+        poll_secs = float(
+            global_config_loaded_from_config_yaml.app.features.companion_ws_proactive_chat_poll_seconds
+        )
+        delivery = inner_tick_delivery_for_telegram(
+            self._push_telegram_assistant_text
+        )
+
+        async def _run_poll(_ctx: dict) -> None:
+            await run_inner_tick_poll(
+                delivery=delivery,
+                coordinator=self._coordinator,
+                ws_conn_id=None,
+                tc_box=None,
+            )
+
+        await self._presence.start_inner_tick_worker(
+            poll_seconds=poll_secs,
+            run_one_poll=_run_poll,
+        )
+        self._tool_bg_task = asyncio.create_task(
+            self._tool_background_consumer(),
+            name=f"telegram_tool_bg_{agent_id}",
+        )
 
     async def stop(self) -> None:
+        task = self._tool_bg_task
+        if task is not None and (not task.done()):
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        self._tool_bg_task = None
+        if self._presence is not None:
+            await self._presence.stop()
+            self._presence = None
+        self._downlink = None
         self._coordinator.sign_out()
         self._inty_user_id = None
 
@@ -145,3 +197,27 @@ class TelegramInprocessPresence:
             )
             self._coordinator.remove_foreground_pending(preset_uid)
             return "Companion 回合失败，请查看 Ops 日志。"
+
+    async def _push_telegram_assistant_text(self, text: str) -> None:
+        assert self._downlink is not None
+        await self._downlink.send_assistant_text(text)
+
+    async def _tool_background_consumer(self) -> None:
+        assert self._downlink is not None
+        while True:
+            ev = await self._coordinator.background_events.get()
+            ctx = self._coordinator.pop_foreground_pending(ev.user_msg_uuid)
+            if ctx is None:
+                logger.warning(
+                    "telegram tool_bg missing foreground ctx user_msg_uuid={}",
+                    ev.user_msg_uuid,
+                )
+                continue
+            self._coordinator.set_foreground_pending(ev.user_msg_uuid, ctx)
+            try:
+                async with self._coordinator.turn_lock:
+                    await self._downlink.deliver(
+                        tool_background_downlink(tool_output=ev)
+                    )
+            except Exception:
+                logger.exception("telegram tool_bg deliver failed")

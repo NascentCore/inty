@@ -1,14 +1,21 @@
-"""In-memory telegram_chat_id ↔ Inty binding for Ops telegram-demo (prototype).
-
-TODO(telegram-demo-orm-persistence): Design ``ops_telegram_demo_bindings`` ORM + restore on Ops restart.
-TODO(telegram-demo-binding-not-persisted): Ops restart drops bindings; user must ``/start`` again.
-"""
+"""Telegram demo binding store: in-memory presences + Postgres persistence."""
 
 from __future__ import annotations
 
+from loguru import logger
+
+from app.external_services.telegram_bot_api import TelegramBotApi
+from app.services.agentic_companion.runtime_channel_registry import (
+    ActiveRuntimeChannel,
+    register_active_channel,
+)
 from backend.ops.telegram_demo.binding import TelegramDemoBinding
 from backend.ops.telegram_demo.inprocess_presence import (
     TelegramInprocessPresence,
+)
+from backend.ops.telegram_demo.persistence import (
+    list_bindings,
+    upsert_binding as persist_binding_row,
 )
 
 _bindings_by_chat_id: dict[str, TelegramDemoBinding] = {}
@@ -20,9 +27,15 @@ def get_binding(telegram_chat_id: str) -> TelegramDemoBinding | None:
     return _bindings_by_chat_id.get(telegram_chat_id)
 
 
-def put_binding(binding: TelegramDemoBinding) -> None:
+def _put_binding_memory(binding: TelegramDemoBinding) -> None:
     assert binding.telegram_chat_id != ""
     _bindings_by_chat_id[binding.telegram_chat_id] = binding
+
+
+async def put_binding(binding: TelegramDemoBinding) -> None:
+    """Write binding to memory and Postgres."""
+    _put_binding_memory(binding)
+    await persist_binding_row(binding)
 
 
 def remove_binding(telegram_chat_id: str) -> None:
@@ -41,6 +54,55 @@ def get_or_create_presence(
     presence = TelegramInprocessPresence(binding)
     _presences_by_chat_id[binding.telegram_chat_id] = presence
     return presence
+
+
+async def start_presence(
+    binding: TelegramDemoBinding,
+    *,
+    api: TelegramBotApi,
+) -> TelegramInprocessPresence:
+    """Replace any prior presence for ``binding`` and start inner-tick worker."""
+    existing = _presences_by_chat_id.pop(binding.telegram_chat_id, None)
+    if existing is not None:
+        await existing.stop()
+    presence = TelegramInprocessPresence(binding)
+    _presences_by_chat_id[binding.telegram_chat_id] = presence
+    await presence.start(api=api)
+    return presence
+
+
+async def stop_all_presences() -> None:
+    """Stop every in-process presence (inner-tick + tool_bg) on Ops shutdown."""
+    chat_ids = list(_presences_by_chat_id.keys())
+    for chat_id in chat_ids:
+        presence = _presences_by_chat_id.pop(chat_id, None)
+        if presence is not None:
+            await presence.stop()
+
+
+async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
+    """Reload Postgres bindings and restart presences after Ops restart."""
+    assert api is not None
+    records = await list_bindings()
+    for record in records:
+        binding = record.to_demo_binding()
+        _put_binding_memory(binding)
+        register_active_channel(
+            user_id=binding.user_id,
+            channel=ActiveRuntimeChannel.TELEGRAM,
+        )
+        try:
+            await start_presence(binding, api=api)
+        except Exception:
+            logger.exception(
+                "telegram-demo restore presence failed chat_id={}",
+                binding.telegram_chat_id,
+            )
+    if records:
+        logger.info(
+            "telegram-demo: restored {} persisted binding(s)",
+            len(records),
+        )
 
 
 def clear_all_for_tests() -> None:

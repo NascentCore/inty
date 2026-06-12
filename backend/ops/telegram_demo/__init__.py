@@ -1,8 +1,4 @@
-"""Ops telegram-demo: Telegram Bot API ↔ companion harness (in-process, no ``/api/v1/chat/ws``).
-
-TODO(telegram-demo-onboard-web): Like ``/weixin``, auto-select or create companion on
-``GET /telegram-demo`` so testers need not paste ``agent_id``.
-"""
+"""Ops telegram-demo: Telegram Bot API ↔ companion harness (in-process, no ``/api/v1/chat/ws``)."""
 
 from __future__ import annotations
 
@@ -14,6 +10,10 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.utils.config import resolved_telegram_bot_token
 
+from backend.ops.telegram_demo.session_store import (
+    restore_persisted_bindings,
+    stop_all_presences,
+)
 from backend.ops.telegram_demo.transport import TelegramTransport
 
 _poll_task: asyncio.Task[None] | None = None
@@ -34,6 +34,7 @@ async def start_telegram_demo() -> None:
         return
 
     api = TelegramBotApi(bot_token=token)
+    await restore_persisted_bindings(api=api)
     _transport = TelegramTransport(api=api)
     _poll_task = asyncio.create_task(
         _transport.run_until_stopped(),
@@ -43,12 +44,13 @@ async def start_telegram_demo() -> None:
 
 
 async def stop_telegram_demo() -> None:
-    """Stop long-poll task and release transport."""
+    """Stop long-poll task, all presences, and release transport."""
     global _poll_task, _transport
     transport = _transport
     task = _poll_task
     _transport = None
     _poll_task = None
+    await stop_all_presences()
     if transport is not None:
         await transport.stop()
     if task is not None and (not task.done()):
