@@ -1,6 +1,6 @@
 """Telegram Bot API long-poll transport for Ops telegram-demo.
 
-TODO(telegram-demo-text-only): Non-text inbound (photo, voice, sticker) is ignored.
+TODO(telegram-demo-text-only): Non-text inbound (photo, voice, sticker) is ignored — #3349
 """
 
 from __future__ import annotations
@@ -55,8 +55,8 @@ class TelegramTransport:
 
     Transport is shared; companion state (MemoryStore, inner-tick worker) is per binding.
 
-    TODO(telegram-demo-multi-replica): single Ops process owns getUpdates; do not run
-    multiple replicas with the same bot token.
+    TODO(telegram-demo-multi-replica): single Ops process owns getUpdates; webhook/multi-replica
+    — #3347
     """
 
     def __init__(self, *, api: TelegramBotApi) -> None:

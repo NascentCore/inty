@@ -323,6 +323,10 @@ class Coordinator:
         await asyncio.gather(task, return_exceptions=True)
         return True
 
+    def sign_out(self) -> None:
+        """Clear inner-tick coords when a channel presence stops."""
+        self.inner_tick_context.clear()
+
 
 @dataclass
 class Session:

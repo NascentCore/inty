@@ -1,6 +1,6 @@
 """Per-user active runtime channel registry (prototype: in-process only).
 
-TODO(telegram-demo-channel-multiplex): Unify with Weixin bridge and WS presence in one registry.
+TODO(telegram-demo-channel-multiplex): Unify with Weixin bridge and WS presence in one registry — #3350
 """
 
 from __future__ import annotations
