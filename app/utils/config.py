@@ -349,11 +349,8 @@ class AgentChannelsConfig(BaseModel):
 
 
 def resolved_telegram_bot_token(agent: "AgentConfig") -> str:
-    """Prefer ``agent.channels.telegram.bot_token``; fall back to legacy field."""
-    nested = agent.channels.telegram.bot_token.strip()
-    if nested:
-        return nested
-    return agent.telegram_bot_token.strip()
+    """Return ``agent.channels.telegram.bot_token``."""
+    return agent.channels.telegram.bot_token.strip()
 
 
 @dataclass
@@ -387,9 +384,6 @@ class AgentConfig:
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     base_url: str = OPENROUTER_BASE_URL
     channels: AgentChannelsConfig = field(default_factory=AgentChannelsConfig)
-    # Telegram Bot token for public iMate provisioning flow.
-    # TODO(telegram-demo-config-deprecate): remove after ``agent.channels.telegram.bot_token`` migration.
-    telegram_bot_token: str = ""
     # Chat 专用 LLM 端点（可选）。若两者均配置则 Agent 聊天使用此端点，否则使用 base_url + api_key。记忆抽取始终使用 base_url + api_key。
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     chat_llm_base_url: Optional[str] = None
