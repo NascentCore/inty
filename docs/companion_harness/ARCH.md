@@ -59,7 +59,7 @@ Companion Harness 的目标是为用户提供长期关系中的“虚拟活人�
 | 长期记忆 | MemoryDoc、daily gist、semantic、LivingSphere 快照 | `memory/memory_store.py`、`memory/dreaming_consolidation.py`、`runtime/dreaming_batch.py` |
 | 模型回合 | track 路由、prompt、LLM、双模型 envelope | `companion/turn.py`、`companion/prompt_stack.py`、`companion/turn_routes.py`、`llm/chat_completions.py` |
 | 工具副作用 | 前台/后台工具、图像索引、增量 MemoryDoc 写 | `tools/tool_background.py`、`tools/companion_tool_runtime.py` |
-| 多媒介传输 | WS / Weixin framing、FIFO、presence 锁 | `app/api/v1/endpoints/chat_ws.py`、`companion/websocket_coordinator.py`、`backend/ops/weixin_channel/`、`companion/runtime_channel.py` |
+| 多媒介传输 | WebSocket (generic connection) / Weixin / Telegram | `app/api/v1/endpoints/chat_ws.py`、`companion/websocket_coordinator.py`、`backend/ops/weixin_channel/`、`companion/runtime_channel.py` |
 
 ## 当前路径架构
 
@@ -220,6 +220,10 @@ flowchart TD
 > **设计与代码张力 (#3256)**：`websocket_coordinator.py` 标注目标态为断线后 **persist-first、可重放投递**，而非取消 in-flight turn。上文第 5 条描述的是 **当前** `chat_ws.py` 行为；生命周期章节在 #3256 落地前应以代码为准。
 
 Weixin 路径不经 `/api/v1/chat/ws`，由 `backend/ops/weixin_channel/` 适配为同一 `companion_chat_service` / `run_user_chat` 语义，`TurnRuntimeContext.channel = WECHAT_WEIXIN` 影响 output-format prompt 切片。
+
+### Telegram
+
+[1] [Telegram Bots API meta-operations on bots](https://core.telegram.org/bots/api)
 
 ## Runtime Loop
 
