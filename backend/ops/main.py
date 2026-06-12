@@ -24,7 +24,10 @@ from app.api.utils.health_check_payload import build_health_check_data
 from backend.ops.api.evaluation_web import configure_evaluation_web_routes
 from backend.ops.api.telegram_demo_web import configure_telegram_demo_web_routes
 from backend.ops.api.weixin_web import configure_weixin_web_routes
-from backend.ops.telegram_demo import start_telegram_demo, stop_telegram_demo
+from backend.ops.telegram_demo.lifecycle import (
+    start_telegram_demo,
+    stop_telegram_demo,
+)
 from backend.ops.weixin_session.session_store import restore_persisted_sessions
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
