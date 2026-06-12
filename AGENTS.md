@@ -29,6 +29,10 @@ Read [users list](.agents/USERS.md) to know your human partner's identity and th
 - Consider current system status when exploring the design space, never blindly exploring ideas without firm grounding.
 - Ask me to clarify the grounding if you are unsure.
 
+### Prototype/Demo
+
+- Prototype/Demo code are meant to be thrown away, remember this.
+
 ## Repo structure
 
 **IMPORTANT: `/api/v1/chat/ws` should only use companion harness, technocore, livingsphere. All others are in maintenance mode and should not be changed.**
