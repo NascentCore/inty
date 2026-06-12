@@ -1,4 +1,4 @@
-"""Tests for telegram-demo Postgres persistence."""
+"""Tests for agent_channel endpoint persistence via service layer."""
 
 from __future__ import annotations
 
@@ -7,93 +7,73 @@ import uuid
 import pytest
 from sqlalchemy import delete
 
+from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
 from app.db.session import AsyncSessionLocal, async_engine
-from app.models.chat import Chat
-from app.models.ops_telegram_demo import (
-    OpsTelegramDemoBinding,
-    OpsTelegramDemoPollState,
-)
+from app.models.agent import Agent
+from app.models.agent_channel_endpoint import AgentChannelEndpoint
 from app.models.registry import load_model_modules
-from backend.ops.telegram_demo.binding import TelegramDemoBinding
-from backend.ops.telegram_demo.persistence import (
-    delete_binding,
-    list_bindings,
-    load_poll_offset,
-    save_poll_offset,
-    upsert_binding,
+from app.models.user import User
+from app.services.agentic_channel.endpoints import (
+    bind_endpoint,
+    list_endpoints_for_channel,
 )
-from backend.ops.telegram_demo.provision import provision_inty_for_telegram_onboard
+from app.services.agentic_channel.provision import provision_agent_for_channel_onboard
 
 
 @pytest.fixture(autouse=True)
-async def _dispose_shared_engine_after_test() -> None:
+async def _dispose_engine() -> None:
+    load_model_modules()
+    await async_engine.dispose()
     yield
     await async_engine.dispose()
 
 
 @pytest.mark.asyncio
-async def test_upsert_list_delete_binding() -> None:
-    load_model_modules()
+async def test_provision_persists_endpoint_row() -> None:
     telegram_chat_id = f"tg-persist-{uuid.uuid4().hex}"
-    await async_engine.dispose()
-    provision = await provision_inty_for_telegram_onboard(
-        telegram_chat_id=telegram_chat_id,
+    channel_user_id = f"tu-{uuid.uuid4().hex}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
     )
-    binding = TelegramDemoBinding(
-        telegram_chat_id=telegram_chat_id,
-        user_id=provision.user_id,
-        agent_id=provision.agent_id,
-        chat_id=provision.chat_id,
+    rows = await list_endpoints_for_channel(
+        channel=CompanionRuntimeChannel.TELEGRAM
     )
-
-    await upsert_binding(binding)
-    rows = await list_bindings()
-    match = [r for r in rows if r.telegram_chat_id == telegram_chat_id]
+    match = [r for r in rows if r.channel_address == telegram_chat_id]
     assert len(match) == 1
-    assert match[0].user_id == provision.user_id
+    assert match[0].channel_user_id == channel_user_id
+    assert match[0].user_id == provision.scope.user_id
 
-    updated = TelegramDemoBinding(
-        telegram_chat_id=telegram_chat_id,
-        user_id=provision.user_id,
-        agent_id=provision.agent_id,
-        chat_id=provision.chat_id,
+    scope = AgentScope(
+        user_id=provision.scope.user_id,
+        agent_id=provision.scope.agent_id,
     )
-    await upsert_binding(updated)
-    rows = await list_bindings()
-    match = [r for r in rows if r.telegram_chat_id == telegram_chat_id]
-    assert match[0].agent_id == provision.agent_id
-
-    await delete_binding(telegram_chat_id)
-    rows = await list_bindings()
-    assert telegram_chat_id not in {r.telegram_chat_id for r in rows}
+    await bind_endpoint(
+        scope,
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    rows = await list_endpoints_for_channel(
+        channel=CompanionRuntimeChannel.TELEGRAM
+    )
+    match = [r for r in rows if r.channel_address == telegram_chat_id]
+    assert len(match) == 1
 
     async with AsyncSessionLocal() as db:
-        await db.execute(delete(Chat).where(Chat.user_id == provision.user_id))
         await db.execute(
-            delete(OpsTelegramDemoBinding).where(
-                OpsTelegramDemoBinding.telegram_chat_id == telegram_chat_id
+            delete(AgentChannelEndpoint).where(
+                AgentChannelEndpoint.user_id == provision.scope.user_id
             )
         )
-        await db.commit()
-
-
-@pytest.mark.asyncio
-async def test_poll_offset_roundtrip() -> None:
-    load_model_modules()
-    async with AsyncSessionLocal() as db:
-        row = await db.get(OpsTelegramDemoPollState, 1)
-        if row is not None:
-            row.last_update_id = None
-            await db.commit()
-
-    assert await load_poll_offset() is None
-    await save_poll_offset(42)
-    assert await load_poll_offset() == 42
-    await save_poll_offset(99)
-    assert await load_poll_offset() == 99
-
-    async with AsyncSessionLocal() as db:
-        row = await db.get(OpsTelegramDemoPollState, 1)
-        assert row is not None
-        row.last_update_id = None
+        await db.execute(
+            delete(Agent).where(Agent.creator_id == provision.scope.user_id)
+        )
+        await db.execute(
+            delete(User).where(User.id == provision.scope.user_id)
+        )
         await db.commit()

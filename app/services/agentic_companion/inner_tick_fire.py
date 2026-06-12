@@ -91,6 +91,10 @@ from app.services.agentic_companion.session import Coordinator, InnerTickCoords
 from app.services.agentic_companion.ws_implicit_signals import (
     implicit_signal_bundle_from_tc_box,
 )
+from app.core.companion_harness.agent_channel.scope import (
+    AgentScope,
+    is_agent_scope_memory_store_chat_id,
+)
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
@@ -133,23 +137,12 @@ async def _resolve_inner_tick_scope_coords(
     user_id = coords.user_id
     agent_id = coords.agent_id
     chat_id_raw = coords.chat_id
+    chat_id_str = str(chat_id_raw)
 
     async with AsyncSessionLocal() as pre_db:
         r_user = await pre_db.execute(select(User).where(User.id == user_id))
         current_user = r_user.scalar_one_or_none()
         if current_user is None:
-            return None
-
-        chat = await chat_service.get_or_create_chat_by_agent(
-            db=pre_db, user_id=user_id, agent_id=agent_id
-        )
-        if str(chat.id) != str(chat_id_raw):
-            logger.debug(
-                "inner_tick_scope chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
-                fire_input.ws_conn_id,
-                chat_id_raw,
-                chat.id,
-            )
             return None
 
         match model_source:
@@ -163,6 +156,40 @@ async def _resolve_inner_tick_scope_coords(
                     user=current_user,
                     is_subscribed=False,
                 )
+
+        if is_agent_scope_memory_store_chat_id(chat_id_str):
+            expected = AgentScope(
+                user_id=user_id,
+                agent_id=agent_id,
+            ).memory_store_chat_id()
+            if chat_id_str != expected:
+                logger.debug(
+                    "inner_tick_scope agent-scope chat_id mismatch ws_conn_id={} "
+                    "ctx={} expected={}",
+                    fire_input.ws_conn_id,
+                    chat_id_str,
+                    expected,
+                )
+                return None
+            return InnerTickScopeCoords(
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_row_id=chat_id_str,
+                chat_row_agent_id=agent_id,
+                model_override=model_override,
+            )
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=pre_db, user_id=user_id, agent_id=agent_id
+        )
+        if str(chat.id) != chat_id_str:
+            logger.debug(
+                "inner_tick_scope chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
+                fire_input.ws_conn_id,
+                chat_id_str,
+                chat.id,
+            )
+            return None
 
         return InnerTickScopeCoords(
             user_id=user_id,

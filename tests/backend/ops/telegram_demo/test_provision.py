@@ -1,4 +1,4 @@
-"""Tests for Telegram demo guest user provisioning."""
+"""Tests for agent-channel guest provisioning."""
 
 from __future__ import annotations
 
@@ -6,69 +6,40 @@ import uuid
 
 import pytest
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
 
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import get_new_user_id
 from app.db.session import AsyncSessionLocal, async_engine
 from app.models.agent import Agent, AgentVisibility
-from app.models.chat import Chat
+from app.models.agent_channel_endpoint import AgentChannelEndpoint
 from app.models.registry import load_model_modules
 from app.models.user import AuthType, User
 from app.schemas.agent import AgentCreate
 from app.services import agent_service
-from app.services.user_service import generate_next_readable_id
-from backend.ops.telegram_demo.provision import (
-    provision_inty_for_telegram_chat,
-    provision_inty_for_telegram_onboard,
+from app.services.agentic_channel.errors import ChannelEndpointConflictError
+from app.services.agentic_channel.provision import (
+    provision_agent_for_channel_onboard,
+    provision_agent_for_existing_agent,
 )
+from app.services.user_service import generate_next_readable_id
 
 
-async def _create_creator_user(db: AsyncSession) -> str:
-    user_id = get_new_user_id()
-    readable_id = await generate_next_readable_id(db)
-    user = User(
-        id=user_id,
-        readable_id=readable_id,
-        auth_type=AuthType.GUEST,
-        nickname="Creator",
-        meta_data={"telegram_demo_test": True},
-    )
-    db.add(user)
-    await db.commit()
-    return user_id
-
-
-@pytest.fixture
-async def async_db_session():
-    load_model_modules()
-    engine = create_async_engine(
-        str(global_config_loaded_from_config_yaml.database.async_url),
-        pool_size=1,
-        max_overflow=0,
-        pool_pre_ping=True,
-    )
-    async_session = sessionmaker(
-        bind=engine, class_=AsyncSession, expire_on_commit=False
-    )
-    async with async_session() as session:
-        yield session
-    await engine.dispose()
-
-
-async def _delete_user_and_agents(db: AsyncSession, user_id: str) -> None:
-    await db.execute(delete(Agent).where(Agent.creator_id == user_id))
-    await db.execute(delete(User).where(User.id == user_id))
-    await db.commit()
-
-
-@pytest.mark.asyncio
-async def test_provision_telegram_guest_reuses_user(async_db_session: AsyncSession) -> None:
-    await async_engine.dispose()
-    telegram_chat_id = f"tg-{uuid.uuid4().hex}"
+async def _create_creator_agent() -> str:
     async with AsyncSessionLocal() as db:
-        creator_id = await _create_creator_user(db)
+        user_id = get_new_user_id()
+        readable_id = await generate_next_readable_id(db)
+        user = User(
+            id=user_id,
+            readable_id=readable_id,
+            auth_type=AuthType.GUEST,
+            nickname="Creator",
+            meta_data={"test": True},
+        )
+        db.add(user)
+        await db.commit()
         agent = await agent_service.create_agent(
             db,
             agent_in=AgentCreate(
@@ -80,63 +51,86 @@ async def test_provision_telegram_guest_reuses_user(async_db_session: AsyncSessi
                 personality="warm",
                 scenario="telegram",
             ),
-            user_id=creator_id,
+            user_id=user_id,
         )
-        agent_id = agent.id
+        await db.commit()
+        return agent.id
 
-    first = await provision_inty_for_telegram_chat(
-        telegram_chat_id=telegram_chat_id,
-        agent_id=agent_id,
-    )
-    assert first.is_new_user is True
-    assert first.agent_id == agent_id
-    assert first.chat_id != ""
 
-    row = await async_db_session.execute(
-        select(User).where(User.id == first.user_id)
-    )
-    user = row.scalar_one()
-    assert user.nickname.startswith("Telegram_")
-    assert user.meta_data is not None
-    assert user.meta_data["telegram_chat_id"] == telegram_chat_id
-    assert user.meta_data["telegram_demo"] is True
+async def _cleanup_user(user_id: str) -> None:
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            delete(AgentChannelEndpoint).where(
+                AgentChannelEndpoint.user_id == user_id
+            )
+        )
+        await db.execute(delete(Agent).where(Agent.creator_id == user_id))
+        await db.execute(delete(User).where(User.id == user_id))
+        await db.commit()
 
-    second = await provision_inty_for_telegram_chat(
-        telegram_chat_id=telegram_chat_id,
-        agent_id=agent_id,
-    )
-    assert second.is_new_user is False
-    assert second.user_id == first.user_id
 
-    await async_db_session.execute(delete(Chat).where(Chat.user_id == first.user_id))
-    await _delete_user_and_agents(async_db_session, first.user_id)
-    await async_db_session.execute(delete(Agent).where(Agent.id == agent_id))
-    await async_db_session.execute(delete(User).where(User.id == creator_id))
-    await async_db_session.commit()
+@pytest.fixture(autouse=True)
+async def _dispose_engine() -> None:
+    load_model_modules()
+    await async_engine.dispose()
+    yield
+    await async_engine.dispose()
 
 
 @pytest.mark.asyncio
-async def test_provision_onboard_creates_user_and_agent(
-    async_db_session: AsyncSession,
-) -> None:
-    await async_engine.dispose()
-    telegram_chat_id = f"tg-onboard-{uuid.uuid4().hex}"
-
-    first = await provision_inty_for_telegram_onboard(
-        telegram_chat_id=telegram_chat_id,
+async def test_provision_onboard_idempotent() -> None:
+    address = f"tg-{uuid.uuid4().hex}"
+    channel_user_id = f"tu-{uuid.uuid4().hex}"
+    first = await provision_agent_for_channel_onboard(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=address,
+        channel_user_id=channel_user_id,
     )
     assert first.is_new_user is True
-    assert first.agent_id != ""
-    assert first.chat_id != ""
-
-    second = await provision_inty_for_telegram_onboard(
-        telegram_chat_id=telegram_chat_id,
+    second = await provision_agent_for_channel_onboard(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=address,
+        channel_user_id=channel_user_id,
     )
     assert second.is_new_user is False
-    assert second.user_id == first.user_id
-    assert second.agent_id == first.agent_id
-    assert second.chat_id == first.chat_id
+    assert second.scope == first.scope
+    await _cleanup_user(first.scope.user_id)
 
-    await async_db_session.execute(delete(Chat).where(Chat.user_id == first.user_id))
-    await _delete_user_and_agents(async_db_session, first.user_id)
-    await async_db_session.commit()
+
+@pytest.mark.asyncio
+async def test_provision_existing_agent_creates_guest() -> None:
+    agent_id = await _create_creator_agent()
+    address = f"tg-{uuid.uuid4().hex}"
+    channel_user_id = f"tu-{uuid.uuid4().hex}"
+    first = await provision_agent_for_existing_agent(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=address,
+        channel_user_id=channel_user_id,
+        agent_id=agent_id,
+    )
+    assert first.is_new_user is True
+    assert first.scope.agent_id == agent_id
+    async with AsyncSessionLocal() as db:
+        row = await db.execute(select(User).where(User.id == first.scope.user_id))
+        user = row.scalar_one()
+        assert user.meta_data is not None
+        assert user.meta_data.get("agent_channel") is True
+    await _cleanup_user(first.scope.user_id)
+
+
+@pytest.mark.asyncio
+async def test_provision_onboard_rejects_channel_user_id_mismatch() -> None:
+    address = f"tg-{uuid.uuid4().hex}"
+    channel_user_id = f"tu-{uuid.uuid4().hex}"
+    first = await provision_agent_for_channel_onboard(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=address,
+        channel_user_id=channel_user_id,
+    )
+    with pytest.raises(ChannelEndpointConflictError):
+        await provision_agent_for_channel_onboard(
+            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel_address=address,
+            channel_user_id=f"other-{uuid.uuid4().hex}",
+        )
+    await _cleanup_user(first.scope.user_id)

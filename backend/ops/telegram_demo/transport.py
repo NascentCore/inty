@@ -9,55 +9,56 @@ import asyncio
 
 from loguru import logger
 
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
 from app.external_services.telegram_bot_api import (
     TelegramBotApi,
     TelegramIncomingMessage,
 )
+from app.services.agentic_channel.adapters.telegram import TelegramChannelAdapter
+from app.services.agentic_channel.channel_runtime import turn_channel_up
+from app.services.agentic_channel.endpoints import (
+    EndpointRecord,
+    assert_inbound_endpoint_identity,
+    resolve_scope,
+)
+from app.services.agentic_channel.errors import ChannelEndpointConflictError
+from app.services.agentic_channel.presence import ensure_presence, get_presence
+from app.services.agentic_channel.provision import (
+    ChannelProvisionResult,
+    provision_agent_for_channel_onboard,
+)
 from backend.ops.telegram_demo.binding import (
     StartPayloadKind,
-    TelegramDemoBinding,
     parse_start_payload,
-)
-from app.services.agentic_companion.runtime_channel_registry import (
-    ActiveRuntimeChannel,
-    other_active_channel,
-    register_active_channel,
 )
 from backend.ops.telegram_demo.persistence import (
     load_poll_offset,
     save_poll_offset,
 )
-from backend.ops.telegram_demo.provision import (
-    TelegramProvisionResult,
-    provision_inty_for_telegram_chat,
-    provision_inty_for_telegram_onboard,
-)
 from backend.ops.telegram_demo.session_store import (
-    get_binding,
-    get_or_create_presence,
-    put_binding,
-    start_presence,
+    activate_telegram_scope,
+    remember_scope,
+)
+
+_WELCOME_NEW = (
+    "欢迎！已为你创建 companion，可以直接发中文消息。"
+    "完成 bootstrap 后 companion 会更了解你。"
+)
+_WELCOME_RETURNING = "欢迎回来！已绑定 companion，可以直接发消息聊天。"
+_ONBOARD_HINT = (
+    "请先打开 Ops /telegram-demo 页面扫码，"
+    "或在对话中发送 /start onboard 完成绑定。"
+)
+_IDENTITY_MISMATCH = (
+    "Telegram 用户身份与绑定记录不符，无法处理消息。"
+    "请确认使用同一 Telegram 账号。"
 )
 
 
 class TelegramTransport:
-    """One shared-bot ``getUpdates`` loop; routes each DM to the correct companion.
-
-    Multi-user routing (many Telegram accounts, one ``@bot`` token):
-
-    - Telegram assigns each DM a stable ``chat_id`` (``TelegramIncomingMessage.chat_id``).
-    - ``/start …`` creates or refreshes a row in the binding store:
-      ``telegram_chat_id → (user_id, agent_id, chat_id)`` — one guest User and one
-      Agent per teammate (v2 ``/start onboard``; legacy ``/start agent_{id}`` for tests).
-    - Later text: ``get_binding(chat_id)`` → ``TelegramInprocessPresence`` for that
-      scope → ``run_user_chat(user_id, agent_id, chat_id, runtime_channel=TELEGRAM)``.
-    - Outbound replies use the same ``inbound.chat_id`` so messages never cross chats.
-
-    Transport is shared; companion state (MemoryStore, inner-tick worker) is per binding.
-
-    TODO(telegram-demo-multi-replica): single Ops process owns getUpdates; webhook/multi-replica
-    — #3347
-    """
+    """Shared-bot ``getUpdates`` loop routing DMs via ``agent_channel_endpoints``."""
 
     def __init__(self, *, api: TelegramBotApi) -> None:
         assert api is not None
@@ -103,92 +104,116 @@ class TelegramTransport:
         self._stop.set()
 
     async def _handle_inbound(self, inbound: TelegramIncomingMessage) -> str:
-        """Route one inbound text update by ``inbound.chat_id`` (not by bot username)."""
         start = parse_start_payload(inbound.text)
         if start.kind == StartPayloadKind.ONBOARD:
-            return await self._handle_onboard(telegram_chat_id=inbound.chat_id)
-        if start.kind == StartPayloadKind.AGENT_ID:
-            assert start.agent_id is not None
-            return await self._handle_start(
-                telegram_chat_id=inbound.chat_id,
-                agent_id=start.agent_id,
+            return await self._handle_onboard(inbound=inbound)
+        scope = await resolve_scope(
+            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel_address=inbound.chat_id,
+        )
+        if scope is None:
+            return _ONBOARD_HINT
+        try:
+            await assert_inbound_endpoint_identity(
+                channel=CompanionRuntimeChannel.TELEGRAM,
+                channel_address=inbound.chat_id,
+                channel_user_id=inbound.channel_user_id,
             )
-        binding = get_binding(inbound.chat_id)
-        if binding is None:
-            return (
-                "请先打开 Ops /telegram-demo 页面扫码，"
-                "或在对话中发送 /start onboard 完成绑定。"
+        except ChannelEndpointConflictError:
+            logger.warning(
+                "telegram inbound channel_user_id mismatch chat_id={} from_id={}",
+                inbound.chat_id,
+                inbound.channel_user_id,
             )
-        # TODO(telegram-demo-ensure-presence): ``await ensure_presence(binding, api)`` — #3338
-        presence = get_or_create_presence(binding)
-        return await presence.handle_user_text(inbound.text)
+            return _IDENTITY_MISMATCH
+        await self._ensure_active(
+            inbound=inbound,
+            scope=scope,
+            reason="inbound_message",
+        )
+        presence = get_presence(scope)
+        if presence is None:
+            presence = await ensure_presence(scope)
+        return await presence.handle_user_text(
+            inbound.text,
+            runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+        )
 
-    async def _handle_onboard(self, *, telegram_chat_id: str) -> str:
-        existing = get_binding(telegram_chat_id)
+    async def _handle_onboard(self, *, inbound: TelegramIncomingMessage) -> str:
+        existing = await resolve_scope(
+            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel_address=inbound.chat_id,
+        )
         if existing is not None:
-            # TODO(telegram-demo-ensure-presence): heal dead presence via ``ensure_presence`` — #3338
-            return "欢迎回来！已绑定 companion，可以直接发消息聊天。"
-        try:
-            provision = await provision_inty_for_telegram_onboard(
-                telegram_chat_id=telegram_chat_id,
+            try:
+                await assert_inbound_endpoint_identity(
+                    channel=CompanionRuntimeChannel.TELEGRAM,
+                    channel_address=inbound.chat_id,
+                    channel_user_id=inbound.channel_user_id,
+                )
+            except ChannelEndpointConflictError:
+                logger.warning(
+                    "telegram onboard identity mismatch chat_id={} from_id={}",
+                    inbound.chat_id,
+                    inbound.channel_user_id,
+                )
+                return _IDENTITY_MISMATCH
+            await self._ensure_active(
+                inbound=inbound,
+                scope=existing,
+                reason="onboard_returning",
             )
-        except ValueError as exc:
+            return _WELCOME_RETURNING
+        try:
+            provision = await provision_agent_for_channel_onboard(
+                channel=CompanionRuntimeChannel.TELEGRAM,
+                channel_address=inbound.chat_id,
+                channel_user_id=inbound.channel_user_id,
+            )
+        except (ValueError, ChannelEndpointConflictError) as exc:
             return str(exc)
-        return await self._activate_binding(
-            telegram_chat_id=telegram_chat_id,
+        return await self._activate_provision(
+            inbound=inbound,
             provision=provision,
         )
 
-    async def _handle_start(
+    async def _activate_provision(
         self,
         *,
-        telegram_chat_id: str,
-        agent_id: str,
+        inbound: TelegramIncomingMessage,
+        provision: ChannelProvisionResult,
     ) -> str:
-        try:
-            provision = await provision_inty_for_telegram_chat(
-                telegram_chat_id=telegram_chat_id,
-                agent_id=agent_id,
-            )
-        except ValueError as exc:
-            return str(exc)
-        return await self._activate_binding(
-            telegram_chat_id=telegram_chat_id,
-            provision=provision,
+        record = EndpointRecord(
+            user_id=provision.scope.user_id,
+            agent_id=provision.scope.agent_id,
+            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel_address=provision.channel_address,
+            channel_user_id=provision.channel_user_id,
         )
+        await activate_telegram_scope(
+            record=record,
+            api=self._api,
+            reason="onboard",
+        )
+        assert provision.is_new_user is True
+        return _WELCOME_NEW
 
-    async def _activate_binding(
+    async def _ensure_active(
         self,
         *,
-        telegram_chat_id: str,
-        provision: TelegramProvisionResult,
-    ) -> str:
-        conflict = other_active_channel(
-            user_id=provision.user_id,
-            desired=ActiveRuntimeChannel.TELEGRAM,
+        inbound: TelegramIncomingMessage,
+        scope,
+        reason: str,
+    ) -> None:
+        remember_scope(channel_address=inbound.chat_id, scope=scope)
+        adapter = TelegramChannelAdapter(
+            api=self._api,
+            channel_address=inbound.chat_id,
         )
-        if conflict is not None:
-            return (
-                f"该 Inty 用户已在 {conflict.value} 渠道活跃，"
-                "请先关闭其他渠道后再绑定 Telegram。"
-            )
-
-        binding = TelegramDemoBinding(
-            telegram_chat_id=telegram_chat_id,
-            user_id=provision.user_id,
-            agent_id=provision.agent_id,
-            chat_id=provision.chat_id,
+        await turn_channel_up(
+            scope,
+            CompanionRuntimeChannel.TELEGRAM,
+            adapter=adapter,
+            reason=reason,
         )
-        await put_binding(binding)
-        register_active_channel(
-            user_id=provision.user_id,
-            channel=ActiveRuntimeChannel.TELEGRAM,
-        )
-        # TODO(telegram-demo-ensure-presence): ``await ensure_presence(binding, api)`` — #3338
-        await start_presence(binding, api=self._api)
-        if provision.is_new_user:
-            return (
-                "欢迎！已为你创建 companion，可以直接发中文消息。"
-                "完成 bootstrap 后 companion 会更了解你。"
-            )
-        return "已绑定 companion，可以直接发消息聊天。"
+        await ensure_presence(scope)
