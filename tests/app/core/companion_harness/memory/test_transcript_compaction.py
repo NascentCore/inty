@@ -16,6 +16,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
 from app.core.companion_harness.companion.models import ChatMessage
 from app.core.companion_harness.companion.utc import (
     format_transcript_ts_for_llm,
+    strip_leading_transcript_timestamp_prefixes,
     transcript_message_content_for_llm,
     utc_iso_ts,
 )
@@ -46,6 +47,32 @@ def test_transcript_message_content_for_llm_prefix() -> None:
             ts="2026-05-30T13:09:06Z",
         )
         == "[2026-05-30 13:09:06 UTC] hello"
+    )
+
+
+def test_strip_leading_transcript_timestamp_prefixes() -> None:
+    assert (
+        strip_leading_transcript_timestamp_prefixes(
+            "[2026-05-30 13:09:06 UTC] hello"
+        )
+        == "hello"
+    )
+    assert (
+        strip_leading_transcript_timestamp_prefixes(
+            "[2026-05-30 13:09:06 UTC] [2026-05-30 13:10:00 UTC] hello"
+        )
+        == "hello"
+    )
+    assert strip_leading_transcript_timestamp_prefixes("hello") == "hello"
+
+
+def test_transcript_message_content_for_llm_does_not_double_prefix() -> None:
+    assert (
+        transcript_message_content_for_llm(
+            content="[2026-05-30 13:09:06 UTC] hello",
+            ts="2026-05-30T13:10:00Z",
+        )
+        == "[2026-05-30 13:10:00 UTC] hello"
     )
 
 
