@@ -6,6 +6,7 @@ Create Date: 2026-06-12 07:31:20.389866+00:00
 Revision source: alembic-cli
 
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -73,7 +74,9 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(["agent_id"], ["agents.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["agent_id"], ["agents.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
@@ -98,9 +101,7 @@ def upgrade() -> None:
         ),
     )
     # Telegram private DM: chat_id equals sender user id; reuse for channel_user_id.
-    op.execute(
-        sa.text(
-            """
+    op.execute(sa.text("""
             INSERT INTO agent_channel_endpoints (
                 id,
                 user_id,
@@ -121,9 +122,7 @@ def upgrade() -> None:
                 created_at,
                 updated_at
             FROM ops_telegram_demo_bindings
-            """
-        )
-    )
+            """))
     op.drop_table("ops_telegram_demo_bindings")
 
 
@@ -166,7 +165,9 @@ def downgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(["agent_id"], ["agents.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["agent_id"], ["agents.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["chat_id"], ["chats.id"]),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
         sa.PrimaryKeyConstraint("telegram_chat_id"),
