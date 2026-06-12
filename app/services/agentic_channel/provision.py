@@ -205,10 +205,7 @@ async def provision_agent_for_channel_onboard(
                 channel_user_id=channel_user_id,
             )
             await db.commit()
-        except ChannelEndpointConflictError:
-            await db.rollback()
-            raise
-        except IntegrityError as exc:
+        except (ChannelEndpointConflictError, IntegrityError):
             await db.rollback()
             return await _provision_result_after_bind_race(
                 channel=channel,
@@ -270,10 +267,7 @@ async def provision_agent_for_existing_agent(
                 channel_user_id=channel_user_id,
             )
             await db.commit()
-        except ChannelEndpointConflictError:
-            await db.rollback()
-            raise
-        except IntegrityError:
+        except (ChannelEndpointConflictError, IntegrityError):
             await db.rollback()
             return await _provision_result_after_bind_race(
                 channel=channel,
