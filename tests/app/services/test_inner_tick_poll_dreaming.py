@@ -16,6 +16,7 @@ def _poll_delivery() -> InnerTickDelivery:
     return InnerTickDelivery(
         ws_outbound_queue=asyncio.Queue(),
         weixin_assistant_text=None,
+        telegram_assistant_text=None,
         runtime_channel=CompanionRuntimeChannel.APP,
     )
 

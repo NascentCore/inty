@@ -65,6 +65,7 @@ You should only changes and use code in the following dirs:
 ### Additional dirs
 
 - [devops](/devops/) specify Inty's deployment configurations (environment and application configs etc.)
+  - Contains secrets like API keys, allowed during the current development phase, will be cleaned up prior to production rollout.
 - [research projects](/research/) general research direct or possibility relevant to Inty
 - [experimental](/experimental/) experimental code of relevant open source library/systems.
 

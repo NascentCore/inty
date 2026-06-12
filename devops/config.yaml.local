@@ -86,6 +86,10 @@ agent:
   free_user_chat_image_model: "Z Image Turbo Image to Image"
   sub_user_chat_image_model: "Z Image Turbo Image to Image"
   langsmith_text_chat_sample_rate: 1.0
+  channels:
+    telegram:
+      # Yaxiong's personal telegram account's bot Fairy.
+      bot_token: "8613920909:AAFmhn0Ll7zR7ccw8DrCxF7wDBFoOrG_BzA"
 
 google_play:
   package_name: "com.ai.intellimate"

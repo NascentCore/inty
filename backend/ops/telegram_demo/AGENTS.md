@@ -1,36 +1,41 @@
 # Generated entirely by Cursor agent — telegram-demo Ops bridge package doc.
 
-"""Ops **telegram-demo**: Telegram Bot API long-poll ↔ companion harness.
+Ops **telegram-demo**: Telegram Bot API long-poll ↔ companion harness.
 
 ## Integration surface
 
 | Layer | Role |
 |-------|------|
 | ``app/external_services/telegram_bot_api.py`` | Bot API HTTP (getUpdates, sendMessage, getMe) |
-| ``backend/ops/telegram_demo/`` | Provision, in-memory binding, in-process presence, transport |
-| ``GET /telegram-demo`` | Onboard page: bot info + QR deep link ``https://t.me/{username}?start=agent_{id}`` |
-| ``GET /api/v1/telegram-demo/bot-info`` | JSON bot id / username for the page |
+| ``backend/ops/telegram_demo/`` | Provision, Postgres binding, in-process presence, transport |
+| ``GET /telegram-demo`` | Team QR: ``https://t.me/{username}?start=onboard`` |
+| ``GET /api/v1/telegram-demo/bot-info`` | JSON bot id / username |
+| ``GET /api/v1/telegram-demo/bindings`` | Debug: persisted binding rows |
 | ``companion_chat_service.run_user_chat`` | Same kernel as WebSocket; ``runtime_channel=TELEGRAM`` |
 
 ## Bot ownership
 
 - **Developer** creates the bot in Telegram **BotFather** (``/newbot``).
-- Token lives in ``agent.channels.telegram.bot_token`` (fallback: legacy ``agent.telegram_bot_token``).
-- Inty **consumes** the token only; it does not create or register bots.
+- Token lives in ``agent.channels.telegram.bot_token``.
+- Inty **consumes** the token only.
 
-## User-visible behavior (MVP)
+## User-visible behavior (v2)
 
-1. Tester opens ``http://localhost:8001/telegram-demo``, enters an existing **agent_id**, scans QR.
-2. Telegram opens the bot DM with embedded ``/start agent_{id}``.
-3. Ops provisions a **guest** ``User`` (``nickname=Telegram_*``, ``meta_data.telegram_chat_id``).
-4. User sends **text**; harness replies (中文 OK — language follows harness, not forced English).
-5. **No proactive** inner-tick on Telegram; **no** image/voice inbound yet.
+1. Teammate opens ``GET /telegram-demo``, scans **team QR** (``start=onboard``).
+2. Ops auto-provisions **guest** ``User`` + PRIVATE ``Agent`` per ``telegram_chat_id``.
+3. User sends **text**; harness replies (中文 OK).
+4. **Inner-tick** proactive / maintenance downlink via ``sendMessage`` (per-binding worker).
+5. Ops restart: bindings + presences restore from ``ops_telegram_demo_bindings``.
 
-## Prototype limits (code TODOs, not product promises)
+## Multi-user routing
 
-- Binding **in-memory only** — Ops restart requires ``/start`` again.
-- Still requires **agent_id** on the web page (follow-up: auto onboard like ``/weixin``).
-- One active runtime channel per Inty user within this Ops process (Telegram vs App WS).
+One shared bot; routing key is Telegram ``chat_id`` → binding → ``(user_id, agent_id, chat_id)``.
+See ``TelegramTransport`` class docstring.
 
-TODO(telegram-demo-no-app-required): Telegram users need only the Telegram app; no iMate install.
-Follow-up: public ``/telegram`` onboard, webhook mode, ORM bridge restore — see plan issue backlog.
+## Limits
+
+- Binding + poll offset in Postgres; **single Ops replica** (no multi-pod long-poll) — #3347.
+- Text inbound only; no image/voice yet — #3349.
+- Legacy ``/start agent_{id}`` kept for tests; UI promotes ``onboard`` only.
+
+Manual restore smoke: ``.cursor/skills/telegram-demo-restore-smoke/SKILL.md``.

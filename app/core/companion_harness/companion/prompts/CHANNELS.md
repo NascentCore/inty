@@ -2,7 +2,8 @@
 
 Channels are medium to interact with your human companion:
 
+- App (iMate)
 - Wechat
-- App
+- Telegram
 
-Channels offer different moduality of messages that determines Inty's capability of perceiving the user.
+Channels offer different shapes of interactivity between you and the user.

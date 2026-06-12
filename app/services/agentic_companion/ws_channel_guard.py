@@ -1,6 +1,6 @@
 """Reject companion WebSocket when another runtime channel already holds the user.
 
-TODO(telegram-demo-ws-guard): Extend to Weixin bridge and cross-process registry when needed.
+TODO(telegram-demo-ws-guard): Extend to Weixin bridge and cross-process registry when needed — #3351
 """
 
 from __future__ import annotations

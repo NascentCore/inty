@@ -19,7 +19,10 @@ from app.models.user import AuthType, User
 from app.schemas.agent import AgentCreate
 from app.services import agent_service
 from app.services.user_service import generate_next_readable_id
-from backend.ops.telegram_demo.provision import provision_inty_for_telegram_chat
+from backend.ops.telegram_demo.provision import (
+    provision_inty_for_telegram_chat,
+    provision_inty_for_telegram_onboard,
+)
 
 
 async def _create_creator_user(db: AsyncSession) -> str:
@@ -109,4 +112,31 @@ async def test_provision_telegram_guest_reuses_user(async_db_session: AsyncSessi
     await _delete_user_and_agents(async_db_session, first.user_id)
     await async_db_session.execute(delete(Agent).where(Agent.id == agent_id))
     await async_db_session.execute(delete(User).where(User.id == creator_id))
+    await async_db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_provision_onboard_creates_user_and_agent(
+    async_db_session: AsyncSession,
+) -> None:
+    await async_engine.dispose()
+    telegram_chat_id = f"tg-onboard-{uuid.uuid4().hex}"
+
+    first = await provision_inty_for_telegram_onboard(
+        telegram_chat_id=telegram_chat_id,
+    )
+    assert first.is_new_user is True
+    assert first.agent_id != ""
+    assert first.chat_id != ""
+
+    second = await provision_inty_for_telegram_onboard(
+        telegram_chat_id=telegram_chat_id,
+    )
+    assert second.is_new_user is False
+    assert second.user_id == first.user_id
+    assert second.agent_id == first.agent_id
+    assert second.chat_id == first.chat_id
+
+    await async_db_session.execute(delete(Chat).where(Chat.user_id == first.user_id))
+    await _delete_user_and_agents(async_db_session, first.user_id)
     await async_db_session.commit()
