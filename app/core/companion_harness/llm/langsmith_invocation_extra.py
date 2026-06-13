@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 INTY_LLM_SOURCE_METADATA_KEY = "inty_llm_source"
+INTY_RUNTIME_CHANNEL_METADATA_KEY = "inty_runtime_channel"
 INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY = "inty_tool_choice_attempt"
 INTY_TOOL_BG_ROUND_METADATA_KEY = "inty_tool_bg_round"
 
@@ -27,6 +28,14 @@ TOOL_CHOICE_ATTEMPT_AUTO = "auto"
 LANGSMITH_RUN_NAME_DREAMING_CONSOLIDATION_BASE = (
     "agentic_companion_dreaming_consolidation"
 )
+
+
+def runtime_channel_metadata(*, runtime_channel: str) -> dict[str, Any]:
+    """Metadata fragment for LangSmith runs: which human-facing channel served the turn."""
+    ch = runtime_channel.strip()
+    if not ch:
+        return {}
+    return {INTY_RUNTIME_CHANNEL_METADATA_KEY: ch}
 
 
 def invocation_extra(

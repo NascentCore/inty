@@ -247,6 +247,32 @@ def test_create_companion_turn_root_run_inner_tick_proactive_lane(
     return_value=True,
 )
 @patch("langsmith.run_trees.RunTree")
+def test_create_companion_turn_root_run_includes_runtime_channel(
+    mock_rt_cls: MagicMock, _en: MagicMock
+) -> None:
+    mock_root = MagicMock()
+    mock_rt_cls.return_value = mock_root
+    create_companion_turn_root_run(
+        inty_trace_id="t1",
+        user_msg_uuid="u1",
+        chat_model=resolve_chat_text_model("stub/chat-route"),
+        tool_model=resolve_chat_text_model("stub/tool-route"),
+        user_id="u1",
+        companion_id="a1",
+        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+    )
+    kwargs = mock_rt_cls.call_args.kwargs
+    assert kwargs["inputs"]["runtime_channel"] == "telegram"
+    assert kwargs["tags"][-1] == "runtime_channel_telegram"
+    assert kwargs["extra"]["metadata"]["inty_runtime_channel"] == "telegram"
+    end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
+
+
+@patch(
+    "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    return_value=True,
+)
+@patch("langsmith.run_trees.RunTree")
 def test_create_companion_turn_root_run_inner_tick_dreaming_lane(
     mock_rt_cls: MagicMock, _en: MagicMock
 ) -> None:

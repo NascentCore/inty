@@ -64,6 +64,7 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
     SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
     invocation_extra,
+    runtime_channel_metadata,
 )
 
 from .llm_client import (
@@ -615,6 +616,7 @@ async def _run_companion_turn_core(
             transcript_newest_message_uuid=(
                 transcript_tail_message_uuid(store) if inner_tick_turn else None
             ),
+            runtime_channel=runtime_context.channel,
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(
             langsmith_parent_run
@@ -741,6 +743,9 @@ async def _run_companion_turn_core(
                                     scene=foreground_scene,
                                     langsmith_extra=invocation_extra(
                                         source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
+                                        extra_metadata=runtime_channel_metadata(
+                                            runtime_channel=runtime_context.channel.value
+                                        ),
                                     ),
                                     high_reasoning=tick_proactive,
                                 )
