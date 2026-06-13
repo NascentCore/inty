@@ -19,6 +19,8 @@ app:
   features:
     # WS companion bootstrap: NONE | USER_INTERACTIVE
     companion_memory_bootstrap_type: USER_INTERACTIVE
+    companion_harness:
+      user_feedback_github_token: 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
 
 sentry:
   # dev-inty/default
