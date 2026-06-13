@@ -1,3 +1,5 @@
+<!-- TODO(person-identity-schema): Remove package template; runtime USER.md seeded from templates/IDENTITY.md schema. #3390 -->
+
 # 用户档案
 
 *关于用户，我愿意记住的点点滴滴。*
@@ -8,9 +10,17 @@
 
 ## 身份信息
 
+基础信息：
+
+- 姓名：
+- 性别：
+- 年龄：
+- 所在地：
+- 国籍：
+
 待对话填充
 
-## 偏好与习惯
+## 个性特征
 
 待对话填充
 

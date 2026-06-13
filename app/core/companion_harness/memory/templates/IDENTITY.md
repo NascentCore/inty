@@ -1,3 +1,5 @@
+<!-- TODO(person-identity-schema): Replace with role-neutral person-identity schema; seeds runtime USER.md + IDENTITY.md. #3390 -->
+
 # 我的身份
 
 *由用户与你共同塑造。*
@@ -15,9 +17,13 @@
 
 ## 身份信息
 
-待对话填充
+基础信息：
 
-## 偏好与习惯
+- 姓名：
+- 性别：
+- 年龄：
+
+## 个性特征
 
 待对话填充
 

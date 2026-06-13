@@ -49,6 +49,9 @@ _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = tuple(
     sorted({*BOOTSTRAP_WRITABLE_REL_PATHS, *_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS})
 )
 
+# TODO(person-identity-schema): TEMPLATE_REFERENCE should show generic templates/IDENTITY.md schema once,
+# not separate USER.md + IDENTITY.md package seeds; runtime bootstrap still writes both paths. #3390
+
 # TODO(bootstrap-prompt-single-source): Bootstrap write/tool rules duplicated across
 # ``prompts/BOOTSTRAP.md``, ``build_bootstrap_tool_call_section``, and
 # ``_output_contract_text_interactive_bootstrap_tools``; derive all three from one typed
