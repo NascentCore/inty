@@ -23,6 +23,8 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
+from .envelope_test_support import envelope_response
+
 
 def _tool_response(
     *,
@@ -200,3 +202,96 @@ async def test_user_chat_multi_round_tool_calls_emit_interim_downlink(
     assert [row["role"] for row in rows] == ["user", "assistant", "assistant"]
     assert rows[1]["content"] == "working on it"
     assert rows[2]["content"] == "done with tools"
+
+
+@pytest.mark.asyncio
+async def test_user_chat_in_turn_sync_envelope_significance_on_final_round(
+    tmp_path: Path,
+) -> None:
+    scope = CompanionScope("sync-env", "a", str(tmp_path.resolve()))
+    store = MemoryStore(scope=scope, repository=None)
+    _seed_settled_workspace(store)
+    client = _FakeInTurnSyncLLMClient(
+        [
+            envelope_response(
+                user_facing_reply="parsed sync reply",
+                importance_round=7,
+                importance_user_message=8,
+                importance_assistant_message=6,
+            )
+        ]
+    )
+
+    out = await run_companion_user_chat_turn(
+        "hello envelope",
+        deps=_user_chat_deps(store, client),
+    )
+
+    assert out.assistant_text == "parsed sync reply"
+    assert out.significance_perception == {
+        "importance_round": 7,
+        "importance_user_message": 8,
+        "importance_assistant_message": 6,
+    }
+    assert len(client.chat_calls) == 1
+    assert client.chat_calls[0].get("response_format") is not None
+
+    rows = _transcript_rows(store)
+    assert rows[1]["content"] == "parsed sync reply"
+    assert rows[1]["significance_perception"] == out.significance_perception
+
+
+@pytest.mark.asyncio
+async def test_user_chat_multi_round_envelope_interim_uses_user_facing_reply(
+    tmp_path: Path,
+) -> None:
+    scope = CompanionScope("sync-env-interim", "a", str(tmp_path.resolve()))
+    store = MemoryStore(scope=scope, repository=None)
+    _seed_settled_workspace(store)
+    interim: list[BootstrapInterimOutput] = []
+
+    async def _sink(ev: BootstrapInterimOutput) -> None:
+        interim.append(ev)
+
+    function = SimpleNamespace(
+        name="companion_update_prompt_slice",
+        arguments=json.dumps(
+            {"slice": "MEMORY", "content": "note\n"},
+            ensure_ascii=False,
+        ),
+    )
+    tool_call = SimpleNamespace(id="tc-1", type="function", function=function)
+    client = _FakeInTurnSyncLLMClient(
+        [
+            envelope_response(
+                user_facing_reply="interim visible",
+                tool_calls=[tool_call],
+            ),
+            envelope_response(
+                user_facing_reply="final visible",
+                importance_round=4,
+                importance_user_message=3,
+                importance_assistant_message=5,
+            ),
+        ]
+    )
+
+    out = await run_companion_user_chat_turn(
+        "update memory",
+        deps=_user_chat_deps(store, client, bootstrap_interim_output_sink=_sink),
+    )
+
+    assert out.assistant_text == "final visible"
+    assert out.significance_perception == {
+        "importance_round": 4,
+        "importance_user_message": 3,
+        "importance_assistant_message": 5,
+    }
+    assert len(interim) == 1
+    assert interim[0].text == "interim visible"
+
+    rows = _transcript_rows(store)
+    assert rows[1]["content"] == "interim visible"
+    assert "significance_perception" not in rows[1]
+    assert rows[2]["content"] == "final visible"
+    assert rows[2]["significance_perception"] == out.significance_perception

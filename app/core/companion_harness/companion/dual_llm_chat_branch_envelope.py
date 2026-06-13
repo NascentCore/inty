@@ -11,7 +11,9 @@ companion turn pipeline.
   ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` (``_build_dual_llm_chat_response_format()``; ``turn.run_turn``)
   so the model returns JSON with ``user_facing_reply``, ``output_to_user``, plus
   ``importance_round`` / ``importance_user_message`` / ``importance_assistant_message``.
-  The same envelope is used for async ``tool_background`` finish (see ``tool_bg_routing``).
+  The same envelope is used for in-turn sync user chat (``_run_in_turn_sync_tool_loop``;
+  ``USER_CHAT`` / ``USER_CHAT_BOOTSTRAP``) and async ``tool_background`` finish
+  (see ``tool_bg_routing``).
   Operator guidance lives in ``prompts/SIGNIFICANCE_PERCEPTION.md`` (injected when
   ``include_significance_perception_slice`` is on; see ``prompts/system_messages.py`` and
   ``prompt_stack.companion_turn_tools_and_system_messages``).

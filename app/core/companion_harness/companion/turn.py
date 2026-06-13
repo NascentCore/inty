@@ -6,14 +6,15 @@ only appends transcript JSONL on ``MemoryStore``; batch curation belongs in **Dr
 可选 ``tool_bg_idle_event``：在加载 transcript 之前等待上一轮异步 tool_background 线程收尾，
 保证主 ``transcript.jsonl``（或维护内在节拍用的 ``transcript_inner_tick.jsonl``）已含工具摘要后再组装本轮 chat/tool messages。
 
-**Importance scoring (significance perception)**：When the foreground chat call uses
+**Importance scoring (significance perception)**：When a chat completion uses
 ``response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT``, the assistant JSON envelope includes three
 1-10 scores and ``output_to_user`` beside ``user_facing_reply``. Parsed scores go to ``significance_meta`` and are
 stored on the assistant transcript row and returned on ``CompanionTurnResult.significance_perception``
-(API layer may mirror into ``chat_history.meta_data``). Eligibility: foreground envelope applies to
-async dual-LLM (tools present) always for that chat leg; for the single-completion branch only when
-``use_dual_structured_chat`` is true (no tools, not inner-tick async background route). If the parsed
-envelope has ``output_to_user=false`` on either foreground chat path, ``run_turn`` logs WARNING with
+(API layer may mirror into ``chat_history.meta_data``). Eligibility: in-turn sync tool loops
+(``USER_CHAT`` / ``USER_CHAT_BOOTSTRAP``) on every round with parse on terminal round only;
+single-completion ``CHAT_ONLY_SYNC`` when ``use_dual_structured_chat`` is true (no tools,
+``USER_CHAT`` or implicit sign-on greeting, not inner-tick async background route). If the parsed
+envelope has ``output_to_user=false`` on either chat path, ``run_turn`` logs WARNING with
 ``trace_id``: the prompt/schema contract requires true on chat branches (false is for tool_background
 routing); the model may still drift. Full pipeline notes: ``dual_llm_chat_branch_envelope`` module docstring.
 
@@ -230,13 +231,13 @@ async def _run_in_turn_sync_tool_loop(
     route_mode: TurnRouteMode,
     langsmith_source: str,
     interim_output_sink: BootstrapInterimOutputSink | None,
-) -> tuple[str, str, str, bool, str | None]:
-    """In-turn chat + tools without dual-LLM / tool_background.
+) -> tuple[str, str, str, bool, str | None, dict[str, Any] | None]:
+    """In-turn chat + tools with ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` (no dual-LLM foreground).
 
     Persists the user transcript row first, then non-empty assistant ``content`` from each LLM
     round (via callback) so JSONL order is always user → assistant(s). Interim rounds with
     ``tool_calls`` may also push via ``interim_output_sink``. Caller must not append the user
-    row again at turn end.
+    row again at turn end. ``significance_meta`` is taken from the terminal round envelope only.
     """
     store.append_jsonl_record(
         transcript_rel,
@@ -260,6 +261,7 @@ async def _run_in_turn_sync_tool_loop(
             messages=msgs,
             model=chat_model,
             tools=tools,
+            response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
             scene=LLM_SCENE_CHAT,
             langsmith_extra=invocation_extra(source=langsmith_source),
         )
@@ -326,25 +328,26 @@ async def _run_in_turn_sync_tool_loop(
         nonlocal sync_skip_final_assistant_row
         nonlocal last_interim_assistant_msg_uuid
         round_index += 1
-        body = (message.content or "").strip()
+        split = split_dual_llm_chat_branch_message(message)
+        body = split.visible_text.strip()
         if not body:
             return
         had_tool_calls = bool(getattr(message, "tool_calls", None) or [])
         ls_trace = langsmith_trace_acc
         ls_run = langsmith_llm_run_acc
         assistant_msg_uuid = str(uuid.uuid4())
-        store.append_jsonl_record(
-            transcript_rel,
-            {
-                "role": "assistant",
-                "content": body,
-                "ts": utc_iso_ts(),
-                "uuid": assistant_msg_uuid,
-                "reply_to": user_msg_uuid,
-                "source": "chat",
-                "trace_id": trace_id,
-            },
-        )
+        assistant_row: dict[str, Any] = {
+            "role": "assistant",
+            "content": body,
+            "ts": utc_iso_ts(),
+            "uuid": assistant_msg_uuid,
+            "reply_to": user_msg_uuid,
+            "source": "chat",
+            "trace_id": trace_id,
+        }
+        if (not had_tool_calls) and split.significance_meta:
+            assistant_row["significance_perception"] = split.significance_meta
+        store.append_jsonl_record(transcript_rel, assistant_row)
         last_interim_assistant_msg_uuid = assistant_msg_uuid
         if not had_tool_calls:
             sync_skip_final_assistant_row = True
@@ -377,7 +380,15 @@ async def _run_in_turn_sync_tool_loop(
     if loop_result.trace_id:
         langsmith_trace_acc = loop_result.trace_id
     final_msg = loop_result.response.choices[0].message
-    last_text = (final_msg.content or "").strip()
+    final_split = split_dual_llm_chat_branch_message(final_msg)
+    last_text = final_split.visible_text.strip()
+    significance_meta = final_split.significance_meta
+    if final_split.output_to_user is False:
+        logger.warning(
+            "run_turn in_turn_sync_tool_loop output_to_user=false trace_id={} "
+            "(expected true for terminal chat round)",
+            trace_id,
+        )
     approx_ctx_chars = sum(
         len(str(m.get("content") or "")) for m in loop_result.messages
     )
@@ -396,6 +407,7 @@ async def _run_in_turn_sync_tool_loop(
         langsmith_llm_run_acc,
         sync_skip_final_assistant_row,
         last_interim_assistant_msg_uuid,
+        significance_meta,
     )
 
 
@@ -645,6 +657,7 @@ async def _run_companion_turn_core(
                         langsmith_llm_run_acc,
                         sync_skip_final_assistant_row,
                         sync_last_interim_assistant_msg_uuid,
+                        significance_meta,
                     ) = await _run_in_turn_sync_tool_loop(
                         store=store,
                         llm_client=llm_client,

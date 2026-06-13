@@ -27,6 +27,8 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
+from .envelope_test_support import envelope_response
+
 _NEVER = 86400.0 * 365.0
 
 
@@ -178,6 +180,59 @@ async def test_bootstrap_multi_round_transcript_user_before_all_assistants(
     assert rows[2]["content"] == "从现在起我就是孔明"
     assert len(interim) == 1
     assert interim[0].text == "我先记一下"
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_multi_round_envelope_interim_uses_user_facing_reply(
+    tmp_path: Path,
+) -> None:
+    scope = CompanionScope("bootstrap-env-interim", "agent", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    _seed_bootstrap_workspace(store)
+    interim: list[BootstrapInterimOutput] = []
+
+    async def _sink(ev: BootstrapInterimOutput) -> None:
+        interim.append(ev)
+
+    function = SimpleNamespace(
+        name="companion_update_prompt_slice",
+        arguments=json.dumps(
+            {"slice": "IDENTITY", "content": "孔明\n"},
+            ensure_ascii=False,
+        ),
+    )
+    tool_call = SimpleNamespace(id="tc-1", type="function", function=function)
+    client = _FakeBootstrapLLMClient(
+        [
+            envelope_response(
+                user_facing_reply="bootstrap interim parsed",
+                tool_calls=[tool_call],
+            ),
+            envelope_response(
+                user_facing_reply="bootstrap final parsed",
+                importance_round=6,
+                importance_user_message=7,
+                importance_assistant_message=5,
+            ),
+        ]
+    )
+
+    out = await run_companion_user_chat_turn(
+        "你就叫孔明吧",
+        deps=_bootstrap_deps(store, client, bootstrap_interim_output_sink=_sink),
+    )
+
+    rows = _transcript_rows(store)
+    assert rows[1]["content"] == "bootstrap interim parsed"
+    assert rows[2]["content"] == "bootstrap final parsed"
+    assert out.assistant_text == "bootstrap final parsed"
+    assert out.significance_perception == {
+        "importance_round": 6,
+        "importance_user_message": 7,
+        "importance_assistant_message": 5,
+    }
+    assert len(interim) == 1
+    assert interim[0].text == "bootstrap interim parsed"
 
 
 @pytest.mark.asyncio

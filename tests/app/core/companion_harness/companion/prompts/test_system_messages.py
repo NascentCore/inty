@@ -108,7 +108,7 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
     assert CompanionRuntimeChannel.WECHAT_WEIXIN.value == "wechat_weixin"
 
 
-def test_user_chat_in_turn_sync_builder_omits_dual_envelope_contract() -> None:
+def test_user_chat_in_turn_sync_builder_includes_in_turn_envelope_contract() -> None:
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
@@ -122,8 +122,11 @@ def test_user_chat_in_turn_sync_builder_omits_dual_envelope_contract() -> None:
     )
     contents = [str(message["content"]) for message in messages]
     joined = "\n".join(contents)
+    assert "## In-turn sync: structured reply envelope" in joined
+    assert "importance_round" in joined
     assert "## Dual-LLM chat branch: structured reply envelope" not in joined
     assert "快思考路径（系统 1）与并行工具路径（系统 2）须一致" not in joined
+    assert "tool_choice=none" not in joined
 
 
 def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() -> None:

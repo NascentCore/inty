@@ -17,7 +17,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | Scenario | Function |
 |----------|----------|
 | USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``build_system_messages_for_bootstrap_track`` |
-| Settled USER_CHAT in-turn sync tools | ``build_system_messages_for_user_chat_in_turn_sync`` |
+| Settled USER_CHAT in-turn sync tools | ``build_system_messages_for_user_chat_in_turn_sync`` (+ structured envelope) |
 | ASYNC user-round foreground + plan prefix | ``build_system_messages_for_chat_track`` |
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
@@ -147,6 +147,23 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
         "- `output_to_user` (boolean): **must be true** on this foreground dual-LLM chat branch "
         "(the parallel tool branch decides silent vs visible follow-ups).\n\n"
         "This branch still must not call tools (`tool_choice=none`).\n"
+    )
+
+
+def _in_turn_sync_structured_output_contract_text() -> str:
+    """Prompt for in-turn sync tool loop with ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` (tools allowed)."""
+    return (
+        "## In-turn sync: structured reply envelope\n\n"
+        "Your **entire** assistant `message.content` must be **valid JSON only** "
+        "(no markdown fences, no text before or after the JSON object). "
+        "It must match the API `response_format` schema. Fields:\n"
+        "- `user_facing_reply` (string): natural-language text for the user; on interim "
+        "rounds with `tool_calls`, carry brief progress the user may see before tools finish.\n"
+        "- `importance_round` (integer 1-10): importance of this turn overall given transcript and system context.\n"
+        "- `importance_user_message` (integer 1-10): importance of the latest user message alone.\n"
+        "- `importance_assistant_message` (integer 1-10): importance of `user_facing_reply` alone.\n"
+        "- `output_to_user` (boolean): **must be true** on the terminal round (no further `tool_calls`).\n\n"
+        "You may call tools in the same completion when needed; keep `user_facing_reply` aligned with SOUL / USER boundaries.\n"
     )
 
 
@@ -656,6 +673,7 @@ def _output_system_messages(
     interactive_bootstrap_active: bool,
     include_significance_perception_slice: bool,
     chat_branch_no_tool_api: bool,
+    in_turn_sync_structured_output: bool = False,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     if inner_tick_turn:
@@ -692,6 +710,10 @@ def _output_system_messages(
     if include_significance_perception_slice and chat_branch_no_tool_api:
         out.append(
             _system_message(_dual_llm_chat_structured_output_contract_text())
+        )
+    if include_significance_perception_slice and in_turn_sync_structured_output:
+        out.append(
+            _system_message(_in_turn_sync_structured_output_contract_text())
         )
     return out
 
@@ -742,6 +764,7 @@ def build_system_messages(
     tool_side_compact: bool = False,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
+    in_turn_sync_structured_output: bool = False,
     proactive_life_currents_block: str | None = None,
 ) -> list[dict[str, Any]]:
     tick_proactive = _inner_tick_proactive_chat(
@@ -788,6 +811,7 @@ def build_system_messages(
             interactive_bootstrap_active=interactive_bootstrap_active,
             include_significance_perception_slice=include_significance_perception_slice,
             chat_branch_no_tool_api=chat_branch_no_tool_api,
+            in_turn_sync_structured_output=in_turn_sync_structured_output,
         )
     )
     out.extend(
@@ -821,7 +845,8 @@ def _build_system_messages_for_in_turn_sync_tools(
         async_foreground_chat_stack=False,
         tool_side_compact=False,
         interactive_bootstrap_active=interactive_bootstrap_active,
-        include_significance_perception_slice=False,
+        include_significance_perception_slice=True,
+        in_turn_sync_structured_output=True,
     )
 
 
@@ -861,7 +886,7 @@ def build_system_messages_for_user_chat_in_turn_sync(
     bundle: PromptBundle,
     context: ContextMeta,
 ) -> list[dict[str, Any]]:
-    """Settled USER_CHAT with in-turn tools (``IN_TURN_SYNC_TOOL``): one chat model, no dual envelope."""
+    """Settled USER_CHAT in-turn sync: one chat model, structured envelope + tools."""
     return _build_system_messages_for_in_turn_sync_tools(
         bundle,
         context,

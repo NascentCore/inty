@@ -249,9 +249,9 @@ def build_companion_turn_prompt_plan(
             runtime_context=runtime_context,
         )
     )
-    use_dual_structured_chat = (
-        track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-        and (not tools_for_turn)
+    use_dual_structured_chat = (not tools_for_turn) and track in (
+        CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+        CompanionTurnTrack.USER_CHAT,
     )
 
     transcript_compaction_meta: dict[str, Any] | None = None
