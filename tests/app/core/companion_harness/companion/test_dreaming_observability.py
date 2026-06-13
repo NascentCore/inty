@@ -68,12 +68,21 @@ def test_build_inner_tick_dreaming_runtime_event_record_fields() -> None:
     "app.core.companion_harness.companion.llm_chat_runtime.create_companion_turn_root_run",
     return_value=None,
 )
+@patch(
+    "app.core.companion_harness.companion.dreaming_observability.resolve_langsmith_slice_for_session",
+)
 def test_dreaming_batch_langsmith_scope_yields_none_when_parent_disabled(
+    mock_resolve: MagicMock,
     _create: MagicMock,
 ) -> None:
     from app.core.companion_harness.companion.dreaming_observability import (
         dreaming_batch_langsmith_scope,
     )
+    from app.core.companion_harness.companion.langsmith_turn_slice import (
+        CompanionTurnLangsmithSlice,
+    )
+
+    mock_resolve.return_value = CompanionTurnLangsmithSlice.app_default()
 
     session = MagicMock()
     session.user_id = "u"
@@ -87,5 +96,5 @@ def test_dreaming_batch_langsmith_scope_yields_none_when_parent_disabled(
         inty_trace_id="t",
         candidate=_candidate(),
         parent_run_enabled=False,
-    ) as root:
+    ) as (root, _slice):
         assert root is None

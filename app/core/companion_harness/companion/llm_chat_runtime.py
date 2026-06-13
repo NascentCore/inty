@@ -32,8 +32,8 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
 )
 from app.core.companion_harness.companion.turn_track import (
     langsmith_inty_turn_lane_for_companion_track,
@@ -102,7 +102,7 @@ def _langsmith_parent_run_extra_metadata(
     tool_model: GenAIModel,
     user_id: str = "",
     companion_id: str = "",
-    runtime_channel: CompanionRuntimeChannel | None = None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
 ) -> dict[str, Any]:
     """Align with langsmith.wrappers._openai ``ls_model_name`` for trace filtering."""
     cm = chat_model.id_on_provider.strip()
@@ -121,8 +121,7 @@ def _langsmith_parent_run_extra_metadata(
         "inty_user_id": (user_id or "").strip(),
         "inty_companion_id": (companion_id or "").strip(),
     }
-    if runtime_channel is not None:
-        meta["inty_runtime_channel"] = runtime_channel.value
+    meta.update(langsmith_slice.parent_metadata_fragment())
     if cm and tm and cm != tm:
         meta["ls_model_name"] = f"{cm} | {tm}"
     elif cm:
@@ -187,7 +186,7 @@ def create_companion_turn_root_run(
     inner_tick_activity: InnerTickActivity | None = None,
     implicit_user_signed_on: bool = False,
     transcript_newest_message_uuid: str | None = None,
-    runtime_channel: CompanionRuntimeChannel | None = None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
 ) -> Any | None:
     enabled = (
         companion_turn_langsmith_parent_enabled()
@@ -240,7 +239,7 @@ def create_companion_turn_root_run(
             tool_model=tool_model,
             user_id=uid,
             companion_id=cid,
-            runtime_channel=runtime_channel,
+            langsmith_slice=langsmith_slice,
         )
         meta["inty_turn_lane"] = turn_lane
         if inner_tick_turn:
@@ -261,15 +260,13 @@ def create_companion_turn_root_run(
             "companion_id": cid,
             "inty_turn_lane": turn_lane,
             **lane_inputs,
+            **langsmith_slice.parent_inputs_fragment(),
         }
-        if runtime_channel is not None:
-            root_inputs["runtime_channel"] = runtime_channel.value
         if inner_tick_turn:
             tail_uuid = (transcript_newest_message_uuid or "").strip()
             if tail_uuid:
                 root_inputs["transcript_newest_message_uuid"] = tail_uuid
-        if runtime_channel is not None:
-            run_tags = [*run_tags, f"runtime_channel_{runtime_channel.value}"]
+        run_tags = [*run_tags, *langsmith_slice.parent_tags()]
         root = RunTree(
             name=run_name,
             run_type="chain",

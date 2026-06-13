@@ -23,6 +23,10 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
+    LangsmithChannelSource,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
@@ -34,6 +38,8 @@ from app.core.companion_harness.companion.turn import run_companion_user_chat_tu
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
+
+_APP_SLICE = CompanionTurnLangsmithSlice.app_default()
 
 
 def _idle_tool_bg() -> threading.Event:
@@ -53,6 +59,7 @@ def test_create_companion_turn_root_run_returns_none_when_disabled(_mock: MagicM
             user_msg_uuid="u1",
             chat_model=resolve_chat_text_model("stub/disabled-chat"),
             tool_model=resolve_chat_text_model("stub/disabled-tool"),
+            langsmith_slice=_APP_SLICE,
         )
         is None
     )
@@ -71,6 +78,7 @@ def test_create_companion_turn_root_run_skips_kernel_placeholder_models(
             user_msg_uuid="u1",
             chat_model=resolve_chat_text_model("m/chat"),
             tool_model=resolve_chat_text_model("m/tool"),
+            langsmith_slice=_APP_SLICE,
         )
         is None
     )
@@ -93,6 +101,7 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
         tool_model=resolve_chat_text_model("stub/tool-route"),
         user_id="u-42",
         companion_id="c-7",
+        langsmith_slice=_APP_SLICE,
     )
     assert out is mock_root
     mock_rt_cls.assert_called_once()
@@ -102,6 +111,7 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
         "agentic_companion",
         "user_turn",
         "explicit_user_message",
+        "runtime_channel_app",
     ]
     assert kwargs["inputs"]["inty_trace_id"] == "t1"
     assert kwargs["inputs"]["user_msg_uuid"] == "u1"
@@ -137,6 +147,7 @@ def test_create_companion_turn_root_run_name_uses_unknown_when_ids_empty(
         user_msg_uuid="u1",
         chat_model=resolve_chat_text_model("stub/chat-route"),
         tool_model=resolve_chat_text_model("stub/tool-route"),
+        langsmith_slice=_APP_SLICE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_user_turn user=unknown agent=unknown"
@@ -164,6 +175,7 @@ def test_create_companion_turn_root_run_implicit_signed_on_lane(
         user_id="u1",
         companion_id="a1",
         implicit_user_signed_on=True,
+        langsmith_slice=_APP_SLICE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_implicit_turn user=u1 agent=a1"
@@ -171,6 +183,7 @@ def test_create_companion_turn_root_run_implicit_signed_on_lane(
         "agentic_companion",
         "implicit_turn",
         "implicit_user_signed_on",
+        "runtime_channel_app",
     ]
     assert kwargs["inputs"]["inty_turn_lane"] == "implicit_turn"
     assert kwargs["inputs"]["implicit_signal"] == "implicit_user_signed_on"
@@ -199,10 +212,15 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         transcript_newest_message_uuid="tail-uuid-1",
+        langsmith_slice=_APP_SLICE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_inner_tick maintenance user=u1 agent=a1"
-    assert kwargs["tags"] == ["agentic_companion", "inner_tick"]
+    assert kwargs["tags"] == [
+        "agentic_companion",
+        "inner_tick",
+        "runtime_channel_app",
+    ]
     assert kwargs["inputs"]["inty_turn_lane"] == "inner_tick"
     assert kwargs["inputs"]["inner_tick_activity"] == "maintenance"
     assert kwargs["inputs"]["transcript_newest_message_uuid"] == "tail-uuid-1"
@@ -232,6 +250,7 @@ def test_create_companion_turn_root_run_inner_tick_proactive_lane(
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         transcript_newest_message_uuid="tail-uuid-2",
+        langsmith_slice=_APP_SLICE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_inner_tick proactive_chat user=u1 agent=a1"
@@ -252,6 +271,10 @@ def test_create_companion_turn_root_run_includes_runtime_channel(
 ) -> None:
     mock_root = MagicMock()
     mock_rt_cls.return_value = mock_root
+    telegram_slice = CompanionTurnLangsmithSlice.from_channel(
+        CompanionRuntimeChannel.TELEGRAM,
+        LangsmithChannelSource.EXPLICIT_TURN,
+    )
     create_companion_turn_root_run(
         inty_trace_id="t1",
         user_msg_uuid="u1",
@@ -259,12 +282,16 @@ def test_create_companion_turn_root_run_includes_runtime_channel(
         tool_model=resolve_chat_text_model("stub/tool-route"),
         user_id="u1",
         companion_id="a1",
-        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+        langsmith_slice=telegram_slice,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["inputs"]["runtime_channel"] == "telegram"
-    assert kwargs["tags"][-1] == "runtime_channel_telegram"
+    assert "runtime_channel_telegram" in kwargs["tags"]
     assert kwargs["extra"]["metadata"]["inty_runtime_channel"] == "telegram"
+    assert (
+        kwargs["extra"]["metadata"]["inty_runtime_channel_source"]
+        == LangsmithChannelSource.EXPLICIT_TURN.value
+    )
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
@@ -288,6 +315,7 @@ def test_create_companion_turn_root_run_inner_tick_dreaming_lane(
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.DREAMING,
         transcript_newest_message_uuid="boundary-u1",
+        langsmith_slice=_APP_SLICE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_inner_tick dreaming user=u1 agent=a1"

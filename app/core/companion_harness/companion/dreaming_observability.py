@@ -15,7 +15,13 @@ from typing import TYPE_CHECKING, Any, Iterator
 from loguru import logger
 
 from app.core.companion_harness.companion.dreaming import DreamingCandidate
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
+)
 from app.core.companion_harness.companion.models import InnerTickActivity
+from app.services.agentic_companion.langsmith_channel_resolve import (
+    resolve_langsmith_slice_for_session,
+)
 
 if TYPE_CHECKING:
     from app.core.companion_harness.companion.manager import CompanionSession
@@ -67,12 +73,13 @@ def dreaming_batch_langsmith_scope(
     inty_trace_id: str,
     candidate: DreamingCandidate,
     parent_run_enabled: bool | None,
-) -> Iterator[Any | None]:
+) -> Iterator[tuple[Any | None, CompanionTurnLangsmithSlice]]:
     """Open a LangSmith parent run for one dreaming memory batch."""
     from app.core.companion_harness.companion.llm_chat_runtime import (
         create_companion_turn_root_run,
     )
 
+    langsmith_slice = resolve_langsmith_slice_for_session(session)
     chat_model = session.llm_client.resolve_model("chat")
     tool_model = session.llm_client.resolve_model("tool")
     root = create_companion_turn_root_run(
@@ -86,14 +93,15 @@ def dreaming_batch_langsmith_scope(
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.DREAMING,
         transcript_newest_message_uuid=candidate.boundary_uuid,
+        langsmith_slice=langsmith_slice,
     )
     if root is not None:
         from langsmith.run_helpers import tracing_context
 
         with tracing_context(parent=root):
-            yield root
+            yield root, langsmith_slice
     else:
-        yield None
+        yield None, langsmith_slice
 
 
 def record_dreaming_batch_observability(
