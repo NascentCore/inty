@@ -2,8 +2,9 @@
 
 When ``context.json`` marks the interactive bootstrap flag incomplete,
 ``run_companion_user_chat_turn`` enters ``USER_CHAT_BOOTSTRAP``.  That track
-uses a single in-turn tool loop so the assistant can update prompt slices and
-mark setup complete before normal user-chat routing resumes.
+uses a single in-turn tool loop so the assistant can persist relationship seed
+documents via ``memory_store_write_document`` and mark setup complete before
+normal user-chat routing resumes.
 
 WebSocket startup does not inject a synthetic kickoff user message.  A signed-on
 client emits the implicit sign-on greeting track, whose system stack carries the
@@ -25,22 +26,13 @@ from app.core.companion_harness.experience_profile import (
     normalize_experience_profile_id,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
+    BOOTSTRAP_WRITABLE_REL_PATHS,
     CompanionToolName,
 )
 
-from app.core.companion_harness.memory.memory_store import (
-    MemoryStore,
-    normalize_memory_store_relative_path,
-)
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import ContextMeta
-from .prompt_slices import (
-    PROMPT_SLICE_TO_REL,
-    SYSTEM_PROMPT_SLICE_SEPARATOR,
-    PromptSliceId,
-    parse_persistable_prompt_slice_id,
-    persistable_slice_names_csv,
-    slice_to_workspace_rel,
-)
+from .prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
@@ -48,34 +40,32 @@ from app.core.companion_harness.memory.memory_store_scope import (
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
 
-_INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
-    "IDENTITY.md",
-    "SOUL.md",
-    "STYLE.md",
-    "USER.md",
+_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS: Final[tuple[str, ...]] = (
     "MEMORY.md",
+    "SOUL.md",
 )
 
-_BOOTSTRAP_TOOL_SLICE_IDS: Final[tuple[PromptSliceId, ...]] = (
-    PromptSliceId.IDENTITY,
-    PromptSliceId.SOUL,
-    PromptSliceId.STYLE,
-    PromptSliceId.USER,
+_INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = tuple(
+    sorted({*BOOTSTRAP_WRITABLE_REL_PATHS, *_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS})
 )
+
+# TODO(bootstrap-prompt-single-source): Bootstrap write/tool rules duplicated across
+# ``prompts/BOOTSTRAP.md``, ``build_bootstrap_tool_call_section``, and
+# ``_output_contract_text_interactive_bootstrap_tools``; derive all three from one typed
+# policy next to ``BOOTSTRAP_WRITABLE_REL_PATHS`` / ``BOOTSTRAP_TRACK_TOOL_NAMES``.
 
 
 def build_bootstrap_tool_call_section() -> str:
-    """工具调用 section rendered from typed tool/slice/profile names; accompanies BOOTSTRAP.md."""
+    """工具调用 section rendered from typed tool names; accompanies BOOTSTRAP.md."""
 
-    slices = " / ".join(
-        slice_to_workspace_rel(sid) for sid in _BOOTSTRAP_TOOL_SLICE_IDS
-    )
+    docs = " / ".join(BOOTSTRAP_WRITABLE_REL_PATHS)
     return "\n".join(
         [
             "## 工具调用",
             "",
             "- Bootstrap only done once",
-            f"- Call **{CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE.value}** to update **{slices}** prompt slices",
+            f"- Call **{CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value}** to read persisted docs before updating",
+            f"- Call **{CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value}** to update **{docs}** (full markdown body per path)",
             f"- Call **{CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value}** when the user picks a built-in companionship pattern "
             f"(e.g. `{ExperienceContextMode.REMOTE_LOVER.value}` for 异地爱人, `{ExperienceContextMode.INTIMATE.value}`, `{ExperienceContextMode.EMOTIONAL_COMPANION.value}`)",
             f"- Call **{CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE.value}** to conclude bootstrap",
@@ -116,7 +106,7 @@ def build_interactive_bootstrap_template_reference_parts(
     *,
     max_chars_per_seed: int = 6000,
 ) -> list[str]:
-    """Template seed bodies for writable bootstrap prompt slices."""
+    """Template seed bodies for bootstrap context (incl. SOUL/MEMORY package defaults)."""
 
     blocks: list[str] = []
     for rel in _INTERACTIVE_TEMPLATE_RELS:
@@ -139,7 +129,7 @@ def build_interactive_bootstrap_system_message_parts(
     Ordered system bodies while interactive bootstrap is active.
 
     Returns ``BOOTSTRAP.md``, typed ``## 工具调用`` (``build_bootstrap_tool_call_section``),
-    then template references for writable prompt slices.  One string per system message
+    then template references for writable paths and package seed docs.  One string per system message
     keeps stack inspection and model weighting clearer.
     """
     return [
@@ -161,37 +151,6 @@ def build_interactive_bootstrap_system_append(
             max_chars_per_seed=max_chars_per_seed
         )
     )
-
-
-def tool_companion_update_prompt_slice(
-    store: MemoryStore,
-    slice_name: str,
-    content: str,
-) -> str:
-    """Write an allowed prompt slice and return ``OK`` or ``ERROR`` text."""
-
-    from app.core.companion_harness.memory.memory_store_document_mapping import (
-        parse_memory_store_relative_path,
-    )
-
-    sid = parse_persistable_prompt_slice_id(slice_name)
-    if sid is None:
-        return f"ERROR: unknown slice {slice_name!r}; use one of: {persistable_slice_names_csv()}"
-    rel = PROMPT_SLICE_TO_REL[sid]
-    rel_posix = normalize_memory_store_relative_path(rel)
-    try:
-        parse_memory_store_relative_path(rel_posix)
-    except ValueError as exc:
-        return f"ERROR: {exc}"
-    st = store
-    st.write_document(rel_posix, content)
-    logger.info(
-        "companion_update_prompt_slice slice={} rel={} chars={}",
-        sid.value,
-        rel_posix,
-        len(content),
-    )
-    return f"OK wrote prompt slice {sid.value} to {rel_posix} ({len(content)} chars)"
 
 
 def tool_companion_bootstrap_user_interactive_complete(
@@ -228,9 +187,8 @@ def tool_companion_bootstrap_user_interactive_complete(
         st.scope.registry_key(),
     )
     return (
-        "OK interactive bootstrap marked complete. IDENTITY / SOUL / STYLE / USER / MEMORY may "
-        "still be updated via companion_update_prompt_slice or memory_store_write_document "
-        "(where permitted)."
+        "OK interactive bootstrap marked complete. IDENTITY / STYLE / USER / MEMORY / SOUL "
+        "may still be updated via memory_store_write_document where permitted on later turns."
     )
 
 

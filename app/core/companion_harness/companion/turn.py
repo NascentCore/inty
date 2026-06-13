@@ -120,6 +120,7 @@ from .turn_pipeline import (
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call as repl_execute_tool_call,
@@ -278,7 +279,7 @@ async def _run_bootstrap_track_sync_tool_loop(
     working_messages = deepcopy(messages)
     loop_tools = list(tools_for_turn)
     chat_model = llm_client.resolve_model("chat")
-    allow = MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
+    allow = MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP
 
     def _chat_sync(
         msgs: list[dict[str, Any]], tools: list[dict[str, Any]]

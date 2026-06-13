@@ -41,3 +41,9 @@ that means the code lacks hierarchy.
 ## Alembic version files
 
 - Skip reviewing these files
+
+## GitHub issues & TODOs (followups)
+
+- Add TODO for minor followups that are not required in this change, but is required according to larger-scope repo guidelines
+- Create GitHub issues and add TODOs to track complex follow-ups
+- Comment on discovered GitHub issues if changes are made advanced the issues' progress

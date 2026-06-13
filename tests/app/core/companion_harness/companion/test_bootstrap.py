@@ -8,10 +8,21 @@ from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
-    tool_companion_update_prompt_slice,
+)
+from app.core.companion_harness.companion.models import (
+    ContextMeta,
+    load_prompt_bundle,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.models import ContextMeta
+from app.core.companion_harness.memory.memory_store_scope import (
+    load_template_seed_text,
+)
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    BOOTSTRAP_WRITABLE_REL_PATHS,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
+    REPL_DESCRIPTION_OVERRIDES_BOOTSTRAP,
+    CompanionToolName,
+)
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
     tool_memory_store_write_document,
@@ -100,12 +111,90 @@ def test_execute_tool_call_dispatch_set_experience_profile(tmp_path: Path) -> No
     assert json.loads(st.read_document("context.json"))["context_mode"] == "emotional_companion"
 
 
-def test_tool_companion_update_prompt_slice_writes_user_md(tmp_path: Path) -> None:
+def test_bootstrap_write_identity_ok(tmp_path: Path) -> None:
     root = tmp_path
     st = _store(root)
-    out = tool_companion_update_prompt_slice(st, "USER", "# user\n")
-    assert out.startswith("OK ")
-    assert st.read_document("USER.md") == "# user\n"
+    r = asyncio.run(
+        execute_tool_call(
+            st,
+            "memory_store_write_document",
+            json.dumps(
+                {"relative_path": "IDENTITY.md", "content": "# id\n"},
+                ensure_ascii=False,
+            ),
+            write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
+        )
+    )
+    assert r.startswith("OK ")
+    assert st.read_document("IDENTITY.md") == "# id\n"
+
+
+def test_bootstrap_write_soul_rejected(tmp_path: Path) -> None:
+    root = tmp_path
+    st = _store(root)
+    r = asyncio.run(
+        execute_tool_call(
+            st,
+            "memory_store_write_document",
+            json.dumps(
+                {"relative_path": "SOUL.md", "content": "new soul"},
+                ensure_ascii=False,
+            ),
+            write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
+        )
+    )
+    assert r.startswith("ERROR: memory_store_write_document only allows:")
+    assert "SOUL.md" in r
+    assert st.read_document_if_exists("SOUL.md") is None
+
+
+def test_bootstrap_end_state_seeds(tmp_path: Path) -> None:
+    root = tmp_path
+    st = _store(root)
+    soul_seed = load_template_seed_text("SOUL.md")
+    memory_seed = load_template_seed_text("MEMORY.md")
+    load_prompt_bundle(st)
+    assert st.read_document("SOUL.md") == soul_seed
+    assert st.read_document("MEMORY.md") == memory_seed
+    asyncio.run(
+        execute_tool_call(
+            st,
+            "memory_store_write_document",
+            json.dumps(
+                {
+                    "relative_path": "IDENTITY.md",
+                    "content": "# custom identity\n",
+                },
+                ensure_ascii=False,
+            ),
+            write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
+        )
+    )
+    asyncio.run(
+        execute_tool_call(
+            st,
+            "memory_store_write_document",
+            json.dumps(
+                {"relative_path": "STYLE.md", "content": "# style\n"},
+                ensure_ascii=False,
+            ),
+            write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
+        )
+    )
+    asyncio.run(
+        execute_tool_call(
+            st,
+            "memory_store_write_document",
+            json.dumps(
+                {"relative_path": "USER.md", "content": "# user\n"},
+                ensure_ascii=False,
+            ),
+            write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
+        )
+    )
+    assert st.read_document("SOUL.md") == soul_seed
+    assert st.read_document("MEMORY.md") == memory_seed
+    assert st.read_document("IDENTITY.md") == "# custom identity\n"
 
 
 def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
@@ -165,7 +254,7 @@ def test_tool_companion_set_experience_profile_accepts_unknown_profile_id(tmp_pa
     assert json.loads(st.read_document("context.json"))["context_mode"] == "custom_profile"
 
 
-def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:
+def test_execute_tool_call_dispatch_write_and_complete(tmp_path: Path) -> None:
     root = tmp_path
     st = _store(root)
     st.write_document(
@@ -182,16 +271,20 @@ def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:
         )
         + "\n",
     )
-    st.write_document("SOUL.md", "old")
+    st.write_document("USER.md", "old")
     r1 = asyncio.run(
         execute_tool_call(
             st,
-            "companion_update_prompt_slice",
-            json.dumps({"slice": "SOUL", "content": "new soul"}),
+            "memory_store_write_document",
+            json.dumps(
+                {"relative_path": "USER.md", "content": "new user"},
+                ensure_ascii=False,
+            ),
+            write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
         )
     )
     assert r1.startswith("OK ")
-    assert st.read_document("SOUL.md") == "new soul"
+    assert st.read_document("USER.md") == "new user"
     r2 = asyncio.run(
         execute_tool_call(
             st,
@@ -203,38 +296,6 @@ def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:
     assert json.loads(st.read_document("context.json"))[
         "workspace_bootstrap_user_interactive_completed"
     ] is True
-    r3 = asyncio.run(
-        execute_tool_call(
-            st,
-            "companion_update_prompt_slice",
-            json.dumps({"slice": "SOUL", "content": "soul after complete"}),
-        )
-    )
-    assert r3.startswith("OK ")
-    assert st.read_document("SOUL.md") == "soul after complete"
-
-
-def test_soul_slice_allowed_after_interactive_bootstrap_complete(tmp_path: Path) -> None:
-    root = tmp_path
-    st = _store(root)
-    st.write_document("SOUL.md", "seed")
-    st.write_document(
-        "context.json",
-        json.dumps(
-            {
-                "context_mode": "intimate",
-                "user_id": "u",
-                "companion_id": "a",
-                "chat_id": "c",
-                "workspace_bootstrap_user_interactive_completed": True,
-            },
-            ensure_ascii=False,
-        )
-        + "\n",
-    )
-    ok = tool_companion_update_prompt_slice(st, "SOUL", "updated soul\n")
-    assert ok.startswith("OK ")
-    assert st.read_document("SOUL.md") == "updated soul\n"
 
 
 def test_memory_store_write_soul_allowed_after_interactive_bootstrap_complete(
@@ -256,3 +317,38 @@ def test_memory_store_write_soul_allowed_after_interactive_bootstrap_complete(
     ok = tool_memory_store_write_document(st, "SOUL.md", "updated via store")
     assert ok.startswith("OK ")
     assert st.read_document("SOUL.md") == "updated via store"
+
+
+def test_bootstrap_tool_schema_write_description_names_bootstrap_paths_only() -> None:
+    bootstrap_csv = ", ".join(BOOTSTRAP_WRITABLE_REL_PATHS)
+    write_desc = REPL_DESCRIPTION_OVERRIDES_BOOTSTRAP[
+        CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT
+    ]
+    assert f"Only writable paths via this tool: {bootstrap_csv}" in write_desc
+    assert "SOUL.md" in write_desc
+    from app.core.companion_harness.tools.companion_tool_runtime import (
+        build_openai_bootstrap_track_tools,
+    )
+
+    write_tool = next(
+        t
+        for t in build_openai_bootstrap_track_tools()
+        if t["function"]["name"] == "memory_store_write_document"
+    )
+    assert (
+        f"Only writable paths via this tool: {bootstrap_csv}"
+        in write_tool["function"]["description"]
+    )
+
+
+def test_bootstrap_track_openai_tools_match_manifest() -> None:
+    from app.core.companion_harness.tools.companion_tool_definitions import (
+        BOOTSTRAP_TRACK_TOOL_NAMES,
+    )
+    from app.core.companion_harness.tools.companion_tool_runtime import (
+        build_openai_bootstrap_track_tools,
+    )
+
+    names = {t["function"]["name"] for t in build_openai_bootstrap_track_tools()}
+    expected = {n.value for n in BOOTSTRAP_TRACK_TOOL_NAMES}
+    assert names == expected

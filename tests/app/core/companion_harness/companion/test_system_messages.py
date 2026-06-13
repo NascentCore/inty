@@ -68,11 +68,31 @@ def test_bootstrap_track_injects_typed_tool_call_section() -> None:
     )
     assert contents.index(bootstrap_spec_block) < contents.index(tool_section)
     for tool_name in (
-        CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE,
+        CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
+        CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
         CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
         CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
     ):
         assert tool_name.value in tool_section
+
+
+def test_bootstrap_output_contract_names_memory_store_write_paths_only() -> None:
+    bundle = PromptBundle(
+        identity="identity",
+        soul="soul",
+        user_md="user",
+        memory_md="",
+    )
+    joined = "\n".join(
+        _system_contents(
+            build_system_messages_for_bootstrap_track(bundle, ContextMeta())
+        )
+    )
+    assert "memory_store_write_document" in joined
+    assert "IDENTITY.md / STYLE.md / USER.md" in joined
+    assert "SOUL.md" in joined and "MEMORY.md" in joined
+    assert "companion_update_prompt_slice" not in joined
+    assert "schedule_task" not in joined
 
 
 def test_bootstrap_omits_capability_package_slices() -> None:
