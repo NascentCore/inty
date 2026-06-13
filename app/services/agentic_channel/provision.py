@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +26,10 @@ from app.services.agentic_channel.endpoints import (
     resolve_scope_by_channel_user_id,
     upsert_endpoint_in_session,
 )
-from app.services.agentic_channel.errors import ChannelEndpointConflictError
+from app.services.agentic_channel.errors import (
+    ChannelEndpointConflictError,
+    integrity_error_detail,
+)
 from app.services.agentic_channel.turn import ensure_memory_store_session
 from app.services.global_services import subscription_service
 from app.services.user_service import generate_next_readable_id
@@ -126,9 +130,23 @@ async def _provision_result_after_bind_race(
             channel=channel, channel_user_id=channel_user_id
         )
     if raced is None:
+        logger.error(
+            "agent_channel onboard race recovery failed channel={} channel_address={} channel_user_id={}",
+            channel.value,
+            channel_address,
+            channel_user_id,
+        )
         raise ChannelEndpointConflictError(
             "endpoint bind violates unique constraint"
         )
+    logger.info(
+        "agent_channel onboard race recovery ok channel={} channel_address={} channel_user_id={} user_id={} agent_id={}",
+        channel.value,
+        channel_address,
+        channel_user_id,
+        raced.user_id,
+        raced.agent_id,
+    )
     await assert_inbound_endpoint_identity(
         channel=channel,
         channel_address=channel_address,
@@ -167,9 +185,25 @@ async def provision_agent_for_channel_onboard(
         )
     if by_address is not None and by_user is not None:
         if by_address.registry_key() != by_user.registry_key():
+            logger.warning(
+                "agent_channel onboard scope split channel={} channel_address={} channel_user_id={} by_address={} by_user={}",
+                channel.value,
+                channel_address,
+                channel_user_id,
+                by_address.registry_key(),
+                by_user.registry_key(),
+            )
             raise ChannelEndpointConflictError(
                 "channel_address and channel_user_id resolve to different scopes"
             )
+        logger.info(
+            "agent_channel onboard existing scope channel={} channel_address={} channel_user_id={} user_id={} agent_id={}",
+            channel.value,
+            channel_address,
+            channel_user_id,
+            by_address.user_id,
+            by_address.agent_id,
+        )
         return ChannelProvisionResult(
             scope=by_address,
             is_new_user=False,
@@ -177,6 +211,14 @@ async def provision_agent_for_channel_onboard(
             channel_user_id=channel_user_id,
         )
     if by_address is not None:
+        logger.info(
+            "agent_channel onboard existing by_address channel={} channel_address={} channel_user_id={} user_id={} agent_id={}",
+            channel.value,
+            channel_address,
+            channel_user_id,
+            by_address.user_id,
+            by_address.agent_id,
+        )
         return ChannelProvisionResult(
             scope=by_address,
             is_new_user=False,
@@ -184,6 +226,14 @@ async def provision_agent_for_channel_onboard(
             channel_user_id=channel_user_id,
         )
     if by_user is not None:
+        logger.info(
+            "agent_channel onboard existing by_user channel={} channel_address={} channel_user_id={} user_id={} agent_id={}",
+            channel.value,
+            channel_address,
+            channel_user_id,
+            by_user.user_id,
+            by_user.agent_id,
+        )
         return ChannelProvisionResult(
             scope=by_user,
             is_new_user=False,
@@ -192,11 +242,15 @@ async def provision_agent_for_channel_onboard(
         )
 
     async with AsyncSessionLocal() as db:
+        pending_user_id = ""
+        pending_agent_id = ""
         try:
             user = await _add_guest_user(db)
             tag = uuid.uuid4().hex[:10]
             agent = await _add_channel_agent(db, user_id=user.id, tag=tag)
             scope = AgentScope(user_id=user.id, agent_id=agent.id)
+            pending_user_id = scope.user_id
+            pending_agent_id = scope.agent_id
             await upsert_endpoint_in_session(
                 db,
                 scope,
@@ -205,7 +259,32 @@ async def provision_agent_for_channel_onboard(
                 channel_user_id=channel_user_id,
             )
             await db.commit()
-        except (ChannelEndpointConflictError, IntegrityError):
+        except ChannelEndpointConflictError as exc:
+            logger.warning(
+                "agent_channel onboard bind conflict channel={} channel_address={} channel_user_id={} user_id={} agent_id={} error={}",
+                channel.value,
+                channel_address,
+                channel_user_id,
+                pending_user_id,
+                pending_agent_id,
+                exc,
+            )
+            await db.rollback()
+            return await _provision_result_after_bind_race(
+                channel=channel,
+                channel_address=channel_address,
+                channel_user_id=channel_user_id,
+            )
+        except IntegrityError as exc:
+            logger.warning(
+                "agent_channel onboard integrity error channel={} channel_address={} channel_user_id={} user_id={} agent_id={} {}",
+                channel.value,
+                channel_address,
+                channel_user_id,
+                pending_user_id,
+                pending_agent_id,
+                integrity_error_detail(exc),
+            )
             await db.rollback()
             return await _provision_result_after_bind_race(
                 channel=channel,
@@ -213,6 +292,14 @@ async def provision_agent_for_channel_onboard(
                 channel_user_id=channel_user_id,
             )
 
+    logger.info(
+        "agent_channel onboard created channel={} channel_address={} channel_user_id={} user_id={} agent_id={}",
+        channel.value,
+        channel_address,
+        channel_user_id,
+        scope.user_id,
+        scope.agent_id,
+    )
     await ensure_memory_store_session(scope)
     return ChannelProvisionResult(
         scope=scope,
@@ -256,9 +343,13 @@ async def provision_agent_for_existing_agent(
         if agent is None:
             raise ValueError(f"companion agent not found: {agent_id}")
 
+        pending_user_id = ""
+        pending_agent_id = ""
         try:
             user = await _add_guest_user(db)
             scope = AgentScope(user_id=user.id, agent_id=agent_id)
+            pending_user_id = scope.user_id
+            pending_agent_id = scope.agent_id
             await upsert_endpoint_in_session(
                 db,
                 scope,
@@ -267,7 +358,32 @@ async def provision_agent_for_existing_agent(
                 channel_user_id=channel_user_id,
             )
             await db.commit()
-        except (ChannelEndpointConflictError, IntegrityError):
+        except ChannelEndpointConflictError as exc:
+            logger.warning(
+                "agent_channel bind existing agent conflict channel={} channel_address={} channel_user_id={} agent_id={} user_id={} error={}",
+                channel.value,
+                channel_address,
+                channel_user_id,
+                agent_id,
+                pending_user_id,
+                exc,
+            )
+            await db.rollback()
+            return await _provision_result_after_bind_race(
+                channel=channel,
+                channel_address=channel_address,
+                channel_user_id=channel_user_id,
+            )
+        except IntegrityError as exc:
+            logger.warning(
+                "agent_channel bind existing agent integrity error channel={} channel_address={} channel_user_id={} agent_id={} user_id={} {}",
+                channel.value,
+                channel_address,
+                channel_user_id,
+                agent_id,
+                pending_user_id,
+                integrity_error_detail(exc),
+            )
             await db.rollback()
             return await _provision_result_after_bind_race(
                 channel=channel,

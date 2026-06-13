@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 
+from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -15,7 +16,10 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
-from app.services.agentic_channel.errors import ChannelEndpointConflictError
+from app.services.agentic_channel.errors import (
+    ChannelEndpointConflictError,
+    integrity_error_detail,
+)
 
 
 class EndpointRecord(BaseModel):
@@ -150,15 +154,27 @@ async def upsert_endpoint_in_session(
     by_agent = await _find_by_agent_channel(
         db, agent_id=scope.agent_id, channel=channel
     )
-    _assert_bind_compatible(
-        scope=scope,
-        channel=channel,
-        channel_address=channel_address,
-        channel_user_id=channel_user_id,
-        by_address=by_address,
-        by_user=by_user,
-        by_agent=by_agent,
-    )
+    try:
+        _assert_bind_compatible(
+            scope=scope,
+            channel=channel,
+            channel_address=channel_address,
+            channel_user_id=channel_user_id,
+            by_address=by_address,
+            by_user=by_user,
+            by_agent=by_agent,
+        )
+    except ChannelEndpointConflictError as exc:
+        logger.warning(
+            "agent_channel upsert bind incompatible channel={} channel_address={} channel_user_id={} user_id={} agent_id={} error={}",
+            channel.value,
+            channel_address,
+            channel_user_id,
+            scope.user_id,
+            scope.agent_id,
+            exc,
+        )
+        raise
 
     row = by_agent or by_address or by_user
     if row is None:
@@ -200,6 +216,15 @@ async def bind_endpoint(
             await db.refresh(row)
         except IntegrityError as exc:
             await db.rollback()
+            logger.warning(
+                "agent_channel bind_endpoint integrity error channel={} channel_address={} channel_user_id={} user_id={} agent_id={} {}",
+                channel.value,
+                channel_address,
+                channel_user_id,
+                scope.user_id,
+                scope.agent_id,
+                integrity_error_detail(exc),
+            )
             raise ChannelEndpointConflictError(
                 "endpoint bind violates unique constraint"
             ) from exc

@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 _START_CMD = "/start"
-_ONBOARD_TOKEN = "onboard"
 
 
 class StartPayloadKind(StrEnum):
@@ -34,10 +33,10 @@ def _start_remainder(text: str) -> str | None:
 
 
 def parse_start_payload(text: str) -> StartPayload:
-    """Classify ``/start`` variants: onboard or not a recognized start."""
+    """Classify bare ``/start`` (no deep-link payload) as onboard trigger."""
     remainder = _start_remainder(text)
     if remainder is None:
         return StartPayload(kind=StartPayloadKind.NONE)
-    if remainder == "" or remainder == _ONBOARD_TOKEN:
+    if remainder == "":
         return StartPayload(kind=StartPayloadKind.ONBOARD)
     return StartPayload(kind=StartPayloadKind.NONE)

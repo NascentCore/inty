@@ -126,7 +126,7 @@ async def test_handle_inbound_unknown_start_token_prompts_onboard() -> None:
         local_received_at=time.time(),
     )
     reply = await transport._handle_inbound(inbound)
-    assert "onboard" in reply
+    assert "/start" in reply
 
 
 @pytest.mark.asyncio
@@ -141,7 +141,7 @@ async def test_handle_inbound_unknown_chat_prompts_onboard() -> None:
         local_received_at=time.time(),
     )
     reply = await transport._handle_inbound(inbound)
-    assert "onboard" in reply
+    assert "/start" in reply
 
 
 @pytest.mark.asyncio
@@ -155,7 +155,7 @@ async def test_concurrent_onboard_both_welcome_without_assert() -> None:
         update_id=10,
         chat_id=telegram_chat_id,
         channel_user_id=channel_user_id,
-        text="/start onboard",
+        text="/start",
         local_received_at=time.time(),
     )
     replies = await asyncio.gather(

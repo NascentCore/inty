@@ -51,7 +51,7 @@ _WELCOME_NEW = (
 _WELCOME_RETURNING = "欢迎回来！已绑定 companion，可以直接发消息聊天。"
 _ONBOARD_HINT = (
     "请先打开 Ops /telegram-demo 页面扫码，"
-    "或在对话中发送 /start onboard 完成绑定。"
+    "或在对话中发送 /start 完成绑定。"
 )
 _IDENTITY_MISMATCH = (
     "Telegram 用户身份与绑定记录不符，无法处理消息。"
@@ -165,6 +165,13 @@ class TelegramTransport:
                 scope=existing,
                 reason="onboard_returning",
             )
+            logger.info(
+                "telegram onboard returning chat_id={} from_id={} user_id={} agent_id={}",
+                inbound.chat_id,
+                inbound.channel_user_id,
+                existing.user_id,
+                existing.agent_id,
+            )
             return _WELCOME_RETURNING
         try:
             provision = await provision_agent_for_channel_onboard(
@@ -173,6 +180,12 @@ class TelegramTransport:
                 channel_user_id=inbound.channel_user_id,
             )
         except (ValueError, ChannelEndpointConflictError) as exc:
+            logger.warning(
+                "telegram onboard failed chat_id={} from_id={} error={}",
+                inbound.chat_id,
+                inbound.channel_user_id,
+                exc,
+            )
             return str(exc)
         if not provision.is_new_user:
             await self._ensure_active(
@@ -180,7 +193,21 @@ class TelegramTransport:
                 scope=provision.scope,
                 reason="onboard_returning",
             )
+            logger.info(
+                "telegram onboard returning after provision chat_id={} from_id={} user_id={} agent_id={}",
+                inbound.chat_id,
+                inbound.channel_user_id,
+                provision.scope.user_id,
+                provision.scope.agent_id,
+            )
             return _WELCOME_RETURNING
+        logger.info(
+            "telegram onboard new chat_id={} from_id={} user_id={} agent_id={}",
+            inbound.chat_id,
+            inbound.channel_user_id,
+            provision.scope.user_id,
+            provision.scope.agent_id,
+        )
         return await self._activate_provision(
             inbound=inbound,
             provision=provision,
