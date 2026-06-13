@@ -119,7 +119,6 @@ def test_user_chat_in_turn_sync_builder_omits_dual_envelope_contract() -> None:
     messages = build_system_messages_for_user_chat_in_turn_sync(
         bundle,
         ContextMeta(),
-        memory_bootstrap_type="none",
     )
     contents = [str(message["content"]) for message in messages]
     joined = "\n".join(contents)

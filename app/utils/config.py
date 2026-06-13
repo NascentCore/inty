@@ -395,10 +395,10 @@ class AgentConfig:
     free_user_chat_model: str = GEMINI_2_5_FLASH_LITE
     # Subscribed users: default chat model (OpenRouter model id), invoked via OpenAI client + OpenRouter.
     sub_user_chat_model: str = GEMINI_2_5_FLASH
-    # Companion WS tool-call route model id (passed to OpenAI-compatible gateway via
-    # CompanionLLMConfig.tool_model). Independent of foreground chat envelope model so
-    # the dual-LLM tool loop can scale separately. Empty string falls back to the chat
-    # model at companion_chat_service wiring time (resolved_chat_model GenAIModel).
+    # Used only when ``agent.companion_harness.user_turn.llm_loop_mode`` is
+    # ``dual_llm`` (``tool_background`` tool-model leg). Ignored for default
+    # ``in_turn_single_llm`` settled ``USER_CHAT``. Empty string falls back to the
+    # chat model at companion_chat_service wiring time (resolved_chat_model GenAIModel).
     companion_tool_call_model: str = "google/gemini-3-flash-preview"
     # 免费用户商业化触达：定期返回一条“付费专属预览”消息并引导订阅。
     enable_free_user_premium_preview: bool = False

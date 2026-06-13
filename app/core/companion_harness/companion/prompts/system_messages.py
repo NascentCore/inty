@@ -16,7 +16,8 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 
 | Scenario | Function |
 |----------|----------|
-| USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``build_system_messages_for_bootstrap_track`` (no Capability package slices) |
+| USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``build_system_messages_for_bootstrap_track`` |
+| Settled USER_CHAT in-turn sync tools | ``build_system_messages_for_user_chat_in_turn_sync`` |
 | ASYNC user-round foreground + plan prefix | ``build_system_messages_for_chat_track`` |
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
@@ -803,11 +804,13 @@ def build_system_messages(
     return out
 
 
-def build_system_messages_for_bootstrap_track(
+def _build_system_messages_for_in_turn_sync_tools(
     bundle: PromptBundle,
     context: ContextMeta,
+    *,
+    interactive_bootstrap_active: bool,
 ) -> list[dict[str, Any]]:
-    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background)."""
+    """Shared stack for in-turn sync tool loops (bootstrap + settled ``USER_CHAT``)."""
     return build_system_messages(
         bundle,
         context,
@@ -817,8 +820,20 @@ def build_system_messages_for_bootstrap_track(
         ai_private_text="",
         async_foreground_chat_stack=False,
         tool_side_compact=False,
-        interactive_bootstrap_active=True,
+        interactive_bootstrap_active=interactive_bootstrap_active,
         include_significance_perception_slice=False,
+    )
+
+
+def build_system_messages_for_bootstrap_track(
+    bundle: PromptBundle,
+    context: ContextMeta,
+) -> list[dict[str, Any]]:
+    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background)."""
+    return _build_system_messages_for_in_turn_sync_tools(
+        bundle,
+        context,
+        interactive_bootstrap_active=True,
     )
 
 
@@ -845,21 +860,12 @@ def build_system_messages_for_chat_track(
 def build_system_messages_for_user_chat_in_turn_sync(
     bundle: PromptBundle,
     context: ContextMeta,
-    memory_bootstrap_type: str,
 ) -> list[dict[str, Any]]:
     """Settled USER_CHAT with in-turn tools (``IN_TURN_SYNC_TOOL``): one chat model, no dual envelope."""
-    _ = memory_bootstrap_type
-    return build_system_messages(
+    return _build_system_messages_for_in_turn_sync_tools(
         bundle,
         context,
-        enable_tools=True,
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
-        ai_private_text="",
-        async_foreground_chat_stack=False,
-        tool_side_compact=False,
         interactive_bootstrap_active=False,
-        include_significance_perception_slice=False,
     )
 
 

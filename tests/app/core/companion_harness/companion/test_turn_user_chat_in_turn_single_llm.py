@@ -7,7 +7,6 @@ import threading
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 
@@ -20,22 +19,8 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.utils.config import CompanionMemoryBootstrapType, UserTurnLlmLoopMode
+from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
-
-
-def _patch_in_turn_single_llm():
-    agent = SimpleNamespace(
-        companion_harness=SimpleNamespace(
-            user_turn=SimpleNamespace(
-                llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM
-            )
-        )
-    )
-    return patch(
-        "app.core.companion_harness.companion.turn_routes.global_config_loaded_from_config_yaml",
-        SimpleNamespace(agent=agent),
-    )
 
 
 def _final_response(*, content: str) -> SimpleNamespace:
@@ -128,11 +113,10 @@ async def test_user_chat_in_turn_single_llm_no_tool_background(
     _seed_settled_workspace(store)
     client = _FakeInTurnSyncLLMClient()
 
-    with _patch_in_turn_single_llm():
-        out = await run_companion_user_chat_turn(
-            "hello single llm",
-            deps=_user_chat_deps(store, client),
-        )
+    out = await run_companion_user_chat_turn(
+        "hello single llm",
+        deps=_user_chat_deps(store, client),
+    )
 
     assert out.tool_background_started is False
     assert out.assistant_text == "sync in-turn reply"
