@@ -6,19 +6,29 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.memory.memory_store_document_mapping import (
+    CompanionMemoryDocumentKind,
+)
 from app.models.companion_memory_documents import CompanionMemoryDocumentVersion
+
+# TODO(scope-listing-due-filter): Narrow to scopes due for dreaming/maintenance (#3255 slice 2).
 
 
 async def list_companion_memory_scopes(
     db: AsyncSession,
 ) -> list[CompanionScope]:
-    """Return distinct ``(user_id, companion_id, chat_id)`` rows with any MemoryDoc version."""
+    """Return distinct initialized scopes (rows with ``context_json`` document kind)."""
     result = await db.execute(
         select(
             CompanionMemoryDocumentVersion.user_id,
             CompanionMemoryDocumentVersion.companion_id,
             CompanionMemoryDocumentVersion.chat_id,
-        ).distinct()
+        )
+        .where(
+            CompanionMemoryDocumentVersion.document_kind
+            == CompanionMemoryDocumentKind.CONTEXT_JSON.value
+        )
+        .distinct()
     )
     scopes: list[CompanionScope] = []
     for user_id, companion_id, chat_id in result.all():

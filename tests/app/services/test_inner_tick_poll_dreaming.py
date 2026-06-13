@@ -149,7 +149,7 @@ async def test_run_scope_inner_tick_poll_for_scope_invokes_dreaming() -> None:
     scope = CompanionScope("u", "a", "c")
     with patch.object(
         scope_inner_tick_poll.inner_tick_fire,
-        "try_fire_dreaming_inner_tick",
+        "try_fire_dreaming_for_scope",
         new_callable=AsyncMock,
         return_value=True,
     ) as dreaming:
@@ -158,17 +158,17 @@ async def test_run_scope_inner_tick_poll_for_scope_invokes_dreaming() -> None:
         )
     assert fired is True
     dreaming.assert_awaited_once()
-    fire_input = dreaming.await_args.args[0]
-    assert fire_input.coords.user_id == "u"
-    assert fire_input.coords.agent_id == "a"
-    assert fire_input.coords.chat_id == "c"
-    assert fire_input.ws_conn_id == "scope_inner_tick_worker"
+    assert dreaming.await_args.kwargs["coords"].user_id == "u"
+    assert dreaming.await_args.kwargs["coords"].agent_id == "a"
+    assert dreaming.await_args.kwargs["coords"].chat_id == "c"
+    assert dreaming.await_args.kwargs["poll_source"] == "scope_inner_tick_worker"
 
 
 @pytest.mark.asyncio
 async def test_run_scope_inner_tick_poll_cycle_enumerates_scopes() -> None:
     scope_a = CompanionScope("u1", "a1", "c1")
     scope_b = CompanionScope("u2", "a2", "c2")
+    stop = asyncio.Event()
     with (
         patch.object(
             scope_inner_tick_poll,
@@ -182,5 +182,5 @@ async def test_run_scope_inner_tick_poll_cycle_enumerates_scopes() -> None:
             new_callable=AsyncMock,
         ) as poll_scope,
     ):
-        await scope_inner_tick_poll.run_scope_inner_tick_poll_cycle()
+        await scope_inner_tick_poll.run_scope_inner_tick_poll_cycle(stop=stop)
     assert poll_scope.await_count == 2

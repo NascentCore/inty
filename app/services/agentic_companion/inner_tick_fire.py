@@ -110,6 +110,13 @@ class InnerTickModelSource(StrEnum):
     DREAMING_HARNESS = "dreaming_harness"
 
 
+class InnerTickChatResolveMode(StrEnum):
+    """Whether scope resolution may create a missing ``chats`` row."""
+
+    GET_OR_CREATE = "get_or_create"
+    READ_ONLY = "read_only"
+
+
 @dataclass(frozen=True)
 class InnerTickFireInput:
     """Bundled arguments for one inner-tick ``try_fire_*`` attempt on a presence wire."""
@@ -136,13 +143,28 @@ async def _resolve_inner_tick_scope_coords(
     fire_input: InnerTickFireInput,
     *,
     model_source: InnerTickModelSource,
+    chat_resolve_mode: InnerTickChatResolveMode,
 ) -> InnerTickScopeCoords | None:
     """Load user/chat and model for one inner-tick attempt."""
-    coords = fire_input.coords
+    return await _resolve_inner_tick_scope_coords_for_triple(
+        coords=fire_input.coords,
+        poll_source=fire_input.ws_conn_id,
+        model_source=model_source,
+        chat_resolve_mode=chat_resolve_mode,
+    )
+
+
+async def _resolve_inner_tick_scope_coords_for_triple(
+    *,
+    coords: InnerTickCoords,
+    poll_source: str,
+    model_source: InnerTickModelSource,
+    chat_resolve_mode: InnerTickChatResolveMode,
+) -> InnerTickScopeCoords | None:
+    """Load user/chat and model for one scope triple (presence or scope worker)."""
     user_id = coords.user_id
     agent_id = coords.agent_id
-    chat_id_raw = coords.chat_id
-    chat_id_str = str(chat_id_raw)
+    chat_id_str = str(coords.chat_id)
 
     async with AsyncSessionLocal() as pre_db:
         r_user = await pre_db.execute(select(User).where(User.id == user_id))
@@ -169,9 +191,9 @@ async def _resolve_inner_tick_scope_coords(
             ).memory_store_chat_id()
             if chat_id_str != expected:
                 logger.debug(
-                    "inner_tick_scope agent-scope chat_id mismatch ws_conn_id={} "
+                    "inner_tick_scope agent-scope chat_id mismatch poll_source={} "
                     "ctx={} expected={}",
-                    fire_input.ws_conn_id,
+                    poll_source,
                     chat_id_str,
                     expected,
                 )
@@ -184,13 +206,22 @@ async def _resolve_inner_tick_scope_coords(
                 model_override=model_override,
             )
 
-        chat = await chat_service.get_or_create_chat_by_agent(
-            db=pre_db, user_id=user_id, agent_id=agent_id
-        )
+        match chat_resolve_mode:
+            case InnerTickChatResolveMode.GET_OR_CREATE:
+                chat = await chat_service.get_or_create_chat_by_agent(
+                    db=pre_db, user_id=user_id, agent_id=agent_id
+                )
+            case InnerTickChatResolveMode.READ_ONLY:
+                chat = await chat_service.get_chat_by_user_and_agent(
+                    pre_db, user_id, agent_id
+                )
+                if chat is None:
+                    return None
+
         if str(chat.id) != chat_id_str:
             logger.debug(
-                "inner_tick_scope chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
-                fire_input.ws_conn_id,
+                "inner_tick_scope chat_id mismatch poll_source={} ctx={} db_chat_id={}",
+                poll_source,
                 chat_id_str,
                 chat.id,
             )
@@ -228,6 +259,7 @@ async def try_fire_scheduled_inner_tick(
     coords = await _resolve_inner_tick_scope_coords(
         fire_input,
         model_source=InnerTickModelSource.CHAT_DEFAULT,
+        chat_resolve_mode=InnerTickChatResolveMode.GET_OR_CREATE,
     )
     if coords is None:
         return False
@@ -292,7 +324,7 @@ async def try_fire_scheduled_inner_tick(
             )
             return False
         try:
-            companion_turn = await companion_chat_service._run_companion_api_track_turn_with_lock_held(
+            companion_turn = await companion_chat_service.run_companion_api_track_turn_with_lock_held(
                 track_path="inner_tick_scheduled",
                 user_id=user_id,
                 agent_id=agent_id,
@@ -474,6 +506,7 @@ async def try_fire_proactive_chat_inner_tick(
     coords = await _resolve_inner_tick_scope_coords(
         fire_input,
         model_source=InnerTickModelSource.CHAT_DEFAULT,
+        chat_resolve_mode=InnerTickChatResolveMode.GET_OR_CREATE,
     )
     if coords is None:
         return False
@@ -534,7 +567,7 @@ async def try_fire_proactive_chat_inner_tick(
                 agent_id,
             )
             return False
-        companion_turn = await companion_chat_service._run_companion_api_track_turn_with_lock_held(
+        companion_turn = await companion_chat_service.run_companion_api_track_turn_with_lock_held(
             track_path="inner_tick_proactive_chat",
             user_id=user_id,
             agent_id=agent_id,
@@ -700,6 +733,7 @@ async def try_fire_autonomy_inner_tick(
     coords = await _resolve_inner_tick_scope_coords(
         fire_input,
         model_source=InnerTickModelSource.CHAT_DEFAULT,
+        chat_resolve_mode=InnerTickChatResolveMode.GET_OR_CREATE,
     )
     if coords is None:
         return False
@@ -766,7 +800,7 @@ async def try_fire_autonomy_inner_tick(
             return False
         try:
             companion_turn = (
-                await companion_chat_service._run_companion_api_track_turn_with_lock_held(
+                await companion_chat_service.run_companion_api_track_turn_with_lock_held(
                     track_path="inner_tick_autonomy",
                     user_id=user_id,
                     agent_id=agent_id,
@@ -837,6 +871,7 @@ async def try_fire_maintenance_inner_tick(
     coords = await _resolve_inner_tick_scope_coords(
         fire_input,
         model_source=InnerTickModelSource.CHAT_DEFAULT,
+        chat_resolve_mode=InnerTickChatResolveMode.GET_OR_CREATE,
     )
     if coords is None:
         return False
@@ -928,7 +963,7 @@ async def try_fire_maintenance_inner_tick(
             },
         )
         try:
-            companion_turn = await companion_chat_service._run_companion_api_track_turn_with_lock_held(
+            companion_turn = await companion_chat_service.run_companion_api_track_turn_with_lock_held(
                 track_path="inner_tick_maintenance",
                 user_id=user_id,
                 agent_id=agent_id,
@@ -1099,26 +1134,29 @@ async def try_fire_maintenance_inner_tick(
     return True
 
 
-async def try_fire_dreaming_inner_tick(
-    fire_input: InnerTickFireInput,
+async def try_fire_dreaming_for_scope(
+    *,
+    coords: InnerTickCoords,
+    poll_source: str,
 ) -> bool:
-    """When companion scope may be due for sleeping-state dreaming, run one batch under ``turn_lock``.
+    """Dreaming inner-tick for one scope without signed-on presence (#3255).
 
-    Authoritative due check runs inside ``run_dreaming_batch_if_due`` after the lock is held.
-    Invoked from presence poll (legacy) and ``scope_inner_tick_poll`` (#3255).
+    Authoritative due check runs inside ``run_dreaming_batch_if_due`` after ``turn_lock``.
     """
-    coords = await _resolve_inner_tick_scope_coords(
-        fire_input,
+    resolved = await _resolve_inner_tick_scope_coords_for_triple(
+        coords=coords,
+        poll_source=poll_source,
         model_source=InnerTickModelSource.DREAMING_HARNESS,
+        chat_resolve_mode=InnerTickChatResolveMode.READ_ONLY,
     )
-    if coords is None:
+    if resolved is None:
         return False
 
     mem_store = companion_chat_service.companion_memory_store_if_ready(
-        user_id=coords.user_id,
-        agent_id=coords.agent_id,
-        chat_id=coords.chat_row_id,
-        resolved_chat_model=coords.model_override,
+        user_id=resolved.user_id,
+        agent_id=resolved.agent_id,
+        chat_id=resolved.chat_row_id,
+        resolved_chat_model=resolved.model_override,
     )
     if mem_store is None:
         return False
@@ -1128,27 +1166,37 @@ async def try_fire_dreaming_inner_tick(
     )
 
     scope_session = await companion_chat_service.resolve_companion_session_for_api_turn(
-        user_id=coords.user_id,
-        agent_id=coords.agent_id,
-        chat_id=coords.chat_row_id,
-        resolved_chat_model=coords.model_override,
+        user_id=resolved.user_id,
+        agent_id=resolved.agent_id,
+        chat_id=resolved.chat_row_id,
+        resolved_chat_model=resolved.model_override,
         session_id=None,
     )
     async with _inner_tick_turn_scope(session=scope_session):
         outcome = await asyncio.to_thread(
             companion_chat_service.run_dreaming_batch_for_api,
-            user_id=coords.user_id,
-            agent_id=coords.agent_id,
-            chat_id=coords.chat_row_id,
-            resolved_chat_model=coords.model_override,
+            user_id=resolved.user_id,
+            agent_id=resolved.agent_id,
+            chat_id=resolved.chat_row_id,
+            resolved_chat_model=resolved.model_override,
             dreaming_idle_seconds=idle_seconds,
         )
         if outcome == DreamingBatchOutcome.CHECKPOINT_SAVED:
             logger.info(
-                "companion_ws_dreaming checkpoint_saved ws_conn_id={} user={} agent={} chat={}",
-                fire_input.ws_conn_id,
-                coords.user_id,
-                coords.agent_id,
-                coords.chat_row_id,
+                "companion_dreaming checkpoint_saved poll_source={} user={} agent={} chat={}",
+                poll_source,
+                resolved.user_id,
+                resolved.agent_id,
+                resolved.chat_row_id,
             )
         return outcome == DreamingBatchOutcome.CHECKPOINT_SAVED
+
+
+async def try_fire_dreaming_inner_tick(
+    fire_input: InnerTickFireInput,
+) -> bool:
+    """Presence-path delegator; scope worker should call ``try_fire_dreaming_for_scope``."""
+    return await try_fire_dreaming_for_scope(
+        coords=fire_input.coords,
+        poll_source=fire_input.ws_conn_id,
+    )

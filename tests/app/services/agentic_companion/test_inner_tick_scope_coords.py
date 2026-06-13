@@ -14,6 +14,7 @@ from app.services.agentic_companion.inner_tick_delivery import (
     inner_tick_delivery_for_telegram,
 )
 from app.services.agentic_companion.inner_tick_fire import (
+    InnerTickChatResolveMode,
     InnerTickFireInput,
     InnerTickModelSource,
     _resolve_inner_tick_scope_coords,
@@ -61,6 +62,7 @@ async def test_resolve_inner_tick_scope_coords_accepts_agent_scope_chat_id() -> 
     resolved = await _resolve_inner_tick_scope_coords(
         fire_input,
         model_source=InnerTickModelSource.CHAT_DEFAULT,
+        chat_resolve_mode=InnerTickChatResolveMode.GET_OR_CREATE,
     )
     assert resolved is not None
     assert resolved.chat_row_id == scope.memory_store_chat_id()
@@ -90,6 +92,7 @@ async def test_resolve_inner_tick_scope_coords_rejects_mismatched_agent_scope() 
     resolved = await _resolve_inner_tick_scope_coords(
         fire_input,
         model_source=InnerTickModelSource.CHAT_DEFAULT,
+        chat_resolve_mode=InnerTickChatResolveMode.GET_OR_CREATE,
     )
     assert resolved is None
     await _delete_user(user.id)

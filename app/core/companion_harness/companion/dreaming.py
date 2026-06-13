@@ -1,7 +1,7 @@
 """Sleeping-state dreaming for end-of-day rollup into memory.
 
 Dreaming is Inty's sleeping-state memory activity. When the configured idle
-period passes with no user messages, a signed-on presence inner-tick poll may
+period passes with no user messages, the scope inner-tick worker may
 **summarize everything that happened during the day** since the previous dream
 checkpoint and settle it into applicable MemoryDocs: user-visible dialogue on
 ``transcript.jsonl`` (``USER_CHAT``, ``PROACTIVE_CHAT``, ``SCHEDULED``) plus
@@ -31,17 +31,11 @@ day** (``dreaming_due`` compares ``DreamingState.last_processed_calendar_date`` 
 ``dreaming_idle_seconds`` is satisfied. User-local timezone for the day boundary is
 planned (``TODO(user-feature)``).
 
-Concurrency: ``InnerTickActivity.DREAMING`` runs on the inner-tick poll path under
-presence ``Coordinator.turn_lock`` (same wire as user chat and other inner ticks).
-Prototype assumes **single presence** per scope (``companion_harness`` AGENTS.md) — scope
-``CompanionSession.turn_lock`` serializes turns (#3272).
+Concurrency: dreaming runs on the **scope inner-tick worker** (#3255) under
+``CompanionSession.turn_lock`` (#3272). Prototype assumes **single presence** per scope
+when user is online; multi-process needs cluster advisory lock (#3271).
 
-TODO(scope-inner-tick-worker): Dreaming must run for idle scopes without signed-on
-presence (#3255 — https://github.com/NascentCore/inty/issues/3255). It is not a delivery
-track — hoist to scope-level inner-tick worker with ``CompanionSession`` ``turn_lock``
-(and cluster advisory lock for multi-process — #3271
-https://github.com/NascentCore/inty/issues/3271), not the per-wire poll in
-``inner_tick_poll.py``.
+TODO(scope-inner-tick-slice-2): maintenance + AUTONOMY on same scope worker (#3255).
 
 Prototype invariant: ``transcript.jsonl`` must not change while a dreaming batch runs
 (``turn_lock`` + ``dreaming_idle_seconds`` ≫ tool_background timeouts; #3272 single

@@ -1,4 +1,4 @@
-"""Ops scope inner-tick worker lifecycle (#3255)."""
+"""Scope inner-tick worker lifecycle (Ops + production inty backend)."""
 
 from __future__ import annotations
 

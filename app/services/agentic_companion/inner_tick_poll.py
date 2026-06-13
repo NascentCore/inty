@@ -1,15 +1,15 @@
-"""Shared inner-tick poll: proactive and scheduled delivery tracks (WS or Weixin).
+"""Shared inner-tick poll: proactive, scheduled, autonomy, and maintenance (WS or Weixin).
 
 Requires signed-on presence coordinates on ``coordinator`` — poll runs on the same ``Coordinator``
 as user chat. Scope ``CompanionSession.turn_lock`` (#3272) serializes inner-tick ``try_fire_*``
 with user turns on ``(user_id, agent_id, chat_id)``. Prototype assumes one wire per paired
 user; multiple tabs are out of scope (``companion_harness`` AGENTS.md).
 
-Each poll wake tries at most one activity, in priority order: proactive → scheduled.
+Each poll wake tries at most one activity, in priority order:
+proactive → scheduled → autonomy → maintenance.
 
-Scope tracks (maintenance, autonomy, dreaming) run on the process-level scope worker
-(``scope_inner_tick_poll`` / #3255). Presence poll still runs maintenance and autonomy until
-their throttle state moves off ``Coordinator`` (slice 2).
+**Dreaming** runs on the process-level scope worker (``scope_inner_tick_poll`` / #3255), not here.
+Maintenance and autonomy remain on presence until slice 2 moves throttle off ``Coordinator``.
 
 TODO(inner-tick-poll-multi-track): Try every **due** track per wake (e.g. scheduled must not
 be skipped when proactive fires) — product decision #3273

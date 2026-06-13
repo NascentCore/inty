@@ -467,7 +467,7 @@ async def _execute_companion_api_track_turn(
     return out
 
 
-async def _run_companion_api_track_turn_with_lock_held(
+async def run_companion_api_track_turn_with_lock_held(
     *,
     track_path: str,
     user_id: str,
@@ -538,7 +538,7 @@ async def _run_companion_api_track_turn(
         resolved_chat_model=resolved_chat_model,
     )
     async with session.turn_lock:
-        return await _run_companion_api_track_turn_with_lock_held(
+        return await run_companion_api_track_turn_with_lock_held(
             track_path=track_path,
             user_id=user_id,
             agent_id=agent_id,

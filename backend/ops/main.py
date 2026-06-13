@@ -24,7 +24,7 @@ from app.api.utils.health_check_payload import build_health_check_data
 from backend.ops.api.evaluation_web import configure_evaluation_web_routes
 from backend.ops.api.telegram_demo_web import configure_telegram_demo_web_routes
 from backend.ops.api.weixin_web import configure_weixin_web_routes
-from backend.ops.scope_inner_tick_lifecycle import (
+from app.services.agentic_companion.scope_inner_tick_lifecycle import (
     start_scope_inner_tick_worker,
     stop_scope_inner_tick_worker,
 )
