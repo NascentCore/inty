@@ -245,6 +245,7 @@ def _output_contract_text_with_tools(
 
 
 # TODO(bootstrap-prompt-single-source): Keep in sync with ``bootstrap.py`` until single-source policy lands.
+# CRS #3328 (relationship seed); #3367 (TrackWritePolicy registry).
 
 
 def _output_contract_text_interactive_bootstrap_tools() -> str:
@@ -373,7 +374,7 @@ __CONFESS_TO_USER = (
 )
 
 
-# TODO(narrow-maintenance): Drop 档案一致 / memory_store 写回 bullets below; ai_private append only; MemoryDoc → DREAMING.
+# TODO(narrow-maintenance): Drop 档案一致 / memory_store 写回 bullets below; ai_private append only; MemoryDoc → DREAMING (#3290).
 __EASE_CONTEXT_PRESSURE = (
     "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
     "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"
@@ -465,7 +466,7 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
 
 
 def _inner_tick_turn_section() -> str:
-    # TODO(narrow-maintenance): MAINTENANCE-only slice (ai_private + scene beat); drop 档案一致 /
+    # TODO(narrow-maintenance): MAINTENANCE-only slice (ai_private + scene beat); drop 档案一致 / (#3290)
     # LS/TC / memory_store bullets. ``AUTONOMY`` → ``build_system_messages_for_inner_tick_autonomy``.
     return "\n".join(
         [
@@ -637,6 +638,9 @@ def _persona_system_messages(
         out.append(_system_message(build_bootstrap_tool_call_section()))
         for block in build_interactive_bootstrap_template_reference_parts():
             out.append(_system_message(block))
+    # TODO(crs-companionship-doc): Phase A — inject persisted ``COMPANIONSHIP.md`` (relationship_phase,
+    # tone) from MemoryStore here after bootstrap (#3342). Phase B — activate prompt + ``turn_recall``
+    # Turn Brief (#3343). Canon: CRS #3341, glossary #3345, SDCM #3365.
     return out
 
 

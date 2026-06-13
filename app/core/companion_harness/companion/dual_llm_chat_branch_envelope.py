@@ -29,6 +29,11 @@ companion turn pipeline.
 - **Memory extraction (optional)**: ``memory_extraction.use_significance_perception_in_extraction`` →
   ``memory_extraction_service`` sorts by ``meta_data.significance_perception.importance_round``.
 
+TODO(crs-turn-recall): ``importance_*`` scores are **moment-level significance perception**, not
+``turn_recall`` (ephemeral per-turn memory depth / Turn Brief). Add ``turn_recall`` to the envelope
+or a parallel Turn Brief channel in Phase A (#3342); wire prompt + dreaming curator in Phase B (#3343).
+CRS epic #3341; do not conflate with ``relationship_phase`` / ``tone`` (slow bond state in companionship doc).
+
 Design: ``/docs/imate/DESIGN.md``. LangSmith: ``inty_llm_source=foreground_dual_llm_envelope``
 (``llm/langsmith_invocation_extra.py``).
 """

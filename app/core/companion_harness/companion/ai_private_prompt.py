@@ -56,7 +56,7 @@ def get_ai_private_text_for_prompt(
     ``get_ai_private_jsonl_text_for_prompt`` (see ``prompt_stack``). This function
     stays for tooling, tests, and ``get_ai_private_merged_text_for_prompt``.
 
-    TODO(narrow-maintenance): Pair MAINTENANCE read injection with append-only tool on ``ai_private.jsonl``.
+    TODO(narrow-maintenance): Pair MAINTENANCE read injection with append-only tool on ``ai_private.jsonl`` (#3290).
     AUTONOMY track uses ``LIFE_CURRENTS.md`` (not ai_private append); MemoryDoc curation → DREAMING.
     """
     body = store.read_document_if_exists(_AI_PRIVATE_MD_REL)

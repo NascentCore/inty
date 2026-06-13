@@ -75,6 +75,7 @@ You should only changes and use code in the following dirs:
 
 - Create TODOs for minor changes, they are picked up by the cursor automation.
 - Create GitHub issues for large & complex follow-ups, also reference the issue in TODOs placed at appropriate code places.
+- Do not reference issues in AGENTS.md or skills' MD files
 
 ### Output
 

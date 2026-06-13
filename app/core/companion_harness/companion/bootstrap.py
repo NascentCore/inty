@@ -53,6 +53,7 @@ _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = tuple(
 # ``prompts/BOOTSTRAP.md``, ``build_bootstrap_tool_call_section``, and
 # ``_output_contract_text_interactive_bootstrap_tools``; derive all three from one typed
 # policy next to ``BOOTSTRAP_WRITABLE_REL_PATHS`` / ``BOOTSTRAP_TRACK_TOOL_NAMES``.
+# CRS bootstrap relationship seed — #3328; consolidate with ``TrackWritePolicy`` — #3367.
 
 
 def build_bootstrap_tool_call_section() -> str:
