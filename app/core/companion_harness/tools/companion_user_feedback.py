@@ -110,6 +110,33 @@ def _truncate_text(text: str, max_chars: int) -> str:
     return text[:max_chars] + "\n…[truncated]"
 
 
+def _tail_text(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    return "…[truncated]\n" + text[-max_chars:]
+
+
+def _github_issue_label_fallbacks() -> tuple[tuple[str, ...], ...]:
+    return (
+        GITHUB_ISSUE_LABELS,
+        tuple(lb for lb in GITHUB_ISSUE_LABELS if lb != "needs-triage"),
+        tuple(
+            lb
+            for lb in GITHUB_ISSUE_LABELS
+            if lb not in ("needs-triage", "user-reported")
+        ),
+        ("agentic_companion", "p2", "s2"),
+    )
+
+
+def _github_api_headers(token: str) -> dict[str, str]:
+    return {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+
 def _parse_context_mode(context_json: str) -> str:
     raw = (context_json or "").strip()
     if not raw:
@@ -173,7 +200,7 @@ def build_harness_snapshot(
         correlation=resolve_user_turn_correlation(),
         context_mode=_parse_context_mode(context_json),
         context_json=context_json,
-        transcript_tail=_truncate_text(transcript_raw, TRANSCRIPT_TAIL_MAX_CHARS),
+        transcript_tail=_tail_text(transcript_raw, TRANSCRIPT_TAIL_MAX_CHARS),
         memory_docs=memory_docs,
         runtime_events=read_runtime_events(store, limit=5),
         vcs_revision=vcs_revision(),
@@ -257,10 +284,11 @@ def _langsmith_url_cell(correlation: UserTurnCorrelation) -> str:
 
 def build_github_issue_title(snapshot: HarnessSnapshot) -> str:
     summary = snapshot.complaint_summary.replace("\n", " ").strip()
-    title_tail = _truncate_text(summary, 72).replace("\n", " ")
-    return (
+    title_tail = summary[:72]
+    title = (
         f"{GITHUB_ISSUE_TITLE_PREFIX} {snapshot.complaint_category}: {title_tail}"
     )
+    return title[:256]
 
 
 def build_github_issue_body(snapshot: HarnessSnapshot) -> str:
@@ -270,7 +298,7 @@ def build_github_issue_body(snapshot: HarnessSnapshot) -> str:
         snapshot.context_json,
         GITHUB_BODY_MEMORY_DOC_MAX_CHARS,
     )
-    transcript_excerpt = _truncate_text(
+    transcript_excerpt = _tail_text(
         snapshot.transcript_tail,
         GITHUB_BODY_TRANSCRIPT_MAX_CHARS,
     )
@@ -355,42 +383,34 @@ def create_github_issue(
     assert repo
     assert token
     url = f"https://api.github.com/repos/{repo}/issues"
-    payload = {
-        "title": build_github_issue_title(snapshot),
-        "body": build_github_issue_body(snapshot),
-        "labels": list(GITHUB_ISSUE_LABELS),
-    }
-    resp = requests.post(
-        url,
-        headers={
-            "Authorization": f"token {token}",
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-        json=payload,
-        timeout=30.0,
-    )
-    if resp.status_code == 422:
-        payload["labels"] = [
-            lb for lb in GITHUB_ISSUE_LABELS if lb != "needs-triage"
-        ]
+    title = build_github_issue_title(snapshot)
+    body = build_github_issue_body(snapshot)
+    headers = _github_api_headers(token)
+    last_exc: Exception | None = None
+    for labels in _github_issue_label_fallbacks():
+        payload = {"title": title, "body": body, "labels": list(labels)}
         resp = requests.post(
             url,
-            headers={
-                "Authorization": f"token {token}",
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
+            headers=headers,
             json=payload,
             timeout=30.0,
         )
-    resp.raise_for_status()
-    data = resp.json()
-    issue_url = str(data.get("html_url") or "").strip()
-    issue_number = int(data.get("number") or 0)
-    assert issue_url
-    assert issue_number > 0
-    return issue_url, issue_number
+        if resp.status_code == 422:
+            last_exc = requests.HTTPError(
+                f"422 label set {labels!r}: {resp.text}",
+                response=resp,
+            )
+            continue
+        resp.raise_for_status()
+        data = resp.json()
+        issue_url = str(data.get("html_url") or "").strip()
+        issue_number = int(data.get("number") or 0)
+        assert issue_url
+        assert issue_number > 0
+        return issue_url, issue_number
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("create_github_issue: no label fallback attempted")
 
 
 def _github_issue_worker(
@@ -398,6 +418,8 @@ def _github_issue_worker(
     store: MemoryStore,
     github_config: GithubIssueConfig,
 ) -> None:
+    # TODO(companion-user-feedback): MemoryStore.append_jsonl_record is read-modify-write;
+    # concurrent appends from other turns may race — consider append-only repo API.
     try:
         issue_url, issue_number = create_github_issue(snapshot, github_config)
         append_github_issue_completion(

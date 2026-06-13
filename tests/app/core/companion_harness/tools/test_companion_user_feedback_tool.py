@@ -137,6 +137,25 @@ def test_build_harness_snapshot_reads_memory_docs(tmp_path) -> None:
     assert snap.complaint_category == "tone"
 
 
+def test_build_harness_snapshot_transcript_tail_is_recent_lines(tmp_path) -> None:
+    scope = CompanionScope("u", "c", "chat")
+    store = MemoryStore(scope=scope, repository=None)
+    prefix = '{"role":"user","content":"EARLY_ONLY"}\n'
+    filler = '{"role":"user","content":"f"}\n' * 800
+    recent_marker = '{"role":"user","content":"RECENT_COMPLAINT"}\n'
+    store.write_document("transcript.jsonl", prefix + filler + recent_marker)
+
+    snap = build_harness_snapshot(
+        store,
+        UserFeedbackInput(
+            complaint_summary="x",
+            complaint_category=ComplaintCategory.OTHER,
+        ),
+    )
+    assert "RECENT_COMPLAINT" in snap.transcript_tail
+    assert "EARLY_ONLY" not in snap.transcript_tail
+
+
 def test_github_issue_title_has_user_reported_prefix() -> None:
     title = build_github_issue_title(_sample_snapshot())
     assert title.startswith(GITHUB_ISSUE_TITLE_PREFIX)
