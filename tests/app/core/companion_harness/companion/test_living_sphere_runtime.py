@@ -68,7 +68,7 @@ def test_inner_tick_tools_exclude_living_sphere_record_update() -> None:
 
 
 def test_repl_tools_include_living_sphere_record_update_after_bootstrap() -> None:
-    names = {t["function"]["name"] for t in build_openai_repl_tools(interactive_bootstrap_active=False)}
+    names = {t["function"]["name"] for t in build_openai_repl_tools()}
     assert LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME in names
 
 

@@ -57,14 +57,14 @@ def test_prepare_strict_false_explicit():
 
 def test_build_openai_repl_tools_all_functions_strict_true(monkeypatch):
     monkeypatch.delenv("INTY_OPENAI_TOOLS_STRICT", raising=False)
-    tools = build_openai_repl_tools(interactive_bootstrap_active=False)
+    tools = build_openai_repl_tools()
     for t in _function_tools(tools):
         assert t["function"].get("strict") is True
 
 
 def test_build_openai_repl_tools_strict_false_when_env_off(monkeypatch):
     monkeypatch.setenv("INTY_OPENAI_TOOLS_STRICT", "0")
-    tools = build_openai_repl_tools(interactive_bootstrap_active=False)
+    tools = build_openai_repl_tools()
     for t in _function_tools(tools):
         assert t["function"].get("strict") is False
 

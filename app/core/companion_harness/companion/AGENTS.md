@@ -40,8 +40,8 @@ Codified in ``lifecycle_invariants.py``; enforced by
   via ``consolidate_memory_during_dreaming`` (plus ``.companion_dreaming_state.json``
   checkpoint — not MemoryDoc curation).
 
-Carve-outs (documented, not kernel): bootstrap ``companion_update_prompt_slice``,
-``transcript_compaction`` state JSON, ``companion_runtime_events.jsonl``, session-init
+Carve-outs (documented, not kernel): bootstrap ``memory_store_write_document`` (3-path allowlist),
+``companion_set_experience_profile``, ``transcript_compaction`` state JSON, ``companion_runtime_events.jsonl``, session-init
 ``context.json``, tool-driven workspace writes during a turn.
 
 ## Prototype notes

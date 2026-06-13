@@ -244,31 +244,23 @@ def _output_contract_text_with_tools(
     return base
 
 
-def _output_contract_text_interactive_bootstrap_tools(
-    *,
-    tool_side_compact: bool = False,
-) -> str:
+# TODO(bootstrap-prompt-single-source): Keep in sync with ``bootstrap.py`` until single-source policy lands.
+
+
+def _output_contract_text_interactive_bootstrap_tools() -> str:
     base = (
         "输出与工具（交互式关系建立阶段）："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        + "（0）本阶段核心是**初始化 SOUL 切片**（并同时把 IDENTITY / STYLE / USER / MEMORY 落到可用初稿）；"
-        "须用 **companion_update_prompt_slice** 写入上述五份根目录约定稿；**禁止**使用 memory_store_write_document 写入它们。"
-        "调用 **companion_bootstrap_user_interactive_complete** 后，**SOUL 即锁定**（不可再改）；"
-        "IDENTITY / STYLE / USER / MEMORY 在后续日常轮次仍可用 companion_update_prompt_slice 或 memory_store_write_document 按需更新。"
-        "（TOOLS 操作说明与 significance 评分引导为包内固定模版，不由本工具写入。）"
+        + "（0）本阶段用 **memory_store_write_document** 把 **IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
+        "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
+        "用户选定内置陪伴模式时调用 **companion_set_experience_profile**（须附 note）。"
         "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须**调用 "
         "**companion_bootstrap_user_interactive_complete**（可选短 note）；未调用该工具前不要声称阶段已结束。"
-        "（1）用户自愿透露、适合长期保存的基本事实，可调用 update_user_md 写入 USER 档案；"
-        "（1.1）当用户明确提出未来提醒，必须先调用 schedule_task；exec_time_utc 须为带时区的 ISO8601。"
-        "（2）确有核对持久化约定稿需求时可用 memory_store_list_paths / memory_store_read_document；勿编造内容。"
-        "列表目录约束与上文「输出与工具」一致：勿为闲聊列根目录。"
-        "（3）凡涉及可与持久化档案核对的事实，须先读到持久化正文再作答。"
-        "（4）需要公开可核验信息且持久化文档无依据时，须先调用 google_web_search。"
-        "（5）模型与实现细节类问题：仅可依据当前可见上下文或已执行工具返回作答，无法核验时如实说明不确定。"
-    )
-    base += _repl_tool_contract_image_generation_clause()
-    base += _repl_tool_contract_suffix_after_image_clause(
-        tool_side_compact=tool_side_compact
+        "调用完成后进入日常相处；后续轮次可用 **memory_store_write_document** 按需更新允许列表内的持久化约定稿。"
+        "（TOOLS 操作说明与 significance 评分引导为包内固定模版，不由工具写入。）"
+        "（1）须核对持久化档案时先用 **memory_store_read_document** 读正文；勿编造。"
+        "（2）凡涉及可与持久化档案核对的事实，须先读到持久化正文再作答。"
+        "（3）模型与实现细节类问题：仅可依据当前可见上下文或已执行工具返回作答，无法核验时如实说明不确定。"
     )
     return base
 
@@ -670,9 +662,7 @@ def _output_system_messages(
             if interactive_bootstrap_active:
                 out.append(
                     _system_message(
-                        _output_contract_text_interactive_bootstrap_tools(
-                            tool_side_compact=tool_side_compact,
-                        )
+                        _output_contract_text_interactive_bootstrap_tools()
                     )
                 )
             else:

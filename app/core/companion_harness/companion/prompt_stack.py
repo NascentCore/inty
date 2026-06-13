@@ -125,9 +125,7 @@ def companion_tools_for_turn(
                 else (
                     build_openai_repl_tools_inner_tick()
                     if inner_tick_turn
-                    else build_openai_repl_tools(
-                        interactive_bootstrap_active=False
-                    )
+                    else build_openai_repl_tools()
                 )
             )
             if implicit_user_signed_on_turn and not inner_tick_turn:
@@ -229,8 +227,9 @@ def companion_turn_tools_and_system_messages(
     """
     Single source for companion chat-round tools list and system message stack.
 
-    ``USER_CHAT_BOOTSTRAP`` runs one in-turn tool loop so setup can write prompt
-    slices before completion.  Normal user chat and maintenance inner tick require
+    ``USER_CHAT_BOOTSTRAP`` runs one in-turn tool loop so setup can persist
+    relationship seed docs via ``memory_store_write_document`` before completion.
+    Normal user chat and maintenance inner tick require
     the async foreground/tool-background route.  Proactive, scheduled, and
     implicit sign-on greeting tracks are chat-only system stacks with no tools.
     """
