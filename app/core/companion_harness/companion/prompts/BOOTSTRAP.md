@@ -20,12 +20,13 @@
 
 ## Prompt slices to update (you and user's background)
 
-- 本阶段经工具写入：`IDENTITY.md`、`STYLE.md`、`USER.md`（`memory_store_write_document`，传完整正文）
+- 本阶段经工具写入：`IDENTITY.md`、`STYLE.md`、`USER.md`、`COMPANIONSHIP.md`（`memory_store_write_document`，传完整正文）
 - `SOUL.md`、`MEMORY.md`：沿用包内模板种子（见 TEMPLATE_REFERENCE），本阶段勿用写工具覆盖
 - 收集对话信息时优先更新：
    - 用户希望你所承担的角色 → `IDENTITY.md`
    - 用户的信息 → `USER.md`
    - 相处语气与陪伴模式 → `STYLE.md`
+   - 双方关系 framing（用户原话、阶段、相处约定）→ `COMPANIONSHIP.md`
 
 ## 沟通方式
 

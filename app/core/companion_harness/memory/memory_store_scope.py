@@ -94,6 +94,10 @@ class MemoryStoreScopePaths:
         return "CHANNELS.md"
 
     @property
+    def companionship_md(self) -> str:
+        return "COMPANIONSHIP.md"
+
+    @property
     def techno_core_md(self) -> str:
         return "TECHNO_CORE.md"
 
@@ -212,6 +216,7 @@ _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "user_md",
     "memory_md",
     "channels_md",
+    "companionship_md",
 )
 
 

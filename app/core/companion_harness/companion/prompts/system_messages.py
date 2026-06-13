@@ -68,6 +68,10 @@ from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_DAILY_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
+
+COMPANIONSHIP_SYSTEM_HEADING = (
+    "当前陪伴关系 framing（COMPANIONSHIP.md）：\n\n"
+)
 from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 from app.core.companion_harness.prompting.bundle import PromptBundle
@@ -252,7 +256,7 @@ def _output_contract_text_interactive_bootstrap_tools() -> str:
     base = (
         "输出与工具（交互式关系建立阶段）："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        + "（0）本阶段用 **memory_store_write_document** 把 **IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
+        + "（0）本阶段用 **memory_store_write_document** 把 **COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
         "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
         "用户选定内置陪伴模式时调用 **companion_set_experience_profile**（须附 note）。"
         "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须**调用 "
@@ -610,6 +614,15 @@ def _persona_system_messages(
         _system_message(bundle.soul.strip()),
         _system_message(bundle.style_md.strip()),
     ]
+    if (
+        not interactive_bootstrap_active
+        and bundle.companionship_md.strip()
+    ):
+        out.append(
+            _system_message(
+                COMPANIONSHIP_SYSTEM_HEADING + bundle.companionship_md.strip()
+            )
+        )
     if bundle.techno_core_md.strip():
         out.append(_system_message(bundle.techno_core_md.strip()))
     if bundle.living_sphere_md.strip():
@@ -638,9 +651,6 @@ def _persona_system_messages(
         out.append(_system_message(build_bootstrap_tool_call_section()))
         for block in build_interactive_bootstrap_template_reference_parts():
             out.append(_system_message(block))
-    # TODO(crs-companionship-doc): Phase A — inject persisted ``COMPANIONSHIP.md`` (relationship_phase,
-    # tone) from MemoryStore here after bootstrap (#3342). Phase B — activate prompt + ``turn_recall``
-    # Turn Brief (#3343). Canon: CRS #3341, glossary #3345, SDCM #3365.
     return out
 
 

@@ -50,6 +50,7 @@ def _conservative_tool_finish_envelope() -> DualLlmChatBranchEnvelope:
         importance_user_message=5,
         importance_assistant_message=5,
         output_to_user=False,
+        turn_recall="",
     )
 
 

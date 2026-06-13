@@ -110,6 +110,13 @@ class CompanionTurnResult(BaseModel):
             "See dual_llm_chat_branch_envelope module docstring."
         ),
     )
+    turn_recall: str | None = Field(
+        default=None,
+        description=(
+            "Ephemeral Turn Brief from dual-LLM envelope ``turn_recall`` when non-empty; "
+            "plumbed in Phase A (#3342), prompt + curator activation in Phase B (#3343)."
+        ),
+    )
     user_msg_uuid: str = ""
     assistant_msg_uuid: str = Field(
         default="",
@@ -276,6 +283,7 @@ def load_prompt_bundle(
             "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         channels_md=_read_memory_document_required(store, "CHANNELS.md"),
+        companionship_md=_read_memory_document_required(store, "COMPANIONSHIP.md"),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),

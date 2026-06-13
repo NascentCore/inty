@@ -5,9 +5,6 @@ schemas are exposed, which system-message wrapper is used, and which route mode
 must be enforced.  Mid-turn refreshes re-read MemoryStore and ``context.json`` so
 tool-side writes to persona/context documents become visible before the next
 model leg continues.
-
-TODO(crs-companionship-doc): After #3342, load ``COMPANIONSHIP.md`` from MemoryStore into
-``PromptBundle`` / ``_persona_system_messages``; #3343 activates template + ``turn_recall``.
 """
 
 from __future__ import annotations

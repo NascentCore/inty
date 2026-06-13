@@ -90,6 +90,7 @@ def test_bootstrap_output_contract_names_memory_store_write_paths_only() -> None
     )
     assert "memory_store_write_document" in joined
     assert "IDENTITY.md / STYLE.md / USER.md" in joined
+    assert "COMPANIONSHIP.md" in joined
     assert "SOUL.md" in joined and "MEMORY.md" in joined
     assert "companion_update_prompt_slice" not in joined
     assert "schedule_task" not in joined
@@ -111,6 +112,49 @@ def test_bootstrap_omits_capability_package_slices() -> None:
     )
     assert "channel contract" not in joined
     assert "tool contract" not in joined
+
+
+def test_persona_injects_companionship_after_bootstrap() -> None:
+    bundle = PromptBundle(
+        identity="identity",
+        soul="soul",
+        style_md="style",
+        user_md="user",
+        memory_md="memory",
+        companionship_md="# 我们的关系\n\n用户原话：朋友\n",
+    )
+    contents = _system_contents(
+        build_system_messages(
+            bundle,
+            ContextMeta(workspace_bootstrap_user_interactive_completed=True),
+        )
+    )
+    joined = "\n".join(contents)
+    assert "当前陪伴关系 framing（COMPANIONSHIP.md）" in joined
+    assert "用户原话：朋友" in joined
+    style_idx = joined.index("style")
+    companionship_idx = joined.index("用户原话：朋友")
+    assert style_idx < companionship_idx
+
+
+def test_persona_omits_companionship_during_bootstrap() -> None:
+    bundle = PromptBundle(
+        identity="identity",
+        soul="soul",
+        style_md="style",
+        user_md="user",
+        memory_md="",
+        companionship_md="# 我们的关系\n\nseed\n",
+    )
+    joined = "\n".join(
+        _system_contents(
+            build_system_messages_for_bootstrap_track(
+                bundle,
+                ContextMeta(workspace_bootstrap_user_interactive_completed=False),
+            )
+        )
+    )
+    assert "当前陪伴关系 framing（COMPANIONSHIP.md）" not in joined
 
 
 def test_system_messages_omit_weixin_clawbot_alias_for_unknown_channel() -> None:

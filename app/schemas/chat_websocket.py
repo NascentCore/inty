@@ -241,6 +241,12 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
     langsmith_trace_id: Optional[str] = None
     langsmith_run_id: Optional[str] = None
     significance_perception: Optional[ChatWsSignificancePerception] = None
+    turn_recall: Optional[str] = Field(
+        default=None,
+        description=(
+            "Ephemeral Turn Brief from dual-LLM envelope; Phase A plumbing (#3342)."
+        ),
+    )
     tool_background_started: Optional[bool] = None
     context_mode: Optional[str] = None
     tool_bg_output_to_user: Optional[bool] = None
