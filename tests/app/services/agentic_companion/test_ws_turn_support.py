@@ -1,4 +1,4 @@
-"""Tests for companion WS turn meta mapping (#3255)."""
+"""Tests for companion WS turn meta mapping (#3377)."""
 
 from __future__ import annotations
 

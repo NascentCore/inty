@@ -88,7 +88,7 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "context.json": (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
     "ai_private.md": (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
     # Inner thoughts about the user (MAINTENANCE)—not LIFE_CURRENTS virtual-world activity.
-    # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today (#3290, #3341).
+    # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today (#3375, #3341).
     # TODO(crs-companionship-doc): add ``COMPANIONSHIP`` document_kind when Phase A lands (#3342).
     "ai_private.jsonl": (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
     "tool_background.jsonl": (

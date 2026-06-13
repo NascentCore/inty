@@ -20,7 +20,7 @@ MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口
 - companion 的身份、稳定边界、对用户的长期理解，以及跨日的语义记忆。
 - **`LIFE_CURRENTS.md`**（AUTONOMY）：Inty 在 **虚拟空间/环境**中的自主活动状态（中期主题、当日兴致、进展）——**她在世界里做什么**，不是对用户的心理独白。与 `ai_private.jsonl` 分工见 [`AUTONOMY.md`](./AUTONOMY.md#ai_privatejsonl-vs-life_currentsmd核心区分)。
 - 由记忆管线与少量工具策展更新；通常只读注入到 system prompt（`LIFE_CURRENTS` 另由 AUTONOMY 写、PROACTIVE_CHAT 只读 hint）。
-- **DREAMING（sleeping）** 做 **当日汇总**：用户可见 `transcript.jsonl`（chat / proactive / scheduled）与沉默 awake 轨（autonomy / maintenance 的 inner-tick transcript、`LIFE_CURRENTS.md`、`ai_private.jsonl` 等）一并策展进 gist 与 semantic MemoryDoc。实现与 `TODO(dreaming-day-rollup)` 见 [`dreaming_consolidation`](/app/core/companion_harness/memory/dreaming_consolidation.py)、[`AUTONOMY.md`](./AUTONOMY.md)。
+- **DREAMING（sleeping）** 做 **当日汇总**：用户可见 `transcript.jsonl`（chat / proactive / scheduled）与沉默 awake 轨（autonomy / maintenance 的 inner-tick transcript、`LIFE_CURRENTS.md`、`ai_private.jsonl` 等）一并策展进 gist 与 semantic MemoryDoc。实现与 `TODO(dreaming-day-rollup)`（[#3376](https://github.com/NascentCore/inty/issues/3376)）见 [`dreaming_consolidation`](/app/core/companion_harness/memory/dreaming_consolidation.py)、[`AUTONOMY.md`](./AUTONOMY.md)。
 
 ### 2. 对话轨迹（transcript / inner_tick / ai_private）
 

@@ -48,11 +48,11 @@ Epic [#3341](https://github.com/nascentcore/inty/issues/3341) — psychology × 
 - [ ] Optional long-cycle reflection: [#3366](https://github.com/nascentcore/inty/issues/3366)
 - [ ] Inspect companionship state: [#3346](https://github.com/nascentcore/inty/issues/3346)
 
-Awake express / Dreaming learn split: [#3290](https://github.com/nascentcore/inty/issues/3290) (merged direction; `narrow-maintenance` + `dreaming-day-rollup` TODOs in code).
+Awake express / Dreaming learn split: [PR #3290](https://github.com/NascentCore/inty/pull/3290) (merged); follow-up [#3375](https://github.com/NascentCore/inty/issues/3375) `narrow-maintenance` + [#3376](https://github.com/NascentCore/inty/issues/3376) `dreaming-day-rollup`.
 
 ### 将智能体运行环境收束成可移植可迁移的组件
 
-- [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）
+- [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）— Epic [#3373](https://github.com/NascentCore/inty/issues/3373)，子票 [#3374](https://github.com/NascentCore/inty/issues/3374)
 
 ### 推理编排显式化（参考 [Pie](https://pie-project.org/) 研究）
 
@@ -355,7 +355,7 @@ Weixin 路径不经 `/api/v1/chat/ws`，由 `backend/ops/weixin_channel/` 适配
 | 8 | 媒介无关 user turn | `user_text: str`；`CompanionUserTurnInput` 多模态 **TODO**（Phase 1b/1c） | 功能 |
 | 9 | user-scoped / companion-scoped 记忆 | 仅 `user_id+companion_id+chat_id` scope | 目标态 |
 | 10 | 断线 persist-first 投递 | 当前 `cancel_all()` 取消 in-flight（#3256） | 行为 |
-| 11 | autonomous / 可暂停 runtime | 无离线持续运行；inner-tick 依赖 presence 连接 | 目标态 |
+| 11 | autonomous / 可暂停 runtime | 无离线持续运行；inner-tick 依赖 presence 连接 | Epic [#3373](https://github.com/NascentCore/inty/issues/3373) |
 | 12 | sub-task / sub-agent fan-out | 未实现 | 目标态 |
 | 13 | 结构化 metrics（latency / drop） | 未统一导出 | 可观测性 |
 | 14 | Maintenance inner-tick 语义 | 仍含 MemoryDoc 整理职责；计划收窄为 Autonomy + dreaming 分工 | 演进中 |

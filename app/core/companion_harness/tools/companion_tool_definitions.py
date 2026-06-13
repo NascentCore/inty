@@ -44,7 +44,7 @@ MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 # TODO(ai-private-jsonl-write): ``ai_private.jsonl`` (inner thoughts *about the user*, MAINTENANCE)
 # is ORM-mapped but excluded here — not ``LIFE_CURRENTS.md`` (virtual-world activity, AUTONOMY).
 # Enable MAINTENANCE append via dedicated append-only tool (preferred) or allowlist + append-only runtime.
-# CRS Awake express / Dreaming learn — #3290; epic #3341.
+# CRS Awake express / Dreaming learn — PR #3290; follow-up #3375 #3376; epic #3341.
 # TODO(track-write-policy): Collapse per-track ``memory_store_write_document`` policy into one
 # ``TrackWritePolicy`` (allowlist + tool description override) keyed by ``CompanionTurnTrack``;
 # wire ``turn.py`` write_allowlist and ``build_openai_*_track_tools`` from that registry instead of
@@ -580,7 +580,7 @@ BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
 
 # TODO(narrow-maintenance): MAINTENANCE only — collapse to ``ai_private.jsonl`` append (+ minimal
 # read if needed). Drop UPDATE_USER_MD, TECHNO_CORE_RECORD_EVENT, memory_store_*; MemoryDoc
-# curation → DREAMING (#3290, CRS #3341). AUTONOMY uses ``INNER_TICK_AUTONOMY_TOOL_NAMES``.
+# curation → DREAMING (#3375, CRS #3341). AUTONOMY uses ``INNER_TICK_AUTONOMY_TOOL_NAMES``.
 INNER_TICK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.UPDATE_USER_MD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,

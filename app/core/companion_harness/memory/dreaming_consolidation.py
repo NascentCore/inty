@@ -4,7 +4,7 @@ Batch-curates **the day's full arc** into ``memory/daily/<date>.md`` (daily gist
 ``MEMORY.md``, ``USER.md``, ``STYLE.md``, ``SOUL.md``, and ``LIVING_SPHERE.md`` —
 user-visible ``transcript.jsonl`` (chat, proactive, scheduled) plus silent awake
 inner-tick material (autonomy, maintenance) once ``TODO(dreaming-day-rollup)``
-merges inner-tick / ``ai_private.jsonl`` / ``LIFE_CURRENTS.md`` into the slice (#3343;
+merges inner-tick / ``ai_private.jsonl`` / ``LIFE_CURRENTS.md`` into the slice (#3376;
 optional long-cycle reflection #3366).
 Only invoked from the dreaming inner-tick path — no awake post-turn updates.
 
@@ -164,7 +164,7 @@ def _dreaming_transcript_block(rows: list[ChatMessage]) -> str:
     """Render a compact transcript block for batch curation prompts.
 
     TODO(dreaming-day-rollup): append inner-tick / ai_private / LIFE_CURRENTS
-    sections when ``dreaming_candidate_slice`` supplies them (#3343).
+    sections when ``dreaming_candidate_slice`` supplies them (#3376).
     """
     lines: list[str] = []
     for row in rows:
@@ -318,7 +318,7 @@ def consolidate_memory_during_dreaming(
     ``rows`` come from ``dreaming_candidate_slice`` (main ``transcript.jsonl`` only
     today). TODO(dreaming-day-rollup): curator prompts must also ingest merged
     inner-tick transcript, ``ai_private.jsonl``, and ``LIFE_CURRENTS.md`` for the
-    same calendar day so DREAMING rolls up AUTONOMY / MAINTENANCE awake activity (#3343;
+    same calendar day so DREAMING rolls up AUTONOMY / MAINTENANCE awake activity (#3376;
     companionship / relationship fields #3342).
     """
     assert rows
