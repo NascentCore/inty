@@ -41,7 +41,7 @@ Companion Harness 现状：以会话上下文、长期记忆、模型回合、�
 Epic [#3341](https://github.com/nascentcore/inty/issues/3341) — psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
 
 - [ ] L0 canon: [#3345](https://github.com/nascentcore/inty/issues/3345) glossary (`RELATIONSHIP_STATE.md`), [#3365](https://github.com/nascentcore/inty/issues/3365) SDCM + write lattice
-- [ ] Phase A: [#3342](https://github.com/nascentcore/inty/issues/3342) companionship doc + Turn Brief plumbing (no UX change)
+- [x] Phase A: [#3342](https://github.com/nascentcore/inty/issues/3342) companionship doc + Turn Brief plumbing (no UX change)
 - [ ] Phase B: [#3343](https://github.com/nascentcore/inty/issues/3343) activate companionship prompt + `turn_recall` + dreaming curator
 - [ ] Bootstrap relationship seed: [#3328](https://github.com/nascentcore/inty/issues/3328)
 - [ ] Track write registry: [#3367](https://github.com/nascentcore/inty/issues/3367) `TrackWritePolicy` × time frame × `CompanionTurnTrack`

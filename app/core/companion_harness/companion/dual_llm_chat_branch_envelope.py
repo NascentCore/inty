@@ -304,7 +304,7 @@ def parse_dual_llm_chat_envelope_from_message(
     return None
 
 
-def _turn_recall_from_envelope(env: DualLlmChatBranchEnvelope) -> str | None:
+def turn_recall_from_envelope(env: DualLlmChatBranchEnvelope) -> str | None:
     text = (env.turn_recall or "").strip()
     return text or None
 
@@ -322,7 +322,7 @@ def split_dual_llm_chat_branch_content(raw: str) -> DualLlmChatBranchSplit:
         visible_text=env.user_facing_reply.strip(),
         significance_meta=envelope_to_assistant_metadata_dict(env),
         output_to_user=env.output_to_user,
-        turn_recall=_turn_recall_from_envelope(env),
+        turn_recall=turn_recall_from_envelope(env),
     )
 
 
@@ -342,7 +342,7 @@ def split_dual_llm_chat_branch_message(message: Any) -> DualLlmChatBranchSplit:
             visible_text=env.user_facing_reply.strip(),
             significance_meta=envelope_to_assistant_metadata_dict(env),
             output_to_user=env.output_to_user,
-            turn_recall=_turn_recall_from_envelope(env),
+            turn_recall=turn_recall_from_envelope(env),
         )
     content = _message_field(message, "content")
     raw = content if isinstance(content, str) else ""

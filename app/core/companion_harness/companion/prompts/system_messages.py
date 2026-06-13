@@ -60,17 +60,15 @@ from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_spec_text,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    companionship_md_ready_for_system_injection,
     get_imate_axiom_system_text,
     get_inty_facts_system_text,
     get_safety_system_text,
 )
 from app.core.companion_harness.memory.memory_taxonomy import (
+    COMPANIONSHIP_SYSTEM_HEADING,
     MEMORY_SYSTEM_HEADING_DAILY_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
-)
-
-COMPANIONSHIP_SYSTEM_HEADING = (
-    "当前陪伴关系 framing（COMPANIONSHIP.md）：\n\n"
 )
 from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
@@ -609,6 +607,8 @@ def _persona_system_messages(
     include_significance_perception_slice: bool,
     interactive_bootstrap_active: bool,
 ) -> list[dict[str, Any]]:
+    # TODO(crs-persona-slice-registry): Registry for persistable persona slices
+    # (inject order, heading, gate) instead of per-doc conditionals — #3367 / #3343.
     out: list[dict[str, Any]] = [
         _system_message(bundle.identity.strip()),
         _system_message(bundle.soul.strip()),
@@ -616,7 +616,7 @@ def _persona_system_messages(
     ]
     if (
         not interactive_bootstrap_active
-        and bundle.companionship_md.strip()
+        and companionship_md_ready_for_system_injection(bundle.companionship_md)
     ):
         out.append(
             _system_message(

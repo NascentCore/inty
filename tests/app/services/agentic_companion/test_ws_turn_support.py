@@ -24,3 +24,18 @@ def test_companion_ai_meta_from_turn_result_scheduled_reminder_fields() -> None:
     assert meta["source"] == "inner_tick"
     assert meta["companion_scheduled_reminder"] is True
     assert meta["scheduledTaskId"] == "task-99"
+
+
+def test_companion_ai_meta_from_turn_result_turn_recall() -> None:
+    turn = CompanionTurnResult(
+        assistant_text="hi",
+        turn_recall="用户提到下周见面",
+        user_msg_uuid="550e8400-e29b-41d4-a716-446655440000",
+        assistant_msg_uuid="33333333-3333-4333-8333-000000000002",
+    )
+    meta = companion_ai_meta_from_turn_result(
+        turn,
+        companion_scheduled_reminder=None,
+        scheduled_task_id=None,
+    )
+    assert meta["turn_recall"] == "用户提到下周见面"

@@ -130,7 +130,7 @@ def test_persona_injects_companionship_after_bootstrap() -> None:
         )
     )
     joined = "\n".join(contents)
-    assert "当前陪伴关系 framing（COMPANIONSHIP.md）" in joined
+    assert "COMPANIONSHIP — 陪伴关系 framing（COMPANIONSHIP.md）" in joined
     assert "用户原话：朋友" in joined
     style_idx = joined.index("style")
     companionship_idx = joined.index("用户原话：朋友")
@@ -154,7 +154,31 @@ def test_persona_omits_companionship_during_bootstrap() -> None:
             )
         )
     )
-    assert "当前陪伴关系 framing（COMPANIONSHIP.md）" not in joined
+    assert "COMPANIONSHIP — 陪伴关系 framing（COMPANIONSHIP.md）" not in joined
+
+
+def test_persona_omits_stub_companionship_after_bootstrap() -> None:
+    from app.core.companion_harness.memory.memory_store_scope import (
+        load_template_seed_text,
+    )
+
+    bundle = PromptBundle(
+        identity="identity",
+        soul="soul",
+        style_md="style",
+        user_md="user",
+        memory_md="memory",
+        companionship_md=load_template_seed_text("COMPANIONSHIP.md"),
+    )
+    joined = "\n".join(
+        _system_contents(
+            build_system_messages(
+                bundle,
+                ContextMeta(workspace_bootstrap_user_interactive_completed=True),
+            )
+        )
+    )
+    assert "COMPANIONSHIP — 陪伴关系 framing（COMPANIONSHIP.md）" not in joined
 
 
 def test_system_messages_omit_weixin_clawbot_alias_for_unknown_channel() -> None:
