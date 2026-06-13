@@ -1,4 +1,9 @@
-"""GitHub issue title/body for companion user-feedback snapshots."""
+"""GitHub issue title/body for companion user-feedback snapshots.
+
+Companion-specific formatting only; HTTP client is ``app.utils.github.issues``.
+Issues use ``[user-reported]`` title prefix and label fallbacks when optional
+labels (``user-reported``, ``needs-triage``) are missing on the repo.
+"""
 
 from __future__ import annotations
 

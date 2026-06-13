@@ -1,4 +1,4 @@
-"""Create GitHub issues via REST API with optional label-set retries."""
+"""Create GitHub issues via REST API; retries alternate label sets on HTTP 422."""
 
 from __future__ import annotations
 

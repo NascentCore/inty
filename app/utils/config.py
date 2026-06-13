@@ -193,8 +193,8 @@ class FeaturesConfig(BaseModel):
         user_feedback_github_token: str = Field(
             default="",
             description=(
-                "GitHub token for ``companion_record_user_feedback`` issue creation; "
-                "empty skips issue filing (snapshot still persisted)."
+                "GitHub PAT for ``companion_record_user_feedback`` issue creation; "
+                "empty uses ``GH_TOKEN`` env; both empty skips issue filing."
             ),
         )
 

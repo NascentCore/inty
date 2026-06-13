@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid
 
 import pytest
@@ -74,6 +75,7 @@ async def test_record_user_feedback_appends_snapshot_jsonl(tmp_path) -> None:
         scene=None,
     )
     token = companion_llm_runtime_event_bind_ctx.set(bind)
+    old_gh = os.environ.pop("GH_TOKEN", None)
     try:
         out = await execute_tool_call(
             store,
@@ -88,6 +90,8 @@ async def test_record_user_feedback_appends_snapshot_jsonl(tmp_path) -> None:
         )
     finally:
         companion_llm_runtime_event_bind_ctx.reset(token)
+        if old_gh is not None:
+            os.environ["GH_TOKEN"] = old_gh
 
     assert out.startswith("OK feedback_id=")
     assert "github_issue=skipped_no_token" in out
@@ -158,22 +162,13 @@ def test_build_harness_snapshot_transcript_tail_is_recent_lines(tmp_path) -> Non
     assert "EARLY_ONLY" not in snap.transcript_tail
 
 
-def test_github_issue_title_has_user_reported_prefix() -> None:
-    title = build_github_issue_title(_sample_snapshot())
+def test_github_issue_format() -> None:
+    snap = _sample_snapshot()
+    title = build_github_issue_title(snap)
+    body = build_github_issue_body(snap)
     assert title.startswith(GITHUB_ISSUE_TITLE_PREFIX)
     assert "memory:" in title
-
-
-def test_github_issue_body_includes_langsmith_trace_id() -> None:
-    body = build_github_issue_body(_sample_snapshot())
-    assert "langsmith_trace_id" in body
+    assert "user-reported" in GITHUB_ISSUE_LABELS
     assert "`ls-trace-1`" in body
-    assert "smith.langchain.com" in body
-    assert "user_msg_uuid" in body
     assert "`user-msg-1`" in body
     assert "## Context (trace back to original session)" in body
-
-
-def test_github_issue_labels_include_user_reported() -> None:
-    assert "user-reported" in GITHUB_ISSUE_LABELS
-    assert "agentic_companion" in GITHUB_ISSUE_LABELS

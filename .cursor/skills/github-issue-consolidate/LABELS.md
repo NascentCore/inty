@@ -21,7 +21,6 @@
 |-------|------|
 | `enhancement` | 功能改进（GitHub 默认） |
 | `feature` | 明确的新功能（常与 `enhancement` 同用） |
-| `user-reported` | companion harness 自动上报的用户抱怨（`companion_record_user_feedback`） |
 | `question` | 需要 reporter 补充信息 |
 | `ui-nits` | 小 UI 修正 |
 | `stainless` | 生成代码/SDK 相关 |
@@ -65,7 +64,6 @@ Bug 类 issue 应有 **恰好一个** `s*` label；enhancement 可省略。
 | 场景 | Labels |
 |------|--------|
 | Companion bug | `agentic_companion`, `s1`, `p2`, `needs-triage` |
-| User-reported companion complaint | `user-reported`, `agentic_companion`, `s2`, `p2`, `needs-triage` |
 | Companion feature | `agentic_companion`, `enhancement`, `feature`, `p2`, `needs-triage` |
 | Backend bug | `backend`, `s2`, `p2`, `needs-triage` |
 | Android feature | `android`, `enhancement`, `feature`, `p2`, `needs-triage` |

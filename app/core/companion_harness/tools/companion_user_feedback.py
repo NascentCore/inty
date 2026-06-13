@@ -1,11 +1,21 @@
-"""Capture companion harness snapshot on user complaint and file GitHub issue in background.
+"""Companion user complaint tool: harness snapshot + async GitHub issue.
 
-Generated entirely by Cursor agent.
+Design:
+- Sync: capture ``HarnessSnapshot`` and append ``kind=snapshot`` to
+  ``.companion_user_feedback.jsonl`` before returning to the LLM tool loop.
+- Async: daemon thread POSTs GitHub issue; appends ``kind=github_issue_created``
+  or ``kind=github_issue_skipped`` (never blocks the tool handler).
+- Correlation: ``get_current_trace_info()`` + ``companion_llm_runtime_event_bind_ctx``
+  at tool-call time (user-turn LangSmith trace + inty_trace_id / user_msg_uuid).
+- GitHub REST lives in ``app.utils.github.issues``; issue title/body/labels in
+  ``companion_user_feedback_github_issue`` (companion-domain, not generic utils).
+- Token: ``features.companion_harness.user_feedback_github_token``, else ``GH_TOKEN``.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import threading
 import uuid
 from dataclasses import dataclass
@@ -245,6 +255,7 @@ def _github_issue_worker(
 ) -> None:
     # TODO(companion-user-feedback): MemoryStore.append_jsonl_record is read-modify-write;
     # concurrent appends from other turns may race — consider append-only repo API.
+    # Lazy import avoids import cycle (github_issue module imports HarnessSnapshot here).
     from app.core.companion_harness.tools.companion_user_feedback_github_issue import (
         create_companion_user_feedback_github_issue,
     )
@@ -299,10 +310,11 @@ def load_user_feedback_github_config() -> tuple[str, str]:
     from app.core.config import global_config_loaded_from_config_yaml
 
     harness_cfg = global_config_loaded_from_config_yaml.app.features.companion_harness
-    return (
-        harness_cfg.user_feedback_github_repo,
-        harness_cfg.user_feedback_github_token,
-    )
+    repo = harness_cfg.user_feedback_github_repo.strip()
+    token = harness_cfg.user_feedback_github_token.strip()
+    if not token:
+        token = os.environ.get("GH_TOKEN", "").strip()
+    return repo, token
 
 
 def tool_companion_record_user_feedback(
