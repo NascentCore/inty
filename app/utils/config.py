@@ -254,8 +254,9 @@ class FeaturesConfig(BaseModel):
         return self
 
 
-@dataclass
-class AppConfig:
+class AppConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     name: str = "inty-backend"
     # OpenAPI/docs and some non-fatal init failures (e.g. optional Firebase). Log level is not tied to this flag; use logging.level / INTY_* env.
     debug: bool = False
@@ -263,7 +264,7 @@ class AppConfig:
     debug_messages: bool = True
     # Use JSON format for request/response logging. Default is True (JSON format).
     use_json_log_format: bool = True
-    backend_cors_origins: List[AnyHttpUrl] = None
+    backend_cors_origins: Optional[list[AnyHttpUrl]] = None
     version: str = "1.1.0"
     environment: Environment = Environment.DEV
     # 所有 Google 服务（GCP 及其他）都使用该身份信息来访问：GCS、Vertex AI
@@ -274,10 +275,10 @@ class AppConfig:
     # 仅当请求头 appVersionCode >= 此值时返回日常记忆提醒（消息列表 daily_memory_prompt、角色详情 daily_memories）；小于此值按旧版不返回。0 表示不按版本限制。
     min_app_version_code_for_daily_memory: int = 0
 
-    api_endpoints: APIEndpointsConfig = field(
+    api_endpoints: APIEndpointsConfig = Field(
         default_factory=APIEndpointsConfig
     )
-    features: FeaturesConfig = field(default_factory=FeaturesConfig)
+    features: FeaturesConfig = Field(default_factory=FeaturesConfig)
 
     class LimitsConfig(BaseModel):
         model_config = ConfigDict(extra="ignore")
@@ -305,13 +306,15 @@ class AppConfig:
         subscribed_user_music_gen_24h_limit: int = 6
         image_compression_threshold_size_kb: int = 500
 
-    limits: LimitsConfig = field(default_factory=LimitsConfig)
+    limits: LimitsConfig = Field(default_factory=LimitsConfig)
 
-    def __post_init__(self):
+    @model_validator(mode="after")
+    def ensure_nested_defaults(self) -> "AppConfig":
         if self.limits is None:
             self.limits = self.LimitsConfig()
         if self.features is None:
             self.features = FeaturesConfig()
+        return self
 
     @property
     def name_for_openrouter(self) -> str:
@@ -353,11 +356,12 @@ def resolved_telegram_bot_token(agent: "AgentConfig") -> str:
     return agent.channels.telegram.bot_token.strip()
 
 
-@dataclass
-class AgentConfig:
+class AgentConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     # OpenRouter API key; chat is invoked via OpenAI client (app.utils.openai_client) against base_url.
-    api_key: str
-    langchain_api_key: str
+    api_key: str = Field(...)
+    langchain_api_key: str = Field(...)
     # DEPRECATED: Do not use. Use free_user_chat_model and sub_user_chat_model instead.
     model: str = GEMINI_2_5_FLASH
     # Free users: default chat model (OpenRouter model id), invoked via OpenAI client + OpenRouter.
@@ -383,7 +387,9 @@ class AgentConfig:
     # OpenAI-compatible endpoint; use OPENROUTER_BASE_URL to invoke e.g. google/gemini-2.5-flash-lite via OpenRouter.
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     base_url: str = OPENROUTER_BASE_URL
-    channels: AgentChannelsConfig = field(default_factory=AgentChannelsConfig)
+    channels: AgentChannelsConfig = Field(
+        default_factory=AgentChannelsConfig
+    )
     # Chat 专用 LLM 端点（可选）。若两者均配置则 Agent 聊天使用此端点，否则使用 base_url + api_key。记忆抽取始终使用 base_url + api_key。
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     chat_llm_base_url: Optional[str] = None
@@ -409,7 +415,7 @@ class AgentConfig:
     # 图片生成不使用该采样率限制，保持全量追踪。
     langsmith_text_chat_sample_rate: float = 0.1
     # 若用户邮箱命中该名单，则文本聊天调用始终写入 LangSmith trace（忽略采样率）。
-    langsmith_text_chat_always_trace_user_emails: list[str] = field(
+    langsmith_text_chat_always_trace_user_emails: list[str] = Field(
         default_factory=list
     )
     # 官方 IntelliMate 助手的对话历史窗口条数（不按订阅分档，仅此一个限制）
@@ -847,7 +853,7 @@ def load_config(path: str) -> Config:
         )
 
     return Config(
-        app=AppConfig(**app_data),
+        app=AppConfig.model_validate(app_data),
         security=SecurityConfig.model_validate(data.get("security") or {}),
         database=DatabaseSettings.model_validate(data.get("database") or {}),
         google_oauth=GoogleOAuthConfig.model_validate(
@@ -858,7 +864,7 @@ def load_config(path: str) -> Config:
         ),
         logging=LoggingConfig.model_validate(data.get("logging") or {}),
         embedding=EmbeddingConfig.model_validate(data.get("embedding") or {}),
-        agent=AgentConfig(**agent_data),
+        agent=AgentConfig.model_validate(agent_data),
         gcs=GCSConfig.model_validate(data.get("gcs") or {}),
         firebase=FirebaseConfig.model_validate(data.get("firebase") or {}),
         google_play=GooglePlayConfig.model_validate(

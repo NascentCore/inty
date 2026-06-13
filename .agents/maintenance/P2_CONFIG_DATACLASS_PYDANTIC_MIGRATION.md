@@ -78,9 +78,9 @@ flowchart TB
 | CFG-PYD-18 | done | `MemoryExtractionConfig` | — | `memory_extraction` | 已迁移为 `BaseModel`；`WorkflowMode` 由 Pydantic 字符串→枚举；Fixed in `cursor/agent-maintenance-tasks-772c` |
 | CFG-PYD-19 | done | `PushNotificationConfig` | — | `push_notification` | 已迁移为 `BaseModel`；`stages` 默认值由 `model_validator(after)` 保持；Fixed in `cursor/agent-maintenance-tasks-772c` |
 | CFG-PYD-20 | done | `FeaturesConfig` | — | `app.features`（预处理 dict） | 已迁移为 `BaseModel`；`companion_transcript_compaction` 使用 `Field(default_factory=...)`；bootstrap / context_mode 校验由 `model_validator(after)` 保持；Fixed in `cursor/agent-maintenance-tasks-e9ac` |
-| CFG-PYD-21 | todo | `AgentConfig` | — | `agent` | 体量大；无其它 *Config* dataclass 交叉引用 |
+| CFG-PYD-21 | done | `AgentConfig` | — | `agent` | 已迁移为 `BaseModel`；`load_config` 使用 `model_validate`；Fixed in `cursor/agent-maintenance-tasks-02d9` |
 | CFG-PYD-22 | done | `AppConfig.LimitsConfig` | CFG-PYD-01..21 中与 app 树无冲突者 | `app.limits`（预处理 dict） | 已迁移为 `BaseModel`；`load_config` 使用 `model_validate`；Fixed in `cursor/agent-maintenance-tasks-5273` |
-| CFG-PYD-23 | todo | `AppConfig` | CFG-PYD-06, CFG-PYD-20, CFG-PYD-22 | `app` | 含 `backend_cors_origins` 等；修正 `List[AnyHttpUrl] = None` 为 `Optional[...]`；`LimitsConfig` / `features` / `api_endpoints` 默认值用 `Field(default_factory=...)`；`__post_init__` 合并进 validator |
+| CFG-PYD-23 | done | `AppConfig` | CFG-PYD-06, CFG-PYD-20, CFG-PYD-22 | `app` | 已迁移为 `BaseModel`；`backend_cors_origins` 为 `Optional[list[AnyHttpUrl]]`；`__post_init__` → `model_validator(after)`；Fixed in `cursor/agent-maintenance-tasks-02d9` |
 | CFG-PYD-24 | todo | `Config` | CFG-PYD-01..23 | 根对象：`Config(...)` 整段 | 最后一跳；`load_config` 返回类型为 Pydantic `Config`；各子键一律 `model_validate` |
 
 **并行建议**：`CFG-PYD-01`～`CFG-PYD-19` 中凡 `depends_on` 仅为「无」且互不修改同一代码块的，可由自动化并行尝试；冲突时以文件级锁串行。
