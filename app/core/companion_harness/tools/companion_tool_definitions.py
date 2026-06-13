@@ -489,7 +489,7 @@ TECHNO_CORE_RECORD_EVENT_TOOL = LlmFunctionTool(
 
 UPDATE_USER_MD = LlmFunctionTool(
     name=CompanionToolName.UPDATE_USER_MD,
-    description="Append structured facts about the user to USER.md under «身份信息». Call when the user shares durable basic info (e.g. age, how they wish to be called, timezone) that should persist. Do not use for secrets unless the user clearly wants them remembered. Speak to the user in companion language only; never mention tools, JSON, or filenames.",
+    description="Append structured facts about the user to USER.md under «身份信息». Call when the user shares durable basic info (e.g. age, how they wish to be called, city, timezone as IANA such as Asia/Shanghai) that should persist. Do not use for secrets unless the user clearly wants them remembered. Speak to the user in companion language only; never mention tools, JSON, or filenames.",
     parameters={
         "type": "object",
         "properties": {

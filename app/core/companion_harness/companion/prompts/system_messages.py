@@ -214,6 +214,8 @@ def _output_contract_text_with_tools(
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
         + "（1）用户自愿透露、适合长期保存的基本事实（含闲聊中的小细节），"
         "应及时调用 update_user_md 写入 USER 档案，避免只记在当轮回复里；"
+        "当用户透露城市、作息或当地时间线索时，尽快推断并持久化其**时区**（标签「时区」，值用 IANA 如 Asia/Shanghai），"
+        "以便后续轮次感知用户当地几点；融入自然对话，勿要求用户发送时区命令；"
         "IDENTITY.md / STYLE.md 中值得长期保留的相处约定，在用户明确表达或反复出现时，"
         "用 memory_store_read_document 读全文后再 memory_store_write_document 更新；"
         "（1.1）当用户明确提出未来提醒（如「两小时后提醒我」「明早八点叫我」），"
