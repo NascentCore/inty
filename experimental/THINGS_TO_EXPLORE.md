@@ -9,3 +9,6 @@ Record links to interesting ideas and inspirations, give it a short tile.
 - Paint by Language Model
   - [Gallery](https://www.liamlaverty.com/paint-by-language-model/)
   - [Programmer API](https://www.liamlaverty.com/paint-by-language-model/draw/api)
+
+- Removing um from audio for clearer speech
+  - [erm](https://doug.sh/posts/erm-a-local-cli-that-strips-ums-uhs-and-erms-from-speech/)
