@@ -20,13 +20,8 @@ from app.services.agentic_channel.channel_runtime import (
     get_scope_channel_registry,
 )
 from app.services.agentic_companion.runtime_channel_registry import (
-    ActiveRuntimeChannel,
     active_channel_for_user,
 )
-
-
-def _runtime_channel_from_active(active: ActiveRuntimeChannel) -> CompanionRuntimeChannel:
-    return CompanionRuntimeChannel(active.value)
 
 
 def resolve_langsmith_slice_for_session(
@@ -57,7 +52,7 @@ def resolve_langsmith_slice_for_session(
     user_active = active_channel_for_user(session.user_id)
     if user_active is not None:
         return CompanionTurnLangsmithSlice.from_channel(
-            _runtime_channel_from_active(user_active),
+            CompanionRuntimeChannel(user_active.value),
             LangsmithChannelSource.USER_REGISTRY,
         )
 

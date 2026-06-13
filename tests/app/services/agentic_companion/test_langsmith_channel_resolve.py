@@ -94,3 +94,27 @@ def test_resolve_agent_scope_without_active_channel_defaults_app() -> None:
 
     assert slice_.runtime_channel == CompanionRuntimeChannel.APP
     assert slice_.channel_source == LangsmithChannelSource.DEFAULT_APP
+
+
+def test_resolve_agent_scope_without_active_channel_logs_debug() -> None:
+    from loguru import logger
+
+    scope = AgentScope(user_id="u3", agent_id="a3")
+    session = _session(
+        user_id="u3",
+        companion_id="a3",
+        chat_id=scope.memory_store_chat_id(),
+    )
+    messages: list[str] = []
+    sink_id = logger.add(messages.append, level="DEBUG", format="{message}")
+
+    try:
+        resolve_langsmith_slice_for_session(session)
+    finally:
+        logger.remove(sink_id)
+
+    assert any(
+        "langsmith_channel_resolve agent_scope_default_app" in line
+        and scope.registry_key() in line
+        for line in messages
+    )

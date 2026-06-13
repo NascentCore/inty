@@ -487,8 +487,10 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
     store.write_document("transcript.jsonl", "")
 
     sentinel = MagicMock()
+    parent_kwargs: list[dict[str, Any]] = []
 
     def _fake_create_root(**kwargs: Any) -> MagicMock:
+        parent_kwargs.append(kwargs)
         return sentinel
 
     monkeypatch.setattr(
@@ -517,7 +519,7 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
             repository_only_store_text=False,
             memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.APP,
+                channel=CompanionRuntimeChannel.TELEGRAM,
                 implicit_signal_bundle=None,
             ),
             background_output_sink=None,
@@ -531,3 +533,11 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
     assert len(bg_jobs) == 1
     assert bg_jobs[0]["langsmith_parent_run"] is sentinel
     assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
+    assert len(parent_kwargs) == 1
+    slice_ = parent_kwargs[0]["langsmith_slice"]
+    assert slice_.runtime_channel == CompanionRuntimeChannel.TELEGRAM
+    assert slice_.channel_source == LangsmithChannelSource.EXPLICIT_TURN
+    assert len(client.chat_calls) == 1
+    fg_meta = client.chat_calls[0]["langsmith_extra"]["metadata"]
+    assert fg_meta["inty_runtime_channel"] == "telegram"
+    assert fg_meta["inty_runtime_channel_source"] == "explicit_turn"

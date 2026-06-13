@@ -35,6 +35,9 @@ from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 class CompanionTurnDeps:
     """Immutable dependencies for one ``run_turn`` execution.
 
+    TODO(companion-langsmith-slice): hoist ``langsmith_slice`` here when more modules
+    need turn-bound channel observability without param drilling.
+
     Unpacked once at the top of ``_run_companion_turn_core``; inner helpers continue
     to receive primitive fields to keep the core diff small.
 
