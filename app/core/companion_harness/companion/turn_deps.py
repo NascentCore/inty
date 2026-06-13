@@ -113,11 +113,11 @@ class CompanionTurnDeps:
         uses ``CompanionSession.tool_bg_idle``.
 
     bootstrap_interim_output_sink
-        Async callback for ``USER_CHAT_BOOTSTRAP`` only: each in-turn sync tool-loop
-        round with non-empty assistant ``content`` is pushed immediately (WebSocket
-        interim frames) before the turn ends. All other tracks pass ``None``. Set
-        from ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink`` on
-        user chat only.
+        Async callback for in-turn sync tool-loop rounds (bootstrap and settled
+        ``USER_CHAT``): each round with non-empty assistant ``content`` and
+        ``tool_calls`` is pushed immediately (WebSocket interim frames) before turn
+        end. Set from ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink``
+        on user chat (#3209).
     """
 
     store: MemoryStore

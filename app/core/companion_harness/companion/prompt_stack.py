@@ -40,7 +40,6 @@ from .runtime_channel import (
 )
 from .prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
-    build_system_messages_for_chat_track,
     build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_maintenance,
@@ -190,20 +189,17 @@ def companion_system_messages_for_track(
             out = build_system_messages_for_bootstrap_track(bundle, context)
         case CompanionTurnTrack.USER_CHAT:
             match route_mode:
-                case TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
-                    out = build_system_messages_for_chat_track(
-                        bundle,
-                        context,
-                        memory_bootstrap_type,
-                    )
-                case TurnRouteMode.IN_TURN_SYNC_TOOL:
+                case (
+                    TurnRouteMode.IN_TURN_SYNC_TOOL
+                    | TurnRouteMode.CHAT_ONLY_SYNC
+                ):
                     out = build_system_messages_for_user_chat_in_turn_sync(
                         bundle,
                         context,
                     )
                 case _:
                     raise RuntimeError(
-                        "user_chat track requires ASYNC or IN_TURN_SYNC_TOOL route, got "
+                        "user_chat track requires IN_TURN_SYNC_TOOL or CHAT_ONLY_SYNC, got "
                         f"{route_mode.value}"
                     )
     out = append_runtime_output_format_system_message(
@@ -232,11 +228,10 @@ def companion_turn_tools_and_system_messages(
     """
     Single source for companion chat-round tools list and system message stack.
 
-    ``USER_CHAT_BOOTSTRAP`` and settled ``USER_CHAT`` (``IN_TURN_SYNC_TOOL``) run
-    in-turn sync tool loops.  ``dual_llm`` user chat uses async foreground +
-    ``tool_background``.  Maintenance and autonomy inner ticks always use async
-    dual when tools are on.  Proactive, scheduled, and implicit sign-on greeting
-    tracks are chat-only system stacks with no tools.
+    ``USER_CHAT_BOOTSTRAP`` and settled ``USER_CHAT`` run in-turn sync tool loops when
+    tools are on (``IN_TURN_SYNC_TOOL``).  Maintenance and autonomy inner ticks use async
+    ``tool_background``.  Proactive, scheduled, and implicit sign-on greeting tracks are
+    chat-only system stacks with no tools.
     """
     inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
     if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
@@ -319,10 +314,9 @@ def refresh_companion_turn_prompt_stack(
                     context,
                 )
             else:
-                refreshed = build_system_messages_for_chat_track(
+                refreshed = build_system_messages_for_user_chat_in_turn_sync(
                     bundle,
                     context,
-                    memory_bootstrap_type,
                 )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             refreshed = build_system_messages_for_inner_tick_maintenance(
@@ -335,16 +329,10 @@ def refresh_companion_turn_prompt_stack(
                 bundle, context, store
             )
         case CompanionTurnTrack.USER_CHAT:
-            if resolved_route_mode == TurnRouteMode.IN_TURN_SYNC_TOOL:
-                refreshed = build_system_messages_for_user_chat_in_turn_sync(
-                    bundle,
-                    context,
-                )
-            else:
-                refreshed = build_system_messages_for_tool_track(
-                    bundle,
-                    context,
-                )
+            refreshed = build_system_messages_for_user_chat_in_turn_sync(
+                bundle,
+                context,
+            )
         case (
             CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
             | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT

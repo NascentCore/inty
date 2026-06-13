@@ -250,9 +250,8 @@ def build_companion_turn_prompt_plan(
         )
     )
     use_dual_structured_chat = (
-        (not inner_tick_turn)
+        track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
         and (not tools_for_turn)
-        and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     )
 
     transcript_compaction_meta: dict[str, Any] | None = None

@@ -62,7 +62,6 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
-    SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
     SOURCE_USER_CHAT_IN_TURN_SYNC,
     invocation_extra,
 )
@@ -75,7 +74,6 @@ from .llm_client import (
 from .llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
-    record_llm_inference_failure,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .proactive_chat import (
@@ -102,12 +100,10 @@ from .prompt_stack import (
 )
 from .runtime_channel import TurnRuntimeContext
 from .turn_deps import CompanionTurnDeps
-from .turn_track import turn_flags_for_track
+from .turn_track import in_turn_sync_tool_loop_active, turn_flags_for_track
 from .prompts.system_messages import (
-    build_system_messages_for_chat_track,
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_maintenance,
-    build_system_messages_for_tool_track,
 )
 from .dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
@@ -160,7 +156,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
-CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
+
 _BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS = 24
 
 
@@ -187,61 +183,34 @@ def _replace_leading_system_messages_multi(
     return [*system_messages, *messages[stack_depth:]]
 
 
-def _async_dual_llm_system_message_variants(
+def _inner_tick_async_tool_system_messages(
     *,
     store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
-    memory_bootstrap_type: str,
-    inner_tick_turn: bool,
     route_inner_activity: InnerTickActivity,
     runtime_context: TurnRuntimeContext,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Foreground ``chat_track`` vs tool-path stacks for ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``.
-
-    Implicit sign-on rounds never reach this helper (they use ``CHAT_ONLY_SYNC``).
-    """
-    tick_proactive = (
-        inner_tick_turn
-        and route_inner_activity == InnerTickActivity.PROACTIVE_CHAT
-    )
-    if inner_tick_turn and not tick_proactive:
-        match route_inner_activity:
-            case InnerTickActivity.MAINTENANCE:
-                tool_system_msgs = (
-                    build_system_messages_for_inner_tick_maintenance(
-                        bundle, context, store
-                    )
-                )
-            case InnerTickActivity.AUTONOMY:
-                tool_system_msgs = (
-                    build_system_messages_for_inner_tick_autonomy(
-                        bundle, context, store
-                    )
-                )
-            case _:
-                raise RuntimeError(
-                    "unexpected inner-tick activity for async tool path: "
-                    f"{route_inner_activity.value}"
-                )
-    else:
-        tool_system_msgs = build_system_messages_for_tool_track(bundle, context)
-    chat_system_msgs = build_system_messages_for_chat_track(
-        bundle,
-        context,
-        memory_bootstrap_type,
-    )
-    tool_system_msgs = append_runtime_output_format_system_message(
+) -> list[dict[str, Any]]:
+    """Tool-path system stack for maintenance/autonomy ``tool_background`` legs."""
+    match route_inner_activity:
+        case InnerTickActivity.MAINTENANCE:
+            tool_system_msgs = build_system_messages_for_inner_tick_maintenance(
+                bundle, context, store
+            )
+        case InnerTickActivity.AUTONOMY:
+            tool_system_msgs = build_system_messages_for_inner_tick_autonomy(
+                bundle, context, store
+            )
+        case _:
+            raise RuntimeError(
+                "unexpected inner-tick activity for async tool path: "
+                f"{route_inner_activity.value}"
+            )
+    return append_runtime_output_format_system_message(
         system_messages=tool_system_msgs,
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    chat_system_msgs = append_runtime_output_format_system_message(
-        system_messages=chat_system_msgs,
-        bundle=bundle,
-        runtime_context=runtime_context,
-    )
-    return tool_system_msgs, chat_system_msgs
 
 
 async def _run_in_turn_sync_tool_loop(
@@ -347,14 +316,14 @@ async def _run_in_turn_sync_tool_loop(
         )
 
     round_index = 0
-    skip_final_transcript_assistant_row = False
+    sync_skip_final_assistant_row = False
     last_interim_assistant_msg_uuid: str | None = None
 
     async def _on_sync_assistant_message(message: Any) -> None:
         nonlocal round_index
         nonlocal langsmith_trace_acc
         nonlocal langsmith_llm_run_acc
-        nonlocal skip_final_transcript_assistant_row
+        nonlocal sync_skip_final_assistant_row
         nonlocal last_interim_assistant_msg_uuid
         round_index += 1
         body = (message.content or "").strip()
@@ -378,7 +347,7 @@ async def _run_in_turn_sync_tool_loop(
         )
         last_interim_assistant_msg_uuid = assistant_msg_uuid
         if not had_tool_calls:
-            skip_final_transcript_assistant_row = True
+            sync_skip_final_assistant_row = True
         if interim_output_sink is not None and had_tool_calls:
             await interim_output_sink(
                 BootstrapInterimOutput(
@@ -425,7 +394,7 @@ async def _run_in_turn_sync_tool_loop(
         last_text,
         langsmith_trace_acc,
         langsmith_llm_run_acc,
-        skip_final_transcript_assistant_row,
+        sync_skip_final_assistant_row,
         last_interim_assistant_msg_uuid,
     )
 
@@ -585,8 +554,8 @@ async def _run_companion_turn_core(
     last_text = ""
     significance_meta: dict[str, Any] | None = None
     tool_background_started = False
-    sync_loop_skip_final_assistant_row = False
-    sync_loop_last_interim_assistant_msg_uuid: str | None = None
+    sync_skip_final_assistant_row = False
+    sync_last_interim_assistant_msg_uuid: str | None = None
     user_row_persisted_in_sync_loop = False
     t_loop = time.perf_counter()
 
@@ -648,9 +617,9 @@ async def _run_companion_turn_core(
 
         with _langsmith_cm:
             try:
-                if (
-                    track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP
-                    or route_mode == TurnRouteMode.IN_TURN_SYNC_TOOL
+                if in_turn_sync_tool_loop_active(
+                    track=track,
+                    route_mode=route_mode,
                 ):
                     rel_tr_in_turn_sync = (
                         transcript_relative_path_for_turn_persistence(
@@ -661,16 +630,10 @@ async def _run_companion_turn_core(
                     match track:
                         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
                             in_turn_sync_langsmith_source = SOURCE_BOOTSTRAP_TRACK
-                            in_turn_sync_interim_sink = (
-                                bootstrap_interim_output_sink
-                            )
-                            in_turn_sync_log_label = "bootstrap_track"
                         case CompanionTurnTrack.USER_CHAT:
                             in_turn_sync_langsmith_source = (
                                 SOURCE_USER_CHAT_IN_TURN_SYNC
                             )
-                            in_turn_sync_interim_sink = None
-                            in_turn_sync_log_label = "in_turn_sync_tool"
                         case _:
                             raise AssertionError(
                                 "in-turn sync loop unexpected track="
@@ -680,8 +643,8 @@ async def _run_companion_turn_core(
                         last_text,
                         langsmith_trace_acc,
                         langsmith_llm_run_acc,
-                        sync_loop_skip_final_assistant_row,
-                        sync_loop_last_interim_assistant_msg_uuid,
+                        sync_skip_final_assistant_row,
+                        sync_last_interim_assistant_msg_uuid,
                     ) = await _run_in_turn_sync_tool_loop(
                         store=store,
                         llm_client=llm_client,
@@ -697,47 +660,34 @@ async def _run_companion_turn_core(
                         track=track,
                         route_mode=route_mode,
                         langsmith_source=in_turn_sync_langsmith_source,
-                        interim_output_sink=in_turn_sync_interim_sink,
+                        interim_output_sink=bootstrap_interim_output_sink,
                     )
                     user_row_persisted_in_sync_loop = True
                     logger.info(
-                        "run_turn loop_done {} loop_total_ms={:.0f}",
-                        in_turn_sync_log_label,
+                        "run_turn loop_done in_turn_sync_tool track={} loop_total_ms={:.0f}",
+                        track.value,
                         (time.perf_counter() - t_loop) * 1000.0,
                     )
                 elif (
                     route_mode
                     == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
                 ):
-                    tool_system_msgs, chat_system_msgs = (
-                        _async_dual_llm_system_message_variants(
-                            store=store,
-                            bundle=bundle,
-                            context=context,
-                            memory_bootstrap_type=memory_bootstrap_type,
-                            inner_tick_turn=inner_tick_turn,
-                            route_inner_activity=route_inner_activity,
-                            runtime_context=runtime_context,
-                        )
+                    assert inner_tick_turn and (not tick_proactive)
+                    tool_system_msgs = _inner_tick_async_tool_system_messages(
+                        store=store,
+                        bundle=bundle,
+                        context=context,
+                        route_inner_activity=route_inner_activity,
+                        runtime_context=runtime_context,
                     )
                     _stack_depth = len(prompt_plan.system_messages)
-                    chat_msgs = _replace_leading_system_messages_multi(
-                        messages,
-                        chat_system_msgs,
-                        stack_depth=_stack_depth,
-                    )
                     tool_msgs = _replace_leading_system_messages_multi(
                         messages,
                         tool_system_msgs,
                         stack_depth=_stack_depth,
                     )
-                    chat_model = llm_client.resolve_model("chat")
                     tool_model = llm_client.resolve_model("tool")
-                    foreground_scene = (
-                        LLM_SCENE_INNER_TICK
-                        if inner_tick_turn and not tick_proactive
-                        else LLM_SCENE_CHAT
-                    )
+                    chat_model = llm_client.resolve_model("chat")
 
                     def _kernel_bg_on_event(ev: ToolOutputEvent) -> None:
                         if background_output_sink is not None:
@@ -745,102 +695,16 @@ async def _run_companion_turn_core(
                         else:
                             push_output_event(ev)
 
-                    skip_foreground_envelope = (
-                        inner_tick_turn and not tick_proactive
+                    logger.info(
+                        "run_turn inner_tick tool_background inner_tick_activity={} model_chat={}",
+                        route_inner_activity.value,
+                        chat_model,
                     )
-                    if skip_foreground_envelope:
-                        logger.info(
-                            "run_turn inner_tick skip foreground envelope "
-                            "inner_tick_activity={} model_chat={}",
-                            route_inner_activity.value,
-                            chat_model,
-                        )
-                        last_text = ""
-                        significance_meta = None
-                        tool_msgs_for_bg = deepcopy(tool_msgs)
-                        force_tools_first_round = True
-                    else:
-                        t_api = time.perf_counter()
-                        try:
-
-                            def _chat_sync() -> Any:
-                                return llm_client.chat_completion(
-                                    messages=chat_msgs,
-                                    model=chat_model,
-                                    tools=None,
-                                    response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
-                                    scene=foreground_scene,
-                                    langsmith_extra=invocation_extra(
-                                        source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
-                                    ),
-                                    high_reasoning=tick_proactive,
-                                )
-
-                            resp = await asyncio.wait_for(
-                                asyncio.to_thread(_chat_sync),
-                                timeout=llm_client.config.async_chat_front_timeout_sec,
-                            )
-                            langsmith_trace_acc = (
-                                langsmith_trace_id_from_completion(resp)
-                                or langsmith_trace_acc
-                            )
-                            ls_lr = langsmith_llm_run_id_from_completion(resp)
-                            if ls_lr:
-                                langsmith_llm_run_acc = ls_lr
-                        except asyncio.TimeoutError as exc:
-                            record_llm_inference_failure(
-                                model=chat_model.id_on_provider,
-                                exc=exc,
-                                foreground_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
-                            )
-                            raise RuntimeError(
-                                f"async chat front timed out after "
-                                f"{llm_client.config.async_chat_front_timeout_sec:.0f}s "
-                                f"(trace_id={trace_id})"
-                            ) from exc
-
-                        approx_ctx_chars = sum(
-                            len(str(m.get("content") or "")) for m in chat_msgs
-                        )
-                        logger.info(
-                            "run_turn llm_round={} model={} chat_completions_ms={:.0f} "
-                            "approx_ctx_chars={} async_chat_tool_background "
-                            "foreground_chat scene={}",
-                            1,
-                            chat_model,
-                            (time.perf_counter() - t_api) * 1000.0,
-                            approx_ctx_chars,
-                            foreground_scene,
-                        )
-                        msg = resp.choices[0].message
-                        _dual_split = split_dual_llm_chat_branch_message(msg)
-                        last_text = _dual_split.visible_text
-                        significance_meta = _dual_split.significance_meta
-                        fg_output_to_user = _dual_split.output_to_user
-                        # Async foreground chat leg (tools present): same dual-LLM envelope contract as
-                        # single-shot structured chat; ``output_to_user`` must be true here. False is for
-                        # tool_background routing only; non-fatal drift -> WARNING with ``trace_id``.
-                        if fg_output_to_user is False:
-                            logger.warning(
-                                "run_turn foreground dual_llm envelope output_to_user=false "
-                                "trace_id={} (expected true for chat branch)",
-                                trace_id,
-                            )
-                        fg_text = last_text.strip()
-                        tool_msgs_for_bg = deepcopy(tool_msgs)
-                        if fg_text:
-                            tool_msgs_for_bg.append(
-                                {
-                                    "role": "assistant",
-                                    "content": (
-                                        f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\n{fg_text}"
-                                    ),
-                                }
-                            )
-                        force_tools_first_round = not bool(fg_text)
+                    last_text = ""
+                    significance_meta = None
                     start_tool_background_job(
                         memory_store=store,
-                        request_messages=tool_msgs_for_bg,
+                        request_messages=deepcopy(tool_msgs),
                         tool_model=tool_model,
                         user_msg_uuid=user_msg_uuid,
                         trace_id=trace_id,
@@ -863,17 +727,16 @@ async def _run_companion_turn_core(
                         runtime_context=runtime_context,
                         companion_turn_track=track,
                         tool_bg_idle_event=tool_bg_idle_event,
-                        force_tools_first_round=force_tools_first_round,
+                        force_tools_first_round=True,
                     )
                     tool_background_started = True
                     logger.info(
-                        "run_turn loop_done rounds={} loop_total_ms={:.0f} route={}",
-                        1,
+                        "run_turn loop_done inner_tick_tool_bg loop_total_ms={:.0f} route={}",
                         (time.perf_counter() - t_loop) * 1000.0,
                         route_mode.value,
                     )
                     logger.debug(
-                        "langsmith_companion_parent_run run_turn_fg_done inty_trace_id={} "
+                        "langsmith_companion_parent_run run_turn_inner_tick_tool_bg inty_trace_id={} "
                         "user_msg_uuid={} ls_trace_id={} defer_parent_end_to_tool_bg_thread=1",
                         trace_id,
                         user_msg_uuid,
@@ -1031,8 +894,8 @@ async def _run_companion_turn_core(
         )
     )
     assistant_msg_uuid = (
-        sync_loop_last_interim_assistant_msg_uuid
-        if sync_loop_last_interim_assistant_msg_uuid is not None
+        sync_last_interim_assistant_msg_uuid
+        if sync_last_interim_assistant_msg_uuid is not None
         else str(uuid.uuid4())
     )
     if implicit_sign_on_turn:
@@ -1074,7 +937,7 @@ async def _run_companion_turn_core(
     }
     if significance_meta:
         assistant_row["significance_perception"] = significance_meta
-    if not sync_loop_skip_final_assistant_row:
+    if not sync_skip_final_assistant_row:
         store.append_jsonl_record(rel_tr, assistant_row)
 
     logger.info(
