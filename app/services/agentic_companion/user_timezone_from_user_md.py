@@ -1,8 +1,7 @@
 """Read persisted USER.md timezone facts for agent-channel ``UserTimeContext`` injection.
 
-TODO(user-timezone-inference): Remove this regex/section parser. Timezone should be
-inferred by the companion during chat and persisted via ``update_user_md``; injection
-should read that structured persistence directly once schema is explicit.
+TODO(#3391): Remove regex parser; add transcript fallback, timezone_source logging,
+structured USER.md persistence.
 """
 
 from __future__ import annotations

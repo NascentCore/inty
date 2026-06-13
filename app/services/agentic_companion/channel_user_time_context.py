@@ -1,4 +1,8 @@
-"""Wall-clock context for agent-channel turns when the client cannot report device TZ."""
+"""Wall-clock context for agent-channel turns when the client cannot report device TZ.
+
+TODO(#3391): Log timezone_source (client | user_md | transcript | none); replace
+USER.md regex read with structured persistence.
+"""
 
 from __future__ import annotations
 

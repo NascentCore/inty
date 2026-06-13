@@ -168,6 +168,7 @@ def _companion_user_time_context_system_for_llm(
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> str | None:
     """Optional ``## user-time-context`` system body from ``client_time``, or ``None``."""
+    # TODO(#3391): Log timezone_source when enriching from USER.md / transcript fallback.
     enabled = bool(
         _global_config.app.features.experimental_enable_chat_with_user_time_context
     )
