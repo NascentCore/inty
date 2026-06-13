@@ -123,7 +123,7 @@ flowchart TB
 |--------|------|
 | CFG-PYD-OPT-01 | 将 `_validate_config` 中仅依赖单个子树的规则拆入对应 `BaseModel` 的 `model_validator` |
 | CFG-PYD-OPT-02 | 为 YAML 根定义顶层 `RootConfig` 单模型，合并 `load_config` 与 `surprise_snap` 特例（减少手写拼装） |
-| CFG-PYD-OPT-03 | 删除重复的 `from loguru import logger` 等无关清理；Claimed in `cursor/agent-maintenance-tasks-4126` |
+| CFG-PYD-OPT-03 | done — 删除重复的 `from loguru import logger` 等无关清理；Fixed in `cursor/agent-maintenance-tasks-4126` |
 
 ---
 
