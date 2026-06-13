@@ -47,7 +47,7 @@ from app.external_services.gcs import (
 )
 from app.models.agent import AgentVisibility
 from app.models.resource import ResourceType
-from app.models.user import Gender
+from app.models.user import Gender, normalize_gender
 from app.schemas.agent import AgentSortOption
 from app.schemas.response import MatchedAgentImageItem
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
@@ -1223,6 +1223,10 @@ async def create_agent(
     """
     创建新的AI角色
     如果 agent_in 没有 avatar，则自动为用户扣一个 avatar，crop_avatar()
+
+    Companion production onboard (telegram / weixin / agent-channel) must use
+    ``companion_guest_provision.add_private_agent`` instead — no readable_id,
+    avatar, or opening-voice side effects.
     """
     try:
         # 验证必填字段
@@ -1270,7 +1274,7 @@ async def create_agent(
 
         # 处理 gender 字段：将字符串转换为 Gender 枚举，并将 NON_BINARY 映射到 OTHER
         if "gender" in processed_agent_data and processed_agent_data["gender"]:
-            processed_agent_data["gender"] = _normalize_gender(
+            processed_agent_data["gender"] = normalize_gender(
                 processed_agent_data["gender"]
             )
 
@@ -1396,32 +1400,6 @@ async def _crop_avatar_from_background(
     )
 
 
-def _normalize_gender(gender_value: Any) -> Gender:
-    """
-    规范化 gender 字段：将字符串转换为 Gender 枚举，并将 NON_BINARY 映射到 OTHER
-
-    Args:
-        gender_value: gender 字段的值，可能是字符串或 Gender 枚举
-
-    Returns:
-        规范化后的 Gender 枚举值
-    """
-    # 如果已经是 Gender 枚举实例，直接返回
-    if isinstance(gender_value, Gender):
-        return gender_value
-
-    # 将字符串转换为大写
-    gender_str = str(gender_value).upper()
-    # 将 NON_BINARY 映射到 OTHER
-    if gender_str == "NON_BINARY":
-        gender_str = "OTHER"
-    try:
-        return Gender[gender_str]
-    except KeyError:
-        logger.warning(f"无效的 gender 值: {gender_value}，使用默认值 OTHER")
-        return Gender.OTHER
-
-
 def _update_agent_in_db(update_data: dict, db_agent: Agent):
     # 验证更新数据
     # 验证名称不为空（如果提供了名称）
@@ -1495,7 +1473,7 @@ def _update_agent_in_db(update_data: dict, db_agent: Agent):
 
     # 处理 gender 字段：将字符串转换为 Gender 枚举，并将 NON_BINARY 映射到 OTHER
     if "gender" in update_data and update_data["gender"]:
-        update_data["gender"] = _normalize_gender(update_data["gender"])
+        update_data["gender"] = normalize_gender(update_data["gender"])
 
     # 更新其他字段
     for field, value in update_data.items():

@@ -6,7 +6,6 @@ Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -14,16 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
 from app.db.session import AsyncSessionLocal
-from app.models.agent import Agent
 from app.models.user import User
-from app.services.agentic_channel.companion_guest_provision import (
+from app.core.companion_harness.agent_channel.guest_agent_kind import (
     CompanionGuestAgentKind,
-    GuestUserInput,
-    PrivateAgentInput,
-    add_guest_user,
-    add_private_agent,
-    companion_guest_agent_create,
+)
+from app.services.agentic_channel.companion_guest_provision import (
+    ProvisionGuestScopeInput,
+    add_companion_guest_agent_for_user,
     first_private_agent_for_user,
+    provision_guest_scope,
 )
 
 
@@ -50,46 +48,6 @@ async def _user_by_ilink_user_id(
     return result.scalar_one_or_none()
 
 
-async def _create_weixin_user(
-    db: AsyncSession,
-    ilink_user_id: str,
-) -> User:
-    assert ilink_user_id != ""
-    user = await add_guest_user(
-        db,
-        GuestUserInput(
-            nickname_prefix="Weixin",
-            meta_data={"ilink_user_id": ilink_user_id},
-        ),
-    )
-    await db.commit()
-    await db.refresh(user)
-    return user
-
-
-async def _create_weixin_agent(
-    db: AsyncSession,
-    *,
-    user_id: str,
-    tag: str,
-) -> Agent:
-    assert user_id != ""
-    assert tag != ""
-    agent = await add_private_agent(
-        db,
-        PrivateAgentInput(
-            user_id=user_id,
-            agent_in=companion_guest_agent_create(
-                kind=CompanionGuestAgentKind.WEIXIN,
-                tag=tag,
-            ),
-        ),
-    )
-    await db.commit()
-    await db.refresh(agent)
-    return agent
-
-
 async def provision_inty_for_ilink_user(
     *, ilink_user_id: str
 ) -> ProvisionResult:
@@ -99,17 +57,37 @@ async def provision_inty_for_ilink_user(
         user = await _user_by_ilink_user_id(db, ilink_user_id)
         is_new_user = user is None
         if user is None:
-            user = await _create_weixin_user(db, ilink_user_id)
+            scope = await provision_guest_scope(
+                db,
+                ProvisionGuestScopeInput(
+                    kind=CompanionGuestAgentKind.WEIXIN,
+                    nickname_prefix="Weixin",
+                    meta_data={"ilink_user_id": ilink_user_id},
+                ),
+            )
+            await db.commit()
+            user_id = scope.user_id
+            agent_id = scope.agent_id
+        else:
+            # iLink may persist guest user before agent row exists (partial retry path).
+            # Telegram/agent-channel onboard always creates user+agent atomically via
+            # ``provision_guest_scope`` — no orphan-user recovery there.
+            agent = await first_private_agent_for_user(db, user.id)
+            if agent is None:
+                agent = await add_companion_guest_agent_for_user(
+                    db,
+                    user_id=user.id,
+                    kind=CompanionGuestAgentKind.WEIXIN,
+                )
+                await db.commit()
+                await db.refresh(agent)
+            user_id = user.id
+            agent_id = agent.id
 
-        agent = await first_private_agent_for_user(db, user.id)
-        if agent is None:
-            tag = uuid.uuid4().hex[:10]
-            agent = await _create_weixin_agent(db, user_id=user.id, tag=tag)
-
-        jwt = create_access_token(user.id)
+        jwt = create_access_token(user_id)
         return ProvisionResult(
-            user_id=user.id,
-            agent_id=agent.id,
+            user_id=user_id,
+            agent_id=agent_id,
             jwt=jwt,
             is_new_user=is_new_user,
         )

@@ -11,14 +11,10 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.core.uuid import get_new_user_id
-from app.db.session import AsyncSessionLocal, async_engine
-from app.models.agent import Agent, AgentVisibility
+from app.db.session import AsyncSessionLocal
+from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
-from app.models.registry import load_model_modules
-from app.models.user import AuthType, User
-from app.schemas.agent import AgentCreate
-from app.services import agent_service
+from app.models.user import User
 from app.services.agentic_channel.adapters.weixin import WeixinChannelAdapterStub
 from app.services.agentic_channel.channel_runtime import (
     ChannelRuntimeState,
@@ -28,32 +24,20 @@ from app.services.agentic_channel.channel_runtime import (
     turn_channel_up,
 )
 from app.services.agentic_channel.endpoints import bind_endpoint
+from app.core.companion_harness.agent_channel.guest_agent_kind import (
+    CompanionGuestAgentKind,
+)
+from tests.app.services.agentic_channel.companion_test_fixtures import (
+    create_guest_scope_for_test,
+)
+
+
 async def _create_scope() -> AgentScope:
-    async with AsyncSessionLocal() as db:
-        user_id = get_new_user_id()
-        user = User(
-            id=user_id,
-            auth_type=AuthType.GUEST,
-            nickname="runtime-test",
-            meta_data={"test": True},
-        )
-        db.add(user)
-        await db.commit()
-        agent = await agent_service.create_agent(
-            db,
-            agent_in=AgentCreate(
-                name="runtime-agent",
-                gender="FEMALE",
-                visibility=AgentVisibility.PRIVATE,
-                intro="demo",
-                opening="hi",
-                personality="warm",
-                scenario="test",
-            ),
-            user_id=user_id,
-        )
-        await db.commit()
-        return AgentScope(user_id=user_id, agent_id=agent.id)
+    return await create_guest_scope_for_test(
+        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        nickname_prefix="runtime",
+        meta_data={"test": True},
+    )
 
 
 async def _cleanup_scope(scope: AgentScope) -> None:
@@ -69,12 +53,9 @@ async def _cleanup_scope(scope: AgentScope) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def _dispose_engine() -> None:
-    load_model_modules()
-    await async_engine.dispose()
+async def _clear_channel_registries() -> None:
     yield
     clear_registries_for_tests()
-    await async_engine.dispose()
 
 
 @pytest.mark.asyncio

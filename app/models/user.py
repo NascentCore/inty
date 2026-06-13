@@ -40,6 +40,24 @@ class Gender(str, enum.Enum):
     OTHER = "OTHER"
 
 
+def normalize_gender(gender_value: Gender | str) -> Gender:
+    """Map API gender strings (including NON_BINARY) to ``Gender`` enum."""
+    if isinstance(gender_value, Gender):
+        return gender_value
+    gender_str = str(gender_value).upper()
+    match gender_str:
+        case "NON_BINARY":
+            return Gender.OTHER
+        case "MALE" | "FEMALE" | "OTHER":
+            return Gender[gender_str]
+        case _:
+            logger.warning(
+                "Invalid gender value {}, using OTHER",
+                gender_value,
+            )
+            return Gender.OTHER
+
+
 class User(Base):
     """用户模型"""
 
@@ -49,6 +67,8 @@ class User(Base):
     # category prefixes like user-<uuid> for better readability.
     id = Column(String, primary_key=True, comment="用户唯一标识符")
 
+    # TODO(#3358): drop uq_users_readable_id / unique ix_users_readable_id once legacy
+    # readable_id allocation is removed; companion guest rows leave readable_id NULL.
     readable_id = Column(
         String(8),
         comment="DEPRECATED: use User.id; legacy 8-digit display id",

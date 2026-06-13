@@ -10,11 +10,10 @@ from sqlalchemy import delete
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.db.session import AsyncSessionLocal, async_engine
+from app.db.session import AsyncSessionLocal
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
-from app.models.registry import load_model_modules
 from app.models.user import User
 from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
 from app.services.agentic_channel.presence import clear_presences_for_tests
@@ -43,13 +42,10 @@ async def _reset_store() -> None:
     session_store.clear_all_for_tests()
     clear_registries_for_tests()
     clear_presences_for_tests()
-    load_model_modules()
-    await async_engine.dispose()
     yield
     session_store.clear_all_for_tests()
     clear_registries_for_tests()
     clear_presences_for_tests()
-    await async_engine.dispose()
 
 
 @pytest.mark.asyncio

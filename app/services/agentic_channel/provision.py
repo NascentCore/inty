@@ -7,7 +7,6 @@ may still touch it). Enforced by ``chat_ws_boundary.companion_surface_readable_i
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 
 from loguru import logger
@@ -22,13 +21,14 @@ from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.user import User
+from app.core.companion_harness.agent_channel.guest_agent_kind import (
+    companion_guest_agent_kind_for_channel,
+)
 from app.services.agentic_channel.companion_guest_provision import (
-    CompanionGuestAgentKind,
     GuestUserInput,
-    PrivateAgentInput,
+    ProvisionGuestScopeInput,
     add_guest_user,
-    add_private_agent,
-    companion_guest_agent_create,
+    provision_guest_scope,
 )
 from app.services.agentic_channel.endpoints import (
     assert_inbound_endpoint_identity,
@@ -182,25 +182,14 @@ async def provision_agent_for_channel_onboard(
         pending_user_id = ""
         pending_agent_id = ""
         try:
-            user = await add_guest_user(
+            scope = await provision_guest_scope(
                 db,
-                GuestUserInput(
+                ProvisionGuestScopeInput(
+                    kind=companion_guest_agent_kind_for_channel(channel),
                     nickname_prefix="Guest",
                     meta_data={"agent_channel": True},
                 ),
             )
-            tag = uuid.uuid4().hex[:10]
-            agent = await add_private_agent(
-                db,
-                PrivateAgentInput(
-                    user_id=user.id,
-                    agent_in=companion_guest_agent_create(
-                        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
-                        tag=tag,
-                    ),
-                ),
-            )
-            scope = AgentScope(user_id=user.id, agent_id=agent.id)
             pending_user_id = scope.user_id
             pending_agent_id = scope.agent_id
             await upsert_endpoint_in_session(
@@ -268,7 +257,11 @@ async def provision_agent_for_existing_agent(
     channel_user_id: str,
     agent_id: str,
 ) -> ChannelProvisionResult:
-    """Bind channel endpoint to an existing companion agent (tests only; not wired in transport)."""
+    """Bind channel endpoint to an existing companion agent (tests only; not wired in transport).
+
+    Creates guest user via ``add_guest_user`` only — does not call ``provision_guest_scope``
+    because ``agent_id`` already exists.
+    """
     assert channel_address != ""
     assert channel_user_id != ""
     assert agent_id != ""

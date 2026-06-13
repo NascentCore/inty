@@ -8,10 +8,8 @@ import pytest
 from sqlalchemy import delete
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.uuid import get_new_user_id
-from app.db.session import AsyncSessionLocal, async_engine
-from app.models.registry import load_model_modules
-from app.models.user import AuthType, User
+from app.db.session import AsyncSessionLocal
+from app.models.user import User
 from app.services.agentic_companion.inner_tick_delivery import (
     inner_tick_delivery_for_telegram,
 )
@@ -21,35 +19,22 @@ from app.services.agentic_companion.inner_tick_fire import (
     _resolve_inner_tick_scope_coords,
 )
 from app.services.agentic_companion.session import Coordinator, InnerTickCoords
+from tests.app.services.agentic_channel.companion_test_fixtures import (
+    create_guest_user_for_test,
+)
 
 
 async def _create_guest_user() -> User:
-    async with AsyncSessionLocal() as db:
-        user_id = get_new_user_id()
-        user = User(
-            id=user_id,
-            auth_type=AuthType.GUEST,
-            nickname="inner_tick_test",
-            meta_data={"test": True},
-        )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        return user
+    return await create_guest_user_for_test(
+        nickname_prefix="inner_tick",
+        meta_data={"test": True},
+    )
 
 
 async def _delete_user(user_id: str) -> None:
     async with AsyncSessionLocal() as db:
         await db.execute(delete(User).where(User.id == user_id))
         await db.commit()
-
-
-@pytest.fixture(autouse=True)
-async def _dispose_engine() -> None:
-    load_model_modules()
-    await async_engine.dispose()
-    yield
-    await async_engine.dispose()
 
 
 @pytest.mark.asyncio

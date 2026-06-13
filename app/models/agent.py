@@ -45,6 +45,8 @@ class Agent(Base):
     __tablename__ = "agents"
 
     id = Column(String, primary_key=True, index=True)
+    # TODO(#3358): drop uq_agents_readable_id / unique ix_agents_readable_id once legacy
+    # readable_id allocation is removed; companion guest rows leave readable_id NULL.
     readable_id = Column(
         String(8),
         comment="DEPRECATED: use Agent.id; legacy 8-digit display id",

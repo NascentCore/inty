@@ -11,24 +11,15 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.db.session import AsyncSessionLocal, async_engine
+from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
-from app.models.registry import load_model_modules
 from app.models.user import User
 from app.services.agentic_channel.endpoints import (
     bind_endpoint,
     list_endpoints_for_channel,
 )
 from app.services.agentic_channel.provision import provision_agent_for_channel_onboard
-
-
-@pytest.fixture(autouse=True)
-async def _dispose_engine() -> None:
-    load_model_modules()
-    await async_engine.dispose()
-    yield
-    await async_engine.dispose()
 
 
 @pytest.mark.asyncio

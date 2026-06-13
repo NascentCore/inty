@@ -11,47 +11,31 @@ from sqlalchemy import delete, select
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.core.uuid import get_new_user_id
-from app.db.session import AsyncSessionLocal, async_engine
-from app.models.agent import Agent, AgentVisibility
+from app.db.session import AsyncSessionLocal
+from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
-from app.models.registry import load_model_modules
-from app.models.user import AuthType, User
-from app.schemas.agent import AgentCreate
-from app.services import agent_service
+from app.models.user import User
 from app.services.agentic_channel.errors import ChannelEndpointConflictError
+from app.core.companion_harness.agent_channel.guest_agent_kind import (
+    CompanionGuestAgentKind,
+)
 from app.services.agentic_channel.provision import (
     provision_agent_for_channel_onboard,
     provision_agent_for_existing_agent,
 )
+from tests.app.services.agentic_channel.companion_test_fixtures import (
+    assert_companion_guest_identity_has_no_readable_id,
+    create_guest_scope_for_test,
+)
 
 
 async def _create_creator_agent() -> str:
-    async with AsyncSessionLocal() as db:
-        user_id = get_new_user_id()
-        user = User(
-            id=user_id,
-            auth_type=AuthType.GUEST,
-            nickname="Creator",
-            meta_data={"test": True},
-        )
-        db.add(user)
-        await db.commit()
-        agent = await agent_service.create_agent(
-            db,
-            agent_in=AgentCreate(
-                name="telegram-demo-agent",
-                gender="FEMALE",
-                visibility=AgentVisibility.PRIVATE,
-                intro="demo",
-                opening="hi",
-                personality="warm",
-                scenario="telegram",
-            ),
-            user_id=user_id,
-        )
-        await db.commit()
-        return agent.id
+    scope = await create_guest_scope_for_test(
+        kind=CompanionGuestAgentKind.TELEGRAM,
+        nickname_prefix="Creator",
+        meta_data={"test": True},
+    )
+    return scope.agent_id
 
 
 async def _cleanup_user(user_id: str) -> None:
@@ -64,14 +48,6 @@ async def _cleanup_user(user_id: str) -> None:
         await db.execute(delete(Agent).where(Agent.creator_id == user_id))
         await db.execute(delete(User).where(User.id == user_id))
         await db.commit()
-
-
-@pytest.fixture(autouse=True)
-async def _dispose_engine() -> None:
-    load_model_modules()
-    await async_engine.dispose()
-    yield
-    await async_engine.dispose()
 
 
 @pytest.mark.asyncio
@@ -153,8 +129,7 @@ async def test_telegram_onboard_leaves_readable_id_unset() -> None:
             select(Agent).where(Agent.id == result.scope.agent_id)
         )
         agent = agent_row.scalar_one()
-        assert user.readable_id is None
-        assert agent.readable_id is None
+        assert_companion_guest_identity_has_no_readable_id(user=user, agent=agent)
     await _cleanup_user(result.scope.user_id)
 
 
