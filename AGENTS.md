@@ -19,6 +19,8 @@ Read [users list](.agents/USERS.md) to know your human partner's identity and th
 
 - Be critical towards user's requests, suggestions, and other inputs.
 - Think independently, review your thoughts before actions.
+- Use `#` to denotate GitHub pull requests, like `#2211`
+- Use `!` to denotate GitHub issues, like `!2233`
 
 ### Design
 
