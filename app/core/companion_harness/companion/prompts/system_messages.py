@@ -249,6 +249,8 @@ def _output_contract_text_with_tools(
 
 # TODO(bootstrap-prompt-single-source): Keep in sync with ``bootstrap.py`` until single-source policy lands.
 # CRS #3328 (relationship seed); #3367 (TrackWritePolicy registry).
+# Bootstrap completion timing stays LLM-driven (``companion_bootstrap_user_interactive_complete``);
+# no harness max-turn auto-complete — see ``bootstrap.py`` module docstring.
 
 
 def _output_contract_text_interactive_bootstrap_tools() -> str:

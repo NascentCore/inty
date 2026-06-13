@@ -101,6 +101,8 @@ def interactive_bootstrap_active(
     TODO(bootstrap-max-turns): Harness-level cap (max user-chat rounds or wall
     clock) before forcing best-effort MemoryDoc writes + complete — prompt-only
     pacing in ``BOOTSTRAP.md`` is insufficient when the model skips tools.
+    But the principle is to let the LLM decide when to complete, not to force it.
+    So leave this TODO open for debate and evaluation.
     """
 
     return (
