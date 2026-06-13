@@ -65,7 +65,9 @@ def guest_nickname(*, prefix: str, user_id: str) -> str:
     return f"{prefix}_{user_id[-8:]}"
 
 
-def companion_guest_agent_name(*, kind: CompanionGuestAgentKind, tag: str) -> str:
+def companion_guest_agent_name(
+    *, kind: CompanionGuestAgentKind, tag: str
+) -> str:
     """Channel-specific display name only; legacy character-card fields stay NULL."""
     assert tag != ""
     match kind:
@@ -109,7 +111,9 @@ async def add_companion_guest_agent_for_user(
     )
 
 
-async def add_private_agent(db: AsyncSession, input: PrivateAgentInput) -> Agent:
+async def add_private_agent(
+    db: AsyncSession, input: PrivateAgentInput
+) -> Agent:
     assert input.user_id != ""
     assert input.name != ""
     assert input.gender != ""

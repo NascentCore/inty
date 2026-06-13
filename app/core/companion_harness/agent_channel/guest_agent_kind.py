@@ -29,4 +29,6 @@ def companion_guest_agent_kind_for_channel(
         case CompanionRuntimeChannel.APP:
             return CompanionGuestAgentKind.AGENT_CHANNEL
         case _:
-            raise AssertionError(f"unsupported companion runtime channel: {channel!r}")
+            raise AssertionError(
+                f"unsupported companion runtime channel: {channel!r}"
+            )
