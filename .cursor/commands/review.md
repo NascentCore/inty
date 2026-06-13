@@ -37,6 +37,7 @@ that means the code lacks hierarchy.
 - [ ] Tests are added if needed
 - [ ] Reviwed code smells
 - [ ] Changes passed tests, fix test failures if needed
+- [ ] Referenced GitHub issues updated
 
 ## Alembic version files
 

@@ -95,6 +95,7 @@ class CompanionToolName(StrEnum):
     COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE = (
         "companion_bootstrap_user_interactive_complete"
     )
+    COMPANION_RECORD_USER_FEEDBACK = "companion_record_user_feedback"
     COMPANION_SET_EXPERIENCE_PROFILE = "companion_set_experience_profile"
     GENERATE_IMAGE = "generate_image"
     GOOGLE_WEB_SEARCH = "google_web_search"
@@ -519,6 +520,43 @@ UPDATE_USER_MD = LlmFunctionTool(
     extra_function_keys={},
 )
 
+COMPANION_RECORD_USER_FEEDBACK_TOOL = LlmFunctionTool(
+    name=CompanionToolName.COMPANION_RECORD_USER_FEEDBACK,
+    description=(
+        "File structured user complaint when the human expresses dissatisfaction with "
+        "companion behavior, memory, tone, or tool results (bug report). Reassure the "
+        "user in chat first, then call this tool with a concise complaint_summary. "
+        "Do not call for casual chat or neutral questions."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "complaint_summary": {
+                "type": "string",
+                "description": (
+                    "One or two sentences summarizing what the user is unhappy about, "
+                    "in their own framing."
+                ),
+            },
+            "complaint_category": {
+                "type": "string",
+                "enum": [
+                    "behavior",
+                    "memory",
+                    "tone",
+                    "tool_failure",
+                    "other",
+                ],
+                "description": "Primary complaint area for triage.",
+            },
+        },
+        "required": ["complaint_summary", "complaint_category"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
 COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     SET_BOOTSTRAP_COMPLETE_TOOL,
     SET_EXPERIENCE_PROFILE_TOOL,
@@ -534,6 +572,7 @@ COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     SCHEDULE_TASK_TOOL,
     TECHNO_CORE_RECORD_EVENT_TOOL,
     UPDATE_USER_MD,
+    COMPANION_RECORD_USER_FEEDBACK_TOOL,
 )
 
 COMPANION_LLM_TOOLS_BY_NAME: dict[CompanionToolName, LlmFunctionTool] = {
@@ -551,6 +590,7 @@ OPENAI_TOOLS_BASE_NAMES: tuple[CompanionToolName, ...] = (
 )
 
 TOOL_NAMES_SHARED_HEAD: tuple[CompanionToolName, ...] = (
+    CompanionToolName.COMPANION_RECORD_USER_FEEDBACK,
     CompanionToolName.UPDATE_USER_MD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     CompanionToolName.SCHEDULE_TASK,

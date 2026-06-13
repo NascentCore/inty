@@ -162,7 +162,8 @@ You should only changes and use code in the following dirs:
 - Package docstring in `__init__.py`, `__init__.py` should only has docstring, do not include any code
 - Module docstring at the top of `.py` file
 - Function/class docstring include intention, purpose
-- Code lines comment
+- Code lines comment: keep key design decisions documented in the code
+- Do not use double-tick '``'
 
 Donts
 

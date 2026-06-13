@@ -14,6 +14,9 @@ app:
     subscribed_user_agent_creation_24h_limit: 10
   gcp_service_account_key: "inty-backend-key.json"
   min_app_version_code_for_festival_memory: 3345
+  features:
+    companion_harness:
+      user_feedback_github_token: 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
 
 sentry:
   # dev-inty/default
