@@ -84,6 +84,7 @@ class CompanionTurnDeps:
         ``ImplicitSignalBundle`` (sign-on greeting, proactive triggers). Drives
         output-format system slices, implicit sign-on user text substitution, and
         is forwarded into ``tool_background`` for channel-aware tool behavior.
+        TODO(companion-channel-tools): channel tool executors read this + agent scope — #3362
 
     background_output_sink
         Optional synchronous callback invoked for each ``ToolOutputEvent`` while

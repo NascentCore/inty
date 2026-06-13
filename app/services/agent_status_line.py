@@ -1,4 +1,7 @@
-"""Read ``agents.status_line`` for chat completion wire headers."""
+"""Read ``agents.status_line`` for chat completion wire headers.
+
+TODO(companion-channel-tools): Add write path for ``companion_set_status_line`` harness tool — #3362
+"""
 
 from __future__ import annotations
 

@@ -329,7 +329,10 @@ def _repl_online_ack_clause() -> str:
 
 
 def weixin_clawbot_contact_alias_system_message() -> dict[str, Any]:
-    """Channel-specific system message for Weixin-visible ClawBot contact naming."""
+    """Channel-specific system message for Weixin-visible ClawBot contact naming.
+
+    TODO(companion-channel-tools): Weixin has no rename tool; keep guidance-only (not harness tool) — #3362
+    """
 
     return _system_message(
         "Weixin / ClawBot 联系人显示名\n\n"

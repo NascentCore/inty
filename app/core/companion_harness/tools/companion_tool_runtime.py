@@ -2,6 +2,9 @@
 
 Persisted companion documents and transcript go through MemoryStore; tool paths align with
 ``memory_store_document_mapping``.
+
+TODO(companion-channel-tools): Dispatch channel-specific tools via adapter layer / agent row
+  writes (e.g. companion_set_status_line) using turn runtime_context — #3362
 """
 
 from __future__ import annotations

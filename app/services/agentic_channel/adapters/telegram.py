@@ -1,7 +1,7 @@
 """Telegram channel adapter for agent-channel stack.
 
-TODO(telegram-channel-tools): Per-channel tools (setMyName, setMyDescription, …) need
-  dedicated-bot bonding; shared-bot must not expose bot-global meta ops — #3361
+TODO(telegram-channel-tools): Per-channel tools (setMyName, setMyDescription, …) via #3362;
+  require dedicated-bot bonding (#3361); shared-bot must not expose bot-global meta ops.
 """
 
 from __future__ import annotations
