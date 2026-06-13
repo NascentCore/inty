@@ -214,8 +214,6 @@ def _output_contract_text_with_tools(
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
         + "（1）用户自愿透露、适合长期保存的基本事实（含闲聊中的小细节），"
         "应及时调用 update_user_md 写入 USER 档案，避免只记在当轮回复里；"
-        "当用户透露城市、作息或当地时间线索时，尽快推断并持久化其**时区**（标签「时区」，值用 IANA 如 Asia/Shanghai），"
-        "以便后续轮次感知用户当地几点；融入自然对话，勿要求用户发送时区命令；"
         "IDENTITY.md / STYLE.md 中值得长期保留的相处约定，在用户明确表达或反复出现时，"
         "用 memory_store_read_document 读全文后再 memory_store_write_document 更新；"
         "（1.1）当用户明确提出未来提醒（如「两小时后提醒我」「明早八点叫我」），"
@@ -286,6 +284,17 @@ def _proactive_chat_clause() -> str:
         "忽发的念头、 playful 提问、分享刚「看到」的事、来自 USER/MEMORY 的牵挂、或日常小事；"
         "须与关系与人设连续，禁止元叙述（不提系统、主动机制或「好久没聊」式客套）。\n"
         "两种方式二选一或自然衔接；仅输出自然语言短句，不要调用工具。"
+    )
+
+
+def _infer_time_zone_prompt_slice(*, user_profile_tool_name: str) -> str:
+    """Guide eager timezone inference for surfaces without automatic device timezone."""
+    return (
+        "用户当地时间与作息\n"
+        "部分通道（如 Telegram、微信等 IM）不会自动上报设备时区。"
+        "尽早从措辞、作息与地点线索推断用户当地情境；把握足够时，"
+        f"用 {user_profile_tool_name} 持久化（标签「时区」，值写 IANA，如 Asia/Shanghai）。"
+        "融入自然闲聊，勿要求用户发送时区命令。"
     )
 
 
@@ -717,6 +726,14 @@ def _contextual_system_messages(
     ]
     if repl_online_ack_turn:
         out.append(_system_message(_repl_online_ack_clause()))
+    if not inner_tick_turn:
+        out.append(
+            _system_message(
+                _infer_time_zone_prompt_slice(
+                    user_profile_tool_name=CompanionToolName.UPDATE_USER_MD.value,
+                )
+            )
+        )
     if tick_proactive:
         out.append(_system_message(_proactive_chat_clause()))
         if proactive_life_currents_block is not None:

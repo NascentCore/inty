@@ -1,4 +1,9 @@
-"""Infer user IANA timezone from persisted USER.md for agent-channel turns."""
+"""Read persisted USER.md timezone facts for agent-channel ``UserTimeContext`` injection.
+
+TODO(user-timezone-inference): Remove this regex/section parser. Timezone should be
+inferred by the companion during chat and persisted via ``update_user_md``; injection
+should read that structured persistence directly once schema is explicit.
+"""
 
 from __future__ import annotations
 
@@ -50,7 +55,16 @@ def _identity_section_lines(user_md: str) -> list[str]:
 
 
 def infer_iana_timezone_from_user_md(user_md: str) -> str | None:
-    """Return IANA timezone when USER.md records one under identity facts."""
+    """Return IANA timezone recorded in USER.md «身份信息», if any.
+
+    Resolution order within the identity section only:
+
+    1. Lines whose text mentions a timezone label (时区 / timezone / time zone) —
+       extract the first token matching ``Region/City`` and validate with ``ZoneInfo``.
+    2. Otherwise any line containing a valid IANA token (debug-logged as unlabeled).
+
+    Returns ``None`` when USER.md is empty, lacks «身份信息», or has no valid IANA name.
+    """
     if not user_md.strip():
         return None
     identity_lines = _identity_section_lines(user_md)
