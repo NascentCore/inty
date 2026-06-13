@@ -1,7 +1,16 @@
-"""Prompt slice ids (filename stem, no .md) for system injection.
+"""Prompt slice ids: runtime system-injection units mapped from Memory docs or package seeds.
 
-``PromptSliceId.MEMORY`` maps to ``MEMORY.md`` (semantic memory). Daily gist lives under
-``memory/daily/<date>.md`` (dreaming-written); see ``memory_taxonomy``.
+**Memory doc** = persistency (MemoryStore / Postgres). Human-readable markdown for
+examination and LLM tool I/O.
+
+**Prompt slice** = runtime effect (assembled ``role: system`` blocks per turn).
+Persistable slices are **1:1** with a workspace-relative ``{STEM}.md`` Memory doc
+(``slice_to_workspace_rel``). Slices may also come from package templates only
+(``BOOTSTRAP``, ``TOOLS``) or from Python-assembled text (doctrine, channel format,
+user-time tail) with **no** Memory doc.
+
+``PromptSliceId.MEMORY`` → ``MEMORY.md``. Daily gist: ``memory/daily/<date>.md``
+(dreaming-written); see ``memory_taxonomy``.
 """
 
 from __future__ import annotations

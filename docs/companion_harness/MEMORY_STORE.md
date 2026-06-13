@@ -11,11 +11,36 @@ MemoryStore 是 Companion Harness 的「工作区状态层」：人设、对话�
 
 ---
 
+## Memory doc 与 prompt slice
+
+两套概念，不要混用：
+
+| 概念 | 职责 | 典型落点 |
+|------|------|----------|
+| **Memory doc** | **持久化**（Postgres `companion_memory_document_versions`）；人类可读，便于 REPL / SQL / LangSmith 检视；也是 LLM 经工具读写的正文 | `IDENTITY.md`、`COMPANIONSHIP.md`、`transcript.jsonl` 等 |
+| **Prompt slice** | **运行时效果**：组装进当轮 `role: system` 的文本块；决定模型此刻「看见什么」 | `system_messages.py` / `prompt_stack` 注入的各块 |
+
+约定：
+
+- **Persistable prompt slice** 与 Memory doc **1:1**：`PromptSliceId` → `{STEM}.md`（见 `prompt_slices.slice_to_workspace_rel`）。注入前从 MemoryStore 读正文（`load_prompt_bundle`）。
+- **Non-persistable slice** 无 Memory doc 对应体，或仅有包内种子、不以会话文档为真源：`BOOTSTRAP`、`TOOLS`、`SIGNIFICANCE_PERCEPTION`、`AXIOM` / `SAFETY` 等。
+- **Slice 还可来自代码**：固定 doctrine、channel output-format、`user-time-context` 尾缀、inner-tick 合成句等——这些不是 Memory doc，但是 prompt slice。
+
+数据流（persistable）：
+
+```text
+template seed → MemoryStore.write_document → load_prompt_bundle → system message(s)
+```
+
+`context.json`、`.companion_*` JSON 是**控制面**，不是 prompt slice，也不走 1:1 markdown 映射。
+
+---
+
 ## 当前 MemoryStore：四类状态
 
 MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口都是 POSIX 格式相对路径（对模型友好），权威存储在 Postgres `companion_memory_document_versions`，每条文档由 `document_kind` 标签分类。
 
-### 1. 人设根稿（IDENTITY / SOUL / USER / MEMORY / LIFE_CURRENTS）
+### 1. 人设根稿（IDENTITY / SOUL / USER / STYLE / COMPANIONSHIP / MEMORY / LIFE_CURRENTS）
 
 - companion 的身份、稳定边界、对用户的长期理解，以及跨日的语义记忆。
 - **`LIFE_CURRENTS.md`**（AUTONOMY）：Inty 在 **虚拟空间/环境**中的自主活动状态（中期主题、当日兴致、进展）——**她在世界里做什么**，不是对用户的心理独白。与 `ai_private.jsonl` 分工见 [`AUTONOMY.md`](./AUTONOMY.md#ai_privatejsonl-vs-life_currentsmd核心区分)。
