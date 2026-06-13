@@ -149,6 +149,7 @@ You should only changes and use code in the following dirs:
   - Document pydantic model fields as Field description
 - Do not allow None argument
 - Do not use global variable, pass variable as argument
+  - Exceptions: global config (meant to directly dicates low-level behaviors)
 - Do not allow default value for function argument
 - Do not use string literals, use `StrEnum` instead
 - Use `match ... case` for options, never use multiple `if ... elif ... else`
