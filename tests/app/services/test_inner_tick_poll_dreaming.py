@@ -43,14 +43,14 @@ async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
         ) as scheduled,
         patch.object(
             inner_tick_poll.inner_tick_fire,
+            "try_fire_autonomy_inner_tick",
+            new_callable=AsyncMock,
+        ) as autonomy,
+        patch.object(
+            inner_tick_poll.inner_tick_fire,
             "try_fire_maintenance_inner_tick",
             new_callable=AsyncMock,
         ) as maintenance,
-        patch.object(
-            inner_tick_poll.inner_tick_fire,
-            "try_fire_dreaming_inner_tick",
-            new_callable=AsyncMock,
-        ) as dreaming,
     ):
         await inner_tick_poll.run_inner_tick_poll(
             delivery=_poll_delivery(),
@@ -61,8 +61,8 @@ async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
 
     proactive.assert_awaited_once()
     scheduled.assert_not_awaited()
+    autonomy.assert_not_awaited()
     maintenance.assert_not_awaited()
-    dreaming.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -94,7 +94,7 @@ async def test_run_inner_tick_poll_skips_when_coords_disarmed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_inner_tick_poll_falls_through_to_maintenance_not_dreaming() -> None:
+async def test_run_inner_tick_poll_falls_through_to_scheduled_only() -> None:
     live_ctx = {"user_id": "u", "agent_id": "a", "chat_id": "c"}
     coordinator = MagicMock()
     coordinator.snapshot_inner_tick_coords.return_value = live_ctx
@@ -110,25 +110,18 @@ async def test_run_inner_tick_poll_falls_through_to_maintenance_not_dreaming() -
             inner_tick_poll.inner_tick_fire,
             "try_fire_scheduled_inner_tick",
             new_callable=AsyncMock,
-            return_value=False,
+            return_value=True,
         ) as scheduled,
         patch.object(
             inner_tick_poll.inner_tick_fire,
             "try_fire_autonomy_inner_tick",
             new_callable=AsyncMock,
-            return_value=False,
         ) as autonomy,
         patch.object(
             inner_tick_poll.inner_tick_fire,
             "try_fire_maintenance_inner_tick",
             new_callable=AsyncMock,
-            return_value=True,
         ) as maintenance,
-        patch.object(
-            inner_tick_poll.inner_tick_fire,
-            "try_fire_dreaming_inner_tick",
-            new_callable=AsyncMock,
-        ) as dreaming,
     ):
         await inner_tick_poll.run_inner_tick_poll(
             delivery=_poll_delivery(),
@@ -139,29 +132,40 @@ async def test_run_inner_tick_poll_falls_through_to_maintenance_not_dreaming() -
 
     proactive.assert_awaited_once()
     scheduled.assert_awaited_once()
-    autonomy.assert_awaited_once()
-    maintenance.assert_awaited_once()
-    dreaming.assert_not_awaited()
+    autonomy.assert_not_awaited()
+    maintenance.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_run_scope_inner_tick_poll_for_scope_invokes_dreaming() -> None:
+async def test_run_scope_inner_tick_poll_order_maintenance_autonomy_dreaming() -> None:
     scope = CompanionScope("u", "a", "c")
-    with patch.object(
-        scope_inner_tick_poll.inner_tick_fire,
-        "try_fire_dreaming_for_scope",
-        new_callable=AsyncMock,
-        return_value=True,
-    ) as dreaming:
+    with (
+        patch.object(
+            scope_inner_tick_poll.inner_tick_fire,
+            "try_fire_maintenance_for_scope",
+            new_callable=AsyncMock,
+            return_value=False,
+        ) as maintenance,
+        patch.object(
+            scope_inner_tick_poll.inner_tick_fire,
+            "try_fire_autonomy_for_scope",
+            new_callable=AsyncMock,
+            return_value=False,
+        ) as autonomy,
+        patch.object(
+            scope_inner_tick_poll.inner_tick_fire,
+            "try_fire_dreaming_for_scope",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as dreaming,
+    ):
         fired = await scope_inner_tick_poll.run_scope_inner_tick_poll_for_scope(
             scope=scope
         )
     assert fired is True
+    maintenance.assert_awaited_once()
+    autonomy.assert_awaited_once()
     dreaming.assert_awaited_once()
-    assert dreaming.await_args.kwargs["coords"].user_id == "u"
-    assert dreaming.await_args.kwargs["coords"].agent_id == "a"
-    assert dreaming.await_args.kwargs["coords"].chat_id == "c"
-    assert dreaming.await_args.kwargs["poll_source"] == "scope_inner_tick_worker"
 
 
 @pytest.mark.asyncio

@@ -32,10 +32,7 @@ day** (``dreaming_due`` compares ``DreamingState.last_processed_calendar_date`` 
 planned (``TODO(user-feature)``).
 
 Concurrency: dreaming runs on the **scope inner-tick worker** (#3255) under
-``CompanionSession.turn_lock`` (#3272). Prototype assumes **single presence** per scope
-when user is online; multi-process needs cluster advisory lock (#3271).
-
-TODO(scope-inner-tick-slice-2): maintenance + AUTONOMY on same scope worker (#3255).
+``CompanionSession.turn_lock`` (#3272). Maintenance and AUTONOMY use the same worker.
 
 Prototype invariant: ``transcript.jsonl`` must not change while a dreaming batch runs
 (``turn_lock`` + ``dreaming_idle_seconds`` ≫ tool_background timeouts; #3272 single
