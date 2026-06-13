@@ -1105,10 +1105,7 @@ async def try_fire_dreaming_inner_tick(
     """When companion scope may be due for sleeping-state dreaming, run one batch under ``turn_lock``.
 
     Authoritative due check runs inside ``run_dreaming_batch_if_due`` after the lock is held.
-
-    TODO(scope-inner-tick-worker): Move off presence poll — scope worker #3255
-    (https://github.com/NascentCore/inty/issues/3255); delete this ``try_fire_*`` once
-    presence-less inner-tick lands.
+    Invoked from presence poll (legacy) and ``scope_inner_tick_poll`` (#3255).
     """
     coords = await _resolve_inner_tick_scope_coords(
         fire_input,

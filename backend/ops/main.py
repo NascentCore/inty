@@ -24,6 +24,10 @@ from app.api.utils.health_check_payload import build_health_check_data
 from backend.ops.api.evaluation_web import configure_evaluation_web_routes
 from backend.ops.api.telegram_demo_web import configure_telegram_demo_web_routes
 from backend.ops.api.weixin_web import configure_weixin_web_routes
+from backend.ops.scope_inner_tick_lifecycle import (
+    start_scope_inner_tick_worker,
+    stop_scope_inner_tick_worker,
+)
 from backend.ops.telegram_demo.lifecycle import (
     start_telegram_demo,
     stop_telegram_demo,
@@ -136,6 +140,8 @@ async def startup_event():
         logger.info("Weixin bridge restore scheduled")
         await start_telegram_demo()
         logger.info("Telegram demo poll scheduled")
+        await start_scope_inner_tick_worker()
+        logger.info("Scope inner-tick worker scheduled")
     except Exception as e:
         logger.error(f"Ops 应用启动过程中出错: {str(e)}")
 
@@ -185,6 +191,7 @@ async def _preload_popular_agent_data(db: AsyncSession):
 @app.on_event("shutdown")
 async def shutdown_event():
     try:
+        await stop_scope_inner_tick_worker()
         await stop_telegram_demo()
         from app.core.companion_harness.companion.websocket_coordinator import (
             ChatWsInflightShutdownRegistry,
