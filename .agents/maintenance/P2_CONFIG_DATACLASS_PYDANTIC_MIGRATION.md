@@ -81,7 +81,7 @@ flowchart TB
 | CFG-PYD-21 | done | `AgentConfig` | — | `agent` | 已迁移为 `BaseModel`；`load_config` 使用 `model_validate`；Fixed in `cursor/agent-maintenance-tasks-02d9` |
 | CFG-PYD-22 | done | `AppConfig.LimitsConfig` | CFG-PYD-01..21 中与 app 树无冲突者 | `app.limits`（预处理 dict） | 已迁移为 `BaseModel`；`load_config` 使用 `model_validate`；Fixed in `cursor/agent-maintenance-tasks-5273` |
 | CFG-PYD-23 | done | `AppConfig` | CFG-PYD-06, CFG-PYD-20, CFG-PYD-22 | `app` | 已迁移为 `BaseModel`；`backend_cors_origins` 为 `Optional[list[AnyHttpUrl]]`；`__post_init__` → `model_validator(after)`；Fixed in `cursor/agent-maintenance-tasks-02d9` |
-| CFG-PYD-24 | todo | `Config` | CFG-PYD-01..23 | 根对象：`Config(...)` 整段 | 最后一跳；`load_config` 返回类型为 Pydantic `Config`；各子键一律 `model_validate` |
+| CFG-PYD-24 | in_progress | `Config` | CFG-PYD-01..23 | 根对象：`Config(...)` 整段 | 最后一跳；`load_config` 返回类型为 Pydantic `Config`；各子键一律 `model_validate`；Claimed in `cursor/agent-maintenance-tasks-4126` |
 
 **并行建议**：`CFG-PYD-01`～`CFG-PYD-19` 中凡 `depends_on` 仅为「无」且互不修改同一代码块的，可由自动化并行尝试；冲突时以文件级锁串行。
 
@@ -123,7 +123,7 @@ flowchart TB
 |--------|------|
 | CFG-PYD-OPT-01 | 将 `_validate_config` 中仅依赖单个子树的规则拆入对应 `BaseModel` 的 `model_validator` |
 | CFG-PYD-OPT-02 | 为 YAML 根定义顶层 `RootConfig` 单模型，合并 `load_config` 与 `surprise_snap` 特例（减少手写拼装） |
-| CFG-PYD-OPT-03 | 删除重复的 `from loguru import logger` 等无关清理 |
+| CFG-PYD-OPT-03 | 删除重复的 `from loguru import logger` 等无关清理；Claimed in `cursor/agent-maintenance-tasks-4126` |
 
 ---
 
