@@ -44,6 +44,10 @@ from app.services.agent_status_line import (
 from app.services.agentic_companion.ws_turn_support import (
     companion_ai_meta_from_turn_result,
 )
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.companion.dreaming_observability import (
     DreamingBatchOutcome,
 )
@@ -288,17 +292,24 @@ async def try_fire_scheduled_inner_tick(
             )
             return False
         try:
-            companion_turn = await companion_chat_service.run_companion_inner_tick_scheduled_turn_for_api_unlocked(
-                scheduled_user_text=synthetic_user_text,
+            companion_turn = await companion_chat_service._run_companion_api_track_turn_with_lock_held(
+                track_path="inner_tick_scheduled",
                 user_id=user_id,
                 agent_id=agent_id,
                 chat_id=chat_row_id,
                 resolved_chat_model=model_override,
+                user_chars=len(synthetic_user_text),
                 session_id=session_id,
-                background_output_sink=None,
-                preset_user_msg_uuid=preset_uid,
-                implicit_signal_bundle=ws_implicit,
-                runtime_channel=delivery.runtime_channel,
+                run_track=lambda manager, session: manager.run_inner_tick_scheduled_turn(
+                    session,
+                    synthetic_user_text,
+                    background_output_sink=None,
+                    preset_user_msg_uuid=preset_uid,
+                    runtime_context=TurnRuntimeContext(
+                        channel=delivery.runtime_channel,
+                        implicit_signal_bundle=ws_implicit,
+                    ),
+                ),
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):
@@ -523,16 +534,23 @@ async def try_fire_proactive_chat_inner_tick(
                 agent_id,
             )
             return False
-        companion_turn = await companion_chat_service.run_companion_inner_tick_proactive_chat_turn_for_api_unlocked(
+        companion_turn = await companion_chat_service._run_companion_api_track_turn_with_lock_held(
+            track_path="inner_tick_proactive_chat",
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat_row_id,
             resolved_chat_model=model_override,
+            user_chars=0,
             session_id=session_id,
-            background_output_sink=None,
-            preset_user_msg_uuid=preset_uid,
-            implicit_signal_bundle=ws_implicit,
-            runtime_channel=delivery.runtime_channel,
+            run_track=lambda manager, session: manager.run_inner_tick_proactive_chat_turn(
+                session,
+                background_output_sink=None,
+                preset_user_msg_uuid=preset_uid,
+                runtime_context=TurnRuntimeContext(
+                    channel=delivery.runtime_channel,
+                    implicit_signal_bundle=ws_implicit,
+                ),
+            ),
         )
         hb_user_text = (
             companion_turn.transcript_user_content
@@ -748,15 +766,23 @@ async def try_fire_autonomy_inner_tick(
             return False
         try:
             companion_turn = (
-                await companion_chat_service.run_inner_tick_autonomy_unlocked(
+                await companion_chat_service._run_companion_api_track_turn_with_lock_held(
+                    track_path="inner_tick_autonomy",
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_row_id,
                     resolved_chat_model=model_override,
+                    user_chars=0,
                     session_id=session_id,
-                    background_output_sink=coordinator.background_sink,
-                    preset_user_msg_uuid=preset_uid,
-                    implicit_signal_bundle=ws_implicit,
+                    run_track=lambda manager, session: manager.run_inner_tick_autonomy_turn(
+                        session,
+                        background_output_sink=coordinator.background_sink,
+                        preset_user_msg_uuid=preset_uid,
+                        runtime_context=TurnRuntimeContext(
+                            channel=CompanionRuntimeChannel.APP,
+                            implicit_signal_bundle=ws_implicit,
+                        ),
+                    ),
                 )
             )
         except Exception as exc:
@@ -902,16 +928,23 @@ async def try_fire_maintenance_inner_tick(
             },
         )
         try:
-            companion_turn = await companion_chat_service.run_companion_inner_tick_maintenance_turn_for_api_unlocked(
+            companion_turn = await companion_chat_service._run_companion_api_track_turn_with_lock_held(
+                track_path="inner_tick_maintenance",
                 user_id=user_id,
                 agent_id=agent_id,
                 chat_id=chat_row_id,
                 resolved_chat_model=model_override,
+                user_chars=0,
                 session_id=session_id,
-                background_output_sink=coordinator.background_sink,
-                preset_user_msg_uuid=preset_uid,
-                implicit_signal_bundle=ws_implicit,
-                runtime_channel=delivery.runtime_channel,
+                run_track=lambda manager, session: manager.run_inner_tick_maintenance_turn(
+                    session,
+                    background_output_sink=coordinator.background_sink,
+                    preset_user_msg_uuid=preset_uid,
+                    runtime_context=TurnRuntimeContext(
+                        channel=delivery.runtime_channel,
+                        implicit_signal_bundle=ws_implicit,
+                    ),
+                ),
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):

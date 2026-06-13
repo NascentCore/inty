@@ -22,8 +22,10 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.scope_turn_lock import get_scope_turn_lock
+from app.core.companion_harness.companion.scope_turn_lock import (
+    companion_scope_from_foreground_ctx,
+    get_scope_turn_lock,
+)
 from app.services import agent_service, chat_service, companion_chat_service
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.downlink import tool_background_downlink
@@ -255,22 +257,14 @@ class WeixinInprocessPresence:
                 )
                 continue
             self._coordinator.set_foreground_pending(ev.user_msg_uuid, ctx)
-            user_id = str(ctx.get("user_id") or "").strip()
-            agent_id = str(ctx.get("agent_id") or "").strip()
-            chat_id_raw = ctx.get("chat_id")
-            if not user_id or not agent_id or chat_id_raw is None:
+            scope = companion_scope_from_foreground_ctx(ctx)
+            if scope is None:
                 logger.warning(
                     "weixin tool_bg missing scope coords user_msg_uuid={}",
                     ev.user_msg_uuid,
                 )
                 continue
-            scope_lock = get_scope_turn_lock(
-                CompanionScope(
-                    user_id=user_id,
-                    companion_id=agent_id,
-                    chat_id=str(chat_id_raw),
-                )
-            )
+            scope_lock = get_scope_turn_lock(scope)
             try:
                 async with scope_lock:
                     await self._downlink.deliver(

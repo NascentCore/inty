@@ -28,8 +28,10 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.scope_turn_lock import get_scope_turn_lock
+from app.core.companion_harness.companion.scope_turn_lock import (
+    companion_scope_from_foreground_ctx,
+    get_scope_turn_lock,
+)
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutputSink,
 )
@@ -1518,22 +1520,14 @@ async def chat_completions_websocket(
                     continue
                 # Pop to detect stale uuid; re-set so deliver holds turn_lock without losing ctx.
                 companion_ws.set_foreground_pending(ev.user_msg_uuid, ctx)
-                user_id = str(ctx.get("user_id") or "").strip()
-                agent_id = str(ctx.get("agent_id") or "").strip()
-                chat_id_raw = ctx.get("chat_id")
-                if not user_id or not agent_id or chat_id_raw is None:
+                scope = companion_scope_from_foreground_ctx(ctx)
+                if scope is None:
                     logger.warning(
                         "companion tool_bg missing scope coords user_msg_uuid={}",
                         ev.user_msg_uuid,
                     )
                     continue
-                scope_lock = get_scope_turn_lock(
-                    CompanionScope(
-                        user_id=user_id,
-                        companion_id=agent_id,
-                        chat_id=str(chat_id_raw),
-                    )
-                )
+                scope_lock = get_scope_turn_lock(scope)
                 try:
                     async with scope_lock:
                         await ws_downlink.deliver(
