@@ -7,6 +7,7 @@ import json
 import threading
 from pathlib import Path
 from types import SimpleNamespace
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import patch
 
@@ -33,8 +34,22 @@ from app.core.companion_harness.companion.turn import (
     run_inner_tick_autonomy,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.utils.config import CompanionMemoryBootstrapType
+from app.utils.config import CompanionMemoryBootstrapType, UserTurnLlmLoopMode
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
+
+
+def _patch_dual_llm_loop_mode():
+    agent = SimpleNamespace(
+        companion_harness=SimpleNamespace(
+            user_turn=SimpleNamespace(
+                llm_loop_mode=UserTurnLlmLoopMode.DUAL_LLM
+            )
+        )
+    )
+    return patch(
+        "app.core.companion_harness.companion.turn_routes.global_config_loaded_from_config_yaml",
+        SimpleNamespace(agent=agent),
+    )
 
 
 def _default_turn_deps(
@@ -152,14 +167,15 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     )
 
     client = _FakeAsyncDualLLMClient()
-    out = await run_companion_user_chat_turn(
-        "hello async dual",
-        deps=_default_turn_deps(
-            store,
-            client,
-            tool_bg_idle_event=_idle_tool_bg(),
-        ),
-    )
+    with _patch_dual_llm_loop_mode():
+        out = await run_companion_user_chat_turn(
+            "hello async dual",
+            deps=_default_turn_deps(
+                store,
+                client,
+                tool_bg_idle_event=_idle_tool_bg(),
+            ),
+        )
 
     assert out.tool_background_started is True
     assert out.assistant_text == "foreground ok"
@@ -373,14 +389,15 @@ async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_injec
     )
 
     client = _FakeAsyncDualLLMClientEmptyFg()
-    await run_companion_user_chat_turn(
-        "hello empty fg",
-        deps=_default_turn_deps(
-            store,
-            client,
-            tool_bg_idle_event=_idle_tool_bg(),
-        ),
-    )
+    with _patch_dual_llm_loop_mode():
+        await run_companion_user_chat_turn(
+            "hello empty fg",
+            deps=_default_turn_deps(
+                store,
+                client,
+                tool_bg_idle_event=_idle_tool_bg(),
+            ),
+        )
 
     assert len(bg_jobs) == 1
     bg_msgs = bg_jobs[0]["request_messages"]

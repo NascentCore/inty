@@ -366,7 +366,7 @@ class AgentCompanionHarnessUserTurnConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     llm_loop_mode: UserTurnLlmLoopMode = Field(
-        default=UserTurnLlmLoopMode.DUAL_LLM,
+        default=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
         description=(
             "Settled USER_CHAT LLM execution: dual_llm (foreground envelope + "
             "tool_background) or in_turn_single_llm (bootstrap-style in-turn tools)."

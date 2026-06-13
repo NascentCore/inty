@@ -288,7 +288,7 @@ def test_agent_config_user_turn_llm_loop_mode_default() -> None:
     agent = AgentConfig(api_key="test", langchain_api_key="test")
     assert (
         agent.companion_harness.user_turn.llm_loop_mode
-        == UserTurnLlmLoopMode.DUAL_LLM
+        == UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM
     )
 
 

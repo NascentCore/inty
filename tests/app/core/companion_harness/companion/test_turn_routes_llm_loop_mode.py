@@ -27,7 +27,7 @@ def _patch_llm_loop_mode(mode: UserTurnLlmLoopMode):
     )
 
 
-def test_resolve_turn_route_mode_default_dual_llm_for_user_chat_tools() -> None:
+def test_resolve_turn_route_mode_dual_llm_for_user_chat_tools() -> None:
     with _patch_llm_loop_mode(UserTurnLlmLoopMode.DUAL_LLM):
         route = resolve_turn_route_mode(
             inner_tick_turn=False,
