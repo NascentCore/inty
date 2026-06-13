@@ -3,11 +3,9 @@
 Use Pydantic models, instead of dataclass.
 """
 
-import dataclasses
 import math
 import os
 import sys
-from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, StrEnum
 from pathlib import Path
@@ -16,8 +14,6 @@ from typing import Any, List, Optional
 import yaml
 from loguru import logger
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
-
-from loguru import logger
 
 from app.utils import models_catalog
 from app.core.companion_harness.experience_profile import (
@@ -730,8 +726,7 @@ class GeminiLiveConfig(BaseModel):
     audio_temp_dir: Optional[str] = None
 
 
-@dataclass
-class PhoneCallConfig:
+class PhoneCallConfig(BaseModel):
     """PSTN phone-call bridge configuration.
 
     The feature flag defaults to on so product surfaces may show the capability,
@@ -739,19 +734,17 @@ class PhoneCallConfig:
     Secrets should be supplied by environment variables in deployments.
     """
 
+    model_config = ConfigDict(extra="ignore")
+
     enabled: bool = True
     default_country_code: str = "+1"
     twilio_from_number: str = ""
     twilio_media_stream_base_url: str = ""
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
-    inbound_number_agent_map: dict = None
+    inbound_number_agent_map: dict[str, str] = Field(default_factory=dict)
     default_inbound_agent_id: str = ""
     media_stream_token_ttl_seconds: int = 300
-
-    def __post_init__(self):
-        if self.inbound_number_agent_map is None:
-            self.inbound_number_agent_map = {}
 
 
 class TTSConfig(BaseModel):
@@ -783,8 +776,9 @@ class WeixinChannelConfig(BaseModel):
     split_multiline_messages: bool = False
 
 
-@dataclass
-class Config:
+class Config(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     app: AppConfig
     security: SecurityConfig
     database: DatabaseSettings
@@ -799,20 +793,20 @@ class Config:
     elevenlabs: ElevenLabsConfig
     cloudflare: CloudflareConfig
     push_notification: PushNotificationConfig
-    memory_extraction: MemoryExtractionConfig = field(
-        default_factory=lambda: MemoryExtractionConfig()
+    memory_extraction: MemoryExtractionConfig = Field(
+        default_factory=MemoryExtractionConfig
     )
-    user_analytics_report: UserAnalyticsReportConfig = field(
-        default_factory=lambda: UserAnalyticsReportConfig()
+    user_analytics_report: UserAnalyticsReportConfig = Field(
+        default_factory=UserAnalyticsReportConfig
     )
-    fal: FalConfig = field(default_factory=FalConfig)
-    gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
-    phone_call: PhoneCallConfig = field(default_factory=PhoneCallConfig)
-    tts: TTSConfig = field(default_factory=TTSConfig)
-    surprise_snap: SurpriseSnapConfig = field(
-        default_factory=lambda: SurpriseSnapConfig()
+    fal: FalConfig = Field(default_factory=FalConfig)
+    gemini_live: GeminiLiveConfig = Field(default_factory=GeminiLiveConfig)
+    phone_call: PhoneCallConfig = Field(default_factory=PhoneCallConfig)
+    tts: TTSConfig = Field(default_factory=TTSConfig)
+    surprise_snap: SurpriseSnapConfig = Field(
+        default_factory=SurpriseSnapConfig
     )
-    weixin_channel: WeixinChannelConfig = field(
+    weixin_channel: WeixinChannelConfig = Field(
         default_factory=WeixinChannelConfig
     )
 
@@ -900,7 +894,7 @@ def load_config(path: str) -> Config:
         gemini_live=GeminiLiveConfig.model_validate(
             data.get("gemini_live") or {}
         ),
-        phone_call=PhoneCallConfig(**(data.get("phone_call") or {})),
+        phone_call=PhoneCallConfig.model_validate(data.get("phone_call") or {}),
         tts=TTSConfig.model_validate(data.get("tts") or {}),
         surprise_snap=_parse_surprise_snap_config(data),
         weixin_channel=WeixinChannelConfig.model_validate(
