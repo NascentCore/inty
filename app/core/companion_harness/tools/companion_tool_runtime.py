@@ -65,6 +65,10 @@ from app.techno_core.models import (
     Visibility,
 )
 
+from .companion_user_feedback import (
+    COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
+    tool_companion_record_user_feedback,
+)
 from .fal_z_image_tool import (
     MAX_NUM_IMAGES_PER_CALL,
     reset_fal_async_client_after_short_lived_loop,
@@ -669,6 +673,8 @@ async def _dispatch(
         if not isinstance(raw_reason, str):
             return "ERROR: reason must be a string"
         return await tool_phone_call_user(store, raw_phone, raw_reason)
+    if name == COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
+        return tool_companion_record_user_feedback(store, arguments)
     if name == "companion_set_experience_profile":
         raw_ctx = arguments.get("context_mode")
         if not isinstance(raw_ctx, str):

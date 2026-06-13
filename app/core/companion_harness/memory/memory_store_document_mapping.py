@@ -47,6 +47,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     )
     COMPANION_SCHEDULE_TASKS_JSON = "companion_schedule_tasks_json"
     COMPANION_RUNTIME_EVENTS_JSONL = "companion_runtime_events_jsonl"
+    COMPANION_USER_FEEDBACK_JSONL = "companion_user_feedback_jsonl"
     COMPANION_DREAMING_STATE_JSON = "companion_dreaming_state_json"
     INTY_V2_LIVING_SPHERE_CURATOR_JSON = "inty_v2_living_sphere_curator_json"
     INTY_V2_CONTEXT_COMPACTION_STATE_JSON = (
@@ -112,6 +113,10 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     ),
     ".companion_runtime_events.jsonl": (
         CompanionMemoryDocumentKind.COMPANION_RUNTIME_EVENTS_JSONL,
+        None,
+    ),
+    ".companion_user_feedback.jsonl": (
+        CompanionMemoryDocumentKind.COMPANION_USER_FEEDBACK_JSONL,
         None,
     ),
     ".companion_dreaming_state.json": (

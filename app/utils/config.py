@@ -186,6 +186,17 @@ class FeaturesConfig(BaseModel):
                 "(see ``companion.dreaming`` module doc)."
             ),
         )
+        user_feedback_github_repo: str = Field(
+            default="nascentcore/inty",
+            description="GitHub repo (owner/name) for companion user-feedback issues.",
+        )
+        user_feedback_github_token: str = Field(
+            default="",
+            description=(
+                "GitHub token for ``companion_record_user_feedback`` issue creation; "
+                "empty skips issue filing (snapshot still persisted)."
+            ),
+        )
 
     experimental_enable_chat_with_user_time_context: bool = False
     # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
