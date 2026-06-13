@@ -327,11 +327,24 @@ Weixin 路径不经 `/api/v1/chat/ws`，由 `backend/ops/weixin_channel/` 适配
 - **远期**（自托管时）：prefix KV 复用、引擎内 tool loop（免每轮 re-prefill）。
 - **非目标**：Pie server、Wasm inferlet、ToT/MCTS、KV rewind。
 
-## See also
+## Exo-runtime design
 
-- [Pie](https://pie-project.org/) · [arXiv:2510.24051](https://arxiv.org/html/2510.24051v1) — 可编程 LLM serving 参考
-- [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — 其他灵感条目
-- [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — 多 agent 虚拟世界、共享 AgentHarness、sub-agent（firefly）目标态与两期交付
-- [REFACTORING_PLAN.md](./REFACTORING_PLAN.md) — 包拆分与 `runtime/` / `environment/` 目标结构
-- [AUTONOMY.md](./AUTONOMY.md) · [PRODUCT_DESIGN.md](./PRODUCT_DESIGN.md)
-- [GLOSSARY.md](./GLOSSARY.md) · [MEMORY_STORE.md](./MEMORY_STORE.md)
+Constructs between end users and the core-agentic-harness runtime:
+
+- Interaction container: Weixin, Telegram
+
+这个设计的具体内容，可以称为用于情感陪伴的智能体 Harness，就是围绕 LLM 周围快、慢周期，外部刺激，人格模型，等等；
+组合在一起，能在体感上模拟一个“虚拟的活人”。
+
+## 高层设计
+
+只关注智能体 Harness 的设计，目标：
+
+1. 人类式记忆：从聊天中持续提取并更新用户偏好、用户画像、关系边界、事件、LivingSphere、TechnoCore。
+2. 长期连续性的关系演化：基于记忆自动生成后续关系、情感建立与演化。
+
+非目标（本阶段）：
+
+- 后端扩展（多用户、多实例）
+
+目标态扩展（多 agent 世界引擎、sub-agent）见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)。

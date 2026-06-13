@@ -6,7 +6,7 @@ MemoryStore 是 Companion Harness 的「工作区状态层」：人设、对话�
 
 - **进程内注册表**：`memory_registry.get_memory_store(scope, dsn=...)` 始终挂上 `SqlAlchemyMemoryRepository`，**必须**传入非空 `dsn`（与 `CompanionConfig.memory_pg_dsn`、仓库根 `config.yaml` 的 `database.url` 同源）；不存在「注册表里仅内存、不写库」的路径。纯逻辑测试应直接构造 `MemoryStore(scope, repository=None)` 并绕过注册表；需要走注册表 + ORM 的测试与 `experimental/harness_seeding_demo` 的播种脚本假定 **`database.url` 已配置且库可达**（与 `tests/app/core/companion_harness/companion_memory_registry_dsn.py` 的约定一致）。
 - 不在范围：分层 Markdown 记忆（episodic / gist / semantic）的策展机制 —— 见 [`dreaming_consolidation`](/app/core/companion_harness/memory/dreaming_consolidation.py)。
-- 不在范围：跨 transport / turn / tool 的整体职责切分 —— 见 [`ARCH.md`](/docs/companion_harness/ARCH.md)。
+- 不在范围：跨 transport / turn / tool 的整体职责切分 —— 见 [`DESIGN.md`](/docs/companion_harness/DESIGN.md)。
 - 不在范围：legacy 主站 `memory` 表与节日 / 日常抽取管线（避免混淆）。
 
 ---
@@ -24,7 +24,7 @@ MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口
 
 ### 2. 对话轨迹（transcript / inner_tick / ai_private）
 
-- **`transcript.jsonl`**：用户可见对话主轨；每轮末追加 user / assistant，作为下一轮上下文与压实输入；体积大时带截窗读取。Proactive chat 也写本轨；**proactive rhythm** 以本轨**最后一条 assistant 的 `ts`** 为锚（见 [ARCH.md](./ARCH.md) 与 `proactive_chat.py`）。
+- **`transcript.jsonl`**：用户可见对话主轨；每轮末追加 user / assistant，作为下一轮上下文与压实输入；体积大时带截窗读取。Proactive chat 也写本轨；**proactive rhythm** 以本轨**最后一条 assistant 的 `ts`** 为锚（见 [DESIGN.md](./DESIGN.md) 与 `proactive_chat.py`）。
 - **`transcript_inner_tick.jsonl`**：沉默 inner-tick turn（`MAINTENANCE`、`AUTONOMY`）；与主 transcript 按时间合并后供 inner_tick scene；proactive / scheduled 仍写主轨。
 - **`ai_private.md` / `ai_private.jsonl`**：**对用户的心理独白**（情绪、未说出口的念头、关系场景里的内在节拍），供 MAINTENANCE inner-tick 注入 `内在活动（ai_private）` system 块。不是虚拟环境里的「动手做事」——后者见 `LIFE_CURRENTS.md`（AUTONOMY）。
   - **读**：由 `get_ai_private_jsonl_text_for_prompt` / `get_ai_private_text_for_prompt` 等从 MemoryStore 读取（实现见 `app/core/companion_harness/companion/ai_private_prompt.py`）。

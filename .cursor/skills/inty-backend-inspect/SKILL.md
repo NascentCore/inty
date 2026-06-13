@@ -164,7 +164,7 @@ python3 .cursor/skills/scripts/langsmith_find_companion_run_by_user_msg_uuid.py 
 - [`launch-inty-backend`](../launch-inty-backend/SKILL.md)
 - [`langsmith-download-run`](../langsmith-download-run/SKILL.md)
 - [`inty-server-module-verify`](../inty-server-module-verify/SKILL.md)
-- [`docs/companion_harness/ARCH.md`](../../../docs/companion_harness/ARCH.md)
+- [`docs/companion_harness/DESIGN.md`](../../../docs/companion_harness/DESIGN.md)
 - [`app/core/companion_harness/companion/llm_chat_runtime.py`](../../../app/core/companion_harness/companion/llm_chat_runtime.py)
 
 ## 实现边界

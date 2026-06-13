@@ -7,9 +7,8 @@
 
 ## See also
 
-- [ARCH.md](./ARCH.md) — 当前生产架构与 transport 边界
+- [DESIGN.md](./DESIGN.md) — 当前生产架构与 transport 边界
 - [REFACTOR_PLAN.md](./REFACTOR_PLAN.md) — `runtime/` / `environment/` 与共享 spine 的涌现方向（Phase 3）
-- [PRODUCT_DESIGN.md](./PRODUCT_DESIGN.md) — 产品层「虚拟活人」目标
 - [AUTONOMY.md](./AUTONOMY.md) — companion 自主轨道（`LIFE_CURRENTS.md`）；与 sub-agent 世界互补，非替代
 - [WORLD_CAPSULES.md](./WORLD_CAPSULES.md) — 共同想象设定巩固；与本 FR 的 agent 交往层正交
 - [techno_core/DESIGN.md](../../techno_core/DESIGN.md) · [LIVING_SPHERE.md](./LIVING_SPHERE.md)
@@ -248,4 +247,4 @@ flowchart TB
 |---|---|
 | [AUTONOMY.md](./AUTONOMY.md) | Companion **对自己**的中期/当日兴致；World Engine 提供 **他者**（sub-agent）与 mailbox 交往。可并存。 |
 | [WORLD_CAPSULES.md](./WORLD_CAPSULES.md) | 共同想象 **设定巩固**；本 FR 是 **运行时多 agent 引擎**。胶囊可后置接入 TechnoCore 层。 |
-| [ARCH.md](./ARCH.md) | 描述**当前**生产路径；本 FR 是**目标态** world engine，经 Phase 1/2 渐进落地。 |
+| [DESIGN.md](./DESIGN.md) | 描述**当前**生产路径；本 FR 是**目标态** world engine，经 Phase 1/2 渐进落地。 |
