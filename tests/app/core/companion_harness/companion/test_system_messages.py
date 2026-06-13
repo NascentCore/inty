@@ -56,7 +56,10 @@ def test_bootstrap_track_injects_typed_tool_call_section() -> None:
         memory_md="",
     )
     contents = _system_contents(
-        build_system_messages_for_bootstrap_track(bundle, ContextMeta())
+        build_system_messages_for_bootstrap_track(
+            bundle,
+            ContextMeta(workspace_bootstrap_user_interactive_completed=False),
+        )
     )
     tool_section = build_bootstrap_tool_call_section()
 
@@ -64,7 +67,7 @@ def test_bootstrap_track_injects_typed_tool_call_section() -> None:
     bootstrap_spec_block = next(
         content
         for content in contents
-        if content.startswith("# Agentic 初始化执行规范（内部）")
+        if "# Bootstrap companionship" in content
     )
     assert contents.index(bootstrap_spec_block) < contents.index(tool_section)
     for tool_name in (
@@ -89,8 +92,7 @@ def test_bootstrap_output_contract_names_memory_store_write_paths_only() -> None
         )
     )
     assert "memory_store_write_document" in joined
-    assert "IDENTITY.md / STYLE.md / USER.md" in joined
-    assert "COMPANIONSHIP.md" in joined
+    assert "COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md" in joined
     assert "SOUL.md" in joined and "MEMORY.md" in joined
     assert "companion_update_prompt_slice" not in joined
     assert "schedule_task" not in joined
