@@ -710,6 +710,34 @@ def test_agent_config_text_to_image_models_accept_none_for_vertex_fallback():
     assert agent_config.sub_user_text_to_image_model is None
 
 
+def test_agent_config_model_validate_ignores_unknown_keys():
+    agent_config = AgentConfig.model_validate(
+        {
+            "api_key": "test",
+            "langchain_api_key": "test",
+            "free_user_chat_model": "google/gemini-2.5-flash",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert agent_config.free_user_chat_model == "google/gemini-2.5-flash"
+    assert not hasattr(agent_config, "unknown_key")
+
+
+def test_app_config_model_validate_ignores_unknown_keys():
+    app_config = AppConfig.model_validate(
+        {
+            "name": "my-app",
+            "environment": "dev",
+            "unknown_key": "ignored",
+        }
+    )
+
+    assert app_config.name == "my-app"
+    assert app_config.environment == Environment.DEV
+    assert not hasattr(app_config, "unknown_key")
+
+
 def test_features_config_companion_memory_bootstrap_type_default():
     f = FeaturesConfig()
     assert f.companion_memory_bootstrap_type == (
