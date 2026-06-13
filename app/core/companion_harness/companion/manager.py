@@ -6,11 +6,12 @@
 
 每个 ``CompanionSession`` 还持有 ``tool_bg_idle`` — 上一轮 tool_background 是否结束；
 下一轮 ``run_turn`` 加载 transcript 前等待。Dreaming 与用户 chat、inner-tick 在
-**presence** ``Coordinator.turn_lock`` 上串行（见 ``session.Coordinator``）。
+**scope** ``CompanionSession.turn_lock`` 上串行（见 ``scope_turn_lock``；#3272）。
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import threading
 
@@ -40,6 +41,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult
 from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from .scope import CompanionScope
+from .scope_turn_lock import get_scope_turn_lock
 from .turn_deps import CompanionTurnDeps
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 from .turn_tracks import (
@@ -120,6 +122,11 @@ class CompanionSession:
     @property
     def is_initialized(self) -> bool:
         return is_scope_initialized_in_store(self.store)
+
+    @property
+    def turn_lock(self) -> asyncio.Lock:
+        """Scope-level turn serializer (singleton per ``CompanionScope.registry_key()``)."""
+        return get_scope_turn_lock(self.scope)
 
 
 class CompanionManager:

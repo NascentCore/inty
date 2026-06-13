@@ -33,8 +33,8 @@ planned (``TODO(user-feature)``).
 
 Concurrency: ``InnerTickActivity.DREAMING`` runs on the inner-tick poll path under
 presence ``Coordinator.turn_lock`` (same wire as user chat and other inner ticks).
-Prototype assumes **single presence** per scope (``companion_harness`` AGENTS.md) — no
-``CompanionActivityGate`` or cross-tab scope mutex.
+Prototype assumes **single presence** per scope (``companion_harness`` AGENTS.md) — scope
+``CompanionSession.turn_lock`` serializes turns (#3272).
 
 TODO(scope-inner-tick-worker): Dreaming must run for idle scopes without signed-on
 presence (#3255 — https://github.com/NascentCore/inty/issues/3255). It is not a delivery

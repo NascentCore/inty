@@ -3,10 +3,10 @@
 Persists chat history and delivers assistant output via :class:`InnerTickDelivery`.
 WS wire envelopes are built here; Weixin receives plain text through the same path.
 
-Locking: each ``try_fire_*`` acquires **presence** ``coordinator.turn_lock``. User chat on
-the same wire also holds ``turn_lock`` — inner ticks (including dreaming) and user messages
-queue on one connection. Prototype: single presence per paired user (``companion_harness``
-AGENTS.md); no scope mutex for multiple ``turn_lock`` on the same scope.
+Locking: each ``try_fire_*`` acquires **scope** ``CompanionSession.turn_lock`` (#3272).
+User chat on the same scope also holds that lock — inner ticks (including dreaming) and
+user messages serialize per ``(user_id, agent_id, chat_id)``. Prototype: single presence
+per paired user (``companion_harness`` AGENTS.md).
 
 TODO(dreaming-cluster-lock): Multi-process backend needs Postgres advisory lock around
 dreaming batches — https://github.com/NascentCore/inty/issues/3271
@@ -87,6 +87,7 @@ from app.services.agentic_companion.inner_tick_delivery import (
     InnerTickDelivery,
     deliver_inner_tick_assistant,
 )
+from app.core.companion_harness.companion.manager import CompanionSession
 from app.services.agentic_companion.session import Coordinator, InnerTickCoords
 from app.services.agentic_companion.ws_implicit_signals import (
     implicit_signal_bundle_from_tc_box,
@@ -203,10 +204,10 @@ async def _resolve_inner_tick_scope_coords(
 @asynccontextmanager
 async def _inner_tick_turn_scope(
     *,
-    coordinator: Coordinator,
+    session: CompanionSession,
 ) -> AsyncIterator[None]:
-    """Acquire presence ``turn_lock`` for one inner-tick activity."""
-    async with coordinator.turn_lock:
+    """Acquire scope ``turn_lock`` for one inner-tick activity."""
+    async with session.turn_lock:
         yield
 
 
@@ -260,7 +261,14 @@ async def try_fire_scheduled_inner_tick(
     preset_uid = str(uuid.uuid4())
 
     ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
-    async with _inner_tick_turn_scope(coordinator=coordinator):
+    scope_session = await companion_chat_service.resolve_companion_session_for_api_turn(
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_row_id,
+        resolved_chat_model=model_override,
+        session_id=session_id,
+    )
+    async with _inner_tick_turn_scope(session=scope_session):
         if coordinator.inner_tick_maintenance_foreground_pending():
             logger.debug(
                 "companion_ws_scheduled_reminder skipped prev_maintenance_pending "
@@ -280,7 +288,7 @@ async def try_fire_scheduled_inner_tick(
             )
             return False
         try:
-            companion_turn = await companion_chat_service.run_companion_inner_tick_scheduled_turn_for_api(
+            companion_turn = await companion_chat_service.run_companion_inner_tick_scheduled_turn_for_api_unlocked(
                 scheduled_user_text=synthetic_user_text,
                 user_id=user_id,
                 agent_id=agent_id,
@@ -498,7 +506,14 @@ async def try_fire_proactive_chat_inner_tick(
         preset_uid = str(uuid.uuid4())
 
     ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
-    async with _inner_tick_turn_scope(coordinator=coordinator):
+    scope_session = await companion_chat_service.resolve_companion_session_for_api_turn(
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_row_id,
+        resolved_chat_model=model_override,
+        session_id=session_id,
+    )
+    async with _inner_tick_turn_scope(session=scope_session):
         coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
         if coordinator.inner_tick_proactive_tool_bg_still_running():
             logger.debug(
@@ -508,7 +523,7 @@ async def try_fire_proactive_chat_inner_tick(
                 agent_id,
             )
             return False
-        companion_turn = await companion_chat_service.run_companion_inner_tick_proactive_chat_turn_for_api(
+        companion_turn = await companion_chat_service.run_companion_inner_tick_proactive_chat_turn_for_api_unlocked(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat_row_id,
@@ -714,7 +729,14 @@ async def try_fire_autonomy_inner_tick(
     ws_implicit = implicit_signal_bundle_from_tc_box(tc_box)
     preset_uid = str(uuid.uuid4())
 
-    async with _inner_tick_turn_scope(coordinator=coordinator):
+    scope_session = await companion_chat_service.resolve_companion_session_for_api_turn(
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_row_id,
+        resolved_chat_model=model_override,
+        session_id=session_id,
+    )
+    async with _inner_tick_turn_scope(session=scope_session):
         coordinator.clear_inner_tick_autonomy_tool_bg_idle_if_idle()
         if coordinator.inner_tick_autonomy_tool_bg_still_running():
             logger.debug(
@@ -726,7 +748,7 @@ async def try_fire_autonomy_inner_tick(
             return False
         try:
             companion_turn = (
-                await companion_chat_service.run_inner_tick_autonomy(
+                await companion_chat_service.run_inner_tick_autonomy_unlocked(
                     user_id=user_id,
                     agent_id=agent_id,
                     chat_id=chat_row_id,
@@ -850,7 +872,14 @@ async def try_fire_maintenance_inner_tick(
         user_time_context=stub_utc,
     )
 
-    async with _inner_tick_turn_scope(coordinator=coordinator):
+    scope_session = await companion_chat_service.resolve_companion_session_for_api_turn(
+        user_id=user_id,
+        agent_id=agent_id,
+        chat_id=chat_row_id,
+        resolved_chat_model=model_override,
+        session_id=session_id,
+    )
+    async with _inner_tick_turn_scope(session=scope_session):
         if coordinator.inner_tick_maintenance_foreground_pending():
             logger.debug(
                 "companion_ws_maintenance_inner_tick skipped prev_inner_tick_pending "
@@ -865,13 +894,15 @@ async def try_fire_maintenance_inner_tick(
             {
                 "session_id": session_id,
                 "agent_id": agent_id,
+                "user_id": user_id,
+                "chat_id": chat_row_id,
                 "request": stub_request,
                 "effective_local_id": None,
                 "ws_inner_tick_maintenance": True,
             },
         )
         try:
-            companion_turn = await companion_chat_service.run_companion_inner_tick_maintenance_turn_for_api(
+            companion_turn = await companion_chat_service.run_companion_inner_tick_maintenance_turn_for_api_unlocked(
                 user_id=user_id,
                 agent_id=agent_id,
                 chat_id=chat_row_id,
@@ -1066,7 +1097,14 @@ async def try_fire_dreaming_inner_tick(
         global_config_loaded_from_config_yaml.app.features.companion_harness.dreaming_idle_seconds
     )
 
-    async with _inner_tick_turn_scope(coordinator=fire_input.coordinator):
+    scope_session = await companion_chat_service.resolve_companion_session_for_api_turn(
+        user_id=coords.user_id,
+        agent_id=coords.agent_id,
+        chat_id=coords.chat_row_id,
+        resolved_chat_model=coords.model_override,
+        session_id=None,
+    )
+    async with _inner_tick_turn_scope(session=scope_session):
         outcome = await asyncio.to_thread(
             companion_chat_service.run_dreaming_batch_for_api,
             user_id=coords.user_id,
