@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
+)
 from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     turn_recall_from_envelope,
@@ -13,6 +16,8 @@ from app.core.companion_harness.tools.tool_bg_routing import (
     resolve_tool_background_finish_envelope,
     resolve_tool_bg_routing_sync,
 )
+
+_APP_SLICE = CompanionTurnLangsmithSlice.app_default()
 
 
 def _completion_response(
@@ -51,6 +56,7 @@ def test_resolve_tool_background_finish_envelope_skips_routing_for_autonomy() ->
         create_completion_sync=create_sync,
         conversation_messages=[],
         final_assistant_content="无",
+        langsmith_slice=_APP_SLICE,
     )
     create_sync.assert_not_called()
     assert out.output_to_user is False
@@ -68,6 +74,7 @@ def test_resolve_tool_background_finish_envelope_routes_for_maintenance() -> Non
         create_completion_sync=create_sync,
         conversation_messages=[],
         final_assistant_content="not envelope",
+        langsmith_slice=_APP_SLICE,
     )
     create_sync.assert_called_once()
     assert out.output_to_user is False
@@ -82,6 +89,7 @@ def test_resolve_tool_bg_routing_uses_final_assistant_json() -> None:
         create_completion_sync=create_sync,
         conversation_messages=[],
         final_assistant_content=inner,
+        langsmith_slice=_APP_SLICE,
     )
     assert out.user_facing_reply == "hello"
     assert out.output_to_user is True
@@ -98,6 +106,7 @@ def test_resolve_tool_bg_routing_strips_json_fence() -> None:
         create_completion_sync=create_sync,
         conversation_messages=[],
         final_assistant_content=raw,
+        langsmith_slice=_APP_SLICE,
     )
     assert out.user_facing_reply == "hello"
     create_sync.assert_not_called()
@@ -134,8 +143,11 @@ def test_resolve_tool_bg_routing_fallback_on_invalid_then_conservative() -> None
         create_completion_sync=create_sync,
         conversation_messages=[{"role": "user", "content": "hi"}],
         final_assistant_content="not envelope",
+        langsmith_slice=_APP_SLICE,
     )
     create_sync.assert_called_once()
+    extra = create_sync.call_args.kwargs["langsmith_extra"]
+    assert extra["metadata"]["inty_runtime_channel"] == "app"
     assert out.output_to_user is False
     assert out.user_facing_reply == ""
     assert out.importance_round == 5
@@ -154,6 +166,7 @@ def test_resolve_tool_bg_routing_fallback_returns_parsed_envelope() -> None:
         create_completion_sync=create_sync,
         conversation_messages=[],
         final_assistant_content="{",
+        langsmith_slice=_APP_SLICE,
     )
     assert out.user_facing_reply == "done"
     assert out.output_to_user is False
@@ -174,6 +187,7 @@ def test_resolve_tool_bg_routing_fallback_reads_reasoning_envelope() -> None:
         create_completion_sync=create_sync,
         conversation_messages=[],
         final_assistant_content="{",
+        langsmith_slice=_APP_SLICE,
     )
     assert out.user_facing_reply == "done from reasoning"
     assert out.output_to_user is True

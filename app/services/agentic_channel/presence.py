@@ -11,6 +11,8 @@ from sqlalchemy import select
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.companion.scope_turn_lock import get_scope_turn_lock
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
@@ -178,9 +180,10 @@ class AgentChannelPresence:
                 {
                     "session_id": session_id,
                     "agent_id": self._scope.agent_id,
+                    "user_id": self._scope.user_id,
+                    "chat_id": synthetic_chat_id,
                     "request": stub_request,
                     "effective_local_id": None,
-                    "user_id": self._scope.user_id,
                 },
             )
             implicit_bundle = ImplicitSignalBundle(
@@ -188,16 +191,15 @@ class AgentChannelPresence:
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
             )
-            async with self._coordinator.turn_lock:
-                turn = await run_agent_turn(
-                    scope=self._scope,
-                    user_text=stripped,
-                    resolved_chat_model=model,
-                    runtime_channel=runtime_channel,
-                    background_output_sink=self._coordinator.background_sink,
-                    preset_user_msg_uuid=preset_uid,
-                    implicit_signal_bundle=implicit_bundle,
-                )
+            turn = await run_agent_turn(
+                scope=self._scope,
+                user_text=stripped,
+                resolved_chat_model=model,
+                runtime_channel=runtime_channel,
+                background_output_sink=self._coordinator.background_sink,
+                preset_user_msg_uuid=preset_uid,
+                implicit_signal_bundle=implicit_bundle,
+            )
             assert isinstance(turn, CompanionTurnResult)
             if not turn.tool_background_started:
                 self._coordinator.remove_foreground_pending(preset_uid)
@@ -237,7 +239,14 @@ class AgentChannelPresence:
             if downlink is None:
                 continue
             try:
-                async with self._coordinator.turn_lock:
+                scope_lock = get_scope_turn_lock(
+                    CompanionScope(
+                        user_id=self._scope.user_id,
+                        companion_id=self._scope.agent_id,
+                        chat_id=self._scope.memory_store_chat_id(),
+                    )
+                )
+                async with scope_lock:
                     await downlink.deliver(
                         tool_background_downlink(tool_output=ev)
                     )

@@ -214,7 +214,10 @@ def _output_contract_text_with_tools(
     base = (
         "输出与工具："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        + "（1）用户自愿透露、适合长期保存的基本事实，可调用 update_user_md 写入 USER 档案；"
+        + "（1）用户自愿透露、适合长期保存的基本事实（含闲聊中的小细节），"
+        "应及时调用 update_user_md 写入 USER 档案，避免只记在当轮回复里；"
+        "IDENTITY.md / STYLE.md 中值得长期保留的相处约定，在用户明确表达或反复出现时，"
+        "用 memory_store_read_document 读全文后再 memory_store_write_document 更新；"
         "（1.1）当用户明确提出未来提醒（如「两小时后提醒我」「明早八点叫我」），"
         "必须先调用 schedule_task 写入定时队列；exec_time_utc 需给绝对时间（ISO8601，带时区），"
         "task_text 写提醒内容；禁止只口头答应而不写入定时队列。"
@@ -248,6 +251,8 @@ def _output_contract_text_with_tools(
 
 # TODO(bootstrap-prompt-single-source): Keep in sync with ``bootstrap.py`` until single-source policy lands.
 # CRS #3328 (relationship seed); #3367 (TrackWritePolicy registry).
+# Bootstrap completion timing stays LLM-driven (``companion_bootstrap_user_interactive_complete``);
+# no harness max-turn auto-complete — see ``bootstrap.py`` module docstring.
 
 
 def _output_contract_text_interactive_bootstrap_tools() -> str:
@@ -256,9 +261,11 @@ def _output_contract_text_interactive_bootstrap_tools() -> str:
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
         + "（0）本阶段用 **memory_store_write_document** 把 **COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
         "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
+        "即使用户配合度低，也基于已有对话写 best-effort 初稿，不可留空模板。"
         "用户选定内置陪伴模式时调用 **companion_set_experience_profile**（须附 note）。"
-        "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须**调用 "
-        "**companion_bootstrap_user_interactive_complete**（可选短 note）；未调用该工具前不要声称阶段已结束。"
+        "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须先完成上述三份初稿写入**，再**必须**调用 "
+        "**companion_bootstrap_user_interactive_complete**（可选短 note）；禁止跳过写入直接 complete；"
+        "未调用该工具前不要声称阶段已结束。"
         "调用完成后进入日常相处；后续轮次可用 **memory_store_write_document** 按需更新允许列表内的持久化约定稿。"
         "（TOOLS 操作说明与 significance 评分引导为包内固定模版，不由工具写入。）"
         "（1）须核对持久化档案时先用 **memory_store_read_document** 读正文；勿编造。"

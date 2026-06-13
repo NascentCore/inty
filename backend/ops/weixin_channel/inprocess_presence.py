@@ -22,6 +22,10 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
+from app.core.companion_harness.companion.scope_turn_lock import (
+    companion_scope_from_foreground_ctx,
+    get_scope_turn_lock,
+)
 from app.services import agent_service, chat_service, companion_chat_service
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.downlink import tool_background_downlink
@@ -197,9 +201,10 @@ class WeixinInprocessPresence:
                 {
                     "session_id": session_id,
                     "agent_id": agent_id,
+                    "user_id": user_id,
+                    "chat_id": chat_id,
                     "request": stub_request,
                     "effective_local_id": None,
-                    "user_id": user_id,
                 },
             )
             implicit_bundle = ImplicitSignalBundle(
@@ -207,19 +212,18 @@ class WeixinInprocessPresence:
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
             )
-            async with self._coordinator.turn_lock:
-                turn = await companion_chat_service.run_user_chat(
-                    user_id=user_id,
-                    agent_id=agent_id,
-                    chat_id=chat_id,
-                    user_text=stripped,
-                    resolved_chat_model=model_override,
-                    session_id=session_id,
-                    background_output_sink=self._coordinator.background_sink,
-                    preset_user_msg_uuid=preset_uid,
-                    implicit_signal_bundle=implicit_bundle,
-                    runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
-                )
+            turn = await companion_chat_service.run_user_chat(
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_id=chat_id,
+                user_text=stripped,
+                resolved_chat_model=model_override,
+                session_id=session_id,
+                background_output_sink=self._coordinator.background_sink,
+                preset_user_msg_uuid=preset_uid,
+                implicit_signal_bundle=implicit_bundle,
+                runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+            )
             if not turn.tool_background_started:
                 self._coordinator.remove_foreground_pending(preset_uid)
             reply = turn.assistant_text.strip()
@@ -253,8 +257,16 @@ class WeixinInprocessPresence:
                 )
                 continue
             self._coordinator.set_foreground_pending(ev.user_msg_uuid, ctx)
+            scope = companion_scope_from_foreground_ctx(ctx)
+            if scope is None:
+                logger.warning(
+                    "weixin tool_bg missing scope coords user_msg_uuid={}",
+                    ev.user_msg_uuid,
+                )
+                continue
+            scope_lock = get_scope_turn_lock(scope)
             try:
-                async with self._coordinator.turn_lock:
+                async with scope_lock:
                     await self._downlink.deliver(
                         tool_background_downlink(tool_output=ev)
                     )

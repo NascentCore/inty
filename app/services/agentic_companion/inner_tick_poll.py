@@ -1,9 +1,9 @@
 """Shared inner-tick poll: proactive, scheduled, autonomy, maintenance, dreaming (WS or Weixin delivery).
 
 Requires signed-on presence coordinates on ``coordinator`` — poll runs on the same ``Coordinator``
-as user chat, so **one ``turn_lock`` per wire** serializes inner-tick activities when each
-``try_fire_*`` runs (they do not overlap in time on that connection). Prototype assumes
-one wire per paired user; multiple tabs are out of scope (``companion_harness`` AGENTS.md).
+as user chat. Scope ``CompanionSession.turn_lock`` (#3272) serializes inner-tick ``try_fire_*``
+with user turns on ``(user_id, agent_id, chat_id)``. Prototype assumes one wire per paired
+user; multiple tabs are out of scope (``companion_harness`` AGENTS.md).
 
 Each poll wake tries at most one activity, in priority order:
 proactive → scheduled → autonomy → maintenance → dreaming.

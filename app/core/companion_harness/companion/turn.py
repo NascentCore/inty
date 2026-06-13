@@ -63,8 +63,10 @@ from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
     SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
-    invocation_extra,
+    SOURCE_IMPLICIT_SIGN_ON_GREETING,
+    SOURCE_SINGLE_COMPLETION,
 )
+from .langsmith_turn_slice import CompanionTurnLangsmithSlice
 
 from .llm_client import (
     LLM_SCENE_CHAT,
@@ -258,6 +260,7 @@ async def _run_bootstrap_track_sync_tool_loop(
     user_msg_uuid: str,
     transcript_rel: str,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
 ) -> tuple[str, str, str, bool, str | None]:
     """In-turn chat + tools for ``USER_CHAT_BOOTSTRAP`` (no dual-LLM / tool_background).
 
@@ -289,7 +292,10 @@ async def _run_bootstrap_track_sync_tool_loop(
             model=chat_model,
             tools=tools,
             scene=LLM_SCENE_CHAT,
-            langsmith_extra=invocation_extra(source=SOURCE_BOOTSTRAP_TRACK),
+            langsmith_extra=langsmith_slice.foreground_invocation_extra(
+                source=SOURCE_BOOTSTRAP_TRACK,
+                extra_metadata=None,
+            ),
         )
 
     t_api = time.perf_counter()
@@ -599,6 +605,10 @@ async def _run_companion_turn_core(
             )
         )
 
+        langsmith_slice = CompanionTurnLangsmithSlice.from_runtime_context(
+            runtime_context
+        )
+
         langsmith_parent_run = create_companion_turn_root_run(
             inty_trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
@@ -616,6 +626,7 @@ async def _run_companion_turn_core(
             transcript_newest_message_uuid=(
                 transcript_tail_message_uuid(store) if inner_tick_turn else None
             ),
+            langsmith_slice=langsmith_slice,
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(
             langsmith_parent_run
@@ -670,6 +681,7 @@ async def _run_companion_turn_core(
                         bootstrap_interim_output_sink=(
                             bootstrap_interim_output_sink
                         ),
+                        langsmith_slice=langsmith_slice,
                     )
                     logger.info(
                         "run_turn loop_done bootstrap_track loop_total_ms={:.0f}",
@@ -741,8 +753,9 @@ async def _run_companion_turn_core(
                                     tools=None,
                                     response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
                                     scene=foreground_scene,
-                                    langsmith_extra=invocation_extra(
+                                    langsmith_extra=langsmith_slice.foreground_invocation_extra(
                                         source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
+                                        extra_metadata=None,
                                     ),
                                     high_reasoning=tick_proactive,
                                 )
@@ -888,7 +901,10 @@ async def _run_companion_turn_core(
                             tool_choice=None,
                             response_format=response_format,
                             scene=llm_scene,
-                            langsmith_extra=None,
+                            langsmith_extra=langsmith_slice.foreground_invocation_extra(
+                                source=SOURCE_IMPLICIT_SIGN_ON_GREETING,
+                                extra_metadata=None,
+                            ),
                             high_reasoning=tick_proactive,
                             max_attempts=greet_max_attempts,
                             per_attempt_timeout_sec=greet_timeout_sec,
@@ -902,6 +918,10 @@ async def _run_companion_turn_core(
                             tools=None,
                             response_format=response_format,
                             scene=llm_scene,
+                            langsmith_extra=langsmith_slice.foreground_invocation_extra(
+                                source=SOURCE_SINGLE_COMPLETION,
+                                extra_metadata=None,
+                            ),
                             high_reasoning=tick_proactive,
                         )
                     langsmith_trace_acc = (

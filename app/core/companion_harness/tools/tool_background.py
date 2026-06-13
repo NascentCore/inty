@@ -37,7 +37,6 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     INTY_TOOL_BG_ROUND_METADATA_KEY,
     SOURCE_TOOL_BACKGROUND_CONTINUE,
     SOURCE_TOOL_BACKGROUND_INITIAL,
-    tool_call_langsmith_extra,
     tool_choice_attempt_metadata,
 )
 from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
@@ -65,6 +64,9 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.companion.prompt_stack import (
     refresh_companion_turn_prompt_stack,
+)
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
@@ -407,6 +409,7 @@ def _initial_tool_bg_completion_with_fallbacks(
     messages_payload: list[dict[str, Any]],
     tools: list[Any],
     force_tools: bool,
+    langsmith_slice: CompanionTurnLangsmithSlice,
 ) -> tuple[Any, _InitialToolBgCompletionMeta]:
     """
     First tool_background completion (no response_format; tools may use tool_choice fallbacks).
@@ -428,7 +431,7 @@ def _initial_tool_bg_completion_with_fallbacks(
                 tools=tools,
                 tool_choice=tc,
                 response_format=None,
-                langsmith_extra=tool_call_langsmith_extra(
+                langsmith_extra=langsmith_slice.tool_call_extra(
                     phase_suffix=SOURCE_TOOL_BACKGROUND_INITIAL,
                     extra_metadata=tool_choice_attempt_metadata(tc),
                 ),
@@ -579,6 +582,9 @@ async def _run_background_tool_loop(
         inner_tick_activity=inner_tick_activity,
     )
     tool_api_id = tool_model.id_on_provider
+    langsmith_slice = CompanionTurnLangsmithSlice.from_runtime_context(
+        runtime_context
+    )
     try:
         if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
@@ -606,6 +612,7 @@ async def _run_background_tool_loop(
             messages_payload=payload,
             tools=tools,
             force_tools=force_tools,
+            langsmith_slice=langsmith_slice,
         )
 
         if is_tool_background_aborted(user_msg_uuid):
@@ -708,7 +715,7 @@ async def _run_background_tool_loop(
                 model=tool_api_id,
                 messages_payload=inner_payload,
                 tools=tools,
-                langsmith_extra=tool_call_langsmith_extra(
+                langsmith_extra=langsmith_slice.tool_call_extra(
                     phase_suffix=SOURCE_TOOL_BACKGROUND_CONTINUE,
                     extra_metadata={
                         INTY_TOOL_BG_ROUND_METADATA_KEY: active_round,
@@ -803,6 +810,7 @@ async def _run_background_tool_loop(
             conversation_messages=list(loop_result.messages),
             final_assistant_content=raw_final,
             trace_id=trace_id,
+            langsmith_slice=langsmith_slice,
         )
         output_to_user_flag = routing.output_to_user
         should_push = tool_background_should_deliver_to_user(

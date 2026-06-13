@@ -19,13 +19,15 @@ from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     parse_dual_llm_chat_envelope_from_message,
     parse_dual_llm_chat_envelope_json,
 )
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
+)
 from app.core.companion_harness.companion.models import (
     InnerTickActivity,
     inner_tick_activity_suppresses_user_delivery,
 )
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
-    tool_call_langsmith_extra,
 )
 
 _UNIFIED_FALLBACK_SYSTEM_PROMPT = (
@@ -65,6 +67,7 @@ def resolve_tool_background_finish_envelope(
     conversation_messages: list[dict[str, Any]],
     final_assistant_content: str,
     trace_id: str | None = None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
 ) -> DualLlmChatBranchEnvelope:
     """Resolve tool_background finish envelope.
 
@@ -89,6 +92,7 @@ def resolve_tool_background_finish_envelope(
         conversation_messages=conversation_messages,
         final_assistant_content=final_assistant_content,
         trace_id=trace_id,
+        langsmith_slice=langsmith_slice,
     )
 
 
@@ -100,6 +104,7 @@ def resolve_tool_bg_routing_sync(
     conversation_messages: list[dict[str, Any]],
     final_assistant_content: str,
     trace_id: str | None = None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
 ) -> DualLlmChatBranchEnvelope:
     """
     Prefer unified envelope JSON from the model's final assistant message; if missing/invalid,
@@ -137,8 +142,9 @@ def resolve_tool_bg_routing_sync(
         messages_payload=payload,
         tools=[],
         response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
-        langsmith_extra=tool_call_langsmith_extra(
+        langsmith_extra=langsmith_slice.tool_call_extra(
             phase_suffix=SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
+            extra_metadata=None,
         ),
     )
     fallback = parse_dual_llm_chat_envelope_from_message(

@@ -220,6 +220,7 @@ _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
 )
 
 
+# TODO(person-identity-schema): Seed runtime USER.md + IDENTITY.md from generic templates/IDENTITY.md + role wrappers. #3390
 def ensure_template_seeded_core_documents_in_store(store: MemoryStore) -> None:
     """
     Persist package templates for IDENTITY / SOUL / STYLE / USER / MEMORY when the store has no usable

@@ -1,7 +1,7 @@
 """In-process agentic companion: coordinator state + session lifecycle across channels.
 
-``Coordinator`` holds turn serialization, tool-background queues,
-inner-tick coordinates, and overlap guards (channel-agnostic). ``Session``
+``Coordinator`` holds tool-background queues, inner-tick coordinates, and overlap guards
+(channel-agnostic). ``Session``
 binds a :class:`~app.services.agentic_companion.downlink.ChannelDownlink` and
 runs the inner-tick poll worker skeleton; transport adapters materialize
 :class:`~app.services.agentic_companion.downlink.Downlink` events.
@@ -16,14 +16,13 @@ Concurrency vocabulary (human terms — three layers, not interchangeable):
   and one ``MemoryStore`` per scope in-process.
 - **Presence** — one live wire to the user (a WebSocket accept or Weixin in-process session).
   Prototype (**``companion_harness`` AGENTS.md**): **one presence per paired user** — not
-  multiple tabs / multiple wires. Each presence has one ``Coordinator`` and one ``turn_lock``.
-- **``turn_lock`` (presence level)** — "on this phone line, handle one turn at a time": user
-  message, greeting, inner-tick fire (including dreaming), tool-background downlink. Prototype
-  does not model a second tab on the same scope; no extra scope mutex for cross-tab races.
+  multiple tabs / multiple wires. Each presence has one ``Coordinator``.
+- **``turn_lock`` (scope level)** — on ``CompanionSession.turn_lock`` (#3272): serializes user
+  message, greeting, inner-tick fire (including dreaming), and tool-background downlink per
+  ``(user_id, agent_id, chat_id)``.
 
 Post-prototype: enforce single-presence on ``accept()`` (#3272 —
-https://github.com/NascentCore/inty/issues/3272) and hoist ``turn_lock`` to
-``CompanionSession`` — ``chat_ws`` TODO(companion-ws-single-presence). Scope-level inner-tick
+https://github.com/NascentCore/inty/issues/3272). Scope-level inner-tick
 worker (dreaming + maintenance/autonomy without signed-on user): #3255 /
 TODO(scope-inner-tick-worker) in ``inner_tick_poll``. Presence poll keeps delivery tracks only
 (proactive, scheduled).
@@ -39,6 +38,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.companion.scope_turn_lock import get_scope_turn_lock
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
     BootstrapInterimOutputSink,
@@ -127,10 +128,6 @@ class Coordinator:
     """Channel-agnostic companion invariants for one signed-on (user, agent, chat) presence."""
 
     loop: asyncio.AbstractEventLoop
-    # Presence-level turn serializer (one asyncio.Lock per WS / Weixin connection).
-    # Holds while one turn runs on *this wire*; does not serialize another tab on the same scope.
-    # TODO(tool-bg-idle-starves-user-chat): See websocket_coordinator / issues #3113 #3123.
-    turn_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     background_events: asyncio.Queue[ToolOutputEvent] = field(
         default_factory=asyncio.Queue
     )
@@ -315,7 +312,7 @@ class Coordinator:
         task.add_done_callback(_on_done)
 
     async def cancel_implicit_greeting_turn_if_running(self) -> bool:
-        """Cancel in-flight implicit greeting so user chat can take ``turn_lock``."""
+        """Cancel in-flight implicit greeting so user chat can take scope ``turn_lock``."""
         task = self._implicit_greeting_turn_task
         if task is None or task.done():
             return False
@@ -422,17 +419,24 @@ class Session:
                 if self._inner_tick_stop.is_set():
                     break
                 inner_tick_snapshot: dict[str, Any] | None = None
-                async with self.coordinator.turn_lock:
-                    if self._inner_tick_stop.is_set():
-                        break
-                    inner_tick_snapshot = (
-                        self.coordinator.snapshot_inner_tick_coords()
-                    )
-                    if inner_tick_snapshot is not None:
-                        # TODO(#3314): Move opportunistic cleanup out of the poll loop;
-                        # completed background work should prune itself via registry callbacks.
-                        self.coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
-                        self.coordinator.clear_inner_tick_autonomy_tool_bg_idle_if_idle()
+                inner_tick_snapshot = self.coordinator.snapshot_inner_tick_coords()
+                if inner_tick_snapshot is not None:
+                    poll_coords = InnerTickCoords.from_context(inner_tick_snapshot)
+                    if poll_coords is not None:
+                        scope_lock = get_scope_turn_lock(
+                            CompanionScope(
+                                user_id=poll_coords.user_id,
+                                companion_id=poll_coords.agent_id,
+                                chat_id=poll_coords.chat_id,
+                            )
+                        )
+                        async with scope_lock:
+                            if self._inner_tick_stop.is_set():
+                                break
+                            # TODO(#3314): Move opportunistic cleanup out of the poll loop;
+                            # completed background work should prune itself via registry callbacks.
+                            self.coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
+                            self.coordinator.clear_inner_tick_autonomy_tool_bg_idle_if_idle()
                 if (
                     inner_tick_snapshot is None
                     or self._inner_tick_stop.is_set()

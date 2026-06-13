@@ -133,11 +133,33 @@ def _system_blocks(run: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def _runtime_channel_summary(run: dict[str, Any]) -> str | None:
+    extra = run.get("extra")
+    if isinstance(extra, dict):
+        meta = extra.get("metadata")
+        if isinstance(meta, dict):
+            channel = meta.get("inty_runtime_channel")
+            if channel:
+                source = meta.get("inty_runtime_channel_source")
+                if source:
+                    return f"inty_runtime_channel={channel!r} source={source!r}"
+                return f"inty_runtime_channel={channel!r}"
+    inputs = run.get("inputs")
+    if isinstance(inputs, dict):
+        channel = inputs.get("runtime_channel")
+        if channel:
+            return f"runtime_channel(input)={channel!r}"
+    return None
+
+
 def _inspect_run(run: dict[str, Any], *, show_body: bool) -> int:
     name = str(run.get("name") or "")
     rid = str(run.get("id") or "")
     blocks = _system_blocks(run)
     print(f"run name={name!r} id={rid}")
+    channel_line = _runtime_channel_summary(run)
+    if channel_line:
+        print(channel_line)
     print(f"system_message_count={len(blocks)}")
     hashes: dict[str, list[int]] = {}
     for i, m in enumerate(blocks):
