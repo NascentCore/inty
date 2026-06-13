@@ -1,7 +1,7 @@
 """Maintenance inner-tick copy for LivingSphere / TechnoCore autonomous beats.
 
 TODO(narrow-maintenance): Remove from MAINTENANCE prompt; drop ``techno_core_record_event`` from
-``INNER_TICK_TOOL_NAMES``. LS/TC agentic beats → AUTONOMY; ``LIVING_SPHERE.md`` compact → DREAMING (#3290).
+``INNER_TICK_TOOL_NAMES``. LS/TC agentic beats → AUTONOMY; ``LIVING_SPHERE.md`` compact → DREAMING (#3375).
 
 Human partners read ``system_messages``; this module holds the LS/TC paragraphs as
 data plus a stdlib ``string.Template`` pass so the companion tool name and the

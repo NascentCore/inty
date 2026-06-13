@@ -121,7 +121,7 @@ _USER_PROFILE_SECTION = "## 身份信息"
 
 
 # TODO(narrow-maintenance): ``ai_private.jsonl`` append tool for MAINTENANCE inner-tick; drop
-# UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (MemoryDoc → DREAMING #3290).
+# UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (MemoryDoc → DREAMING #3375).
 
 
 def _latest_generated_image_http_url_from_index(
@@ -550,7 +550,7 @@ def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     """
     MAINTENANCE 内在节拍：USER 档案、TechnoCore 事件、MemoryStore 读写；不含定时、联网、生图/改图。
 
-    TODO(narrow-maintenance): 收成 ``ai_private.jsonl`` append-only；见 ``INNER_TICK_TOOL_NAMES`` (#3290)。
+    TODO(narrow-maintenance): 收成 ``ai_private.jsonl`` append-only；见 ``INNER_TICK_TOOL_NAMES`` (#3375)。
     自主活动（``LIFE_CURRENTS``、开放 tools）在 ``build_openai_repl_tools_inner_tick_autonomy``。
     """
     return prepare_openai_tools_for_chat_completions(

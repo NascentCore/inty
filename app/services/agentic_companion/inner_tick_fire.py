@@ -13,7 +13,7 @@ dreaming batches — https://github.com/NascentCore/inty/issues/3271
 
 TODO(inner-tick-fire-delivery-dedup): Extract shared WS / chat_history response assembly
 for proactive, scheduled, and maintenance delivery tracks; turn meta lives in
-``ws_turn_support`` (#3255).
+``ws_turn_support`` (#3377).
 
 Prototype: inner-tick fire paths do not call ``subscription_service`` (no
 ``check_chat_limit`` / ``record_usage``). User chat billing stays in ``chat_ws.py``.
@@ -210,8 +210,8 @@ async def _inner_tick_turn_scope(
         yield
 
 
-# TODO(inner-tick-fire-dedup): Collapse the four ``try_fire_*`` bodies after delivery-track
-# split (#3255); shared pre-check lives in ``_resolve_inner_tick_scope_coords`` today.
+# TODO(inner-tick-fire-dedup): Collapse delivery ``try_fire_*`` bodies after scope/presence
+# split (#3255) and shared assembly (#3377); pre-check in ``_resolve_inner_tick_scope_coords``.
 async def try_fire_scheduled_inner_tick(
     fire_input: InnerTickFireInput,
 ) -> bool:

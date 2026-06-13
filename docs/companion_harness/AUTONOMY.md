@@ -137,12 +137,12 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 
 | TODO | 范围 | 目标 |
 |------|------|------|
-| `dreaming-day-rollup` | DREAMING batch | 合并 `transcript_inner_tick.jsonl`、`ai_private.jsonl`、`LIFE_CURRENTS.md` 等与主 transcript 进入 `consolidate_memory_during_dreaming`（今日仅 `transcript.jsonl` 切片）；#3343 curator，#3366 长周期 reflection |
-| `narrow-maintenance` | MAINTENANCE track | `INNER_TICK_TOOL_NAMES` → `ai_private.jsonl` append（+ 专用 append 工具或扩白名单）；删 `update_user_md` / `techno_core` / `memory_store_*`；prompt 删档案一致、LS/TC 段落 — #3290，CRS #3341 |
+| `dreaming-day-rollup` | DREAMING batch | 合并 `transcript_inner_tick.jsonl`、`ai_private.jsonl`、`LIFE_CURRENTS.md` 等与主 transcript 进入 `consolidate_memory_during_dreaming`（今日仅 `transcript.jsonl` 切片）；[#3376](https://github.com/NascentCore/inty/issues/3376)，#3343 curator，#3366 长周期 reflection |
+| `narrow-maintenance` | MAINTENANCE track | `INNER_TICK_TOOL_NAMES` → `ai_private.jsonl` append（+ 专用 append 工具或扩白名单）；删 `update_user_md` / `techno_core` / `memory_store_*`；prompt 删档案一致、LS/TC 段落 — [#3375](https://github.com/NascentCore/inty/issues/3375)（PR #3290 follow-up），CRS #3341 |
 | `cross-track-image-delivery` (#3285) | AUTONOMY → proactive/user-chat | AUTONOMY 静默生图与对外交付路径 |
 | `rename-memory-doc` | transcript 持久化 | `transcript_inner_tick` 拆 maintenance vs autonomy 路径 |
 | `inner-tick-poll-multi-track` (#3273) | poll | 单次 wake 尝试所有 due track，不单 fire 一个 |
-| `scope-inner-tick-worker` (#3255) | 调度 | dreaming / maintenance / autonomy 迁出 presence poll |
+| `scope-inner-tick-worker` (#3255) | 调度 | dreaming / maintenance / autonomy 迁出 presence poll；Epic [#3373](https://github.com/NascentCore/inty/issues/3373) |
 
 `companion/AGENTS.md` 中 `TODO(narrow-maintenance)` 建议 human 改为：「Shrink MAINTENANCE to ai_private / transcript reorg; MemoryDoc sync → DREAMING」（勿写「memory-reorg」以免与 dreaming 混淆）。
 

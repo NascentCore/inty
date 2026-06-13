@@ -188,7 +188,7 @@ def dreaming_candidate_slice(
     Without checkpoint: at most the last 24h on the main transcript.
     """
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    # TODO(dreaming-day-rollup): load and merge paths.transcript_inner_tick here (#3343).
+    # TODO(dreaming-day-rollup): load and merge paths.transcript_inner_tick here (#3376).
     raw_rows = transcript_without_trailing_presence_signals(
         load_transcript_from_store(store, paths.transcript)
     )
