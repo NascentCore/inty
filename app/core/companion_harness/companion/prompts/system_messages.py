@@ -47,6 +47,7 @@ from app.core.companion_harness.memory.memory_store_document_mapping import (
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
     CompanionToolName,
+    UPDATE_USER_MD,
 )
 from app.utils.config import CompanionMemoryBootstrapType
 
@@ -287,13 +288,14 @@ def _proactive_chat_clause() -> str:
     )
 
 
-def _infer_time_zone_prompt_slice(*, user_profile_tool_name: str) -> str:
+def _infer_time_zone_prompt_slice() -> str:
     """Guide eager timezone inference for surfaces without automatic device timezone."""
+    tool_name = UPDATE_USER_MD.name.value
     return (
         "用户当地时间与作息\n"
         "部分通道（如 Telegram、微信等 IM）不会自动上报设备时区。"
         "尽早从措辞、作息与地点线索推断用户当地情境；把握足够时，"
-        f"用 {user_profile_tool_name} 持久化（标签「时区」，值写 IANA，如 Asia/Shanghai）。"
+        f"用 {tool_name} 持久化（标签「时区」，值写 IANA，如 Asia/Shanghai）。"
         "融入自然闲聊，勿要求用户发送时区命令。"
     )
 
@@ -727,13 +729,7 @@ def _contextual_system_messages(
     if repl_online_ack_turn:
         out.append(_system_message(_repl_online_ack_clause()))
     if not inner_tick_turn:
-        out.append(
-            _system_message(
-                _infer_time_zone_prompt_slice(
-                    user_profile_tool_name=CompanionToolName.UPDATE_USER_MD.value,
-                )
-            )
-        )
+        out.append(_system_message(_infer_time_zone_prompt_slice()))
     if tick_proactive:
         out.append(_system_message(_proactive_chat_clause()))
         if proactive_life_currents_block is not None:
