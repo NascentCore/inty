@@ -287,19 +287,23 @@ class CompanionLLMClient:
         messages: list[dict[str, Any]],
         *,
         model_role: str = "memory",
+        langsmith_extra: dict[str, Any] | None = None,
     ) -> str:
         m = self.resolve_model(model_role)
         api_model = m.id_on_provider
         approx_chars = sum(len(str(x.get("content") or "")) for x in messages)
         t_api = time.perf_counter()
+        resolved_extra = (
+            langsmith_extra
+            if langsmith_extra is not None
+            else dreaming_consolidation_langsmith_extra(model_role=model_role)
+        )
         resp = self.chat_completions_sync(
             self._client,
             model=api_model,
             messages_payload=messages,
             tools=[],
-            langsmith_extra=dreaming_consolidation_langsmith_extra(
-                model_role=model_role
-            ),
+            langsmith_extra=resolved_extra,
         )
         api_ms = (time.perf_counter() - t_api) * 1000.0
         logger.info(

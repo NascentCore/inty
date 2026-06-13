@@ -1,4 +1,4 @@
-"""Companion WebSocket turn metadata and harness turn → wire mapping (#3255)."""
+"""Companion WebSocket turn metadata and harness turn → wire mapping (#3377)."""
 
 from __future__ import annotations
 

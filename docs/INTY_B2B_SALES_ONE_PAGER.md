@@ -116,4 +116,4 @@ Postgres (companion_memory_document_versions) + living_sphere + techno_core
 
 ---
 
-**联系与材料**：架构详解见仓库 `docs/companion_harness/ARCH.md`、`PRODUCT_DESIGN.md`、`MEMORY_STORE.md`；本页仅作对外销售摘要。
+**联系与材料**：架构详解见仓库 `docs/companion_harness/DESIGN.md`、`MEMORY_STORE.md`；本页仅作对外销售摘要。

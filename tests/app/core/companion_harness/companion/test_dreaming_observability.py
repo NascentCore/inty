@@ -68,12 +68,21 @@ def test_build_inner_tick_dreaming_runtime_event_record_fields() -> None:
     "app.core.companion_harness.companion.llm_chat_runtime.create_companion_turn_root_run",
     return_value=None,
 )
+@patch(
+    "app.core.companion_harness.companion.dreaming_observability.resolve_langsmith_slice_for_session",
+)
 def test_dreaming_batch_langsmith_scope_yields_none_when_parent_disabled(
+    mock_resolve: MagicMock,
     _create: MagicMock,
 ) -> None:
     from app.core.companion_harness.companion.dreaming_observability import (
         dreaming_batch_langsmith_scope,
     )
+    from app.core.companion_harness.companion.langsmith_turn_slice import (
+        CompanionTurnLangsmithSlice,
+    )
+
+    mock_resolve.return_value = CompanionTurnLangsmithSlice.app_default()
 
     session = MagicMock()
     session.user_id = "u"
@@ -87,5 +96,67 @@ def test_dreaming_batch_langsmith_scope_yields_none_when_parent_disabled(
         inty_trace_id="t",
         candidate=_candidate(),
         parent_run_enabled=False,
-    ) as root:
+    ) as (root, _slice):
         assert root is None
+
+
+@patch(
+    "app.core.companion_harness.companion.llm_chat_runtime.create_companion_turn_root_run",
+)
+def test_dreaming_batch_langsmith_scope_resolves_scope_registry_channel(
+    mock_create: MagicMock,
+) -> None:
+    from app.core.companion_harness.agent_channel.scope import AgentScope
+    from app.core.companion_harness.companion.dreaming_observability import (
+        dreaming_batch_langsmith_scope,
+    )
+    from app.core.companion_harness.companion.langsmith_turn_slice import (
+        LangsmithChannelSource,
+    )
+    from app.core.companion_harness.companion.runtime_channel import (
+        CompanionRuntimeChannel,
+    )
+    from app.services.agentic_channel.channel_runtime import (
+        ChannelRuntimeState,
+        clear_registries_for_tests,
+        get_scope_channel_registry,
+    )
+
+    clear_registries_for_tests()
+    scope = AgentScope(user_id="u-scope", agent_id="a-scope")
+    registry = get_scope_channel_registry(scope)
+    registry.states[CompanionRuntimeChannel.TELEGRAM] = ChannelRuntimeState.ACTIVE
+
+    mock_root = MagicMock()
+    mock_create.return_value = mock_root
+
+    session = MagicMock()
+    session.user_id = scope.user_id
+    session.companion_id = scope.agent_id
+    session.chat_id = scope.memory_store_chat_id()
+    session.llm_client.resolve_model.return_value = MagicMock(
+        id_on_provider="m/chat"
+    )
+
+    with dreaming_batch_langsmith_scope(
+        session=session,
+        inty_trace_id="trace-scope",
+        candidate=_candidate(),
+        parent_run_enabled=True,
+    ) as (root, slice_):
+        assert root is mock_root
+        assert slice_.runtime_channel == CompanionRuntimeChannel.TELEGRAM
+        assert slice_.channel_source == LangsmithChannelSource.SCOPE_REGISTRY
+
+    mock_create.assert_called_once()
+    create_slice = mock_create.call_args.kwargs["langsmith_slice"]
+    assert create_slice.runtime_channel == CompanionRuntimeChannel.TELEGRAM
+    assert create_slice.channel_source == LangsmithChannelSource.SCOPE_REGISTRY
+    consolidation_extra = slice_.dreaming_consolidation_extra(model_role="memory")
+    assert (
+        consolidation_extra["metadata"]["inty_runtime_channel"] == "telegram"
+    )
+    assert (
+        consolidation_extra["metadata"]["inty_runtime_channel_source"]
+        == "scope_registry"
+    )

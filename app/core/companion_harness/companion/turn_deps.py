@@ -35,6 +35,9 @@ from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 class CompanionTurnDeps:
     """Immutable dependencies for one ``run_turn`` execution.
 
+    TODO(companion-langsmith-slice): hoist ``langsmith_slice`` here when more modules
+    need turn-bound channel observability without param drilling.
+
     Unpacked once at the top of ``_run_companion_turn_core``; inner helpers continue
     to receive primitive fields to keep the core diff small.
 
@@ -84,6 +87,7 @@ class CompanionTurnDeps:
         ``ImplicitSignalBundle`` (sign-on greeting, proactive triggers). Drives
         output-format system slices, implicit sign-on user text substitution, and
         is forwarded into ``tool_background`` for channel-aware tool behavior.
+        TODO(companion-channel-tools): channel tool executors read this + agent scope — #3362
 
     background_output_sink
         Optional synchronous callback invoked for each ``ToolOutputEvent`` while

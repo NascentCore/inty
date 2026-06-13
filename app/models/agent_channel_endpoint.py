@@ -8,7 +8,11 @@ from app.models.base import Base
 
 
 class AgentChannelEndpoint(Base):
-    """One bonded channel endpoint for an ``(user_id, agent_id)`` scope."""
+    """One bonded channel endpoint for an ``(user_id, agent_id)`` scope.
+
+    TODO(telegram-dedicated-bot-bonding): May need per-endpoint bot token / bot_id when
+    moving from shared-bot to 1:1:1 user/bot/agent — #3361
+    """
 
     __tablename__ = "agent_channel_endpoints"
     __table_args__ = (

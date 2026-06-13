@@ -10,7 +10,7 @@ transcript, ``LIFE_CURRENTS.md``, ``ai_private.jsonl``, related tool/jsonl trace
 
 ``TODO(dreaming-day-rollup)``: ``dreaming_candidate_slice`` today gates on
 ``transcript.jsonl`` only; merge inner-tick / ai_private / LIFE_CURRENTS into
-``consolidate_memory_during_dreaming`` input.
+``consolidate_memory_during_dreaming`` input (#3343; optional #3366).
 
 If there has never been a previous dream, Inty only looks back over the last
 24 hours so the first dream does not reopen an unbounded history.
@@ -33,8 +33,8 @@ planned (``TODO(user-feature)``).
 
 Concurrency: ``InnerTickActivity.DREAMING`` runs on the inner-tick poll path under
 presence ``Coordinator.turn_lock`` (same wire as user chat and other inner ticks).
-Prototype assumes **single presence** per scope (``companion_harness`` AGENTS.md) — no
-``CompanionActivityGate`` or cross-tab scope mutex.
+Prototype assumes **single presence** per scope (``companion_harness`` AGENTS.md) — scope
+``CompanionSession.turn_lock`` serializes turns (#3272).
 
 TODO(scope-inner-tick-worker): Dreaming must run for idle scopes without signed-on
 presence (#3255 — https://github.com/NascentCore/inty/issues/3255). It is not a delivery
@@ -183,12 +183,12 @@ def dreaming_candidate_slice(
     (AUTONOMY / MAINTENANCE), ``ai_private.jsonl``, and ``LIFE_CURRENTS.md``
     (plus related tool/jsonl traces) into the candidate slice passed to
     ``consolidate_memory_during_dreaming``; extend ``DreamingCandidate`` /
-    race guard if inner-tick boundaries need separate checkpoints.
+    race guard if inner-tick boundaries need separate checkpoints (#3343; #3366 reflection).
 
     Without checkpoint: at most the last 24h on the main transcript.
     """
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    # TODO(dreaming-day-rollup): load and merge paths.transcript_inner_tick here.
+    # TODO(dreaming-day-rollup): load and merge paths.transcript_inner_tick here (#3376).
     raw_rows = transcript_without_trailing_presence_signals(
         load_transcript_from_store(store, paths.transcript)
     )

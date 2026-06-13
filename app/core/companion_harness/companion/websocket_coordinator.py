@@ -4,10 +4,10 @@
 with WS-only bootstrap deliver context and outbound queue binding. Channel-agnostic
 state lives in ``app.services.agentic_companion.session``.
 
-Each ``chat_completions_websocket`` accept creates one coordinator ⇒ one presence
-``turn_lock``. Prototype: that accept **is** the only wire for the paired user (no multi-tab).
-Dreaming runs on the inner-tick poll under that lock. See ``session.Coordinator`` and
-``companion_harness`` AGENTS.md「Concurrency (prototype)」.
+Each ``chat_completions_websocket`` accept creates one coordinator (one presence wire).
+Prototype: that accept **is** the only wire for the paired user (no multi-tab).
+Turns serialize on scope ``CompanionSession.turn_lock`` (#3272). See
+``session.Coordinator`` and ``companion_harness`` AGENTS.md「Concurrency (prototype)」.
 
 TODO(ws-disconnect-lifecycle): https://github.com/NascentCore/inty/issues/3256 — on shutdown
 or WebSocket session end, do not cancel in-flight turns; persist-first with delivery state,

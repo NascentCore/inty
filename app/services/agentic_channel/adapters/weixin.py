@@ -1,4 +1,8 @@
-"""Weixin channel adapter stub (interface only; production bridge unchanged)."""
+"""Weixin channel adapter stub (interface only; production bridge unchanged).
+
+TODO(companion-channel-tools): No Weixin rename API — channel tools stay guidance-only
+  (see weixin_clawbot_contact_alias_system_message); do not expose failing meta tools — #3362
+"""
 
 from __future__ import annotations
 

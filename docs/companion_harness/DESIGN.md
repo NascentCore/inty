@@ -1,14 +1,58 @@
 # Companion Harness: 架构说明
 
-Companion Harness 是陪伴智能体的工作框架：以会话上下文、长期记忆、模型回合、工具副作用和多媒介传输为五个独立层次组织 companion 主链路，并把 WebSocket / Weixin 等实现视为传输适配器。Companion Harness 加上 LLMs 形成可运行的陪伴智能体。
+## 概要（Executive Summary）
 
-**实现状态（2026-06）**：`companion_harness` 在代码中自标为 **PROTOTYPE**（见 `app/core/companion_harness/AGENTS.md`），聚焦文本聊天与单 presence；下文「当前路径」指已接入 `/api/v1/chat/ws` 与 Ops Weixin 的真实调用链，「目标态 / 差距」见文末对照表。
+Companion Harness 一套完整的智能体框架，由 LLM 驱动：1 人 1 Inty，长期关系，体感上要像”活人“，而不是用完即弃的任务 Bot；是 Inty 理念和愿景的核心载体。
+
+### 我们在造什么
+
+大模型会说话，但不会**记得你、惦记你、在你沉默时仍过自己的日子（分享给你）**。
+Harness 干的就是这件事：把 LLM 放进一套有节律、有记忆、有副作用的状态机里，让「聊天」变成「关系」。
+
+### 理想态下，她怎么「活着」
+
+Harness 要的是：**一段会延续的关系**——你不在时她也在虚拟空间生活，回来时还能接上，换 App 或微信还是同一个人。
+我们认为 AI 突破现有局限成为长期伴侣的关键是：长期自主性，也就是产生用户预期以外的反馈；但这些行为和反馈始终以用户伴侣的视角呈现。
+
+自主性体现在：
+
+1. **沉默期不是 frozen。**
+   你忙、你睡、你几天不来，她仍有自己的节律：该惦记时会找你；该到期的事会提醒；更关键的是——她会**真的去做**自己世界里的事（查资料、写东西、更新 `LIFE_CURRENTS`），不是只在 proactive 里口头说「我在看书」。活人感的判据是：**状态层有痕迹**——文档变了、工具跑过、生成物落库——而不只是话术。
+
+   心里想着你，和在世界里动手，是两件不同的事：前者是内在节拍，后者是她在虚拟空间里持续推进的主题；两者都会在一天结束时被收进长期记忆，但 awake 时各走各的轨道。
+
+**渠道换，人不变。**
+App、微信、REPL 只是找到她的方式；人格、记忆、关系活在 Harness 内核里，不在某个客户端安装包里。断线重连仍是这段关系——传输可以换，companion 不能分裂成好几个「她」。
+
+Companion Harness + LLM = Inty（陪伴智能体）；Inty + Memory = Personal Companion
+
+**Exo-runtime**（微信、Telegram 等）是用户与 Inty 互动的媒介。
+
+### 现状
+
+以上是**目标态的理想设计**，不是现状清单。`companion_harness` 目前仍处于 **PROTOTYPE** 状态。
+
+Companion Harness 现状：以会话上下文、长期记忆、模型回合、工具副作用和多媒介传输为五个独立层次组织 companion 主链路，并把 WebSocket / Weixin 等实现视为传输适配器。Companion Harness 加上 LLMs 形成可运行的陪伴智能体。聚焦文本聊天与单 presence；下文「当前路径」指已接入 `/api/v1/chat/ws` 与 Weixin Telegram 接入，「目标态 / 差距」见文末对照表。
 
 ## 重要下一步工作
 
+### Companion Relationship System (CRS)
+
+Epic [#3341](https://github.com/nascentcore/inty/issues/3341) — psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
+
+- [ ] L0 canon: [#3345](https://github.com/nascentcore/inty/issues/3345) glossary (`RELATIONSHIP_STATE.md`), [#3365](https://github.com/nascentcore/inty/issues/3365) SDCM + write lattice
+- [ ] Phase A: [#3342](https://github.com/nascentcore/inty/issues/3342) companionship doc + Turn Brief plumbing (no UX change)
+- [ ] Phase B: [#3343](https://github.com/nascentcore/inty/issues/3343) activate companionship prompt + `turn_recall` + dreaming curator
+- [ ] Bootstrap relationship seed: [#3328](https://github.com/nascentcore/inty/issues/3328)
+- [ ] Track write registry: [#3367](https://github.com/nascentcore/inty/issues/3367) `TrackWritePolicy` × time frame × `CompanionTurnTrack`
+- [ ] Optional long-cycle reflection: [#3366](https://github.com/nascentcore/inty/issues/3366)
+- [ ] Inspect companionship state: [#3346](https://github.com/nascentcore/inty/issues/3346)
+
+Awake express / Dreaming learn split: [PR #3290](https://github.com/NascentCore/inty/pull/3290) (merged); follow-up [#3375](https://github.com/NascentCore/inty/issues/3375) `narrow-maintenance` + [#3376](https://github.com/NascentCore/inty/issues/3376) `dreaming-day-rollup`.
+
 ### 将智能体运行环境收束成可移植可迁移的组件
 
-- [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）
+- [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）— Epic [#3373](https://github.com/NascentCore/inty/issues/3373)，子票 [#3374](https://github.com/NascentCore/inty/issues/3374)
 
 ### 推理编排显式化（参考 [Pie](https://pie-project.org/) 研究）
 
@@ -225,6 +269,12 @@ Weixin 路径不经 `/api/v1/chat/ws`，由 `backend/ops/weixin_channel/` 适配
 
 [1] [Telegram Bots API meta-operations on bots](https://core.telegram.org/bots/api)
 
+**现状（shared-bot）**：Ops telegram-demo 使用单一 `bot_token`；`agent_channel_endpoints` 按 `chat_id` 路由到 `(user_id, agent_id)`。Public promotion 共用同一 `@username`，仅 `start_parameter` 区分 agent。Bot API 的 `setMyName` 等 meta-operation 为 **bot 全局**，无法 per-user 定制可见 bot 名。
+
+**选项 B — dedicated-bot bonding（未决，#3361）**：以 Telegram Bots API 为 triage / onboarding portal；为每位用户 provision **独立 bot**（独立 token + `@username`），形成 **1 user : 1 Telegram bot : 1 Inty agent** 三元绑定。动机：per-bot channel tools（改名、描述、menu）、消除 shared-bot 路由歧义、IM 身份与 agent 一一对应。待决：BotFather / bot-factory 创建流程、N token 存储与 long-poll/webhook 扩展、与 App/Weixin 同 agent 多 channel 策略。
+
+**Channel-specific tools（#3362）**：按 `CompanionRuntimeChannel` 过滤 harness tool schemas；执行经 channel adapter 或 agent row 写入（如 `companion_set_status_line` → `agents.status_line`，App WS 可见）。Telegram meta tools 依赖 #3361；Weixin 无 rename API，仅 system-message 引导。
+
 ## Runtime Loop
 
 ### 目标态（尚未落地为独立 inbound runtime）
@@ -305,7 +355,7 @@ Weixin 路径不经 `/api/v1/chat/ws`，由 `backend/ops/weixin_channel/` 适配
 | 8 | 媒介无关 user turn | `user_text: str`；`CompanionUserTurnInput` 多模态 **TODO**（Phase 1b/1c） | 功能 |
 | 9 | user-scoped / companion-scoped 记忆 | 仅 `user_id+companion_id+chat_id` scope | 目标态 |
 | 10 | 断线 persist-first 投递 | 当前 `cancel_all()` 取消 in-flight（#3256） | 行为 |
-| 11 | autonomous / 可暂停 runtime | 无离线持续运行；inner-tick 依赖 presence 连接 | 目标态 |
+| 11 | autonomous / 可暂停 runtime | 无离线持续运行；inner-tick 依赖 presence 连接 | Epic [#3373](https://github.com/NascentCore/inty/issues/3373) |
 | 12 | sub-task / sub-agent fan-out | 未实现 | 目标态 |
 | 13 | 结构化 metrics（latency / drop） | 未统一导出 | 可观测性 |
 | 14 | Maintenance inner-tick 语义 | 仍含 MemoryDoc 整理职责；计划收窄为 Autonomy + dreaming 分工 | 演进中 |
@@ -327,11 +377,24 @@ Weixin 路径不经 `/api/v1/chat/ws`，由 `backend/ops/weixin_channel/` 适配
 - **远期**（自托管时）：prefix KV 复用、引擎内 tool loop（免每轮 re-prefill）。
 - **非目标**：Pie server、Wasm inferlet、ToT/MCTS、KV rewind。
 
-## See also
+## Exo-runtime design
 
-- [Pie](https://pie-project.org/) · [arXiv:2510.24051](https://arxiv.org/html/2510.24051v1) — 可编程 LLM serving 参考
-- [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — 其他灵感条目
-- [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — 多 agent 虚拟世界、共享 AgentHarness、sub-agent（firefly）目标态与两期交付
-- [REFACTORING_PLAN.md](./REFACTORING_PLAN.md) — 包拆分与 `runtime/` / `environment/` 目标结构
-- [AUTONOMY.md](./AUTONOMY.md) · [PRODUCT_DESIGN.md](./PRODUCT_DESIGN.md)
-- [GLOSSARY.md](./GLOSSARY.md) · [MEMORY_STORE.md](./MEMORY_STORE.md)
+Constructs between end users and the core-agentic-harness runtime:
+
+- Interaction container: Weixin, Telegram
+
+这个设计的具体内容，可以称为用于情感陪伴的智能体 Harness，就是围绕 LLM 周围快、慢周期，外部刺激，人格模型，等等；
+组合在一起，能在体感上模拟一个“虚拟的活人”。
+
+## 高层设计
+
+只关注智能体 Harness 的设计，目标：
+
+1. 人类式记忆：从聊天中持续提取并更新用户偏好、用户画像、关系边界、事件、LivingSphere、TechnoCore。
+2. 长期连续性的关系演化：基于记忆自动生成后续关系、情感建立与演化。
+
+非目标（本阶段）：
+
+- 后端扩展（多用户、多实例）
+
+目标态扩展（多 agent 世界引擎、sub-agent）见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)。

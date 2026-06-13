@@ -230,7 +230,10 @@ def _output_contract_text_with_tools(
     base = (
         "输出与工具："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        + "（1）用户自愿透露、适合长期保存的基本事实，可调用 update_user_md 写入 USER 档案；"
+        + "（1）用户自愿透露、适合长期保存的基本事实（含闲聊中的小细节），"
+        "应及时调用 update_user_md 写入 USER 档案，避免只记在当轮回复里；"
+        "IDENTITY.md / STYLE.md 中值得长期保留的相处约定，在用户明确表达或反复出现时，"
+        "用 memory_store_read_document 读全文后再 memory_store_write_document 更新；"
         "（1.1）当用户明确提出未来提醒（如「两小时后提醒我」「明早八点叫我」），"
         "必须先调用 schedule_task 写入定时队列；exec_time_utc 需给绝对时间（ISO8601，带时区），"
         "task_text 写提醒内容；禁止只口头答应而不写入定时队列。"
@@ -262,31 +265,28 @@ def _output_contract_text_with_tools(
     return base
 
 
-def _output_contract_text_interactive_bootstrap_tools(
-    *,
-    tool_side_compact: bool = False,
-) -> str:
+# TODO(bootstrap-prompt-single-source): Keep in sync with ``bootstrap.py`` until single-source policy lands.
+# CRS #3328 (relationship seed); #3367 (TrackWritePolicy registry).
+# Bootstrap completion timing stays LLM-driven (``companion_bootstrap_user_interactive_complete``);
+# no harness max-turn auto-complete — see ``bootstrap.py`` module docstring.
+
+
+def _output_contract_text_interactive_bootstrap_tools() -> str:
     base = (
         "输出与工具（交互式关系建立阶段）："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        + "（0）本阶段核心是**初始化 SOUL 切片**（并同时把 IDENTITY / STYLE / USER / MEMORY 落到可用初稿）；"
-        "须用 **companion_update_prompt_slice** 写入上述五份根目录约定稿；**禁止**使用 memory_store_write_document 写入它们。"
-        "调用 **companion_bootstrap_user_interactive_complete** 后，**SOUL 即锁定**（不可再改）；"
-        "IDENTITY / STYLE / USER / MEMORY 在后续日常轮次仍可用 companion_update_prompt_slice 或 memory_store_write_document 按需更新。"
-        "（TOOLS 操作说明与 significance 评分引导为包内固定模版，不由本工具写入。）"
-        "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须**调用 "
-        "**companion_bootstrap_user_interactive_complete**（可选短 note）；未调用该工具前不要声称阶段已结束。"
-        "（1）用户自愿透露、适合长期保存的基本事实，可调用 update_user_md 写入 USER 档案；"
-        "（1.1）当用户明确提出未来提醒，必须先调用 schedule_task；exec_time_utc 须为带时区的 ISO8601。"
-        "（2）确有核对持久化约定稿需求时可用 memory_store_list_paths / memory_store_read_document；勿编造内容。"
-        "列表目录约束与上文「输出与工具」一致：勿为闲聊列根目录。"
-        "（3）凡涉及可与持久化档案核对的事实，须先读到持久化正文再作答。"
-        "（4）需要公开可核验信息且持久化文档无依据时，须先调用 google_web_search。"
-        "（5）模型与实现细节类问题：仅可依据当前可见上下文或已执行工具返回作答，无法核验时如实说明不确定。"
-    )
-    base += _repl_tool_contract_image_generation_clause()
-    base += _repl_tool_contract_suffix_after_image_clause(
-        tool_side_compact=tool_side_compact
+        + "（0）本阶段用 **memory_store_write_document** 把 **IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
+        "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
+        "即使用户配合度低，也基于已有对话写 best-effort 初稿，不可留空模板。"
+        "用户选定内置陪伴模式时调用 **companion_set_experience_profile**（须附 note）。"
+        "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须先完成上述三份初稿写入**，再**必须**调用 "
+        "**companion_bootstrap_user_interactive_complete**（可选短 note）；禁止跳过写入直接 complete；"
+        "未调用该工具前不要声称阶段已结束。"
+        "调用完成后进入日常相处；后续轮次可用 **memory_store_write_document** 按需更新允许列表内的持久化约定稿。"
+        "（TOOLS 操作说明与 significance 评分引导为包内固定模版，不由工具写入。）"
+        "（1）须核对持久化档案时先用 **memory_store_read_document** 读正文；勿编造。"
+        "（2）凡涉及可与持久化档案核对的事实，须先读到持久化正文再作答。"
+        "（3）模型与实现细节类问题：仅可依据当前可见上下文或已执行工具返回作答，无法核验时如实说明不确定。"
     )
     return base
 
@@ -347,7 +347,10 @@ def _repl_online_ack_clause() -> str:
 
 
 def weixin_clawbot_contact_alias_system_message() -> dict[str, Any]:
-    """Channel-specific system message for Weixin-visible ClawBot contact naming."""
+    """Channel-specific system message for Weixin-visible ClawBot contact naming.
+
+    TODO(companion-channel-tools): Weixin has no rename tool; keep guidance-only (not harness tool) — #3362
+    """
 
     return _system_message(
         "Weixin / ClawBot 联系人显示名\n\n"
@@ -396,7 +399,7 @@ __CONFESS_TO_USER = (
 )
 
 
-# TODO(narrow-maintenance): Drop 档案一致 / memory_store 写回 bullets below; ai_private append only; MemoryDoc → DREAMING.
+# TODO(narrow-maintenance): Drop 档案一致 / memory_store 写回 bullets below; ai_private append only; MemoryDoc → DREAMING (#3375).
 __EASE_CONTEXT_PRESSURE = (
     "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
     "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"
@@ -488,7 +491,7 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
 
 
 def _inner_tick_turn_section() -> str:
-    # TODO(narrow-maintenance): MAINTENANCE-only slice (ai_private + scene beat); drop 档案一致 /
+    # TODO(narrow-maintenance): MAINTENANCE-only slice (ai_private + scene beat); drop 档案一致 / (#3375)
     # LS/TC / memory_store bullets. ``AUTONOMY`` → ``build_system_messages_for_inner_tick_autonomy``.
     return "\n".join(
         [
@@ -660,6 +663,9 @@ def _persona_system_messages(
         out.append(_system_message(build_bootstrap_tool_call_section()))
         for block in build_interactive_bootstrap_template_reference_parts():
             out.append(_system_message(block))
+    # TODO(crs-companionship-doc): Phase A — inject persisted ``COMPANIONSHIP.md`` (relationship_phase,
+    # tone) from MemoryStore here after bootstrap (#3342). Phase B — activate prompt + ``turn_recall``
+    # Turn Brief (#3343). Canon: CRS #3341, glossary #3345, SDCM #3365.
     return out
 
 
@@ -686,9 +692,7 @@ def _output_system_messages(
             if interactive_bootstrap_active:
                 out.append(
                     _system_message(
-                        _output_contract_text_interactive_bootstrap_tools(
-                            tool_side_compact=tool_side_compact,
-                        )
+                        _output_contract_text_interactive_bootstrap_tools()
                     )
                 )
             else:

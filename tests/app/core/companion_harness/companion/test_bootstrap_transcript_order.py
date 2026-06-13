@@ -156,9 +156,12 @@ async def test_bootstrap_multi_round_transcript_user_before_all_assistants(
         [
             _tool_response(
                 content="我先记一下",
-                tool_name="companion_update_prompt_slice",
+                tool_name="memory_store_write_document",
                 tool_arguments=json.dumps(
-                    {"slice": "IDENTITY", "content": "孔明\n"},
+                    {
+                        "relative_path": "IDENTITY.md",
+                        "content": "孔明\n",
+                    },
                     ensure_ascii=False,
                 ),
             ),

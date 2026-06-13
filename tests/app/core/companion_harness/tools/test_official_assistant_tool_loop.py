@@ -57,13 +57,13 @@ async def test_on_assistant_message_called_each_non_tool_and_tool_round() -> Non
     async def execute_tool_call(
         name: str, raw_arguments: str
     ) -> tuple[str, str | None]:
-        assert name == "companion_update_prompt_slice"
+        assert name == "memory_store_write_document"
         return "OK", None
 
     round_two = _resp("closing line", None)
     round_one = _resp(
         "hello before tools",
-        [_ToolCall(id="tc1", type="function", function=_Fn(name="companion_update_prompt_slice", arguments="{}"))],
+        [_ToolCall(id="tc1", type="function", function=_Fn(name="memory_store_write_document", arguments="{}"))],
     )
 
     async def continue_chat(

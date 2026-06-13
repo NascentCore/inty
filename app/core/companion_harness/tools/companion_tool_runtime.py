@@ -2,6 +2,9 @@
 
 Persisted companion documents and transcript go through MemoryStore; tool paths align with
 ``memory_store_document_mapping``.
+
+TODO(companion-channel-tools): Dispatch channel-specific tools via adapter layer / agent row
+  writes (e.g. companion_set_status_line) using turn runtime_context — #3362
 """
 
 from __future__ import annotations
@@ -27,7 +30,6 @@ from app.core.companion_harness.tools.dispatchers.memory_store import (
 from app.core.companion_harness.companion.bootstrap import (
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
-    tool_companion_update_prompt_slice,
 )
 from app.core.companion_harness.companion.message_format import (
     openai_assistant_message_dict,
@@ -62,6 +64,10 @@ from app.techno_core.models import (
     Visibility,
 )
 
+from .companion_user_feedback import (
+    COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
+    tool_companion_record_user_feedback,
+)
 from .fal_z_image_tool import (
     MAX_NUM_IMAGES_PER_CALL,
     reset_fal_async_client_after_short_lived_loop,
@@ -86,8 +92,8 @@ from .companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
     REPL_DESCRIPTION_OVERRIDES,
     REPL_DESCRIPTION_OVERRIDES_AUTONOMY,
+    REPL_DESCRIPTION_OVERRIDES_BOOTSTRAP,
     TOOL_NAMES_APPENDED,
-    TOOL_NAMES_BOOTSTRAP_APPENDED,
     TOOL_NAMES_NON_BOOTSTRAP_TAIL,
     TOOL_NAMES_SHARED_HEAD,
     TOOL_TAG_GENERATION,
@@ -119,7 +125,7 @@ _USER_PROFILE_SECTION = "## 身份信息"
 
 
 # TODO(narrow-maintenance): ``ai_private.jsonl`` append tool for MAINTENANCE inner-tick; drop
-# UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (MemoryDoc → DREAMING).
+# UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (MemoryDoc → DREAMING #3375).
 
 
 def _latest_generated_image_http_url_from_index(
@@ -516,47 +522,31 @@ async def tool_phone_call_user(
 
 
 def build_openai_bootstrap_track_tools() -> list[dict[str, Any]]:
-    """USER_CHAT_BOOTSTRAP track: prompt-slice writes + bootstrap complete only."""
+    """USER_CHAT_BOOTSTRAP track: MemoryStore read/write, experience profile, bootstrap complete."""
     return prepare_openai_tools_for_chat_completions(
         openai_tools_for_names(
             BOOTSTRAP_TRACK_TOOL_NAMES,
-            description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
+            description_overrides=REPL_DESCRIPTION_OVERRIDES_BOOTSTRAP,
         )
     )
 
 
-def build_openai_repl_tools(
-    *, interactive_bootstrap_active: bool = False
-) -> list[dict[str, Any]]:
+def build_openai_repl_tools() -> list[dict[str, Any]]:
     """
     伴侣对话轮：用户档案追加、LivingSphere/TechnoCore 事件落库、工作区文档读写（写入仅限 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST）。
+
+    Bootstrap track uses ``build_openai_bootstrap_track_tools`` instead.
     """
-    if interactive_bootstrap_active:
-        names = TOOL_NAMES_SHARED_HEAD
-    else:
-        names = TOOL_NAMES_SHARED_HEAD + TOOL_NAMES_NON_BOOTSTRAP_TAIL
     out = openai_tools_for_names(
-        names,
+        TOOL_NAMES_SHARED_HEAD + TOOL_NAMES_NON_BOOTSTRAP_TAIL,
         description_overrides=REPL_DESCRIPTION_OVERRIDES,
-    )
-    appended_names = (
-        TOOL_NAMES_BOOTSTRAP_APPENDED
-        if interactive_bootstrap_active
-        else TOOL_NAMES_APPENDED
     )
     out.extend(
         openai_tools_for_names(
-            appended_names,
+            TOOL_NAMES_APPENDED,
             description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
         )
     )
-    if interactive_bootstrap_active:
-        out.extend(
-            openai_tools_for_names(
-                BOOTSTRAP_TRACK_TOOL_NAMES,
-                description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
-            )
-        )
     return prepare_openai_tools_for_chat_completions(out)
 
 
@@ -564,7 +554,7 @@ def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     """
     MAINTENANCE 内在节拍：USER 档案、TechnoCore 事件、MemoryStore 读写；不含定时、联网、生图/改图。
 
-    TODO(narrow-maintenance): 收成 ``ai_private.jsonl`` append-only；见 ``INNER_TICK_TOOL_NAMES``。
+    TODO(narrow-maintenance): 收成 ``ai_private.jsonl`` append-only；见 ``INNER_TICK_TOOL_NAMES`` (#3375)。
     自主活动（``LIFE_CURRENTS``、开放 tools）在 ``build_openai_repl_tools_inner_tick_autonomy``。
     """
     return prepare_openai_tools_for_chat_completions(
@@ -666,6 +656,8 @@ async def _dispatch(
         if not isinstance(raw_reason, str):
             return "ERROR: reason must be a string"
         return await tool_phone_call_user(store, raw_phone, raw_reason)
+    if name == COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
+        return tool_companion_record_user_feedback(store, arguments)
     if name == "companion_set_experience_profile":
         raw_ctx = arguments.get("context_mode")
         if not isinstance(raw_ctx, str):
@@ -838,14 +830,6 @@ async def _dispatch(
             not out.startswith("ERROR:"),
         )
         return out
-    if name == "companion_update_prompt_slice":
-        raw_slice = arguments.get("slice")
-        raw_content = arguments.get("content")
-        if not isinstance(raw_slice, str):
-            return "ERROR: slice must be a string"
-        if not isinstance(raw_content, str):
-            return "ERROR: content must be a string"
-        return tool_companion_update_prompt_slice(store, raw_slice, raw_content)
     if name == "companion_bootstrap_user_interactive_complete":
         raw_note = arguments.get("note")
         if raw_note is not None and not isinstance(raw_note, str):

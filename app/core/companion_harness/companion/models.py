@@ -47,11 +47,11 @@ class InnerTickActivity(StrEnum):
     ``AUTONOMY`` reads/writes ``LIFE_CURRENTS.md`` with an open tool set; never delivers
     client-visible NL or images (see ``inner_tick_activity_suppresses_user_delivery``).
     ``MAINTENANCE`` (awake inner-tick turn) still uses a restricted tool set today;
-    ``TODO(narrow-maintenance)`` targets ai_private / transcript reorg only.
+    ``TODO(narrow-maintenance)`` targets ai_private / transcript reorg only (#3375).
     ``DREAMING`` (sleeping batch, not a turn) **rolls up the whole day**: user-visible
     chat plus scheduled / proactive on ``transcript.jsonl``, and silent ``AUTONOMY`` /
     ``MAINTENANCE`` traces — into MemoryDoc curation (``TODO(dreaming-day-rollup)``:
-    inner-tick / ai_private / LIFE_CURRENTS not yet merged into consolidation input).
+    inner-tick / ai_private / LIFE_CURRENTS not yet merged; #3343 curator, #3366 reflection).
     """
 
     MAINTENANCE = "maintenance"

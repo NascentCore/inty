@@ -47,6 +47,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     )
     COMPANION_SCHEDULE_TASKS_JSON = "companion_schedule_tasks_json"
     COMPANION_RUNTIME_EVENTS_JSONL = "companion_runtime_events_jsonl"
+    COMPANION_USER_FEEDBACK_JSONL = "companion_user_feedback_jsonl"
     COMPANION_DREAMING_STATE_JSON = "companion_dreaming_state_json"
     INTY_V2_LIVING_SPHERE_CURATOR_JSON = "inty_v2_living_sphere_curator_json"
     INTY_V2_CONTEXT_COMPACTION_STATE_JSON = (
@@ -88,7 +89,8 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "context.json": (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
     "ai_private.md": (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
     # Inner thoughts about the user (MAINTENANCE)—not LIFE_CURRENTS virtual-world activity.
-    # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today.
+    # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today (#3375, #3341).
+    # TODO(crs-companionship-doc): add ``COMPANIONSHIP`` document_kind when Phase A lands (#3342).
     "ai_private.jsonl": (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
     "tool_background.jsonl": (
         CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL,
@@ -112,6 +114,10 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     ),
     ".companion_runtime_events.jsonl": (
         CompanionMemoryDocumentKind.COMPANION_RUNTIME_EVENTS_JSONL,
+        None,
+    ),
+    ".companion_user_feedback.jsonl": (
+        CompanionMemoryDocumentKind.COMPANION_USER_FEEDBACK_JSONL,
         None,
     ),
     ".companion_dreaming_state.json": (

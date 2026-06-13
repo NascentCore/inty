@@ -1,5 +1,9 @@
 # Companionship templates
 
+<!-- TODO(crs-companionship-doc): Package seed only today. Phase A (#3342) — persist
+     ``COMPANIONSHIP.md`` in MemoryStore (relationship_phase, tone). Phase B (#3343) —
+     inject into prompt stack + dreaming curator. Not a product ``context_mode`` enum. -->
+
 List different modes of companionship.
 
 ## 亲密关系

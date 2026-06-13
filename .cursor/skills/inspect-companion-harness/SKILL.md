@@ -32,7 +32,7 @@ PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STY
 ## 何时使用
 
 - 用户问「`IDENTITY.md` / 工作区文档有没有写进数据库」「工具更新了语料但库里看不到」。
-- 对照 LangSmith trace 里的 `memory_store_write_document` / `companion_update_prompt_slice` 与真实 DB 行。
+- 对照 LangSmith trace 里的 `memory_store_write_document` 与真实 DB 行。
 - 验证本地/开发环境 **append-only** 版本表是否出现 **新 `sequence_id`**。
 
 ## 配置里取连接信息
@@ -110,7 +110,7 @@ ORDER BY sequence_id DESC LIMIT 1;
 
 ## 可选交叉验证
 
-- **LangSmith**：trace 内搜 `companion_update_prompt_slice` / `memory_store_write_document` 及对 `IDENTITY.md` 的路径参数；见仓库 **`.cursor/skills/langsmith-download-run/SKILL.md`**。
+- **LangSmith**：trace 内搜 `memory_store_write_document` 及对 `IDENTITY.md` 等路径参数；见仓库 **`.cursor/skills/langsmith-download-run/SKILL.md`**。
 
 ## 文档引用（人类读者）
 

@@ -1,4 +1,8 @@
-"""Channel adapter protocol for agent-channel stack."""
+"""Channel adapter protocol for agent-channel stack.
+
+TODO(companion-channel-tools): Extend protocol with channel tool execution hooks (or sibling
+  port) so harness dispatch stays out of transport details — #3362
+"""
 
 from __future__ import annotations
 

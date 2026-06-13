@@ -12,18 +12,20 @@ New tool checklist:
 
 TODO(abstraction): Group tools by defining tuple of LlmFunctionTool data objects.
 Do not group by tool names.
+
+TODO(companion-channel-tools): Channel-specific tool schemas + ``CompanionToolName`` members
+  (e.g. companion_set_status_line); filter by ``runtime_context.channel`` — #3362
+TODO(telegram-channel-tools): Telegram meta tools (e.g. telegram_set_bot_name) gated on
+  dedicated-bot bonding — #3361
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.companion_harness.companion.prompt_slices import (
-    PROMPT_SLICE_TO_REL,
-)
 from app.core.companion_harness.experience_profile import ExperienceContextMode
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
@@ -42,6 +44,12 @@ MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 # TODO(ai-private-jsonl-write): ``ai_private.jsonl`` (inner thoughts *about the user*, MAINTENANCE)
 # is ORM-mapped but excluded here — not ``LIFE_CURRENTS.md`` (virtual-world activity, AUTONOMY).
 # Enable MAINTENANCE append via dedicated append-only tool (preferred) or allowlist + append-only runtime.
+# CRS Awake express / Dreaming learn — PR #3290; follow-up #3375 #3376; epic #3341.
+# TODO(track-write-policy): Collapse per-track ``memory_store_write_document`` policy into one
+# ``TrackWritePolicy`` (allowlist + tool description override) keyed by ``CompanionTurnTrack``;
+# wire ``turn.py`` write_allowlist and ``build_openai_*_track_tools`` from that registry instead of
+# three parallel ``MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_*`` + ``REPL_DESCRIPTION_OVERRIDES_*`` pairs.
+# https://github.com/nascentcore/inty/issues/3367
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
     {
         "IDENTITY.md",
@@ -53,6 +61,20 @@ MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
     }
 )
 
+# USER_CHAT_BOOTSTRAP: relationship seed docs only; SOUL/MEMORY come from package templates.
+MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP: frozenset[str] = frozenset(
+    {
+        "IDENTITY.md",
+        "STYLE.md",
+        "USER.md",
+    }
+)
+
+# Sorted display order for bootstrap prompts (single source; same paths as allowlist).
+BOOTSTRAP_WRITABLE_REL_PATHS: Final[tuple[str, ...]] = tuple(
+    sorted(MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP)
+)
+
 # AUTONOMY inner-tick: only LIFE_CURRENTS.md (profile curation → DREAMING / MAINTENANCE).
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY: frozenset[str] = frozenset(
     {"LIFE_CURRENTS.md"}
@@ -60,10 +82,6 @@ MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY: frozenset[str] = frozenset(
 
 TOOL_TAG_GENERATION = "GENERATION"
 
-
-_PROMPT_SLICE_ENUM: tuple[str, ...] = tuple(
-    sorted(s.value for s in PROMPT_SLICE_TO_REL)
-)
 
 _SELECTABLE_EXPERIENCE_PROFILE_IDS: tuple[str, ...] = tuple(
     sorted(m.value for m in ExperienceContextMode)
@@ -77,8 +95,8 @@ class CompanionToolName(StrEnum):
     COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE = (
         "companion_bootstrap_user_interactive_complete"
     )
+    COMPANION_RECORD_USER_FEEDBACK = "companion_record_user_feedback"
     COMPANION_SET_EXPERIENCE_PROFILE = "companion_set_experience_profile"
-    COMPANION_UPDATE_PROMPT_SLICE = "companion_update_prompt_slice"
     GENERATE_IMAGE = "generate_image"
     GOOGLE_WEB_SEARCH = "google_web_search"
     LIVING_SPHERE_RECORD_UPDATE = "living_sphere_record_update"
@@ -152,30 +170,6 @@ SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
             },
         },
         "required": ["context_mode", "note"],
-        "additionalProperties": False,
-    },
-    tags=frozenset(),
-    extra_function_keys={},
-)
-
-
-UPDATE_PROMPT_SLICE_TOOL = LlmFunctionTool(
-    name=CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE,
-    description="Overwrite one workspace prompt slice (root markdown) in MemoryStore. Use during interactive relationship bootstrap instead of memory_store_write_document. Pass the full updated markdown as content. TOOLS / significance-perception operator text are fixed package templates, not slices.",
-    parameters={
-        "type": "object",
-        "properties": {
-            "slice": {
-                "type": "string",
-                "enum": list(_PROMPT_SLICE_ENUM),
-                "description": "Which prompt document to replace.",
-            },
-            "content": {
-                "type": "string",
-                "description": "Full UTF-8 body to write for that slice.",
-            },
-        },
-        "required": ["slice", "content"],
         "additionalProperties": False,
     },
     tags=frozenset(),
@@ -526,10 +520,46 @@ UPDATE_USER_MD = LlmFunctionTool(
     extra_function_keys={},
 )
 
+COMPANION_RECORD_USER_FEEDBACK_TOOL = LlmFunctionTool(
+    name=CompanionToolName.COMPANION_RECORD_USER_FEEDBACK,
+    description=(
+        "File structured user complaint when the human expresses dissatisfaction with "
+        "companion behavior, memory, tone, or tool results (bug report). Reassure the "
+        "user in chat first, then call this tool with a concise complaint_summary. "
+        "Do not call for casual chat or neutral questions."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "complaint_summary": {
+                "type": "string",
+                "description": (
+                    "One or two sentences summarizing what the user is unhappy about, "
+                    "in their own framing."
+                ),
+            },
+            "complaint_category": {
+                "type": "string",
+                "enum": [
+                    "behavior",
+                    "memory",
+                    "tone",
+                    "tool_failure",
+                    "other",
+                ],
+                "description": "Primary complaint area for triage.",
+            },
+        },
+        "required": ["complaint_summary", "complaint_category"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
 COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     SET_BOOTSTRAP_COMPLETE_TOOL,
     SET_EXPERIENCE_PROFILE_TOOL,
-    UPDATE_PROMPT_SLICE_TOOL,
     GENERATE_IMAGE_TOOL,
     LIVING_SPHERE_RECORD_UPDATE_TOOL,
     GOOGLE_WEB_SEARCH_TOOL,
@@ -542,6 +572,7 @@ COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     SCHEDULE_TASK_TOOL,
     TECHNO_CORE_RECORD_EVENT_TOOL,
     UPDATE_USER_MD,
+    COMPANION_RECORD_USER_FEEDBACK_TOOL,
 )
 
 COMPANION_LLM_TOOLS_BY_NAME: dict[CompanionToolName, LlmFunctionTool] = {
@@ -559,6 +590,7 @@ OPENAI_TOOLS_BASE_NAMES: tuple[CompanionToolName, ...] = (
 )
 
 TOOL_NAMES_SHARED_HEAD: tuple[CompanionToolName, ...] = (
+    CompanionToolName.COMPANION_RECORD_USER_FEEDBACK,
     CompanionToolName.UPDATE_USER_MD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     CompanionToolName.SCHEDULE_TASK,
@@ -579,21 +611,16 @@ TOOL_NAMES_APPENDED: tuple[CompanionToolName, ...] = (
     CompanionToolName.MODIFY_IMAGE,
 )
 
-TOOL_NAMES_BOOTSTRAP_APPENDED: tuple[CompanionToolName, ...] = (
-    CompanionToolName.GOOGLE_WEB_SEARCH,
-    CompanionToolName.READ_WEB_PAGE,
-    CompanionToolName.GENERATE_IMAGE,
-    CompanionToolName.MODIFY_IMAGE,
-)
-
 BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
-    CompanionToolName.COMPANION_UPDATE_PROMPT_SLICE,
+    CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
+    CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
+    CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
     CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
 )
 
 # TODO(narrow-maintenance): MAINTENANCE only — collapse to ``ai_private.jsonl`` append (+ minimal
 # read if needed). Drop UPDATE_USER_MD, TECHNO_CORE_RECORD_EVENT, memory_store_*; MemoryDoc
-# curation → DREAMING. AUTONOMY uses ``INNER_TICK_AUTONOMY_TOOL_NAMES`` (LIFE_CURRENTS + open tools).
+# curation → DREAMING (#3375, CRS #3341). AUTONOMY uses ``INNER_TICK_AUTONOMY_TOOL_NAMES``.
 INNER_TICK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.UPDATE_USER_MD,
     CompanionToolName.TECHNO_CORE_RECORD_EVENT,
@@ -659,6 +686,24 @@ def _repl_description_overrides() -> dict[CompanionToolName, str]:
 
 REPL_DESCRIPTION_OVERRIDES: dict[CompanionToolName, str] = (
     _repl_description_overrides()
+)
+
+
+def _repl_description_overrides_bootstrap() -> dict[CompanionToolName, str]:
+    """USER_CHAT_BOOTSTRAP: ``memory_store_write_document`` seeds IDENTITY / STYLE / USER only."""
+    bootstrap_csv = ", ".join(BOOTSTRAP_WRITABLE_REL_PATHS)
+    return {
+        CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT: (
+            "Create or overwrite relationship seed documents in MemoryStore during interactive bootstrap. "
+            f"Only writable paths via this tool: {bootstrap_csv}. "
+            "SOUL.md and MEMORY.md use package template seeds in this phase—do not write them. "
+            "Pass the full markdown body per path; read the current file first when updating."
+        ),
+    }
+
+
+REPL_DESCRIPTION_OVERRIDES_BOOTSTRAP: dict[CompanionToolName, str] = (
+    _repl_description_overrides_bootstrap()
 )
 
 

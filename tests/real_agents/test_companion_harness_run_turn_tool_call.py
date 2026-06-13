@@ -4,6 +4,10 @@ Real LLM: companion user chat turn must call memory_store_list_paths then answer
 Enable: INTY_COMPANION_HARNESS_REAL_LLM_TEST=1 and OPENROUTER_API_KEY.
 Uses OpenRouter model nvidia/nemotron-3-super-120b-a12b:free.
 Marked noci (skipped in default CI).
+
+TODO(real-llm-tests): _InstrumentedCompanionLLMClient.chat_completion must accept and
+  forward langsmith_extra (and high_reasoning) like CompanionLLMClient — turn.py passes
+  langsmith_extra on foreground chat; missing kwarg breaks this test at runtime.
 """
 
 from __future__ import annotations

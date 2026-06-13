@@ -63,9 +63,11 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
+    SOURCE_IMPLICIT_SIGN_ON_GREETING,
+    SOURCE_SINGLE_COMPLETION,
     SOURCE_USER_CHAT_IN_TURN_SYNC,
-    invocation_extra,
 )
+from .langsmith_turn_slice import CompanionTurnLangsmithSlice
 
 from .llm_client import (
     LLM_SCENE_CHAT,
@@ -118,6 +120,7 @@ from .turn_pipeline import (
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call as repl_execute_tool_call,
@@ -229,8 +232,9 @@ async def _run_in_turn_sync_tool_loop(
     transcript_rel: str,
     track: CompanionTurnTrack,
     route_mode: TurnRouteMode,
-    langsmith_source: str,
     interim_output_sink: BootstrapInterimOutputSink | None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    langsmith_source: str,
 ) -> tuple[str, str, str, bool, str | None, dict[str, Any] | None]:
     """In-turn chat + tools with ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` (no dual-LLM foreground).
 
@@ -252,7 +256,15 @@ async def _run_in_turn_sync_tool_loop(
     working_messages = deepcopy(messages)
     loop_tools = list(tools_for_turn)
     chat_model = llm_client.resolve_model("chat")
-    allow = MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
+    match track:
+        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            allow = MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP
+        case CompanionTurnTrack.USER_CHAT:
+            allow = MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
+        case _:
+            raise AssertionError(
+                "in-turn sync loop unexpected track=" f"{track.value}"
+            )
 
     def _chat_sync(
         msgs: list[dict[str, Any]], tools: list[dict[str, Any]]
@@ -263,7 +275,10 @@ async def _run_in_turn_sync_tool_loop(
             tools=tools,
             response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
             scene=LLM_SCENE_CHAT,
-            langsmith_extra=invocation_extra(source=langsmith_source),
+            langsmith_extra=langsmith_slice.foreground_invocation_extra(
+                source=langsmith_source,
+                extra_metadata=None,
+            ),
         )
 
     t_api = time.perf_counter()
@@ -586,6 +601,10 @@ async def _run_companion_turn_core(
             )
         )
 
+        langsmith_slice = CompanionTurnLangsmithSlice.from_runtime_context(
+            runtime_context
+        )
+
         langsmith_parent_run = create_companion_turn_root_run(
             inty_trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
@@ -603,6 +622,7 @@ async def _run_companion_turn_core(
             transcript_newest_message_uuid=(
                 transcript_tail_message_uuid(store) if inner_tick_turn else None
             ),
+            langsmith_slice=langsmith_slice,
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(
             langsmith_parent_run
@@ -672,8 +692,9 @@ async def _run_companion_turn_core(
                         transcript_rel=rel_tr_in_turn_sync,
                         track=track,
                         route_mode=route_mode,
-                        langsmith_source=in_turn_sync_langsmith_source,
                         interim_output_sink=bootstrap_interim_output_sink,
+                        langsmith_slice=langsmith_slice,
+                        langsmith_source=in_turn_sync_langsmith_source,
                     )
                     user_row_persisted_in_sync_loop = True
                     logger.info(
@@ -715,9 +736,11 @@ async def _run_companion_turn_core(
                     )
                     last_text = ""
                     significance_meta = None
+                    tool_msgs_for_bg = deepcopy(tool_msgs)
+                    force_tools_first_round = True
                     start_tool_background_job(
                         memory_store=store,
-                        request_messages=deepcopy(tool_msgs),
+                        request_messages=tool_msgs_for_bg,
                         tool_model=tool_model,
                         user_msg_uuid=user_msg_uuid,
                         trace_id=trace_id,
@@ -740,7 +763,7 @@ async def _run_companion_turn_core(
                         runtime_context=runtime_context,
                         companion_turn_track=track,
                         tool_bg_idle_event=tool_bg_idle_event,
-                        force_tools_first_round=True,
+                        force_tools_first_round=force_tools_first_round,
                     )
                     tool_background_started = True
                     logger.info(
@@ -792,7 +815,10 @@ async def _run_companion_turn_core(
                             tool_choice=None,
                             response_format=response_format,
                             scene=llm_scene,
-                            langsmith_extra=None,
+                            langsmith_extra=langsmith_slice.foreground_invocation_extra(
+                                source=SOURCE_IMPLICIT_SIGN_ON_GREETING,
+                                extra_metadata=None,
+                            ),
                             high_reasoning=tick_proactive,
                             max_attempts=greet_max_attempts,
                             per_attempt_timeout_sec=greet_timeout_sec,
@@ -806,6 +832,10 @@ async def _run_companion_turn_core(
                             tools=None,
                             response_format=response_format,
                             scene=llm_scene,
+                            langsmith_extra=langsmith_slice.foreground_invocation_extra(
+                                source=SOURCE_SINGLE_COMPLETION,
+                                extra_metadata=None,
+                            ),
                             high_reasoning=tick_proactive,
                         )
                     langsmith_trace_acc = (

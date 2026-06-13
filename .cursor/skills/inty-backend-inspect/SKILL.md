@@ -121,7 +121,7 @@ LIMIT 30;
 
 ## 专项：有 `user-input`、无 `chat`（卡住的 `tool_background` + `turn_lock`）
 
-同一 **`ws_conn_id`** 上，[`chat.py`](../../../app/api/v1/endpoints/chat.py) 用 **`companion_ws.turn_lock`** 串行所有 companion 回合（用户消息、greeting、inner-tick）。每轮 [`run_turn`](../../../app/core/companion_harness/companion/turn.py) 在加载 transcript **之前** 会 `await` **`CompanionSession.tool_bg_idle`**（`threading.Event`）；后台 [`tool_background`](../../../app/core/companion_harness/tools/tool_background.py) 启动时 `clear()`，正常结束时 `set()`。
+同一 companion **scope**（`user_id` + `agent_id` + `chat_id`）上，[`scope_turn_lock.get_scope_turn_lock`](../../../app/core/companion_harness/companion/scope_turn_lock.py) / **`CompanionSession.turn_lock`** 串行所有 companion 回合（用户消息、greeting、inner-tick、tool_bg 投递）。每轮 [`run_turn`](../../../app/core/companion_harness/companion/turn.py) 在加载 transcript **之前** 会 `await` **`CompanionSession.tool_bg_idle`**（`threading.Event`，同为 scope 单例）；后台 [`tool_background`](../../../app/core/companion_harness/tools/tool_background.py) 启动时 `clear()`，正常结束时 `set()`。
 
 **典型链路（勿把 REPL 的 `inner-tick … [SILENT]` 当成对用户消息的回复）**：
 
@@ -164,7 +164,7 @@ python3 .cursor/skills/scripts/langsmith_find_companion_run_by_user_msg_uuid.py 
 - [`launch-inty-backend`](../launch-inty-backend/SKILL.md)
 - [`langsmith-download-run`](../langsmith-download-run/SKILL.md)
 - [`inty-server-module-verify`](../inty-server-module-verify/SKILL.md)
-- [`docs/companion_harness/ARCH.md`](../../../docs/companion_harness/ARCH.md)
+- [`docs/companion_harness/DESIGN.md`](../../../docs/companion_harness/DESIGN.md)
 - [`app/core/companion_harness/companion/llm_chat_runtime.py`](../../../app/core/companion_harness/companion/llm_chat_runtime.py)
 
 ## 实现边界

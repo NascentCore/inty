@@ -5,6 +5,9 @@ schemas are exposed, which system-message wrapper is used, and which route mode
 must be enforced.  Mid-turn refreshes re-read MemoryStore and ``context.json`` so
 tool-side writes to persona/context documents become visible before the next
 model leg continues.
+
+TODO(crs-companionship-doc): After #3342, load ``COMPANIONSHIP.md`` from MemoryStore into
+``PromptBundle`` / ``_persona_system_messages``; #3343 activates template + ``turn_recall``.
 """
 
 from __future__ import annotations
@@ -101,6 +104,8 @@ def companion_tools_for_turn(
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
     implicit_user_signed_on_turn: bool = False,
+    # TODO(companion-channel-tools): Filter tool schemas by ``runtime_context.channel`` — #3362
+    # TODO(telegram-channel-tools): Telegram meta tools only when dedicated-bot bonding — #3361
 ) -> list[dict[str, Any]]:
     """OpenAI tool schemas for this turn (independent of which system-message wrapper runs)."""
     match track:
@@ -123,9 +128,7 @@ def companion_tools_for_turn(
                 else (
                     build_openai_repl_tools_inner_tick()
                     if inner_tick_turn
-                    else build_openai_repl_tools(
-                        interactive_bootstrap_active=False
-                    )
+                    else build_openai_repl_tools()
                 )
             )
             if implicit_user_signed_on_turn and not inner_tick_turn:

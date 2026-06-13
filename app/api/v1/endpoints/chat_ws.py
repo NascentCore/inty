@@ -28,6 +28,10 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
+from app.core.companion_harness.companion.scope_turn_lock import (
+    companion_scope_from_foreground_ctx,
+    get_scope_turn_lock,
+)
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutputSink,
 )
@@ -226,21 +230,20 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
         )
         merged = _chat_request_with_merged_ws_time_context(base, tc_box[0])
         try:
-            async with companion_ws.turn_lock:
-                response = await _agent_chat_ws_completions_impl(
-                    db=db,
-                    agent_id=agent_id,
-                    request=merged,
-                    current_user=current_user,
-                    subscription_svc=subscription_svc,
-                    voice_svc=voice_svc,
-                    companion_background_sink=companion_ws.background_sink,
-                    companion_ws_foreground_pending=companion_ws.foreground_pending,
-                    companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
-                    companion_ws=companion_ws,
-                    implicit_greeting_turn=True,
-                    ws_outbound_queue=outbound_queue,
-                )
+            response = await _agent_chat_ws_completions_impl(
+                db=db,
+                agent_id=agent_id,
+                request=merged,
+                current_user=current_user,
+                subscription_svc=subscription_svc,
+                voice_svc=voice_svc,
+                companion_background_sink=companion_ws.background_sink,
+                companion_ws_foreground_pending=companion_ws.foreground_pending,
+                companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
+                companion_ws=companion_ws,
+                implicit_greeting_turn=True,
+                ws_outbound_queue=outbound_queue,
+            )
         except HTTPException as e:
             await outbound_queue.put(
                 _chat_ws_error_payload_from_http_exception(e, agent_id=agent_id)
@@ -1089,9 +1092,10 @@ async def _agent_chat_ws_completions_impl(
                         ] = {
                             "session_id": session_id,
                             "agent_id": agent_id,
+                            "user_id": str(current_user.id),
+                            "chat_id": chat.id,
                             "request": request,
                             "effective_local_id": effective_local_id,
-                            "user_id": str(current_user.id),
                             "chat_voice_id": chat_settings.voice_id,
                             "agent_voice_id": agent_data.get("voice_id"),
                             "agent_gender": agent_data.get("gender"),
@@ -1357,9 +1361,9 @@ async def chat_completions_websocket(
     # ``app/core/companion_harness`` (see harness AGENTS.md).
     # Concurrency (see ``session.Coordinator``, ``companion_harness`` AGENTS.md):
     # - Prototype: one signed-on presence per paired user (no multi-tab). Each ``accept()``
-    #   is that single wire ⇒ one ``turn_lock`` (user chat + inner-tick including dreaming).
+    #   is that single wire; turns serialize on scope ``CompanionSession.turn_lock`` (#3272).
     # TODO(companion-ws-single-presence): #3272 — reject or supersede a second ``accept()``
-    # on (user_id, agent_id); then hoist ``turn_lock`` to ``CompanionSession``.
+    # on (user_id, agent_id).
     # https://github.com/NascentCore/inty/issues/3272
     await websocket.accept()
     ws_conn_id = _resolve_ws_conn_id_from_websocket(websocket)
@@ -1516,8 +1520,16 @@ async def chat_completions_websocket(
                     continue
                 # Pop to detect stale uuid; re-set so deliver holds turn_lock without losing ctx.
                 companion_ws.set_foreground_pending(ev.user_msg_uuid, ctx)
+                scope = companion_scope_from_foreground_ctx(ctx)
+                if scope is None:
+                    logger.warning(
+                        "companion tool_bg missing scope coords user_msg_uuid={}",
+                        ev.user_msg_uuid,
+                    )
+                    continue
+                scope_lock = get_scope_turn_lock(scope)
                 try:
-                    async with companion_ws.turn_lock:
+                    async with scope_lock:
                         await ws_downlink.deliver(
                             tool_background_downlink(tool_output=ev)
                         )
@@ -1621,24 +1633,23 @@ async def chat_completions_websocket(
                 # https://github.com/NascentCore/inty/issues/3113
                 # https://github.com/NascentCore/inty/issues/3123
                 await companion_ws.cancel_implicit_greeting_turn_if_running()
-                async with companion_ws.turn_lock:
-                    turn_task = inflight_turn_tracker.spawn(
-                        _agent_chat_ws_completions_impl(
-                            db=db,
-                            agent_id=websocket_request.agent_id,
-                            request=merged_request,
-                            current_user=current_user,
-                            subscription_svc=subscription_svc,
-                            voice_svc=voice_svc,
-                            companion_background_sink=companion_ws.background_sink,
-                            companion_ws_foreground_pending=companion_ws.foreground_pending,
-                            companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
-                            companion_ws=companion_ws,
-                            ws_outbound_queue=outbound_queue,
-                        ),
-                        name=f"chat_ws_turn_{ws_conn_id}",
-                    )
-                    response = await turn_task
+                turn_task = inflight_turn_tracker.spawn(
+                    _agent_chat_ws_completions_impl(
+                        db=db,
+                        agent_id=websocket_request.agent_id,
+                        request=merged_request,
+                        current_user=current_user,
+                        subscription_svc=subscription_svc,
+                        voice_svc=voice_svc,
+                        companion_background_sink=companion_ws.background_sink,
+                        companion_ws_foreground_pending=companion_ws.foreground_pending,
+                        companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
+                        companion_ws=companion_ws,
+                        ws_outbound_queue=outbound_queue,
+                    ),
+                    name=f"chat_ws_turn_{ws_conn_id}",
+                )
+                response = await turn_task
             except asyncio.CancelledError:
                 logger.debug(
                     "chat_ws companion turn cancelled ws_conn_id={} user={}",

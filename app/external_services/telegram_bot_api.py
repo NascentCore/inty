@@ -1,4 +1,8 @@
-"""Telegram Bot API HTTP client for Ops telegram-demo long-poll bridge."""
+"""Telegram Bot API HTTP client for Ops telegram-demo long-poll bridge.
+
+TODO(telegram-dedicated-bot-api): Add setMyName / setMyDescription / sendChatAction when
+  per-user bot token exists (dedicated-bot bonding) — #3361
+"""
 
 from __future__ import annotations
 

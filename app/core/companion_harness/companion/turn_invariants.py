@@ -9,6 +9,9 @@ must go only through ``consolidate_memory_during_dreaming`` (checkpoint and
 observability are orchestration, not curation).
 
 Architecture enforcement: ``.cursor/skills/scripts/check_companion_turn_invariants.py``.
+
+TODO(crs-write-lattice): When ``TrackWritePolicy`` (#3367) lands, extend CI checker to enforce
+short-frame awake tracks cannot batch-curate long-frame MemoryDocs (canon #3365, epic #3341).
 """
 
 from __future__ import annotations

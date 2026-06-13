@@ -1,9 +1,15 @@
 # Tests
 
-- Do not write tests for `/tools/`
-- Do not write tests for `/experimental/`
+- Do not write tests for
+  `/tools/`
+  `/experimental/`
+  `/research/`
+- Tests for non-Python code are not under this dir.
+  For instance, `/web_app/` `/imate_android_app/` `/imate_ios_app/` have their own tests dir, respectively.
+
 - Add test files for a source file with the same relative paths
-- Never use mocks or monkeypatch in tests
+
+- Never use mocks or monkeypatch in tests, always assume tests can access local service instance
 - When checking multiline text, split text to array of lines and compare with the expected array.
   ```python
   text_lines = text.split("\n")

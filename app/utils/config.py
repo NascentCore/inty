@@ -3,11 +3,9 @@
 Use Pydantic models, instead of dataclass.
 """
 
-import dataclasses
 import math
 import os
 import sys
-from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, StrEnum
 from pathlib import Path
@@ -16,8 +14,6 @@ from typing import Any, List, Optional
 import yaml
 from loguru import logger
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
-
-from loguru import logger
 
 from app.utils import models_catalog
 from app.core.companion_harness.experience_profile import (
@@ -186,6 +182,17 @@ class FeaturesConfig(BaseModel):
                 "(see ``companion.dreaming`` module doc)."
             ),
         )
+        user_feedback_github_repo: str = Field(
+            default="nascentcore/inty",
+            description="GitHub repo (owner/name) for companion user-feedback issues.",
+        )
+        user_feedback_github_token: str = Field(
+            default="",
+            description=(
+                "GitHub PAT for ``companion_record_user_feedback`` issue creation; "
+                "empty uses ``GH_TOKEN`` env; both empty skips issue filing."
+            ),
+        )
 
     experimental_enable_chat_with_user_time_context: bool = False
     # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
@@ -215,16 +222,16 @@ class FeaturesConfig(BaseModel):
     # up to 2× this value. WS proactive is always on when inner-tick coords are armed (signed on).
     # NOTE: proactive chat is not gated by daily message count; usage limits will use token
     # consumption (future), not ``limits.free_user_chat_24h_limit``.
-    # See docs/companion_harness/ARCH.md (proactive rhythm).
+    # See docs/companion_harness/DESIGN.md (proactive rhythm).
     companion_ws_proactive_chat_base_idle_seconds: float = 30.0
     # Stop proactive chat and cap each proactive wait when silence since last real user message
-    # exceeds this many minutes. See docs/companion_harness/ARCH.md.
+    # exceeds this many minutes. See docs/companion_harness/DESIGN.md.
     companion_ws_proactive_chat_stop_after_silence_minutes: float = 30.0
     # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
-    # See docs/companion_harness/ARCH.md (inner-tick worker poll).
+    # See docs/companion_harness/DESIGN.md (inner-tick worker poll).
     companion_ws_proactive_chat_poll_seconds: float = 60.0
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
-    # See docs/companion_harness/ARCH.md (maintenance min_gap).
+    # See docs/companion_harness/DESIGN.md (maintenance min_gap).
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
     # Seconds to wait on ``CompanionSession.tool_bg_idle`` before LivingSphere jsonl compact
     # (dreaming consolidation LivingSphere compact waits for tool_background idle).
@@ -254,8 +261,9 @@ class FeaturesConfig(BaseModel):
         return self
 
 
-@dataclass
-class AppConfig:
+class AppConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     name: str = "inty-backend"
     # OpenAPI/docs and some non-fatal init failures (e.g. optional Firebase). Log level is not tied to this flag; use logging.level / INTY_* env.
     debug: bool = False
@@ -263,7 +271,7 @@ class AppConfig:
     debug_messages: bool = True
     # Use JSON format for request/response logging. Default is True (JSON format).
     use_json_log_format: bool = True
-    backend_cors_origins: List[AnyHttpUrl] = None
+    backend_cors_origins: Optional[list[AnyHttpUrl]] = None
     version: str = "1.1.0"
     environment: Environment = Environment.DEV
     # 所有 Google 服务（GCP 及其他）都使用该身份信息来访问：GCS、Vertex AI
@@ -274,10 +282,10 @@ class AppConfig:
     # 仅当请求头 appVersionCode >= 此值时返回日常记忆提醒（消息列表 daily_memory_prompt、角色详情 daily_memories）；小于此值按旧版不返回。0 表示不按版本限制。
     min_app_version_code_for_daily_memory: int = 0
 
-    api_endpoints: APIEndpointsConfig = field(
+    api_endpoints: APIEndpointsConfig = Field(
         default_factory=APIEndpointsConfig
     )
-    features: FeaturesConfig = field(default_factory=FeaturesConfig)
+    features: FeaturesConfig = Field(default_factory=FeaturesConfig)
 
     class LimitsConfig(BaseModel):
         model_config = ConfigDict(extra="ignore")
@@ -305,13 +313,15 @@ class AppConfig:
         subscribed_user_music_gen_24h_limit: int = 6
         image_compression_threshold_size_kb: int = 500
 
-    limits: LimitsConfig = field(default_factory=LimitsConfig)
+    limits: LimitsConfig = Field(default_factory=LimitsConfig)
 
-    def __post_init__(self):
+    @model_validator(mode="after")
+    def ensure_nested_defaults(self) -> "AppConfig":
         if self.limits is None:
             self.limits = self.LimitsConfig()
         if self.features is None:
             self.features = FeaturesConfig()
+        return self
 
     @property
     def name_for_openrouter(self) -> str:
@@ -353,17 +363,12 @@ def resolved_telegram_bot_token(agent: "AgentConfig") -> str:
     return agent.channels.telegram.bot_token.strip()
 
 
-class AgentCompanionHarnessConfig(BaseModel):
-    """Agent-scoped companion harness settings under ``agent.companion_harness``."""
-
+class AgentConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-
-@dataclass
-class AgentConfig:
     # OpenRouter API key; chat is invoked via OpenAI client (app.utils.openai_client) against base_url.
-    api_key: str
-    langchain_api_key: str
+    api_key: str = Field(...)
+    langchain_api_key: str = Field(...)
     # DEPRECATED: Do not use. Use free_user_chat_model and sub_user_chat_model instead.
     model: str = GEMINI_2_5_FLASH
     # Free users: default chat model (OpenRouter model id), invoked via OpenAI client + OpenRouter.
@@ -387,9 +392,8 @@ class AgentConfig:
     # OpenAI-compatible endpoint; use OPENROUTER_BASE_URL to invoke e.g. google/gemini-2.5-flash-lite via OpenRouter.
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     base_url: str = OPENROUTER_BASE_URL
-    channels: AgentChannelsConfig = field(default_factory=AgentChannelsConfig)
-    companion_harness: AgentCompanionHarnessConfig = field(
-        default_factory=AgentCompanionHarnessConfig
+    channels: AgentChannelsConfig = Field(
+        default_factory=AgentChannelsConfig
     )
     # Chat 专用 LLM 端点（可选）。若两者均配置则 Agent 聊天使用此端点，否则使用 base_url + api_key。记忆抽取始终使用 base_url + api_key。
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
@@ -416,7 +420,7 @@ class AgentConfig:
     # 图片生成不使用该采样率限制，保持全量追踪。
     langsmith_text_chat_sample_rate: float = 0.1
     # 若用户邮箱命中该名单，则文本聊天调用始终写入 LangSmith trace（忽略采样率）。
-    langsmith_text_chat_always_trace_user_emails: list[str] = field(
+    langsmith_text_chat_always_trace_user_emails: list[str] = Field(
         default_factory=list
     )
     # 官方 IntelliMate 助手的对话历史窗口条数（不按订阅分档，仅此一个限制）
@@ -720,8 +724,7 @@ class GeminiLiveConfig(BaseModel):
     audio_temp_dir: Optional[str] = None
 
 
-@dataclass
-class PhoneCallConfig:
+class PhoneCallConfig(BaseModel):
     """PSTN phone-call bridge configuration.
 
     The feature flag defaults to on so product surfaces may show the capability,
@@ -729,19 +732,17 @@ class PhoneCallConfig:
     Secrets should be supplied by environment variables in deployments.
     """
 
+    model_config = ConfigDict(extra="ignore")
+
     enabled: bool = True
     default_country_code: str = "+1"
     twilio_from_number: str = ""
     twilio_media_stream_base_url: str = ""
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
-    inbound_number_agent_map: dict = None
+    inbound_number_agent_map: dict[str, str] = Field(default_factory=dict)
     default_inbound_agent_id: str = ""
     media_stream_token_ttl_seconds: int = 300
-
-    def __post_init__(self):
-        if self.inbound_number_agent_map is None:
-            self.inbound_number_agent_map = {}
 
 
 class TTSConfig(BaseModel):
@@ -773,8 +774,9 @@ class WeixinChannelConfig(BaseModel):
     split_multiline_messages: bool = False
 
 
-@dataclass
-class Config:
+class Config(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     app: AppConfig
     security: SecurityConfig
     database: DatabaseSettings
@@ -789,20 +791,20 @@ class Config:
     elevenlabs: ElevenLabsConfig
     cloudflare: CloudflareConfig
     push_notification: PushNotificationConfig
-    memory_extraction: MemoryExtractionConfig = field(
-        default_factory=lambda: MemoryExtractionConfig()
+    memory_extraction: MemoryExtractionConfig = Field(
+        default_factory=MemoryExtractionConfig
     )
-    user_analytics_report: UserAnalyticsReportConfig = field(
-        default_factory=lambda: UserAnalyticsReportConfig()
+    user_analytics_report: UserAnalyticsReportConfig = Field(
+        default_factory=UserAnalyticsReportConfig
     )
-    fal: FalConfig = field(default_factory=FalConfig)
-    gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
-    phone_call: PhoneCallConfig = field(default_factory=PhoneCallConfig)
-    tts: TTSConfig = field(default_factory=TTSConfig)
-    surprise_snap: SurpriseSnapConfig = field(
-        default_factory=lambda: SurpriseSnapConfig()
+    fal: FalConfig = Field(default_factory=FalConfig)
+    gemini_live: GeminiLiveConfig = Field(default_factory=GeminiLiveConfig)
+    phone_call: PhoneCallConfig = Field(default_factory=PhoneCallConfig)
+    tts: TTSConfig = Field(default_factory=TTSConfig)
+    surprise_snap: SurpriseSnapConfig = Field(
+        default_factory=SurpriseSnapConfig
     )
-    weixin_channel: WeixinChannelConfig = field(
+    weixin_channel: WeixinChannelConfig = Field(
         default_factory=WeixinChannelConfig
     )
 
@@ -852,17 +854,9 @@ def load_config(path: str) -> Config:
         agent_data["channels"] = AgentChannelsConfig.model_validate(
             agent_data["channels"]
         )
-    if "companion_harness" in agent_data and isinstance(
-        agent_data["companion_harness"], dict
-    ):
-        agent_data["companion_harness"] = (
-            AgentCompanionHarnessConfig.model_validate(
-                agent_data["companion_harness"]
-            )
-        )
 
     return Config(
-        app=AppConfig(**app_data),
+        app=AppConfig.model_validate(app_data),
         security=SecurityConfig.model_validate(data.get("security") or {}),
         database=DatabaseSettings.model_validate(data.get("database") or {}),
         google_oauth=GoogleOAuthConfig.model_validate(
@@ -873,7 +867,7 @@ def load_config(path: str) -> Config:
         ),
         logging=LoggingConfig.model_validate(data.get("logging") or {}),
         embedding=EmbeddingConfig.model_validate(data.get("embedding") or {}),
-        agent=AgentConfig(**agent_data),
+        agent=AgentConfig.model_validate(agent_data),
         gcs=GCSConfig.model_validate(data.get("gcs") or {}),
         firebase=FirebaseConfig.model_validate(data.get("firebase") or {}),
         google_play=GooglePlayConfig.model_validate(
@@ -898,7 +892,7 @@ def load_config(path: str) -> Config:
         gemini_live=GeminiLiveConfig.model_validate(
             data.get("gemini_live") or {}
         ),
-        phone_call=PhoneCallConfig(**(data.get("phone_call") or {})),
+        phone_call=PhoneCallConfig.model_validate(data.get("phone_call") or {}),
         tts=TTSConfig.model_validate(data.get("tts") or {}),
         surprise_snap=_parse_surprise_snap_config(data),
         weixin_channel=WeixinChannelConfig.model_validate(
