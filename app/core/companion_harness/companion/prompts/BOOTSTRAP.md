@@ -41,5 +41,7 @@
 
 ## 尽快推进
 
-- 尽快完成 bootstrap
-- 用户始终没有提供必要信息，则提前结束
+- 目标：少量轮次内完成关系初稿并进入日常相处；不要无限闲聊却不写档案、不收尾。
+- **必要信息**（best-effort，不要求凑齐）：彼此称呼或代称、大致陪伴期待、至少一轮可写入档案的对话素材；用户不愿细说则以已有信息为准。
+- **顺序固定**：先用 **memory_store_write_document** 把 **IDENTITY.md / STYLE.md / USER.md** 写成可用初稿（即使用户配合度低，也基于已有对话写，不可留空模板）；再调用 **companion_bootstrap_user_interactive_complete**。**禁止**跳过写入直接 complete。
+- 用户表达厌倦、想正常聊天、或已连续多轮无新信息时，可提前收尾（仍须先写初稿再 complete）。
