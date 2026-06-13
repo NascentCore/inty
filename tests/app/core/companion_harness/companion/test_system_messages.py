@@ -64,7 +64,7 @@ def test_bootstrap_track_injects_typed_tool_call_section() -> None:
     bootstrap_spec_block = next(
         content
         for content in contents
-        if content.startswith("# Agentic 初始化执行规范（内部）")
+        if "# Bootstrap companionship" in content
     )
     assert contents.index(bootstrap_spec_block) < contents.index(tool_section)
     for tool_name in (
@@ -146,7 +146,7 @@ def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> No
             context=context,
             memory_bootstrap_type="none",
             track=CompanionTurnTrack.USER_CHAT,
-            route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
+            route_mode=TurnRouteMode.IN_TURN_SYNC_TOOL,
             runtime_context=TurnRuntimeContext(
                 channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
                 implicit_signal_bundle=None,
