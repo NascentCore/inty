@@ -3,6 +3,9 @@
 Identity for companion / telegram-demo / weixin paths uses ``User.id`` and ``Agent.id``
 only. Do **not** read or write legacy ``readable_id`` here (maintenance-mode HTTP APIs
 may still touch it). Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
+
+TODO(telegram-dedicated-bot-bonding): Triage portal to provision per-user bot token and
+  bind 1 user : 1 bot : 1 agent — #3361
 """
 
 from __future__ import annotations

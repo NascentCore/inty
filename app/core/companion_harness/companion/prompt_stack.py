@@ -101,6 +101,8 @@ def companion_tools_for_turn(
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
     implicit_user_signed_on_turn: bool = False,
+    # TODO(telegram-channel-tools): Filter tool schemas by ``runtime_context.channel``;
+    #   Telegram meta tools only when dedicated-bot bonding (#3361) is live.
 ) -> list[dict[str, Any]]:
     """OpenAI tool schemas for this turn (independent of which system-message wrapper runs)."""
     match track:

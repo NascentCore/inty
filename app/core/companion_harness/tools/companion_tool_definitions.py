@@ -12,6 +12,9 @@ New tool checklist:
 
 TODO(abstraction): Group tools by defining tuple of LlmFunctionTool data objects.
 Do not group by tool names.
+
+TODO(telegram-channel-tools): Channel-specific tool schemas (e.g. telegram_set_bot_name)
+  gated on dedicated-bot bonding — #3361
 """
 
 from __future__ import annotations

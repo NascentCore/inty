@@ -255,6 +255,10 @@ Weixin 路径不经 `/api/v1/chat/ws`，由 `backend/ops/weixin_channel/` 适配
 
 [1] [Telegram Bots API meta-operations on bots](https://core.telegram.org/bots/api)
 
+**现状（shared-bot）**：Ops telegram-demo 使用单一 `bot_token`；`agent_channel_endpoints` 按 `chat_id` 路由到 `(user_id, agent_id)`。Public promotion 共用同一 `@username`，仅 `start_parameter` 区分 agent。Bot API 的 `setMyName` 等 meta-operation 为 **bot 全局**，无法 per-user 定制可见 bot 名。
+
+**选项 B — dedicated-bot bonding（未决，#3361）**：以 Telegram Bots API 为 triage / onboarding portal；为每位用户 provision **独立 bot**（独立 token + `@username`），形成 **1 user : 1 Telegram bot : 1 Inty agent** 三元绑定。动机：per-bot channel tools（改名、描述、menu）、消除 shared-bot 路由歧义、IM 身份与 agent 一一对应。待决：BotFather / bot-factory 创建流程、N token 存储与 long-poll/webhook 扩展、与 App/Weixin 同 agent 多 channel 策略。
+
 ## Runtime Loop
 
 ### 目标态（尚未落地为独立 inbound runtime）
