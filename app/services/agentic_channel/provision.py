@@ -1,25 +1,35 @@
-"""Guest user + agent provisioning for agent-channel onboard (no legacy chat row)."""
+"""Guest user + agent provisioning for agent-channel onboard (no legacy chat row).
+
+Identity for companion / telegram-demo / weixin paths uses ``User.id`` and ``Agent.id``
+only. Do **not** read or write legacy ``readable_id`` here (maintenance-mode HTTP APIs
+may still touch it). Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
+"""
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
 from app.core.model_selection import select_chat_model
-from app.core.uuid import get_new_user_id
 from app.db.session import AsyncSessionLocal
-from app.models.agent import Agent, AgentVisibility
-from app.models.user import AuthType, Gender, User
-from app.schemas.agent import AgentCreate
+from app.models.agent import Agent
+from app.models.user import User
+from app.core.companion_harness.agent_channel.guest_agent_kind import (
+    companion_guest_agent_kind_for_channel,
+)
+from app.services.agentic_channel.companion_guest_provision import (
+    GuestUserInput,
+    ProvisionGuestScopeInput,
+    add_guest_user,
+    provision_guest_scope,
+)
 from app.services.agentic_channel.endpoints import (
     assert_inbound_endpoint_identity,
     resolve_scope,
@@ -32,7 +42,6 @@ from app.services.agentic_channel.errors import (
 )
 from app.services.agentic_channel.turn import ensure_memory_store_session
 from app.services.global_services import subscription_service
-from app.services.user_service import generate_next_readable_id
 
 
 @dataclass(frozen=True)
@@ -41,78 +50,6 @@ class ChannelProvisionResult:
     is_new_user: bool
     channel_address: str
     channel_user_id: str
-
-
-def _default_agent_create(*, tag: str) -> AgentCreate:
-    return AgentCreate(
-        name=f"agent-channel-{tag}",
-        gender="FEMALE",
-        visibility=AgentVisibility.PRIVATE,
-        intro="Agent channel companion.",
-        opening="Hello.",
-        personality="Warm, curious.",
-        scenario="Multi-channel companion.",
-    )
-
-
-async def _add_guest_user(db: AsyncSession) -> User:
-    user_id = get_new_user_id()
-    readable_id = await generate_next_readable_id(db)
-    suffix = user_id[-8:]
-    user = User(
-        id=user_id,
-        readable_id=readable_id,
-        auth_type=AuthType.GUEST,
-        nickname=f"Guest_{suffix}",
-        meta_data={"agent_channel": True},
-    )
-    db.add(user)
-    return user
-
-
-async def _add_channel_agent(
-    db: AsyncSession,
-    *,
-    user_id: str,
-    tag: str,
-) -> Agent:
-    assert user_id != ""
-    assert tag != ""
-    agent_in = _default_agent_create(tag=tag)
-    agent_id = str(uuid.uuid4())
-    readable_id = await generate_next_readable_id(db)
-    agent = Agent(
-        id=agent_id,
-        readable_id=readable_id,
-        name=agent_in.name,
-        gender=Gender.FEMALE,
-        intro=agent_in.intro,
-        opening=agent_in.opening,
-        personality=agent_in.personality,
-        scenario=agent_in.scenario,
-        visibility=AgentVisibility.PRIVATE,
-        creator_id=user_id,
-    )
-    db.add(agent)
-    return agent
-
-
-async def _first_private_agent_for_user(
-    db: AsyncSession,
-    user_id: str,
-) -> Agent | None:
-    assert user_id != ""
-    stmt = (
-        select(Agent)
-        .where(
-            Agent.creator_id == user_id,
-            Agent.visibility == AgentVisibility.PRIVATE,
-        )
-        .order_by(Agent.created_at.asc())
-        .limit(1)
-    )
-    result = await db.execute(stmt)
-    return result.scalar_one_or_none()
 
 
 async def _provision_result_after_bind_race(
@@ -245,10 +182,14 @@ async def provision_agent_for_channel_onboard(
         pending_user_id = ""
         pending_agent_id = ""
         try:
-            user = await _add_guest_user(db)
-            tag = uuid.uuid4().hex[:10]
-            agent = await _add_channel_agent(db, user_id=user.id, tag=tag)
-            scope = AgentScope(user_id=user.id, agent_id=agent.id)
+            scope = await provision_guest_scope(
+                db,
+                ProvisionGuestScopeInput(
+                    kind=companion_guest_agent_kind_for_channel(channel),
+                    nickname_prefix="Guest",
+                    meta_data={"agent_channel": True},
+                ),
+            )
             pending_user_id = scope.user_id
             pending_agent_id = scope.agent_id
             await upsert_endpoint_in_session(
@@ -316,7 +257,11 @@ async def provision_agent_for_existing_agent(
     channel_user_id: str,
     agent_id: str,
 ) -> ChannelProvisionResult:
-    """Bind channel endpoint to an existing companion agent (tests only; not wired in transport)."""
+    """Bind channel endpoint to an existing companion agent (tests only; not wired in transport).
+
+    Creates guest user via ``add_guest_user`` only — does not call ``provision_guest_scope``
+    because ``agent_id`` already exists.
+    """
     assert channel_address != ""
     assert channel_user_id != ""
     assert agent_id != ""
@@ -346,7 +291,13 @@ async def provision_agent_for_existing_agent(
         pending_user_id = ""
         pending_agent_id = ""
         try:
-            user = await _add_guest_user(db)
+            user = await add_guest_user(
+                db,
+                GuestUserInput(
+                    nickname_prefix="Guest",
+                    meta_data={"agent_channel": True},
+                ),
+            )
             scope = AgentScope(user_id=user.id, agent_id=agent_id)
             pending_user_id = scope.user_id
             pending_agent_id = scope.agent_id

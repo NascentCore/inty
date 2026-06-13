@@ -8,10 +8,12 @@
 
 ## 原则（比命令更重要）
 
+- 用 `alembic` CLI 生成 version 文件。
 - **一切表结构变更走迁移**：不要手工在生产改表后忘了补 revision。
 - **禁止改写历史**：已合并的 revision 文件视为 **只读**；修正用 **新 revision** 说明补救原因。
 - **数据回填**：避免生成「仅批量改数据」的 migration 文件——数据修复用脚本或运维任务，schema 迁移专注 DDL。
 - **Ops 与主站共头**：任何 Ops 会读写的共享表，必须在 **同一 Alembic head** 上演进。
+- **legacy schema 勿贸然清理**：仍被 legacy 代码使用的表/列/约束，先开 GitHub issue 并在代码里加 TODO 引用 issue，再规划迁移。
 
 ## 实操入口
 
