@@ -77,10 +77,16 @@ def run_dreaming_batch_if_due(
         inty_trace_id=inty_trace_id,
         candidate=candidate,
         parent_run_enabled=None,
-    ) as langsmith_root_run:
+    ) as (langsmith_root_run, langsmith_slice):
 
         def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
-            return session.llm_client.complete_text(messages, model_role=role)
+            return session.llm_client.complete_text(
+                messages,
+                model_role=role,
+                langsmith_extra=langsmith_slice.dreaming_consolidation_extra(
+                    model_role=role
+                ),
+            )
 
         consolidate_memory_during_dreaming(
             session.store,

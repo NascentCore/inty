@@ -13,6 +13,9 @@ from app.core.companion_harness.companion.dreaming import (
 from app.core.companion_harness.companion.dreaming_observability import (
     DreamingBatchOutcome,
 )
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
+)
 from app.core.companion_harness.companion.models import ChatMessage
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
@@ -50,7 +53,7 @@ def _session() -> MagicMock:
 
 @contextmanager
 def _noop_dreaming_observability(**_kwargs):
-    yield None
+    yield None, CompanionTurnLangsmithSlice.app_default()
 
 
 def test_run_dreaming_batch_if_due_skips_when_not_due() -> None:

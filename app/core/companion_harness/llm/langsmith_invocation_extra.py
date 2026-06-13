@@ -11,12 +11,16 @@ from __future__ import annotations
 from typing import Any
 
 INTY_LLM_SOURCE_METADATA_KEY = "inty_llm_source"
+INTY_RUNTIME_CHANNEL_METADATA_KEY = "inty_runtime_channel"
+INTY_RUNTIME_CHANNEL_SOURCE_METADATA_KEY = "inty_runtime_channel_source"
 INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY = "inty_tool_choice_attempt"
 INTY_TOOL_BG_ROUND_METADATA_KEY = "inty_tool_bg_round"
 
 # Companion foreground chat completion that requests structured JSON envelope + importance_* fields.
 SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE = "foreground_dual_llm_envelope"
 SOURCE_BOOTSTRAP_TRACK = "bootstrap_track"
+SOURCE_IMPLICIT_SIGN_ON_GREETING = "implicit_sign_on_greeting"
+SOURCE_SINGLE_COMPLETION = "single_completion"
 SOURCE_TOOL_BACKGROUND_INITIAL = "tool_background_initial"
 SOURCE_TOOL_BACKGROUND_CONTINUE = "tool_background_continue"
 SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK = "tool_background_routing_fallback"
