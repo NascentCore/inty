@@ -81,6 +81,11 @@ Use `agent_id` as `companion_id`.
 
 Optional LangSmith: [`langsmith-download-run`](../langsmith-download-run/SKILL.md) — search `memory_store_write_document`.
 
+### 5. Terminate services launched during tests
+
+- backend service instances
+- cleanup temporary data created during tests
+
 ## Pass criteria (short)
 
 - `context.json`: `workspace_bootstrap_user_interactive_completed` **true**.
