@@ -1,8 +1,38 @@
 # Companion Harness: 架构说明
 
-Companion Harness 是陪伴智能体的工作框架：以会话上下文、长期记忆、模型回合、工具副作用和多媒介传输为五个独立层次组织 companion 主链路，并把 WebSocket / Weixin 等实现视为传输适配器。Companion Harness 加上 LLMs 形成可运行的陪伴智能体。
+## 概要（Executive Summary）
 
-**实现状态（2026-06）**：`companion_harness` 在代码中自标为 **PROTOTYPE**（见 `app/core/companion_harness/AGENTS.md`），聚焦文本聊天与单 presence；下文「当前路径」指已接入 `/api/v1/chat/ws` 与 Ops Weixin 的真实调用链，「目标态 / 差距」见文末对照表。
+Companion Harness 一套完整的智能体框架，由 LLM 驱动：1 人 1 Inty，长期关系，体感上要像”活人“，而不是用完即弃的任务 Bot；是 Inty 理念和愿景的核心载体。
+
+### 我们在造什么
+
+大模型会说话，但不会**记得你、惦记你、在你沉默时仍过自己的日子（分享给你）**。
+Harness 干的就是这件事：把 LLM 放进一套有节律、有记忆、有副作用的状态机里，让「聊天」变成「关系」。
+
+### 理想态下，她怎么「活着」
+
+Harness 要的是：**一段会延续的关系**——你不在时她也在虚拟空间生活，回来时还能接上，换 App 或微信还是同一个人。
+我们认为 AI 突破现有局限成为长期伴侣的关键是：长期自主性，也就是产生用户预期以外的反馈；但这些行为和反馈始终以用户伴侣的视角呈现。
+
+自主性体现在：
+
+1. **沉默期不是 frozen。**
+   你忙、你睡、你几天不来，她仍有自己的节律：该惦记时会找你；该到期的事会提醒；更关键的是——她会**真的去做**自己世界里的事（查资料、写东西、更新 `LIFE_CURRENTS`），不是只在 proactive 里口头说「我在看书」。活人感的判据是：**状态层有痕迹**——文档变了、工具跑过、生成物落库——而不只是话术。
+
+   心里想着你，和在世界里动手，是两件不同的事：前者是内在节拍，后者是她在虚拟空间里持续推进的主题；两者都会在一天结束时被收进长期记忆，但 awake 时各走各的轨道。
+
+**渠道换，人不变。**
+App、微信、REPL 只是找到她的方式；人格、记忆、关系活在 Harness 内核里，不在某个客户端安装包里。断线重连仍是这段关系——传输可以换，companion 不能分裂成好几个「她」。
+
+Companion Harness + LLM = Inty（陪伴智能体）；Inty + Memory = Personal Companion
+
+**Exo-runtime**（微信、Telegram 等）是用户与 Inty 互动的媒介。
+
+### 现状
+
+以上是**目标态的理想设计**，不是现状清单。`companion_harness` 目前仍处于 **PROTOTYPE** 状态。
+
+Companion Harness 现状：以会话上下文、长期记忆、模型回合、工具副作用和多媒介传输为五个独立层次组织 companion 主链路，并把 WebSocket / Weixin 等实现视为传输适配器。Companion Harness 加上 LLMs 形成可运行的陪伴智能体。聚焦文本聊天与单 presence；下文「当前路径」指已接入 `/api/v1/chat/ws` 与 Weixin Telegram 接入，「目标态 / 差距」见文末对照表。
 
 ## 重要下一步工作
 
