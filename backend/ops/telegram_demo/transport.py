@@ -51,7 +51,7 @@ _WELCOME_NEW = (
 _WELCOME_RETURNING = "欢迎回来！已绑定 companion，可以直接发消息聊天。"
 _ONBOARD_HINT = (
     "请先打开 Ops /telegram-demo 页面扫码，"
-    "或在对话中发送 /start 完成绑定。"
+    "或在对话中发送 /start onboard 完成绑定。"
 )
 _IDENTITY_MISMATCH = (
     "Telegram 用户身份与绑定记录不符，无法处理消息。"

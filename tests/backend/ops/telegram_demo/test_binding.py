@@ -15,14 +15,14 @@ def test_parse_start_payload_bare_start_with_bot_username() -> None:
     assert payload.kind == StartPayloadKind.ONBOARD
 
 
-def test_parse_start_payload_start_with_payload_is_none() -> None:
+def test_parse_start_payload_onboard_deep_link() -> None:
     payload = parse_start_payload("/start onboard")
-    assert payload.kind == StartPayloadKind.NONE
+    assert payload.kind == StartPayloadKind.ONBOARD
 
 
-def test_parse_start_payload_start_with_bot_username_and_payload_is_none() -> None:
+def test_parse_start_payload_onboard_deep_link_with_bot_username() -> None:
     payload = parse_start_payload("/start@MyBot onboard")
-    assert payload.kind == StartPayloadKind.NONE
+    assert payload.kind == StartPayloadKind.ONBOARD
 
 
 def test_parse_start_payload_unknown_start_token_is_none() -> None:

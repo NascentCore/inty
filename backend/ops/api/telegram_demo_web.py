@@ -28,11 +28,11 @@ _TELEGRAM_DEMO_HTML = """<!DOCTYPE html>
   <pre id="status">正在加载 bot 信息…</pre>
   <h2>队友使用指南</h2>
   <ol>
-    <li>用 Telegram 扫上方 QR，或打开链接后在 bot 里点 Start（会发送 <code>/start</code>）</li>
+    <li>用 Telegram 扫上方 QR，或打开链接（会自动发送 <code>/start onboard</code>）</li>
     <li>在 bot 里用<strong>中文</strong>聊天，完成 bootstrap（取名、关系等）</li>
     <li>bootstrap 结束后正常闲聊；空闲时可能收到 proactive 消息</li>
     <li><strong>一人一个 companion</strong>；仅支持文字；勿与 App WebSocket 同时用同一 guest 账号</li>
-    <li>Ops 重启后一般<strong>直接发消息</strong>即可；异常时再发 <code>/start</code></li>
+    <li>Ops 重启后一般<strong>直接发消息</strong>即可；异常时再扫 QR 或发 <code>/start onboard</code></li>
     <li>无回复：确认 Ops <code>/health</code>、查看 <code>.inty/inty.log</code></li>
   </ol>
   <script>
@@ -43,7 +43,7 @@ _TELEGRAM_DEMO_HTML = """<!DOCTYPE html>
     }
 
     function renderQr(username) {
-      const url = "https://t.me/" + username;
+      const url = "https://t.me/" + username + "?start=onboard";
       const imgUrl = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data="
         + encodeURIComponent(url);
       document.getElementById("qr").innerHTML =
