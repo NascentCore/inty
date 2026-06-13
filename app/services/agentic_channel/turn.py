@@ -175,16 +175,17 @@ async def run_agent_turn(
         scope, resolved_chat_model=resolved_chat_model
     )
     await _maybe_append_agent_channel_session_system(session=session)
-    out = await manager.run_user_chat_turn(
-        session,
-        user_text,
-        background_output_sink=background_output_sink,
-        preset_user_msg_uuid=preset_user_msg_uuid,
-        runtime_context=TurnRuntimeContext(
-            channel=runtime_channel,
-            implicit_signal_bundle=implicit_signal_bundle,
-        ),
-    )
+    async with session.turn_lock:
+        out = await manager.run_user_chat_turn(
+            session,
+            user_text,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
+            runtime_context=TurnRuntimeContext(
+                channel=runtime_channel,
+                implicit_signal_bundle=implicit_signal_bundle,
+            ),
+        )
     logger.info(
         "agent_channel turn finished scope={} channel={} total_ms={:.0f}",
         scope.registry_key(),

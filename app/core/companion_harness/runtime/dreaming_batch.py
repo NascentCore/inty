@@ -41,8 +41,7 @@ def run_dreaming_batch_if_due(
     ``dreaming_due`` enforces idle time plus **at most one successful dream per UTC
     calendar day** per scope (intentional; see ``companion.dreaming``).
 
-    Caller must hold presence ``turn_lock`` (or equivalent single-writer exclusion).
-    Re-checks ``dreaming_due`` inside the lock so conditions may change while waiting.
+    Caller must hold scope ``CompanionSession.turn_lock`` (#3272). Re-checks ``dreaming_due`` inside the lock so conditions may change while waiting.
     Prototype: ``transcript.jsonl`` must not change during the batch; mismatch after
     ``consolidate_memory_during_dreaming`` raises ``DreamingTranscriptBoundaryMismatchError``
     (see ``companion.dreaming`` module doc — #3272, #3271, tool_bg timing TODO).

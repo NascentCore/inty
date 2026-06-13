@@ -4,13 +4,13 @@
 一份 MemoryStore，进程内单例。Prototype 假定每个 paired user 仅一条 presence（单 tab /
 单 wire），见 ``companion_harness`` AGENTS.md「Concurrency (prototype)」。
 
-每个 ``CompanionSession`` 还持有 ``tool_bg_idle`` — 上一轮 tool_background 是否结束；
-下一轮 ``run_turn`` 加载 transcript 前等待。Dreaming 与用户 chat、inner-tick 在
-**presence** ``Coordinator.turn_lock`` 上串行（见 ``session.Coordinator``）。
+每个 ``CompanionSession`` 还通过 ``turn_lock`` / ``tool_bg_idle`` 暴露 scope 级串行化状态
+（``scope_turn_lock``；#3272）。
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import threading
 
@@ -40,6 +40,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult
 from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from .scope import CompanionScope
+from .scope_turn_lock import get_scope_tool_bg_idle, get_scope_turn_lock
 from .turn_deps import CompanionTurnDeps
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 from .turn_tracks import (
@@ -111,15 +112,20 @@ class CompanionSession:
         self.store = store
         self.llm_client = llm_client
         self.config = config
-        # TODO(tool-bg-idle-starves-user-chat): Cleared by tool_background start; run_turn
-        # awaits this before loading transcript. Wedged maintenance bg blocks user chat.
-        # https://github.com/NascentCore/inty/issues/3123
-        self.tool_bg_idle = threading.Event()
-        self.tool_bg_idle.set()
+
+    @property
+    def tool_bg_idle(self) -> threading.Event:
+        """Scope-level tool_background idle gate (singleton per ``CompanionScope``)."""
+        return get_scope_tool_bg_idle(self.scope)
 
     @property
     def is_initialized(self) -> bool:
         return is_scope_initialized_in_store(self.store)
+
+    @property
+    def turn_lock(self) -> asyncio.Lock:
+        """Scope-level turn serializer (singleton per ``CompanionScope.registry_key()``)."""
+        return get_scope_turn_lock(self.scope)
 
 
 class CompanionManager:

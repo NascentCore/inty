@@ -47,6 +47,11 @@ def shutdown_memory_store(
     if store is None:
         return
     store.shutdown(timeout_s=timeout_s)
+    from app.core.companion_harness.companion.scope_turn_lock import (
+        release_scope_runtime_state,
+    )
+
+    release_scope_runtime_state(scope)
 
 
 def memory_store_cache_key(scope: CompanionScope) -> str:
