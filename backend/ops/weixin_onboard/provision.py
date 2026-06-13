@@ -1,4 +1,8 @@
-"""Provision Inty user, agent, and bridge JWT after Weixin iLink QR confirm."""
+"""Provision Inty user, agent, and bridge JWT after Weixin iLink QR confirm.
+
+Identity uses ``User.id`` and ``Agent.id`` only; legacy ``readable_id`` is unused.
+Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
+"""
 
 from __future__ import annotations
 
@@ -9,13 +13,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.core.uuid import get_new_user_id
 from app.db.session import AsyncSessionLocal
-from app.models.agent import Agent, AgentVisibility
-from app.models.user import AuthType, User
-from app.schemas.agent import AgentCreate
-from app.services import agent_service
-from app.services.user_service import generate_next_readable_id
+from app.models.agent import Agent
+from app.models.user import User
+from app.services.agentic_channel.companion_guest_provision import (
+    CompanionGuestAgentKind,
+    GuestUserInput,
+    PrivateAgentInput,
+    add_guest_user,
+    add_private_agent,
+    companion_guest_agent_create,
+    first_private_agent_for_user,
+)
 
 
 @dataclass(frozen=True)
@@ -26,18 +35,6 @@ class ProvisionResult:
     agent_id: str
     jwt: str
     is_new_user: bool
-
-
-def _default_agent_create(*, tag: str) -> AgentCreate:
-    return AgentCreate(
-        name=f"weixin-companion-{tag}",
-        gender="FEMALE",
-        visibility=AgentVisibility.PRIVATE,
-        intro="Weixin onboard companion.",
-        opening="Hello.",
-        personality="Warm, curious.",
-        scenario="Weixin chat companion.",
-    )
 
 
 async def _user_by_ilink_user_id(
@@ -53,43 +50,44 @@ async def _user_by_ilink_user_id(
     return result.scalar_one_or_none()
 
 
-async def _first_private_agent_for_user(
-    db: AsyncSession,
-    user_id: str,
-) -> Agent | None:
-    assert user_id != ""
-    stmt = (
-        select(Agent)
-        .where(
-            Agent.creator_id == user_id,
-            Agent.visibility == AgentVisibility.PRIVATE,
-        )
-        .order_by(Agent.created_at.asc())
-        .limit(1)
-    )
-    result = await db.execute(stmt)
-    return result.scalar_one_or_none()
-
-
 async def _create_weixin_user(
     db: AsyncSession,
     ilink_user_id: str,
 ) -> User:
     assert ilink_user_id != ""
-    user_id = get_new_user_id()
-    readable_id = await generate_next_readable_id(db)
-    suffix = user_id[-8:]
-    user = User(
-        id=user_id,
-        readable_id=readable_id,
-        auth_type=AuthType.GUEST,
-        nickname=f"Weixin_{suffix}",
-        meta_data={"ilink_user_id": ilink_user_id},
+    user = await add_guest_user(
+        db,
+        GuestUserInput(
+            nickname_prefix="Weixin",
+            meta_data={"ilink_user_id": ilink_user_id},
+        ),
     )
-    db.add(user)
     await db.commit()
     await db.refresh(user)
     return user
+
+
+async def _create_weixin_agent(
+    db: AsyncSession,
+    *,
+    user_id: str,
+    tag: str,
+) -> Agent:
+    assert user_id != ""
+    assert tag != ""
+    agent = await add_private_agent(
+        db,
+        PrivateAgentInput(
+            user_id=user_id,
+            agent_in=companion_guest_agent_create(
+                kind=CompanionGuestAgentKind.WEIXIN,
+                tag=tag,
+            ),
+        ),
+    )
+    await db.commit()
+    await db.refresh(agent)
+    return agent
 
 
 async def provision_inty_for_ilink_user(
@@ -103,14 +101,10 @@ async def provision_inty_for_ilink_user(
         if user is None:
             user = await _create_weixin_user(db, ilink_user_id)
 
-        agent = await _first_private_agent_for_user(db, user.id)
+        agent = await first_private_agent_for_user(db, user.id)
         if agent is None:
             tag = uuid.uuid4().hex[:10]
-            agent = await agent_service.create_agent(
-                db,
-                agent_in=_default_agent_create(tag=tag),
-                user_id=user.id,
-            )
+            agent = await _create_weixin_agent(db, user_id=user.id, tag=tag)
 
         jwt = create_access_token(user.id)
         return ProvisionResult(

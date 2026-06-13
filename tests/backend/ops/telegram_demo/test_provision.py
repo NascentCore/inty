@@ -11,7 +11,6 @@ from sqlalchemy import delete, select
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import get_new_user_id
 from app.db.session import AsyncSessionLocal, async_engine
 from app.models.agent import Agent, AgentVisibility
@@ -25,16 +24,13 @@ from app.services.agentic_channel.provision import (
     provision_agent_for_channel_onboard,
     provision_agent_for_existing_agent,
 )
-from app.services.user_service import generate_next_readable_id
 
 
 async def _create_creator_agent() -> str:
     async with AsyncSessionLocal() as db:
         user_id = get_new_user_id()
-        readable_id = await generate_next_readable_id(db)
         user = User(
             id=user_id,
-            readable_id=readable_id,
             auth_type=AuthType.GUEST,
             nickname="Creator",
             meta_data={"test": True},
@@ -135,6 +131,31 @@ async def test_provision_onboard_rejects_channel_user_id_mismatch() -> None:
             channel_user_id=f"other-{uuid.uuid4().hex}",
         )
     await _cleanup_user(first.scope.user_id)
+
+
+@pytest.mark.asyncio
+async def test_telegram_onboard_leaves_readable_id_unset() -> None:
+    """Telegram onboard must not write legacy readable_id (nullable ORM column)."""
+    address = f"tg-{uuid.uuid4().hex}"
+    channel_user_id = f"tu-{uuid.uuid4().hex}"
+    result = await provision_agent_for_channel_onboard(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=address,
+        channel_user_id=channel_user_id,
+    )
+    assert result.is_new_user is True
+    async with AsyncSessionLocal() as db:
+        user_row = await db.execute(
+            select(User).where(User.id == result.scope.user_id)
+        )
+        user = user_row.scalar_one()
+        agent_row = await db.execute(
+            select(Agent).where(Agent.id == result.scope.agent_id)
+        )
+        agent = agent_row.scalar_one()
+        assert user.readable_id is None
+        assert agent.readable_id is None
+    await _cleanup_user(result.scope.user_id)
 
 
 @pytest.mark.asyncio

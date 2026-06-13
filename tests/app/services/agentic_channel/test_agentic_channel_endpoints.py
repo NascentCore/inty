@@ -27,16 +27,13 @@ from app.services.agentic_channel.endpoints import (
     resolve_scope_by_channel_user_id,
 )
 from app.services.agentic_channel.errors import ChannelEndpointConflictError
-from app.services.user_service import generate_next_readable_id
 
 
 async def _create_user_and_agent() -> AgentScope:
     async with AsyncSessionLocal() as db:
         user_id = get_new_user_id()
-        readable_id = await generate_next_readable_id(db)
         user = User(
             id=user_id,
-            readable_id=readable_id,
             auth_type=AuthType.GUEST,
             nickname="endpoint-test",
             meta_data={"test": True},

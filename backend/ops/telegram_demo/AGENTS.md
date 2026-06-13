@@ -22,7 +22,8 @@ Ops **telegram-demo**: Telegram Bot API long-poll ↔ companion harness.
 ## User-visible behavior (v2)
 
 1. Teammate opens ``GET /telegram-demo``, scans **team QR** (``start=onboard``).
-2. Ops auto-provisions **guest** ``User`` + PRIVATE ``Agent`` per ``telegram_chat_id``.
+2. Ops auto-provisions **guest** ``User`` + PRIVATE ``Agent`` per ``telegram_chat_id``
+   (identity: ``user_id`` / ``agent_id`` only; legacy ``readable_id`` unused).
 3. User sends **text**; harness replies (中文 OK).
 4. **Inner-tick** proactive / maintenance downlink via ``sendMessage`` (per-binding worker).
 5. Ops restart: bindings + presences restore from ``ops_telegram_demo_bindings``.

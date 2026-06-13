@@ -21,16 +21,13 @@ from app.services.agentic_companion.inner_tick_fire import (
     _resolve_inner_tick_scope_coords,
 )
 from app.services.agentic_companion.session import Coordinator, InnerTickCoords
-from app.services.user_service import generate_next_readable_id
 
 
 async def _create_guest_user() -> User:
     async with AsyncSessionLocal() as db:
         user_id = get_new_user_id()
-        readable_id = await generate_next_readable_id(db)
         user = User(
             id=user_id,
-            readable_id=readable_id,
             auth_type=AuthType.GUEST,
             nickname="inner_tick_test",
             meta_data={"test": True},

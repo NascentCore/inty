@@ -64,6 +64,8 @@ async def test_provision_create_and_reuse(async_db_session: AsyncSession) -> Non
     )
     agent = agent_row.scalar_one()
     assert agent.creator_id == first.user_id
+    assert user.readable_id is None
+    assert agent.readable_id is None
 
     second = await provision_inty_for_ilink_user(ilink_user_id=ilink_user_id)
     assert second.is_new_user is False

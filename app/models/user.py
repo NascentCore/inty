@@ -49,8 +49,11 @@ class User(Base):
     # category prefixes like user-<uuid> for better readability.
     id = Column(String, primary_key=True, comment="用户唯一标识符")
 
-    # DEPRECATED: app 显示 ID 而非 readable_id
-    readable_id = Column(String(8), comment="【已废弃】用户可读ID")
+    readable_id = Column(
+        String(8),
+        comment="DEPRECATED: use User.id; legacy 8-digit display id",
+        info={"deprecated": True},
+    )
     # TODO: Use SERIAL instead of string.
     nickname = Column(String, index=True, comment="用户昵称，可搜索")
     avatar = Column(String, comment="用户头像URL")

@@ -28,16 +28,11 @@ from app.services.agentic_channel.channel_runtime import (
     turn_channel_up,
 )
 from app.services.agentic_channel.endpoints import bind_endpoint
-from app.services.user_service import generate_next_readable_id
-
-
 async def _create_scope() -> AgentScope:
     async with AsyncSessionLocal() as db:
         user_id = get_new_user_id()
-        readable_id = await generate_next_readable_id(db)
         user = User(
             id=user_id,
-            readable_id=readable_id,
             auth_type=AuthType.GUEST,
             nickname="runtime-test",
             meta_data={"test": True},

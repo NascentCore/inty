@@ -2,20 +2,22 @@
 
 ## Overview
 
-As a fellow team member, review and revise the pending changes in the current conversation.
+As a fellow team member, review the pending changes in the current conversation.
 
 ## Instructions
 
 ### Review
 
 - Understand what the code does
+- Consider the overall architecture of [companion harness](/app/core/companion_harness/)
+- Consider [style rules](/.agents/guidelines/PY_STYLE_RULES.md)
 - Critique architecture
 - Check for bugs
-- Review based on [style rules](/.agents/guidelines/PY_STYLE_RULES.md)
 
 ### Enhance
 
 - Propose architecture improvement to improve structural clarity
+- Propose wholistic solution instead of duct-tape fixes
 
 ### Identify code smells
 
@@ -35,3 +37,7 @@ that means the code lacks hierarchy.
 - [ ] Tests are added if needed
 - [ ] Reviwed code smells
 - [ ] Changes passed tests, fix test failures if needed
+
+## Alembic version files
+
+- Skip reviewing these files
