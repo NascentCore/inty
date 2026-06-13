@@ -8,6 +8,7 @@ from app.utils.companion_feature_defaults import (
     DEFAULT_COMPANION_FEATURE_COMPACTION,
 )
 from app.utils.config import (
+    AgentCompanionHarnessConfig,
     AgentConfig,
     APIEndpointsConfig,
     AppConfig,
@@ -32,6 +33,7 @@ from app.utils.config import (
     SurpriseSnapConfig,
     TTSConfig,
     UserAnalyticsReportConfig,
+    UserTurnLlmLoopMode,
     VerificationConfig,
     _validate_config,
     load_config,
@@ -280,6 +282,39 @@ def test_features_config_companion_transcript_compaction_null_disables():
 def test_features_config_companion_harness_dreaming_idle_seconds() -> None:
     f = FeaturesConfig(companion_harness={"dreaming_idle_seconds": 33})
     assert f.companion_harness.dreaming_idle_seconds == 33
+
+
+def test_agent_config_user_turn_llm_loop_mode_default() -> None:
+    agent = AgentConfig(api_key="test", langchain_api_key="test")
+    assert (
+        agent.companion_harness.user_turn.llm_loop_mode
+        == UserTurnLlmLoopMode.DUAL_LLM
+    )
+
+
+def test_load_config_agent_companion_harness_user_turn_llm_loop_mode() -> None:
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_memory_bootstrap_type: NONE\n"
+    ).replace(
+        "agent:\n  api_key:",
+        "agent:\n  companion_harness:\n    user_turn:\n"
+        "      llm_loop_mode: in_turn_single_llm\n  api_key:",
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+    assert (
+        cfg.agent.companion_harness.user_turn.llm_loop_mode
+        == UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM
+    )
+
+
+def test_agent_companion_harness_config_model_validate() -> None:
+    parsed = AgentCompanionHarnessConfig.model_validate(
+        {"user_turn": {"llm_loop_mode": "dual_llm"}}
+    )
+    assert parsed.user_turn.llm_loop_mode == UserTurnLlmLoopMode.DUAL_LLM
 
 
 def test_features_config_uses_pydantic_validation():

@@ -16,6 +16,9 @@ from typing import TYPE_CHECKING, Awaitable, Callable
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.config import global_config_loaded_from_config_yaml
+from app.utils.config import UserTurnLlmLoopMode
+
 from .models import InnerTickActivity
 
 if TYPE_CHECKING:
@@ -46,9 +49,11 @@ class TurnRouteMode(str, Enum):
     """Which in-turn LLM execution strategy ``run_turn`` uses for this round.
 
     ``*_SYNC``: one ``chat_completion`` in the turn thread (not WS sync/async semantics).
-    When ``tools_enabled``, routing is always ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``
-    (tools run only in ``tool_background``). Otherwise in-turn sync chat uses
-    ``PROACTIVE_CHAT_SYNC``, ``INNER_TICK_SYNC``, or ``CHAT_ONLY_SYNC``.
+    When ``tools_enabled``, default routing is ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``
+    (tools run in ``tool_background``). Settled ``USER_CHAT`` may use ``IN_TURN_SYNC_TOOL``
+    when ``agent.companion_harness.user_turn.llm_loop_mode`` is ``in_turn_single_llm``.
+    Otherwise in-turn sync chat uses ``PROACTIVE_CHAT_SYNC``, ``INNER_TICK_SYNC``, or
+    ``CHAT_ONLY_SYNC``.
     """
 
     # TODO: rename members to drop ``_SYNC`` / avoid leaking execution-strategy names;
@@ -56,6 +61,7 @@ class TurnRouteMode(str, Enum):
     PROACTIVE_CHAT_SYNC = "proactive_chat_sync"
     INNER_TICK_SYNC = "inner_tick_sync"
     CHAT_ONLY_SYNC = "chat_only_sync"
+    IN_TURN_SYNC_TOOL = "in_turn_sync_tool"
     ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL = (
         "async_foreground_chat_background_tool"
     )
@@ -67,8 +73,16 @@ def resolve_turn_route_mode(
     inner_tick_activity: InnerTickActivity,
     tools_enabled: bool,
 ) -> TurnRouteMode:
-    """Pick route label. Tools always use async foreground chat + background tool thread."""
+    """Pick route label. Tools default to async foreground chat + background tool thread."""
     if tools_enabled:
+        mode = (
+            global_config_loaded_from_config_yaml.agent.companion_harness.user_turn.llm_loop_mode
+        )
+        if (
+            not inner_tick_turn
+            and mode == UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM
+        ):
+            return TurnRouteMode.IN_TURN_SYNC_TOOL
         return TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     if (
         inner_tick_turn

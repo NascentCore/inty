@@ -842,6 +842,27 @@ def build_system_messages_for_chat_track(
     )
 
 
+def build_system_messages_for_user_chat_in_turn_sync(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    memory_bootstrap_type: str,
+) -> list[dict[str, Any]]:
+    """Settled USER_CHAT with in-turn tools (``IN_TURN_SYNC_TOOL``): one chat model, no dual envelope."""
+    _ = memory_bootstrap_type
+    return build_system_messages(
+        bundle,
+        context,
+        enable_tools=True,
+        inner_tick_turn=False,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        ai_private_text="",
+        async_foreground_chat_stack=False,
+        tool_side_compact=False,
+        interactive_bootstrap_active=False,
+        include_significance_perception_slice=False,
+    )
+
+
 def build_system_messages_for_tool_track(
     bundle: PromptBundle,
     context: ContextMeta,

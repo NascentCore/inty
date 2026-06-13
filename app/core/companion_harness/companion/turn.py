@@ -63,6 +63,7 @@ from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
     SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
+    SOURCE_USER_CHAT_IN_TURN_SYNC,
     invocation_extra,
 )
 
@@ -243,7 +244,7 @@ def _async_dual_llm_system_message_variants(
     return tool_system_msgs, chat_system_msgs
 
 
-async def _run_bootstrap_track_sync_tool_loop(
+async def _run_in_turn_sync_tool_loop(
     *,
     store: MemoryStore,
     llm_client: CompanionLLMClient,
@@ -256,14 +257,17 @@ async def _run_bootstrap_track_sync_tool_loop(
     ts_user: datetime,
     user_msg_uuid: str,
     transcript_rel: str,
-    bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
+    track: CompanionTurnTrack,
+    route_mode: TurnRouteMode,
+    langsmith_source: str,
+    interim_output_sink: BootstrapInterimOutputSink | None,
 ) -> tuple[str, str, str, bool, str | None]:
-    """In-turn chat + tools for ``USER_CHAT_BOOTSTRAP`` (no dual-LLM / tool_background).
+    """In-turn chat + tools without dual-LLM / tool_background.
 
     Persists the user transcript row first, then non-empty assistant ``content`` from each LLM
     round (via callback) so JSONL order is always user → assistant(s). Interim rounds with
-    ``tool_calls`` may also push via ``bootstrap_interim_output_sink``. Caller must not append
-    the user row again at turn end.
+    ``tool_calls`` may also push via ``interim_output_sink``. Caller must not append the user
+    row again at turn end.
     """
     store.append_jsonl_record(
         transcript_rel,
@@ -288,7 +292,7 @@ async def _run_bootstrap_track_sync_tool_loop(
             model=chat_model,
             tools=tools,
             scene=LLM_SCENE_CHAT,
-            langsmith_extra=invocation_extra(source=SOURCE_BOOTSTRAP_TRACK),
+            langsmith_extra=invocation_extra(source=langsmith_source),
         )
 
     t_api = time.perf_counter()
@@ -338,14 +342,15 @@ async def _run_bootstrap_track_sync_tool_loop(
             inner_tick_turn=False,
             inner_tick_activity=InnerTickActivity.MAINTENANCE,
             messages=messages_with_tool_results,
-            track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+            track=track,
+            route_mode=route_mode,
         )
 
     round_index = 0
     skip_final_transcript_assistant_row = False
     last_interim_assistant_msg_uuid: str | None = None
 
-    async def _on_bootstrap_assistant_message(message: Any) -> None:
+    async def _on_sync_assistant_message(message: Any) -> None:
         nonlocal round_index
         nonlocal langsmith_trace_acc
         nonlocal langsmith_llm_run_acc
@@ -374,8 +379,8 @@ async def _run_bootstrap_track_sync_tool_loop(
         last_interim_assistant_msg_uuid = assistant_msg_uuid
         if not had_tool_calls:
             skip_final_transcript_assistant_row = True
-        if bootstrap_interim_output_sink is not None and had_tool_calls:
-            await bootstrap_interim_output_sink(
+        if interim_output_sink is not None and had_tool_calls:
+            await interim_output_sink(
                 BootstrapInterimOutput(
                     text=body,
                     user_msg_uuid=user_msg_uuid,
@@ -398,7 +403,7 @@ async def _run_bootstrap_track_sync_tool_loop(
         insert_system_message=_insert_system_message,
         initial_trace_id=langsmith_trace_acc or None,
         after_tool_messages_appended=_after_tool_messages_appended,
-        on_assistant_message=_on_bootstrap_assistant_message,
+        on_assistant_message=_on_sync_assistant_message,
     )
     if loop_result.trace_id:
         langsmith_trace_acc = loop_result.trace_id
@@ -408,8 +413,9 @@ async def _run_bootstrap_track_sync_tool_loop(
         len(str(m.get("content") or "")) for m in loop_result.messages
     )
     logger.info(
-        "run_turn bootstrap_track llm_done model={} chat_completions_ms={:.0f} "
-        "approx_ctx_chars={} trace_id={}",
+        "run_turn in_turn_sync_tool_loop llm_done track={} model={} "
+        "chat_completions_ms={:.0f} approx_ctx_chars={} trace_id={}",
+        track.value,
         chat_model,
         (time.perf_counter() - t_api) * 1000.0,
         approx_ctx_chars,
@@ -510,12 +516,6 @@ async def _run_companion_turn_core(
         inner_tick_turn,
         route_inner_activity.value if inner_tick_turn else "-",
     )
-    logger.debug(
-        "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm=True",
-        llm_client.config.api_base,
-        llm_client.resolve_model("chat"),
-        llm_client.resolve_model("tool"),
-    )
 
     raw_idle_timeout = (
         os.environ.get("INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC", "").strip() or ""
@@ -568,6 +568,13 @@ async def _run_companion_turn_core(
     route_mode = prompt_plan.route_mode
     messages = prompt_plan.messages
     use_dual_structured_chat = prompt_plan.use_dual_structured_chat
+    logger.debug(
+        "run_turn llm_client api_base={} model_chat={} model_tool={} route_mode={}",
+        llm_client.config.api_base,
+        llm_client.resolve_model("chat"),
+        llm_client.resolve_model("tool"),
+        route_mode.value,
+    )
     user_msg_uuid = (
         preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
     )
@@ -580,6 +587,7 @@ async def _run_companion_turn_core(
     tool_background_started = False
     bootstrap_skip_final_transcript_assistant_row = False
     bootstrap_last_interim_assistant_msg_uuid: str | None = None
+    user_row_persisted_in_sync_loop = False
     t_loop = time.perf_counter()
 
     llm_runtime_bind_token: (
@@ -653,7 +661,7 @@ async def _run_companion_turn_core(
                         langsmith_llm_run_acc,
                         bootstrap_skip_final_transcript_assistant_row,
                         bootstrap_last_interim_assistant_msg_uuid,
-                    ) = await _run_bootstrap_track_sync_tool_loop(
+                    ) = await _run_in_turn_sync_tool_loop(
                         store=store,
                         llm_client=llm_client,
                         messages=messages,
@@ -665,12 +673,47 @@ async def _run_companion_turn_core(
                         ts_user=ts_user,
                         user_msg_uuid=user_msg_uuid,
                         transcript_rel=rel_tr_bootstrap,
-                        bootstrap_interim_output_sink=(
-                            bootstrap_interim_output_sink
-                        ),
+                        track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+                        route_mode=route_mode,
+                        langsmith_source=SOURCE_BOOTSTRAP_TRACK,
+                        interim_output_sink=bootstrap_interim_output_sink,
                     )
+                    user_row_persisted_in_sync_loop = True
                     logger.info(
                         "run_turn loop_done bootstrap_track loop_total_ms={:.0f}",
+                        (time.perf_counter() - t_loop) * 1000.0,
+                    )
+                elif route_mode == TurnRouteMode.IN_TURN_SYNC_TOOL:
+                    rel_tr_sync = transcript_relative_path_for_turn_persistence(
+                        inner_tick_turn=False,
+                        inner_tick_activity=route_inner_activity,
+                    )
+                    (
+                        last_text,
+                        langsmith_trace_acc,
+                        langsmith_llm_run_acc,
+                        bootstrap_skip_final_transcript_assistant_row,
+                        bootstrap_last_interim_assistant_msg_uuid,
+                    ) = await _run_in_turn_sync_tool_loop(
+                        store=store,
+                        llm_client=llm_client,
+                        messages=messages,
+                        tools_for_turn=tools_for_turn,
+                        memory_bootstrap_type=memory_bootstrap_type,
+                        repository_only_store_text=repository_only_store_text,
+                        trace_id=trace_id,
+                        user_text=user_text,
+                        ts_user=ts_user,
+                        user_msg_uuid=user_msg_uuid,
+                        transcript_rel=rel_tr_sync,
+                        track=CompanionTurnTrack.USER_CHAT,
+                        route_mode=route_mode,
+                        langsmith_source=SOURCE_USER_CHAT_IN_TURN_SYNC,
+                        interim_output_sink=None,
+                    )
+                    user_row_persisted_in_sync_loop = True
+                    logger.info(
+                        "run_turn loop_done in_turn_sync_tool loop_total_ms={:.0f}",
                         (time.perf_counter() - t_loop) * 1000.0,
                     )
                 elif (
@@ -1028,7 +1071,7 @@ async def _run_companion_turn_core(
         if track == CompanionTurnTrack.INNER_TICK_SCHEDULED:
             user_row["scheduled"] = True
         user_row["trace_id"] = trace_id
-        if track != CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+        if not user_row_persisted_in_sync_loop:
             store.append_jsonl_record(rel_tr, user_row)
     last_text = strip_leading_transcript_timestamp_prefixes(last_text)
     assistant_row: dict[str, Any] = {

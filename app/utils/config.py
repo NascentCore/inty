@@ -353,6 +353,37 @@ def resolved_telegram_bot_token(agent: "AgentConfig") -> str:
     return agent.channels.telegram.bot_token.strip()
 
 
+class UserTurnLlmLoopMode(StrEnum):
+    """Settled ``USER_CHAT`` in-turn LLM execution strategy."""
+
+    DUAL_LLM = "dual_llm"
+    IN_TURN_SINGLE_LLM = "in_turn_single_llm"
+
+
+class AgentCompanionHarnessUserTurnConfig(BaseModel):
+    """Companion harness knobs scoped to explicit user chat turns."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    llm_loop_mode: UserTurnLlmLoopMode = Field(
+        default=UserTurnLlmLoopMode.DUAL_LLM,
+        description=(
+            "Settled USER_CHAT LLM execution: dual_llm (foreground envelope + "
+            "tool_background) or in_turn_single_llm (bootstrap-style in-turn tools)."
+        ),
+    )
+
+
+class AgentCompanionHarnessConfig(BaseModel):
+    """Agent-scoped companion harness settings under ``agent.companion_harness``."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    user_turn: AgentCompanionHarnessUserTurnConfig = Field(
+        default_factory=AgentCompanionHarnessUserTurnConfig
+    )
+
+
 @dataclass
 class AgentConfig:
     # OpenRouter API key; chat is invoked via OpenAI client (app.utils.openai_client) against base_url.
@@ -384,6 +415,9 @@ class AgentConfig:
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     base_url: str = OPENROUTER_BASE_URL
     channels: AgentChannelsConfig = field(default_factory=AgentChannelsConfig)
+    companion_harness: AgentCompanionHarnessConfig = field(
+        default_factory=AgentCompanionHarnessConfig
+    )
     # Chat 专用 LLM 端点（可选）。若两者均配置则 Agent 聊天使用此端点，否则使用 base_url + api_key。记忆抽取始终使用 base_url + api_key。
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     chat_llm_base_url: Optional[str] = None
@@ -844,6 +878,14 @@ def load_config(path: str) -> Config:
     if "channels" in agent_data and isinstance(agent_data["channels"], dict):
         agent_data["channels"] = AgentChannelsConfig.model_validate(
             agent_data["channels"]
+        )
+    if "companion_harness" in agent_data and isinstance(
+        agent_data["companion_harness"], dict
+    ):
+        agent_data["companion_harness"] = (
+            AgentCompanionHarnessConfig.model_validate(
+                agent_data["companion_harness"]
+            )
         )
 
     return Config(

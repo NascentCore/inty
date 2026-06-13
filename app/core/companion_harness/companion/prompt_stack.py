@@ -47,6 +47,7 @@ from .prompts.system_messages import (
     build_system_messages_for_inner_tick_proactive_chat,
     build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
+    build_system_messages_for_user_chat_in_turn_sync,
     weixin_clawbot_contact_alias_system_message,
 )
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
@@ -188,19 +189,24 @@ def companion_system_messages_for_track(
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             out = build_system_messages_for_bootstrap_track(bundle, context)
         case CompanionTurnTrack.USER_CHAT:
-            if (
-                route_mode
-                != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-            ):
-                raise RuntimeError(
-                    "user_chat track requires ASYNC route, got "
-                    f"{route_mode.value}"
-                )
-            out = build_system_messages_for_chat_track(
-                bundle,
-                context,
-                memory_bootstrap_type,
-            )
+            match route_mode:
+                case TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
+                    out = build_system_messages_for_chat_track(
+                        bundle,
+                        context,
+                        memory_bootstrap_type,
+                    )
+                case TurnRouteMode.IN_TURN_SYNC_TOOL:
+                    out = build_system_messages_for_user_chat_in_turn_sync(
+                        bundle,
+                        context,
+                        memory_bootstrap_type,
+                    )
+                case _:
+                    raise RuntimeError(
+                        "user_chat track requires ASYNC or IN_TURN_SYNC_TOOL route, got "
+                        f"{route_mode.value}"
+                    )
     out = append_runtime_output_format_system_message(
         system_messages=out,
         bundle=bundle,
@@ -270,6 +276,7 @@ def refresh_companion_turn_prompt_stack(
         channel=CompanionRuntimeChannel.APP,
         implicit_signal_bundle=None,
     ),
+    route_mode: TurnRouteMode | None = None,
 ) -> list[dict[str, Any]]:
     """
     Re-read context.json and prompt slices, replace leading system messages, return tools schema.
@@ -290,6 +297,13 @@ def refresh_companion_turn_prompt_stack(
         inner_tick_activity=inner_tick_activity,
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,
     )
+    resolved_route_mode = route_mode
+    if resolved_route_mode is None:
+        resolved_route_mode = resolve_turn_route_mode(
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_activity=inner_tick_activity,
+            tools_enabled=bool(tools_for_turn),
+        )
     match track:
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             bootstrap_still_active = interactive_bootstrap_active(
@@ -321,10 +335,17 @@ def refresh_companion_turn_prompt_stack(
                 bundle, context, store
             )
         case CompanionTurnTrack.USER_CHAT:
-            refreshed = build_system_messages_for_tool_track(
-                bundle,
-                context,
-            )
+            if resolved_route_mode == TurnRouteMode.IN_TURN_SYNC_TOOL:
+                refreshed = build_system_messages_for_user_chat_in_turn_sync(
+                    bundle,
+                    context,
+                    memory_bootstrap_type,
+                )
+            else:
+                refreshed = build_system_messages_for_tool_track(
+                    bundle,
+                    context,
+                )
         case (
             CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
             | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT

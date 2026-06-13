@@ -20,6 +20,7 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages_for_inner_tick_proactive_chat,
     build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
+    build_system_messages_for_user_chat_in_turn_sync,
 )
 from app.core.companion_harness.companion.prompt_stack import (
     append_runtime_output_format_system_message,
@@ -107,11 +108,31 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
     assert CompanionRuntimeChannel.WECHAT_WEIXIN.value == "wechat_weixin"
 
 
+def test_user_chat_in_turn_sync_builder_omits_dual_envelope_contract() -> None:
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+    )
+    messages = build_system_messages_for_user_chat_in_turn_sync(
+        bundle,
+        ContextMeta(),
+        memory_bootstrap_type="none",
+    )
+    contents = [str(message["content"]) for message in messages]
+    joined = "\n".join(contents)
+    assert "## Dual-LLM chat branch: structured reply envelope" not in joined
+    assert "快思考路径（系统 1）与并行工具路径（系统 2）须一致" not in joined
+
+
 def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() -> None:
     builders = [
         build_system_messages,
         build_system_messages_for_bootstrap_track,
         build_system_messages_for_chat_track,
+        build_system_messages_for_user_chat_in_turn_sync,
         build_system_messages_for_tool_track,
         build_system_messages_for_inner_tick_maintenance,
         build_system_messages_for_inner_tick_autonomy,
