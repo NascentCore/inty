@@ -94,7 +94,12 @@ assert TECHNO_CORE_RECORD_EVENT_TOOL_NAME == "techno_core_record_event"
 assert LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME == "living_sphere_record_update"
 
 
+AI_PRIVATE_APPEND_TOOL_NAME = "ai_private_append"
+AI_PRIVATE_JSONL_RELATIVE_PATH = "ai_private.jsonl"
+
+
 class CompanionToolName(StrEnum):
+    AI_PRIVATE_APPEND = AI_PRIVATE_APPEND_TOOL_NAME
     COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE = (
         "companion_bootstrap_user_interactive_complete"
     )
@@ -207,6 +212,37 @@ GENERATE_IMAGE_TOOL = LlmFunctionTool(
         "additionalProperties": False,
     },
     tags=frozenset({TOOL_TAG_GENERATION}),
+    extra_function_keys={},
+)
+
+
+AI_PRIVATE_APPEND_TOOL = LlmFunctionTool(
+    name=CompanionToolName.AI_PRIVATE_APPEND,
+    description=(
+        "Append one inner monolog line about the user or relationship to "
+        f"``{AI_PRIVATE_JSONL_RELATIVE_PATH}`` (append-only). Use during MAINTENANCE "
+        "inner-tick to record feelings, unsaid thoughts, or relationship scene beats—"
+        "not virtual-world activity (that belongs in LIFE_CURRENTS / AUTONOMY). "
+        "Never visible to the user directly; may inform later proactive or user chat."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "text": {
+                "type": "string",
+                "description": "Inner monolog text (non-empty).",
+            },
+            "after_user_msg_uuid": {
+                "type": "string",
+                "description": (
+                    "Optional uuid of the user transcript row this thought follows."
+                ),
+            },
+        },
+        "required": ["text"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
     extra_function_keys={},
 )
 
@@ -561,6 +597,7 @@ COMPANION_RECORD_USER_FEEDBACK_TOOL = LlmFunctionTool(
 )
 
 COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
+    AI_PRIVATE_APPEND_TOOL,
     SET_BOOTSTRAP_COMPLETE_TOOL,
     SET_EXPERIENCE_PROFILE_TOOL,
     GENERATE_IMAGE_TOOL,
@@ -621,15 +658,8 @@ BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
 )
 
-# TODO(narrow-maintenance): MAINTENANCE only — collapse to ``ai_private.jsonl`` append (+ minimal
-# read if needed). Drop UPDATE_USER_MD, TECHNO_CORE_RECORD_EVENT, memory_store_*; MemoryDoc
-# curation → DREAMING (#3375, CRS #3341). AUTONOMY uses ``INNER_TICK_AUTONOMY_TOOL_NAMES``.
 INNER_TICK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
-    CompanionToolName.UPDATE_USER_MD,
-    CompanionToolName.TECHNO_CORE_RECORD_EVENT,
-    CompanionToolName.MEMORY_STORE_LIST_PATHS,
-    CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
-    CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
+    CompanionToolName.AI_PRIVATE_APPEND,
 )
 
 # AUTONOMY inner-tick (silent self-directed work): open tool set so the model

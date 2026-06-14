@@ -85,8 +85,15 @@ from .llm_runtime_events import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .proactive_chat import (
+    PROACTIVE_CHAT_SILENT_TOKEN,
     build_proactive_chat_transcript_user_marker,
 )
+from .transcript_ai_private import (
+    build_ai_private_splice_manifest_row,
+    select_tail_splice_thoughts,
+    track_uses_ai_private_splice,
+)
+from .ai_private_prompt import AiPrivateThought, mark_ai_private_surfaced
 from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
 )
@@ -171,6 +178,18 @@ from app.core.companion_harness.memory.memory_store_scope import (
 
 CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 _BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS = 24
+
+
+def _memory_store_write_allowlist_for_track(
+    track: CompanionTurnTrack,
+) -> frozenset[str]:
+    match track:
+        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
+            return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
+        case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
+            return frozenset()
+        case _:
+            return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
 
 
 class CompanionToolBackgroundStartedError(RuntimeError):
@@ -563,6 +582,11 @@ async def _run_companion_turn_core(
         user_text = build_proactive_chat_transcript_user_marker(
             loaded_state.loaded_transcript
         )
+    tail_splice_thoughts: list[AiPrivateThought] = []
+    if track_uses_ai_private_splice(track):
+        tail_splice_thoughts = select_tail_splice_thoughts(
+            store, loaded_state.loaded_transcript
+        )
     context = loaded_state.context
     bundle = loaded_state.bundle
     ts_user = utc_now()
@@ -577,6 +601,7 @@ async def _run_companion_turn_core(
         implicit_sign_on_turn=implicit_sign_on_turn,
         runtime_context=runtime_context,
         transcript_compaction=transcript_compaction,
+        tail_splice_thoughts=tail_splice_thoughts,
     )
     tools_for_turn = prompt_plan.tools_for_turn
     route_mode = prompt_plan.route_mode
@@ -842,11 +867,7 @@ async def _run_companion_turn_core(
                         execute_tool_call_fn=repl_execute_tool_call,
                         client=llm_client.sync_client_for_route("tool"),
                         chat_completions_sync=llm_client.chat_completions_sync,
-                        write_allowlist=(
-                            MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
-                            if track == CompanionTurnTrack.INNER_TICK_AUTONOMY
-                            else MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
-                        ),
+                        write_allowlist=_memory_store_write_allowlist_for_track(track),
                         repository_only_store_text=repository_only_store_text,
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
@@ -1064,6 +1085,28 @@ async def _run_companion_turn_core(
         if track != CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             store.append_jsonl_record(rel_tr, user_row)
     last_text = strip_leading_transcript_timestamp_prefixes(last_text)
+    splice_thought_uuids = [t.uuid for t in tail_splice_thoughts]
+    should_persist_ai_private_splice = (
+        track_uses_ai_private_splice(track)
+        and splice_thought_uuids
+        and last_text.strip()
+        and last_text.strip() != PROACTIVE_CHAT_SILENT_TOKEN
+        and not bootstrap_skip_final_transcript_assistant_row
+    )
+    if should_persist_ai_private_splice:
+        mark_ai_private_surfaced(store, splice_thought_uuids)
+        anchor_uuid: str | None = None
+        for row in reversed(loaded_state.loaded_transcript):
+            if row.role == "user" and row.proactive_chat is not True:
+                if isinstance(row.uuid, str) and row.uuid.strip():
+                    anchor_uuid = row.uuid.strip()
+                break
+        manifest_row = build_ai_private_splice_manifest_row(
+            thought_uuids=splice_thought_uuids,
+            reply_to_user_msg_uuid=user_msg_uuid,
+            anchor_user_msg_uuid=anchor_uuid,
+        )
+        store.append_jsonl_record(rel_tr, manifest_row)
     if not bootstrap_skip_final_transcript_assistant_row:
         append_transcript_assistant_row(
             store,

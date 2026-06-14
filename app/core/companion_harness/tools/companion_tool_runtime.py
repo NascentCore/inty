@@ -27,6 +27,9 @@ from app.core.companion_harness.tools.dispatchers.memory_store import (
     dispatch_memory_store_tool,
 )
 
+from app.core.companion_harness.companion.ai_private_prompt import (
+    append_ai_private_thought,
+)
 from app.core.companion_harness.companion.bootstrap import (
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
@@ -78,6 +81,7 @@ from .image_gate import (
     list_image_asset_records,
 )
 from .companion_tool_definitions import (
+    AI_PRIVATE_APPEND_TOOL_NAME,
     COMPANION_LLM_TOOLS,
     COMPANION_LLM_TOOLS_BY_NAME,
     BOOTSTRAP_TRACK_TOOL_NAMES,
@@ -468,6 +472,29 @@ def tool_living_sphere_record_update(
     return f"OK recorded update_id={update.update_id}"
 
 
+def tool_ai_private_append(
+    store: MemoryStore, arguments: dict[str, Any]
+) -> str:
+    """Append one monolog line to ``ai_private.jsonl``."""
+    raw_text = arguments.get("text")
+    if not isinstance(raw_text, str) or not raw_text.strip():
+        return "ERROR: text must be a non-empty string"
+    raw_after = arguments.get("after_user_msg_uuid")
+    after_uuid: str | None = None
+    if raw_after is not None:
+        if not isinstance(raw_after, str):
+            return "ERROR: after_user_msg_uuid must be a string"
+        stripped = raw_after.strip()
+        if stripped:
+            after_uuid = stripped
+    thought = append_ai_private_thought(
+        store,
+        text=raw_text,
+        after_user_msg_uuid=after_uuid,
+    )
+    return f"OK recorded ai_private uuid={thought.uuid}"
+
+
 def tool_schedule_task(
     store: MemoryStore, exec_time_utc: str, task_text: str
 ) -> str:
@@ -546,16 +573,11 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
 
 
 def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
-    """
-    MAINTENANCE 内在节拍：USER 档案、TechnoCore 事件、MemoryStore 读写；不含定时、联网、生图/改图。
-
-    TODO(narrow-maintenance): 收成 ``ai_private.jsonl`` append-only；见 ``INNER_TICK_TOOL_NAMES`` (#3375)。
-    自主活动（``LIFE_CURRENTS``、开放 tools）在 ``build_openai_repl_tools_inner_tick_autonomy``。
-    """
+    """MAINTENANCE inner tick: ``ai_private.jsonl`` append only."""
     return prepare_openai_tools_for_chat_completions(
         openai_tools_for_names(
             INNER_TICK_TOOL_NAMES,
-            description_overrides=REPL_DESCRIPTION_OVERRIDES,
+            description_overrides=_EMPTY_DESCRIPTION_OVERRIDES,
         )
     )
 
@@ -628,6 +650,8 @@ async def _dispatch(
         return tool_techno_core_record_event(store, arguments)
     if name == LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME:
         return tool_living_sphere_record_update(store, arguments)
+    if name == AI_PRIVATE_APPEND_TOOL_NAME:
+        return tool_ai_private_append(store, arguments)
     if name == "schedule_task":
         raw_exec_time = arguments.get("exec_time_utc")
         raw_task_text = arguments.get("task_text")
