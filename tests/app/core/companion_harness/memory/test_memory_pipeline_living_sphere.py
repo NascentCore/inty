@@ -31,6 +31,7 @@ def _seed_store(store: MemoryStore) -> None:
         ("STYLE.md", "style\n"),
         ("USER.md", "u\n"),
         ("MEMORY.md", "m\n"),
+        ("COMPANIONSHIP.md", "companionship\n"),
     ):
         store.write_document(name, body)
     store.write_document(LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown())

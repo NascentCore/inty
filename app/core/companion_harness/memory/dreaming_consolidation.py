@@ -32,7 +32,7 @@ from app.core.companion_harness.companion.utc import local_date_str
 
 from .living_sphere_curator import compact_living_sphere_if_pending
 from .memory_store import MemoryStore
-from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
+from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS, load_template_seed_text
 
 # TODO(memdoc-path-constants): Curator read/write still hardcodes paths; use scope path constants. #3413
 
@@ -333,7 +333,9 @@ def _rewrite_companionship_md(
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
     # assistant_text unused: bond curation reads the full dreaming slice via user_text.
-    companionship_body = store.read_document("COMPANIONSHIP.md")
+    companionship_body = store.read_document_if_exists("COMPANIONSHIP.md")
+    if companionship_body is None:
+        companionship_body = load_template_seed_text("COMPANIONSHIP.md")
     memory_body = store.read_document("MEMORY.md")
     if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
         memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
