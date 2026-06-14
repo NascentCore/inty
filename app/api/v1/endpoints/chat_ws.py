@@ -800,7 +800,7 @@ async def _build_companion_tool_background_ws_payload(
     return out
 
 
-# TODO(companion-ws-bootstrap-downlink): move materialize into WebSocketDownlink; drop parallel consumer. #3209
+# TODO(companion-ws-bootstrap-downlink): move materialize into WebSocketDownlink; drop parallel consumer. #3209 #3398
 async def _deliver_bootstrap_interim_queued(
     queued: BootstrapInterimQueued,
 ) -> None:
@@ -1107,7 +1107,7 @@ async def _agent_chat_ws_completions_impl(
                     ) = None
                     if ws_outbound_queue is not None:
                         assert companion_ws is not None
-                        # TODO(companion-presence-ws-outbound): deliver via session, not coordinator queue. #3211 #3209
+                        # TODO(companion-presence-ws-outbound): deliver via session, not coordinator queue. #3211 #3209 #3398
                         companion_ws.set_bootstrap_interim_deliver_ctx(
                             BootstrapInterimDeliverCtx(
                                 db=db,
@@ -1412,7 +1412,7 @@ async def chat_completions_websocket(
     tc_box: list[Optional[dict]] = [None]
     companion_ws = CompanionWebSocketCoordinator.for_current_loop()
     companion_ws.bind_outbound_queue(outbound_queue)
-    # TODO(companion-presence-ws-outbound): one session downlink consumer; no extra bootstrap task. #3211
+    # TODO(companion-presence-ws-outbound): one session downlink consumer; no extra bootstrap task. #3211 #3398
     bootstrap_interim_consumer_task = asyncio.create_task(
         _companion_ws_bootstrap_interim_consumer(companion_ws),
         name="companion_ws_bootstrap_interim",

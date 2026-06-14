@@ -379,6 +379,7 @@ class AgentConfig(BaseModel):
     # CompanionLLMConfig.tool_model). Independent of foreground chat envelope model so
     # the dual-LLM tool loop can scale separately. Empty string falls back to the chat
     # model at companion_chat_service wiring time (resolved_chat_model GenAIModel).
+    # TODO(#3398): If user chat stays single-LLM, this applies mainly to inner-tick tool_background.
     companion_tool_call_model: str = "google/gemini-3-flash-preview"
     # 免费用户商业化触达：定期返回一条“付费专属预览”消息并引导订阅。
     enable_free_user_premium_preview: bool = False

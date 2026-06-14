@@ -127,7 +127,7 @@ class ChatWsInflightShutdownRegistry:
 class CompanionWebSocketCoordinator(Coordinator):
     """``/api/v1/chat/ws`` coordinator: presence state plus WS bootstrap/outbound hooks."""
 
-    # TODO(companion-ws-bootstrap-downlink): fold queue + deliver_ctx into session downlink. #3209 #3211
+    # TODO(companion-ws-bootstrap-downlink): fold queue + deliver_ctx into session downlink. #3209 #3211 #3398
     bootstrap_interim_queued_events: asyncio.Queue[BootstrapInterimQueued] = (
         field(default_factory=asyncio.Queue)
     )
@@ -153,7 +153,7 @@ class CompanionWebSocketCoordinator(Coordinator):
 
     def bootstrap_interim_output_sink(self) -> BootstrapInterimOutputSink:
         """WS sink: queue ``BootstrapInterimQueued`` with captured deliver ctx."""
-        # TODO(companion-ws-bootstrap-downlink): collapse with session downlink. #3209
+        # TODO(companion-ws-bootstrap-downlink): collapse with session downlink. #3209 #3398
 
         async def _sink(ev: BootstrapInterimOutput) -> None:
             ctx = self.bootstrap_interim_deliver_ctx

@@ -7,6 +7,8 @@ awaits the full turn.
 When tools are enabled, ``run_turn`` resolves the user-visible assistant string from the **foreground**
 envelope chat before spawning ``tool_background``; the latter's tool-model rounds are not awaited for
 that return value (maintenance inner tick skips foreground—see ``turn`` module docstring / companion AGENTS).
+
+TODO(#3398): Debate single-LLM in-turn sync vs dual-LLM (foreground chat + ``tool_background``) for user chat.
 """
 
 from __future__ import annotations
@@ -67,7 +69,10 @@ def resolve_turn_route_mode(
     inner_tick_activity: InnerTickActivity,
     tools_enabled: bool,
 ) -> TurnRouteMode:
-    """Pick route label. Tools always use async foreground chat + background tool thread."""
+    """Pick route label. Tools always use async foreground chat + background tool thread.
+
+    TODO(#3398): ``llm_loop_mode`` may switch settled ``USER_CHAT`` to in-turn sync — child #3369.
+    """
     if tools_enabled:
         return TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     if (

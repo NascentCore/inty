@@ -121,7 +121,7 @@ class CompanionTurnDeps:
         round with non-empty assistant ``content`` is pushed immediately (WebSocket
         interim frames) before the turn ends. All other tracks pass ``None``. Set
         from ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink`` on
-        user chat only.
+        user chat only. TODO(#3398 #3209): channel-agnostic per-chunk downlink.
     """
 
     store: MemoryStore
