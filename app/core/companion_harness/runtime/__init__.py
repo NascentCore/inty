@@ -13,9 +13,12 @@ entry points after resolving a ``CompanionSession``.
 - Authoritative ``dreaming_due`` checks run inside the lock within
   ``dreaming_batch.run_dreaming_batch_if_due``; callers must not decide due/skip
   outside the lock.
+- Inner-tick AwakeTurn due checks and kernel fires live in
+  ``companion_harness.runtime.inner_tick_fire``; channel glue in
+  ``app.services.agentic_companion.inner_tick_fire`` holds ``turn_lock`` before calling.
 - One signed-on presence per paired user (#3272); user chat and inner-tick
   (including dreaming) serialize on scope ``turn_lock``.
-- Scope inner-tick worker (#3255) runs maintenance, autonomy, dreaming without presence.
+- Scope inner-tick worker (#3255) runs maintenance, autonomy, dreaming without presence
+  via ``scope_inner_tick_poll`` / ``scope_inner_tick_fire``.
 - Postgres advisory lock for multi-process (#3271) remains future work.
-
 """

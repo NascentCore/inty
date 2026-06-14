@@ -11,7 +11,7 @@ import asyncio
 from loguru import logger
 
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.services.agentic_companion.inner_tick_scope_resolver import (
+from app.services.agentic_companion.inner_tick_scope import (
     InnerTickChatResolveMode,
 )
 from app.services.agentic_companion.scope_inner_tick_fire import (

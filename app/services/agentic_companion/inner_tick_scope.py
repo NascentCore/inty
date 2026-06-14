@@ -1,9 +1,10 @@
-"""Postgres reads to resolve inner-tick scope coordinates (persistency boundary)."""
+"""ORM scope resolution for inner-tick glue (user, agent, chat row, model)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 from loguru import logger
 from sqlalchemy import select
@@ -17,7 +18,8 @@ from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services import chat_service
-from app.services.agentic_companion.session import InnerTickCoords
+from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
+from app.services.agentic_companion.session import Coordinator, InnerTickCoords
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
@@ -36,6 +38,17 @@ class InnerTickChatResolveMode(StrEnum):
 
 
 @dataclass(frozen=True)
+class InnerTickFireInput:
+    """Bundled arguments for one inner-tick ``try_fire_*`` attempt on a presence wire."""
+
+    delivery: InnerTickDelivery
+    coords: InnerTickCoords
+    coordinator: Coordinator
+    ws_conn_id: str
+    tc_box: list[Any | None]
+
+
+@dataclass(frozen=True)
 class InnerTickScopeCoords:
     """Resolved DB scope for inner-tick fire paths (user, agent, chat, model)."""
 
@@ -47,18 +60,16 @@ class InnerTickScopeCoords:
 
 
 async def resolve_inner_tick_scope_coords(
+    fire_input: InnerTickFireInput,
     *,
-    coords: InnerTickCoords,
-    poll_source: str,
     model_source: InnerTickModelSource,
-    chat_resolve_mode: InnerTickChatResolveMode,
 ) -> InnerTickScopeCoords | None:
-    """Load user/chat and model for one inner-tick attempt."""
+    """Load user/chat and model for one presence inner-tick attempt."""
     return await resolve_inner_tick_scope_coords_for_triple(
-        coords=coords,
-        poll_source=poll_source,
+        coords=fire_input.coords,
+        poll_source=fire_input.ws_conn_id,
         model_source=model_source,
-        chat_resolve_mode=chat_resolve_mode,
+        chat_resolve_mode=InnerTickChatResolveMode.GET_OR_CREATE,
     )
 
 

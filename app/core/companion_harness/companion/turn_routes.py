@@ -9,7 +9,10 @@ envelope chat before spawning ``tool_background``; the latter's tool-model round
 that return value (maintenance inner tick skips foreground—see ``turn`` module docstring / companion AGENTS).
 
 TODO(#3398): Debate single-LLM in-turn sync vs dual-LLM (foreground chat + ``tool_background``) for user chat.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

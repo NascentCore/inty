@@ -30,7 +30,10 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 Post-transcript slices (e.g. ``## user-time-context`` in ``turn_pipeline``) are not built here.
 
 TODO(code-consistency): All tool name should be template swapped with LllmFunctionTool.name.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

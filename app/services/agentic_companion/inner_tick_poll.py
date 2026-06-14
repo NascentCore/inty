@@ -20,7 +20,7 @@ from typing import Any, Optional
 
 from app.services.agentic_companion import inner_tick_fire
 from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
-from app.services.agentic_companion.inner_tick_fire import InnerTickFireInput
+from app.services.agentic_companion.inner_tick_scope import InnerTickFireInput
 from app.services.agentic_companion.session import Coordinator, InnerTickCoords
 
 

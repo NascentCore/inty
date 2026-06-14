@@ -17,7 +17,7 @@ Use with [SKILL.md](SKILL.md) when the target is `docs/companion_harness/DESIGN.
 | 9 | [turn_routes.py](/app/core/companion_harness/companion/turn_routes.py) | `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL` |
 | 10 | Entry shell | `chat_ws.py` → `companion_chat_service.py` → `CompanionManager` → `run_turn` |
 | 11 | IM ops | `backend/ops/weixin_channel/`, `backend/ops/telegram_demo/`, `app/services/agentic_channel/` |
-| 12 | Inner tick | `services/agentic_companion/inner_tick_fire.py`, `runtime/dreaming_batch.py` |
+| 12 | Inner tick | `core/companion_harness/runtime/inner_tick_fire.py`, `runtime/dreaming_batch.py`; glue: `services/agentic_companion/inner_tick_fire.py` |
 | 13 | Memory | `memory/memory_store.py`, `memory_store_document_mapping.py` |
 | 14 | Worlds | `app/living_sphere/`, `app/techno_core/` — imports/call sites only |
 | 15 | Persist | `companion_memory_document_versions`, `memory_registry` DSN, `backend/alembic/` |

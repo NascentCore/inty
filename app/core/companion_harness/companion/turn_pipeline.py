@@ -3,7 +3,10 @@
 The runtime behavior still lives in ``turn._run_companion_turn_core``. This module names the
 front half of that function as explicit stages so the production pipeline can
 be split without changing WebSocket, MemoryStore, or tool-background behavior.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

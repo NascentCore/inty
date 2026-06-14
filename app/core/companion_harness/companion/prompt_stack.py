@@ -13,7 +13,10 @@ TODO(#3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled
 
 TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
 hierarchy (design issue; options include in-context vs retrieval-required splits).
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

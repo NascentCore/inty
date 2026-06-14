@@ -1,4 +1,7 @@
-"""Pydantic 模型：消息、人格包、控制面元数据。"""
+"""Pydantic 模型：消息、人格包、控制面元数据。
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

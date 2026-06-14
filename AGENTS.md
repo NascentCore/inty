@@ -25,6 +25,8 @@ Read [users list](.agents/USERS.md) to know your human partner's identity and th
 ### Design
 
 - Identify the single most effective design after exploring a wide range of possible deisng option. List your rationale, and unselected options.
+- Start by clarifying the highest-level objective, and then break down into logical hierarchy with each layer composed of orthogonal
+  and loosely coupled concepts, and the higher-layer achieves its goals through composition of lower-layer components.
 
 ### Brainstorm
 

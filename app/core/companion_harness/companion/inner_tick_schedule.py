@@ -8,7 +8,10 @@ the unified WS worker fires proactive / scheduled / autonomy / maintenance
 on ``companion_ws_proactive_chat_poll_seconds``.
 
 See ``docs/companion_harness/DESIGN.md`` for scheduling semantics and transport boundaries.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 
