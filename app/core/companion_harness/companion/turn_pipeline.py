@@ -255,6 +255,7 @@ def build_companion_turn_prompt_plan(
         and (not tools_for_turn)
         and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     )
+    # TODO(#3398): Structured envelope on single chat model; not the same as dual-LLM two-model split.
 
     transcript_compaction_meta: dict[str, Any] | None = None
     if transcript_compaction is not None and not inner_tick_turn:

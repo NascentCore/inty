@@ -48,7 +48,7 @@ async def deliver_inner_tick_assistant(
     assistant_text: str,
 ) -> None:
     """Push a full WS frame and/or plain channel text after history is persisted."""
-    # TODO(companion-ws-inner-tick-downlink): enqueue via WebSocketDownlink.deliver, not raw put. #3210
+    # TODO(companion-ws-inner-tick-downlink): enqueue via WebSocketDownlink.deliver, not raw put. #3210 #3398
     if delivery.ws_outbound_queue is not None:
         assert ws_payload is not None
         await delivery.ws_outbound_queue.put(ws_payload)

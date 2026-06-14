@@ -131,7 +131,7 @@ class Coordinator:
     background_events: asyncio.Queue[ToolOutputEvent] = field(
         default_factory=asyncio.Queue
     )
-    # TODO(companion-ws-bootstrap-downlink): channel-agnostic queue unused on WS; collapse with downlink. #3209
+    # TODO(companion-ws-bootstrap-downlink): channel-agnostic queue unused on WS; collapse with downlink. #3209 #3398
     bootstrap_interim_events: asyncio.Queue[BootstrapInterimOutput] = field(
         default_factory=asyncio.Queue
     )
@@ -390,7 +390,7 @@ class Session:
     async def deliver_bootstrap_interim(
         self, interim: BootstrapInterimOutput
     ) -> None:
-        # TODO(companion-ws-bootstrap-downlink): WS downlink must handle BOOTSTRAP_INTERIM before this is wired. #3209
+        # TODO(companion-ws-bootstrap-downlink): WS downlink must handle BOOTSTRAP_INTERIM before this is wired. #3209 #3398
         await self.downlink.deliver(
             bootstrap_interim_downlink(interim=interim),
         )

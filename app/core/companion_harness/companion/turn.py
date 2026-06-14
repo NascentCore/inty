@@ -34,6 +34,9 @@ foreground parse. ``start_tool_background_job`` then runs the tool-model loop in
 assistant ``content`` immediately via ``bootstrap_interim_output_sink`` (WebSocket
 ``outbound_queue``). Terminal rounds (no ``tool_calls``) use only the usual end-of-turn WS frame.
 
+TODO(#3398): Dual-LLM user-turn vs single-LLM in-turn sync; channel-agnostic ``UserVisibleChunk``
+downlink — epic #3398, #3209.
+
 TODO(tool-bg-idle-starves-user-chat): Hung maintenance ``tool_background`` leaves
 ``CompanionSession.tool_bg_idle`` cleared; the next proactive or user ``run_turn`` blocks here
 while the WebSocket ``turn_lock`` holder waits, so burst USER_MESSAGE can show only
@@ -690,6 +693,7 @@ async def _run_companion_turn_core(
                     route_mode
                     == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
                 ):
+                    # TODO(#3398): dual-LLM user-turn vs single-LLM in-turn sync — epic tracks routing change.
                     tool_system_msgs, chat_system_msgs = (
                         _async_dual_llm_system_message_variants(
                             store=store,

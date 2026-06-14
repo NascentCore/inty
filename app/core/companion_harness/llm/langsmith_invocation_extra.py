@@ -17,6 +17,7 @@ INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY = "inty_tool_choice_attempt"
 INTY_TOOL_BG_ROUND_METADATA_KEY = "inty_tool_bg_round"
 
 # Companion foreground chat completion that requests structured JSON envelope + importance_* fields.
+# TODO(#3398): dual-LLM user-turn foreground envelope vs single-LLM in-turn sync — epic #3398.
 SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE = "foreground_dual_llm_envelope"
 SOURCE_BOOTSTRAP_TRACK = "bootstrap_track"
 SOURCE_IMPLICIT_SIGN_ON_GREETING = "implicit_sign_on_greeting"

@@ -5,6 +5,8 @@ The model's final assistant message must validate as ``DualLlmChatBranchEnvelope
 extra no-tools completion runs with the same ``response_format`` and a short
 system instruction. The fallback completion accepts validated envelopes from
 ``message.content`` or provider reasoning side channels.
+
+TODO(#3398): dual-LLM user-turn tool leg and inner-tick ``tool_background`` finish envelope — epic #3398.
 """
 
 from __future__ import annotations
