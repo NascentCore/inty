@@ -31,9 +31,6 @@ from app.core.companion_harness.companion.bootstrap import (
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
 )
-from app.core.companion_harness.companion.message_format import (
-    openai_assistant_message_dict,
-)
 from app.core.companion_harness.companion.models import (
     ChatMessage,
     load_context_meta,
@@ -88,8 +85,6 @@ from .companion_tool_definitions import (
     INNER_TICK_AUTONOMY_TOOL_NAMES,
     INNER_TICK_TOOL_NAMES,
     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
     REPL_DESCRIPTION_OVERRIDES,
     REPL_DESCRIPTION_OVERRIDES_AUTONOMY,
     REPL_DESCRIPTION_OVERRIDES_BOOTSTRAP,
@@ -102,7 +97,6 @@ from .companion_tool_definitions import (
 )
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
-from app.core.config import global_config_loaded_from_config_yaml
 
 # TODO(commercialization-cleanup): Remove ``tool_phone_call_user`` and ``subscription_service`` /
 # ``phone_call_service`` imports from harness — tool is not registered in ``TOOL_NAMES_*``;

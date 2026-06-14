@@ -135,26 +135,6 @@ def build_interactive_bootstrap_template_reference_parts(
     return blocks
 
 
-def build_interactive_bootstrap_system_message_parts(
-    *,
-    max_chars_per_seed: int = 6000,
-) -> list[str]:
-    """
-    Ordered system bodies while interactive bootstrap is active.
-
-    Returns ``BOOTSTRAP.md``, typed ``## 工具调用`` (``build_bootstrap_tool_call_section``),
-    then template references for writable paths and package seed docs.  One string per system message
-    keeps stack inspection and model weighting clearer.
-    """
-    return [
-        load_bootstrap_spec_text(),
-        build_bootstrap_tool_call_section(),
-        *build_interactive_bootstrap_template_reference_parts(
-            max_chars_per_seed=max_chars_per_seed
-        ),
-    ]
-
-
 def tool_companion_bootstrap_user_interactive_complete(
     store: MemoryStore,
     note: str | None = None,
