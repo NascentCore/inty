@@ -117,6 +117,7 @@ from app.services.phone_call_service import (
 )
 from sqlalchemy import select
 
+# TODO(memdoc-path-constants): Replace ad-hoc _USER_MD_REL with canonical constant. #3413
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
 # GENERATION: 成功产出应对用户可见的交付物时, async tool_background **必须**下行到客户端;

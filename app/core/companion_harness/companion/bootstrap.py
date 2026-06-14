@@ -43,6 +43,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
 
+# TODO(memdoc-path-constants): Seed-only rels from canonical MemDoc path constants. #3413
 _BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS: Final[tuple[str, ...]] = (
     "MEMORY.md",
     "SOUL.md",

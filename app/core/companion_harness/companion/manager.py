@@ -168,6 +168,7 @@ class CompanionManager:
                 self._config.memory_bootstrap_type
                 == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
             )
+            # TODO(memdoc-path-constants): context.json → DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json. #3413
             existing_ctx = store.read_document_if_exists("context.json")
             parsed_ctx: dict[str, object] | None = None
             write_full_context = False

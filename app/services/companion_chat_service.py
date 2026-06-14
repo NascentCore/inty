@@ -253,6 +253,7 @@ def _companion_manager_for_resolved_model(
 def _mark_companion_ws_session_system_written_in_store(
     session: CompanionSession,
 ) -> None:
+    # TODO(memdoc-path-constants): context.json → DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json. #3413
     rel = "context.json"
     raw = session.store.read_document_if_exists(rel)
     if raw is None or not str(raw).strip():

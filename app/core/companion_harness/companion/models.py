@@ -247,6 +247,7 @@ def load_prompt_bundle(
     *,
     meta: ContextMeta | None = None,
 ) -> PromptBundle:
+    # TODO(memdoc-path-constants): read_document paths → DEFAULT_MEMORY_STORE_SCOPE_PATHS. #3413
     """从 MemoryStore 读取组装 PromptBundle 所需的语义文档。
 
     私人记忆两层（见 ``memory_taxonomy``）：``memory/daily/<日期>.md`` daily gist（dreaming 写入），
@@ -294,6 +295,7 @@ def load_prompt_bundle(
 
 
 def load_context_meta(*, store: MemoryStore) -> ContextMeta:
+    # TODO(memdoc-path-constants): context.json → DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json. #3413
     body = store.read_document_if_exists("context.json")
     if body is not None and body.strip():
         try:

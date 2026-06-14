@@ -18,6 +18,7 @@ from app.services.agentic_companion.user_timezone_from_user_md import (
     infer_iana_timezone_from_user_md,
 )
 
+# TODO(memdoc-path-constants): Replace ad-hoc _USER_MD_REL with canonical constant. #3413
 _USER_MD_REL = "USER.md"
 
 

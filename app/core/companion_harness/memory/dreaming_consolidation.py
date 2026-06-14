@@ -31,6 +31,8 @@ from .living_sphere_curator import compact_living_sphere_if_pending
 from .memory_store import MemoryStore
 from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
+# TODO(memdoc-path-constants): Curator read/write still hardcodes paths; use scope path constants. #3413
+
 _MEMORY_DAILY_GIST_CTX_MAX = 12_000
 _SOUL_MEMORY_CTX_MAX = 12_000
 
