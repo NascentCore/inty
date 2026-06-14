@@ -103,7 +103,31 @@ def test_contextual_messages_include_experience_directives_when_tone_set() -> No
     assert "warm" in joined
 
 
-def test_contextual_messages_omit_experience_directives_when_tone_unset() -> None:
+def test_contextual_messages_include_experience_directives_when_intent_only() -> None:
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+    )
+    messages = build_system_messages_for_chat_track(
+        bundle,
+        ContextMeta(
+            context_mode="emotional_companion",
+            experience_directives=ExperienceDirectives(
+                intent=ExperienceSessionIntent.CASUAL_CHAT,
+            )
+        ),
+        memory_bootstrap_type="none",
+    )
+    joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    assert "EXPERIENCE DIRECTIVES" in joined
+    assert "casual_chat" in joined
+    assert "语气细调" not in joined
+
+
+def test_contextual_messages_omit_experience_directives_when_unset() -> None:
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",

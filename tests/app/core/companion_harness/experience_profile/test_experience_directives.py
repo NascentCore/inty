@@ -43,6 +43,36 @@ def test_context_meta_rejects_invalid_experience_directives_tone() -> None:
         )
 
 
+def test_context_meta_rejects_invalid_experience_directives_intent() -> None:
+    with pytest.raises(ValidationError):
+        ContextMeta.model_validate(
+            {
+                "context_mode": "intimate",
+                "experience_directives": {"intent": "not_an_intent"},
+            }
+        )
+
+
+def test_context_meta_accepts_matching_intent_and_context_mode() -> None:
+    meta = ContextMeta.model_validate(
+        {
+            "context_mode": "roleplay",
+            "experience_directives": {"intent": "roleplay"},
+        }
+    )
+    assert meta.experience_directives.intent == ExperienceSessionIntent.ROLEPLAY
+
+
+def test_context_meta_rejects_intent_context_mode_drift() -> None:
+    with pytest.raises(ValidationError):
+        ContextMeta.model_validate(
+            {
+                "context_mode": "roleplay",
+                "experience_directives": {"intent": "casual_chat"},
+            }
+        )
+
+
 def test_load_context_meta_legacy_json_without_directives(
     tmp_path: Path,
 ) -> None:

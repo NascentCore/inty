@@ -16,6 +16,7 @@ from pydantic import (
     Field,
     ValidationError,
     field_validator,
+    model_validator,
 )
 
 from app.core.companion_harness.experience_profile.context_mode import (
@@ -24,6 +25,7 @@ from app.core.companion_harness.experience_profile.context_mode import (
 )
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectives,
+    context_mode_for_session_intent,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
@@ -281,8 +283,8 @@ class ContextMeta(BaseModel):
     experience_directives: ExperienceDirectives = Field(
         default_factory=ExperienceDirectives,
         description=(
-            "Real-time session experience overlays (tone, pacing). "
-            "Phase A (#3342): persist only; prompt clause in Phase B (#3343)."
+            "Real-time session experience overlays: intent (what user wants) and "
+            "optional tone. Mapped to harness context_mode on persist."
         ),
     )
 
@@ -290,6 +292,20 @@ class ContextMeta(BaseModel):
     @classmethod
     def _validate_context_mode(cls, v: str) -> str:
         return normalize_experience_profile_id(v)
+
+    @model_validator(mode="after")
+    def _experience_intent_matches_context_mode(self) -> ContextMeta:
+        intent = self.experience_directives.intent
+        if intent is None:
+            return self
+        expected = context_mode_for_session_intent(intent)
+        if self.context_mode != expected:
+            raise ValueError(
+                "context_mode "
+                f"{self.context_mode!r} does not match experience_directives.intent "
+                f"{intent.value!r} (expected {expected!r})"
+            )
+        return self
 
 
 def load_prompt_bundle(

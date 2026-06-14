@@ -35,10 +35,6 @@ from app.core.companion_harness.companion.bootstrap import (
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
 )
-from app.core.companion_harness.experience_profile.experience_directives import (
-    ExperienceDirectiveTone,
-    ExperienceSessionIntent,
-)
 from app.core.companion_harness.companion.models import (
     ChatMessage,
     load_context_meta,
@@ -122,6 +118,14 @@ from sqlalchemy import select
 
 # TODO(memdoc-path-constants): Replace ad-hoc _USER_MD_REL with canonical constant. #3413
 _USER_MD_REL = "USER.md"
+
+
+def _companion_tool_validation_error_message(exc: ValidationError) -> str:
+    detail = "; ".join(
+        f"{'.'.join(str(part) for part in err['loc'])}: {err['msg']}"
+        for err in exc.errors()
+    )
+    return f"ERROR: {detail}"
 _USER_PROFILE_SECTION = "## 身份信息"
 # GENERATION: 成功产出应对用户可见的交付物时, async tool_background **必须**下行到客户端;
 # 是否附加 NL 由统一收尾信封中的 ``output_to_user`` 与产物回填共同决定（见 tool_background）。
@@ -683,37 +687,11 @@ async def _dispatch(
     if name == COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
         return tool_companion_record_user_feedback(store, arguments)
     if name == "companion_set_experience_profile":
-        raw_intent = arguments.get("experience_intent")
-        if not isinstance(raw_intent, str):
-            return "ERROR: experience_intent must be a string"
-        raw_note = arguments.get("note")
-        if not isinstance(raw_note, str):
-            return "ERROR: note must be a string"
         try:
-            intent = ExperienceSessionIntent(raw_intent.strip().lower())
-        except ValueError:
-            return (
-                "ERROR: experience_intent must be one of "
-                "casual_chat, deep_conversation, roleplay, emotional_support, "
-                "remote_romance, interactive_fiction"
-            )
-        raw_tone = arguments.get("tone")
-        tone_opt: ExperienceDirectiveTone | None = None
-        if raw_tone is not None:
-            if not isinstance(raw_tone, str):
-                return "ERROR: tone must be a string"
-            try:
-                tone_opt = ExperienceDirectiveTone(raw_tone.strip().lower())
-            except ValueError:
-                return "ERROR: tone must be one of warm, playful, cool, direct"
-        return tool_companion_set_experience_profile(
-            store,
-            CompanionSetExperienceProfileToolInput(
-                experience_intent=intent,
-                note=raw_note,
-                tone=tone_opt,
-            ),
-        )
+            tool_input = CompanionSetExperienceProfileToolInput.model_validate(arguments)
+        except ValidationError as exc:
+            return _companion_tool_validation_error_message(exc)
+        return tool_companion_set_experience_profile(store, tool_input)
     if name == "google_web_search":
         raw_q = arguments.get("query")
         if not isinstance(raw_q, str):

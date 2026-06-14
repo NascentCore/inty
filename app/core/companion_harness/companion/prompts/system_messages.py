@@ -731,6 +731,8 @@ def _contextual_system_messages(
     ai_private_text: str,
     proactive_life_currents_block: str | None,
 ) -> list[dict[str, Any]]:
+    # TODO(experience-profile): collapse harness context_mode user-facing clause into
+    # experience_directives when intent is set (#3343).
     out: list[dict[str, Any]] = [
         _system_message(experience_profile_system_clause(context.context_mode)),
     ]

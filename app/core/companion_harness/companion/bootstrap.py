@@ -227,7 +227,7 @@ def tool_companion_set_experience_profile(
         }
     )
     data = updated.model_dump(mode="json")
-    data["experience_profile_change_note"] = tool_input.note.strip()[:2000]
+    data["experience_change_note"] = tool_input.note.strip()[:2000]
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel_ctx, out)
     logger.info(

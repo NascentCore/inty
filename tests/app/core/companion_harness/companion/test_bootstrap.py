@@ -75,7 +75,7 @@ def test_tool_companion_set_experience_profile_updates_context(tmp_path: Path) -
     data = json.loads(st.read_document("context.json"))
     assert data["context_mode"] == "roleplay"
     assert data["experience_directives"]["intent"] == "roleplay"
-    assert data["experience_profile_change_note"] == "user asked"
+    assert data["experience_change_note"] == "user asked"
 
 
 def test_execute_tool_call_dispatch_set_experience_profile_missing_note(
@@ -94,7 +94,8 @@ def test_execute_tool_call_dispatch_set_experience_profile_missing_note(
             json.dumps({"experience_intent": "emotional_support"}),
         )
     )
-    assert r == "ERROR: note must be a string"
+    assert r.startswith("ERROR:")
+    assert "note" in r
     assert json.loads(st.read_document("context.json"))["context_mode"] == "public"
 
 
