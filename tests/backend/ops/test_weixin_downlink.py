@@ -53,7 +53,7 @@ async def test_weixin_downlink_skips_without_peer_id() -> None:
 
 
 @pytest.mark.asyncio
-async def test_weixin_downlink_skips_bootstrap_interim() -> None:
+async def test_weixin_downlink_delivers_bootstrap_interim() -> None:
     transport = _RecordingWeixinTransport()
     downlink = WeixinDownlink(transport, lambda: "peer-1")
     interim = BootstrapInterimOutput(
@@ -67,7 +67,7 @@ async def test_weixin_downlink_skips_bootstrap_interim() -> None:
         assistant_msg_uuid="a",
     )
     await downlink.deliver(bootstrap_interim_downlink(interim=interim))
-    assert transport.sent == []
+    assert transport.sent == [("peer-1", "round one")]
 
 
 @pytest.mark.asyncio

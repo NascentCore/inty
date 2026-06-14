@@ -23,7 +23,7 @@ async def dispatch_uplink_envelope(
                 user_id=ctx.user_id,
                 agent_id=ctx.agent_id,
                 chat_id=ctx.chat_id,
-                user_text=envelope.user_text(),
+                user_text="",
                 resolved_chat_model=ctx.resolved_chat_model,
                 session_id=ctx.session_id,
                 preset_user_msg_uuid=ctx.preset_user_msg_uuid,

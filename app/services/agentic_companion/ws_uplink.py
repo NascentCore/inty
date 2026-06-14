@@ -31,11 +31,13 @@ def parse_ws_user_message(
     agentic_loop_channel: object | None,
 ) -> UplinkEnvelope:
     """Map one WS chat completion request to ``USER_MESSAGE`` uplink."""
-    last_user = ""
+    last_user_msg = None
     for msg in reversed(request.messages):
-        if msg.role == "user" and (msg.content or "").strip():
-            last_user = str(msg.content).strip()
+        if msg.role == "user":
+            last_user_msg = msg
             break
+    assert last_user_msg is not None
+    last_user = last_user_msg.extract_text_content()
     assert last_user.strip()
     preset_uid = (request.message_id or "").strip() or None
     bundle = implicit_signal_bundle or ImplicitSignalBundle(
