@@ -35,7 +35,6 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import ContextMeta
-from .prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
@@ -154,18 +153,6 @@ def build_interactive_bootstrap_system_message_parts(
             max_chars_per_seed=max_chars_per_seed
         ),
     ]
-
-
-def build_interactive_bootstrap_system_append(
-    *,
-    max_chars_per_seed: int = 6000,
-) -> str:
-    """Legacy single-string join of bootstrap blocks (prefer build_interactive_bootstrap_system_message_parts)."""
-    return SYSTEM_PROMPT_SLICE_SEPARATOR.join(
-        build_interactive_bootstrap_system_message_parts(
-            max_chars_per_seed=max_chars_per_seed
-        )
-    )
 
 
 def tool_companion_bootstrap_user_interactive_complete(
