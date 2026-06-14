@@ -8,7 +8,10 @@ data plus a stdlib ``string.Template`` pass so the companion tool name and the
 ``techno_core_events.jsonl`` path are substituted from ``techno_core.models`` without
 embedding duplicated literals in ``system_messages.py``. (Jinja2 is not a backend
 dependency; Template covers the same “named slot” need.)
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

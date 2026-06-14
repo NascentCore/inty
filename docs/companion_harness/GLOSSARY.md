@@ -28,7 +28,8 @@
 
 | 术语 | 定义 |
 |------|------|
-| **对端（peer）** | WebSocket 的一端；在实现讨论中指 **浏览器/App ↔ 服务端** 的 socket 关系，**不**自动等于「客户侧」或「智能体」。 |
+| **Memory doc** | memory document | MemoryStore 中持久化的文档（多为 ``.md`` / ``.jsonl``）；人类可读、可 SQL 检视；persistable prompt slice 的真源。见 [MEMORY_STORE.md](./MEMORY_STORE.md#memory-doc-与-prompt-slice)。 |
+| **Prompt slice** | prompt slice | 当轮注入 LLM 的 system 文本块；可 1:1 来自 Memory doc，也可仅来自包内模板或 Python 组装。 |
 | **业务 outbound 队列** | 服务端上 **按序发出助手/业务类下行 JSON** 的缓冲与泵；属**客户侧交付路径**上的服务端设施。 |
 | **后台事件队列（tool）** | 工具线程产出的结构化事件，经线程安全入口进入与读循环协作的队列，再组装为对话下行并入 **业务 outbound 队列**。 |
 | **当轮上下文表（foreground pending）** | 按 **当轮用户消息标识** 关联工具收尾与当轮会话/语音等上下文的侧车结构；**不是**通用消息总线，也**不是**「前台」那次对话模型调用本身。 |

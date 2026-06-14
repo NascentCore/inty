@@ -3,7 +3,10 @@
 The runtime behavior still lives in ``turn._run_companion_turn_core``. This module names the
 front half of that function as explicit stages so the production pipeline can
 be split without changing WebSocket, MemoryStore, or tool-background behavior.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 
@@ -24,7 +27,6 @@ from .proactive_chat import (
 )
 from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
-    implicit_user_signed_on_chat_turn,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
@@ -173,6 +175,8 @@ def _companion_user_time_context_system_for_llm(
 ) -> str | None:
     """Optional ``## user-time-context`` system body from ``client_time``, or ``None``."""
     # TODO(#3391): Log timezone_source when enriching from USER.md / transcript fallback.
+    # TODO(#3411): LangSmith acceptance — inspect agentic_companion_chat (not tool_background_*) for
+    # ``## User's Local Time Context`` after USER.md has persisted IANA timezone.
     enabled = bool(
         _global_config.app.features.experimental_enable_chat_with_user_time_context
     )

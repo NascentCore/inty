@@ -20,6 +20,7 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.user_md == "USER.md"
     assert p.memory_md == "MEMORY.md"
     assert p.channels_md == "CHANNELS.md"
+    assert p.companionship_md == "COMPANIONSHIP.md"
     assert p.techno_core_md == "TECHNO_CORE.md"
     assert p.living_sphere_md == "LIVING_SPHERE.md"
     assert p.tools_md == "TOOLS.md"
@@ -105,6 +106,7 @@ def test_ensure_minimal_documents_in_store(tmp_path: Path) -> None:
     assert "42" not in memory
     assert "待对话填充" in store.read_document("USER.md")
     assert "沟通风格" in store.read_document("STYLE.md")
+    assert "我们的关系" in store.read_document("COMPANIONSHIP.md")
     assert "Channels are medium" in store.read_document("CHANNELS.md")
     ensure_minimal_documents_in_store(store)
     assert is_scope_initialized_in_store(store) is True

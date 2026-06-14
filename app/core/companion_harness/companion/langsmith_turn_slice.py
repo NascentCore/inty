@@ -3,7 +3,10 @@
 Pure harness module: builds parent RunTree fragments and child ``langsmith_extra``
 dicts from ``CompanionRuntimeChannel``. Session-level resolution lives in
 ``app.services.agentic_companion.langsmith_channel_resolve``.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

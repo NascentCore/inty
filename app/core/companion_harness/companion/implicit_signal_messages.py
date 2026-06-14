@@ -7,13 +7,16 @@ similar greetings across turns (models weigh trailing system instructions heavil
 framing the trigger as user input improves variation while keeping the signal last in
 the dialogue before the assistant reply. During interactive bootstrap, ``user_signed_on``
 with ``message_id`` is the first-turn opener (replacing the legacy WebSocket kickoff
-placeholder); system stack carries ``BOOTSTRAP.md`` via ``build_interactive_bootstrap_system_message_parts``.
+placeholder); system stack carries ``BOOTSTRAP.md`` via ``prompts/system_messages.py`` bootstrap slices.
 
 Client wall-clock context (``ImplicitSignalBundle.client_time``) is not injected here;
 ``turn_pipeline`` emits a dedicated ``## user-time-context`` **system** message
 (``User's time`` / ``Time zone`` lines) immediately before the tail **user** message when
 the feature flag is enabled.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

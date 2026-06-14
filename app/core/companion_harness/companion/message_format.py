@@ -1,4 +1,7 @@
-"""OpenAI chat message shapes shared by turn loop and REPL tools."""
+"""OpenAI chat message shapes shared by turn loop and REPL tools.
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

@@ -63,6 +63,8 @@ def get_safety_system_text() -> str:
     return load_template_seed_text("SAFETY.md").strip()
 
 
+# TODO(memdoc-path-constants): Property return values are still string literals; export
+# module-level Final constants and migrate all call sites to use them. #3413
 @dataclass(frozen=True)
 class MemoryStoreScopePaths:
     """Standard document paths as scope-relative posix strings (MemoryStore keys)."""
@@ -92,6 +94,10 @@ class MemoryStoreScopePaths:
     @property
     def channels_md(self) -> str:
         return "CHANNELS.md"
+
+    @property
+    def companionship_md(self) -> str:
+        return "COMPANIONSHIP.md"
 
     @property
     def techno_core_md(self) -> str:
@@ -205,6 +211,7 @@ def is_scope_initialized_in_store(store: MemoryStore) -> bool:
 
 _MINIMAL_TRANSCRIPT_SEED = ""
 
+# TODO(prompt-slice-dedup): Iterate PromptSliceId / PROMPT_SLICE_TO_REL instead of this attr tuple. #3417
 _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "identity",
     "soul",
@@ -212,6 +219,7 @@ _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "user_md",
     "memory_md",
     "channels_md",
+    "companionship_md",
 )
 
 
@@ -285,6 +293,7 @@ def needs_startup_profile_inquiry(store: MemoryStore) -> bool:
     for m in load_transcript_from_store(store, rel_tr):
         if m.role in ("user", "assistant"):
             return False
+    # TODO(memdoc-path-constants): Use paths.identity / paths.user_md. #3413
     ident = store.read_document_if_exists("IDENTITY.md") or ""
     user_md = store.read_document_if_exists("USER.md") or ""
     id_stub = _text_matches_any_marker(ident, _IDENTITY_STUB_MARKERS)

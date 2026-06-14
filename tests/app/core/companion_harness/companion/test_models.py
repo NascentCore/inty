@@ -47,6 +47,19 @@ def test_load_prompt_bundle_reads_channels_from_memory_store(tmp_path: Path) -> 
     assert bundle.channels_md == "# Channels\ncustom channel contract\n"
 
 
+def test_load_prompt_bundle_reads_companionship_from_memory_store(tmp_path: Path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("models", "a", f"{tmp_path.name}-companionship"),
+        repository=None,
+    )
+    store.write_document(
+        "COMPANIONSHIP.md",
+        "# 我们的关系\n\n用户原话：异地恋人\n",
+    )
+    bundle = load_prompt_bundle(store, meta=ContextMeta())
+    assert "异地恋人" in bundle.companionship_md
+
+
 def test_context_meta_defaults() -> None:
     c = ContextMeta()
     assert c.context_mode == "intimate"

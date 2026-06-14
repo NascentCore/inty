@@ -9,6 +9,8 @@ requires-python = ">=3.12"
 dev = [
     "black>=24",
     "pylint>=3.2",
+    "ruff>=0.9",
+    "vulture>=2.14",
 ]
 
 [tool.black]

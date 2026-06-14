@@ -1,4 +1,7 @@
-"""Pydantic 模型：消息、人格包、控制面元数据。"""
+"""Pydantic 模型：消息、人格包、控制面元数据。
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 
@@ -16,6 +19,7 @@ from pydantic import (
 )
 
 from app.core.companion_harness.experience_profile import (
+    ExperienceDirectives,
     experience_profile_injects_private_memory,
     normalize_experience_profile_id,
 )
@@ -116,6 +120,13 @@ class CompanionTurnResult(BaseModel):
             "See dual_llm_chat_branch_envelope module docstring."
         ),
     )
+    turn_recall: str | None = Field(
+        default=None,
+        description=(
+            "Ephemeral Turn Brief from dual-LLM envelope ``turn_recall`` when non-empty; "
+            "plumbed in Phase A (#3342), prompt + curator activation in Phase B (#3343)."
+        ),
+    )
     user_msg_uuid: str = ""
     assistant_msg_uuid: str = Field(
         default="",
@@ -196,6 +207,14 @@ class ChatMessage(BaseModel):
         default=None,
         description="Manifest row only: last real user message uuid at splice time.",
     )
+    significance_perception: dict[str, Any] | None = Field(
+        default=None,
+        description="Dual-LLM envelope importance metadata on assistant rows.",
+    )
+    turn_recall: str | None = Field(
+        default=None,
+        description="Ephemeral Turn Brief on assistant rows (#3342).",
+    )
 
 
 def is_ai_private_splice_manifest(row: ChatMessage) -> bool:
@@ -257,6 +276,13 @@ class ContextMeta(BaseModel):
     # Legacy JSON flag from older workspaces; WebSocket connect-time kickoff was removed. Default True
     # means "nothing to do"; omit key in new USER_INTERACTIVE seeds.
     companion_ws_interactive_kickoff_sent: bool = True
+    experience_directives: ExperienceDirectives = Field(
+        default_factory=ExperienceDirectives,
+        description=(
+            "Real-time session experience overlays (tone, pacing). "
+            "Phase A (#3342): persist only; prompt clause in Phase B (#3343)."
+        ),
+    )
 
     @field_validator("context_mode")
     @classmethod
@@ -269,6 +295,7 @@ def load_prompt_bundle(
     *,
     meta: ContextMeta | None = None,
 ) -> PromptBundle:
+    # TODO(memdoc-path-constants): read_document paths → DEFAULT_MEMORY_STORE_SCOPE_PATHS. #3413
     """从 MemoryStore 读取组装 PromptBundle 所需的语义文档。
 
     私人记忆两层（见 ``memory_taxonomy``）：``memory/daily/<日期>.md`` daily gist（dreaming 写入），
@@ -304,6 +331,7 @@ def load_prompt_bundle(
             "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         channels_md=_read_memory_document_required(store, "CHANNELS.md"),
+        companionship_md=_read_memory_document_required(store, "COMPANIONSHIP.md"),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
@@ -316,6 +344,7 @@ def load_prompt_bundle(
 
 
 def load_context_meta(*, store: MemoryStore) -> ContextMeta:
+    # TODO(memdoc-path-constants): context.json → DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json. #3413
     body = store.read_document_if_exists("context.json")
     if body is not None and body.strip():
         try:

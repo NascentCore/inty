@@ -77,14 +77,21 @@ from app.core.companion_harness.companion.runtime_events import (
 )
 from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     envelope_to_assistant_metadata_dict,
+    turn_recall_from_envelope,
+)
+from app.core.companion_harness.companion.transcript_assistant_row import (
+    TranscriptAssistantRowBuildInput,
+    append_transcript_assistant_row,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.companion.message_format import (
+    openai_assistant_message_dict,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
+from .companion_tool_definitions import MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
 from .companion_tool_runtime import (
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     execute_tool_call,
-    openai_assistant_message_dict,
     round_includes_generation_tool,
     tool_requires_client_delivery_on_success,
 )
@@ -341,6 +348,7 @@ class ToolOutputEvent:
     local_image_paths: tuple[str, ...] = ()
     # Parsed from unified finish envelope; mirrors foreground significance_perception shape.
     significance_perception: dict[str, Any] | None = None
+    turn_recall: str | None = None
     # InnerTickActivity.value when this background round is an inner-tick turn; else None.
     inner_tick_activity: str | None = None
 
@@ -498,18 +506,22 @@ def _append_background_transcript_assistant(
     reply_to: str,
     trace_id: str,
     transcript_relative_path: str,
+    significance_perception: dict[str, Any] | None = None,
+    turn_recall: str | None = None,
 ) -> None:
-    store.append_jsonl_record(
+    append_transcript_assistant_row(
+        store,
         transcript_relative_path,
-        {
-            "role": "assistant",
-            "content": content,
-            "ts": utc_iso_ts(),
-            "uuid": assistant_msg_uuid,
-            "source": "tool_bg",
-            "reply_to": reply_to,
-            "trace_id": trace_id,
-        },
+        TranscriptAssistantRowBuildInput(
+            content=content,
+            uuid=assistant_msg_uuid,
+            reply_to=reply_to,
+            trace_id=trace_id,
+            source="tool_bg",
+            significance_perception=significance_perception,
+            turn_recall=turn_recall,
+        ),
+        ts=utc_iso_ts(),
     )
 
 
@@ -561,6 +573,8 @@ async def _run_background_tool_loop(
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
+    # TODO(#3411): tool_background passes implicit_signal_bundle=None — LangSmith tool_* spans
+    # omit ``## User's Local Time Context``; verify injection on foreground agentic_companion_chat only.
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
         channel=CompanionRuntimeChannel.APP,
         implicit_signal_bundle=None,
@@ -813,6 +827,7 @@ async def _run_background_tool_loop(
         )
         base_nl = (routing.user_facing_reply or "").strip()
         significance_meta = envelope_to_assistant_metadata_dict(routing)
+        turn_recall = turn_recall_from_envelope(routing)
         if output_to_user_flag and not base_nl:
             filler = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs)
             if filler:
@@ -862,6 +877,8 @@ async def _run_background_tool_loop(
                     reply_to=user_msg_uuid,
                     trace_id=trace_id,
                     transcript_relative_path=transcript_append_rel,
+                    significance_perception=significance_meta,
+                    turn_recall=turn_recall,
                 )
                 _append_background_log(
                     store=memory_store,
@@ -908,6 +925,8 @@ async def _run_background_tool_loop(
             reply_to=user_msg_uuid,
             trace_id=trace_id,
             transcript_relative_path=transcript_append_rel,
+            significance_perception=significance_meta,
+            turn_recall=turn_recall,
         )
         _append_background_log(
             store=memory_store,
@@ -948,6 +967,7 @@ async def _run_background_tool_loop(
                 image_asset_baseline=image_asset_baseline,
                 local_image_paths=tuple(image_paths),
                 significance_perception=significance_meta,
+                turn_recall=turn_recall,
                 inner_tick_activity=(
                     inner_tick_activity.value if inner_tick_turn else None
                 ),

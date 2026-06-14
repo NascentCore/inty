@@ -29,6 +29,7 @@ def companion_ai_meta_from_turn_result(
         langsmith_trace_id=companion_turn.langsmith_trace_id or None,
         langsmith_run_id=companion_turn.langsmith_run_id or None,
         significance_perception=significance,
+        turn_recall=companion_turn.turn_recall or None,
         tool_background_started=(
             True if companion_turn.tool_background_started else None
         ),

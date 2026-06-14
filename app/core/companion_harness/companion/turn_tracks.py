@@ -1,7 +1,10 @@
 """Per-track entry aliases; implementations live in ``turn``.
 
 TODO(cleanup): Remove this, callers import the source modules directly.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

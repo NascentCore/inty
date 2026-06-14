@@ -19,6 +19,7 @@ def _read_profile_doc(store: MemoryStore, relative_path: str) -> str:
     return ""
 
 
+# TODO(memdoc-path-constants): Profile doc keys/paths from canonical MemDoc constants. #3413
 def _core_profile_payload(store: MemoryStore) -> dict[str, str]:
     return {
         "IDENTITY.md": _read_profile_doc(store, "IDENTITY.md"),

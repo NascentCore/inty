@@ -14,7 +14,7 @@ import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
-from app.core.companion_harness.companion.models import InnerTickActivity
+from app.core.companion_harness.companion.models import InnerTickActivity, load_transcript_from_store
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
@@ -88,7 +88,8 @@ def _assert_no_adjacent_user_roles(messages: list[dict[str, Any]]) -> None:
 
 
 class _FakeAsyncDualLLMClient:
-    def __init__(self) -> None:
+    def __init__(self, *, turn_recall: str = "") -> None:
+        self.turn_recall = turn_recall
         self.config = CompanionLLMConfig(
             api_key="k",
             default_model=resolve_chat_text_model("m/default"),
@@ -108,6 +109,8 @@ class _FakeAsyncDualLLMClient:
             "importance_round": 5,
             "importance_user_message": 5,
             "importance_assistant_message": 5,
+            "output_to_user": True,
+            "turn_recall": self.turn_recall,
         }
         msg = SimpleNamespace(
             content=json.dumps(env),
@@ -183,6 +186,44 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
         "role": "assistant",
         "content": f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\nforeground ok",
     }
+
+
+@pytest.mark.asyncio
+async def test_async_dual_run_turn_persists_turn_recall_on_transcript(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = _store(tmp_path)
+    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document("IDENTITY.md", "id\n")
+    store.write_document("SOUL.md", "s\n")
+    store.write_document("STYLE.md", "st\n")
+    store.write_document("USER.md", "u\n")
+    store.write_document("MEMORY.md", "m\n")
+    store.write_document("CHANNELS.md", "ch\n")
+    store.write_document("COMPANIONSHIP.md", "bond\n")
+    store.write_document("transcript.jsonl", "")
+
+    monkeypatch.setattr(
+        "app.core.companion_harness.companion.turn.start_tool_background_job",
+        lambda **_kwargs: None,
+    )
+
+    client = _FakeAsyncDualLLMClient(turn_recall="用户提到下周见面")
+    out = await run_companion_user_chat_turn(
+        "hello",
+        deps=_default_turn_deps(
+            store,
+            client,
+            tool_bg_idle_event=_idle_tool_bg(),
+        ),
+    )
+
+    assert out.turn_recall == "用户提到下周见面"
+    msgs = load_transcript_from_store(store, "transcript.jsonl")
+    assistant_rows = [m for m in msgs if m.role == "assistant"]
+    assert len(assistant_rows) == 1
+    assert assistant_rows[0].turn_recall == "用户提到下周见面"
+    assert assistant_rows[0].content == "foreground ok"
 
 
 @pytest.mark.asyncio

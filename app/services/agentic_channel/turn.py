@@ -39,6 +39,7 @@ from app.utils.models_catalog import GenAIModel
 def _mark_agent_channel_session_system_written(
     session: CompanionSession,
 ) -> None:
+    # TODO(memdoc-path-constants): context.json → DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json. #3413
     rel = "context.json"
     raw = session.store.read_document_if_exists(rel)
     if raw is None or not str(raw).strip():
@@ -179,6 +180,7 @@ async def run_agent_turn(
     )
     await _maybe_append_agent_channel_session_system(session=session)
     bundle = implicit_signal_bundle
+    # TODO(#3411): Manual E2E — after USER.md 时区 persisted, verify enrichment + LangSmith time slice.
     if bundle.client_time is None:
         client_time = client_time_from_memory_store(session.store)
         if client_time is not None:

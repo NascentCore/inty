@@ -6,7 +6,10 @@
 
 每个 ``CompanionSession`` 还通过 ``turn_lock`` / ``tool_bg_idle`` 暴露 scope 级串行化状态
 （``scope_turn_lock``；#3272）。
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 
@@ -165,6 +168,7 @@ class CompanionManager:
                 self._config.memory_bootstrap_type
                 == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
             )
+            # TODO(memdoc-path-constants): context.json → DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json. #3413
             existing_ctx = store.read_document_if_exists("context.json")
             parsed_ctx: dict[str, object] | None = None
             write_full_context = False
