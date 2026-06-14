@@ -8,7 +8,6 @@ import threading
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 
@@ -25,8 +24,10 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_repl_tools_inner_tick,
     build_openai_repl_tools_inner_tick_autonomy,
 )
+from app.core.companion_harness.companion.dual_llm_foreground_chat import (
+    build_chat_track_handoff_assistant_message,
+)
 from app.core.companion_harness.companion.turn import (
-    CHAT_TRACK_RESPONSE_MESSAGE_TITLE,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,
     run_companion_user_chat_turn,
@@ -182,10 +183,9 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert bg_jobs[0]["main_event_loop"] is loop
     assert bg_jobs[0]["force_tools_first_round"] is False
     _assert_no_adjacent_user_roles(bg_msgs)
-    assert bg_msgs[-1] == {
-        "role": "assistant",
-        "content": f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\nforeground ok",
-    }
+    assert bg_msgs[-1] == build_chat_track_handoff_assistant_message(
+        fg_text="foreground ok"
+    )
 
 
 @pytest.mark.asyncio
