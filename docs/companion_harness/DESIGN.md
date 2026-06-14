@@ -157,7 +157,7 @@ User (App / WeChat / Telegram / REPL)
 - `*.md` refer to semantic content
 - `*.jsonl` refer to episodic content
 
-TODO(memory-context-hierarchy): Replace stub with full context hierarchy (pinned blocks, recall stream, archival semantic, private working, external knowledge) and path mapping — !3405.
+TODO(memory-hierarchy-design): Design conceptual & logical memory hierarchy; replace `*.md` / `*.jsonl` stub below after !3405 closes (conversation options are candidates, not the spec).
 
 ## Turn 轨道：用户与智能体交互及慢周期后台数据处理支持 (Runtime Loops)
 

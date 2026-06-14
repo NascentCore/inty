@@ -9,5 +9,5 @@ LLM context from ``transcript.jsonl``.
 Runtime turn orchestration, tools, and WebSocket coordination live in sibling packages;
 they import from here rather than the reverse.
 
-TODO(memory-context-hierarchy): Document conceptual memory layers and path mapping — #3405.
+TODO(memory-hierarchy-design): Agree conceptual & logical memory hierarchy in docs—#3405.
 """

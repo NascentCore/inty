@@ -3,9 +3,9 @@
 Maps logical paths to daily gist / semantic terminology used in system injection
 headings and docs. Daily gist lives at ``memory/daily/{date}.md``; semantic at ``MEMORY.md``.
 
-TODO(memory-context-hierarchy): Expand into full context-hierarchy taxonomy (pinned blocks,
-recall stream, archival semantic, private working stream, external knowledge) per design
-issue #3405; align headings with ``docs/companion_harness/DESIGN.md``.
+TODO(memory-hierarchy-design): Design conceptual & logical memory hierarchy (layers, naming,
+lifecycle, injection rules)—#3405. Current headings are placeholders until design closes;
+conversation options (Letta context hierarchy, five-layer sketch, etc.) are candidates only.
 """
 
 from __future__ import annotations

@@ -11,8 +11,8 @@ TODO(crs-companionship-doc): After #3342, load ``COMPANIONSHIP.md`` from MemoryS
 
 TODO(#3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled ``USER_CHAT`` — #3369.
 
-TODO(memory-context-hierarchy): Document which memory layers (pinned blocks vs recall tail
-vs archival inject) each track loads — #3405.
+TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
+hierarchy (design issue; options include in-context vs retrieval-required splits).
 """
 
 from __future__ import annotations
