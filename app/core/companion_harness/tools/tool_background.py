@@ -41,7 +41,8 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
 )
 from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
 from app.core.companion_harness.tools.runtime import (
-    resolve_official_assistant_tool_loop_async,
+    insert_openai_system_message,
+    resolve_openai_tool_call_loop_async,
 )
 
 from app.core.companion_harness.companion.llm_chat_runtime import (
@@ -311,19 +312,6 @@ def tool_background_should_deliver_to_user(
     return generation_deliver or output_to_user
 
 
-def _insert_system_message(
-    openai_messages: list[dict[str, Any]],
-    system_message_content: str,
-) -> None:
-    insertion_index = 0
-    while (
-        insertion_index < len(openai_messages)
-        and openai_messages[insertion_index].get("role") == "system"
-    ):
-        insertion_index += 1
-    openai_messages.insert(
-        insertion_index, {"role": "system", "content": system_message_content}
-    )
 
 
 @dataclass(frozen=True)
@@ -554,7 +542,7 @@ def _append_background_log(
     )
 
 
-async def _run_background_tool_loop(
+async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
@@ -761,14 +749,14 @@ async def _run_background_tool_loop(
             )
 
         try:
-            loop_result = await resolve_official_assistant_tool_loop_async(
+            loop_result = await resolve_openai_tool_call_loop_async(
                 response=initial_response,
                 openai_messages=working_messages,
                 max_tool_call_rounds=_BG_TOOL_MAX_ROUNDS,
                 execute_tool_call=execute_tool_call,
                 continue_chat=continue_chat,
                 build_assistant_tool_call_message=openai_assistant_message_dict,
-                insert_system_message=_insert_system_message,
+                insert_system_message=insert_openai_system_message,
                 initial_trace_id=None,
                 after_tool_messages_appended=_after_tool_messages_appended,
             )
@@ -1031,7 +1019,7 @@ def start_tool_background_job(
 
         def _run_async_tool_loop() -> None:
             asyncio.run(
-                _run_background_tool_loop(
+                run_tool_background_loop(
                     memory_store=memory_store,
                     request_messages=request_messages,
                     tool_model=tool_model,

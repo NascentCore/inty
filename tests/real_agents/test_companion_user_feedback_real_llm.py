@@ -33,7 +33,7 @@ from app.core.companion_harness.tools.companion_user_feedback import (
     USER_FEEDBACK_JSONL_REL,
 )
 from app.core.companion_harness.tools.runtime import (
-    resolve_official_assistant_tool_loop_async,
+    resolve_openai_tool_call_loop_async,
 )
 from app.utils.models_catalog import resolve_chat_text_model
 
@@ -121,7 +121,7 @@ async def test_real_llm_calls_companion_record_user_feedback(tmp_path) -> None:
             resp = client.chat_completion(messages=msgs, tools=tools)
             return resp, None
 
-        await resolve_official_assistant_tool_loop_async(
+        await resolve_openai_tool_call_loop_async(
             response=initial,
             openai_messages=messages,
             max_tool_call_rounds=4,

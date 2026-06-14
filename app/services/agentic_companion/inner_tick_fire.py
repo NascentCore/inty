@@ -21,8 +21,6 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from typing import Optional
 
 from loguru import logger
@@ -64,12 +62,16 @@ from app.services.agentic_companion.inner_tick_deliver import (
     InnerTickVisibleDeliverInput,
     deliver_visible_inner_tick_turn,
 )
+from app.services.agentic_companion.inner_tick_kernel_context import (
+    build_inner_tick_kernel_context,
+)
 from app.services.agentic_companion.inner_tick_scope import (
     InnerTickFireInput,
     InnerTickModelSource,
     InnerTickScopeCoords,
     resolve_inner_tick_scope_coords,
 )
+from app.services.agentic_companion.inner_tick_turn_scope import inner_tick_turn_scope
 from app.services.agentic_companion.ws_implicit_signals import (
     implicit_signal_bundle_from_tc_box,
 )
@@ -106,45 +108,20 @@ async def _kernel_context(
     preset_uid: str,
     background_output_sink,
 ) -> tuple[InnerTickKernelInput, CompanionSession] | None:
-    mem_store = companion_chat_service.companion_memory_store_if_ready(
-        user_id=coords.user_id,
-        agent_id=coords.agent_id,
-        chat_id=coords.chat_row_id,
-        resolved_chat_model=coords.model_override,
-    )
-    if mem_store is None:
-        return None
-
     ws_implicit = implicit_signal_bundle_from_tc_box(fire_input.tc_box)
-    manager, session = companion_chat_service._companion_manager_session_ref(
+    return await build_inner_tick_kernel_context(
         user_id=coords.user_id,
         agent_id=coords.agent_id,
-        chat_id=coords.chat_row_id,
-        resolved_chat_model=coords.model_override,
-    )
-    kernel_input = InnerTickKernelInput(
-        manager=manager,
-        session=session,
-        mem_store=mem_store,
+        chat_row_id=coords.chat_row_id,
+        model_override=coords.model_override,
         throttle=_throttle_snapshot(fire_input),
         runtime_context=TurnRuntimeContext(
             channel=fire_input.delivery.runtime_channel,
             implicit_signal_bundle=ws_implicit,
         ),
-        preset_user_msg_uuid=preset_uid,
+        preset_uid=preset_uid,
         background_output_sink=background_output_sink,
     )
-    return kernel_input, session
-
-
-@asynccontextmanager
-async def _inner_tick_turn_scope(
-    *,
-    session: CompanionSession,
-) -> AsyncIterator[None]:
-    """Acquire scope ``turn_lock`` for one inner-tick activity."""
-    async with session.turn_lock:
-        yield
 
 
 async def try_fire_scheduled_inner_tick(
@@ -174,7 +151,7 @@ async def try_fire_scheduled_inner_tick(
     ws_conn_id = fire_input.ws_conn_id
     session_id = generate_session_id(str(coords.chat_row_id))
 
-    async with _inner_tick_turn_scope(session=scope_session):
+    async with inner_tick_turn_scope(session=scope_session):
         if coordinator.inner_tick_maintenance_foreground_pending():
             logger.debug(
                 "companion_ws_scheduled_reminder skipped prev_maintenance_pending "
@@ -286,7 +263,7 @@ async def try_fire_proactive_chat_inner_tick(
     ws_conn_id = fire_input.ws_conn_id
     session_id = generate_session_id(str(coords.chat_row_id))
 
-    async with _inner_tick_turn_scope(session=scope_session):
+    async with inner_tick_turn_scope(session=scope_session):
         coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
         if coordinator.inner_tick_proactive_tool_bg_still_running():
             logger.debug(
@@ -395,7 +372,7 @@ async def try_fire_autonomy_inner_tick(
         background_output_sink=kernel_input.background_output_sink,
     )
 
-    async with _inner_tick_turn_scope(session=scope_session):
+    async with inner_tick_turn_scope(session=scope_session):
         coordinator.clear_inner_tick_autonomy_tool_bg_idle_if_idle()
         if coordinator.inner_tick_autonomy_tool_bg_still_running():
             logger.debug(
@@ -490,7 +467,7 @@ async def try_fire_maintenance_inner_tick(
         implicit=ws_implicit,
     )
 
-    async with _inner_tick_turn_scope(session=scope_session):
+    async with inner_tick_turn_scope(session=scope_session):
         if coordinator.inner_tick_maintenance_foreground_pending():
             logger.debug(
                 "companion_ws_maintenance_inner_tick skipped prev_inner_tick_pending "
@@ -625,7 +602,7 @@ async def try_fire_dreaming_inner_tick(
         resolved_chat_model=coords.model_override,
         session_id=None,
     )
-    async with _inner_tick_turn_scope(session=scope_session):
+    async with inner_tick_turn_scope(session=scope_session):
         outcome = await asyncio.to_thread(
             companion_chat_service.run_dreaming_batch_for_api,
             user_id=coords.user_id,

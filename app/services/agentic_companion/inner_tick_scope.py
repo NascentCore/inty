@@ -30,6 +30,13 @@ class InnerTickModelSource(StrEnum):
     DREAMING_HARNESS = "dreaming_harness"
 
 
+class InnerTickChatResolveMode(StrEnum):
+    """Whether scope resolution may create a missing ``chats`` row."""
+
+    GET_OR_CREATE = "get_or_create"
+    READ_ONLY = "read_only"
+
+
 @dataclass(frozen=True)
 class InnerTickFireInput:
     """Bundled arguments for one inner-tick ``try_fire_*`` attempt on a presence wire."""
@@ -57,12 +64,26 @@ async def resolve_inner_tick_scope_coords(
     *,
     model_source: InnerTickModelSource,
 ) -> InnerTickScopeCoords | None:
-    """Load user/chat and model for one inner-tick attempt."""
-    coords = fire_input.coords
+    """Load user/chat and model for one presence inner-tick attempt."""
+    return await resolve_inner_tick_scope_coords_for_triple(
+        coords=fire_input.coords,
+        poll_source=fire_input.ws_conn_id,
+        model_source=model_source,
+        chat_resolve_mode=InnerTickChatResolveMode.GET_OR_CREATE,
+    )
+
+
+async def resolve_inner_tick_scope_coords_for_triple(
+    *,
+    coords: InnerTickCoords,
+    poll_source: str,
+    model_source: InnerTickModelSource,
+    chat_resolve_mode: InnerTickChatResolveMode,
+) -> InnerTickScopeCoords | None:
+    """Load user/chat and model for one scope triple (presence or scope worker)."""
     user_id = coords.user_id
     agent_id = coords.agent_id
-    chat_id_raw = coords.chat_id
-    chat_id_str = str(chat_id_raw)
+    chat_id_str = str(coords.chat_id)
 
     async with AsyncSessionLocal() as pre_db:
         r_user = await pre_db.execute(select(User).where(User.id == user_id))
@@ -89,9 +110,9 @@ async def resolve_inner_tick_scope_coords(
             ).memory_store_chat_id()
             if chat_id_str != expected:
                 logger.debug(
-                    "inner_tick_scope agent-scope chat_id mismatch ws_conn_id={} "
+                    "inner_tick_scope agent-scope chat_id mismatch poll_source={} "
                     "ctx={} expected={}",
-                    fire_input.ws_conn_id,
+                    poll_source,
                     chat_id_str,
                     expected,
                 )
@@ -104,13 +125,22 @@ async def resolve_inner_tick_scope_coords(
                 model_override=model_override,
             )
 
-        chat = await chat_service.get_or_create_chat_by_agent(
-            db=pre_db, user_id=user_id, agent_id=agent_id
-        )
+        match chat_resolve_mode:
+            case InnerTickChatResolveMode.GET_OR_CREATE:
+                chat = await chat_service.get_or_create_chat_by_agent(
+                    db=pre_db, user_id=user_id, agent_id=agent_id
+                )
+            case InnerTickChatResolveMode.READ_ONLY:
+                chat = await chat_service.get_chat_by_user_and_agent(
+                    pre_db, user_id, agent_id
+                )
+                if chat is None:
+                    return None
+
         if str(chat.id) != chat_id_str:
             logger.debug(
-                "inner_tick_scope chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
-                fire_input.ws_conn_id,
+                "inner_tick_scope chat_id mismatch poll_source={} ctx={} db_chat_id={}",
+                poll_source,
                 chat_id_str,
                 chat.id,
             )

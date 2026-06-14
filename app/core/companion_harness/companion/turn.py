@@ -56,9 +56,7 @@ import os
 import threading
 import time
 import uuid
-from datetime import datetime
 from contextlib import nullcontext
-from copy import deepcopy
 from typing import Any
 
 from loguru import logger
@@ -66,8 +64,6 @@ from loguru import logger
 from app.core.config import global_config_loaded_from_config_yaml
 from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    SOURCE_BOOTSTRAP_TRACK,
-    SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
     SOURCE_IMPLICIT_SIGN_ON_GREETING,
     SOURCE_SINGLE_COMPLETION,
 )
@@ -76,14 +72,11 @@ from .langsmith_turn_slice import CompanionTurnLangsmithSlice
 from .llm_client import (
     LLM_SCENE_CHAT,
     LLM_SCENE_INNER_TICK,
-    CompanionLLMClient,
 )
 from .llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
-    record_llm_inference_failure,
 )
-from app.core.companion_harness.memory.memory_store import MemoryStore
 from .proactive_chat import build_proactive_chat_transcript_user_marker
 from .transcript_ai_private import (
     AiPrivateSplicePersistInput,
@@ -95,29 +88,26 @@ from .transcript_ai_private import (
 from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
 )
-from app.core.companion_harness.prompting.bundle import PromptBundle
-from .message_format import openai_assistant_message_dict
 from .models import (
     CompanionTurnTrack,
     CompanionTurnResult,
-    ContextMeta,
-    InnerTickActivity,
     load_context_meta,
     transcript_relative_path_for_turn_persistence,
 )
-from .prompt_stack import (
-    append_runtime_output_format_system_message,
-    refresh_companion_turn_prompt_stack,
+from .in_turn_sync_tool_loop import (
+    BootstrapInTurnSyncToolLoopInput,
+    run_bootstrap_track_sync_tool_loop,
 )
-from .runtime_channel import TurnRuntimeContext
+from .dual_llm_foreground_chat import (
+    DualLlmForegroundChatInput,
+    run_dual_llm_foreground_chat,
+)
+from .dual_llm_message_stacks import (
+    dual_llm_system_message_variants,
+    replace_leading_system_messages_multi,
+)
 from .turn_deps import CompanionTurnDeps
 from .turn_track import turn_flags_for_track
-from .prompts.system_messages import (
-    build_system_messages_for_chat_track,
-    build_system_messages_for_inner_tick_autonomy,
-    build_system_messages_for_inner_tick_maintenance,
-    build_system_messages_for_tool_track,
-)
 from .dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
@@ -130,23 +120,16 @@ from .turn_pipeline import (
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
-    execute_tool_call as repl_execute_tool_call,
-)
-from app.core.companion_harness.tools.runtime import (
-    resolve_official_assistant_tool_loop_async,
+    execute_tool_call,
 )
 from app.core.companion_harness.tools.tool_background import (
     ToolOutputEvent,
-    _insert_system_message,
     push_output_event,
     start_tool_background_job,
 )
 from .turn_routes import (
-    BootstrapInterimOutput,
-    BootstrapInterimOutputSink,
     TurnRouteMode,
 )
 from .transcript_assistant_row import (
@@ -174,13 +157,12 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
-CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
-_BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS = 24
-
 
 def _memory_store_write_allowlist_for_track(
     track: CompanionTurnTrack,
 ) -> frozenset[str]:
+    # TODO(#3369): Wire settled ``USER_CHAT`` in-turn sync via ``run_in_turn_sync_tool_loop``
+    # with this allowlist and track-specific ``after_tool_messages_appended``.
     match track:
         case CompanionTurnTrack.INNER_TICK_AUTONOMY:
             return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
@@ -198,261 +180,6 @@ class CompanionToolBackgroundStartedError(RuntimeError):
     def __init__(self, original_exception: Exception) -> None:
         self.original_exception = original_exception
         super().__init__(str(original_exception))
-
-
-def _replace_leading_system_messages_multi(
-    messages: list[dict[str, Any]],
-    system_messages: list[dict[str, Any]],
-    *,
-    stack_depth: int,
-) -> list[dict[str, Any]]:
-    """Replace the first ``stack_depth`` system messages (MemoryStore stack) with ``system_messages``.
-
-    In dual-LLM invocation turn, 把消息列表开头那几段「人设/记忆」系统提示换成 chat 或 tool 各自需要的版本，同时完整保留后面的聊天记录、时间上下文和当前用户输入。
-    """
-    return [*system_messages, *messages[stack_depth:]]
-
-
-def _async_dual_llm_system_message_variants(
-    *,
-    store: MemoryStore,
-    bundle: PromptBundle,
-    context: ContextMeta,
-    memory_bootstrap_type: str,
-    inner_tick_turn: bool,
-    route_inner_activity: InnerTickActivity,
-    runtime_context: TurnRuntimeContext,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Foreground ``chat_track`` vs tool-path stacks for ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``.
-
-    Implicit sign-on rounds never reach this helper (they use ``CHAT_ONLY_SYNC``).
-    """
-    tick_proactive = (
-        inner_tick_turn
-        and route_inner_activity == InnerTickActivity.PROACTIVE_CHAT
-    )
-    if inner_tick_turn and not tick_proactive:
-        match route_inner_activity:
-            case InnerTickActivity.MAINTENANCE:
-                tool_system_msgs = (
-                    build_system_messages_for_inner_tick_maintenance(
-                        bundle, context, store
-                    )
-                )
-            case InnerTickActivity.AUTONOMY:
-                tool_system_msgs = (
-                    build_system_messages_for_inner_tick_autonomy(
-                        bundle, context, store
-                    )
-                )
-            case _:
-                raise RuntimeError(
-                    "unexpected inner-tick activity for async tool path: "
-                    f"{route_inner_activity.value}"
-                )
-    else:
-        tool_system_msgs = build_system_messages_for_tool_track(bundle, context)
-    chat_system_msgs = build_system_messages_for_chat_track(
-        bundle,
-        context,
-        memory_bootstrap_type,
-    )
-    tool_system_msgs = append_runtime_output_format_system_message(
-        system_messages=tool_system_msgs,
-        bundle=bundle,
-        runtime_context=runtime_context,
-    )
-    chat_system_msgs = append_runtime_output_format_system_message(
-        system_messages=chat_system_msgs,
-        bundle=bundle,
-        runtime_context=runtime_context,
-    )
-    return tool_system_msgs, chat_system_msgs
-
-
-async def _run_bootstrap_track_sync_tool_loop(
-    *,
-    store: MemoryStore,
-    llm_client: CompanionLLMClient,
-    messages: list[dict[str, Any]],
-    tools_for_turn: list[dict[str, Any]],
-    memory_bootstrap_type: str,
-    repository_only_store_text: bool,
-    trace_id: str,
-    user_text: str,
-    ts_user: datetime,
-    user_msg_uuid: str,
-    transcript_rel: str,
-    bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
-    langsmith_slice: CompanionTurnLangsmithSlice,
-) -> tuple[str, str, str, bool, str | None]:
-    """In-turn chat + tools for ``USER_CHAT_BOOTSTRAP`` (no dual-LLM / tool_background).
-
-    Persists the user transcript row first, then non-empty assistant ``content`` from each LLM
-    round (via callback) so JSONL order is always user → assistant(s). Interim rounds with
-    ``tool_calls`` may also push via ``bootstrap_interim_output_sink``. Caller must not append
-    the user row again at turn end.
-    """
-    store.append_jsonl_record(
-        transcript_rel,
-        {
-            "role": "user",
-            "content": user_text,
-            "ts": ts_user.isoformat(),
-            "uuid": user_msg_uuid,
-            "trace_id": trace_id,
-        },
-    )
-    working_messages = deepcopy(messages)
-    loop_tools = list(tools_for_turn)
-    chat_model = llm_client.resolve_model("chat")
-    allow = MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP
-
-    def _chat_sync(
-        msgs: list[dict[str, Any]], tools: list[dict[str, Any]]
-    ) -> Any:
-        return llm_client.chat_completion(
-            messages=msgs,
-            model=chat_model,
-            tools=tools,
-            scene=LLM_SCENE_CHAT,
-            langsmith_extra=langsmith_slice.foreground_invocation_extra(
-                source=SOURCE_BOOTSTRAP_TRACK,
-                extra_metadata=None,
-            ),
-        )
-
-    t_api = time.perf_counter()
-    initial_resp = await asyncio.to_thread(
-        _chat_sync, working_messages, loop_tools
-    )
-    langsmith_trace_acc = langsmith_trace_id_from_completion(initial_resp) or ""
-    langsmith_llm_run_acc = (
-        langsmith_llm_run_id_from_completion(initial_resp) or ""
-    )
-
-    async def execute_tool_call(
-        name: str, raw_arguments: str
-    ) -> tuple[str, str | None]:
-        result = await repl_execute_tool_call(
-            store,
-            name,
-            raw_arguments,
-            write_allowlist=allow,
-            repository_only_store_text=repository_only_store_text,
-        )
-        return result, None
-
-    async def continue_chat(
-        messages_with_tool_results: list[dict[str, Any]],
-    ) -> tuple[Any, str | None]:
-        nonlocal loop_tools
-        next_resp = await asyncio.to_thread(
-            _chat_sync, messages_with_tool_results, loop_tools
-        )
-        nonlocal langsmith_trace_acc, langsmith_llm_run_acc
-        tid = langsmith_trace_id_from_completion(next_resp)
-        rid = langsmith_llm_run_id_from_completion(next_resp)
-        if tid:
-            langsmith_trace_acc = tid
-        if rid:
-            langsmith_llm_run_acc = rid
-        return next_resp, tid
-
-    async def _after_tool_messages_appended(
-        messages_with_tool_results: list[dict[str, Any]],
-    ) -> None:
-        nonlocal loop_tools
-        loop_tools = refresh_companion_turn_prompt_stack(
-            store=store,
-            memory_bootstrap_type=memory_bootstrap_type,
-            inner_tick_turn=False,
-            inner_tick_activity=InnerTickActivity.MAINTENANCE,
-            messages=messages_with_tool_results,
-            track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
-        )
-
-    round_index = 0
-    skip_final_transcript_assistant_row = False
-    last_interim_assistant_msg_uuid: str | None = None
-
-    async def _on_bootstrap_assistant_message(message: Any) -> None:
-        nonlocal round_index
-        nonlocal langsmith_trace_acc
-        nonlocal langsmith_llm_run_acc
-        nonlocal skip_final_transcript_assistant_row
-        nonlocal last_interim_assistant_msg_uuid
-        round_index += 1
-        body = (message.content or "").strip()
-        if not body:
-            return
-        had_tool_calls = bool(getattr(message, "tool_calls", None) or [])
-        ls_trace = langsmith_trace_acc
-        ls_run = langsmith_llm_run_acc
-        assistant_msg_uuid = str(uuid.uuid4())
-        store.append_jsonl_record(
-            transcript_rel,
-            {
-                "role": "assistant",
-                "content": body,
-                "ts": utc_iso_ts(),
-                "uuid": assistant_msg_uuid,
-                "reply_to": user_msg_uuid,
-                "source": "chat",
-                "trace_id": trace_id,
-            },
-        )
-        last_interim_assistant_msg_uuid = assistant_msg_uuid
-        if not had_tool_calls:
-            skip_final_transcript_assistant_row = True
-        if bootstrap_interim_output_sink is not None and had_tool_calls:
-            await bootstrap_interim_output_sink(
-                BootstrapInterimOutput(
-                    text=body,
-                    user_msg_uuid=user_msg_uuid,
-                    trace_id=trace_id,
-                    langsmith_trace_id=ls_trace,
-                    langsmith_run_id=ls_run,
-                    round_index=round_index,
-                    had_tool_calls=had_tool_calls,
-                    assistant_msg_uuid=assistant_msg_uuid,
-                )
-            )
-
-    loop_result = await resolve_official_assistant_tool_loop_async(
-        response=initial_resp,
-        openai_messages=working_messages,
-        max_tool_call_rounds=_BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
-        execute_tool_call=execute_tool_call,
-        continue_chat=continue_chat,
-        build_assistant_tool_call_message=openai_assistant_message_dict,
-        insert_system_message=_insert_system_message,
-        initial_trace_id=langsmith_trace_acc or None,
-        after_tool_messages_appended=_after_tool_messages_appended,
-        on_assistant_message=_on_bootstrap_assistant_message,
-    )
-    if loop_result.trace_id:
-        langsmith_trace_acc = loop_result.trace_id
-    final_msg = loop_result.response.choices[0].message
-    last_text = (final_msg.content or "").strip()
-    approx_ctx_chars = sum(
-        len(str(m.get("content") or "")) for m in loop_result.messages
-    )
-    logger.info(
-        "run_turn bootstrap_track llm_done model={} chat_completions_ms={:.0f} "
-        "approx_ctx_chars={} trace_id={}",
-        chat_model,
-        (time.perf_counter() - t_api) * 1000.0,
-        approx_ctx_chars,
-        trace_id,
-    )
-    return (
-        last_text,
-        langsmith_trace_acc,
-        langsmith_llm_run_acc,
-        skip_final_transcript_assistant_row,
-        last_interim_assistant_msg_uuid,
-    )
 
 
 async def _await_tool_background_idle_if_configured(
@@ -690,28 +417,33 @@ async def _run_companion_turn_core(
                             inner_tick_activity=route_inner_activity,
                         )
                     )
-                    (
-                        last_text,
-                        langsmith_trace_acc,
-                        langsmith_llm_run_acc,
-                        bootstrap_skip_final_transcript_assistant_row,
-                        bootstrap_last_interim_assistant_msg_uuid,
-                    ) = await _run_bootstrap_track_sync_tool_loop(
-                        store=store,
-                        llm_client=llm_client,
-                        messages=messages,
-                        tools_for_turn=tools_for_turn,
-                        memory_bootstrap_type=memory_bootstrap_type,
-                        repository_only_store_text=repository_only_store_text,
-                        trace_id=trace_id,
-                        user_text=user_text,
-                        ts_user=ts_user,
-                        user_msg_uuid=user_msg_uuid,
-                        transcript_rel=rel_tr_bootstrap,
-                        bootstrap_interim_output_sink=(
-                            bootstrap_interim_output_sink
-                        ),
-                        langsmith_slice=langsmith_slice,
+                    bootstrap_loop_result = await run_bootstrap_track_sync_tool_loop(
+                        BootstrapInTurnSyncToolLoopInput(
+                            store=store,
+                            llm_client=llm_client,
+                            messages=tuple(messages),
+                            tools_for_turn=tuple(tools_for_turn),
+                            memory_bootstrap_type=memory_bootstrap_type,
+                            repository_only_store_text=repository_only_store_text,
+                            trace_id=trace_id,
+                            user_text=user_text,
+                            ts_user=ts_user,
+                            user_msg_uuid=user_msg_uuid,
+                            transcript_rel=rel_tr_bootstrap,
+                            bootstrap_interim_output_sink=(
+                                bootstrap_interim_output_sink
+                            ),
+                            langsmith_slice=langsmith_slice,
+                        )
+                    )
+                    last_text = bootstrap_loop_result.assistant_text
+                    langsmith_trace_acc = bootstrap_loop_result.langsmith_trace_id
+                    langsmith_llm_run_acc = bootstrap_loop_result.langsmith_run_id
+                    bootstrap_skip_final_transcript_assistant_row = (
+                        bootstrap_loop_result.skip_final_transcript_assistant_row
+                    )
+                    bootstrap_last_interim_assistant_msg_uuid = (
+                        bootstrap_loop_result.last_interim_assistant_msg_uuid
                     )
                     logger.info(
                         "run_turn loop_done bootstrap_track loop_total_ms={:.0f}",
@@ -722,8 +454,9 @@ async def _run_companion_turn_core(
                     == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
                 ):
                     # TODO(#3398): dual-LLM user-turn vs single-LLM in-turn sync — epic tracks routing change.
+                    # TODO(#3398): Extract dual-LLM message-stack assembly (variants + replace) for sidecar reuse.
                     tool_system_msgs, chat_system_msgs = (
-                        _async_dual_llm_system_message_variants(
+                        dual_llm_system_message_variants(
                             store=store,
                             bundle=bundle,
                             context=context,
@@ -734,12 +467,12 @@ async def _run_companion_turn_core(
                         )
                     )
                     _stack_depth = len(prompt_plan.system_messages)
-                    chat_msgs = _replace_leading_system_messages_multi(
+                    chat_msgs = replace_leading_system_messages_multi(
                         messages,
                         chat_system_msgs,
                         stack_depth=_stack_depth,
                     )
-                    tool_msgs = _replace_leading_system_messages_multi(
+                    tool_msgs = replace_leading_system_messages_multi(
                         messages,
                         tool_system_msgs,
                         stack_depth=_stack_depth,
@@ -761,99 +494,29 @@ async def _run_companion_turn_core(
                     skip_foreground_envelope = (
                         inner_tick_turn and not tick_proactive
                     )
-                    if skip_foreground_envelope:
-                        logger.info(
-                            "run_turn inner_tick skip foreground envelope "
-                            "inner_tick_activity={} model_chat={}",
-                            route_inner_activity.value,
-                            chat_model,
+                    fg_result = await run_dual_llm_foreground_chat(
+                        DualLlmForegroundChatInput(
+                            llm_client=llm_client,
+                            chat_msgs=tuple(chat_msgs),
+                            tool_msgs=tuple(tool_msgs),
+                            chat_model=chat_model,
+                            langsmith_slice=langsmith_slice,
+                            foreground_scene=foreground_scene,
+                            high_reasoning=tick_proactive,
+                            trace_id=trace_id,
+                            skip_foreground_envelope=skip_foreground_envelope,
+                            route_inner_activity=route_inner_activity,
+                            langsmith_trace_id=langsmith_trace_acc,
+                            langsmith_run_id=langsmith_llm_run_acc,
                         )
-                        last_text = ""
-                        significance_meta = None
-                        turn_recall = None
-                        tool_msgs_for_bg = deepcopy(tool_msgs)
-                        force_tools_first_round = True
-                    else:
-                        t_api = time.perf_counter()
-                        try:
-
-                            def _chat_sync() -> Any:
-                                return llm_client.chat_completion(
-                                    messages=chat_msgs,
-                                    model=chat_model,
-                                    tools=None,
-                                    response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
-                                    scene=foreground_scene,
-                                    langsmith_extra=langsmith_slice.foreground_invocation_extra(
-                                        source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
-                                        extra_metadata=None,
-                                    ),
-                                    high_reasoning=tick_proactive,
-                                )
-
-                            resp = await asyncio.wait_for(
-                                asyncio.to_thread(_chat_sync),
-                                timeout=llm_client.config.async_chat_front_timeout_sec,
-                            )
-                            langsmith_trace_acc = (
-                                langsmith_trace_id_from_completion(resp)
-                                or langsmith_trace_acc
-                            )
-                            ls_lr = langsmith_llm_run_id_from_completion(resp)
-                            if ls_lr:
-                                langsmith_llm_run_acc = ls_lr
-                        except asyncio.TimeoutError as exc:
-                            record_llm_inference_failure(
-                                model=chat_model.id_on_provider,
-                                exc=exc,
-                                foreground_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
-                            )
-                            raise RuntimeError(
-                                f"async chat front timed out after "
-                                f"{llm_client.config.async_chat_front_timeout_sec:.0f}s "
-                                f"(trace_id={trace_id})"
-                            ) from exc
-
-                        approx_ctx_chars = sum(
-                            len(str(m.get("content") or "")) for m in chat_msgs
-                        )
-                        logger.info(
-                            "run_turn llm_round={} model={} chat_completions_ms={:.0f} "
-                            "approx_ctx_chars={} async_chat_tool_background "
-                            "foreground_chat scene={}",
-                            1,
-                            chat_model,
-                            (time.perf_counter() - t_api) * 1000.0,
-                            approx_ctx_chars,
-                            foreground_scene,
-                        )
-                        msg = resp.choices[0].message
-                        _dual_split = split_dual_llm_chat_branch_message(msg)
-                        last_text = _dual_split.visible_text
-                        significance_meta = _dual_split.significance_meta
-                        turn_recall = _dual_split.turn_recall
-                        fg_output_to_user = _dual_split.output_to_user
-                        # Async foreground chat leg (tools present): same dual-LLM envelope contract as
-                        # single-shot structured chat; ``output_to_user`` must be true here. False is for
-                        # tool_background routing only; non-fatal drift -> WARNING with ``trace_id``.
-                        if fg_output_to_user is False:
-                            logger.warning(
-                                "run_turn foreground dual_llm envelope output_to_user=false "
-                                "trace_id={} (expected true for chat branch)",
-                                trace_id,
-                            )
-                        fg_text = last_text.strip()
-                        tool_msgs_for_bg = deepcopy(tool_msgs)
-                        if fg_text:
-                            tool_msgs_for_bg.append(
-                                {
-                                    "role": "assistant",
-                                    "content": (
-                                        f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\n{fg_text}"
-                                    ),
-                                }
-                            )
-                        force_tools_first_round = not bool(fg_text)
+                    )
+                    last_text = fg_result.assistant_text
+                    significance_meta = fg_result.significance_meta
+                    turn_recall = fg_result.turn_recall
+                    langsmith_trace_acc = fg_result.langsmith_trace_id
+                    langsmith_llm_run_acc = fg_result.langsmith_run_id
+                    tool_msgs_for_bg = list(fg_result.tool_msgs_for_bg)
+                    force_tools_first_round = fg_result.force_tools_first_round
                     start_tool_background_job(
                         memory_store=store,
                         request_messages=tool_msgs_for_bg,
@@ -862,7 +525,7 @@ async def _run_companion_turn_core(
                         trace_id=trace_id,
                         tools=tools_for_turn,
                         on_event=_kernel_bg_on_event,
-                        execute_tool_call_fn=repl_execute_tool_call,
+                        execute_tool_call_fn=execute_tool_call,
                         client=llm_client.sync_client_for_route("tool"),
                         chat_completions_sync=llm_client.chat_completions_sync,
                         write_allowlist=_memory_store_write_allowlist_for_track(track),

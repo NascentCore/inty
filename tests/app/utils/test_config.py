@@ -313,34 +313,30 @@ def test_companion_transcript_compaction_config_validates(config):
     _validate_config(config)
 
 
-def test_companion_transcript_compaction_invalid_raises(config):
-    config.app.features = FeaturesConfig(
-        companion_transcript_compaction={"max_context_chars": 50},
-    )
-    with pytest.raises(ValueError):
-        _validate_config(config)
+def test_companion_transcript_compaction_invalid_raises():
+    with pytest.raises(Exception):
+        FeaturesConfig(
+            companion_transcript_compaction={"max_context_chars": 50},
+        )
 
 
-def test_companion_transcript_window_out_of_range_raises(config):
-    config.app.features = FeaturesConfig(companion_transcript_llm_window_max_messages=1)
-    with pytest.raises(ValueError):
-        _validate_config(config)
+def test_companion_transcript_window_out_of_range_raises():
+    with pytest.raises(ValueError, match="window_max_messages"):
+        FeaturesConfig(companion_transcript_llm_window_max_messages=1)
 
 
-def test_implicit_sign_on_greeting_llm_timeout_out_of_range_raises(config):
-    config.app.features = FeaturesConfig(
-        companion_implicit_sign_on_greeting_llm_timeout_sec=0.5,
-    )
+def test_implicit_sign_on_greeting_llm_timeout_out_of_range_raises():
     with pytest.raises(ValueError, match="timeout_sec"):
-        _validate_config(config)
+        FeaturesConfig(
+            companion_implicit_sign_on_greeting_llm_timeout_sec=0.5,
+        )
 
 
-def test_implicit_sign_on_greeting_llm_max_attempts_out_of_range_raises(config):
-    config.app.features = FeaturesConfig(
-        companion_implicit_sign_on_greeting_llm_max_attempts=6,
-    )
+def test_implicit_sign_on_greeting_llm_max_attempts_out_of_range_raises():
     with pytest.raises(ValueError, match="max_attempts"):
-        _validate_config(config)
+        FeaturesConfig(
+            companion_implicit_sign_on_greeting_llm_max_attempts=6,
+        )
 
 
 def test_proactive_chat_base_idle_seconds_default(config):
@@ -348,12 +344,11 @@ def test_proactive_chat_base_idle_seconds_default(config):
     assert config.app.features.companion_ws_proactive_chat_base_idle_seconds == 30.0
 
 
-def test_proactive_chat_base_idle_seconds_out_of_range_raises(config):
-    config.app.features = FeaturesConfig(
-        companion_ws_proactive_chat_base_idle_seconds=5.0,
-    )
+def test_proactive_chat_base_idle_seconds_out_of_range_raises():
     with pytest.raises(ValueError, match="base_idle_seconds"):
-        _validate_config(config)
+        FeaturesConfig(
+            companion_ws_proactive_chat_base_idle_seconds=5.0,
+        )
 
 
 def test_name_for_openrouter_dev_environment():
@@ -438,6 +433,7 @@ def test_app_limits_config_model_validate_ignores_unknown_keys():
     limits = AppConfig.LimitsConfig.model_validate(
         {
             "free_user_chat_24h_limit": 42,
+            "guest_user_chat_24h_limit": 7,
             "guest_user_voice_24h_limit": 7,
             "unknown_key": "ignored",
         }

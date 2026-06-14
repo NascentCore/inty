@@ -75,7 +75,7 @@ class CompanionTurnDeps:
         When ``True``, companion tools read/write textual MemoryStore documents
         only (no repository side paths for transcript/context markdown). Wired from
         ``CompanionConfig.repository_only_store_text`` and passed into tool
-        execution (``repl_execute_tool_call``, ``tool_background``).
+        execution (``execute_tool_call``, ``tool_background``).
 
     memory_bootstrap_type
         ``CompanionMemoryBootstrapType`` value (``NONE`` | ``USER_INTERACTIVE``).

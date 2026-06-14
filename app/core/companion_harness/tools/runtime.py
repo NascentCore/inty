@@ -83,7 +83,7 @@ def resolve_official_assistant_tool_loop(
     )
 
 
-async def resolve_official_assistant_tool_loop_async(
+async def resolve_openai_tool_call_loop_async(
     *,
     response: Any,
     openai_messages: list[dict[str, Any]],
@@ -101,14 +101,14 @@ async def resolve_official_assistant_tool_loop_async(
     on_assistant_message: Callable[[Any], Awaitable[None]] | None = None,
 ) -> OfficialAssistantToolLoopResult:
     """
-    Async variant of official assistant tool-call loop.
+    Async variant of openai tool-call loop.
 
-    Keep semantics aligned with `resolve_official_assistant_tool_loop`, but
+    Keep semantics aligned with `resolve_openai_tool_call_loop`, but
     allow async tool execution and async model continuation in the same event loop.
 
     ``after_tool_messages_appended`` runs once per tool round, after all tool
-    results (and any injected system messages) are appended and before
-    ``continue_chat``. Callers use it to refresh leading system messages or tool
+    results (and any injected system messages) are appended and before ``continue_chat``.
+    Callers use it to refresh leading system messages or tool
     definitions when workspace slices change mid-loop (e.g. bootstrap complete).
     """
     messages_with_tool_results = [*openai_messages]
@@ -157,4 +157,20 @@ async def resolve_official_assistant_tool_loop_async(
     raise ValueError(
         "Official assistant tool call rounds exceeded "
         f"limit={max_tool_call_rounds}"
+    )
+
+
+def insert_openai_system_message(
+    openai_messages: list[dict[str, Any]],
+    system_message_content: str,
+) -> None:
+    """Insert tool-injected system text after the leading system-message prefix."""
+    insertion_index = 0
+    while (
+        insertion_index < len(openai_messages)
+        and openai_messages[insertion_index].get("role") == "system"
+    ):
+        insertion_index += 1
+    openai_messages.insert(
+        insertion_index, {"role": "system", "content": system_message_content}
     )

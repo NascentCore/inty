@@ -50,8 +50,12 @@ def shutdown_memory_store(
     from app.core.companion_harness.companion.scope_turn_lock import (
         release_scope_runtime_state,
     )
+    from app.services.agentic_companion.scope_inner_tick_state import (
+        release_scope_inner_tick_state,
+    )
 
     release_scope_runtime_state(scope)
+    release_scope_inner_tick_state(scope)
 
 
 def memory_store_cache_key(scope: CompanionScope) -> str:
