@@ -45,6 +45,8 @@ def run_dreaming_batch_if_due(
     Prototype: ``transcript.jsonl`` must not change during the batch; mismatch after
     ``consolidate_memory_during_dreaming`` raises ``DreamingTranscriptBoundaryMismatchError``
     (see ``companion.dreaming`` module doc — #3272, #3271, tool_bg timing TODO).
+    TODO(dreaming-day-rollup): inner-tick merge may require boundary guard on
+    ``transcript_inner_tick.jsonl`` too (#3376).
 
     TODO(dreaming-cluster-lock): Postgres advisory lock per scope when running multi-process
     backend — https://github.com/NascentCore/inty/issues/3271

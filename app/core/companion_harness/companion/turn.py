@@ -77,16 +77,14 @@ from .llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
 )
-from .proactive_chat import (
-    PROACTIVE_CHAT_SILENT_TOKEN,
-    build_proactive_chat_transcript_user_marker,
-)
+from .proactive_chat import build_proactive_chat_transcript_user_marker
 from .transcript_ai_private import (
-    build_ai_private_splice_manifest_row,
-    select_tail_splice_thoughts,
+    AiPrivateSplicePersistInput,
+    AiPrivateSplicePlan,
+    build_ai_private_splice_plan,
+    persist_ai_private_splice_if_applicable,
     track_uses_ai_private_splice,
 )
-from .ai_private_prompt import AiPrivateThought, mark_ai_private_surfaced
 from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
 )
@@ -309,9 +307,9 @@ async def _run_companion_turn_core(
         user_text = build_proactive_chat_transcript_user_marker(
             loaded_state.loaded_transcript
         )
-    tail_splice_thoughts: list[AiPrivateThought] = []
+    ai_private_splice_plan = AiPrivateSplicePlan(thoughts=(), anchor_user_msg_uuid=None)
     if track_uses_ai_private_splice(track):
-        tail_splice_thoughts = select_tail_splice_thoughts(
+        ai_private_splice_plan = build_ai_private_splice_plan(
             store, loaded_state.loaded_transcript
         )
     context = loaded_state.context
@@ -328,7 +326,7 @@ async def _run_companion_turn_core(
         implicit_sign_on_turn=implicit_sign_on_turn,
         runtime_context=runtime_context,
         transcript_compaction=transcript_compaction,
-        tail_splice_thoughts=tail_splice_thoughts,
+        tail_splice_thoughts=list(ai_private_splice_plan.thoughts),
     )
     tools_for_turn = prompt_plan.tools_for_turn
     route_mode = prompt_plan.route_mode
@@ -748,28 +746,19 @@ async def _run_companion_turn_core(
         if track != CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             store.append_jsonl_record(rel_tr, user_row)
     last_text = strip_leading_transcript_timestamp_prefixes(last_text)
-    splice_thought_uuids = [t.uuid for t in tail_splice_thoughts]
-    should_persist_ai_private_splice = (
-        track_uses_ai_private_splice(track)
-        and splice_thought_uuids
-        and last_text.strip()
-        and last_text.strip() != PROACTIVE_CHAT_SILENT_TOKEN
-        and not bootstrap_skip_final_transcript_assistant_row
-    )
-    if should_persist_ai_private_splice:
-        mark_ai_private_surfaced(store, splice_thought_uuids)
-        anchor_uuid: str | None = None
-        for row in reversed(loaded_state.loaded_transcript):
-            if row.role == "user" and row.proactive_chat is not True:
-                if isinstance(row.uuid, str) and row.uuid.strip():
-                    anchor_uuid = row.uuid.strip()
-                break
-        manifest_row = build_ai_private_splice_manifest_row(
-            thought_uuids=splice_thought_uuids,
-            reply_to_user_msg_uuid=user_msg_uuid,
-            anchor_user_msg_uuid=anchor_uuid,
+    persist_ai_private_splice_if_applicable(
+        AiPrivateSplicePersistInput(
+            store=store,
+            transcript_relative_path=rel_tr,
+            track=track,
+            splice_plan=ai_private_splice_plan,
+            user_msg_uuid=user_msg_uuid,
+            assistant_text=last_text,
+            bootstrap_skip_final_transcript_assistant_row=(
+                bootstrap_skip_final_transcript_assistant_row
+            ),
         )
-        store.append_jsonl_record(rel_tr, manifest_row)
+    )
     if not bootstrap_skip_final_transcript_assistant_row:
         append_transcript_assistant_row(
             store,

@@ -497,17 +497,6 @@ async def try_fire_maintenance_inner_tick(
                 coordinator.remove_foreground_pending(preset_uid)
             raise
 
-        if kernel_result is None:
-            coordinator.remove_foreground_pending(preset_uid)
-            logger.info(
-                "companion_ws_maintenance_inner_tick monolog_empty ws_conn_id={} "
-                "user={} agent={}",
-                ws_conn_id,
-                coords.user_id,
-                coords.agent_id,
-            )
-            return False
-
         companion_turn = kernel_result.turn
         reply_stripped = str(companion_turn.assistant_text or "").strip()
         if not companion_turn.tool_background_started:

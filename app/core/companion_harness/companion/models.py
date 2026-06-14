@@ -43,6 +43,14 @@ AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 
 AI_PRIVATE_SPLICE_MANIFEST_SOURCE = "ai_private_splice_manifest"
 AI_PRIVATE_HYDRATED_SOURCE = "ai_private"
+PROACTIVE_CHAT_SILENT_TOKEN = "[SILENT]"
+
+
+class TranscriptProjection(StrEnum):
+    """Which ``transcript.jsonl`` rows a consumer sees."""
+
+    FULL = "full"
+    USER_VISIBLE = "user_visible"
 
 
 class InnerTickActivity(StrEnum):
@@ -419,13 +427,53 @@ def transcript_without_trailing_presence_signals(
     return msgs[:i]
 
 
-def load_transcript_from_store(
+def _read_transcript_rows_from_store(
     store: MemoryStore, relative_path: str
 ) -> list[ChatMessage]:
     body = store.read_document_if_exists(relative_path)
     if body is None:
         return []
     return load_transcript_text(body)
+
+
+def transcript_rows_user_visible(rows: list[ChatMessage]) -> list[ChatMessage]:
+    """Rows suitable for chat history mirroring and user-facing transcript views."""
+    return [row for row in rows if is_transcript_row_user_visible(row)]
+
+
+def load_transcript_projection_from_store(
+    store: MemoryStore,
+    relative_path: str,
+    projection: TranscriptProjection,
+) -> list[ChatMessage]:
+    """Load transcript JSONL with an explicit consumer projection."""
+    rows = _read_transcript_rows_from_store(store, relative_path)
+    match projection:
+        case TranscriptProjection.FULL:
+            return rows
+        case TranscriptProjection.USER_VISIBLE:
+            return transcript_rows_user_visible(rows)
+
+
+def load_transcript_from_store(
+    store: MemoryStore, relative_path: str
+) -> list[ChatMessage]:
+    """Load full transcript JSONL (LLM context, compaction, proactive rhythm)."""
+    return load_transcript_projection_from_store(
+        store, relative_path, TranscriptProjection.FULL
+    )
+
+
+def load_user_visible_transcript_from_store(
+    store: MemoryStore, relative_path: str
+) -> list[ChatMessage]:
+    """Load transcript JSONL excluding manifest and synthetic proactive user rows."""
+    return load_transcript_projection_from_store(
+        store, relative_path, TranscriptProjection.USER_VISIBLE
+    )
+
+
+# TODO(transcript-projection): wire USER_VISIBLE at chat_history mirror paths when transcript.jsonl is mirrored to PG
 
 
 # 近期对话窗口
@@ -477,8 +525,12 @@ def companion_turn_transcript_loaded_messages(
     load ``transcript.jsonl`` as-is; maintenance turns merge the inner file for their own LLM
     context.
     """
-    raw_main = load_transcript_from_store(store, rel_main_transcript)
-    raw_inner = load_transcript_from_store(store, rel_inner_tick_transcript)
+    raw_main = load_transcript_projection_from_store(
+        store, rel_main_transcript, TranscriptProjection.FULL
+    )
+    raw_inner = load_transcript_projection_from_store(
+        store, rel_inner_tick_transcript, TranscriptProjection.FULL
+    )
     tick_proactive = (
         inner_tick_turn
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT

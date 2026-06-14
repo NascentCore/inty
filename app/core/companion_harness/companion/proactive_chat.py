@@ -24,7 +24,12 @@ from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .models import ChatMessage, load_transcript_from_store
+from .models import (
+    ChatMessage,
+    TranscriptProjection,
+    load_transcript_projection_from_store,
+)
+from .transcript_anchor import last_real_user_transcript_anchor, parse_transcript_row_ts
 
 PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
     "## Proactive Messaging\n"
@@ -39,8 +44,6 @@ PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
 PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER = (
     "[SYSTEM PROACTIVE CHAT] The user has not sent a new message for some time."
 )
-
-PROACTIVE_CHAT_SILENT_TOKEN = "[SILENT]"
 
 _NEVER = 86400.0 * 365.0
 
@@ -71,16 +74,6 @@ class ProactiveChatConfig(BaseModel):
     )
 
 
-def _parse_ts(ts: str) -> datetime:
-    s = ts.strip()
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    dt = datetime.fromisoformat(s)
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
-
-
 def _user_message_gaps_seconds(msgs: list[ChatMessage]) -> list[float]:
     user_ts: list[datetime] = []
     for m in msgs:
@@ -88,7 +81,7 @@ def _user_message_gaps_seconds(msgs: list[ChatMessage]) -> list[float]:
             continue
         if m.proactive_chat is True:
             continue
-        user_ts.append(_parse_ts(m.ts))
+        user_ts.append(parse_transcript_row_ts(m.ts))
     if len(user_ts) < 2:
         return []
     gaps: list[float] = []
@@ -111,7 +104,7 @@ def _rhythm_idle_seconds(msgs: list[ChatMessage], base: float) -> float:
 def _last_assistant_ts(msgs: list[ChatMessage]) -> datetime | None:
     for m in reversed(msgs):
         if m.role == "assistant":
-            return _parse_ts(m.ts)
+            return parse_transcript_row_ts(m.ts)
     return None
 
 
@@ -128,10 +121,7 @@ def _format_elapsed_since(seconds: float) -> str:
 
 
 def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
-    for m in reversed(msgs):
-        if m.role == "user" and m.proactive_chat is not True:
-            return _parse_ts(m.ts)
-    return None
+    return last_real_user_transcript_anchor(msgs).ts
 
 
 def _proactive_rounds_since_last_real_user(msgs: list[ChatMessage]) -> int:
@@ -185,7 +175,9 @@ def next_proactive_chat_wait_seconds(
     now: datetime | None = None,
 ) -> float:
     """Seconds until proactive chat may fire; <= 0 when due; large value when gated off."""
-    msgs = load_transcript_from_store(store, "transcript.jsonl")
+    msgs = load_transcript_projection_from_store(
+        store, "transcript.jsonl", TranscriptProjection.FULL
+    )
     if len(msgs) < config.min_transcript_lines:
         return _NEVER
 

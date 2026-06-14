@@ -23,7 +23,8 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import (
     ChatMessage,
     load_context_meta,
-    load_transcript_from_store,
+    TranscriptProjection,
+    load_transcript_projection_from_store,
     transcript_without_trailing_presence_signals,
 )
 
@@ -85,7 +86,9 @@ def inner_tick_min_gap_seconds() -> float:
 def _maintenance_transcript_messages(store: MemoryStore) -> list[ChatMessage]:
     """``transcript.jsonl`` rows with trailing presence user lines stripped (maintenance gate view)."""
     return transcript_without_trailing_presence_signals(
-        load_transcript_from_store(store, "transcript.jsonl")
+        load_transcript_projection_from_store(
+            store, "transcript.jsonl", TranscriptProjection.USER_VISIBLE
+        )
     )
 
 

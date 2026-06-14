@@ -364,10 +364,9 @@ def consolidate_memory_during_dreaming(
     """Batch-curate all applicable memory docs from a sleeping-state transcript slice.
 
     ``rows`` come from ``dreaming_candidate_slice`` (main ``transcript.jsonl`` only
-    today). TODO(dreaming-day-rollup): curator prompts must also ingest merged
-    inner-tick transcript, ``ai_private.jsonl``, and ``LIFE_CURRENTS.md`` for the
-    same calendar day so DREAMING rolls up AUTONOMY / MAINTENANCE awake activity (#3376;
-    companionship / relationship fields #3342).
+    today). TODO(dreaming-day-rollup): merge inner-tick transcript and inject
+    ``LIFE_CURRENTS.md`` per candidate day into curator prompts (#3376).
+    ai_private manifest hydrate + unconsumed section: partial #3420.
     """
     assert rows
     t_all = time.perf_counter()
@@ -381,6 +380,8 @@ def consolidate_memory_during_dreaming(
         for day, day_rows in sorted(rows_by_day.items())
     ]
     transcript_block = "\n\n".join(day_blocks)
+    # TODO(dreaming-day-rollup): append LIFE_CURRENTS.md body per day in
+    # rows_by_day before memory/user/style/soul curator steps (#3376).
     logger.info(
         "dreaming_consolidation start ws={} rows={} chars={}",
         ws,
