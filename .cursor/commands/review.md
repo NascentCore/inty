@@ -29,15 +29,11 @@ behaviors are not well abstracted
 that means the code lacks hierarchy.
 - If you noticed refactoring opporutnity, add TODOs to code places that the refactoring should be applied.
 
-## Checklist
+### Package & module and code organization
 
-- [ ] Intention is understood
-- [ ] Confirm that changes match user intention
-- [ ] Critique the architecture
-- [ ] Tests are added if needed
-- [ ] Reviwed code smells
-- [ ] Changes passed tests, fix test failures if needed
-- [ ] Referenced GitHub issues updated
+- Relevant code is grouped in intuitive module names
+- Relevant code files are grouped under intuitive package names
+- Sub-packages are grouped logically
 
 ## Alembic version files
 
@@ -48,3 +44,14 @@ that means the code lacks hierarchy.
 - Add TODO for minor followups that are not required in this change, but is required according to larger-scope repo guidelines
 - Create GitHub issues and add TODOs to track complex follow-ups
 - Comment on discovered GitHub issues if changes are made advanced the issues' progress
+
+## Checklist
+
+- [ ] Intention is understood
+- [ ] Confirm that changes match user intention
+- [ ] Critique the architecture
+- [ ] Tests are added if needed
+- [ ] Reviwed code smells
+- [ ] Changes passed tests, fix test failures if needed
+- [ ] Code, files, packages are well organized
+- [ ] Referenced GitHub issues updated
