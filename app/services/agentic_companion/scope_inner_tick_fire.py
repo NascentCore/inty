@@ -2,7 +2,7 @@
 
 Orchestration only — Postgres reads go through ``inner_tick_scope`` /
 ``scope_inner_tick_persistence``; kernel due + turns via ``companion_harness.runtime``.
-Process-local throttle lives in ``scope_inner_tick_state``.
+# TODO(dedup-scope-presence-inner-tick): Share maintenance/autonomy fire bodies via harness runtime + throttle adapter.
 """
 
 from __future__ import annotations
@@ -34,6 +34,9 @@ from app.core.companion_harness.runtime.inner_tick_fire import (
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services import companion_chat_service
+from app.services.agentic_companion.inner_tick_kernel_context import (
+    build_inner_tick_kernel_context,
+)
 from app.services.agentic_companion.inner_tick_scope import (
     InnerTickChatResolveMode,
     InnerTickModelSource,
@@ -44,6 +47,7 @@ from app.services.agentic_companion.scope_inner_tick_state import (
     get_scope_inner_tick_state,
 )
 from app.services.agentic_companion.session import InnerTickCoords
+from app.utils.models_catalog import GenAIModel
 
 
 def _scope_throttle_snapshot(scope: CompanionScope) -> InnerTickThrottleSnapshot:
@@ -61,39 +65,24 @@ async def _scope_kernel_context(
     resolved_user_id: str,
     resolved_agent_id: str,
     resolved_chat_row_id: str | int,
-    resolved_model,
+    resolved_model: GenAIModel,
     scope: CompanionScope,
     preset_uid: str,
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> tuple[InnerTickKernelInput, CompanionSession] | None:
-    mem_store = companion_chat_service.companion_memory_store_if_ready(
+    return await build_inner_tick_kernel_context(
         user_id=resolved_user_id,
         agent_id=resolved_agent_id,
-        chat_id=resolved_chat_row_id,
-        resolved_chat_model=resolved_model,
-    )
-    if mem_store is None:
-        return None
-
-    manager, session = companion_chat_service._companion_manager_session_ref(
-        user_id=resolved_user_id,
-        agent_id=resolved_agent_id,
-        chat_id=resolved_chat_row_id,
-        resolved_chat_model=resolved_model,
-    )
-    kernel_input = InnerTickKernelInput(
-        manager=manager,
-        session=session,
-        mem_store=mem_store,
+        chat_row_id=resolved_chat_row_id,
+        model_override=resolved_model,
         throttle=_scope_throttle_snapshot(scope),
         runtime_context=TurnRuntimeContext(
             channel=CompanionRuntimeChannel.APP,
             implicit_signal_bundle=implicit_signal_bundle,
         ),
-        preset_user_msg_uuid=preset_uid,
+        preset_uid=preset_uid,
         background_output_sink=None,
     )
-    return kernel_input, session
 
 
 async def try_fire_autonomy_for_scope(
