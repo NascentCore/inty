@@ -53,6 +53,7 @@ MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 # TODO(memdoc-path-constants): Build allowlists from canonical MemDoc path constants. #3413
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
     {
+        "COMPANIONSHIP.md",
         "IDENTITY.md",
         "LIFE_CURRENTS.md",  # AUTONOMY: virtual-space activity (not ai_private user-directed thoughts)
         "MEMORY.md",
@@ -65,6 +66,7 @@ MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
 # USER_CHAT_BOOTSTRAP: relationship seed docs only; SOUL/MEMORY come from package templates.
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP: frozenset[str] = frozenset(
     {
+        "COMPANIONSHIP.md",
         "IDENTITY.md",
         "STYLE.md",
         "USER.md",

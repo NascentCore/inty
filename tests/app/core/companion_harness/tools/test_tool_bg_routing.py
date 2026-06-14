@@ -9,6 +9,9 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
 from app.core.companion_harness.companion.models import InnerTickActivity
+from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+    turn_recall_from_envelope,
+)
 from app.core.companion_harness.tools.tool_bg_routing import (
     resolve_tool_background_finish_envelope,
     resolve_tool_bg_routing_sync,
@@ -39,6 +42,7 @@ def _valid_envelope_dict() -> dict:
         "importance_user_message": 4,
         "importance_assistant_message": 6,
         "output_to_user": True,
+        "turn_recall": "",
     }
 
 
@@ -106,6 +110,29 @@ def test_resolve_tool_bg_routing_strips_json_fence() -> None:
     )
     assert out.user_facing_reply == "hello"
     create_sync.assert_not_called()
+
+
+def test_turn_recall_from_envelope_strips_empty() -> None:
+    from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+        DualLlmChatBranchEnvelope,
+    )
+
+    assert turn_recall_from_envelope(
+        DualLlmChatBranchEnvelope(
+            importance_round=5,
+            importance_user_message=5,
+            importance_assistant_message=5,
+            turn_recall="",
+        )
+    ) is None
+    assert turn_recall_from_envelope(
+        DualLlmChatBranchEnvelope(
+            importance_round=5,
+            importance_user_message=5,
+            importance_assistant_message=5,
+            turn_recall="  用户提到下周见面  ",
+        )
+    ) == "用户提到下周见面"
 
 
 def test_resolve_tool_bg_routing_fallback_on_invalid_then_conservative() -> None:

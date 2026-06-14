@@ -144,6 +144,10 @@ from .turn_routes import (
     BootstrapInterimOutputSink,
     TurnRouteMode,
 )
+from .transcript_assistant_row import (
+    TranscriptAssistantRowBuildInput,
+    append_transcript_assistant_row,
+)
 from .utc import (
     strip_leading_transcript_timestamp_prefixes,
     utc_iso_ts,
@@ -587,6 +591,7 @@ async def _run_companion_turn_core(
 
     last_text = ""
     significance_meta: dict[str, Any] | None = None
+    turn_recall: str | None = None
     tool_background_started = False
     bootstrap_skip_final_transcript_assistant_row = False
     bootstrap_last_interim_assistant_msg_uuid: str | None = None
@@ -742,6 +747,7 @@ async def _run_companion_turn_core(
                         )
                         last_text = ""
                         significance_meta = None
+                        turn_recall = None
                         tool_msgs_for_bg = deepcopy(tool_msgs)
                         force_tools_first_round = True
                     else:
@@ -802,6 +808,7 @@ async def _run_companion_turn_core(
                         _dual_split = split_dual_llm_chat_branch_message(msg)
                         last_text = _dual_split.visible_text
                         significance_meta = _dual_split.significance_meta
+                        turn_recall = _dual_split.turn_recall
                         fg_output_to_user = _dual_split.output_to_user
                         # Async foreground chat leg (tools present): same dual-LLM envelope contract as
                         # single-shot structured chat; ``output_to_user`` must be true here. False is for
@@ -950,6 +957,7 @@ async def _run_companion_turn_core(
                         _dual_split = split_dual_llm_chat_branch_message(msg)
                         last_text = _dual_split.visible_text
                         significance_meta = _dual_split.significance_meta
+                        turn_recall = _dual_split.turn_recall
                         fg_output_to_user = _dual_split.output_to_user
                         # Single-shot path: one completion, no tool loop, structured dual-LLM envelope.
                         # Contract (see ``prompts/system_messages._dual_llm_chat_structured_output_contract_text``):
@@ -1056,19 +1064,21 @@ async def _run_companion_turn_core(
         if track != CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             store.append_jsonl_record(rel_tr, user_row)
     last_text = strip_leading_transcript_timestamp_prefixes(last_text)
-    assistant_row: dict[str, Any] = {
-        "role": "assistant",
-        "content": last_text,
-        "ts": utc_iso_ts(),
-        "uuid": assistant_msg_uuid,
-        "reply_to": user_msg_uuid,
-        "source": "inner_tick" if inner_tick_turn else "chat",
-        "trace_id": trace_id,
-    }
-    if significance_meta:
-        assistant_row["significance_perception"] = significance_meta
     if not bootstrap_skip_final_transcript_assistant_row:
-        store.append_jsonl_record(rel_tr, assistant_row)
+        append_transcript_assistant_row(
+            store,
+            rel_tr,
+            TranscriptAssistantRowBuildInput(
+                content=last_text,
+                uuid=assistant_msg_uuid,
+                reply_to=user_msg_uuid,
+                trace_id=trace_id,
+                source="inner_tick" if inner_tick_turn else "chat",
+                significance_perception=significance_meta,
+                turn_recall=turn_recall,
+            ),
+            ts=utc_iso_ts(),
+        )
 
     logger.info(
         "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "
@@ -1086,6 +1096,7 @@ async def _run_companion_turn_core(
     return CompanionTurnResult(
         assistant_text=last_text,
         significance_perception=significance_meta,
+        turn_recall=turn_recall,
         user_msg_uuid=user_msg_uuid,
         assistant_msg_uuid=assistant_msg_uuid,
         trace_id=trace_id,

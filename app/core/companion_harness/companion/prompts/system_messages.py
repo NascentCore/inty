@@ -69,6 +69,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     get_safety_system_text,
 )
 from app.core.companion_harness.memory.memory_taxonomy import (
+    COMPANIONSHIP_SYSTEM_HEADING,
     MEMORY_SYSTEM_HEADING_DAILY_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
@@ -261,7 +262,8 @@ def _output_contract_text_interactive_bootstrap_tools() -> str:
     base = (
         "输出与工具（交互式关系建立阶段）："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        + "（0）本阶段用 **memory_store_write_document** 把 **IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
+        # TODO(structured-memdoc-names): Use template variable and MemoryDoc name variable to assemble this line.
+        + "（0）本阶段用 **memory_store_write_document** 把 **COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
         "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
         "即使用户配合度低，也基于已有对话写 best-effort 初稿，不可留空模板。"
         "用户选定内置陪伴模式时调用 **companion_set_experience_profile**（须附 note）。"
@@ -631,11 +633,22 @@ def _persona_system_messages(
     include_significance_perception_slice: bool,
     interactive_bootstrap_active: bool,
 ) -> list[dict[str, Any]]:
+    # TODO(crs-persona-slice-registry): Registry for persistable persona slices
+    # (inject order, heading, gate) instead of per-doc conditionals — #3367 / #3343.
     out: list[dict[str, Any]] = [
         _system_message(bundle.identity.strip()),
         _system_message(bundle.soul.strip()),
         _system_message(bundle.style_md.strip()),
     ]
+    if (
+        not interactive_bootstrap_active
+        and bundle.companionship_md.strip()
+    ):
+        out.append(
+            _system_message(
+                COMPANIONSHIP_SYSTEM_HEADING + bundle.companionship_md.strip()
+            )
+        )
     if bundle.techno_core_md.strip():
         out.append(_system_message(bundle.techno_core_md.strip()))
     if bundle.living_sphere_md.strip():
@@ -664,9 +677,6 @@ def _persona_system_messages(
         out.append(_system_message(build_bootstrap_tool_call_section()))
         for block in build_interactive_bootstrap_template_reference_parts():
             out.append(_system_message(block))
-    # TODO(crs-companionship-doc): Phase A — inject persisted ``COMPANIONSHIP.md`` (relationship_phase,
-    # tone) from MemoryStore here after bootstrap (#3342). Phase B — activate prompt + ``turn_recall``
-    # Turn Brief (#3343). Canon: CRS #3341, glossary #3345, SDCM #3365.
     return out
 
 

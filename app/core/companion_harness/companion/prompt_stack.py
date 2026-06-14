@@ -6,17 +6,14 @@ must be enforced.  Mid-turn refreshes re-read MemoryStore and ``context.json`` s
 tool-side writes to persona/context documents become visible before the next
 model leg continues.
 
-TODO(crs-companionship-doc): After #3342, load ``COMPANIONSHIP.md`` from MemoryStore into
-``PromptBundle`` / ``_persona_system_messages``; #3343 activates template + ``turn_recall``.
-
 TODO(#3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled ``USER_CHAT`` — #3369.
 
 TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
 hierarchy (design issue; options include in-context vs retrieval-required splits).
 
-
 TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
-https://github.com/NascentCore/inty/issues/3409"""
+https://github.com/NascentCore/inty/issues/3409
+"""
 
 from __future__ import annotations
 

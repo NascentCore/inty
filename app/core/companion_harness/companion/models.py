@@ -19,6 +19,7 @@ from pydantic import (
 )
 
 from app.core.companion_harness.experience_profile import (
+    ExperienceDirectives,
     experience_profile_injects_private_memory,
     normalize_experience_profile_id,
 )
@@ -116,6 +117,13 @@ class CompanionTurnResult(BaseModel):
             "See dual_llm_chat_branch_envelope module docstring."
         ),
     )
+    turn_recall: str | None = Field(
+        default=None,
+        description=(
+            "Ephemeral Turn Brief from dual-LLM envelope ``turn_recall`` when non-empty; "
+            "plumbed in Phase A (#3342), prompt + curator activation in Phase B (#3343)."
+        ),
+    )
     user_msg_uuid: str = ""
     assistant_msg_uuid: str = Field(
         default="",
@@ -188,6 +196,14 @@ class ChatMessage(BaseModel):
     repl_online_ack: bool | None = None
     inner_tick: bool | None = None
     source: str | None = None
+    significance_perception: dict[str, Any] | None = Field(
+        default=None,
+        description="Dual-LLM envelope importance metadata on assistant rows.",
+    )
+    turn_recall: str | None = Field(
+        default=None,
+        description="Ephemeral Turn Brief on assistant rows (#3342).",
+    )
 
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000
@@ -235,6 +251,13 @@ class ContextMeta(BaseModel):
     # Legacy JSON flag from older workspaces; WebSocket connect-time kickoff was removed. Default True
     # means "nothing to do"; omit key in new USER_INTERACTIVE seeds.
     companion_ws_interactive_kickoff_sent: bool = True
+    experience_directives: ExperienceDirectives = Field(
+        default_factory=ExperienceDirectives,
+        description=(
+            "Real-time session experience overlays (tone, pacing). "
+            "Phase A (#3342): persist only; prompt clause in Phase B (#3343)."
+        ),
+    )
 
     @field_validator("context_mode")
     @classmethod
@@ -283,6 +306,7 @@ def load_prompt_bundle(
             "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         channels_md=_read_memory_document_required(store, "CHANNELS.md"),
+        companionship_md=_read_memory_document_required(store, "COMPANIONSHIP.md"),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),

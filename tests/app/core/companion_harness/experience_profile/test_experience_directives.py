@@ -1,0 +1,54 @@
+"""Tests for ``context.json`` experience directives (#3342 A3)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+
+from app.core.companion_harness.companion.models import ContextMeta, load_context_meta
+from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.experience_profile import (
+    ExperienceDirectiveTone,
+    ExperienceDirectives,
+)
+from app.core.companion_harness.memory.memory_store import MemoryStore
+
+
+def test_context_meta_default_experience_directives() -> None:
+    meta = ContextMeta()
+    assert meta.experience_directives == ExperienceDirectives()
+    assert meta.experience_directives.tone is None
+
+
+def test_context_meta_parses_experience_directives_tone() -> None:
+    meta = ContextMeta.model_validate(
+        {
+            "context_mode": "intimate",
+            "experience_directives": {"tone": "playful"},
+        }
+    )
+    assert meta.experience_directives.tone == ExperienceDirectiveTone.PLAYFUL
+
+
+def test_context_meta_rejects_invalid_experience_directives_tone() -> None:
+    with pytest.raises(ValidationError):
+        ContextMeta.model_validate(
+            {
+                "context_mode": "intimate",
+                "experience_directives": {"tone": "not_a_tone"},
+            }
+        )
+
+
+def test_load_context_meta_legacy_json_without_directives(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("ed", "a", tmp_path.name),
+        repository=None,
+    )
+    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    meta = load_context_meta(store=store)
+    assert meta.experience_directives.tone is None

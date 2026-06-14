@@ -13,6 +13,10 @@ from .models import (
     InnerTickActivity,
     transcript_relative_path_for_turn_persistence,
 )
+from .transcript_assistant_row import (
+    TranscriptAssistantRowBuildInput,
+    append_transcript_assistant_row,
+)
 from .utc import utc_iso_ts
 
 
@@ -30,6 +34,7 @@ def persist_repl_turn_transcript_rows(
     assistant_source: str = "chat",
     trace_id: str | None = None,
     assistant_extra: dict[str, Any] | None = None,
+    turn_recall: str | None = None,
 ) -> str:
     """Persist one user + one assistant row to the main or inner-tick JSONL transcript.
 
@@ -65,16 +70,18 @@ def persist_repl_turn_transcript_rows(
         user_row["trace_id"] = trace_id
     store.append_jsonl_record(rel_tr, user_row)
     assistant_msg_uuid = str(uuid.uuid4())
-    assistant_row: dict[str, Any] = {
-        "role": "assistant",
-        "content": assistant_text,
-        "ts": utc_iso_ts(),
-        "uuid": assistant_msg_uuid,
-        "reply_to": assistant_reply_to,
-        "source": assistant_source,
-        "trace_id": trace_id,
-    }
-    if assistant_extra:
-        assistant_row["significance_perception"] = assistant_extra
-    store.append_jsonl_record(rel_tr, assistant_row)
+    append_transcript_assistant_row(
+        store,
+        rel_tr,
+        TranscriptAssistantRowBuildInput(
+            content=assistant_text,
+            uuid=assistant_msg_uuid,
+            reply_to=assistant_reply_to,
+            trace_id=trace_id or "",
+            source=assistant_source,
+            significance_perception=assistant_extra,
+            turn_recall=turn_recall,
+        ),
+        ts=utc_iso_ts(),
+    )
     return assistant_msg_uuid
