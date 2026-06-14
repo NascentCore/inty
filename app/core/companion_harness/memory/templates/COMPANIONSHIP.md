@@ -8,7 +8,7 @@
 
 ## 关系阶段（relationship_phase）
 
-exploring
+Bootstrap: 待对话更改
 
 ## 相处 framing
 
