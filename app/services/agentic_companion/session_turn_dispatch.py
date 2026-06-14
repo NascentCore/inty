@@ -29,6 +29,7 @@ async def dispatch_uplink_envelope(
                 preset_user_msg_uuid=ctx.preset_user_msg_uuid,
                 runtime_channel=channel,
                 implicit_signal_bundle=envelope.runtime_context.implicit_signal_bundle,
+                agentic_loop_channel=ctx.agentic_loop_channel,
             )
         case UplinkTriggerKind.USER_MESSAGE:
             return await companion_chat_service.run_user_chat(

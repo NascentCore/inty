@@ -401,7 +401,6 @@ class Session:
     ) -> CompanionTurnResult:
         """Session hub entry: dispatch uplink to companion harness (turn lock inside service)."""
         assert envelope is not None
-        _ = self.downlink
         return await dispatch_uplink_envelope(envelope)
 
     async def start_inner_tick_worker(

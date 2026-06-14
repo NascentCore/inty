@@ -26,6 +26,7 @@ def parse_telegram_uplink(
     resolved_chat_model: GenAIModel,
     preset_user_msg_uuid: str,
     session_id: str,
+    runtime_channel: CompanionRuntimeChannel,
     background_output_sink: object | None,
     agentic_loop_channel: object | None,
 ) -> UplinkEnvelope:
@@ -48,13 +49,13 @@ def parse_telegram_uplink(
             resolved_chat_model=resolved_chat_model,
             session_id=session_id,
             preset_user_msg_uuid=preset_user_msg_uuid.strip(),
-            runtime_channel=CompanionRuntimeChannel.TELEGRAM.value,
+            runtime_channel=runtime_channel.value,
             background_output_sink=background_output_sink,
             bootstrap_interim_output_sink=None,
             agentic_loop_channel=agentic_loop_channel,
         ),
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=runtime_channel,
             implicit_signal_bundle=bundle,
         ),
     )

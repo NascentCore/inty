@@ -610,6 +610,7 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
+    agentic_loop_channel: object | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="implicit_sign_on_greeting",
@@ -628,6 +629,7 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
                 channel=runtime_channel,
                 implicit_signal_bundle=implicit_signal_bundle,
             ),
+            agentic_loop_channel=agentic_loop_channel,
         ),
     )
 

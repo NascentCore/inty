@@ -203,6 +203,7 @@ class AgentChannelPresence:
                 resolved_chat_model=model,
                 preset_user_msg_uuid=preset_uid,
                 session_id=session_id,
+                runtime_channel=runtime_channel,
                 background_output_sink=bg_sink,
                 agentic_loop_channel=agentic_loop_channel,
             )

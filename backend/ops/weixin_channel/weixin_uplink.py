@@ -47,13 +47,13 @@ def parse_weixin_uplink(
             resolved_chat_model=resolved_chat_model,
             session_id=session_id,
             preset_user_msg_uuid=preset_user_msg_uuid,
-            runtime_channel=CompanionRuntimeChannel.WECHAT.value,
+            runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN.value,
             background_output_sink=background_output_sink,
             bootstrap_interim_output_sink=None,
             agentic_loop_channel=agentic_loop_channel,
         ),
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.WECHAT,
+            channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
             implicit_signal_bundle=bundle,
         ),
     )

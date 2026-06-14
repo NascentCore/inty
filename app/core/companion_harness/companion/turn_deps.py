@@ -130,7 +130,8 @@ class CompanionTurnDeps:
         round with non-empty assistant ``content`` is pushed immediately (WebSocket
         interim frames) before the turn ends. All other tracks pass ``None``. Set
         from ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink`` on
-        user chat only. TODO(#3402): ``UserVisibleChunkSink`` for all user-turn visible rounds.
+        user chat only. TODO(#3402): retire when all user-turn streaming uses
+        ``agentic_loop_channel`` only (Grill #12).
 
     agentic_loop_channel
         Per-call-streaming loop downlink adapter for bootstrap/settled user-turn.

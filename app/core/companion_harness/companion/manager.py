@@ -253,7 +253,7 @@ class CompanionManager:
         preset_user_msg_uuid: str | None,
         runtime_context: TurnRuntimeContext,
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
-        agentic_loop_channel: LoopChannelAdapter | None = None,
+        agentic_loop_channel: object | None = None,
     ) -> CompanionTurnDeps:
         return CompanionTurnDeps(
             store=session.store,
@@ -313,6 +313,7 @@ class CompanionManager:
             channel=CompanionRuntimeChannel.APP,
             implicit_signal_bundle=None,
         ),
+        agentic_loop_channel: object | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_implicit_sign_on_greeting_turn(
             user_text,
@@ -322,6 +323,7 @@ class CompanionManager:
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
                 bootstrap_interim_output_sink=None,
+                agentic_loop_channel=agentic_loop_channel,
             ),
         )
 

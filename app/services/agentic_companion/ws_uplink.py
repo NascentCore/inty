@@ -75,6 +75,7 @@ def parse_ws_implicit_sign_on(
     session_id: str | None,
     runtime_channel: CompanionRuntimeChannel,
     client_time: object | None,
+    agentic_loop_channel: object | None,
 ) -> UplinkEnvelope:
     """Map WS ``user_signed_on`` greeting to ``IMPLICIT_SIGN_ON`` uplink."""
     assert preset_message_id.strip()
@@ -96,7 +97,7 @@ def parse_ws_implicit_sign_on(
             runtime_channel=runtime_channel.value,
             background_output_sink=None,
             bootstrap_interim_output_sink=None,
-            agentic_loop_channel=None,
+            agentic_loop_channel=agentic_loop_channel,
         ),
         runtime_context=TurnRuntimeContext(
             channel=runtime_channel,

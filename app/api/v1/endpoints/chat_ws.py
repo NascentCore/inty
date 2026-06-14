@@ -1181,6 +1181,8 @@ async def _agent_chat_ws_completions_impl(
                             user_signed_on=implicit_greeting_ws,
                             server_received_at_utc=datetime.now(timezone.utc),
                         )
+                        # TODO(#3398): drop ``companion_chat_service`` direct calls once every WS
+                        # connection always binds ``companion_presence`` (Session hub only).
                         if companion_presence is not None:
                             if implicit_greeting_ws:
                                 assert companion_preset_uid is not None
@@ -1193,6 +1195,7 @@ async def _agent_chat_ws_completions_impl(
                                     session_id=session_id,
                                     runtime_channel=CompanionRuntimeChannel.APP,
                                     client_time=request.user_time_context,
+                                    agentic_loop_channel=agentic_loop_channel,
                                 )
                             else:
                                 envelope = parse_ws_user_message(
@@ -1220,8 +1223,9 @@ async def _agent_chat_ws_completions_impl(
                                 resolved_chat_model=model_override,
                                 implicit_signal_bundle=companion_implicit_bundle,
                                 session_id=session_id,
-                                background_output_sink=companion_background_sink,
+                                background_output_sink=bg_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
+                                agentic_loop_channel=agentic_loop_channel,
                             )
                         else:
                             companion_turn = await companion_chat_service.run_user_chat(
