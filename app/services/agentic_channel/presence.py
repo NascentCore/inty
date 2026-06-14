@@ -186,6 +186,8 @@ class AgentChannelPresence:
                     "effective_local_id": None,
                 },
             )
+            # TODO(#3411): Telegram Bot API has no device timezone; manual E2E smoke:
+            # inference → update_user_md → USER.md → LangSmith foreground ## User's Local Time Context.
             implicit_bundle = ImplicitSignalBundle(
                 client_time=None,
                 user_signed_on=False,

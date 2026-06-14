@@ -172,6 +172,8 @@ def _companion_user_time_context_system_for_llm(
 ) -> str | None:
     """Optional ``## user-time-context`` system body from ``client_time``, or ``None``."""
     # TODO(#3391): Log timezone_source when enriching from USER.md / transcript fallback.
+    # TODO(#3411): LangSmith acceptance — inspect agentic_companion_chat (not tool_background_*) for
+    # ``## User's Local Time Context`` after USER.md has persisted IANA timezone.
     enabled = bool(
         _global_config.app.features.experimental_enable_chat_with_user_time_context
     )

@@ -2,6 +2,7 @@
 
 TODO(#3391): Log timezone_source (client | user_md | transcript | none); replace
 USER.md regex read with structured persistence.
+TODO(#3411): Manual E2E smoke — Telegram/Weixin turn with persisted USER.md 时区 → LangSmith time slice.
 """
 
 from __future__ import annotations

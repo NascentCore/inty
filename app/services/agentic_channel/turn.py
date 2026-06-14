@@ -179,6 +179,7 @@ async def run_agent_turn(
     )
     await _maybe_append_agent_channel_session_system(session=session)
     bundle = implicit_signal_bundle
+    # TODO(#3411): Manual E2E — after USER.md 时区 persisted, verify enrichment + LangSmith time slice.
     if bundle.client_time is None:
         client_time = client_time_from_memory_store(session.store)
         if client_time is not None:

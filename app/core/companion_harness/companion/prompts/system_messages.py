@@ -292,7 +292,10 @@ def _proactive_chat_clause() -> str:
 
 
 def _infer_time_zone_prompt_slice() -> str:
-    """Guide eager timezone inference for surfaces without automatic device timezone."""
+    """Guide eager timezone inference for surfaces without automatic device timezone.
+
+    TODO(#3411): Real Telegram E2E not yet verified — model must call update_user_md; smoke on local Ops.
+    """
     tool_name = UPDATE_USER_MD.name.value
     return (
         "用户当地时间与作息\n"
