@@ -242,8 +242,7 @@ async def kernel_fire_maintenance(
     )
     reply_stripped = str(companion_turn.assistant_text or "").strip()
     if not reply_stripped and not companion_turn.tool_background_started:
-        logger.warning("inner_tick_maintenance kernel empty reply")
-        return None
+        logger.info("inner_tick_maintenance kernel monolog_empty")
 
     return InnerTickKernelResult(
         turn=companion_turn,

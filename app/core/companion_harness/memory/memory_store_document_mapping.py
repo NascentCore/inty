@@ -26,6 +26,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     MEMORY = "memory"
     LIFE_CURRENTS = "life_currents"
     CHANNELS = "channels"
+    COMPANIONSHIP = "companionship"
     TECHNO_CORE = "techno_core"
     TECHNO_CORE_EVENTS_JSONL = "techno_core_events_jsonl"
     LIVING_SPHERE = "living_sphere"
@@ -60,6 +61,8 @@ class CompanionMemoryDocumentKind(str, Enum):
     INTY_V2_SCHEDULE_TASKS_JSON = "inty_v2_schedule_tasks_json"
 
 
+# TODO(memdoc-path-constants): Derive keys from canonical MemDoc path constants (shared with
+# MemoryStoreScopePaths) instead of duplicating literals. #3413
 _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "IDENTITY.md": (CompanionMemoryDocumentKind.IDENTITY, None),
     "SOUL.md": (CompanionMemoryDocumentKind.SOUL, None),
@@ -69,6 +72,7 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     # Virtual-space activity state (AUTONOMY): what Inty is doing in the world—not inner thoughts about the user.
     "LIFE_CURRENTS.md": (CompanionMemoryDocumentKind.LIFE_CURRENTS, None),
     "CHANNELS.md": (CompanionMemoryDocumentKind.CHANNELS, None),
+    "COMPANIONSHIP.md": (CompanionMemoryDocumentKind.COMPANIONSHIP, None),
     "TECHNO_CORE.md": (CompanionMemoryDocumentKind.TECHNO_CORE, None),
     "techno_core_events.jsonl": (
         CompanionMemoryDocumentKind.TECHNO_CORE_EVENTS_JSONL,
@@ -94,7 +98,6 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "ai_private.md": (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
     # Inner thoughts about the user (MAINTENANCE)—not LIFE_CURRENTS virtual-world activity.
     # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today (#3375, #3341).
-    # TODO(crs-companionship-doc): add ``COMPANIONSHIP`` document_kind when Phase A lands (#3342).
     "ai_private.jsonl": (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
     "tool_background.jsonl": (
         CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL,

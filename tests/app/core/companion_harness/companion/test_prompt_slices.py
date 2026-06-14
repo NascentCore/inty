@@ -10,3 +10,8 @@ from app.core.companion_harness.companion.prompt_slices import (
 def test_channels_maps_to_workspace_rel() -> None:
     assert slice_to_workspace_rel(PromptSliceId.CHANNELS) == "CHANNELS.md"
     assert PROMPT_SLICE_TO_REL[PromptSliceId.CHANNELS] == "CHANNELS.md"
+
+
+def test_companionship_maps_to_workspace_rel() -> None:
+    assert slice_to_workspace_rel(PromptSliceId.COMPANIONSHIP) == "COMPANIONSHIP.md"
+    assert PROMPT_SLICE_TO_REL[PromptSliceId.COMPANIONSHIP] == "COMPANIONSHIP.md"

@@ -64,7 +64,6 @@ from typing import Any
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
@@ -86,10 +85,15 @@ from .llm_runtime_events import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .proactive_chat import (
-    PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
-    PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
+    PROACTIVE_CHAT_SILENT_TOKEN,
     build_proactive_chat_transcript_user_marker,
 )
+from .transcript_ai_private import (
+    build_ai_private_splice_manifest_row,
+    select_tail_splice_thoughts,
+    track_uses_ai_private_splice,
+)
+from .ai_private_prompt import AiPrivateThought, mark_ai_private_surfaced
 from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
 )
@@ -147,6 +151,10 @@ from .turn_routes import (
     BootstrapInterimOutputSink,
     TurnRouteMode,
 )
+from .transcript_assistant_row import (
+    TranscriptAssistantRowBuildInput,
+    append_transcript_assistant_row,
+)
 from .utc import (
     strip_leading_transcript_timestamp_prefixes,
     utc_iso_ts,
@@ -170,6 +178,18 @@ from app.core.companion_harness.memory.memory_store_scope import (
 
 CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 _BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS = 24
+
+
+def _memory_store_write_allowlist_for_track(
+    track: CompanionTurnTrack,
+) -> frozenset[str]:
+    match track:
+        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
+            return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
+        case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
+            return frozenset()
+        case _:
+            return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
 
 
 class CompanionToolBackgroundStartedError(RuntimeError):
@@ -562,6 +582,11 @@ async def _run_companion_turn_core(
         user_text = build_proactive_chat_transcript_user_marker(
             loaded_state.loaded_transcript
         )
+    tail_splice_thoughts: list[AiPrivateThought] = []
+    if track_uses_ai_private_splice(track):
+        tail_splice_thoughts = select_tail_splice_thoughts(
+            store, loaded_state.loaded_transcript
+        )
     context = loaded_state.context
     bundle = loaded_state.bundle
     ts_user = utc_now()
@@ -576,6 +601,7 @@ async def _run_companion_turn_core(
         implicit_sign_on_turn=implicit_sign_on_turn,
         runtime_context=runtime_context,
         transcript_compaction=transcript_compaction,
+        tail_splice_thoughts=tail_splice_thoughts,
     )
     tools_for_turn = prompt_plan.tools_for_turn
     route_mode = prompt_plan.route_mode
@@ -590,6 +616,7 @@ async def _run_companion_turn_core(
 
     last_text = ""
     significance_meta: dict[str, Any] | None = None
+    turn_recall: str | None = None
     tool_background_started = False
     bootstrap_skip_final_transcript_assistant_row = False
     bootstrap_last_interim_assistant_msg_uuid: str | None = None
@@ -745,6 +772,7 @@ async def _run_companion_turn_core(
                         )
                         last_text = ""
                         significance_meta = None
+                        turn_recall = None
                         tool_msgs_for_bg = deepcopy(tool_msgs)
                         force_tools_first_round = True
                     else:
@@ -805,6 +833,7 @@ async def _run_companion_turn_core(
                         _dual_split = split_dual_llm_chat_branch_message(msg)
                         last_text = _dual_split.visible_text
                         significance_meta = _dual_split.significance_meta
+                        turn_recall = _dual_split.turn_recall
                         fg_output_to_user = _dual_split.output_to_user
                         # Async foreground chat leg (tools present): same dual-LLM envelope contract as
                         # single-shot structured chat; ``output_to_user`` must be true here. False is for
@@ -838,11 +867,7 @@ async def _run_companion_turn_core(
                         execute_tool_call_fn=repl_execute_tool_call,
                         client=llm_client.sync_client_for_route("tool"),
                         chat_completions_sync=llm_client.chat_completions_sync,
-                        write_allowlist=(
-                            MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
-                            if track == CompanionTurnTrack.INNER_TICK_AUTONOMY
-                            else MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
-                        ),
+                        write_allowlist=_memory_store_write_allowlist_for_track(track),
                         repository_only_store_text=repository_only_store_text,
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
@@ -953,6 +978,7 @@ async def _run_companion_turn_core(
                         _dual_split = split_dual_llm_chat_branch_message(msg)
                         last_text = _dual_split.visible_text
                         significance_meta = _dual_split.significance_meta
+                        turn_recall = _dual_split.turn_recall
                         fg_output_to_user = _dual_split.output_to_user
                         # Single-shot path: one completion, no tool loop, structured dual-LLM envelope.
                         # Contract (see ``prompts/system_messages._dual_llm_chat_structured_output_contract_text``):
@@ -1059,19 +1085,43 @@ async def _run_companion_turn_core(
         if track != CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             store.append_jsonl_record(rel_tr, user_row)
     last_text = strip_leading_transcript_timestamp_prefixes(last_text)
-    assistant_row: dict[str, Any] = {
-        "role": "assistant",
-        "content": last_text,
-        "ts": utc_iso_ts(),
-        "uuid": assistant_msg_uuid,
-        "reply_to": user_msg_uuid,
-        "source": "inner_tick" if inner_tick_turn else "chat",
-        "trace_id": trace_id,
-    }
-    if significance_meta:
-        assistant_row["significance_perception"] = significance_meta
+    splice_thought_uuids = [t.uuid for t in tail_splice_thoughts]
+    should_persist_ai_private_splice = (
+        track_uses_ai_private_splice(track)
+        and splice_thought_uuids
+        and last_text.strip()
+        and last_text.strip() != PROACTIVE_CHAT_SILENT_TOKEN
+        and not bootstrap_skip_final_transcript_assistant_row
+    )
+    if should_persist_ai_private_splice:
+        mark_ai_private_surfaced(store, splice_thought_uuids)
+        anchor_uuid: str | None = None
+        for row in reversed(loaded_state.loaded_transcript):
+            if row.role == "user" and row.proactive_chat is not True:
+                if isinstance(row.uuid, str) and row.uuid.strip():
+                    anchor_uuid = row.uuid.strip()
+                break
+        manifest_row = build_ai_private_splice_manifest_row(
+            thought_uuids=splice_thought_uuids,
+            reply_to_user_msg_uuid=user_msg_uuid,
+            anchor_user_msg_uuid=anchor_uuid,
+        )
+        store.append_jsonl_record(rel_tr, manifest_row)
     if not bootstrap_skip_final_transcript_assistant_row:
-        store.append_jsonl_record(rel_tr, assistant_row)
+        append_transcript_assistant_row(
+            store,
+            rel_tr,
+            TranscriptAssistantRowBuildInput(
+                content=last_text,
+                uuid=assistant_msg_uuid,
+                reply_to=user_msg_uuid,
+                trace_id=trace_id,
+                source="inner_tick" if inner_tick_turn else "chat",
+                significance_perception=significance_meta,
+                turn_recall=turn_recall,
+            ),
+            ts=utc_iso_ts(),
+        )
 
     logger.info(
         "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "
@@ -1089,6 +1139,7 @@ async def _run_companion_turn_core(
     return CompanionTurnResult(
         assistant_text=last_text,
         significance_perception=significance_meta,
+        turn_recall=turn_recall,
         user_msg_uuid=user_msg_uuid,
         assistant_msg_uuid=assistant_msg_uuid,
         trace_id=trace_id,

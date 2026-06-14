@@ -30,9 +30,11 @@ companion turn pipeline.
   ``memory_extraction_service`` sorts by ``meta_data.significance_perception.importance_round``.
 
 TODO(crs-turn-recall): ``importance_*`` scores are **moment-level significance perception**, not
-``turn_recall`` (ephemeral per-turn memory depth / Turn Brief). Add ``turn_recall`` to the envelope
-or a parallel Turn Brief channel in Phase A (#3342); wire prompt + dreaming curator in Phase B (#3343).
-CRS epic #3341; do not conflate with ``relationship_phase`` / ``tone`` (slow bond state in companionship doc).
+``turn_recall`` (ephemeral per-turn memory depth / Turn Brief). Phase A (#3342) plumbs
+``turn_recall`` on the envelope, transcript, and WS meta; Phase B (#3343) wires prompt +
+dreaming curator. CRS epic #3341; do not conflate with ``relationship_phase``
+(slow bond in ``COMPANIONSHIP.md``) or ``experience_directives.tone`` (fast stance in
+``context.json``).
 
 Design: ``/docs/imate/DESIGN.md``. LangSmith: ``inty_llm_source=foreground_dual_llm_envelope``
 (``llm/langsmith_invocation_extra.py``).
@@ -60,7 +62,6 @@ from pydantic import (
     Field,
     ValidationError,
     field_validator,
-    model_validator,
 )
 from pydantic_core import PydanticSerializationError
 
@@ -112,6 +113,13 @@ class DualLlmChatBranchEnvelope(BaseModel):
             "user-visible recap is needed."
         ),
     )
+    turn_recall: str = Field(
+        default="",
+        description=(
+            "Ephemeral Turn Brief: one-turn recall notes for harness plumbing (Phase A). "
+            "Leave empty until Phase B activates operator guidance."
+        ),
+    )
 
     @field_validator("output_to_user", mode="before")
     @classmethod
@@ -129,6 +137,15 @@ class DualLlmChatBranchEnvelope(BaseModel):
     @field_validator("user_facing_reply", mode="before")
     @classmethod
     def _coerce_reply(cls, v: object) -> str:
+        if v is None:
+            return ""
+        if isinstance(v, str):
+            return v
+        return str(v)
+
+    @field_validator("turn_recall", mode="before")
+    @classmethod
+    def _coerce_turn_recall(cls, v: object) -> str:
         if v is None:
             return ""
         if isinstance(v, str):
@@ -223,6 +240,7 @@ class DualLlmChatBranchSplit:
     visible_text: str
     significance_meta: dict[str, Any] | None
     output_to_user: bool | None
+    turn_recall: str | None = None
 
 
 def _message_field(message: Any, field_name: str) -> Any:
@@ -292,6 +310,11 @@ def parse_dual_llm_chat_envelope_from_message(
     return None
 
 
+def turn_recall_from_envelope(env: DualLlmChatBranchEnvelope) -> str | None:
+    text = (env.turn_recall or "").strip()
+    return text or None
+
+
 def split_dual_llm_chat_branch_content(raw: str) -> DualLlmChatBranchSplit:
     env = parse_dual_llm_chat_envelope_json(raw)
     if env is None:
@@ -299,11 +322,13 @@ def split_dual_llm_chat_branch_content(raw: str) -> DualLlmChatBranchSplit:
             visible_text=(raw or "").strip(),
             significance_meta=None,
             output_to_user=None,
+            turn_recall=None,
         )
     return DualLlmChatBranchSplit(
         visible_text=env.user_facing_reply.strip(),
         significance_meta=envelope_to_assistant_metadata_dict(env),
         output_to_user=env.output_to_user,
+        turn_recall=turn_recall_from_envelope(env),
     )
 
 
@@ -323,6 +348,7 @@ def split_dual_llm_chat_branch_message(message: Any) -> DualLlmChatBranchSplit:
             visible_text=env.user_facing_reply.strip(),
             significance_meta=envelope_to_assistant_metadata_dict(env),
             output_to_user=env.output_to_user,
+            turn_recall=turn_recall_from_envelope(env),
         )
     content = _message_field(message, "content")
     raw = content if isinstance(content, str) else ""
@@ -330,4 +356,5 @@ def split_dual_llm_chat_branch_message(message: Any) -> DualLlmChatBranchSplit:
         visible_text=(raw or "").strip(),
         significance_meta=None,
         output_to_user=None,
+        turn_recall=None,
     )

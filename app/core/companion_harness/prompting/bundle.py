@@ -41,6 +41,13 @@ class PromptBundle(BaseModel):
         default="",
         description="Channel capability contract: CHANNELS.md body for Capability system injection.",
     )
+    companionship_md: str = Field(
+        default="",
+        description=(
+            "User-facing companionship framing: COMPANIONSHIP.md body "
+            "(relationship_phase, tone, mutual agreements)."
+        ),
+    )
     output_format_im_dm_md: str = Field(
         default="",
         description="Channel output-format slice for IM DM delivery (Weixin, Telegram, etc.).",

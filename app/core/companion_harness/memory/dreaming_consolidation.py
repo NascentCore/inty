@@ -25,11 +25,16 @@ from app.core.companion_harness.companion.dreaming import (
     parse_transcript_datetime,
 )
 from app.core.companion_harness.companion.models import ChatMessage
+from app.core.companion_harness.companion.transcript_ai_private import (
+    dreaming_transcript_block,
+)
 from app.core.companion_harness.companion.utc import local_date_str
 
 from .living_sphere_curator import compact_living_sphere_if_pending
 from .memory_store import MemoryStore
 from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
+
+# TODO(memdoc-path-constants): Curator read/write still hardcodes paths; use scope path constants. #3413
 
 _MEMORY_DAILY_GIST_CTX_MAX = 12_000
 _SOUL_MEMORY_CTX_MAX = 12_000
@@ -160,17 +165,11 @@ def _log_dreaming_consolidation_curated(
     )
 
 
-def _dreaming_transcript_block(rows: list[ChatMessage]) -> str:
-    """Render a compact transcript block for batch curation prompts.
-
-    TODO(dreaming-day-rollup): append inner-tick / ai_private / LIFE_CURRENTS
-    sections when ``dreaming_candidate_slice`` supplies them (#3376).
-    """
-    lines: list[str] = []
-    for row in rows:
-        role = "User" if row.role == "user" else "Assistant"
-        lines.append(f"[{row.ts}] {role}: {row.content}")
-    return "\n".join(lines)
+def _dreaming_transcript_block(
+    store: MemoryStore, rows: list[ChatMessage], *, day_iso: str
+) -> str:
+    """Render a compact transcript block for batch curation prompts."""
+    return dreaming_transcript_block(store, rows, day_iso=day_iso)
 
 
 def _rewrite_dreaming_daily_gist_md(
@@ -184,7 +183,7 @@ def _rewrite_dreaming_daily_gist_md(
     prev_gist = store.read_document_if_exists(rel) or ""
     user_block = (
         f"Previous daily gist ({rel}):\n\n{prev_gist}\n\n"
-        f"---\n\nDreaming transcript slice:\n{_dreaming_transcript_block(rows)}\n"
+        f"---\n\nDreaming transcript slice:\n{_dreaming_transcript_block(store, rows, day_iso=day)}\n"
     )
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": _DAY_SUMMARY_SYSTEM},
@@ -324,7 +323,15 @@ def consolidate_memory_during_dreaming(
     assert rows
     t_all = time.perf_counter()
     ws = store.scope.registry_key()
-    transcript_block = _dreaming_transcript_block(rows)
+    rows_by_day: dict[str, list[ChatMessage]] = {}
+    for row in rows:
+        day = parse_transcript_datetime(row.ts).date().isoformat()
+        rows_by_day.setdefault(day, []).append(row)
+    day_blocks = [
+        _dreaming_transcript_block(store, day_rows, day_iso=day)
+        for day, day_rows in sorted(rows_by_day.items())
+    ]
+    transcript_block = "\n\n".join(day_blocks)
     logger.info(
         "dreaming_consolidation start ws={} rows={} chars={}",
         ws,
@@ -333,11 +340,6 @@ def consolidate_memory_during_dreaming(
     )
 
     any_curation = False
-    rows_by_day: dict[str, list[ChatMessage]] = {}
-    for row in rows:
-        day = parse_transcript_datetime(row.ts).date().isoformat()
-        rows_by_day.setdefault(day, []).append(row)
-
     for day, day_rows in sorted(rows_by_day.items()):
         t = time.perf_counter()
         _rewrite_dreaming_daily_gist_md(

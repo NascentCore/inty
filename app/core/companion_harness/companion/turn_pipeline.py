@@ -27,7 +27,6 @@ from .proactive_chat import (
 )
 from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
-    implicit_user_signed_on_chat_turn,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
@@ -60,7 +59,11 @@ from app.core.companion_harness.memory.transcript_compaction import (
     load_compaction_state_from_store,
     save_compaction_state_to_store,
     transcript_compaction_meta_from_outcome,
-    transcript_rows_to_openai_dialogue,
+)
+from .ai_private_prompt import AiPrivateThought
+from .transcript_ai_private import (
+    track_uses_ai_private_splice,
+    transcript_window_to_llm_dialogue,
 )
 from .turn_routes import TurnRouteMode
 from .utc import transcript_message_content_for_llm_at
@@ -172,6 +175,8 @@ def _companion_user_time_context_system_for_llm(
 ) -> str | None:
     """Optional ``## user-time-context`` system body from ``client_time``, or ``None``."""
     # TODO(#3391): Log timezone_source when enriching from USER.md / transcript fallback.
+    # TODO(#3411): LangSmith acceptance — inspect agentic_companion_chat (not tool_background_*) for
+    # ``## User's Local Time Context`` after USER.md has persisted IANA timezone.
     enabled = bool(
         _global_config.app.features.experimental_enable_chat_with_user_time_context
     )
@@ -238,6 +243,7 @@ def build_companion_turn_prompt_plan(
     implicit_sign_on_turn: bool,
     runtime_context: TurnRuntimeContext,
     transcript_compaction: TranscriptCompactionConfig | None,
+    tail_splice_thoughts: list[AiPrivateThought],
 ) -> CompanionTurnPromptPlan:
     """Assemble system messages, route, and final request messages."""
     inner_tick_turn, _route_inner_activity = turn_flags_for_track(track)
@@ -258,8 +264,20 @@ def build_companion_turn_prompt_plan(
         and (not tools_for_turn)
         and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     )
-    # TODO(#3401): ``use_dual_structured_chat`` is loop-mechanism; keep separate from ``CompanionTurnTrack``.
-    # TODO(#3398): Structured envelope on single chat model; not the same as dual-LLM two-model split.
+    use_ai_private_splice = track_uses_ai_private_splice(track)
+
+    def _transcript_dialogue() -> list[dict[str, Any]]:
+        if use_ai_private_splice:
+            return transcript_window_to_llm_dialogue(
+                store,
+                loaded_state.transcript_window,
+                tail_splice_thoughts=tail_splice_thoughts,
+            )
+        from app.core.companion_harness.memory.transcript_compaction import (
+            transcript_rows_to_openai_dialogue,
+        )
+
+        return transcript_rows_to_openai_dialogue(loaded_state.transcript_window)
 
     transcript_compaction_meta: dict[str, Any] | None = None
     if transcript_compaction is not None and not inner_tick_turn:
@@ -271,7 +289,7 @@ def build_companion_turn_prompt_plan(
         )
         pre_user: list[dict[str, Any]] = [
             *system_messages,
-            *transcript_rows_to_openai_dialogue(loaded_state.transcript_window),
+            *_transcript_dialogue(),
         ]
         outcome = compactor.maybe_compact(
             messages=pre_user,
@@ -304,9 +322,7 @@ def build_companion_turn_prompt_plan(
             )
     else:
         messages = list(system_messages)
-        messages.extend(
-            transcript_rows_to_openai_dialogue(loaded_state.transcript_window)
-        )
+        messages.extend(_transcript_dialogue())
 
     if tick_proactive:
         messages.append(

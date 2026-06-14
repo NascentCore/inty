@@ -35,7 +35,6 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import ContextMeta
-from .prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
@@ -43,6 +42,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
 
+# TODO(memdoc-path-constants): Seed-only rels from canonical MemDoc path constants. #3413
 _BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS: Final[tuple[str, ...]] = (
     "MEMORY.md",
     "SOUL.md",
@@ -134,38 +134,6 @@ def build_interactive_bootstrap_template_reference_parts(
             body = body[: max_chars_per_seed - 1] + "\n…[truncated]"
         blocks.append(f"## TEMPLATE_REFERENCE {rel}\n\n{body}")
     return blocks
-
-
-def build_interactive_bootstrap_system_message_parts(
-    *,
-    max_chars_per_seed: int = 6000,
-) -> list[str]:
-    """
-    Ordered system bodies while interactive bootstrap is active.
-
-    Returns ``BOOTSTRAP.md``, typed ``## 工具调用`` (``build_bootstrap_tool_call_section``),
-    then template references for writable paths and package seed docs.  One string per system message
-    keeps stack inspection and model weighting clearer.
-    """
-    return [
-        load_bootstrap_spec_text(),
-        build_bootstrap_tool_call_section(),
-        *build_interactive_bootstrap_template_reference_parts(
-            max_chars_per_seed=max_chars_per_seed
-        ),
-    ]
-
-
-def build_interactive_bootstrap_system_append(
-    *,
-    max_chars_per_seed: int = 6000,
-) -> str:
-    """Legacy single-string join of bootstrap blocks (prefer build_interactive_bootstrap_system_message_parts)."""
-    return SYSTEM_PROMPT_SLICE_SEPARATOR.join(
-        build_interactive_bootstrap_system_message_parts(
-            max_chars_per_seed=max_chars_per_seed
-        )
-    )
 
 
 def tool_companion_bootstrap_user_interactive_complete(

@@ -522,8 +522,8 @@ async def try_fire_maintenance_inner_tick(
 
         if kernel_result is None:
             coordinator.remove_foreground_pending(preset_uid)
-            logger.warning(
-                "companion_ws_maintenance_inner_tick empty reply ws_conn_id={} "
+            logger.info(
+                "companion_ws_maintenance_inner_tick monolog_empty ws_conn_id={} "
                 "user={} agent={}",
                 ws_conn_id,
                 coords.user_id,

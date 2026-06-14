@@ -749,6 +749,7 @@ async def _build_companion_tool_background_ws_payload(
             generated_image=gi or None,
             tool_bg_local_image_paths=tb_paths,
             significance_perception=sig,
+            turn_recall=ev.turn_recall or None,
             inner_tick_activity=ev.inner_tick_activity,
         )
     )

@@ -43,6 +43,7 @@ _UNIFIED_FALLBACK_SYSTEM_PROMPT = (
     "- `output_to_user` (boolean): **true** if the user should see a follow-up bubble with tool "
     "outcomes (read_file, list_dir, search, generated assets, etc.). **false** when "
     "only silent persistence ran and no recap is needed.\n"
+    "- `turn_recall` (string): ephemeral Turn Brief for harness plumbing; leave empty when unused.\n"
     "Successful image generation still delivers the asset; `output_to_user` only gates extra text.\n"
 )
 
@@ -54,6 +55,7 @@ def _conservative_tool_finish_envelope() -> DualLlmChatBranchEnvelope:
         importance_user_message=5,
         importance_assistant_message=5,
         output_to_user=False,
+        turn_recall="",
     )
 
 

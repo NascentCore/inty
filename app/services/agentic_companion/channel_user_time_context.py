@@ -2,6 +2,7 @@
 
 TODO(#3391): Log timezone_source (client | user_md | transcript | none); replace
 USER.md regex read with structured persistence.
+TODO(#3411): Manual E2E smoke — Telegram/Weixin turn with persisted USER.md 时区 → LangSmith time slice.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from app.services.agentic_companion.user_timezone_from_user_md import (
     infer_iana_timezone_from_user_md,
 )
 
+# TODO(memdoc-path-constants): Replace ad-hoc _USER_MD_REL with canonical constant. #3413
 _USER_MD_REL = "USER.md"
 
 

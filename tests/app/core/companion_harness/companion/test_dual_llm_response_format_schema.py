@@ -23,6 +23,7 @@ def _envelope_payload() -> dict[str, Any]:
         "importance_user_message": 2,
         "importance_assistant_message": 4,
         "output_to_user": True,
+        "turn_recall": "",
     }
 
 
@@ -42,6 +43,7 @@ def assert_dual_llm_response_format_schema_contract(fmt: dict[str, Any]) -> None
         "importance_user_message",
         "importance_assistant_message",
         "output_to_user",
+        "turn_recall",
     }
     assert set(props) == expected_keys
     req = schema["required"]
@@ -59,6 +61,16 @@ def assert_dual_llm_response_format_schema_contract(fmt: dict[str, Any]) -> None
         assert props[key]["minimum"] == 1
         assert props[key]["maximum"] == 10
     assert props["output_to_user"]["type"] == "boolean"
+    assert props["turn_recall"]["type"] == "string"
+
+
+def test_split_dual_llm_chat_branch_message_turn_recall() -> None:
+    payload = _envelope_payload()
+    payload["turn_recall"] = "用户提到下周见面"
+    inner = json.dumps(payload, ensure_ascii=False)
+    msg = SimpleNamespace(content=inner, reasoning=None, reasoning_details=None)
+    split = split_dual_llm_chat_branch_message(msg)
+    assert split.turn_recall == "用户提到下周见面"
 
 
 def test_dual_llm_chat_response_format_schema_contract() -> None:
