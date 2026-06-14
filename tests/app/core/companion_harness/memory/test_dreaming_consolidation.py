@@ -18,7 +18,7 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
         scope=CompanionScope("dream-mem", "agent", tmp_path.name),
         repository=None,
     )
-    for rel in ("MEMORY.md", "USER.md", "STYLE.md", "SOUL.md"):
+    for rel in ("MEMORY.md", "USER.md", "STYLE.md", "SOUL.md", "COMPANIONSHIP.md"):
         store.write_document(rel, f"{rel} seed\n")
     rows = [
         ChatMessage(
@@ -57,6 +57,7 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
         "user",
         "style",
         "soul",
+        "companionship",
     ]
     daily = store.read_document("memory/daily/2026-01-02.md")
     assert daily == "dreaming_day_summary curated\n"
@@ -65,3 +66,4 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
     assert store.read_document("USER.md") == "user curated\n"
     assert store.read_document("STYLE.md") == "style curated\n"
     assert store.read_document("SOUL.md") == "soul curated\n"
+    assert store.read_document("COMPANIONSHIP.md") == "companionship curated\n"

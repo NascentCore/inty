@@ -77,7 +77,8 @@ def build_bootstrap_tool_call_section() -> str:
             f"- Call **{CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value}** to read persisted docs before updating",
             f"- Call **{CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value}** to update **{docs}** (full markdown body per path)",
             f"- Call **{CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value}** when the user picks a built-in companionship pattern "
-            f"(e.g. `{ExperienceContextMode.REMOTE_LOVER.value}` for 异地爱人, `{ExperienceContextMode.INTIMATE.value}`, `{ExperienceContextMode.EMOTIONAL_COMPANION.value}`)",
+            f"(e.g. `{ExperienceContextMode.REMOTE_LOVER.value}` for 异地爱人, `{ExperienceContextMode.INTIMATE.value}`, `{ExperienceContextMode.EMOTIONAL_COMPANION.value}`); "
+            "optional `tone` (`warm` / `playful` / `cool` / `direct`) for session stance — bond narrative stays in COMPANIONSHIP.md",
             f"- Call **{CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE.value}** to conclude bootstrap",
             "- 尽快收尾：已有对话足以写初稿时，先 **memory_store_write_document** 写 IDENTITY / STYLE / USER，再 complete；禁止跳过写入直接 complete",
             "- 即使用户配合度低，也基于已有对话写 best-effort 初稿；用户想进入日常相处或已连续多轮无新信息时可提前 complete（仍须先写初稿）",
