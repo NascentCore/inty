@@ -9,4 +9,7 @@ TODO(companion-multimodal-user-turn): Phase 1 — user chat accepts images via
 ``CompanionUserTurnInput`` (see ``user_turn_input.py``) and ``run_user_chat``;
 Weixin/WS are channel adapters (Phase 2 for Weixin).
 https://github.com/NascentCore/inty/issues/3293
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""

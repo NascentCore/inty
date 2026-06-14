@@ -51,7 +51,10 @@ presence; #3271 cluster lock). ``dreaming_race_guard_matches`` re-checks that in
 TODO(dreaming-transcript-invariant): If ``dreaming_idle_seconds`` is lowered below
 tool_background worst-case runtime, gate dreaming on ``tool_bg_idle`` or revisit this
 assumption (see #3123).
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

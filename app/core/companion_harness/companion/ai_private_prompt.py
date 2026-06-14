@@ -1,12 +1,17 @@
 """Load ai_private text for MAINTENANCE inner-tick prompt injection.
 
+TODO(#3400): Track rename to monolog; prompt labels need not say ``ai_private`` in headers.
+
 ``ai_private.jsonl`` holds **inner thoughts about the user** (feelings, unsaid lines, scene
 beats in the relationship)—not virtual-world activity. Activity in TechnoCore / LivingSphere /
 the environment lives in ``LIFE_CURRENTS.md`` (AUTONOMY track).
 
 Kernel maintenance inner-tick turns load ``ai_private.jsonl`` via ``get_ai_private_jsonl_text_for_prompt``.
 ``get_ai_private_text_for_prompt`` remains for ``ai_private.md`` only (tests, tooling, optional merge).
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

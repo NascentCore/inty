@@ -23,6 +23,9 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.config import global_config_loaded_from_config_yaml
+from app.services.agentic_companion.channel_user_time_context import (
+    client_time_from_memory_store,
+)
 from app.services.companion_chat_service import (
     DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT,
     _companion_manager_for_resolved_model,
@@ -175,6 +178,12 @@ async def run_agent_turn(
         scope, resolved_chat_model=resolved_chat_model
     )
     await _maybe_append_agent_channel_session_system(session=session)
+    bundle = implicit_signal_bundle
+    # TODO(#3411): Manual E2E — after USER.md 时区 persisted, verify enrichment + LangSmith time slice.
+    if bundle.client_time is None:
+        client_time = client_time_from_memory_store(session.store)
+        if client_time is not None:
+            bundle = bundle.model_copy(update={"client_time": client_time})
     async with session.turn_lock:
         out = await manager.run_user_chat_turn(
             session,
@@ -183,7 +192,7 @@ async def run_agent_turn(
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
                 channel=runtime_channel,
-                implicit_signal_bundle=implicit_signal_bundle,
+                implicit_signal_bundle=bundle,
             ),
         )
     logger.info(

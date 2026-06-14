@@ -14,7 +14,10 @@ Field provenance:
 - **Per-turn** (from the wire / API layer each invocation): ``runtime_context``,
   ``background_output_sink``, ``preset_user_msg_uuid``,
   ``bootstrap_interim_output_sink``.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 
@@ -121,7 +124,7 @@ class CompanionTurnDeps:
         round with non-empty assistant ``content`` is pushed immediately (WebSocket
         interim frames) before the turn ends. All other tracks pass ``None``. Set
         from ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink`` on
-        user chat only.
+        user chat only. TODO(#3402): ``UserVisibleChunkSink`` for all user-turn visible rounds.
     """
 
     store: MemoryStore

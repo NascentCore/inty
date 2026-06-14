@@ -31,6 +31,7 @@ class DownlinkKind(StrEnum):
     SCHEDULED = "scheduled"  # Due ``schedule_queue`` reminder inner-tick
     TOOL_BACKGROUND = "tool_background"  # Async ``tool_background`` loop produced user-visible text
     BOOTSTRAP_INTERIM = "bootstrap_interim"  # Bootstrap sync tool-loop LLM round before ``USER_CHAT_BOOTSTRAP`` ends
+    # TODO(#3402): Add ``USER_VISIBLE_CHUNK`` for user-turn per-round delivery; retire ``BOOTSTRAP_INTERIM``.
 
 
 @dataclass(frozen=True)

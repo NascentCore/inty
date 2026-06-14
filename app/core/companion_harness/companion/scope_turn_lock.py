@@ -1,4 +1,7 @@
-"""Process-local scope turn serializer and tool_bg idle keyed by ``CompanionScope.registry_key()``."""
+"""Process-local scope turn serializer and tool_bg idle keyed by ``CompanionScope.registry_key()``.
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

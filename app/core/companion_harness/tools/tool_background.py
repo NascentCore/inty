@@ -372,6 +372,7 @@ def _unregister_thread(worker: threading.Thread) -> None:
 def _assistant_text_from_completion_response(resp: Any) -> str:
     # TODO(companion-dual-envelope-reasoning-channel): Tool-background path only reads ``.content``;
     # same provider quirk as foreground ``turn.py`` when switching reasoning-heavy chat models.
+    # TODO(#3398): dual-LLM tool-model leg; epic tracks single-LLM in-turn alternative for user chat.
     content = resp.choices[0].message.content
     if not isinstance(content, str):
         preview = repr(content)
@@ -571,6 +572,8 @@ async def _run_background_tool_loop(
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
+    # TODO(#3411): tool_background passes implicit_signal_bundle=None — LangSmith tool_* spans
+    # omit ``## User's Local Time Context``; verify injection on foreground agentic_companion_chat only.
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
         channel=CompanionRuntimeChannel.APP,
         implicit_signal_bundle=None,

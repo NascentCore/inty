@@ -37,7 +37,13 @@ dreaming curator. CRS epic #3341; do not conflate with ``relationship_phase`` / 
 
 Design: ``/docs/imate/DESIGN.md``. LangSmith: ``inty_llm_source=foreground_dual_llm_envelope``
 (``llm/langsmith_invocation_extra.py``).
-"""
+
+TODO(#3398): Envelope is shared by single-LLM in-turn sync and dual-LLM ``tool_background`` finish;
+epic tracks whether user chat stays on one chat model or splits chat vs ``companion_tool_call_model``.
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

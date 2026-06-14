@@ -1,4 +1,7 @@
-"""Pydantic 模型：消息、人格包、控制面元数据。"""
+"""Pydantic 模型：消息、人格包、控制面元数据。
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 
@@ -48,6 +51,8 @@ class InnerTickActivity(StrEnum):
     client-visible NL or images (see ``inner_tick_activity_suppresses_user_delivery``).
     ``MAINTENANCE`` (awake inner-tick turn) still uses a restricted tool set today;
     ``TODO(narrow-maintenance)`` targets ai_private / transcript reorg only (#3375).
+    TODO(#3400): Rename ``MAINTENANCE`` → ``MONOLOG`` and ``INNER_TICK_MAINTENANCE`` track
+    (user-directed inner speech; distinct from ``AUTONOMY`` virtual-space activity).
     ``DREAMING`` (sleeping batch, not a turn) **rolls up the whole day**: user-visible
     chat plus scheduled / proactive on ``transcript.jsonl``, and silent ``AUTONOMY`` /
     ``MAINTENANCE`` traces — into MemoryDoc curation (``TODO(dreaming-day-rollup)``:
@@ -79,6 +84,7 @@ class CompanionTurnTrack(StrEnum):
     IMPLICIT_SIGN_ON_GREETING = "implicit_sign_on_greeting"
     INNER_TICK_PROACTIVE_CHAT = "inner_tick_proactive_chat"
     INNER_TICK_SCHEDULED = "inner_tick_scheduled"
+    # TODO(#3400): Rename to ``INNER_TICK_MONOLOG`` when wire + LangSmith migration ready.
     INNER_TICK_MAINTENANCE = "inner_tick_maintenance"
     INNER_TICK_AUTONOMY = "inner_tick_autonomy"
 
