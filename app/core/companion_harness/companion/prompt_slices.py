@@ -37,6 +37,7 @@ def slice_to_workspace_rel(slice_id: PromptSliceId) -> str | None:
     return f"{slice_id.value}.md"
 
 
+# TODO(prompt-slice-dedup): Canonical persistable slices; memory_store_scope seeding should derive from here. #3417
 _PERSISTABLE_SLICE_IDS: Final[frozenset[PromptSliceId]] = frozenset(
     {
         PromptSliceId.IDENTITY,

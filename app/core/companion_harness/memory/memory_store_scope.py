@@ -207,6 +207,7 @@ def is_scope_initialized_in_store(store: MemoryStore) -> bool:
 
 _MINIMAL_TRANSCRIPT_SEED = ""
 
+# TODO(prompt-slice-dedup): Iterate PromptSliceId / PROMPT_SLICE_TO_REL instead of this attr tuple. #3417
 _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "identity",
     "soul",
