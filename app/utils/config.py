@@ -260,6 +260,62 @@ class FeaturesConfig(BaseModel):
         )
         return self
 
+    @model_validator(mode="after")
+    def validate_feature_ranges(self) -> "FeaturesConfig":
+        """Range checks formerly in ``_validate_config`` (CFG-PYD-OPT-01c)."""
+        ws_idle = self.chat_ws_idle_timeout_seconds
+        if ws_idle < 10 or ws_idle > 3600:
+            raise ValueError(
+                "app.features.chat_ws_idle_timeout_seconds must be between 10 and 3600"
+            )
+
+        from app.core.companion_harness.memory.transcript_compaction import (
+            CompactionConfig as CompanionTranscriptCompactionConfig,
+        )
+
+        if self.companion_transcript_llm_window_max_messages is not None:
+            w = self.companion_transcript_llm_window_max_messages
+            if w < 2 or w > 500:
+                raise ValueError(
+                    "app.features.companion_transcript_llm_window_max_messages "
+                    "must be between 2 and 500"
+                )
+        if self.companion_transcript_compaction is not None:
+            CompanionTranscriptCompactionConfig.model_validate(
+                self.companion_transcript_compaction
+            )
+        tb_wait = self.companion_tool_bg_idle_wait_timeout_sec
+        if tb_wait < 1.0 or tb_wait > 3600.0:
+            raise ValueError(
+                "app.features.companion_tool_bg_idle_wait_timeout_sec "
+                "must be between 1 and 3600"
+            )
+        greet_timeout = self.companion_implicit_sign_on_greeting_llm_timeout_sec
+        if greet_timeout < 1.0 or greet_timeout > 60.0:
+            raise ValueError(
+                "app.features.companion_implicit_sign_on_greeting_llm_timeout_sec "
+                "must be between 1 and 60"
+            )
+        greet_attempts = self.companion_implicit_sign_on_greeting_llm_max_attempts
+        if greet_attempts < 1 or greet_attempts > 5:
+            raise ValueError(
+                "app.features.companion_implicit_sign_on_greeting_llm_max_attempts "
+                "must be between 1 and 5"
+            )
+        pc_idle = self.companion_ws_proactive_chat_base_idle_seconds
+        if pc_idle < 10.0 or pc_idle > 3600.0:
+            raise ValueError(
+                "app.features.companion_ws_proactive_chat_base_idle_seconds "
+                "must be between 10 and 3600"
+            )
+        pc_stop = self.companion_ws_proactive_chat_stop_after_silence_minutes
+        if pc_stop < 1.0 or pc_stop > 1440.0:
+            raise ValueError(
+                "app.features.companion_ws_proactive_chat_stop_after_silence_minutes "
+                "must be between 1 and 1440"
+            )
+        return self
+
 
 class AppConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -312,6 +368,44 @@ class AppConfig(BaseModel):
         free_user_music_gen_24h_limit: int = 2
         subscribed_user_music_gen_24h_limit: int = 6
         image_compression_threshold_size_kb: int = 500
+
+        @model_validator(mode="after")
+        def auto_correct_voice_and_guest_limits(self) -> "AppConfig.LimitsConfig":
+            """Sync voice limits to chat limits; reset guest>free to defaults."""
+            if self.guest_user_voice_24h_limit != self.guest_user_chat_24h_limit:
+                logger.warning(
+                    "Config issue: guest_user_voice_24h_limit "
+                    f"({self.guest_user_voice_24h_limit}) "
+                    f"!= guest_user_chat_24h_limit ({self.guest_user_chat_24h_limit}). "
+                    f"Auto-correcting to {self.guest_user_chat_24h_limit}"
+                )
+                self.guest_user_voice_24h_limit = self.guest_user_chat_24h_limit
+
+            if self.free_user_voice_24h_limit != self.free_user_chat_24h_limit:
+                logger.warning(
+                    "Config issue: free_user_voice_24h_limit "
+                    f"({self.free_user_voice_24h_limit}) "
+                    f"!= free_user_chat_24h_limit ({self.free_user_chat_24h_limit}). "
+                    f"Auto-correcting to {self.free_user_chat_24h_limit}"
+                )
+                self.free_user_voice_24h_limit = self.free_user_chat_24h_limit
+
+            if self.guest_user_chat_24h_limit > self.free_user_chat_24h_limit:
+                default_guest = 10
+                default_free = 100
+                logger.warning(
+                    "Config issue: guest_user_chat_24h_limit "
+                    f"({self.guest_user_chat_24h_limit}) "
+                    f"> free_user_chat_24h_limit ({self.free_user_chat_24h_limit}). "
+                    f"Auto-correcting to defaults: guest={default_guest}, "
+                    f"free={default_free}"
+                )
+                self.guest_user_chat_24h_limit = default_guest
+                self.free_user_chat_24h_limit = default_free
+                self.guest_user_voice_24h_limit = default_guest
+                self.free_user_voice_24h_limit = default_free
+
+            return self
 
     limits: LimitsConfig = Field(default_factory=LimitsConfig)
 
@@ -747,6 +841,33 @@ class PhoneCallConfig(BaseModel):
     default_inbound_agent_id: str = ""
     media_stream_token_ttl_seconds: int = 300
 
+    @model_validator(mode="after")
+    def validate_phone_call_when_enabled(self) -> "PhoneCallConfig":
+        """Range/format checks formerly in ``_validate_config`` (CFG-PYD-OPT-01b)."""
+        if not self.enabled:
+            return self
+        if (
+            self.media_stream_token_ttl_seconds < 60
+            or self.media_stream_token_ttl_seconds > 3600
+        ):
+            raise ValueError(
+                "phone_call.media_stream_token_ttl_seconds must be between 60 and 3600"
+            )
+        if (
+            self.twilio_media_stream_base_url
+            and not self.twilio_media_stream_base_url.startswith("wss://")
+        ):
+            raise ValueError(
+                "phone_call.twilio_media_stream_base_url must start with wss://"
+            )
+        if self.default_country_code and not self.default_country_code.startswith(
+            "+"
+        ):
+            raise ValueError(
+                "phone_call.default_country_code must start with '+'"
+            )
+        return self
+
 
 class TTSConfig(BaseModel):
     """语音播报配置"""
@@ -939,41 +1060,7 @@ def _validate_config(config: Config):
                 "agent.newapi_gemini_bearer_token or NEWAPI_GEMINI_BEARER_TOKEN required when newapi_gemini_base_url is set"
             )
 
-    # 校验并自动修正 limits 配置
     limits = config.app.limits
-
-    # 规则1: 游客语音生成次数应该等于聊天次数，否则以聊天次数为准
-    if limits.guest_user_voice_24h_limit != limits.guest_user_chat_24h_limit:
-        logger.warning(
-            f"Config issue: guest_user_voice_24h_limit ({limits.guest_user_voice_24h_limit}) "
-            f"!= guest_user_chat_24h_limit ({limits.guest_user_chat_24h_limit}). "
-            f"Auto-correcting to {limits.guest_user_chat_24h_limit}"
-        )
-        limits.guest_user_voice_24h_limit = limits.guest_user_chat_24h_limit
-
-    # 规则2: 登录用户语音生成次数应该等于聊天次数，否则以聊天次数为准
-    if limits.free_user_voice_24h_limit != limits.free_user_chat_24h_limit:
-        logger.warning(
-            f"Config issue: free_user_voice_24h_limit ({limits.free_user_voice_24h_limit}) "
-            f"!= free_user_chat_24h_limit ({limits.free_user_chat_24h_limit}). "
-            f"Auto-correcting to {limits.free_user_chat_24h_limit}"
-        )
-        limits.free_user_voice_24h_limit = limits.free_user_chat_24h_limit
-
-    # 规则3: 游客聊天次数应该 <= 登录用户，否则使用默认值
-    if limits.guest_user_chat_24h_limit > limits.free_user_chat_24h_limit:
-        default_guest = 10
-        default_free = 100
-        logger.warning(
-            f"Config issue: guest_user_chat_24h_limit ({limits.guest_user_chat_24h_limit}) "
-            f"> free_user_chat_24h_limit ({limits.free_user_chat_24h_limit}). "
-            f"Auto-correcting to defaults: guest={default_guest}, free={default_free}"
-        )
-        limits.guest_user_chat_24h_limit = default_guest
-        limits.free_user_chat_24h_limit = default_free
-        # 同步修正语音限制
-        limits.guest_user_voice_24h_limit = default_guest
-        limits.free_user_voice_24h_limit = default_free
 
     if (
         config.app.environment != Environment.TEST
@@ -981,78 +1068,4 @@ def _validate_config(config: Config):
     ):
         raise ValueError(
             "test_only_guest_user_image_gen_24h_limit is only allowed in test environment"
-        )
-
-    ws_idle = config.app.features.chat_ws_idle_timeout_seconds
-    if ws_idle < 10 or ws_idle > 3600:
-        raise ValueError(
-            "app.features.chat_ws_idle_timeout_seconds must be between 10 and 3600"
-        )
-
-    pc = config.phone_call
-    if pc.enabled:
-        if (
-            pc.media_stream_token_ttl_seconds < 60
-            or pc.media_stream_token_ttl_seconds > 3600
-        ):
-            raise ValueError(
-                "phone_call.media_stream_token_ttl_seconds must be between 60 and 3600"
-            )
-        if (
-            pc.twilio_media_stream_base_url
-            and not pc.twilio_media_stream_base_url.startswith("wss://")
-        ):
-            raise ValueError(
-                "phone_call.twilio_media_stream_base_url must start with wss://"
-            )
-        if pc.default_country_code and not pc.default_country_code.startswith(
-            "+"
-        ):
-            raise ValueError(
-                "phone_call.default_country_code must start with '+'"
-            )
-
-    from app.core.companion_harness.memory.transcript_compaction import (
-        CompactionConfig as CompanionTranscriptCompactionConfig,
-    )
-
-    feats = config.app.features
-    if feats.companion_transcript_llm_window_max_messages is not None:
-        w = feats.companion_transcript_llm_window_max_messages
-        if w < 2 or w > 500:
-            raise ValueError(
-                "app.features.companion_transcript_llm_window_max_messages must be between 2 and 500"
-            )
-    if feats.companion_transcript_compaction is not None:
-        CompanionTranscriptCompactionConfig.model_validate(
-            feats.companion_transcript_compaction
-        )
-    tb_wait = feats.companion_tool_bg_idle_wait_timeout_sec
-    if tb_wait < 1.0 or tb_wait > 3600.0:
-        raise ValueError(
-            "app.features.companion_tool_bg_idle_wait_timeout_sec must be between 1 and 3600"
-        )
-    greet_timeout = feats.companion_implicit_sign_on_greeting_llm_timeout_sec
-    if greet_timeout < 1.0 or greet_timeout > 60.0:
-        raise ValueError(
-            "app.features.companion_implicit_sign_on_greeting_llm_timeout_sec "
-            "must be between 1 and 60"
-        )
-    greet_attempts = feats.companion_implicit_sign_on_greeting_llm_max_attempts
-    if greet_attempts < 1 or greet_attempts > 5:
-        raise ValueError(
-            "app.features.companion_implicit_sign_on_greeting_llm_max_attempts "
-            "must be between 1 and 5"
-        )
-    pc_idle = feats.companion_ws_proactive_chat_base_idle_seconds
-    if pc_idle < 10.0 or pc_idle > 3600.0:
-        raise ValueError(
-            "app.features.companion_ws_proactive_chat_base_idle_seconds "
-            "must be between 10 and 3600"
-        )
-    pc_stop = feats.companion_ws_proactive_chat_stop_after_silence_minutes
-    if pc_stop < 1.0 or pc_stop > 1440.0:
-        raise ValueError(
-            "app.features.companion_ws_proactive_chat_stop_after_silence_minutes "
-            "must be between 1 and 1440"
         )
