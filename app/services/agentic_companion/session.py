@@ -21,11 +21,8 @@ Concurrency vocabulary (human terms — three layers, not interchangeable):
   message, greeting, inner-tick fire (including dreaming), and tool-background downlink per
   ``(user_id, agent_id, chat_id)``.
 
-Post-prototype: enforce single-presence on ``accept()`` (#3272 —
-https://github.com/NascentCore/inty/issues/3272). Scope-level inner-tick
-worker (dreaming + maintenance/autonomy without signed-on user): #3255 /
-TODO(scope-inner-tick-worker) in ``inner_tick_poll``. Presence poll keeps delivery tracks only
-(proactive, scheduled).
+Scope-level inner-tick worker (``scope_inner_tick_poll`` / #3255): maintenance, autonomy,
+dreaming without signed-on user. Presence poll: proactive + scheduled delivery only.
 """
 
 from __future__ import annotations
@@ -436,7 +433,6 @@ class Session:
                             # TODO(#3314): Move opportunistic cleanup out of the poll loop;
                             # completed background work should prune itself via registry callbacks.
                             self.coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
-                            self.coordinator.clear_inner_tick_autonomy_tool_bg_idle_if_idle()
                 if (
                     inner_tick_snapshot is None
                     or self._inner_tick_stop.is_set()

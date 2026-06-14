@@ -21,6 +21,10 @@ load_dotenv()
 # 如果不在最前面，有可能导致环境变量未注入导致 LangSmith tracing 获得空的环境变量，从而失效
 from app.core.build_info import build_time_utc, vcs_dirty, vcs_revision
 from app.core.config import global_config_loaded_from_config_yaml
+from app.services.agentic_companion.scope_inner_tick_lifecycle import (
+    start_scope_inner_tick_worker,
+    stop_scope_inner_tick_worker,
+)
 
 from app.api.deps import get_async_db
 from app.api.utils.health_check_payload import build_health_check_data
@@ -151,6 +155,8 @@ async def startup_event():
             await agent_manager.initialize_popular_agents(db_session)
             break  # 只需要一次初始化
         logger.info("Agent初始化完成")
+        await start_scope_inner_tick_worker()
+        logger.info("Scope inner-tick worker scheduled")
 
     except Exception as e:
         logger.error(f"应用启动过程中出错: {str(e)}")
@@ -254,6 +260,7 @@ async def _preload_database_tables(db: AsyncSession):
 async def shutdown_event():
     """应用关闭事件"""
     try:
+        await stop_scope_inner_tick_worker()
         from app.core.companion_harness.companion.websocket_coordinator import (
             ChatWsInflightShutdownRegistry,
         )
