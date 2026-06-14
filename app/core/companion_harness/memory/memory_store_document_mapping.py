@@ -13,7 +13,12 @@ _MEMORY_DAILY_RE: Final[re.Pattern[str]] = re.compile(
 
 
 class CompanionMemoryDocumentKind(str, Enum):
-    """Persisted document discriminator (no DB path columns)."""
+    """Persisted document discriminator (no DB path columns).
+
+    TODO(memory-context-hierarchy): Group kinds under logical layers (pinned block vs recall
+    stream vs archival vs private working vs external) in docs and optional taxonomy module —
+    #3405.
+    """
 
     IDENTITY = "identity"
     SOUL = "soul"

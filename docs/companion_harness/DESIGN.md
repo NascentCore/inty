@@ -157,6 +157,8 @@ User (App / WeChat / Telegram / REPL)
 - `*.md` refer to semantic content
 - `*.jsonl` refer to episodic content
 
+TODO(memory-context-hierarchy): Replace stub with full context hierarchy (pinned blocks, recall stream, archival semantic, private working, external knowledge) and path mapping — !3405.
+
 ## Turn 轨道：用户与智能体交互及慢周期后台数据处理支持 (Runtime Loops)
 
 `CompanionTurnTrack`（`companion/models.py`）与 `run_turn` 一一对应；inner-tick 活动由 `InnerTickActivity` 区分。
