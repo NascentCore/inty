@@ -121,10 +121,10 @@ flowchart TB
 
 | task_id | status | 描述 |
 |--------|--------|------|
-| CFG-PYD-OPT-01 | in_progress | 将 `_validate_config` 中仅依赖单个子树的规则拆入对应 `BaseModel` 的 `model_validator` |
-| CFG-PYD-OPT-01a | claimed | `AppConfig.LimitsConfig`：语音=聊天同步、游客≤登录用户自动修正 → `model_validator`；Claimed in `cursor/agent-maintenance-tasks-5722` |
-| CFG-PYD-OPT-01b | claimed | `PhoneCallConfig`：enabled 时 TTL / WSS URL / 国家码校验 → `model_validator`；Claimed in `cursor/agent-maintenance-tasks-5722` |
-| CFG-PYD-OPT-01c | claimed | `FeaturesConfig`：WS idle、companion transcript/compaction、proactive chat 等范围校验 → `model_validator`；Claimed in `cursor/agent-maintenance-tasks-5722` |
+| CFG-PYD-OPT-01 | in_progress | 将 `_validate_config` 中仅依赖单个子树的规则拆入对应 `BaseModel` 的 `model_validator`（required keys、agent nicknames、environment×limits 仍留根校验） |
+| CFG-PYD-OPT-01a | done | `AppConfig.LimitsConfig`：语音=聊天同步、游客≤登录用户自动修正 → `model_validator`；Fixed in `cursor/agent-maintenance-tasks-5722` |
+| CFG-PYD-OPT-01b | done | `PhoneCallConfig`：enabled 时 TTL / WSS URL / 国家码校验 → `model_validator`；Fixed in `cursor/agent-maintenance-tasks-5722` |
+| CFG-PYD-OPT-01c | done | `FeaturesConfig`：WS idle、companion transcript/compaction、proactive chat 等范围校验 → `model_validator`；Fixed in `cursor/agent-maintenance-tasks-5722` |
 | CFG-PYD-OPT-02 | — | 为 YAML 根定义顶层 `RootConfig` 单模型，合并 `load_config` 与 `surprise_snap` 特例（减少手写拼装） |
 | CFG-PYD-OPT-03 | done | 删除重复的 `from loguru import logger` 等无关清理；Fixed in `cursor/agent-maintenance-tasks-4126` |
 
