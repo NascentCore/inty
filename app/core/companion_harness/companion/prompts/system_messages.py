@@ -262,6 +262,7 @@ def _output_contract_text_interactive_bootstrap_tools() -> str:
     base = (
         "输出与工具（交互式关系建立阶段）："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
+        # TODO(structured-memdoc-names): Use template variable and MemoryDoc name variable to assemble this line.
         + "（0）本阶段用 **memory_store_write_document** 把 **COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
         "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
         "即使用户配合度低，也基于已有对话写 best-effort 初稿，不可留空模板。"
