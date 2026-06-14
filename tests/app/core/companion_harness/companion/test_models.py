@@ -12,9 +12,11 @@ from app.core.companion_harness.companion.models import (
     AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
     ChatMessage,
     ContextMeta,
+    TranscriptProjection,
     is_transcript_row_user_visible,
     load_prompt_bundle,
     load_transcript_from_store,
+    load_transcript_projection_from_store,
     load_transcript_text,
     load_user_visible_transcript_from_store,
     transcript_for_llm_turn,
@@ -225,3 +227,31 @@ def test_load_user_visible_transcript_from_store(tmp_path: Path) -> None:
     assert transcript_rows_user_visible(visible) == visible
     assert len(visible) == 1
     assert visible[0].content == "hi"
+
+
+def test_load_transcript_projection_from_store(tmp_path: Path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("models", "a", f"{tmp_path.name}-proj"),
+        repository=None,
+    )
+    rows = [
+        {"role": "user", "content": "hi", "ts": "2026-01-01T00:00:00Z"},
+        {
+            "role": "system",
+            "content": "[ai_private_splice]",
+            "ts": "2026-01-01T00:01:00Z",
+            "source": AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
+        },
+    ]
+    store.write_document(
+        "transcript.jsonl", "\n".join(json.dumps(r) for r in rows) + "\n"
+    )
+    full = load_transcript_projection_from_store(
+        store, "transcript.jsonl", TranscriptProjection.FULL
+    )
+    visible = load_transcript_projection_from_store(
+        store, "transcript.jsonl", TranscriptProjection.USER_VISIBLE
+    )
+    assert len(full) == 2
+    assert len(visible) == 1
+    assert load_user_visible_transcript_from_store(store, "transcript.jsonl") == visible

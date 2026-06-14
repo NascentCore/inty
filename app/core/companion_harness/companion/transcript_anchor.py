@@ -17,6 +17,8 @@ class RealUserTranscriptAnchor:
 
 
 def parse_transcript_row_ts(ts: str) -> datetime:
+    """Parse transcript ``ts`` values as timezone-aware UTC datetimes."""
+    assert ts
     s = ts.strip()
     if s.endswith("Z"):
         s = s[:-1] + "+00:00"
@@ -24,6 +26,9 @@ def parse_transcript_row_ts(ts: str) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
+
+
+parse_transcript_datetime = parse_transcript_row_ts
 
 
 def last_real_user_transcript_anchor(

@@ -74,6 +74,7 @@ from .models import (
     load_transcript_from_store,
     transcript_without_trailing_presence_signals,
 )
+from .transcript_anchor import parse_transcript_row_ts as parse_transcript_datetime
 
 _FIRST_DREAMING_LOOKBACK = timedelta(hours=24)
 
@@ -114,16 +115,6 @@ class DreamingCandidate:
     latest_user_ts: datetime
     boundary_line_count: int
     boundary_uuid: str
-
-
-def parse_transcript_datetime(raw: str) -> datetime:
-    """Parse transcript ``ts`` values as timezone-aware UTC datetimes."""
-    assert raw
-    normalized = raw.replace("Z", "+00:00")
-    dt = datetime.fromisoformat(normalized)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
 
 
 def load_dreaming_state(store: MemoryStore) -> DreamingState | None:

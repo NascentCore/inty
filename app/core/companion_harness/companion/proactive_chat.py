@@ -24,7 +24,12 @@ from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .models import ChatMessage, load_transcript_from_store
+from .models import (
+    ChatMessage,
+    PROACTIVE_CHAT_SILENT_TOKEN,
+    TranscriptProjection,
+    load_transcript_projection_from_store,
+)
 from .transcript_anchor import last_real_user_transcript_anchor, parse_transcript_row_ts
 
 PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
@@ -40,8 +45,6 @@ PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
 PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER = (
     "[SYSTEM PROACTIVE CHAT] The user has not sent a new message for some time."
 )
-
-PROACTIVE_CHAT_SILENT_TOKEN = "[SILENT]"
 
 _NEVER = 86400.0 * 365.0
 
@@ -177,7 +180,9 @@ def next_proactive_chat_wait_seconds(
     now: datetime | None = None,
 ) -> float:
     """Seconds until proactive chat may fire; <= 0 when due; large value when gated off."""
-    msgs = load_transcript_from_store(store, "transcript.jsonl")
+    msgs = load_transcript_projection_from_store(
+        store, "transcript.jsonl", TranscriptProjection.FULL
+    )
     if len(msgs) < config.min_transcript_lines:
         return _NEVER
 

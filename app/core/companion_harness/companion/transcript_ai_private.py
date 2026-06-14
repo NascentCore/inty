@@ -14,17 +14,18 @@ from app.core.companion_harness.companion.ai_private_prompt import (
     mark_ai_private_surfaced,
     select_unsurfaced_thoughts_after_anchor as load_unsurfaced_after_ts,
 )
-from app.core.companion_harness.companion.dreaming import parse_transcript_datetime
 from app.core.companion_harness.companion.models import (
     AI_PRIVATE_HYDRATED_SOURCE,
     AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
     ChatMessage,
     CompanionTurnTrack,
+    PROACTIVE_CHAT_SILENT_TOKEN,
     is_ai_private_splice_manifest,
 )
-from app.core.companion_harness.companion.proactive_chat import PROACTIVE_CHAT_SILENT_TOKEN
 from app.core.companion_harness.companion.transcript_anchor import (
+    RealUserTranscriptAnchor,
     last_real_user_transcript_anchor,
+    parse_transcript_datetime,
 )
 from app.core.companion_harness.companion.utc import (
     transcript_message_content_for_llm,
@@ -40,6 +41,7 @@ _AI_PRIVATE_SPLICE_TRACKS: frozenset[CompanionTurnTrack] = frozenset(
         CompanionTurnTrack.USER_CHAT,
         CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
         CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+        # TODO(ai-private-splice-scheduled): INNER_TICK_SCHEDULED + GREETING if product wants parity
     }
 )
 
@@ -70,12 +72,10 @@ def track_uses_ai_private_splice(track: CompanionTurnTrack) -> bool:
     return track in _AI_PRIVATE_SPLICE_TRACKS
 
 
-def select_tail_splice_thoughts(
+def _tail_splice_thoughts_at_anchor(
     store: MemoryStore,
-    loaded_transcript: list[ChatMessage],
+    anchor: RealUserTranscriptAnchor,
 ) -> list[AiPrivateThought]:
-    """Unsurfaced monolog after the last real user anchor in ``loaded_transcript``."""
-    anchor = last_real_user_transcript_anchor(loaded_transcript)
     thoughts = load_unsurfaced_after_ts(store, anchor_ts=anchor.ts)
     if anchor.uuid is None:
         return thoughts
@@ -86,12 +86,22 @@ def select_tail_splice_thoughts(
     ]
 
 
+def select_tail_splice_thoughts(
+    store: MemoryStore,
+    loaded_transcript: list[ChatMessage],
+) -> list[AiPrivateThought]:
+    """Unsurfaced monolog after the last real user anchor in ``loaded_transcript``."""
+    return _tail_splice_thoughts_at_anchor(
+        store, last_real_user_transcript_anchor(loaded_transcript)
+    )
+
+
 def build_ai_private_splice_plan(
     store: MemoryStore, loaded_transcript: list[ChatMessage]
 ) -> AiPrivateSplicePlan:
     anchor = last_real_user_transcript_anchor(loaded_transcript)
     return AiPrivateSplicePlan(
-        thoughts=tuple(select_tail_splice_thoughts(store, loaded_transcript)),
+        thoughts=tuple(_tail_splice_thoughts_at_anchor(store, anchor)),
         anchor_user_msg_uuid=anchor.uuid,
     )
 
@@ -115,6 +125,7 @@ def persist_ai_private_splice_if_applicable(
         return
     thought_uuids = [t.uuid for t in persist_input.splice_plan.thoughts]
     mark_ai_private_surfaced(persist_input.store, thought_uuids)
+    # TODO(ai-private-persist-atomic): surfaced marker + manifest append should share one write batch
     manifest_row = build_ai_private_splice_manifest_row(
         thought_uuids=thought_uuids,
         reply_to_user_msg_uuid=persist_input.user_msg_uuid,
