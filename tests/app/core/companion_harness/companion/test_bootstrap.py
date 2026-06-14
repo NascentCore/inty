@@ -78,6 +78,35 @@ def test_tool_companion_set_experience_profile_updates_context(tmp_path: Path) -
     assert data["experience_change_note"] == "user asked"
 
 
+def test_tool_companion_set_experience_profile_repairs_drifted_context(
+    tmp_path: Path,
+) -> None:
+    st = _store(tmp_path)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "roleplay",
+                "experience_directives": {"intent": "casual_chat", "tone": "warm"},
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    ok = tool_companion_set_experience_profile(
+        st,
+        CompanionSetExperienceProfileToolInput(
+            experience_intent=ExperienceSessionIntent.EMOTIONAL_SUPPORT,
+            note="repair drift",
+        ),
+    )
+    assert ok.startswith("OK ")
+    data = json.loads(st.read_document("context.json"))
+    assert data["context_mode"] == "emotional_companion"
+    assert data["experience_directives"]["intent"] == "emotional_support"
+    assert data["experience_directives"]["tone"] == "warm"
+
+
 def test_execute_tool_call_dispatch_set_experience_profile_missing_note(
     tmp_path: Path,
 ) -> None:

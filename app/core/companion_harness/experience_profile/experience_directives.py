@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from app.core.companion_harness.experience_profile.context_mode import (
     ExperienceContextMode,
@@ -99,6 +99,29 @@ class ExperienceDirectives(BaseModel):
                 return None
             return ExperienceDirectiveTone(normalized)
         return v
+
+
+def repair_context_json_dict(raw: dict[str, object]) -> dict[str, object]:
+    """Align ``context_mode`` with ``experience_directives.intent`` when intent is set.
+
+    Read/modify paths call this before ``ContextMeta.model_validate`` so legacy drift
+    does not brick ``load_context_meta`` or block the experience-profile tool.
+    """
+
+    data = dict(raw)
+    directives_raw = data.get("experience_directives")
+    if not isinstance(directives_raw, dict):
+        return data
+    try:
+        directives = ExperienceDirectives.model_validate(directives_raw)
+    except ValidationError:
+        return data
+    if directives.intent is None:
+        return data
+    expected = context_mode_for_session_intent(directives.intent)
+    if data.get("context_mode") != expected:
+        data["context_mode"] = expected
+    return data
 
 
 EXPERIENCE_DIRECTIVES_SYSTEM_HEADING = (

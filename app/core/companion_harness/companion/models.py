@@ -26,6 +26,7 @@ from app.core.companion_harness.experience_profile.context_mode import (
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectives,
     context_mode_for_session_intent,
+    repair_context_json_dict,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
@@ -371,7 +372,7 @@ def load_context_meta(*, store: MemoryStore) -> ContextMeta:
             raise ValueError(
                 "context.json: invalid JSON in memory store"
             ) from e
-        return ContextMeta.model_validate(raw)
+        return ContextMeta.model_validate(repair_context_json_dict(raw))
     return ContextMeta()
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -71,6 +72,29 @@ def test_context_meta_rejects_intent_context_mode_drift() -> None:
                 "experience_directives": {"intent": "casual_chat"},
             }
         )
+
+
+def test_load_context_meta_repairs_intent_context_mode_drift(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("ed-drift", "a", tmp_path.name),
+        repository=None,
+    )
+    store.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "roleplay",
+                "experience_directives": {"intent": "casual_chat"},
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    meta = load_context_meta(store=store)
+    assert meta.context_mode == "emotional_companion"
+    assert meta.experience_directives.intent == ExperienceSessionIntent.CASUAL_CHAT
 
 
 def test_load_context_meta_legacy_json_without_directives(

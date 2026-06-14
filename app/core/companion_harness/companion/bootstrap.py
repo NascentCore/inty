@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
+    ExperienceDirectives,
     ExperienceSessionIntent,
     context_mode_for_session_intent,
 )
@@ -213,22 +214,26 @@ def tool_companion_set_experience_profile(
     if not isinstance(data, dict):
         return "ERROR: context.json must be a JSON object"
     previous = str(data.get("context_mode", "")).strip() or "(unset)"
-    meta = ContextMeta.model_validate(data)
+    existing_directives = ExperienceDirectives.model_validate(
+        data.get("experience_directives") or {}
+    )
     directive_updates: dict[str, ExperienceSessionIntent | ExperienceDirectiveTone] = {
         "intent": tool_input.experience_intent,
     }
     if tool_input.tone is not None:
         directive_updates["tone"] = tool_input.tone
-    directives = meta.experience_directives.model_copy(update=directive_updates)
-    updated = meta.model_copy(
-        update={
+    directives = existing_directives.model_copy(update=directive_updates)
+    updated = ContextMeta.model_validate(
+        {
+            **data,
             "context_mode": normalized,
             "experience_directives": directives,
         }
     )
-    data = updated.model_dump(mode="json")
-    data["experience_change_note"] = tool_input.note.strip()[:2000]
-    out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    persisted = updated.model_dump(mode="json")
+    # Audit note only; not part of ContextMeta (ephemeral tool rationale).
+    persisted["experience_change_note"] = tool_input.note.strip()[:2000]
+    out = json.dumps(persisted, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel_ctx, out)
     logger.info(
         "companion_set_experience_profile scope={} {} -> {} intent={} tone={}",

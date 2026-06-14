@@ -90,10 +90,11 @@ def test_contextual_messages_include_experience_directives_when_tone_set() -> No
     messages = build_system_messages_for_chat_track(
         bundle,
         ContextMeta(
+            context_mode="intimate",
             experience_directives=ExperienceDirectives(
                 intent=ExperienceSessionIntent.DEEP_CONVERSATION,
                 tone=ExperienceDirectiveTone.WARM,
-            )
+            ),
         ),
         memory_bootstrap_type="none",
     )
