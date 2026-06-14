@@ -13,8 +13,9 @@ entry points after resolving a ``CompanionSession``.
 - Authoritative ``dreaming_due`` checks run inside the lock within
   ``dreaming_batch.run_dreaming_batch_if_due``; callers must not decide due/skip
   outside the lock.
+- Inner-tick AwakeTurn due checks and kernel fires live in
+  ``inner_tick_fire``; callers hold ``turn_lock`` before calling.
 - One signed-on presence per paired user (#3272); user chat and inner-tick
   (including dreaming) serialize on scope ``turn_lock``.
 - Future: scope-level worker (#3255, Epic #3373) and Postgres advisory lock (#3271).
-
 """
