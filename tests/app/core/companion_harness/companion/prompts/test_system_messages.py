@@ -138,6 +138,33 @@ def test_inner_tick_maintenance_omits_infer_time_zone_slice() -> None:
     assert "用户当地时间与作息" not in joined
 
 
+def test_inner_tick_maintenance_is_monolog_only_without_ls_tc_or_memory_store() -> None:
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+    )
+    messages = build_system_messages_for_inner_tick_maintenance(
+        store=MemoryStore(
+            scope=CompanionScope("sm", "a", "maintenance-prompt"),
+            repository=None,
+        ),
+        bundle=bundle,
+        context=ContextMeta(),
+    )
+    contents = [str(m["content"]) for m in messages if m["role"] == "system"]
+    inner_blocks = [c for c in contents if c.startswith("本轮（内在节拍）")]
+    assert len(inner_blocks) == 1
+    block = inner_blocks[0]
+    assert "ai_private_append" in block
+    assert "memory_store_write_document" not in block
+    assert "living_sphere_record_update" not in block
+    assert "面向用户的正文**必须为空字符串**" in block
+    assert any(c.startswith("内在活动（ai_private）") for c in contents)
+
+
 def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
     bundle = PromptBundle(
         identity="identity\n",
@@ -328,7 +355,7 @@ def test_proactive_chat_injects_life_currents_when_present(tmp_path) -> None:
     assert life_lines[0] == "## 你最近在做的事（仅供参考）"
     assert "跟得上他在做的独立游戏圈" in life_block
     assert "翻一翻他上次提到的那本《xxx》" in life_block
-    assert life_lines[-1].startswith("若自然，可把")
+    assert life_lines[-1].startswith("内在独白（ai_private）已在对话上下文中")
 
 
 def test_proactive_chat_omits_life_currents_when_missing(tmp_path) -> None:
