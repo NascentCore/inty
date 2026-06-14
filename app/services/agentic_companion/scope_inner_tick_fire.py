@@ -2,7 +2,7 @@
 
 Orchestration only — Postgres reads go through ``inner_tick_scope`` /
 ``scope_inner_tick_persistence``; kernel due + turns via ``companion_harness.runtime``.
-# TODO(dedup-scope-presence-inner-tick): Share maintenance/autonomy fire bodies via harness runtime + throttle adapter.
+# TODO(dedup-scope-presence-inner-tick): Share maintenance/autonomy fire bodies — #3424.
 """
 
 from __future__ import annotations

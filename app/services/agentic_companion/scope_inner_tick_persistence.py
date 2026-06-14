@@ -8,7 +8,7 @@ from app.core.companion_harness.memory.companion_scope_listing import (
 )
 from app.db.session import AsyncSessionLocal
 
-# TODO(scope-listing-due-filter): Narrow to scopes due for dreaming/maintenance (#3255 follow-up).
+# TODO(scope-listing-due-filter): Narrow to scopes due for dreaming/maintenance — #3423.
 
 
 async def fetch_initialized_companion_scopes() -> list[CompanionScope]:
