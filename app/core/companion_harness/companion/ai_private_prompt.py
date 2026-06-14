@@ -22,7 +22,9 @@ from typing import Any, Literal
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.companion_harness.companion.dreaming import parse_transcript_datetime
+from app.core.companion_harness.companion.transcript_anchor import (
+    parse_transcript_row_ts as parse_transcript_datetime,
+)
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 

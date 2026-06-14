@@ -408,7 +408,7 @@ def transcript_without_trailing_presence_signals(
     return msgs[:i]
 
 
-def load_transcript_from_store(
+def _read_transcript_rows_from_store(
     store: MemoryStore, relative_path: str
 ) -> list[ChatMessage]:
     body = store.read_document_if_exists(relative_path)
@@ -428,12 +428,21 @@ def load_transcript_projection_from_store(
     projection: TranscriptProjection,
 ) -> list[ChatMessage]:
     """Load transcript JSONL with an explicit consumer projection."""
-    rows = load_transcript_from_store(store, relative_path)
+    rows = _read_transcript_rows_from_store(store, relative_path)
     match projection:
         case TranscriptProjection.FULL:
             return rows
         case TranscriptProjection.USER_VISIBLE:
             return transcript_rows_user_visible(rows)
+
+
+def load_transcript_from_store(
+    store: MemoryStore, relative_path: str
+) -> list[ChatMessage]:
+    """Load full transcript JSONL (LLM context, compaction, proactive rhythm)."""
+    return load_transcript_projection_from_store(
+        store, relative_path, TranscriptProjection.FULL
+    )
 
 
 def load_user_visible_transcript_from_store(
@@ -497,8 +506,12 @@ def companion_turn_transcript_loaded_messages(
     load ``transcript.jsonl`` as-is; maintenance turns merge the inner file for their own LLM
     context.
     """
-    raw_main = load_transcript_from_store(store, rel_main_transcript)
-    raw_inner = load_transcript_from_store(store, rel_inner_tick_transcript)
+    raw_main = load_transcript_projection_from_store(
+        store, rel_main_transcript, TranscriptProjection.FULL
+    )
+    raw_inner = load_transcript_projection_from_store(
+        store, rel_inner_tick_transcript, TranscriptProjection.FULL
+    )
     tick_proactive = (
         inner_tick_turn
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT

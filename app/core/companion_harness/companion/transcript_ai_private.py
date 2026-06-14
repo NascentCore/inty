@@ -256,8 +256,6 @@ def dreaming_transcript_block(
     expanded = expand_manifest_rows(store, rows)
     lines: list[str] = []
     for row in expanded:
-        if is_ai_private_splice_manifest(row):
-            continue
         if row.source == AI_PRIVATE_HYDRATED_SOURCE:
             lines.append(
                 f"[{row.ts}] Inner monolog (ai_private): {row.content}"

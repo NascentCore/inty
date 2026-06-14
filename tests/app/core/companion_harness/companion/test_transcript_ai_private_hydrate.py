@@ -9,6 +9,7 @@ from app.core.companion_harness.companion.models import (
     AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
     ChatMessage,
     CompanionTurnTrack,
+    PROACTIVE_CHAT_SILENT_TOKEN,
     load_transcript_from_store,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -19,6 +20,7 @@ from app.core.companion_harness.companion.transcript_ai_private import (
     expand_manifest_rows,
     persist_ai_private_splice_if_applicable,
     select_tail_splice_thoughts,
+    should_persist_ai_private_splice,
     transcript_window_to_llm_dialogue,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -136,3 +138,39 @@ def test_persist_ai_private_splice_appends_manifest_and_marks_surfaced(
             ),
         ],
     ) == []
+
+
+def test_persist_ai_private_splice_skips_silent_reply(tmp_path: Path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("silent", "a", tmp_path.name),
+        repository=None,
+    )
+    thought = append_ai_private_thought(
+        store, text="unsurfaced", after_user_msg_uuid=None
+    )
+    persist_input = AiPrivateSplicePersistInput(
+        store=store,
+        transcript_relative_path="transcript.jsonl",
+        track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+        splice_plan=AiPrivateSplicePlan(
+            thoughts=(thought,),
+            anchor_user_msg_uuid="user-1",
+        ),
+        user_msg_uuid="user-2",
+        assistant_text=PROACTIVE_CHAT_SILENT_TOKEN,
+        bootstrap_skip_final_transcript_assistant_row=False,
+    )
+    assert not should_persist_ai_private_splice(persist_input)
+    persist_ai_private_splice_if_applicable(persist_input)
+    assert load_transcript_from_store(store, "transcript.jsonl") == []
+    assert select_tail_splice_thoughts(
+        store,
+        [
+            ChatMessage(
+                role="user",
+                content="hi",
+                ts="2026-01-02T09:00:00+00:00",
+                uuid="user-1",
+            ),
+        ],
+    ) == [thought]

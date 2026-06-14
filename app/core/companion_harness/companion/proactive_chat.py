@@ -75,10 +75,6 @@ class ProactiveChatConfig(BaseModel):
     )
 
 
-def _parse_ts(ts: str) -> datetime:
-    return parse_transcript_row_ts(ts)
-
-
 def _user_message_gaps_seconds(msgs: list[ChatMessage]) -> list[float]:
     user_ts: list[datetime] = []
     for m in msgs:
@@ -86,7 +82,7 @@ def _user_message_gaps_seconds(msgs: list[ChatMessage]) -> list[float]:
             continue
         if m.proactive_chat is True:
             continue
-        user_ts.append(_parse_ts(m.ts))
+        user_ts.append(parse_transcript_row_ts(m.ts))
     if len(user_ts) < 2:
         return []
     gaps: list[float] = []
@@ -109,7 +105,7 @@ def _rhythm_idle_seconds(msgs: list[ChatMessage], base: float) -> float:
 def _last_assistant_ts(msgs: list[ChatMessage]) -> datetime | None:
     for m in reversed(msgs):
         if m.role == "assistant":
-            return _parse_ts(m.ts)
+            return parse_transcript_row_ts(m.ts)
     return None
 
 
