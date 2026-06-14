@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 BackgroundToolEventSink = Callable[["ToolOutputEvent"], None]
 
 
+# TODO(#3402): Replace with channel-agnostic ``UserVisibleChunk`` + ``UserVisibleChunkSink``.
 class BootstrapInterimOutput(BaseModel):
     """One bootstrap sync tool-loop LLM round delivered to the client before turn end."""
 
@@ -51,6 +52,9 @@ class TurnRouteMode(str, Enum):
     When ``tools_enabled``, routing is always ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``
     (tools run only in ``tool_background``). Otherwise in-turn sync chat uses
     ``PROACTIVE_CHAT_SYNC``, ``INNER_TICK_SYNC``, or ``CHAT_ONLY_SYNC``.
+
+    TODO(#3401): ``TurnRouteMode`` conflates ``CompanionTurnTrack`` with loop mechanism;
+    introduce ``AgenticLoopMechanism`` and resolve via ``resolve_agentic_loop(track, config)``.
     """
 
     # TODO: rename members to drop ``_SYNC`` / avoid leaking execution-strategy names;

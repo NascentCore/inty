@@ -1,5 +1,7 @@
 """Load ai_private text for MAINTENANCE inner-tick prompt injection.
 
+TODO(#3400): Track rename to monolog; prompt labels need not say ``ai_private`` in headers.
+
 ``ai_private.jsonl`` holds **inner thoughts about the user** (feelings, unsaid lines, scene
 beats in the relationship)—not virtual-world activity. Activity in TechnoCore / LivingSphere /
 the environment lives in ``LIFE_CURRENTS.md`` (AUTONOMY track).

@@ -1,5 +1,8 @@
 """Inner-tick turn execution: scheduled, proactive, maintenance, dreaming (WS + Weixin delivery).
 
+TODO(#3400): Rename maintenance inner-tick to monolog track/activity + wire meta
+(``companion_maintenance_inner_tick`` → monolog); behavior narrow stays #3375.
+
 Persists chat history and delivers assistant output via :class:`InnerTickDelivery`.
 WS wire envelopes are built here; Weixin receives plain text through the same path.
 
