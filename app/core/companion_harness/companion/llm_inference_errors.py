@@ -8,7 +8,10 @@ downstream crash on ``resp.choices[0]``. When an ``error`` body is present (Open
 return HTTP 200 with ``choices: null`` and upstream status in ``error.code``), that status
 maps to the client message; otherwise ``provider_http_status`` is ``None`` and a generic
 provider message is used.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

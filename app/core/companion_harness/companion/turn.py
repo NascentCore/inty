@@ -43,7 +43,10 @@ while the WebSocket ``turn_lock`` holder waits, so burst USER_MESSAGE can show o
 ``user-input`` with no ``chat`` (see ``chat.py`` USER_MESSAGE path, ``tool_background.py``).
 Issues: https://github.com/NascentCore/inty/issues/3123 (orchestration),
 https://github.com/NascentCore/inty/issues/3113 (WS turn_lock).
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

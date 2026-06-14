@@ -12,7 +12,10 @@ Turns serialize on scope ``CompanionSession.turn_lock`` (#3272). See
 TODO(ws-disconnect-lifecycle): https://github.com/NascentCore/inty/issues/3256 — on shutdown
 or WebSocket session end, do not cancel in-flight turns; persist-first with delivery state,
 mark undelivered, replay after ``user_signed_on``.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

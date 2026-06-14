@@ -12,7 +12,10 @@ Architecture enforcement: ``.cursor/skills/scripts/check_companion_turn_invarian
 
 TODO(crs-write-lattice): When ``TrackWritePolicy`` (#3367) lands, extend CI checker to enforce
 short-frame awake tracks cannot batch-curate long-frame MemoryDocs (canon #3365, epic #3341).
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 
