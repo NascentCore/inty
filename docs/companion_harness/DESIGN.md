@@ -34,16 +34,6 @@ Epic [#3395](https://github.com/nascentcore/inty/issues/3395) — Telegram × Bo
 
 Epic [#3341](https://github.com/nascentcore/inty/issues/3341) — psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
 
-- [ ] L0 canon: [#3345](https://github.com/nascentcore/inty/issues/3345) glossary (`RELATIONSHIP_STATE.md`), [#3365](https://github.com/nascentcore/inty/issues/3365) SDCM + write lattice
-- [x] Phase A: [#3342](https://github.com/nascentcore/inty/issues/3342) companionship doc + Turn Brief plumbing (no UX change)
-- [ ] Phase B: [#3343](https://github.com/nascentcore/inty/issues/3343) activate companionship prompt + `turn_recall` + dreaming curator
-- [ ] Bootstrap relationship seed: [#3328](https://github.com/nascentcore/inty/issues/3328)
-- [ ] Track write registry: [#3367](https://github.com/nascentcore/inty/issues/3367) `TrackWritePolicy` × time frame × `CompanionTurnTrack`
-- [ ] Optional long-cycle reflection: [#3366](https://github.com/nascentcore/inty/issues/3366)
-- [ ] Inspect companionship state: [#3346](https://github.com/nascentcore/inty/issues/3346)
-
-Awake express / Dreaming learn split: [PR #3290](https://github.com/NascentCore/inty/pull/3290) (merged); follow-up [#3375](https://github.com/NascentCore/inty/issues/3375) `narrow-maintenance` + [#3376](https://github.com/NascentCore/inty/issues/3376) `dreaming-day-rollup`.
-
 ### 将智能体运行环境收束成可移植可迁移的组件
 
 - [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）— Epic [#3373](https://github.com/NascentCore/inty/issues/3373)
