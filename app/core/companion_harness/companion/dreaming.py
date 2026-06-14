@@ -183,15 +183,17 @@ def dreaming_candidate_slice(
 
     Today only ``transcript.jsonl`` (user-visible chat, proactive, scheduled).
     TODO(dreaming-day-rollup): Merge same-day ``transcript_inner_tick.jsonl``
-    (AUTONOMY / MAINTENANCE), ``ai_private.jsonl``, and ``LIFE_CURRENTS.md``
-    (plus related tool/jsonl traces) into the candidate slice passed to
-    ``consolidate_memory_during_dreaming``; extend ``DreamingCandidate`` /
-    race guard if inner-tick boundaries need separate checkpoints (#3343; #3366 reflection).
+    (AUTONOMY / MAINTENANCE), ``LIFE_CURRENTS.md``, and related tool/jsonl traces
+    into the candidate slice passed to ``consolidate_memory_during_dreaming``;
+    extend ``DreamingCandidate`` / race guard if inner-tick boundaries need separate
+    checkpoints (#3376). Partial ai_private render (manifest hydrate + unconsumed
+    section) shipped in #3420 — candidate **selection** still main transcript only.
 
     Without checkpoint: at most the last 24h on the main transcript.
     """
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    # TODO(dreaming-day-rollup): load and merge paths.transcript_inner_tick here (#3376).
+    # TODO(dreaming-day-rollup): merge paths.transcript_inner_tick + LIFE_CURRENTS.md
+    # into candidate rows; ai_private dreaming render partial in #3420 (#3376).
     raw_rows = transcript_without_trailing_presence_signals(
         load_transcript_from_store(store, paths.transcript)
     )
