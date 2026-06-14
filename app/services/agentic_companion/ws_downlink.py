@@ -5,7 +5,7 @@ and ``chat_ws._companion_ws_bootstrap_interim_consumer``. Inner-tick assistant f
 ``inner_tick_fire`` + ``deliver_inner_tick_assistant``.
 
 TODO(companion-ws-outbound-unify): Route bootstrap + inner-tick through this adapter so
-``chat_ws`` has one downlink → ``outbound_queue`` contract. #3209 #3210 #3211 #3398
+``chat_ws`` has one downlink → ``outbound_queue`` contract. #3209 #3210 #3211 #3398 #3402
 """
 
 from __future__ import annotations
