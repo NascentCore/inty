@@ -38,6 +38,7 @@ from app.utils.langsmith import get_current_trace_info
 USER_FEEDBACK_JSONL_REL = ".companion_user_feedback.jsonl"
 COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME = "companion_record_user_feedback"
 
+# TODO(memdoc-path-constants): Snapshot paths from canonical MemDoc path constants. #3413
 SNAPSHOT_DOC_PATHS: tuple[str, ...] = (
     "context.json",
     "IDENTITY.md",

@@ -41,10 +41,6 @@ class PromptSliceId(StrEnum):
     COMPANIONSHIP = "COMPANIONSHIP"
 
 
-# Joins legacy single-string system prompt and interactive-bootstrap block strings.
-SYSTEM_PROMPT_SLICE_SEPARATOR: Final[str] = "\n\n---\n\n"
-
-
 def slice_to_workspace_rel(slice_id: PromptSliceId) -> str | None:
     """Workspace-relative path for persisted slices; BOOTSTRAP is package-only."""
     if slice_id == PromptSliceId.BOOTSTRAP:
@@ -52,6 +48,7 @@ def slice_to_workspace_rel(slice_id: PromptSliceId) -> str | None:
     return f"{slice_id.value}.md"
 
 
+# TODO(prompt-slice-dedup): Canonical persistable slices; memory_store_scope seeding should derive from here. #3417
 _PERSISTABLE_SLICE_IDS: Final[frozenset[PromptSliceId]] = frozenset(
     {
         PromptSliceId.IDENTITY,

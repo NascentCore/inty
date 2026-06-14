@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
+# TODO(memdoc-path-constants): Replace ad-hoc _MEMORY_REL with canonical constant. #3413
 _MEMORY_REL = "MEMORY.md"
 _MAX_HTML_BYTES = 2_000_000
 _DEFAULT_BULLETS = 10

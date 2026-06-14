@@ -84,12 +84,14 @@ from app.core.companion_harness.companion.transcript_assistant_row import (
     append_transcript_assistant_row,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.companion.message_format import (
+    openai_assistant_message_dict,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
+from .companion_tool_definitions import MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
 from .companion_tool_runtime import (
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     execute_tool_call,
-    openai_assistant_message_dict,
     round_includes_generation_tool,
     tool_requires_client_delivery_on_success,
 )

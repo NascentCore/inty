@@ -61,6 +61,8 @@ class CompanionMemoryDocumentKind(str, Enum):
     INTY_V2_SCHEDULE_TASKS_JSON = "inty_v2_schedule_tasks_json"
 
 
+# TODO(memdoc-path-constants): Derive keys from canonical MemDoc path constants (shared with
+# MemoryStoreScopePaths) instead of duplicating literals. #3413
 _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "IDENTITY.md": (CompanionMemoryDocumentKind.IDENTITY, None),
     "SOUL.md": (CompanionMemoryDocumentKind.SOUL, None),

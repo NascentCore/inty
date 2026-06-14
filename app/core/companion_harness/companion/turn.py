@@ -64,7 +64,6 @@ from typing import Any
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
@@ -86,8 +85,6 @@ from .llm_runtime_events import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .proactive_chat import (
-    PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
-    PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
     build_proactive_chat_transcript_user_marker,
 )
 from app.core.companion_harness.companion.bootstrap import (
