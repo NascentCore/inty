@@ -18,5 +18,4 @@ entry points after resolving a ``CompanionSession``.
 - One signed-on presence per paired user (#3272); user chat and inner-tick
   (including dreaming) serialize on scope ``turn_lock``.
 - Future: scope-level worker (#3255, Epic #3373) and Postgres advisory lock (#3271).
-
 """
