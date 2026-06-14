@@ -39,6 +39,7 @@ def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
         ("STYLE.md", "style\n"),
         ("USER.md", "user\n"),
         ("MEMORY.md", "mem\n"),
+        ("COMPANIONSHIP.md", "companionship\n"),
         ("context.json", '{"context_mode":"intimate"}\n'),
     ):
         store.write_document(name, body)

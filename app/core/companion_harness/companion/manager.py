@@ -20,7 +20,7 @@ import threading
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.companion_harness.experience_profile import (
+from app.core.companion_harness.experience_profile.context_mode import (
     ExperienceContextMode,
     normalize_experience_profile_id,
 )

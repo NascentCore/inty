@@ -16,7 +16,7 @@ from loguru import logger
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
 
 from app.utils import models_catalog
-from app.core.companion_harness.experience_profile import (
+from app.core.companion_harness.experience_profile.context_mode import (
     normalize_experience_profile_id,
 )
 from app.utils.companion_feature_defaults import (

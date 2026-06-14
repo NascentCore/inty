@@ -18,7 +18,7 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
         scope=CompanionScope("dream-mem", "agent", tmp_path.name),
         repository=None,
     )
-    for rel in ("MEMORY.md", "USER.md", "STYLE.md", "SOUL.md"):
+    for rel in ("MEMORY.md", "USER.md", "STYLE.md", "SOUL.md", "COMPANIONSHIP.md"):
         store.write_document(rel, f"{rel} seed\n")
     rows = [
         ChatMessage(
@@ -57,6 +57,7 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
         "user",
         "style",
         "soul",
+        "companionship",
     ]
     daily = store.read_document("memory/daily/2026-01-02.md")
     assert daily == "dreaming_day_summary curated\n"
@@ -65,3 +66,41 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
     assert store.read_document("USER.md") == "user curated\n"
     assert store.read_document("STYLE.md") == "style curated\n"
     assert store.read_document("SOUL.md") == "soul curated\n"
+    assert store.read_document("COMPANIONSHIP.md") == "companionship curated\n"
+
+
+def test_rewrite_companionship_md_uses_template_seed_when_missing(
+    tmp_path: Path,
+) -> None:
+    from app.core.companion_harness.memory.dreaming_consolidation import (
+        _rewrite_companionship_md,
+    )
+    from app.core.companion_harness.memory.memory_store_scope import (
+        load_template_seed_text,
+    )
+
+    store = MemoryStore(
+        scope=CompanionScope("dream-companionship-seed", "agent", tmp_path.name),
+        repository=None,
+    )
+    store.write_document("MEMORY.md", "memory seed\n")
+    template_seed = load_template_seed_text("COMPANIONSHIP.md")
+    captured_user_blocks: list[str] = []
+
+    def complete_fn(messages: list[dict[str, object]], role: str) -> str:
+        assert role == "companionship"
+        captured_user_blocks.append(str(messages[1]["content"]))
+        return "companionship curated from template\n"
+
+    _rewrite_companionship_md(
+        store,
+        user_text="Dreaming transcript slice:\nuser: hello",
+        assistant_text="",
+        complete_fn=complete_fn,
+    )
+    assert captured_user_blocks
+    assert template_seed.strip() in captured_user_blocks[0]
+    assert (
+        store.read_document("COMPANIONSHIP.md")
+        == "companionship curated from template\n"
+    )

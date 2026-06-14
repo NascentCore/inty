@@ -49,6 +49,7 @@ DREAMING_CURATOR_CALLABLES: frozenset[str] = frozenset(
         "_rewrite_user_md",
         "_rewrite_style_md",
         "_rewrite_soul_md",
+        "_rewrite_companionship_md",
         "compact_living_sphere_if_pending",
         "compact_living_sphere_batch",
     }

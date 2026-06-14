@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.companion_harness.experience_profile import (
+from app.core.companion_harness.experience_profile.context_mode import (
     EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING,
     experience_profile_injects_private_memory,
     experience_profile_system_clause,

@@ -39,9 +39,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.core.companion_harness.experience_profile import (
+from app.core.companion_harness.experience_profile.context_mode import (
     experience_profile_injects_private_memory,
     experience_profile_system_clause,
+)
+from app.core.companion_harness.experience_profile.experience_directives import (
+    experience_directives_system_clause,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_document_mapping import (
@@ -144,7 +147,11 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
         "- `importance_user_message` (integer 1-10): importance of the latest user message alone.\n"
         "- `importance_assistant_message` (integer 1-10): importance of `user_facing_reply` alone.\n"
         "- `output_to_user` (boolean): **must be true** on this foreground dual-LLM chat branch "
-        "(the parallel tool branch decides silent vs visible follow-ups).\n\n"
+        "(the parallel tool branch decides silent vs visible follow-ups).\n"
+        "- `turn_recall` (string): optional **Turn Brief** for this turn only — short internal "
+        "note about relationship-relevant details you are holding for the reply (e.g. upcoming "
+        "plans the user mentioned). Leave empty string when nothing special; do not store "
+        "long-term preferences here (bond → COMPANIONSHIP.md).\n\n"
         "This branch still must not call tools (`tool_choice=none`).\n"
     )
 
@@ -724,9 +731,16 @@ def _contextual_system_messages(
     ai_private_text: str,
     proactive_life_currents_block: str | None,
 ) -> list[dict[str, Any]]:
+    # TODO(experience-profile): collapse harness context_mode user-facing clause into
+    # experience_directives when intent is set (#3343).
     out: list[dict[str, Any]] = [
         _system_message(experience_profile_system_clause(context.context_mode)),
     ]
+    directive_clause = experience_directives_system_clause(
+        context.experience_directives
+    )
+    if directive_clause is not None:
+        out.append(_system_message(directive_clause))
     if repl_online_ack_turn:
         out.append(_system_message(_repl_online_ack_clause()))
     if not inner_tick_turn:

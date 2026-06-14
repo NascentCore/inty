@@ -1,7 +1,7 @@
 """Sleeping-state dreaming memory consolidation (end-of-day rollup).
 
 Batch-curates **the day's full arc** into ``memory/daily/<date>.md`` (daily gist),
-``MEMORY.md``, ``USER.md``, ``STYLE.md``, ``SOUL.md``, and ``LIVING_SPHERE.md`` —
+``MEMORY.md``, ``USER.md``, ``STYLE.md``, ``SOUL.md``, ``COMPANIONSHIP.md``, and ``LIVING_SPHERE.md`` —
 user-visible ``transcript.jsonl`` (chat, proactive, scheduled) plus silent awake
 inner-tick material (autonomy, maintenance) once ``TODO(dreaming-day-rollup)``
 merges inner-tick / ``ai_private.jsonl`` / ``LIFE_CURRENTS.md`` into the slice (#3376;
@@ -32,7 +32,7 @@ from app.core.companion_harness.companion.utc import local_date_str
 
 from .living_sphere_curator import compact_living_sphere_if_pending
 from .memory_store import MemoryStore
-from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
+from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS, load_template_seed_text
 
 # TODO(memdoc-path-constants): Curator read/write still hardcodes paths; use scope path constants. #3413
 
@@ -118,6 +118,26 @@ Rules:
 - If the latest turn is purely small talk with no new communication-style signal and no explicit style instruction, return the current STYLE.md unchanged (verbatim aside from trivial whitespace).
 - Output raw markdown only: no preamble, no code fences around the whole document.
 - Write in the same language as STYLE.md and the conversation (usually Chinese for Chinese content).
+"""
+
+_COMPANIONSHIP_CURATOR_SYSTEM = """You are a COMPANIONSHIP.md curator. This document is the **bond narrative** between the user and the assistant: user wording for the relationship, relationship_phase (bond maturity), distance/commitment framing, and mutual agreements visible to the user.
+
+COMPANIONSHIP.md is injected post-bootstrap. It is **not**:
+- `context.json` `context_mode`, `experience_directives.intent`, or `experience_directives.tone` (fast session experience — dreaming **never** edits context.json)
+- `STYLE.md` (how Inty speaks) or `IDENTITY.md` (who Inty is)
+
+Given the current COMPANIONSHIP.md, the latest MEMORY.md (already updated this turn), and the dreaming transcript slice, output ONLY the full updated COMPANIONSHIP.md body (markdown).
+
+Rules:
+- Preserve template sections: 用户原话, relationship_phase, 相处 framing, 对用户可见的相处约定, 更新记录.
+- **relationship_phase**: change cautiously (e.g. exploring → settled) only when the slice shows clear mutual stabilization; prefer incremental bond shifts, not drama.
+- Record durable user relationship wording; keep quoted user voice where appropriate.
+- Update mutual agreements and distance/commitment when clearly negotiated; do not invent commitments.
+- Do **not** encode session intent (casual_chat / roleplay / …) or tone (warm/playful) — those belong in context.json `experience_directives`.
+- When bond state changes, append a brief dated note under 更新记录.
+- If the slice has no bond-relevant signal, return COMPANIONSHIP.md unchanged (verbatim aside from trivial whitespace).
+- Output raw markdown only; same language as the document (usually Chinese).
+- Stay within ~4000 characters substantive unless the document is already longer.
 """
 
 
@@ -305,6 +325,35 @@ def _rewrite_soul_md(
     store.write_document("SOUL.md", new_body.strip() + "\n")
 
 
+def _rewrite_companionship_md(
+    store: MemoryStore,
+    *,
+    user_text: str,
+    assistant_text: str,
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+) -> None:
+    # assistant_text unused: bond curation reads the full dreaming slice via user_text.
+    companionship_body = store.read_document_if_exists("COMPANIONSHIP.md")
+    if companionship_body is None:
+        companionship_body = load_template_seed_text("COMPANIONSHIP.md")
+    memory_body = store.read_document("MEMORY.md")
+    if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
+        memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
+    else:
+        memory_ctx = memory_body
+    user_block = (
+        f"Current COMPANIONSHIP.md:\n\n{companionship_body}\n\n---\n\n"
+        f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
+        f"{user_text}\n"
+    )
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": _COMPANIONSHIP_CURATOR_SYSTEM},
+        {"role": "user", "content": user_block},
+    ]
+    new_body = complete_fn(messages, "companionship")
+    store.write_document("COMPANIONSHIP.md", new_body.strip() + "\n")
+
+
 def consolidate_memory_during_dreaming(
     store: MemoryStore,
     rows: list[ChatMessage],
@@ -362,6 +411,7 @@ def consolidate_memory_during_dreaming(
         ("dreaming_user_md", _rewrite_user_md),
         ("dreaming_style_md", _rewrite_style_md),
         ("dreaming_soul_md", _rewrite_soul_md),
+        ("dreaming_companionship_md", _rewrite_companionship_md),
     ):
         t = time.perf_counter()
         rewrite_fn(

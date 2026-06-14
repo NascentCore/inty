@@ -23,10 +23,13 @@ from pathlib import Path
 from typing import Any, Final
 
 from loguru import logger
+from pydantic import BaseModel, Field
 
-from app.core.companion_harness.experience_profile import (
-    ExperienceContextMode,
-    normalize_experience_profile_id,
+from app.core.companion_harness.experience_profile.experience_directives import (
+    ExperienceDirectiveTone,
+    ExperienceDirectives,
+    ExperienceSessionIntent,
+    context_mode_for_session_intent,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
     BOOTSTRAP_WRITABLE_REL_PATHS,
@@ -73,8 +76,9 @@ def build_bootstrap_tool_call_section() -> str:
             "- Bootstrap only done once",
             f"- Call **{CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value}** to read persisted docs before updating",
             f"- Call **{CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value}** to update **{docs}** (full markdown body per path)",
-            f"- Call **{CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value}** when the user picks a built-in companionship pattern "
-            f"(e.g. `{ExperienceContextMode.REMOTE_LOVER.value}` for 异地爱人, `{ExperienceContextMode.INTIMATE.value}`, `{ExperienceContextMode.EMOTIONAL_COMPANION.value}`)",
+            f"- Call **{CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value}** when the user clarifies what companionship experience they want "
+            f"(e.g. `casual_chat`, `deep_conversation`, `roleplay`, `remote_romance`); optional `tone` (`warm` / `playful` / `cool` / `direct`). "
+            "Bond narrative stays in COMPANIONSHIP.md — do not ask the user for harness `context_mode` ids",
             f"- Call **{CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE.value}** to conclude bootstrap",
             "- 尽快收尾：已有对话足以写初稿时，先 **memory_store_write_document** 写 IDENTITY / STYLE / USER，再 complete；禁止跳过写入直接 complete",
             "- 即使用户配合度低，也基于已有对话写 best-effort 初稿；用户想进入日常相处或已连续多轮无新信息时可提前 complete（仍须先写初稿）",
@@ -175,18 +179,29 @@ def tool_companion_bootstrap_user_interactive_complete(
     )
 
 
+class CompanionSetExperienceProfileToolInput(BaseModel):
+    """Arguments for ``companion_set_experience_profile`` tool handler."""
+
+    experience_intent: ExperienceSessionIntent = Field(
+        description=(
+            "What companionship experience the user wants: casual chat, deep conversation, "
+            "role-play, emotional support, remote romance, or interactive fiction."
+        ),
+    )
+    note: str = Field(description="Short internal audit note (not shown to user).")
+    tone: ExperienceDirectiveTone | None = Field(
+        default=None,
+        description="Optional experience_directives.tone overlay; omit to leave unchanged.",
+    )
+
+
 def tool_companion_set_experience_profile(
     store: MemoryStore,
-    context_mode: str,
-    *,
-    note: str,
+    tool_input: CompanionSetExperienceProfileToolInput,
 ) -> str:
-    """Persist ``context_mode`` in ``context.json`` with audit note."""
+    """Persist ``experience_directives`` and mapped ``context_mode`` in ``context.json``."""
 
-    try:
-        normalized = normalize_experience_profile_id(context_mode)
-    except ValueError as exc:
-        return f"ERROR: {exc}"
+    normalized = context_mode_for_session_intent(tool_input.experience_intent)
     rel_ctx = "context.json"
     st = store
     raw_body = st.read_document_if_exists(rel_ctx)
@@ -199,17 +214,40 @@ def tool_companion_set_experience_profile(
     if not isinstance(data, dict):
         return "ERROR: context.json must be a JSON object"
     previous = str(data.get("context_mode", "")).strip() or "(unset)"
-    data["context_mode"] = normalized
-    data["experience_profile_change_note"] = note.strip()[:2000]
-    out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    existing_directives = ExperienceDirectives.model_validate(
+        data.get("experience_directives") or {}
+    )
+    directive_updates: dict[str, ExperienceSessionIntent | ExperienceDirectiveTone] = {
+        "intent": tool_input.experience_intent,
+    }
+    if tool_input.tone is not None:
+        directive_updates["tone"] = tool_input.tone
+    directives = existing_directives.model_copy(update=directive_updates)
+    updated = ContextMeta.model_validate(
+        {
+            **data,
+            "context_mode": normalized,
+            "experience_directives": directives,
+        }
+    )
+    persisted = updated.model_dump(mode="json")
+    # Audit note only; not part of ContextMeta (ephemeral tool rationale).
+    persisted["experience_change_note"] = tool_input.note.strip()[:2000]
+    out = json.dumps(persisted, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel_ctx, out)
     logger.info(
-        "companion_set_experience_profile scope={} {} -> {}",
+        "companion_set_experience_profile scope={} {} -> {} intent={} tone={}",
         st.scope.registry_key(),
         previous,
         normalized,
+        tool_input.experience_intent.value,
+        directives.tone.value if directives.tone is not None else None,
     )
+    tone_suffix = ""
+    if tool_input.tone is not None:
+        tone_suffix = f"; experience_directives.tone={tool_input.tone.value!r}"
     return (
-        f"OK experience profile (context_mode) set to {normalized!r} "
-        f"(previous {previous!r}); applies starting the next companion turn."
+        f"OK experience intent set to {tool_input.experience_intent.value!r} "
+        f"(context_mode {normalized!r}, previous {previous!r}){tone_suffix}; "
+        "applies starting the next companion turn."
     )
