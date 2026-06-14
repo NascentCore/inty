@@ -26,11 +26,9 @@ from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.companion_harness.experience_profile.context_mode import (
-    ExperienceContextMode,
-)
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
+    ExperienceSessionIntent,
 )
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
@@ -91,8 +89,8 @@ MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY: frozenset[str] = frozenset(
 TOOL_TAG_GENERATION = "GENERATION"
 
 
-_SELECTABLE_EXPERIENCE_PROFILE_IDS: tuple[str, ...] = tuple(
-    sorted(m.value for m in ExperienceContextMode)
+_SELECTABLE_EXPERIENCE_SESSION_INTENTS: tuple[str, ...] = tuple(
+    sorted(m.value for m in ExperienceSessionIntent)
 )
 
 assert TECHNO_CORE_RECORD_EVENT_TOOL_NAME == "techno_core_record_event"
@@ -163,19 +161,21 @@ SET_BOOTSTRAP_COMPLETE_TOOL = LlmFunctionTool(
 SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
     name=CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
     description=(
-        "Persist session experience into context.json: context_mode (coarse product switch) "
-        "and optional experience_directives.tone (session stance overlay).\n"
-        "Call when conversation shows the user wants a different built-in mode or tone.\n"
+        "Persist what companionship experience the user wants into context.json "
+        "(experience_directives.intent + optional tone). Harness maps intent to internal "
+        "context_mode; do not ask the user for context_mode ids.\n"
         "Takes effect on the next companion turn; do not use memory_store_write_document on context.json."
     ),
     parameters={
         "type": "object",
         "properties": {
-            "context_mode": {
+            "experience_intent": {
                 "type": "string",
+                "enum": list(_SELECTABLE_EXPERIENCE_SESSION_INTENTS),
                 "description": (
-                    "Target experience profile ID: "
-                    f"{', '.join(_SELECTABLE_EXPERIENCE_PROFILE_IDS)}"
+                    "What the user wants this session to feel like: casual_chat, "
+                    "deep_conversation, roleplay, emotional_support, remote_romance, "
+                    "or interactive_fiction."
                 ),
             },
             "tone": {
@@ -191,7 +191,7 @@ SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
                 "description": "Short internal note (not shown to user) about the rationale of the change.",
             },
         },
-        "required": ["context_mode", "note"],
+        "required": ["experience_intent", "note"],
         "additionalProperties": False,
     },
     tags=frozenset(),

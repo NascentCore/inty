@@ -12,6 +12,7 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
     ExperienceDirectives,
+    ExperienceSessionIntent,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
@@ -69,9 +70,13 @@ def test_experience_directives_system_clause_playful() -> None:
     )
 
     out = experience_directives_system_clause(
-        ExperienceDirectives(tone=ExperienceDirectiveTone.PLAYFUL)
+        ExperienceDirectives(
+            intent=ExperienceSessionIntent.CASUAL_CHAT,
+            tone=ExperienceDirectiveTone.PLAYFUL,
+        )
     )
     assert out is not None
     assert out.startswith(EXPERIENCE_DIRECTIVES_SYSTEM_HEADING)
+    assert "casual_chat" in out
     assert "playful" in out
     assert "俏皮" in out

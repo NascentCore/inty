@@ -37,6 +37,7 @@ from app.core.companion_harness.companion.bootstrap import (
 )
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
+    ExperienceSessionIntent,
 )
 from app.core.companion_harness.companion.models import (
     ChatMessage,
@@ -682,12 +683,20 @@ async def _dispatch(
     if name == COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
         return tool_companion_record_user_feedback(store, arguments)
     if name == "companion_set_experience_profile":
-        raw_ctx = arguments.get("context_mode")
-        if not isinstance(raw_ctx, str):
-            return "ERROR: context_mode must be a string"
+        raw_intent = arguments.get("experience_intent")
+        if not isinstance(raw_intent, str):
+            return "ERROR: experience_intent must be a string"
         raw_note = arguments.get("note")
         if not isinstance(raw_note, str):
             return "ERROR: note must be a string"
+        try:
+            intent = ExperienceSessionIntent(raw_intent.strip().lower())
+        except ValueError:
+            return (
+                "ERROR: experience_intent must be one of "
+                "casual_chat, deep_conversation, roleplay, emotional_support, "
+                "remote_romance, interactive_fiction"
+            )
         raw_tone = arguments.get("tone")
         tone_opt: ExperienceDirectiveTone | None = None
         if raw_tone is not None:
@@ -700,7 +709,7 @@ async def _dispatch(
         return tool_companion_set_experience_profile(
             store,
             CompanionSetExperienceProfileToolInput(
-                context_mode=raw_ctx,
+                experience_intent=intent,
                 note=raw_note,
                 tone=tone_opt,
             ),

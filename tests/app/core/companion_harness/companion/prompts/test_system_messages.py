@@ -10,6 +10,7 @@ from app.core.companion_harness.companion.models import (
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
     ExperienceDirectives,
+    ExperienceSessionIntent,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -90,13 +91,15 @@ def test_contextual_messages_include_experience_directives_when_tone_set() -> No
         bundle,
         ContextMeta(
             experience_directives=ExperienceDirectives(
-                tone=ExperienceDirectiveTone.WARM
+                intent=ExperienceSessionIntent.DEEP_CONVERSATION,
+                tone=ExperienceDirectiveTone.WARM,
             )
         ),
         memory_bootstrap_type="none",
     )
     joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
     assert "EXPERIENCE DIRECTIVES" in joined
+    assert "deep_conversation" in joined
     assert "warm" in joined
 
 
