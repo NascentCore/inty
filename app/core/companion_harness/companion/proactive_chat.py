@@ -26,7 +26,6 @@ from pydantic import BaseModel, Field
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import (
     ChatMessage,
-    PROACTIVE_CHAT_SILENT_TOKEN,
     TranscriptProjection,
     load_transcript_projection_from_store,
 )

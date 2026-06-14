@@ -84,10 +84,7 @@ from .llm_runtime_events import (
     record_llm_inference_failure,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .proactive_chat import (
-    PROACTIVE_CHAT_SILENT_TOKEN,
-    build_proactive_chat_transcript_user_marker,
-)
+from .proactive_chat import build_proactive_chat_transcript_user_marker
 from .transcript_ai_private import (
     AiPrivateSplicePersistInput,
     AiPrivateSplicePlan,
