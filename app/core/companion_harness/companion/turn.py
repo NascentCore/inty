@@ -124,7 +124,7 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
-    execute_tool_call as repl_execute_tool_call,
+    execute_tool_call,
 )
 from app.core.companion_harness.tools.tool_background import (
     ToolOutputEvent,
@@ -527,7 +527,7 @@ async def _run_companion_turn_core(
                         trace_id=trace_id,
                         tools=tools_for_turn,
                         on_event=_kernel_bg_on_event,
-                        execute_tool_call_fn=repl_execute_tool_call,
+                        execute_tool_call_fn=execute_tool_call,
                         client=llm_client.sync_client_for_route("tool"),
                         chat_completions_sync=llm_client.chat_completions_sync,
                         write_allowlist=_memory_store_write_allowlist_for_track(track),

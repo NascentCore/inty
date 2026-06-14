@@ -166,7 +166,7 @@ async def run_in_turn_sync_tool_loop(
     async def execute_tool_call(
         name: str, raw_arguments: str
     ) -> tuple[str, str | None]:
-        result = await repl_execute_tool_call(
+        result = await execute_tool_call(
             store,
             name,
             raw_arguments,

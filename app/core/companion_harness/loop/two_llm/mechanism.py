@@ -18,7 +18,7 @@ from app.core.companion_harness.companion.llm_client import (
     LLM_SCENE_INNER_TICK,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
-    execute_tool_call as repl_execute_tool_call,
+    execute_tool_call,
 )
 from app.core.companion_harness.tools.tool_background import run_tool_background_loop
 
@@ -77,7 +77,7 @@ class TwoModelChatThenToolBgMechanism:
             trace_id=loop_input.trace_id,
             tools=list(loop_input.openai_tools),
             on_event=event_sink,
-            execute_tool_call_fn=repl_execute_tool_call,
+            execute_tool_call_fn=execute_tool_call,
             client=loop_input.llm_client.sync_client_for_route("tool"),
             chat_completion_sync=loop_input.llm_client.chat_completions_sync,
             write_allowlist=loop_input.write_allowlist,
