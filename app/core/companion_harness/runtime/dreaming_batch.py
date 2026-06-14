@@ -49,9 +49,8 @@ def run_dreaming_batch_if_due(
     TODO(dreaming-cluster-lock): Postgres advisory lock per scope when running multi-process
     backend — https://github.com/NascentCore/inty/issues/3271
 
-    TODO(scope-inner-tick-worker): Callable from scope-level worker without WS/Weixin
-    presence (#3255 — https://github.com/NascentCore/inty/issues/3255); caller holds scope
-    ``turn_lock`` on ``CompanionSession`` instead.
+    Callable from scope inner-tick worker (#3255 / PR #3387); caller holds scope
+    ``turn_lock`` on ``CompanionSession``.
     """
     assert idle_seconds > 0
     if not session.is_initialized:
