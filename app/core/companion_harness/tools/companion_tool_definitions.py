@@ -15,8 +15,8 @@ Do not group by tool names.
 
 TODO(companion-channel-tools): Channel-specific tool schemas + ``CompanionToolName`` members
   (e.g. companion_set_status_line); filter by ``runtime_context.channel`` — #3362
-TODO(telegram-channel-tools): Telegram meta tools (e.g. telegram_set_bot_name) gated on
-  dedicated-bot bonding — #3361
+TODO(telegram-meta-ops-tools): Telegram meta tools (e.g. telegram_set_bot_name) — #3397;
+  gated on dedicated-bot bonding #3361; shared-bot path #3396
 """
 
 from __future__ import annotations

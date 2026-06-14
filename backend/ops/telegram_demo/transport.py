@@ -1,8 +1,8 @@
 """Telegram Bot API long-poll transport for Ops telegram-demo.
 
 TODO(telegram-demo-text-only): Non-text inbound (photo, voice, sticker) is ignored — #3349
-TODO(telegram-dedicated-bot-bonding): Shared-bot triage today; per-user bot token +
-  1:1:1 user/bot/agent bonding + triage portal — #3361
+TODO(telegram-shared-bot): Option A shared-bot routing — #3396
+TODO(telegram-dedicated-bot-bonding): Option B per-user bot token + 1:1:1 user/bot/agent — #3361 (epic #3395)
 """
 
 from __future__ import annotations
