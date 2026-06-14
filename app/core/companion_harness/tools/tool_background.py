@@ -502,6 +502,8 @@ def _append_background_transcript_assistant(
     significance_perception: dict[str, Any] | None = None,
     turn_recall: str | None = None,
 ) -> None:
+    # TODO(transcript-jsonl-pydantic): Converge assistant JSONL rows with turn.py and
+    # ChatMessage read path — https://github.com/NascentCore/inty/issues/3407
     row: dict[str, Any] = {
         "role": "assistant",
         "content": content,

@@ -60,7 +60,6 @@ from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_spec_text,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
-    companionship_md_ready_for_system_injection,
     get_imate_axiom_system_text,
     get_inty_facts_system_text,
     get_safety_system_text,
@@ -623,7 +622,7 @@ def _persona_system_messages(
     ]
     if (
         not interactive_bootstrap_active
-        and companionship_md_ready_for_system_injection(bundle.companionship_md)
+        and bundle.companionship_md.strip()
     ):
         out.append(
             _system_message(

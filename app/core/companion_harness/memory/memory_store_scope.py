@@ -267,9 +267,6 @@ _USER_STUB_MARKERS: tuple[str, ...] = (
     "等待观察",
     "待对话填充",
 )
-_COMPANIONSHIP_STUB_MARKERS: tuple[str, ...] = (
-    "待对话填充",
-)
 
 
 def _text_matches_any_marker(text: str, markers: tuple[str, ...]) -> bool:
@@ -277,15 +274,6 @@ def _text_matches_any_marker(text: str, markers: tuple[str, ...]) -> bool:
     if not s:
         return True
     return any(m in s for m in markers)
-
-
-def companionship_md_ready_for_system_injection(body: str) -> bool:
-    """True when ``COMPANIONSHIP.md`` has left the package template placeholders."""
-
-    s = body.strip()
-    if not s:
-        return False
-    return not _text_matches_any_marker(s, _COMPANIONSHIP_STUB_MARKERS)
 
 
 def needs_startup_profile_inquiry(store: MemoryStore) -> bool:

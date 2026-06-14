@@ -1056,6 +1056,7 @@ async def _run_companion_turn_core(
         if track != CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             store.append_jsonl_record(rel_tr, user_row)
     last_text = strip_leading_transcript_timestamp_prefixes(last_text)
+    # TODO(transcript-jsonl-pydantic): Build assistant row via shared Pydantic model — #3407
     assistant_row: dict[str, Any] = {
         "role": "assistant",
         "content": last_text,

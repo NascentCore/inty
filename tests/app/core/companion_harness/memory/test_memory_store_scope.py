@@ -5,7 +5,6 @@ from pathlib import Path
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     MemoryStoreScopePaths,
-    companionship_md_ready_for_system_injection,
     ensure_minimal_documents_in_store,
     is_scope_initialized_in_store,
     is_scope_initialized_on_disk,
@@ -111,11 +110,3 @@ def test_ensure_minimal_documents_in_store(tmp_path: Path) -> None:
     assert "Channels are medium" in store.read_document("CHANNELS.md")
     ensure_minimal_documents_in_store(store)
     assert is_scope_initialized_in_store(store) is True
-
-
-def test_companionship_md_ready_for_system_injection() -> None:
-    assert companionship_md_ready_for_system_injection("") is False
-    assert companionship_md_ready_for_system_injection("# 我们的关系\n\n待对话填充\n") is False
-    assert companionship_md_ready_for_system_injection(
-        "# 我们的关系\n\n用户原话：异地恋人\n"
-    ) is True

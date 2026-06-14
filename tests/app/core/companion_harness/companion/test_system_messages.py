@@ -159,7 +159,7 @@ def test_persona_omits_companionship_during_bootstrap() -> None:
     assert "COMPANIONSHIP — 陪伴关系 framing（COMPANIONSHIP.md）" not in joined
 
 
-def test_persona_omits_stub_companionship_after_bootstrap() -> None:
+def test_persona_injects_seed_companionship_after_bootstrap() -> None:
     from app.core.companion_harness.memory.memory_store_scope import (
         load_template_seed_text,
     )
@@ -180,7 +180,8 @@ def test_persona_omits_stub_companionship_after_bootstrap() -> None:
             )
         )
     )
-    assert "COMPANIONSHIP — 陪伴关系 framing（COMPANIONSHIP.md）" not in joined
+    assert "COMPANIONSHIP — 陪伴关系 framing（COMPANIONSHIP.md）" in joined
+    assert "我们的关系" in joined
 
 
 def test_system_messages_omit_weixin_clawbot_alias_for_unknown_channel() -> None:
