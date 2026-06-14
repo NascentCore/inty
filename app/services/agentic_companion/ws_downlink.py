@@ -5,7 +5,7 @@ and ``chat_ws._companion_ws_bootstrap_interim_consumer``. Inner-tick assistant f
 ``inner_tick_fire`` + ``deliver_inner_tick_assistant``.
 
 TODO(companion-ws-outbound-unify): Route bootstrap + inner-tick through this adapter so
-``chat_ws`` has one downlink → ``outbound_queue`` contract. #3209 #3210 #3211
+``chat_ws`` has one downlink → ``outbound_queue`` contract. #3209 #3210 #3211 #3398 #3402
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ class WebSocketDownlink:
             case DownlinkKind.TOOL_BACKGROUND:
                 await self._deliver_tool_background(event)
             case _:
-                # TODO(companion-ws-bootstrap-downlink): BOOTSTRAP_INTERIM materializer. #3209
+                # TODO(companion-ws-bootstrap-downlink): BOOTSTRAP_INTERIM materializer. #3209 #3398
                 # TODO(companion-ws-inner-tick-downlink): USER_REPLY / PROACTIVE / SCHEDULED / MAINTENANCE. #3210
                 raise NotImplementedError(
                     f"WebSocketDownlink does not handle {event.kind}; "

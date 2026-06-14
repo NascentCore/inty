@@ -71,7 +71,10 @@ def _companion_tool_call_model_yaml(agent: object) -> str:
 
 
 def _companion_tool_model_api_id(chat_model_api_id: str) -> str:
-    """OpenRouter-style id for tool rounds; defaults to chat model when YAML override is empty."""
+    """OpenRouter-style id for tool rounds; defaults to chat model when YAML override is empty.
+
+    TODO(#3398): Scope of separate tool model vs single chat model for user turns — epic #3398.
+    """
     cfg = global_config_loaded_from_config_yaml
     raw = _companion_tool_call_model_yaml(cfg.agent)
     if not raw:

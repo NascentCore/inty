@@ -168,6 +168,7 @@ def _companion_user_time_context_system_for_llm(
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> str | None:
     """Optional ``## user-time-context`` system body from ``client_time``, or ``None``."""
+    # TODO(#3391): Log timezone_source when enriching from USER.md / transcript fallback.
     enabled = bool(
         _global_config.app.features.experimental_enable_chat_with_user_time_context
     )
@@ -254,6 +255,8 @@ def build_companion_turn_prompt_plan(
         and (not tools_for_turn)
         and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     )
+    # TODO(#3401): ``use_dual_structured_chat`` is loop-mechanism; keep separate from ``CompanionTurnTrack``.
+    # TODO(#3398): Structured envelope on single chat model; not the same as dual-LLM two-model split.
 
     transcript_compaction_meta: dict[str, Any] | None = None
     if transcript_compaction is not None and not inner_tick_turn:

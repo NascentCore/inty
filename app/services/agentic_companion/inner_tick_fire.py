@@ -1,12 +1,19 @@
 """Inner-tick turn execution: presence delivery tracks + scope autonomous tracks.
 
-**Presence** (``try_fire_proactive_*``, ``try_fire_scheduled_*``): delivers via
-:class:`InnerTickDelivery` and may write ``chat_history``.
+TODO(#3400): Rename maintenance inner-tick to monolog track/activity + wire meta
+(``companion_maintenance_inner_tick`` → monolog); behavior narrow stays #3375.
+
+**Presence** (``try_fire_proactive_*``, ``try_fire_scheduled_*``): persists chat history
+and delivers assistant output via :class:`InnerTickDelivery`. WS wire envelopes are built
+here; Weixin receives plain text through the same path.
 
 **Scope** (``try_fire_*_for_scope``): maintenance, autonomy, dreaming — MemoryStore only,
 no signed-on presence (#3255). Throttle lives in ``scope_inner_tick_state``.
 
 Locking: each ``try_fire_*`` acquires **scope** ``CompanionSession.turn_lock`` (#3272).
+User chat on the same scope also holds that lock — inner ticks (including dreaming) and
+user messages serialize per ``(user_id, agent_id, chat_id)``. Prototype: single presence
+per paired user (``companion_harness`` AGENTS.md).
 
 TODO(dreaming-cluster-lock): Multi-process backend needs Postgres advisory lock around
 dreaming batches — https://github.com/NascentCore/inty/issues/3271

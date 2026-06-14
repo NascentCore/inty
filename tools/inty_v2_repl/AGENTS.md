@@ -43,3 +43,5 @@ python -m tools.inty_v2_repl.main repl \
 - **Logs**: REPL does not write a local log file; **loguru** is stderr-only (`proto_log.configure_proto_log`).
 
 Interactive **`repl`** sends each line with **`post_turn`** (upload immediately). Downlink prints as frames arrive; the server still handles chat **in request order** per WebSocket. Override send-thread wait budget with **`INTY_V2_BACKEND_WS_POST_TURN_TIMEOUT_SEC`** (default `180`) if reconnect-heavy environments need more headroom.
+
+- REPL / 本地：`python-dotenv`、`.env`。

@@ -215,6 +215,7 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
             "companion_proactive_chat", "companion_proactive_heartbeat"
         ),
     )
+    # TODO(#3400): Rename wire field when ``INNER_TICK_MONOLOG`` track lands (keep alias for compat).
     companion_maintenance_inner_tick: Optional[bool] = None
     companion_scheduled_reminder: Optional[bool] = None
     scheduled_task_id: Optional[str] = Field(

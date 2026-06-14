@@ -8,6 +8,11 @@ model leg continues.
 
 TODO(crs-companionship-doc): After #3342, load ``COMPANIONSHIP.md`` from MemoryStore into
 ``PromptBundle`` / ``_persona_system_messages``; #3343 activates template + ``turn_recall``.
+
+TODO(#3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled ``USER_CHAT`` — #3369.
+
+TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
+hierarchy (design issue; options include in-context vs retrieval-required splits).
 """
 
 from __future__ import annotations
@@ -105,7 +110,7 @@ def companion_tools_for_turn(
     inner_tick_activity: InnerTickActivity,
     implicit_user_signed_on_turn: bool = False,
     # TODO(companion-channel-tools): Filter tool schemas by ``runtime_context.channel`` — #3362
-    # TODO(telegram-channel-tools): Telegram meta tools only when dedicated-bot bonding — #3361
+    # TODO(telegram-meta-ops-tools): Telegram meta tools only when dedicated-bot — #3397 / #3361
 ) -> list[dict[str, Any]]:
     """OpenAI tool schemas for this turn (independent of which system-message wrapper runs)."""
     match track:

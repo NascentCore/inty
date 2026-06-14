@@ -29,7 +29,7 @@ class TelegramBotProvisionResult:
 
 # TODO(telegram-demo): Ops telegram-demo long-poll uses ``telegram_bot_api``; this service
 # remains for public-agent promotion deep links only.
-# TODO(telegram-dedicated-bot-bonding): Per-agent bot token + triage portal — #3361
+# TODO(telegram-dedicated-bot-bonding): Per-agent bot token + triage portal — #3361 (epic #3395)
 
 
 @dataclass
