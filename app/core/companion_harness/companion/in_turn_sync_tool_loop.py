@@ -26,7 +26,7 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
 )
 from app.core.companion_harness.tools.runtime import (
     insert_openai_system_message,
-    resolve_official_assistant_tool_loop_async,
+    resolve_openai_tool_call_loop_async,
 )
 from .langsmith_turn_slice import CompanionTurnLangsmithSlice
 from .llm_client import CompanionLLMClient, LLM_SCENE_CHAT
@@ -166,7 +166,7 @@ async def run_in_turn_sync_tool_loop(
     async def execute_tool_call(
         name: str, raw_arguments: str
     ) -> tuple[str, str | None]:
-        result = await execute_tool_call(
+        result = await repl_execute_tool_call(
             store,
             name,
             raw_arguments,
@@ -249,7 +249,7 @@ async def run_in_turn_sync_tool_loop(
                 )
             )
 
-    loop_result = await resolve_official_assistant_tool_loop_async(
+    loop_result = await resolve_openai_tool_call_loop_async(
         response=initial_resp,
         openai_messages=working_messages,
         max_tool_call_rounds=loop_input.max_tool_rounds,

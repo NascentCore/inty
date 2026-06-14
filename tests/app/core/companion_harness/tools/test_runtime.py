@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from app.core.companion_harness.tools.runtime import (
-    resolve_official_assistant_tool_loop_async,
+    resolve_openai_tool_call_loop_async,
 )
 
 
@@ -71,7 +71,7 @@ async def test_on_assistant_message_called_each_non_tool_and_tool_round() -> Non
     ) -> tuple[Any, str | None]:
         return round_two, "trace-2"
 
-    result = await resolve_official_assistant_tool_loop_async(
+    result = await resolve_openai_tool_call_loop_async(
         response=round_one,
         openai_messages=[{"role": "user", "content": "hi"}],
         max_tool_call_rounds=4,

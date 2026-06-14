@@ -42,7 +42,7 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
 from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
 from app.core.companion_harness.tools.runtime import (
     insert_openai_system_message,
-    resolve_official_assistant_tool_loop_async,
+    resolve_openai_tool_call_loop_async,
 )
 
 from app.core.companion_harness.companion.llm_chat_runtime import (
@@ -749,7 +749,7 @@ async def run_tool_background_loop(
             )
 
         try:
-            loop_result = await resolve_official_assistant_tool_loop_async(
+            loop_result = await resolve_openai_tool_call_loop_async(
                 response=initial_response,
                 openai_messages=working_messages,
                 max_tool_call_rounds=_BG_TOOL_MAX_ROUNDS,
