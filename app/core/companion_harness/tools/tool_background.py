@@ -561,6 +561,8 @@ async def _run_background_tool_loop(
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
+    # TODO(#3411): tool_background passes implicit_signal_bundle=None — LangSmith tool_* spans
+    # omit ``## User's Local Time Context``; verify injection on foreground agentic_companion_chat only.
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
         channel=CompanionRuntimeChannel.APP,
         implicit_signal_bundle=None,
