@@ -56,6 +56,46 @@ def test_doctrine_system_prefix_excludes_subconscious_prompt() -> None:
     assert all("SUBCONSCIOUS" not in str(message["content"]) for message in messages)
 
 
+def test_contextual_messages_include_infer_time_zone_slice_with_tool_name() -> None:
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+    )
+    messages = build_system_messages_for_chat_track(
+        bundle,
+        ContextMeta(),
+        memory_bootstrap_type="none",
+    )
+    joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    assert "用户当地时间与作息" in joined
+    assert "update_user_md" in joined
+    assert "Asia/Shanghai" in joined
+
+
+def test_inner_tick_maintenance_omits_infer_time_zone_slice() -> None:
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+    )
+    messages = build_system_messages(
+        bundle,
+        ContextMeta(),
+        enable_tools=True,
+        inner_tick_turn=True,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        ai_private_text="private\n",
+        tool_side_compact=True,
+    )
+    joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    assert "用户当地时间与作息" not in joined
+
+
 def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
     bundle = PromptBundle(
         identity="identity\n",

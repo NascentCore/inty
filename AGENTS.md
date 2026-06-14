@@ -19,6 +19,8 @@ Read [users list](.agents/USERS.md) to know your human partner's identity and th
 
 - Be critical towards user's requests, suggestions, and other inputs.
 - Think independently, review your thoughts before actions.
+- Use `#` to denotate GitHub pull requests, like `#2211`
+- Use `!` to denotate GitHub issues, like `!2233`
 
 ### Design
 
@@ -158,12 +160,18 @@ You should only changes and use code in the following dirs:
 
 ### Documentation
 
-- Use human redable format, and human understandable languages
+#### Code documentation
+
 - Package docstring in `__init__.py`, `__init__.py` should only has docstring, do not include any code
 - Module docstring at the top of `.py` file
-- Function/class docstring include intention, purpose
+- Function/class docstring: how does the code work, intended usage scenarios
 - Code lines comment: keep key design decisions documented in the code
 - Do not use double-tick '``'
+- Do not use tables, use bullet points to record dimentional content
+
+#### Dedicated docs/ dir
+
+- [docs](/docs/)
 
 Donts
 

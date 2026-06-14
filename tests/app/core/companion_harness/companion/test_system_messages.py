@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.core.companion_harness.companion.bootstrap import (
     build_bootstrap_tool_call_section,
+    load_bootstrap_spec_text,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
     CompanionToolName,
@@ -58,15 +59,12 @@ def test_bootstrap_track_injects_typed_tool_call_section() -> None:
     contents = _system_contents(
         build_system_messages_for_bootstrap_track(bundle, ContextMeta())
     )
+    bootstrap_spec = load_bootstrap_spec_text()
     tool_section = build_bootstrap_tool_call_section()
 
+    assert bootstrap_spec in contents
     assert tool_section in contents
-    bootstrap_spec_block = next(
-        content
-        for content in contents
-        if "# Bootstrap companionship" in content
-    )
-    assert contents.index(bootstrap_spec_block) < contents.index(tool_section)
+    assert contents.index(bootstrap_spec) < contents.index(tool_section)
     for tool_name in (
         CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
         CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,

@@ -5,7 +5,7 @@ only. Do **not** read or write legacy ``readable_id`` here (maintenance-mode HTT
 may still touch it). Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
 
 TODO(telegram-dedicated-bot-bonding): Triage portal to provision per-user bot token and
-  bind 1 user : 1 bot : 1 agent — #3361
+  bind 1 user : 1 bot : 1 agent — #3361 (epic #3395; Option A constraints #3396)
 """
 
 from __future__ import annotations
