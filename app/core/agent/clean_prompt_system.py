@@ -408,56 +408,6 @@ def _insert_system_message_into_messages(
     )
 
 
-def resolve_official_assistant_tool_calls(
-    *,
-    request: OfficialAssistantToolLoopInput,
-    continue_chat: ContinuationFn,
-    deps: OfficialAssistantToolDeps = DEFAULT_OFFICIAL_ASSISTANT_TOOL_DEPS,
-) -> OfficialAssistantToolLoopOutput:
-    messages_with_tool_results = [*request.openai_messages]
-    current_response = request.response
-    side_effects: list[OfficialAssistantSideEffect] = []
-
-    for _ in range(OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS):
-        current_message = current_response.choices[0].message
-        tool_calls = current_message.tool_calls
-        if not tool_calls:
-            return OfficialAssistantToolLoopOutput(
-                response=current_response,
-                openai_messages=messages_with_tool_results,
-                side_effects=side_effects,
-            )
-
-        messages_with_tool_results.append(
-            _build_assistant_tool_call_message(current_message)
-        )
-        for tool_call in tool_calls:
-            execution_result = execute_official_assistant_tool_call(
-                tool_name=tool_call.function.name,
-                raw_arguments=tool_call.function.arguments or "",
-                user_id=request.user_id,
-                deps=deps,
-            )
-            side_effects.extend(execution_result.side_effects)
-            messages_with_tool_results.append(
-                OpenAIChatMessageSnapshot(
-                    role="tool",
-                    tool_call_id=tool_call.id,
-                    content=execution_result.tool_result,
-                )
-            )
-            if execution_result.injected_system_message:
-                _insert_system_message_into_messages(
-                    openai_messages=messages_with_tool_results,
-                    system_message_content=execution_result.injected_system_message,
-                )
-        current_response = continue_chat(messages_with_tool_results)
-
-    raise ValueError(
-        f"Official assistant tool call rounds exceeded limit={OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS}"
-    )
-
-
 def chat_completion_snapshot_from_openai_response(
     response: Any,
 ) -> ChatCompletionSnapshot:

@@ -7,7 +7,7 @@
 - Tests for non-Python code are not under this dir.
   For instance, `/web_app/` `/imate_android_app/` `/imate_ios_app/` have their own tests dir, respectively.
 
-- Add test files for a source file with the same relative paths
+- Add test files should be named after the corresponding source files, by appending `test_` prefix
 
 - Never use mocks or monkeypatch in tests, always assume tests can access local service instance
 - When checking multiline text, split text to array of lines and compare with the expected array.
