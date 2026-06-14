@@ -30,10 +30,6 @@ class PromptSliceId(StrEnum):
     CHANNELS = "CHANNELS"
 
 
-# Joins legacy single-string system prompt and interactive-bootstrap block strings.
-SYSTEM_PROMPT_SLICE_SEPARATOR: Final[str] = "\n\n---\n\n"
-
-
 def slice_to_workspace_rel(slice_id: PromptSliceId) -> str | None:
     """Workspace-relative path for persisted slices; BOOTSTRAP is package-only."""
     if slice_id == PromptSliceId.BOOTSTRAP:
