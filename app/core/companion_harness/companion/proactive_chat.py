@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import ChatMessage, load_transcript_from_store
+from .transcript_anchor import last_real_user_transcript_anchor, parse_transcript_row_ts
 
 PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
     "## Proactive Messaging\n"
@@ -72,13 +73,7 @@ class ProactiveChatConfig(BaseModel):
 
 
 def _parse_ts(ts: str) -> datetime:
-    s = ts.strip()
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    dt = datetime.fromisoformat(s)
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+    return parse_transcript_row_ts(ts)
 
 
 def _user_message_gaps_seconds(msgs: list[ChatMessage]) -> list[float]:
@@ -128,10 +123,7 @@ def _format_elapsed_since(seconds: float) -> str:
 
 
 def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
-    for m in reversed(msgs):
-        if m.role == "user" and m.proactive_chat is not True:
-            return _parse_ts(m.ts)
-    return None
+    return last_real_user_transcript_anchor(msgs).ts
 
 
 def _proactive_rounds_since_last_real_user(msgs: list[ChatMessage]) -> int:

@@ -9,12 +9,16 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
+    AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
     ChatMessage,
     ContextMeta,
+    is_transcript_row_user_visible,
     load_prompt_bundle,
     load_transcript_from_store,
     load_transcript_text,
+    load_user_visible_transcript_from_store,
     transcript_for_llm_turn,
+    transcript_rows_user_visible,
     transcript_without_trailing_presence_signals,
 )
 
@@ -173,3 +177,51 @@ def test_load_transcript_valid_jsonl(tmp_path: Path) -> None:
     assert len(msgs) == 2
     assert msgs[0].role == "user" and msgs[0].content == "a"
     assert msgs[1].role == "assistant" and msgs[1].content == "b"
+
+
+def test_is_transcript_row_user_visible_filters_manifest_and_proactive_user() -> None:
+    manifest = ChatMessage(
+        role="system",
+        content="[ai_private_splice]",
+        ts="2026-01-01T00:00:00Z",
+        source=AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
+    )
+    proactive = ChatMessage(
+        role="user",
+        content="[SYSTEM PROACTIVE CHAT]",
+        ts="2026-01-01T00:01:00Z",
+        proactive_chat=True,
+    )
+    real_user = ChatMessage(role="user", content="hi", ts="2026-01-01T00:02:00Z")
+    assert not is_transcript_row_user_visible(manifest)
+    assert not is_transcript_row_user_visible(proactive)
+    assert is_transcript_row_user_visible(real_user)
+
+
+def test_load_user_visible_transcript_from_store(tmp_path: Path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("models", "a", f"{tmp_path.name}-uv"),
+        repository=None,
+    )
+    rows = [
+        {"role": "user", "content": "hi", "ts": "2026-01-01T00:00:00Z"},
+        {
+            "role": "system",
+            "content": "[ai_private_splice]",
+            "ts": "2026-01-01T00:01:00Z",
+            "source": AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
+        },
+        {
+            "role": "user",
+            "content": "[SYSTEM PROACTIVE CHAT]",
+            "ts": "2026-01-01T00:02:00Z",
+            "proactive_chat": True,
+        },
+    ]
+    store.write_document(
+        "transcript.jsonl", "\n".join(json.dumps(r) for r in rows) + "\n"
+    )
+    visible = load_user_visible_transcript_from_store(store, "transcript.jsonl")
+    assert transcript_rows_user_visible(visible) == visible
+    assert len(visible) == 1
+    assert visible[0].content == "hi"

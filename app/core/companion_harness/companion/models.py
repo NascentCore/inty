@@ -409,6 +409,20 @@ def load_transcript_from_store(
     return load_transcript_text(body)
 
 
+def transcript_rows_user_visible(rows: list[ChatMessage]) -> list[ChatMessage]:
+    """Rows suitable for chat history mirroring and user-facing transcript views."""
+    return [row for row in rows if is_transcript_row_user_visible(row)]
+
+
+def load_user_visible_transcript_from_store(
+    store: MemoryStore, relative_path: str
+) -> list[ChatMessage]:
+    """Load transcript JSONL excluding manifest and synthetic proactive user rows."""
+    return transcript_rows_user_visible(
+        load_transcript_from_store(store, relative_path)
+    )
+
+
 # 近期对话窗口
 TRANSCRIPT_WINDOW_MAX_MESSAGES: int = 20
 

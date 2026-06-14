@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from typing import Any
+
+from loguru import logger
 
 from app.core.companion_harness.companion.ai_private_prompt import (
     AiPrivateThought,
     load_ai_private_index,
-    select_unsurfaced_thoughts_after_anchor,
+    mark_ai_private_surfaced,
+    select_unsurfaced_thoughts_after_anchor as load_unsurfaced_after_ts,
 )
 from app.core.companion_harness.companion.dreaming import parse_transcript_datetime
 from app.core.companion_harness.companion.models import (
@@ -18,7 +22,10 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     is_ai_private_splice_manifest,
 )
-from app.core.companion_harness.companion.proactive_chat import _last_real_user_ts
+from app.core.companion_harness.companion.proactive_chat import PROACTIVE_CHAT_SILENT_TOKEN
+from app.core.companion_harness.companion.transcript_anchor import (
+    last_real_user_transcript_anchor,
+)
 from app.core.companion_harness.companion.utc import (
     transcript_message_content_for_llm,
     utc_iso_ts,
@@ -37,9 +44,86 @@ _AI_PRIVATE_SPLICE_TRACKS: frozenset[CompanionTurnTrack] = frozenset(
 )
 
 
+@dataclass(frozen=True)
+class AiPrivateSplicePlan:
+    """Tail-splice thoughts selected before prompt build for one turn."""
+
+    thoughts: tuple[AiPrivateThought, ...]
+    anchor_user_msg_uuid: str | None
+
+
+@dataclass(frozen=True)
+class AiPrivateSplicePersistInput:
+    """Inputs to mark surfaced + append manifest after a successful splice turn."""
+
+    store: MemoryStore
+    transcript_relative_path: str
+    track: CompanionTurnTrack
+    splice_plan: AiPrivateSplicePlan
+    user_msg_uuid: str
+    assistant_text: str
+    bootstrap_skip_final_transcript_assistant_row: bool
+
+
 def track_uses_ai_private_splice(track: CompanionTurnTrack) -> bool:
     """Whether this turn tail-splices unsurfaced ``ai_private`` before the tail user."""
     return track in _AI_PRIVATE_SPLICE_TRACKS
+
+
+def select_tail_splice_thoughts(
+    store: MemoryStore,
+    loaded_transcript: list[ChatMessage],
+) -> list[AiPrivateThought]:
+    """Unsurfaced monolog after the last real user anchor in ``loaded_transcript``."""
+    anchor = last_real_user_transcript_anchor(loaded_transcript)
+    thoughts = load_unsurfaced_after_ts(store, anchor_ts=anchor.ts)
+    if anchor.uuid is None:
+        return thoughts
+    return [
+        t
+        for t in thoughts
+        if t.after_user_msg_uuid is None or t.after_user_msg_uuid == anchor.uuid
+    ]
+
+
+def build_ai_private_splice_plan(
+    store: MemoryStore, loaded_transcript: list[ChatMessage]
+) -> AiPrivateSplicePlan:
+    anchor = last_real_user_transcript_anchor(loaded_transcript)
+    return AiPrivateSplicePlan(
+        thoughts=tuple(select_tail_splice_thoughts(store, loaded_transcript)),
+        anchor_user_msg_uuid=anchor.uuid,
+    )
+
+
+def should_persist_ai_private_splice(persist_input: AiPrivateSplicePersistInput) -> bool:
+    assistant_text = persist_input.assistant_text.strip()
+    return (
+        track_uses_ai_private_splice(persist_input.track)
+        and persist_input.splice_plan.thoughts
+        and assistant_text
+        and assistant_text != PROACTIVE_CHAT_SILENT_TOKEN
+        and not persist_input.bootstrap_skip_final_transcript_assistant_row
+    )
+
+
+def persist_ai_private_splice_if_applicable(
+    persist_input: AiPrivateSplicePersistInput,
+) -> None:
+    """Mark thoughts surfaced and append manifest row (surfaced before manifest)."""
+    if not should_persist_ai_private_splice(persist_input):
+        return
+    thought_uuids = [t.uuid for t in persist_input.splice_plan.thoughts]
+    mark_ai_private_surfaced(persist_input.store, thought_uuids)
+    manifest_row = build_ai_private_splice_manifest_row(
+        thought_uuids=thought_uuids,
+        reply_to_user_msg_uuid=persist_input.user_msg_uuid,
+        anchor_user_msg_uuid=persist_input.splice_plan.anchor_user_msg_uuid,
+    )
+    persist_input.store.append_jsonl_record(
+        persist_input.transcript_relative_path,
+        manifest_row,
+    )
 
 
 def expand_manifest_rows(
@@ -56,6 +140,11 @@ def expand_manifest_rows(
         for thought_uuid in uuids:
             thought = index.get(thought_uuid)
             if thought is None:
+                logger.warning(
+                    "ai_private manifest hydrate missing thought uuid={} manifest_uuid={}",
+                    thought_uuid,
+                    row.uuid,
+                )
                 continue
             out.append(
                 ChatMessage(
@@ -69,30 +158,19 @@ def expand_manifest_rows(
     return out
 
 
-def _last_real_user_uuid(msgs: list[ChatMessage]) -> str | None:
-    for row in reversed(msgs):
-        if row.role == "user" and row.proactive_chat is not True:
-            uuid = row.uuid
-            if isinstance(uuid, str) and uuid.strip():
-                return uuid.strip()
-            return None
-    return None
-
-
-def select_tail_splice_thoughts(
-    store: MemoryStore, loaded_transcript: list[ChatMessage]
-) -> list[AiPrivateThought]:
-    """Unsurfaced monolog after the last real user anchor in ``loaded_transcript``."""
-    anchor_ts = _last_real_user_ts(loaded_transcript)
-    anchor_uuid = _last_real_user_uuid(loaded_transcript)
-    thoughts = select_unsurfaced_thoughts_after_anchor(store, anchor_ts=anchor_ts)
-    if anchor_uuid is None:
-        return thoughts
-    return [
-        t
-        for t in thoughts
-        if t.after_user_msg_uuid is None or t.after_user_msg_uuid == anchor_uuid
-    ]
+def _thought_uuids_already_in_block(
+    expanded: list[ChatMessage], rows: list[ChatMessage]
+) -> set[str]:
+    uuids: set[str] = set()
+    for row in expanded:
+        if row.uuid:
+            uuids.add(row.uuid)
+    for row in rows:
+        if not is_ai_private_splice_manifest(row):
+            continue
+        for thought_uuid in row.ai_private_thought_uuids or []:
+            uuids.add(thought_uuid)
+    return uuids
 
 
 def transcript_window_to_llm_dialogue(
@@ -144,11 +222,14 @@ def select_unconsumed_ai_private_for_day(
     store: MemoryStore,
     *,
     day_iso: str,
+    exclude_uuids: frozenset[str],
 ) -> list[AiPrivateThought]:
-    """Unsurfaced ``ai_private.jsonl`` rows whose ``ts`` falls on ``day_iso`` (local calendar)."""
-    thoughts = select_unsurfaced_thoughts_after_anchor(store, anchor_ts=None)
+    """Unsurfaced rows on ``day_iso`` excluding uuids already rendered in the block."""
+    thoughts = load_unsurfaced_after_ts(store, anchor_ts=None)
     out: list[AiPrivateThought] = []
     for thought in thoughts:
+        if thought.uuid in exclude_uuids:
+            continue
         if parse_transcript_datetime(thought.ts).date().isoformat() == day_iso:
             out.append(thought)
     return sorted(out, key=lambda t: parse_transcript_datetime(t.ts))
@@ -173,7 +254,10 @@ def dreaming_transcript_block(
             continue
         role = "User" if row.role == "user" else "Assistant"
         lines.append(f"[{row.ts}] {role}: {row.content}")
-    unconsumed = select_unconsumed_ai_private_for_day(store, day_iso=day_iso)
+    exclude = frozenset(_thought_uuids_already_in_block(expanded, rows))
+    unconsumed = select_unconsumed_ai_private_for_day(
+        store, day_iso=day_iso, exclude_uuids=exclude
+    )
     if unconsumed:
         lines.append("--- Monolog (ai_private, unconsumed) ---")
         for thought in unconsumed:

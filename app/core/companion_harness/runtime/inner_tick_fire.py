@@ -231,7 +231,7 @@ async def kernel_fire_autonomy(
 
 async def kernel_fire_maintenance(
     kernel_input: InnerTickKernelInput,
-) -> InnerTickKernelResult | None:
+) -> InnerTickKernelResult:
     """Run one maintenance inner-tick turn; caller holds ``turn_lock``."""
     line_count = maintenance_transcript_line_count(kernel_input.mem_store)
     companion_turn = await kernel_input.manager.run_inner_tick_maintenance_turn(
