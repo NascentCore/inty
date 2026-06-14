@@ -11,12 +11,13 @@ from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
 if TYPE_CHECKING:
     from .channel_adapter import LoopChannelAdapter
-    from .projection import project_deliverable
+    from .projection import LoopProjectionContext, project_deliverable
 
 
 class LoopDeliverableKind(StrEnum):
     """Wide loop emission kinds mapped to ``DownlinkKind`` via projection."""
 
+    INTERIM_REPLY = "interim_reply"
     BOOTSTRAP_INTERIM = "bootstrap_interim"
     FOREGROUND_TEXT = "foreground_text"
     TOOL_BACKGROUND = "tool_background"
@@ -38,8 +39,18 @@ class LoopDeliverable:
 class AgenticLoopOutputQueue:
     """Per-call-streaming queue: each push immediately projects and delivers on channel."""
 
-    def __init__(self, channel: LoopChannelAdapter) -> None:
+    def __init__(
+        self,
+        channel: LoopChannelAdapter,
+        *,
+        projection: LoopProjectionContext | None = None,
+    ) -> None:
+        from .projection import LoopProjectionContext
+
         self._channel = channel
+        self._projection = projection or LoopProjectionContext(
+            defer_terminal_user_reply=False
+        )
         self._mirror: list[LoopDeliverable] = []
 
     @property
@@ -47,12 +58,12 @@ class AgenticLoopOutputQueue:
         """Audit mirror of everything pushed (not the primary UX path)."""
         return tuple(self._mirror)
 
-    async def push_bootstrap_interim(
+    async def push_interim_reply(
         self, interim: BootstrapInterimOutput
     ) -> None:
-        """Push one bootstrap-style interim round (1-LLM tool round)."""
+        """Push one in-turn interim round (bootstrap sync tool loop)."""
         deliverable = LoopDeliverable(
-            kind=LoopDeliverableKind.BOOTSTRAP_INTERIM,
+            kind=LoopDeliverableKind.INTERIM_REPLY,
             assistant_text=interim.text,
             bootstrap_interim=interim,
             tool_output=None,
@@ -60,6 +71,12 @@ class AgenticLoopOutputQueue:
             turn_recall=None,
         )
         await self._push(deliverable)
+
+    async def push_bootstrap_interim(
+        self, interim: BootstrapInterimOutput
+    ) -> None:
+        """Alias for ``push_interim_reply`` (legacy call sites)."""
+        await self.push_interim_reply(interim)
 
     async def push_foreground_text(
         self,
@@ -109,5 +126,10 @@ class AgenticLoopOutputQueue:
         from .projection import project_deliverable
 
         self._mirror.append(deliverable)
+        if (
+            self._projection.defer_terminal_user_reply
+            and deliverable.kind == LoopDeliverableKind.USER_REPLY
+        ):
+            return
         downlink = project_deliverable(deliverable)
         await self._channel.deliver(downlink)

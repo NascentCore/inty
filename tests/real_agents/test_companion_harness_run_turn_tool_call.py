@@ -121,6 +121,7 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
             langsmith_parent_run_enabled=None,
             tool_bg_idle_event=None,
             bootstrap_interim_output_sink=None,
+        agentic_loop_channel=None,
         ),
     )
 

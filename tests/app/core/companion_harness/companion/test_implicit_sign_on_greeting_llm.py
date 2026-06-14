@@ -158,6 +158,7 @@ def _implicit_greeting_deps(
         langsmith_parent_run_enabled=False,
         tool_bg_idle_event=_idle_tool_bg(),
         bootstrap_interim_output_sink=None,
+        agentic_loop_channel=None,
     )
 
 

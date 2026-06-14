@@ -253,6 +253,7 @@ class CompanionManager:
         preset_user_msg_uuid: str | None,
         runtime_context: TurnRuntimeContext,
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
+        agentic_loop_channel: LoopChannelAdapter | None = None,
     ) -> CompanionTurnDeps:
         return CompanionTurnDeps(
             store=session.store,
@@ -269,6 +270,7 @@ class CompanionManager:
             ),
             tool_bg_idle_event=session.tool_bg_idle,
             bootstrap_interim_output_sink=bootstrap_interim_output_sink,
+            agentic_loop_channel=agentic_loop_channel,
         )
 
     # TODO(companion-multimodal-user-turn): Phase 1c — accept ``CompanionUserTurnInput``
@@ -286,6 +288,7 @@ class CompanionManager:
             implicit_signal_bundle=None,
         ),
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
+        agentic_loop_channel: object | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_user_chat_turn(
             user_text,
@@ -295,6 +298,7 @@ class CompanionManager:
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
                 bootstrap_interim_output_sink=bootstrap_interim_output_sink,
+                agentic_loop_channel=agentic_loop_channel,
             ),
         )
 

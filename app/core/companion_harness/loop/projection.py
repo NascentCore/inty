@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutput,
+    InTurnInterimOutput,
+)
 from app.services.agentic_companion.downlink import (
     Downlink,
     DownlinkKind,
@@ -13,12 +19,20 @@ from app.services.agentic_companion.downlink import (
 from .output_queue import LoopDeliverable, LoopDeliverableKind
 
 
+@dataclass(frozen=True)
+class LoopProjectionContext:
+    """Track-aware loop→downlink projection (bootstrap defers loop terminal)."""
+
+    defer_terminal_user_reply: bool
+
+
 def project_deliverable(deliverable: LoopDeliverable) -> Downlink:
     """Map one ``LoopDeliverable`` to a ``Downlink`` for ``LoopChannelAdapter``."""
     match deliverable.kind:
-        case LoopDeliverableKind.BOOTSTRAP_INTERIM:
-            assert deliverable.bootstrap_interim is not None
-            return bootstrap_interim_downlink(interim=deliverable.bootstrap_interim)
+        case LoopDeliverableKind.INTERIM_REPLY | LoopDeliverableKind.BOOTSTRAP_INTERIM:
+            interim = deliverable.bootstrap_interim
+            assert interim is not None
+            return bootstrap_interim_downlink(interim=interim)
         case LoopDeliverableKind.TOOL_BACKGROUND:
             assert deliverable.tool_output is not None
             return tool_background_downlink(tool_output=deliverable.tool_output)
@@ -38,6 +52,20 @@ def project_deliverable(deliverable: LoopDeliverable) -> Downlink:
             )
         case _:
             raise AssertionError(f"unknown deliverable kind: {deliverable.kind}")
+
+
+def interim_output_from_dataclass(interim: InTurnInterimOutput) -> BootstrapInterimOutput:
+    """Wire ``InTurnInterimOutput`` → Pydantic for ``Downlink`` factories."""
+    return BootstrapInterimOutput(
+        text=interim.text,
+        user_msg_uuid=interim.user_msg_uuid,
+        trace_id=interim.trace_id,
+        langsmith_trace_id=interim.langsmith_trace_id,
+        langsmith_run_id=interim.langsmith_run_id,
+        round_index=interim.round_index,
+        had_tool_calls=interim.had_tool_calls,
+        assistant_msg_uuid=interim.assistant_msg_uuid,
+    )
 
 
 def _minimal_turn_result(

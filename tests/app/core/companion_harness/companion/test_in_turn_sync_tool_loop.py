@@ -220,6 +220,7 @@ async def test_run_bootstrap_track_sync_tool_loop_returns_result(
             user_msg_uuid="user-bootstrap",
             transcript_rel="transcript.jsonl",
             bootstrap_interim_output_sink=None,
+        agentic_loop_channel=None,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
                     channel=CompanionRuntimeChannel.APP,

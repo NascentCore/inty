@@ -1,12 +1,4 @@
-"""WebSocket downlink adapter: tool-background ``Downlink`` → outbound queue.
-
-Bootstrap interim rounds use ``CompanionWebSocketCoordinator.bootstrap_interim_queued_events``
-and ``chat_ws._companion_ws_bootstrap_interim_consumer``. Inner-tick assistant frames use
-``inner_tick_fire`` + ``deliver_inner_tick_assistant``.
-
-TODO(companion-ws-outbound-unify): Route bootstrap + inner-tick through this adapter so
-``chat_ws`` has one downlink → ``outbound_queue`` contract. #3209 #3210 #3211 #3398 #3402
-"""
+"""WebSocket downlink adapter: ``Downlink`` → outbound queue."""
 
 from __future__ import annotations
 
@@ -19,39 +11,58 @@ from app.services.agentic_companion.downlink import (
     DownlinkKind,
     downlink_delivers_user_visible_text,
 )
+from app.services.agentic_companion.ws_deliver_ctx import WsDownlinkDeliverCtx
 from app.services.ws_session_messages import WsOutboundPayload
 
 ToolBackgroundWsMaterializer = Callable[
     [ToolOutputEvent], Awaitable[WsOutboundPayload]
 ]
+BootstrapInterimWsMaterializer = Callable[
+    [Downlink, WsDownlinkDeliverCtx], Awaitable[None]
+]
+LoopForegroundWsMaterializer = Callable[
+    [Downlink, WsDownlinkDeliverCtx], Awaitable[None]
+]
 
 
 class WebSocketDownlink:
-    """Enqueue tool-background companion events as WS outbound payloads."""
+    """Enqueue companion downlink events as WS outbound payloads."""
 
     def __init__(
         self,
         outbound_queue: asyncio.Queue[WsOutboundPayload],
         tool_background_materializer: ToolBackgroundWsMaterializer,
+        *,
+        bootstrap_interim_materializer: BootstrapInterimWsMaterializer | None,
+        loop_foreground_materializer: LoopForegroundWsMaterializer | None,
+        deliver_ctx: WsDownlinkDeliverCtx | None,
     ) -> None:
         assert outbound_queue is not None
         assert tool_background_materializer is not None
         self._outbound_queue = outbound_queue
         self._tool_background_materializer = tool_background_materializer
+        self._bootstrap_interim_materializer = bootstrap_interim_materializer
+        self._loop_foreground_materializer = loop_foreground_materializer
+        self._deliver_ctx = deliver_ctx
+
+    def bind_deliver_ctx(self, ctx: WsDownlinkDeliverCtx | None) -> None:
+        """Set per-turn context for bootstrap interim materialization."""
+        self._deliver_ctx = ctx
 
     async def deliver(self, event: Downlink) -> None:
-        """Materialize tool-background output when user-visible and enqueue for the WS pump."""
+        """Materialize user-visible downlink and enqueue for the WS pump."""
         if not downlink_delivers_user_visible_text(event):
             return
         match event.kind:
             case DownlinkKind.TOOL_BACKGROUND:
                 await self._deliver_tool_background(event)
+            case DownlinkKind.BOOTSTRAP_INTERIM:
+                await self._deliver_bootstrap_interim(event)
+            case DownlinkKind.USER_REPLY:
+                await self._deliver_loop_foreground(event)
             case _:
-                # TODO(companion-ws-bootstrap-downlink): BOOTSTRAP_INTERIM materializer. #3209 #3398
-                # TODO(companion-ws-inner-tick-downlink): USER_REPLY / PROACTIVE / SCHEDULED / MAINTENANCE. #3210
                 raise NotImplementedError(
-                    f"WebSocketDownlink does not handle {event.kind}; "
-                    "use bootstrap consumer or inner_tick_fire for this path"
+                    f"WebSocketDownlink does not handle {event.kind}"
                 )
 
     async def _deliver_tool_background(self, event: Downlink) -> None:
@@ -59,3 +70,19 @@ class WebSocketDownlink:
         assert tool_output is not None
         payload = await self._tool_background_materializer(tool_output)
         await self._outbound_queue.put(payload)
+
+    async def _deliver_bootstrap_interim(self, event: Downlink) -> None:
+        assert event.bootstrap_interim is not None
+        ctx = self._deliver_ctx
+        materializer = self._bootstrap_interim_materializer
+        if ctx is None or materializer is None:
+            return
+        await materializer(event, ctx)
+
+    async def _deliver_loop_foreground(self, event: Downlink) -> None:
+        """Settled DUAL_LLM per-call foreground stream (terminal turn frame uses chat_ws)."""
+        ctx = self._deliver_ctx
+        materializer = self._loop_foreground_materializer
+        if ctx is None or materializer is None:
+            return
+        await materializer(event, ctx)

@@ -527,6 +527,7 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
             langsmith_parent_run_enabled=None,
             tool_bg_idle_event=_idle_tool_bg(),
             bootstrap_interim_output_sink=None,
+        agentic_loop_channel=None,
         ),
     )
 

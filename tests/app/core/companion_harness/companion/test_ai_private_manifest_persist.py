@@ -112,6 +112,7 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
         langsmith_parent_run_enabled=None,
         tool_bg_idle_event=idle,
         bootstrap_interim_output_sink=None,
+        agentic_loop_channel=None,
     )
     result = await run_companion_user_chat_turn("hello again", deps=deps)
     assert result.assistant_text == "visible reply"

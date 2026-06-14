@@ -52,6 +52,7 @@ def _minimal_turn_deps(**overrides: object) -> CompanionTurnDeps:
         langsmith_parent_run_enabled=False,
         tool_bg_idle_event=None,
         bootstrap_interim_output_sink=None,
+        agentic_loop_channel=None,
     )
     if overrides:
         return replace(deps, **overrides)

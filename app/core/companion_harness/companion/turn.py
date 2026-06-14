@@ -98,6 +98,17 @@ from .in_turn_sync_tool_loop import (
     BootstrapInTurnSyncToolLoopInput,
     run_bootstrap_track_sync_tool_loop,
 )
+from app.core.companion_harness.loop.bootstrap_input import (
+    BootstrapAgenticLoopBuildInput,
+    build_bootstrap_agentic_loop_input,
+)
+from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
+from app.core.companion_harness.loop.projection import LoopProjectionContext
+from app.core.companion_harness.loop.runner import run_agentic_loop
+from app.core.companion_harness.loop.settled_input import (
+    SettledAgenticLoopBuildInput,
+    build_settled_agentic_loop_input,
+)
 from .dual_llm_foreground_chat import (
     DualLlmForegroundChatInput,
     run_dual_llm_foreground_chat,
@@ -245,6 +256,7 @@ async def _run_companion_turn_core(
     langsmith_parent_run_enabled = deps.langsmith_parent_run_enabled
     tool_bg_idle_event = deps.tool_bg_idle_event
     bootstrap_interim_output_sink = deps.bootstrap_interim_output_sink
+    agentic_loop_channel = deps.agentic_loop_channel
     t0 = time.perf_counter()
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
@@ -417,34 +429,71 @@ async def _run_companion_turn_core(
                             inner_tick_activity=route_inner_activity,
                         )
                     )
-                    bootstrap_loop_result = await run_bootstrap_track_sync_tool_loop(
-                        BootstrapInTurnSyncToolLoopInput(
-                            store=store,
-                            llm_client=llm_client,
-                            messages=tuple(messages),
-                            tools_for_turn=tuple(tools_for_turn),
-                            memory_bootstrap_type=memory_bootstrap_type,
-                            repository_only_store_text=repository_only_store_text,
-                            trace_id=trace_id,
-                            user_text=user_text,
-                            ts_user=ts_user,
-                            user_msg_uuid=user_msg_uuid,
-                            transcript_rel=rel_tr_bootstrap,
-                            bootstrap_interim_output_sink=(
-                                bootstrap_interim_output_sink
+                    if agentic_loop_channel is not None:
+                        loop_out = await run_agentic_loop(
+                            build_bootstrap_agentic_loop_input(
+                                BootstrapAgenticLoopBuildInput(
+                                    store=store,
+                                    llm_client=llm_client,
+                                    openai_messages=tuple(messages),
+                                    openai_tools=tuple(tools_for_turn),
+                                    memory_bootstrap_type=memory_bootstrap_type,
+                                    repository_only_store_text=(
+                                        repository_only_store_text
+                                    ),
+                                    trace_id=trace_id,
+                                    user_text=user_text,
+                                    ts_user=ts_user,
+                                    user_msg_uuid=user_msg_uuid,
+                                    transcript_rel=rel_tr_bootstrap,
+                                    langsmith_slice=langsmith_slice,
+                                    runtime_context=runtime_context,
+                                )
                             ),
-                            langsmith_slice=langsmith_slice,
+                            llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
+                            channel=agentic_loop_channel,
+                            projection=LoopProjectionContext(
+                                defer_terminal_user_reply=True
+                            ),
                         )
-                    )
-                    last_text = bootstrap_loop_result.assistant_text
-                    langsmith_trace_acc = bootstrap_loop_result.langsmith_trace_id
-                    langsmith_llm_run_acc = bootstrap_loop_result.langsmith_run_id
-                    bootstrap_skip_final_transcript_assistant_row = (
-                        bootstrap_loop_result.skip_final_transcript_assistant_row
-                    )
-                    bootstrap_last_interim_assistant_msg_uuid = (
-                        bootstrap_loop_result.last_interim_assistant_msg_uuid
-                    )
+                        last_text = loop_out.assistant_text
+                        langsmith_trace_acc = loop_out.langsmith_trace_id
+                        langsmith_llm_run_acc = loop_out.langsmith_run_id
+                        bootstrap_skip_final_transcript_assistant_row = (
+                            loop_out.skip_final_transcript_assistant_row
+                        )
+                        bootstrap_last_interim_assistant_msg_uuid = (
+                            loop_out.last_interim_assistant_msg_uuid
+                        )
+                    else:
+                        bootstrap_loop_result = await run_bootstrap_track_sync_tool_loop(
+                            BootstrapInTurnSyncToolLoopInput(
+                                store=store,
+                                llm_client=llm_client,
+                                messages=tuple(messages),
+                                tools_for_turn=tuple(tools_for_turn),
+                                memory_bootstrap_type=memory_bootstrap_type,
+                                repository_only_store_text=repository_only_store_text,
+                                trace_id=trace_id,
+                                user_text=user_text,
+                                ts_user=ts_user,
+                                user_msg_uuid=user_msg_uuid,
+                                transcript_rel=rel_tr_bootstrap,
+                                bootstrap_interim_output_sink=(
+                                    bootstrap_interim_output_sink
+                                ),
+                                langsmith_slice=langsmith_slice,
+                            )
+                        )
+                        last_text = bootstrap_loop_result.assistant_text
+                        langsmith_trace_acc = bootstrap_loop_result.langsmith_trace_id
+                        langsmith_llm_run_acc = bootstrap_loop_result.langsmith_run_id
+                        bootstrap_skip_final_transcript_assistant_row = (
+                            bootstrap_loop_result.skip_final_transcript_assistant_row
+                        )
+                        bootstrap_last_interim_assistant_msg_uuid = (
+                            bootstrap_loop_result.last_interim_assistant_msg_uuid
+                        )
                     logger.info(
                         "run_turn loop_done bootstrap_track loop_total_ms={:.0f}",
                         (time.perf_counter() - t_loop) * 1000.0,
@@ -477,70 +526,118 @@ async def _run_companion_turn_core(
                         tool_system_msgs,
                         stack_depth=_stack_depth,
                     )
-                    chat_model = llm_client.resolve_model("chat")
-                    tool_model = llm_client.resolve_model("tool")
-                    foreground_scene = (
-                        LLM_SCENE_INNER_TICK
-                        if inner_tick_turn and not tick_proactive
-                        else LLM_SCENE_CHAT
-                    )
-
-                    def _kernel_bg_on_event(ev: ToolOutputEvent) -> None:
-                        if background_output_sink is not None:
-                            background_output_sink(ev)
-                        else:
-                            push_output_event(ev)
-
                     skip_foreground_envelope = (
                         inner_tick_turn and not tick_proactive
                     )
-                    fg_result = await run_dual_llm_foreground_chat(
-                        DualLlmForegroundChatInput(
-                            llm_client=llm_client,
-                            chat_msgs=tuple(chat_msgs),
-                            tool_msgs=tuple(tool_msgs),
-                            chat_model=chat_model,
-                            langsmith_slice=langsmith_slice,
-                            foreground_scene=foreground_scene,
-                            high_reasoning=tick_proactive,
-                            trace_id=trace_id,
-                            skip_foreground_envelope=skip_foreground_envelope,
-                            route_inner_activity=route_inner_activity,
-                            langsmith_trace_id=langsmith_trace_acc,
-                            langsmith_run_id=langsmith_llm_run_acc,
+                    if agentic_loop_channel is not None:
+                        loop_out = await run_agentic_loop(
+                            build_settled_agentic_loop_input(
+                                SettledAgenticLoopBuildInput(
+                                    store=store,
+                                    llm_client=llm_client,
+                                    openai_messages=tuple(messages),
+                                    openai_tools=tuple(tools_for_turn),
+                                    dual_llm_chat_msgs=tuple(chat_msgs),
+                                    dual_llm_tool_msgs=tuple(tool_msgs),
+                                    companion_turn_track=track,
+                                    memory_bootstrap_type=memory_bootstrap_type,
+                                    repository_only_store_text=(
+                                        repository_only_store_text
+                                    ),
+                                    trace_id=trace_id,
+                                    user_text=user_text,
+                                    ts_user=ts_user,
+                                    user_msg_uuid=user_msg_uuid,
+                                    transcript_rel=transcript_relative_path_for_turn_persistence(
+                                        inner_tick_turn=inner_tick_turn,
+                                        inner_tick_activity=route_inner_activity,
+                                    ),
+                                    langsmith_slice=langsmith_slice,
+                                    runtime_context=runtime_context,
+                                    inner_tick_turn=inner_tick_turn,
+                                    inner_tick_activity=route_inner_activity,
+                                    skip_foreground_envelope=skip_foreground_envelope,
+                                    high_reasoning=tick_proactive,
+                                    langsmith_trace_id=langsmith_trace_acc,
+                                    langsmith_run_id=langsmith_llm_run_acc,
+                                    prompt_bundle=bundle,
+                                    context_meta=context,
+                                    stack_depth=_stack_depth,
+                                )
+                            ),
+                            llm_loop_mode=UserTurnLlmLoopMode.DUAL_LLM,
+                            channel=agentic_loop_channel,
                         )
-                    )
-                    last_text = fg_result.assistant_text
-                    significance_meta = fg_result.significance_meta
-                    turn_recall = fg_result.turn_recall
-                    langsmith_trace_acc = fg_result.langsmith_trace_id
-                    langsmith_llm_run_acc = fg_result.langsmith_run_id
-                    tool_msgs_for_bg = list(fg_result.tool_msgs_for_bg)
-                    force_tools_first_round = fg_result.force_tools_first_round
-                    start_tool_background_job(
-                        memory_store=store,
-                        request_messages=tool_msgs_for_bg,
-                        tool_model=tool_model,
-                        user_msg_uuid=user_msg_uuid,
-                        trace_id=trace_id,
-                        tools=tools_for_turn,
-                        on_event=_kernel_bg_on_event,
-                        execute_tool_call_fn=execute_tool_call,
-                        client=llm_client.sync_client_for_route("tool"),
-                        chat_completions_sync=llm_client.chat_completions_sync,
-                        write_allowlist=_memory_store_write_allowlist_for_track(track),
-                        repository_only_store_text=repository_only_store_text,
-                        main_event_loop=asyncio.get_running_loop(),
-                        langsmith_parent_run=langsmith_parent_run,
-                        memory_bootstrap_type=memory_bootstrap_type,
-                        inner_tick_turn=inner_tick_turn,
-                        inner_tick_activity=route_inner_activity,
-                        runtime_context=runtime_context,
-                        companion_turn_track=track,
-                        tool_bg_idle_event=tool_bg_idle_event,
-                        force_tools_first_round=force_tools_first_round,
-                    )
-                    tool_background_started = True
+                        last_text = loop_out.assistant_text
+                        significance_meta = loop_out.significance_meta
+                        turn_recall = loop_out.turn_recall
+                        langsmith_trace_acc = loop_out.langsmith_trace_id
+                        langsmith_llm_run_acc = loop_out.langsmith_run_id
+                        tool_background_started = False
+                    else:
+                        chat_model = llm_client.resolve_model("chat")
+                        tool_model = llm_client.resolve_model("tool")
+                        foreground_scene = (
+                            LLM_SCENE_INNER_TICK
+                            if inner_tick_turn and not tick_proactive
+                            else LLM_SCENE_CHAT
+                        )
+
+                        def _kernel_bg_on_event(ev: ToolOutputEvent) -> None:
+                            if background_output_sink is not None:
+                                background_output_sink(ev)
+                            else:
+                                push_output_event(ev)
+
+                        fg_result = await run_dual_llm_foreground_chat(
+                            DualLlmForegroundChatInput(
+                                llm_client=llm_client,
+                                chat_msgs=tuple(chat_msgs),
+                                tool_msgs=tuple(tool_msgs),
+                                chat_model=chat_model,
+                                langsmith_slice=langsmith_slice,
+                                foreground_scene=foreground_scene,
+                                high_reasoning=tick_proactive,
+                                trace_id=trace_id,
+                                skip_foreground_envelope=skip_foreground_envelope,
+                                route_inner_activity=route_inner_activity,
+                                langsmith_trace_id=langsmith_trace_acc,
+                                langsmith_run_id=langsmith_llm_run_acc,
+                            )
+                        )
+                        last_text = fg_result.assistant_text
+                        significance_meta = fg_result.significance_meta
+                        turn_recall = fg_result.turn_recall
+                        langsmith_trace_acc = fg_result.langsmith_trace_id
+                        langsmith_llm_run_acc = fg_result.langsmith_run_id
+                        tool_msgs_for_bg = list(fg_result.tool_msgs_for_bg)
+                        force_tools_first_round = fg_result.force_tools_first_round
+                        start_tool_background_job(
+                            memory_store=store,
+                            request_messages=tool_msgs_for_bg,
+                            tool_model=tool_model,
+                            user_msg_uuid=user_msg_uuid,
+                            trace_id=trace_id,
+                            tools=tools_for_turn,
+                            on_event=_kernel_bg_on_event,
+                            execute_tool_call_fn=execute_tool_call,
+                            client=llm_client.sync_client_for_route("tool"),
+                            chat_completions_sync=llm_client.chat_completions_sync,
+                            write_allowlist=_memory_store_write_allowlist_for_track(
+                                track
+                            ),
+                            repository_only_store_text=repository_only_store_text,
+                            main_event_loop=asyncio.get_running_loop(),
+                            langsmith_parent_run=langsmith_parent_run,
+                            memory_bootstrap_type=memory_bootstrap_type,
+                            inner_tick_turn=inner_tick_turn,
+                            inner_tick_activity=route_inner_activity,
+                            runtime_context=runtime_context,
+                            companion_turn_track=track,
+                            tool_bg_idle_event=tool_bg_idle_event,
+                            force_tools_first_round=force_tools_first_round,
+                        )
+                        tool_background_started = True
                     logger.info(
                         "run_turn loop_done rounds={} loop_total_ms={:.0f} route={}",
                         1,

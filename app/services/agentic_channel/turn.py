@@ -171,6 +171,7 @@ async def run_agent_turn(
     background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
     implicit_signal_bundle,
+    agentic_loop_channel: object | None = None,
 ) -> object:
     """Run one user-chat turn without ``chat_history`` writes."""
     assert user_text.strip() != ""
@@ -195,6 +196,7 @@ async def run_agent_turn(
                 channel=runtime_channel,
                 implicit_signal_bundle=bundle,
             ),
+            agentic_loop_channel=agentic_loop_channel,
         )
     logger.info(
         "agent_channel turn finished scope={} channel={} total_ms={:.0f}",

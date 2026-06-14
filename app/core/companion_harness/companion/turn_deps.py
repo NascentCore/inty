@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.transcript_compaction import (
@@ -32,6 +33,11 @@ from app.core.companion_harness.memory.transcript_compaction import (
 from .llm_client import CompanionLLMClient
 from .runtime_channel import TurnRuntimeContext
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
+
+if TYPE_CHECKING:
+    from app.core.companion_harness.loop.channel_adapter import LoopChannelAdapter
+else:
+    LoopChannelAdapter = object
 
 
 @dataclass(frozen=True)
@@ -125,6 +131,11 @@ class CompanionTurnDeps:
         interim frames) before the turn ends. All other tracks pass ``None``. Set
         from ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink`` on
         user chat only. TODO(#3402): ``UserVisibleChunkSink`` for all user-turn visible rounds.
+
+    agentic_loop_channel
+        Per-call-streaming loop downlink adapter for bootstrap/settled user-turn.
+        When set, bootstrap and dual-LLM settled paths use ``run_agentic_loop`` instead
+        of legacy interim/background sinks.
     """
 
     store: MemoryStore
@@ -139,3 +150,4 @@ class CompanionTurnDeps:
     langsmith_parent_run_enabled: bool | None
     tool_bg_idle_event: threading.Event | None
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None
+    agentic_loop_channel: LoopChannelAdapter | None

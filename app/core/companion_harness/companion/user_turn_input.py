@@ -1,13 +1,17 @@
-"""Companion foreground user-turn input (text + optional images).
+"""Companion foreground user-turn input (text-only phase; multimodal #3293 later)."""
 
-TODO(companion-multimodal-user-turn): Phase 1b — implement ``CompanionUserTurnInput``
-https://github.com/NascentCore/inty/issues/3293
-(frozen dataclass: ``text: str``, ``image_data_urls: tuple[str, ...]``) with
-``to_transcript_text()`` (caption or ``"[image]"``). Consumed by
-``companion_chat_service.run_user_chat``; channel adapters (Weixin, WS) map wire
-DTOs to this type. Multimodal LLM assembly lives in ``turn_pipeline``; capability
-gate uses ``chat_model_accepts_image_input`` from ``models_catalog``.
+from __future__ import annotations
+
+from dataclasses import dataclass
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
-https://github.com/NascentCore/inty/issues/3409"""
+@dataclass(frozen=True)
+class CompanionUserTurnInput:
+    """Normalized user text for one companion user-chat turn."""
+
+    text: str
+
+    def to_transcript_text(self) -> str:
+        """Text persisted on the user transcript row."""
+        assert self.text.strip()
+        return self.text

@@ -16,6 +16,7 @@ https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Awaitable, Callable
 
@@ -46,6 +47,32 @@ class BootstrapInterimOutput(BaseModel):
 
 
 BootstrapInterimOutputSink = Callable[[BootstrapInterimOutput], Awaitable[None]]
+
+
+@dataclass(frozen=True)
+class InTurnInterimOutput:
+    """Internal interim round before wire ``BootstrapInterimOutput`` (phase-5 Pydantic retire)."""
+
+    text: str
+    user_msg_uuid: str
+    trace_id: str
+    langsmith_trace_id: str
+    langsmith_run_id: str
+    round_index: int
+    had_tool_calls: bool
+    assistant_msg_uuid: str
+
+    def to_pydantic(self) -> BootstrapInterimOutput:
+        return BootstrapInterimOutput(
+            text=self.text,
+            user_msg_uuid=self.user_msg_uuid,
+            trace_id=self.trace_id,
+            langsmith_trace_id=self.langsmith_trace_id,
+            langsmith_run_id=self.langsmith_run_id,
+            round_index=self.round_index,
+            had_tool_calls=self.had_tool_calls,
+            assistant_msg_uuid=self.assistant_msg_uuid,
+        )
 
 
 class TurnRouteMode(str, Enum):

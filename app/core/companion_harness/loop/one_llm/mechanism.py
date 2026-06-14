@@ -52,4 +52,7 @@ class OneModelInTurnSyncMechanism:
                 sync_result.skip_final_transcript_assistant_row
             ),
             tool_background_started=False,
+            last_interim_assistant_msg_uuid=(
+                sync_result.last_interim_assistant_msg_uuid
+            ),
         )

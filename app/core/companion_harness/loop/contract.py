@@ -84,6 +84,7 @@ class AgenticLoopOutput:
     deliverables: tuple[LoopDeliverable, ...]
     skip_final_transcript_assistant_row: bool
     tool_background_started: bool
+    last_interim_assistant_msg_uuid: str | None
 
 
 class AgenticLoopMechanism(Protocol):

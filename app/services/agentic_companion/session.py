@@ -37,6 +37,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.scope_turn_lock import get_scope_turn_lock
+from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
     BootstrapInterimOutputSink,
@@ -46,6 +47,10 @@ from app.services.agentic_companion.downlink import (
     ChannelDownlink,
     bootstrap_interim_downlink,
 )
+from app.services.agentic_companion.session_turn_dispatch import (
+    dispatch_uplink_envelope,
+)
+from app.services.agentic_companion.uplink import UplinkEnvelope
 
 InnerTickPollRunner = Callable[[dict[str, Any]], Awaitable[None]]
 
@@ -387,10 +392,17 @@ class Session:
     async def deliver_bootstrap_interim(
         self, interim: BootstrapInterimOutput
     ) -> None:
-        # TODO(companion-ws-bootstrap-downlink): WS downlink must handle BOOTSTRAP_INTERIM before this is wired. #3209 #3398
         await self.downlink.deliver(
             bootstrap_interim_downlink(interim=interim),
         )
+
+    async def run_user_turn(
+        self, envelope: UplinkEnvelope
+    ) -> CompanionTurnResult:
+        """Session hub entry: dispatch uplink to companion harness (turn lock inside service)."""
+        assert envelope is not None
+        _ = self.downlink
+        return await dispatch_uplink_envelope(envelope)
 
     async def start_inner_tick_worker(
         self,

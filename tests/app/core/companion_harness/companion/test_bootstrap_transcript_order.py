@@ -105,6 +105,7 @@ def _bootstrap_deps(
         langsmith_parent_run_enabled=False,
         tool_bg_idle_event=tool_bg_idle,
         bootstrap_interim_output_sink=bootstrap_interim_output_sink,
+        agentic_loop_channel=None,
     )
 
 

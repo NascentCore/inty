@@ -573,6 +573,7 @@ async def run_user_chat(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     runtime_channel: CompanionRuntimeChannel = CompanionRuntimeChannel.APP,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
+    agentic_loop_channel: object | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="user_chat",
@@ -592,6 +593,7 @@ async def run_user_chat(
                 implicit_signal_bundle=implicit_signal_bundle,
             ),
             bootstrap_interim_output_sink=bootstrap_interim_output_sink,
+            agentic_loop_channel=agentic_loop_channel,
         ),
     )
 

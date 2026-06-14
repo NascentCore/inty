@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.services.agentic_companion.downlink import Downlink
+from app.services.agentic_companion.downlink import ChannelDownlink, Downlink
 
 
 class LoopChannelAdapter:
@@ -23,3 +23,14 @@ class RecordingChannelAdapter(LoopChannelAdapter):
 
     async def deliver(self, event: Downlink) -> None:
         self.events.append(event)
+
+
+class DownlinkLoopChannelAdapter(LoopChannelAdapter):
+    """Forward loop projected downlinks to one ``ChannelDownlink``."""
+
+    def __init__(self, inner: ChannelDownlink) -> None:
+        assert inner is not None
+        self._inner = inner
+
+    async def deliver(self, event: Downlink) -> None:
+        await self._inner.deliver(event)

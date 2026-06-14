@@ -101,6 +101,7 @@ class TwoModelChatThenToolBgMechanism:
             deliverables=output_queue.deliverables,
             skip_final_transcript_assistant_row=False,
             tool_background_started=True,
+            last_interim_assistant_msg_uuid=None,
         )
 
 

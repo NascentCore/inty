@@ -32,17 +32,13 @@ from app.core.companion_harness.companion.scope_turn_lock import (
     companion_scope_from_foreground_ctx,
     get_scope_turn_lock,
 )
-from app.core.companion_harness.companion.turn_routes import (
-    BootstrapInterimOutputSink,
-)
+from app.core.companion_harness.companion.runtime_channel import CompanionRuntimeChannel
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.core.companion_harness.companion.runtime_events import (
     build_user_signed_out_runtime_event_record,
     build_ws_conn_dropped_runtime_event_record,
 )
 from app.core.companion_harness.companion.websocket_coordinator import (
-    BootstrapInterimDeliverCtx,
-    BootstrapInterimQueued,
     ChatWsInflightShutdownRegistry,
     ChatWsInflightTurnTracker,
     CompanionWebSocketCoordinator,
@@ -77,7 +73,9 @@ from app.services import agent_service, chat_history_service, chat_service
 from app.services import companion_chat_service
 from app.services.chat_websocket_session import chat_ws_outbound_pump
 from app.services.ws_session_messages import WsOutboundPayload
-from app.services.agentic_companion.downlink import tool_background_downlink
+from app.services.agentic_companion.downlink import Downlink, tool_background_downlink
+from app.services.agentic_companion.ws_deliver_ctx import WsDownlinkDeliverCtx
+from app.core.companion_harness.loop.channel_adapter import DownlinkLoopChannelAdapter
 from app.services.agentic_companion.inner_tick_delivery import (
     inner_tick_delivery_for_ws,
 )
@@ -95,6 +93,10 @@ from app.services.agentic_companion.ws_channel_guard import (
     ws_reject_reason_if_telegram_active,
 )
 from app.services.agentic_companion.ws_downlink import WebSocketDownlink
+from app.services.agentic_companion.ws_uplink import (
+    parse_ws_implicit_sign_on,
+    parse_ws_user_message,
+)
 from app.services.phone_call_service import (
     PhoneCallConfigError,
     PhoneCallLimitError,
@@ -221,6 +223,7 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
     companion_ws: CompanionWebSocketCoordinator,
     tc_box: list[Optional[dict]],
     outbound_queue: asyncio.Queue[WsOutboundPayload],
+    companion_presence: Session,
 ) -> None:
     """Run one companion greeting turn scheduled from ``user_signed_on`` (with ``message_id``)."""
     try:
@@ -243,6 +246,7 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                 companion_ws=companion_ws,
                 implicit_greeting_turn=True,
                 ws_outbound_queue=outbound_queue,
+                companion_presence=companion_presence,
             )
         except HTTPException as e:
             await outbound_queue.put(
@@ -328,6 +332,7 @@ async def _try_handle_ws_user_signed_on_frame(
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService,
     app_version_code: Optional[int],
+    companion_presence: Session,
 ) -> bool:
     """
     Consume ``{"type":"user_signed_on","agent_id":...}``.
@@ -419,6 +424,7 @@ async def _try_handle_ws_user_signed_on_frame(
                 companion_ws=companion_ws,
                 tc_box=tc_box,
                 outbound_queue=outbound_queue,
+                companion_presence=companion_presence,
             ),
             name=f"chat_ws_user_signed_on_greeting_{ws_conn_id}",
         )
@@ -802,12 +808,14 @@ async def _build_companion_tool_background_ws_payload(
 
 
 # TODO(companion-ws-bootstrap-downlink): move materialize into WebSocketDownlink; drop parallel consumer. #3209 #3398
-async def _deliver_bootstrap_interim_queued(
-    queued: BootstrapInterimQueued,
+# TODO(companion-ws-bootstrap-downlink): legacy queue path; remove in proc-5. #3209 #3398
+async def _materialize_ws_bootstrap_interim_downlink(
+    event: Downlink,
+    ctx: WsDownlinkDeliverCtx,
 ) -> None:
-    """Materialize one bootstrap sync tool-loop round into chat history + WS outbound."""
-    ev = queued.ev
-    ctx = queued.ctx
+    """Materialize one bootstrap interim ``Downlink`` into chat history + WS outbound."""
+    ev = event.bootstrap_interim
+    assert ev is not None
     meta_data = dump_chat_ws_companion_wire_meta(
         ChatWsCompanionWireMessageMetaData(
             source="bootstrap_tool_round",
@@ -861,16 +869,60 @@ async def _deliver_bootstrap_interim_queued(
     await ctx.outbound_queue.put(out)
 
 
-async def _companion_ws_bootstrap_interim_consumer(
-    companion_ws: CompanionWebSocketCoordinator,
+async def _materialize_ws_loop_foreground_downlink(
+    event: Downlink,
+    ctx: WsDownlinkDeliverCtx,
 ) -> None:
-    """Drain ``bootstrap_interim_queued_events`` for the lifetime of one ``/api/v1/chat/ws`` session."""
-    while True:
-        queued = await companion_ws.bootstrap_interim_queued_events.get()
-        try:
-            await _deliver_bootstrap_interim_queued(queued)
-        except Exception:
-            logger.exception("companion_ws bootstrap_interim deliver failed")
+    """Materialize one settled DUAL_LLM foreground stream frame during the turn."""
+    assert event.turn is not None
+    turn = event.turn
+    sp = turn.significance_perception
+    significance = sp if isinstance(sp, dict) and sp else None
+    meta_data = dump_chat_ws_companion_wire_meta(
+        ChatWsCompanionWireMessageMetaData(
+            source="chat",
+            significance_perception=significance,
+            turn_recall=turn.turn_recall or None,
+        )
+    )
+    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+        ctx.session_id,
+        event.assistant_text,
+        agent_id=ctx.agent_id,
+        meta_data=meta_data,
+    )
+    latest_message_info = None
+    try:
+        if ai_message_id is not None:
+            latest_message_info = (
+                await chat_history_service.get_ai_message_info_by_id(
+                    ctx.db, ai_message_id
+                )
+            )
+    except Exception as e:
+        logger.warning("loop_foreground get_ai_message_info_by_id failed: {}", e)
+    subscription_actions = [
+        BizAction(action_type=ActionType.NONE, message=""),
+    ]
+    completion = build_companion_ws_completion_data(
+        response_text_content=event.assistant_text,
+        response_content_parts=None,
+        last_user_text=ctx.last_user_text,
+        latest_message_info=latest_message_info,
+        audio_url=None,
+        request=ctx.request,
+        source_imate_id=ctx.request.target_imate_id,
+        user_message_id=None,
+        subscription_actions=subscription_actions,
+        client_local_id=ctx.effective_local_id,
+    )
+    payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
+    out = payload.model_dump(exclude_none=True)
+    out["agent_id"] = ctx.agent_id
+    out["status_line"] = await _agent_status_line_for_chat_header(
+        ctx.db, ctx.agent_id
+    )
+    await ctx.outbound_queue.put(out)
 
 
 async def _agent_chat_ws_completions_impl(
@@ -887,6 +939,8 @@ async def _agent_chat_ws_completions_impl(
     companion_ws: CompanionWebSocketCoordinator | None = None,
     implicit_greeting_turn: bool = False,
     ws_outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
+    ws_downlink: WebSocketDownlink | None = None,
+    companion_presence: Session | None = None,
 ) -> dict:
     """One companion chat turn for ``/api/v1/chat/ws`` (production WebSocket path).
 
@@ -1103,14 +1157,11 @@ async def _agent_chat_ws_completions_impl(
                             "agent_settings": agent_data.get("settings"),
                             "language": request.language,
                         }
-                    bootstrap_interim_sink: (
-                        BootstrapInterimOutputSink | None
-                    ) = None
-                    if ws_outbound_queue is not None:
-                        assert companion_ws is not None
-                        # TODO(companion-presence-ws-outbound): deliver via session, not coordinator queue. #3211 #3209 #3398
-                        companion_ws.set_bootstrap_interim_deliver_ctx(
-                            BootstrapInterimDeliverCtx(
+                    agentic_loop_channel = None
+                    bg_sink = companion_background_sink
+                    if ws_outbound_queue is not None and ws_downlink is not None:
+                        ws_downlink.bind_deliver_ctx(
+                            WsDownlinkDeliverCtx(
                                 db=db,
                                 agent_id=agent_id,
                                 session_id=session_id,
@@ -1120,16 +1171,47 @@ async def _agent_chat_ws_completions_impl(
                                 outbound_queue=ws_outbound_queue,
                             )
                         )
-                        bootstrap_interim_sink = (
-                            companion_ws.bootstrap_interim_output_sink()
+                        agentic_loop_channel = DownlinkLoopChannelAdapter(
+                            ws_downlink
                         )
+                        bg_sink = None
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
                             client_time=request.user_time_context,
                             user_signed_on=implicit_greeting_ws,
                             server_received_at_utc=datetime.now(timezone.utc),
                         )
-                        if implicit_greeting_ws:
+                        if companion_presence is not None:
+                            if implicit_greeting_ws:
+                                assert companion_preset_uid is not None
+                                envelope = parse_ws_implicit_sign_on(
+                                    user_id=str(current_user.id),
+                                    agent_id=agent_id,
+                                    chat_id=chat.id,
+                                    preset_message_id=companion_preset_uid,
+                                    resolved_chat_model=model_override,
+                                    session_id=session_id,
+                                    runtime_channel=CompanionRuntimeChannel.APP,
+                                    client_time=request.user_time_context,
+                                )
+                            else:
+                                envelope = parse_ws_user_message(
+                                    user_id=str(current_user.id),
+                                    agent_id=agent_id,
+                                    chat_id=chat.id,
+                                    request=request,
+                                    resolved_chat_model=model_override,
+                                    session_id=session_id,
+                                    runtime_channel=CompanionRuntimeChannel.APP,
+                                    implicit_signal_bundle=companion_implicit_bundle,
+                                    background_output_sink=bg_sink,
+                                    bootstrap_interim_output_sink=None,
+                                    agentic_loop_channel=agentic_loop_channel,
+                                )
+                            companion_turn = await companion_presence.run_user_turn(
+                                envelope
+                            )
+                        elif implicit_greeting_ws:
                             companion_turn = await companion_chat_service.run_companion_implicit_sign_on_greeting_turn_for_api(
                                 user_id=current_user.id,
                                 agent_id=agent_id,
@@ -1149,10 +1231,10 @@ async def _agent_chat_ws_completions_impl(
                                 user_text=last_user_text,
                                 resolved_chat_model=model_override,
                                 session_id=session_id,
-                                background_output_sink=companion_background_sink,
+                                background_output_sink=bg_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
                                 implicit_signal_bundle=companion_implicit_bundle,
-                                bootstrap_interim_output_sink=bootstrap_interim_sink,
+                                agentic_loop_channel=agentic_loop_channel,
                             )
                         if (
                             companion_preset_uid is not None
@@ -1201,8 +1283,8 @@ async def _agent_chat_ws_completions_impl(
                                 ]["foreground_user_message_id"] = bg_user_row_id
                         raise
                     finally:
-                        if companion_ws is not None:
-                            companion_ws.clear_bootstrap_interim_deliver_ctx()
+                        if ws_downlink is not None:
+                            ws_downlink.bind_deliver_ctx(None)
                     companion_reply = companion_turn.assistant_text
                     companion_ai_meta = _companion_ai_meta_from_turn_result(
                         companion_turn,
@@ -1413,11 +1495,6 @@ async def chat_completions_websocket(
     tc_box: list[Optional[dict]] = [None]
     companion_ws = CompanionWebSocketCoordinator.for_current_loop()
     companion_ws.bind_outbound_queue(outbound_queue)
-    # TODO(companion-presence-ws-outbound): one session downlink consumer; no extra bootstrap task. #3211 #3398
-    bootstrap_interim_consumer_task = asyncio.create_task(
-        _companion_ws_bootstrap_interim_consumer(companion_ws),
-        name="companion_ws_bootstrap_interim",
-    )
     inflight_turn_tracker = ChatWsInflightTurnTracker()
     ChatWsInflightShutdownRegistry.register(inflight_turn_tracker)
     ws_leased_agent_id_box: list[Optional[str]] = [None]
@@ -1441,6 +1518,9 @@ async def chat_completions_websocket(
     ws_downlink = WebSocketDownlink(
         outbound_queue,
         _ws_tool_background_materializer,
+        bootstrap_interim_materializer=_materialize_ws_bootstrap_interim_downlink,
+        loop_foreground_materializer=_materialize_ws_loop_foreground_downlink,
+        deliver_ctx=None,
     )
     presence = Session.from_coordinator(
         downlink=ws_downlink,
@@ -1572,6 +1652,7 @@ async def chat_completions_websocket(
                 subscription_svc=subscription_svc,
                 voice_svc=voice_svc,
                 app_version_code=app_version_code,
+                companion_presence=presence,
             ):
                 continue
             if await _try_handle_ws_user_signed_out_frame(
@@ -1647,6 +1728,8 @@ async def chat_completions_websocket(
                         companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
                         companion_ws=companion_ws,
                         ws_outbound_queue=outbound_queue,
+                        ws_downlink=ws_downlink,
+                        companion_presence=presence,
                     ),
                     name=f"chat_ws_turn_{ws_conn_id}",
                 )
@@ -1696,11 +1779,6 @@ async def chat_completions_websocket(
             )
             ws_leased_agent_id_box[0] = None
         await presence.stop()
-        bootstrap_interim_consumer_task.cancel()
-        try:
-            await bootstrap_interim_consumer_task
-        except asyncio.CancelledError:
-            pass
         # TODO(ws-disconnect-lifecycle): #3256 — persist-first; finish turns; mark undelivered.
         await inflight_turn_tracker.cancel_all()
         ChatWsInflightShutdownRegistry.unregister(inflight_turn_tracker)

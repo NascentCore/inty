@@ -29,6 +29,8 @@ _TELEGRAM_TEXT_KINDS = frozenset(
         DownlinkKind.PROACTIVE,
         DownlinkKind.SCHEDULED,
         DownlinkKind.MAINTENANCE,
+        DownlinkKind.BOOTSTRAP_INTERIM,
+        DownlinkKind.TOOL_BACKGROUND,
     }
 )
 

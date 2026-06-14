@@ -59,6 +59,7 @@ def _default_turn_deps(
         langsmith_parent_run_enabled=None,
         tool_bg_idle_event=None,
         bootstrap_interim_output_sink=None,
+        agentic_loop_channel=None,
     )
     if overrides:
         from dataclasses import replace

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
 
 from loguru import logger
 from sqlalchemy import select
@@ -19,16 +18,16 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
 )
+from app.core.companion_harness.loop.channel_adapter import DownlinkLoopChannelAdapter
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services import agent_service
 from app.services.agentic_channel.channel_runtime import (
     get_scope_channel_registry,
 )
-from app.services.agentic_channel.turn import run_agent_turn
+from app.services.agentic_channel.telegram_uplink import parse_telegram_uplink
 from app.services.agentic_companion.downlink import (
     DownlinkKind,
     downlink_delivers_user_visible_text,
@@ -186,22 +185,28 @@ class AgentChannelPresence:
                     "effective_local_id": None,
                 },
             )
-            # TODO(#3411): Telegram Bot API has no device timezone; manual E2E smoke:
-            # inference → update_user_md → USER.md → LangSmith foreground ## User's Local Time Context.
-            implicit_bundle = ImplicitSignalBundle(
-                client_time=None,
-                user_signed_on=False,
-                server_received_at_utc=datetime.now(timezone.utc),
-            )
-            turn = await run_agent_turn(
+            agentic_loop_channel = None
+            bg_sink = self._coordinator.background_sink
+            registry = get_scope_channel_registry(self._scope)
+            active = registry.active_channel()
+            if active is not None:
+                channel_downlink = registry.downlinks.get(active)
+                if channel_downlink is not None:
+                    agentic_loop_channel = DownlinkLoopChannelAdapter(
+                        channel_downlink
+                    )
+                    bg_sink = None
+            assert self._session is not None
+            envelope = parse_telegram_uplink(
                 scope=self._scope,
                 user_text=stripped,
                 resolved_chat_model=model,
-                runtime_channel=runtime_channel,
-                background_output_sink=self._coordinator.background_sink,
                 preset_user_msg_uuid=preset_uid,
-                implicit_signal_bundle=implicit_bundle,
+                session_id=session_id,
+                background_output_sink=bg_sink,
+                agentic_loop_channel=agentic_loop_channel,
             )
+            turn = await self._session.run_user_turn(envelope)
             assert isinstance(turn, CompanionTurnResult)
             if not turn.tool_background_started:
                 self._coordinator.remove_foreground_pending(preset_uid)

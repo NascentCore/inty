@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -18,17 +17,15 @@ from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
-from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
-)
 from app.core.companion_harness.companion.scope_turn_lock import (
     companion_scope_from_foreground_ctx,
     get_scope_turn_lock,
 )
-from app.services import agent_service, chat_service, companion_chat_service
+from app.services import agent_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.downlink import tool_background_downlink
+from app.core.companion_harness.loop.channel_adapter import DownlinkLoopChannelAdapter
+from backend.ops.weixin_channel.weixin_uplink import parse_weixin_uplink
 from app.services.agentic_companion.inner_tick_delivery import (
     inner_tick_delivery_for_weixin,
 )
@@ -207,23 +204,24 @@ class WeixinInprocessPresence:
                     "effective_local_id": None,
                 },
             )
-            implicit_bundle = ImplicitSignalBundle(
-                client_time=None,
-                user_signed_on=False,
-                server_received_at_utc=datetime.now(timezone.utc),
-            )
-            turn = await companion_chat_service.run_user_chat(
+            agentic_loop_channel = None
+            bg_sink = self._coordinator.background_sink
+            assert self._presence is not None
+            if self._downlink is not None:
+                agentic_loop_channel = DownlinkLoopChannelAdapter(self._downlink)
+                bg_sink = None
+            envelope = parse_weixin_uplink(
                 user_id=user_id,
                 agent_id=agent_id,
                 chat_id=chat_id,
                 user_text=stripped,
                 resolved_chat_model=model_override,
                 session_id=session_id,
-                background_output_sink=self._coordinator.background_sink,
                 preset_user_msg_uuid=preset_uid,
-                implicit_signal_bundle=implicit_bundle,
-                runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+                background_output_sink=bg_sink,
+                agentic_loop_channel=agentic_loop_channel,
             )
+            turn = await self._presence.run_user_turn(envelope)
             if not turn.tool_background_started:
                 self._coordinator.remove_foreground_pending(preset_uid)
             reply = turn.assistant_text.strip()
