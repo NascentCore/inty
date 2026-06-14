@@ -16,3 +16,12 @@ Review and revise the plan:
 ## Testing
 
 - Plan should include writing and running tests.
+
+## Refactoring or reorganize code
+
+The implementation plan should following the following overall procedures:
+1. implement the new design in code with minimal changes to the existing code
+2. test the new code
+2. integrate the new code into the existing code
+3. tests: unit tests, smoke tests, manual tests
+4. delete the old code
