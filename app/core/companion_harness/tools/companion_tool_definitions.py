@@ -26,8 +26,10 @@ from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.companion_harness.experience_profile import (
+from app.core.companion_harness.experience_profile.context_mode import (
     ExperienceContextMode,
+)
+from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
 )
 from app.core.companion_harness.tools.openai_tools_prepare import (

@@ -18,10 +18,12 @@ from pydantic import (
     field_validator,
 )
 
-from app.core.companion_harness.experience_profile import (
-    ExperienceDirectives,
+from app.core.companion_harness.experience_profile.context_mode import (
     experience_profile_injects_private_memory,
     normalize_experience_profile_id,
+)
+from app.core.companion_harness.experience_profile.experience_directives import (
+    ExperienceDirectives,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 

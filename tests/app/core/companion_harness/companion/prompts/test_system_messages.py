@@ -7,7 +7,7 @@ from app.core.companion_harness.companion.models import (
     ContextMeta,
     InnerTickActivity,
 )
-from app.core.companion_harness.experience_profile import (
+from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
     ExperienceDirectives,
 )

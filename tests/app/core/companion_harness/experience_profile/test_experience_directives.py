@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from app.core.companion_harness.companion.models import ContextMeta, load_context_meta
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.experience_profile import (
+from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
     ExperienceDirectives,
 )
@@ -55,7 +55,7 @@ def test_load_context_meta_legacy_json_without_directives(
 
 
 def test_experience_directives_system_clause_none_when_unset() -> None:
-    from app.core.companion_harness.experience_profile import (
+    from app.core.companion_harness.experience_profile.experience_directives import (
         experience_directives_system_clause,
     )
 
@@ -63,7 +63,7 @@ def test_experience_directives_system_clause_none_when_unset() -> None:
 
 
 def test_experience_directives_system_clause_playful() -> None:
-    from app.core.companion_harness.experience_profile import (
+    from app.core.companion_harness.experience_profile.experience_directives import (
         EXPERIENCE_DIRECTIVES_SYSTEM_HEADING,
         experience_directives_system_clause,
     )

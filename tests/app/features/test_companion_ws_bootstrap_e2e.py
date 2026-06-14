@@ -29,7 +29,7 @@ from tests.app.companion_ws_bootstrap.server import (
     postgres_tcp_reachable,
     run_inty_backend_subprocess,
 )
-from app.core.companion_harness.experience_profile import ExperienceContextMode
+from app.core.companion_harness.experience_profile.context_mode import ExperienceContextMode
 
 from tests.app.companion_ws_bootstrap.ws_client import (
     connect_send_implicit_sign_on_and_expect_assistant,

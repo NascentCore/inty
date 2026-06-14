@@ -35,7 +35,9 @@ from app.core.companion_harness.companion.bootstrap import (
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
 )
-from app.core.companion_harness.experience_profile import ExperienceDirectiveTone
+from app.core.companion_harness.experience_profile.experience_directives import (
+    ExperienceDirectiveTone,
+)
 from app.core.companion_harness.companion.models import (
     ChatMessage,
     load_context_meta,

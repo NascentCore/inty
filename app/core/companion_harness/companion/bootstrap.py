@@ -25,11 +25,13 @@ from typing import Any, Final
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.companion_harness.experience_profile import (
+from app.core.companion_harness.experience_profile.context_mode import (
     ExperienceContextMode,
+    normalize_experience_profile_id,
+)
+from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
     ExperienceDirectives,
-    normalize_experience_profile_id,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
     BOOTSTRAP_WRITABLE_REL_PATHS,
