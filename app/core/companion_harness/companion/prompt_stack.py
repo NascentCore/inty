@@ -10,6 +10,9 @@ TODO(crs-companionship-doc): After #3342, load ``COMPANIONSHIP.md`` from MemoryS
 ``PromptBundle`` / ``_persona_system_messages``; #3343 activates template + ``turn_recall``.
 
 TODO(#3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled ``USER_CHAT`` — #3369.
+
+TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
+hierarchy (design issue; options include in-context vs retrieval-required splits).
 """
 
 from __future__ import annotations
