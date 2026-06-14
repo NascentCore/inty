@@ -370,6 +370,7 @@ def _unregister_thread(worker: threading.Thread) -> None:
 def _assistant_text_from_completion_response(resp: Any) -> str:
     # TODO(companion-dual-envelope-reasoning-channel): Tool-background path only reads ``.content``;
     # same provider quirk as foreground ``turn.py`` when switching reasoning-heavy chat models.
+    # TODO(#3398): Inner-tick dual-model leg; user chat uses in-turn sync on chat model.
     content = resp.choices[0].message.content
     if not isinstance(content, str):
         preview = repr(content)

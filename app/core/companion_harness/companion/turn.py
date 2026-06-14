@@ -31,9 +31,12 @@ foreground parse. ``start_tool_background_job`` then runs the tool-model loop in
 ``run_turn`` does **not** await that loop. Maintenance inner ticks skip the foreground envelope; see
 ``companion/AGENTS.md`` (Async tool_background) for the product-facing summary.
 
-**Bootstrap (``USER_CHAT_BOOTSTRAP``)**: In-turn rounds that include ``tool_calls`` push non-empty
-assistant ``content`` immediately via ``bootstrap_interim_output_sink`` (WebSocket
-``outbound_queue``). Terminal rounds (no ``tool_calls``) use only the usual end-of-turn WS frame.
+**In-turn user-visible chunks (``USER_CHAT`` / ``USER_CHAT_BOOTSTRAP``)**: Non-empty assistant
+``user_facing_reply`` per LLM round may push via ``bootstrap_interim_output_sink`` (WebSocket).
+TODO(unified-per-chunk-downlink): every visible round → downlink; drop terminal duplicate — #3398 #3209.
+
+TODO(user-turn-llm-loop-mode): Dual-LLM user-turn vs single-LLM in-turn sync; chat vs tool model
+specialization — epic #3398.
 
 TODO(tool-bg-idle-starves-user-chat): Hung maintenance ``tool_background`` leaves
 ``CompanionSession.tool_bg_idle`` cleared; the next proactive or user ``run_turn`` blocks here
@@ -706,6 +709,7 @@ async def _run_companion_turn_core(
                     route_mode
                     == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
                 ):
+                    # TODO(#3398): User chat no longer uses this branch; inner-tick maintenance/autonomy only.
                     assert inner_tick_turn and (not tick_proactive)
                     tool_system_msgs = _inner_tick_async_tool_system_messages(
                         store=store,

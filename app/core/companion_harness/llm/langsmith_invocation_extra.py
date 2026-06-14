@@ -17,6 +17,7 @@ INTY_TOOL_CHOICE_ATTEMPT_METADATA_KEY = "inty_tool_choice_attempt"
 INTY_TOOL_BG_ROUND_METADATA_KEY = "inty_tool_bg_round"
 
 # Companion foreground chat completion that requests structured JSON envelope + importance_* fields.
+# TODO(#3398): Historical dual-LLM user-turn foreground; settled USER_CHAT uses SOURCE_USER_CHAT_IN_TURN_SYNC.
 SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE = "foreground_dual_llm_envelope"
 SOURCE_BOOTSTRAP_TRACK = "bootstrap_track"
 SOURCE_USER_CHAT_IN_TURN_SYNC = "user_chat_in_turn_sync"

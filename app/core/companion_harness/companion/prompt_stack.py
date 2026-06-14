@@ -8,6 +8,9 @@ model leg continues.
 
 TODO(crs-companionship-doc): After #3342, load ``COMPANIONSHIP.md`` from MemoryStore into
 ``PromptBundle`` / ``_persona_system_messages``; #3343 activates template + ``turn_recall``.
+
+TODO(#3398): ``USER_CHAT`` uses in-turn sync prompts; dual-LLM foreground contract only if
+``llm_loop_mode`` restores async split — child #3369.
 """
 
 from __future__ import annotations

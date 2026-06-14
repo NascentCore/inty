@@ -121,7 +121,7 @@ class CompanionTurnDeps:
         ``USER_CHAT``): each round with non-empty assistant ``content`` and
         ``tool_calls`` is pushed immediately (WebSocket interim frames) before turn
         end. Set from ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink``
-        on user chat (#3209).
+        on user chat. TODO(#3398 #3209): per-chunk downlink for all visible rounds.
     """
 
     store: MemoryStore

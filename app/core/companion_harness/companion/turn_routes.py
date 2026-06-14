@@ -4,9 +4,9 @@
 ``tool_background`` split). They do **not** describe WebSocket blocking or whether the HTTP handler
 awaits the full turn.
 
-When tools are enabled, ``run_turn`` resolves the user-visible assistant string from the **foreground**
-envelope chat before spawning ``tool_background``; the latter's tool-model rounds are not awaited for
-that return value (maintenance inner tick skips foreground—see ``turn`` module docstring / companion AGENTS).
+Settled ``USER_CHAT`` with tools uses ``IN_TURN_SYNC_TOOL`` (single chat model, in-turn tool loop).
+``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` remains for maintenance/autonomy inner ticks (``tool_background``
+only). Epic debate on restoring dual-LLM for user chat: #3398.
 """
 
 from __future__ import annotations
@@ -67,7 +67,11 @@ def resolve_turn_route_mode(
     inner_tick_activity: InnerTickActivity,
     tools_enabled: bool,
 ) -> TurnRouteMode:
-    """Pick route label from turn shape (no config.yaml reads)."""
+    """Pick route label from turn shape (no config.yaml reads).
+
+    TODO(user-turn-llm-loop-mode): Optional ``llm_loop_mode`` config may restore
+    ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` for settled ``USER_CHAT`` — epic #3398, child #3369.
+    """
     if tools_enabled:
         if inner_tick_turn:
             return TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
