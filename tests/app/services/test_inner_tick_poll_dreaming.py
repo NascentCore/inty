@@ -141,19 +141,19 @@ async def test_run_scope_inner_tick_poll_order_maintenance_autonomy_dreaming() -
     scope = CompanionScope("u", "a", "c")
     with (
         patch.object(
-            scope_inner_tick_poll.inner_tick_fire,
+            scope_inner_tick_poll,
             "try_fire_maintenance_for_scope",
             new_callable=AsyncMock,
             return_value=False,
         ) as maintenance,
         patch.object(
-            scope_inner_tick_poll.inner_tick_fire,
+            scope_inner_tick_poll,
             "try_fire_autonomy_for_scope",
             new_callable=AsyncMock,
             return_value=False,
         ) as autonomy,
         patch.object(
-            scope_inner_tick_poll.inner_tick_fire,
+            scope_inner_tick_poll,
             "try_fire_dreaming_for_scope",
             new_callable=AsyncMock,
             return_value=True,
@@ -176,7 +176,7 @@ async def test_run_scope_inner_tick_poll_cycle_enumerates_scopes() -> None:
     with (
         patch.object(
             scope_inner_tick_poll,
-            "list_companion_memory_scopes",
+            "fetch_initialized_companion_scopes",
             new_callable=AsyncMock,
             return_value=[scope_a, scope_b],
         ),

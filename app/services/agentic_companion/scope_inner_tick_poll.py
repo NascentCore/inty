@@ -1,4 +1,8 @@
-"""Scope-level inner-tick poll: autonomous tracks without signed-on presence (#3255)."""
+"""Scope-level inner-tick poll: autonomous tracks without signed-on presence (#3255).
+
+Orchestration only — Postgres reads go through ``scope_inner_tick_persistence``;
+track execution goes through ``scope_inner_tick_fire``.
+"""
 
 from __future__ import annotations
 
@@ -7,18 +11,22 @@ import asyncio
 from loguru import logger
 
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.memory.companion_scope_listing import (
-    list_companion_memory_scopes,
+from app.services.agentic_companion.inner_tick_scope_resolver import (
+    InnerTickChatResolveMode,
 )
-from app.db.session import AsyncSessionLocal
-from app.services.agentic_companion import inner_tick_fire
-from app.services.agentic_companion.inner_tick_fire import InnerTickChatResolveMode
+from app.services.agentic_companion.scope_inner_tick_fire import (
+    try_fire_autonomy_for_scope,
+    try_fire_dreaming_for_scope,
+    try_fire_maintenance_for_scope,
+)
+from app.services.agentic_companion.scope_inner_tick_persistence import (
+    fetch_initialized_companion_scopes,
+)
 from app.services.agentic_companion.session import InnerTickCoords
 
 _SCOPE_WORKER_POLL_SOURCE = "scope_inner_tick_worker"
 
 # TODO(dreaming-cluster-lock): Postgres advisory lock per scope (#3271).
-# TODO(scope-listing-due-filter): Narrow to due scopes per wake (#3255 follow-up).
 
 
 async def run_scope_inner_tick_poll_for_scope(
@@ -37,11 +45,11 @@ async def run_scope_inner_tick_poll_for_scope(
         "chat_resolve_mode": InnerTickChatResolveMode.READ_ONLY,
         "implicit_signal_bundle": None,
     }
-    if await inner_tick_fire.try_fire_maintenance_for_scope(**common):
+    if await try_fire_maintenance_for_scope(**common):
         return True
-    if await inner_tick_fire.try_fire_autonomy_for_scope(**common):
+    if await try_fire_autonomy_for_scope(**common):
         return True
-    return await inner_tick_fire.try_fire_dreaming_for_scope(
+    return await try_fire_dreaming_for_scope(
         coords=coords,
         poll_source=_SCOPE_WORKER_POLL_SOURCE,
     )
@@ -52,8 +60,7 @@ async def run_scope_inner_tick_poll_cycle(
     stop: asyncio.Event,
 ) -> None:
     """Enumerate Postgres scopes and attempt one scope track per scope per wake."""
-    async with AsyncSessionLocal() as db:
-        scopes = await list_companion_memory_scopes(db)
+    scopes = await fetch_initialized_companion_scopes()
     for scope in scopes:
         if stop.is_set():
             return

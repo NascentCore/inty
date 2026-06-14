@@ -77,16 +77,14 @@ def _log_has_worker_started(repo_root: Path, workspace: Path | None) -> bool:
 
 
 async def _run_scope_poll_cycle() -> tuple[int, str]:
-    from app.core.companion_harness.memory.companion_scope_listing import (
-        list_companion_memory_scopes,
+    from app.services.agentic_companion.scope_inner_tick_persistence import (
+        fetch_initialized_companion_scopes,
     )
-    from app.db.session import AsyncSessionLocal
     from app.services.agentic_companion.scope_inner_tick_poll import (
         run_scope_inner_tick_poll_cycle,
     )
 
-    async with AsyncSessionLocal() as db:
-        scopes = await list_companion_memory_scopes(db)
+    scopes = await fetch_initialized_companion_scopes()
     scope_count = len(scopes)
     stop = asyncio.Event()
     await run_scope_inner_tick_poll_cycle(stop=stop)
