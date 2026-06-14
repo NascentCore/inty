@@ -17,13 +17,14 @@
 | `PROACTIVE_CHAT` | 合成 turn | 是 | 主动找用户说话 |
 | `SCHEDULED` | 合成 turn | 是 | `schedule_task` 到期提醒 |
 | **`AUTONOMY`** | 合成 turn | **否**（proactive 可间接引用） | 读/写 `LIFE_CURRENTS.md`，开放 tools **真的去做** |
-| `MAINTENANCE` | 合成 turn | 否（当前仍可能经 tool_background 投递） | awake 内在节拍 + 受限 tools（**待收窄**，见下） |
+| `MAINTENANCE` | 合成 turn | **否**（纯 monolog A：foreground 空，无 WS 下行） | awake 内向独白 append ``ai_private.jsonl`` + 可选 ``transcript_inner_tick`` 场景拍 |
 | `DREAMING` | memory batch | 否 | sleeping **当日汇总**：把一整天发生的事沉淀进 MemoryDoc（非 turn） |
 
 **分工（收窄完成后）**：
 
 - `AUTONOMY`：虚拟空间/环境中的**自主活动**（`LIFE_CURRENTS.md`、联网、生图、LS/TC 事件）。
-- `MAINTENANCE`：对用户与关系的**内在心理独白**（`ai_private.jsonl` append、场景下一拍、`transcript_inner_tick`）——**不是** MemoryDoc 策展。
+- `MAINTENANCE`：对用户与关系的**内在心理独白**（``ai_private.jsonl`` append via ``ai_private_append``、场景下一拍、`transcript_inner_tick`）——**不是** MemoryDoc 策展；**不向用户投递可见正文**。
+- `USER_CHAT` / `PROACTIVE_CHAT`：**读侧** tail-splice 未 surfaced 的 ``ai_private`` 独白（manifest 索引行持久化在 ``transcript.jsonl``，hydrate 供后续轮与 DREAMING）。
 - `DREAMING`：**汇总当日全部经历**——用户可见对话（`USER_CHAT`、`PROACTIVE_CHAT`、`SCHEDULED`，`transcript.jsonl`）与沉默 awake 轨（`AUTONOMY`、`MAINTENANCE`：`transcript_inner_tick.jsonl`、`LIFE_CURRENTS.md`、`ai_private.jsonl`、相关 tool/jsonl 痕迹）——策展进 `MEMORY` / `USER` / `SOUL` / `STYLE`、daily gist、`LIVING_SPHERE` compact。**不是**当场场景扮演，也不替代 awake 时各轨道的实时写入。
 
 三者并列：**awake** 时 AUTONOMY / MAINTENANCE 各自记账；**sleeping** 时 DREAMING 做 end-of-day rollup，**不**用 dreaming 替换 maintenance。
@@ -36,7 +37,8 @@
 | **轨道** | `MAINTENANCE`（收窄后 primary 写入方） | `AUTONOMY` |
 | **存储形态** | `.jsonl` 行级 append（事件流） | `.md` 整文件重写（当前主题 + 当日兴致 + 进展） |
 | **是否「真的在做」** | 可以是想象/心理节拍，不必有工具痕迹 | 要求工具调用、生成物、文档版本等**外在状态变化** |
-| **读侧消费** | MAINTENANCE prompt 注入「内在活动」 | PROACTIVE_CHAT 只读 hint；AUTONOMY 读写 |
+| **读侧消费** | MAINTENANCE prompt 注入「内在活动」；USER_CHAT / PROACTIVE_CHAT tail-splice + manifest hydrate | PROACTIVE_CHAT 只读 hint；AUTONOMY 读写 |
+| **写侧** | MAINTENANCE 经 ``ai_private_append``（append-only）；成功 user/proactive turn mark **surfaced** | AUTONOMY ``memory_store_write_document`` 仅 ``LIFE_CURRENTS.md`` |
 
 一句话：`ai_private` = **心里想用户**；`LIFE_CURRENTS` = **在世界里动手做事**。
 

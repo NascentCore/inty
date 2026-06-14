@@ -24,11 +24,12 @@ MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口
 
 ### 2. 对话轨迹（transcript / inner_tick / ai_private）
 
-- **`transcript.jsonl`**：用户可见对话主轨；每轮末追加 user / assistant，作为下一轮上下文与压实输入；体积大时带截窗读取。Proactive chat 也写本轨；**proactive rhythm** 以本轨**最后一条 assistant 的 `ts`** 为锚（见 [DESIGN.md](./DESIGN.md) 与 `proactive_chat.py`）。
+- **`transcript.jsonl`**：用户可见对话主轨；每轮末追加 user / assistant，作为下一轮上下文与压实输入；体积大时带截窗读取。Proactive chat 也写本轨；**proactive rhythm** 以本轨**最后一条 assistant 的 `ts`** 为锚（见 [DESIGN.md](./DESIGN.md) 与 `proactive_chat.py`）。**Manifest 行**（`source=ai_private_splice_manifest`）：仅索引本轮 tail-splice 的 `ai_private` thought UUIDs，**过滤**出 chat history / UI；后续轮 hydrate 为 assistant monolog 供 LLM 与 DREAMING。
 - **`transcript_inner_tick.jsonl`**：沉默 inner-tick turn（`MAINTENANCE`、`AUTONOMY`）；与主 transcript 按时间合并后供 inner_tick scene；proactive / scheduled 仍写主轨。
 - **`ai_private.md` / `ai_private.jsonl`**：**对用户的心理独白**（情绪、未说出口的念头、关系场景里的内在节拍），供 MAINTENANCE inner-tick 注入 `内在活动（ai_private）` system 块。不是虚拟环境里的「动手做事」——后者见 `LIFE_CURRENTS.md`（AUTONOMY）。
-  - **读**：由 `get_ai_private_jsonl_text_for_prompt` / `get_ai_private_text_for_prompt` 等从 MemoryStore 读取（实现见 `app/core/companion_harness/companion/ai_private_prompt.py`）。
-  - **写（当前事实）**：`ai_private.jsonl` 已映射到 ORM（`memory_store_document_mapping.py`），但伴侣工具链里 **`memory_store_write_document` 受 `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` 约束**（仅 allowlist 内 `.md`），**不含** `ai_private.jsonl`，故 **模型经工具默认不可写**该文件；运维/测试或代码内直接 `MemoryStore.write_document` / `append_jsonl_record` 仍可写入。TODO(`ai-private-jsonl-write`)：为 MAINTENANCE 接通 append（专用 append 工具优先，或 allowlist + runtime 仅 append）。
+  - **结构化行**（`ai_private.jsonl`）：`{ uuid, ts, text, after_user_msg_uuid? }`；消费后 append-only **surfaced marker** `{ kind: surfaced, ref_uuid, ts }`。
+  - **读**：MAINTENANCE 经 `get_ai_private_jsonl_text_for_prompt`；USER_CHAT / PROACTIVE_CHAT 经 `transcript_ai_private` tail-splice + manifest hydrate；DREAMING expand manifest + 未 surfaced 当日行。
+  - **写**：MAINTENANCE 经伴侣工具 `ai_private_append`（append-only）；**不经** `memory_store_write_document` allowlist。
 
 ### LivingSphere 小家（`LIVING_SPHERE.md` + `living_sphere_updates.jsonl`）
 

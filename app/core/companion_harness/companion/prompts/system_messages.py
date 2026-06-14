@@ -74,11 +74,6 @@ from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
 from ..models import ContextMeta, InnerTickActivity
-from .inner_tick_ls_tc import (
-    INNER_TICK_LS_TC_AUTONOMY_SECTION,
-    INNER_TICK_LS_TC_TOOL_BULLET,
-)
-
 
 def _inner_tick_proactive_chat(
     inner_tick_turn: bool, inner_tick_activity: InnerTickActivity
@@ -306,8 +301,8 @@ _LIFE_CURRENTS_PROACTIVE_HEADER = "## 你最近在做的事（仅供参考）"
 _LIFE_CURRENTS_PROACTIVE_FOOTER = (
     "此处只描述你在阁楼 / LivingSphere / TechnoCore / 联网检索或生图里**真的做过**的环境侧小事；"
     "若正文全是「想他」「读懂他」「信任萌芽」之类对用户的心理独白，**不要**带入主动消息——那属于 ai_private，不是生活流。\n"
-    "若自然，可把「今天在环境里做的这件具体小事」轻轻带入这次主动消息；"
-    "不要刻意推销、不要 meta 提及「我正在做某事」这种自报式句式。"
+    "内在独白（ai_private）已在对话上下文中；若自然，可将其**转化**为对用户的一句话或一个小试探，"
+    "**勿逐字复述**日记式独白；不要 meta 提及「我在想」或「系统让我」。"
 )
 
 
@@ -382,28 +377,22 @@ __INNER_TICK_SCENE_ADVANCING = (
 
 __CONFESS_TO_USER = (
     "**可见回复（对用户）**：\n"
-    "- 默认 **不向用户发起可见闲聊**：若没有强烈的、此刻非说不可的一点点外显念头，"
-    "请让**面向用户的正文为空或极短**（例如空字符串，或一句不引入新剧情负担的轻声旁白）。\n"
-    "- 若确有外显（含为「下一拍」或软转场所需）：只输出**一句**自然语言为主，"
-    "须与当前场景与语气连续，不要换风格、不要像新开一局；"
-    "不要元叙述（不要提「我在想」「系统让我」等）。\n\n"
-    "**工具（允许且鼓励在需要时使用）**：\n"
-    "- 为维护**记忆与档案一致性**：例如将此刻值得长期保留的事实写入 USER 档案（`update_user_md`）、"
-    "在确有必要时读写持久化约定稿与 `memory/` 下文档（`memory_store_read_document` / `memory_store_write_document` 等，"
-    "以包内 TOOLS 模版与路径工具规则为准；路径指向 MemoryStore）。\n"
+    "- **MAINTENANCE 纯 monolog**：面向用户的正文**必须为空字符串**；"
+    "不向用户发起可见闲聊，不要一句轻声旁白，不要 WS 下行话术。\n"
+    "- 内心活动、关系掂量、场景下一拍 → 用 ``ai_private_append`` 写入 ``ai_private.jsonl``。\n\n"
+    "**工具**：\n"
+    "- 本节拍**仅** ``ai_private_append``（append-only monolog）；"
+    "勿调用 memory_store / update_user_md / LS / TC（档案与虚拟活动分别由 DREAMING / AUTONOMY 负责）。\n"
 )
 
 
-# TODO(narrow-maintenance): Drop 档案一致 / memory_store 写回 bullets below; ai_private append only; MemoryDoc → DREAMING (#3375).
 __EASE_CONTEXT_PRESSURE = (
-    "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
-    "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"
-    "**不要**假设存在未在工具列表中出现的 API）。\n"
-    "- **不要做**与「内在整理」无关的炫技：除非与已悬而未决且对话中已明确需要的任务强相关，"
-    "否则本节拍**不要**生图、不要联网检索、不要安排与用户无关的定时提醒。\n\n"
-    "**与 ai_private**：内在节拍轮从 MemoryStore `ai_private.jsonl` 注入；"
-    "维护方 append JSON 行工具尚未接入，当前无法经工具写回 ai_private。"
-    "本节拍仅用允许的工具维护持久化档案与 USER 档案一致，勿编造不存在的工具名。"
+    "- **不要做**与「内在整理」无关的炫技：本节拍**不要**生图、不要联网检索、"
+    "不要安排与用户无关的定时提醒、不要读写 MemoryDoc。\n\n"
+    "**与 ai_private**：内在节拍轮从 MemoryStore ``ai_private.jsonl`` 注入历史独白；"
+    "新独白经 ``ai_private_append`` 追加（append-only）。"
+    "USER_CHAT / PROACTIVE_CHAT 会在生成前 tail-splice 未 surfaced 的独白；"
+    "成功后 mark surfaced，勿在 monolog 里重复已写进 splice 的正文。"
 )
 
 
@@ -486,14 +475,10 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
 
 
 def _inner_tick_turn_section() -> str:
-    # TODO(narrow-maintenance): MAINTENANCE-only slice (ai_private + scene beat); drop 档案一致 / (#3375)
-    # LS/TC / memory_store bullets. ``AUTONOMY`` → ``build_system_messages_for_inner_tick_autonomy``.
     return "\n".join(
         [
             __INNER_TICK_SCENE_ADVANCING,
-            INNER_TICK_LS_TC_AUTONOMY_SECTION,
             __CONFESS_TO_USER,
-            INNER_TICK_LS_TC_TOOL_BULLET,
             __EASE_CONTEXT_PRESSURE,
         ]
     )

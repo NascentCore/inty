@@ -31,10 +31,15 @@ def test_inner_tick_autonomy_includes_open_work_tools() -> None:
     assert CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value in names
 
 
-def test_inner_tick_autonomy_is_superset_of_maintenance_inner_tick_tools() -> None:
+def test_inner_tick_maintenance_tools_are_ai_private_append_only() -> None:
+    maintenance_names = {tool.value for tool in INNER_TICK_TOOL_NAMES}
+    assert maintenance_names == {CompanionToolName.AI_PRIVATE_APPEND.value}
+
+
+def test_inner_tick_autonomy_and_maintenance_tool_sets_are_disjoint() -> None:
     maintenance_names = {tool.value for tool in INNER_TICK_TOOL_NAMES}
     autonomy_names = {tool.value for tool in INNER_TICK_AUTONOMY_TOOL_NAMES}
-    assert maintenance_names.issubset(autonomy_names)
+    assert maintenance_names.isdisjoint(autonomy_names)
 
 
 def test_inner_tick_autonomy_tools_are_registered_openai_schemas() -> None:

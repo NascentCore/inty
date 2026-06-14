@@ -32,6 +32,9 @@ if TYPE_CHECKING:
 
 AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 
+AI_PRIVATE_SPLICE_MANIFEST_SOURCE = "ai_private_splice_manifest"
+AI_PRIVATE_HYDRATED_SOURCE = "ai_private"
+
 
 class InnerTickActivity(StrEnum):
     """Idle poll activities serialized on presence ``turn_lock``.
@@ -185,6 +188,28 @@ class ChatMessage(BaseModel):
     repl_online_ack: bool | None = None
     inner_tick: bool | None = None
     source: str | None = None
+    ai_private_thought_uuids: list[str] | None = Field(
+        default=None,
+        description="Manifest row only: thought UUIDs spliced on the following assistant turn.",
+    )
+    anchor_user_msg_uuid: str | None = Field(
+        default=None,
+        description="Manifest row only: last real user message uuid at splice time.",
+    )
+
+
+def is_ai_private_splice_manifest(row: ChatMessage) -> bool:
+    """True for transcript.jsonl manifest index rows (not user-visible chat)."""
+    return row.source == AI_PRIVATE_SPLICE_MANIFEST_SOURCE
+
+
+def is_transcript_row_user_visible(row: ChatMessage) -> bool:
+    """Filter manifest and synthetic proactive user rows from chat history / UI paths."""
+    if is_ai_private_splice_manifest(row):
+        return False
+    if row.role == "user" and row.proactive_chat is True:
+        return False
+    return True
 
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000

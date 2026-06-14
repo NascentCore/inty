@@ -57,7 +57,11 @@ from app.core.companion_harness.memory.transcript_compaction import (
     load_compaction_state_from_store,
     save_compaction_state_to_store,
     transcript_compaction_meta_from_outcome,
-    transcript_rows_to_openai_dialogue,
+)
+from .ai_private_prompt import AiPrivateThought
+from .transcript_ai_private import (
+    track_uses_ai_private_splice,
+    transcript_window_to_llm_dialogue,
 )
 from .turn_routes import TurnRouteMode
 from .utc import transcript_message_content_for_llm_at
@@ -235,6 +239,7 @@ def build_companion_turn_prompt_plan(
     implicit_sign_on_turn: bool,
     runtime_context: TurnRuntimeContext,
     transcript_compaction: TranscriptCompactionConfig | None,
+    tail_splice_thoughts: list[AiPrivateThought],
 ) -> CompanionTurnPromptPlan:
     """Assemble system messages, route, and final request messages."""
     inner_tick_turn, _route_inner_activity = turn_flags_for_track(track)
@@ -255,8 +260,20 @@ def build_companion_turn_prompt_plan(
         and (not tools_for_turn)
         and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     )
-    # TODO(#3401): ``use_dual_structured_chat`` is loop-mechanism; keep separate from ``CompanionTurnTrack``.
-    # TODO(#3398): Structured envelope on single chat model; not the same as dual-LLM two-model split.
+    use_ai_private_splice = track_uses_ai_private_splice(track)
+
+    def _transcript_dialogue() -> list[dict[str, Any]]:
+        if use_ai_private_splice:
+            return transcript_window_to_llm_dialogue(
+                store,
+                loaded_state.transcript_window,
+                tail_splice_thoughts=tail_splice_thoughts,
+            )
+        from app.core.companion_harness.memory.transcript_compaction import (
+            transcript_rows_to_openai_dialogue,
+        )
+
+        return transcript_rows_to_openai_dialogue(loaded_state.transcript_window)
 
     transcript_compaction_meta: dict[str, Any] | None = None
     if transcript_compaction is not None and not inner_tick_turn:
@@ -268,7 +285,7 @@ def build_companion_turn_prompt_plan(
         )
         pre_user: list[dict[str, Any]] = [
             *system_messages,
-            *transcript_rows_to_openai_dialogue(loaded_state.transcript_window),
+            *_transcript_dialogue(),
         ]
         outcome = compactor.maybe_compact(
             messages=pre_user,
@@ -301,9 +318,7 @@ def build_companion_turn_prompt_plan(
             )
     else:
         messages = list(system_messages)
-        messages.extend(
-            transcript_rows_to_openai_dialogue(loaded_state.transcript_window)
-        )
+        messages.extend(_transcript_dialogue())
 
     if tick_proactive:
         messages.append(
