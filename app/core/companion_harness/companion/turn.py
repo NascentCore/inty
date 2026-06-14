@@ -57,7 +57,6 @@ import threading
 import time
 import uuid
 from contextlib import nullcontext
-from copy import deepcopy
 from typing import Any
 
 from loguru import logger
@@ -65,7 +64,6 @@ from loguru import logger
 from app.core.config import global_config_loaded_from_config_yaml
 from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
     SOURCE_IMPLICIT_SIGN_ON_GREETING,
     SOURCE_SINGLE_COMPLETION,
 )
@@ -78,7 +76,6 @@ from .llm_client import (
 from .llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
-    record_llm_inference_failure,
 )
 from .proactive_chat import (
     PROACTIVE_CHAT_SILENT_TOKEN,
@@ -102,6 +99,10 @@ from .models import (
 from .in_turn_sync_tool_loop import (
     BootstrapInTurnSyncToolLoopInput,
     run_bootstrap_track_sync_tool_loop,
+)
+from .dual_llm_foreground_chat import (
+    DualLlmForegroundChatInput,
+    run_dual_llm_foreground_chat,
 )
 from .dual_llm_message_stacks import (
     dual_llm_system_message_variants,
@@ -157,8 +158,6 @@ from .llm_chat_runtime import (
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
-
-CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 
 
 def _memory_store_write_allowlist_for_track(
@@ -456,8 +455,8 @@ async def _run_companion_turn_core(
                     route_mode
                     == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
                 ):
-                    # TODO(#3398): Extract ``run_dual_llm_foreground_chat`` (Phase 0.5) for sidecar reuse.
                     # TODO(#3398): dual-LLM user-turn vs single-LLM in-turn sync — epic tracks routing change.
+                    # TODO(#3398): Extract dual-LLM message-stack assembly (variants + replace) for sidecar reuse.
                     tool_system_msgs, chat_system_msgs = (
                         dual_llm_system_message_variants(
                             store=store,
@@ -497,99 +496,29 @@ async def _run_companion_turn_core(
                     skip_foreground_envelope = (
                         inner_tick_turn and not tick_proactive
                     )
-                    if skip_foreground_envelope:
-                        logger.info(
-                            "run_turn inner_tick skip foreground envelope "
-                            "inner_tick_activity={} model_chat={}",
-                            route_inner_activity.value,
-                            chat_model,
+                    fg_result = await run_dual_llm_foreground_chat(
+                        DualLlmForegroundChatInput(
+                            llm_client=llm_client,
+                            chat_msgs=tuple(chat_msgs),
+                            tool_msgs=tuple(tool_msgs),
+                            chat_model=chat_model,
+                            langsmith_slice=langsmith_slice,
+                            foreground_scene=foreground_scene,
+                            high_reasoning=tick_proactive,
+                            trace_id=trace_id,
+                            skip_foreground_envelope=skip_foreground_envelope,
+                            route_inner_activity=route_inner_activity,
+                            langsmith_trace_id=langsmith_trace_acc,
+                            langsmith_run_id=langsmith_llm_run_acc,
                         )
-                        last_text = ""
-                        significance_meta = None
-                        turn_recall = None
-                        tool_msgs_for_bg = deepcopy(tool_msgs)
-                        force_tools_first_round = True
-                    else:
-                        t_api = time.perf_counter()
-                        try:
-
-                            def _chat_sync() -> Any:
-                                return llm_client.chat_completion(
-                                    messages=chat_msgs,
-                                    model=chat_model,
-                                    tools=None,
-                                    response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
-                                    scene=foreground_scene,
-                                    langsmith_extra=langsmith_slice.foreground_invocation_extra(
-                                        source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
-                                        extra_metadata=None,
-                                    ),
-                                    high_reasoning=tick_proactive,
-                                )
-
-                            resp = await asyncio.wait_for(
-                                asyncio.to_thread(_chat_sync),
-                                timeout=llm_client.config.async_chat_front_timeout_sec,
-                            )
-                            langsmith_trace_acc = (
-                                langsmith_trace_id_from_completion(resp)
-                                or langsmith_trace_acc
-                            )
-                            ls_lr = langsmith_llm_run_id_from_completion(resp)
-                            if ls_lr:
-                                langsmith_llm_run_acc = ls_lr
-                        except asyncio.TimeoutError as exc:
-                            record_llm_inference_failure(
-                                model=chat_model.id_on_provider,
-                                exc=exc,
-                                foreground_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
-                            )
-                            raise RuntimeError(
-                                f"async chat front timed out after "
-                                f"{llm_client.config.async_chat_front_timeout_sec:.0f}s "
-                                f"(trace_id={trace_id})"
-                            ) from exc
-
-                        approx_ctx_chars = sum(
-                            len(str(m.get("content") or "")) for m in chat_msgs
-                        )
-                        logger.info(
-                            "run_turn llm_round={} model={} chat_completions_ms={:.0f} "
-                            "approx_ctx_chars={} async_chat_tool_background "
-                            "foreground_chat scene={}",
-                            1,
-                            chat_model,
-                            (time.perf_counter() - t_api) * 1000.0,
-                            approx_ctx_chars,
-                            foreground_scene,
-                        )
-                        msg = resp.choices[0].message
-                        _dual_split = split_dual_llm_chat_branch_message(msg)
-                        last_text = _dual_split.visible_text
-                        significance_meta = _dual_split.significance_meta
-                        turn_recall = _dual_split.turn_recall
-                        fg_output_to_user = _dual_split.output_to_user
-                        # Async foreground chat leg (tools present): same dual-LLM envelope contract as
-                        # single-shot structured chat; ``output_to_user`` must be true here. False is for
-                        # tool_background routing only; non-fatal drift -> WARNING with ``trace_id``.
-                        if fg_output_to_user is False:
-                            logger.warning(
-                                "run_turn foreground dual_llm envelope output_to_user=false "
-                                "trace_id={} (expected true for chat branch)",
-                                trace_id,
-                            )
-                        fg_text = last_text.strip()
-                        tool_msgs_for_bg = deepcopy(tool_msgs)
-                        if fg_text:
-                            tool_msgs_for_bg.append(
-                                {
-                                    "role": "assistant",
-                                    "content": (
-                                        f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\n{fg_text}"
-                                    ),
-                                }
-                            )
-                        force_tools_first_round = not bool(fg_text)
+                    )
+                    last_text = fg_result.assistant_text
+                    significance_meta = fg_result.significance_meta
+                    turn_recall = fg_result.turn_recall
+                    langsmith_trace_acc = fg_result.langsmith_trace_id
+                    langsmith_llm_run_acc = fg_result.langsmith_run_id
+                    tool_msgs_for_bg = list(fg_result.tool_msgs_for_bg)
+                    force_tools_first_round = fg_result.force_tools_first_round
                     start_tool_background_job(
                         memory_store=store,
                         request_messages=tool_msgs_for_bg,
