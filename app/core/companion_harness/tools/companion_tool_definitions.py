@@ -26,7 +26,10 @@ from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.companion_harness.experience_profile import ExperienceContextMode
+from app.core.companion_harness.experience_profile import (
+    ExperienceContextMode,
+    ExperienceDirectiveTone,
+)
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
@@ -153,8 +156,9 @@ SET_BOOTSTRAP_COMPLETE_TOOL = LlmFunctionTool(
 SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
     name=CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
     description=(
-        "Persist the session experience profile id into context.json as context_mode (normalized lowercase).\n"
-        "Call only after inferred from conversation context that the user wants to switch (e.g. roleplay vs emotional companion).\n"
+        "Persist session experience into context.json: context_mode (coarse product switch) "
+        "and optional experience_directives.tone (session stance overlay).\n"
+        "Call when conversation shows the user wants a different built-in mode or tone.\n"
         "Takes effect on the next companion turn; do not use memory_store_write_document on context.json."
     ),
     parameters={
@@ -165,6 +169,14 @@ SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
                 "description": (
                     "Target experience profile ID: "
                     f"{', '.join(_SELECTABLE_EXPERIENCE_PROFILE_IDS)}"
+                ),
+            },
+            "tone": {
+                "type": "string",
+                "enum": [member.value for member in ExperienceDirectiveTone],
+                "description": (
+                    "Optional experience_directives.tone overlay "
+                    "(warm / playful / cool / direct). Omit to leave tone unchanged."
                 ),
             },
             "note": {

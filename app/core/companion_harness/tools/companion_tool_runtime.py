@@ -28,9 +28,11 @@ from app.core.companion_harness.tools.dispatchers.memory_store import (
 )
 
 from app.core.companion_harness.companion.bootstrap import (
+    CompanionSetExperienceProfileToolInput,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
 )
+from app.core.companion_harness.experience_profile import ExperienceDirectiveTone
 from app.core.companion_harness.companion.models import (
     ChatMessage,
     load_context_meta,
@@ -660,10 +662,22 @@ async def _dispatch(
         raw_note = arguments.get("note")
         if not isinstance(raw_note, str):
             return "ERROR: note must be a string"
+        raw_tone = arguments.get("tone")
+        tone_opt: ExperienceDirectiveTone | None = None
+        if raw_tone is not None:
+            if not isinstance(raw_tone, str):
+                return "ERROR: tone must be a string"
+            try:
+                tone_opt = ExperienceDirectiveTone(raw_tone.strip().lower())
+            except ValueError:
+                return "ERROR: tone must be one of warm, playful, cool, direct"
         return tool_companion_set_experience_profile(
             store,
-            raw_ctx,
-            note=raw_note,
+            CompanionSetExperienceProfileToolInput(
+                context_mode=raw_ctx,
+                note=raw_note,
+                tone=tone_opt,
+            ),
         )
     if name == "google_web_search":
         raw_q = arguments.get("query")

@@ -7,6 +7,10 @@ from app.core.companion_harness.companion.models import (
     ContextMeta,
     InnerTickActivity,
 )
+from app.core.companion_harness.experience_profile import (
+    ExperienceDirectiveTone,
+    ExperienceDirectives,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
@@ -72,6 +76,45 @@ def test_contextual_messages_include_infer_time_zone_slice_with_tool_name() -> N
     assert "用户当地时间与作息" in joined
     assert "update_user_md" in joined
     assert "Asia/Shanghai" in joined
+
+
+def test_contextual_messages_include_experience_directives_when_tone_set() -> None:
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+    )
+    messages = build_system_messages_for_chat_track(
+        bundle,
+        ContextMeta(
+            experience_directives=ExperienceDirectives(
+                tone=ExperienceDirectiveTone.WARM
+            )
+        ),
+        memory_bootstrap_type="none",
+    )
+    joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    assert "EXPERIENCE DIRECTIVES" in joined
+    assert "warm" in joined
+
+
+def test_contextual_messages_omit_experience_directives_when_tone_unset() -> None:
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+    )
+    messages = build_system_messages_for_chat_track(
+        bundle,
+        ContextMeta(),
+        memory_bootstrap_type="none",
+    )
+    joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    assert "EXPERIENCE DIRECTIVES" not in joined
 
 
 def test_inner_tick_maintenance_omits_infer_time_zone_slice() -> None:

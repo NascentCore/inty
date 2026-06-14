@@ -116,8 +116,8 @@ class DualLlmChatBranchEnvelope(BaseModel):
     turn_recall: str = Field(
         default="",
         description=(
-            "Ephemeral Turn Brief: one-turn recall notes for harness plumbing (Phase A). "
-            "Leave empty until Phase B activates operator guidance."
+            "Ephemeral Turn Brief: one-turn recall notes (#3343 operator in "
+            "SIGNIFICANCE_PERCEPTION.md). Leave empty when nothing special."
         ),
     )
 

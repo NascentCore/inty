@@ -5,10 +5,12 @@ import json
 from pathlib import Path
 
 from app.core.companion_harness.companion.bootstrap import (
+    CompanionSetExperienceProfileToolInput,
     interactive_bootstrap_active,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
 )
+from app.core.companion_harness.experience_profile import ExperienceDirectiveTone
 from app.core.companion_harness.companion.models import (
     ContextMeta,
     load_prompt_bundle,
@@ -60,7 +62,11 @@ def test_tool_companion_set_experience_profile_updates_context(tmp_path: Path) -
         json.dumps({"context_mode": "intimate", "user_id": "u"}, ensure_ascii=False) + "\n",
     )
     ok = tool_companion_set_experience_profile(
-        st, " ROLEPLAY ", note="user asked"
+        st,
+        CompanionSetExperienceProfileToolInput(
+            context_mode=" ROLEPLAY ",
+            note="user asked",
+        ),
     )
     assert ok.startswith("OK ")
     data = json.loads(st.read_document("context.json"))
@@ -109,6 +115,50 @@ def test_execute_tool_call_dispatch_set_experience_profile(tmp_path: Path) -> No
     )
     assert r.startswith("OK ")
     assert json.loads(st.read_document("context.json"))["context_mode"] == "emotional_companion"
+
+
+def test_tool_companion_set_experience_profile_sets_tone(tmp_path: Path) -> None:
+    st = _store(tmp_path)
+    st.write_document(
+        "context.json",
+        json.dumps({"context_mode": "intimate"}, ensure_ascii=False) + "\n",
+    )
+    ok = tool_companion_set_experience_profile(
+        st,
+        CompanionSetExperienceProfileToolInput(
+            context_mode="intimate",
+            note="user wants playful",
+            tone=ExperienceDirectiveTone.PLAYFUL,
+        ),
+    )
+    assert "tone='playful'" in ok
+    data = json.loads(st.read_document("context.json"))
+    assert data["experience_directives"]["tone"] == "playful"
+
+
+def test_execute_tool_call_dispatch_set_experience_profile_tone(tmp_path: Path) -> None:
+    st = _store(tmp_path)
+    st.write_document(
+        "context.json",
+        json.dumps({"context_mode": "intimate"}, ensure_ascii=False) + "\n",
+    )
+    r = asyncio.run(
+        execute_tool_call(
+            st,
+            "companion_set_experience_profile",
+            json.dumps(
+                {
+                    "context_mode": "remote_lover",
+                    "note": "playful remote",
+                    "tone": "playful",
+                }
+            ),
+        )
+    )
+    assert r.startswith("OK ")
+    data = json.loads(st.read_document("context.json"))
+    assert data["context_mode"] == "remote_lover"
+    assert data["experience_directives"]["tone"] == "playful"
 
 
 def test_bootstrap_write_identity_ok(tmp_path: Path) -> None:
@@ -248,7 +298,11 @@ def test_tool_companion_set_experience_profile_accepts_unknown_profile_id(tmp_pa
         json.dumps({"context_mode": "intimate", "user_id": "u"}, ensure_ascii=False) + "\n",
     )
     ok = tool_companion_set_experience_profile(
-        st, "custom_profile", note="experiment"
+        st,
+        CompanionSetExperienceProfileToolInput(
+            context_mode="custom_profile",
+            note="experiment",
+        ),
     )
     assert ok.startswith("OK ")
     assert json.loads(st.read_document("context.json"))["context_mode"] == "custom_profile"

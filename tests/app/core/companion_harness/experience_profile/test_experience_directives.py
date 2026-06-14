@@ -52,3 +52,26 @@ def test_load_context_meta_legacy_json_without_directives(
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     meta = load_context_meta(store=store)
     assert meta.experience_directives.tone is None
+
+
+def test_experience_directives_system_clause_none_when_unset() -> None:
+    from app.core.companion_harness.experience_profile import (
+        experience_directives_system_clause,
+    )
+
+    assert experience_directives_system_clause(ExperienceDirectives()) is None
+
+
+def test_experience_directives_system_clause_playful() -> None:
+    from app.core.companion_harness.experience_profile import (
+        EXPERIENCE_DIRECTIVES_SYSTEM_HEADING,
+        experience_directives_system_clause,
+    )
+
+    out = experience_directives_system_clause(
+        ExperienceDirectives(tone=ExperienceDirectiveTone.PLAYFUL)
+    )
+    assert out is not None
+    assert out.startswith(EXPERIENCE_DIRECTIVES_SYSTEM_HEADING)
+    assert "playful" in out
+    assert "俏皮" in out

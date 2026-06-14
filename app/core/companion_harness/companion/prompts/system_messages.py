@@ -40,6 +40,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.companion_harness.experience_profile import (
+    experience_directives_system_clause,
     experience_profile_injects_private_memory,
     experience_profile_system_clause,
 )
@@ -149,7 +150,11 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
         "- `importance_user_message` (integer 1-10): importance of the latest user message alone.\n"
         "- `importance_assistant_message` (integer 1-10): importance of `user_facing_reply` alone.\n"
         "- `output_to_user` (boolean): **must be true** on this foreground dual-LLM chat branch "
-        "(the parallel tool branch decides silent vs visible follow-ups).\n\n"
+        "(the parallel tool branch decides silent vs visible follow-ups).\n"
+        "- `turn_recall` (string): optional **Turn Brief** for this turn only — short internal "
+        "note about relationship-relevant details you are holding for the reply (e.g. upcoming "
+        "plans the user mentioned). Leave empty string when nothing special; do not store "
+        "long-term preferences here (bond → COMPANIONSHIP.md).\n\n"
         "This branch still must not call tools (`tool_choice=none`).\n"
     )
 
@@ -742,6 +747,11 @@ def _contextual_system_messages(
     out: list[dict[str, Any]] = [
         _system_message(experience_profile_system_clause(context.context_mode)),
     ]
+    directive_clause = experience_directives_system_clause(
+        context.experience_directives
+    )
+    if directive_clause is not None:
+        out.append(_system_message(directive_clause))
     if repl_online_ack_turn:
         out.append(_system_message(_repl_online_ack_clause()))
     if not inner_tick_turn:

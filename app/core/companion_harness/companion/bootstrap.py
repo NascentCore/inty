@@ -23,9 +23,12 @@ from pathlib import Path
 from typing import Any, Final
 
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from app.core.companion_harness.experience_profile import (
     ExperienceContextMode,
+    ExperienceDirectiveTone,
+    ExperienceDirectives,
     normalize_experience_profile_id,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
@@ -175,16 +178,25 @@ def tool_companion_bootstrap_user_interactive_complete(
     )
 
 
+class CompanionSetExperienceProfileToolInput(BaseModel):
+    """Arguments for ``companion_set_experience_profile`` tool handler."""
+
+    context_mode: str = Field(description="Target experience profile id (context_mode).")
+    note: str = Field(description="Short internal audit note (not shown to user).")
+    tone: ExperienceDirectiveTone | None = Field(
+        default=None,
+        description="Optional experience_directives.tone overlay; omit to leave unchanged.",
+    )
+
+
 def tool_companion_set_experience_profile(
     store: MemoryStore,
-    context_mode: str,
-    *,
-    note: str,
+    tool_input: CompanionSetExperienceProfileToolInput,
 ) -> str:
-    """Persist ``context_mode`` in ``context.json`` with audit note."""
+    """Persist ``context_mode`` and optional ``experience_directives`` in ``context.json``."""
 
     try:
-        normalized = normalize_experience_profile_id(context_mode)
+        normalized = normalize_experience_profile_id(tool_input.context_mode)
     except ValueError as exc:
         return f"ERROR: {exc}"
     rel_ctx = "context.json"
@@ -199,17 +211,31 @@ def tool_companion_set_experience_profile(
     if not isinstance(data, dict):
         return "ERROR: context.json must be a JSON object"
     previous = str(data.get("context_mode", "")).strip() or "(unset)"
-    data["context_mode"] = normalized
-    data["experience_profile_change_note"] = note.strip()[:2000]
+    meta = ContextMeta.model_validate(data)
+    directives = meta.experience_directives
+    if tool_input.tone is not None:
+        directives = ExperienceDirectives(tone=tool_input.tone)
+    updated = meta.model_copy(
+        update={
+            "context_mode": normalized,
+            "experience_directives": directives,
+        }
+    )
+    data = updated.model_dump(mode="json")
+    data["experience_profile_change_note"] = tool_input.note.strip()[:2000]
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel_ctx, out)
     logger.info(
-        "companion_set_experience_profile scope={} {} -> {}",
+        "companion_set_experience_profile scope={} {} -> {} tone={}",
         st.scope.registry_key(),
         previous,
         normalized,
+        directives.tone.value if directives.tone is not None else None,
     )
+    tone_suffix = ""
+    if tool_input.tone is not None:
+        tone_suffix = f"; experience_directives.tone={tool_input.tone.value!r}"
     return (
         f"OK experience profile (context_mode) set to {normalized!r} "
-        f"(previous {previous!r}); applies starting the next companion turn."
+        f"(previous {previous!r}){tone_suffix}; applies starting the next companion turn."
     )
