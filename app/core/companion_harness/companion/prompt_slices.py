@@ -2,7 +2,10 @@
 
 ``PromptSliceId.MEMORY`` maps to ``MEMORY.md`` (semantic memory). Daily gist lives under
 ``memory/daily/<date>.md`` (dreaming-written); see ``memory_taxonomy``.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

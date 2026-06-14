@@ -5,7 +5,10 @@ harness ``## user-time-context`` **system** slice matches the classic agent
 tail-user suffix contract.
 
 # TODO(code-structure): Move this to app.core.companion_harness.companion.prompts.user_time_context_slice.py
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

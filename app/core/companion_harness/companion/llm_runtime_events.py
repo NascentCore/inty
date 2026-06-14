@@ -8,7 +8,10 @@ the bind so recording is a no-op.
 
 Do not add unrelated companion imports here—keep this module as the single narrow bridge from
 ``llm.chat_completions`` into MemoryStore-backed runtime JSONL.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 

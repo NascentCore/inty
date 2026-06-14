@@ -7,4 +7,7 @@ https://github.com/NascentCore/inty/issues/3293
 ``companion_chat_service.run_user_chat``; channel adapters (Weixin, WS) map wire
 DTOs to this type. Multimodal LLM assembly lives in ``turn_pipeline``; capability
 gate uses ``chat_model_accepts_image_input`` from ``models_catalog``.
-"""
+
+
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+https://github.com/NascentCore/inty/issues/3409"""
