@@ -27,7 +27,7 @@ from app.utils.models_catalog import resolve_chat_text_model
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.tool_background import (
     _initial_tool_bg_completion_with_fallbacks,
-    _run_background_tool_loop,
+    run_tool_background_loop,
 )
 
 
@@ -158,7 +158,7 @@ async def test_run_background_tool_loop_continue_sync_receives_telegram_channel(
     store.write_document("MEMORY.md", "memory\n")
     store.write_document("transcript.jsonl", "")
 
-    await _run_background_tool_loop(
+    await run_tool_background_loop(
         memory_store=store,
         request_messages=[{"role": "user", "content": "hi"}],
         tool_model=resolve_chat_text_model("m/tool"),

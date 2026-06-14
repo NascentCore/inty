@@ -158,3 +158,19 @@ async def resolve_official_assistant_tool_loop_async(
         "Official assistant tool call rounds exceeded "
         f"limit={max_tool_call_rounds}"
     )
+
+
+def insert_openai_system_message(
+    openai_messages: list[dict[str, Any]],
+    system_message_content: str,
+) -> None:
+    """Insert tool-injected system text after the leading system-message prefix."""
+    insertion_index = 0
+    while (
+        insertion_index < len(openai_messages)
+        and openai_messages[insertion_index].get("role") == "system"
+    ):
+        insertion_index += 1
+    openai_messages.insert(
+        insertion_index, {"role": "system", "content": system_message_content}
+    )
