@@ -79,6 +79,10 @@ from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     envelope_to_assistant_metadata_dict,
     turn_recall_from_envelope,
 )
+from app.core.companion_harness.companion.transcript_assistant_row import (
+    TranscriptAssistantRowBuildInput,
+    append_transcript_assistant_row,
+)
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
@@ -503,24 +507,19 @@ def _append_background_transcript_assistant(
     significance_perception: dict[str, Any] | None = None,
     turn_recall: str | None = None,
 ) -> None:
-    # TODO(transcript-jsonl-pydantic): Converge assistant JSONL rows with turn.py and
-    # ChatMessage read path — https://github.com/NascentCore/inty/issues/3407
-    row: dict[str, Any] = {
-        "role": "assistant",
-        "content": content,
-        "ts": utc_iso_ts(),
-        "uuid": assistant_msg_uuid,
-        "source": "tool_bg",
-        "reply_to": reply_to,
-        "trace_id": trace_id,
-    }
-    if significance_perception:
-        row["significance_perception"] = significance_perception
-    if turn_recall:
-        row["turn_recall"] = turn_recall
-    store.append_jsonl_record(
+    append_transcript_assistant_row(
+        store,
         transcript_relative_path,
-        row,
+        TranscriptAssistantRowBuildInput(
+            content=content,
+            uuid=assistant_msg_uuid,
+            reply_to=reply_to,
+            trace_id=trace_id,
+            source="tool_bg",
+            significance_perception=significance_perception,
+            turn_recall=turn_recall,
+        ),
+        ts=utc_iso_ts(),
     )
 
 

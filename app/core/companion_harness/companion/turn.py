@@ -147,6 +147,10 @@ from .turn_routes import (
     BootstrapInterimOutputSink,
     TurnRouteMode,
 )
+from .transcript_assistant_row import (
+    TranscriptAssistantRowBuildInput,
+    append_transcript_assistant_row,
+)
 from .utc import (
     strip_leading_transcript_timestamp_prefixes,
     utc_iso_ts,
@@ -1063,22 +1067,21 @@ async def _run_companion_turn_core(
         if track != CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             store.append_jsonl_record(rel_tr, user_row)
     last_text = strip_leading_transcript_timestamp_prefixes(last_text)
-    # TODO(transcript-jsonl-pydantic): Build assistant row via shared Pydantic model — #3407
-    assistant_row: dict[str, Any] = {
-        "role": "assistant",
-        "content": last_text,
-        "ts": utc_iso_ts(),
-        "uuid": assistant_msg_uuid,
-        "reply_to": user_msg_uuid,
-        "source": "inner_tick" if inner_tick_turn else "chat",
-        "trace_id": trace_id,
-    }
-    if significance_meta:
-        assistant_row["significance_perception"] = significance_meta
-    if turn_recall:
-        assistant_row["turn_recall"] = turn_recall
     if not bootstrap_skip_final_transcript_assistant_row:
-        store.append_jsonl_record(rel_tr, assistant_row)
+        append_transcript_assistant_row(
+            store,
+            rel_tr,
+            TranscriptAssistantRowBuildInput(
+                content=last_text,
+                uuid=assistant_msg_uuid,
+                reply_to=user_msg_uuid,
+                trace_id=trace_id,
+                source="inner_tick" if inner_tick_turn else "chat",
+                significance_perception=significance_meta,
+                turn_recall=turn_recall,
+            ),
+            ts=utc_iso_ts(),
+        )
 
     logger.info(
         "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "

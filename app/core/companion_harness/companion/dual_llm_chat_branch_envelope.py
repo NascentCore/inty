@@ -32,8 +32,9 @@ companion turn pipeline.
 TODO(crs-turn-recall): ``importance_*`` scores are **moment-level significance perception**, not
 ``turn_recall`` (ephemeral per-turn memory depth / Turn Brief). Phase A (#3342) plumbs
 ``turn_recall`` on the envelope, transcript, and WS meta; Phase B (#3343) wires prompt +
-dreaming curator. CRS epic #3341; do not conflate with ``relationship_phase`` / ``tone``
-(slow bond state in companionship doc).
+dreaming curator. CRS epic #3341; do not conflate with ``relationship_phase``
+(slow bond in ``COMPANIONSHIP.md``) or ``experience_directives.tone`` (fast stance in
+``context.json``).
 
 Design: ``/docs/imate/DESIGN.md``. LangSmith: ``inty_llm_source=foreground_dual_llm_envelope``
 (``llm/langsmith_invocation_extra.py``).
