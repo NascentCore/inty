@@ -6,7 +6,6 @@ Not WeChat user presence: iLink does not expose open-app or open-DM signals (see
 from __future__ import annotations
 
 import asyncio
-import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -14,7 +13,6 @@ from loguru import logger
 
 from app.api import deps
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
@@ -26,7 +24,15 @@ from app.core.companion_harness.companion.scope_turn_lock import (
     companion_scope_from_foreground_ctx,
     get_scope_turn_lock,
 )
-from app.services import agent_service, chat_service, companion_chat_service
+from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.agentic_companion.types import (
+    InboundWireMessage,
+)
+from app.services import agent_service
+from app.services.agentic_channel.serving import (
+    drain_and_deliver_user_chat_turn,
+    enqueue_inbound_wire_message,
+)
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.downlink import tool_background_downlink
 from app.services.agentic_companion.inner_tick_delivery import (
@@ -68,7 +74,11 @@ class WeixinInprocessPresence:
         self._inty_user_id: str | None = None
 
     async def start(self, transport: WeixinTransport) -> None:
-        """Resolve chat row, store inner-tick coords, start poll + tool_bg consumer."""
+        """Store agent-channel inner-tick coords, start poll + tool_bg consumer.
+
+        Inner-tick shares ``AgentScope.memory_store_chat_id()`` with ``handle_user_text``
+        so proactive/scheduled ticks read the same MemoryStore transcript as user chat.
+        """
         assert transport is not None
         inty_user = await _inty_user_from_binding(self._binding)
         if inty_user is None:
@@ -77,19 +87,13 @@ class WeixinInprocessPresence:
             )
         self._inty_user_id = str(inty_user.id)
         agent_id = self._binding.agent_id
-        async with AsyncSessionLocal() as db:
-            chat = await chat_service.get_or_create_chat_by_agent(
-                db=db,
-                user_id=self._inty_user_id,
-                agent_id=agent_id,
-            )
-            await db.commit()
-            chat_id = chat.id
-
+        # TODO(#3350): Share AgentScope inner-tick coord setup with AgentChannelPresence.start().
+        scope = AgentScope(user_id=self._inty_user_id, agent_id=agent_id)
+        synthetic_chat_id = scope.memory_store_chat_id()
         self._coordinator.store_inner_tick_coords(
             user_id=self._inty_user_id,
             agent_id=agent_id,
-            chat_id=chat_id,
+            chat_id=synthetic_chat_id,
         )
         self._downlink = WeixinDownlink(
             transport,
@@ -139,11 +143,10 @@ class WeixinInprocessPresence:
     # ``CompanionUserTurnInput`` and call ``run_user_chat(user_turn=...)``. Image-only
     # turns need non-empty ``image_data_urls`` even when ``text`` is empty.
     async def handle_user_text(self, user_text: str) -> str:
-        """Run one foreground user-chat turn; return one assistant string for Hermes.
+        """Run one user-chat turn via queues; return Channel error or ``""`` when delivered.
 
-        Hermes may split that string into several WeChat bubbles when sending.
-        Inty does not split here; see ``transport`` and
-        ``config.yaml`` ``weixin_channel.split_multiline_messages``.
+        Happy-path assistant text is sent by ``drain_and_deliver_user_chat_turn`` through
+        ``WeixinDownlink``; Hermes transport must not re-send the return value.
         """
         stripped = user_text.strip()
         assert stripped
@@ -158,6 +161,7 @@ class WeixinInprocessPresence:
 
         user_id = self._inty_user_id
         agent_id = self._binding.agent_id
+        queue_message_id: str | None = None
         try:
             async with AsyncSessionLocal() as db:
                 inty_user = await deps.get_user_from_token(
@@ -168,41 +172,36 @@ class WeixinInprocessPresence:
                         "This demo bridge could not verify your Inty token. "
                         "Stop the session and start again with a valid JWT."
                     )
-                subscription = (
-                    await self._subscription_svc.get_user_current_subscription(
-                        db, user_id
-                    )
-                )
-                model_override = select_chat_model(
-                    user=inty_user,
-                    is_subscribed=bool(subscription),
-                )
                 agent_data = await agent_service.get_agent_for_chat(
                     db, agent_id
                 )
                 if agent_data is None:
                     return "Companion not found for this bridge."
-                chat = await chat_service.get_or_create_chat_by_agent(
-                    db=db,
-                    user_id=user_id,
-                    agent_id=agent_id,
-                )
-                await db.commit()
-                chat_id = chat.id
 
-            session_id = generate_session_id(str(chat_id))
-            preset_uid = str(uuid.uuid4())
+            scope = AgentScope(user_id=user_id, agent_id=agent_id)
+            synthetic_chat_id = scope.memory_store_chat_id()
+            session_id = generate_session_id(synthetic_chat_id)
+            wire_id = f"weixin:{self._binding.user_id}"
+            inbound = InboundWireMessage(
+                scope=scope,
+                channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+                wire_id=wire_id,
+                text=stripped,
+                received_at_utc=datetime.now(timezone.utc),
+                client_message_id=None,
+            )
+            queue_message_id = await enqueue_inbound_wire_message(inbound)
             stub_request = ChatCompletionRequest(
                 messages=[ChatMessage(role="user", content=stripped)],
-                message_id=preset_uid,
+                message_id=queue_message_id,
             )
             self._coordinator.set_foreground_pending(
-                preset_uid,
+                queue_message_id,
                 {
                     "session_id": session_id,
                     "agent_id": agent_id,
                     "user_id": user_id,
-                    "chat_id": chat_id,
+                    "chat_id": synthetic_chat_id,
                     "request": stub_request,
                     "effective_local_id": None,
                 },
@@ -212,32 +211,32 @@ class WeixinInprocessPresence:
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
             )
-            turn = await companion_chat_service.run_user_chat(
-                user_id=user_id,
-                agent_id=agent_id,
-                chat_id=chat_id,
-                user_text=stripped,
-                resolved_chat_model=model_override,
-                session_id=session_id,
-                background_output_sink=self._coordinator.background_sink,
-                preset_user_msg_uuid=preset_uid,
-                implicit_signal_bundle=implicit_bundle,
+
+            async def send_user_reply(text: str) -> None:
+                assert self._downlink is not None
+                await self._downlink.send_assistant_text(text)
+
+            delivery_result = await drain_and_deliver_user_chat_turn(
+                scope,
                 runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+                delivery_wire_id=wire_id,
+                implicit_signal_bundle=implicit_bundle,
+                background_output_sink=self._coordinator.background_sink,
+                send_text=send_user_reply,
             )
-            if not turn.tool_background_started:
-                self._coordinator.remove_foreground_pending(preset_uid)
-            reply = turn.assistant_text.strip()
-            if reply:
-                return reply
-            if turn.tool_background_started:
-                return "…"
-            return "（没有回复内容）"
-        except Exception:
+            if not delivery_result.tool_background_started:
+                self._coordinator.remove_foreground_pending(queue_message_id)
+            return ""
+        except Exception as exc:
             logger.exception(
                 "weixin inprocess user_chat failed user_id={} agent_id={}",
                 user_id,
                 agent_id,
             )
+            if queue_message_id is not None and not getattr(
+                exc, "companion_tool_background_started", False
+            ):
+                self._coordinator.remove_foreground_pending(queue_message_id)
             return "Companion turn failed. Check Ops logs for weixin inprocess user_chat."
 
     async def _push_weixin_assistant_text(self, text: str) -> None:

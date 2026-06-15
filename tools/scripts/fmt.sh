@@ -3,8 +3,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
-# Python 格式化范围与 .agents/guidelines/py-style-tooling.md 一致；配置见 pyproject.toml [tool.black]（80 列）。
-PYTHON_FORMAT_PATHS=(app backend)
+# shellcheck source=tools/scripts/python-black.sh
+source "$ROOT/tools/scripts/python-black.sh"
 
 # 与 tools/scripts/lint-markdown.sh 使用同一 CLI；本地若无 node_modules 则自动 npm install。
 run_markdownlint() {
@@ -13,25 +13,6 @@ run_markdownlint() {
         npm install --prefix tools/markdownlint
     fi
     npx --prefix tools/markdownlint markdownlint-cli2
-}
-
-is_python_format_path() {
-    local file="$1"
-    local dir
-    for dir in "${PYTHON_FORMAT_PATHS[@]}"; do
-        if [[ "$file" == "${dir}/"* ]]; then
-            return 0
-        fi
-    done
-    return 1
-}
-
-run_black() {
-    if [ "$#" -eq 0 ]; then
-        return 0
-    fi
-    echo "Formatting Python files with uv run black..."
-    uv run black "$@"
 }
 
 # Check for --all flag and CI commit behavior

@@ -13,6 +13,7 @@ import asyncio
 
 from loguru import logger
 
+from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
@@ -23,7 +24,10 @@ from app.external_services.telegram_bot_api import (
 from app.services.agentic_channel.adapters.telegram import (
     TelegramChannelAdapter,
 )
-from app.services.agentic_channel.channel_runtime import turn_channel_up
+from app.services.agentic_channel.channel_runtime import (
+    get_scope_channel_registry,
+    turn_channel_up,
+)
 from app.services.agentic_channel.endpoints import (
     EndpointRecord,
     assert_inbound_endpoint_identity,
@@ -35,6 +39,7 @@ from app.services.agentic_channel.provision import (
     ChannelProvisionResult,
     provision_agent_for_channel_onboard,
 )
+from app.services.agentic_companion.downlink import Downlink, DownlinkKind
 from backend.ops.telegram_demo.binding import (
     StartPayloadKind,
     parse_start_payload,
@@ -93,13 +98,7 @@ class TelegramTransport:
                     self._offset = next_offset
                     await save_poll_offset(next_offset)
                 for inbound in messages:
-                    reply = await self._handle_inbound(inbound)
-                    if reply:
-                        await asyncio.to_thread(
-                            self._api.send_message,
-                            chat_id=inbound.chat_id,
-                            text=reply,
-                        )
+                    await self._handle_inbound(inbound)
             except asyncio.CancelledError:
                 raise
             except Exception:
@@ -109,16 +108,64 @@ class TelegramTransport:
     async def stop(self) -> None:
         self._stop.set()
 
-    async def _handle_inbound(self, inbound: TelegramIncomingMessage) -> str:
+    async def _send_channel_text(
+        self,
+        *,
+        chat_id: str,
+        text: str,
+        scope: AgentScope | None = None,
+    ) -> None:
+        """Send one Channel-local user-visible string via Telegram adapter downlink."""
+        # TODO(#3402): Share outbound helper with AgentChannelPresence.send_user_reply.
+        assert chat_id != ""
+        assert text != ""
+        if scope is not None:
+            registry = get_scope_channel_registry(scope)
+            downlink = registry.downlinks.get(CompanionRuntimeChannel.TELEGRAM)
+            if downlink is not None:
+                await downlink.deliver(
+                    Downlink(
+                        kind=DownlinkKind.USER_REPLY,
+                        assistant_text=text,
+                        turn=None,
+                        tool_output=None,
+                        bootstrap_interim=None,
+                        scheduled_task_id=None,
+                        transcript_user_text=None,
+                    )
+                )
+                return
+        adapter = TelegramChannelAdapter(
+            api=self._api,
+            channel_address=chat_id,
+        )
+        await adapter.as_downlink().deliver(
+            Downlink(
+                kind=DownlinkKind.USER_REPLY,
+                assistant_text=text,
+                turn=None,
+                tool_output=None,
+                bootstrap_interim=None,
+                scheduled_task_id=None,
+                transcript_user_text=None,
+            )
+        )
+
+    async def _handle_inbound(self, inbound: TelegramIncomingMessage) -> None:
         start = parse_start_payload(inbound.text)
         if start.kind == StartPayloadKind.ONBOARD:
-            return await self._handle_onboard(inbound=inbound)
+            await self._handle_onboard(inbound=inbound)
+            return
         scope = await resolve_scope(
             channel=CompanionRuntimeChannel.TELEGRAM,
             channel_address=inbound.chat_id,
         )
         if scope is None:
-            return _ONBOARD_HINT
+            await self._send_channel_text(
+                chat_id=inbound.chat_id,
+                text=_ONBOARD_HINT,
+            )
+            return
         try:
             await assert_inbound_endpoint_identity(
                 channel=CompanionRuntimeChannel.TELEGRAM,
@@ -131,7 +178,12 @@ class TelegramTransport:
                 inbound.chat_id,
                 inbound.channel_user_id,
             )
-            return _IDENTITY_MISMATCH
+            await self._send_channel_text(
+                chat_id=inbound.chat_id,
+                text=_IDENTITY_MISMATCH,
+                scope=scope,
+            )
+            return
         await self._ensure_active(
             inbound=inbound,
             scope=scope,
@@ -140,12 +192,20 @@ class TelegramTransport:
         presence = get_presence(scope)
         if presence is None:
             presence = await ensure_presence(scope)
-        return await presence.handle_user_text(
+        channel_error = await presence.handle_user_text(
             inbound.text,
             runtime_channel=CompanionRuntimeChannel.TELEGRAM,
         )
+        if channel_error:
+            await self._send_channel_text(
+                chat_id=inbound.chat_id,
+                text=channel_error,
+                scope=scope,
+            )
 
-    async def _handle_onboard(self, *, inbound: TelegramIncomingMessage) -> str:
+    async def _handle_onboard(
+        self, *, inbound: TelegramIncomingMessage
+    ) -> None:
         existing = await resolve_scope(
             channel=CompanionRuntimeChannel.TELEGRAM,
             channel_address=inbound.chat_id,
@@ -163,7 +223,12 @@ class TelegramTransport:
                     inbound.chat_id,
                     inbound.channel_user_id,
                 )
-                return _IDENTITY_MISMATCH
+                await self._send_channel_text(
+                    chat_id=inbound.chat_id,
+                    text=_IDENTITY_MISMATCH,
+                    scope=existing,
+                )
+                return
             await self._ensure_active(
                 inbound=inbound,
                 scope=existing,
@@ -176,7 +241,12 @@ class TelegramTransport:
                 existing.user_id,
                 existing.agent_id,
             )
-            return _WELCOME_RETURNING
+            await self._send_channel_text(
+                chat_id=inbound.chat_id,
+                text=_WELCOME_RETURNING,
+                scope=existing,
+            )
+            return
         try:
             provision = await provision_agent_for_channel_onboard(
                 channel=CompanionRuntimeChannel.TELEGRAM,
@@ -190,7 +260,11 @@ class TelegramTransport:
                 inbound.channel_user_id,
                 exc,
             )
-            return str(exc)
+            await self._send_channel_text(
+                chat_id=inbound.chat_id,
+                text=str(exc),
+            )
+            return
         if not provision.is_new_user:
             await self._ensure_active(
                 inbound=inbound,
@@ -204,7 +278,12 @@ class TelegramTransport:
                 provision.scope.user_id,
                 provision.scope.agent_id,
             )
-            return _WELCOME_RETURNING
+            await self._send_channel_text(
+                chat_id=inbound.chat_id,
+                text=_WELCOME_RETURNING,
+                scope=provision.scope,
+            )
+            return
         logger.info(
             "telegram onboard new chat_id={} from_id={} user_id={} agent_id={}",
             inbound.chat_id,
@@ -212,7 +291,7 @@ class TelegramTransport:
             provision.scope.user_id,
             provision.scope.agent_id,
         )
-        return await self._activate_provision(
+        await self._activate_provision(
             inbound=inbound,
             provision=provision,
         )
@@ -222,7 +301,7 @@ class TelegramTransport:
         *,
         inbound: TelegramIncomingMessage,
         provision: ChannelProvisionResult,
-    ) -> str:
+    ) -> None:
         record = EndpointRecord(
             user_id=provision.scope.user_id,
             agent_id=provision.scope.agent_id,
@@ -235,7 +314,11 @@ class TelegramTransport:
             api=self._api,
             reason="onboard",
         )
-        return _WELCOME_NEW
+        await self._send_channel_text(
+            chat_id=inbound.chat_id,
+            text=_WELCOME_NEW,
+            scope=provision.scope,
+        )
 
     async def _ensure_active(
         self,

@@ -36,7 +36,9 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.scope_turn_lock import get_scope_turn_lock
+from app.core.companion_harness.companion.scope_turn_lock import (
+    get_scope_turn_lock,
+)
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
     BootstrapInterimOutputSink,
@@ -416,9 +418,13 @@ class Session:
                 if self._inner_tick_stop.is_set():
                     break
                 inner_tick_snapshot: dict[str, Any] | None = None
-                inner_tick_snapshot = self.coordinator.snapshot_inner_tick_coords()
+                inner_tick_snapshot = (
+                    self.coordinator.snapshot_inner_tick_coords()
+                )
                 if inner_tick_snapshot is not None:
-                    poll_coords = InnerTickCoords.from_context(inner_tick_snapshot)
+                    poll_coords = InnerTickCoords.from_context(
+                        inner_tick_snapshot
+                    )
                     if poll_coords is not None:
                         scope_lock = get_scope_turn_lock(
                             CompanionScope(
@@ -454,4 +460,6 @@ class Session:
             await asyncio.gather(task, return_exceptions=True)
         # TODO(#3314): Session shutdown should cancel/drain every registered
         # lifecycle child, not only the poll worker and implicit greeting task.
+        # TODO(companion-session-eviction): Also release process-local CompanionSession /
+        # MemoryStore for this scope when safe (#3444).
         await self.cancel_implicit_greeting_if_running()

@@ -16,12 +16,17 @@ from app.core.companion_harness.companion.models import (
     ContextMeta,
     InnerTickActivity,
 )
-from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import (
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
-from .output_queue import AgenticLoopOutputQueue, LoopDeliverable
+from app.core.companion_harness.agentic_companion.types import (
+    AgenticLoopInputBatch,
+)
 
+from .output_queue import AgenticLoopOutputQueue, LoopDeliverable
 
 AfterToolMessagesHook = Callable[
     [list[dict[str, Any]]],
@@ -62,6 +67,7 @@ class AgenticLoopInput:
     context_meta: ContextMeta | None
     dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None
     dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None
+    input_batch: AgenticLoopInputBatch | None = None
 
 
 @dataclass(frozen=True)

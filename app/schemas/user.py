@@ -122,7 +122,7 @@ class UserInDBBase(UserBase):
 
     id: str
     # DEPRECATED: app 显示 ID 而非 readable_id
-    readable_id: str
+    readable_id: Optional[str] = None
     auth_type: str
     is_active: bool
     created_at: datetime

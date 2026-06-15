@@ -4,9 +4,9 @@ If not in plan mode, do nothing and stop!
 
 Review and revise the plan:
 
-- The plan addresses the user request(s)
-- The plan makes sound designs
-- The plan's implementation procedure is well organized
+- The plan's objectives are reasonable
+- The plan's design is sound
+- The plan's details are sufficiently granular
 
 ## Use alembic cli to generate database version files
 
@@ -38,3 +38,7 @@ The implementation plan should following the following overall procedures:
 Limit the the number of layers in implementing a complex feature:
 
 - When extending behaviors, prefer rewriting a new function and remove the old one, over extending the existing function and wrap them behind a new function with "more specific interface". The former sheds the unnecessary complexity, and the latter merely hides unnecessary complexity.
+
+## References
+
+- When choosing from different options, consider the overall [companion harness design](/docs/companion_harness/DESIGN.md)

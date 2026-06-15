@@ -164,7 +164,11 @@ class WeixinChannelSession:
         if self._presence is not None:
             await self._presence.stop()
 
-    async def _handle_inbound(self, inbound: WeixinInboundMessage) -> str:
+    async def _send_channel_text(self, peer_id: str, text: str) -> None:
+        assert self._transport is not None
+        await self._transport.send_text(peer_id, text.strip())
+
+    async def _handle_inbound(self, inbound: WeixinInboundMessage) -> None:
         # TODO(weixin-1to1-binding): last_peer_id is interim; inbound should use bound_peer_id
         # and reject or warn when peer_id != bound peer once 1:1 binding is enforced.
         self.binding.last_peer_id = inbound.peer_id
@@ -183,6 +187,11 @@ class WeixinChannelSession:
             media_types=inbound.media_types,
         )
         if bridge_reply is not None:
-            return bridge_reply
+            await self._send_channel_text(inbound.peer_id, bridge_reply)
+            return
         assert self._presence is not None
-        return await self._presence.handle_user_text(inbound.text.strip())
+        channel_error = await self._presence.handle_user_text(
+            inbound.text.strip()
+        )
+        if channel_error:
+            await self._send_channel_text(inbound.peer_id, channel_error)

@@ -51,6 +51,7 @@ class ModelBuilder(StrEnum):
     ELEVENLABS = "11labs"
     ALIBABA_TONGYI = "alibaba_tongyi"
     DEEPSEEK = "deepseek"
+    XIAOMI = "xiaomi"
 
 
 class PricingModel(StrEnum):
@@ -326,6 +327,37 @@ DEEPSEEK_V4_FLASH = GenAIModel(
 )
 
 
+MIMO_V2_5 = GenAIModel(
+    nickname="MiMo V2.5",
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]
+    ),
+    builder=ModelBuilder.XIAOMI,
+    provider=ModelAPIProvider.OPENROUTER,
+    id_on_provider="xiaomi/mimo-v2.5",
+    context_window_tokens=1_048_576,
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.14,
+                model=PricingModel.BY_1M_TOKEN,
+                modality=DataModality.TEXT,
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.28,
+                model=PricingModel.BY_1M_TOKEN,
+                modality=DataModality.TEXT,
+            ),
+        ],
+        official_url="https://openrouter.ai/xiaomi/mimo-v2.5",
+    ),
+    official_url="https://openrouter.ai/xiaomi/mimo-v2.5",
+    notes="1,048,576 context window. Omnimodal model; agentic / tool-use oriented.",
+)
+
+
 GEMINI_2_5_FLASH_LITE = GenAIModel(
     nickname="Gemini 2.5 Flash Lite",
     modalities=ModelModalities(
@@ -398,6 +430,37 @@ GEMINI_2_5_FLASH = GenAIModel(
         official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
     ),
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
+)
+
+
+GEMINI_3_5_FLASH = GenAIModel(
+    nickname="Gemini 3.5 Flash",
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]
+    ),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.OPENROUTER,
+    id_on_provider="google/gemini-3.5-flash",
+    context_window_tokens=1_048_576,
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=1.50,
+                model=PricingModel.BY_1M_TOKEN,
+                modality=DataModality.TEXT,
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=9.0,
+                model=PricingModel.BY_1M_TOKEN,
+                modality=DataModality.TEXT,
+            ),
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-3",
+    ),
+    playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-3.5-flash&project=alien-paratext-461204-i9",
+    notes="GA Flash model (2026-05); supports thinking, tools, structured outputs, 1M context.",
 )
 
 
@@ -840,6 +903,7 @@ VERTEX_GEMINI_LIVE_2_5_FLASH_NATIVE_AUDIO = GenAIModel(
 ALL_GEMINI_MODELS = (
     GEMINI_2_5_FLASH_LITE,
     GEMINI_2_5_FLASH,
+    GEMINI_3_5_FLASH,
     NANO_BANANA,
     NANO_BANANA_PRO,
     NANO_BANANA_2,
@@ -1094,8 +1158,10 @@ CHAT_TEXT_MODELS = [
     DEEPSEEK_V3_2,
     DEEPSEEK_V4_PRO,
     DEEPSEEK_V4_FLASH,
+    MIMO_V2_5,
     GEMINI_2_5_FLASH_LITE,
     GEMINI_2_5_FLASH,
+    GEMINI_3_5_FLASH,
 ]
 
 

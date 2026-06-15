@@ -43,7 +43,11 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult
 from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
 from .scope import CompanionScope
-from .scope_turn_lock import get_scope_tool_bg_idle, get_scope_turn_lock
+from .scope_turn_lock import (
+    ScopeTurnLock,
+    get_scope_tool_bg_idle,
+    get_scope_turn_lock,
+)
 from .turn_deps import CompanionTurnDeps
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 from .turn_tracks import (
@@ -126,13 +130,18 @@ class CompanionSession:
         return is_scope_initialized_in_store(self.store)
 
     @property
-    def turn_lock(self) -> asyncio.Lock:
+    def turn_lock(self) -> ScopeTurnLock:
         """Scope-level turn serializer (singleton per ``CompanionScope.registry_key()``)."""
         return get_scope_turn_lock(self.scope)
 
 
 class CompanionManager:
-    """管理所有活跃 companion session 的生命周期。"""
+    """管理所有活跃 companion session 的生命周期。
+
+    TODO(companion-session-eviction): ``_sessions`` is append-only today; evict when scope
+    has no active presence and no in-flight turns/tool_background.
+    https://github.com/NascentCore/inty/issues/3444
+    """
 
     def __init__(self, config: CompanionConfig) -> None:
         self._config = config

@@ -10,6 +10,9 @@ from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.manager import CompanionSession
+from app.core.companion_harness.companion.scope_turn_lock import (
+    assert_scope_turn_lock_held_by_current_task,
+)
 from app.core.companion_harness.companion.models import load_context_meta
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
@@ -172,12 +175,16 @@ async def run_agent_turn(
     preset_user_msg_uuid: str | None,
     implicit_signal_bundle,
 ) -> object:
-    """Run one user-chat turn without ``chat_history`` writes."""
+    """Run one user-chat turn without ``chat_history`` writes.
+
+    Caller must already hold ``session.turn_lock`` for ``scope``; this function does not acquire it.
+    """
     assert user_text.strip() != ""
     t0 = time.perf_counter()
     manager, session = _manager_and_session(
         scope, resolved_chat_model=resolved_chat_model
     )
+    assert_scope_turn_lock_held_by_current_task(session.scope)
     await _maybe_append_agent_channel_session_system(session=session)
     bundle = implicit_signal_bundle
     # TODO(#3411): Manual E2E — after USER.md 时区 persisted, verify enrichment + LangSmith time slice.
@@ -185,17 +192,16 @@ async def run_agent_turn(
         client_time = client_time_from_memory_store(session.store)
         if client_time is not None:
             bundle = bundle.model_copy(update={"client_time": client_time})
-    async with session.turn_lock:
-        out = await manager.run_user_chat_turn(
-            session,
-            user_text,
-            background_output_sink=background_output_sink,
-            preset_user_msg_uuid=preset_user_msg_uuid,
-            runtime_context=TurnRuntimeContext(
-                channel=runtime_channel,
-                implicit_signal_bundle=bundle,
-            ),
-        )
+    out = await manager.run_user_chat_turn(
+        session,
+        user_text,
+        background_output_sink=background_output_sink,
+        preset_user_msg_uuid=preset_user_msg_uuid,
+        runtime_context=TurnRuntimeContext(
+            channel=runtime_channel,
+            implicit_signal_bundle=bundle,
+        ),
+    )
     logger.info(
         "agent_channel turn finished scope={} channel={} total_ms={:.0f}",
         scope.registry_key(),
