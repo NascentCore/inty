@@ -27,6 +27,7 @@ async def run_app_ws_user_turn_via_queues(
     background_output_sink,
 ) -> str:
     """Enqueue one WS user message and drain one companion batch."""
+    # TODO(#3209): Use drain_and_deliver_user_chat_turn + WS send_text adapter.
     assert wire_id != ""
     assert user_text.strip() != ""
     inbound = InboundWireMessage(

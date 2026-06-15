@@ -135,6 +135,15 @@ async def test_handle_inbound_voice_only_does_not_call_companion() -> None:
         on_binding_peer_updated=None,
         on_ilink_session_expired=_noop_ilink_session_expired,
     )
+    class _RecordingTransport:
+        def __init__(self) -> None:
+            self.sent: list[tuple[str, str]] = []
+
+        async def send_text(self, peer_id: str, text: str) -> None:
+            self.sent.append((peer_id, text))
+
+    transport = _RecordingTransport()
+    session._transport = transport
     presence = _RecordingPresence()
     session._presence = presence
     inbound = WeixinInboundMessage(
@@ -144,10 +153,10 @@ async def test_handle_inbound_voice_only_does_not_call_companion() -> None:
         media_paths=("/tmp/weixin-voice.silk",),
         media_types=("audio/silk",),
     )
-    reply = await session._handle_inbound(inbound)
+    await session._handle_inbound(inbound)
     assert presence.calls == []
-    assert reply is not None
-    assert "voice" in reply.lower()
+    assert transport.sent
+    assert "voice" in transport.sent[0][1].lower()
 
 
 @pytest.mark.asyncio
@@ -174,6 +183,15 @@ async def test_handle_inbound_image_only_does_not_call_companion() -> None:
         on_binding_peer_updated=None,
         on_ilink_session_expired=_noop_ilink_session_expired,
     )
+    class _RecordingTransport:
+        def __init__(self) -> None:
+            self.sent: list[tuple[str, str]] = []
+
+        async def send_text(self, peer_id: str, text: str) -> None:
+            self.sent.append((peer_id, text))
+
+    transport = _RecordingTransport()
+    session._transport = transport
     presence = _RecordingPresence()
     session._presence = presence
     inbound = WeixinInboundMessage(
@@ -183,10 +201,10 @@ async def test_handle_inbound_image_only_does_not_call_companion() -> None:
         media_paths=("/tmp/weixin-image.jpg",),
         media_types=("image/jpeg",),
     )
-    reply = await session._handle_inbound(inbound)
+    await session._handle_inbound(inbound)
     assert presence.calls == []
-    assert reply is not None
-    assert "image" in reply.lower()
+    assert transport.sent
+    assert "image" in transport.sent[0][1].lower()
 
 
 @pytest.mark.asyncio
@@ -197,7 +215,7 @@ async def test_handle_inbound_text_forwards_to_inprocess_presence() -> None:
 
         async def handle_user_text(self, user_text: str) -> str:
             self.calls.append(user_text)
-            return "companion reply"
+            return ""
 
     binding = WeixinChannelBinding(
         user_id="user-1",
@@ -213,6 +231,15 @@ async def test_handle_inbound_text_forwards_to_inprocess_presence() -> None:
         on_binding_peer_updated=None,
         on_ilink_session_expired=_noop_ilink_session_expired,
     )
+    class _RecordingTransport:
+        def __init__(self) -> None:
+            self.sent: list[tuple[str, str]] = []
+
+        async def send_text(self, peer_id: str, text: str) -> None:
+            self.sent.append((peer_id, text))
+
+    transport = _RecordingTransport()
+    session._transport = transport
     presence = _RecordingPresence()
     session._presence = presence
     inbound = WeixinInboundMessage(
@@ -222,6 +249,6 @@ async def test_handle_inbound_text_forwards_to_inprocess_presence() -> None:
         media_paths=(),
         media_types=(),
     )
-    reply = await session._handle_inbound(inbound)
+    await session._handle_inbound(inbound)
     assert presence.calls == ["hello"]
-    assert reply == "companion reply"
+    assert transport.sent == []

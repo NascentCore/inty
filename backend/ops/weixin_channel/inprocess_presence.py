@@ -30,7 +30,7 @@ from app.core.companion_harness.agentic_companion.types import (
 )
 from app.services import agent_service, chat_service
 from app.services.agentic_channel.serving import (
-    drain_scope_once_via_companion,
+    drain_and_deliver_user_chat_turn,
     enqueue_inbound_wire_message,
 )
 from app.services.chat_service import generate_session_id
@@ -145,11 +145,10 @@ class WeixinInprocessPresence:
     # ``CompanionUserTurnInput`` and call ``run_user_chat(user_turn=...)``. Image-only
     # turns need non-empty ``image_data_urls`` even when ``text`` is empty.
     async def handle_user_text(self, user_text: str) -> str:
-        """Run one foreground user-chat turn; return one assistant string for Hermes.
+        """Run one user-chat turn via queues; return Channel error or ``""`` when delivered.
 
-        Hermes may split that string into several WeChat bubbles when sending.
-        Inty does not split here; see ``transport`` and
-        ``config.yaml`` ``weixin_channel.split_multiline_messages``.
+        Happy-path assistant text is sent by ``drain_and_deliver_user_chat_turn`` through
+        ``WeixinDownlink``; Hermes transport must not re-send the return value.
         """
         stripped = user_text.strip()
         assert stripped
@@ -184,10 +183,11 @@ class WeixinInprocessPresence:
             scope = AgentScope(user_id=user_id, agent_id=agent_id)
             synthetic_chat_id = scope.memory_store_chat_id()
             session_id = generate_session_id(synthetic_chat_id)
+            wire_id = f"weixin:{self._binding.user_id}"
             inbound = InboundWireMessage(
                 scope=scope,
                 channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
-                wire_id=f"weixin:{self._binding.user_id}",
+                wire_id=wire_id,
                 text=stripped,
                 received_at_utc=datetime.now(timezone.utc),
                 client_message_id=None,
@@ -213,17 +213,22 @@ class WeixinInprocessPresence:
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
             )
-            drain_result = await drain_scope_once_via_companion(
+
+            async def send_user_reply(text: str) -> None:
+                assert self._downlink is not None
+                await self._downlink.send_assistant_text(text)
+
+            delivery_result = await drain_and_deliver_user_chat_turn(
                 scope,
                 runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+                delivery_wire_id=wire_id,
                 implicit_signal_bundle=implicit_bundle,
                 background_output_sink=self._coordinator.background_sink,
+                send_text=send_user_reply,
             )
-            if not drain_result.tool_background_started:
+            if not delivery_result.tool_background_started:
                 self._coordinator.remove_foreground_pending(queue_message_id)
-            if drain_result.reply_text:
-                return drain_result.reply_text
-            return "（没有回复内容）"
+            return ""
         except Exception as exc:
             logger.exception(
                 "weixin inprocess user_chat failed user_id={} agent_id={}",

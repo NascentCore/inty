@@ -26,13 +26,14 @@ from app.services.agentic_channel.channel_runtime import (
     get_scope_channel_registry,
 )
 from app.services.agentic_channel.serving import (
-    drain_scope_once_via_companion,
+    drain_and_deliver_user_chat_turn,
     enqueue_inbound_wire_message,
 )
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
 )
 from app.services.agentic_companion.downlink import (
+    Downlink,
     DownlinkKind,
     downlink_delivers_user_visible_text,
     tool_background_downlink,
@@ -155,6 +156,7 @@ class AgentChannelPresence:
         *,
         runtime_channel: CompanionRuntimeChannel,
     ) -> str:
+        """Run one user-chat turn; return Channel error text or ``""`` when delivered via queue."""
         stripped = user_text.strip()
         assert stripped
         queue_message_id: str | None = None
@@ -174,10 +176,11 @@ class AgentChannelPresence:
 
             synthetic_chat_id = self._scope.memory_store_chat_id()
             session_id = generate_session_id(synthetic_chat_id)
+            wire_id = f"{runtime_channel.value}:{self._scope.registry_key()}"
             inbound = InboundWireMessage(
                 scope=self._scope,
                 channel=runtime_channel,
-                wire_id=f"{runtime_channel.value}:{self._scope.registry_key()}",
+                wire_id=wire_id,
                 text=stripped,
                 received_at_utc=datetime.now(timezone.utc),
                 client_message_id=None,
@@ -205,15 +208,39 @@ class AgentChannelPresence:
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
             )
-            drain_result = await drain_scope_once_via_companion(
+
+            async def send_user_reply(text: str) -> None:
+                # TODO(#3402): Route via shared ChannelOutboundPort, not manual Downlink.
+                registry = get_scope_channel_registry(self._scope)
+                downlink = registry.downlinks.get(runtime_channel)
+                if downlink is None:
+                    raise RuntimeError(
+                        f"no downlink for channel={runtime_channel.value} "
+                        f"scope={self._scope.registry_key()}"
+                    )
+                await downlink.deliver(
+                    Downlink(
+                        kind=DownlinkKind.USER_REPLY,
+                        assistant_text=text,
+                        turn=None,
+                        tool_output=None,
+                        bootstrap_interim=None,
+                        scheduled_task_id=None,
+                        transcript_user_text=None,
+                    )
+                )
+
+            delivery_result = await drain_and_deliver_user_chat_turn(
                 self._scope,
                 runtime_channel=runtime_channel,
+                delivery_wire_id=wire_id,
                 implicit_signal_bundle=implicit_bundle,
                 background_output_sink=self._coordinator.background_sink,
+                send_text=send_user_reply,
             )
-            if not drain_result.tool_background_started:
+            if not delivery_result.tool_background_started:
                 self._coordinator.remove_foreground_pending(queue_message_id)
-            return drain_result.reply_text
+            return ""
         except Exception as exc:
             logger.exception(
                 "agent_channel user_chat failed scope={}",

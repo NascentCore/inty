@@ -46,6 +46,44 @@ class DrainScopeOnceResult:
     tool_background_started: bool
 
 
+@dataclass(frozen=True)
+class UserChatTurnDeliveryResult:
+    """Outcome of one user-chat enqueue + drain + OutputQueue pull delivery."""
+
+    delivered_text: str
+    tool_background_started: bool
+
+
+async def drain_and_deliver_user_chat_turn(
+    scope: AgentScope,
+    *,
+    runtime_channel: CompanionRuntimeChannel,
+    delivery_wire_id: str,
+    implicit_signal_bundle: ImplicitSignalBundle,
+    background_output_sink,
+    send_text: SendTextFn,
+) -> UserChatTurnDeliveryResult:
+    """Drain one input batch, pull OutputQueue, deliver via ``send_text``."""
+    # TODO(#3402): Return typed Channel handle result instead of str from presence.
+    assert delivery_wire_id != ""
+    drain_result = await drain_scope_once_via_companion(
+        scope,
+        runtime_channel=runtime_channel,
+        implicit_signal_bundle=implicit_signal_bundle,
+        background_output_sink=background_output_sink,
+    )
+    delivered_text = await deliver_pending_output_for_wire(
+        scope,
+        delivery_channel=runtime_channel,
+        delivery_wire_id=delivery_wire_id,
+        send_text=send_text,
+    )
+    return UserChatTurnDeliveryResult(
+        delivered_text=delivered_text,
+        tool_background_started=drain_result.tool_background_started,
+    )
+
+
 async def enqueue_inbound_wire_message(
     inbound: InboundWireMessage,
 ) -> str:
@@ -188,13 +226,15 @@ async def handle_sync_user_turn_via_queues(
     runtime_channel: CompanionRuntimeChannel,
     implicit_signal_bundle: ImplicitSignalBundle,
     background_output_sink,
-) -> str:
-    """Enqueue inbound user text and drain one companion batch."""
+    send_text: SendTextFn,
+) -> UserChatTurnDeliveryResult:
+    """Enqueue inbound user text, drain one batch, pull OutputQueue for delivery."""
     await enqueue_inbound_wire_message(inbound)
-    drain_result = await drain_scope_once_via_companion(
+    return await drain_and_deliver_user_chat_turn(
         scope,
         runtime_channel=runtime_channel,
+        delivery_wire_id=inbound.wire_id,
         implicit_signal_bundle=implicit_signal_bundle,
         background_output_sink=background_output_sink,
+        send_text=send_text,
     )
-    return drain_result.reply_text

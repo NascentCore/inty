@@ -38,6 +38,8 @@ from .types import (
     AgenticCompanionRunResult,
 )
 
+_EMPTY_USER_REPLY_PLACEHOLDER = "（没有回复内容）"
+
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -102,13 +104,22 @@ class AgenticCompanion:
                 )
             assert isinstance(turn, CompanionTurnResult)
             output_ids: list[str] = []
-            if turn.assistant_text.strip():
+            output_text = turn.assistant_text.strip()
+            match (bool(output_text), turn.tool_background_started):
+                case (True, _):
+                    pass
+                case (False, True):
+                    # TODO(#3398): tool_bg outbound via OutputQueue in a later phase.
+                    output_text = ""
+                case (False, False):
+                    output_text = _EMPTY_USER_REPLY_PLACEHOLDER
+            if output_text:
                 output = AgentOutputMessage(
                     message_id=str(uuid.uuid4()),
                     scope=self.scope,
                     batch_id=batch.batch_id,
                     kind=DownlinkKind.USER_REPLY,
-                    text=turn.assistant_text,
+                    text=output_text,
                     created_at_utc=_utc_now(),
                     in_reply_to_input_ids=in_reply_ids,
                     trace_id=turn.trace_id or None,

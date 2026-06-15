@@ -238,7 +238,7 @@ class WeixinInboundMessage:
     media_types: tuple[str, ...]
 
 
-WeixinInboundHandler = Callable[[WeixinInboundMessage], Awaitable[str]]
+WeixinInboundHandler = Callable[[WeixinInboundMessage], Awaitable[None]]
 
 
 class WeixinTransport:
@@ -282,10 +282,7 @@ class WeixinTransport:
         adapter = WeixinAdapter(config)
 
         async def handle_weixin_message(event: MessageEvent) -> str:
-            # TODO(weixin-ws-disconnect-hermes-wording): return-value path only; raises
-            # from ``_inbound_handler`` become Hermes generic error DM to the peer.
-            # Voice ``event.text`` is whatever Hermes extracted (WeChat transcription or
-            # empty); we do not inspect raw iLink ``item_list`` here.
+            # Hermes still expects a return value; Inty outbound uses ``send_text`` only.
             peer_id = event.source.chat_id
             assert peer_id != ""
             inbound = WeixinInboundMessage(
@@ -295,7 +292,8 @@ class WeixinTransport:
                 media_paths=tuple(event.media_urls),
                 media_types=tuple(event.media_types),
             )
-            return await self._inbound_handler(inbound)
+            await self._inbound_handler(inbound)
+            return ""
 
         adapter.set_message_handler(handle_weixin_message)
         self._adapter = adapter
