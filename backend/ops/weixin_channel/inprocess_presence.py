@@ -28,7 +28,7 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
 )
-from app.services import agent_service, chat_service
+from app.services import agent_service
 from app.services.agentic_channel.serving import (
     drain_and_deliver_user_chat_turn,
     enqueue_inbound_wire_message,
@@ -74,7 +74,11 @@ class WeixinInprocessPresence:
         self._inty_user_id: str | None = None
 
     async def start(self, transport: WeixinTransport) -> None:
-        """Resolve chat row, store inner-tick coords, start poll + tool_bg consumer."""
+        """Store agent-channel inner-tick coords, start poll + tool_bg consumer.
+
+        Inner-tick shares ``AgentScope.memory_store_chat_id()`` with ``handle_user_text``
+        so proactive/scheduled ticks read the same MemoryStore transcript as user chat.
+        """
         assert transport is not None
         inty_user = await _inty_user_from_binding(self._binding)
         if inty_user is None:
@@ -83,19 +87,13 @@ class WeixinInprocessPresence:
             )
         self._inty_user_id = str(inty_user.id)
         agent_id = self._binding.agent_id
-        async with AsyncSessionLocal() as db:
-            chat = await chat_service.get_or_create_chat_by_agent(
-                db=db,
-                user_id=self._inty_user_id,
-                agent_id=agent_id,
-            )
-            await db.commit()
-            chat_id = chat.id
-
+        # TODO(#3350): Share AgentScope inner-tick coord setup with AgentChannelPresence.start().
+        scope = AgentScope(user_id=self._inty_user_id, agent_id=agent_id)
+        synthetic_chat_id = scope.memory_store_chat_id()
         self._coordinator.store_inner_tick_coords(
             user_id=self._inty_user_id,
             agent_id=agent_id,
-            chat_id=chat_id,
+            chat_id=synthetic_chat_id,
         )
         self._downlink = WeixinDownlink(
             transport,
