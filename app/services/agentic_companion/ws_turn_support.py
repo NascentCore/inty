@@ -39,3 +39,17 @@ def companion_ai_meta_from_turn_result(
         scheduled_task_id=scheduled_task_id,
     )
     return dump_chat_ws_companion_wire_meta(meta)
+
+
+def companion_ai_meta_from_queue_delivery(
+    *,
+    queue_message_id: str,
+    tool_background_started: bool,
+) -> dict[str, Any]:
+    """Build assistant ``meta_data`` for queue-delivered App WS user-chat replies."""
+    assert queue_message_id != ""
+    meta = ChatWsCompanionWireMessageMetaData(
+        user_msg_uuid=queue_message_id,
+        tool_background_started=True if tool_background_started else None,
+    )
+    return dump_chat_ws_companion_wire_meta(meta)
