@@ -8,6 +8,7 @@ TODO(telegram-dedicated-bot-bonding): Option B per-user bot token + 1:1:1 user/b
 from __future__ import annotations
 
 import asyncio
+import urllib.error
 
 from loguru import logger
 
@@ -55,6 +56,8 @@ _ONBOARD_HINT = (
     "请先打开 Ops /telegram-demo 页面扫码，"
     "或在对话中发送 /start onboard 完成绑定。"
 )
+_POLL_TRANSIENT_ERRORS = (TimeoutError, urllib.error.URLError, OSError)
+_POLL_RETRY_SLEEP_S = 2.0
 _IDENTITY_MISMATCH = (
     "Telegram 用户身份与绑定记录不符，无法处理消息。"
     "请确认使用同一 Telegram 账号。"
@@ -100,9 +103,15 @@ class TelegramTransport:
                         )
             except asyncio.CancelledError:
                 raise
+            except _POLL_TRANSIENT_ERRORS as exc:
+                logger.warning(
+                    "telegram-demo poll transient network error: {}",
+                    exc,
+                )
+                await asyncio.sleep(_POLL_RETRY_SLEEP_S)
             except Exception:
                 logger.exception("telegram-demo poll iteration failed")
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(_POLL_RETRY_SLEEP_S)
 
     async def stop(self) -> None:
         self._stop.set()

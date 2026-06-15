@@ -10,6 +10,7 @@ from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.manager import CompanionSession
+from app.core.companion_harness.companion.bootstrap import interactive_bootstrap_active
 from app.core.companion_harness.companion.models import load_context_meta
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
@@ -133,6 +134,26 @@ def _manager_and_session(
             "Companion MemoryStore not initialized (expected minimal seed at session create)"
         )
     return manager, session
+
+
+def interactive_bootstrap_active_for_companion_session(
+    session: CompanionSession,
+) -> bool:
+    """Whether the next user-chat turn would run on ``USER_CHAT_BOOTSTRAP``."""
+    meta = load_context_meta(store=session.store)
+    return interactive_bootstrap_active(
+        feature_enabled=(
+            session.config.memory_bootstrap_type
+            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+        ),
+        meta=meta,
+    )
+
+
+async def interactive_bootstrap_active_for_scope(scope: AgentScope) -> bool:
+    """Whether the next user-chat turn would run on ``USER_CHAT_BOOTSTRAP`` (agent-channel)."""
+    session = await ensure_memory_store_session(scope)
+    return interactive_bootstrap_active_for_companion_session(session)
 
 
 async def ensure_memory_store_session(scope: AgentScope) -> CompanionSession:

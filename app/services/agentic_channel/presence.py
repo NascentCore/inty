@@ -40,6 +40,10 @@ from app.services.agentic_companion.inner_tick_poll import run_inner_tick_poll
 from app.services.agentic_companion.session import Coordinator, Session
 from app.services.chat_service import generate_session_id
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
+from app.services.agentic_channel.transport_reply import (
+    agentic_loop_suppresses_transport_reply,
+)
+from app.services.agentic_channel.turn import interactive_bootstrap_active_for_scope
 
 _presences: dict[str, AgentChannelPresence] = {}
 _presence_start_locks: dict[str, asyncio.Lock] = {}
@@ -186,6 +190,7 @@ class AgentChannelPresence:
                 },
             )
             agentic_loop_channel = None
+            agentic_loop_channel_wired = False
             bg_sink = self._coordinator.background_sink
             registry = get_scope_channel_registry(self._scope)
             active = registry.active_channel()
@@ -195,7 +200,11 @@ class AgentChannelPresence:
                     agentic_loop_channel = DownlinkLoopChannelAdapter(
                         channel_downlink
                     )
+                    agentic_loop_channel_wired = True
                     bg_sink = None
+            bootstrap_active = await interactive_bootstrap_active_for_scope(
+                self._scope
+            )
             assert self._session is not None
             envelope = parse_telegram_uplink(
                 scope=self._scope,
@@ -214,6 +223,12 @@ class AgentChannelPresence:
             reply = strip_leading_transcript_timestamp_prefixes(
                 turn.assistant_text.strip()
             )
+            if agentic_loop_suppresses_transport_reply(
+                agentic_loop_channel_wired=agentic_loop_channel_wired,
+                interactive_bootstrap_active=bootstrap_active,
+                assistant_reply=reply,
+            ):
+                return ""
             if reply:
                 return reply
             if turn.tool_background_started:

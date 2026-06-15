@@ -8,7 +8,10 @@ from urllib.error import HTTPError
 
 import pytest
 
-from app.external_services.telegram_bot_api import TelegramBotApi
+from app.external_services.telegram_bot_api import (
+    TelegramBotApi,
+    _GET_UPDATES_URLOPEN_TIMEOUT_SLACK_S,
+)
 
 
 class _FakeResponse:
@@ -56,3 +59,16 @@ def test_telegram_bot_api_get_text_messages_empty() -> None:
     )
     assert messages == []
     assert next_offset is None
+
+
+def test_get_text_messages_uses_read_timeout_with_slack() -> None:
+    seen_timeouts: list[object] = []
+
+    def capturing_urlopen(request, timeout=15):
+        seen_timeouts.append(timeout)
+        return _FakeResponse({"ok": True, "result": []})
+
+    api = TelegramBotApi(bot_token="token", urlopen=capturing_urlopen)
+    api.get_text_messages(offset=None, timeout_seconds=30)
+    assert seen_timeouts == [30 + _GET_UPDATES_URLOPEN_TIMEOUT_SLACK_S]
+    assert isinstance(seen_timeouts[0], int)

@@ -25,6 +25,17 @@ from app.services import agent_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.downlink import tool_background_downlink
 from app.core.companion_harness.loop.channel_adapter import DownlinkLoopChannelAdapter
+from app.services.companion_chat_service import (
+    _companion_manager_for_resolved_model,
+    _companion_runtime_config_fingerprint,
+    _companion_tool_model_api_id,
+)
+from app.services.agentic_channel.transport_reply import (
+    agentic_loop_suppresses_transport_reply,
+)
+from app.services.agentic_channel.turn import (
+    interactive_bootstrap_active_for_companion_session,
+)
 from backend.ops.weixin_channel.weixin_uplink import parse_weixin_uplink
 from app.services.agentic_companion.inner_tick_delivery import (
     inner_tick_delivery_for_weixin,
@@ -205,11 +216,28 @@ class WeixinInprocessPresence:
                 },
             )
             agentic_loop_channel = None
+            agentic_loop_channel_wired = False
             bg_sink = self._coordinator.background_sink
             assert self._presence is not None
             if self._downlink is not None:
                 agentic_loop_channel = DownlinkLoopChannelAdapter(self._downlink)
+                agentic_loop_channel_wired = True
                 bg_sink = None
+            chat_api_id = model_override.id_on_provider
+            tool_api_id = _companion_tool_model_api_id(chat_api_id)
+            manager = _companion_manager_for_resolved_model(
+                chat_api_id,
+                tool_api_id,
+                _companion_runtime_config_fingerprint(),
+            )
+            companion_session = manager.get_or_create_session(
+                user_id,
+                agent_id,
+                chat_id,
+            )
+            bootstrap_active = interactive_bootstrap_active_for_companion_session(
+                companion_session
+            )
             envelope = parse_weixin_uplink(
                 user_id=user_id,
                 agent_id=agent_id,
@@ -225,6 +253,12 @@ class WeixinInprocessPresence:
             if not turn.tool_background_started:
                 self._coordinator.remove_foreground_pending(preset_uid)
             reply = turn.assistant_text.strip()
+            if agentic_loop_suppresses_transport_reply(
+                agentic_loop_channel_wired=agentic_loop_channel_wired,
+                interactive_bootstrap_active=bootstrap_active,
+                assistant_reply=reply,
+            ):
+                return ""
             if reply:
                 return reply
             if turn.tool_background_started:

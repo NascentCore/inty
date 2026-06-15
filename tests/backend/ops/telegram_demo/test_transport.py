@@ -7,7 +7,7 @@ import json
 import time
 import uuid
 from io import BytesIO
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 import pytest
 from sqlalchemy import delete
@@ -165,3 +165,67 @@ async def test_concurrent_onboard_both_welcome_without_assert() -> None:
     )
     assert scope is not None
     await _cleanup_scope(scope)
+
+
+@pytest.mark.asyncio
+async def test_run_until_stopped_recovers_from_transient_urlopen_error() -> None:
+    poll_calls = {"n": 0}
+
+    def flaky_urlopen(request, timeout=15):
+        url = request.full_url
+        if "/getUpdates" in url:
+            poll_calls["n"] += 1
+            if poll_calls["n"] == 1:
+                raise URLError("timed out")
+            return _FakeResponse({"ok": True, "result": []})
+        if url.endswith("/getMe"):
+            return _FakeResponse(
+                {
+                    "ok": True,
+                    "result": {"id": 42, "username": "demo_bot"},
+                }
+            )
+        if url.endswith("/sendMessage"):
+            return _FakeResponse({"ok": True, "result": {}})
+        raise HTTPError(url, 404, "not found", hdrs=None, fp=BytesIO())
+
+    api = TelegramBotApi(bot_token="retry-test-token", urlopen=flaky_urlopen)
+    transport = TelegramTransport(api=api)
+    transport._long_poll_timeout_seconds = 0
+    task = asyncio.create_task(transport.run_until_stopped())
+    await asyncio.sleep(3.0)
+    await transport.stop()
+    await task
+    assert poll_calls["n"] >= 2
+
+
+@pytest.mark.asyncio
+async def test_run_until_stopped_recovers_from_transient_urlopen_error() -> None:
+    poll_calls = {"n": 0}
+
+    def flaky_urlopen(request, timeout=15):
+        url = request.full_url
+        if "/getUpdates" in url:
+            poll_calls["n"] += 1
+            if poll_calls["n"] == 1:
+                raise URLError("timed out")
+            return _FakeResponse({"ok": True, "result": []})
+        if url.endswith("/getMe"):
+            return _FakeResponse(
+                {
+                    "ok": True,
+                    "result": {"id": 42, "username": "demo_bot"},
+                }
+            )
+        if url.endswith("/sendMessage"):
+            return _FakeResponse({"ok": True, "result": {}})
+        raise HTTPError(url, 404, "not found", hdrs=None, fp=BytesIO())
+
+    api = TelegramBotApi(bot_token="retry-test-token", urlopen=flaky_urlopen)
+    transport = TelegramTransport(api=api)
+    transport._long_poll_timeout_seconds = 0
+    task = asyncio.create_task(transport.run_until_stopped())
+    await asyncio.sleep(3.0)
+    await transport.stop()
+    await task
+    assert poll_calls["n"] >= 2
