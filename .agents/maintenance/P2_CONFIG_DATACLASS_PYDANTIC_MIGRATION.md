@@ -125,6 +125,8 @@ flowchart TB
 | CFG-PYD-OPT-01a | done | `AppConfig.LimitsConfig`：语音=聊天同步、游客≤登录用户自动修正 → `model_validator`；Fixed in `cursor/agent-maintenance-tasks-5722` |
 | CFG-PYD-OPT-01b | done | `PhoneCallConfig`：enabled 时 TTL / WSS URL / 国家码校验 → `model_validator`；Fixed in `cursor/agent-maintenance-tasks-5722` |
 | CFG-PYD-OPT-01c | done | `FeaturesConfig`：WS idle、companion transcript/compaction、proactive chat 等范围校验 → `model_validator`；Fixed in `cursor/agent-maintenance-tasks-5722` |
+| CFG-PYD-OPT-01d | in_progress | `AgentConfig`：`chat_llm_provider` 枚举校验 → `model_validator`；Claimed in `cursor/agent-maintenance-tasks-c162` |
+| CFG-PYD-OPT-01e | in_progress | `AgentConfig`：`newapi_gemini_base_url` 设置时 Bearer token 必填 → `model_validator`；Claimed in `cursor/agent-maintenance-tasks-c162` |
 | CFG-PYD-OPT-02 | — | 为 YAML 根定义顶层 `RootConfig` 单模型，合并 `load_config` 与 `surprise_snap` 特例（减少手写拼装） |
 | CFG-PYD-OPT-03 | done | 删除重复的 `from loguru import logger` 等无关清理；Fixed in `cursor/agent-maintenance-tasks-4126` |
 
