@@ -6,6 +6,11 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.registry import load_model_modules
 
+# It is important to call load_model_modules() before the table metadata is accessed or models are referenced,
+# because this function ensures that all SQLAlchemy ORM models are imported and registered.
+# This guarantees that relationships, table definitions, and mappers are properly loaded into SQLAlchemy's
+# metadata registry. Without this, tables may not be discovered for operations like schema generation,
+# migrations, or auto-creation, leading to runtime errors.
 load_model_modules()
 
 _db = global_config_loaded_from_config_yaml.database

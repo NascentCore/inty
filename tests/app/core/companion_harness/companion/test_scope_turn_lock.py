@@ -9,6 +9,8 @@ import pytest
 from app.core.companion_harness.companion.manager import CompanionSession
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.scope_turn_lock import (
+    ScopeTurnLockNotHeldError,
+    assert_scope_turn_lock_held_by_current_task,
     companion_scope_from_foreground_ctx,
     get_scope_tool_bg_idle,
     get_scope_turn_lock,
@@ -94,3 +96,33 @@ async def test_scope_turn_lock_serializes_concurrent_holders() -> None:
 
     await asyncio.gather(holder_a(), holder_b())
     assert order == ["a-enter", "a-exit", "b-enter", "b-exit"]
+
+
+@pytest.mark.asyncio
+async def test_assert_scope_turn_lock_held_by_current_task_requires_holder() -> None:
+    scope = CompanionScope("user-f", "agent-f", "chat-f")
+    with pytest.raises(ScopeTurnLockNotHeldError, match="is not held"):
+        assert_scope_turn_lock_held_by_current_task(scope)
+    lock = get_scope_turn_lock(scope)
+    async with lock:
+        assert_scope_turn_lock_held_by_current_task(scope)
+
+
+@pytest.mark.asyncio
+async def test_assert_scope_turn_lock_rejects_other_task_holder() -> None:
+    scope = CompanionScope("user-g", "agent-g", "chat-g")
+    lock = get_scope_turn_lock(scope)
+    ready = asyncio.Event()
+    release = asyncio.Event()
+
+    async def holder() -> None:
+        async with lock:
+            ready.set()
+            await release.wait()
+
+    task = asyncio.create_task(holder())
+    await ready.wait()
+    with pytest.raises(ScopeTurnLockNotHeldError, match="another task"):
+        assert_scope_turn_lock_held_by_current_task(scope)
+    release.set()
+    await task

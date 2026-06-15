@@ -4,9 +4,9 @@ If not in plan mode, do nothing and stop!
 
 Review and revise the plan:
 
-- The plan addresses the user request(s)
-- The plan makes sound designs
-- The plan's implementation procedure is well organized
+- The plan's objectives are reasonable
+- The plan's design is sound
+- The plan's details are sufficiently granular
 
 ## Use alembic cli to generate database version files
 

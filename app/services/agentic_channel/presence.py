@@ -3,21 +3,18 @@
 from __future__ import annotations
 
 import asyncio
-import uuid
 from datetime import datetime, timezone
 
 from loguru import logger
 from sqlalchemy import select
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.models import CompanionTurnResult
-from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.scope_turn_lock import get_scope_turn_lock
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.core.companion_harness.companion.utc import (
-    strip_leading_transcript_timestamp_prefixes,
+from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.companion.scope_turn_lock import (
+    get_scope_turn_lock,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
@@ -28,7 +25,13 @@ from app.services import agent_service
 from app.services.agentic_channel.channel_runtime import (
     get_scope_channel_registry,
 )
-from app.services.agentic_channel.turn import run_agent_turn
+from app.services.agentic_channel.serving import (
+    drain_scope_once_via_companion,
+    enqueue_inbound_wire_message,
+)
+from app.core.companion_harness.agentic_companion.types import (
+    InboundWireMessage,
+)
 from app.services.agentic_companion.downlink import (
     DownlinkKind,
     downlink_delivers_user_visible_text,
@@ -40,7 +43,6 @@ from app.services.agentic_companion.inner_tick_delivery import (
 from app.services.agentic_companion.inner_tick_poll import run_inner_tick_poll
 from app.services.agentic_companion.session import Coordinator, Session
 from app.services.chat_service import generate_session_id
-from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 
 _presences: dict[str, AgentChannelPresence] = {}
 _presence_start_locks: dict[str, asyncio.Lock] = {}
@@ -155,7 +157,7 @@ class AgentChannelPresence:
     ) -> str:
         stripped = user_text.strip()
         assert stripped
-        preset_uid = str(uuid.uuid4())
+        queue_message_id: str | None = None
         try:
             async with AsyncSessionLocal() as db:
                 inty_user_row = await db.execute(
@@ -170,15 +172,23 @@ class AgentChannelPresence:
                 if agent_data is None:
                     return "找不到这个 companion，请确认 agent_id 是否正确。"
 
-            model = await resolve_chat_model_for_scope(self._scope)
             synthetic_chat_id = self._scope.memory_store_chat_id()
             session_id = generate_session_id(synthetic_chat_id)
+            inbound = InboundWireMessage(
+                scope=self._scope,
+                channel=runtime_channel,
+                wire_id=f"{runtime_channel.value}:{self._scope.registry_key()}",
+                text=stripped,
+                received_at_utc=datetime.now(timezone.utc),
+                client_message_id=None,
+            )
+            queue_message_id = await enqueue_inbound_wire_message(inbound)
             stub_request = ChatCompletionRequest(
                 messages=[ChatMessage(role="user", content=stripped)],
-                message_id=preset_uid,
+                message_id=queue_message_id,
             )
             self._coordinator.set_foreground_pending(
-                preset_uid,
+                queue_message_id,
                 {
                     "session_id": session_id,
                     "agent_id": self._scope.agent_id,
@@ -195,33 +205,20 @@ class AgentChannelPresence:
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
             )
-            turn = await run_agent_turn(
-                scope=self._scope,
-                user_text=stripped,
-                resolved_chat_model=model,
+            reply = await drain_scope_once_via_companion(
+                self._scope,
                 runtime_channel=runtime_channel,
-                background_output_sink=self._coordinator.background_sink,
-                preset_user_msg_uuid=preset_uid,
                 implicit_signal_bundle=implicit_bundle,
+                background_output_sink=self._coordinator.background_sink,
             )
-            assert isinstance(turn, CompanionTurnResult)
-            if not turn.tool_background_started:
-                self._coordinator.remove_foreground_pending(preset_uid)
-            reply = strip_leading_transcript_timestamp_prefixes(
-                turn.assistant_text.strip()
-            )
-            if reply:
-                return reply
-            if turn.tool_background_started:
-                # Tool output is delivered by _tool_background_consumer via downlink.
-                return ""
-            return "（没有回复内容）"
+            return reply
         except Exception:
             logger.exception(
                 "agent_channel user_chat failed scope={}",
                 self._scope.registry_key(),
             )
-            self._coordinator.remove_foreground_pending(preset_uid)
+            if queue_message_id is not None:
+                self._coordinator.remove_foreground_pending(queue_message_id)
             return "Companion 回合失败，请查看 Ops 日志。"
 
     async def _tool_background_consumer(self) -> None:
