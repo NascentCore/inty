@@ -299,7 +299,7 @@ class AgentInDB(AgentBase):
 
     id: str
     # DEPRECATED: app 显示 ID 而非 readable_id
-    readable_id: str
+    readable_id: Optional[str] = None
     status: AgentStatus
     creator_id: Optional[str] = None
     created_at: datetime
