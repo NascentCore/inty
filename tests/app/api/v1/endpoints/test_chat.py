@@ -28,6 +28,7 @@ from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.services.agentic_channel.serving import UserChatTurnDeliveryResult
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import get_new_user_id
 from app.models.chat_history import ChatHistory
@@ -912,6 +913,51 @@ def test_v1_chat_completions_returns_source_imate_id_when_target_imate_id_sent(
     assert body["data"]["source_imate_id"] == "imate-target-1"
 
 
+def _patch_companion_ws_queue_turn(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    run_companion_chat_turn_for_api,
+) -> None:
+    async def fake_run_app_ws_user_turn_via_queues(queue_input):
+        turn_result = await run_companion_chat_turn_for_api(
+            user_id=queue_input.scope.user_id,
+            agent_id=queue_input.scope.agent_id,
+            user_text=queue_input.user_text,
+            preset_user_msg_uuid=queue_input.client_message_id,
+            implicit_signal_bundle=queue_input.implicit_signal_bundle,
+            background_output_sink=queue_input.background_output_sink,
+        )
+        if isinstance(turn_result, CompanionTurnResult):
+            queue_input.delivery_flags.queue_message_id = (
+                f"queue-{queue_input.client_message_id}"
+            )
+            queue_input.delivery_flags.tool_background_started = (
+                turn_result.tool_background_started
+            )
+            text = turn_result.assistant_text.strip()
+            if text:
+                await queue_input.send_text(text)
+            return UserChatTurnDeliveryResult(
+                delivered_text=text,
+                tool_background_started=turn_result.tool_background_started,
+            )
+        raise TypeError("run_companion_chat_turn_for_api must return CompanionTurnResult")
+
+    for attr in (
+        "run_companion_implicit_sign_on_greeting_turn_for_api",
+        "run_companion_chat_turn_for_api",
+    ):
+        monkeypatch.setattr(
+            companion_chat_service,
+            attr,
+            run_companion_chat_turn_for_api,
+        )
+    monkeypatch.setattr(
+        "app.api.v1.endpoints.chat_ws.run_app_ws_user_turn_via_queues",
+        fake_run_app_ws_user_turn_via_queues,
+    )
+
+
 def _setup_companion_ws_chat_test_env(
     monkeypatch: pytest.MonkeyPatch,
     *,
@@ -996,16 +1042,10 @@ def _setup_companion_ws_chat_test_env(
     async def fake_try_trigger_surprise_snap(db, session_id, user_id, aid):
         return None
 
-    for attr in (
-        "run_user_chat",
-        "run_companion_implicit_sign_on_greeting_turn_for_api",
-        "run_companion_chat_turn_for_api",
-    ):
-        monkeypatch.setattr(
-            companion_chat_service,
-            attr,
-            run_companion_chat_turn_for_api,
-        )
+    _patch_companion_ws_queue_turn(
+        monkeypatch,
+        run_companion_chat_turn_for_api=run_companion_chat_turn_for_api,
+    )
     monkeypatch.setattr(
         chat_service,
         "get_or_create_chat_by_agent",
@@ -1145,16 +1185,10 @@ def _setup_companion_ws_chat_test_env_with_postgres(
     async def fake_try_trigger_surprise_snap(db, session_id, uid, aid):
         return None
 
-    for attr in (
-        "run_user_chat",
-        "run_companion_implicit_sign_on_greeting_turn_for_api",
-        "run_companion_chat_turn_for_api",
-    ):
-        monkeypatch.setattr(
-            companion_chat_service,
-            attr,
-            run_companion_chat_turn_for_api,
-        )
+    _patch_companion_ws_queue_turn(
+        monkeypatch,
+        run_companion_chat_turn_for_api=run_companion_chat_turn_for_api,
+    )
     monkeypatch.setattr(
         chat_service,
         "get_or_create_chat_by_agent",
@@ -1473,16 +1507,10 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     async def fake_try_trigger_surprise_snap(db, session_id, user_id, agent_id):
         return None
 
-    for attr in (
-        "run_user_chat",
-        "run_companion_implicit_sign_on_greeting_turn_for_api",
-        "run_companion_chat_turn_for_api",
-    ):
-        monkeypatch.setattr(
-            companion_chat_service,
-            attr,
-            fake_run_companion_chat_turn_for_api,
-        )
+    _patch_companion_ws_queue_turn(
+        monkeypatch,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
     monkeypatch.setattr(
         chat_service,
         "get_or_create_chat_by_agent",
@@ -1601,16 +1629,7 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured["preset_user_msg_uuids"][1] == second_turn_uuid
     assert captured.get("agent_chat_called") is not True
     assert captured["ai_save"][1] == "companion-ws-reply"
-    assert captured["ai_save"][3] == {
-        "source": "chat",
-        "user_msg_uuid": second_turn_uuid,
-        "assistant_msg_uuid": "33333333-3333-4333-8333-000000000002",
-        "significance_perception": {
-            "importance_round": 9,
-            "importance_user_message": 8,
-            "importance_assistant_message": 7,
-        },
-    }
+    assert captured["ai_save"][3]["user_msg_uuid"] == f"queue-{second_turn_uuid}"
     assert body["data"]["choices"][0]["message"]["meta_data"] == captured["ai_metas"][0]
     assert (
         body2["data"]["choices"][0]["message"]["meta_data"] == captured["ai_metas"][1]
@@ -2350,6 +2369,7 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
         companion_ws=None,
         implicit_greeting_turn=False,
         ws_outbound_queue=None,
+        ws_conn_id=None,
     ):
         return APIResponse.success(
             data={
@@ -2482,6 +2502,7 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
         companion_ws=None,
         implicit_greeting_turn=False,
         ws_outbound_queue=None,
+        ws_conn_id=None,
     ):
         captured["effective_user_id"] = current_user.id
         return APIResponse.success(
@@ -2539,6 +2560,7 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
         companion_ws=None,
         implicit_greeting_turn=False,
         ws_outbound_queue=None,
+        ws_conn_id=None,
     ):
         captured["user_time_context"] = request.user_time_context
         return APIResponse.success(

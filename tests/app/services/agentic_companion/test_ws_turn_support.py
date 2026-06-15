@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.services.agentic_companion.ws_turn_support import (
+    companion_ai_meta_from_queue_delivery,
     companion_ai_meta_from_turn_result,
 )
 
@@ -39,3 +40,12 @@ def test_companion_ai_meta_from_turn_result_turn_recall() -> None:
         scheduled_task_id=None,
     )
     assert meta["turn_recall"] == "用户提到下周见面"
+
+
+def test_companion_ai_meta_from_queue_delivery_tool_background() -> None:
+    meta = companion_ai_meta_from_queue_delivery(
+        queue_message_id="queue-msg-1",
+        tool_background_started=True,
+    )
+    assert meta["user_msg_uuid"] == "queue-msg-1"
+    assert meta["tool_background_started"] is True

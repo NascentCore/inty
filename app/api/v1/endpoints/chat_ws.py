@@ -8,6 +8,7 @@ Wire frames: ``app/schemas/chat_websocket.py``; outbound pump: ``app/services/ch
 import asyncio
 import json
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
@@ -25,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
@@ -89,6 +91,14 @@ from app.services.agentic_companion.presence_registry import (
     companion_presence_registry,
 )
 from app.services.agentic_companion.session import Session
+from app.services.agentic_companion.ws_queue_serving import (
+    AppWsQueueDeliveryFlags,
+    AppWsUserTurnQueueInput,
+    run_app_ws_user_turn_via_queues,
+)
+from app.services.agentic_companion.ws_turn_support import (
+    companion_ai_meta_from_queue_delivery,
+)
 from app.services.agentic_companion.ws_channel_guard import (
     register_app_ws_channel,
     unregister_app_ws_channel,
@@ -248,6 +258,8 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
             await outbound_queue.put(
                 _chat_ws_error_payload_from_http_exception(e, agent_id=agent_id)
             )
+            return
+        if response is None:
             return
         if isinstance(response, dict):
             response_data = dict(response)
@@ -873,6 +885,126 @@ async def _companion_ws_bootstrap_interim_consumer(
             logger.exception("companion_ws bootstrap_interim deliver failed")
 
 
+@dataclass(frozen=True)
+class AppWsQueueDeliveryCtx:
+    """Values needed to materialize one queue-delivered App WS completion frame."""
+
+    db: AsyncSession
+    agent_id: str
+    chat_id: str
+    session_id: str
+    request: ChatCompletionRequest
+    last_user_message: Any
+    last_user_text: str
+    effective_local_id: str | None
+    companion_preset_uid: str | None
+    companion_ws_foreground_pending: dict[str, dict[str, Any]] | None
+    outbound_queue: asyncio.Queue[WsOutboundPayload]
+    delivery_flags: AppWsQueueDeliveryFlags
+
+
+async def _deliver_app_ws_user_reply_from_queue(
+    ctx: AppWsQueueDeliveryCtx,
+    text: str,
+) -> None:
+    """Persist chat_history and enqueue one WS completion for OutputQueue-delivered text."""
+    assert text.strip() != ""
+    companion_user_row_id = await _persist_companion_user_message_for_bg(
+        session_id=ctx.session_id,
+        last_user_message=ctx.last_user_message,
+        effective_local_id=ctx.effective_local_id,
+        implicit_greeting_turn=False,
+    )
+    if (
+        ctx.companion_preset_uid is not None
+        and ctx.companion_ws_foreground_pending is not None
+        and ctx.companion_preset_uid in ctx.companion_ws_foreground_pending
+    ):
+        ctx.companion_ws_foreground_pending[ctx.companion_preset_uid][
+            "foreground_user_message_id"
+        ] = companion_user_row_id
+    companion_ai_meta = companion_ai_meta_from_queue_delivery(
+        queue_message_id=ctx.delivery_flags.queue_message_id,
+        tool_background_started=ctx.delivery_flags.tool_background_started,
+    )
+    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+        ctx.session_id,
+        text,
+        agent_id=ctx.agent_id,
+        meta_data=companion_ai_meta,
+    )
+    latest_message_info = None
+    try:
+        if ai_message_id is not None:
+            latest_message_info = (
+                await chat_history_service.get_ai_message_info_by_id(
+                    ctx.db, ai_message_id
+                )
+            )
+    except Exception as e:
+        logger.warning(f"queue deliver get_ai_message_info_by_id failed: {e}")
+    user_message_id = companion_user_row_id
+    if user_message_id is None:
+        try:
+            user_message_id = (
+                await chat_history_service.get_latest_user_message_id(
+                    ctx.db, ctx.session_id
+                )
+            )
+        except Exception as e:
+            logger.warning(
+                f"queue deliver get_latest_user_message_id failed: {e}"
+            )
+    response_text_content, response_content_parts = (
+        _normalize_chat_response_content(text)
+    )
+    completion = build_companion_ws_completion_data(
+        response_text_content=response_text_content,
+        response_content_parts=response_content_parts,
+        last_user_text=ctx.last_user_text,
+        latest_message_info=latest_message_info,
+        audio_url=None,
+        request=ctx.request,
+        source_imate_id=ctx.request.target_imate_id,
+        user_message_id=user_message_id,
+        subscription_actions=None,
+        client_local_id=ctx.effective_local_id,
+    )
+    payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
+    out = payload.model_dump(exclude_none=True)
+    out["agent_id"] = ctx.agent_id
+    out["status_line"] = await _agent_status_line_for_chat_header(
+        ctx.db, ctx.agent_id
+    )
+    await ctx.outbound_queue.put(out)
+
+
+def _alias_ws_foreground_pending_for_queue_message(
+    *,
+    companion_ws_foreground_pending: dict[str, dict[str, Any]],
+    client_message_id: str,
+    queue_message_id: str,
+) -> None:
+    """Map queue message id to the same foreground ctx as the client message id."""
+    assert client_message_id != ""
+    assert queue_message_id != ""
+    ctx = companion_ws_foreground_pending.get(client_message_id)
+    if ctx is None:
+        return
+    companion_ws_foreground_pending[queue_message_id] = ctx
+
+
+def _clear_ws_foreground_pending_aliases(
+    *,
+    companion_ws_foreground_pending: dict[str, dict[str, Any]],
+    client_message_id: str,
+    queue_message_id: str,
+) -> None:
+    companion_ws_foreground_pending.pop(client_message_id, None)
+    if queue_message_id:
+        companion_ws_foreground_pending.pop(queue_message_id, None)
+
+
 async def _agent_chat_ws_completions_impl(
     *,
     db: AsyncSession,
@@ -887,7 +1019,8 @@ async def _agent_chat_ws_completions_impl(
     companion_ws: CompanionWebSocketCoordinator | None = None,
     implicit_greeting_turn: bool = False,
     ws_outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
-) -> dict:
+    ws_conn_id: str | None = None,
+) -> dict | None:
     """One companion chat turn for ``/api/v1/chat/ws`` (production WebSocket path).
 
     Companion kernel + wire envelope.
@@ -1120,9 +1253,11 @@ async def _agent_chat_ws_completions_impl(
                                 outbound_queue=ws_outbound_queue,
                             )
                         )
-                        bootstrap_interim_sink = (
-                            companion_ws.bootstrap_interim_output_sink()
-                        )
+                        if implicit_greeting_ws:
+                            bootstrap_interim_sink = (
+                                companion_ws.bootstrap_interim_output_sink()
+                            )
+                        _ = bootstrap_interim_sink
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
                             client_time=request.user_time_context,
@@ -1141,27 +1276,97 @@ async def _agent_chat_ws_completions_impl(
                                 background_output_sink=companion_background_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
                             )
+                            if (
+                                companion_preset_uid is not None
+                                and companion_ws_foreground_pending is not None
+                                and not companion_turn.tool_background_started
+                            ):
+                                companion_ws_foreground_pending.pop(
+                                    companion_preset_uid, None
+                                )
                         else:
-                            companion_turn = await companion_chat_service.run_user_chat(
-                                user_id=current_user.id,
+                            assert ws_outbound_queue is not None
+                            assert ws_conn_id is not None
+                            assert ws_conn_id != ""
+                            delivery_flags = AppWsQueueDeliveryFlags()
+                            delivery_ctx = AppWsQueueDeliveryCtx(
+                                db=db,
                                 agent_id=agent_id,
-                                chat_id=chat.id,
-                                user_text=last_user_text,
-                                resolved_chat_model=model_override,
+                                chat_id=str(chat.id),
                                 session_id=session_id,
-                                background_output_sink=companion_background_sink,
-                                preset_user_msg_uuid=companion_preset_uid,
-                                implicit_signal_bundle=companion_implicit_bundle,
-                                bootstrap_interim_output_sink=bootstrap_interim_sink,
+                                request=request,
+                                last_user_message=last_user_message,
+                                last_user_text=last_user_text,
+                                effective_local_id=effective_local_id,
+                                companion_preset_uid=companion_preset_uid,
+                                companion_ws_foreground_pending=companion_ws_foreground_pending,
+                                outbound_queue=ws_outbound_queue,
+                                delivery_flags=delivery_flags,
                             )
-                        if (
-                            companion_preset_uid is not None
-                            and companion_ws_foreground_pending is not None
-                            and not companion_turn.tool_background_started
-                        ):
-                            companion_ws_foreground_pending.pop(
-                                companion_preset_uid, None
+
+                            async def send_user_reply(text: str) -> None:
+                                await _deliver_app_ws_user_reply_from_queue(
+                                    delivery_ctx, text
+                                )
+
+                            scope = AgentScope(
+                                user_id=str(current_user.id),
+                                agent_id=agent_id,
                             )
+                            wire_id = f"app:{ws_conn_id}"
+                            delivery_result = await run_app_ws_user_turn_via_queues(
+                                AppWsUserTurnQueueInput(
+                                    scope=scope,
+                                    wire_id=wire_id,
+                                    user_text=last_user_text,
+                                    client_message_id=companion_preset_uid,
+                                    implicit_signal_bundle=companion_implicit_bundle,
+                                    background_output_sink=companion_background_sink,
+                                    delivery_flags=delivery_flags,
+                                    send_text=send_user_reply,
+                                )
+                            )
+                            if (
+                                companion_preset_uid is not None
+                                and companion_ws_foreground_pending is not None
+                                and delivery_flags.queue_message_id
+                            ):
+                                _alias_ws_foreground_pending_for_queue_message(
+                                    companion_ws_foreground_pending=companion_ws_foreground_pending,
+                                    client_message_id=companion_preset_uid,
+                                    queue_message_id=delivery_flags.queue_message_id,
+                                )
+                            if (
+                                companion_preset_uid is not None
+                                and companion_ws_foreground_pending is not None
+                                and not delivery_result.tool_background_started
+                            ):
+                                _clear_ws_foreground_pending_aliases(
+                                    companion_ws_foreground_pending=companion_ws_foreground_pending,
+                                    client_message_id=companion_preset_uid,
+                                    queue_message_id=delivery_flags.queue_message_id,
+                                )
+                            if (
+                                not delivery_result.delivered_text.strip()
+                                and not delivery_result.tool_background_started
+                            ):
+                                logger.error(
+                                    "Companion queue chat returned no content agent_id={} user_id={}",
+                                    agent_id,
+                                    current_user.id,
+                                )
+                                raise HTTPException(
+                                    status_code=500,
+                                    detail="Chat returned no content",
+                                )
+                            if companion_ws_inner_tick_ctx is not None:
+                                apply_companion_ws_inner_tick_coords(
+                                    companion_ws_inner_tick_ctx,
+                                    user_id=current_user.id,
+                                    agent_id=agent_id,
+                                    chat_id=chat.id,
+                                )
+                            return None
                     except Exception as exc:
                         bg_started_on_exc = bool(
                             getattr(
@@ -1173,8 +1378,10 @@ async def _agent_chat_ws_completions_impl(
                             and companion_ws_foreground_pending is not None
                             and not bg_started_on_exc
                         ):
-                            companion_ws_foreground_pending.pop(
-                                companion_preset_uid, None
+                            _clear_ws_foreground_pending_aliases(
+                                companion_ws_foreground_pending=companion_ws_foreground_pending,
+                                client_message_id=companion_preset_uid,
+                                queue_message_id="",
                             )
                         if bg_started_on_exc:
                             try:
@@ -1203,59 +1410,61 @@ async def _agent_chat_ws_completions_impl(
                     finally:
                         if companion_ws is not None:
                             companion_ws.clear_bootstrap_interim_deliver_ctx()
-                    companion_reply = companion_turn.assistant_text
-                    companion_ai_meta = _companion_ai_meta_from_turn_result(
-                        companion_turn,
-                        companion_scheduled_reminder=None,
-                        scheduled_task_id=None,
-                    )
-                    companion_user_row_id = (
-                        await _persist_companion_user_message_for_bg(
-                            session_id=session_id,
-                            last_user_message=last_user_message,
-                            effective_local_id=effective_local_id,
-                            implicit_greeting_turn=implicit_greeting_ws,
+                    if implicit_greeting_ws:
+                        companion_reply = companion_turn.assistant_text
+                        companion_ai_meta = _companion_ai_meta_from_turn_result(
+                            companion_turn,
+                            companion_scheduled_reminder=None,
+                            scheduled_task_id=None,
                         )
-                    )
-                    if (
-                        companion_preset_uid is not None
-                        and companion_ws_foreground_pending is not None
-                        and companion_preset_uid
-                        in companion_ws_foreground_pending
-                    ):
-                        companion_ws_foreground_pending[companion_preset_uid][
-                            "foreground_user_message_id"
-                        ] = companion_user_row_id
-                    ai_message_id = (
-                        await chat_history_service.add_ai_message_sync_async(
+                        companion_user_row_id = (
+                            await _persist_companion_user_message_for_bg(
+                                session_id=session_id,
+                                last_user_message=last_user_message,
+                                effective_local_id=effective_local_id,
+                                implicit_greeting_turn=implicit_greeting_ws,
+                            )
+                        )
+                        if (
+                            companion_preset_uid is not None
+                            and companion_ws_foreground_pending is not None
+                            and companion_preset_uid
+                            in companion_ws_foreground_pending
+                        ):
+                            companion_ws_foreground_pending[
+                                companion_preset_uid
+                            ][
+                                "foreground_user_message_id"
+                            ] = companion_user_row_id
+                        ai_message_id = await chat_history_service.add_ai_message_sync_async(
                             session_id,
                             companion_reply,
                             agent_id=chat.agent_id,
                             meta_data=companion_ai_meta,
                         )
-                    )
-                    response_content = companion_reply
-                    if (
-                        response_content is None
-                        or not str(response_content).strip()
-                    ):
-                        logger.error(
-                            f"Companion chat returned no content - agent_id={agent_id}, user_id={current_user.id}"
-                        )
-                        raise HTTPException(
-                            status_code=500, detail="Chat returned no content"
-                        )
-                    (
-                        response_text_content,
-                        response_content_parts,
-                    ) = _normalize_chat_response_content(response_content)
-                    if companion_ws_inner_tick_ctx is not None:
-                        apply_companion_ws_inner_tick_coords(
-                            companion_ws_inner_tick_ctx,
-                            user_id=current_user.id,
-                            agent_id=agent_id,
-                            chat_id=chat.id,
-                        )
+                        response_content = companion_reply
+                        if (
+                            response_content is None
+                            or not str(response_content).strip()
+                        ):
+                            logger.error(
+                                f"Companion chat returned no content - agent_id={agent_id}, user_id={current_user.id}"
+                            )
+                            raise HTTPException(
+                                status_code=500,
+                                detail="Chat returned no content",
+                            )
+                        (
+                            response_text_content,
+                            response_content_parts,
+                        ) = _normalize_chat_response_content(response_content)
+                        if companion_ws_inner_tick_ctx is not None:
+                            apply_companion_ws_inner_tick_coords(
+                                companion_ws_inner_tick_ctx,
+                                user_id=current_user.id,
+                                agent_id=agent_id,
+                                chat_id=chat.id,
+                            )
 
             response_preview = (
                 response_text_content[:100]
@@ -1647,6 +1856,7 @@ async def chat_completions_websocket(
                         companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
                         companion_ws=companion_ws,
                         ws_outbound_queue=outbound_queue,
+                        ws_conn_id=ws_conn_id,
                     ),
                     name=f"chat_ws_turn_{ws_conn_id}",
                 )
@@ -1664,6 +1874,8 @@ async def chat_completions_websocket(
                         e, agent_id=websocket_request.agent_id
                     )
                 )
+                continue
+            if response is None:
                 continue
             if isinstance(response, dict):
                 response_data = dict(response)
