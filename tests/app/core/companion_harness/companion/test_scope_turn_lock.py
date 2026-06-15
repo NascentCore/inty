@@ -109,6 +109,31 @@ async def test_assert_scope_turn_lock_held_by_current_task_requires_holder() -> 
 
 
 @pytest.mark.asyncio
+async def test_scope_turn_lock_release_rejects_non_holder() -> None:
+    scope = CompanionScope("user-h", "agent-h", "chat-h")
+    lock = get_scope_turn_lock(scope)
+    holder_ready = asyncio.Event()
+    holder_done = asyncio.Event()
+
+    async def holder() -> None:
+        await lock.acquire()
+        holder_ready.set()
+        await holder_done.wait()
+        lock.release()
+
+    holder_task = asyncio.create_task(holder())
+    await holder_ready.wait()
+    assert lock.locked()
+    assert lock._holder_task is holder_task
+    with pytest.raises(ScopeTurnLockNotHeldError, match="another task"):
+        lock.release()
+    assert lock.locked()
+    assert lock._holder_task is holder_task
+    holder_done.set()
+    await holder_task
+
+
+@pytest.mark.asyncio
 async def test_assert_scope_turn_lock_rejects_other_task_holder() -> None:
     scope = CompanionScope("user-g", "agent-g", "chat-g")
     lock = get_scope_turn_lock(scope)

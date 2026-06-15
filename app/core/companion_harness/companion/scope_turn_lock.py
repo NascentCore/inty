@@ -33,8 +33,12 @@ class ScopeTurnLock(asyncio.Lock):
         return True
 
     def release(self) -> None:
-        if self._holder_task is asyncio.current_task():
-            self._holder_task = None
+        current = asyncio.current_task()
+        if self._holder_task is not current:
+            raise ScopeTurnLockNotHeldError(
+                "scope turn_lock is held by another task"
+            )
+        self._holder_task = None
         super().release()
 
 
