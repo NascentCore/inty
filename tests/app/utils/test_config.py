@@ -1,3 +1,4 @@
+import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -718,6 +719,49 @@ def test_agent_config_model_validate_ignores_unknown_keys():
 
     assert agent_config.free_user_chat_model == "google/gemini-2.5-flash"
     assert not hasattr(agent_config, "unknown_key")
+
+
+def test_agent_config_chat_llm_provider_invalid_raises():
+    with pytest.raises(ValueError, match="chat_llm_provider"):
+        AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            chat_llm_provider="bogus",
+        )
+
+
+def test_agent_config_newapi_gemini_bearer_required_when_base_url_set():
+    original = os.environ.get("NEWAPI_GEMINI_BEARER_TOKEN")
+    try:
+        os.environ.pop("NEWAPI_GEMINI_BEARER_TOKEN", None)
+        with pytest.raises(ValueError, match="newapi_gemini_bearer_token"):
+            AgentConfig(
+                api_key="test",
+                langchain_api_key="test",
+                newapi_gemini_base_url="https://llm.example.com",
+            )
+    finally:
+        if original is None:
+            os.environ.pop("NEWAPI_GEMINI_BEARER_TOKEN", None)
+        else:
+            os.environ["NEWAPI_GEMINI_BEARER_TOKEN"] = original
+
+
+def test_agent_config_newapi_gemini_accepts_env_bearer_token():
+    original = os.environ.get("NEWAPI_GEMINI_BEARER_TOKEN")
+    try:
+        os.environ["NEWAPI_GEMINI_BEARER_TOKEN"] = "env-bearer"
+        agent_config = AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            newapi_gemini_base_url="https://llm.example.com",
+        )
+        assert agent_config.newapi_gemini_bearer_token is None
+    finally:
+        if original is None:
+            os.environ.pop("NEWAPI_GEMINI_BEARER_TOKEN", None)
+        else:
+            os.environ["NEWAPI_GEMINI_BEARER_TOKEN"] = original
 
 
 def test_app_config_model_validate_ignores_unknown_keys():

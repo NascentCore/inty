@@ -568,6 +568,25 @@ class AgentConfig(BaseModel):
     # Agent 聊天轻量数据缓存 TTL（秒）；短 TTL 便于 ops 与后端分离部署时读到最新数据
     agent_config_cache_ttl_seconds: int = 20 * 60  # 默认 20 分钟
 
+    @model_validator(mode="after")
+    def validate_agent_fields(self) -> "AgentConfig":
+        """Checks formerly in ``_validate_config`` (CFG-PYD-OPT-01d/e)."""
+        if self.chat_llm_provider not in ("openrouter", "litellm"):
+            raise ValueError(
+                "agent.chat_llm_provider must be 'openrouter' or 'litellm', "
+                f"got: {self.chat_llm_provider!r}"
+            )
+        if (self.newapi_gemini_base_url or "").strip():
+            tok = (self.newapi_gemini_bearer_token or "").strip() or (
+                os.environ.get("NEWAPI_GEMINI_BEARER_TOKEN") or ""
+            ).strip()
+            if not tok:
+                raise ValueError(
+                    "agent.newapi_gemini_bearer_token or NEWAPI_GEMINI_BEARER_TOKEN "
+                    "required when newapi_gemini_base_url is set"
+                )
+        return self
+
 
 class GCSConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1045,20 +1064,6 @@ def _validate_config(config: Config):
         config.agent.free_user_chat_image_model
     )
     models_catalog.must_resolve_nickname(config.agent.sub_user_chat_image_model)
-
-    if config.agent.chat_llm_provider not in ("openrouter", "litellm"):
-        raise ValueError(
-            f"agent.chat_llm_provider must be 'openrouter' or 'litellm', got: {config.agent.chat_llm_provider!r}"
-        )
-
-    if (config.agent.newapi_gemini_base_url or "").strip():
-        tok = (config.agent.newapi_gemini_bearer_token or "").strip() or (
-            os.environ.get("NEWAPI_GEMINI_BEARER_TOKEN") or ""
-        ).strip()
-        if not tok:
-            raise ValueError(
-                "agent.newapi_gemini_bearer_token or NEWAPI_GEMINI_BEARER_TOKEN required when newapi_gemini_base_url is set"
-            )
 
     limits = config.app.limits
 
