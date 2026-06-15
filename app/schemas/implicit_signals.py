@@ -1,4 +1,8 @@
-"""Turn-level implicit signals from client / runtime (companion MVP: client time)."""
+"""Turn-level implicit signals from client / runtime (companion MVP: client time).
+
+TODO(channel-implicit-signals): Carry IM gesture signals (emoji reaction, reply-to ref)
+  from channel bridges — epic #3440
+"""
 
 from __future__ import annotations
 

@@ -4,6 +4,9 @@ agentic_companion 里的 presence 指：用户与 companion 处于同一段「�
 
 WebSocket and Weixin adapters translate :class:`Downlink` into
 ``ChatWebSocketResponse`` / Hermes ``send_text`` without re-entering ``/api/v1/chat/ws``.
+
+TODO(channel-outbound-affordances): Extend ``Downlink`` (or adapter port) with reply threading
+  and emoji reaction targets; map transcript UUIDs ↔ channel message IDs — #3440
 """
 
 from __future__ import annotations

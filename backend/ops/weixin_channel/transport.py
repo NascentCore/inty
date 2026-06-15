@@ -106,6 +106,9 @@ send WeChat DMs, so **cannot** ask the chatter to re-scan QR inside WeChat chat;
 QR on Ops ``/weixin``. Optional: restore-time ``getupdates`` probe before connect;
 one-shot DM to ``last_peer_id`` with Ops re-login URL while token is still valid.
 
+TODO(weixin-reply-reaction-inbound): Wire Hermes quoted/reply + reaction events into channel
+  inbound envelope (today only flattened ``MessageEvent.text``) — #3442 (epic #3440)
+
 TODO(weixin-ws-disconnect-hermes-wording): ``inbound_handler`` exceptions (e.g.
 companion path errors) are caught by Hermes ``BasePlatformAdapter`` and
 replied to WeChat with "use /reset"—Hermes CLI wording, not an Inty slash command.

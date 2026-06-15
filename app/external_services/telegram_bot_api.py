@@ -2,6 +2,8 @@
 
 TODO(telegram-meta-ops-api): Add setMyName / setMyDescription / sendChatAction — #3397
   (requires dedicated-bot bonding #3361; shared-bot constraints #3396)
+TODO(telegram-reply-reaction-api): Parse reply_to_message + message_reaction in getUpdates;
+  sendMessage reply_parameters + setMessageReaction — #3441 (epic #3440)
 """
 
 from __future__ import annotations

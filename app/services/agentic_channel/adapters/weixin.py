@@ -2,6 +2,8 @@
 
 TODO(companion-channel-tools): No Weixin rename API — channel tools stay guidance-only
   (see weixin_clawbot_contact_alias_system_message); do not expose failing meta tools — #3362
+TODO(weixin-reply-reaction): Quote/reply threading + emoji reactions via Hermes when iLink
+  allows; align with ``WeixinDownlink`` — #3442 (epic #3440)
 """
 
 from __future__ import annotations
