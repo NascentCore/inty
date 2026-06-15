@@ -50,6 +50,26 @@ Epic [#3394](https://github.com/nascentcore/inty/issues/3394) — sub-tasks & su
 
 Companion Harness 的目标是为用户提供长期关系中的“虚拟活人”体验。后端内核必须提供长期实践中的关系演化机制，并在其框架内系统性添加次一级机制来支持个人陪伴。
 
+### Concepts & naming
+
+- agentic companion: the thing user interact with to form companionship with,
+  it's an abstract union of various static and runtime data and mechanisms,
+  including agentic loops, memory, llms, programed loops like inner-tick, etc.
+  This concept is by nature vague at this point, as we are still evolving its design.
+  - inner-tick: a programmed loop where the agentic companion periodically wakes up and use llm to perform
+    some work.
+- agentic loop: multi-turn reasoning with llm(s), multiple agentic loops forms the central mind model for
+  simulating the thoughts and actions of an agentic companion. Agentic loop emits user-visible messages,
+  and non-user-visible data for later process and eventually influences the later steps of generating
+  user-visible messages (monolog & autonomy etc.).
+- channel: abstract the medium through witch the user interact with the agentic companion.
+  Right now we have the following channels:
+  - Weixin/WeChat (IM)
+  - Telegram (IM)
+  - App (WebSocket)
+- Interaction patterns:
+  - proactive: proactively poking user from agent, a user-visible behavior pattern
+
 ## 系统实现规范
 
 - 失败应显性：各类错误应该显式呈现给用户、后端日志、异常等等；目的：有助于原型开发期间解决基础性问题
