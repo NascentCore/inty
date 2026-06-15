@@ -2,6 +2,8 @@
 
 TODO(companion-channel-tools): Extend protocol with channel tool execution hooks (or sibling
   port) so harness dispatch stays out of transport details — #3362
+TODO(channel-inbound-outbound-affordances): Add inbound envelope + outbound reply/reaction hooks
+  to ``ChannelAdapter`` — epic #3440; Telegram #3441; Weixin #3442
 """
 
 from __future__ import annotations

@@ -3,6 +3,8 @@
 TODO(telegram-demo-text-only): Non-text inbound (photo, voice, sticker) is ignored — #3349
 TODO(telegram-shared-bot): Option A shared-bot routing — #3396
 TODO(telegram-dedicated-bot-bonding): Option B per-user bot token + 1:1:1 user/bot/agent — #3361 (epic #3395)
+TODO(telegram-reply-reaction-inbound): Route reply_to + emoji reaction updates into channel
+  inbound envelope (not flat text only) — #3441 (epic #3440)
 """
 
 from __future__ import annotations

@@ -145,6 +145,8 @@ class AgentChannelPresence:
             )
         )
 
+    # TODO(channel-inbound-envelope): Accept reply-to + reaction fields; map channel message
+    # IDs ↔ transcript UUIDs — epic #3440; Telegram #3441; Weixin #3442
     async def handle_user_text(
         self,
         user_text: str,
