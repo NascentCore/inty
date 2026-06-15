@@ -3,8 +3,9 @@
 - Understand the bug provided
 - Write tests to reproduce the bug according to the description
 - Come up with initial fixing idea and ask me to confirm to proceed
+- After fixing make sure run tests to double check
 
-## How to fix
+## Bug fix tips
 
 - If the bug is caused by unhandled state, do not handle the bad state, but to make the bad state impossible.
   Eg: if an exception happens because of a input string argument is empty, assert non-emptiness of the argument,
