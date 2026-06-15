@@ -81,6 +81,7 @@ def persist_repl_turn_transcript_rows(
             source=assistant_source,
             significance_perception=assistant_extra,
             turn_recall=turn_recall,
+            tool_results_digest=None,
         ),
         ts=utc_iso_ts(),
     )

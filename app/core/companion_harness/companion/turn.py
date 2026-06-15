@@ -103,8 +103,10 @@ from app.core.companion_harness.loop.bootstrap_input import (
     build_bootstrap_agentic_loop_input,
 )
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
-from app.core.companion_harness.loop.projection import LoopProjectionContext
-from app.core.companion_harness.loop.runner import run_agentic_loop
+from app.services.agentic_companion.wired_agentic_loop import (
+    WiredAgenticLoopRunInput,
+    run_wired_agentic_loop,
+)
 from app.core.companion_harness.loop.settled_input import (
     SettledAgenticLoopBuildInput,
     build_settled_agentic_loop_input,
@@ -356,6 +358,7 @@ async def _run_companion_turn_core(
     turn_recall: str | None = None
     tool_background_started = False
     bootstrap_skip_final_transcript_assistant_row = False
+    wired_agentic_loop_skip_final_transcript = False
     bootstrap_last_interim_assistant_msg_uuid: str | None = None
     t_loop = time.perf_counter()
 
@@ -430,32 +433,32 @@ async def _run_companion_turn_core(
                         )
                     )
                     if agentic_loop_channel is not None:
-                        loop_out = await run_agentic_loop(
-                            build_bootstrap_agentic_loop_input(
-                                BootstrapAgenticLoopBuildInput(
-                                    store=store,
-                                    llm_client=llm_client,
-                                    openai_messages=tuple(messages),
-                                    openai_tools=tuple(tools_for_turn),
-                                    memory_bootstrap_type=memory_bootstrap_type,
-                                    repository_only_store_text=(
-                                        repository_only_store_text
-                                    ),
-                                    trace_id=trace_id,
-                                    user_text=user_text,
-                                    ts_user=ts_user,
-                                    user_msg_uuid=user_msg_uuid,
-                                    transcript_rel=rel_tr_bootstrap,
-                                    langsmith_slice=langsmith_slice,
-                                    runtime_context=runtime_context,
-                                )
-                            ),
-                            llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
-                            channel=agentic_loop_channel,
-                            projection=LoopProjectionContext(
-                                defer_terminal_user_reply=True
-                            ),
+                        loop_out = await run_wired_agentic_loop(
+                            WiredAgenticLoopRunInput(
+                                loop_input=build_bootstrap_agentic_loop_input(
+                                    BootstrapAgenticLoopBuildInput(
+                                        store=store,
+                                        llm_client=llm_client,
+                                        openai_messages=tuple(messages),
+                                        openai_tools=tuple(tools_for_turn),
+                                        memory_bootstrap_type=memory_bootstrap_type,
+                                        repository_only_store_text=(
+                                            repository_only_store_text
+                                        ),
+                                        trace_id=trace_id,
+                                        user_text=user_text,
+                                        ts_user=ts_user,
+                                        user_msg_uuid=user_msg_uuid,
+                                        transcript_rel=rel_tr_bootstrap,
+                                        langsmith_slice=langsmith_slice,
+                                        runtime_context=runtime_context,
+                                    )
+                                ),
+                                llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
+                                channel=agentic_loop_channel,
+                            )
                         )
+                        wired_agentic_loop_skip_final_transcript = True
                         last_text = loop_out.assistant_text
                         langsmith_trace_acc = loop_out.langsmith_trace_id
                         langsmith_llm_run_acc = loop_out.langsmith_run_id
@@ -530,44 +533,48 @@ async def _run_companion_turn_core(
                         inner_tick_turn and not tick_proactive
                     )
                     if agentic_loop_channel is not None:
-                        loop_out = await run_agentic_loop(
-                            build_settled_agentic_loop_input(
-                                SettledAgenticLoopBuildInput(
-                                    store=store,
-                                    llm_client=llm_client,
-                                    openai_messages=tuple(messages),
-                                    openai_tools=tuple(tools_for_turn),
-                                    dual_llm_chat_msgs=tuple(chat_msgs),
-                                    dual_llm_tool_msgs=tuple(tool_msgs),
-                                    companion_turn_track=track,
-                                    memory_bootstrap_type=memory_bootstrap_type,
-                                    repository_only_store_text=(
-                                        repository_only_store_text
-                                    ),
-                                    trace_id=trace_id,
-                                    user_text=user_text,
-                                    ts_user=ts_user,
-                                    user_msg_uuid=user_msg_uuid,
-                                    transcript_rel=transcript_relative_path_for_turn_persistence(
+                        rel_tr_settled = transcript_relative_path_for_turn_persistence(
+                            inner_tick_turn=inner_tick_turn,
+                            inner_tick_activity=route_inner_activity,
+                        )
+                        loop_out = await run_wired_agentic_loop(
+                            WiredAgenticLoopRunInput(
+                                loop_input=build_settled_agentic_loop_input(
+                                    SettledAgenticLoopBuildInput(
+                                        store=store,
+                                        llm_client=llm_client,
+                                        openai_messages=tuple(messages),
+                                        openai_tools=tuple(tools_for_turn),
+                                        dual_llm_chat_msgs=tuple(chat_msgs),
+                                        dual_llm_tool_msgs=tuple(tool_msgs),
+                                        companion_turn_track=track,
+                                        memory_bootstrap_type=memory_bootstrap_type,
+                                        repository_only_store_text=(
+                                            repository_only_store_text
+                                        ),
+                                        trace_id=trace_id,
+                                        user_text=user_text,
+                                        ts_user=ts_user,
+                                        user_msg_uuid=user_msg_uuid,
+                                        transcript_rel=rel_tr_settled,
+                                        langsmith_slice=langsmith_slice,
+                                        runtime_context=runtime_context,
                                         inner_tick_turn=inner_tick_turn,
                                         inner_tick_activity=route_inner_activity,
-                                    ),
-                                    langsmith_slice=langsmith_slice,
-                                    runtime_context=runtime_context,
-                                    inner_tick_turn=inner_tick_turn,
-                                    inner_tick_activity=route_inner_activity,
-                                    skip_foreground_envelope=skip_foreground_envelope,
-                                    high_reasoning=tick_proactive,
-                                    langsmith_trace_id=langsmith_trace_acc,
-                                    langsmith_run_id=langsmith_llm_run_acc,
-                                    prompt_bundle=bundle,
-                                    context_meta=context,
-                                    stack_depth=_stack_depth,
-                                )
-                            ),
-                            llm_loop_mode=UserTurnLlmLoopMode.DUAL_LLM,
-                            channel=agentic_loop_channel,
+                                        skip_foreground_envelope=skip_foreground_envelope,
+                                        high_reasoning=tick_proactive,
+                                        langsmith_trace_id=langsmith_trace_acc,
+                                        langsmith_run_id=langsmith_llm_run_acc,
+                                        prompt_bundle=bundle,
+                                        context_meta=context,
+                                        stack_depth=_stack_depth,
+                                    )
+                                ),
+                                llm_loop_mode=UserTurnLlmLoopMode.DUAL_LLM,
+                                channel=agentic_loop_channel,
+                            )
                         )
+                        wired_agentic_loop_skip_final_transcript = True
                         last_text = loop_out.assistant_text
                         significance_meta = loop_out.significance_meta
                         turn_recall = loop_out.turn_recall
@@ -856,7 +863,10 @@ async def _run_companion_turn_core(
             ),
         )
     )
-    if not bootstrap_skip_final_transcript_assistant_row:
+    if (
+        not bootstrap_skip_final_transcript_assistant_row
+        and not wired_agentic_loop_skip_final_transcript
+    ):
         append_transcript_assistant_row(
             store,
             rel_tr,
@@ -868,6 +878,7 @@ async def _run_companion_turn_core(
                 source="inner_tick" if inner_tick_turn else "chat",
                 significance_perception=significance_meta,
                 turn_recall=turn_recall,
+                tool_results_digest=None,
             ),
             ts=utc_iso_ts(),
         )

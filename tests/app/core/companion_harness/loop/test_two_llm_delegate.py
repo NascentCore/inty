@@ -8,18 +8,18 @@ from types import SimpleNamespace
 import pytest
 
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.loop.channel_adapter import RecordingChannelAdapter
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.loop.parity.fixtures import (
     FakeDualLlmClient,
     dual_llm_fg_response,
     dual_llm_tool_finish_response,
 )
-from app.core.companion_harness.loop.runner import run_agentic_loop
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.services.agentic_companion.channel import RecordingChannel
 from app.services.agentic_companion.downlink import DownlinkKind
 from tests.app.core.companion_harness.loop.test_support import (
     build_agentic_loop_input,
+    run_agentic_loop_with_channel,
 )
 
 
@@ -36,7 +36,7 @@ async def test_two_llm_skip_foreground_envelope(tmp_path: Path) -> None:
         fg_response=dual_llm_fg_response(text="unused"),
         tool_sync_handler=_tool_sync,
     )
-    channel = RecordingChannelAdapter()
+    channel = RecordingChannel()
     msgs = ({"role": "user", "content": "maint"},)
     loop_input = build_agentic_loop_input(
         store=store,
@@ -50,7 +50,7 @@ async def test_two_llm_skip_foreground_envelope(tmp_path: Path) -> None:
         dual_llm_chat_msgs=msgs,
         dual_llm_tool_msgs=msgs,
     )
-    result = await run_agentic_loop(
+    result = await run_agentic_loop_with_channel(
         loop_input,
         llm_loop_mode=UserTurnLlmLoopMode.DUAL_LLM,
         channel=channel,
@@ -73,7 +73,7 @@ async def test_two_llm_foreground_per_call_deliver(tmp_path: Path) -> None:
         fg_response=dual_llm_fg_response(text="foreground ok"),
         tool_sync_handler=_tool_sync,
     )
-    channel = RecordingChannelAdapter()
+    channel = RecordingChannel()
     msgs = ({"role": "user", "content": "hi"},)
     loop_input = build_agentic_loop_input(
         store=store,
@@ -87,7 +87,7 @@ async def test_two_llm_foreground_per_call_deliver(tmp_path: Path) -> None:
         dual_llm_chat_msgs=msgs,
         dual_llm_tool_msgs=msgs,
     )
-    result = await run_agentic_loop(
+    result = await run_agentic_loop_with_channel(
         loop_input,
         llm_loop_mode=UserTurnLlmLoopMode.DUAL_LLM,
         channel=channel,

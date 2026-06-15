@@ -20,7 +20,8 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
 )
-from app.core.companion_harness.loop.contract import AgenticLoopInput
+from app.core.companion_harness.loop.contract import AgenticLoopInput, AgenticLoopOutput
+from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
@@ -88,4 +89,25 @@ def build_agentic_loop_input(
         context_meta=None,
         dual_llm_chat_msgs=dual_llm_chat_msgs,
         dual_llm_tool_msgs=dual_llm_tool_msgs,
+    )
+
+
+async def run_agentic_loop_with_channel(
+    loop_input: AgenticLoopInput,
+    *,
+    llm_loop_mode: UserTurnLlmLoopMode,
+    channel: object,
+) -> AgenticLoopOutput:
+    """Run wired agentic loop for sidecar tests (``ChannelTurn`` + delivery)."""
+    from app.services.agentic_companion.wired_agentic_loop import (
+        WiredAgenticLoopRunInput,
+        run_wired_agentic_loop,
+    )
+
+    return await run_wired_agentic_loop(
+        WiredAgenticLoopRunInput(
+            loop_input=loop_input,
+            llm_loop_mode=llm_loop_mode,
+            channel=channel,  # type: ignore[arg-type]
+        )
     )

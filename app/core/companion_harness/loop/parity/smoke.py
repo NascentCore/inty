@@ -21,14 +21,17 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.loop.channel_adapter import RecordingChannelAdapter
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.loop.parity.golden import (
     GoldenScenario,
     build_golden_scenario,
 )
-from app.core.companion_harness.loop.runner import run_agentic_loop
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.services.agentic_companion.channel import RecordingChannel
+from app.services.agentic_companion.wired_agentic_loop import (
+    WiredAgenticLoopRunInput,
+    run_wired_agentic_loop,
+)
 
 
 class SmokeScenario(StrEnum):
@@ -73,11 +76,13 @@ async def _run_scenario(
 ) -> None:
     golden = _golden_for_smoke(scenario)
     bundle = build_golden_scenario(golden)
-    channel = RecordingChannelAdapter()
-    result = await run_agentic_loop(
-        bundle.loop_input,
-        llm_loop_mode=mode,
-        channel=channel,
+    channel = RecordingChannel()
+    result = await run_wired_agentic_loop(
+        WiredAgenticLoopRunInput(
+            loop_input=bundle.loop_input,
+            llm_loop_mode=mode,
+            channel=channel,
+        )
     )
     print(
         json.dumps(
@@ -96,11 +101,13 @@ async def _run_scenario(
 async def _compare_legacy(scenario: SmokeScenario) -> None:
     golden = _golden_for_smoke(scenario)
     bundle = build_golden_scenario(golden)
-    channel = RecordingChannelAdapter()
-    sidecar = await run_agentic_loop(
-        bundle.loop_input,
-        llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
-        channel=channel,
+    channel = RecordingChannel()
+    sidecar = await run_wired_agentic_loop(
+        WiredAgenticLoopRunInput(
+            loop_input=bundle.loop_input,
+            llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
+            channel=channel,
+        )
     )
     legacy_store = MemoryStore(
         scope=CompanionScope("smoke-legacy-run", "agent", "loop-legacy-run"),

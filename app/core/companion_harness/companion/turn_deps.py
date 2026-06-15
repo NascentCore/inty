@@ -35,9 +35,9 @@ from .runtime_channel import TurnRuntimeContext
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 
 if TYPE_CHECKING:
-    from app.core.companion_harness.loop.channel_adapter import LoopChannelAdapter
+    from app.services.agentic_companion.channel import Channel
 else:
-    LoopChannelAdapter = object
+    Channel = object
 
 
 @dataclass(frozen=True)
@@ -134,9 +134,8 @@ class CompanionTurnDeps:
         ``agentic_loop_channel`` only (Grill #12).
 
     agentic_loop_channel
-        Per-call-streaming loop downlink adapter for bootstrap/settled user-turn.
-        When set, bootstrap and dual-LLM settled paths use ``run_agentic_loop`` instead
-        of legacy interim/background sinks.
+        Per-call-streaming ToChannel for bootstrap/settled user-turn wired paths.
+        TODO(#3398): rename field to ``to_channel``; type is ``Channel``.
     """
 
     store: MemoryStore
@@ -151,4 +150,4 @@ class CompanionTurnDeps:
     langsmith_parent_run_enabled: bool | None
     tool_bg_idle_event: threading.Event | None
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None
-    agentic_loop_channel: LoopChannelAdapter | None
+    agentic_loop_channel: Channel | None

@@ -1,61 +1,51 @@
-"""Per-call-streaming deliverables and output queue."""
+"""Agentic loop outbound FIFO: enqueue writes transcript; delivery is pull-side."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+import asyncio
+from typing import Any, Final
 
 from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
-if TYPE_CHECKING:
-    from .channel_adapter import LoopChannelAdapter
-    from .projection import LoopProjectionContext, project_deliverable
+from .deliverable_transcript import persist_deliverable_transcript
+from .delivery_policy import DeliveryPolicy
+from .loop_deliverable import LoopDeliverable, LoopDeliverableKind
+from .output_queue_types import OutputQueueTranscriptContext
 
 
-class LoopDeliverableKind(StrEnum):
-    """Wide loop emission kinds mapped to ``DownlinkKind`` via projection."""
-
-    INTERIM_REPLY = "interim_reply"
-    BOOTSTRAP_INTERIM = "bootstrap_interim"
-    FOREGROUND_TEXT = "foreground_text"
-    TOOL_BACKGROUND = "tool_background"
-    USER_REPLY = "user_reply"
+class QueueClosedSentinel:
+    """Returned by ``pull`` after ``close``; not a deliverable."""
 
 
-@dataclass(frozen=True)
-class LoopDeliverable:
-    """One user-visible or auditable delivery from an agentic loop."""
-
-    kind: LoopDeliverableKind
-    assistant_text: str
-    bootstrap_interim: BootstrapInterimOutput | None
-    tool_output: ToolOutputEvent | None
-    significance_meta: dict[str, Any] | None
-    turn_recall: str | None
+QUEUE_CLOSED: Final = QueueClosedSentinel()
 
 
-class AgenticLoopOutputQueue:
-    """Per-call-streaming queue: each push immediately projects and delivers on channel."""
+class OutputQueue:
+    """Loop outbound FIFO: enqueue mirrors + transcript; ``ChannelTurn`` drains."""
 
     def __init__(
         self,
-        channel: LoopChannelAdapter,
         *,
-        projection: LoopProjectionContext | None = None,
+        transcript_ctx: OutputQueueTranscriptContext,
+        delivery_policy: DeliveryPolicy,
     ) -> None:
-        from .projection import LoopProjectionContext
-
-        self._channel = channel
-        self._projection = projection or LoopProjectionContext(
-            defer_terminal_user_reply=False
-        )
+        self._transcript_ctx = transcript_ctx
+        self._delivery_policy = delivery_policy
         self._mirror: list[LoopDeliverable] = []
+        self._queue: asyncio.Queue[LoopDeliverable | QueueClosedSentinel] = (
+            asyncio.Queue()
+        )
+        self._held_terminal: list[LoopDeliverable] = []
+        self._closed = False
+
+    @property
+    def delivery_policy(self) -> DeliveryPolicy:
+        return self._delivery_policy
 
     @property
     def deliverables(self) -> tuple[LoopDeliverable, ...]:
-        """Audit mirror of everything pushed (not the primary UX path)."""
+        """Audit mirror of everything enqueued."""
         return tuple(self._mirror)
 
     async def push_interim_reply(
@@ -70,7 +60,7 @@ class AgenticLoopOutputQueue:
             significance_meta=None,
             turn_recall=None,
         )
-        await self._push(deliverable)
+        await self._enqueue(deliverable)
 
     async def push_bootstrap_interim(
         self, interim: BootstrapInterimOutput
@@ -95,7 +85,7 @@ class AgenticLoopOutputQueue:
             significance_meta=significance_meta,
             turn_recall=turn_recall,
         )
-        await self._push(deliverable)
+        await self._enqueue(deliverable)
 
     async def push_tool_background(self, event: ToolOutputEvent) -> None:
         """Push one tool_background user-visible event."""
@@ -107,7 +97,7 @@ class AgenticLoopOutputQueue:
             significance_meta=event.significance_perception,
             turn_recall=event.turn_recall,
         )
-        await self._push(deliverable)
+        await self._enqueue(deliverable)
 
     async def push_user_reply(self, *, assistant_text: str) -> None:
         """Push terminal user-visible assistant text for this turn."""
@@ -120,16 +110,35 @@ class AgenticLoopOutputQueue:
             significance_meta=None,
             turn_recall=None,
         )
-        await self._push(deliverable)
+        await self._enqueue(deliverable)
 
-    async def _push(self, deliverable: LoopDeliverable) -> None:
-        from .projection import project_deliverable
+    async def pull(
+        self,
+    ) -> LoopDeliverable | QueueClosedSentinel:
+        """Block until the next deliverable or queue close sentinel."""
+        return await self._queue.get()
 
-        self._mirror.append(deliverable)
-        if (
-            self._projection.defer_terminal_user_reply
-            and deliverable.kind == LoopDeliverableKind.USER_REPLY
-        ):
+    def close(self) -> None:
+        """Signal delivery task that no further deliverables will be enqueued."""
+        if self._closed:
             return
-        downlink = project_deliverable(deliverable)
-        await self._channel.deliver(downlink)
+        self._closed = True
+        self._queue.put_nowait(QUEUE_CLOSED)
+
+    def hold_for_flush(self, deliverable: LoopDeliverable) -> None:
+        """Buffer terminal reply until ``flush_held`` after queue close."""
+        self._held_terminal.append(deliverable)
+
+    def flush_held(self) -> tuple[LoopDeliverable, ...]:
+        """Drain held terminal replies in enqueue order."""
+        held = tuple(self._held_terminal)
+        self._held_terminal.clear()
+        return held
+
+    async def _enqueue(self, deliverable: LoopDeliverable) -> None:
+        self._mirror.append(deliverable)
+        persist_deliverable_transcript(
+            deliverable,
+            transcript_ctx=self._transcript_ctx,
+        )
+        await self._queue.put(deliverable)

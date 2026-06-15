@@ -339,6 +339,8 @@ class ToolOutputEvent:
     turn_recall: str | None = None
     # InnerTickActivity.value when this background round is an inner-tick turn; else None.
     inner_tick_activity: str | None = None
+    # Structured digest for transcript JSONL ``tool_results_digest`` field (display NL in ``text``).
+    tool_results_digest: str | None = None
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -508,6 +510,7 @@ def _append_background_transcript_assistant(
             source="tool_bg",
             significance_perception=significance_perception,
             turn_recall=turn_recall,
+            tool_results_digest=None,
         ),
         ts=utc_iso_ts(),
     )
@@ -824,6 +827,11 @@ async def run_tool_background_loop(
         # (REPL surfaces them as a banner). Body text stays NL-only for production clients.
         display_text = base_nl
         elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+        digest_core = ""
+        if total_tool_calls > 0:
+            digest_core = _tool_bg_nl_filler_from_appended_turn(
+                appended_turn_msgs
+            ).strip()
 
         transcript_body = build_tool_background_transcript_body(
             display_text=display_text,
@@ -858,6 +866,7 @@ async def run_tool_background_loop(
         if not should_push:
             if transcript_body.strip():
                 assistant_msg_uuid = str(uuid.uuid4())
+                # TODO(#3398): wired ``OutputQueue`` path writes transcript on enqueue; skip inline append here.
                 _append_background_transcript_assistant(
                     store=memory_store,
                     content=transcript_body,
@@ -906,6 +915,7 @@ async def run_tool_background_loop(
             )
             return
         assistant_msg_uuid = str(uuid.uuid4())
+        # TODO(#3398): wired ``OutputQueue`` path writes transcript on enqueue; skip inline append here.
         _append_background_transcript_assistant(
             store=memory_store,
             content=transcript_body,
@@ -959,6 +969,7 @@ async def run_tool_background_loop(
                 inner_tick_activity=(
                     inner_tick_activity.value if inner_tick_turn else None
                 ),
+                tool_results_digest=digest_core or None,
             )
         )
     finally:

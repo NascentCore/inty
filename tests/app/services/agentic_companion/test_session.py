@@ -11,10 +11,8 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
-from app.services.agentic_companion.downlink import (
-    Downlink,
-    DownlinkKind,
-)
+from app.services.agentic_companion.channel import DownlinkChannel
+from app.services.agentic_companion.downlink import Downlink, DownlinkKind
 from app.services.agentic_companion.session import (
     Coordinator,
     Session,
@@ -128,7 +126,7 @@ async def test_presence_coordinator_autonomy_throttle_and_overlap_flags() -> Non
 async def test_presence_session_deliver_bootstrap_interim() -> None:
     downlink = _RecordingDownlink()
     loop = asyncio.get_running_loop()
-    session = Session.create(downlink=downlink, loop=loop)
+    session = Session.create(channel=DownlinkChannel(downlink), loop=loop)
     interim = BootstrapInterimOutput(
         text="round",
         user_msg_uuid="u",
@@ -149,7 +147,7 @@ async def test_presence_session_deliver_bootstrap_interim() -> None:
 async def test_presence_session_inner_tick_worker_invokes_poll_runner() -> None:
     downlink = _RecordingDownlink()
     loop = asyncio.get_running_loop()
-    session = Session.create(downlink=downlink, loop=loop)
+    session = Session.create(channel=DownlinkChannel(downlink), loop=loop)
     session.store_sign_on_coords(user_id="u1", agent_id="a1", chat_id=10)
     poll_calls: list[dict[str, object]] = []
 
@@ -167,7 +165,7 @@ async def test_presence_session_inner_tick_worker_invokes_poll_runner() -> None:
 async def test_presence_session_sign_out_stops_inner_tick_polls() -> None:
     downlink = _RecordingDownlink()
     loop = asyncio.get_running_loop()
-    session = Session.create(downlink=downlink, loop=loop)
+    session = Session.create(channel=DownlinkChannel(downlink), loop=loop)
     session.store_sign_on_coords(user_id="u1", agent_id="a1", chat_id=10)
     poll_calls: list[dict[str, object]] = []
 
@@ -189,7 +187,7 @@ async def test_presence_session_from_coordinator_reuses_coordinator() -> None:
     loop = asyncio.get_running_loop()
     coordinator = Coordinator.for_loop(loop)
     session = Session.from_coordinator(
-        downlink=downlink,
+        channel=DownlinkChannel(downlink),
         coordinator=coordinator,
     )
     assert session.coordinator is coordinator

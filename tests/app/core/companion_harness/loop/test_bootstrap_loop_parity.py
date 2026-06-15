@@ -27,7 +27,6 @@ from app.core.companion_harness.loop.bootstrap_input import (
     BootstrapAgenticLoopBuildInput,
     build_bootstrap_agentic_loop_input,
 )
-from app.core.companion_harness.loop.channel_adapter import RecordingChannelAdapter
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.loop.output_queue import LoopDeliverableKind
 from app.core.companion_harness.loop.parity.fixtures import (
@@ -35,9 +34,11 @@ from app.core.companion_harness.loop.parity.fixtures import (
     final_response,
     tool_response,
 )
-from app.core.companion_harness.loop.projection import LoopProjectionContext
-from app.core.companion_harness.loop.runner import run_agentic_loop
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.services.agentic_companion.channel import RecordingChannel
+from tests.app.core.companion_harness.loop.test_support import (
+    run_agentic_loop_with_channel,
+)
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
 )
@@ -134,8 +135,8 @@ async def test_bootstrap_loop_matches_legacy_sync_tool_loop() -> None:
             final_response(content="terminal body"),
         ]
     )
-    channel = RecordingChannelAdapter()
-    loop_out = await run_agentic_loop(
+    channel = RecordingChannel()
+    loop_out = await run_agentic_loop_with_channel(
         build_bootstrap_agentic_loop_input(
             BootstrapAgenticLoopBuildInput(
                 store=store2,
@@ -155,7 +156,6 @@ async def test_bootstrap_loop_matches_legacy_sync_tool_loop() -> None:
         ),
         llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
         channel=channel,
-        projection=LoopProjectionContext(defer_terminal_user_reply=True),
     )
     assert loop_out.assistant_text == legacy.assistant_text
     assert (
@@ -178,13 +178,11 @@ async def test_bootstrap_loop_matches_legacy_sync_tool_loop() -> None:
     assert [r.get("content") for r in legacy_rows] == [
         r.get("content") for r in loop_rows
     ]
-    assert len(channel.events) == 1
+    assert len(channel.events) == 2
     assert channel.events[0].kind == DownlinkKind.BOOTSTRAP_INTERIM
+    assert channel.events[1].kind == DownlinkKind.USER_REPLY
     assert any(
         d.kind == LoopDeliverableKind.USER_REPLY for d in loop_out.deliverables
-    )
-    assert not any(
-        ev.kind == DownlinkKind.USER_REPLY for ev in channel.events
     )
     assert MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP
     assert CompanionTurnTrack.USER_CHAT_BOOTSTRAP

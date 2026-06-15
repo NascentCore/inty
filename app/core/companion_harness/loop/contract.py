@@ -20,7 +20,8 @@ from app.core.companion_harness.companion.runtime_channel import TurnRuntimeCont
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
-from .output_queue import AgenticLoopOutputQueue, LoopDeliverable
+from .loop_deliverable import LoopDeliverable
+from .output_queue import OutputQueue
 
 
 AfterToolMessagesHook = Callable[
@@ -69,7 +70,7 @@ class AgenticLoopRunBundle:
     """``AgenticLoopInput`` plus injected per-call-streaming queue."""
 
     loop_input: AgenticLoopInput
-    output_queue: AgenticLoopOutputQueue
+    output_queue: OutputQueue
 
 
 @dataclass(frozen=True)
@@ -96,7 +97,7 @@ class AgenticLoopMechanism(Protocol):
 
 def agentic_loop_run_bundle(
     loop_input: AgenticLoopInput,
-    output_queue: AgenticLoopOutputQueue,
+    output_queue: OutputQueue,
 ) -> AgenticLoopRunBundle:
     """Attach ``output_queue`` for mechanism execution."""
     return AgenticLoopRunBundle(

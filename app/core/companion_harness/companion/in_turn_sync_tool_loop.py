@@ -61,6 +61,7 @@ class InTurnSyncToolLoopInput:
     transcript_rel: str
     # TODO(#3369): Rename ``BootstrapInterimOutputSink`` when settled USER_CHAT reuses this loop.
     interim_output_sink: BootstrapInterimOutputSink | None
+    skip_inline_interim_transcript: bool
     langsmith_slice: CompanionTurnLangsmithSlice
     max_tool_rounds: int
     # Runs after each tool round (same timing as ``runtime.after_tool_messages_appended``).
@@ -220,18 +221,19 @@ async def run_in_turn_sync_tool_loop(
         ls_trace = langsmith_trace_acc
         ls_run = langsmith_llm_run_acc
         assistant_msg_uuid = str(uuid.uuid4())
-        store.append_jsonl_record(
-            transcript_rel,
-            {
-                "role": "assistant",
-                "content": body,
-                "ts": utc_iso_ts(),
-                "uuid": assistant_msg_uuid,
-                "reply_to": user_msg_uuid,
-                "source": "chat",
-                "trace_id": trace_id,
-            },
-        )
+        if not loop_input.skip_inline_interim_transcript:
+            store.append_jsonl_record(
+                transcript_rel,
+                {
+                    "role": "assistant",
+                    "content": body,
+                    "ts": utc_iso_ts(),
+                    "uuid": assistant_msg_uuid,
+                    "reply_to": user_msg_uuid,
+                    "source": "chat",
+                    "trace_id": trace_id,
+                },
+            )
         last_interim_assistant_msg_uuid = assistant_msg_uuid
         if not had_tool_calls:
             skip_final_transcript_assistant_row = True
@@ -323,6 +325,7 @@ async def run_bootstrap_track_sync_tool_loop(
             user_msg_uuid=loop_input.user_msg_uuid,
             transcript_rel=loop_input.transcript_rel,
             interim_output_sink=loop_input.bootstrap_interim_output_sink,
+            skip_inline_interim_transcript=False,
             langsmith_slice=loop_input.langsmith_slice,
             max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
             after_tool_messages_appended=_bootstrap_after_tool_round,

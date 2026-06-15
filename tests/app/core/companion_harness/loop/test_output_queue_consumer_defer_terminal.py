@@ -1,8 +1,9 @@
-"""Tests for loop sink adapters and output queue projection."""
+"""``DeliveryPolicy`` defers bootstrap terminal ``USER_REPLY`` until queue close."""
 
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 
@@ -25,9 +26,9 @@ from app.services.agentic_companion.output_queue_delivery import (
 
 
 @pytest.mark.asyncio
-async def test_push_bootstrap_interim_delivers_immediately(tmp_path) -> None:
+async def test_defer_terminal_user_reply_until_queue_close(tmp_path: Path) -> None:
     store = MemoryStore(
-        scope=CompanionScope("sink", "a", tmp_path.name),
+        scope=CompanionScope("defer", "a", tmp_path.name),
         repository=None,
     )
     store.write_document("transcript.jsonl", "")
@@ -40,25 +41,30 @@ async def test_push_bootstrap_interim_delivers_immediately(tmp_path) -> None:
             trace_id="t1",
         ),
         delivery_policy=DeliveryPolicy(
-            terminal_reply_delivery=TerminalReplyDelivery.IMMEDIATE
+            terminal_reply_delivery=TerminalReplyDelivery.ON_QUEUE_CLOSE
         ),
     )
     delivery = asyncio.create_task(deliver_output_queue(queue, channel))
-    interim = BootstrapInterimOutput(
-        text="interim",
-        user_msg_uuid="u1",
-        trace_id="t1",
-        langsmith_trace_id="ls1",
-        langsmith_run_id="lr1",
-        round_index=1,
-        had_tool_calls=True,
-        assistant_msg_uuid="a1",
+    await queue.push_interim_reply(
+        BootstrapInterimOutput(
+            text="interim body",
+            user_msg_uuid="u1",
+            trace_id="t1",
+            langsmith_trace_id="",
+            langsmith_run_id="",
+            round_index=1,
+            had_tool_calls=True,
+            assistant_msg_uuid="i1",
+        )
     )
-    await queue.push_bootstrap_interim(interim)
     await asyncio.sleep(0)
     assert len(channel.events) == 1
-    assert channel.events[0].kind == DownlinkKind.BOOTSTRAP_INTERIM
-    assert channel.events[0].assistant_text == "interim"
-    assert queue.deliverables[0].bootstrap_interim == interim
+    assert channel.events[0].kind is DownlinkKind.BOOTSTRAP_INTERIM
+    await queue.push_user_reply(assistant_text="terminal")
+    await asyncio.sleep(0)
+    assert len(channel.events) == 1
     queue.close()
     await delivery
+    assert len(channel.events) == 2
+    assert channel.events[1].kind is DownlinkKind.USER_REPLY
+    assert channel.events[1].assistant_text == "terminal"

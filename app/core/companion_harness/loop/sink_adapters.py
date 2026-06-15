@@ -10,13 +10,13 @@ from app.core.companion_harness.companion.turn_routes import (
 )
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
-from .output_queue import AgenticLoopOutputQueue
+from .output_queue import OutputQueue
 
 _DRAIN_SENTINEL: ToolOutputEvent | None = None
 
 
 def make_bootstrap_interim_sink(
-    output_queue: AgenticLoopOutputQueue,
+    output_queue: OutputQueue,
 ) -> BootstrapInterimOutputSink:
     """Build interim sink that per-call-streams bootstrap interim deliverables."""
 
@@ -29,7 +29,7 @@ def make_bootstrap_interim_sink(
 class ToolBackgroundEventSink:
     """FIFO async drainer: sync ``on_event`` enqueues; drainer awaits each push."""
 
-    def __init__(self, output_queue: AgenticLoopOutputQueue) -> None:
+    def __init__(self, output_queue: OutputQueue) -> None:
         self._output_queue = output_queue
         self._pending: asyncio.Queue[ToolOutputEvent | None] = asyncio.Queue()
         self._drainer: asyncio.Task[None] | None = None

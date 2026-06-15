@@ -9,7 +9,6 @@ from types import SimpleNamespace
 import pytest
 
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.loop.channel_adapter import RecordingChannelAdapter
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.loop.parity.fixtures import (
     FakeDualLlmClient,
@@ -19,14 +18,15 @@ from app.core.companion_harness.loop.parity.fixtures import (
     final_response,
     tool_response,
 )
-from app.core.companion_harness.loop.runner import run_agentic_loop
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.services.agentic_companion.channel import RecordingChannel
 from tests.app.core.companion_harness.loop.test_support import (
     build_agentic_loop_input,
+    run_agentic_loop_with_channel,
 )
 
 
-class _PerCallRecordingChannel(RecordingChannelAdapter):
+class _PerCallRecordingChannel(RecordingChannel):
     """Records whether deliver ran before runner return."""
 
     def __init__(self) -> None:
@@ -82,7 +82,7 @@ async def test_per_call_streaming_one_llm_deliver_before_return(
         user_msg_uuid="user-pcs",
         trace_id="trace-pcs",
     )
-    result = await run_agentic_loop(
+    result = await run_agentic_loop_with_channel(
         loop_input,
         llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
         channel=channel,
@@ -122,7 +122,7 @@ async def test_per_call_streaming_two_llm_deliver_before_return(
         dual_llm_chat_msgs=msgs,
         dual_llm_tool_msgs=msgs,
     )
-    result = await run_agentic_loop(
+    result = await run_agentic_loop_with_channel(
         loop_input,
         llm_loop_mode=UserTurnLlmLoopMode.DUAL_LLM,
         channel=channel,

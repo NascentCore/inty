@@ -196,6 +196,7 @@ class CompanionTurnResult(BaseModel):
 
 
 class ChatMessage(BaseModel):
+    """Represents a single message in the chat transcript."""
     role: Literal["user", "assistant", "system"]
     content: str
     ts: str = Field(validation_alias=AliasChoices("ts", "timestamp"))
@@ -227,6 +228,10 @@ class ChatMessage(BaseModel):
     turn_recall: str | None = Field(
         default=None,
         description="Ephemeral Turn Brief on assistant rows (#3342).",
+    )
+    tool_results_digest: dict[str, str] | None = Field(
+        default=None,
+        description="Structured tool-result digest on the same row as display content.",
     )
 
 

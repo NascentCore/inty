@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+
+if TYPE_CHECKING:
+    from app.core.companion_harness.loop.output_queue_types import ToolTranscriptDigest
 
 
 @dataclass(frozen=True)
@@ -21,6 +24,7 @@ class TranscriptAssistantRowBuildInput:
     source: str
     significance_perception: dict[str, Any] | None
     turn_recall: str | None
+    tool_results_digest: ToolTranscriptDigest | None
 
 
 class TranscriptAssistantRow(BaseModel):
@@ -41,6 +45,10 @@ class TranscriptAssistantRow(BaseModel):
         default=None,
         description="Ephemeral Turn Brief when non-empty (#3342).",
     )
+    tool_results_digest: dict[str, str] | None = Field(
+        default=None,
+        description="Structured tool-result digest on the same row as display content.",
+    )
 
 
 def build_transcript_assistant_row(
@@ -50,6 +58,9 @@ def build_transcript_assistant_row(
 ) -> dict[str, Any]:
     """Validate and serialize one assistant JSONL object (omit unset optional keys)."""
 
+    digest_payload: dict[str, str] | None = None
+    if row_input.tool_results_digest is not None:
+        digest_payload = {"body": row_input.tool_results_digest.body}
     row = TranscriptAssistantRow(
         content=row_input.content,
         ts=ts,
@@ -59,6 +70,7 @@ def build_transcript_assistant_row(
         trace_id=row_input.trace_id,
         significance_perception=row_input.significance_perception,
         turn_recall=row_input.turn_recall,
+        tool_results_digest=digest_payload,
     )
     return row.model_dump(mode="json", exclude_none=True)
 

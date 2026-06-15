@@ -75,14 +75,6 @@ You should only changes and use code in the following dirs:
 
 ## General instructions
 
-### TODOs and GitHub issues
-
-- Create TODOs for minor changes, they are picked up by the cursor automation.
-- Create GitHub issues for large & complex follow-ups, also reference the issue in TODOs placed at appropriate code places.
-- Do not reference issues in AGENTS.md or skills' MD files
-
-### Output
-
 - Answer with 1 sentence, no elaboration.
 - Use nested bullet points to provide structured output.
 - Order information from most to least importance
@@ -92,6 +84,8 @@ You should only changes and use code in the following dirs:
 
 ## Writing code
 
+- When writing Python code, read [PY_STYLE_RULES](/.agents/guidelines/PY_STYLE_RULES.md) to follow general guidelines.
+- When notice minor changes opportunity not in the scope of the current object, read [create_gh_issues](/.cursor/commands/create_gh_issues.md) to create TODOs and/or GitHub issues.
 - Write few & dense code to accomplish the requests
 - Document your code as you go, not after.
 - A function should not have more than 5 arguments, beyond that, create input
@@ -129,14 +123,6 @@ You should only changes and use code in the following dirs:
     ...
     bar(bool_arg)
   ```
-
-### Antipatterns to avoid
-
-- **Over engineering**: speculation, defensive programming, optionality, multiple alternatives, etc.
-  - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
-  only add configurability the user explicitly requested.
-  - **Do not add enable/disable knob for new features**: just implement the features.
-- Shallow wrapper, eg: function of only 1 line of actuall code
 
 ### Writing code
 

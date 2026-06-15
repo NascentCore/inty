@@ -25,6 +25,7 @@ def test_build_transcript_assistant_row_omits_empty_optionals() -> None:
             source="chat",
             significance_perception=None,
             turn_recall=None,
+            tool_results_digest=None,
         ),
         ts="2026-06-13T00:00:00+00:00",
     )
@@ -61,6 +62,7 @@ def test_append_transcript_assistant_row_roundtrips_chat_message(
                 "importance_assistant_message": 5,
             },
             turn_recall="用户提到下周见面",
+            tool_results_digest=None,
         ),
         ts="2026-06-13T00:00:00+00:00",
     )

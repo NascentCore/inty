@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.companion_harness.loop.channel_adapter import RecordingChannelAdapter
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.loop.parity.golden import (
     GoldenScenario,
     build_golden_scenario,
 )
-from app.core.companion_harness.loop.runner import run_agentic_loop
+from app.services.agentic_companion.channel import RecordingChannel
+from tests.app.core.companion_harness.loop.test_support import (
+    run_agentic_loop_with_channel,
+)
 
 
 def _mode_for(scenario: GoldenScenario) -> UserTurnLlmLoopMode:
@@ -33,8 +35,8 @@ def _mode_for(scenario: GoldenScenario) -> UserTurnLlmLoopMode:
 )
 async def test_golden_scenario_runs(scenario: GoldenScenario) -> None:
     bundle = build_golden_scenario(scenario)
-    channel = RecordingChannelAdapter()
-    result = await run_agentic_loop(
+    channel = RecordingChannel()
+    result = await run_agentic_loop_with_channel(
         bundle.loop_input,
         llm_loop_mode=_mode_for(scenario),
         channel=channel,

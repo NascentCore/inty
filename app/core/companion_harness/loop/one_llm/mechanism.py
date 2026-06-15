@@ -33,6 +33,7 @@ class OneModelInTurnSyncMechanism:
                 user_msg_uuid=loop_input.user_msg_uuid,
                 transcript_rel=loop_input.transcript_rel,
                 interim_output_sink=interim_sink,
+                skip_inline_interim_transcript=True,
                 langsmith_slice=loop_input.langsmith_slice,
                 max_tool_rounds=loop_input.max_tool_rounds,
                 after_tool_messages_appended=loop_input.after_tool_messages_appended,

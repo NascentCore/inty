@@ -18,7 +18,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
 )
-from app.core.companion_harness.loop.channel_adapter import DownlinkLoopChannelAdapter
+from app.services.agentic_companion.channel import DownlinkChannel
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
@@ -40,10 +40,6 @@ from app.services.agentic_companion.inner_tick_poll import run_inner_tick_poll
 from app.services.agentic_companion.session import Coordinator, Session
 from app.services.chat_service import generate_session_id
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
-from app.services.agentic_channel.transport_reply import (
-    agentic_loop_suppresses_transport_reply,
-)
-from app.services.agentic_channel.turn import interactive_bootstrap_active_for_scope
 
 _presences: dict[str, AgentChannelPresence] = {}
 _presence_start_locks: dict[str, asyncio.Lock] = {}
@@ -84,7 +80,7 @@ class AgentChannelPresence:
         )
         downlink = _ActiveChannelDownlink(self._scope)
         self._session = Session.from_coordinator(
-            downlink=downlink,
+            channel=DownlinkChannel(downlink),
             coordinator=self._coordinator,
         )
         poll_secs = float(
@@ -124,19 +120,16 @@ class AgentChannelPresence:
 
     async def send_assistant_text(self, text: str) -> None:
         registry = get_scope_channel_registry(self._scope)
-        active = registry.active_channel()
-        if active is None:
+        to_channel = registry.active_to_channel()
+        if to_channel is None:
             logger.warning(
                 "agent_channel proactive drop: no ACTIVE channel scope={}",
                 self._scope.registry_key(),
             )
             return
-        downlink = registry.downlinks.get(active)
-        if downlink is None:
-            return
         from app.services.agentic_companion.downlink import Downlink
 
-        await downlink.deliver(
+        await to_channel.deliver(
             Downlink(
                 kind=DownlinkKind.PROACTIVE,
                 assistant_text=text,
@@ -190,21 +183,14 @@ class AgentChannelPresence:
                 },
             )
             agentic_loop_channel = None
-            agentic_loop_channel_wired = False
+            wired_to_channel = False
             bg_sink = self._coordinator.background_sink
             registry = get_scope_channel_registry(self._scope)
-            active = registry.active_channel()
-            if active is not None:
-                channel_downlink = registry.downlinks.get(active)
-                if channel_downlink is not None:
-                    agentic_loop_channel = DownlinkLoopChannelAdapter(
-                        channel_downlink
-                    )
-                    agentic_loop_channel_wired = True
-                    bg_sink = None
-            bootstrap_active = await interactive_bootstrap_active_for_scope(
-                self._scope
-            )
+            to_channel = registry.active_to_channel()
+            if to_channel is not None:
+                agentic_loop_channel = to_channel
+                wired_to_channel = True
+                bg_sink = None
             assert self._session is not None
             envelope = parse_telegram_uplink(
                 scope=self._scope,
@@ -220,15 +206,11 @@ class AgentChannelPresence:
             assert isinstance(turn, CompanionTurnResult)
             if not turn.tool_background_started:
                 self._coordinator.remove_foreground_pending(preset_uid)
+            if wired_to_channel:
+                return ""
             reply = strip_leading_transcript_timestamp_prefixes(
                 turn.assistant_text.strip()
             )
-            if agentic_loop_suppresses_transport_reply(
-                agentic_loop_channel_wired=agentic_loop_channel_wired,
-                interactive_bootstrap_active=bootstrap_active,
-                assistant_reply=reply,
-            ):
-                return ""
             if reply:
                 return reply
             if turn.tool_background_started:
@@ -255,11 +237,8 @@ class AgentChannelPresence:
                 continue
             self._coordinator.set_foreground_pending(ev.user_msg_uuid, ctx)
             registry = get_scope_channel_registry(self._scope)
-            active = registry.active_channel()
-            if active is None:
-                continue
-            downlink = registry.downlinks.get(active)
-            if downlink is None:
+            to_channel = registry.active_to_channel()
+            if to_channel is None:
                 continue
             try:
                 scope_lock = get_scope_turn_lock(
@@ -270,7 +249,7 @@ class AgentChannelPresence:
                     )
                 )
                 async with scope_lock:
-                    await downlink.deliver(
+                    await to_channel.deliver(
                         tool_background_downlink(tool_output=ev)
                     )
             except Exception:
@@ -294,13 +273,10 @@ class _ActiveChannelDownlink:
         if not downlink_delivers_user_visible_text(event):
             return
         registry = get_scope_channel_registry(self._scope)
-        active = registry.active_channel()
-        if active is None:
+        to_channel = registry.active_to_channel()
+        if to_channel is None:
             return
-        downlink = registry.downlinks.get(active)
-        if downlink is None:
-            return
-        await downlink.deliver(event)
+        await to_channel.deliver(event)
 
 
 async def ensure_presence(scope: AgentScope) -> AgentChannelPresence:

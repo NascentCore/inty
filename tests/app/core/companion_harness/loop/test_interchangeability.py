@@ -8,12 +8,11 @@ from types import SimpleNamespace
 import pytest
 
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.loop.channel_adapter import RecordingChannelAdapter
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.loop.contract import AgenticLoopOutput
 from app.core.companion_harness.loop.output_queue import LoopDeliverableKind
-from app.core.companion_harness.loop.runner import run_agentic_loop
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.services.agentic_companion.channel import RecordingChannel
 from app.core.companion_harness.loop.parity.fixtures import (
     FakeDualLlmClient,
     dual_llm_fg_response,
@@ -25,6 +24,7 @@ from tests.app.core.companion_harness.companion.test_in_turn_sync_tool_loop impo
 )
 from tests.app.core.companion_harness.loop.test_support import (
     build_agentic_loop_input,
+    run_agentic_loop_with_channel,
 )
 
 
@@ -68,14 +68,14 @@ async def test_interchangeability_same_input_swap_mode(tmp_path: Path) -> None:
         dual_llm_tool_msgs=msgs,
     )
 
-    channel_a = RecordingChannelAdapter()
-    out_a = await run_agentic_loop(
+    channel_a = RecordingChannel()
+    out_a = await run_agentic_loop_with_channel(
         one_input,
         llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
         channel=channel_a,
     )
-    channel_b = RecordingChannelAdapter()
-    out_b = await run_agentic_loop(
+    channel_b = RecordingChannel()
+    out_b = await run_agentic_loop_with_channel(
         two_input,
         llm_loop_mode=UserTurnLlmLoopMode.DUAL_LLM,
         channel=channel_b,

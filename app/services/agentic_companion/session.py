@@ -43,8 +43,8 @@ from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutputSink,
 )
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
+from app.services.agentic_companion.channel import Channel
 from app.services.agentic_companion.downlink import (
-    ChannelDownlink,
     bootstrap_interim_downlink,
 )
 from app.services.agentic_companion.session_turn_dispatch import (
@@ -329,9 +329,9 @@ class Coordinator:
 
 @dataclass
 class Session:
-    """One companion presence: coordinator + channel downlink + inner-tick worker."""
+    """One companion presence: coordinator + ToChannel + inner-tick worker."""
 
-    downlink: ChannelDownlink
+    channel: Channel
     coordinator: Coordinator
     _inner_tick_stop: asyncio.Event = field(repr=False)
     _inner_tick_task: asyncio.Task[None] | None = field(
@@ -342,11 +342,11 @@ class Session:
     def create(
         cls,
         *,
-        downlink: ChannelDownlink,
+        channel: Channel,
         loop: asyncio.AbstractEventLoop,
     ) -> Session:
         return cls(
-            downlink=downlink,
+            channel=channel,
             coordinator=Coordinator.for_loop(loop),
             _inner_tick_stop=asyncio.Event(),
         )
@@ -355,14 +355,14 @@ class Session:
     def from_coordinator(
         cls,
         *,
-        downlink: ChannelDownlink,
+        channel: Channel,
         coordinator: Coordinator,
     ) -> Session:
         """Bind an existing coordinator (e.g. ``CompanionWebSocketCoordinator``) to a channel downlink."""
-        assert downlink is not None
+        assert channel is not None
         assert coordinator is not None
         return cls(
-            downlink=downlink,
+            channel=channel,
             coordinator=coordinator,
             _inner_tick_stop=asyncio.Event(),
         )
@@ -392,7 +392,7 @@ class Session:
     async def deliver_bootstrap_interim(
         self, interim: BootstrapInterimOutput
     ) -> None:
-        await self.downlink.deliver(
+        await self.channel.deliver(
             bootstrap_interim_downlink(interim=interim),
         )
 

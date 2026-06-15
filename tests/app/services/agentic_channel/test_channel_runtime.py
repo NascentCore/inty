@@ -104,6 +104,10 @@ async def test_turn_up_supersedes_prior_active_channel() -> None:
             registry.state_of(CompanionRuntimeChannel.TELEGRAM)
             == ChannelRuntimeState.INACTIVE
         )
+        assert registry.active_to_channel() is not None
+        assert registry.channels[
+            CompanionRuntimeChannel.WECHAT_WEIXIN
+        ] is registry.active_to_channel()
     finally:
         await _cleanup_scope(scope)
 
@@ -125,5 +129,6 @@ async def test_turn_down_idempotent() -> None:
             reason="noop",
         )
         assert registry.active_channel() is None
+        assert registry.active_to_channel() is None
     finally:
         await _cleanup_scope(scope)

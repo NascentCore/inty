@@ -100,6 +100,7 @@ async def test_run_in_turn_sync_tool_loop_user_before_assistant_transcript(
             user_msg_uuid="user-uuid-1",
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
+            skip_inline_interim_transcript=False,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
                     channel=CompanionRuntimeChannel.APP,
@@ -169,6 +170,7 @@ async def test_run_in_turn_sync_tool_loop_interim_sink_on_tool_round(
             user_msg_uuid="user-uuid-2",
             transcript_rel="transcript.jsonl",
             interim_output_sink=_sink,
+            skip_inline_interim_transcript=False,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
                     channel=CompanionRuntimeChannel.APP,
@@ -293,6 +295,7 @@ async def test_run_in_turn_sync_tool_loop_after_tool_hook_refreshes_openai_tools
             user_msg_uuid="user-uuid-refresh",
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
+            skip_inline_interim_transcript=False,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
                     channel=CompanionRuntimeChannel.APP,

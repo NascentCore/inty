@@ -8,10 +8,9 @@ from pathlib import Path
 import pytest
 
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.loop.channel_adapter import RecordingChannelAdapter
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
-from app.core.companion_harness.loop.runner import run_agentic_loop
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.services.agentic_companion.channel import RecordingChannel
 from app.services.agentic_companion.downlink import DownlinkKind
 from tests.app.core.companion_harness.companion.test_in_turn_sync_tool_loop import (
     _FakeSyncToolLoopLLMClient,
@@ -20,6 +19,7 @@ from tests.app.core.companion_harness.companion.test_in_turn_sync_tool_loop impo
 )
 from tests.app.core.companion_harness.loop.test_support import (
     build_agentic_loop_input,
+    run_agentic_loop_with_channel,
 )
 
 
@@ -29,7 +29,7 @@ async def test_one_llm_delegate_matches_sync_tool_loop_terminal(tmp_path: Path) 
     store = MemoryStore(scope=scope, repository=None)
     store.write_document("transcript.jsonl", "")
     client = _FakeSyncToolLoopLLMClient([_final_response(content="done")])
-    channel = RecordingChannelAdapter()
+    channel = RecordingChannel()
     loop_input = build_agentic_loop_input(
         store=store,
         llm_client=client,  # type: ignore[arg-type]
@@ -39,7 +39,7 @@ async def test_one_llm_delegate_matches_sync_tool_loop_terminal(tmp_path: Path) 
         user_msg_uuid="user-1",
         trace_id="trace-1",
     )
-    result = await run_agentic_loop(
+    result = await run_agentic_loop_with_channel(
         loop_input,
         llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
         channel=channel,
@@ -69,7 +69,7 @@ async def test_one_llm_delegate_per_call_interim_and_terminal(tmp_path: Path) ->
             _final_response(content="terminal line"),
         ]
     )
-    channel = RecordingChannelAdapter()
+    channel = RecordingChannel()
     loop_input = build_agentic_loop_input(
         store=store,
         llm_client=client,  # type: ignore[arg-type]
@@ -87,7 +87,7 @@ async def test_one_llm_delegate_per_call_interim_and_terminal(tmp_path: Path) ->
         user_msg_uuid="user-2",
         trace_id="trace-2",
     )
-    result = await run_agentic_loop(
+    result = await run_agentic_loop_with_channel(
         loop_input,
         llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
         channel=channel,

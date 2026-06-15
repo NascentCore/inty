@@ -1,10 +1,10 @@
-"""DownlinkLoopChannelAdapter forwards to inner channel."""
+"""``DownlinkChannel`` forwards to inner ``ChannelDownlink``."""
 
 from __future__ import annotations
 
 import pytest
 
-from app.core.companion_harness.loop.channel_adapter import DownlinkLoopChannelAdapter
+from app.services.agentic_companion.channel import DownlinkChannel
 from app.services.agentic_companion.downlink import Downlink, DownlinkKind
 
 
@@ -17,9 +17,9 @@ class _RecordingInner:
 
 
 @pytest.mark.asyncio
-async def test_downlink_loop_channel_adapter_forwards() -> None:
+async def test_downlink_channel_forwards() -> None:
     inner = _RecordingInner()
-    adapter = DownlinkLoopChannelAdapter(inner)
+    channel = DownlinkChannel(inner)
     event = Downlink(
         kind=DownlinkKind.BOOTSTRAP_INTERIM,
         assistant_text="x",
@@ -29,5 +29,5 @@ async def test_downlink_loop_channel_adapter_forwards() -> None:
         scheduled_task_id=None,
         transcript_user_text=None,
     )
-    await adapter.deliver(event)
+    await channel.deliver(event)
     assert inner.events == [event]

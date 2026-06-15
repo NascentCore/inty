@@ -13,6 +13,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.services.agentic_channel.adapters.base import ChannelAdapter
 from app.services.agentic_channel.endpoints import get_endpoint_for_scope
+from app.services.agentic_companion.channel import Channel, DownlinkChannel
 from app.services.agentic_companion.downlink import ChannelDownlink
 
 
@@ -32,9 +33,20 @@ class ScopeChannelRegistry:
     downlinks: dict[CompanionRuntimeChannel, ChannelDownlink] = field(
         default_factory=dict
     )
+    # TODO(#3398): retire ``downlinks`` once all callers use ``channels`` only.
+    channels: dict[CompanionRuntimeChannel, Channel] = field(
+        default_factory=dict
+    )
     adapters: dict[CompanionRuntimeChannel, ChannelAdapter] = field(
         default_factory=dict
     )
+
+    def active_to_channel(self) -> Channel | None:
+        """Return ACTIVE ``Channel`` for this scope, if any."""
+        active = self.active_channel()
+        if active is None:
+            return None
+        return self.channels.get(active)
 
     def active_channel(self) -> CompanionRuntimeChannel | None:
         for channel, state in self.states.items():
@@ -85,7 +97,9 @@ async def turn_channel_up(
 
     registry.states[channel] = ChannelRuntimeState.ACTIVE
     registry.adapters[channel] = adapter
-    registry.downlinks[channel] = adapter.as_downlink()
+    downlink = adapter.as_downlink()
+    registry.downlinks[channel] = downlink
+    registry.channels[channel] = DownlinkChannel(downlink)
     await adapter.on_turn_up(scope)
     logger.info(
         "agent_channel turn_up scope={} channel={} reason={}",
@@ -108,6 +122,7 @@ async def turn_channel_down(
         return
     registry.states[channel] = ChannelRuntimeState.INACTIVE
     registry.downlinks.pop(channel, None)
+    registry.channels.pop(channel, None)
     adapter = registry.adapters.pop(channel, None)
     if adapter is not None:
         await adapter.on_turn_down(scope)

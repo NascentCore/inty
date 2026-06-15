@@ -75,7 +75,7 @@ from app.services.chat_websocket_session import chat_ws_outbound_pump
 from app.services.ws_session_messages import WsOutboundPayload
 from app.services.agentic_companion.downlink import Downlink, tool_background_downlink
 from app.services.agentic_companion.ws_deliver_ctx import WsDownlinkDeliverCtx
-from app.core.companion_harness.loop.channel_adapter import DownlinkLoopChannelAdapter
+from app.services.agentic_companion.channel import DownlinkChannel
 from app.services.agentic_companion.inner_tick_delivery import (
     inner_tick_delivery_for_ws,
 )
@@ -1171,9 +1171,7 @@ async def _agent_chat_ws_completions_impl(
                                 outbound_queue=ws_outbound_queue,
                             )
                         )
-                        agentic_loop_channel = DownlinkLoopChannelAdapter(
-                            ws_downlink
-                        )
+                        agentic_loop_channel = DownlinkChannel(ws_downlink)
                         bg_sink = None
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
@@ -1527,7 +1525,7 @@ async def chat_completions_websocket(
         deliver_ctx=None,
     )
     presence = Session.from_coordinator(
-        downlink=ws_downlink,
+        channel=DownlinkChannel(ws_downlink),
         coordinator=companion_ws,
     )
     poll_secs = float(

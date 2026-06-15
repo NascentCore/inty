@@ -1,13 +1,15 @@
-"""Project loop deliverables to channel-agnostic ``Downlink``."""
+"""Project ``LoopDeliverable`` to channel-agnostic ``Downlink`` at core/wire boundary."""
 
 from __future__ import annotations
-
-from dataclasses import dataclass
 
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
     InTurnInterimOutput,
+)
+from app.core.companion_harness.loop.loop_deliverable import (
+    LoopDeliverable,
+    LoopDeliverableKind,
 )
 from app.services.agentic_companion.downlink import (
     Downlink,
@@ -16,18 +18,9 @@ from app.services.agentic_companion.downlink import (
     tool_background_downlink,
 )
 
-from .output_queue import LoopDeliverable, LoopDeliverableKind
-
-
-@dataclass(frozen=True)
-class LoopProjectionContext:
-    """Track-aware loop→downlink projection (bootstrap defers loop terminal)."""
-
-    defer_terminal_user_reply: bool
-
 
 def project_deliverable(deliverable: LoopDeliverable) -> Downlink:
-    """Map one ``LoopDeliverable`` to a ``Downlink`` for ``LoopChannelAdapter``."""
+    """Map one ``LoopDeliverable`` to a ``Downlink`` for ``Channel.deliver``."""
     match deliverable.kind:
         case LoopDeliverableKind.INTERIM_REPLY | LoopDeliverableKind.BOOTSTRAP_INTERIM:
             interim = deliverable.bootstrap_interim
