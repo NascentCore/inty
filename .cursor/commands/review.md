@@ -1,16 +1,12 @@
 # Review change in the current conversation
 
-## Overview
-
-As a fellow team member, review the pending changes in the current conversation.
+Review the pending changes.
 
 ## Instructions
 
 ### Review
 
 - Understand what the code does
-- Consider the overall architecture of [companion harness](/app/core/companion_harness/)
-- Consider [style rules](/.agents/guidelines/PY_STYLE_RULES.md)
 - Critique architecture
 - Check for bugs
 
@@ -29,6 +25,21 @@ behaviors are not well abstracted
 that means the code lacks hierarchy.
 - If you noticed refactoring opporutnity, add TODOs to code places that the refactoring should be applied.
 
+## Alembic version files
+
+- Skip reviewing these files
+
+## GitHub issues & TODOs (followups)
+
+- Update TODOs and their referenced GitHub issues if needed
+- Add TODO for minor followups that are not required in this change, but is required according to larger-scope repo guidelines
+- Create GitHub issues and add TODOs to track complex follow-ups
+- Comment on discovered GitHub issues if changes are made advanced the issues' progress
+
+## References
+
+- Consider [style rules](/.agents/guidelines/PY_STYLE_RULES.md)
+
 ## Checklist
 
 - [ ] Intention is understood
@@ -38,13 +49,3 @@ that means the code lacks hierarchy.
 - [ ] Reviwed code smells
 - [ ] Changes passed tests, fix test failures if needed
 - [ ] Referenced GitHub issues updated
-
-## Alembic version files
-
-- Skip reviewing these files
-
-## GitHub issues & TODOs (followups)
-
-- Add TODO for minor followups that are not required in this change, but is required according to larger-scope repo guidelines
-- Create GitHub issues and add TODOs to track complex follow-ups
-- Comment on discovered GitHub issues if changes are made advanced the issues' progress
