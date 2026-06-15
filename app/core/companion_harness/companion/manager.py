@@ -136,7 +136,12 @@ class CompanionSession:
 
 
 class CompanionManager:
-    """管理所有活跃 companion session 的生命周期。"""
+    """管理所有活跃 companion session 的生命周期。
+
+    TODO(companion-session-eviction): ``_sessions`` is append-only today; evict when scope
+    has no active presence and no in-flight turns/tool_background.
+    https://github.com/NascentCore/inty/issues/3444
+    """
 
     def __init__(self, config: CompanionConfig) -> None:
         self._config = config

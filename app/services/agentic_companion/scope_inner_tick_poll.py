@@ -59,7 +59,12 @@ async def run_scope_inner_tick_poll_cycle(
     *,
     stop: asyncio.Event,
 ) -> None:
-    """Enumerate Postgres scopes and attempt one scope track per scope per wake."""
+    """Enumerate Postgres scopes and attempt one scope track per scope per wake.
+
+    TODO(companion-session-eviction): Each fire calls ``get_or_create_session`` and grows
+    process-local registries for scopes with no active presence; pair with idle eviction.
+    https://github.com/NascentCore/inty/issues/3444
+    """
     scopes = await fetch_initialized_companion_scopes()
     for scope in scopes:
         if stop.is_set():

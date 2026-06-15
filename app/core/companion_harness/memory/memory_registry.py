@@ -1,4 +1,9 @@
-"""Process-local MemoryStore registry keyed by ``CompanionScope`` only."""
+"""Process-local MemoryStore registry keyed by ``CompanionScope`` only.
+
+TODO(companion-session-eviction): ``_MEMORY_STORES`` grows forever; wire ``shutdown_memory_store``
+to presence stop / idle TTL eviction (not only tests).
+https://github.com/NascentCore/inty/issues/3444
+"""
 
 from __future__ import annotations
 
