@@ -1,7 +1,11 @@
 # Fix bug
 
 - Understand the bug provided
-- Reproduce the bug according to the description
+- Write tests to reproduce the bug according to the description
+- Come up with initial fixing idea and ask me to confirm to proceed
+
+## How to fix
+
 - If the bug is caused by unhandled state, do not handle the bad state, but to make the bad state impossible.
   Eg: if an exception happens because of a input string argument is empty, assert non-emptiness of the argument,
   do not use `if` to tolerate empty input argument, or redefine the argument as `StrEnum`.
