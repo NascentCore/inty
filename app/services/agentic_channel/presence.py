@@ -205,19 +205,23 @@ class AgentChannelPresence:
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
             )
-            reply = await drain_scope_once_via_companion(
+            drain_result = await drain_scope_once_via_companion(
                 self._scope,
                 runtime_channel=runtime_channel,
                 implicit_signal_bundle=implicit_bundle,
                 background_output_sink=self._coordinator.background_sink,
             )
-            return reply
-        except Exception:
+            if not drain_result.tool_background_started:
+                self._coordinator.remove_foreground_pending(queue_message_id)
+            return drain_result.reply_text
+        except Exception as exc:
             logger.exception(
                 "agent_channel user_chat failed scope={}",
                 self._scope.registry_key(),
             )
-            if queue_message_id is not None:
+            if queue_message_id is not None and not getattr(
+                exc, "companion_tool_background_started", False
+            ):
                 self._coordinator.remove_foreground_pending(queue_message_id)
             return "Companion 回合失败，请查看 Ops 日志。"
 

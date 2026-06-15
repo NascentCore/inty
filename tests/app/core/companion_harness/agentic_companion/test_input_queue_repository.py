@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from app.core.companion_harness.agent_channel.guest_agent_kind import (
     CompanionGuestAgentKind,
@@ -90,6 +90,58 @@ async def test_input_queue_append_and_claim_batch_order() -> None:
         assert len(batch.messages) == 2
         assert [m.text for m in batch.messages] == ["first", "second"]
         assert all(m.status == QueueStatus.CLAIMED for m in batch.messages)
+    finally:
+        await _cleanup_scope(scope)
+
+
+@pytest.mark.asyncio
+async def test_mark_batch_failed_persists_after_commit() -> None:
+    scope = await create_guest_scope_for_test(
+        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        nickname_prefix="input_queue_failed",
+        meta_data={"test": True},
+    )
+    try:
+        now = datetime.now(timezone.utc)
+        async with AsyncSessionLocal() as db:
+            repo = PostgresInputQueueRepository(db)
+            await repo.append_user_message(
+                InboundWireMessage(
+                    scope=scope,
+                    channel=CompanionRuntimeChannel.TELEGRAM,
+                    wire_id="wire-a",
+                    text="will fail",
+                    received_at_utc=now,
+                )
+            )
+            batch = await repo.claim_pending_batch(scope)
+            assert batch is not None
+            await repo.mark_batch_failed(
+                batch,
+                error_message="synthetic drain failure",
+            )
+            await db.commit()
+            batch_id = batch.batch_id
+
+        async with AsyncSessionLocal() as db:
+            rows = list(
+                (
+                    await db.execute(
+                        select(AgenticCompanionInputQueueRow).where(
+                            AgenticCompanionInputQueueRow.user_id
+                            == scope.user_id,
+                            AgenticCompanionInputQueueRow.agent_id
+                            == scope.agent_id,
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+        assert len(rows) == 1
+        assert rows[0].status == QueueStatus.FAILED.value
+        assert rows[0].error_message == "synthetic drain failure"
+        assert rows[0].batch_id == batch_id
     finally:
         await _cleanup_scope(scope)
 

@@ -38,9 +38,10 @@ async def run_app_ws_user_turn_via_queues(
         client_message_id=None,
     )
     await enqueue_inbound_wire_message(inbound)
-    return await drain_scope_once_via_companion(
+    drain_result = await drain_scope_once_via_companion(
         scope,
         runtime_channel=CompanionRuntimeChannel.APP,
         implicit_signal_bundle=implicit_signal_bundle,
         background_output_sink=background_output_sink,
     )
+    return drain_result.reply_text

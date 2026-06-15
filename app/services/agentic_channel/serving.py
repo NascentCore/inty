@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from loguru import logger
@@ -37,6 +38,14 @@ from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 SendTextFn = Callable[[str], Awaitable[None]]
 
 
+@dataclass(frozen=True)
+class DrainScopeOnceResult:
+    """Outcome of one synchronous companion drain for Channel/Wire callers."""
+
+    reply_text: str
+    tool_background_started: bool
+
+
 async def enqueue_inbound_wire_message(
     inbound: InboundWireMessage,
 ) -> str:
@@ -54,8 +63,8 @@ async def drain_scope_once_via_companion(
     runtime_channel: CompanionRuntimeChannel,
     implicit_signal_bundle: ImplicitSignalBundle,
     background_output_sink,
-) -> str:
-    """Drain one input batch; return user-visible assistant text for sync reply."""
+) -> DrainScopeOnceResult:
+    """Drain one input batch; return user-visible text and tool_bg ownership."""
     model = await resolve_chat_model_for_scope(scope)
     async with AsyncSessionLocal() as db:
         companion = AgenticCompanion(
@@ -63,23 +72,40 @@ async def drain_scope_once_via_companion(
             input_repo=PostgresInputQueueRepository(db),
             output_repo=PostgresOutputQueueRepository(db),
         )
-        result = await companion.drain_once(
-            resolved_chat_model=model,
-            runtime_channel=runtime_channel,
-            background_output_sink=background_output_sink,
-            implicit_signal_bundle=implicit_signal_bundle,
-        )
+        try:
+            result = await companion.drain_once(
+                resolved_chat_model=model,
+                runtime_channel=runtime_channel,
+                background_output_sink=background_output_sink,
+                implicit_signal_bundle=implicit_signal_bundle,
+            )
+        except Exception:
+            # Persist mark_batch_failed before the session context rolls back.
+            await db.commit()
+            raise
         await db.commit()
     if result is None:
-        return ""
+        return DrainScopeOnceResult(
+            reply_text="",
+            tool_background_started=False,
+        )
     reply = strip_leading_transcript_timestamp_prefixes(
         result.assistant_text.strip()
     )
     if reply:
-        return reply
+        return DrainScopeOnceResult(
+            reply_text=reply,
+            tool_background_started=result.tool_background_started,
+        )
     if result.tool_background_started:
-        return ""
-    return "（没有回复内容）"
+        return DrainScopeOnceResult(
+            reply_text="",
+            tool_background_started=True,
+        )
+    return DrainScopeOnceResult(
+        reply_text="（没有回复内容）",
+        tool_background_started=False,
+    )
 
 
 async def deliver_pending_output_for_wire(
@@ -165,9 +191,10 @@ async def handle_sync_user_turn_via_queues(
 ) -> str:
     """Enqueue inbound user text and drain one companion batch."""
     await enqueue_inbound_wire_message(inbound)
-    return await drain_scope_once_via_companion(
+    drain_result = await drain_scope_once_via_companion(
         scope,
         runtime_channel=runtime_channel,
         implicit_signal_bundle=implicit_signal_bundle,
         background_output_sink=background_output_sink,
     )
+    return drain_result.reply_text

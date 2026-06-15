@@ -213,22 +213,26 @@ class WeixinInprocessPresence:
                 user_signed_on=False,
                 server_received_at_utc=datetime.now(timezone.utc),
             )
-            reply = await drain_scope_once_via_companion(
+            drain_result = await drain_scope_once_via_companion(
                 scope,
                 runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
                 implicit_signal_bundle=implicit_bundle,
                 background_output_sink=self._coordinator.background_sink,
             )
-            if reply:
-                return reply
+            if not drain_result.tool_background_started:
+                self._coordinator.remove_foreground_pending(queue_message_id)
+            if drain_result.reply_text:
+                return drain_result.reply_text
             return "（没有回复内容）"
-        except Exception:
+        except Exception as exc:
             logger.exception(
                 "weixin inprocess user_chat failed user_id={} agent_id={}",
                 user_id,
                 agent_id,
             )
-            if queue_message_id is not None:
+            if queue_message_id is not None and not getattr(
+                exc, "companion_tool_background_started", False
+            ):
                 self._coordinator.remove_foreground_pending(queue_message_id)
             return "Companion turn failed. Check Ops logs for weixin inprocess user_chat."
 
