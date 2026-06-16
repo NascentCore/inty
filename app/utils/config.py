@@ -13,7 +13,7 @@ from typing import Any, List, Optional
 
 import yaml
 from loguru import logger
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.utils import models_catalog
 from app.core.companion_harness.experience_profile.context_mode import (
@@ -702,26 +702,6 @@ class MemoryExtractionConfig(BaseModel):
     use_significance_perception_in_extraction: bool = False
 
 
-def _parse_surprise_snap_config(data: dict) -> "SurpriseSnapConfig":
-    raw = data.get("surprise_snap") or {}
-    enabled_since = raw.get("enabled_since")
-    if isinstance(enabled_since, str):
-        try:
-            enabled_since = datetime.fromisoformat(
-                enabled_since.replace("Z", "+00:00")
-            )
-        except (ValueError, TypeError):
-            enabled_since = None
-    elif not isinstance(enabled_since, datetime):
-        enabled_since = None
-    trigger_rounds = raw.get("trigger_rounds")
-    if not isinstance(trigger_rounds, list):
-        trigger_rounds = [3, 8, 15]
-    return SurpriseSnapConfig.model_validate(
-        {"enabled_since": enabled_since, "trigger_rounds": trigger_rounds}
-    )
-
-
 class SurpriseSnapConfig(BaseModel):
     """Surprise Snap：用户与角色对话达到指定轮数时插入专属照消息。"""
 
@@ -733,6 +713,25 @@ class SurpriseSnapConfig(BaseModel):
     trigger_rounds: List[int] = Field(
         default_factory=lambda: [3, 8, 15]
     )  # 用户消息数达到这些轮数时触发
+
+    @field_validator("enabled_since", mode="before")
+    @classmethod
+    def parse_enabled_since(cls, value: object) -> object:
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except (ValueError, TypeError):
+                return None
+        if isinstance(value, datetime):
+            return value
+        return None
+
+    @field_validator("trigger_rounds", mode="before")
+    @classmethod
+    def ensure_trigger_rounds_list(cls, value: object) -> object:
+        if not isinstance(value, list):
+            return [3, 8, 15]
+        return value
 
 
 class UserAnalyticsReportConfig(BaseModel):
@@ -952,6 +951,45 @@ class Config(BaseModel):
     )
 
 
+_ROOT_CONFIG_OPTIONAL_YAML_SECTIONS = (
+    "security",
+    "database",
+    "google_oauth",
+    "verification",
+    "logging",
+    "embedding",
+    "gcs",
+    "firebase",
+    "google_play",
+    "elevenlabs",
+    "cloudflare",
+    "push_notification",
+    "memory_extraction",
+    "user_analytics_report",
+    "fal",
+    "gemini_live",
+    "phone_call",
+    "tts",
+    "surprise_snap",
+    "weixin_channel",
+)
+
+
+class RootConfig(Config):
+    """YAML document root: single ``model_validate`` entry for ``load_config``."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def fill_missing_yaml_sections(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        normalized = dict(data)
+        for key in _ROOT_CONFIG_OPTIONAL_YAML_SECTIONS:
+            if key not in normalized:
+                normalized[key] = {}
+        return normalized
+
+
 # TODO(INTY_CONFIG_YAML): add resolve_inty_config_yaml_path() — INTY_CONFIG_YAML or config.yaml;
 # used by app.core.config, backend/alembic/env.py, and standalone scripts.
 
@@ -971,77 +1009,11 @@ def load_config(path: str) -> Config:
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
-    # Handle nested app config with limits
-    app_data = data.get("app", {})
-    if "limits" in app_data and isinstance(app_data["limits"], dict):
-        app_data["limits"] = AppConfig.LimitsConfig.model_validate(
-            app_data["limits"]
-        )
-    if "features" in app_data and isinstance(app_data["features"], dict):
-        app_data["features"] = FeaturesConfig.model_validate(
-            app_data["features"]
-        )
-    if "api_endpoints" in app_data and isinstance(
-        app_data["api_endpoints"], dict
-    ):
-        app_data["api_endpoints"] = APIEndpointsConfig.model_validate(
-            app_data["api_endpoints"]
-        )
+    return RootConfig.model_validate(data or {})
 
-    # Convert environment string to Environment enum if present
-    if "environment" in app_data and isinstance(app_data["environment"], str):
-        app_data["environment"] = Environment(app_data["environment"])
 
-    agent_data = dict(data.get("agent", {}))
-    if "channels" in agent_data and isinstance(agent_data["channels"], dict):
-        agent_data["channels"] = AgentChannelsConfig.model_validate(
-            agent_data["channels"]
-        )
-
-    return Config(
-        app=AppConfig.model_validate(app_data),
-        security=SecurityConfig.model_validate(data.get("security") or {}),
-        database=DatabaseSettings.model_validate(data.get("database") or {}),
-        google_oauth=GoogleOAuthConfig.model_validate(
-            data.get("google_oauth") or {}
-        ),
-        verification=VerificationConfig.model_validate(
-            data.get("verification") or {}
-        ),
-        logging=LoggingConfig.model_validate(data.get("logging") or {}),
-        embedding=EmbeddingConfig.model_validate(data.get("embedding") or {}),
-        agent=AgentConfig.model_validate(agent_data),
-        gcs=GCSConfig.model_validate(data.get("gcs") or {}),
-        firebase=FirebaseConfig.model_validate(data.get("firebase") or {}),
-        google_play=GooglePlayConfig.model_validate(
-            data.get("google_play") or {}
-        ),
-        elevenlabs=ElevenLabsConfig.model_validate(
-            data.get("elevenlabs") or {}
-        ),
-        cloudflare=CloudflareConfig.model_validate(
-            data.get("cloudflare") or {}
-        ),
-        push_notification=PushNotificationConfig.model_validate(
-            data.get("push_notification") or {}
-        ),
-        memory_extraction=MemoryExtractionConfig.model_validate(
-            data.get("memory_extraction") or {}
-        ),
-        user_analytics_report=UserAnalyticsReportConfig.model_validate(
-            data.get("user_analytics_report") or {}
-        ),
-        fal=FalConfig.model_validate(data.get("fal") or {}),
-        gemini_live=GeminiLiveConfig.model_validate(
-            data.get("gemini_live") or {}
-        ),
-        phone_call=PhoneCallConfig.model_validate(data.get("phone_call") or {}),
-        tts=TTSConfig.model_validate(data.get("tts") or {}),
-        surprise_snap=_parse_surprise_snap_config(data),
-        weixin_channel=WeixinChannelConfig.model_validate(
-            data.get("weixin_channel") or {}
-        ),
-    )
+# TODO(config): replace ``fill_missing_yaml_sections`` with ``Field(default_factory=...)`` on
+# optional YAML sections so ``RootConfig`` needs no before-validator.
 
 
 def _validate_config(config: Config):
