@@ -14,8 +14,8 @@ Harness 要的是：**一段会延续的关系**——你不在时她也在虚�
 
 自主性体现在：
 
-─ Autonomy: agents have their own autonomous activities to build up their own identity and novelty.
-─ App、微信、Telegram, users can interact with agents through channels used by humans, all are consistent.
+- Autonomy: agents have their own autonomous activities to build up their own identity and novelty.
+- App、微信、Telegram, users can interact with agents through channels used by humans, all are consistent.
 
 ### 现状
 
@@ -36,15 +36,15 @@ Epic [#3341](https://github.com/nascentcore/inty/issues/3341) — psychology × 
 
 ### 将智能体运行环境收束成可移植可迁移的组件
 
-─ [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）— Epic [#3373](https://github.com/NascentCore/inty/issues/3373)
+- [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）— Epic [#3373](https://github.com/NascentCore/inty/issues/3373)
 
-### 推理编排显式化（参考 [Pie](https://pie─project.org/) 研究）
+### 推理编排显式化（参考 [Pie](https://pie-project.org/) 研究）
 
 Epic [#3393](https://github.com/nascentcore/inty/issues/3393) — turn program spec × prompt_stack stable/volatile seam × tool_background scratch working memory.
 
 ### 更稳固健壮的异步多层级任务执行系统
 
-Epic [#3394](https://github.com/nascentcore/inty/issues/3394) — sub─tasks & sub─agents, fan─in / fan─out, async & parallel execution.
+Epic [#3394](https://github.com/nascentcore/inty/issues/3394) — sub-tasks & sub-agents, fan-in / fan-out, async & parallel execution.
 
 ## 目标态
 
@@ -52,27 +52,26 @@ Companion Harness 的目标是为用户提供长期关系中的“虚拟活人�
 
 ### Concepts & naming
 
-─ agentic companion: the thing user interact with to form companionship with,
+- agentic companion: the thing user interact with to form companionship with,
   it's an abstract union of various static and runtime data and mechanisms,
-  including agentic loops, memory, llms, programed loops like inner─tick, etc.
+  including agentic loops, memory, llms, programed loops like inner-tick, etc.
   This concept is by nature vague at this point, as we are still evolving its design.
-  ─ inner─tick: a programmed loop where the agentic companion periodically wakes up and use llm to perform
+  - inner-tick: a programmed loop where the agentic companion periodically wakes up and use llm to perform
     some work.
-─ agentic loop: multi─turn reasoning with llm(s), multiple agentic loops forms the central mind model for
-  simulating the thoughts and actions of an agentic companion. Agentic loop emits user─visible messages,
-  and non─user─visible data for later process and eventually influences the later steps of generating
-  user─visible messages (monolog & autonomy etc.).
-─ channel: abstract the medium through witch the user interact with the agentic companion.
+- agentic loop: multi-turn reasoning with llm(s), multiple agentic loops forms the central mind model for
+  simulating the thoughts and actions of an agentic companion. Agentic loop emits user-visible messages,
+  and non-user-visible data for later process and eventually influences the later steps of generating
+  user-visible messages (monolog & autonomy etc.).
+- channel: abstract the medium through witch the user interact with the agentic companion.
   Right now we have the following channels:
-  ─ Weixin/WeChat (IM)
-  ─ Telegram (IM)
-  ─ App (WebSocket)
-─ Interaction patterns:
-  ─ proactive: proactively poking user from agent, a user─visible behavior pattern
+  - Weixin/WeChat (IM)
+  - Telegram (IM)
+  - App (WebSocket)
+- input & output queue: for buffering messages between user and agent.
+- Interaction patterns:
+  - proactive: proactively poking user from agent, a user-visible behavior pattern
 
 ## 目标架构图
-
-下图以 Companion Harness 为出发点，描述用户如何经各渠道触达同一 Inty，以及内核与虚拟世界、持久化记忆如何衔接；下一节展开 Harness 内部职责划分。
 
 ```
                     ┌──────────────────────────────────────┐
@@ -86,21 +85,22 @@ Companion Harness 的目标是为用户提供长期关系中的“虚拟活人�
                     └───────────────────┬──────────────────┘
                                         │
                     ┌───────────────────▼──────────────────┐
-                    │  Governance (skipped in prototype)   │
+                    │  Governance (minimal in prototype)   │
                     │  auth · usage · visible history ·    │
                     │  protocol adaptation                 │
                     └───────────────────┬──────────────────┘
                                         │
-         ┌──────────────────────────────┴─────────────────────────────┐
-         │                                                            │
- ┌───────▼─────────────────────────────┐   ┌──────────────────────────▼─────────────┐
- │  Companion Harness kernel           │◄─►│  Techno Core shared virtual world      │
- │  relationship · memory · turns ·    │   │  ┌──────────────────────────────────┐  │
- │  tools                              │   │  │ Living Sphere                    │  │
- └──────────────────┬──────────────────┘   │  │ personal living space            │  │
-                    │                      │  └──────────────────────────────────┘  │
-                    └───────────────────┐  └────────────────────────────────────────┘
+                    ┌───────────────────▼──────────────────┐
+                    │        InputQueue & OutputQueue      │
+                    └───────────────────┬──────────────────┘
                                         │
+                    ┌───────────────────▼──────────────────┐   ┌────────────────────────────────────────┐
+                    │  Companion Harness kernel            │◄─►│  Techno Core shared virtual world      │
+                    │  relationship · memory · turns ·     │   │  ┌──────────────────────────────────┐  │
+                    │  tools                               │   │  │ Living Sphere                    │  │
+                    └───────────────────┬──────────────────┘   │  │ personal living space            │  │
+                                        │                      │  └──────────────────────────────────┘  │
+                                        │                      └────────────────────────────────────────┘
                     ┌───────────────────▼─────────────────┐
                     │  Persistence                        │
                     │  long─term memory & dialogue trace  │
@@ -135,64 +135,64 @@ Companion Harness 的目标是为用户提供长期关系中的“虚拟活人�
 
 当前 companion 的「世界」主要由 MemoryStore 中的一组版本化 markdown 文档、transcript 和工具副作用构成，**还不是独立 world engine**（目标态见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)）。
 
-─ `*.md` refer to semantic content
-─ `*.jsonl` refer to episodic content
+- `*.md` refer to semantic content
+- `*.jsonl` refer to episodic content
 
-TODO(memory─hierarchy─design): Design conceptual & logical memory hierarchy; replace `*.md` / `*.jsonl` stub below after !3405 closes (conversation options are candidates, not the spec).
+TODO(memory-hierarchy-design): Design conceptual & logical memory hierarchy; replace `*.md` / `*.jsonl` stub below after !3405 closes (conversation options are candidates, not the spec).
 
 ## Turn 轨道：用户与智能体交互及慢周期后台数据处理支持 (Runtime Loops)
 
-`CompanionTurnTrack`（`companion/models.py`）与 `run_turn` 一一对应；inner─tick 活动由 `InnerTickActivity` 区分。
+`CompanionTurnTrack`（`companion/models.py`）与 `run_turn` 一一对应；inner-tick 活动由 `InnerTickActivity` 区分。
 
-─ **`USER_CHAT` / `USER_CHAT_BOOTSTRAP`**
-  ─ 触发：用户消息
-  ─ 用户可见：是
-─ **`IMPLICIT_SIGN_ON_GREETING`**
-  ─ 触发：`user_signed_on` implicit signal
-  ─ 用户可见：是
-─ **`PROACTIVE_CHAT`**
-  ─ 触发：idle poll
-  ─ 用户可见：是（主动心跳）
-─ **`SCHEDULED`**
-  ─ 触发：定时队列
-  ─ 用户可见：Determined by the agentic loop (executing the scheduled task)
-─ **`MAINTENANCE`** (monolog)
-  ─ 触发：idle poll
-  ─ 用户可见：否
+- **`USER_CHAT` / `USER_CHAT_BOOTSTRAP`**
+  - 触发：用户消息
+  - 用户可见：是
+- **`IMPLICIT_SIGN_ON_GREETING`**
+  - 触发：`user_signed_on` implicit signal
+  - 用户可见：是
+- **`PROACTIVE_CHAT`**
+  - 触发：idle poll
+  - 用户可见：是（主动心跳）
+- **`SCHEDULED`**
+  - 触发：定时队列
+  - 用户可见：Determined by the agentic loop (executing the scheduled task)
+- **`MAINTENANCE`** (monolog)
+  - 触发：idle poll
+  - 用户可见：否
 - `AUTONOMY`
   - 触发：inner-tick
   - 用户可见：否（非直接）
-─ **Dreaming（非 turn）**
-  ─ 触发：inner-tick
-  ─ 用户可见：否（`InnerTickActivity.DREAMING`）非直接，会修改 MemDoc 从而影响后续聊天
+- **Dreaming（非 turn）**
+  - 触发：inner-tick
+  - 用户可见：否（`InnerTickActivity.DREAMING`）非直接，会修改 MemDoc 从而影响后续聊天
 
-## Channels (could be extended to become a broader 'Exo─Runtime Design')
+## Channels (could be extended to become a broader 'Exo-Runtime Design')
 
 Channels are medium for user to interact with agents.
-In other words, constructs between end users and the core─agentic─harness runtime.
+In other words, constructs between end users and the core-agentic-harness runtime.
 They provide different content modality & representation formats, and conventions of interaction. It's like a social scenarios:
 a bar is for casual encountering, coffee shop is for general friends, etc. Telegram, WhatsApp, Weixin all have different canonical types of interaction patterns.
 
-Currently─supported channels:
+Currently-supported channels:
 
-─ Websocket
-─ Telegram
-─ Weixin/WeChat
+- Websocket
+- Telegram
+- Weixin/WeChat
 
 ## 代码层技术选型（Tech Stack）
 
-─ Python 3.12（与仓库环境一致）。
-─ Pydantic v2
-─ LLM client (OpenAI─compatible), with [models catalog](/app/utils/models_catalog.py)
-─ Configs: `config.yaml` + `app/utils/config.py` / `app/core/config.py`。
-─ Persistency: PostgreSQL + SQLAlchemy；MemoryStore → `companion_memory_document_versions`
-  ─ Alembic 迁移：`/backend/alembic/`
-─ Observability
-  ─ LangSmith for llm call tracing
-  ─ loguru logging
-  ─ `/app/core/companion_harness/companion/runtime_events.py`
-    agentic─native introspection, potentially useful for users to understand the agent's situation. It's like a person's health reports.
+- Python 3.12（与仓库环境一致）。
+- Pydantic v2
+- LLM client (OpenAI-compatible), with [models catalog](/app/utils/models_catalog.py)
+- Configs: `config.yaml` + `app/utils/config.py` / `app/core/config.py`。
+- Persistency: PostgreSQL + SQLAlchemy；MemoryStore → `companion_memory_document_versions`
+  - Alembic 迁移：`/backend/alembic/`
+- Observability
+  - LangSmith for llm call tracing
+  - loguru logging
+  - `/app/core/companion_harness/companion/runtime_events.py`
+    agentic-native introspection, potentially useful for users to understand the agent's situation. It's like a person's health reports.
 
 ## 扩展设计
 
-─ [多 agent 世界引擎、sub─agent](/docs/companion_harness/FR_WORLD_ENGINE.md)。
+- [多 agent 世界引擎、sub-agent](/docs/companion_harness/FR_WORLD_ENGINE.md)。
