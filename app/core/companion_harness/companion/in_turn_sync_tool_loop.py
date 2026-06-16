@@ -1,7 +1,8 @@
 """In-turn synchronous chat + tool loop (single LLM, no dual-LLM / tool_background).
 
-Used by ``USER_CHAT_BOOTSTRAP`` today; future settled ``USER_CHAT`` in-turn sync (#3369) reuses
-the same entry with different ``write_allowlist`` / ``after_tool_messages_appended`` hooks.
+Shared by production ``AgenticLoop.run`` (settled ``USER_CHAT`` and ``USER_CHAT_BOOTSTRAP``)
+and legacy non-queue bootstrap; callers differ by ``write_allowlist`` /
+``after_tool_messages_appended`` hooks.
 """
 
 from __future__ import annotations
@@ -38,6 +39,10 @@ from .message_format import openai_assistant_message_dict
 from .models import CompanionTurnTrack, InnerTickActivity
 from .prompt_stack import refresh_companion_turn_prompt_stack
 from .turn_routes import BootstrapInterimOutput, BootstrapInterimOutputSink
+from .transcript_user_row import (
+    TranscriptUserRowBuildInput,
+    append_transcript_user_row,
+)
 from .utc import utc_iso_ts
 
 BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS = 24
@@ -59,8 +64,10 @@ class InTurnSyncToolLoopInput:
     ts_user: datetime
     user_msg_uuid: str
     transcript_rel: str
-    # TODO(#3369): Rename ``BootstrapInterimOutputSink`` when settled USER_CHAT reuses this loop.
+    # TODO(#3465): Replace delivery-policy flags with caller-owned assistant
+    # round event adapters; this loop should not know AgenticLoop vs legacy.
     interim_output_sink: BootstrapInterimOutputSink | None
+    emit_every_assistant_round: bool
     langsmith_slice: CompanionTurnLangsmithSlice
     max_tool_rounds: int
     # Runs after each tool round (same timing as ``runtime.after_tool_messages_appended``).
@@ -73,6 +80,10 @@ class InTurnSyncToolLoopInput:
         ]
         | None
     )
+    # TODO(#3467): Move transcript ownership out of this shared input once
+    # AgenticLoop owns the new path; leave legacy bootstrap documented only.
+    caller_persisted_user_transcript: bool
+    """True when the caller already appended the user transcript row before this loop."""
 
 
 @dataclass(frozen=True)
@@ -84,6 +95,8 @@ class InTurnSyncToolLoopResult:
     langsmith_run_id: str
     skip_final_transcript_assistant_row: bool
     last_interim_assistant_msg_uuid: str | None
+    loop_persisted_user_transcript: bool
+    """True when this loop appended the user transcript row."""
 
 
 @dataclass(frozen=True)
@@ -115,24 +128,30 @@ async def run_in_turn_sync_tool_loop(
     """In-turn chat + tools on one chat model (no dual-LLM / tool_background).
 
     Persists the user transcript row first, then non-empty assistant ``content`` from each LLM
-    round (via callback) so JSONL order is always user → assistant(s). Interim rounds with
-    ``tool_calls`` may also push via ``interim_output_sink``. Caller must not append
-    the user row again at turn end.
+    round (via callback) so JSONL order is always user → assistant(s). When
+    ``emit_every_assistant_round`` is true, every non-empty assistant round pushes via
+    ``interim_output_sink``; otherwise only tool rounds do (terminal rounds stay for the
+    caller). Caller must not append the user row again at turn end.
+
+    TODO(#3470): When emitting every round, shape copy via prompt/contract so interim
+    frames feel like companion chat while working (!3458), not repeated setup status.
     """
     store = loop_input.store
     transcript_rel = loop_input.transcript_rel
     trace_id = loop_input.trace_id
     user_msg_uuid = loop_input.user_msg_uuid
-    store.append_jsonl_record(
-        transcript_rel,
-        {
-            "role": "user",
-            "content": loop_input.user_text,
-            "ts": loop_input.ts_user.isoformat(),
-            "uuid": user_msg_uuid,
-            "trace_id": trace_id,
-        },
-    )
+    persist_user_row_in_loop = not loop_input.caller_persisted_user_transcript
+    if persist_user_row_in_loop:
+        append_transcript_user_row(
+            store,
+            transcript_rel,
+            TranscriptUserRowBuildInput(
+                content=loop_input.user_text,
+                uuid=user_msg_uuid,
+                trace_id=trace_id,
+            ),
+            ts=loop_input.ts_user.isoformat(),
+        )
     working_messages = deepcopy(list(loop_input.messages))
     loop_tools = list(loop_input.tools_for_turn)
     chat_model = loop_input.llm_client.resolve_model("chat")
@@ -214,6 +233,9 @@ async def run_in_turn_sync_tool_loop(
         nonlocal last_interim_assistant_msg_uuid
         round_index += 1
         body = (message.content or "").strip()
+        # TODO(#3457): Deliver interim chat while tools run — when body is empty but
+        # tool_calls present, resolve visible text so user is not silent during tool
+        # execution (!3456).
         if not body:
             return
         had_tool_calls = bool(getattr(message, "tool_calls", None) or [])
@@ -235,7 +257,9 @@ async def run_in_turn_sync_tool_loop(
         last_interim_assistant_msg_uuid = assistant_msg_uuid
         if not had_tool_calls:
             skip_final_transcript_assistant_row = True
-        if interim_sink is not None and had_tool_calls:
+        if interim_sink is not None and (
+            loop_input.emit_every_assistant_round or had_tool_calls
+        ):
             await interim_sink(
                 BootstrapInterimOutput(
                     text=body,
@@ -282,6 +306,7 @@ async def run_in_turn_sync_tool_loop(
         langsmith_run_id=langsmith_llm_run_acc,
         skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
         last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
+        loop_persisted_user_transcript=persist_user_row_in_loop,
     )
 
 
@@ -289,6 +314,8 @@ async def run_bootstrap_track_sync_tool_loop(
     loop_input: BootstrapInTurnSyncToolLoopInput,
 ) -> InTurnSyncToolLoopResult:
     """Bootstrap track wrapper around :func:`run_in_turn_sync_tool_loop`."""
+    # TODO(#3466): Treat non-queue bootstrap as backup-only; record discovered
+    # behavior risks, but do not let this path shape the new AgenticLoop API.
     from app.core.companion_harness.tools.companion_tool_definitions import (
         MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
     )
@@ -323,9 +350,11 @@ async def run_bootstrap_track_sync_tool_loop(
             user_msg_uuid=loop_input.user_msg_uuid,
             transcript_rel=loop_input.transcript_rel,
             interim_output_sink=loop_input.bootstrap_interim_output_sink,
+            emit_every_assistant_round=False,
             langsmith_slice=loop_input.langsmith_slice,
             max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
             after_tool_messages_appended=_bootstrap_after_tool_round,
+            caller_persisted_user_transcript=False,
         )
     )
     logger.info(

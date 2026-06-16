@@ -162,6 +162,10 @@ def companion_system_messages_for_track(
                 memory_bootstrap_type,
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
+            # TODO(#3463): Compose proactive as overlay on base track prefix — during
+            # bootstrap reuse ``build_system_messages_for_bootstrap_track``, then append
+            # proactive-only slices; do not rely on ``interactive_bootstrap_active`` alone
+            # (``_persona_system_messages`` also requires ``not inner_tick_turn``).
             out = build_system_messages_for_inner_tick_proactive_chat(
                 bundle, context, store
             )

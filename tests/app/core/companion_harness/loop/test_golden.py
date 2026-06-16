@@ -35,7 +35,7 @@ async def test_golden_scenario_runs(scenario: GoldenScenario) -> None:
     bundle = build_golden_scenario(scenario)
     channel = RecordingChannelAdapter()
     result = await run_agentic_loop(
-        bundle.loop_input,
+        bundle.loop_context,
         llm_loop_mode=_mode_for(scenario),
         channel=channel,
     )

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.transcript_compaction import (
@@ -32,6 +33,14 @@ from app.core.companion_harness.memory.transcript_compaction import (
 from .llm_client import CompanionLLMClient
 from .runtime_channel import TurnRuntimeContext
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
+
+if TYPE_CHECKING:
+    from app.core.companion_harness.agentic_companion.output_queue import (
+        OutputQueue,
+    )
+    from app.core.companion_harness.agentic_companion.types import (
+        UserMessageBatch,
+    )
 
 
 @dataclass(frozen=True)
@@ -120,11 +129,19 @@ class CompanionTurnDeps:
         uses ``CompanionSession.tool_bg_idle``.
 
     bootstrap_interim_output_sink
-        Async callback for ``USER_CHAT_BOOTSTRAP`` only: each in-turn sync tool-loop
-        round with non-empty assistant ``content`` is pushed immediately (WebSocket
-        interim frames) before the turn ends. All other tracks pass ``None``. Set
-        from ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink`` on
-        user chat only. TODO(#3402): ``UserVisibleChunkSink`` for all user-turn visible rounds.
+        Legacy non-queue ``USER_CHAT_BOOTSTRAP`` only: tool-round interim WebSocket
+        frames via ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink``.
+        Queue-serving bootstrap uses ``agentic_output_queue`` instead. TODO(#3402):
+        ``UserVisibleChunkSink`` for all user-turn visible rounds.
+
+    agentic_output_queue
+        Domain ``OutputQueue`` for queue-serving ``USER_CHAT`` / ``USER_CHAT_BOOTSTRAP``.
+        When set with ``user_message_batch``, ``run_turn`` routes through
+        ``AgenticLoop.run`` instead of dual-LLM or legacy bootstrap interim sink.
+
+    user_message_batch
+        Correlates ``OutputQueue`` appends with claimed input batch
+        (``batch_id`` + ``message_ids``). Required when ``agentic_output_queue`` is set.
     """
 
     store: MemoryStore
@@ -139,3 +156,5 @@ class CompanionTurnDeps:
     langsmith_parent_run_enabled: bool | None
     tool_bg_idle_event: threading.Event | None
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None
+    agentic_output_queue: OutputQueue | None = None
+    user_message_batch: UserMessageBatch | None = None

@@ -164,7 +164,7 @@ async def test_output_queue_append_claim_and_deliver() -> None:
                     kind=DownlinkKind.USER_REPLY,
                     text="hello back",
                     created_at_utc=datetime.now(timezone.utc),
-                    in_reply_to_input_ids=("in-1",),
+                    message_ids=("in-1",),
                 )
             )
             await db.commit()

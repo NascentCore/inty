@@ -161,6 +161,10 @@ class CompanionTurnResult(BaseModel):
             "HTTP/WS payload."
         ),
     )
+    output_message_ids: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description="OutputQueue message ids appended during AgenticLoop queue-serving turns.",
+    )
     assistant_source: AssistantTurnSource = "chat"
     inner_tick_activity: str | None = Field(
         default=None,
@@ -355,7 +359,9 @@ def load_prompt_bundle(
             "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         channels_md=_read_memory_document_required(store, "CHANNELS.md"),
-        companionship_md=_read_memory_document_required(store, "COMPANIONSHIP.md"),
+        companionship_md=_read_memory_document_required(
+            store, "COMPANIONSHIP.md"
+        ),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),

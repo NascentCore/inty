@@ -13,6 +13,9 @@ WebSocket interface is also used by iMate iOS and Android apps.
 ## Setup
 
 ```bash
+# Launch ops backend elsewhere
+# Remember to copy the bearer token in <repo_root>/.inty_ops_bearer_token
+# And update the .env file locally before starting repl.
 cd tools/inty_v2_repl/
 uv venv
 source .venv/bin/activate

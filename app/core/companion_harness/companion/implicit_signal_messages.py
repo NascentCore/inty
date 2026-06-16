@@ -25,10 +25,8 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 USER_SIGNED_ON_TRIGGER_USER_TEXT = (
     "## Implicit user signed on signal\n"
     "- The user has just come online in the chat session.\n"
-    "- If currently in bootstrap phase: open naturally as if you have just woken up; "
-    "lead the relationship-establishment flow proactively; ask one question at a time; "
-    "do not expose engineering or system details.\n"
-    "- If not in bootstrap phase: continue the conversation naturally with a brief, natural, warm greeting that fits the current conversation context.\n"
+    "- If in bootstrap phase, ask one question at a time, proactively drive the relationship-establishment flow;\n"
+    "- If not in bootstrap phase, continue the conversation naturally with a warm greeting that fits the current conversation context.\n"
 )
 
 MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON = "（用户上线：隐式客户端信号）"

@@ -1,4 +1,4 @@
-"""Companion LLM client: chat completions + plain text completions for curators.
+"""Companion LLM clients: legacy ``CompanionLLMClient`` and ``AsyncLlmClient`` for AgenticLoop.
 
 TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
 https://github.com/NascentCore/inty/issues/3409"""
@@ -6,15 +6,30 @@ https://github.com/NascentCore/inty/issues/3409"""
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import time
+from copy import deepcopy
 from typing import Any, Literal
 
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.companion_harness.companion.llm_inference_errors import (
+    log_and_build_inference_error,
+    raise_if_chat_completion_missing_choices,
+)
 from app.core.companion_harness.llm.chat_completions import (
+    OpenRouterInvalidJsonError,
     create_chat_completion_sync,
+)
+from app.core.companion_harness.llm.langsmith_completion_enrich import (
+    _ensure_langsmith_handle_container_end_patch,
+    completion_with_langsmith_trace_id,
+    reset_wrapped_llm_run_id_for_completion_attempt,
+)
+from app.core.companion_harness.llm.openrouter_tool_params import (
+    tool_path_chat_completion_kwargs,
 )
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     dreaming_consolidation_langsmith_extra,
@@ -22,12 +37,20 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
 from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
 from app.core.companion_harness.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
+    get_openai_compatible_async_client,
     get_openai_compatible_sync_client,
 )
 from app.core.companion_harness.companion.llm_runtime_events import (
     record_llm_inference_failure,
 )
-from app.utils.models_catalog import DEEPSEEK_V3_2, GenAIModel
+from app.utils.models_catalog import (
+    DEEPSEEK_V3_2,
+    GenAIModel,
+    resolve_chat_text_model,
+)
+
+_OPENROUTER_JSON_MAX_ATTEMPTS = 3
+_OPENROUTER_JSON_BACKOFF_SECONDS = (0.25, 0.75)
 
 LLM_SCENE_CHAT = "chat"
 LLM_SCENE_TOOL_CALL = "tool_call"
@@ -96,6 +119,7 @@ class CompanionLLMClient:
         self._client_dual_chat: Any | None = None
         self._client_dual_tool: Any | None = None
         self._client_inner_tick: Any | None = None
+        self._async_llm_client: AsyncLlmClient | None = None
 
     @property
     def config(self) -> CompanionLLMConfig:
@@ -147,6 +171,13 @@ class CompanionLLMClient:
                 )
             )
         return self._client_inner_tick
+
+    @property
+    def async_llm_client(self) -> AsyncLlmClient:
+        """Lazy ``AsyncLlmClient`` for AgenticLoop; one instance per ``CompanionLLMClient``."""
+        if self._async_llm_client is None:
+            self._async_llm_client = AsyncLlmClient(self._config)
+        return self._async_llm_client
 
     def sync_client_for_route(
         self, route: Literal["unified", "chat", "tool", "inner_tick"]
@@ -326,3 +357,105 @@ class CompanionLLMClient:
             )
             return ""
         return content.strip()
+
+
+class AsyncLlmClient:
+    """
+    Wraps the async OpenAI client to provide narrower and simpler interface.
+    To be used in AgenticLoop.
+    """
+
+    def __init__(self, config: CompanionLLMConfig) -> None:
+        self._config = config
+        self._async_client = get_openai_compatible_async_client(
+            OpenAICompatibleClientOptions(
+                api_key=config.api_key or None,
+                base_url=config.api_base or None,
+                wrap_langsmith=True,
+                chat_name="agentic_companion_async_chat",
+                completions_name="companion_AsyncOpenAI",
+            )
+        )
+
+    @property
+    def config(self) -> CompanionLLMConfig:
+        return self._config
+
+    def resolve_model(self, role: str) -> GenAIModel:
+        """Return catalog model for a config role, else ``default_model``."""
+        m: GenAIModel | None = getattr(self._config, f"{role}_model", None)
+        return m if m is not None else self._config.default_model
+
+    async def chat_completion(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        tool_choice: str | None,
+        model: GenAIModel | None = None,
+        langsmith_extra: dict[str, Any] | None = None,
+        high_reasoning: bool = False,
+    ) -> Any:
+        """Execute one single-LLM prompt; caller owns the wire message context."""
+        _ensure_langsmith_handle_container_end_patch()
+        chat_model = model or self.resolve_model("chat")
+        api_model = chat_model.id_on_provider
+        create_kw: dict[str, Any] = {
+            "model": api_model,
+            "messages": deepcopy(messages),
+        }
+        if langsmith_extra:
+            create_kw["langsmith_extra"] = langsmith_extra
+        if high_reasoning:
+            create_kw.update(
+                tool_path_chat_completion_kwargs(
+                    resolve_chat_text_model(api_model)
+                )
+            )
+        tool_list = list(tools)
+        if tool_list:
+            create_kw["tools"] = tool_list
+            create_kw["parallel_tool_calls"] = True
+            if tool_choice is not None:
+                create_kw["tool_choice"] = tool_choice
+        for attempt in range(1, _OPENROUTER_JSON_MAX_ATTEMPTS + 1):
+            try:
+                reset_wrapped_llm_run_id_for_completion_attempt()
+                raw = await self._async_client.chat.completions.create(
+                    **create_kw
+                )
+                enriched = completion_with_langsmith_trace_id(raw)
+                raise_if_chat_completion_missing_choices(
+                    enriched, model=api_model
+                )
+                return enriched
+            except json.JSONDecodeError as exc:
+                retryable = attempt < _OPENROUTER_JSON_MAX_ATTEMPTS
+                logger.warning(
+                    "AsyncLlmClient invalid_json_response model={} attempt={}/{} "
+                    "retryable={} err={}",
+                    api_model,
+                    attempt,
+                    _OPENROUTER_JSON_MAX_ATTEMPTS,
+                    retryable,
+                    exc,
+                )
+                if retryable:
+                    delay = _OPENROUTER_JSON_BACKOFF_SECONDS[
+                        min(attempt - 1, 1)
+                    ]
+                    await asyncio.sleep(delay)
+                    continue
+                invalid_json_exc = OpenRouterInvalidJsonError(
+                    "OpenRouter returned a non-JSON response body "
+                    f"for model={api_model} after {_OPENROUTER_JSON_MAX_ATTEMPTS} attempts."
+                )
+                record_llm_inference_failure(
+                    model=api_model, exc=invalid_json_exc
+                )
+                raise invalid_json_exc from exc
+            except Exception as exc:
+                inf = log_and_build_inference_error(exc)
+                record_llm_inference_failure(model=api_model, exc=inf)
+                raise inf from exc
+        raise RuntimeError("unreachable")

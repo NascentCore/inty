@@ -62,3 +62,4 @@ Any forms of speculative features that does not fit the current prototype state.
 
 - All external system dependencies should be wrapped in custom class to hide all interfaces and only expose needed ones.
 - Use named `dataclass` types to pass data between functions
+- All remote API calls should be async

@@ -1,4 +1,8 @@
-"""1-LLM agentic loop mechanism (delegates ``run_in_turn_sync_tool_loop``)."""
+"""1-LLM agentic loop mechanism (delegates ``run_in_turn_sync_tool_loop``).
+
+TODO(#3460): Inline this logic into AgenticLoop.run_single_llm_user_turn()
+and delete this sidecar mechanism.
+"""
 
 from __future__ import annotations
 
@@ -8,16 +12,16 @@ from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
 )
 
 from ..contract import AgenticLoopOutput, AgenticLoopRunBundle
-from ..sink_adapters import make_bootstrap_interim_sink
+from ..sink_adapters import make_user_reply_per_call_sink
 
 
 class OneModelInTurnSyncMechanism:
     """In-turn single-LLM sync tool loop with per-call-streaming interim + terminal."""
 
     async def run(self, bundle: AgenticLoopRunBundle) -> AgenticLoopOutput:
-        loop_input = bundle.loop_input
+        loop_input = bundle.loop_context
         output_queue = bundle.output_queue
-        interim_sink = make_bootstrap_interim_sink(output_queue)
+        interim_sink = make_user_reply_per_call_sink(output_queue)
         sync_result = await run_in_turn_sync_tool_loop(
             InTurnSyncToolLoopInput(
                 store=loop_input.store,
@@ -33,9 +37,11 @@ class OneModelInTurnSyncMechanism:
                 user_msg_uuid=loop_input.user_msg_uuid,
                 transcript_rel=loop_input.transcript_rel,
                 interim_output_sink=interim_sink,
+                emit_every_assistant_round=False,
                 langsmith_slice=loop_input.langsmith_slice,
                 max_tool_rounds=loop_input.max_tool_rounds,
                 after_tool_messages_appended=loop_input.after_tool_messages_appended,
+                caller_persisted_user_transcript=False,
             )
         )
         terminal_text = sync_result.assistant_text.strip()
@@ -52,4 +58,5 @@ class OneModelInTurnSyncMechanism:
                 sync_result.skip_final_transcript_assistant_row
             ),
             tool_background_started=False,
+            last_interim_assistant_msg_uuid=sync_result.last_interim_assistant_msg_uuid,
         )

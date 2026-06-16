@@ -13,6 +13,9 @@ Regenerate from repo root::
 This trace's intermediate LLM rounds have empty ``message.content``; tests may
 normalize interim visible text from tool ``arguments.text`` to exercise the
 delivery pipeline (not to reproduce production interim copy for that trace).
+
+TODO(#3457): Promote interim-visible-text helper so user chat keeps talking while
+tools execute — parent !3456.
 """
 
 from __future__ import annotations
@@ -27,7 +30,9 @@ from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
 )
-from app.core.companion_harness.loop.parity.fixtures import FakeSyncToolLoopLLMClient
+from app.core.companion_harness.loop.parity.fixtures import (
+    FakeSyncToolLoopLLMClient,
+)
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 _TRACE_ID = "019ec520-b7b5-7ab1-bf7d-38f5c9730dda"
@@ -57,14 +62,17 @@ def llm_runs_for_in_turn_replay(trace: dict[str, Any]) -> list[dict[str, Any]]:
     runs = [
         r
         for r in trace.get("runs", [])
-        if r.get("run_type") == "llm" and r.get("name") not in _EXCLUDED_RUN_NAMES
+        if r.get("run_type") == "llm"
+        and r.get("name") not in _EXCLUDED_RUN_NAMES
     ]
     runs.sort(key=lambda r: r.get("start_time") or "")
     assert len(runs) >= _IN_TURN_REPLAY_LLM_COUNT
     return runs[:_IN_TURN_REPLAY_LLM_COUNT]
 
 
-def completion_from_langsmith_outputs(outputs: dict[str, Any]) -> SimpleNamespace:
+def completion_from_langsmith_outputs(
+    outputs: dict[str, Any],
+) -> SimpleNamespace:
     """Map LangSmith chat completion outputs to OpenAI-shaped ``SimpleNamespace``."""
     choices = outputs.get("choices")
     assert isinstance(choices, list) and choices
@@ -128,7 +136,9 @@ def interim_visible_text(completion: SimpleNamespace) -> str:
     return _tool_argument_text(fn.arguments or "")
 
 
-def normalize_completion_for_interim(completion: SimpleNamespace) -> SimpleNamespace:
+def normalize_completion_for_interim(
+    completion: SimpleNamespace,
+) -> SimpleNamespace:
     """When tool-only response has empty content, fill content for interim sink tests."""
     message = completion.choices[0].message
     body = (message.content or "").strip()

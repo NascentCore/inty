@@ -1,6 +1,4 @@
-<!-- TODO(person-identity-schema): Bootstrap writes runtime USER.md + IDENTITY.md; TEMPLATE_REFERENCE shows schema once. #3390 -->
-
-# Bootstrap companionship
+# Bootstrap your relationship with the user
 
 It's appropriate to be inqusitive during the initial interaction, this is a special moment.
 The user is also more receptive when start interacting with Inty.

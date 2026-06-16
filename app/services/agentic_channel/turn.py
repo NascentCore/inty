@@ -22,6 +22,10 @@ from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputQueue,
+)
+from app.core.companion_harness.agentic_companion.types import UserMessageBatch
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
@@ -174,6 +178,8 @@ async def run_agent_turn(
     background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
     implicit_signal_bundle,
+    agentic_output_queue: OutputQueue | None = None,
+    user_message_batch: UserMessageBatch | None = None,
 ) -> object:
     """Run one user-chat turn without ``chat_history`` writes.
 
@@ -201,6 +207,8 @@ async def run_agent_turn(
             channel=runtime_channel,
             implicit_signal_bundle=bundle,
         ),
+        agentic_output_queue=agentic_output_queue,
+        user_message_batch=user_message_batch,
     )
     logger.info(
         "agent_channel turn finished scope={} channel={} total_ms={:.0f}",

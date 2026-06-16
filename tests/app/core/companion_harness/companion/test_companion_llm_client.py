@@ -9,10 +9,143 @@ import pytest
 
 from app.core.companion_harness.companion import llm_client as llm_client_module
 from app.core.companion_harness.companion.llm_client import (
+    AsyncLlmClient,
     CompanionLLMClient,
     CompanionLLMConfig,
 )
 from app.core.companion_harness.providers.openai_compatible_clients import OpenAICompatibleClientOptions
+
+
+@pytest.mark.asyncio
+async def test_async_llm_client_is_distinct_class_with_chat_completion() -> None:
+    assert AsyncLlmClient is not CompanionLLMClient
+    captured: dict[str, Any] = {}
+
+    class _FakeCompletions:
+        async def create(self, **kwargs: Any) -> Any:
+            captured.update(kwargs)
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="ok"))]
+            )
+
+    class _FakeChat:
+        completions = _FakeCompletions()
+
+    class _FakeAsyncClient:
+        chat = _FakeChat()
+
+    client = AsyncLlmClient(CompanionLLMConfig(api_key="test-key"))
+    client._async_client = _FakeAsyncClient()  # noqa: SLF001
+    messages = [{"role": "user", "content": "hi"}]
+    tools = [{"type": "function", "function": {"name": "generate_image"}}]
+    result = await client.chat_completion(
+        messages=messages,
+        tools=tools,
+        tool_choice=None,
+        high_reasoning=True,
+    )
+
+    assert captured["messages"] == messages
+    assert captured["tools"] == tools
+    assert "tool_choice" not in captured
+    assert captured["parallel_tool_calls"] is True
+    assert captured["extra_body"] == {
+        "reasoning": {"effort": "high", "exclude": True}
+    }
+    assert result.choices[0].message.content == "ok"
+
+
+@pytest.mark.asyncio
+async def test_async_llm_client_passes_langsmith_extra() -> None:
+    captured: dict[str, Any] = {}
+
+    class _FakeCompletions:
+        async def create(self, **kwargs: Any) -> Any:
+            captured.update(kwargs)
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="ok"))]
+            )
+
+    class _FakeChat:
+        completions = _FakeCompletions()
+
+    class _FakeAsyncClient:
+        chat = _FakeChat()
+
+    client = AsyncLlmClient(CompanionLLMConfig(api_key="test-key"))
+    client._async_client = _FakeAsyncClient()  # noqa: SLF001
+    langsmith_extra = {
+        "metadata": {"inty_llm_source": "single_completion"},
+    }
+    await client.chat_completion(
+        messages=[{"role": "user", "content": "hi"}],
+        tools=[],
+        tool_choice=None,
+        langsmith_extra=langsmith_extra,
+    )
+
+    assert captured["langsmith_extra"] == langsmith_extra
+
+
+def test_companion_llm_client_reuses_async_llm_client() -> None:
+    companion = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
+    first = companion.async_llm_client
+    second = companion.async_llm_client
+    assert first is second
+
+
+def test_async_llm_client_instances_share_cached_http_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.companion_harness.providers import (
+        openai_compatible_clients as occ_mod,
+    )
+
+    build_count = 0
+    original_build = occ_mod._build_openai_compatible_async_client
+
+    def _counting_build(options: OpenAICompatibleClientOptions) -> Any:
+        nonlocal build_count
+        build_count += 1
+        return original_build(options=options)
+
+    with occ_mod._CLIENT_CACHE_LOCK:
+        occ_mod._CLIENT_CACHE.clear()
+    monkeypatch.setattr(
+        occ_mod,
+        "_build_openai_compatible_async_client",
+        _counting_build,
+    )
+    cfg = CompanionLLMConfig(api_key="test-key")
+    first = AsyncLlmClient(cfg)
+    second = AsyncLlmClient(cfg)
+
+    assert first._async_client is second._async_client  # noqa: SLF001
+    assert build_count == 1
+
+
+def test_async_llm_client_uses_langsmith_wrapper_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_options: list[OpenAICompatibleClientOptions] = []
+
+    def _fake_get_client(options: OpenAICompatibleClientOptions) -> Any:
+        captured_options.append(options)
+        return object()
+
+    monkeypatch.setattr(
+        llm_client_module,
+        "get_openai_compatible_async_client",
+        _fake_get_client,
+    )
+
+    AsyncLlmClient(CompanionLLMConfig(api_key="test-key"))
+
+    assert len(captured_options) == 1
+    options = captured_options[0]
+    assert options.wrap_langsmith is True
+    assert options.chat_name == "agentic_companion_async_chat"
+    assert options.completions_name == "companion_AsyncOpenAI"
 
 
 def test_companion_llm_clients_use_distinct_langsmith_chat_names(

@@ -21,7 +21,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
 | ASYNC autonomy inner tick (silent self-directed work) | ``build_system_messages_for_inner_tick_autonomy`` |
-| Proactive inner tick (``PROACTIVE_CHAT``) | ``build_system_messages_for_inner_tick_proactive_chat`` |
+| Proactive inner tick (``PROACTIVE_CHAT``) | ``build_system_messages_for_inner_tick_proactive_chat`` (bootstrap: inject ``BOOTSTRAP.md`` — #3463) |
 | Scheduled reminder inner tick | ``build_system_messages_for_inner_tick_scheduled`` |
 | Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` (bootstrap: inject ``BOOTSTRAP.md``, omit ``TOOLS.md``; chat-only, no tools) |
 
@@ -81,6 +81,7 @@ from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
 from ..models import ContextMeta, InnerTickActivity
+
 
 def _inner_tick_proactive_chat(
     inner_tick_turn: bool, inner_tick_activity: InnerTickActivity
@@ -216,6 +217,10 @@ def _output_contract_text_with_tools(
     *,
     tool_side_compact: bool = False,
 ) -> str:
+    # TODO(#3458): User chat must include brief user-facing ``message.content`` when
+    # starting tool_calls so user is not silent during tool execution — !3456.
+    # TODO(#3470): Interim lines during bootstrap writes should sound like chatting
+    # while working, not repeated「我在记档案 / 已上线」status; trace 019ed445-8195-7b93-bbf4-c23dd5b8ebf4.
     base = (
         "输出与工具："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
@@ -262,9 +267,8 @@ def _output_contract_text_with_tools(
 
 def _output_contract_text_interactive_bootstrap_tools() -> str:
     base = (
-        "输出与工具（交互式关系建立阶段）："
-        + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        # TODO(structured-memdoc-names): Use template variable and MemoryDoc name variable to assemble this line.
+        "输出与工具（交互式关系建立阶段）：" + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
+        # TODO(#3453): Use ``PromptTemplate`` + MemoryDoc name variables for this line.
         + "（0）本阶段用 **memory_store_write_document** 把 **COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
         "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
         "即使用户配合度低，也基于已有对话写 best-effort 初稿，不可留空模板。"
@@ -632,10 +636,7 @@ def _persona_system_messages(
         _system_message(bundle.soul.strip()),
         _system_message(bundle.style_md.strip()),
     ]
-    if (
-        not interactive_bootstrap_active
-        and bundle.companionship_md.strip()
-    ):
+    if not interactive_bootstrap_active and bundle.companionship_md.strip():
         out.append(
             _system_message(
                 COMPANIONSHIP_SYSTEM_HEADING + bundle.companionship_md.strip()
@@ -664,6 +665,7 @@ def _persona_system_messages(
                     MEMORY_SYSTEM_HEADING_SEMANTIC + bundle.memory_md.strip()
                 )
             )
+    # TODO(#3463): Also inject bootstrap spec on proactive inner ticks while bootstrap active.
     if interactive_bootstrap_active and not inner_tick_turn:
         out.append(_system_message(load_bootstrap_spec_text()))
         out.append(_system_message(build_bootstrap_tool_call_section()))
@@ -730,12 +732,17 @@ def _contextual_system_messages(
     repl_online_ack_turn: bool,
     ai_private_text: str,
     proactive_life_currents_block: str | None,
+    interactive_bootstrap_active: bool,
 ) -> list[dict[str, Any]]:
     # TODO(experience-profile): collapse harness context_mode user-facing clause into
     # experience_directives when intent is set (#3343).
-    out: list[dict[str, Any]] = [
-        _system_message(experience_profile_system_clause(context.context_mode)),
-    ]
+    out: list[dict[str, Any]] = []
+    if not interactive_bootstrap_active:
+        out.append(
+            _system_message(
+                experience_profile_system_clause(context.context_mode)
+            )
+        )
     directive_clause = experience_directives_system_clause(
         context.experience_directives
     )
@@ -832,6 +839,7 @@ def build_system_messages(
             repl_online_ack_turn=repl_online_ack_turn,
             ai_private_text=ai_private_text,
             proactive_life_currents_block=proactive_life_currents_block,
+            interactive_bootstrap_active=interactive_bootstrap_active,
         )
     )
     return out
@@ -971,6 +979,7 @@ def build_system_messages_for_inner_tick_autonomy(
             repl_online_ack_turn=False,
             ai_private_text="",
             proactive_life_currents_block=None,
+            interactive_bootstrap_active=False,
         )
     )
     return out
@@ -989,6 +998,10 @@ def build_system_messages_for_inner_tick_proactive_chat(
     as a "for reference only" system block so the assistant can naturally
     weave today's small thing into the next proactive message without
     self-advertising.
+
+    TODO(#3463): When ``interactive_bootstrap_active`` during bootstrap, inject
+    ``BOOTSTRAP.md`` and bootstrap-oriented proactive copy so idle nudges finish
+    info gathering instead of generic small talk.
     """
     return build_system_messages(
         bundle,

@@ -100,6 +100,9 @@ def _build_openai_compatible_async_client(
             api_key=options.api_key,
             default_headers=options.default_headers,
             timeout=options.timeout,
+            wrap_langsmith=options.wrap_langsmith,
+            chat_name=options.chat_name,
+            completions_name=options.completions_name,
             use_fake_openai=options.use_fake_openai,
         )
     )

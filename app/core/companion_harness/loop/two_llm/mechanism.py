@@ -1,4 +1,8 @@
-"""2-LLM agentic loop mechanism (fg + in-process tool leg)."""
+"""2-LLM agentic loop mechanism (fg + in-process tool leg).
+
+TODO(#3460): Inline this logic into AgenticLoop.run_dual_llm_user_turn()
+and delete this sidecar mechanism.
+"""
 
 from __future__ import annotations
 
@@ -20,9 +24,15 @@ from app.core.companion_harness.companion.llm_client import (
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
 )
-from app.core.companion_harness.tools.tool_background import run_tool_background_loop
+from app.core.companion_harness.tools.tool_background import (
+    run_tool_background_loop,
+)
 
-from ..contract import AgenticLoopInput, AgenticLoopOutput, AgenticLoopRunBundle
+from ..contract import (
+    AgenticLoopOutput,
+    AgenticLoopRunBundle,
+    LegacyAgenticLoopContext,
+)
 from ..sink_adapters import ToolBackgroundEventSink
 
 
@@ -30,7 +40,7 @@ class TwoModelChatThenToolBgMechanism:
     """Dual-LLM foreground envelope + in-process ``run_tool_background_loop``."""
 
     async def run(self, bundle: AgenticLoopRunBundle) -> AgenticLoopOutput:
-        loop_input = bundle.loop_input
+        loop_input = bundle.loop_context
         output_queue = bundle.output_queue
         chat_msgs, tool_msgs = _resolve_dual_llm_message_stacks(loop_input)
         chat_model = loop_input.llm_client.resolve_model("chat")
@@ -89,8 +99,8 @@ class TwoModelChatThenToolBgMechanism:
             companion_turn_track=loop_input.companion_turn_track,
             force_tools_first_round=fg_result.force_tools_first_round,
         )
-        # TODO(#3398): production ``turn.py`` uses ``start_tool_background_job`` (thread);
-        # sidecar uses in-process ``await`` — add ``ThreadToolLegAdapter`` at integration.
+        # TODO(#3460): Move this in-process tool leg into
+        # AgenticLoop.run_dual_llm_user_turn(); do not keep a separate mechanism API.
         await event_sink.flush()
         return AgenticLoopOutput(
             assistant_text=fg_result.assistant_text,
@@ -101,41 +111,42 @@ class TwoModelChatThenToolBgMechanism:
             deliverables=output_queue.deliverables,
             skip_final_transcript_assistant_row=False,
             tool_background_started=True,
+            last_interim_assistant_msg_uuid=None,
         )
 
 
 def _resolve_dual_llm_message_stacks(
-    loop_input: AgenticLoopInput,
+    loop_context: LegacyAgenticLoopContext,
 ) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:
     if (
-        loop_input.dual_llm_chat_msgs is not None
-        and loop_input.dual_llm_tool_msgs is not None
+        loop_context.dual_llm_chat_msgs is not None
+        and loop_context.dual_llm_tool_msgs is not None
     ):
-        return loop_input.dual_llm_chat_msgs, loop_input.dual_llm_tool_msgs
-    assert loop_input.prompt_bundle is not None
-    assert loop_input.context_meta is not None
+        return loop_context.dual_llm_chat_msgs, loop_context.dual_llm_tool_msgs
+    assert loop_context.prompt_bundle is not None
+    assert loop_context.context_meta is not None
     tool_system_msgs, chat_system_msgs = dual_llm_system_message_variants(
-        store=loop_input.store,
-        bundle=loop_input.prompt_bundle,
-        context=loop_input.context_meta,
-        memory_bootstrap_type=loop_input.memory_bootstrap_type,
-        inner_tick_turn=loop_input.inner_tick_turn,
-        route_inner_activity=loop_input.inner_tick_activity,
-        runtime_context=loop_input.runtime_context,
+        store=loop_context.store,
+        bundle=loop_context.prompt_bundle,
+        context=loop_context.context_meta,
+        memory_bootstrap_type=loop_context.memory_bootstrap_type,
+        inner_tick_turn=loop_context.inner_tick_turn,
+        route_inner_activity=loop_context.inner_tick_activity,
+        runtime_context=loop_context.runtime_context,
     )
-    base_messages = list(loop_input.openai_messages)
+    base_messages = list(loop_context.openai_messages)
     chat_msgs = tuple(
         replace_leading_system_messages_multi(
             base_messages,
             chat_system_msgs,
-            stack_depth=loop_input.stack_depth,
+            stack_depth=loop_context.stack_depth,
         )
     )
     tool_msgs = tuple(
         replace_leading_system_messages_multi(
             base_messages,
             tool_system_msgs,
-            stack_depth=loop_input.stack_depth,
+            stack_depth=loop_context.stack_depth,
         )
     )
     return chat_msgs, tool_msgs

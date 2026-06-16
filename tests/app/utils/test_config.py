@@ -278,9 +278,22 @@ def test_features_config_companion_transcript_compaction_null_disables():
     assert f.companion_transcript_compaction is None
 
 
-def test_features_config_companion_harness_dreaming_idle_seconds() -> None:
-    f = FeaturesConfig(companion_harness={"dreaming_idle_seconds": 33})
-    assert f.companion_harness.dreaming_idle_seconds == 33
+def test_agent_config_companion_harness_settings() -> None:
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={
+            "dreaming_idle_seconds": 33,
+            "user_feedback_github": {
+                "repo": "nascentcore/test",
+                "token": "gh_test",
+            },
+        },
+    )
+
+    assert agent.companion_harness.dreaming_idle_seconds == 33
+    assert agent.companion_harness.user_feedback_github.repo == "nascentcore/test"
+    assert agent.companion_harness.user_feedback_github.token == "gh_test"
 
 
 def test_features_config_uses_pydantic_validation():

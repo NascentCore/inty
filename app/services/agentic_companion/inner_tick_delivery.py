@@ -9,6 +9,9 @@ from dataclasses import dataclass
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
+from app.core.companion_harness.loop.agentic_loop import (
+    user_visible_assistant_text,
+)
 
 WeixinAssistantTextSink = Callable[[str], Awaitable[None]]
 TelegramAssistantTextSink = Callable[[str], Awaitable[None]]
@@ -48,18 +51,17 @@ async def deliver_inner_tick_assistant(
     assistant_text: str,
 ) -> None:
     """Push a full WS frame and/or plain channel text after history is persisted."""
+    visible = user_visible_assistant_text(assistant_text)
+    if visible is None:
+        return
     # TODO(companion-ws-inner-tick-downlink): enqueue via WebSocketDownlink.deliver, not raw put. #3210 #3398
     if delivery.ws_outbound_queue is not None:
         assert ws_payload is not None
         await delivery.ws_outbound_queue.put(ws_payload)
     if delivery.weixin_assistant_text is not None:
-        stripped = assistant_text.strip()
-        if stripped:
-            await delivery.weixin_assistant_text(stripped)
+        await delivery.weixin_assistant_text(visible)
     if delivery.telegram_assistant_text is not None:
-        stripped = assistant_text.strip()
-        if stripped:
-            await delivery.telegram_assistant_text(stripped)
+        await delivery.telegram_assistant_text(visible)
 
 
 def inner_tick_delivery_for_ws(

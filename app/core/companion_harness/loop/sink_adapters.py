@@ -1,4 +1,8 @@
-"""Sync tool_background ``on_event`` → async per-call-streaming deliver."""
+"""Sync tool_background ``on_event`` → async per-call-streaming deliver.
+
+TODO(#3460): Delete this sidecar adapter module when direct AgenticLoop
+user-turn methods write only to agentic_companion OutputQueue.
+"""
 
 from __future__ import annotations
 
@@ -22,6 +26,17 @@ def make_bootstrap_interim_sink(
 
     async def _sink(interim: BootstrapInterimOutput) -> None:
         await output_queue.push_bootstrap_interim(interim)
+
+    return _sink
+
+
+def make_user_reply_per_call_sink(
+    output_queue: AgenticLoopOutputQueue,
+) -> BootstrapInterimOutputSink:
+    """Build sink that per-call-streams each non-empty assistant text as ``USER_REPLY``."""
+
+    async def _sink(interim: BootstrapInterimOutput) -> None:
+        await output_queue.push_user_reply(assistant_text=interim.text)
 
     return _sink
 

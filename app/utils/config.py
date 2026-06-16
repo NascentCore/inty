@@ -3,7 +3,6 @@
 Use Pydantic models, instead of dataclass.
 """
 
-import math
 import os
 import sys
 from datetime import datetime
@@ -13,7 +12,14 @@ from typing import Any, List, Optional
 
 import yaml
 from loguru import logger
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.utils import models_catalog
 from app.core.companion_harness.experience_profile.context_mode import (
@@ -170,31 +176,6 @@ class CompanionMemoryBootstrapType(StrEnum):
 class FeaturesConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    class CompanionHarnessConfig(BaseModel):
-        # TODO(#3471): Add initial_token_budget and token_budget_stop_remaining fields.
-        # TODO: Change to Chinese OSS model when releasing to prod.
-        dreaming_llm: str = "google/gemini-3.5-flash"
-        dreaming_idle_seconds: int = Field(
-            default=7200,
-            ge=1,
-            description=(
-                "Min seconds since the latest real user message before "
-                "``dreaming_due`` may run. Independent of the once-per-UTC-day cap "
-                "(see ``companion.dreaming`` module doc)."
-            ),
-        )
-        user_feedback_github_repo: str = Field(
-            default="nascentcore/inty",
-            description="GitHub repo (owner/name) for companion user-feedback issues.",
-        )
-        user_feedback_github_token: str = Field(
-            default="",
-            description=(
-                "GitHub PAT for ``companion_record_user_feedback`` issue creation; "
-                "empty uses ``GH_TOKEN`` env; both empty skips issue filing."
-            ),
-        )
-
     experimental_enable_chat_with_user_time_context: bool = True
     # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
     enable_selfie_persona_summary: bool = True
@@ -242,10 +223,6 @@ class FeaturesConfig(BaseModel):
     companion_implicit_sign_on_greeting_llm_timeout_sec: float = 12.0
     # Max LLM attempts for that greeting (includes the first call; 2 = one retry).
     companion_implicit_sign_on_greeting_llm_max_attempts: int = 2
-    # TODO: Move existing companion harness configs into CompanionHarnessConfig.
-    companion_harness: CompanionHarnessConfig = Field(
-        default_factory=CompanionHarnessConfig
-    )
 
     @model_validator(mode="after")
     def normalize_companion_fields(self) -> "FeaturesConfig":
@@ -298,7 +275,9 @@ class FeaturesConfig(BaseModel):
                 "app.features.companion_implicit_sign_on_greeting_llm_timeout_sec "
                 "must be between 1 and 60"
             )
-        greet_attempts = self.companion_implicit_sign_on_greeting_llm_max_attempts
+        greet_attempts = (
+            self.companion_implicit_sign_on_greeting_llm_max_attempts
+        )
         if greet_attempts < 1 or greet_attempts > 5:
             raise ValueError(
                 "app.features.companion_implicit_sign_on_greeting_llm_max_attempts "
@@ -372,9 +351,14 @@ class AppConfig(BaseModel):
         image_compression_threshold_size_kb: int = 500
 
         @model_validator(mode="after")
-        def auto_correct_voice_and_guest_limits(self) -> "AppConfig.LimitsConfig":
+        def auto_correct_voice_and_guest_limits(
+            self,
+        ) -> "AppConfig.LimitsConfig":
             """Sync voice limits to chat limits; reset guest>free to defaults."""
-            if self.guest_user_voice_24h_limit != self.guest_user_chat_24h_limit:
+            if (
+                self.guest_user_voice_24h_limit
+                != self.guest_user_chat_24h_limit
+            ):
                 logger.warning(
                     "Config issue: guest_user_voice_24h_limit "
                     f"({self.guest_user_voice_24h_limit}) "
@@ -491,8 +475,64 @@ class AgentConfig(BaseModel):
     # OpenAI-compatible endpoint; use OPENROUTER_BASE_URL to invoke e.g. google/gemini-2.5-flash-lite via OpenRouter.
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
     base_url: str = OPENROUTER_BASE_URL
-    channels: AgentChannelsConfig = Field(
-        default_factory=AgentChannelsConfig
+    channels: AgentChannelsConfig = Field(default_factory=AgentChannelsConfig)
+
+    class CompanionHarnessConfig(BaseModel):
+        # TODO: Change to Chinese OSS model when releasing to prod.
+        dreaming_llm: str = Field(
+            default="google/gemini-3.5-flash",
+            description="The model to use for dreaming.",
+        )
+        dreaming_idle_seconds: int = Field(
+            default=7200,
+            ge=1,
+            description=(
+                "Min seconds since the latest real user message before "
+                "``dreaming_due`` may run. Independent of the once-per-UTC-day cap "
+                "(see ``companion.dreaming`` module doc)."
+            ),
+        )
+
+        class UserFeedbackGithubConfig(BaseModel):
+            repo: str = Field(
+                default="nascentcore/inty",
+                description="GitHub repo (owner/name) for companion user-feedback issues.",
+            )
+            token: str = Field(
+                default="",
+                description=(
+                    "GitHub PAT for ``companion_record_user_feedback`` issue creation; "
+                    "empty uses ``GH_TOKEN`` env; both empty skips issue filing."
+                ),
+            )
+
+        user_feedback_github: UserFeedbackGithubConfig = Field(
+            default_factory=UserFeedbackGithubConfig
+        )
+
+        class UserTurnConfig(BaseModel):
+            llm_loop_mode: str = Field(
+                default="dual_llm",
+                description=(
+                    "Settled user-chat agentic loop mode: "
+                    "in_turn_single_llm | dual_llm"
+                ),
+            )
+
+            @field_validator("llm_loop_mode")
+            @classmethod
+            def _validate_llm_loop_mode(cls, value: str) -> str:
+                from app.core.companion_harness.loop.config import (
+                    UserTurnLlmLoopMode,
+                )
+
+                UserTurnLlmLoopMode(value)
+                return value
+
+        user_turn: UserTurnConfig = Field(default_factory=UserTurnConfig)
+
+    companion_harness: CompanionHarnessConfig = Field(
+        default_factory=CompanionHarnessConfig
     )
     # Chat 专用 LLM 端点（可选）。若两者均配置则 Agent 聊天使用此端点，否则使用 base_url + api_key。记忆抽取始终使用 base_url + api_key。
     # TODO(abstraction): Can be removed, replaced with GenAIModel with embedded provider.
@@ -880,8 +920,9 @@ class PhoneCallConfig(BaseModel):
             raise ValueError(
                 "phone_call.twilio_media_stream_base_url must start with wss://"
             )
-        if self.default_country_code and not self.default_country_code.startswith(
-            "+"
+        if (
+            self.default_country_code
+            and not self.default_country_code.startswith("+")
         ):
             raise ValueError(
                 "phone_call.default_country_code must start with '+'"

@@ -158,7 +158,7 @@ class GenAIModel(BaseModel):
     """
 
     nickname: str = Field(description="""
-        用于给非后端团队提供的名称，方便沟通和理解。
+        给所有人的通用名字（约定名字），方便沟通和理解。通常是简化过后的名字方便理解。
         计划在 app/utils/config.py 中使用这些名字来指代模型。
 
         这个名字可以包含空格，比如 "Nano Banana"。
@@ -460,7 +460,12 @@ GEMINI_3_5_FLASH = GenAIModel(
         official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-3",
     ),
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-3.5-flash&project=alien-paratext-461204-i9",
-    notes="GA Flash model (2026-05); supports thinking, tools, structured outputs, 1M context.",
+    notes="""
+        GA Flash model (2026-05); supports thinking, tools, structured outputs, 1M context.
+        Does not produce content in the initial round of tool-call,
+        which is not good for chat-like use cases.
+        TODO(#3456): User chat must not go silent while tools execute.
+    """,
 )
 
 

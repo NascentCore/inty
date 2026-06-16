@@ -14,9 +14,6 @@ app:
     subscribed_user_agent_creation_24h_limit: 10
   gcp_service_account_key: "inty-backend-key.json"
   min_app_version_code_for_festival_memory: 3345
-  features:
-    companion_harness:
-      user_feedback_github_token: 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
 
 sentry:
   # dev-inty/default
@@ -66,6 +63,9 @@ agent:
   # intellimate-dev project, inty-dev-shared api key, personal access token
   # 用于所有 dev 环境的 trace 记录
   langchain_api_key: "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"
+  companion_harness:
+    user_feedback_github:
+      token: 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
   # 与 Prod 环境配置保持一致，方便测试
   # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本）
   free_user_chat_image_model: "Z Image Turbo Image to Image"

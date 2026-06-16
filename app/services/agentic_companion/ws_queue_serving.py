@@ -19,9 +19,12 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.serving import (
     SendTextFn,
     UserChatTurnDeliveryResult,
-    deliver_pending_output_for_wire,
-    drain_scope_once_via_companion,
+    drain_and_deliver_user_chat_turn,
     enqueue_inbound_wire_message,
+)
+from app.services.agentic_channel.turn import ensure_memory_store_session
+from app.services.agentic_companion.ws_turn_support import (
+    image_asset_baseline_for_scope_store,
 )
 
 
@@ -31,6 +34,8 @@ class AppWsQueueDeliveryFlags:
 
     queue_message_id: str = ""
     tool_background_started: bool = False
+    image_asset_baseline: int = 0
+    image_asset_baseline_initialized: bool = False
 
 
 @dataclass(frozen=True)
@@ -63,22 +68,20 @@ async def run_app_ws_user_turn_via_queues(
     )
     queue_message_id = await enqueue_inbound_wire_message(inbound)
     queue_input.delivery_flags.queue_message_id = queue_message_id
-    drain_result = await drain_scope_once_via_companion(
+    session = await ensure_memory_store_session(queue_input.scope)
+    queue_input.delivery_flags.image_asset_baseline = (
+        image_asset_baseline_for_scope_store(session.store)
+    )
+    queue_input.delivery_flags.image_asset_baseline_initialized = True
+    result = await drain_and_deliver_user_chat_turn(
         queue_input.scope,
         runtime_channel=CompanionRuntimeChannel.APP,
+        delivery_wire_id=queue_input.wire_id,
         implicit_signal_bundle=queue_input.implicit_signal_bundle,
         background_output_sink=queue_input.background_output_sink,
-    )
-    queue_input.delivery_flags.tool_background_started = (
-        drain_result.tool_background_started
-    )
-    delivered_text = await deliver_pending_output_for_wire(
-        queue_input.scope,
-        delivery_channel=CompanionRuntimeChannel.APP,
-        delivery_wire_id=queue_input.wire_id,
         send_text=queue_input.send_text,
     )
-    return UserChatTurnDeliveryResult(
-        delivered_text=delivered_text,
-        tool_background_started=drain_result.tool_background_started,
+    queue_input.delivery_flags.tool_background_started = (
+        result.tool_background_started
     )
+    return result

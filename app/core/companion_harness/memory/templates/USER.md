@@ -1,5 +1,3 @@
-<!-- TODO(person-identity-schema): Remove package template; runtime USER.md seeded from templates/IDENTITY.md schema. #3390 -->
-
 # 用户档案
 
 *关于用户，我愿意记住的点点滴滴。*

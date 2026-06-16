@@ -1,4 +1,8 @@
-"""Project loop deliverables to channel-agnostic ``Downlink``."""
+"""Project loop deliverables to channel-agnostic ``Downlink``.
+
+TODO(#3460): Delete with loop/output_queue.py after direct AgenticLoop
+methods write user-visible content to agentic_companion OutputQueue.
+"""
 
 from __future__ import annotations
 
@@ -18,11 +22,15 @@ def project_deliverable(deliverable: LoopDeliverable) -> Downlink:
     match deliverable.kind:
         case LoopDeliverableKind.BOOTSTRAP_INTERIM:
             assert deliverable.bootstrap_interim is not None
-            return bootstrap_interim_downlink(interim=deliverable.bootstrap_interim)
+            return bootstrap_interim_downlink(
+                interim=deliverable.bootstrap_interim
+            )
         case LoopDeliverableKind.TOOL_BACKGROUND:
             assert deliverable.tool_output is not None
             return tool_background_downlink(tool_output=deliverable.tool_output)
-        case LoopDeliverableKind.FOREGROUND_TEXT | LoopDeliverableKind.USER_REPLY:
+        case (
+            LoopDeliverableKind.FOREGROUND_TEXT | LoopDeliverableKind.USER_REPLY
+        ):
             return Downlink(
                 kind=DownlinkKind.USER_REPLY,
                 assistant_text=deliverable.assistant_text,
@@ -37,7 +45,9 @@ def project_deliverable(deliverable: LoopDeliverable) -> Downlink:
                 transcript_user_text=None,
             )
         case _:
-            raise AssertionError(f"unknown deliverable kind: {deliverable.kind}")
+            raise AssertionError(
+                f"unknown deliverable kind: {deliverable.kind}"
+            )
 
 
 def _minimal_turn_result(

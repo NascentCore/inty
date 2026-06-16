@@ -62,6 +62,8 @@ Outbound — Hermes adapter entry points (this module only calls ``send`` today)
   render it.
 - ``send_image`` / ``send_image_file`` — native image bubble: encrypt, CDN upload,
   send reference.
+  TODO(weixin-outbound-image-transport): Expose this path through ``WeixinTransport``
+  for companion image downlinks — #3452
 - ``send_document`` — file attachment: same encrypted CDN upload flow.
 - ``send_video`` — video message: same encrypted CDN upload flow.
 
@@ -121,7 +123,6 @@ import contextvars
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any
 
 from gateway.config import PlatformConfig
 from gateway.platforms.base import MessageEvent

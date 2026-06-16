@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 
 from loguru import logger
 
@@ -23,26 +21,15 @@ from app.core.companion_harness.companion.turn_routes import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.turn import run_agent_turn
-from app.services.agentic_companion.downlink import DownlinkKind
 from app.utils.models_catalog import GenAIModel
 
-from .postgres_queue import (
-    PostgresInputQueueRepository,
-    PostgresOutputQueueRepository,
-)
-from .repositories import TranscriptProjector
-from .transcript_projection import MemoryStoreTranscriptProjector
+from .output_queue import get_output_queue_for_scope
+from .postgres_queue import PostgresInputQueueRepository
 from .types import (
-    AgentOutputMessage,
     AgenticCompanionInputBatch,
     AgenticCompanionRunResult,
+    UserMessageBatch,
 )
-
-_EMPTY_USER_REPLY_PLACEHOLDER = "（没有回复内容）"
-
-
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 def _batch_user_text(batch: AgenticCompanionInputBatch) -> str:
@@ -59,14 +46,13 @@ def _batch_input_ids(batch: AgenticCompanionInputBatch) -> tuple[str, ...]:
 
 @dataclass
 class AgenticCompanion:
-    """One AgentScope serving runtime: drain InputQueue, run turns, persist OutputQueue."""
+    """AgenticCompanion is the runtime of a companion, which responds to user messages and drives the autonomous activities of the agent.
+
+    One AgentScope serving runtime: drain InputQueue, run turns, persist OutputQueue.
+    """
 
     scope: AgentScope
     input_repo: PostgresInputQueueRepository
-    output_repo: PostgresOutputQueueRepository
-    transcript_projector: TranscriptProjector = field(
-        default_factory=MemoryStoreTranscriptProjector
-    )
     _worker_task: asyncio.Task[None] | None = field(default=None, repr=False)
     _stop: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
 
@@ -84,6 +70,11 @@ class AgenticCompanion:
         user_text = _batch_user_text(batch)
         preset_uid = batch.messages[-1].message_id
         in_reply_ids = _batch_input_ids(batch)
+        domain_output_queue = get_output_queue_for_scope(self.scope)
+        user_message_batch = UserMessageBatch(
+            batch_id=batch.batch_id,
+            message_ids=in_reply_ids,
+        )
         try:
             scope_lock = get_scope_turn_lock(
                 CompanionScope(
@@ -101,34 +92,11 @@ class AgenticCompanion:
                     background_output_sink=background_output_sink,
                     preset_user_msg_uuid=preset_uid,
                     implicit_signal_bundle=implicit_signal_bundle,
+                    agentic_output_queue=domain_output_queue,
+                    user_message_batch=user_message_batch,
                 )
             assert isinstance(turn, CompanionTurnResult)
-            output_ids: list[str] = []
-            output_text = turn.assistant_text.strip()
-            match (bool(output_text), turn.tool_background_started):
-                case (True, _):
-                    pass
-                case (False, True):
-                    # TODO(#3398): tool_bg outbound via OutputQueue in a later phase.
-                    output_text = ""
-                case (False, False):
-                    output_text = _EMPTY_USER_REPLY_PLACEHOLDER
-            if output_text:
-                output = AgentOutputMessage(
-                    message_id=str(uuid.uuid4()),
-                    scope=self.scope,
-                    batch_id=batch.batch_id,
-                    kind=DownlinkKind.USER_REPLY,
-                    text=output_text,
-                    created_at_utc=_utc_now(),
-                    in_reply_to_input_ids=in_reply_ids,
-                    trace_id=turn.trace_id or None,
-                    langsmith_trace_id=turn.langsmith_trace_id or None,
-                    langsmith_run_id=turn.langsmith_run_id or None,
-                    turn_recall=turn.turn_recall,
-                )
-                await self.output_repo.append_agent_output(output)
-                output_ids.append(output.message_id)
+            output_ids = list(turn.output_message_ids)
             await self.input_repo.mark_batch_processed(batch)
             return AgenticCompanionRunResult(
                 batch_id=batch.batch_id,

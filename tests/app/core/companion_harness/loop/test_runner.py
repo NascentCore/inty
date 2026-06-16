@@ -51,7 +51,7 @@ class _ObservingTraceReplayLLMClient:
             assert len(self._channel.events) == self._call_index
             assert (
                 self._channel.events[self._call_index - 1].kind
-                is DownlinkKind.BOOTSTRAP_INTERIM
+                is DownlinkKind.USER_REPLY
             )
         result = self._inner.chat_completion(**kwargs)
         if self._call_index == 0:
@@ -114,9 +114,9 @@ async def test_trace_replay_interim_delivered_before_next_llm_call(
 
     assert channel.deliver_before_return is True
     assert len(channel.events) == 3
-    assert channel.events[0].kind is DownlinkKind.BOOTSTRAP_INTERIM
+    assert channel.events[0].kind is DownlinkKind.USER_REPLY
     assert channel.events[0].assistant_text == interim_one
-    assert channel.events[1].kind is DownlinkKind.BOOTSTRAP_INTERIM
+    assert channel.events[1].kind is DownlinkKind.USER_REPLY
     assert channel.events[1].assistant_text == interim_two
     assert channel.events[2].kind is DownlinkKind.USER_REPLY
     assert channel.events[2].assistant_text == terminal_text

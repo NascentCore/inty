@@ -1,12 +1,18 @@
-"""Agentic loop interchange contract: one Input, one Output, one Mechanism protocol."""
+"""Agentic loop interchange contract: legacy mechanism protocol and re-exports.
+
+TODO(#3460): Delete legacy mechanism contract types from this module after
+dead-code cleanup; production types live in loop/context.py.
+"""
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
 
+from app.core.companion_harness.agentic_companion.types import (
+    AgenticLoopInputBatch,
+)
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
@@ -22,21 +28,18 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
-from app.core.companion_harness.agentic_companion.types import (
-    AgenticLoopInputBatch,
+from .context import (
+    AfterToolMessagesHook,
+    AgenticLoopOutput,
 )
-
-from .output_queue import AgenticLoopOutputQueue, LoopDeliverable
-
-AfterToolMessagesHook = Callable[
-    [list[dict[str, Any]]],
-    Awaitable[tuple[dict[str, Any], ...] | None],
-]
+from .output_queue import AgenticLoopOutputSink
 
 
+# TODO(#3460): Delete this after direct AgenticLoop user-turn methods retire the
+# legacy channel runner and 2-LLM parity harness.
 @dataclass(frozen=True)
-class AgenticLoopInput:
-    """Mode-agnostic superset input for ``run_agentic_loop`` (swap ``llm_loop_mode`` only)."""
+class LegacyAgenticLoopContext:
+    """Legacy parity context without domain ``OutputQueue`` (channel runner only)."""
 
     store: MemoryStore
     llm_client: CompanionLLMClient
@@ -72,39 +75,25 @@ class AgenticLoopInput:
 
 @dataclass(frozen=True)
 class AgenticLoopRunBundle:
-    """``AgenticLoopInput`` plus injected per-call-streaming queue."""
+    """Legacy context plus injected per-call-streaming queue."""
 
-    loop_input: AgenticLoopInput
-    output_queue: AgenticLoopOutputQueue
-
-
-@dataclass(frozen=True)
-class AgenticLoopOutput:
-    """Turn summary returned when the agentic loop finishes (UX uses channel per-call-streaming)."""
-
-    assistant_text: str
-    significance_meta: dict[str, Any] | None
-    turn_recall: str | None
-    langsmith_trace_id: str
-    langsmith_run_id: str
-    deliverables: tuple[LoopDeliverable, ...]
-    skip_final_transcript_assistant_row: bool
-    tool_background_started: bool
+    loop_context: LegacyAgenticLoopContext
+    output_queue: AgenticLoopOutputSink
 
 
 class AgenticLoopMechanism(Protocol):
-    """Interchangeable 1-LLM / 2-LLM loop implementation."""
+    """Legacy interchangeable 1-LLM / 2-LLM loop implementation."""
 
     async def run(self, bundle: AgenticLoopRunBundle) -> AgenticLoopOutput:
         """Execute one agentic loop; per-call deliverables via ``bundle.output_queue``."""
 
 
 def agentic_loop_run_bundle(
-    loop_input: AgenticLoopInput,
-    output_queue: AgenticLoopOutputQueue,
+    loop_context: LegacyAgenticLoopContext,
+    output_queue: AgenticLoopOutputSink,
 ) -> AgenticLoopRunBundle:
-    """Attach ``output_queue`` for mechanism execution."""
+    """Attach ``output_queue`` for legacy mechanism execution."""
     return AgenticLoopRunBundle(
-        loop_input=loop_input,
+        loop_context=loop_context,
         output_queue=output_queue,
     )

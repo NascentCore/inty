@@ -19,8 +19,6 @@ app:
   features:
     # WS companion bootstrap: NONE | USER_INTERACTIVE
     companion_memory_bootstrap_type: USER_INTERACTIVE
-    companion_harness:
-      user_feedback_github_token: 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
 
 sentry:
   # dev-inty/default
@@ -36,7 +34,7 @@ security:
 database:
   # Read-only replica: 34.87.163.31
   host: localhost
-  port: 5432
+  port: 5433
   user: postgres
   # Read-only replica: sxwl666A!
   password: "sxwl666!"
@@ -66,13 +64,18 @@ agent:
   api_key: "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"
   # intellimate-dev project, inty-testing api key, personal access token
   langchain_api_key: "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"
+  companion_harness:
+    user_feedback_github:
+      token: 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
   # 模型本地无法访问，IP 被限制
-  # free_user_chat_model: "google/gemini-2.5-flash-lite"
-  # sub_user_chat_model: "google/gemini-2.5-flash-lite"
+  # free_user_chat_model: "google/gemini-3.5-flash"
+  # sub_user_chat_model: "google/gemini-3.5-flash"
   # free_user_chat_model: "inception/mercury-2"
   # sub_user_chat_model: "inception/mercury-2"
   # free_user_chat_model: "deepseek/deepseek-v3.2"
   # sub_user_chat_model: "deepseek/deepseek-v3.2"
+  # flash toolcall is not reliable:
+  # https://smith.langchain.com/public/0e461185-249b-43ee-b39d-6b93fd31ead7/r
   free_user_chat_model: "deepseek/deepseek-v4-flash"
   sub_user_chat_model: "deepseek/deepseek-v4-flash"
   # companion_tool_call_model: "deepseek/deepseek-v4-flash"
@@ -82,6 +85,8 @@ agent:
   # v4 很不稳定，会出现没有输出的情况，可能是 provider 问题，也可能是模型自身问题：
   # https://smith.langchain.com/public/93dc20b8-5bfe-48b8-8958-528f853f4146/r
   # https://smith.langchain.com/public/b71416d1-9b03-4322-8f46-bf3deb134a44/r
+  # 工具调用不响应：
+  # https://github.com/NascentCore/inty/issues/3454
   # free_user_chat_model: "deepseek/deepseek-v4-pro"
   # sub_user_chat_model: "deepseek/deepseek-v4-pro"
   # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本）

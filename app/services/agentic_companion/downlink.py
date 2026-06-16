@@ -7,6 +7,8 @@ WebSocket and Weixin adapters translate :class:`Downlink` into
 
 TODO(channel-outbound-affordances): Extend ``Downlink`` (or adapter port) with reply threading
   and emoji reaction targets; map transcript UUIDs ↔ channel message IDs — #3440
+TODO(channel-outbound-images): Carry user-visible image assets explicitly for native
+  Telegram / Weixin image bubbles instead of parsing text URLs — #3451 / #3452
 """
 
 from __future__ import annotations
