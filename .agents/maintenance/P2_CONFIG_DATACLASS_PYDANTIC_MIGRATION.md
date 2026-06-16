@@ -127,7 +127,7 @@ flowchart TB
 | CFG-PYD-OPT-01c | done | `FeaturesConfig`：WS idle、companion transcript/compaction、proactive chat 等范围校验 → `model_validator`；Fixed in `cursor/agent-maintenance-tasks-5722` |
 | CFG-PYD-OPT-01d | done | `AgentConfig`：`chat_llm_provider` 枚举校验 → `model_validator`；Fixed in `cursor/agent-maintenance-tasks-c162` |
 | CFG-PYD-OPT-01e | done | `AgentConfig`：`newapi_gemini_base_url` 设置时 Bearer token 必填 → `model_validator`；Fixed in `cursor/agent-maintenance-tasks-c162` |
-| CFG-PYD-OPT-02 | — | 为 YAML 根定义顶层 `RootConfig` 单模型，合并 `load_config` 与 `surprise_snap` 特例（减少手写拼装） |
+| CFG-PYD-OPT-02 | in_progress | 为 YAML 根定义顶层 `RootConfig` 单模型，合并 `load_config` 与 `surprise_snap` 特例（减少手写拼装）；Claimed in `cursor/agent-maintenance-tasks-2747` |
 | CFG-PYD-OPT-03 | done | 删除重复的 `from loguru import logger` 等无关清理；Fixed in `cursor/agent-maintenance-tasks-4126` |
 
 ---
