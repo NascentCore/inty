@@ -1,4 +1,11 @@
-"""Per-scope OutputQueue: durable append + in-memory ready delivery buffer."""
+"""Durable outbound queue for assistant text visible to the user.
+
+Each companion scope owns one outbound queue. Assistant replies are written to
+database storage first, then held in an in-memory ready buffer for channel
+delivery. Delivery workers pull ready items, send them on the active channel,
+then mark rows delivered or failed for retry. This separates turn execution
+(which may emit multiple partial lines during tools) from transport timing.
+"""
 
 from __future__ import annotations
 
@@ -23,7 +30,11 @@ def _utc_now() -> datetime:
 
 @dataclass(frozen=True)
 class OutputQueueAppendInput:
-    """One user-visible assistant emission to persist and queue for delivery."""
+    """Payload for one assistant line the user should see.
+
+    Carries the visible text, correlation to the inbound user batch, and
+    observability identifiers so delivery and history can tie back to the turn.
+    """
 
     batch_id: str
     text: str
@@ -36,7 +47,11 @@ class OutputQueueAppendInput:
 
 @dataclass(frozen=True)
 class ReadyOutputMessage:
-    """In-memory delivery marker after durable OutputQueue append succeeded."""
+    """One outbound line waiting for channel delivery.
+
+    Produced after durable persistence succeeds; consumed by the outbound pump
+    until the channel acknowledges send or reports failure.
+    """
 
     message_id: str
     batch_id: str
@@ -48,7 +63,7 @@ class ReadyOutputMessage:
 
 @dataclass(frozen=True)
 class OutputDeliveryAck:
-    """Successful Channel delivery acknowledgement."""
+    """Confirmation that the active channel delivered one outbound line to the user."""
 
     message_id: str
     delivered_at_utc: datetime
@@ -56,7 +71,10 @@ class OutputDeliveryAck:
 
 @dataclass(frozen=True)
 class OutputDeliveryFailure:
-    """Failed Channel delivery; row stays retryable in durable store."""
+    """Report that channel delivery failed so the line can be retried.
+
+    The durable row returns to a pending state and may re-enter the ready buffer.
+    """
 
     message_id: str
     error_message: str
@@ -64,7 +82,12 @@ class OutputDeliveryFailure:
 
 @dataclass
 class OutputQueue:
-    """Scope-neutral outbound buffer: DB persist first, then in-memory ready queue."""
+    """Outbound buffer for one user–companion scope.
+
+    Turn execution appends user-visible assistant text here; channel workers pull
+    ready lines in order and track in-flight items until delivery succeeds or
+    fails. One process-local instance exists per scope registry key.
+    """
 
     scope: AgentScope
     _ready: deque[ReadyOutputMessage] = field(default_factory=deque, repr=False)

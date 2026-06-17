@@ -1,9 +1,19 @@
-"""Per-scope long-lived InputQueue drain worker and OutputQueue pump.
+"""Long-lived queue workers for one human–companion pairing scope.
+
+Each paired user and companion agent shares one scope. While that scope is
+active on a channel, this module keeps two background workers alive: one pulls
+inbound user messages from durable storage and runs the companion turn, the
+other continuously delivers assistant replies that were written to the outbound
+queue. Inbound work is wake-driven: a new user message signals the input worker
+instead of polling constantly. Outbound delivery runs on its own loop so partial
+replies and tool-round chatter can reach the user before the full turn finishes.
+
+Attach one instance per scope for the lifetime of channel presence (for example
+while a Telegram session or app connection is registered). Stop both workers when
+presence ends.
 
 TODO(#3501): Hermes-style inbound quiet window after each drain before next claim;
   coalesce rapid bursts that arrive during an in-flight user turn.
-
-Generated entirely by Cursor agent.
 """
 
 from __future__ import annotations
@@ -32,7 +42,12 @@ _SCOPE_OUTPUT_PUMP_POLL_SEC = 0.02
 
 @dataclass(frozen=True)
 class ScopeDrainCompletion:
-    """One InputQueue batch completion reported from worker to presence state."""
+    """Summary emitted after one inbound batch was claimed, processed, and drained.
+
+    Presence layer uses this to clear per-message coordination state and to
+    distinguish turns that handed work to a background tool loop from turns that
+    finished entirely in the foreground.
+    """
 
     input_message_ids: tuple[str, ...]
     tool_background_started: bool
@@ -45,7 +60,15 @@ OnDrainCompleteFn = Callable[[ScopeDrainCompletion], Awaitable[None]]
 
 
 class ScopeQueueServing:
-    """One AgentScope: wake-driven input drain + long-lived OutputQueue pump."""
+    """Runs inbound draining and outbound delivery for one companion scope.
+
+    Intended use: start when channel presence comes online for a user–agent pair;
+    call wake when a user message is enqueued so the input worker processes
+    pending batches; stop on presence teardown. Outbound pumping starts with
+    start and keeps delivering assistant text from the durable outbound queue
+    until stop. The caller supplies how to send text on the active channel and
+    how to record drain completion for coordination with foreground pending state.
+    """
 
     def __init__(
         self,

@@ -136,18 +136,16 @@ You should only changes and use code in the following dirs:
 #### Code documentation
 
 - Package docstring in `__init__.py`, `__init__.py` should only has docstring.
-  The docstring should only describe the abstract design of the package's logical component, and how they should be used in their intended usage scenarios.
-- Module docstring at the top of `.py` file, should only describe the abstract
-  design of the module, and how they should be used in their intended usage scenarios.
-- Function/class docstring: should only describe the abstract design, and how they should be used in their intended usage scenarios.
-- Do not use double-tick '``'
-- Do not use tables, use bullet points to record dimentional content
+  Document the package's design and intended.
+  In human readable languages, without referencing code.
+- Module docstring at the top of `.py` file.
+  Document the package's design and intended.
+  In human readable languages, without referencing code.
+- Function/class docstring: Document the package's design and intended.
+  In human readable languages, without referencing code.
 
-#### Dedicated docs/ dir
-
-- [docs](/docs/)
-
-Donts
+### Donts
 
 - Do not touch any `AGENTS.md`, they are maintained by human partners
 - Do not use double-tick quote names ``channel_runtime``
+- Do not use tables, use bullet points

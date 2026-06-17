@@ -1,4 +1,10 @@
-"""Production ``AgenticLoop``: direct 1-LLM and 2-LLM user-turn methods with domain ``OutputQueue``."""
+"""Production agentic loop for queue-served user turns.
+
+Runs one user-facing turn through either a single language model with in-turn
+tool calling or a dual-model chat-plus-tool path. User-visible assistant text is
+written to the durable outbound queue as it is produced so channels can deliver
+partial replies before the turn finishes.
+"""
 
 from __future__ import annotations
 
@@ -96,7 +102,11 @@ def _append_user_transcript_row(
 
 @dataclass
 class _UserVisibleOutputAppender:
-    """Append user-visible assistant text to domain ``OutputQueue``; tracks message ids."""
+    """Collects user-visible assistant lines into the outbound queue for one turn.
+
+    Filters silent or internal-only text, persists each visible line with batch
+    correlation, and records outbound ids for the turn result.
+    """
 
     output_queue: OutputQueue
     batch: UserMessageBatch
@@ -129,7 +139,12 @@ class _UserVisibleOutputAppender:
 
 
 class _DomainToolBackgroundAppendSink:
-    """FIFO drainer: sync ``on_event`` enqueues user-visible tool leg text for OutputQueue."""
+    """Bridges background tool-loop events into the outbound queue.
+
+    Tool work may emit user-visible follow-ups from a worker thread; this sink
+    accepts those events synchronously and drains them asynchronously into the
+    same outbound appender used for foreground lines.
+    """
 
     def __init__(
         self, *, appender: _UserVisibleOutputAppender, trace_id: str
@@ -345,20 +360,25 @@ async def _run_prompt_plan_tool_loop(
 
 
 class AgenticLoop:
-    """AgenticLoop executes one user turn via explicit 1-LLM or 2-LLM direct methods.
+    """Executes one queue-served user turn for bootstrap or settled chat.
 
-    Each non-empty user-visible assistant ``content`` is appended to domain ``OutputQueue``
-    immediately so ``channel_output_pump`` can deliver without waiting for the full turn.
+    Single-model path runs in-turn tool rounds and streams each non-empty
+    assistant line to the outbound queue immediately. Dual-model path runs
+    foreground chat then optional background tool work with the same outbound
+    streaming policy. Intended for turns that already have outbound queue and
+    inbound batch correlation attached by the turn executor.
 
     TODO(#3456): User chat must not go silent while tools execute; deliver interim
-    chat via !3457 harness + !3458 prompt when LLM omits content on tool rounds.
+    chat when the model omits content on tool rounds.
 
-    TODO(#3470): Bootstrap interim OutputQueue lines should read like a person
-    chatting while working — not serial status broadcasts; see trace
-    019ed445-8195-7b93-bbf4-c23dd5b8ebf4 (旁边有人就行 regression).
+    TODO(#3470): Bootstrap outbound lines during tools should read like natural
+    chat while working, not serial status broadcasts.
 
-    TODO(!3459): Migrate proactive chat, maintenance, scheduled, and dreaming
-    to call this loop instead of using the legacy in-turn sync tool loop.
+    TODO(#3459): Migrate proactive, maintenance, scheduled, and dreaming turns
+    to this loop instead of legacy in-turn sync paths.
+
+    TODO(#3402): Replace bootstrap-named interim callback types with a neutral
+    per-round visible-text sink shared by queue and non-queue paths.
     """
 
     def __init__(

@@ -1,10 +1,15 @@
-"""Typed prompt assembly for queue-serving single-LLM settled ``USER_CHAT``.
+"""Typed prompt assembly for queue-served user chat with a single language model.
 
-TODO(#3398): First step toward prompt-stack migration; legacy ``build_system_messages_for_*``
-callers remain unchanged until follow-up issues land.
+Builds structured system, transcript, and tail-user sections for settled user
+turns that run through the agentic loop and in-turn tool calling. Legacy prompt
+builders for non-queue paths stay unchanged until follow-up migration work.
+
+TODO(#3398): First step toward prompt-stack migration; legacy callers remain
+unchanged until follow-up issues land.
 https://github.com/NascentCore/inty/issues/3398
 
-TODO(#3453): Named-slot system slices should use ``PromptTemplate`` instead of imperative assembly.
+TODO(#3453): Named-slot system slices should use declarative templates instead
+of imperative assembly.
 https://github.com/NascentCore/inty/issues/3453
 """
 
@@ -56,7 +61,7 @@ from app.core.companion_harness.prompting.bundle import PromptBundle
 
 
 class PromptMessageRole(StrEnum):
-    """Roles used by the single-LLM user-chat initial prompt path."""
+    """Speaker role for one line in a typed prompt plan."""
 
     SYSTEM = "system"
     USER = "user"
@@ -65,7 +70,7 @@ class PromptMessageRole(StrEnum):
 
 @dataclass(frozen=True)
 class PromptMessage:
-    """Internal prompt message; OpenAI wire dict conversion stays in ``LLMClient``."""
+    """One line in a prompt plan before conversion to provider wire format."""
 
     role: PromptMessageRole
     content: str
@@ -73,7 +78,11 @@ class PromptMessage:
 
 @dataclass(frozen=True)
 class PromptPlan:
-    """Typed prompt request for single-LLM ``AgenticLoop`` in-turn tool loop."""
+    """Complete initial prompt for one single-model user turn with tools.
+
+    Holds ordered messages plus tool definitions and optional tool-choice hint
+    for the first model call in an in-turn sync tool loop.
+    """
 
     messages: tuple[PromptMessage, ...]
     # TODO(#3398): Type tool schemas instead of OpenAI dict payloads.
@@ -171,7 +180,12 @@ def _build_system_messages_for_single_llm_user_chat(
 
 @dataclass(frozen=True)
 class PromptBuilder:
-    """Build ``PromptPlan`` for queue-serving single-LLM settled ``USER_CHAT``."""
+    """Assembles prompt plans for queue-served settled user chat.
+
+    Given memory bundle, context metadata, and runtime channel signals, produces
+    a prompt plan with system doctrine, transcript window, optional private
+    thought splice, time context, and the current user utterance.
+    """
 
     bundle: PromptBundle
     context: ContextMeta

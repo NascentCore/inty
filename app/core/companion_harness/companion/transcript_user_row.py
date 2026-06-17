@@ -1,4 +1,4 @@
-"""Shared write helper for user rows on transcript JSONL."""
+"""Shared helper for writing user lines to companion transcript storage."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 
 @dataclass(frozen=True)
 class TranscriptUserRowBuildInput:
-    """Inputs to build one user transcript JSONL record."""
+    """Source fields for one user line in the conversation transcript."""
 
     content: str
     uuid: str
@@ -20,7 +20,7 @@ class TranscriptUserRowBuildInput:
 
 
 class TranscriptUserRow(BaseModel):
-    """Wire shape for one user line in ``transcript*.jsonl``."""
+    """Validated shape of one user message stored in transcript JSONL."""
 
     role: Literal["user"] = "user"
     content: str

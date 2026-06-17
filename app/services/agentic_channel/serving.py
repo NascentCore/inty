@@ -42,7 +42,11 @@ _CHANNEL_OUTPUT_PUMP_POLL_SEC = 0.02
 
 @dataclass(frozen=True)
 class DrainScopeOnceResult:
-    """Outcome of one synchronous companion drain for Channel/Wire callers."""
+    """Outcome of processing at most one claimed inbound batch for a scope.
+
+    When a batch was drained, carries the inbound message ids and whether a
+    background tool loop took over. When nothing was pending, reports no drain.
+    """
 
     reply_text: str
     tool_background_started: bool

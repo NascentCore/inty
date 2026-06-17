@@ -1,7 +1,8 @@
-"""Agentic loop context packaging for production ``AgenticLoop`` user-turn methods.
+"""Runtime packaging for production user-turn execution in the agentic loop.
 
-This module assembles pre-built runtime inputs only; it does not call ``PromptBuilder``
-or decide prompt semantics.
+Assembles immutable inputs for one turn (messages, tools, tracing, outbound
+queue handles) from values already built upstream. Does not decide prompt
+wording or call the language model.
 """
 
 from __future__ import annotations
@@ -52,7 +53,11 @@ AfterToolMessagesHook = Callable[
 
 @dataclass(frozen=True)
 class AgenticLoopLangsmithContext:
-    """LangSmith invocation and correlation metadata for production ``AgenticLoop``."""
+    """Tracing and correlation metadata attached to one agentic loop turn.
+
+    Bundles the slice used for invocation extras plus foreground source label
+    and identifiers that tie model calls back to the user message.
+    """
 
     turn_slice: CompanionTurnLangsmithSlice
     foreground_source: str
@@ -62,7 +67,13 @@ class AgenticLoopLangsmithContext:
 
 @dataclass(frozen=True)
 class AgenticLoopContext:
-    """Pre-assembled runtime context for ``AgenticLoop`` direct user-turn methods."""
+    """Everything needed to run one user-facing turn through the agentic loop.
+
+    Built before execution starts: dialogue and tools, transcript targets,
+    observability, outbound queue correlation, and optional dual-model message
+    stacks or a typed prompt plan. Consumed once per turn by single-LLM or
+    dual-LLM loop entry points.
+    """
 
     openai_messages: tuple[dict[str, Any], ...]
     openai_tools: tuple[dict[str, Any], ...]
@@ -97,7 +108,12 @@ class AgenticLoopContext:
 
 @dataclass(frozen=True)
 class AgenticLoopOutput:
-    """Turn summary returned when the agentic loop finishes."""
+    """Result summary after one agentic loop turn completes.
+
+    Carries final assistant text, tracing ids, whether a background tool loop
+    started, transcript skip hints, and ids of outbound lines persisted during
+    the turn for delivery correlation.
+    """
 
     assistant_text: str
     significance_meta: dict[str, Any] | None

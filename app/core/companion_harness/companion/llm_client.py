@@ -360,9 +360,12 @@ class CompanionLLMClient:
 
 
 class AsyncLlmClient:
-    """
-    Wraps the async OpenAI client to provide narrower and simpler interface.
-    To be used in AgenticLoop.
+    """Async language-model client for the agentic loop single-model path.
+
+    Narrow wrapper around the provider async chat API: resolves configured models,
+    attaches tracing metadata, supports optional tools and high-reasoning kwargs,
+    and retries when the provider returns a non-JSON body. One instance is reused
+    per companion client for the lifetime of a session.
     """
 
     def __init__(self, config: CompanionLLMConfig) -> None:
