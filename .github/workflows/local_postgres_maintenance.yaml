@@ -21,7 +21,7 @@ on:
         default: false
         type: boolean
   schedule:
-    # UTC 03:15 daily — ensure container, pg_dump both DBs, prune dumps older than 14 days
+    # UTC 03:15 daily — ensure container, pg_dump both DBs, prune dumps older than retention
     - cron: "15 3 * * *"
     # UTC 04:00 Sunday — wiring + DB connectivity (no restart test)
     - cron: "0 4 * * 0"
@@ -52,17 +52,19 @@ jobs:
       - name: Backup inty-dev and inty
         run: devops/scripts/backup_local_postgres.sh
 
-      - name: Prune dumps older than 14 days
-        run: find /opt/inty/backups/postgres -name '*.dump' -mtime +14 -delete
-
   verify:
     runs-on: inty-prod-server-gcp
+    needs: backup
     if: >-
-      (github.event_name == 'workflow_dispatch'
-      && (inputs.task == 'verify' || inputs.task == 'all'))
-      || (github.event_name == 'schedule'
-      && github.event.schedule == '0 4 * * 0'
-      && github.ref == 'refs/heads/main')
+      always()
+      && (needs.backup.result == 'success' || needs.backup.result == 'skipped')
+      && (
+        (github.event_name == 'workflow_dispatch'
+        && (inputs.task == 'verify' || inputs.task == 'all'))
+        || (github.event_name == 'schedule'
+        && github.event.schedule == '0 4 * * 0'
+        && github.ref == 'refs/heads/main')
+      )
 
     steps:
       - uses: actions/checkout@v4
@@ -71,11 +73,9 @@ jobs:
         run: devops/scripts/ensure_inty_dev_postgres_container.sh
 
       - name: Verify durability wiring
-        env:
-          RESTART_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.restart_test == 'true' }}
         run: |
           set -euo pipefail
-          if [[ "${RESTART_TEST}" == "true" ]]; then
+          if [[ "${{ github.event_name == 'workflow_dispatch' && inputs.restart_test == 'true' }}" == "true" ]]; then
             devops/scripts/verify_local_postgres_durability.sh --restart-test
           else
             devops/scripts/verify_local_postgres_durability.sh

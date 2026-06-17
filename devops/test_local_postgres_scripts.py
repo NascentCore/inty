@@ -30,6 +30,8 @@ def test_lib_declares_canonical_volume_and_container():
     text = LIB_PATH.read_text(encoding="utf-8")
     assert 'readonly INTY_PG_CONTAINER="inty-dev-postgres"' in text
     assert 'readonly INTY_PG_VOLUME="inty-dev-postgres-data"' in text
+    assert 'readonly INTY_PG_BACKUP_RETENTION_DAYS="14"' in text
+    assert "prune_old_backups" in text
     assert "unless-stopped" not in text  # policy lives in ensure script
 
 
@@ -77,6 +79,19 @@ def test_backup_dumps_both_logical_databases():
     assert "INTY_PG_PROD_DB" in text
     assert "pg_dump" in text
     assert "docker exec" in text
+    assert "prune_old_backups" in text
+    assert "INTY_PG_BACKUP_RETENTION_DAYS" in text
+
+
+WORKFLOW_PATH = Path(__file__).parents[1] / ".github" / "workflows" / "local_postgres_maintenance.yaml"
+
+
+def test_maintenance_workflow_serializes_verify_after_backup():
+    text = WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "needs: backup" in text
+    assert "needs.backup.result == 'skipped'" in text
+    assert "devops/scripts/backup_local_postgres.sh" in text
+    assert "find /opt/inty/backups/postgres" not in text
 
 
 def test_guard_refuses_when_protected_volume_exists():

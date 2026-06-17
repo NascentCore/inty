@@ -2,8 +2,6 @@
 # Idempotent start or (re)create inty-dev-postgres bound to the canonical named volume.
 # CREATED_BY_AGENT
 #
-# TODO(!3496): Scheduled by .github/workflows/local_postgres_maintenance.yaml on inty-prod-server-gcp (epic #3495).
-#
 # Safe operations only: never removes volumes, never runs docker volume prune.
 #
 # Usage (from repo root, on the VM):

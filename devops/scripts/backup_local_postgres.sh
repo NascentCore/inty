@@ -3,7 +3,7 @@
 # CREATED_BY_AGENT
 #
 # Writes custom-format pg_dump files under /opt/inty/backups/postgres by default.
-# Does not delete old backups; prune via local_postgres_maintenance workflow (see LOCAL_POSTGRES.md).
+# Prunes dumps older than INTY_PG_BACKUP_RETENTION_DAYS after each run.
 #
 # Usage (from repo root, on the VM):
 #   devops/scripts/backup_local_postgres.sh
@@ -70,3 +70,5 @@ load_pg_password
 mkdir -p "${OUTPUT_DIR}"
 dump_database "${INTY_PG_DEV_DB}"
 dump_database "${INTY_PG_PROD_DB}"
+prune_old_backups "${INTY_PG_BACKUP_RETENTION_DAYS}"
+echo "pruned dumps older than ${INTY_PG_BACKUP_RETENTION_DAYS} days under ${INTY_PG_BACKUP_DIR}"
