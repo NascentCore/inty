@@ -14,14 +14,21 @@ description: >-
 
 - 核对 `STYLE.md` / `SOUL.md` / `MEMORY.md` 等是否落库、正文是否与 REPL/LangSmith 一致。
 - 对比同一文档的多个 `sequence_id`（append-only 版本）。
+- 需要 **全 agent 文档总览** 时，用 [`list-agent-documents/SKILL.md`](../list-agent-documents/SKILL.md)。
 
 ## 脚本（读库唯一入口）
 
-仓库根执行（`PYTHONPATH=.`）：
+仓库根执行（`PYTHONPATH=.`）。CLI 为 **Cyclopts**；`--help` 看全参数。
+
+**配置**：与后端相同 — 先读 **`INTY_CONFIG_YAML`** 环境变量，否则 **`config.yaml`**；`--config` 会写入 `INTY_CONFIG_YAML`（见 `app/core/config.py`）。本地 Ops 常见：
+
+```bash
+export INTY_CONFIG_YAML=devops/config.yaml.local
+```
 
 ```bash
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
-  --companion-id <agent_id>
+  --agent-id <agent_id>
 ```
 
 **仅有 `agent_id`、且该 companion 只有一个 `(user_id, chat_id)` 时**可省略 scope；否则脚本会列出候选 scope 并退出，需补 `--user-id` / `--chat-id`。
@@ -31,12 +38,12 @@ PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STY
 | 参数 | 作用 |
 |------|------|
 | `DOCUMENT`（位置参数） | 逻辑路径：`STYLE.md`、`context.json`、`memory/daily/2026-05-18.md` 等 |
-| `--companion-id` | WebSocket/API 的 `agent_id` |
+| `--agent-id` | WebSocket/API 的 `agent_id`（ORM 列 `companion_id`） |
 | `--user-id` / `--chat-id` | MemoryStore 作用域三元组 |
-| `--config` | 默认 `config.yaml`；CI 可用 `devops/config.yaml.test` |
+| `--config` | 覆盖 `INTY_CONFIG_YAML`；未设时沿用 env 或 `config.yaml` |
 | `--limit N` | 打印最近 N 个版本（默认 1） |
 | `--meta-only` | 只打 `sequence_id` / `created_at` / 字数，不打正文 |
-| `--list-scopes` | 列出该 companion 下所有 `(user_id, chat_id)` |
+| `--list-scopes` | 列出该 agent 下所有 `(user_id, chat_id)` |
 | `--list-kinds` | 列出该 scope 下各 `document_kind` 的最新 `sequence_id` |
 
 ### 示例
@@ -44,21 +51,21 @@ PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STY
 ```bash
 # 最新 STYLE.md 全文
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
-  --companion-id 4ca541f4-64fa-43c0-af6c-7f440def4839
+  --agent-id 4ca541f4-64fa-43c0-af6c-7f440def4839
 
 # 本地测试用户 + 明确 chat
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
-  --companion-id <agent_id> \
+  --agent-id <agent_id> \
   --user-id user-testing \
   --chat-id <chat_id>
 
 # 最近两版对比
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
-  --companion-id <agent_id> --limit 2
+  --agent-id <agent_id> --limit 2
 
 # 该会话写过哪些 document_kind
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
-  --companion-id <agent_id> --list-kinds
+  --agent-id <agent_id> --list-kinds
 ```
 
 ## 路径 ↔ `document_kind`

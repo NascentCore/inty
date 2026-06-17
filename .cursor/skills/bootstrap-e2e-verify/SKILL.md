@@ -75,6 +75,7 @@ Use `agent_id` as `companion_id`.
 | Check | Where |
 |-------|--------|
 | `workspace_bootstrap_user_interactive_completed: true` | [`context-mode-in-db`](../inspect-companion-harness/context-mode-in-db/SKILL.md) |
+| All MemDocs at a glance (`--meta-only`) | [`list-agent-documents`](../inspect-companion-harness/list-agent-documents/SKILL.md) |
 | USER / identity / style customized | [`inspect-companion-harness`](../inspect-companion-harness/SKILL.md) — `document_kind` `user`, `identity`, `style` |
 | SOUL / memory = package template, **one** `sequence_id` each | same skill; compare to `load_template_seed_text` in code |
 | Optional transcript | `document_kind = transcript` (latest row) |
