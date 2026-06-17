@@ -17,7 +17,6 @@ on:
       - "backend/inty/start.sh"
       # dev 环境（iMate & IntelliMate 共用同一环境与配置）
       - "devops/config.yaml.dev"
-      - "devops/config.yaml.dev.docker"
       # prod 环境部署暂时关闭
       # - "devops/config.yaml.prod"
       # 容器
@@ -89,7 +88,7 @@ jobs:
         run: |
           case "${{ steps.prep.outputs.environment }}" in
             dev)
-              echo "config_file=devops/config.yaml.dev.docker" >> $GITHUB_OUTPUT
+              echo "config_file=devops/config.yaml.dev" >> $GITHUB_OUTPUT
               echo "keys_dir=/opt/inty-dev" >> $GITHUB_OUTPUT
               echo "app_label=inty-backend" >> $GITHUB_OUTPUT
               echo "langchain_project=inty-backend-dev" >> $GITHUB_OUTPUT

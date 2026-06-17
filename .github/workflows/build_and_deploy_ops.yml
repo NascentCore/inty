@@ -11,7 +11,6 @@ on:
       - "backend/ops/**"
       - "requirements.txt"
       - "devops/config.yaml.dev"
-      - "devops/config.yaml.dev.docker"
       - "devops/config.yaml.prod"
       - "evaluation/**/*.tsx"
       - "evaluation/**/*.ts"
@@ -71,7 +70,7 @@ jobs:
         run: |
           case "${{ steps.prep.outputs.environment }}" in
             dev)
-              echo "config_file=devops/config.yaml.dev.docker" >> $GITHUB_OUTPUT
+              echo "config_file=devops/config.yaml.dev" >> $GITHUB_OUTPUT
               ;;
             prod)
               echo "config_file=devops/config.yaml.prod" >> $GITHUB_OUTPUT

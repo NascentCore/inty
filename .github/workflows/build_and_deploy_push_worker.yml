@@ -16,7 +16,6 @@ on:
       # 运维部署
       - "devops/docker/Dockerfile.push-worker"
       - "devops/config.yaml.dev"
-      - "devops/config.yaml.dev.docker"
       - "devops/config.yaml.prod"
       # 本文件
       - ".github/workflows/build_and_deploy_push_worker.yml"
@@ -71,7 +70,7 @@ jobs:
         run: |
           case "${{ steps.prep.outputs.environment }}" in
             dev)
-              echo "config_file=devops/config.yaml.dev.docker" >> $GITHUB_OUTPUT
+              echo "config_file=devops/config.yaml.dev" >> $GITHUB_OUTPUT
               ;;
             prod)
               echo "config_file=devops/config.yaml.prod" >> $GITHUB_OUTPUT
