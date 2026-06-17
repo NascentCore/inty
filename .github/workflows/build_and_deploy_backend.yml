@@ -172,14 +172,14 @@ jobs:
           script: |
             sudo docker stop ${{ vars.INTY_BACKEND_CONTAINER_NAME }} || true
             sudo docker rm ${{ vars.INTY_BACKEND_CONTAINER_NAME }} || true
-            # log-driver: https://docs.docker.com/engine/logging/drivers/gcplogs/
-            #   运行于 gcp 环境，docker engine 探测 gcp 环境信息，相关设置都自动提取
-            #   https://docs.docker.com/engine/logging/drivers/gcplogs/#gcplogs-options
-            # LANGCHAIN_* 相关环境变量应该不需要设置，已经在代码中强制设置，以后考虑清理
-            # https://github.com/NascentCore/inty/blob/ef9c9735c62a9cb2d6be4b2414bebed410f1ff56/app/core/config.py#L267
+            DEV_DOCKER_HOST_ARGS=""
+            if [ "${{ steps.prep.outputs.environment }}" = "dev" ]; then
+              DEV_DOCKER_HOST_ARGS="--add-host=host.docker.internal:host-gateway"
+            fi
             sudo docker run --detach --log-driver=gcplogs \
               --name ${{ vars.INTY_BACKEND_CONTAINER_NAME }} \
               --restart unless-stopped \
+              ${DEV_DOCKER_HOST_ARGS} \
               --publish ${{ vars.SERVICE_PORT_ON_HOST }}:8000 \
               --env LANGCHAIN_TRACING_V2=true \
               --env LANGCHAIN_PROJECT=${{ steps.map.outputs.langchain_project }} \
