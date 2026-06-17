@@ -286,9 +286,6 @@ class ContextMeta(BaseModel):
     workspace_bootstrap_user_interactive_completed: bool = True
     # True = skip inserting the one-shot WS companion session system line (default for legacy / non-interactive).
     companion_ws_session_system_written: bool = True
-    # Legacy JSON flag from older workspaces; WebSocket connect-time kickoff was removed. Default True
-    # means "nothing to do"; omit key in new USER_INTERACTIVE seeds.
-    companion_ws_interactive_kickoff_sent: bool = True
     experience_directives: ExperienceDirectives = Field(
         default_factory=ExperienceDirectives,
         description=(
@@ -462,18 +459,6 @@ def load_transcript_from_store(
     return load_transcript_projection_from_store(
         store, relative_path, TranscriptProjection.FULL
     )
-
-
-def load_user_visible_transcript_from_store(
-    store: MemoryStore, relative_path: str
-) -> list[ChatMessage]:
-    """Load transcript JSONL excluding manifest and synthetic proactive user rows."""
-    return load_transcript_projection_from_store(
-        store, relative_path, TranscriptProjection.USER_VISIBLE
-    )
-
-
-# TODO(transcript-projection): wire USER_VISIBLE at chat_history mirror paths when transcript.jsonl is mirrored to PG
 
 
 # 近期对话窗口

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import json
 from pathlib import Path
 
 from app.core.companion_harness.companion.ai_private_prompt import (

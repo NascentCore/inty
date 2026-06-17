@@ -37,7 +37,6 @@ from app.core.companion_harness.companion.bootstrap import (
 )
 from app.core.companion_harness.companion.models import (
     ChatMessage,
-    load_context_meta,
 )
 from app.core.companion_harness.companion.schedule_queue import (
     add_schedule_task,
@@ -102,19 +101,6 @@ from .companion_tool_definitions import (
 )
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
-
-# TODO(commercialization-cleanup): Remove ``tool_phone_call_user`` and ``subscription_service`` /
-# ``phone_call_service`` imports from harness — tool is not registered in ``TOOL_NAMES_*``;
-# outbound call billing belongs in app orchestration (``phone_call.py``), not ``companion_harness``.
-from app.db.session import AsyncSessionLocal
-from app.models.user import User
-from app.services.global_services import subscription_service
-from app.services.phone_call_service import (
-    PhoneCallConfigError,
-    PhoneCallLimitError,
-    phone_call_service,
-)
-from sqlalchemy import select
 
 # TODO(memdoc-path-constants): Replace ad-hoc _USER_MD_REL with canonical constant. #3413
 _USER_MD_REL = "USER.md"
@@ -520,40 +506,6 @@ def tool_schedule_task(
     )
 
 
-async def tool_phone_call_user(
-    store: MemoryStore, phone_number: str, reason: str
-) -> str:
-    # TODO(commercialization-cleanup): Delete this handler and ``execute_tool_call`` branch;
-    # see module-level TODO — prototype harness must not depend on ``SubscriptionService``.
-    context = load_context_meta(store=store)
-    user_id = context.user_id.strip()
-    agent_id = context.companion_id.strip()
-    if not user_id or not agent_id:
-        return "ERROR: phone call requires active user and companion context"
-    async with AsyncSessionLocal() as db:
-        row = await db.execute(select(User).where(User.id == user_id))
-        user = row.scalar_one_or_none()
-        if user is None or user.deleted_at:
-            return "ERROR: phone call user context no longer exists"
-        try:
-            result = await phone_call_service.start_outbound_call(
-                db=db,
-                current_user=user,
-                agent_id=agent_id,
-                phone_number=phone_number,
-                subscription_svc=subscription_service,
-                reason=reason,
-            )
-        except PhoneCallLimitError as exc:
-            return f"ERROR: {exc}"
-        except (PhoneCallConfigError, ValueError) as exc:
-            return f"ERROR: {exc}"
-    return (
-        "OK phone call queued "
-        f"to={result.to_number_masked} status={result.status} call_sid={result.call_sid}"
-    )
-
-
 def build_openai_bootstrap_track_tools() -> list[dict[str, Any]]:
     """USER_CHAT_BOOTSTRAP track: MemoryStore read/write, experience profile, bootstrap complete."""
     return prepare_openai_tools_for_chat_completions(
@@ -678,14 +630,6 @@ async def _dispatch(
             )
         except ValueError as exc:
             return f"ERROR: {exc}"
-    if name == "phone_call_user":
-        raw_phone = arguments.get("phone_number")
-        raw_reason = arguments.get("reason")
-        if not isinstance(raw_phone, str):
-            return "ERROR: phone_number must be a string"
-        if not isinstance(raw_reason, str):
-            return "ERROR: reason must be a string"
-        return await tool_phone_call_user(store, raw_phone, raw_reason)
     if name == COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
         return tool_companion_record_user_feedback(store, arguments)
     if name == "companion_set_experience_profile":

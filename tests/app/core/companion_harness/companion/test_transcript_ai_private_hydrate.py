@@ -16,7 +16,6 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.transcript_ai_private import (
     AiPrivateSplicePersistInput,
     AiPrivateSplicePlan,
-    dreaming_transcript_block,
     expand_manifest_rows,
     persist_ai_private_splice_if_applicable,
     select_tail_splice_thoughts,

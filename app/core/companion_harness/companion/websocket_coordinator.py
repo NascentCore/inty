@@ -36,8 +36,6 @@ from app.services.agentic_companion.session import (
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from app.schemas.chat import ChatCompletionRequest
-
 _ChatWsInflightTurnResult = TypeVar("_ChatWsInflightTurnResult")
 
 
@@ -64,7 +62,7 @@ class BootstrapInterimDeliverCtx:
     db: "AsyncSession"
     agent_id: str
     session_id: str
-    request: "ChatCompletionRequest"
+    request: Any
     last_user_text: str
     effective_local_id: str | None
     outbound_queue: asyncio.Queue[Any]

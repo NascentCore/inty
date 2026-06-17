@@ -10,7 +10,6 @@ from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
 from app.core.companion_harness.companion.websocket_coordinator import (
     BootstrapInterimDeliverCtx,
-    BootstrapInterimQueued,
     CompanionWebSocketCoordinator,
 )
 

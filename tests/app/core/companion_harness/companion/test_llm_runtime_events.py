@@ -48,7 +48,7 @@ def test_create_chat_completion_sync_writes_llm_inference_failure(tmp_path) -> N
 
         class _ChatCompletions:
             @staticmethod
-            def create(**kw):
+            def create(**_kw):
                 raise RuntimeError("simulated transport failure")
 
         client = SimpleNamespace(chat=SimpleNamespace(completions=_ChatCompletions))
