@@ -20,6 +20,7 @@ Umbrella issue: #3491.
 Tracking checklist:
 
 - [ ] Do not distinguish SEALED vs TERMINATED in the first implementation; non-active companion state only needs to be frozen, invisible, zero-runtime, and data-preserving.
+- [ ] Weak-firmness decision: keep channel adapters responsible for channel identity proof and route all companion scope creation/reuse through one shared provisioning service; double-confirm this split after the bond and identity-linking architecture is more concrete.
 
 ### Epic: Consistent identity across companion channels
 
