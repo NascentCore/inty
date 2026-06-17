@@ -171,7 +171,10 @@ class AgenticCompanion:
                         implicit_signal_bundle=implicit_signal_bundle,
                     )
                 except Exception:
-                    pass
+                    logger.exception(
+                        "agentic_companion worker drain_once failed scope={}",
+                        self.scope.registry_key(),
+                    )
                 try:
                     await asyncio.wait_for(
                         self._stop.wait(),

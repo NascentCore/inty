@@ -3,7 +3,7 @@
 
 from datetime import date, datetime
 from typing import Optional
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -16,7 +16,7 @@ RUN_AT_HOUR_MAX = 23
 def _validate_iana_timezone(v: str) -> str:
     try:
         ZoneInfo(v)
-    except Exception:
+    except ZoneInfoNotFoundError:
         raise ValueError(f"Invalid IANA timezone: {v}")
     return v
 
