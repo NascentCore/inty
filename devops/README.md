@@ -15,8 +15,7 @@
 
 - 共享同一台 gcp VM
 - 差别在配置文件：[dev](config.yaml.dev) [prod](config.yaml.prod)
-- **dev 数据库**：IntelliMate dev（`config.yaml.dev`）使用 **VM 上 Docker Postgres**（容器 `inty-dev-postgres`，库 `inty-dev`），不再连 Cloud SQL；见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)
-- **prod 数据库**：仍使用 GCP Cloud SQL（逻辑库 `inty`），见 [GCP.md](GCP.md)
+- **IntelliMate 数据库（dev + prod）**：均使用 **VM 上 Docker Postgres**（容器 `inty-dev-postgres`，逻辑库 `inty-dev` / `inty`），不再连 Cloud SQL；见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)
 - **Ops 平台**：evaluation Web UI 与完整 `/api/v1`，独立镜像与工作流部署；workflow [build_and_deploy_ops.yml](../.github/workflows/build_and_deploy_ops.yml)，dev 与 prod 同 VM、不同 host 端口（8001 / 8011），nginx 将 ops.inty.cc → 8011、dev.ops.inty.cc → 8001。手动选择 GitHub Environment `imate-dev` / `imate-prod` / **`imate`** 可部署 iMate 相关 Ops（容器 `inty-ops-imate-*` 或 `inty-ops-imate`，与 IntelliMate 的 `inty-ops-dev` 等并行）。
 - **iMate（第二 Inty 后端实例）**：与 IntelliMate **并行**，独立库、独立 GCS bucket、独立容器与域名；不得 stop/rm `inty-backend-dev` / `inty-backend-prod`。
   - 配置：[config.yaml.imate_dev](config.yaml.imate_dev)、[config.yaml.imate_prod](config.yaml.imate_prod)、[config.yaml.imate](config.yaml.imate)（构建期注入镜像，与 IntelliMate 同一 [Dockerfile](docker/Dockerfile)）。
@@ -42,7 +41,7 @@ dev 环境预制了 3 个测试用户（使用`python tools/scripts/create_email
 
 ## 链接
 
-- [IntelliMate dev 本地 Postgres（Docker）](LOCAL_POSTGRES.md)
+- [IntelliMate 本地 Postgres（Docker，dev + prod）](LOCAL_POSTGRES.md)
 - [prod push worker logs](https://cloudlogging.app.goo.gl/VXHGrai93hqJU3er9)
 - [dev push worker logs](https://cloudlogging.app.goo.gl/xhWv88U4bH7v7UNd9)
 - [prod inty backend logs](https://cloudlogging.app.goo.gl/9fr7rxgrwbas68En9)
@@ -55,8 +54,7 @@ dev 环境预制了 3 个测试用户（使用`python tools/scripts/create_email
 
 - **配置文件**：
   - `config.yaml.dev` / `config.yaml.prod`：IntelliMate 部署环境配置（构建期注入进入镜像；具体机制见 `RELEASE.md`）
-    - **dev**：`database` 指向 VM 本地 Docker Postgres（[LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)）
-    - **prod**：`database` 指向 GCP Cloud SQL（[GCP.md](GCP.md)）
+    - **dev / prod**：`database` 均指向 VM 本地 Docker Postgres（[LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)）
   - `config.yaml.imate_dev` / `config.yaml.imate_prod`：iMate 第二实例配置
   - `config.yaml.local`：工程师本机运行配置参考（只读副本等；**不是** dev-instance 上 IntelliMate dev 部署库，后者见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)）
   - `config.yaml.test`：CI/本地测试配置（工作流会 `cp devops/config.yaml.test config.yaml`）
