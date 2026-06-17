@@ -6,7 +6,7 @@ must be enforced.  Mid-turn refreshes re-read MemoryStore and ``context.json`` s
 tool-side writes to persona/context documents become visible before the next
 model leg continues.
 
-TODO(#3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled ``USER_CHAT`` — #3369.
+TODO(!3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled ``USER_CHAT`` — #3369.
 
 TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
 hierarchy (design issue; options include in-context vs retrieval-required splits).
@@ -162,6 +162,10 @@ def companion_system_messages_for_track(
                 memory_bootstrap_type,
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
+            # TODO(!3463): Compose proactive as overlay on base track prefix — during
+            # bootstrap reuse ``build_system_messages_for_bootstrap_track``, then append
+            # proactive-only slices; do not rely on ``interactive_bootstrap_active`` alone
+            # (``_persona_system_messages`` also requires ``not inner_tick_turn``).
             out = build_system_messages_for_inner_tick_proactive_chat(
                 bundle, context, store
             )

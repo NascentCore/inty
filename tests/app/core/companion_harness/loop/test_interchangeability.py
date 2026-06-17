@@ -10,7 +10,7 @@ import pytest
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.loop.channel_adapter import RecordingChannelAdapter
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
-from app.core.companion_harness.loop.contract import AgenticLoopOutput
+from app.core.companion_harness.loop.context import AgenticLoopOutput
 from app.core.companion_harness.loop.output_queue import LoopDeliverableKind
 from app.core.companion_harness.loop.runner import run_agentic_loop
 from app.core.companion_harness.memory.memory_store import MemoryStore

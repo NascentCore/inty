@@ -20,7 +20,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
 )
-from app.core.companion_harness.loop.contract import AgenticLoopInput
+from app.core.companion_harness.loop.contract import LegacyAgenticLoopContext
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
@@ -56,9 +56,9 @@ def build_agentic_loop_input(
     high_reasoning: bool = False,
     dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None = None,
     dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None = None,
-) -> AgenticLoopInput:
-    """Build a mode-agnostic ``AgenticLoopInput`` for loop sidecar tests."""
-    return AgenticLoopInput(
+) -> LegacyAgenticLoopContext:
+    """Build a mode-agnostic legacy loop context for sidecar tests."""
+    return LegacyAgenticLoopContext(
         store=store,
         llm_client=llm_client,
         openai_messages=openai_messages,

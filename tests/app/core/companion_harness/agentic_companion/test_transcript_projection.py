@@ -51,7 +51,7 @@ async def test_transcript_projection_includes_queue_ids() -> None:
             kind=DownlinkKind.USER_REPLY,
             text="hello",
             created_at_utc=now,
-            in_reply_to_input_ids=("in-1",),
+            message_ids=("in-1",),
         ),
     )
     body = store.read_document_if_exists(DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript)

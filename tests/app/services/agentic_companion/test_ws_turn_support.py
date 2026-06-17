@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.schemas.chat_websocket import ChatWsGeneratedImageMeta
 from app.services.agentic_companion.ws_turn_support import (
     companion_ai_meta_from_queue_delivery,
     companion_ai_meta_from_turn_result,
@@ -49,3 +50,18 @@ def test_companion_ai_meta_from_queue_delivery_tool_background() -> None:
     )
     assert meta["user_msg_uuid"] == "queue-msg-1"
     assert meta["tool_background_started"] is True
+    assert meta["source"] == "chat"
+
+
+def test_companion_ai_meta_from_queue_delivery_generated_image() -> None:
+    meta = companion_ai_meta_from_queue_delivery(
+        queue_message_id="queue-msg-2",
+        tool_background_started=False,
+        generated_image=ChatWsGeneratedImageMeta(
+            image_url="file:///tmp/z_image_test.jpeg",
+            width=1024,
+            height=768,
+        ),
+    )
+    assert meta["generated_image"]["image_url"] == "file:///tmp/z_image_test.jpeg"
+    assert meta["generated_image"]["width"] == 1024

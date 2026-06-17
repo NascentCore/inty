@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
+ENV_INTY_CONFIG_YAML = "INTY_CONFIG_YAML"
 ENV_GATE_COMPANION_WS_BOOTSTRAP_E2E = "INTY_COMPANION_WS_BOOTSTRAP_E2E"
 ENV_GATE_COMPANION_WS_IMPLICIT_SIGNON_E2E = "INTY_COMPANION_WS_IMPLICIT_SIGNON_E2E"
 # Child-only: must match app/services/subscription_service.check_chat_limit bypass.
@@ -23,3 +25,11 @@ def companion_ws_implicit_e2e_gated() -> bool:
         os.environ.get(ENV_GATE_COMPANION_WS_BOOTSTRAP_E2E) == "1"
         or os.environ.get(ENV_GATE_COMPANION_WS_IMPLICIT_SIGNON_E2E) == "1"
     )
+
+
+def inty_config_yaml_path() -> Path | None:
+    """Resolved path from ``INTY_CONFIG_YAML``, or ``None`` when unset."""
+    raw = os.environ.get(ENV_INTY_CONFIG_YAML, "").strip()
+    if not raw:
+        return None
+    return Path(raw)

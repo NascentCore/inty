@@ -35,7 +35,7 @@ The update script also installs **Google Cloud SDK** (`google-cloud-cli`) via ap
 ### Starting services
 
 1. **PostgreSQL** (preferred): run from repo root after install/update:
-   - `./tools/scripts/ensure_postgres_for_tests.sh` — pulls `postgres:16` when Docker works, otherwise starts distro PostgreSQL; runs `alembic upgrade head`.
+   - `./tools/scripts/ensure_postgres_for_tests.sh` — Docker container `pg-inty` (`postgres:16` on `:5432`) when Docker works, otherwise starts distro PostgreSQL; runs `alembic upgrade head`.
    - Cloud Agent VM start hook: `.cursor/cloud-agent-start.sh` (same script).
    - Manual Docker only: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
    - Verify readiness: `PGPASSWORD='sxwl666!' psql -h localhost -U postgres -d inty -c 'SELECT 1'`

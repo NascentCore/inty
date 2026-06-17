@@ -16,7 +16,9 @@ def scope_inner_tick_poll_interval_seconds() -> float:
     """Wake interval: min(presence poll, dreaming idle) so due checks are not starved."""
     feats = global_config_loaded_from_config_yaml.app.features
     presence_poll = float(feats.companion_ws_proactive_chat_poll_seconds)
-    dreaming_idle = float(feats.companion_harness.dreaming_idle_seconds)
+    dreaming_idle = float(
+        global_config_loaded_from_config_yaml.agent.companion_harness.dreaming_idle_seconds
+    )
     return min(presence_poll, dreaming_idle)
 
 

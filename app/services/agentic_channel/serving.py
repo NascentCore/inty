@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,14 +13,17 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.companion import (
     AgenticCompanion,
 )
+from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputDeliveryAck,
+    OutputDeliveryFailure,
+    ReadyOutputMessage,
+    get_output_queue_for_scope,
+)
 from app.core.companion_harness.agentic_companion.postgres_queue import (
     PostgresInputQueueRepository,
-    PostgresOutputQueueRepository,
 )
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
-    QueueAck,
-    QueueMessageId,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
@@ -29,21 +33,31 @@ from app.core.companion_harness.companion.utc import (
 )
 from app.db.session import AsyncSessionLocal
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.services.agentic_companion.downlink import (
-    Downlink,
-    downlink_delivers_user_visible_text,
-)
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 
 SendTextFn = Callable[[str], Awaitable[None]]
 
+_CHANNEL_OUTPUT_PUMP_POLL_SEC = 0.02
+
 
 @dataclass(frozen=True)
 class DrainScopeOnceResult:
-    """Outcome of one synchronous companion drain for Channel/Wire callers."""
+    """Outcome of processing at most one claimed inbound batch for a scope.
+
+    When a batch was drained, carries the inbound message ids and whether a
+    background tool loop took over. When nothing was pending, reports no drain.
+    """
 
     reply_text: str
     tool_background_started: bool
+    batch_drained: bool
+    input_message_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if self.batch_drained:
+            assert self.input_message_ids
+        else:
+            assert not self.input_message_ids
 
 
 @dataclass(frozen=True)
@@ -52,6 +66,81 @@ class UserChatTurnDeliveryResult:
 
     delivered_text: str
     tool_background_started: bool
+
+
+async def _deliver_ready_message(
+    *,
+    message: ReadyOutputMessage,
+    send_text: SendTextFn,
+    scope: AgentScope,
+) -> str | None:
+    text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
+    if not text:
+        output_queue = get_output_queue_for_scope(scope)
+        await output_queue.ack_delivered(
+            OutputDeliveryAck(
+                message_id=message.message_id,
+                delivered_at_utc=datetime.now(timezone.utc),
+            )
+        )
+        return None
+    try:
+        await send_text(text)
+    except Exception as exc:
+        logger.warning(
+            "output delivery failed scope={} message_id={} error={}",
+            scope.registry_key(),
+            message.message_id,
+            exc,
+        )
+        output_queue = get_output_queue_for_scope(scope)
+        await output_queue.mark_delivery_failed(
+            OutputDeliveryFailure(
+                message_id=message.message_id,
+                error_message=repr(exc),
+            )
+        )
+        return None
+    output_queue = get_output_queue_for_scope(scope)
+    await output_queue.ack_delivered(
+        OutputDeliveryAck(
+            message_id=message.message_id,
+            delivered_at_utc=datetime.now(timezone.utc),
+        )
+    )
+    return text
+
+
+async def channel_output_pump(
+    scope: AgentScope,
+    *,
+    send_text: SendTextFn,
+    stop_event: asyncio.Event,
+    poll_interval_sec: float = _CHANNEL_OUTPUT_PUMP_POLL_SEC,
+) -> str:
+    """Pull in-memory ready OutputQueue messages until ``stop_event`` and queue drained."""
+    assert poll_interval_sec > 0.0
+    output_queue = get_output_queue_for_scope(scope)
+    last_reply = ""
+    while not stop_event.is_set():
+        for message in await output_queue.pull_ready_batch():
+            delivered = await _deliver_ready_message(
+                message=message,
+                send_text=send_text,
+                scope=scope,
+            )
+            if delivered is not None:
+                last_reply = delivered
+        await asyncio.sleep(poll_interval_sec)
+    for message in await output_queue.pull_ready_batch():
+        delivered = await _deliver_ready_message(
+            message=message,
+            send_text=send_text,
+            scope=scope,
+        )
+        if delivered is not None:
+            last_reply = delivered
+    return last_reply
 
 
 async def drain_and_deliver_user_chat_turn(
@@ -63,21 +152,29 @@ async def drain_and_deliver_user_chat_turn(
     background_output_sink,
     send_text: SendTextFn,
 ) -> UserChatTurnDeliveryResult:
-    """Drain one input batch, pull OutputQueue, deliver via ``send_text``."""
-    # TODO(#3402): Return typed Channel handle result instead of str from presence.
+    """Drain one input batch while pumping OutputQueue ready messages to ``send_text``."""
+    # TODO(!3487): Remove when inbound uses enqueue + wake; ScopeQueueServing owns drain+pump.
+    # TODO(!3402): Return typed Channel handle result instead of str from presence.
     assert delivery_wire_id != ""
-    drain_result = await drain_scope_once_via_companion(
-        scope,
-        runtime_channel=runtime_channel,
-        implicit_signal_bundle=implicit_signal_bundle,
-        background_output_sink=background_output_sink,
+    stop_event = asyncio.Event()
+    pump_task = asyncio.create_task(
+        channel_output_pump(
+            scope,
+            send_text=send_text,
+            stop_event=stop_event,
+        ),
+        name=f"channel_output_pump_{scope.registry_key()}",
     )
-    delivered_text = await deliver_pending_output_for_wire(
-        scope,
-        delivery_channel=runtime_channel,
-        delivery_wire_id=delivery_wire_id,
-        send_text=send_text,
-    )
+    try:
+        drain_result = await drain_scope_once_via_companion(
+            scope,
+            runtime_channel=runtime_channel,
+            implicit_signal_bundle=implicit_signal_bundle,
+            background_output_sink=background_output_sink,
+        )
+    finally:
+        stop_event.set()
+        delivered_text = await pump_task
     return UserChatTurnDeliveryResult(
         delivered_text=delivered_text,
         tool_background_started=drain_result.tool_background_started,
@@ -108,7 +205,6 @@ async def drain_scope_once_via_companion(
         companion = AgenticCompanion(
             scope=scope,
             input_repo=PostgresInputQueueRepository(db),
-            output_repo=PostgresOutputQueueRepository(db),
         )
         try:
             result = await companion.drain_once(
@@ -126,97 +222,18 @@ async def drain_scope_once_via_companion(
         return DrainScopeOnceResult(
             reply_text="",
             tool_background_started=False,
+            batch_drained=False,
+            input_message_ids=(),
         )
     reply = strip_leading_transcript_timestamp_prefixes(
         result.assistant_text.strip()
     )
-    if reply:
-        return DrainScopeOnceResult(
-            reply_text=reply,
-            tool_background_started=result.tool_background_started,
-        )
-    if result.tool_background_started:
-        return DrainScopeOnceResult(
-            reply_text="",
-            tool_background_started=True,
-        )
     return DrainScopeOnceResult(
-        reply_text="（没有回复内容）",
-        tool_background_started=False,
+        reply_text=reply,
+        tool_background_started=result.tool_background_started,
+        batch_drained=True,
+        input_message_ids=result.input_message_ids,
     )
-
-
-async def deliver_pending_output_for_wire(
-    scope: AgentScope,
-    *,
-    delivery_channel: CompanionRuntimeChannel,
-    delivery_wire_id: str,
-    send_text: SendTextFn,
-    limit: int = 16,
-) -> str:
-    """Pull OutputQueue rows, send via ``send_text``, return last user-visible text."""
-    assert delivery_wire_id != ""
-    last_reply = ""
-    async with AsyncSessionLocal() as db:
-        output_repo = PostgresOutputQueueRepository(db)
-        claims = await output_repo.claim_pending_for_delivery(
-            scope,
-            delivery_channel=delivery_channel,
-            delivery_wire_id=delivery_wire_id,
-            limit=limit,
-        )
-        for claim in claims:
-            record = claim.record
-            downlink = Downlink(
-                kind=record.kind,
-                assistant_text=record.text,
-                turn=None,
-                tool_output=None,
-                bootstrap_interim=None,
-                scheduled_task_id=None,
-                transcript_user_text=None,
-            )
-            if not downlink_delivers_user_visible_text(downlink):
-                await output_repo.mark_delivered(
-                    QueueAck(
-                        message_id=QueueMessageId(value=record.message_id),
-                        delivered_at_utc=datetime.now(timezone.utc),
-                    )
-                )
-                continue
-            text = strip_leading_transcript_timestamp_prefixes(
-                record.text.strip()
-            )
-            if not text:
-                await output_repo.mark_delivered(
-                    QueueAck(
-                        message_id=QueueMessageId(value=record.message_id),
-                        delivered_at_utc=datetime.now(timezone.utc),
-                    )
-                )
-                continue
-            try:
-                await send_text(text)
-                await output_repo.mark_delivered(
-                    QueueAck(
-                        message_id=QueueMessageId(value=record.message_id),
-                        delivered_at_utc=datetime.now(timezone.utc),
-                    )
-                )
-                last_reply = text
-            except Exception as exc:
-                logger.warning(
-                    "output delivery failed scope={} message_id={} error={}",
-                    scope.registry_key(),
-                    record.message_id,
-                    exc,
-                )
-                await output_repo.mark_failed(
-                    record.message_id,
-                    error_message=repr(exc),
-                )
-        await db.commit()
-    return last_reply
 
 
 async def handle_sync_user_turn_via_queues(

@@ -47,11 +47,7 @@ class MemoryStoreTranscriptProjector:
             content=record.text,
             timestamp=record.created_at_utc.replace(microsecond=0).isoformat(),
             trace_id=record.trace_id,
-            reply_to=(
-                record.in_reply_to_input_ids[0]
-                if record.in_reply_to_input_ids
-                else None
-            ),
+            reply_to=(record.message_ids[0] if record.message_ids else None),
         )
         self._append(store, projection)
 

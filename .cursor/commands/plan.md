@@ -1,5 +1,11 @@
 # Plan (with additional contexts)
 
+This is to draft a solid implementation plan, after you have a sound design.
+
+## Scoping
+
+- Start with core & minimal, and create github issues and add TODOs in code places, whenever run into situations where the available information is not sufficient for a clear & concrete design.
+
 ## For [companion harness](/app/core/companion_harness/)
 
 When working on [companion harness](/app/core/companion_harness/)

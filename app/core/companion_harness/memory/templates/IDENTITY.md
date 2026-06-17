@@ -1,5 +1,3 @@
-<!-- TODO(person-identity-schema): Replace with role-neutral person-identity schema; seeds runtime USER.md + IDENTITY.md. #3390 -->
-
 # 我的身份
 
 *由用户与你共同塑造。*

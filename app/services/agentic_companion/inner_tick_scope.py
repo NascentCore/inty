@@ -94,7 +94,7 @@ async def resolve_inner_tick_scope_coords_for_triple(
         match model_source:
             case InnerTickModelSource.DREAMING_HARNESS:
                 dreaming_llm = (
-                    global_config_loaded_from_config_yaml.app.features.companion_harness.dreaming_llm
+                    global_config_loaded_from_config_yaml.agent.companion_harness.dreaming_llm
                 )
                 model_override = resolve_chat_text_model(dreaming_llm)
             case InnerTickModelSource.CHAT_DEFAULT:

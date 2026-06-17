@@ -15,6 +15,34 @@ from app.services.agentic_companion.inner_tick_delivery import (
 
 
 @pytest.mark.asyncio
+async def test_deliver_inner_tick_assistant_weixin_skips_silent() -> None:
+    sent: list[str] = []
+
+    async def sink(text: str) -> None:
+        sent.append(text)
+
+    delivery = inner_tick_delivery_for_weixin(sink)
+    await deliver_inner_tick_assistant(
+        delivery,
+        ws_payload=None,
+        assistant_text="[SILENT]",
+    )
+    assert sent == []
+
+
+@pytest.mark.asyncio
+async def test_deliver_inner_tick_assistant_ws_skips_silent() -> None:
+    queue: asyncio.Queue = asyncio.Queue()
+    delivery = inner_tick_delivery_for_ws(queue)
+    await deliver_inner_tick_assistant(
+        delivery,
+        ws_payload={"text": "[SILENT]"},
+        assistant_text="[SILENT]",
+    )
+    assert queue.empty()
+
+
+@pytest.mark.asyncio
 async def test_deliver_inner_tick_assistant_ws_puts_payload() -> None:
     queue: asyncio.Queue = asyncio.Queue()
     delivery = inner_tick_delivery_for_ws(queue)

@@ -1,10 +1,10 @@
 """
 E2E: ``/api/v1/chat/ws`` greeting via ``user_signed_on`` + ``message_id`` returns assistant JSON.
 
-Requires PostgreSQL reachable at 127.0.0.1:5432 with migrations applied (same as CI ``devops/config.yaml.test``).
-Subprocess loads that YAML via ``INTY_CONFIG_YAML``; the pytest process does not.
+Requires PostgreSQL reachable at 127.0.0.1:5432 with migrations applied.
+Export ``INTY_CONFIG_YAML`` before pytest; the subprocess uvicorn inherits it.
 
-Enable with ``INTY_COMPANION_WS_BOOTSTRAP_E2E=1`` or ``INTY_COMPANION_WS_IMPLICIT_SIGNON_E2E=1``. Calls the real chat model from test config (network).
+Enable with ``INTY_COMPANION_WS_BOOTSTRAP_E2E=1`` or ``INTY_COMPANION_WS_IMPLICIT_SIGNON_E2E=1``. Calls the real chat model from that config (network).
 
 The subprocess sets ``INTY_E2E_RELAX_SUBSCRIPTION=1`` so guest chat limits do not block under ``debug: true``.
 
@@ -23,7 +23,9 @@ import pytest
 
 from tests.app.companion_ws_bootstrap.constants import (
     DEFAULT_RECV_TIMEOUT_SEC,
+    ENV_INTY_CONFIG_YAML,
     companion_ws_implicit_e2e_gated,
+    inty_config_yaml_path,
 )
 from tests.app.companion_ws_bootstrap.server import (
     postgres_tcp_reachable,
@@ -53,6 +55,8 @@ def running_inty_backend():
         )
     if not postgres_tcp_reachable():
         pytest.skip("PostgreSQL not reachable at 127.0.0.1:5432")
+    if inty_config_yaml_path() is None:
+        pytest.skip(f"Set {ENV_INTY_CONFIG_YAML} before running companion WS E2E")
     with run_inty_backend_subprocess() as ctx:
         yield ctx
 

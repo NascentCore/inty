@@ -1,8 +1,11 @@
-"""Companion chat WebSocket: ``/api/v1/chat/ws``.
+"""Agentic companion's interface on WebSocket
 
-Only the production companion harness path (companion_harness, technocore, livingsphere).
-HTTP chat completions and image/music generation stay in ``chat.py``.
-Wire frames: ``app/schemas/chat_websocket.py``; outbound pump: ``app/services/chat_websocket_session.py``.
+Legacy chat-completion interfaces are in ``chat.py``.
+Do not mix these 2, i.e., agentic companion and chat completion should be independent.
+
+
+TODO(!3487): USER_CHAT enqueue + wake via ``AgentChannelPresence``; silent send-only inbound.
+TODO(!3488): ``AppWsChannelAdapter`` + single scope ``Coordinator``; retire per-connection queue drain.
 """
 
 import asyncio
@@ -98,6 +101,7 @@ from app.services.agentic_companion.ws_queue_serving import (
 )
 from app.services.agentic_companion.ws_turn_support import (
     companion_ai_meta_from_queue_delivery,
+    generated_image_meta_from_baseline,
 )
 from app.services.agentic_companion.ws_channel_guard import (
     register_app_ws_channel,
@@ -415,10 +419,15 @@ async def _try_handle_ws_user_signed_on_frame(
                 ).model_dump(exclude_none=True)
             )
             return True
+        agent_scope = AgentScope(
+            user_id=str(current_user.id),
+            agent_id=agent_id,
+        )
+        inner_tick_chat_id = agent_scope.memory_store_chat_id()
         companion_ws.store_inner_tick_coords(
             user_id=current_user.id,
             agent_id=agent_id,
-            chat_id=chat.id,
+            chat_id=inner_tick_chat_id,
         )
         greeting_task = inflight_turn_tracker.spawn(
             _enqueue_companion_greeting_ws_turn_after_user_signed_on(
@@ -444,7 +453,7 @@ async def _try_handle_ws_user_signed_on_frame(
             ws_conn_id,
             current_user.id,
             agent_id,
-            chat.id,
+            inner_tick_chat_id,
             preset_mid,
         )
     except Exception:
@@ -890,6 +899,7 @@ class AppWsQueueDeliveryCtx:
     """Values needed to materialize one queue-delivered App WS completion frame."""
 
     db: AsyncSession
+    user_id: str
     agent_id: str
     chat_id: str
     session_id: str
@@ -923,9 +933,17 @@ async def _deliver_app_ws_user_reply_from_queue(
         ctx.companion_ws_foreground_pending[ctx.companion_preset_uid][
             "foreground_user_message_id"
         ] = companion_user_row_id
+    generated_image = None
+    if ctx.delivery_flags.memory_store is not None:
+        assert ctx.delivery_flags.image_asset_baseline_initialized
+        generated_image = generated_image_meta_from_baseline(
+            ctx.delivery_flags.memory_store,
+            ctx.delivery_flags.image_asset_baseline,
+        )
     companion_ai_meta = companion_ai_meta_from_queue_delivery(
         queue_message_id=ctx.delivery_flags.queue_message_id,
         tool_background_started=ctx.delivery_flags.tool_background_started,
+        generated_image=generated_image,
     )
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
         ctx.session_id,
@@ -1051,6 +1069,11 @@ async def _agent_chat_ws_completions_impl(
                 status_code=500,
                 detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}",
             )
+
+        agent_scope_inner_tick_chat_id = AgentScope(
+            user_id=str(current_user.id),
+            agent_id=agent_id,
+        ).memory_store_chat_id()
 
         user_messages = [msg for msg in request.messages if msg.role == "user"]
         if not user_messages:
@@ -1210,7 +1233,7 @@ async def _agent_chat_ws_completions_impl(
                             companion_ws_inner_tick_ctx,
                             user_id=current_user.id,
                             agent_id=agent_id,
-                            chat_id=chat.id,
+                            chat_id=agent_scope_inner_tick_chat_id,
                         )
                     _ = companion_user_row_id
                 else:
@@ -1291,8 +1314,9 @@ async def _agent_chat_ws_completions_impl(
                             delivery_flags = AppWsQueueDeliveryFlags()
                             delivery_ctx = AppWsQueueDeliveryCtx(
                                 db=db,
+                                user_id=str(current_user.id),
                                 agent_id=agent_id,
-                                chat_id=str(chat.id),
+                                chat_id=agent_scope_inner_tick_chat_id,
                                 session_id=session_id,
                                 request=request,
                                 last_user_message=last_user_message,
@@ -1364,7 +1388,7 @@ async def _agent_chat_ws_completions_impl(
                                     companion_ws_inner_tick_ctx,
                                     user_id=current_user.id,
                                     agent_id=agent_id,
-                                    chat_id=chat.id,
+                                    chat_id=agent_scope_inner_tick_chat_id,
                                 )
                             return None
                     except Exception as exc:
@@ -1463,7 +1487,7 @@ async def _agent_chat_ws_completions_impl(
                                 companion_ws_inner_tick_ctx,
                                 user_id=current_user.id,
                                 agent_id=agent_id,
-                                chat_id=chat.id,
+                                chat_id=agent_scope_inner_tick_chat_id,
                             )
 
             response_preview = (

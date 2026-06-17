@@ -5,7 +5,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-BASE_CONFIG_PATH="${REPO_ROOT}/devops/config.yaml.local"
+BASE_CONFIG_PATH="${REPO_ROOT}/devops/config.yaml.test"
 
 # 颜色输出
 RED='\033[0;31m'
@@ -93,10 +93,22 @@ write_custom_config() {
     log_info "生成自定义配置文件: $config_path"
     
     cp "$BASE_CONFIG_PATH" "$config_path"
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s/db: \"inty\"/db: $dbname/" "$config_path"
+    _sed_inplace() {
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "$@"
+        else
+            sed -i "$@"
+        fi
+    }
+    # Align Alembic config with the same PG_* params used for psql (CI :5432, not local :5433).
+    if grep -qE '^  port:' "$config_path"; then
+        _sed_inplace "s/^  port:.*/  port: ${PG_PORT}/" "$config_path"
+    fi
+    if grep -qE '^  db:' "$config_path"; then
+        _sed_inplace "s/^  db:.*/  db: ${dbname}/" "$config_path"
     else
-        sed -i "s/db: \"inty\"/db: $dbname/" "$config_path"
+        _sed_inplace "/^  host:/a\\
+  db: ${dbname}" "$config_path"
     fi
     cat "$config_path"
 }

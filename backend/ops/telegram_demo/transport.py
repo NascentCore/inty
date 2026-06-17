@@ -5,6 +5,8 @@ TODO(telegram-shared-bot): Option A shared-bot routing — #3396
 TODO(telegram-dedicated-bot-bonding): Option B per-user bot token + 1:1:1 user/bot/agent — #3361 (epic #3395)
 TODO(telegram-reply-reaction-inbound): Route reply_to + emoji reaction updates into channel
   inbound envelope (not flat text only) — #3441 (epic #3440)
+TODO(!3501): Optional transport-level text coalescing (Hermes ``_flush_text_batch``); prefer
+  ``ScopeQueueServing`` post-drain quiet window for durable InputQueue semantics.
 """
 
 from __future__ import annotations
@@ -116,7 +118,7 @@ class TelegramTransport:
         scope: AgentScope | None = None,
     ) -> None:
         """Send one Channel-local user-visible string via Telegram adapter downlink."""
-        # TODO(#3402): Share outbound helper with AgentChannelPresence.send_user_reply.
+        # TODO(!3402): Share outbound helper with AgentChannelPresence.send_user_reply.
         assert chat_id != ""
         assert text != ""
         if scope is not None:
