@@ -51,6 +51,16 @@ def test_load_prompt_bundle_reads_channels_from_memory_store(tmp_path: Path) -> 
     assert bundle.channels_md == "# Channels\ncustom channel contract\n"
 
 
+def test_load_prompt_bundle_loads_harness_from_package_template(tmp_path: Path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("models", "a", f"{tmp_path.name}-harness"),
+        repository=None,
+    )
+    bundle = load_prompt_bundle(store, meta=ContextMeta())
+    assert "Innate limits of the companion harness" in bundle.harness_md
+    assert "only communicate in text" in bundle.harness_md
+
+
 def test_load_prompt_bundle_reads_companionship_from_memory_store(tmp_path: Path) -> None:
     store = MemoryStore(
         scope=CompanionScope("models", "a", f"{tmp_path.name}-companionship"),

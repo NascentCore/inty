@@ -247,6 +247,7 @@ def is_transcript_row_user_visible(row: ChatMessage) -> bool:
 _OPTIONAL_DOC_MAX_CHARS = 64_000
 _MEMORY_DAILY_GIST_INJECT_MAX_CHARS = 12_000
 OUTPUT_FORMAT_IM_DM_MD = "OUTPUT_FORMAT_IM_DM.md"
+HARNESS_MD = "HARNESS.md"
 
 
 def _read_memory_document_optional(
@@ -353,6 +354,9 @@ def load_prompt_bundle(
         ),
         tools_md=_template_doc_truncated(
             "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
+        ),
+        harness_md=_template_doc_truncated(
+            HARNESS_MD, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         channels_md=_read_memory_document_required(store, "CHANNELS.md"),
         companionship_md=_read_memory_document_required(store, "COMPANIONSHIP.md"),

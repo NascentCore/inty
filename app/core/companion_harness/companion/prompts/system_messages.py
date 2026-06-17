@@ -10,6 +10,10 @@ it only materializes the ordered system prefix consumed by model calls.
 Doctrine is loaded from package prompt seeds and is never writable through
 MemoryStore tools.
 
+**Capability (package + store):** harness innate limits (``HARNESS.md``) → channel
+contracts (``CHANNELS.md``) → tool contracts (``TOOLS.md``). Package-only harness
+and tool seeds are not writable through MemoryStore tools.
+
 Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdown ``##`` headings.
 
 **Scenario → entrypoint** (production; call from ``prompt_stack`` / ``turn`` / ``tool_background``):
@@ -23,7 +27,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | ASYNC autonomy inner tick (silent self-directed work) | ``build_system_messages_for_inner_tick_autonomy`` |
 | Proactive inner tick (``PROACTIVE_CHAT``) | ``build_system_messages_for_inner_tick_proactive_chat`` |
 | Scheduled reminder inner tick | ``build_system_messages_for_inner_tick_scheduled`` |
-| Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` (bootstrap: inject ``BOOTSTRAP.md``, omit ``TOOLS.md``; chat-only, no tools) |
+| Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` (bootstrap: inject ``BOOTSTRAP.md``, omit Capability package slices; chat-only, no tools) |
 
 ``build_system_messages`` is the internal combiner; tests may call it directly.
 
@@ -597,6 +601,8 @@ def _capability_system_messages(
         and not chat_branch_no_tool_api
         and not interactive_bootstrap_active
     ):
+        if bundle.harness_md.strip():
+            out.append(_system_message(bundle.harness_md.strip()))
         if bundle.channels_md.strip():
             out.append(_system_message(bundle.channels_md.strip()))
         out.append(_system_message(bundle.tools_md.strip()))
