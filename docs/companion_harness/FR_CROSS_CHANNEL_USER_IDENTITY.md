@@ -2,6 +2,8 @@ Generated entirely by Cursor agent.
 
 # Cross-channel identity follow-ups
 
+STATUS: PENDING
+
 ## Minimal invariant
 
 - One canonical User.id has at most one active companion Agent.id.
