@@ -110,7 +110,7 @@ def build_github_issue_body(snapshot: HarnessSnapshot) -> str:
             "",
             "> Automated report from `companion_record_user_feedback` tool.",
             "> Full harness snapshot in MemoryStore "
-            f"`.companion_user_feedback.jsonl` (feedback_id above).",
+            "`.companion_user_feedback.jsonl` (feedback_id above).",
             "",
             "## Harness snapshot excerpt (GitHub body caps: transcript 2k, memory 500/doc)",
             "",

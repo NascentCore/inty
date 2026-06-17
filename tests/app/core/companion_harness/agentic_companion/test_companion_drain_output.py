@@ -62,7 +62,6 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> N
     try:
         async with AsyncSessionLocal() as db:
             input_repo = PostgresInputQueueRepository(db)
-            output_repo = PostgresOutputQueueRepository(db)
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
