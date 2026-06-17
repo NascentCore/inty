@@ -158,18 +158,30 @@ list_column_names() {
   "
 }
 
+# Comma-separated PostgreSQL identifiers, each double-quoted (reserved words / special chars).
+join_quoted_column_identifiers() {
+  local col quoted result=""
+  for col in "$@"; do
+    col="${col//\"/\"\"}"
+    quoted="\"${col}\""
+    if [[ -n "${result}" ]]; then
+      result+=","
+    fi
+    result+="${quoted}"
+  done
+  echo "${result}"
+}
+
 sync_table_incremental() {
   local tbl="$1"
-  local cutoff cols col_list copy_cols csv_path row_count
+  local cutoff cols quoted_cols csv_path row_count
 
   cutoff="$(local_max_created_at "${tbl}")"
   mapfile -t cols < <(list_column_names "${tbl}")
-  col_list="$(IFS=','; echo "${cols[*]}")"
-  copy_cols="$(printf '%s,' "${cols[@]}")"
-  copy_cols="${copy_cols%,}"
+  quoted_cols="$(join_quoted_column_identifiers "${cols[@]}")"
 
   csv_path="${TMP_DIR}/${tbl}.csv"
-  psql_remote -c "\\copy (SELECT ${col_list} FROM public.\"${tbl}\" WHERE created_at > '${cutoff}' ORDER BY created_at) TO '${csv_path}' WITH (FORMAT csv, HEADER true)"
+  psql_remote -c "\\copy (SELECT ${quoted_cols} FROM public.\"${tbl}\" WHERE created_at > '${cutoff}' ORDER BY created_at) TO '${csv_path}' WITH (FORMAT csv, HEADER true)"
 
   row_count=$(( $(wc -l < "${csv_path}") - 1 ))
   if [[ "${row_count}" -le 0 ]]; then
@@ -177,7 +189,7 @@ sync_table_incremental() {
     return 0
   fi
 
-  psql_local -c "\\copy public.\"${tbl}\" (${copy_cols}) FROM '${csv_path}' WITH (FORMAT csv, HEADER true)"
+  psql_local -c "\\copy public.\"${tbl}\" (${quoted_cols}) FROM '${csv_path}' WITH (FORMAT csv, HEADER true)"
   echo "  ${tbl}: copied ${row_count} row(s) (cutoff ${cutoff})"
 
   if [[ "${tbl}" == "chat_history" ]]; then
