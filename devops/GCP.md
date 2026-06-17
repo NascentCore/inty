@@ -26,7 +26,7 @@ DataStream 比较麻烦，因为需要从主数据库同步数据、要重启数
 - **API endpoint**：https://app.inty.cc
   - Monitoring：https://app.checklyhq.com/accounts/1896e6d6-1599-414f-998e-3dabcc58fd7f
 - **Inty-dev**：https://dev.inty.sxwl.ai
-  - 运营评测工具：https://dev.inty.sxwl.ai/evaluation
+  - 运营评测工具：<!-- TODO(!3499): URL stale; update to active Ops/evaluation entry point --> https://dev.inty.sxwl.ai/evaluation
 
 ### iMate（第二 Inty 后端实例）Cloud SQL 逻辑库
 
