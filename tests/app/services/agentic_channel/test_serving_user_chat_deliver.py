@@ -35,6 +35,8 @@ async def test_drain_and_deliver_runs_pump_concurrently() -> None:
         return_value=DrainScopeOnceResult(
             reply_text="hello from companion",
             tool_background_started=False,
+            batch_drained=True,
+            input_message_ids=("msg-1",),
         ),
     ):
         with patch(
@@ -72,6 +74,8 @@ async def test_drain_and_deliver_returns_empty_when_pump_empty() -> None:
         return_value=DrainScopeOnceResult(
             reply_text="fallback reply",
             tool_background_started=False,
+            batch_drained=True,
+            input_message_ids=("msg-2",),
         ),
     ):
         with patch(

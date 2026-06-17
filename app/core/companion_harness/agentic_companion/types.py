@@ -189,6 +189,10 @@ class AgenticCompanionRunResult(BaseModel):
     assistant_text: str
     tool_background_started: bool
     output_message_ids: tuple[str, ...] = Field(default_factory=tuple)
+    # TODO: Why do we need return input message ids?
+    # Normally, output has nothing to do with input.
+    # The caller should track the input message ids themselves.
+    input_message_ids: tuple[str, ...]
 
 
 class TranscriptProjectionRecord(BaseModel):

@@ -1,8 +1,6 @@
 """In-process agent-channel presence: shared inner-tick + tool_bg per scope.
 
-TODO(#3486): Start ``ScopeQueueServing`` from ``ensure_presence`` / ``stop_presence``.
-TODO(#3487): ``handle_user_text`` enqueue + wake only; drop ``drain_and_deliver_user_chat_turn``.
-TODO(#3490): Remove queue USER_CHAT ``foreground_pending`` + ``background_sink`` once !3487 ships.
+TODO(#3490): Remove queue USER_CHAT ``foreground_pending`` + ``background_sink``.
 """
 
 from __future__ import annotations
@@ -25,13 +23,15 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services import agent_service
 from app.services.agentic_channel.channel_runtime import (
     get_scope_channel_registry,
 )
+from app.services.agentic_channel.scope_queue_serving import (
+    ScopeDrainCompletion,
+    ScopeQueueServing,
+)
 from app.services.agentic_channel.serving import (
-    drain_and_deliver_user_chat_turn,
     enqueue_inbound_wire_message,
 )
 from app.core.companion_harness.agentic_companion.types import (
@@ -73,6 +73,7 @@ class AgentChannelPresence:
         self._coordinator = Coordinator.for_loop(self._loop)
         self._session: Session | None = None
         self._tool_bg_task: asyncio.Task[None] | None = None
+        self._queue_serving: ScopeQueueServing | None = None
 
     @property
     def scope(self) -> AgentScope:
@@ -115,8 +116,18 @@ class AgentChannelPresence:
             self._tool_background_consumer(),
             name=f"agent_channel_tool_bg_{self._scope.agent_id}",
         )
+        self._queue_serving = ScopeQueueServing(
+            self._scope,
+            background_output_sink=self._coordinator.background_sink,
+            send_text=self._send_user_reply_via_active_channel,
+            on_drain_complete=self._on_queue_drain_complete,
+        )
+        await self._queue_serving.start()
 
     async def stop(self) -> None:
+        if self._queue_serving is not None:
+            await self._queue_serving.stop()
+            self._queue_serving = None
         task = self._tool_bg_task
         if task is not None and (not task.done()):
             task.cancel()
@@ -152,6 +163,45 @@ class AgentChannelPresence:
                 transcript_user_text=None,
             )
         )
+
+    async def _send_user_reply_via_active_channel(self, text: str) -> None:
+        registry = get_scope_channel_registry(self._scope)
+        active = registry.active_channel()
+        if active is None:
+            raise RuntimeError(
+                f"no ACTIVE channel for user_reply scope={self._scope.registry_key()}"
+            )
+        downlink = registry.downlinks.get(active)
+        if downlink is None:
+            raise RuntimeError(
+                f"no downlink for channel={active.value} "
+                f"scope={self._scope.registry_key()}"
+            )
+        await downlink.deliver(
+            Downlink(
+                kind=DownlinkKind.USER_REPLY,
+                assistant_text=text,
+                turn=None,
+                tool_output=None,
+                bootstrap_interim=None,
+                scheduled_task_id=None,
+                transcript_user_text=None,
+            )
+        )
+
+    async def _on_queue_drain_complete(
+        self, completion: ScopeDrainCompletion
+    ) -> None:
+        input_message_ids = completion.input_message_ids
+        assert input_message_ids
+        if completion.tool_background_started:
+            primary_message_id = input_message_ids[-1]
+            for message_id in input_message_ids:
+                if message_id != primary_message_id:
+                    self._coordinator.remove_foreground_pending(message_id)
+            return
+        for message_id in input_message_ids:
+            self._coordinator.remove_foreground_pending(message_id)
 
     # TODO(channel-inbound-envelope): Accept reply-to + reaction fields; map channel message
     # IDs ↔ transcript UUIDs — epic #3440; Telegram #3441; Weixin #3442
@@ -190,6 +240,8 @@ class AgentChannelPresence:
                 received_at_utc=datetime.now(timezone.utc),
                 client_message_id=None,
             )
+            # TODO(#3411): Telegram Bot API has no device timezone; manual E2E smoke:
+            # inference → update_user_md → USER.md → LangSmith foreground ## User's Local Time Context.
             queue_message_id = await enqueue_inbound_wire_message(inbound)
             stub_request = ChatCompletionRequest(
                 messages=[ChatMessage(role="user", content=stripped)],
@@ -206,45 +258,8 @@ class AgentChannelPresence:
                     "effective_local_id": None,
                 },
             )
-            # TODO(#3411): Telegram Bot API has no device timezone; manual E2E smoke:
-            # inference → update_user_md → USER.md → LangSmith foreground ## User's Local Time Context.
-            implicit_bundle = ImplicitSignalBundle(
-                client_time=None,
-                user_signed_on=False,
-                server_received_at_utc=datetime.now(timezone.utc),
-            )
-
-            async def send_user_reply(text: str) -> None:
-                # TODO(#3402): Route via shared ChannelOutboundPort, not manual Downlink.
-                registry = get_scope_channel_registry(self._scope)
-                downlink = registry.downlinks.get(runtime_channel)
-                if downlink is None:
-                    raise RuntimeError(
-                        f"no downlink for channel={runtime_channel.value} "
-                        f"scope={self._scope.registry_key()}"
-                    )
-                await downlink.deliver(
-                    Downlink(
-                        kind=DownlinkKind.USER_REPLY,
-                        assistant_text=text,
-                        turn=None,
-                        tool_output=None,
-                        bootstrap_interim=None,
-                        scheduled_task_id=None,
-                        transcript_user_text=None,
-                    )
-                )
-
-            delivery_result = await drain_and_deliver_user_chat_turn(
-                self._scope,
-                runtime_channel=runtime_channel,
-                delivery_wire_id=wire_id,
-                implicit_signal_bundle=implicit_bundle,
-                background_output_sink=self._coordinator.background_sink,
-                send_text=send_user_reply,
-            )
-            if not delivery_result.tool_background_started:
-                self._coordinator.remove_foreground_pending(queue_message_id)
+            assert self._queue_serving is not None
+            self._queue_serving.wake(runtime_channel=runtime_channel)
             return ""
         except Exception as exc:
             logger.exception(

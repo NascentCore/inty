@@ -5,7 +5,9 @@ TODO(telegram-shared-bot): Option A shared-bot routing — #3396
 TODO(telegram-dedicated-bot-bonding): Option B per-user bot token + 1:1:1 user/bot/agent — #3361 (epic #3395)
 TODO(telegram-reply-reaction-inbound): Route reply_to + emoji reaction updates into channel
   inbound envelope (not flat text only) — #3441 (epic #3440)
-TODO(#3487): Inbound enqueue + wake only once ``ScopeQueueServing`` ships (!3485).
+TODO(#3487): Inbound enqueue + wake only once ``ScopeQueueServing`` ships (!3485). Telegram done in !3486.
+TODO(#3501): Optional transport-level text coalescing (Hermes ``_flush_text_batch``); prefer
+  ``ScopeQueueServing`` post-drain quiet window for durable InputQueue semantics.
 """
 
 from __future__ import annotations

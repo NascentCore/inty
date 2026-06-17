@@ -1,8 +1,4 @@
-"""Agentic companion serving pipeline glue for Channel/Wire integrations.
-
-TODO(#3486): Add ``ScopeQueueServing`` — long-lived input drain worker + output pump per
-scope; inbound handlers enqueue + wake only (!3485, !3487).
-"""
+"""Agentic companion serving pipeline glue for Channel/Wire integrations."""
 
 from __future__ import annotations
 
@@ -50,6 +46,14 @@ class DrainScopeOnceResult:
 
     reply_text: str
     tool_background_started: bool
+    batch_drained: bool
+    input_message_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if self.batch_drained:
+            assert self.input_message_ids
+        else:
+            assert not self.input_message_ids
 
 
 @dataclass(frozen=True)
@@ -214,6 +218,8 @@ async def drain_scope_once_via_companion(
         return DrainScopeOnceResult(
             reply_text="",
             tool_background_started=False,
+            batch_drained=False,
+            input_message_ids=(),
         )
     reply = strip_leading_transcript_timestamp_prefixes(
         result.assistant_text.strip()
@@ -221,6 +227,8 @@ async def drain_scope_once_via_companion(
     return DrainScopeOnceResult(
         reply_text=reply,
         tool_background_started=result.tool_background_started,
+        batch_drained=True,
+        input_message_ids=result.input_message_ids,
     )
 
 

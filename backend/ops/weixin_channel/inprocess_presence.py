@@ -2,7 +2,7 @@
 
 Not WeChat user presence: iLink does not expose open-app or open-DM signals (see ``transport``).
 
-TODO(#3487): ``handle_user_text`` enqueue + wake only; drop ``drain_and_deliver_user_chat_turn`` (!3485).
+TODO(#3493): Migrate ``WeixinInprocessPresence`` to ``ScopeQueueServing`` enqueue + wake (!3487).
 """
 
 from __future__ import annotations

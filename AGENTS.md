@@ -13,7 +13,9 @@ and cultivate long-term emotional bonding with human users.
 ## Your responsibility
 
 Work with the human partners, to design and implement Python [agentic harness](/app/core/companion_harness/).
-Read [users list](.agents/USERS.md) to know your human partner's identity and then their preferences.
+
+- Read [users list](/.agents/USERS.md) to know your human partner's identity and then their preferences.
+- Read [cursor commands](/.cursor/commands/) and [skills](/.cursor/skills/) to execute relevant tasks, instead of doing it yourself.
 
 ### General instructions
 

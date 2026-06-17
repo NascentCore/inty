@@ -106,6 +106,7 @@ class AgenticCompanion:
                 assistant_text=turn.assistant_text,
                 tool_background_started=turn.tool_background_started,
                 output_message_ids=tuple(output_ids),
+                input_message_ids=_batch_input_ids(batch),
             )
         except Exception as exc:
             logger.exception(
