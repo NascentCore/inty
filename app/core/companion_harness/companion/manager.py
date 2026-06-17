@@ -229,6 +229,7 @@ class CompanionManager:
             ensure_minimal_documents_in_store(store)
             ensure_techno_core_seeded(store)
             ensure_living_sphere_seeded(store)
+            # TODO(#3471): ensure_token_budget_seeded(store, initial_budget=...) on session init.
 
             session = CompanionSession(
                 scope=scope,

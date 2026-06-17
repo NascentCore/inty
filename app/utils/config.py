@@ -171,6 +171,7 @@ class FeaturesConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     class CompanionHarnessConfig(BaseModel):
+        # TODO(#3471): Add initial_token_budget and token_budget_stop_remaining fields.
         # TODO: Change to Chinese OSS model when releasing to prod.
         dreaming_llm: str = "google/gemini-3.5-flash"
         dreaming_idle_seconds: int = Field(
@@ -221,7 +222,8 @@ class FeaturesConfig(BaseModel):
     # Base quiet period (seconds) before proactive chat may fire; rhythm adapts from real-user gaps
     # up to 2× this value. WS proactive is always on when inner-tick coords are armed (signed on).
     # NOTE: proactive chat is not gated by daily message count; usage limits will use token
-    # consumption (future), not ``limits.free_user_chat_24h_limit``.
+    # consumption via ``app.features.companion_harness.initial_token_budget`` (#3471), not
+    # ``limits.free_user_chat_24h_limit``.
     # See docs/companion_harness/DESIGN.md (proactive rhythm).
     companion_ws_proactive_chat_base_idle_seconds: float = 30.0
     # Stop proactive chat and cap each proactive wait when silence since last real user message

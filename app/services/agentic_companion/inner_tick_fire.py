@@ -127,6 +127,7 @@ async def _kernel_context(
 async def try_fire_scheduled_inner_tick(
     fire_input: InnerTickFireInput,
 ) -> bool:
+    # TODO(#3473): gate proactive + scheduled fire on token budget before turn_lock.
     """When ``schedule_queue`` has a due pending task, run one inner-tick reminder turn."""
     coords = await resolve_inner_tick_scope_coords(
         fire_input,

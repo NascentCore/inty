@@ -292,6 +292,7 @@ class CompanionLLMClient:
         model_role: str = "memory",
         langsmith_extra: dict[str, Any] | None = None,
     ) -> str:
+        # TODO(#3472): debit token budget after complete_text (dreaming curator path).
         m = self.resolve_model(model_role)
         api_model = m.id_on_provider
         approx_chars = sum(len(str(x.get("content") or "")) for x in messages)

@@ -218,6 +218,7 @@ async def _run_companion_turn_core(
     track: CompanionTurnTrack,
     deps: CompanionTurnDeps,
 ) -> CompanionTurnResult:
+    # TODO(#3473): skip LLM when companion_token_budget_allows_llm is false.
     """
     执行一轮完整对话。
 
