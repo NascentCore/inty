@@ -6,16 +6,8 @@ Companion Harness 一套完整的智能体框架，由 LLM 驱动：1 人 1 Inty
 
 Companion Harness + LLM = Inty（陪伴智能体）；Inty + Memory = Personal Companion
 
-大模型会说话，但不会**记得你、惦记你、在你沉默时仍过自己的日子（分享给你）**。
-Harness 干的就是这件事：把 LLM 放进一套有节律、有记忆、有副作用的状态机里，让「聊天」变成「关系」。
-
-Harness 要的是：**一段会延续的关系**——你不在时她也在虚拟空间生活，回来时还能接上，换 App 或微信还是同一个人。
-我们认为 AI 突破现有局限成为长期伴侣的关键是：长期自主性，也就是产生用户预期以外的反馈；但这些行为和反馈始终以用户伴侣的视角呈现。
-
-自主性体现在：
-
-- Autonomy: agents have their own autonomous activities to build up their own identity and novelty.
-- App、微信、Telegram, users can interact with agents through channels used by humans, all are consistent.
+Companion Harness 干的就是这件事：把 LLM 放进一套有节律、有记忆、有副作用的状态机里，让「聊天」变成「关系」，即：用户与智能体体验、演化一段关系的框架。
+Companion Harness 提供了**活着的关系**的存在框架；在此之上，iMate 作为一款产品，是为用户提供一个**真心为你**的心灵港湾。
 
 ### 现状
 
@@ -23,8 +15,15 @@ Harness 要的是：**一段会延续的关系**——你不在时她也在虚�
 
 ## 重要下一步工作
 
-Only reference Epic GitHub issues. Do not include details.
-State of the Epic GitHub issues are in the GitHub issues themselves.
+大模型会说话，但不会**记得你、惦记你、在你沉默时仍过自己的日子（分享给你）**。
+
+我们认为 AI 突破现有局限成为长期伴侣的关键是：长期自主性，也就是产生用户预期以外的反馈；但这些行为和反馈始终以用户伴侣的视角呈现。
+自主性体现在：
+
+- Autonomy: agents have their own autonomous activities to build up their own identity and novelty.
+- App、微信、Telegram, users can interact with agents through channels used by humans, all are consistent.
+
+所有工作都围绕这个目标：
 
 ### Telegram production integration
 
@@ -46,9 +45,11 @@ Epic [#3393](https://github.com/nascentcore/inty/issues/3393) — turn program s
 
 Epic [#3394](https://github.com/nascentcore/inty/issues/3394) — sub-tasks & sub-agents, fan-in / fan-out, async & parallel execution.
 
-## 目标态
+## 目标态：内核与产品
 
-Companion Harness 的目标是为用户提供长期关系中的“虚拟活人”体验。后端内核必须提供长期实践中的关系演化机制，并在其框架内系统性添加次一级机制来支持个人陪伴。
+Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**提供一个完整自洽的存在环境。
+在此之上，需要叠加面向特定人群的**产品功能**，来实现陪伴的商业化体验，即**陪伴价值用户可感知、用户有付费意愿**。
+如 [多 agent 世界引擎、sub-agent](/docs/companion_harness/FR_WORLD_ENGINE.md)。
 
 ### Concepts & naming
 
@@ -178,21 +179,3 @@ Currently-supported channels:
 - Websocket
 - Telegram
 - Weixin/WeChat
-
-## 代码层技术选型（Tech Stack）
-
-- Python 3.12（与仓库环境一致）。
-- Pydantic v2
-- LLM client (OpenAI-compatible), with [models catalog](/app/utils/models_catalog.py)
-- Configs: `config.yaml` + `app/utils/config.py` / `app/core/config.py`。
-- Persistency: PostgreSQL + SQLAlchemy；MemoryStore → `companion_memory_document_versions`
-  - Alembic 迁移：`/backend/alembic/`
-- Observability
-  - LangSmith for llm call tracing
-  - loguru logging
-  - `/app/core/companion_harness/companion/runtime_events.py`
-    agentic-native introspection, potentially useful for users to understand the agent's situation. It's like a person's health reports.
-
-## 扩展设计
-
-- [多 agent 世界引擎、sub-agent](/docs/companion_harness/FR_WORLD_ENGINE.md)。
