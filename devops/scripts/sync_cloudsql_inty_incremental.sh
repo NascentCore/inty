@@ -2,6 +2,8 @@
 # Incrementally sync Cloud SQL rows into local Docker Postgres (created_at cutoff).
 # CREATED_BY_AGENT
 #
+# TODO(!3497): Run --check-only on the VM for inty-dev and inty before prod cutover (epic #3495).
+#
 # Compares remote vs local row counts; for tables with created_at, copies rows where
 # remote.created_at > local.max(created_at). Single-column PK tables use staging +
 # ON CONFLICT DO NOTHING to tolerate re-runs. Updates chat_history_id_seq when needed.
