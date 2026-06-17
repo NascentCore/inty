@@ -9,8 +9,9 @@ Generated entirely by Cursor agent.
 - Telegram, Weixin, App, and future channels are not assumed to be the same human until an account-linking flow proves they map to the same canonical User.id.
 - Telegram/Weixin first-onboard may create a provisional guest User.id and active companion bond immediately.
 - App login is the strongest canonical identity anchor, but not the only registration entry point.
-- When linking two identities that already have different active companions, automatic merge must stop for an explicit product flow; deselected companions are sealed for possible future revival, not deleted.
-- SEALED companions are frozen in time: invisible to users, consume zero runtime resources, and retain all agent data so future revival can continue from the preserved state.
+- When linking two identities that already have different active companions, automatic merge must stop for an explicit product flow; deselected companions are sealed, not deleted.
+- SEALED companions are frozen in time: invisible to users, consume zero runtime resources, and retain all agent data.
+- Revival is a distant-future non-goal for the current implementation; SEALED exists now because identity merge and reset decisions may need a safe inactive state.
 
 ## GitHub issue drafts
 
@@ -37,7 +38,7 @@ Umbrella issue: #3491.
   - Make one canonical user to one active companion agent a database invariant.
 - Scope:
   - Add companion bond persistence with active user and active agent uniqueness.
-  - Include ACTIVE and SEALED bond states; SEALED companions are invisible to users, consume zero runtime resources, and retain all agent data for potential revival.
+  - Include ACTIVE and SEALED bond states; SEALED companions are invisible to users, consume zero runtime resources, and retain all agent data.
   - Route all companion onboarding through the bond service.
   - Add repair/audit script for duplicate active bonds or orphaned agents.
 - Acceptance:
@@ -69,7 +70,7 @@ Umbrella issue: #3491.
   - Endpoint repointing behavior after reset.
 - Acceptance:
   - A new active companion for a canonical user always terminates the previous active bond in the same transaction.
-  - Old companion state is never silently reused by the replacement; merge-deselected companions are frozen for possible revival.
+  - Old companion state is never silently reused by the replacement; merge-deselected companions are frozen and hidden.
   - Ordinary channel onboarding never terminates an old companion as an implicit side effect.
 
 ### Issue: Product design for companion reset
@@ -81,9 +82,9 @@ Umbrella issue: #3491.
   - Confirmation copy and emotional framing.
   - Identity merge conflict flow when both sides already have active companions.
   - What the user can see, recover, export, or delete after reset.
-  - Revival policy for sealed companions, including how runtime restarts from the preserved state.
+  - Explicitly mark revival of SEALED companions as distant-future and out of scope for the first reset/merge implementation.
   - Whether support/admin reset is allowed and how it is audited.
 - Acceptance:
   - Backend reset API has a product-approved state transition and UX contract.
   - Implementation TODOs can reference the product decision instead of encoding ad hoc reset semantics.
-  - Product explicitly defines when a SEALED companion can become ACTIVE again and visible to a user.
+  - Product does not need to define SEALED revival before the first reset/merge implementation.
