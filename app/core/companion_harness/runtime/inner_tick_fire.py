@@ -208,6 +208,8 @@ async def kernel_fire_proactive(
     )
 
 
+# TODO(#3468): AUTONOMY durable artifacts (LIFE_CURRENTS, TC/LS events, generated_images)
+# must shape the next user-visible turn — see research/langsmith_traces/019ed438….json.
 async def kernel_fire_autonomy(
     kernel_input: InnerTickKernelInput,
 ) -> InnerTickKernelResult:

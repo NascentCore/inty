@@ -88,7 +88,7 @@ def inner_tick_activity_suppresses_user_delivery(
     """True when inner-tick ``tool_background`` must not push NL or images to the client.
 
     TODO(cross-track-image-delivery): AUTONOMY may generate_images silently; proactive
-    / user-chat need a coherent path to reference or deliver those assets. #3285
+    / user-chat need a coherent path to reference or deliver those assets. #3285 #3468
     """
     return inner_tick_activity == InnerTickActivity.AUTONOMY
 
