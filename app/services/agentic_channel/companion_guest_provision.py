@@ -6,6 +6,13 @@ Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
 TODO(#3358): DB still has unique constraints on ``readable_id`` for legacy HTTP paths;
 do not drop until those callers migrate — see issue for Alembic plan.
 
+TODO(companion-bond-invariant): #3491 — replace oldest-PRIVATE-agent reuse with
+a DB-enforced active companion bond; merge-deselected companions must enter
+SEALED state: frozen, invisible, zero runtime, all data intact. Replacement
+must wait for the product reset decision drafted in
+docs/companion_harness/FR_CROSS_CHANNEL_USER_IDENTITY.md; revival is distant
+future and out of scope for the first implementation.
+
 **Not** ``agent_service.create_agent``: that path is maintenance-mode HTTP only
 (readable_id allocation, avatar crop, opening-voice enqueue, subscription limits).
 Companion telegram / weixin / agent-channel onboard must stay on this module.
