@@ -2,7 +2,7 @@
 # Idempotent start or (re)create inty-dev-postgres bound to the canonical named volume.
 # CREATED_BY_AGENT
 #
-# TODO(!3496): After merge, run on VM + install cron from SOPS.md (epic #3495).
+# TODO(!3496): Scheduled by .github/workflows/local_postgres_maintenance.yaml on inty-prod-server-gcp (epic #3495).
 #
 # Safe operations only: never removes volumes, never runs docker volume prune.
 #
@@ -70,6 +70,22 @@ ensure_volume() {
   echo "volume ${INTY_PG_VOLUME}: created with label ${INTY_PG_VOLUME_LABEL}"
 }
 
+ensure_restart_policy() {
+  if [[ "${MODE}" == "check" ]]; then
+    return
+  fi
+  if ! container_exists; then
+    return
+  fi
+  local restart_policy
+  restart_policy="$(container_restart_policy)"
+  if [[ "${restart_policy}" == "unless-stopped" ]]; then
+    return
+  fi
+  docker update --restart unless-stopped "${INTY_PG_CONTAINER}" >/dev/null
+  echo "container ${INTY_PG_CONTAINER}: restart policy ${restart_policy} -> unless-stopped"
+}
+
 run_postgres_container() {
   load_pg_password
   docker run -d \
@@ -88,12 +104,14 @@ run_postgres_container() {
 ensure_container() {
   if container_running; then
     assert_canonical_mount
+    ensure_restart_policy
     echo "container ${INTY_PG_CONTAINER}: running (volume ${INTY_PG_VOLUME})"
     return
   fi
 
   if container_exists; then
     assert_canonical_mount
+    ensure_restart_policy
     if [[ "${MODE}" == "check" ]]; then
       echo "container ${INTY_PG_CONTAINER}: stopped" >&2
       exit 1

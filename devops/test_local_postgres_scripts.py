@@ -36,10 +36,19 @@ def test_lib_declares_canonical_volume_and_container():
 def test_ensure_binds_named_volume_and_restart_policy():
     text = ENSURE_PATH.read_text(encoding="utf-8")
     assert "--restart unless-stopped" in text
+    assert "docker update --restart unless-stopped" in text
+    assert "ensure_restart_policy" in text
     assert '-v "${INTY_PG_VOLUME}:/var/lib/postgresql/data"' in text
     assert "docker volume create" in text
     assert "INTY_PG_VOLUME_LABEL" in text
     assert "assert_canonical_mount" in text
+
+
+def test_ensure_restart_policy_skips_check_only_mode():
+    body = read_bash_function_body(ENSURE_PATH, "ensure_restart_policy")
+    assert '"${MODE}" == "check"' in body
+    assert "container_restart_policy" in body
+    assert "docker update --restart unless-stopped" in body
 
 
 def test_ensure_refuses_wrong_mount():

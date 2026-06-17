@@ -3,7 +3,7 @@
 # CREATED_BY_AGENT
 #
 # Writes custom-format pg_dump files under /opt/inty/backups/postgres by default.
-# Does not delete old backups; prune via cron (see LOCAL_POSTGRES.md).
+# Does not delete old backups; prune via local_postgres_maintenance workflow (see LOCAL_POSTGRES.md).
 #
 # Usage (from repo root, on the VM):
 #   devops/scripts/backup_local_postgres.sh

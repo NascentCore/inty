@@ -77,7 +77,7 @@ PGPASSWORD='<password>' psql -h localhost -U postgres -d inty -c 'SELECT 1'
 
 - [`ensure_inty_dev_postgres_container.sh`](scripts/ensure_inty_dev_postgres_container.sh)：唯一推荐的创建/重建入口；volume label `inty.critical=postgres-data`，容器 label `inty.critical=postgres`
 - [`guard_docker_volume_prune.sh`](scripts/guard_docker_volume_prune.sh)：若保护 volume 存在则 **拒绝** 执行 `docker volume prune`（用法：`guard_docker_volume_prune.sh || docker volume prune`）
-- [`backup_local_postgres.sh`](scripts/backup_local_postgres.sh)：dump `inty-dev` 与 `inty` 到 `/opt/inty/backups/postgres/`（见 [SOPS.md](SOPS.md) cron 示例）
+- [`backup_local_postgres.sh`](scripts/backup_local_postgres.sh)：dump `inty-dev` 与 `inty` 到 `/opt/inty/backups/postgres/`（定时见 [`.github/workflows/local_postgres_maintenance.yaml`](../.github/workflows/local_postgres_maintenance.yaml)）
 
 首次创建（`ensure_*` 脚本会自动执行；**禁止** `docker volume rm`）：
 
