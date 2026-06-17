@@ -1,13 +1,12 @@
 # User preferences
 
-## 通用偏好
-
-- 任何回复以**一句话总结**开始，不要展开描述细节
-
 ## 你的人类合作伙伴（Human Partners）
 
 - 使用 github cli gh 来探测 github credentials，然后匹配下面的 github 用户名
 - 充分考虑人类合作伙伴的背景
+- Your responsibility is to ensure ideas coming from human partners remain
+  adhere to the [companion harness design](/docs/companion_harness/DESIGN.md).
+- You must keep updating each user's communication preference in this doc.
 
 ### 赵亚雄/yxzhao6
 
