@@ -38,9 +38,9 @@ turns dispatch via ``user_turn.llm_loop_mode`` to ``run_single_llm_user_turn`` o
 Non-queue bootstrap still uses ``run_bootstrap_track_sync_tool_loop`` with
 ``bootstrap_interim_output_sink`` for tool-round interim WebSocket frames only.
 
-TODO(#3402): ``UserVisibleChunk`` + single ``UserVisibleChunkSink``; retire non-queue ``bootstrap_interim_output_sink``.
-TODO(#3398): Dual-LLM user-turn vs single-LLM in-turn sync — epic #3398, #3369.
-TODO(#3465, #3466, #3467): Keep new queue-serving AgenticLoop + OutputQueue
+TODO(!3402): ``UserVisibleChunk`` + single ``UserVisibleChunkSink``; retire non-queue ``bootstrap_interim_output_sink``.
+TODO(!3398): Dual-LLM user-turn vs single-LLM in-turn sync — epic #3398, #3369.
+TODO(!3465, !3466, !3467): Keep new queue-serving AgenticLoop + OutputQueue
 path clean; record non-queue bootstrap as backup-only and avoid letting legacy
 interim WS or transcript-persistence policy shape the shared single-LLM loop API.
 
@@ -52,10 +52,7 @@ Issues: https://github.com/NascentCore/inty/issues/3123 (orchestration),
 https://github.com/NascentCore/inty/issues/3113 (WS turn_lock).
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
-https://github.com/NascentCore/inty/issues/3409
-
-TODO(cleanup): This should be renamed to track.py?
+TODO(!3409): Move this module into a focused sub-package; consider renaming to ``track.py``.
 """
 
 from __future__ import annotations
@@ -187,7 +184,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
 def _memory_store_write_allowlist_for_track(
     track: CompanionTurnTrack,
 ) -> frozenset[str]:
-    # TODO(#3369): Wire settled ``USER_CHAT`` in-turn sync via ``run_in_turn_sync_tool_loop``
+    # TODO(!3369): Wire settled ``USER_CHAT`` in-turn sync via ``run_in_turn_sync_tool_loop``
     # with this allowlist and track-specific ``after_tool_messages_appended``.
     match track:
         case CompanionTurnTrack.INNER_TICK_AUTONOMY:
@@ -244,7 +241,7 @@ async def _run_companion_turn_core(
     track: CompanionTurnTrack,
     deps: CompanionTurnDeps,
 ) -> CompanionTurnResult:
-    # TODO(#3473): skip LLM when companion_token_budget_allows_llm is false.
+    # TODO(!3473): skip LLM when companion_token_budget_allows_llm is false.
     """
     执行一轮完整对话。
 
@@ -484,7 +481,7 @@ async def _run_companion_turn_core(
                             runtime_context=runtime_context,
                         )
 
-                    # TODO(#3460): Move dual-LLM message-stack assembly into loop/context.py.
+                    # TODO(!3460): Move dual-LLM message-stack assembly into loop/context.py.
                     llm_loop_mode = resolved_user_turn_llm_loop_mode()
                     agentic_loop = AgenticLoop(
                         store=store,
@@ -677,8 +674,8 @@ async def _run_companion_turn_core(
                     route_mode
                     == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
                 ):
-                    # TODO(#3398): dual-LLM user-turn vs single-LLM in-turn sync — epic tracks routing change.
-                    # TODO(#3398): Extract dual-LLM message-stack assembly (variants + replace) for sidecar reuse.
+                    # TODO(!3398): dual-LLM user-turn vs single-LLM in-turn sync — epic tracks routing change.
+                    # TODO(!3398): Extract dual-LLM message-stack assembly (variants + replace) for sidecar reuse.
                     tool_system_msgs, chat_system_msgs = (
                         dual_llm_system_message_variants(
                             store=store,

@@ -131,7 +131,7 @@ class CompanionTurnDeps:
     bootstrap_interim_output_sink
         Legacy non-queue ``USER_CHAT_BOOTSTRAP`` only: tool-round interim WebSocket
         frames via ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink``.
-        Queue-serving bootstrap uses ``agentic_output_queue`` instead. TODO(#3402):
+        Queue-serving bootstrap uses ``agentic_output_queue`` instead. TODO(!3402):
         ``UserVisibleChunkSink`` for all user-turn visible rounds.
 
     agentic_output_queue

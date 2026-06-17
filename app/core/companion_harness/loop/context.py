@@ -96,7 +96,7 @@ class AgenticLoopContext:
     context_meta: ContextMeta | None = None
     input_batch: AgenticLoopInputBatch | None = None
     prompt_plan: PromptPlan | None = None
-    # TODO(#3460): Migrate 2-LLM message stacks to typed prompt/context; drop legacy dict fields.
+    # TODO(!3460): Migrate 2-LLM message stacks to typed prompt/context; drop legacy dict fields.
     memory_bootstrap_type: str = ""
     stack_depth: int = 0
     companion_turn_track: CompanionTurnTrack | None = None
@@ -120,7 +120,7 @@ class AgenticLoopOutput:
     turn_recall: str | None
     langsmith_trace_id: str
     langsmith_run_id: str
-    # TODO(#3460): Legacy sidecar mechanisms populate LoopDeliverable rows; production returns ().
+    # TODO(!3460): Legacy sidecar mechanisms populate LoopDeliverable rows; production returns ().
     deliverables: tuple[Any, ...]
     skip_final_transcript_assistant_row: bool
     tool_background_started: bool

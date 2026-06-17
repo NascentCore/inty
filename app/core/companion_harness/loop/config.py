@@ -1,6 +1,6 @@
 """Agentic loop mode selection (aligned with #3369 ``user_turn.llm_loop_mode`` draft).
 
-TODO(#3460): Keep UserTurnLlmLoopMode as the config enum, but delete
+TODO(!3460): Keep UserTurnLlmLoopMode as the config enum, but delete
 resolve_agentic_loop() when sidecar mechanisms are retired.
 """
 
@@ -36,7 +36,7 @@ def resolve_agentic_loop(
 ) -> OneModelInTurnSyncMechanism | TwoModelChatThenToolBgMechanism:
     """Return the mechanism implementation for ``mode`` (legacy parity tests only).
 
-    TODO(#3460): Remove after 1/2-LLM mechanism deletion; production dispatches
+    TODO(!3460): Remove after 1/2-LLM mechanism deletion; production dispatches
     directly to AgenticLoop user-turn methods.
     """
     from .one_llm.mechanism import OneModelInTurnSyncMechanism

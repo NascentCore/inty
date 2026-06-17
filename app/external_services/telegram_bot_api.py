@@ -4,8 +4,7 @@ TODO(telegram-meta-ops-api): Add setMyName / setMyDescription / sendChatAction �
   (requires dedicated-bot bonding #3361; shared-bot constraints #3396)
 TODO(telegram-reply-reaction-api): Parse reply_to_message + message_reaction in getUpdates;
   sendMessage reply_parameters + setMessageReaction — #3441 (epic #3440)
-TODO(telegram-outbound-image-api): Add the minimal sendPhoto wrapper for native
-  image bubbles in Telegram channel delivery — #3451
+TODO(!3451): Add the minimal sendPhoto wrapper for native Telegram image bubbles.
 """
 
 from __future__ import annotations

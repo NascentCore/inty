@@ -12,7 +12,7 @@ Attach one instance per scope for the lifetime of channel presence (for example
 while a Telegram session or app connection is registered). Stop both workers when
 presence ends.
 
-TODO(#3501): Hermes-style inbound quiet window after each drain before next claim;
+TODO(!3501): Hermes-style inbound quiet window after each drain before next claim;
   coalesce rapid bursts that arrive during an in-flight user turn.
 """
 

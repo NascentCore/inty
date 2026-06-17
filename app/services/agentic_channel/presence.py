@@ -1,6 +1,6 @@
 """In-process agent-channel presence: shared inner-tick + tool_bg per scope.
 
-TODO(#3490): Remove queue USER_CHAT ``foreground_pending`` + ``background_sink``.
+TODO(!3490): Remove queue USER_CHAT ``foreground_pending`` + ``background_sink``.
 """
 
 from __future__ import annotations
@@ -240,7 +240,7 @@ class AgentChannelPresence:
                 received_at_utc=datetime.now(timezone.utc),
                 client_message_id=None,
             )
-            # TODO(#3411): Telegram Bot API has no device timezone; manual E2E smoke:
+            # TODO(!3411): Telegram Bot API has no device timezone; manual E2E smoke:
             # inference → update_user_md → USER.md → LangSmith foreground ## User's Local Time Context.
             queue_message_id = await enqueue_inbound_wire_message(inbound)
             stub_request = ChatCompletionRequest(

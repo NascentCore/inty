@@ -43,7 +43,7 @@ PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
     "- If you have something meaningful, respond appropriately.\n"
     "- If there is nothing appropriate to say right now, respond with exactly: [SILENT]\n"
 )
-# TODO(#3463): During interactive bootstrap, add bootstrap-specific proactive copy that
+# TODO(!3463): During interactive bootstrap, add bootstrap-specific proactive copy that
 # reinforces finishing USER.md / IDENTITY.md / STYLE.md / COMPANIONSHIP.md gathering.
 
 PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER = (

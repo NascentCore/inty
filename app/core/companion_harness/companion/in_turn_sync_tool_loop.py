@@ -64,7 +64,7 @@ class InTurnSyncToolLoopInput:
     ts_user: datetime
     user_msg_uuid: str
     transcript_rel: str
-    # TODO(#3465): Replace delivery-policy flags with caller-owned assistant
+    # TODO(!3465): Replace delivery-policy flags with caller-owned assistant
     # round event adapters; this loop should not know AgenticLoop vs legacy.
     interim_output_sink: BootstrapInterimOutputSink | None
     emit_every_assistant_round: bool
@@ -80,7 +80,7 @@ class InTurnSyncToolLoopInput:
         ]
         | None
     )
-    # TODO(#3467): Move transcript ownership out of this shared input once
+    # TODO(!3467): Move transcript ownership out of this shared input once
     # AgenticLoop owns the new path; leave legacy bootstrap documented only.
     caller_persisted_user_transcript: bool
     """True when the caller already appended the user transcript row before this loop."""
@@ -103,7 +103,7 @@ class InTurnSyncToolLoopResult:
 class BootstrapInTurnSyncToolLoopInput:
     """Bootstrap-track inputs for :func:`run_bootstrap_track_sync_tool_loop`.
 
-    TODO(#3398): Collapse shared fields into ``InTurnSyncToolLoopInput`` via a builder
+    TODO(!3398): Collapse shared fields into ``InTurnSyncToolLoopInput`` via a builder
     once bootstrap and settled USER_CHAT share the same call site shape.
     """
 
@@ -133,7 +133,7 @@ async def run_in_turn_sync_tool_loop(
     ``interim_output_sink``; otherwise only tool rounds do (terminal rounds stay for the
     caller). Caller must not append the user row again at turn end.
 
-    TODO(#3470): When emitting every round, shape copy via prompt/contract so interim
+    TODO(!3470): When emitting every round, shape copy via prompt/contract so interim
     frames feel like companion chat while working (!3458), not repeated setup status.
     """
     store = loop_input.store
@@ -233,7 +233,7 @@ async def run_in_turn_sync_tool_loop(
         nonlocal last_interim_assistant_msg_uuid
         round_index += 1
         body = (message.content or "").strip()
-        # TODO(#3457): Deliver interim chat while tools run — when body is empty but
+        # TODO(!3457): Deliver interim chat while tools run — when body is empty but
         # tool_calls present, resolve visible text so user is not silent during tool
         # execution (!3456).
         if not body:
@@ -314,7 +314,7 @@ async def run_bootstrap_track_sync_tool_loop(
     loop_input: BootstrapInTurnSyncToolLoopInput,
 ) -> InTurnSyncToolLoopResult:
     """Bootstrap track wrapper around :func:`run_in_turn_sync_tool_loop`."""
-    # TODO(#3466): Treat non-queue bootstrap as backup-only; record discovered
+    # TODO(!3466): Treat non-queue bootstrap as backup-only; record discovered
     # behavior risks, but do not let this path shape the new AgenticLoop API.
     from app.core.companion_harness.tools.companion_tool_definitions import (
         MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,

@@ -1,6 +1,6 @@
 """Sync tool_background ``on_event`` → async per-call-streaming deliver.
 
-TODO(#3460): Delete this sidecar adapter module when direct AgenticLoop
+TODO(!3460): Delete this sidecar adapter module when direct AgenticLoop
 user-turn methods write only to agentic_companion OutputQueue.
 """
 

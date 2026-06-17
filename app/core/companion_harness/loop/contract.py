@@ -1,6 +1,6 @@
 """Agentic loop interchange contract: legacy mechanism protocol and re-exports.
 
-TODO(#3460): Delete legacy mechanism contract types from this module after
+TODO(!3460): Delete legacy mechanism contract types from this module after
 dead-code cleanup; production types live in loop/context.py.
 """
 
@@ -35,7 +35,7 @@ from .context import (
 from .output_queue import AgenticLoopOutputSink
 
 
-# TODO(#3460): Delete this after direct AgenticLoop user-turn methods retire the
+# TODO(!3460): Delete this after direct AgenticLoop user-turn methods retire the
 # legacy channel runner and 2-LLM parity harness.
 @dataclass(frozen=True)
 class LegacyAgenticLoopContext:

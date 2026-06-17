@@ -1,6 +1,6 @@
 """2-LLM agentic loop mechanism (fg + in-process tool leg).
 
-TODO(#3460): Inline this logic into AgenticLoop.run_dual_llm_user_turn()
+TODO(!3460): Inline this logic into AgenticLoop.run_dual_llm_user_turn()
 and delete this sidecar mechanism.
 """
 
@@ -99,7 +99,7 @@ class TwoModelChatThenToolBgMechanism:
             companion_turn_track=loop_input.companion_turn_track,
             force_tools_first_round=fg_result.force_tools_first_round,
         )
-        # TODO(#3460): Move this in-process tool leg into
+        # TODO(!3460): Move this in-process tool leg into
         # AgenticLoop.run_dual_llm_user_turn(); do not keep a separate mechanism API.
         await event_sink.flush()
         return AgenticLoopOutput(

@@ -4,11 +4,11 @@ Builds structured system, transcript, and tail-user sections for settled user
 turns that run through the agentic loop and in-turn tool calling. Legacy prompt
 builders for non-queue paths stay unchanged until follow-up migration work.
 
-TODO(#3398): First step toward prompt-stack migration; legacy callers remain
+TODO(!3398): First step toward prompt-stack migration; legacy callers remain
 unchanged until follow-up issues land.
 https://github.com/NascentCore/inty/issues/3398
 
-TODO(#3453): Named-slot system slices should use declarative templates instead
+TODO(!3453): Named-slot system slices should use declarative templates instead
 of imperative assembly.
 https://github.com/NascentCore/inty/issues/3453
 """
@@ -85,7 +85,7 @@ class PromptPlan:
     """
 
     messages: tuple[PromptMessage, ...]
-    # TODO(#3398): Type tool schemas instead of OpenAI dict payloads.
+    # TODO(!3398): Type tool schemas instead of OpenAI dict payloads.
     tools: tuple[dict[str, Any], ...]
     tool_choice: str | None
 

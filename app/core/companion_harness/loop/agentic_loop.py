@@ -282,7 +282,7 @@ async def _run_prompt_plan_tool_loop(
         nonlocal last_interim_assistant_msg_uuid
         round_index += 1
         body = (message.content or "").strip()
-        # TODO(#3457): Deliver interim chat while tools run — when body is empty but
+        # TODO(!3457): Deliver interim chat while tools run — when body is empty but
         # tool_calls present, resolve visible text so user is not silent during tool
         # execution (!3456).
         if not body:
@@ -368,16 +368,16 @@ class AgenticLoop:
     streaming policy. Intended for turns that already have outbound queue and
     inbound batch correlation attached by the turn executor.
 
-    TODO(#3456): User chat must not go silent while tools execute; deliver interim
+    TODO(!3456): User chat must not go silent while tools execute; deliver interim
     chat when the model omits content on tool rounds.
 
-    TODO(#3470): Bootstrap outbound lines during tools should read like natural
+    TODO(!3470): Bootstrap outbound lines during tools should read like natural
     chat while working, not serial status broadcasts.
 
-    TODO(#3459): Migrate proactive, maintenance, scheduled, and dreaming turns
+    TODO(!3459): Migrate proactive, maintenance, scheduled, and dreaming turns
     to this loop instead of legacy in-turn sync paths.
 
-    TODO(#3402): Replace bootstrap-named interim callback types with a neutral
+    TODO(!3402): Replace bootstrap-named interim callback types with a neutral
     per-round visible-text sink shared by queue and non-queue paths.
     """
 
@@ -419,9 +419,9 @@ class AgenticLoop:
                 interim_output_sink=_emit_user_reply,
             )
         else:
-            # TODO(#3460): Bootstrap queue path still uses openai_messages without
+            # TODO(!3460): Bootstrap queue path still uses openai_messages without
             # PromptPlan; migrate to PromptPlan then delete this legacy fallback.
-            # TODO(#3465): Keep OutputQueue delivery policy here at the AgenticLoop
+            # TODO(!3465): Keep OutputQueue delivery policy here at the AgenticLoop
             # adapter boundary; the shared sync loop should only emit assistant rounds.
             sync_result = await run_in_turn_sync_tool_loop(
                 InTurnSyncToolLoopInput(

@@ -2,7 +2,7 @@
 
 Not WeChat user presence: iLink does not expose open-app or open-DM signals (see ``transport``).
 
-TODO(#3493): Migrate ``WeixinInprocessPresence`` to ``ScopeQueueServing`` enqueue + wake (!3487).
+TODO(!3493): Migrate ``WeixinInprocessPresence`` to ``ScopeQueueServing`` enqueue + wake (!3487).
 """
 
 from __future__ import annotations
@@ -89,7 +89,7 @@ class WeixinInprocessPresence:
             )
         self._inty_user_id = str(inty_user.id)
         agent_id = self._binding.agent_id
-        # TODO(#3350): Share AgentScope inner-tick coord setup with AgentChannelPresence.start().
+        # TODO(!3350): Share AgentScope inner-tick coord setup with AgentChannelPresence.start().
         scope = AgentScope(user_id=self._inty_user_id, agent_id=agent_id)
         synthetic_chat_id = scope.memory_store_chat_id()
         self._coordinator.store_inner_tick_coords(

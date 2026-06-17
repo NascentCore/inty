@@ -217,9 +217,9 @@ def _output_contract_text_with_tools(
     *,
     tool_side_compact: bool = False,
 ) -> str:
-    # TODO(#3458): User chat must include brief user-facing ``message.content`` when
+    # TODO(!3458): User chat must include brief user-facing ``message.content`` when
     # starting tool_calls so user is not silent during tool execution — !3456.
-    # TODO(#3470): Interim lines during bootstrap writes should sound like chatting
+    # TODO(!3470): Interim lines during bootstrap writes should sound like chatting
     # while working, not repeated「我在记档案 / 已上线」status; trace 019ed445-8195-7b93-bbf4-c23dd5b8ebf4.
     base = (
         "输出与工具："
@@ -268,7 +268,7 @@ def _output_contract_text_with_tools(
 def _output_contract_text_interactive_bootstrap_tools() -> str:
     base = (
         "输出与工具（交互式关系建立阶段）：" + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        # TODO(#3453): Use ``PromptTemplate`` + MemoryDoc name variables for this line.
+        # TODO(!3453): Use ``PromptTemplate`` + MemoryDoc name variables for this line.
         + "（0）本阶段用 **memory_store_write_document** 把 **COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
         "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
         "即使用户配合度低，也基于已有对话写 best-effort 初稿，不可留空模板。"
@@ -302,7 +302,7 @@ def _proactive_chat_clause() -> str:
 def _infer_time_zone_prompt_slice() -> str:
     """Guide eager timezone inference for surfaces without automatic device timezone.
 
-    TODO(#3411): Real Telegram E2E not yet verified — model must call update_user_md; smoke on local Ops.
+    TODO(!3411): Real Telegram E2E not yet verified — model must call update_user_md; smoke on local Ops.
     """
     tool_name = UPDATE_USER_MD.name.value
     return (
@@ -665,7 +665,7 @@ def _persona_system_messages(
                     MEMORY_SYSTEM_HEADING_SEMANTIC + bundle.memory_md.strip()
                 )
             )
-    # TODO(#3463): Also inject bootstrap spec on proactive inner ticks while bootstrap active.
+    # TODO(!3463): Also inject bootstrap spec on proactive inner ticks while bootstrap active.
     if interactive_bootstrap_active and not inner_tick_turn:
         out.append(_system_message(load_bootstrap_spec_text()))
         out.append(_system_message(build_bootstrap_tool_call_section()))
@@ -864,7 +864,7 @@ def build_system_messages_for_bootstrap_track(
     )
 
 
-# TODO(#3468): USER_CHAT does not inject fresh LIFE_CURRENTS.md after AUTONOMY; user replies
+# TODO(!3468): USER_CHAT does not inject fresh LIFE_CURRENTS.md after AUTONOMY; user replies
 # may ignore silent virtual-space work (trace 019ed438-f634-7941-b109-cbdc9e2e9510).
 def build_system_messages_for_chat_track(
     bundle: PromptBundle,
@@ -985,7 +985,7 @@ def build_system_messages_for_inner_tick_autonomy(
     return out
 
 
-# TODO(#3468): Add integration test — AUTONOMY write to LIFE_CURRENTS must appear in the
+# TODO(!3468): Add integration test — AUTONOMY write to LIFE_CURRENTS must appear in the
 # next PROACTIVE_CHAT stack (fixture trace 019ed438-f634-7941-b109-cbdc9e2e9510).
 def build_system_messages_for_inner_tick_proactive_chat(
     bundle: PromptBundle,
@@ -999,7 +999,7 @@ def build_system_messages_for_inner_tick_proactive_chat(
     weave today's small thing into the next proactive message without
     self-advertising.
 
-    TODO(#3463): When ``interactive_bootstrap_active`` during bootstrap, inject
+    TODO(!3463): When ``interactive_bootstrap_active`` during bootstrap, inject
     ``BOOTSTRAP.md`` and bootstrap-oriented proactive copy so idle nudges finish
     info gathering instead of generic small talk.
     """

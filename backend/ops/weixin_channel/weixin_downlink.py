@@ -2,8 +2,7 @@
 
 TODO(weixin-reply-reaction-downlink): Quote/reply threading + emoji reactions on outbound
   when Hermes/iLink supports them — #3442 (epic #3440)
-TODO(weixin-outbound-image): Dispatch image-bearing ``Downlink`` events to Hermes
-  native WeChat image bubbles once ``Downlink`` carries explicit assets — #3452
+TODO(!3452): Dispatch image-bearing ``Downlink`` events to Hermes native WeChat image bubbles.
 
 Weixin only forwards user-visible assistant text today, matching
 ``WeixinChannelSession._handle_proactive_push`` (no images, tool_bg meta, or bootstrap rounds).

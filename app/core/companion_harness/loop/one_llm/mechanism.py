@@ -1,6 +1,6 @@
 """1-LLM agentic loop mechanism (delegates ``run_in_turn_sync_tool_loop``).
 
-TODO(#3460): Inline this logic into AgenticLoop.run_single_llm_user_turn()
+TODO(!3460): Inline this logic into AgenticLoop.run_single_llm_user_turn()
 and delete this sidecar mechanism.
 """
 

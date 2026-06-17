@@ -1,6 +1,6 @@
 """Legacy channel-runner entry with config-selected mechanism.
 
-TODO(#3460): Delete this sidecar runner when AgenticLoop direct user-turn
+TODO(!3460): Delete this sidecar runner when AgenticLoop direct user-turn
 methods become the only loop execution API.
 """
 
@@ -24,7 +24,7 @@ async def run_agentic_loop(
 ) -> AgenticLoopOutput:
     """Run one legacy interchangeable agentic loop; per-call-streaming via ``channel``.
 
-    TODO(#3460): Remove after direct AgenticLoop user-turn methods replace this
+    TODO(!3460): Remove after direct AgenticLoop user-turn methods replace this
     runner and the 1/2-LLM mechanism modules.
     Production ``USER_CHAT`` uses ``AgenticLoop`` direct user-turn methods with domain ``OutputQueue``.
     """

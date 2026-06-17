@@ -71,7 +71,7 @@ def _input_row_to_record(
 def _output_row_to_record(
     row: AgenticCompanionOutputQueueRow,
 ) -> OutputQueueRecord:
-    # TODO(#3450): Rename DB column ``in_reply_to_input_ids_json`` → ``message_ids_json``.
+    # TODO(!3504): Rename DB column ``in_reply_to_input_ids_json`` → ``message_ids_json``.
     raw_ids = json.loads(row.in_reply_to_input_ids_json or "[]")
     message_ids = tuple(str(x) for x in raw_ids)
     delivery_channel = (

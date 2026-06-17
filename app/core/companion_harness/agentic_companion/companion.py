@@ -1,6 +1,6 @@
 """AgenticCompanion: per-scope serving runtime draining InputQueue into AgenticLoop.
 
-TODO(#3486): Prefer ``ScopeQueueServing`` worker loop over ad-hoc ``start_worker`` callers.
+TODO(!3487): Remaining ad-hoc ``drain_and_deliver`` callers should enqueue + wake ``ScopeQueueServing`` only.
 """
 
 from __future__ import annotations

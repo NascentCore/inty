@@ -4,8 +4,8 @@ Legacy chat-completion interfaces are in ``chat.py``.
 Do not mix these 2, i.e., agentic companion and chat completion should be independent.
 
 
-TODO(#3487): USER_CHAT enqueue + wake via ``AgentChannelPresence``; silent send-only inbound.
-TODO(#3488): ``AppWsChannelAdapter`` + single scope ``Coordinator``; retire per-connection queue drain.
+TODO(!3487): USER_CHAT enqueue + wake via ``AgentChannelPresence``; silent send-only inbound.
+TODO(!3488): ``AppWsChannelAdapter`` + single scope ``Coordinator``; retire per-connection queue drain.
 """
 
 import asyncio

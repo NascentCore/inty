@@ -4,8 +4,7 @@ TODO(telegram-meta-ops-tools): Meta-ops dispatch (setMyName, setMyDescription, �
   framework #3362; dedicated-bot #3361; shared-bot must not expose bot-global meta ops #3396.
 TODO(telegram-reply-reaction): ``sendMessage`` reply_parameters + ``setMessageReaction`` on
   downlink; inbound reply_to / message_reaction → harness — #3441 (epic #3440)
-TODO(telegram-outbound-image): Deliver image-bearing ``Downlink`` events through native
-  Telegram image messages once ``Downlink`` carries explicit assets — #3451
+TODO(!3451): Deliver image-bearing ``Downlink`` events through native Telegram image messages.
 """
 
 from __future__ import annotations

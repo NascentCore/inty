@@ -14,7 +14,7 @@ This trace's intermediate LLM rounds have empty ``message.content``; tests may
 normalize interim visible text from tool ``arguments.text`` to exercise the
 delivery pipeline (not to reproduce production interim copy for that trace).
 
-TODO(#3457): Promote interim-visible-text helper so user chat keeps talking while
+TODO(!3457): Promote interim-visible-text helper so user chat keeps talking while
 tools execute — parent !3456.
 """
 

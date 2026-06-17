@@ -1,6 +1,6 @@
 """Per-call-streaming deliverables and output queue.
 
-TODO(#3460): Retire this sidecar queue in favor of
+TODO(!3460): Retire this sidecar queue in favor of
 agentic_companion/output_queue.py as the only user-visible OutputQueue.
 """
 
@@ -59,7 +59,7 @@ class AgenticLoopOutputSink(Protocol):
 class AgenticLoopOutputQueue(AgenticLoopOutputSink):
     """Per-call-streaming queue: each push immediately projects and delivers on channel.
 
-    TODO(#3460): Legacy parity tests only; production should use the single
+    TODO(!3460): Legacy parity tests only; production should use the single
     agentic_companion OutputQueue through direct AgenticLoop user-turn methods.
     """
 

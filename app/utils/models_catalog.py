@@ -464,7 +464,7 @@ GEMINI_3_5_FLASH = GenAIModel(
         GA Flash model (2026-05); supports thinking, tools, structured outputs, 1M context.
         Does not produce content in the initial round of tool-call,
         which is not good for chat-like use cases.
-        TODO(#3456): User chat must not go silent while tools execute.
+        TODO(!3456): User chat must not go silent while tools execute.
     """,
 )
 

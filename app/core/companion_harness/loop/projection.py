@@ -1,6 +1,6 @@
 """Project loop deliverables to channel-agnostic ``Downlink``.
 
-TODO(#3460): Delete with loop/output_queue.py after direct AgenticLoop
+TODO(!3460): Delete with loop/output_queue.py after direct AgenticLoop
 methods write user-visible content to agentic_companion OutputQueue.
 """
 
