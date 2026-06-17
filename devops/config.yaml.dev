@@ -27,7 +27,8 @@ security:
   access_token_expire_minutes: 10080
 
 database:
-  host: "10.41.177.3"
+  host: localhost
+  port: 5432
   user: postgres
   password: "sxwl666A!"
   db: "inty-dev"
@@ -38,7 +39,6 @@ database:
   pool_pre_ping: true
   connect_timeout: 5
   command_timeout: 30
-  replica_host: "10.41.177.17"
 
 google_oauth:
   client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
