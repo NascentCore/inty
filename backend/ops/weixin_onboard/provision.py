@@ -2,6 +2,10 @@
 
 Identity uses ``User.id`` and ``Agent.id`` only; legacy ``readable_id`` is unused.
 Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
+
+TODO(cross-channel-consistent-identity): Create the GitHub issues drafted in
+  docs/companion_harness/CROSS_CHANNEL_IDENTITY_FOLLOWUPS.md, then replace
+  iLink-local user lookup with canonical channel identity resolution.
 """
 
 from __future__ import annotations

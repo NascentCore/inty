@@ -6,6 +6,10 @@ may still touch it). Enforced by ``chat_ws_boundary.companion_surface_readable_i
 
 TODO(telegram-dedicated-bot-bonding): Triage portal to provision per-user bot token and
   bind 1 user : 1 bot : 1 agent — #3361 (epic #3395; Option A constraints #3396)
+
+TODO(cross-channel-consistent-identity): Create the GitHub issues drafted in
+  docs/companion_harness/CROSS_CHANNEL_IDENTITY_FOLLOWUPS.md, then route this
+  onboard path through canonical channel identity resolution before provisioning.
 """
 
 from __future__ import annotations
