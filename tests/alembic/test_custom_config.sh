@@ -116,16 +116,11 @@ main() {
     # 生成唯一数据库名
     db_name="alembic_test_$(openssl rand -hex 4)"
     config_path="$(mktemp -t alembic_test_config_XXXXXX.yaml)"
-    default_config_path="${REPO_ROOT}/config.yaml"
-    default_config_created=false
     
     # 清理函数
     cleanup() {
         log_info "清理测试环境"
         [ -f "$config_path" ] && rm -f "$config_path"
-        if [ "$default_config_created" = true ] && [ -f "$default_config_path" ]; then
-            rm -f "$default_config_path"
-        fi
         drop_database "$db_name" 2>/dev/null || true
     }
     trap cleanup EXIT
@@ -139,14 +134,8 @@ main() {
     # 生成自定义配置
     write_custom_config "$config_path" "$db_name"
     
-    # TODO(INTY_CONFIG_YAML): drop temp repo-root config.yaml; export INTY_CONFIG_YAML="$config_path" instead
-    # 创建默认 config.yaml 文件，因为 app/core/config.py 在导入时会尝试加载它
-    # 使用 BASE_CONFIG_PATH 作为模板，但使用默认数据库名
-    if [ ! -f "$default_config_path" ]; then
-        log_info "创建临时默认配置文件: $default_config_path"
-        cp "$BASE_CONFIG_PATH" "$default_config_path"
-        default_config_created=true
-    fi
+    # app.core.config 在模型导入链上会被加载；用 INTY_CONFIG_YAML 指向本次 Alembic 自定义配置
+    export INTY_CONFIG_YAML="$config_path"
 
     if ! python -m alembic -c "${REPO_ROOT}/backend/alembic/alembic.ini" -x "config=$config_path" upgrade head; then
         log_error "Alembic upgrade 失败"

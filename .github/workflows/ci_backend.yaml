@@ -134,7 +134,7 @@ jobs:
           ./tests/alembic/test_custom_config.sh
         env:
           PYTHONPATH: .
-          # TODO(INTY_CONFIG_YAML): set INTY_CONFIG_YAML=devops/config.yaml.test when test_custom_config.sh stops using cp
+          INTY_CONFIG_YAML: devops/config.yaml.test
       - name: Run python tests
         run: |
           # TODO(INTY_CONFIG_YAML): replace cp with INTY_CONFIG_YAML=devops/config.yaml.test
