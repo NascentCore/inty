@@ -195,7 +195,10 @@ def fetch_document_versions(
     from app.db.base import SessionLocal
     from app.models.companion_memory_documents import CompanionMemoryDocumentVersion
 
-    kind, cal = parse_memory_store_relative_path(relative_path)
+    try:
+        kind, cal = parse_memory_store_relative_path(relative_path)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     stmt = (
         select(CompanionMemoryDocumentVersion)
         .where(_scope_filters(scope, kind.value, cal))
