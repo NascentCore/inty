@@ -126,7 +126,7 @@ def companion_tools_for_turn(
                 and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
             )
             # TODO(cross-track-image-delivery): PROACTIVE_CHAT tools=[] — visual offers
-            # need AUTONOMY asset handoff or user-chat tool leg; see #3285.
+            # need AUTONOMY asset handoff or user-chat tool leg; see #3285 #3468.
             tools_for_turn = (
                 []
                 if tick_proactive

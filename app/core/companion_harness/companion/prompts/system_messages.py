@@ -856,6 +856,8 @@ def build_system_messages_for_bootstrap_track(
     )
 
 
+# TODO(#3468): USER_CHAT does not inject fresh LIFE_CURRENTS.md after AUTONOMY; user replies
+# may ignore silent virtual-space work (trace 019ed438-f634-7941-b109-cbdc9e2e9510).
 def build_system_messages_for_chat_track(
     bundle: PromptBundle,
     context: ContextMeta,
@@ -974,6 +976,8 @@ def build_system_messages_for_inner_tick_autonomy(
     return out
 
 
+# TODO(#3468): Add integration test — AUTONOMY write to LIFE_CURRENTS must appear in the
+# next PROACTIVE_CHAT stack (fixture trace 019ed438-f634-7941-b109-cbdc9e2e9510).
 def build_system_messages_for_inner_tick_proactive_chat(
     bundle: PromptBundle,
     context: ContextMeta,
