@@ -37,11 +37,7 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
     SOURCE_SINGLE_COMPLETION,
 )
-from app.core.companion_harness.prompt_builder import (
-    PromptMessage,
-    PromptPlan,
-    prompt_messages_to_openai_dicts,
-)
+from app.core.companion_harness.prompt_builder import PromptPlan
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
@@ -239,7 +235,7 @@ def build_settled_dual_llm_user_chat_loop_context(
 
 def build_bootstrap_user_chat_loop_context(
     *,
-    messages: tuple[PromptMessage, ...],
+    messages: list[dict[str, Any]],
     tools_for_turn: list[dict[str, Any]],
     repository_only_store_text: bool,
     trace_id: str,
@@ -261,10 +257,8 @@ def build_bootstrap_user_chat_loop_context(
     assert user_text.strip() != ""
     assert transcript_rel != ""
 
-    openai_messages = tuple(prompt_messages_to_openai_dicts(messages))
-
     return AgenticLoopContext(
-        openai_messages=openai_messages,
+        openai_messages=tuple(messages),
         openai_tools=tuple(tools_for_turn),
         write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
         repository_only_store_text=repository_only_store_text,

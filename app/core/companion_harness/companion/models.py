@@ -46,6 +46,17 @@ AI_PRIVATE_HYDRATED_SOURCE = "ai_private"
 PROACTIVE_CHAT_SILENT_TOKEN = "[SILENT]"
 
 
+def user_visible_assistant_text(text: str) -> str | None:
+    """Normalize assistant text for user-visible delivery; ``None`` when the channel stays quiet.
+
+    Shared gate for OutputQueue append and channel downlink (!3251 ``[SILENT]``).
+    """
+    stripped = text.strip()
+    if not stripped or stripped == PROACTIVE_CHAT_SILENT_TOKEN:
+        return None
+    return stripped
+
+
 class TranscriptProjection(StrEnum):
     """Which ``transcript.jsonl`` rows a consumer sees."""
 

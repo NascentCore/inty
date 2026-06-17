@@ -38,10 +38,6 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
 )
-from app.core.companion_harness.prompt_builder import (
-    PromptMessage,
-    PromptMessageRole,
-)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
 
@@ -96,31 +92,26 @@ def test_settled_user_chat_loop_context_uses_single_completion_source() -> None:
     assert context.companion_turn_track == CompanionTurnTrack.USER_CHAT
 
 
-def test_bootstrap_loop_context_converts_prompt_messages_to_openai_dicts() -> None:
-    """``turn.py`` passes ``prompt_plan.messages`` (``PromptMessage``) into the bootstrap builder."""
-    prompt_messages = (
-        PromptMessage(role=PromptMessageRole.SYSTEM, content="bootstrap sys"),
-        PromptMessage(role=PromptMessageRole.USER, content="hello"),
-    )
+def test_bootstrap_loop_context_passes_openai_dict_messages() -> None:
+    """``turn.py`` passes ``CompanionTurnPromptPlan.messages`` (OpenAI dicts) into the bootstrap builder."""
+    openai_messages = [
+        {"role": "system", "content": "bootstrap sys"},
+        {"role": "user", "content": "hello"},
+    ]
     kwargs = _base_builder_kwargs()
-    kwargs["messages"] = prompt_messages
+    kwargs["messages"] = openai_messages
 
     context = build_bootstrap_user_chat_loop_context(
         **kwargs,
         after_tool_messages_appended=MagicMock(),
     )
 
-    assert context.openai_messages == (
-        {"role": "system", "content": "bootstrap sys"},
-        {"role": "user", "content": "hello"},
-    )
+    assert context.openai_messages == tuple(openai_messages)
 
 
 def test_bootstrap_loop_context_uses_bootstrap_track_and_allowlist() -> None:
     kwargs = _base_builder_kwargs()
-    kwargs["messages"] = (
-        PromptMessage(role=PromptMessageRole.USER, content="hi"),
-    )
+    kwargs["messages"] = [{"role": "user", "content": "hi"}]
     kwargs["stack_depth"] = 0
     kwargs["langsmith_trace_id"] = ""
     kwargs["langsmith_run_id"] = ""

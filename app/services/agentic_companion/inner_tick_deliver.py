@@ -8,7 +8,7 @@ from typing import Any
 from loguru import logger
 
 from app.core.companion_harness.companion.models import CompanionTurnResult
-from app.core.companion_harness.loop.agentic_loop import (
+from app.core.companion_harness.companion.models import (
     user_visible_assistant_text,
 )
 from app.db.session import AsyncSessionLocal

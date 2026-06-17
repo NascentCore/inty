@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.core.companion_harness.loop.agentic_loop import (
+from app.core.companion_harness.companion.models import (
     user_visible_assistant_text,
 )
 

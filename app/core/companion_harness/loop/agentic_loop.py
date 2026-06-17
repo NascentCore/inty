@@ -43,8 +43,8 @@ from app.core.companion_harness.companion.message_format import (
     openai_assistant_message_dict,
 )
 from app.core.companion_harness.companion.models import (
-    PROACTIVE_CHAT_SILENT_TOKEN,
     InnerTickActivity,
+    user_visible_assistant_text,
 )
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
@@ -70,17 +70,6 @@ from app.core.companion_harness.tools.tool_background import (
 from .context import AgenticLoopContext, AgenticLoopOutput
 
 _DRAIN_SENTINEL: ToolOutputEvent | None = None
-
-
-def user_visible_assistant_text(text: str) -> str | None:
-    """Normalize assistant text for user-visible delivery; ``None`` when the channel stays quiet.
-
-    Shared gate for OutputQueue append and channel downlink (!3251 ``[SILENT]``).
-    """
-    stripped = text.strip()
-    if not stripped or stripped == PROACTIVE_CHAT_SILENT_TOKEN:
-        return None
-    return stripped
 
 
 def _append_user_transcript_row(

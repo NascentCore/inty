@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.types import (
@@ -27,6 +28,9 @@ from app.services.agentic_companion.ws_turn_support import (
     image_asset_baseline_for_scope_store,
 )
 
+if TYPE_CHECKING:
+    from app.core.companion_harness.memory.memory_store import MemoryStore
+
 
 @dataclass
 class AppWsQueueDeliveryFlags:
@@ -36,6 +40,7 @@ class AppWsQueueDeliveryFlags:
     tool_background_started: bool = False
     image_asset_baseline: int = 0
     image_asset_baseline_initialized: bool = False
+    memory_store: MemoryStore | None = None
 
 
 @dataclass(frozen=True)
@@ -73,6 +78,7 @@ async def run_app_ws_user_turn_via_queues(
         image_asset_baseline_for_scope_store(session.store)
     )
     queue_input.delivery_flags.image_asset_baseline_initialized = True
+    queue_input.delivery_flags.memory_store = session.store
     result = await drain_and_deliver_user_chat_turn(
         queue_input.scope,
         runtime_channel=CompanionRuntimeChannel.APP,

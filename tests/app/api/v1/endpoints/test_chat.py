@@ -934,6 +934,7 @@ def _patch_companion_ws_queue_turn(
             queue_input.delivery_flags.tool_background_started = (
                 turn_result.tool_background_started
             )
+            queue_input.delivery_flags.image_asset_baseline_initialized = True
             text = turn_result.assistant_text.strip()
             if text:
                 await queue_input.send_text(text)
