@@ -11,8 +11,9 @@ Doctrine is loaded from package prompt seeds and is never writable through
 MemoryStore tools.
 
 **Capability (package + store):** harness innate limits (``HARNESS.md``) → channel
-contracts (``CHANNELS.md``) → tool contracts (``TOOLS.md``). Package-only harness
-and tool seeds are not writable through MemoryStore tools.
+contracts (``CHANNELS.md``) → tool contracts (``TOOLS.md``). Static harness/tool seeds
+are package-authoritative today; TODO(static-prompt-slice-memstore): persist as
+non-mutable MemoryStore kinds (!3506). Mutable channel contract remains ``CHANNELS.md``.
 
 Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdown ``##`` headings.
 

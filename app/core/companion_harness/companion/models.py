@@ -271,6 +271,8 @@ def _read_memory_document_required(
 
 
 def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
+    # TODO(static-prompt-slice-memstore): Replace with MemoryStore reads for static prompt
+    # slices (HARNESS, TOOLS, SIGNIFICANCE_PERCEPTION, OUTPUT_FORMAT_IM_DM). !3506
     text = load_template_seed_text(relative_path).strip()
     if max_chars > 0 and len(text) > max_chars:
         return text[: max_chars - 1] + "..."
