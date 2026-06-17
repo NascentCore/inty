@@ -78,6 +78,8 @@ def create_chat_completion_sync(
             raw = client.chat.completions.create(**create_kw)
             enriched = completion_with_langsmith_trace_id(raw)
             raise_if_chat_completion_missing_choices(enriched, model=model)
+            # TODO(#3472): record_completion_token_usage from companion_llm_runtime_event_bind_ctx.
+            # TODO(#3474): split input vs output token debit — follow-up.
             return enriched
         except json.JSONDecodeError as exc:
             retryable = attempt < _OPENROUTER_JSON_MAX_ATTEMPTS
