@@ -86,9 +86,11 @@ agent:
     - "charlesfengyu@gmail.com"
     - "it@sxwl.ai"
     - "justicezyx@gmail.com"  # 赵亚雄个人账户
+
   companion_harness:
     user_feedback_github:
       token: "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"
+
   channels:
     telegram:
       # Name: Inty (the AI personal companion)
