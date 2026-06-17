@@ -4,6 +4,8 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
@@ -78,3 +80,22 @@ def test_next_due_task_for_execution_picks_earliest_ready(tmp_path: Path) -> Non
     ids = {t["id"] for t in body["tasks"]}
     assert legacy_id in ids
     assert len(ids) == 2
+
+
+def test_add_schedule_task_accepts_z_and_rejects_naive_time(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+
+    add_schedule_task(
+        store,
+        exec_time_utc="2026-01-01T00:00:00Z",
+        task_text="midnight",
+    )
+    body = json.loads(store.read_document(_schedule_document_rel()))
+    assert body["tasks"][0]["exec_time_utc"] == "2026-01-01T00:00:00+00:00"
+
+    with pytest.raises(ValueError, match="timezone offset or Z"):
+        add_schedule_task(
+            store,
+            exec_time_utc="2026-01-01T00:00:00",
+            task_text="naive",
+        )
