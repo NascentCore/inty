@@ -8,10 +8,12 @@ See .cursor/skills/inspect-companion-harness/list-agent-documents/SKILL.md.
 
 from __future__ import annotations
 
-import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Annotated
+
+import cyclopts
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:
@@ -21,11 +23,19 @@ from companion_memory_inspect_lib import (
     DocumentVersionRow,
     apply_inty_config_env,
     iter_scope_documents_via_memory_store,
-    list_companion_scopes,
+    list_agent_scopes,
     list_latest_document_kinds,
     load_database_dsn,
     open_memory_store,
     resolve_scope,
+)
+
+app = cyclopts.App(
+    help=(
+        "Retrieve all MemoryStore documents for an agent_id for debugging.\n\n"
+        "Config: same as backend — ``INTY_CONFIG_YAML`` env or ``--config``; "
+        "see ``app.core.config``."
+    ),
 )
 
 
@@ -81,57 +91,27 @@ def _dump_scope(
     return missing
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Retrieve all MemoryStore documents for a companion (agent_id) for debugging."
-        )
-    )
-    parser.add_argument(
-        "--companion-id",
-        required=True,
-        help="WebSocket/API agent_id (MemoryStore companion_id)",
-    )
-    parser.add_argument("--user-id", default="", help="MemoryStore user_id scope")
-    parser.add_argument("--chat-id", default="", help="MemoryStore chat_id scope")
-    parser.add_argument(
-        "--config",
-        default="config.yaml",
-        help="Repo-root YAML with database block (default: config.yaml)",
-    )
-    parser.add_argument(
-        "--list-scopes",
-        action="store_true",
-        help="List (user_id, chat_id) scopes for --companion-id and exit",
-    )
-    parser.add_argument(
-        "--all-scopes",
-        action="store_true",
-        help="Dump every scope for this companion_id (default: one resolved scope)",
-    )
-    parser.add_argument(
-        "--meta-only",
-        action="store_true",
-        help="Print paths and version metadata only, not document bodies",
-    )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Emit one JSON object per scope (meta + optional content)",
-    )
-    parser.add_argument(
-        "--output-dir",
-        default="",
-        help="Write each document body under DIR/<companion_id>/<chat_id>/<path>",
-    )
-    args = parser.parse_args()
+def _run_list_agent_documents(
+    *,
+    agent_id: str,
+    user_id: str | None,
+    chat_id: str | None,
+    config: str | None,
+    list_scopes: bool,
+    all_scopes: bool,
+    meta_only: bool,
+    as_json: bool,
+    output_dir: str | None,
+) -> int:
+    assert agent_id
+    apply_inty_config_env(config)
+    uid = (user_id or "").strip()
+    cid = (chat_id or "").strip()
 
-    apply_inty_config_env(args.config)
-
-    if args.list_scopes:
-        scopes = list_companion_scopes(args.companion_id)
+    if list_scopes:
+        scopes = list_agent_scopes(agent_id)
         if not scopes:
-            sys.stdout.write(f"No scopes for companion_id={args.companion_id!r}\n")
+            sys.stdout.write(f"No scopes for agent_id={agent_id!r}\n")
             return 1
         for scope in scopes:
             sys.stdout.write(
@@ -139,32 +119,26 @@ def main() -> int:
             )
         return 0
 
-    if args.all_scopes:
-        scopes = list_companion_scopes(args.companion_id)
+    if all_scopes:
+        scopes = list_agent_scopes(agent_id)
         if not scopes:
-            raise SystemExit(f"No MemoryStore rows for companion_id={args.companion_id!r}")
+            raise SystemExit(f"No MemoryStore rows for agent_id={agent_id!r}")
     else:
-        scopes = [
-            resolve_scope(
-                companion_id=args.companion_id,
-                user_id=args.user_id,
-                chat_id=args.chat_id,
-            )
-        ]
+        scopes = [resolve_scope(agent_id=agent_id, user_id=uid, chat_id=cid)]
 
     dsn = load_database_dsn()
-    output_dir = Path(args.output_dir).resolve() if args.output_dir else None
+    out_dir = Path(output_dir).resolve() if output_dir else None
     exit_code = 0
 
     for scope in scopes:
-        if args.json:
+        if as_json:
             store = open_memory_store(scope, dsn=dsn)
             meta_rows = {
                 r.relative_path: r for r in list_latest_document_kinds(scope)
             }
             payload = {
                 "scope": scope.registry_key(),
-                "companion_id": scope.companion_id,
+                "agent_id": scope.companion_id,
                 "user_id": scope.user_id,
                 "chat_id": scope.chat_id,
                 "documents": [],
@@ -177,7 +151,7 @@ def main() -> int:
                     "created_at": row.created_at if row else None,
                     "content_chars": len(body) if body is not None else 0,
                 }
-                if not args.meta_only and body is not None:
+                if not meta_only and body is not None:
                     entry["content"] = body
                 payload["documents"].append(entry)
             sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
@@ -187,13 +161,98 @@ def main() -> int:
         missing = _dump_scope(
             scope=scope,
             dsn=dsn,
-            meta_only=args.meta_only,
-            output_dir=output_dir,
+            meta_only=meta_only,
+            output_dir=out_dir,
         )
         if missing:
             exit_code = 1
     return exit_code
 
 
+@app.default
+def main(
+    *,
+    agent_id: Annotated[
+        str,
+        cyclopts.Parameter(
+            name="--agent-id",
+            help="WebSocket/API agent_id (MemoryStore companion_id column)",
+        ),
+    ],
+    user_id: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--user-id",
+            help="MemoryStore user_id scope",
+        ),
+    ] = None,
+    chat_id: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--chat-id",
+            help="MemoryStore chat_id scope",
+        ),
+    ] = None,
+    config: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--config",
+            help=(
+                "Inty YAML path (sets INTY_CONFIG_YAML). "
+                "When omitted: existing INTY_CONFIG_YAML env, else config.yaml."
+            ),
+        ),
+    ] = None,
+    list_scopes: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--list-scopes",
+            help="List (user_id, chat_id) scopes for --agent-id and exit",
+        ),
+    ] = False,
+    all_scopes: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--all-scopes",
+            help="Dump every scope for this agent_id (default: one resolved scope)",
+        ),
+    ] = False,
+    meta_only: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--meta-only",
+            help="Print paths and version metadata only, not document bodies",
+        ),
+    ] = False,
+    as_json: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--json",
+            help="Emit one JSON object per scope (meta + optional content)",
+        ),
+    ] = False,
+    output_dir: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--output-dir",
+            help="Write each document body under DIR/<agent_id>/<chat_id>/<path>",
+        ),
+    ] = None,
+) -> None:
+    raise SystemExit(
+        _run_list_agent_documents(
+            agent_id=agent_id,
+            user_id=user_id,
+            chat_id=chat_id,
+            config=config,
+            list_scopes=list_scopes,
+            all_scopes=all_scopes,
+            meta_only=meta_only,
+            as_json=as_json,
+            output_dir=output_dir,
+        )
+    )
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    app()

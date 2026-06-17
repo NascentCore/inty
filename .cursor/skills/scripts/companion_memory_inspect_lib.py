@@ -42,15 +42,31 @@ def repo_root_from_cwd() -> Path:
     )
 
 
-def apply_inty_config_env(config_arg: str) -> Path:
+def resolve_inty_config_yaml_path(config_override: str | None) -> Path:
+    """Resolve config path like ``app.core.config`` (``INTY_CONFIG_YAML`` or ``config.yaml``).
+
+    Precedence: explicit ``--config`` / CLI override, then ``INTY_CONFIG_YAML`` env,
+    then repo-root ``config.yaml``. Always writes the resolved path back to
+    ``INTY_CONFIG_YAML`` before any ``app.*`` import.
+    """
     root = repo_root_from_cwd()
-    config_path = Path(config_arg)
+    raw = (
+        config_override or os.environ.get("INTY_CONFIG_YAML") or "config.yaml"
+    ).strip()
+    if not raw:
+        raise SystemExit("Config path is empty")
+    config_path = Path(raw)
     if not config_path.is_absolute():
         config_path = (root / config_path).resolve()
     if not config_path.is_file():
         raise SystemExit(f"Config file not found: {config_path}")
     os.environ["INTY_CONFIG_YAML"] = str(config_path)
     return config_path
+
+
+def apply_inty_config_env(config_override: str | None) -> Path:
+    """Bootstrap Inty YAML config via ``INTY_CONFIG_YAML`` (see ``resolve_inty_config_yaml_path``)."""
+    return resolve_inty_config_yaml_path(config_override)
 
 
 def load_database_dsn() -> str:
@@ -62,8 +78,8 @@ def load_database_dsn() -> str:
     return dsn
 
 
-def list_companion_scopes(companion_id: str) -> list[CompanionScope]:
-    assert companion_id
+def list_agent_scopes(agent_id: str) -> list[CompanionScope]:
+    assert agent_id
     from sqlalchemy import select
 
     from app.core.companion_harness.companion.scope import CompanionScope
@@ -76,7 +92,7 @@ def list_companion_scopes(companion_id: str) -> list[CompanionScope]:
                 CompanionMemoryDocumentVersion.user_id,
                 CompanionMemoryDocumentVersion.chat_id,
             )
-            .where(CompanionMemoryDocumentVersion.companion_id == companion_id)
+            .where(CompanionMemoryDocumentVersion.companion_id == agent_id)
             .distinct()
             .order_by(
                 CompanionMemoryDocumentVersion.user_id,
@@ -93,11 +109,16 @@ def list_companion_scopes(companion_id: str) -> list[CompanionScope]:
         scopes.append(
             CompanionScope(
                 user_id=uid,
-                companion_id=companion_id,
+                companion_id=agent_id,
                 chat_id=cid,
             )
         )
     return scopes
+
+
+def list_companion_scopes(companion_id: str) -> list[CompanionScope]:
+    """Alias for ``list_agent_scopes`` (ORM column is ``companion_id``)."""
+    return list_agent_scopes(companion_id)
 
 
 def print_scope_candidates(scopes: list[CompanionScope]) -> None:
@@ -110,21 +131,21 @@ def print_scope_candidates(scopes: list[CompanionScope]) -> None:
 
 def resolve_scope(
     *,
-    companion_id: str,
+    agent_id: str,
     user_id: str,
     chat_id: str,
 ) -> CompanionScope:
-    assert companion_id
-    scopes = list_companion_scopes(companion_id)
+    assert agent_id
+    scopes = list_agent_scopes(agent_id)
     if not scopes:
-        raise SystemExit(f"No MemoryStore rows for companion_id={companion_id!r}")
+        raise SystemExit(f"No MemoryStore rows for agent_id={agent_id!r}")
 
     if user_id and chat_id:
         for scope in scopes:
             if scope.user_id == user_id and scope.chat_id == chat_id:
                 return scope
         raise SystemExit(
-            f"No MemoryStore scope for companion_id={companion_id!r} "
+            f"No MemoryStore scope for agent_id={agent_id!r} "
             f"user_id={user_id!r} chat_id={chat_id!r}"
         )
 

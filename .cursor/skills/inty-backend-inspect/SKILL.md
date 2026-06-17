@@ -88,11 +88,11 @@ python .cursor/skills/scripts/download_run.py --trace-id "<TRACE_UUID>"
 
 ### D. Postgres（`config.yaml` → `database`）
 
-用 **`meta_data->>'user_msg_uuid'`**、**`session_id`**、**`created_at` 时间窗`** 对齐日志与 trace。Companion **MemoryStore / MemDoc** 落库（`IDENTITY.md`、`context.json`、`transcript.jsonl` 等）优先用 Python 脚本而非手写 SQL：
+用 **`meta_data->>'user_msg_uuid'`**、**`session_id`**、**`created_at` 时间窗`** 对齐日志与 trace。Companion **MemoryStore / MemDoc** 落库（`IDENTITY.md`、`context.json`、`transcript.jsonl` 等）优先用 Python 脚本（Cyclopts CLI；配置同后端 **`INTY_CONFIG_YAML`** / `--config`）：
 
 ```bash
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents.py \
-  --companion-id <agent_id> --meta-only
+  --agent-id <agent_id> --meta-only
 ```
 
 见 [`inspect-companion-harness/list-agent-documents`](../inspect-companion-harness/list-agent-documents/SKILL.md)、单文档 [`show-memory-document`](../inspect-companion-harness/show-memory-document/SKILL.md)。

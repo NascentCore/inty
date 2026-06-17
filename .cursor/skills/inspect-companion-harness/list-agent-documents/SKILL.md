@@ -20,11 +20,17 @@ description: >-
 
 ## 脚本（读库 + MemoryStore）
 
-仓库根执行（`PYTHONPATH=.`）：
+仓库根执行（`PYTHONPATH=.`）。CLI 为 **Cyclopts**；`--help` 看全参数。
+
+**配置**：与后端相同 — 先读 **`INTY_CONFIG_YAML`** 环境变量，否则 **`config.yaml`**；`--config` 会写入 `INTY_CONFIG_YAML`（见 `app/core/config.py`）。本地 Ops 常见：
+
+```bash
+export INTY_CONFIG_YAML=devops/config.yaml.local
+```
 
 ```bash
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents.py \
-  --companion-id <agent_id>
+  --agent-id <agent_id>
 ```
 
 **仅有 `agent_id`、且只有一个 `(user_id, chat_id)`** 时可省略 scope；多 scope 时脚本会列出候选并退出，需补 `--user-id` / `--chat-id`，或加 **`--all-scopes`** 遍历全部。
@@ -33,41 +39,41 @@ PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents
 
 | 参数 | 作用 |
 |------|------|
-| `--companion-id` | WebSocket/API 的 `agent_id` |
+| `--agent-id` | WebSocket/API 的 `agent_id`（ORM 列 `companion_id`） |
 | `--user-id` / `--chat-id` | MemoryStore 作用域三元组 |
-| `--config` | 默认 `config.yaml`；本地 Ops 可用 `devops/config.yaml.local` |
-| `--list-scopes` | 列出该 companion 下所有 `(user_id, chat_id)` |
-| `--all-scopes` | 对该 `companion_id` 的每个 scope 各 dump 一遍 |
+| `--config` | 覆盖 `INTY_CONFIG_YAML`；未设时沿用 env 或 `config.yaml` |
+| `--list-scopes` | 列出该 agent 下所有 `(user_id, chat_id)` |
+| `--all-scopes` | 对该 `agent_id` 的每个 scope 各 dump 一遍 |
 | `--meta-only` | 只打路径与 `sequence_id` / 字数 / `created_at`，不打正文 |
 | `--json` | 每 scope 一行 JSON（`--meta-only` 时不含 `content` 字段） |
-| `--output-dir DIR` | 将正文写入 `DIR/<companion_id>/<chat_id>/<相对路径>` |
+| `--output-dir DIR` | 将正文写入 `DIR/<agent_id>/<chat_id>/<相对路径>` |
 
 ### 示例
 
 ```bash
 # 元数据总览（推荐先看，避免 transcript 刷屏）
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents.py \
-  --companion-id <agent_id> --meta-only
+  --agent-id <agent_id> --meta-only
 
 # 全量正文到终端
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents.py \
-  --companion-id <agent_id>
+  --agent-id <agent_id>
 
 # 导出到目录
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents.py \
-  --companion-id <agent_id> \
+  --agent-id <agent_id> \
   --output-dir .inty/memory_dump
 
 # 本地测试用户 + 明确 chat
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents.py \
-  --companion-id <agent_id> \
+  --agent-id <agent_id> \
   --user-id user-testing \
   --chat-id <chat_id> \
   --meta-only
 
 # 该 agent 关联的所有 chat scope
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents.py \
-  --companion-id <agent_id> --all-scopes --meta-only
+  --agent-id <agent_id> --all-scopes --meta-only
 ```
 
 ## 实现说明

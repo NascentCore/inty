@@ -7,9 +7,11 @@ See .cursor/skills/inspect-companion-harness/show-memory-document/SKILL.md.
 
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
+from typing import Annotated
+
+import cyclopts
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:
@@ -18,11 +20,19 @@ if str(_SCRIPTS_DIR) not in sys.path:
 from companion_memory_inspect_lib import (
     apply_inty_config_env,
     fetch_document_versions,
-    list_companion_scopes,
+    list_agent_scopes,
     list_latest_document_kinds,
     load_database_dsn,
     open_memory_store,
     resolve_scope,
+)
+
+app = cyclopts.App(
+    help=(
+        "Print latest (or recent) companion MemoryStore document bodies for debugging.\n\n"
+        "Config: same as backend — ``INTY_CONFIG_YAML`` env or ``--config``; "
+        "see ``app.core.config``."
+    ),
 )
 
 
@@ -35,58 +45,28 @@ def _print_version_meta(row) -> None:
     )
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Print latest (or recent) companion MemoryStore document bodies for debugging."
-        )
-    )
-    parser.add_argument(
-        "document",
-        help="Scope-relative path, e.g. STYLE.md, context.json, memory/daily/2026-05-18.md",
-    )
-    parser.add_argument(
-        "--companion-id",
-        required=True,
-        help="WebSocket/API agent_id (MemoryStore companion_id)",
-    )
-    parser.add_argument("--user-id", default="", help="MemoryStore user_id scope")
-    parser.add_argument("--chat-id", default="", help="MemoryStore chat_id scope")
-    parser.add_argument(
-        "--config",
-        default="config.yaml",
-        help="Repo-root YAML with database block (default: config.yaml)",
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=1,
-        help="Print the N most recent versions (default: 1)",
-    )
-    parser.add_argument(
-        "--meta-only",
-        action="store_true",
-        help="Print version metadata only, not document body",
-    )
-    parser.add_argument(
-        "--list-scopes",
-        action="store_true",
-        help="List (user_id, chat_id) scopes for --companion-id and exit",
-    )
-    parser.add_argument(
-        "--list-kinds",
-        action="store_true",
-        help="List latest document_kind rows for the resolved scope and exit",
-    )
-    args = parser.parse_args()
-    assert args.limit >= 1
+def _run_show_document(
+    *,
+    document: str | None,
+    agent_id: str,
+    user_id: str | None,
+    chat_id: str | None,
+    config: str | None,
+    limit: int,
+    meta_only: bool,
+    list_scopes: bool,
+    list_kinds: bool,
+) -> int:
+    assert agent_id
+    assert limit >= 1
+    apply_inty_config_env(config)
+    uid = (user_id or "").strip()
+    cid = (chat_id or "").strip()
 
-    apply_inty_config_env(args.config)
-
-    if args.list_scopes:
-        scopes = list_companion_scopes(args.companion_id)
+    if list_scopes:
+        scopes = list_agent_scopes(agent_id)
         if not scopes:
-            sys.stdout.write(f"No scopes for companion_id={args.companion_id!r}\n")
+            sys.stdout.write(f"No scopes for agent_id={agent_id!r}\n")
             return 1
         for scope in scopes:
             sys.stdout.write(
@@ -94,42 +74,130 @@ def main() -> int:
             )
         return 0
 
-    scope = resolve_scope(
-        companion_id=args.companion_id,
-        user_id=args.user_id,
-        chat_id=args.chat_id,
-    )
+    scope = resolve_scope(agent_id=agent_id, user_id=uid, chat_id=cid)
     sys.stdout.write(f"scope={scope.registry_key()}\n")
 
-    if args.list_kinds:
+    if list_kinds:
         rows = list_latest_document_kinds(scope)
         for row in rows:
             sys.stdout.write(f"{row.relative_path}\t")
             _print_version_meta(row)
         return 0
 
+    if not document:
+        sys.stderr.write(
+            "DOCUMENT positional argument required unless --list-scopes or --list-kinds.\n"
+        )
+        return 2
+
     dsn = load_database_dsn()
     store = open_memory_store(scope, dsn=dsn)
-    rel = args.document
-    versions = fetch_document_versions(scope, rel, limit=args.limit)
+    versions = fetch_document_versions(scope, document, limit=limit)
     if not versions:
         paths = store.iter_stored_relative_paths()
         hint = ""
         if paths:
             hint = f" Known paths: {', '.join(paths)}"
-        sys.stderr.write(f"Document not found: {rel!r}.{hint}\n")
+        sys.stderr.write(f"Document not found: {document!r}.{hint}\n")
         return 1
 
     for idx, row in enumerate(versions):
-        if args.limit > 1:
+        if limit > 1:
             sys.stdout.write(f"--- version {idx + 1}/{len(versions)} ---\n")
         _print_version_meta(row)
-        if not args.meta_only:
+        if not meta_only:
             sys.stdout.write(row.content)
             if row.content and not row.content.endswith("\n"):
                 sys.stdout.write("\n")
     return 0
 
 
+@app.default
+def main(
+    document: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            help=(
+                "Scope-relative path, e.g. STYLE.md, context.json, "
+                "memory/daily/2026-05-18.md"
+            ),
+        ),
+    ] = None,
+    *,
+    agent_id: Annotated[
+        str,
+        cyclopts.Parameter(
+            name="--agent-id",
+            help="WebSocket/API agent_id (MemoryStore companion_id column)",
+        ),
+    ],
+    user_id: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--user-id",
+            help="MemoryStore user_id scope",
+        ),
+    ] = None,
+    chat_id: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--chat-id",
+            help="MemoryStore chat_id scope",
+        ),
+    ] = None,
+    config: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--config",
+            help=(
+                "Inty YAML path (sets INTY_CONFIG_YAML). "
+                "When omitted: existing INTY_CONFIG_YAML env, else config.yaml."
+            ),
+        ),
+    ] = None,
+    limit: Annotated[
+        int,
+        cyclopts.Parameter(
+            name="--limit",
+            help="Print the N most recent versions (default: 1)",
+        ),
+    ] = 1,
+    meta_only: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--meta-only",
+            help="Print version metadata only, not document body",
+        ),
+    ] = False,
+    list_scopes: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--list-scopes",
+            help="List (user_id, chat_id) scopes for --agent-id and exit",
+        ),
+    ] = False,
+    list_kinds: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--list-kinds",
+            help="List latest document_kind rows for the resolved scope and exit",
+        ),
+    ] = False,
+) -> None:
+    raise SystemExit(
+        _run_show_document(
+            document=document,
+            agent_id=agent_id,
+            user_id=user_id,
+            chat_id=chat_id,
+            config=config,
+            limit=limit,
+            meta_only=meta_only,
+            list_scopes=list_scopes,
+            list_kinds=list_kinds,
+        )
+    )
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    app()

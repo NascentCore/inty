@@ -24,7 +24,7 @@ description: >-
 
 ```bash
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents.py \
-  --companion-id <agent_id> --meta-only
+  --agent-id <agent_id> --meta-only
 ```
 
 多 scope 时加 `--user-id` / `--chat-id`，或 `--list-scopes` / `--all-scopes`。详见 **`list-agent-documents/SKILL.md`**。
@@ -35,7 +35,7 @@ PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents
 
 ```bash
 PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STYLE.md \
-  --companion-id <agent_id>
+  --agent-id <agent_id>
 ```
 
 多 scope 时加 `--user-id` / `--chat-id`，或先 `--list-scopes`。详见 **`show-memory-document/SKILL.md`**。
@@ -48,7 +48,7 @@ PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STY
 
 ## 配置里取连接信息
 
-1. 仓库根目录读取 **`/config.yaml`**（若无则用 **`/devops/config.yaml.local`**；跑 pytest / CI 常见 **`/devops/config.yaml.test`**）。
+1. 仓库根目录读取 **`config.yaml`**（若无则用 **`INTY_CONFIG_YAML`** 指向的 yaml，如 **`devops/config.yaml.local`**；跑 pytest / CI 常见 **`devops/config.yaml.test`**）。Python 脚本在 import `app.*` 前会设置 **`INTY_CONFIG_YAML`**（与 **`app/core/config.py`** 相同机制）。
 2. 使用块 **`database`**：`host`、`port`、`user`、`password`、`db`。
 3. 用 **`psql`** 或任意 Postgres 客户端连接；shell 示例：`PGPASSWORD='<password>' psql -h <host> -p <port> -U <user> -d <db>`。
 
