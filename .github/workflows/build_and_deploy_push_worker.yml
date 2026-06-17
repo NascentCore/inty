@@ -16,7 +16,8 @@ on:
       # 运维部署
       - "devops/docker/Dockerfile.push-worker"
       - "devops/config.yaml.dev"
-      - "devops/config.yaml.prod"
+      # prod 环境部署暂时关闭；手动 workflow_dispatch 选 prod 时再部署
+      # - "devops/config.yaml.prod"
       # 本文件
       - ".github/workflows/build_and_deploy_push_worker.yml"
   workflow_dispatch:
@@ -27,9 +28,10 @@ on:
         required: true
         default: dev
 
-  schedule:
-    # 美西凌晨 3 点 UTC（Pacific）：11 AM UTC = 3:00 PST（冬令时），夏令时期间为当地 4:00
-    - cron: "0 11 * * *"
+  # 暂停 prod 环境部署；prod push worker 需手动 workflow_dispatch
+  # schedule:
+  #   # 美西凌晨 3 点 UTC（Pacific）：11 AM UTC = 3:00 PST（冬令时），夏令时期间为当地 4:00
+  #   - cron: "0 11 * * *"
 
 concurrency:
   group: inty-deploy-push-worker-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
@@ -126,14 +128,11 @@ jobs:
           script: |
             sudo docker stop inty-push-worker-${{ steps.prep.outputs.environment }} || true
             sudo docker rm inty-push-worker-${{ steps.prep.outputs.environment }} || true
-            DEV_DOCKER_HOST_ARGS=""
-            if [ "${{ steps.prep.outputs.environment }}" = "dev" ]; then
-              DEV_DOCKER_HOST_ARGS="--add-host=host.docker.internal:host-gateway"
-            fi
+            LOCAL_PG_DOCKER_HOST_ARGS="--add-host=host.docker.internal:host-gateway"
             sudo docker run --detach --log-driver=gcplogs \
               --name inty-push-worker-${{ steps.prep.outputs.environment }} \
               --restart unless-stopped \
-              ${DEV_DOCKER_HOST_ARGS} \
+              ${LOCAL_PG_DOCKER_HOST_ARGS} \
               --env LANGCHAIN_TRACING_V2=true \
               --env LANGCHAIN_PROJECT=inty-push-worker-${{ steps.prep.outputs.environment }} \
               --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \

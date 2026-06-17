@@ -149,16 +149,24 @@ WHERE chat_id = (
 
 **注意：** 直接改库不经过 API，因此不会做订阅/超级用户校验；仅运维或调试时使用。
 
-## IntelliMate dev 本地 Postgres（Docker）
+## IntelliMate 本地 Postgres（Docker）
 
-IntelliMate dev 库 `inty-dev` 已从 Cloud SQL 迁到 VM 本地容器；完整说明见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。
+IntelliMate dev（`inty-dev`）与 prod（`inty`）均在 VM 容器 `inty-dev-postgres`；完整说明见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。
 
 常用命令：
 
 ```bash
 docker start inty-dev-postgres
 docker stop inty-dev-postgres
-PGPASSWORD='<见 config.yaml.dev>' psql -h localhost -U postgres -d inty-dev
+PGPASSWORD='<见 config.yaml.dev / config.yaml.prod>' psql -h localhost -U postgres -d inty-dev
+PGPASSWORD='<见 config.yaml.prod>' psql -h localhost -U postgres -d inty
+```
+
+**Cloud SQL → 本地增量同步**（`created_at` cutoff，见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)）：
+
+```bash
+devops/scripts/sync_cloudsql_inty_incremental.sh --check-only
+devops/scripts/sync_cloudsql_inty_incremental.sh --apply
 ```
 
 ## 迁移已有后端数据库到一个新的服务器
@@ -179,9 +187,9 @@ PGPASSWORD='<见 config.yaml.dev>' psql -h localhost -U postgres -d inty-dev
 
    这个命令会启动后端服务，后端服务启动初期会初始化数据库 schema
 
-### 从 Cloud SQL 同步 inty-dev 到本地 Docker（IntelliMate dev）
+### 从 Cloud SQL 同步 IntelliMate dev / prod 到本地 Docker
 
-见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。要点：用 `postgres:17` 容器做 `pg_dump` / `pg_restore`；本地镜像须为 `pgvector/pgvector:pg16`；restore 前 `CREATE EXTENSION vector`。
+见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。要点：用 `postgres:17` 容器做 `pg_dump` / `pg_restore`；本地镜像须为 `pgvector/pgvector:pg16`；restore 前在目标库 `CREATE EXTENSION vector`（prod 还需 `uuid-ossp`，通常由 dump restore 带入）。
 
 ### 通用 dump / restore 示例
 

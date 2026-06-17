@@ -32,7 +32,8 @@ security:
   access_token_expire_minutes: 10080
 
 database:
-  host: "10.41.177.3"
+  host: host.docker.internal
+  port: 5432
   user: "postgres"
   password: "sxwl666A!"
   db: "inty"
