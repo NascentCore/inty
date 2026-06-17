@@ -10,6 +10,8 @@ Generated entirely by Cursor agent.
 
 ## GitHub issue drafts
 
+Umbrella issue: #3491.
+
 ### Epic: Consistent identity across companion channels
 
 - Objective:
@@ -53,8 +55,23 @@ Generated entirely by Cursor agent.
   - Define the only product-approved path that can replace a user's active companion.
 - Scope:
   - Terminated bond status and terminated_at semantics.
+  - Product UX decision for how users request, confirm, and understand companion reset.
   - Whether old memory remains archived, hidden, exportable, or deleted.
   - Endpoint repointing behavior after reset.
 - Acceptance:
   - A new active companion for a canonical user always terminates the previous active bond in the same transaction.
   - Old companion state is never silently reused by the replacement.
+  - Ordinary channel onboarding never terminates an old companion as an implicit side effect.
+
+### Issue: Product design for companion reset
+
+- Objective:
+  - Decide the user-visible semantics for replacing a long-term companion before backend reset implementation.
+- Scope:
+  - Reset entry points across App and chat channels.
+  - Confirmation copy and emotional framing.
+  - What the user can see, recover, export, or delete after reset.
+  - Whether support/admin reset is allowed and how it is audited.
+- Acceptance:
+  - Backend reset API has a product-approved state transition and UX contract.
+  - Implementation TODOs can reference the product decision instead of encoding ad hoc reset semantics.
