@@ -1,0 +1,82 @@
+# CREATED_BY_AGENT
+# Daily backup + weekly durability verify for VM Docker Postgres (inty-dev-postgres).
+# Replaces VM crontab entries documented in devops/SOPS.md (!3496).
+name: Local Postgres maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Which maintenance to run
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - backup
+          - verify
+      restart_test:
+        description: Run verify with --restart-test (slow; verify task only)
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # UTC 03:15 daily — ensure container, pg_dump both DBs, prune dumps older than retention
+    - cron: "15 3 * * *"
+    # UTC 04:00 Sunday — wiring + DB connectivity (no restart test)
+    - cron: "0 4 * * 0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: local-postgres-maintenance
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: inty-prod-server-gcp
+    if: >-
+      (github.event_name == 'workflow_dispatch'
+      && (inputs.task == 'backup' || inputs.task == 'all'))
+      || (github.event_name == 'schedule'
+      && github.event.schedule == '15 3 * * *'
+      && github.ref == 'refs/heads/main')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure Postgres container
+        run: devops/scripts/ensure_inty_dev_postgres_container.sh
+
+      - name: Backup inty-dev and inty
+        run: devops/scripts/backup_local_postgres.sh
+
+  verify:
+    runs-on: inty-prod-server-gcp
+    needs: backup
+    if: >-
+      always()
+      && (needs.backup.result == 'success' || needs.backup.result == 'skipped')
+      && (
+        (github.event_name == 'workflow_dispatch'
+        && (inputs.task == 'verify' || inputs.task == 'all'))
+        || (github.event_name == 'schedule'
+        && github.event.schedule == '0 4 * * 0'
+        && github.ref == 'refs/heads/main')
+      )
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure Postgres container
+        run: devops/scripts/ensure_inty_dev_postgres_container.sh
+
+      - name: Verify durability wiring
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name == 'workflow_dispatch' && inputs.restart_test == 'true' }}" == "true" ]]; then
+            devops/scripts/verify_local_postgres_durability.sh --restart-test
+          else
+            devops/scripts/verify_local_postgres_durability.sh
+          fi

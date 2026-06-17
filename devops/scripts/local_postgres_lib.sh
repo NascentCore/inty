@@ -12,6 +12,7 @@ readonly INTY_PG_PORT="5432"
 readonly INTY_PG_VOLUME_LABEL="inty.critical=postgres-data"
 readonly INTY_PG_CONTAINER_LABEL="inty.critical=postgres"
 readonly INTY_PG_BACKUP_DIR="/opt/inty/backups/postgres"
+readonly INTY_PG_BACKUP_RETENTION_DAYS="14"
 readonly INTY_PG_DEV_DB="inty-dev"
 readonly INTY_PG_PROD_DB="inty"
 
@@ -97,4 +98,13 @@ wait_for_postgres_ready() {
   done
   echo "Postgres not ready on localhost:${INTY_PG_PORT} after ${attempts}s" >&2
   return 1
+}
+
+prune_old_backups() {
+  local retention_days="$1"
+  assert_non_empty "${retention_days}" "retention_days required"
+  if [[ ! -d "${INTY_PG_BACKUP_DIR}" ]]; then
+    return
+  fi
+  find "${INTY_PG_BACKUP_DIR}" -name '*.dump' -mtime +"${retention_days}" -delete
 }
