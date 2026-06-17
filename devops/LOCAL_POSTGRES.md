@@ -24,12 +24,28 @@ IntelliMate **dev** 与 **prod** 的数据库均已从 GCP Cloud SQL 迁到 **de
 
 - **容器名**：`inty-dev-postgres`（历史命名；现承载 dev **与** prod 两个逻辑库）
 - **镜像**：`pgvector/pgvector:pg16`
-- **数据卷**：`inty-dev-postgres-data`（named volume，best-effort 持久化）
+- **数据卷**：`inty-dev-postgres-data`（Docker **named volume**；与容器生命周期解耦，见下文「Volume 耐久性」）
 - **端口**：宿主机 `5432` → 容器 `5432`
 - **逻辑库**：`inty-dev`（dev）、`inty`（prod）
 - **账号**：与 [`config.yaml.dev`](config.yaml.dev) / [`config.yaml.prod`](config.yaml.prod) 中 `database` 段一致（`postgres` / 密码相同）
 
-### 启动 / 停止
+### 启动 / 确保 / 验证（推荐脚本）
+
+在 VM 上、仓库根目录执行：
+
+```bash
+# 幂等：创建/启动容器，始终挂载 canonical named volume
+devops/scripts/ensure_inty_dev_postgres_container.sh
+
+# 只读检查挂载与 restart policy（不改状态）
+devops/scripts/ensure_inty_dev_postgres_container.sh --check-only
+
+# 耐久性验证；加 --restart-test 会在 restart 前后对比库 fingerprint
+devops/scripts/verify_local_postgres_durability.sh
+devops/scripts/verify_local_postgres_durability.sh --restart-test
+```
+
+手动启停（仅当脚本不可用时）：
 
 ```bash
 docker start inty-dev-postgres   # 日常启动
@@ -43,21 +59,31 @@ PGPASSWORD='<password>' psql -h localhost -U postgres -d inty-dev -c 'SELECT 1'
 PGPASSWORD='<password>' psql -h localhost -U postgres -d inty -c 'SELECT 1'
 ```
 
-首次创建容器（会初始化 volume；**慎用** `docker volume rm`）：
+### Volume 耐久性
+
+**Named volume 在以下操作中保留数据**：
+
+- `docker stop` / `docker start` / `docker restart`
+- 宿主机 reboot（容器 `--restart unless-stopped` 时自动拉起）
+- `docker rm inty-dev-postgres`（含 `-v` 也不会删除 **named** volume）
+
+**会丢数据或导致「空库」的误操作**：
+
+- `docker volume rm inty-dev-postgres-data`
+- `docker volume prune`（容器已删、volume 变为 unused 时会被清掉）
+- 重建容器时挂载了**不同** volume 名或未挂 `-v`
+
+**防护措施（已脚本化）**：
+
+- [`ensure_inty_dev_postgres_container.sh`](scripts/ensure_inty_dev_postgres_container.sh)：唯一推荐的创建/重建入口；volume label `inty.critical=postgres-data`，容器 label `inty.critical=postgres`
+- [`guard_docker_volume_prune.sh`](scripts/guard_docker_volume_prune.sh)：若保护 volume 存在则 **拒绝** 执行 `docker volume prune`（用法：`guard_docker_volume_prune.sh || docker volume prune`）
+- [`backup_local_postgres.sh`](scripts/backup_local_postgres.sh)：dump `inty-dev` 与 `inty` 到 `/opt/inty/backups/postgres/`（见 [SOPS.md](SOPS.md) cron 示例）
+
+首次创建（`ensure_*` 脚本会自动执行；**禁止** `docker volume rm`）：
 
 ```bash
-docker volume create inty-dev-postgres-data
-docker run -d \
-  --name inty-dev-postgres \
-  --restart unless-stopped \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD='<见 config.yaml.dev database.password>' \
-  -e POSTGRES_DB=inty-dev \
-  -p 5432:5432 \
-  -v inty-dev-postgres-data:/var/lib/postgresql/data \
-  pgvector/pgvector:pg16
-
-# prod 逻辑库需单独 CREATE DATABASE（见下文重同步）
+devops/scripts/ensure_inty_dev_postgres_container.sh
+# prod 逻辑库若不存在，需单独 CREATE DATABASE（见下文重同步）
 ```
 
 ## 从 Cloud SQL 重新同步

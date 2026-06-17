@@ -153,6 +153,35 @@ WHERE chat_id = (
 
 IntelliMate dev（`inty-dev`）与 prod（`inty`）均在 VM 容器 `inty-dev-postgres`；完整说明见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。
 
+**推荐入口（幂等 / 可验证）**：
+
+```bash
+cd /path/to/inty
+devops/scripts/ensure_inty_dev_postgres_container.sh
+devops/scripts/verify_local_postgres_durability.sh
+devops/scripts/verify_local_postgres_durability.sh --restart-test   # 迁移或 prod cutover 前
+```
+
+**禁止**：在 VM 上直接 `docker volume rm inty-dev-postgres-data` 或未加 guard 的 `docker volume prune`。若需 prune 其他 volume：
+
+```bash
+devops/scripts/guard_docker_volume_prune.sh && docker volume prune
+# guard 检测到 inty-dev-postgres-data 时会 exit 1，阻止 prune
+```
+
+**每日备份**（cron 示例，UTC 03:15；保留 14 天）：
+
+```bash
+15 3 * * * cd /home/licairong/inty && devops/scripts/backup_local_postgres.sh >> /var/log/inty-postgres-backup.log 2>&1
+30 3 * * * find /opt/inty/backups/postgres -name '*.dump' -mtime +14 -delete
+```
+
+**每周耐久性巡检**（cron 示例，UTC 周日 04:00）：
+
+```bash
+0 4 * * 0 cd /home/licairong/inty && devops/scripts/verify_local_postgres_durability.sh >> /var/log/inty-postgres-verify.log 2>&1
+```
+
 常用命令：
 
 ```bash
