@@ -6,7 +6,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Select, Typography } from "antd";
 import { UserSwitchOutlined } from "@ant-design/icons";
-import api, { getAssumeUserId, setAssumeUserId } from "../services/api";
+import api, { setAssumeUserId } from "../services/api";
+import { userDisplayId } from "../utils/userDisplayId";
 
 const STORAGE_KEY = "evaluation_assume_user_id";
 
@@ -48,14 +49,11 @@ export const AssumeUserSelector: React.FC = () => {
         limit: 50,
         skip: 0,
       });
-      const list = (result?.users ?? []).map(
-        (u: { id: string; nickname?: string; readable_id?: string }) => ({
+      const list = (result?.users ?? []).map((u) => ({
           id: u.id,
           label:
-            [u.nickname, u.readable_id, u.id].filter(Boolean).join(" · ") ||
-            u.id,
-        }),
-      );
+            [u.nickname, userDisplayId(u)].filter(Boolean).join(" · ") || u.id,
+        }));
       setUsers(list);
     } catch {
       setUsers([]);

@@ -14,6 +14,21 @@ describe("reportReporterInfo utils", () => {
     ]);
   });
 
+  it("falls back to user id when readable_id is missing", () => {
+    const rows = buildReporterInfoRows({
+      id: "user-01KTEST",
+      readable_id: null,
+      nickname: "Guest",
+      email: null,
+      phone: null,
+      created_at: null,
+    });
+
+    expect(rows.find((row) => row.label === "Readable ID")?.value).toBe(
+      "user-01KTEST",
+    );
+  });
+
   it("formats reporter info rows with normalized values", () => {
     const rows = buildReporterInfoRows({
       id: "user-01KTEST",

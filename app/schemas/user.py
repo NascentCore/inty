@@ -174,7 +174,8 @@ class UserListItem(BaseModel):
     """用户列表项"""
 
     id: str
-    readable_id: str
+    # DEPRECATED: app 显示 ID 而非 readable_id
+    readable_id: Optional[str] = None
     nickname: Optional[str] = None
     avatar: Optional[str] = None
     email: Optional[str] = None
