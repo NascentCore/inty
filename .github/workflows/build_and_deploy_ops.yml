@@ -130,9 +130,14 @@ jobs:
           script: |
             sudo docker stop inty-ops-${{ steps.prep.outputs.environment }} || true
             sudo docker rm inty-ops-${{ steps.prep.outputs.environment }} || true
+            DEV_DOCKER_HOST_ARGS=""
+            if [ "${{ steps.prep.outputs.environment }}" = "dev" ]; then
+              DEV_DOCKER_HOST_ARGS="--add-host=host.docker.internal:host-gateway"
+            fi
             sudo docker run --detach --log-driver=gcplogs \
               --name inty-ops-${{ steps.prep.outputs.environment }} \
               --restart unless-stopped \
+              ${DEV_DOCKER_HOST_ARGS} \
               --publish ${{ vars.OPS_SERVICE_PORT_ON_HOST }}:8001 \
               --env LANGCHAIN_TRACING_V2=true \
               --env LANGCHAIN_PROJECT=inty-ops-${{ steps.prep.outputs.environment }} \
