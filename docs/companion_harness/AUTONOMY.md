@@ -10,7 +10,12 @@
 
 ## Inner-tick poll（五 activity）
 
-每次 poll 至多触发一个（优先级：`proactive → scheduled → autonomy → maintenance → dreaming`）。
+实现为 **两条 poll**（[#3255](https://github.com/NascentCore/inty/issues/3255)），每条 wake **至多触发一个**：
+
+- **Presence poll**（需 signed-on）：`proactive → scheduled`
+- **Scope worker poll**（无需在线）：`maintenance → autonomy → dreaming`
+
+下表为逻辑 activity 职责；**scope worker 上 autonomy 排在 maintenance 之后**（与旧 unified 顺序不同）。
 
 | Activity | 机制 | 用户可见？ | 职责（一句话） |
 |----------|------|------------|----------------|
@@ -97,7 +102,8 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 
 ## 与既有调度的关系
 
-- 复用 unified inner-tick worker（每条 WS 连接）的循环结构；调度顺序为 `proactive → scheduled → autonomy → maintenance → dreaming`（与 ``inner_tick_poll`` 一致）。
+- **Presence**：`inner_tick_poll.py` — `proactive → scheduled`（绑定 `Coordinator` signed-on）
+- **Scope worker**：`scope_inner_tick_poll.py` — `maintenance → autonomy → dreaming`（[#3255](https://github.com/NascentCore/inty/issues/3255)）
 - 自有 `min_gap`，建议初值与 maintenance 相同（120s）。
 - 复用 `turn_lock` / `tool_bg_idle` 串行化各轨道。
 - **不进 chat 日限额**（autonomy 不发消息）；token 限额按 maintenance 同档计费。
@@ -122,7 +128,7 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 
 1. `memory_store_document_mapping.py` 新增 `CompanionMemoryDocumentKind.LIFE_CURRENTS` 与 `"LIFE_CURRENTS.md"` 映射；`MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` 加入它。
 2. `InnerTickActivity` 新增 `AUTONOMY`；`CompanionTurnTrack` 新增 `INNER_TICK_AUTONOMY`；`turn_track.py` 完成翻译与 LangSmith lane 归类。
-3. 内核入口：`run_companion_inner_tick_autonomy_turn_for_api`（参照 `..._maintenance_...`，允许开放工具集，禁用对外下行）。
+3. 内核入口：`run_inner_tick_autonomy`（`turn.py`）/ `CompanionManager.run_inner_tick_autonomy_turn` / `companion_chat_service.run_inner_tick_autonomy`；开放工具集，禁用对外下行。
 4. unified inner-tick worker 在 `proactive` 之后、`maintenance` 之前插入 autonomy 一步。
 5. `PROACTIVE_CHAT` 的 system 拼装加上 `LIFE_CURRENTS.md` 注入段。
 

@@ -46,9 +46,9 @@
 
 | 术语 | 定义 |
 |------|------|
-| **Inner-tick** | 用户空闲时的**合成轮次**（主动搭话、定时提醒、维护整理等）。实现见 `inner_tick_schedule.py` / `agentic_companion/session.py`；架构见 [DESIGN.md](/docs/companion_harness/DESIGN.md)。 |
-| **Proactive chat rhythm** | 两次 proactive 尝试之间，自**最后 assistant 时间戳**起至少等待的 quiet 时长；由真实用户消息间隔自适应，默认约 30–60s。不是 worker poll 周期本身。 |
-| **Inner-tick worker poll** | WebSocket 上 inner-tick 循环的唤醒间隔（默认 60s）；到点后**依次检查** scheduled / proactive / maintenance 是否各自满足条件。 |
+| **Inner-tick** | 用户空闲时的**合成轮次**（主动搭话、定时提醒、维护整理等）。**两条 poll**：presence（`inner_tick_poll.py`：`proactive → scheduled`）与 scope worker（`scope_inner_tick_poll.py`：`maintenance → autonomy → dreaming`）。编排胶水在 `app/services/agentic_companion/`；harness 内核见 `runtime/inner_tick_fire.py`。架构见 [DESIGN.md](./DESIGN.md#inner-tick-双-poll-架构)。 |
+| **Proactive chat rhythm** | 两次 proactive 尝试之间，自**最后 assistant 时间戳**起至少等待的 quiet 时长；由 `companion_ws_proactive_chat_base_idle_seconds`（默认 30s）配置。不是 worker poll 周期本身。 |
+| **Inner-tick worker poll** | 唤醒间隔：WS 默认 60s（`companion_ws_proactive_chat_poll_seconds`）；REPL 默认 90s（`INTY_V2_PROTO_INNER_TICK_SEC`）。到点后按 [DESIGN.md](./DESIGN.md#inner-tick-双-poll-架构) 所述 **presence 或 scope** 链检查各 track。 |
 | **ai_private** | **非独立运行时循环**；工作记忆中「AI 私密活动」类材料，供内在节拍等注入提示时使用。 |
 | **World Capsule（世界胶囊）** | **计划中**：共同想象的设定单元，择优巩固进 LivingSphere / TechnoCore。见 [WORLD_CAPSULES.md](./WORLD_CAPSULES.md)。 |
 | **World Engine（世界引擎）** | **计划中**：harness 作为 actor supervisor，以共享 AgentHarness 驱动 per-agent clock 的 companion 与 sub-agent；agent 间经 mailbox 交往。见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)。 |
@@ -66,4 +66,4 @@
 ## See also
 
 - [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — World Engine、sub-agent、两期交付
-- [DESIGN.md](./DESIGN.md) — WebSocket 生命周期、turn 持久化与 transport 边界
+- [DESIGN.md](./DESIGN.md) — 架构总览、turn 轨道、传输边界、inner-tick 双 poll
