@@ -16,12 +16,11 @@ DataStream 比较麻烦，因为需要从主数据库同步数据、要重启数
 
 - **GCP zone**：asia-southeast1-a
 - **数据库**
-  - **prod（IntelliMate）**：Cloud SQL 实例 `inty-prod`，逻辑库 `inty`（[`config.yaml.prod`](config.yaml.prod)）
-  - **dev（IntelliMate）**：已迁到 dev-instance VM 上的 Docker Postgres，逻辑库仍为 `inty-dev`（[`config.yaml.dev`](config.yaml.dev)）；不再使用 Cloud SQL 私网 IP / 只读副本。操作与重同步见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)
-  - **iMate 等其它逻辑库**：仍在同一 Cloud SQL 实例上（见下文 iMate 小节）
+  - **IntelliMate dev / prod**：均已迁到 dev-instance VM 上的 Docker Postgres（[`config.yaml.dev`](config.yaml.dev) → `inty-dev`，[`config.yaml.prod`](config.yaml.prod) → `inty`）；操作与重同步见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)
+  - **Cloud SQL 实例 `inty-prod`**：仍为 IntelliMate 迁移 **源库**；**iMate 等其它逻辑库** 仍在此实例上（见下文 iMate 小节）
   - [看板](https://console.cloud.google.com/sql/instances/inty-prod/system-insights?project=alien-paratext-461204-i9)
   - [查询性能分析](https://console.cloud.google.com/sql/instances/inty-prod/insights;duration=P1D;sort_by=TOTAL_EXEC_TIME/executed?project=alien-paratext-461204-i9)
-  - **prod Inty 主库读取**：[/devops/config.yaml.prod](/devops/config.yaml.prod) 故意不配置 `database.replica_host`，因此后端、Ops、push worker 中原本偏向只读副本的读取路径会回退到 `database.host`（当前主库私网 IP）。影响范围仅为使用 prod IntelliMate 配置的服务，不改变 iMate 的 `config.yaml.imate_prod`。回滚方式：在 `/devops/config.yaml.prod` 的 `database` 段重新加入 `replica_host` 并重新部署受影响的 prod backend / prod Ops / prod push worker。
+  - **历史**：IntelliMate prod 曾通过 [`config.yaml.prod`](config.yaml.prod) 连 Cloud SQL 主库；现已改为本地 Docker，见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)
 - **GCE VM**：[dev-instance](https://console.cloud.google.com/compute/instancesDetail/zones/asia-southeast1-a/instances/dev-instance)
 - **反向代理**：nginx（详见 `nginx/README.md`）
 - **API endpoint**：https://app.inty.cc
