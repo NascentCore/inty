@@ -10,7 +10,7 @@ TODO(companion-bond-invariant): #3491 — replace oldest-PRIVATE-agent reuse wit
 a DB-enforced active companion bond; merge-deselected companions must enter
 SEALED state: frozen, invisible, zero runtime, all data intact. Replacement
 must wait for the product reset decision drafted in
-docs/companion_harness/CROSS_CHANNEL_IDENTITY_FOLLOWUPS.md; revival is distant
+docs/companion_harness/FR_CROSS_CHANNEL_USER_IDENTITY.md; revival is distant
 future and out of scope for the first implementation.
 
 **Not** ``agent_service.create_agent``: that path is maintenance-mode HTTP only
