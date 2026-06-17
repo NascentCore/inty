@@ -17,6 +17,10 @@ Generated entirely by Cursor agent.
 
 Umbrella issue: #3491.
 
+Tracking checklist:
+
+- [ ] Do not distinguish SEALED vs TERMINATED in the first implementation; non-active companion state only needs to be frozen, invisible, zero-runtime, and data-preserving.
+
 ### Epic: Consistent identity across companion channels
 
 - Objective:
