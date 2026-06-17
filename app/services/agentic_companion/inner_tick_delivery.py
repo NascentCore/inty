@@ -1,4 +1,7 @@
-"""How inner-tick turns reach the human on WebSocket, Weixin, or Telegram."""
+"""How inner-tick turns reach the human on WebSocket, Weixin, or Telegram.
+
+v1: direct delivery (``deliver_visible_inner_tick_turn``). TODO(#3489): proactive via OutputQueue + shared pump (!3485).
+"""
 
 from __future__ import annotations
 

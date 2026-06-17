@@ -1,4 +1,8 @@
-"""APP WebSocket helpers for the agentic companion serving pipeline."""
+"""APP WebSocket helpers for the agentic companion serving pipeline.
+
+TODO(#3487): Enqueue + wake only; remove ``drain_and_deliver_user_chat_turn`` await.
+TODO(#3488): ``AppWsChannelAdapter`` on ``turn_channel_up``; one ``Coordinator`` per scope.
+"""
 
 from __future__ import annotations
 

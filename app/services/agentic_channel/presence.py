@@ -1,4 +1,9 @@
-"""In-process agent-channel presence: shared inner-tick + tool_bg per scope."""
+"""In-process agent-channel presence: shared inner-tick + tool_bg per scope.
+
+TODO(#3486): Start ``ScopeQueueServing`` from ``ensure_presence`` / ``stop_presence``.
+TODO(#3487): ``handle_user_text`` enqueue + wake only; drop ``drain_and_deliver_user_chat_turn``.
+TODO(#3490): Remove queue USER_CHAT ``foreground_pending`` + ``background_sink`` once !3487 ships.
+"""
 
 from __future__ import annotations
 

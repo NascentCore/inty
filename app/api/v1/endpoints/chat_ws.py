@@ -3,6 +3,9 @@
 Only the production companion harness path (companion_harness, technocore, livingsphere).
 HTTP chat completions and image/music generation stay in ``chat.py``.
 Wire frames: ``app/schemas/chat_websocket.py``; outbound pump: ``app/services/chat_websocket_session.py``.
+
+TODO(#3487): USER_CHAT enqueue + wake via ``AgentChannelPresence``; silent send-only inbound.
+TODO(#3488): ``AppWsChannelAdapter`` + single scope ``Coordinator``; retire per-connection queue drain.
 """
 
 import asyncio
