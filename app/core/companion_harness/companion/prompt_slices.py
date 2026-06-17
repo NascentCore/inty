@@ -27,7 +27,7 @@ class PromptSliceId(StrEnum):
 
     ``BOOTSTRAP`` is package-only (no workspace path). ``TOOLS`` / ``SIGNIFICANCE_PERCEPTION`` are
     fixed from package templates for model injection, not store-backed prompt slices.
-    ``CHANNELS`` is persistable but not injected into any system-message group yet.
+    ``CHANNELS`` is persistable and injected through ``PromptBundle.channels_md``.
     ``COMPANIONSHIP`` is persistable; injected post-bootstrap in ``_persona_system_messages``.
     """
 

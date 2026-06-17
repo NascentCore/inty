@@ -9,7 +9,6 @@ from typing import Final
 
 from loguru import logger
 
-from .file_store import read_text
 from .memory_store import MemoryStore, normalize_memory_store_relative_path
 
 _MEMORY_PKG_DIR = Path(__file__).resolve().parent
@@ -38,7 +37,7 @@ def load_template_seed_text(filename: str) -> str:
     path = base / filename
     if not path.is_file():
         raise FileNotFoundError(f"missing memory template seed file: {path}")
-    body = read_text(path).rstrip() + "\n"
+    body = path.read_text(encoding="utf-8").rstrip() + "\n"
     assert (
         body.strip()
     ), f"template seed file is empty after strip (catastrophic): {path}"

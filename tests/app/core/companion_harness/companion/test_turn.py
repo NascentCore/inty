@@ -6,21 +6,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
 from app.core.companion_harness.companion.llm_client import (
-    LLM_SCENE_CHAT,
     CompanionLLMConfig,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.proactive_chat import (
-    PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
-)
-from app.core.companion_harness.companion.models import (
-    INNER_TICK_SYNTHETIC_USER_TEXT,
-    InnerTickActivity,
-)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
     scheduled_task_synthetic_user_text,
@@ -33,11 +24,6 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
-from app.core.companion_harness.companion.user_time_context_llm_slice import (
-    build_companion_user_time_context_system_content,
-)
-from app.schemas.chat import UserTimeContext
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 

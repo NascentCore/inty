@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -18,7 +17,6 @@ from app.core.companion_harness.companion.models import (
     load_transcript_from_store,
     load_transcript_projection_from_store,
     load_transcript_text,
-    load_user_visible_transcript_from_store,
     transcript_for_llm_turn,
     transcript_rows_user_visible,
     transcript_without_trailing_presence_signals,
@@ -71,7 +69,6 @@ def test_context_meta_defaults() -> None:
     assert c.context_mode == "intimate"
     assert c.workspace_bootstrap_user_interactive_completed is True
     assert c.companion_ws_session_system_written is True
-    assert c.companion_ws_interactive_kickoff_sent is True
 
 
 def test_context_meta_normalizes_experience_profile_id() -> None:
@@ -200,7 +197,9 @@ def test_is_transcript_row_user_visible_filters_manifest_and_proactive_user() ->
     assert is_transcript_row_user_visible(real_user)
 
 
-def test_load_user_visible_transcript_from_store(tmp_path: Path) -> None:
+def test_load_user_visible_transcript_projection_from_store(
+    tmp_path: Path,
+) -> None:
     store = MemoryStore(
         scope=CompanionScope("models", "a", f"{tmp_path.name}-uv"),
         repository=None,
@@ -223,7 +222,9 @@ def test_load_user_visible_transcript_from_store(tmp_path: Path) -> None:
     store.write_document(
         "transcript.jsonl", "\n".join(json.dumps(r) for r in rows) + "\n"
     )
-    visible = load_user_visible_transcript_from_store(store, "transcript.jsonl")
+    visible = load_transcript_projection_from_store(
+        store, "transcript.jsonl", TranscriptProjection.USER_VISIBLE
+    )
     assert transcript_rows_user_visible(visible) == visible
     assert len(visible) == 1
     assert visible[0].content == "hi"
@@ -254,4 +255,3 @@ def test_load_transcript_projection_from_store(tmp_path: Path) -> None:
     )
     assert len(full) == 2
     assert len(visible) == 1
-    assert load_user_visible_transcript_from_store(store, "transcript.jsonl") == visible

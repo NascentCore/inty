@@ -4,7 +4,7 @@ Known ``kind`` values include ``llm_inference_failure`` (every failed companion
 ``chat.completions`` via ``llm.chat_completions.create_chat_completion_sync`` plus structured-chat
 foreground timeouts when correlation ContextVar is bound), ``tool_background_failure`` (async tool
 loop thread in ``tool_background`` when the error is not already logged as an LLM inference failure),
-``user_signed_out`` and ``ws_conn_dropped`` (WebSocket control-frame audit from ``chat.py``),
+``user_signed_out`` and ``ws_conn_dropped`` (WebSocket control-frame audit from ``chat_ws.py``),
 ``inner_tick_dreaming`` (sleeping-state memory batch from inner-tick poll slot 4;
 see ``dreaming_observability``), and ad-hoc operator/test entries such as ``tool_timeout``.
 
@@ -121,17 +121,3 @@ def read_runtime_events(
     return rows[: max(0, limit)]
 
 
-def has_unacknowledged_events_of_kind(
-    store: MemoryStore,
-    *,
-    kind: str,
-    since_ts: str | None,
-) -> bool:
-    """True if any event of ``kind`` has ``ts`` strictly after ``since_ts`` (or ``since_ts`` is None)."""
-    cap = 512
-    events = read_runtime_events(store, kinds={kind}, limit=cap)
-    for ev in events:
-        ts = str(ev.get("ts") or "")
-        if since_ts is None or ts > since_ts:
-            return True
-    return False
