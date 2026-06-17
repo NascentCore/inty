@@ -8,6 +8,7 @@ description: >-
   
   Sub-skills:
   show-memory-document (print STYLE.md etc. via Python script)
+  list-agent-documents (dump all MemDocs for an agent_id via MemoryStore API)
   context-mode-in-db.
 ---
 
@@ -16,7 +17,17 @@ description: >-
 ## Sub-skills
 
 - **`show-memory-document/SKILL.md`**：用 **`.cursor/skills/scripts/companion_memory_show_document.py`** 打印指定逻辑文档（如 **`STYLE.md`**）的最新正文或版本元数据。
+- **`list-agent-documents/SKILL.md`**：用 **`.cursor/skills/scripts/companion_memory_list_agent_documents.py`** 按 **`agent_id`** 列出或导出该 companion 的 **全部** MemoryStore 文档（推荐先 `--meta-only`）。
 - **`context-mode-in-db/SKILL.md`**：只查 **`context.json`** 落库里的 **`context_mode`** / **`post_bootstrap_context_mode`**（`document_kind = context_json`），按 **`agent_id`（`companion_id`）** 排查体验配置。
+
+## 列出 agent 全部 MemoryStore 文档（调试总览）
+
+```bash
+PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents.py \
+  --companion-id <agent_id> --meta-only
+```
+
+多 scope 时加 `--user-id` / `--chat-id`，或 `--list-scopes` / `--all-scopes`。详见 **`list-agent-documents/SKILL.md`**。
 
 ## 打印指定 MemoryStore 文档（推荐）
 

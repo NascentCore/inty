@@ -14,6 +14,7 @@ description: >-
 
 - 核对 `STYLE.md` / `SOUL.md` / `MEMORY.md` 等是否落库、正文是否与 REPL/LangSmith 一致。
 - 对比同一文档的多个 `sequence_id`（append-only 版本）。
+- 需要 **全 agent 文档总览** 时，用 [`list-agent-documents/SKILL.md`](../list-agent-documents/SKILL.md)。
 
 ## 脚本（读库唯一入口）
 
