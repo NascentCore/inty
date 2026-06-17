@@ -1,5 +1,6 @@
 import type { ReporterUserInfo } from "../types";
 import { formatUtcTimeRaw } from "./dateUtils";
+import { userDisplayId } from "./userDisplayId";
 
 export interface ReporterInfoRow {
   label: string;
@@ -33,7 +34,7 @@ export function buildReporterInfoRows(
     { label: "手机号", value: getDisplayValue(reporterUserInfo.phone) },
     {
       label: "Readable ID",
-      value: getDisplayValue(reporterUserInfo.readable_id),
+      value: getDisplayValue(userDisplayId(reporterUserInfo)),
     },
     {
       label: "注册时间 (UTC)",

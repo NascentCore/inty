@@ -1278,44 +1278,50 @@ export const chatApi = {
 // 用户管理API - 用于提示词查询功能
 // =============================================================================
 
+type UserListRecord = {
+  id: string;
+  readable_id?: string | null;
+  nickname?: string | null;
+  avatar?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  created_at?: string;
+};
+
+type UserListResponse = {
+  items: UserListRecord[];
+  total: number;
+};
+
 export const userApi = {
   // 获取当前用户信息
   me: (): Promise<Record<string, unknown>> => apiClient.get("/users/me"),
 
   // 搜索用户列表
-  searchUsers: (params?: {
+  searchUsers: async (params?: {
     search?: string;
     skip?: number;
     limit?: number;
   }): Promise<{
-    users: Array<{
-      id: string;
-      readable_id: string;
-      nickname: string;
-      avatar?: string;
-      email?: string;
-      phone?: string;
-      created_at?: string;
-    }>;
+    users: UserListRecord[];
     total: number;
-  }> => apiClient.get("/users", params),
+  }> => {
+    const result = await apiClient.get<UserListResponse>("/users", params);
+    return {
+      users: result.items ?? [],
+      total: result.total ?? 0,
+    };
+  },
 
   // 获取用户列表
-  getUsers: (params?: {
+  getUsers: async (params?: {
     skip?: number;
     limit?: number;
     search?: string;
-  }): Promise<
-    Array<{
-      id: string;
-      readable_id: string;
-      nickname: string;
-      avatar?: string;
-      email?: string;
-      phone?: string;
-      created_at?: string;
-    }>
-  > => apiClient.get("/users", params),
+  }): Promise<UserListRecord[]> => {
+    const result = await apiClient.get<UserListResponse>("/users", params);
+    return result.items ?? [];
+  },
 };
 
 // =============================================================================

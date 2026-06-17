@@ -10,6 +10,7 @@ from app.api import deps
 from app.api.v1.endpoints import users
 from app.models.user import AuthType
 from app.schemas.user import User as UserSchema
+from app.schemas.user import UserList
 from app.services import user_service
 
 
@@ -103,3 +104,27 @@ def test_register_device_token_happy_path(
     assert body["code"] == 200
     assert body["message"] == "Device token registered successfully"
     assert recorded_args["call"] == (payload["token"], users_app.state.test_user.id)
+
+
+def test_user_list_accepts_null_readable_id() -> None:
+    """Guest users may omit legacy readable_id; list schema must still validate."""
+    created_at = datetime.now(timezone.utc)
+    payload = UserList(
+        total=1,
+        skip=0,
+        limit=50,
+        has_more=False,
+        items=[
+            {
+                "id": "user-guest-01",
+                "readable_id": None,
+                "nickname": "guest_user-01",
+                "auth_type": AuthType.GUEST.value,
+                "is_active": True,
+                "is_superuser": False,
+                "created_at": created_at,
+            }
+        ],
+    )
+    assert payload.items[0].readable_id is None
+    assert payload.items[0].id == "user-guest-01"

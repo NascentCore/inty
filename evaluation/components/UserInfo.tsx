@@ -8,12 +8,13 @@ import { Avatar, Dropdown, Typography, Space } from "antd";
 import { UserOutlined, KeyOutlined } from "@ant-design/icons";
 import { useApiKeyContext } from "../hooks/useApiKey";
 import api from "../services/api";
+import { userDisplayId } from "../utils/userDisplayId";
 
 const { Text } = Typography;
 
 interface UserProfile {
   id: string;
-  readable_id: string;
+  readable_id?: string | null;
   nickname?: string | null;
   avatar?: string | null;
   email?: string | null;
@@ -67,16 +68,18 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
     );
   }
 
+  const displayId = userDisplayId(userInfo);
+
   const menuItems = [
     {
       key: "profile",
       label: (
         <div style={{ padding: "8px 0" }}>
           <div style={{ fontWeight: 500, marginBottom: "4px" }}>
-            {userInfo.nickname || userInfo.readable_id}
+            {userInfo.nickname || displayId}
           </div>
           <div style={{ fontSize: "12px", color: "#666" }}>
-            {userInfo.email || userInfo.readable_id}
+            {userInfo.email || displayId}
           </div>
           <div style={{ fontSize: "12px", color: "#999", marginTop: "2px" }}>
             ID: {userInfo.id}
@@ -153,7 +156,7 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
           />
           <div>
             <div style={{ fontSize: "14px", fontWeight: 500, lineHeight: 1.2 }}>
-              {userInfo.nickname || userInfo.readable_id}
+              {userInfo.nickname || displayId}
             </div>
             <div style={{ fontSize: "12px", color: "#666", lineHeight: 1.2 }}>
               {userInfo.is_superuser ? "管理员" : "用户"}
