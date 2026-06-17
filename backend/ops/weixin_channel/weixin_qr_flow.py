@@ -12,6 +12,7 @@ import time
 from enum import StrEnum
 
 import aiohttp
+from loguru import logger
 
 from backend.ops.weixin_channel.ilink_qr_client import (
     EP_GET_BOT_QR,
@@ -88,6 +89,11 @@ class WeixinQrFlow:
                     await asyncio.sleep(1)
                     continue
                 except Exception:
+                    logger.warning(
+                        "weixin QR status poll failed qrcode={}",
+                        qrcode_value,
+                        exc_info=True,
+                    )
                     await asyncio.sleep(1)
                     continue
 

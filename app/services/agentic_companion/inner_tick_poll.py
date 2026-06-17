@@ -16,7 +16,7 @@ https://github.com/NascentCore/inty/issues/3273
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Optional
 
 from app.services.agentic_companion import inner_tick_fire
 from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery

@@ -26,9 +26,6 @@ from app.core.companion_harness.agentic_companion.postgres_queue import (
 from app.core.companion_harness.agentic_companion.repositories import (
     TranscriptProjector,
 )
-from app.core.companion_harness.agentic_companion.transcript_projection import (
-    MemoryStoreTranscriptProjector,
-)
 from app.core.companion_harness.agentic_companion.types import (
     AgentOutputMessage,
 )

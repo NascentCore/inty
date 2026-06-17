@@ -11,7 +11,6 @@ from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
 if TYPE_CHECKING:
     from .channel_adapter import LoopChannelAdapter
-    from .projection import project_deliverable
 
 
 class LoopDeliverableKind(StrEnum):
