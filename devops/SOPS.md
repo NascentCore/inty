@@ -149,6 +149,18 @@ WHERE chat_id = (
 
 **注意：** 直接改库不经过 API，因此不会做订阅/超级用户校验；仅运维或调试时使用。
 
+## IntelliMate dev 本地 Postgres（Docker）
+
+IntelliMate dev 库 `inty-dev` 已从 Cloud SQL 迁到 VM 本地容器；完整说明见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。
+
+常用命令：
+
+```bash
+docker start inty-dev-postgres
+docker stop inty-dev-postgres
+PGPASSWORD='<见 config.yaml.dev>' psql -h localhost -U postgres -d inty-dev
+```
+
 ## 迁移已有后端数据库到一个新的服务器
 
 大体流程：
@@ -167,9 +179,13 @@ WHERE chat_id = (
 
    这个命令会启动后端服务，后端服务启动初期会初始化数据库 schema
 
-### 拷贝数据
+### 从 Cloud SQL 同步 inty-dev 到本地 Docker（IntelliMate dev）
+
+见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。要点：用 `postgres:17` 容器做 `pg_dump` / `pg_restore`；本地镜像须为 `pgvector/pgvector:pg16`；restore 前 `CREATE EXTENSION vector`。
+
+### 通用 dump / restore 示例
 
 ```bash
-docker run --rm -e PGPASSWORD=<password> --network host postgres:16 pg_dump -h localhost -p 5432 -U postgres -d devdb -Fc >devdb.dump
-docker run --rm -e PGPASSWORD=<password> --network host -v $(pwd)/devdb.dump:/devdb.dump postgres:16 pg_restore -h <host> -p 5432 -U postgres -d inty-dev /devdb.dump
+docker run --rm -e PGPASSWORD=<password> --network host postgres:17 pg_dump -h <source-host> -p 5432 -U postgres -d <source-db> -Fc -f /tmp/devdb.dump
+docker run --rm -e PGPASSWORD=<password> --network host -v /tmp:/tmp postgres:17 pg_restore -h localhost -p 5432 -U postgres -d inty-dev --clean --if-exists --no-owner --no-privileges /tmp/devdb.dump
 ```
