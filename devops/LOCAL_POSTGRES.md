@@ -12,7 +12,7 @@ IntelliMate **dev** 与 **prod** 的数据库均已从 GCP Cloud SQL 迁到 **de
 | prod 配置 | [`config.yaml.prod`](config.yaml.prod) | 同上 |
 | dev 逻辑库 | `inty-dev` | `inty-dev`（不变） |
 | prod 逻辑库 | `inty` | `inty`（不变） |
-| `database.host` | `10.41.177.3`（Cloud SQL 私网 IP） | `localhost` |
+| `database.host` | `10.41.177.3`（Cloud SQL 私网 IP） | `host.docker.internal`（容器部署；宿主机直连用 `localhost`） |
 | `database.port` | 默认 `5432` | `5432` |
 | dev `replica_host` | `10.41.177.17`（只读副本） | 已移除 |
 | prod `replica_host` | 未配置（读路径回退主库） | 未配置（本地无副本） |
@@ -141,15 +141,29 @@ devops/scripts/sync_cloudsql_inty_incremental.sh --apply --db inty-dev
 脚本行为：
 
 - 逐表对比 Cloud SQL（`10.41.177.3`）与本地 `localhost:5432` 行数
-- 对有 `created_at` 且远端更多的表做 `\copy` 增量导入
+- 对有 `created_at` 且远端更多的表做 `\copy` 增量导入（`created_at > local.max(created_at)`）
+- 单列主键表经 staging + `ON CONFLICT DO NOTHING`，可安全重复 `--apply`
+- FK 依赖表按固定优先级同步（`users` → `agents` → `chats` → …）；`--apply` 最多重试 5 轮（`APPLY_MAX_PASSES`）
 - `chat_history` 同步后更新 `chat_history_id_seq`
 - 本地行数多于远端、或无 `created_at` 的表：跳过并提示需整库 resync（见上文 `pg_dump` / `pg_restore`）
 
+VM 宿主机任务（Alembic、日报）用 [`scripts/render_vm_database_config.sh`](scripts/render_vm_database_config.sh) 把 `host.docker.internal` 渲染为 `localhost`。
+
 密码默认从 [`config.yaml.prod`](config.yaml.prod) / [`config.yaml.dev`](config.yaml.dev) 的 `database.password` 读取；可用 `PGPASSWORD` 覆盖。
+
+### Prod 容器部署（手动）
+
+[`config.yaml.prod`](config.yaml.prod) 已指向本地 Docker（`host.docker.internal`），但 **prod 后端 / Ops / push worker 不会随 push 自动部署**：
+
+- [build_and_deploy_backend.yml](../.github/workflows/build_and_deploy_backend.yml)：`config.yaml.prod` 不在 push paths；prod schedule 已关闭
+- [build_and_deploy_ops.yml](../.github/workflows/build_and_deploy_ops.yml)：同上
+- [build_and_deploy_push_worker.yml](../.github/workflows/build_and_deploy_push_worker.yml)：同上；prod 定时部署已关闭
+
+推荐顺序：先在 dev 验证本地 Postgres 与 `host.docker.internal` → GitHub Actions **Run workflow** 选手动 environment **prod** 部署 Ops → 再部署 backend（及按需 push worker）。VM 上 Alembic 用 [alembic_upgrade_prod_db.yaml](../.github/workflows/alembic_upgrade_prod_db.yaml)（workflow 内会把 `host.docker.internal` 替换为 `localhost`）。
 
 ## 与后端 / Ops 的连接
 
-[`config.yaml.dev`](config.yaml.dev) 与 [`config.yaml.prod`](config.yaml.prod) 均使用 `host: localhost`、`port: 5432`：
+[`config.yaml.dev`](config.yaml.dev) 与 [`config.yaml.prod`](config.yaml.prod) 均使用 `host: host.docker.internal`、`port: 5432`（构建进 Docker 镜像）：
 
 - **在 VM 宿主机上直接跑** `backend/inty/start.sh`、`backend/ops/start.sh --local`、REPL、Alembic：可直接连 `localhost:5432`。
 - **Docker 部署的** `inty-backend-dev` / `inty-backend-prod` / Ops 容器：容器内 `localhost` 指向容器自身，**不能**直接访问宿主机 Postgres。需在部署时增加宿主机网关（例如 `docker run ... --add-host=host.docker.internal:host-gateway` 且 `database.host: host.docker.internal`），或将 Postgres 与后端接入同一 user-defined network 并用容器名 `inty-dev-postgres` 作为 host。见 [RELEASE.md](RELEASE.md) 与各 workflow。

@@ -17,7 +17,6 @@ on:
       - "backend/inty/start.sh"
       # dev 环境（iMate & IntelliMate 共用同一环境与配置）
       - "devops/config.yaml.dev"
-      # prod 环境部署暂时关闭
       # - "devops/config.yaml.prod"
       # 容器
       - "devops/docker/Dockerfile"
@@ -151,14 +150,11 @@ jobs:
           script: |
             sudo docker stop ${{ vars.INTY_BACKEND_CONTAINER_NAME }} || true
             sudo docker rm ${{ vars.INTY_BACKEND_CONTAINER_NAME }} || true
-            DEV_DOCKER_HOST_ARGS=""
-            if [ "${{ steps.prep.outputs.environment }}" = "dev" ]; then
-              DEV_DOCKER_HOST_ARGS="--add-host=host.docker.internal:host-gateway"
-            fi
+            LOCAL_PG_DOCKER_HOST_ARGS="--add-host=host.docker.internal:host-gateway"
             sudo docker run --detach --log-driver=gcplogs \
               --name ${{ vars.INTY_BACKEND_CONTAINER_NAME }} \
               --restart unless-stopped \
-              ${DEV_DOCKER_HOST_ARGS} \
+              ${LOCAL_PG_DOCKER_HOST_ARGS} \
               --publish ${{ vars.SERVICE_PORT_ON_HOST }}:8000 \
               --env LANGCHAIN_TRACING_V2=true \
               --env LANGCHAIN_PROJECT=${{ steps.map.outputs.langchain_project }} \

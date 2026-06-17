@@ -27,4 +27,5 @@ jobs:
         run: |
           export PYTHONPATH=.
           export ALEMBIC_CONFIG=backend/alembic/alembic.ini
-          alembic -x "config=devops/config.yaml.prod" upgrade head
+          devops/scripts/render_vm_database_config.sh devops/config.yaml.prod /tmp/config.prod.vm.yaml
+          alembic -x "config=/tmp/config.prod.vm.yaml" upgrade head

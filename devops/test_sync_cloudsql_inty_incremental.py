@@ -1,4 +1,4 @@
-"""Tests for sync_cloudsql_inty_incremental.sh column identifier quoting."""
+"""Tests for sync_cloudsql_inty_incremental.sh and render_vm_database_config.sh."""
 
 import re
 import subprocess
@@ -7,7 +7,38 @@ from pathlib import Path
 import pytest
 
 SCRIPT_PATH = Path(__file__).parent / "scripts" / "sync_cloudsql_inty_incremental.sh"
+RENDER_SCRIPT_PATH = Path(__file__).parent / "scripts" / "render_vm_database_config.sh"
 CONFIG_PROD = Path(__file__).parent / "config.yaml.prod"
+
+
+def read_bash_function_body(function_name: str) -> str:
+    """Return lines inside function_name() { ... } from the sync script."""
+    lines = SCRIPT_PATH.read_text(encoding="utf-8").splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith(f"{function_name}()"))
+    body: list[str] = []
+    depth = 0
+    for line in lines[start:]:
+        depth += line.count("{") - line.count("}")
+        if depth == 0 and line != lines[start]:
+            break
+        body.append(line)
+    return "\n".join(body)
+
+
+def run_bash_function(function_name: str, *args: str) -> str:
+    """Run a sourced bash function and return stdout."""
+    arg_list = " ".join(subprocess.list2cmdline([arg]) for arg in args)
+    completed = subprocess.run(
+        [
+            "bash",
+            "-c",
+            f'source "{SCRIPT_PATH}"; {function_name} {arg_list}',
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout.rstrip("\n")
 
 
 def join_quoted_column_identifiers(*columns: str) -> str:
@@ -34,6 +65,48 @@ def read_local_pg_password() -> str | None:
         re.MULTILINE,
     )
     return match.group(1) if match else None
+
+
+def test_render_vm_database_config_rewrites_host(tmp_path: Path):
+    source = tmp_path / "config.yaml"
+    dest = tmp_path / "config.vm.yaml"
+    source.write_text(
+        "database:\n  host: host.docker.internal\n  port: 5432\n",
+        encoding="utf-8",
+    )
+    subprocess.run(
+        [str(RENDER_SCRIPT_PATH), str(source), str(dest)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "host: localhost" in dest.read_text(encoding="utf-8")
+    assert "host.docker.internal" not in dest.read_text(encoding="utf-8")
+
+
+def test_table_sync_priority_orders_users_before_dependents():
+    users_prio = run_bash_function("table_sync_priority", "users")
+    chat_settings_prio = run_bash_function("table_sync_priority", "chat_settings")
+    assert users_prio < chat_settings_prio
+
+
+def test_import_csv_to_table_uses_on_conflict_for_single_pk():
+    body = read_bash_function_body("import_csv_to_table")
+    assert "ON CONFLICT" in body
+    assert "sync_incr_staging" in body
+
+
+def test_apply_incremental_sync_retries_until_match():
+    body = read_bash_function_body("apply_incremental_sync")
+    assert "APPLY_MAX_PASSES" in body
+    assert "collect_mismatches" in body
+
+
+def test_table_has_created_at_queries_remote_not_local():
+    """Incremental copy filters remote rows by created_at; check must hit Cloud SQL."""
+    body = read_bash_function_body("table_has_created_at")
+    assert "psql_remote" in body
+    assert "psql_local" not in body
 
 
 def test_old_unquoted_column_list_lacks_quotes():

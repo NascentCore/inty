@@ -32,7 +32,7 @@ security:
   access_token_expire_minutes: 10080
 
 database:
-  host: localhost
+  host: host.docker.internal
   port: 5432
   user: "postgres"
   password: "sxwl666A!"

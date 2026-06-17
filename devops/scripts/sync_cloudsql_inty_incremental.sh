@@ -3,7 +3,8 @@
 # CREATED_BY_AGENT
 #
 # Compares remote vs local row counts; for tables with created_at, copies rows where
-# remote.created_at > local.max(created_at). Updates chat_history_id_seq when needed.
+# remote.created_at > local.max(created_at). Single-column PK tables use staging +
+# ON CONFLICT DO NOTHING to tolerate re-runs. Updates chat_history_id_seq when needed.
 #
 # Usage (from repo root):
 #   devops/scripts/sync_cloudsql_inty_incremental.sh --check-only
@@ -15,6 +16,7 @@
 #   CLOUDSQL_HOST           default 10.41.177.3
 #   LOCAL_PG_HOST           default localhost
 #   LOCAL_PG_PORT           default 5432
+#   APPLY_MAX_PASSES        default 5 (apply mode retries until all tables match)
 
 set -euo pipefail
 
@@ -25,6 +27,7 @@ CLOUDSQL_HOST="${CLOUDSQL_HOST:-10.41.177.3}"
 LOCAL_PG_HOST="${LOCAL_PG_HOST:-localhost}"
 LOCAL_PG_PORT="${LOCAL_PG_PORT:-5432}"
 PGUSER="${PGUSER:-postgres}"
+APPLY_MAX_PASSES="${APPLY_MAX_PASSES:-5}"
 
 DB="inty"
 MODE="check"
@@ -132,7 +135,7 @@ local_row_count() {
 
 table_has_created_at() {
   local tbl="$1"
-  psql_local -At -c "
+  psql_remote -At -c "
     SELECT 1
     FROM information_schema.columns
     WHERE table_schema = 'public'
@@ -158,7 +161,47 @@ list_column_names() {
   "
 }
 
-# Comma-separated PostgreSQL identifiers, each double-quoted (reserved words / special chars).
+get_pk_columns() {
+  local tbl="$1"
+  psql_local -At -c "
+    SELECT a.attname
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    JOIN pg_index i ON i.indrelid = c.oid AND i.indisprimary
+    JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ANY(i.indkey) AND NOT a.attisdropped
+    WHERE n.nspname = 'public'
+      AND c.relname = '${tbl}'
+    ORDER BY array_position(i.indkey, a.attnum);
+  "
+}
+
+# Parent tables first so FK-dependent rows can insert. TODO: derive order from FK graph.
+SYNC_TABLE_PRIORITY=(users agents chats user_subscriptions resources)
+
+table_sync_priority() {
+  local tbl="$1"
+  local i
+  for i in "${!SYNC_TABLE_PRIORITY[@]}"; do
+    if [[ "${tbl}" == "${SYNC_TABLE_PRIORITY[$i]}" ]]; then
+      printf '%03d' "$i"
+      return
+    fi
+  done
+  printf '999_%s' "${tbl}"
+}
+
+sort_mismatched_for_apply() {
+  local -n _tables_ref="$1"
+  local sorted=()
+  local tbl
+  mapfile -t sorted < <(
+    for tbl in "${_tables_ref[@]}"; do
+      echo "$(table_sync_priority "${tbl}") ${tbl}"
+    done | sort | awk '{print $2}'
+  )
+  _tables_ref=("${sorted[@]}")
+}
+
 join_quoted_column_identifiers() {
   local col quoted result=""
   for col in "$@"; do
@@ -170,6 +213,27 @@ join_quoted_column_identifiers() {
     result+="${quoted}"
   done
   echo "${result}"
+}
+
+import_csv_to_table() {
+  local tbl="$1"
+  local csv_path="$2"
+  local quoted_cols="$3"
+  local -a pk_cols=()
+
+  mapfile -t pk_cols < <(get_pk_columns "${tbl}")
+
+  if [[ ${#pk_cols[@]} -eq 1 ]]; then
+    local quoted_pk
+    quoted_pk="$(join_quoted_column_identifiers "${pk_cols[0]}")"
+    psql_local -v ON_ERROR_STOP=1 <<SQL
+CREATE TEMP TABLE sync_incr_staging (LIKE public."${tbl}" INCLUDING ALL) ON COMMIT DROP;
+\\copy sync_incr_staging (${quoted_cols}) FROM '${csv_path}' WITH (FORMAT csv, HEADER true)
+INSERT INTO public."${tbl}" SELECT ${quoted_cols} FROM sync_incr_staging ON CONFLICT (${quoted_pk}) DO NOTHING;
+SQL
+  else
+    psql_local -c "\\copy public.\"${tbl}\" (${quoted_cols}) FROM '${csv_path}' WITH (FORMAT csv, HEADER true)"
+  fi
 }
 
 sync_table_incremental() {
@@ -189,7 +253,7 @@ sync_table_incremental() {
     return 0
   fi
 
-  psql_local -c "\\copy public.\"${tbl}\" (${quoted_cols}) FROM '${csv_path}' WITH (FORMAT csv, HEADER true)"
+  import_csv_to_table "${tbl}" "${csv_path}" "${quoted_cols}"
   echo "  ${tbl}: copied ${row_count} row(s) (cutoff ${cutoff})"
 
   if [[ "${tbl}" == "chat_history" ]]; then
@@ -198,17 +262,13 @@ sync_table_incremental() {
   fi
 }
 
-main() {
-  parse_args "$@"
-  load_password
-  TMP_DIR="$(mktemp -d)"
-
-  echo "Cloud SQL ${CLOUDSQL_HOST}/${DB} -> local ${LOCAL_PG_HOST}:${LOCAL_PG_PORT}/${DB} (${MODE})"
-  echo
-
-  local mismatched=()
-  local skipped=()
+collect_mismatches() {
+  local -n _mismatched_ref="$1"
+  local -n _skipped_ref="$2"
   local tbl remote_count local_count delta
+
+  _mismatched_ref=()
+  _skipped_ref=()
 
   while IFS= read -r tbl; do
     [[ -z "${tbl}" ]] && continue
@@ -221,16 +281,23 @@ main() {
     echo "MISMATCH ${tbl}: remote=${remote_count} local=${local_count} delta=${delta}"
     if [[ "${delta}" -lt 0 ]]; then
       echo "  skip: local has more rows than Cloud SQL; needs manual investigation or full resync"
-      skipped+=("${tbl}")
+      _skipped_ref+=("${tbl}")
       continue
     fi
     if [[ -z "$(table_has_created_at "${tbl}")" ]]; then
       echo "  skip: no created_at column; use full pg_dump/pg_restore in LOCAL_POSTGRES.md"
-      skipped+=("${tbl}")
+      _skipped_ref+=("${tbl}")
       continue
     fi
-    mismatched+=("${tbl}")
+    _mismatched_ref+=("${tbl}")
   done < <(list_public_tables)
+}
+
+report_sync_status() {
+  local mismatched=()
+  local skipped=()
+
+  collect_mismatches mismatched skipped
 
   if [[ ${#mismatched[@]} -eq 0 ]]; then
     if [[ ${#skipped[@]} -eq 0 ]]; then
@@ -238,38 +305,57 @@ main() {
     else
       echo "No incrementally syncable mismatches."
     fi
-    exit 0
+    return 0
   fi
 
+  return 2
+}
+
+apply_incremental_sync() {
+  local pass mismatched=()
+  local skipped=()
+
+  for (( pass = 1; pass <= APPLY_MAX_PASSES; pass++ )); do
+    collect_mismatches mismatched skipped
+    if [[ ${#mismatched[@]} -eq 0 ]]; then
+      echo "All public tables match after pass ${pass}."
+      return 0
+    fi
+
+    echo
+    echo "Applying incremental sync (pass ${pass}/${APPLY_MAX_PASSES})..."
+    sort_mismatched_for_apply mismatched
+    local tbl
+    for tbl in "${mismatched[@]}"; do
+      sync_table_incremental "${tbl}"
+    done
+  done
+
+  collect_mismatches mismatched skipped
+  if [[ ${#mismatched[@]} -gt 0 ]]; then
+    echo "Sync incomplete after ${APPLY_MAX_PASSES} pass(es); re-run --apply or use full pg_dump/pg_restore." >&2
+    return 1
+  fi
+}
+
+main() {
+  parse_args "$@"
+  load_password
+  TMP_DIR="$(mktemp -d)"
+
+  echo "Cloud SQL ${CLOUDSQL_HOST}/${DB} -> local ${LOCAL_PG_HOST}:${LOCAL_PG_PORT}/${DB} (${MODE})"
+  echo
+
   if [[ "${MODE}" == "check" ]]; then
+    if report_sync_status; then
+      exit 0
+    fi
     echo
     echo "Run with --apply to copy rows where created_at > local.max(created_at)."
     exit 2
   fi
 
-  echo
-  echo "Applying incremental sync..."
-  for tbl in "${mismatched[@]}"; do
-    sync_table_incremental "${tbl}"
-  done
-
-  echo
-  echo "Post-sync verification:"
-  local ok=true
-  for tbl in "${mismatched[@]}"; do
-    remote_count="$(remote_row_count "${tbl}")"
-    local_count="$(local_row_count "${tbl}")"
-    if [[ "${remote_count}" != "${local_count}" ]]; then
-      echo "STILL MISMATCH ${tbl}: remote=${remote_count} local=${local_count}"
-      ok=false
-    else
-      echo "OK ${tbl}: ${local_count} rows"
-    fi
-  done
-
-  if [[ "${ok}" != true ]]; then
-    exit 1
-  fi
+  apply_incremental_sync
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
