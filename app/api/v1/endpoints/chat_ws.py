@@ -98,7 +98,7 @@ from app.services.agentic_companion.ws_queue_serving import (
 )
 from app.services.agentic_companion.ws_turn_support import (
     companion_ai_meta_from_queue_delivery,
-    generated_image_meta_for_queue_delivery,
+    generated_image_meta_from_baseline,
 )
 from app.services.agentic_companion.ws_channel_guard import (
     register_app_ws_channel,
@@ -930,11 +930,13 @@ async def _deliver_app_ws_user_reply_from_queue(
         ctx.companion_ws_foreground_pending[ctx.companion_preset_uid][
             "foreground_user_message_id"
         ] = companion_user_row_id
-    assert ctx.delivery_flags.image_asset_baseline_initialized
-    generated_image = await generated_image_meta_for_queue_delivery(
-        AgentScope(user_id=ctx.user_id, agent_id=ctx.agent_id),
-        image_asset_baseline=ctx.delivery_flags.image_asset_baseline,
-    )
+    generated_image = None
+    if ctx.delivery_flags.memory_store is not None:
+        assert ctx.delivery_flags.image_asset_baseline_initialized
+        generated_image = generated_image_meta_from_baseline(
+            ctx.delivery_flags.memory_store,
+            ctx.delivery_flags.image_asset_baseline,
+        )
     companion_ai_meta = companion_ai_meta_from_queue_delivery(
         queue_message_id=ctx.delivery_flags.queue_message_id,
         tool_background_started=ctx.delivery_flags.tool_background_started,
