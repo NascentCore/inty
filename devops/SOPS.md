@@ -169,18 +169,7 @@ devops/scripts/guard_docker_volume_prune.sh && docker volume prune
 # guard 检测到 inty-dev-postgres-data 时会 exit 1，阻止 prune
 ```
 
-**每日备份**（cron 示例，UTC 03:15；保留 14 天；<!-- TODO(!3496): Install on VM -->）：
-
-```bash
-15 3 * * * cd /home/licairong/inty && devops/scripts/backup_local_postgres.sh >> /var/log/inty-postgres-backup.log 2>&1
-30 3 * * * find /opt/inty/backups/postgres -name '*.dump' -mtime +14 -delete
-```
-
-**每周耐久性巡检**（cron 示例，UTC 周日 04:00）：
-
-```bash
-0 4 * * 0 cd /home/licairong/inty && devops/scripts/verify_local_postgres_durability.sh >> /var/log/inty-postgres-verify.log 2>&1
-```
+**每日备份 / 每周巡检**：由 GitHub Actions [`.github/workflows/local_postgres_maintenance.yaml`](../.github/workflows/local_postgres_maintenance.yaml) 在 `inty-prod-server-gcp` 上定时执行（UTC 03:15 备份（含 14 天 dump 清理）；UTC 周日 04:00 耐久性 verify）。`task: all` 时 verify 在 backup 完成后串行执行。可 **Actions → Local Postgres maintenance → Run workflow** 手动触发（`restart_test: true` 等价于 `--restart-test`）。
 
 常用命令：
 
