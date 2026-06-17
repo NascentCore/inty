@@ -2,6 +2,8 @@
 # Idempotent start or (re)create inty-dev-postgres bound to the canonical named volume.
 # CREATED_BY_AGENT
 #
+# TODO(!3496): After merge, run on VM + install cron from SOPS.md (epic #3495).
+#
 # Safe operations only: never removes volumes, never runs docker volume prune.
 #
 # Usage (from repo root, on the VM):

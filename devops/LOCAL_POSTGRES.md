@@ -150,7 +150,7 @@ docker run --rm \
 
 Cloud SQL 若仍在接收写入，不必整库重 dump。对含 `created_at` 的表，复制 `remote.created_at > local.max(created_at)` 的行即可（prod 上常见：`chat_history`、`subscription_usage`、`voice_cache`）。
 
-**检查差额**（默认只读）：
+**检查差额**（默认只读；TODO !3497 — 在 VM 上执行并记录结果）：
 
 ```bash
 devops/scripts/sync_cloudsql_inty_incremental.sh --check-only
@@ -178,6 +178,8 @@ VM 宿主机任务（Alembic、日报）用 [`scripts/render_vm_database_config.
 密码默认从 [`config.yaml.prod`](config.yaml.prod) / [`config.yaml.dev`](config.yaml.dev) 的 `database.password` 读取；可用 `PGPASSWORD` 覆盖。
 
 ### Prod 容器部署（手动）
+
+<!-- TODO(!3498): Manual prod backend/push-worker deploy + E2E verify after local Postgres cutover (epic #3495). -->
 
 [`config.yaml.prod`](config.yaml.prod) 已指向本地 Docker（`host.docker.internal`），但 **prod 后端 / Ops / push worker 不会随 push 自动部署**：
 

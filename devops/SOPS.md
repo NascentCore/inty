@@ -44,7 +44,7 @@ python tools/scripts/create_email_password_superuser.py \
 
 ## 修改 AI 角色
 
-- 所有改动都在 https://dev.inty.sxwl.ai/evaluation 进行，然后由
+- 所有改动都在 <!-- TODO(!3499): dev.inty.sxwl.ai/evaluation no longer served --> https://dev.inty.sxwl.ai/evaluation 进行，然后由
   https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml
   同步到 prod
 - [背景图片](https://applink.feishu.cn/client/message/link/open?token=AmTE5KCVRMAEaXdRy%2BdBDMg%3D)
@@ -169,7 +169,7 @@ devops/scripts/guard_docker_volume_prune.sh && docker volume prune
 # guard 检测到 inty-dev-postgres-data 时会 exit 1，阻止 prune
 ```
 
-**每日备份**（cron 示例，UTC 03:15；保留 14 天）：
+**每日备份**（cron 示例，UTC 03:15；保留 14 天；<!-- TODO(!3496): Install on VM -->）：
 
 ```bash
 15 3 * * * cd /home/licairong/inty && devops/scripts/backup_local_postgres.sh >> /var/log/inty-postgres-backup.log 2>&1
