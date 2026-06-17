@@ -17,6 +17,7 @@ on:
       - "backend/inty/start.sh"
       # dev 环境（iMate & IntelliMate 共用同一环境与配置）
       - "devops/config.yaml.dev"
+      # prod 环境部署暂时关闭
       # - "devops/config.yaml.prod"
       # 容器
       - "devops/docker/Dockerfile"
