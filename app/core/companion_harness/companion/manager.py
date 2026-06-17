@@ -49,7 +49,7 @@ from .scope_turn_lock import (
 )
 from .turn_deps import CompanionTurnDeps
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
-from .turn_tracks import (
+from .turn import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
     run_companion_inner_tick_proactive_chat_turn,

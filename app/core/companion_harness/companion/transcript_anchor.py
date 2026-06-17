@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 
 from .models import ChatMessage
+from .utc import parse_utc_iso_ts
 
 
 @dataclass(frozen=True)
@@ -18,14 +19,7 @@ class RealUserTranscriptAnchor:
 
 def parse_transcript_row_ts(ts: str) -> datetime:
     """Parse transcript ``ts`` values as timezone-aware UTC datetimes."""
-    assert ts
-    s = ts.strip()
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    dt = datetime.fromisoformat(s)
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+    return parse_utc_iso_ts(ts, allow_naive=True)
 
 
 parse_transcript_datetime = parse_transcript_row_ts

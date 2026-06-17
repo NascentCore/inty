@@ -15,7 +15,7 @@ from typing import Any, Literal
 from loguru import logger
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .utc import utc_iso_ts
+from .utc import parse_utc_iso_ts, utc_iso_ts
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
@@ -90,13 +90,7 @@ class ScheduleTask:
 
 
 def _parse_utc_ts(ts: str) -> datetime:
-    s = ts.strip()
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    dt = datetime.fromisoformat(s)
-    if dt.tzinfo is None:
-        raise ValueError("timestamp must include timezone offset or Z")
-    return dt.astimezone(timezone.utc)
+    return parse_utc_iso_ts(ts, allow_naive=False)
 
 
 def _schedule_document_rel() -> str:

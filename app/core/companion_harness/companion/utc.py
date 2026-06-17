@@ -36,6 +36,18 @@ def local_date_str() -> str:
     return datetime.now().astimezone().date().isoformat()
 
 
+def parse_utc_iso_ts(ts: str, *, allow_naive: bool) -> datetime:
+    """Parse ISO timestamps into UTC; transcript callers may accept legacy naive rows."""
+    assert ts
+    normalized = ts.replace("Z", "+00:00") if ts.endswith("Z") else ts
+    dt = datetime.fromisoformat(normalized)
+    if dt.tzinfo is None:
+        if not allow_naive:
+            raise ValueError("timestamp must include timezone offset or Z")
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def format_transcript_ts_for_llm_dt(dt: datetime) -> str:
     """Human-readable UTC label from a timezone-aware or naive datetime."""
     if dt.tzinfo is None:
@@ -49,9 +61,8 @@ def format_transcript_ts_for_llm(ts: str) -> str | None:
     raw = ts
     if not raw:
         return None
-    normalized = raw.replace("Z", "+00:00") if raw.endswith("Z") else raw
     try:
-        dt = datetime.fromisoformat(normalized)
+        dt = parse_utc_iso_ts(raw, allow_naive=True)
     except ValueError:
         return None
     return format_transcript_ts_for_llm_dt(dt)
