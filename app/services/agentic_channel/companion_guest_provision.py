@@ -8,8 +8,9 @@ do not drop until those callers migrate — see issue for Alembic plan.
 
 TODO(companion-bond-invariant): #3491 — replace oldest-PRIVATE-agent reuse with
 a DB-enforced active companion bond; merge-deselected companions must enter
-SEALED state, and replacement/revival must wait for the product reset decision
-drafted in docs/companion_harness/CROSS_CHANNEL_IDENTITY_FOLLOWUPS.md.
+SEALED state: frozen, invisible, zero runtime, all data intact. Replacement and
+revival must wait for the product reset decision drafted in
+docs/companion_harness/CROSS_CHANNEL_IDENTITY_FOLLOWUPS.md.
 
 **Not** ``agent_service.create_agent``: that path is maintenance-mode HTTP only
 (readable_id allocation, avatar crop, opening-voice enqueue, subscription limits).
