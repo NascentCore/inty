@@ -36,6 +36,12 @@ that means the code lacks hierarchy.
 - Create GitHub issues and add TODOs to track complex follow-ups
 - Comment on discovered GitHub issues if changes are made advanced the issues' progress
 
+## Data types
+
+- Do not use dict in passing data between components
+- Use `dataclass` for internal data structure (not facing users or external services)
+- Use `Pydantic` models for interfacing with externals (users & external services like 3rd party http, cloud service etc.)
+
 ## References
 
 - Consider [style rules](/.agents/guidelines/PY_STYLE_RULES.md)

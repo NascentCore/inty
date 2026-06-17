@@ -5,8 +5,8 @@ If not in plan mode, do nothing and stop!
 Review and revise the plan:
 
 - The plan's objectives are reasonable
-- The plan's design is sound
-- The plan's details are sufficiently granular
+- The plan's logical design is sound
+- The plan's implementation steps are sufficiently granular
 
 ## Use alembic cli to generate database version files
 
@@ -18,26 +18,21 @@ Review and revise the plan:
 - Plan should include writing and running tests.
 - Tests are done at the key juncture between procedures of the plan.
 
-## Refactoring or reorganize code
+## Refactoring
 
-The implementation plan should following the following overall procedures:
+When refactoring, the implementation plan should following the following overall procedures:
+
 1. implement the new design in code with minimal changes to the existing code
 2. test the new code
 2. integrate the new code into the existing code
-3. tests: unit tests, smoke tests, manual tests
-4. delete the old code
-
-## Data types
-
-- Do not use dict in passing data between components
-- Use `dataclass` for internal data structure (not facing users or external services)
-- Use `Pydantic` models for interfacing with externals (users & external services like 3rd party http, cloud service etc.)
+3. test the integrated code
+4. (optional) delete the old code
 
 ## Limited layering
 
 Limit the the number of layers in implementing a complex feature:
 
-- When extending behaviors, prefer rewriting a new function and remove the old one, over extending the existing function and wrap them behind a new function with "more specific interface". The former sheds the unnecessary complexity, and the latter merely hides unnecessary complexity.
+- When extending behaviors, prefer rewriting a new function and remove the old one, over extending the existing function and wrap them behind a new function with "more specific interface" or naming. The former sheds the unnecessary complexity, and the latter merely hides and accumlates unnecessary complexity.
 
 ## References
 
