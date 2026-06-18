@@ -1,0 +1,133 @@
+"""Tests for active companion bond service invariants."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import UTC, datetime
+
+import pytest
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.companion_harness.agent_channel.guest_agent_kind import (
+    CompanionGuestAgentKind,
+)
+from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.db.session import AsyncSessionLocal
+from app.models.agent import Agent
+from app.models.companion_bond import CompanionBond, CompanionBondState
+from app.models.user import User
+from app.services.agentic_channel.companion_bonds import (
+    active_companion_scope_for_user,
+    create_active_companion_bond,
+    require_active_companion_bond,
+)
+from app.services.agentic_channel.companion_guest_provision import (
+    GuestUserInput,
+    add_companion_guest_agent_for_user,
+    add_guest_user,
+)
+from app.services.agentic_channel.errors import CompanionBondInvariantError
+
+
+async def _create_unbonded_scope(
+    db: AsyncSession,
+) -> AgentScope:
+    user = await add_guest_user(
+        db,
+        GuestUserInput(
+            nickname_prefix="Bond",
+            meta_data={"test": True},
+        ),
+    )
+    agent = await add_companion_guest_agent_for_user(
+        db,
+        user_id=user.id,
+        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+    )
+    return AgentScope(user_id=user.id, agent_id=agent.id)
+
+
+async def _delete_scope(db: AsyncSession, scope: AgentScope) -> None:
+    await db.execute(
+        delete(CompanionBond).where(CompanionBond.user_id == scope.user_id)
+    )
+    await db.execute(delete(Agent).where(Agent.creator_id == scope.user_id))
+    await db.execute(delete(User).where(User.id == scope.user_id))
+
+
+@pytest.mark.asyncio
+async def test_create_and_require_active_companion_bond() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        bond = await create_active_companion_bond(db, scope)
+        await db.commit()
+        assert bond.user_id == scope.user_id
+        assert bond.agent_id == scope.agent_id
+        assert bond.state == CompanionBondState.ACTIVE
+
+        required = await require_active_companion_bond(db, scope)
+        resolved = await active_companion_scope_for_user(db, scope.user_id)
+        assert required.id == bond.id
+        assert resolved == scope
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_create_active_companion_bond_rejects_duplicate_user() -> None:
+    async with AsyncSessionLocal() as db:
+        first = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, first)
+        second_agent = await add_companion_guest_agent_for_user(
+            db,
+            user_id=first.user_id,
+            kind=CompanionGuestAgentKind.TELEGRAM,
+        )
+        second = AgentScope(user_id=first.user_id, agent_id=second_agent.id)
+        with pytest.raises(CompanionBondInvariantError):
+            await create_active_companion_bond(db, second)
+        await db.rollback()
+        await _delete_scope(db, first)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_require_active_companion_bond_rejects_zero_and_multiple() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        with pytest.raises(CompanionBondInvariantError):
+            await require_active_companion_bond(db, scope)
+
+        for _ in range(2):
+            db.add(
+                CompanionBond(
+                    id=str(uuid.uuid4()),
+                    user_id=scope.user_id,
+                    agent_id=scope.agent_id,
+                    state=CompanionBondState.ACTIVE,
+                )
+            )
+        await db.flush()
+        with pytest.raises(CompanionBondInvariantError):
+            await require_active_companion_bond(db, scope)
+        await db.rollback()
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_require_active_companion_bond_rejects_deleted_rows() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, scope)
+        agent_row = await db.execute(select(Agent).where(Agent.id == scope.agent_id))
+        agent = agent_row.scalar_one()
+        agent.deleted_at = datetime.now(UTC)
+        await db.flush()
+
+        with pytest.raises(CompanionBondInvariantError):
+            await require_active_companion_bond(db, scope)
+        await db.rollback()
+        await _delete_scope(db, scope)
+        await db.commit()
