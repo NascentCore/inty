@@ -26,11 +26,35 @@ The **Android app** (`android_app/`) builds with Gradle 8.14+ and Java 21. CI wo
 
 ## Update script
 
-The VM startup script (`SetupVmEnvironment`) installs all backend runtime **and** test dependencies from `requirements.txt` + `tests/requirements.txt` (covers pytest, pytest-asyncio, google-genai, Pillow, pydantic, pydantic-settings, loguru, langsmith, google-cloud-storage, etc.) and auto-provisions `config.yaml` from `devops/config.yaml.test` when the file is missing, so future agents always have a working test config on first boot.
+Cloud Agent `install` is wired in [`.cursor/environment.json`](../../.cursor/environment.json) → [`bash .cursor/cloud-agent-install.sh`](../../.cursor/cloud-agent-install.sh). Cursor runs it on each agent boot (idempotent).
 
-It runs `npm install` in `evaluation/`, so `npm run test` (vitest), `npm run build`, and `npm run type-check` work out-of-the-box.
+The install script:
 
-The update script also installs **Google Cloud SDK** (`google-cloud-cli`) via apt, making `gcloud`, `gsutil`, and `bq` available on every boot.
+- Creates `.venv` (Python 3.12) when missing.
+- Installs backend runtime **and** test deps from `requirements.txt` + `tests/requirements.txt` (pytest, pytest-asyncio, google-genai, Pillow, pydantic, pydantic-settings, loguru, langsmith, google-cloud-storage, etc.).
+- Installs Python dev tools **into `.venv`** (not global PATH): `uv`, `black`, `pylint`, `ruff`, `vulture` via `pip` (see script comment: do not `uv sync --group dev` here — it would replace the app venv).
+- Auto-provisions `config.yaml` from `devops/config.yaml.test` when missing.
+
+### Verify Python dev tools (agents: read this before reporting “not installed”)
+
+`uv` and `ruff` are **venv-local**. Bare `command -v uv` / `command -v ruff` without activating `.venv` will fail even when install succeeded.
+
+From repo root:
+
+```bash
+source .venv/bin/activate && command -v uv && uv --version && command -v ruff && ruff --version
+```
+
+Or without activating:
+
+```bash
+test -x .venv/bin/uv && .venv/bin/uv --version
+test -x .venv/bin/ruff && .venv/bin/ruff --version
+```
+
+If missing, re-run install: `bash .cursor/cloud-agent-install.sh`.
+
+Use dev tools as `uv run ruff …` / `uv run black …`, or after `source .venv/bin/activate`.
 
 ### Starting services
 
@@ -82,7 +106,10 @@ The update script pre-installs `node_modules`, so these commands work out-of-the
 
 ## Lint / formatting
 
-- `black --check app/ backend/` — Python formatting (daily auto-PR via CI, so local failures are expected/acceptable)
+After `source .venv/bin/activate` (or `uv run`):
+
+- `uv run black --check app/ backend/` — Python formatting (daily auto-PR via CI, so local failures are expected/acceptable)
+- `uv run ruff check <paths>` — unused imports (`F401`), etc.
 - No strict linter is enforced in CI for the backend currently
 
 ### Android SDK
@@ -141,7 +168,7 @@ echo "Emulator booted"
 - Docker in Cloud Agent VMs requires `fuse-overlayfs` storage driver and `iptables-legacy`. The dockerd must be started manually: `sudo dockerd &>/tmp/dockerd.log &`
 - `psycopg2` (non-binary) build requires `python3.12-dev` and `libpq-dev` system packages.
 - Creating the venv requires `python3.12-venv` system package (not pre-installed in Cloud Agent VMs).
-- `black` is not in `requirements.txt`; install separately: `pip install black`.
+- `uv`, `ruff`, `black`, `pylint`, and `vulture` live in `.venv/bin/`, not on global PATH — activate the venv or use `uv run` (see **Verify Python dev tools** above).
 - The venv **must** be activated before running `start.sh` — the script does not activate it.
 - Auth tokens for testing: `python3 -c "from app.core.security import create_access_token; print(create_access_token('user-testing'))"` (requires `PYTHONPATH=.` and `config.yaml` present).
 - **Android emulator without KVM**: always pass `-no-accel -gpu swiftshader_indirect`; omitting `-no-accel` will crash with `KVM is not found`. See "Android emulator (no-KVM)" section above for full instructions.
