@@ -1,6 +1,4 @@
-# Companion 消息流术语表（Glossary）
-
-面向讨论「谁对谁说话、帧走哪条链、责任边界」时的统一用词；实现细节以源码为准。默认语境为生产环境 **WebSocket 伴侣聊天** 上的编排。
+# Glossary
 
 ## 参照系
 
@@ -28,6 +26,7 @@
 
 | 术语 | 定义 |
 |------|------|
+| **Companion Harness** | companion's agentic runtime |
 | **Memory doc** | memory document | MemoryStore 中持久化的文档（多为 ``.md`` / ``.jsonl``）；人类可读、可 SQL 检视；persistable prompt slice 的真源。见 [MEMORY_STORE.md](./MEMORY_STORE.md#memory-doc-与-prompt-slice)。 |
 | **Prompt slice** | prompt slice | 当轮注入 LLM 的 system 文本块；可 1:1 来自 Memory doc，也可仅来自包内模板或 Python 组装。 |
 | **业务 outbound 队列** | 服务端上 **按序发出助手/业务类下行 JSON** 的缓冲与泵；属**客户侧交付路径**上的服务端设施。 |
@@ -48,22 +47,10 @@
 |------|------|
 | **Inner-tick** | 用户空闲时的**合成轮次**（主动搭话、定时提醒、维护整理等）。实现见 `inner_tick_schedule.py` / `agentic_companion/session.py`；架构见 [DESIGN.md](/docs/companion_harness/DESIGN.md)。 |
 | **Proactive chat rhythm** | 两次 proactive 尝试之间，自**最后 assistant 时间戳**起至少等待的 quiet 时长；由真实用户消息间隔自适应，默认约 30–60s。不是 worker poll 周期本身。 |
-| **Inner-tick worker poll** | WebSocket 上 inner-tick 循环的唤醒间隔（默认 60s）；到点后**依次检查** scheduled / proactive / maintenance 是否各自满足条件。 |
-| **ai_private** | **非独立运行时循环**；工作记忆中「AI 私密活动」类材料，供内在节拍等注入提示时使用。 |
-| **World Capsule（世界胶囊）** | **计划中**：共同想象的设定单元，择优巩固进 LivingSphere / TechnoCore。见 [WORLD_CAPSULES.md](./WORLD_CAPSULES.md)。 |
+| **monolog** | **非独立运行时循环**；工作记忆中「AI 自说自话」类材料，供内在节拍等注入提示时使用。代码中称为 ai_private |
 | **World Engine（世界引擎）** | **计划中**：harness 作为 actor supervisor，以共享 AgentHarness 驱动 per-agent clock 的 companion 与 sub-agent；agent 间经 mailbox 交往。见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)。 |
-| **AgentHarness** | World Engine 共享 runtime spine（turn 骨架、clock、mailbox、MemoryStore I/O）；companion 与 sub-agent 通过 **AgentProfile** 配置差异，非 fork 代码。 |
 | **Sub-agent** | 由 companion will to existence 召唤的 shallow agent（如 firefly）；有 L1 连续性、无 user channel、行为自主。 |
-| **AgentBehavior** | Agent 间唯一可观测物：经 mailbox 投递的行为描述；接收方不见发送方 hidden state。 |
-
-## 使用约定（避免歧义）
-
-- 写「**客户侧**」若包含 **服务端上的交付队列**，建议补一句：**逻辑上属客户侧交付链，物理位置在服务端。**
-- 写「**下行**」若含确认/心跳类帧，建议标明 **对话下行 / 信令下行**。
-- **「智能体」边界**与「编排入口」是否在 WebSocket 处理层内：团队需在架构文档中单点约定，避免「上行」与「内核输入」混用。
-- **「前台」** ≠ **当轮上下文表** ≠ Android 前台进程。
 
 ## See also
 
-- [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — World Engine、sub-agent、两期交付
-- [DESIGN.md](./DESIGN.md) — WebSocket 生命周期、turn 持久化与 transport 边界
+- [Companion Harness Design](./DESIGN.md)
