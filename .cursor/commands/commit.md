@@ -31,9 +31,11 @@ issues/3211
 3. **Git commit changes made in current conversation**
    3.1. In `cmd-k` mode, commit all changes
 4. **Summary**: output commit title to user
+5. git push to remote
 
 ## Checklist
 
 - [ ] 1 sentence commit title
 - [ ] bullet points description
 - [ ] git commit changes in current conversation
+- [ ] the commit is pushed to remote
