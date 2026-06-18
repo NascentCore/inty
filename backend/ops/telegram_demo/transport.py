@@ -7,6 +7,12 @@ TODO(telegram-reply-reaction-inbound): Route reply_to + emoji reaction updates i
   inbound envelope (not flat text only) — #3441 (epic #3440)
 TODO(!3501): Optional transport-level text coalescing (Hermes ``_flush_text_batch``); prefer
   ``ScopeQueueServing`` post-drain quiet window for durable InputQueue semantics.
+TODO(telegram-onboard-greeting): On new onboard, run ``implicit_sign_on_greeting`` after
+  ``activate_telegram_scope`` (same track as WS first connect) so cold ad users get a
+  companion first message within seconds.
+TODO(telegram-onboard-locale): English default for transport copy and first companion turn;
+  follow the user's reply language from their messages onward (replace Chinese-only
+  ``_WELCOME_*`` / ``_ONBOARD_HINT``).
 """
 
 from __future__ import annotations
