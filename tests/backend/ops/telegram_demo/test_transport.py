@@ -25,6 +25,7 @@ from app.external_services.telegram_bot_api import (
 )
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
+from app.models.companion_bond import CompanionBond
 from app.models.user import User
 from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
 from app.services.agentic_channel.endpoints import resolve_scope
@@ -81,6 +82,9 @@ async def _cleanup_scope(scope: AgentScope) -> None:
             delete(AgentChannelEndpoint).where(
                 AgentChannelEndpoint.user_id == scope.user_id
             )
+        )
+        await db.execute(
+            delete(CompanionBond).where(CompanionBond.user_id == scope.user_id)
         )
         await db.execute(delete(Agent).where(Agent.creator_id == scope.user_id))
         await db.execute(delete(User).where(User.id == scope.user_id))

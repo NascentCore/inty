@@ -8,14 +8,19 @@ import uuid
 import pytest
 from sqlalchemy import delete, select
 
+from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
+from app.models.companion_bond import CompanionBond
 from app.models.user import User
-from app.services.agentic_channel.errors import ChannelEndpointConflictError
+from app.services.agentic_channel.errors import (
+    ChannelEndpointConflictError,
+    CompanionBondInvariantError,
+)
 from app.core.companion_harness.agent_channel.guest_agent_kind import (
     CompanionGuestAgentKind,
 )
@@ -29,13 +34,13 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
 )
 
 
-async def _create_creator_agent() -> str:
+async def _create_creator_scope() -> AgentScope:
     scope = await create_guest_scope_for_test(
         kind=CompanionGuestAgentKind.TELEGRAM,
         nickname_prefix="Creator",
         meta_data={"test": True},
     )
-    return scope.agent_id
+    return scope
 
 
 async def _cleanup_user(user_id: str) -> None:
@@ -44,6 +49,9 @@ async def _cleanup_user(user_id: str) -> None:
             delete(AgentChannelEndpoint).where(
                 AgentChannelEndpoint.user_id == user_id
             )
+        )
+        await db.execute(
+            delete(CompanionBond).where(CompanionBond.user_id == user_id)
         )
         await db.execute(delete(Agent).where(Agent.creator_id == user_id))
         await db.execute(delete(User).where(User.id == user_id))
@@ -71,23 +79,22 @@ async def test_provision_onboard_idempotent() -> None:
 
 
 @pytest.mark.asyncio
-async def test_provision_existing_agent_creates_guest() -> None:
-    agent_id = await _create_creator_agent()
+async def test_provision_existing_agent_binds_bonded_scope() -> None:
+    creator_scope = await _create_creator_scope()
     address = f"tg-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     first = await provision_agent_for_existing_agent(
         channel=CompanionRuntimeChannel.TELEGRAM,
         channel_address=address,
         channel_user_id=channel_user_id,
-        agent_id=agent_id,
+        agent_id=creator_scope.agent_id,
     )
-    assert first.is_new_user is True
-    assert first.scope.agent_id == agent_id
+    assert first.is_new_user is False
+    assert first.scope == creator_scope
     async with AsyncSessionLocal() as db:
         row = await db.execute(select(User).where(User.id == first.scope.user_id))
         user = row.scalar_one()
-        assert user.meta_data is not None
-        assert user.meta_data.get("agent_channel") is True
+        assert user.meta_data == {"test": True}
     await _cleanup_user(first.scope.user_id)
 
 
@@ -161,4 +168,69 @@ async def test_concurrent_provision_single_endpoint_no_orphan_users() -> None:
         assert len(endpoints) == 1
         assert endpoints[0].user_id == results[0].scope.user_id
         assert endpoints[0].agent_id == results[0].scope.agent_id
+        bond_rows = await db.execute(
+            select(CompanionBond).where(
+                CompanionBond.user_id == results[0].scope.user_id
+            )
+        )
+        bonds = bond_rows.scalars().all()
+        assert len(bonds) == 1
     await _cleanup_user(results[0].scope.user_id)
+
+
+@pytest.mark.asyncio
+async def test_provision_existing_endpoint_requires_active_bond() -> None:
+    address = f"tg-{uuid.uuid4().hex}"
+    channel_user_id = f"tu-{uuid.uuid4().hex}"
+    first = await provision_agent_for_channel_onboard(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=address,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            delete(CompanionBond).where(
+                CompanionBond.user_id == first.scope.user_id
+            )
+        )
+        await db.commit()
+    with pytest.raises(CompanionBondInvariantError):
+        await provision_agent_for_channel_onboard(
+            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel_address=address,
+            channel_user_id=channel_user_id,
+        )
+    await _cleanup_user(first.scope.user_id)
+
+
+@pytest.mark.asyncio
+async def test_provision_existing_endpoint_rejects_bond_mismatch() -> None:
+    address = f"tg-{uuid.uuid4().hex}"
+    channel_user_id = f"tu-{uuid.uuid4().hex}"
+    first = await provision_agent_for_channel_onboard(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=address,
+        channel_user_id=channel_user_id,
+    )
+    other = await create_guest_scope_for_test(
+        kind=CompanionGuestAgentKind.TELEGRAM,
+        nickname_prefix="Other",
+        meta_data={"test": True},
+    )
+    async with AsyncSessionLocal() as db:
+        bond_row = await db.execute(
+            select(CompanionBond).where(
+                CompanionBond.user_id == first.scope.user_id
+            )
+        )
+        bond = bond_row.scalar_one()
+        bond.agent_id = other.agent_id
+        await db.commit()
+    with pytest.raises(CompanionBondInvariantError):
+        await provision_agent_for_channel_onboard(
+            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel_address=address,
+            channel_user_id=channel_user_id,
+        )
+    await _cleanup_user(first.scope.user_id)
+    await _cleanup_user(other.user_id)

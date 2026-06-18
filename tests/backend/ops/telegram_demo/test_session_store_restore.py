@@ -14,6 +14,7 @@ from app.db.session import AsyncSessionLocal
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
+from app.models.companion_bond import CompanionBond
 from app.models.user import User
 from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
 from app.services.agentic_channel.presence import clear_presences_for_tests
@@ -32,6 +33,7 @@ async def _cleanup_provision(user_id: str) -> None:
                 AgentChannelEndpoint.user_id == user_id
             )
         )
+        await db.execute(delete(CompanionBond).where(CompanionBond.user_id == user_id))
         await db.execute(delete(Agent).where(Agent.creator_id == user_id))
         await db.execute(delete(User).where(User.id == user_id))
         await db.commit()

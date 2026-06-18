@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 import pytest
@@ -12,12 +13,15 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal, async_engine
 from app.models.agent import Agent
+from app.models.agent_channel_endpoint import AgentChannelEndpoint
+from app.models.companion_bond import CompanionBond, CompanionBondState
 from app.models.registry import load_model_modules
 from app.models.user import User
 from app.services.agentic_channel.companion_guest_provision import (
     GuestUserInput,
     add_guest_user,
 )
+from app.services.agentic_channel.errors import CompanionBondInvariantError
 from backend.ops.weixin_onboard.provision import provision_inty_for_ilink_user
 from tests.app.services.agentic_channel.companion_test_fixtures import (
     assert_companion_guest_identity_has_no_readable_id,
@@ -42,6 +46,10 @@ async def async_db_session():
 
 
 async def _delete_user_and_agents(db: AsyncSession, user_id: str) -> None:
+    await db.execute(
+        delete(AgentChannelEndpoint).where(AgentChannelEndpoint.user_id == user_id)
+    )
+    await db.execute(delete(CompanionBond).where(CompanionBond.user_id == user_id))
     await db.execute(delete(Agent).where(Agent.creator_id == user_id))
     await db.execute(delete(User).where(User.id == user_id))
     await db.commit()
@@ -72,6 +80,20 @@ async def test_provision_create_and_reuse(async_db_session: AsyncSession) -> Non
     agent = agent_row.scalar_one()
     assert agent.creator_id == first.user_id
     assert_companion_guest_identity_has_no_readable_id(user=user, agent=agent)
+    endpoint_row = await async_db_session.execute(
+        select(AgentChannelEndpoint).where(
+            AgentChannelEndpoint.user_id == first.user_id
+        )
+    )
+    endpoint = endpoint_row.scalar_one()
+    assert endpoint.channel_address == ilink_user_id
+    assert endpoint.channel_user_id == ilink_user_id
+    bond_row = await async_db_session.execute(
+        select(CompanionBond).where(CompanionBond.user_id == first.user_id)
+    )
+    bond = bond_row.scalar_one()
+    assert bond.agent_id == first.agent_id
+    assert bond.state == CompanionBondState.ACTIVE
 
     second = await provision_inty_for_ilink_user(ilink_user_id=ilink_user_id)
     assert second.is_new_user is False
@@ -83,7 +105,40 @@ async def test_provision_create_and_reuse(async_db_session: AsyncSession) -> Non
 
 
 @pytest.mark.asyncio
-async def test_provision_adds_agent_for_existing_user_without_agent(
+async def test_concurrent_provision_reuses_winning_endpoint(
+    async_db_session: AsyncSession,
+) -> None:
+    await async_engine.dispose()
+    ilink_user_id = f"ilink-{uuid.uuid4().hex}"
+
+    results = await asyncio.gather(
+        provision_inty_for_ilink_user(ilink_user_id=ilink_user_id),
+        provision_inty_for_ilink_user(ilink_user_id=ilink_user_id),
+    )
+    assert results[0].user_id == results[1].user_id
+    assert results[0].agent_id == results[1].agent_id
+    assert sum(1 for result in results if result.is_new_user) == 1
+
+    endpoint_rows = await async_db_session.execute(
+        select(AgentChannelEndpoint).where(
+            AgentChannelEndpoint.channel_address == ilink_user_id
+        )
+    )
+    endpoints = endpoint_rows.scalars().all()
+    assert len(endpoints) == 1
+    bond_rows = await async_db_session.execute(
+        select(CompanionBond).where(
+            CompanionBond.user_id == results[0].user_id
+        )
+    )
+    bonds = bond_rows.scalars().all()
+    assert len(bonds) == 1
+
+    await _delete_user_and_agents(async_db_session, results[0].user_id)
+
+
+@pytest.mark.asyncio
+async def test_provision_rejects_existing_user_without_endpoint(
     async_db_session: AsyncSession,
 ) -> None:
     await async_engine.dispose()
@@ -99,22 +154,7 @@ async def test_provision_adds_agent_for_existing_user_without_agent(
         await db.commit()
         orphan_user_id = user.id
 
-    result = await provision_inty_for_ilink_user(ilink_user_id=ilink_user_id)
-    assert result.is_new_user is False
-    assert result.user_id == orphan_user_id
-    assert result.agent_id != ""
-    assert result.jwt != ""
-
-    agent_row = await async_db_session.execute(
-        select(Agent).where(Agent.id == result.agent_id)
-    )
-    agent = agent_row.scalar_one()
-    user_row = await async_db_session.execute(
-        select(User).where(User.id == orphan_user_id)
-    )
-    user = user_row.scalar_one()
-    assert agent.creator_id == orphan_user_id
-    assert agent.name.startswith("weixin-companion-")
-    assert_companion_guest_identity_has_no_readable_id(user=user, agent=agent)
+    with pytest.raises(CompanionBondInvariantError):
+        await provision_inty_for_ilink_user(ilink_user_id=ilink_user_id)
 
     await _delete_user_and_agents(async_db_session, orphan_user_id)

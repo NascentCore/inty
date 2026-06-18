@@ -14,6 +14,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
+from app.models.companion_bond import CompanionBond
 from app.models.user import User
 from app.services.agentic_channel.endpoints import (
     assert_inbound_endpoint_identity,
@@ -45,6 +46,9 @@ async def _cleanup_scope(scope: AgentScope) -> None:
             delete(AgentChannelEndpoint).where(
                 AgentChannelEndpoint.user_id == scope.user_id
             )
+        )
+        await db.execute(
+            delete(CompanionBond).where(CompanionBond.user_id == scope.user_id)
         )
         await db.execute(delete(Agent).where(Agent.creator_id == scope.user_id))
         await db.execute(delete(User).where(User.id == scope.user_id))

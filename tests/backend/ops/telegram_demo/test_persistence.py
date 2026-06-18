@@ -14,6 +14,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
+from app.models.companion_bond import CompanionBond
 from app.models.user import User
 from app.services.agentic_channel.endpoints import (
     bind_endpoint,
@@ -59,6 +60,11 @@ async def test_provision_persists_endpoint_row() -> None:
         await db.execute(
             delete(AgentChannelEndpoint).where(
                 AgentChannelEndpoint.user_id == provision.scope.user_id
+            )
+        )
+        await db.execute(
+            delete(CompanionBond).where(
+                CompanionBond.user_id == provision.scope.user_id
             )
         )
         await db.execute(

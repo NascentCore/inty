@@ -6,12 +6,8 @@ Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
 TODO(#3358): DB still has unique constraints on ``readable_id`` for legacy HTTP paths;
 do not drop until those callers migrate — see issue for Alembic plan.
 
-TODO(companion-bond-invariant): #3491 — replace oldest-PRIVATE-agent reuse with
-a DB-enforced active companion bond; merge-deselected companions must enter
-SEALED state: frozen, invisible, zero runtime, all data intact. Replacement
-must wait for the product reset decision drafted in
-docs/companion_harness/FR_CROSS_CHANNEL_USER_IDENTITY.md; revival is distant
-future and out of scope for the first implementation.
+TODO(companion-bond-invariant): #3491 — harden active companion uniqueness with
+database constraints after v1 service-level checks settle.
 
 **Not** ``agent_service.create_agent``: that path is maintenance-mode HTTP only
 (readable_id allocation, avatar crop, opening-voice enqueue, subscription limits).
@@ -26,7 +22,6 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.guest_agent_kind import (
@@ -36,6 +31,9 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.uuid import get_new_user_id
 from app.models.agent import Agent, AgentVisibility
 from app.models.user import AuthType, User, normalize_gender
+from app.services.agentic_channel.companion_bonds import (
+    create_active_companion_bond,
+)
 
 COMPANION_GUEST_DEFAULT_GENDER = "FEMALE"
 
@@ -154,23 +152,6 @@ async def provision_guest_scope(
         user_id=user.id,
         kind=input.kind,
     )
-    return AgentScope(user_id=user.id, agent_id=agent.id)
-
-
-async def first_private_agent_for_user(
-    db: AsyncSession,
-    user_id: str,
-) -> Agent | None:
-    """Return oldest PRIVATE agent for user (1:1 companion onboard assumption)."""
-    assert user_id != ""
-    stmt = (
-        select(Agent)
-        .where(
-            Agent.creator_id == user_id,
-            Agent.visibility == AgentVisibility.PRIVATE,
-        )
-        .order_by(Agent.created_at.asc())
-        .limit(1)
-    )
-    result = await db.execute(stmt)
-    return result.scalar_one_or_none()
+    scope = AgentScope(user_id=user.id, agent_id=agent.id)
+    await create_active_companion_bond(db, scope)
+    return scope
