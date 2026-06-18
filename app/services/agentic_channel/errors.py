@@ -9,6 +9,10 @@ class ChannelEndpointConflictError(ValueError):
     """Raised when bind would violate channel human ↔ Inty user 1:1 bonding."""
 
 
+class CompanionBondInvariantError(ValueError):
+    """Raised when active companion bond state is missing or ambiguous."""
+
+
 def integrity_error_detail(exc: IntegrityError) -> str:
     """Summarize Postgres constraint info for Cloud Logging (INFO/WARNING sinks)."""
     orig = exc.orig
