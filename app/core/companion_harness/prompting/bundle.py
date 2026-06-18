@@ -41,6 +41,13 @@ class PromptBundle(BaseModel):
         default="",
         description="Channel capability contract: CHANNELS.md body for Capability system injection.",
     )
+    harness_md: str = Field(
+        default="",
+        description=(
+            "Harness innate limits: HARNESS.md body for Capability system injection "
+            "(package-static today; TODO !3506 — store-backed static prompt slice)."
+        ),
+    )
     companionship_md: str = Field(
         default="",
         description=(

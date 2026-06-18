@@ -32,6 +32,8 @@ class CompanionMemoryDocumentKind(str, Enum):
     LIVING_SPHERE = "living_sphere"
     LIVING_SPHERE_UPDATES_JSONL = "living_sphere_updates_jsonl"
     TOOLS = "tools"
+    # TODO(static-prompt-slice-memstore): Add HARNESS + OUTPUT_FORMAT_IM_DM kinds; load static
+    # Capability slices from MemoryStore, not _template_doc_truncated. !3506
     # Package seed SIGNIFICANCE_PERCEPTION.md; scoring semantics consumed via PromptBundle, not ORM-only.
     SIGNIFICANCE_PERCEPTION = "significance_perception"
     TRANSCRIPT = "transcript"

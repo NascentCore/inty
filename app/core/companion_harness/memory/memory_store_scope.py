@@ -19,6 +19,7 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
         "AXIOM.md",
         "BOOTSTRAP.md",
         "CHANNELS.md",
+        "HARNESS.md",
         "INTY.md",
         "OUTPUT_FORMAT_IM_DM.md",
         "SAFETY.md",
@@ -26,6 +27,8 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
         "SIGNIFICANCE_PERCEPTION.md",
     }
 )
+# TODO(static-prompt-slice-memstore): Split static prompt-slice seeds (HARNESS, TOOLS, …) from
+# mutable MemDoc seeds; persist static kinds in MemoryStore on init. !3506
 
 
 def load_template_seed_text(filename: str) -> str:

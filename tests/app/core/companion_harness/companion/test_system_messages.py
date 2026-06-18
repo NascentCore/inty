@@ -37,19 +37,21 @@ def _system_contents(messages: list[dict[str, object]]) -> list[str]:
     ]
 
 
-def test_capability_group_injects_channels_before_tools() -> None:
+def test_capability_group_injects_harness_channels_tools_in_order() -> None:
     bundle = PromptBundle(
         identity="identity",
         soul="soul",
         user_md="user",
         memory_md="",
+        harness_md="# Harness\nharness contract",
         channels_md="# Channels\nchannel contract",
         tools_md="# Tools\ntool contract",
     )
     contents = _system_contents(build_system_messages(bundle, ContextMeta()))
-    assert contents.index("# Channels\nchannel contract") < contents.index(
-        "# Tools\ntool contract"
-    )
+    harness_i = contents.index("# Harness\nharness contract")
+    channels_i = contents.index("# Channels\nchannel contract")
+    tools_i = contents.index("# Tools\ntool contract")
+    assert harness_i < channels_i < tools_i
 
 
 def test_bootstrap_track_injects_typed_tool_call_section() -> None:
@@ -123,6 +125,7 @@ def test_bootstrap_omits_capability_package_slices() -> None:
         soul="soul",
         user_md="user",
         memory_md="",
+        harness_md="# Harness\nharness contract",
         channels_md="# Channels\nchannel contract",
         tools_md="# Tools\ntool contract",
     )
@@ -131,6 +134,7 @@ def test_bootstrap_omits_capability_package_slices() -> None:
             build_system_messages_for_bootstrap_track(bundle, ContextMeta())
         )
     )
+    assert "harness contract" not in joined
     assert "channel contract" not in joined
     assert "tool contract" not in joined
 
