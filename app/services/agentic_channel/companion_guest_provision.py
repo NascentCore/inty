@@ -22,7 +22,6 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.guest_agent_kind import (
@@ -156,22 +155,3 @@ async def provision_guest_scope(
     scope = AgentScope(user_id=user.id, agent_id=agent.id)
     await create_active_companion_bond(db, scope)
     return scope
-
-
-async def first_private_agent_for_user(
-    db: AsyncSession,
-    user_id: str,
-) -> Agent | None:
-    """Return oldest PRIVATE agent for user (1:1 companion onboard assumption)."""
-    assert user_id != ""
-    stmt = (
-        select(Agent)
-        .where(
-            Agent.creator_id == user_id,
-            Agent.visibility == AgentVisibility.PRIVATE,
-        )
-        .order_by(Agent.created_at.asc())
-        .limit(1)
-    )
-    result = await db.execute(stmt)
-    return result.scalar_one_or_none()

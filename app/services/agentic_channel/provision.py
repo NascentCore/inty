@@ -30,10 +30,11 @@ from app.models.user import User
 from app.core.companion_harness.agent_channel.guest_agent_kind import (
     companion_guest_agent_kind_for_channel,
 )
+from app.services.agentic_channel.companion_bonds import (
+    require_active_companion_bond,
+)
 from app.services.agentic_channel.companion_guest_provision import (
-    GuestUserInput,
     ProvisionGuestScopeInput,
-    add_guest_user,
     provision_guest_scope,
 )
 from app.services.agentic_channel.endpoints import (
@@ -56,6 +57,11 @@ class ChannelProvisionResult:
     is_new_user: bool
     channel_address: str
     channel_user_id: str
+
+
+async def _require_active_bond_for_scope(scope: AgentScope) -> None:
+    async with AsyncSessionLocal() as db:
+        await require_active_companion_bond(db, scope)
 
 
 async def _provision_result_after_bind_race(
@@ -95,6 +101,7 @@ async def _provision_result_after_bind_race(
         channel_address=channel_address,
         channel_user_id=channel_user_id,
     )
+    await _require_active_bond_for_scope(raced)
     await ensure_memory_store_session(raced)
     return ChannelProvisionResult(
         scope=raced,
@@ -147,6 +154,7 @@ async def provision_agent_for_channel_onboard(
             by_address.user_id,
             by_address.agent_id,
         )
+        await _require_active_bond_for_scope(by_address)
         return ChannelProvisionResult(
             scope=by_address,
             is_new_user=False,
@@ -162,6 +170,7 @@ async def provision_agent_for_channel_onboard(
             by_address.user_id,
             by_address.agent_id,
         )
+        await _require_active_bond_for_scope(by_address)
         return ChannelProvisionResult(
             scope=by_address,
             is_new_user=False,
@@ -177,6 +186,7 @@ async def provision_agent_for_channel_onboard(
             by_user.user_id,
             by_user.agent_id,
         )
+        await _require_active_bond_for_scope(by_user)
         return ChannelProvisionResult(
             scope=by_user,
             is_new_user=False,
@@ -265,8 +275,7 @@ async def provision_agent_for_existing_agent(
 ) -> ChannelProvisionResult:
     """Bind channel endpoint to an existing companion agent (tests only; not wired in transport).
 
-    Creates guest user via ``add_guest_user`` only — does not call ``provision_guest_scope``
-    because ``agent_id`` already exists.
+    The existing agent must already have an active companion bond.
     """
     assert channel_address != ""
     assert channel_user_id != ""
@@ -281,6 +290,7 @@ async def provision_agent_for_existing_agent(
             channel_address=channel_address,
             channel_user_id=channel_user_id,
         )
+        await _require_active_bond_for_scope(existing)
         return ChannelProvisionResult(
             scope=existing,
             is_new_user=False,
@@ -293,20 +303,12 @@ async def provision_agent_for_existing_agent(
         agent = agent_row.scalar_one_or_none()
         if agent is None:
             raise ValueError(f"companion agent not found: {agent_id}")
+        scope = AgentScope(user_id=agent.creator_id, agent_id=agent_id)
+        await require_active_companion_bond(db, scope)
 
-        pending_user_id = ""
-        pending_agent_id = ""
+        pending_user_id = scope.user_id
+        pending_agent_id = scope.agent_id
         try:
-            user = await add_guest_user(
-                db,
-                GuestUserInput(
-                    nickname_prefix="Guest",
-                    meta_data={"agent_channel": True},
-                ),
-            )
-            scope = AgentScope(user_id=user.id, agent_id=agent_id)
-            pending_user_id = scope.user_id
-            pending_agent_id = scope.agent_id
             await upsert_endpoint_in_session(
                 db,
                 scope,
@@ -351,7 +353,7 @@ async def provision_agent_for_existing_agent(
     await ensure_memory_store_session(scope)
     return ChannelProvisionResult(
         scope=scope,
-        is_new_user=True,
+        is_new_user=False,
         channel_address=channel_address,
         channel_user_id=channel_user_id,
     )

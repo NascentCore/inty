@@ -27,6 +27,7 @@ from app.models.agentic_companion_queue import (
     AgenticCompanionInputQueueRow,
     AgenticCompanionOutputQueueRow,
 )
+from app.models.companion_bond import CompanionBond
 from app.models.user import User
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from tests.app.services.agentic_channel.companion_test_fixtures import (
@@ -45,6 +46,9 @@ async def _cleanup_scope(scope: AgentScope) -> None:
             delete(AgenticCompanionOutputQueueRow).where(
                 AgenticCompanionOutputQueueRow.user_id == scope.user_id
             )
+        )
+        await db.execute(
+            delete(CompanionBond).where(CompanionBond.user_id == scope.user_id)
         )
         await db.execute(delete(Agent).where(Agent.creator_id == scope.user_id))
         await db.execute(delete(User).where(User.id == scope.user_id))
