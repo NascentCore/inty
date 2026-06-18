@@ -36,6 +36,7 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 
 SendTextFn = Callable[[str], Awaitable[None]]
+DeliverReadyOutputFn = Callable[[ReadyOutputMessage], Awaitable[None]]
 
 _CHANNEL_OUTPUT_PUMP_POLL_SEC = 0.02
 
@@ -71,9 +72,11 @@ class UserChatTurnDeliveryResult:
 async def _deliver_ready_message(
     *,
     message: ReadyOutputMessage,
-    send_text: SendTextFn,
+    send_text: SendTextFn | None,
+    deliver_ready: DeliverReadyOutputFn | None,
     scope: AgentScope,
 ) -> str | None:
+    assert (send_text is not None) != (deliver_ready is not None)
     text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
     if not text:
         output_queue = get_output_queue_for_scope(scope)
@@ -85,7 +88,11 @@ async def _deliver_ready_message(
         )
         return None
     try:
-        await send_text(text)
+        if deliver_ready is not None:
+            await deliver_ready(message)
+        else:
+            assert send_text is not None
+            await send_text(text)
     except Exception as exc:
         logger.warning(
             "output delivery failed scope={} message_id={} error={}",
@@ -114,12 +121,14 @@ async def _deliver_ready_message(
 async def channel_output_pump(
     scope: AgentScope,
     *,
-    send_text: SendTextFn,
+    send_text: SendTextFn | None = None,
+    deliver_ready: DeliverReadyOutputFn | None = None,
     stop_event: asyncio.Event,
     poll_interval_sec: float = _CHANNEL_OUTPUT_PUMP_POLL_SEC,
 ) -> str:
     """Pull in-memory ready OutputQueue messages until ``stop_event`` and queue drained."""
     assert poll_interval_sec > 0.0
+    assert (send_text is not None) != (deliver_ready is not None)
     output_queue = get_output_queue_for_scope(scope)
     last_reply = ""
     while not stop_event.is_set():
@@ -127,6 +136,7 @@ async def channel_output_pump(
             delivered = await _deliver_ready_message(
                 message=message,
                 send_text=send_text,
+                deliver_ready=deliver_ready,
                 scope=scope,
             )
             if delivered is not None:
@@ -136,6 +146,7 @@ async def channel_output_pump(
         delivered = await _deliver_ready_message(
             message=message,
             send_text=send_text,
+            deliver_ready=deliver_ready,
             scope=scope,
         )
         if delivered is not None:
