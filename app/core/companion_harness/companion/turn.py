@@ -675,7 +675,7 @@ async def _run_companion_turn_core(
                     == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
                 ):
                     # TODO(!3398): dual-LLM user-turn vs single-LLM in-turn sync — epic tracks routing change.
-                    # TODO(!3398): Extract dual-LLM message-stack assembly (variants + replace) for sidecar reuse.
+                    # TODO(!3398): Extract dual-LLM message-stack assembly into typed prompt/context builders.
                     tool_system_msgs, chat_system_msgs = (
                         dual_llm_system_message_variants(
                             store=store,

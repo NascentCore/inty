@@ -1,7 +1,6 @@
 """Shared test-only factories for ``loop/context.py`` builder unit tests.
 
 Used by ``test_context.py`` and ``test_bootstrap_user_chat_loop_context.py``.
-For legacy sidecar / ``LegacyAgenticLoopContext`` tests, see ``test_support.py``.
 """
 
 from __future__ import annotations

@@ -120,8 +120,6 @@ class AgenticLoopOutput:
     turn_recall: str | None
     langsmith_trace_id: str
     langsmith_run_id: str
-    # TODO(!3460): Legacy sidecar mechanisms populate LoopDeliverable rows; production returns ().
-    deliverables: tuple[Any, ...]
     skip_final_transcript_assistant_row: bool
     tool_background_started: bool
     last_interim_assistant_msg_uuid: str | None

@@ -451,7 +451,6 @@ class AgenticLoop:
             turn_recall=None,
             langsmith_trace_id=sync_result.langsmith_trace_id,
             langsmith_run_id=sync_result.langsmith_run_id,
-            deliverables=(),
             skip_final_transcript_assistant_row=(
                 sync_result.skip_final_transcript_assistant_row
             ),
@@ -546,7 +545,6 @@ class AgenticLoop:
             turn_recall=fg_result.turn_recall,
             langsmith_trace_id=fg_result.langsmith_trace_id,
             langsmith_run_id=fg_result.langsmith_run_id,
-            deliverables=(),
             skip_final_transcript_assistant_row=False,
             tool_background_started=False,
             last_interim_assistant_msg_uuid=None,
