@@ -8,14 +8,19 @@ from app.core.companion_harness.companion.prompt_stack import (
     append_runtime_output_format_system_message,
 )
 from app.core.companion_harness.companion.prompts.system_messages import (
-    build_system_messages_for_chat_track,
     build_system_messages_for_tool_track,
+)
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from app.core.companion_harness.companion.dual_llm_message_stacks import (
     dual_llm_system_message_variants,
     replace_leading_system_messages_multi,
 )
-from app.core.companion_harness.companion.models import ContextMeta, InnerTickActivity
+from app.core.companion_harness.companion.models import (
+    ContextMeta,
+    InnerTickActivity,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
@@ -74,10 +79,14 @@ def test_dual_llm_system_message_variants_maintenance_tool_differs_from_chat(
         runtime_context=runtime_context,
     )
     tool_text = "\n".join(
-        str(m.get("content") or "") for m in tool_msgs if m.get("role") == "system"
+        str(m.get("content") or "")
+        for m in tool_msgs
+        if m.get("role") == "system"
     )
     chat_text = "\n".join(
-        str(m.get("content") or "") for m in chat_msgs if m.get("role") == "system"
+        str(m.get("content") or "")
+        for m in chat_msgs
+        if m.get("role") == "system"
     )
     assert "用户当地时间" not in tool_text
     assert "用户当地时间" in chat_text
@@ -112,10 +121,9 @@ def test_dual_llm_system_message_variants_user_chat_matches_builders(
         runtime_context=runtime_context,
     )
     expected_chat = append_runtime_output_format_system_message(
-        system_messages=build_system_messages_for_chat_track(
+        system_messages=build_settled_user_turn_dual_chat_leg_system_messages(
             bundle,
             context,
-            memory_bootstrap_type,
         ),
         bundle=bundle,
         runtime_context=runtime_context,

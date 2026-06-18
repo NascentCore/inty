@@ -10,10 +10,12 @@ from typing import Any
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
+)
 from .models import ContextMeta, InnerTickActivity
 from .prompt_stack import append_runtime_output_format_system_message
 from .prompts.system_messages import (
-    build_system_messages_for_chat_track,
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_maintenance,
     build_system_messages_for_tool_track,
@@ -48,7 +50,10 @@ def dual_llm_system_message_variants(
 
     Implicit sign-on rounds never reach this helper (they use ``CHAT_ONLY_SYNC``).
     """
-    if inner_tick_turn and route_inner_activity != InnerTickActivity.PROACTIVE_CHAT:
+    if (
+        inner_tick_turn
+        and route_inner_activity != InnerTickActivity.PROACTIVE_CHAT
+    ):
         match route_inner_activity:
             case InnerTickActivity.MAINTENANCE:
                 tool_system_msgs = (
@@ -69,10 +74,9 @@ def dual_llm_system_message_variants(
                 )
     else:
         tool_system_msgs = build_system_messages_for_tool_track(bundle, context)
-    chat_system_msgs = build_system_messages_for_chat_track(
+    chat_system_msgs = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         context,
-        memory_bootstrap_type,
     )
     tool_system_msgs = append_runtime_output_format_system_message(
         system_messages=tool_system_msgs,

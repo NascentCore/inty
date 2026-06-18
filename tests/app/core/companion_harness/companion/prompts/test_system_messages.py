@@ -15,10 +15,12 @@ from app.core.companion_harness.experience_profile.experience_directives import 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
+)
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
     build_system_messages_for_bootstrap_track,
-    build_system_messages_for_chat_track,
     build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_maintenance,
@@ -57,10 +59,14 @@ def test_doctrine_system_prefix_excludes_subconscious_prompt() -> None:
         "# Inty - AI agents as human companions",
         "# Safety - 安全预防",
     ]
-    assert all("SUBCONSCIOUS" not in str(message["content"]) for message in messages)
+    assert all(
+        "SUBCONSCIOUS" not in str(message["content"]) for message in messages
+    )
 
 
-def test_contextual_messages_include_infer_time_zone_slice_with_tool_name() -> None:
+def test_contextual_messages_include_infer_time_zone_slice_with_tool_name() -> (
+    None
+):
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
@@ -68,18 +74,21 @@ def test_contextual_messages_include_infer_time_zone_slice_with_tool_name() -> N
         user_md="user\n",
         memory_md="memory\n",
     )
-    messages = build_system_messages_for_chat_track(
+    messages = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         ContextMeta(),
-        memory_bootstrap_type="none",
     )
-    joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    joined = "\n".join(
+        str(m["content"]) for m in messages if m["role"] == "system"
+    )
     assert "用户当地时间与作息" in joined
     assert "update_user_md" in joined
     assert "Asia/Shanghai" in joined
 
 
-def test_contextual_messages_include_experience_directives_when_tone_set() -> None:
+def test_contextual_messages_include_experience_directives_when_tone_set() -> (
+    None
+):
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
@@ -87,7 +96,7 @@ def test_contextual_messages_include_experience_directives_when_tone_set() -> No
         user_md="user\n",
         memory_md="memory\n",
     )
-    messages = build_system_messages_for_chat_track(
+    messages = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         ContextMeta(
             context_mode="intimate",
@@ -96,15 +105,18 @@ def test_contextual_messages_include_experience_directives_when_tone_set() -> No
                 tone=ExperienceDirectiveTone.WARM,
             ),
         ),
-        memory_bootstrap_type="none",
     )
-    joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    joined = "\n".join(
+        str(m["content"]) for m in messages if m["role"] == "system"
+    )
     assert "EXPERIENCE DIRECTIVES" in joined
     assert "deep_conversation" in joined
     assert "warm" in joined
 
 
-def test_contextual_messages_include_experience_directives_when_intent_only() -> None:
+def test_contextual_messages_include_experience_directives_when_intent_only() -> (
+    None
+):
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
@@ -112,17 +124,18 @@ def test_contextual_messages_include_experience_directives_when_intent_only() ->
         user_md="user\n",
         memory_md="memory\n",
     )
-    messages = build_system_messages_for_chat_track(
+    messages = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         ContextMeta(
             context_mode="emotional_companion",
             experience_directives=ExperienceDirectives(
                 intent=ExperienceSessionIntent.CASUAL_CHAT,
-            )
+            ),
         ),
-        memory_bootstrap_type="none",
     )
-    joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    joined = "\n".join(
+        str(m["content"]) for m in messages if m["role"] == "system"
+    )
     assert "EXPERIENCE DIRECTIVES" in joined
     assert "casual_chat" in joined
     assert "语气细调" not in joined
@@ -136,12 +149,13 @@ def test_contextual_messages_omit_experience_directives_when_unset() -> None:
         user_md="user\n",
         memory_md="memory\n",
     )
-    messages = build_system_messages_for_chat_track(
+    messages = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         ContextMeta(),
-        memory_bootstrap_type="none",
     )
-    joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    joined = "\n".join(
+        str(m["content"]) for m in messages if m["role"] == "system"
+    )
     assert "EXPERIENCE DIRECTIVES" not in joined
 
 
@@ -162,11 +176,15 @@ def test_inner_tick_maintenance_omits_infer_time_zone_slice() -> None:
         ai_private_text="private\n",
         tool_side_compact=True,
     )
-    joined = "\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    joined = "\n".join(
+        str(m["content"]) for m in messages if m["role"] == "system"
+    )
     assert "用户当地时间与作息" not in joined
 
 
-def test_inner_tick_maintenance_is_monolog_only_without_ls_tc_or_memory_store() -> None:
+def test_inner_tick_maintenance_is_monolog_only_without_ls_tc_or_memory_store() -> (
+    None
+):
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
@@ -200,9 +218,7 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
         style_md="style\n",
         user_md="user\n",
         memory_md="memory\n",
-        output_format_im_dm_md=load_template_seed_text(
-            OUTPUT_FORMAT_IM_DM_MD
-        ),
+        output_format_im_dm_md=load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD),
     )
     messages = build_system_messages(
         bundle,
@@ -236,11 +252,13 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
     assert CompanionRuntimeChannel.WECHAT_WEIXIN.value == "wechat_weixin"
 
 
-def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() -> None:
+def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() -> (
+    None
+):
     builders = [
         build_system_messages,
         build_system_messages_for_bootstrap_track,
-        build_system_messages_for_chat_track,
+        build_settled_user_turn_dual_chat_leg_system_messages,
         build_system_messages_for_tool_track,
         build_system_messages_for_inner_tick_maintenance,
         build_system_messages_for_inner_tick_autonomy,
@@ -250,9 +268,10 @@ def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() 
     ]
 
     for builder in builders:
-        assert "output_format_prompt_slice" not in inspect.signature(
-            builder
-        ).parameters
+        assert (
+            "output_format_prompt_slice"
+            not in inspect.signature(builder).parameters
+        )
 
 
 def test_output_format_slice_resolves_from_runtime_channel() -> None:
@@ -289,7 +308,9 @@ def test_output_format_slice_resolves_from_runtime_channel() -> None:
     )
 
 
-def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() -> None:
+def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() -> (
+    None
+):
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
@@ -306,15 +327,24 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
         tool_side_compact=True,
     )
     contents = [str(m["content"]) for m in messages]
-    autonomy_blocks = [c for c in contents if c.startswith("本轮（AUTONOMY 自主活动）")]
+    autonomy_blocks = [
+        c for c in contents if c.startswith("本轮（AUTONOMY 自主活动）")
+    ]
     assert len(autonomy_blocks) == 1
-    proactive_blocks = [c for c in contents if c.startswith("本轮（陪伴主动聊天）")]
+    proactive_blocks = [
+        c for c in contents if c.startswith("本轮（陪伴主动聊天）")
+    ]
     assert proactive_blocks == []
-    maintenance_blocks = [c for c in contents if c.startswith("本轮（内在节拍）")]
+    maintenance_blocks = [
+        c for c in contents if c.startswith("本轮（内在节拍）")
+    ]
     assert maintenance_blocks == []
     assert not any(c.startswith("内在活动（ai_private）") for c in contents)
     autonomy_lines = autonomy_blocks[0].split("\n")
-    assert "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；" in autonomy_lines[2]
+    assert (
+        "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；"
+        in autonomy_lines[2]
+    )
     assert any("LIFE_CURRENTS.md" in line for line in autonomy_lines)
     autonomy_text = autonomy_blocks[0]
     assert "与 ai_private 分工" in autonomy_text
@@ -332,7 +362,9 @@ def test_build_system_messages_for_inner_tick_autonomy_is_production_builder(
         _make_bundle(), ContextMeta(), store
     )
     contents = [str(m["content"]) for m in messages]
-    autonomy_blocks = [c for c in contents if c.startswith("本轮（AUTONOMY 自主活动）")]
+    autonomy_blocks = [
+        c for c in contents if c.startswith("本轮（AUTONOMY 自主活动）")
+    ]
     assert len(autonomy_blocks) == 1
     assert not any(c.startswith("本轮（内在节拍）") for c in contents)
     assert not any(c.startswith("本轮（陪伴主动聊天）") for c in contents)
@@ -367,7 +399,9 @@ def test_proactive_chat_injects_life_currents_when_present(tmp_path) -> None:
     )
     contents = [str(m["content"]) for m in messages]
     proactive_idx = next(
-        i for i, c in enumerate(contents) if c.startswith("本轮（陪伴主动聊天）")
+        i
+        for i, c in enumerate(contents)
+        if c.startswith("本轮（陪伴主动聊天）")
     )
     life_block = contents[proactive_idx + 1]
     life_lines = life_block.split("\n")

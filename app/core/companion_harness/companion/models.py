@@ -105,7 +105,11 @@ def inner_tick_activity_suppresses_user_delivery(
 
 
 class CompanionTurnTrack(StrEnum):
-    """Active production turn entry tracks (1:1 with ``build_system_messages_for_*``)."""
+    """Active production turn entry tracks (1:1 with ``build_system_messages_for_*``).
+
+    Deprecated successor model: ``prompting.tracks.Track`` + ``Phase`` (settled
+    ``user_turn`` dual-chat leg and single-LLM queue path already migrated).
+    """
 
     USER_CHAT = "user_chat"
     USER_CHAT_BOOTSTRAP = "user_chat_bootstrap"

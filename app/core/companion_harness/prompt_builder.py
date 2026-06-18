@@ -31,13 +31,8 @@ from app.core.companion_harness.companion.prompt_stack import (
     replace_leading_system_messages_inplace,
     weixin_clawbot_contact_alias_system_message,
 )
-from app.core.companion_harness.companion.prompts.system_messages import (
-    _auxiliary_system_messages,
-    _capability_system_messages,
-    _contextual_system_messages,
-    _doctrine_system_messages,
-    _output_system_messages,
-    _persona_system_messages,
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_single_llm_system_messages,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
@@ -123,61 +118,6 @@ def _system_dicts_to_prompt_messages(
     return openai_dialogue_dicts_to_prompt_messages(system_dicts)
 
 
-def _build_system_messages_for_single_llm_user_chat(
-    bundle: PromptBundle,
-    context: ContextMeta,
-) -> list[dict[str, Any]]:
-    """Queue-serving settled ``USER_CHAT``: single LLM with in-turn tools."""
-    out: list[dict[str, Any]] = []
-    out.extend(_doctrine_system_messages())
-    out.extend(_auxiliary_system_messages())
-    out.extend(
-        _capability_system_messages(
-            bundle=bundle,
-            tools_on=True,
-            chat_branch_no_tool_api=False,
-            tool_side_compact=False,
-            inner_tick_turn=False,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _persona_system_messages(
-            bundle=bundle,
-            context=context,
-            inner_tick_turn=False,
-            skip_memory_blocks=False,
-            include_significance_perception_slice=False,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _output_system_messages(
-            inner_tick_turn=False,
-            tick_proactive=False,
-            tools_on=True,
-            tool_side_compact=False,
-            async_foreground_chat_stack=False,
-            interactive_bootstrap_active=False,
-            include_significance_perception_slice=False,
-            chat_branch_no_tool_api=False,
-        )
-    )
-    out.extend(
-        _contextual_system_messages(
-            context=context,
-            inner_tick_turn=False,
-            tick_proactive=False,
-            tick_autonomy=False,
-            repl_online_ack_turn=False,
-            ai_private_text="",
-            proactive_life_currents_block=None,
-            interactive_bootstrap_active=False,
-        )
-    )
-    return out
-
-
 @dataclass(frozen=True)
 class PromptBuilder:
     """Assembles prompt plans for queue-served settled user chat.
@@ -203,7 +143,7 @@ class PromptBuilder:
     ) -> PromptPlan:
         """Assemble initial single-LLM user-chat prompt with in-turn tools enabled."""
         assert user_text.strip() != ""
-        system_dicts = _build_system_messages_for_single_llm_user_chat(
+        system_dicts = build_settled_user_turn_single_llm_system_messages(
             self.bundle,
             self.context,
         )
@@ -272,7 +212,9 @@ def refresh_single_llm_user_chat_prompt_prefix(
     """
     context = load_context_meta(store=store)
     bundle = load_prompt_bundle(store, meta=context)
-    refreshed = _build_system_messages_for_single_llm_user_chat(bundle, context)
+    refreshed = build_settled_user_turn_single_llm_system_messages(
+        bundle, context
+    )
     refreshed = append_runtime_output_format_system_message(
         system_messages=refreshed,
         bundle=bundle,
