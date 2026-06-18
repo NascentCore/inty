@@ -1,11 +1,1 @@
-# `web_app/`：Web 前端（维护态）
-
-**一句话**：曾用于探索 **Web 端与广告相关商业化** 的 Umi/React 应用；**当前无持续投入**，默认 **不要扩展新能力**，除非任务显式点名。
-
-## 读者
-
-- 需要考古旧实现或做极小修复的工程师。
-
-## 技术现实（高层）
-
-- 栈为 **Umi + React + TypeScript**
+# IntelliMate web app (maintenance mode, do not update)
