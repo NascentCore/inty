@@ -1,4 +1,8 @@
-"""Per-scope channel runtime state: bonded endpoints vs ACTIVE downlink."""
+"""Per-scope channel runtime state: bonded endpoints vs ACTIVE downlink.
+
+TODO(rename-channel-to-gateway): Rename channel runtime/registry types to Gateway — they track
+which gateway (weixin/wechat, telegram, sms-phone-number, etc.) is active for a scope.
+"""
 
 from __future__ import annotations
 

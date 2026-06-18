@@ -1,5 +1,7 @@
 """Per-user active runtime channel registry (prototype: in-process only).
 
+TODO(rename-channel-to-gateway): Rename registry/types to Gateway — tracks which human-channel
+gateway (weixin/wechat, telegram, sms-phone-number, etc.) is active per user.
 TODO(telegram-demo-channel-multiplex): Unify with Weixin bridge and WS presence in one registry — #3350
 """
 
