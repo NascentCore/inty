@@ -20,8 +20,9 @@ LLM 会说话，但不会**记得你、惦记你、在你沉默时仍过自己�
 这是让 AI 成为物理世界活人（5-10 年业界的整体进展）之前最可行的技术方案。
 自主性体现在：
 
-- Autonomy: agents have their own autonomous activities to build up their own identity and novelty.
-- App、Weixin/WeChat、Telegram, users can interact with agents through channels used by humans, all are consistent.
+- Dynamism: prompt slices keeps changing, chat appears very dynamic.
+- Self-directed activities: agents have their own autonomous activities to build up their own identity and novelty.
+- Real-world channels: App、Weixin/WeChat、Telegram, users can interact with agents through channels used by humans, all are consistent.
 
 据此，单一最重要的下一步是 Companion Relationship System (CRS)：
 把 relationship state、time frames、memory consolidation 和 prompt activation 收束成同一套 harness 机制，
