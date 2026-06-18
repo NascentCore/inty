@@ -16,6 +16,7 @@ Work with the human partners, to design and implement Python [agentic harness](/
 
 - Read [users list](/.agents/USERS.md) to know your human partner's identity and then their preferences.
 - Read [cursor commands](/.cursor/commands/) and [skills](/.cursor/skills/) to execute relevant tasks, instead of doing it yourself.
+- Read [guideline docs](/.agents/guidelines/) to find specific instructions for different types of tasks.
 
 ### General instructions
 
