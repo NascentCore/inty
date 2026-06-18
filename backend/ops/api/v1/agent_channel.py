@@ -5,9 +5,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
-from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
-)
 from app.schemas.response import APIResponse
 from app.services.agentic_channel.endpoints import list_endpoints_for_agent
 

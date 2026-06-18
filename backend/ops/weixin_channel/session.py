@@ -29,14 +29,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from loguru import logger
-
 if TYPE_CHECKING:
     from backend.ops.weixin_channel.inprocess_presence import (
         WeixinInprocessPresence,
     )
     from backend.ops.weixin_channel.transport import (
-        WeixinCredential,
         WeixinInboundMessage,
         WeixinTransport,
     )
