@@ -30,6 +30,10 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | Scheduled reminder inner tick | ``build_system_messages_for_inner_tick_scheduled`` |
 | Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` (bootstrap: inject ``BOOTSTRAP.md``, omit Capability package slices; chat-only, no tools) |
 
+TODO(!3515): Define human-preference output guidance for user-visible tracks
+(``user_turn``, ``proactive_chat``, ``scheduled_activity``, ``sign_on_greeting``)
+before replacing these prompt entrypoints with track-composed templates.
+
 ``build_system_messages`` is the internal combiner; tests may call it directly.
 
 Post-transcript slices (e.g. ``## user-time-context`` in ``turn_pipeline``) are not built here.

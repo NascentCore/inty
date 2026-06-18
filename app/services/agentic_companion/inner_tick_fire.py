@@ -9,6 +9,9 @@ User chat on the same scope also holds that lock — inner ticks (including drea
 user messages serialize per ``(user_id, agent_id, chat_id)``. Prototype: single presence
 per paired user (``companion_harness`` AGENTS.md).
 
+TODO(!3516): Simplify scope serialization and foreground-pending skip rules during
+the AgenticLoop + InputQueue/OutputQueue + Channel overhaul.
+
 TODO(dreaming-cluster-lock): Multi-process backend needs Postgres advisory lock around
 dreaming batches — https://github.com/NascentCore/inty/issues/3271
 
