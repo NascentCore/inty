@@ -17,9 +17,6 @@ from threading import Lock
 from typing import TYPE_CHECKING, Any
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
-    ReadyOutputMessage,
-)
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
 )
@@ -28,9 +25,6 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
-)
-from app.core.companion_harness.companion.utc import (
-    strip_leading_transcript_timestamp_prefixes,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.scope_queue_serving import (
@@ -164,13 +158,11 @@ def _remove_scope_turn_delivery(
 
 async def _scope_deliver_ready_output(
     scope: AgentScope,
-    message: ReadyOutputMessage,
+    text: str,
+    message_ids: tuple[str, ...],
 ) -> None:
-    state = _lookup_scope_turn_delivery_for_output(scope, message.message_ids)
+    state = _lookup_scope_turn_delivery_for_output(scope, message_ids)
     assert state is not None
-    text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
-    if not text:
-        return
     await state.send_text(text)
 
 
@@ -253,8 +245,10 @@ async def _ensure_app_ws_scope_queue_serving(
         if existing is not None:
             return existing
 
-        async def deliver_ready(message: ReadyOutputMessage) -> None:
-            await _scope_deliver_ready_output(scope, message)
+        async def deliver_ready(
+            text: str, message_ids: tuple[str, ...]
+        ) -> None:
+            await _scope_deliver_ready_output(scope, text, message_ids)
 
         serving = ScopeQueueServing(
             scope,

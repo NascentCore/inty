@@ -22,11 +22,7 @@ from app.services.agentic_companion.ws_queue_serving import (
     enqueue_app_ws_user_turn_and_wake,
     stop_app_ws_scope_queue_serving,
 )
-from app.core.companion_harness.agentic_companion.output_queue import (
-    ReadyOutputMessage,
-)
 from app.services.agentic_channel.scope_queue_serving import ScopeDrainCompletion
-from app.services.agentic_companion.downlink import DownlinkKind
 
 
 @pytest.fixture(autouse=True)
@@ -230,25 +226,13 @@ async def test_deliver_ready_output_routes_by_input_message_ids() -> None:
 
     await _scope_deliver_ready_output(
         scope,
-        ReadyOutputMessage(
-            message_id="out-a",
-            batch_id="batch-a",
-            kind=DownlinkKind.USER_REPLY,
-            text="reply for a",
-            sequence=1,
-            message_ids=("queue-msg-a",),
-        ),
+        "reply for a",
+        ("queue-msg-a",),
     )
     await _scope_deliver_ready_output(
         scope,
-        ReadyOutputMessage(
-            message_id="out-b",
-            batch_id="batch-b",
-            kind=DownlinkKind.USER_REPLY,
-            text="reply for b",
-            sequence=1,
-            message_ids=("queue-msg-b",),
-        ),
+        "reply for b",
+        ("queue-msg-b",),
     )
 
     assert sent_by_turn["a"] == ["reply for a"]

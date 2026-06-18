@@ -36,7 +36,7 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 
 SendTextFn = Callable[[str], Awaitable[None]]
-DeliverReadyOutputFn = Callable[[ReadyOutputMessage], Awaitable[None]]
+DeliverReadyOutputFn = Callable[[str, tuple[str, ...]], Awaitable[None]]
 
 _CHANNEL_OUTPUT_PUMP_POLL_SEC = 0.02
 
@@ -89,7 +89,7 @@ async def _deliver_ready_message(
         return None
     try:
         if deliver_ready is not None:
-            await deliver_ready(message)
+            await deliver_ready(text, message.message_ids)
         else:
             assert send_text is not None
             await send_text(text)
