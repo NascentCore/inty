@@ -8,7 +8,7 @@ Read [Companion Harness Design](/docs/companion_harness/DESIGN.md) to understand
   Agentic companion simulates a **living person**, while the iMate product provides features to smoothly and pleasingly
   onboard users to this whole new experience of AI companionship,
   because, inevitably, an AI companion is totally new, people can only engage it through familiar manners,
-  and then form a meaningful bonding with Inty through long-term interactions.
+  and then form a meaningful bonding with iMate through long-term interactions.
 
 ## iMate's Visions
 
