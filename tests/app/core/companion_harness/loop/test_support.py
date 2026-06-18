@@ -1,4 +1,7 @@
-"""Shared test helpers for agentic loop sidecar tests."""
+"""Shared test helpers for legacy agentic loop sidecar tests (``test_support`` consumers).
+
+For ``loop/context.py`` builder kwargs, use ``context_builder_test_support`` instead.
+"""
 
 from __future__ import annotations
 

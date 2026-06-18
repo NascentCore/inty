@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 """Automated local Ops + WebSocket regression for companion queue-serving.
 
-Drives bootstrap turns, one settled user turn, and waits for inner-tick proactive
-chat via ``BackendChatWsBridge`` (same transport as ``inty_v2_repl``). Writes a
-JSON report under ``tmp/`` and prints a one-line SUMMARY.
+Skill smoke driver (not ``app/`` production code). Drives bootstrap turns, one
+settled user turn, and waits for inner-tick proactive chat via
+``BackendChatWsBridge`` (same transport as ``inty_v2_repl``). Writes a JSON
+report under ``tmp/`` and prints a one-line SUMMARY.
+
+Layout:
+- Driver: ``run_regression`` / ``main`` for end-to-end WS and Postgres checks.
+- Strict-mode DB verification: below ``_is_inner_tick_proactive``; when no
+  proactive WS frame arrives, it queries ``chat_history`` for silent inner ticks.
+  ``_parse_proactive_chat_history_rows`` is unit-tested in
+  ``tests/cursor/skills/scripts/test_run_inty_repl_regression.py``.
 
 Run with shell cwd = repository root (or any path under the repo).
 """
@@ -231,6 +239,9 @@ def _is_inner_tick_proactive(meta: dict[str, Any]) -> bool:
     return lane == "inner_tick" and activity == "proactive_chat"
 
 
+# --- strict-mode DB verification (unit-tested; see tests/cursor/skills/scripts/) ---
+
+
 def _query_proactive_chat_history_rows(
     repo_root: Path,
     config_path: Path,
@@ -239,7 +250,7 @@ def _query_proactive_chat_history_rows(
     agent_id: str,
     run_started_at_utc: datetime,
 ) -> list[ProactiveChatHistoryRow]:
-    """Return synthetic proactive rows for visible or silent inner ticks."""
+    """Regression-only: load synthetic proactive ``chat_history`` rows from Postgres."""
     assert user_id != ""
     assert agent_id != ""
     scope_chat = f"agent-scope:{user_id}:{agent_id}"
@@ -284,7 +295,7 @@ ORDER BY proactive.id;
 
 
 def _parse_proactive_chat_history_rows(raw: str) -> list[ProactiveChatHistoryRow]:
-    """Parse JSON lines emitted by ``_query_proactive_chat_history_rows``."""
+    """Regression-only parser for ``_query_proactive_chat_history_rows`` JSON lines."""
     rows: list[ProactiveChatHistoryRow] = []
     for line in raw.strip().splitlines():
         if not line.strip():

@@ -1,6 +1,9 @@
-"""Generated entirely by Cursor agent.
+"""Unit tests for ``run_inty_repl_regression.py`` strict-mode DB verification helpers.
 
-Regression tests for the REPL regression helper script.
+The skill script lives under ``.cursor/skills/scripts/`` and is loaded by file path
+(see ``_load_regression_module``) because it is a CLI utility, not an ``app/`` module.
+Only the JSON-line parser is covered here; the full driver is exercised manually via
+the ``inty-repl-regression`` skill.
 """
 
 from __future__ import annotations
@@ -11,6 +14,7 @@ from pathlib import Path
 
 
 def _load_regression_module():
+    """Load the skill script as a module for unit-testing private parse helpers."""
     module_path = (
         Path(__file__).parents[4]
         / ".cursor"
