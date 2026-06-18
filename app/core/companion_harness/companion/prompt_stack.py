@@ -46,9 +46,11 @@ from .runtime_channel import (
     TurnRuntimeContext,
     is_im_runtime_channel,
 )
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
+)
 from .prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
-    build_system_messages_for_chat_track,
     build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_maintenance,
@@ -208,10 +210,9 @@ def companion_system_messages_for_track(
                     "user_chat track requires ASYNC route, got "
                     f"{route_mode.value}"
                 )
-            out = build_system_messages_for_chat_track(
+            out = build_settled_user_turn_dual_chat_leg_system_messages(
                 bundle,
                 context,
-                memory_bootstrap_type,
             )
     out = append_runtime_output_format_system_message(
         system_messages=out,
@@ -318,10 +319,11 @@ def refresh_companion_turn_prompt_stack(
                     context,
                 )
             else:
-                refreshed = build_system_messages_for_chat_track(
-                    bundle,
-                    context,
-                    memory_bootstrap_type,
+                refreshed = (
+                    build_settled_user_turn_dual_chat_leg_system_messages(
+                        bundle,
+                        context,
+                    )
                 )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             refreshed = build_system_messages_for_inner_tick_maintenance(

@@ -14,11 +14,13 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_single_llm_system_messages,
+)
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
     PromptMessage,
     PromptMessageRole,
-    _build_system_messages_for_single_llm_user_chat,
     openai_dialogue_dicts_to_prompt_messages,
     prompt_messages_to_openai_dicts,
     refresh_single_llm_user_chat_prompt_prefix,
@@ -49,7 +51,9 @@ def _system_text(plan_messages: tuple[PromptMessage, ...]) -> str:
     )
 
 
-def test_build_user_chat_prompt_allows_tools_and_sets_tool_choice_none() -> None:
+def test_build_user_chat_prompt_allows_tools_and_sets_tool_choice_none() -> (
+    None
+):
     tools = tuple(build_openai_repl_tools())
     builder = PromptBuilder(
         bundle=_bundle(),
@@ -85,7 +89,9 @@ def test_build_user_chat_prompt_allows_tools_and_sets_tool_choice_none() -> None
     assert "画夜空" in plan.messages[-1].content
 
 
-def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> None:
+def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> (
+    None
+):
     bundle = _bundle()
     context = ContextMeta()
     dual_foreground = "\n".join(
@@ -99,7 +105,9 @@ def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> N
     )
     single_llm = "\n".join(
         str(m.get("content") or "")
-        for m in _build_system_messages_for_single_llm_user_chat(bundle, context)
+        for m in build_settled_user_turn_single_llm_system_messages(
+            bundle, context
+        )
     )
     assert "禁止在本路发起任何 tool_calls" in dual_foreground
     assert "禁止在本路发起任何 tool_calls" not in single_llm
@@ -117,12 +125,16 @@ def test_prompt_messages_to_openai_dicts_boundary() -> None:
     ]
 
 
-def test_refresh_single_llm_user_chat_prompt_prefix_avoids_tool_background_compact() -> None:
+def test_refresh_single_llm_user_chat_prompt_prefix_avoids_tool_background_compact() -> (
+    None
+):
     store = MemoryStore(
         scope=CompanionScope("user-1", "agent-1", "chat-1"),
         repository=None,
     )
-    store.write_document("context.json", '{"context_mode":"emotional_companion"}')
+    store.write_document(
+        "context.json", '{"context_mode":"emotional_companion"}'
+    )
     store.write_document("IDENTITY.md", "id")
     store.write_document("USER.md", "user")
     runtime = TurnRuntimeContext(
@@ -133,7 +145,9 @@ def test_refresh_single_llm_user_chat_prompt_prefix_avoids_tool_background_compa
         _bundle(),
         ContextMeta(),
     )
-    compact_joined = "\n".join(str(m.get("content") or "") for m in compact_prefix)
+    compact_joined = "\n".join(
+        str(m.get("content") or "") for m in compact_prefix
+    )
     assert "并行 chat 路已承担对用户话术" in compact_joined
 
     messages: list[dict[str, Any]] = [

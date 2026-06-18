@@ -22,7 +22,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | Scenario | Function |
 |----------|----------|
 | USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``build_system_messages_for_bootstrap_track`` (no Capability package slices) |
-| ASYNC user-round foreground + plan prefix | ``build_system_messages_for_chat_track`` |
+| ASYNC user-round foreground + plan prefix | ``build_settled_user_turn_dual_chat_leg_system_messages`` (``prompting/tracks``) |
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
 | ASYNC autonomy inner tick (silent self-directed work) | ``build_system_messages_for_inner_tick_autonomy`` |
@@ -875,26 +875,8 @@ def build_system_messages_for_bootstrap_track(
     )
 
 
-# TODO(!3468): USER_CHAT does not inject fresh LIFE_CURRENTS.md after AUTONOMY; user replies
-# may ignore silent virtual-space work (trace 019ed438-f634-7941-b109-cbdc9e2e9510).
-def build_system_messages_for_chat_track(
-    bundle: PromptBundle,
-    context: ContextMeta,
-    memory_bootstrap_type: str,
-) -> list[dict[str, Any]]:
-    """ASYNC user round: foreground chat (``tools=None``) and ``prompt_plan`` prefix."""
-    return build_system_messages(
-        bundle,
-        context,
-        enable_tools=True,
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
-        ai_private_text="",
-        async_foreground_chat_stack=True,
-        tool_side_compact=False,
-        interactive_bootstrap_active=False,
-        include_significance_perception_slice=True,
-    )
+# TODO(!3453): Dual-LLM tool-background leg still uses ``build_system_messages_for_tool_track``;
+# migrate to track-composed slices in a follow-up PR.
 
 
 def build_system_messages_for_tool_track(
