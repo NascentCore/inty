@@ -73,16 +73,25 @@ class PromptMessage:
 
 @dataclass(frozen=True)
 class PromptPlan:
-    """Complete initial prompt for one single-model user turn with tools.
+    """Abstract composition of prompt slices bolted together through abstract data types.
 
     Holds ordered messages plus tool definitions and optional tool-choice hint
     for the first model call in an in-turn sync tool loop.
+
+    TODO: SystemMessage, UserMessage, AssistantMessage, ToolMessage, etc.
+    These should be defined as abstract data types, not concrete classes.
+
+    TODO: Should be ordered list of messages, and allow tools to update the content and order.
+    The meta-description of a PromptPlan object can be output as description for LLM
+    to reorder and update the messages.
     """
 
-    messages: tuple[PromptMessage, ...]
+    messages: tuple[
+        PromptMessage, ...
+    ]  # TODO: This should be abstract data type.
     # TODO(!3398): Type tool schemas instead of OpenAI dict payloads.
     tools: tuple[dict[str, Any], ...]
-    tool_choice: str | None
+    tool_choice: str | None  # TODO: This should be enum.
 
 
 def openai_dialogue_dicts_to_prompt_messages(

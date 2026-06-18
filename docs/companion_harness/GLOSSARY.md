@@ -1,5 +1,11 @@
 # Glossary
 
+- MemoryStore: The mechanism of persisting a lice of memory.
+  It provides a file-system path addressing with semantic naming in the components.
+  - MemDoc: The data type representing a lice of memory. It has path in MemoryStore.
+    We call it Doc/Document because they have to be human readable.
+    They manifested into whatever responses LLM gave when being assembled into Prompt of LLM calls.
+
 ## 参照系
 
 | 术语 | 英文别名 | 定义 |
