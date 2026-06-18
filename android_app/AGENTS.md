@@ -1,10 +1,6 @@
-# IntelliMate（`android_app/`）：维护态 Android 客户端
+# IntelliMate Android App (maintenance mode, do not update)
 
 **一句话**：这是 **较早一代 IntelliMate Android 代码树**，整体处于 **维护模式**；新功能优先落在 **iMate**（`imate_android_app/`），除非任务明确要求改此处。
-
-## 读者
-
-- 仍需修 bug、做兼容或读历史实现的工程师；**不要**把这里当作默认新功能落点。
 
 ## 产品与环境直觉
 
@@ -26,12 +22,3 @@
 
 - **单一网络栈**：Retrofit + Moshi 等与主线一致；**不要**并行再造一套 HTTP 客户端森林。
 - **迁移期约束**（若仍有「去 Stainless / 旧 SDK」类计划）：**禁止**在业务代码中新增旧网络入口的运行时依赖；新增调用走统一的 **Service Manager + API 接口 + 本地 DTO** 模式——具体禁止项以当前迁移文档为准。
-
-## 合规与 AI 透明
-
-- **AI 生成内容**在 UI 上需 **显著标识**；遵守团队选定的 **地区法规与平台准则**（如标识义务、数据最小化、可删除可修改）。
-- **涉及 AI 画廊等场景**：明确标注来源，避免与 UGC 混淆。
-
-## 深入阅读
-
-- 设计 token 与主题入口见 `core/design` 包内主题文件；细节以代码为准。
