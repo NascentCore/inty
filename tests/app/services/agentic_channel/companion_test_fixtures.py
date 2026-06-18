@@ -6,12 +6,15 @@ side effects). Maintenance-mode HTTP tests should keep using ``agent_service`` d
 
 from __future__ import annotations
 
+from sqlalchemy import delete
+
 from app.core.companion_harness.agent_channel.guest_agent_kind import (
     CompanionGuestAgentKind,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
+from app.models.companion_bond import CompanionBond
 from app.models.user import User
 from app.services.agentic_channel.companion_guest_provision import (
     GuestUserInput,
@@ -19,6 +22,17 @@ from app.services.agentic_channel.companion_guest_provision import (
     add_guest_user,
     provision_guest_scope,
 )
+
+
+async def delete_guest_scope_for_test(scope: AgentScope) -> None:
+    """Delete companion guest scope rows created by agentic_channel fixtures."""
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            delete(CompanionBond).where(CompanionBond.user_id == scope.user_id)
+        )
+        await db.execute(delete(Agent).where(Agent.creator_id == scope.user_id))
+        await db.execute(delete(User).where(User.id == scope.user_id))
+        await db.commit()
 
 
 def assert_companion_guest_identity_has_no_readable_id(
