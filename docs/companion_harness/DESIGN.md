@@ -75,38 +75,38 @@ Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**�
 ## 目标架构图
 
 ```
-                    ┌──────────────────────────────────────┐
-                    │  Users side                          │
-                    └───────────────────┬──────────────────┘
-                                        │
-                    ┌───────────────────▼──────────────────┐
-                    │  Channel layer (Exo─runtime)         │
-                    │  Realtime channel  │  IM channel     │
-                    │  iMate App · REPL · WeChat · Telegram│
-                    └───────────────────┬──────────────────┘
-                                        │
-                    ┌───────────────────▼──────────────────┐
-                    │  Governance (minimal in prototype)   │
-                    │  auth · usage · visible history ·    │
-                    │  protocol adaptation                 │
-                    └───────────────────┬──────────────────┘
-                                        │
-                    ┌───────────────────▼──────────────────┐
-                    │        InputQueue & OutputQueue      │
-                    └───────────────────┬──────────────────┘
-                                        │
-                    ┌───────────────────▼──────────────────┐   ┌────────────────────────────────────────┐
-                    │  Companion Harness kernel            │◄─►│  Techno Core shared virtual world      │
-                    │  relationship · memory · turns ·     │   │  ┌──────────────────────────────────┐  │
-                    │  tools                               │   │  │ Living Sphere                    │  │
-                    └───────────────────┬──────────────────┘   │  │ personal living space            │  │
-                                        │                      │  └──────────────────────────────────┘  │
-                                        │                      └────────────────────────────────────────┘
-                    ┌───────────────────▼─────────────────┐
-                    │  Persistence                        │
-                    │  long─term memory & dialogue trace  │
-                    │  Database, GCS for media data       │
-                    └─────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  Users side                          │
+└───────────────────┬──────────────────┘
+                    │
+┌───────────────────▼──────────────────┐
+│  Channel layer (Exo─runtime)         │
+│  Realtime channel  │  IM channel     │
+│  iMate App · REPL · WeChat · Telegram│
+└───────────────────┬──────────────────┘
+                    │
+┌───────────────────▼──────────────────┐
+│  Governance (minimal in prototype)   │
+│  auth · usage · visible history ·    │
+│  protocol adaptation                 │
+└───────────────────┬──────────────────┘
+                    │
+┌───────────────────▼──────────────────┐
+│        InputQueue & OutputQueue      │
+└───────────────────┬──────────────────┘
+                    │
+┌───────────────────▼──────────────────┐   ┌────────────────────────────────────────┐
+│  Companion Harness kernel            │◄─►│  Techno Core shared virtual world      │
+│  relationship · memory · turns ·     │   │  ┌──────────────────────────────────┐  │
+│  tools                               │   │  │ Living Sphere                    │  │
+└───────────────────┬──────────────────┘   │  │ personal living space            │  │
+                    │                      │  └──────────────────────────────────┘  │
+                    │                      └────────────────────────────────────────┘
+┌───────────────────▼─────────────────┐
+│  Persistence                        │
+│  long─term memory & dialogue trace  │
+│  Database, GCS for media data       │
+└─────────────────────────────────────┘
 ```
 
 ### Harness 内核（职责展开）
