@@ -202,7 +202,7 @@ async def try_fire_scheduled_inner_tick(
             coordinator.bind_inner_tick_proactive_tool_bg_idle(None)
 
         ws_implicit = implicit_signal_bundle_from_tc_box(fire_input.tc_box)
-        await deliver_visible_inner_tick_turn(
+        delivered = await deliver_visible_inner_tick_turn(
             InnerTickVisibleDeliverInput(
                 delivery=fire_input.delivery,
                 session_id=session_id,
@@ -229,15 +229,26 @@ async def try_fire_scheduled_inner_tick(
             )
         )
 
-    logger.info(
-        "companion_ws_scheduled_reminder pushed assistant ws_conn_id={} user={} "
-        "agent={} chat_id={} task_id={}",
-        ws_conn_id,
-        coords.user_id,
-        coords.agent_id,
-        coords.chat_row_id,
-        due_task.id,
-    )
+    if delivered:
+        logger.info(
+            "companion_ws_scheduled_reminder pushed assistant ws_conn_id={} user={} "
+            "agent={} chat_id={} task_id={}",
+            ws_conn_id,
+            coords.user_id,
+            coords.agent_id,
+            coords.chat_row_id,
+            due_task.id,
+        )
+    else:
+        logger.info(
+            "companion_ws_scheduled_reminder silent ws_conn_id={} user={} agent={} "
+            "chat_id={} task_id={}",
+            ws_conn_id,
+            coords.user_id,
+            coords.agent_id,
+            coords.chat_row_id,
+            due_task.id,
+        )
     return True
 
 
@@ -294,7 +305,7 @@ async def try_fire_proactive_chat_inner_tick(
             coordinator.bind_inner_tick_proactive_tool_bg_idle(None)
 
         ws_implicit = implicit_signal_bundle_from_tc_box(fire_input.tc_box)
-        await deliver_visible_inner_tick_turn(
+        delivered = await deliver_visible_inner_tick_turn(
             InnerTickVisibleDeliverInput(
                 delivery=fire_input.delivery,
                 session_id=session_id,
@@ -321,14 +332,23 @@ async def try_fire_proactive_chat_inner_tick(
             )
         )
 
-    logger.info(
-        "companion_ws_proactive_chat pushed assistant ws_conn_id={} user={} agent={} "
-        "chat_id={}",
-        ws_conn_id,
-        coords.user_id,
-        coords.agent_id,
-        coords.chat_row_id,
-    )
+    if delivered:
+        logger.info(
+            "companion_ws_proactive_chat pushed assistant ws_conn_id={} user={} agent={} "
+            "chat_id={}",
+            ws_conn_id,
+            coords.user_id,
+            coords.agent_id,
+            coords.chat_row_id,
+        )
+    else:
+        logger.info(
+            "companion_ws_proactive_chat silent ws_conn_id={} user={} agent={} chat_id={}",
+            ws_conn_id,
+            coords.user_id,
+            coords.agent_id,
+            coords.chat_row_id,
+        )
     return True
 
 

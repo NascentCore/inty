@@ -144,6 +144,7 @@ For proactive:
   - current tail user message with `[SYSTEM PROACTIVE CHAT] Time since...`
   - historical proactive synthetic user rows when still in transcript window
 - `[SILENT]` is a valid output.
+- When assistant output is `[SILENT]`, no WS downlink is sent; strict mode still passes if `chat_history` has a synthetic `[SYSTEM PROACTIVE CHAT]` user row for this agent after the run started (driver checks DB after the proactive wait).
 
 ## Pass Criteria
 

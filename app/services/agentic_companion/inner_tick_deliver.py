@@ -58,8 +58,11 @@ class InnerTickVisibleDeliverInput:
 
 async def deliver_visible_inner_tick_turn(
     deliver_input: InnerTickVisibleDeliverInput,
-) -> None:
-    """Write chat_history rows and enqueue outbound assistant payload when non-empty."""
+) -> bool:
+    """Write chat_history rows and enqueue outbound assistant payload when non-empty.
+
+    Returns True when user-visible assistant text was delivered on the channel.
+    """
     if not deliver_input.skip_user_history:
         user_meta = dump_chat_ws_companion_wire_meta(
             deliver_input.user_wire_meta
@@ -75,7 +78,7 @@ async def deliver_visible_inner_tick_turn(
         str(companion_reply) if companion_reply is not None else ""
     )
     if reply_stripped is None:
-        return
+        return False
 
     companion_ai_meta = companion_ai_meta_from_turn_result(
         deliver_input.companion_turn,
@@ -160,3 +163,4 @@ async def deliver_visible_inner_tick_turn(
             ws_payload=out,
             assistant_text=response_text_content,
         )
+    return True

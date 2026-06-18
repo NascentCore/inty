@@ -18,6 +18,8 @@ import subprocess
 import sys
 import time
 import uuid
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -25,6 +27,7 @@ _TAG = "[inty-repl-regression]"
 _DEFAULT_API_BASE = "http://127.0.0.1:8001"
 _DEFAULT_CONFIG = "devops/config.yaml.local"
 _DEFAULT_USER_ID = "user-testing"
+_PROACTIVE_CHAT_HISTORY_MARKER = "[SYSTEM PROACTIVE CHAT]"
 _DEFAULT_BOOTSTRAP_TURNS = (
     "who are you?",
     "用中文吧",
@@ -40,6 +43,16 @@ _DEFAULT_SETTLED_TURN = "今天天气怎么样？"
 _RECV_POLL_SEC = 0.25
 _TURN_REPLY_TIMEOUT_SEC = 180.0
 _TURN_TRAILING_QUIET_SEC = 5.0
+
+
+@dataclass(frozen=True)
+class ProactiveChatHistoryRow:
+    """Synthetic proactive user row observed in ``chat_history`` after the run starts."""
+
+    chat_history_id: str
+    content_preview: str
+    created_at: str
+    has_assistant_reply: bool
 
 
 def _find_repo_root() -> Path:
@@ -218,6 +231,101 @@ def _is_inner_tick_proactive(meta: dict[str, Any]) -> bool:
     return lane == "inner_tick" and activity == "proactive_chat"
 
 
+def _query_proactive_chat_history_rows(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    run_started_at_utc: datetime,
+) -> list[ProactiveChatHistoryRow]:
+    """Return synthetic proactive rows for visible or silent inner ticks."""
+    assert user_id != ""
+    assert agent_id != ""
+    scope_chat = f"agent-scope:{user_id}:{agent_id}"
+    session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, scope_chat))
+    since = run_started_at_utc.isoformat()
+    raw = _psql(
+        repo_root,
+        config_path,
+        f"""
+WITH proactive AS (
+  SELECT ch.id,
+         left(ch.message->'data'->>'content', 120) AS content_preview,
+         ch.created_at,
+         lead(ch.id) OVER (ORDER BY ch.id) AS next_proactive_id
+  FROM chat_history ch
+  WHERE ch.session_id = '{session_id}'
+    AND ch.created_at >= timestamptz '{since}'
+    AND ch.meta_data->>'companion_proactive_chat' = 'true'
+    AND ch.meta_data->>'inner_tick' = 'true'
+    AND ch.message->'data'->>'content' LIKE '{_PROACTIVE_CHAT_HISTORY_MARKER}%'
+)
+SELECT json_build_object(
+       'chat_history_id', proactive.id::text,
+       'content_preview', proactive.content_preview,
+       'created_at', proactive.created_at::text,
+       'has_assistant_reply', EXISTS (
+           SELECT 1
+           FROM chat_history ai
+           WHERE ai.session_id = '{session_id}'
+             AND ai.message->>'type' = 'ai'
+             AND ai.id > proactive.id
+             AND (
+               proactive.next_proactive_id IS NULL
+               OR ai.id < proactive.next_proactive_id
+             )
+       ))
+FROM proactive
+ORDER BY proactive.id;
+""",
+    )
+    return _parse_proactive_chat_history_rows(raw)
+
+
+def _parse_proactive_chat_history_rows(raw: str) -> list[ProactiveChatHistoryRow]:
+    """Parse JSON lines emitted by ``_query_proactive_chat_history_rows``."""
+    rows: list[ProactiveChatHistoryRow] = []
+    for line in raw.strip().splitlines():
+        if not line.strip():
+            continue
+        raw_row = json.loads(line)
+        rows.append(
+            ProactiveChatHistoryRow(
+                chat_history_id=str(raw_row["chat_history_id"]),
+                content_preview=str(raw_row["content_preview"]),
+                created_at=str(raw_row["created_at"]),
+                has_assistant_reply=bool(raw_row["has_assistant_reply"]),
+            )
+        )
+    return rows
+
+
+def _record_proactive_from_db(
+    report: dict[str, Any],
+    rows: list[ProactiveChatHistoryRow],
+) -> None:
+    for row in rows:
+        report["proactive"].append(
+            {
+                "text_preview": row.content_preview,
+                "meta": {
+                    "source": "db_chat_history",
+                    "chat_history_id": row.chat_history_id,
+                    "inner_tick_activity": "proactive_chat",
+                },
+                "silent": not row.has_assistant_reply,
+                "created_at": row.created_at,
+            }
+        )
+        print(
+            f"{_TAG} proactive observed (db) chat_history_id={row.chat_history_id} "
+            f"silent={not row.has_assistant_reply} "
+            f"preview={row.content_preview[:60]!r}",
+            flush=True,
+        )
+
+
 def run_regression(
     *,
     repo_root: Path,
@@ -254,6 +362,7 @@ def run_regression(
         "errors": [],
     }
     print(f"{_TAG} agent_id={agent_id}", flush=True)
+    run_started_at_utc = datetime.now(timezone.utc)
     bridge.start(connect_timeout=45.0)
     try:
         print(f"{_TAG} waiting for implicit greeting...", flush=True)
@@ -447,6 +556,26 @@ LIMIT 8;
         "output_queue": out_q.strip(),
         "output_latest": out_latest.strip(),
     }
+
+    if not report["proactive"]:
+        proactive_rows = _query_proactive_chat_history_rows(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+            run_started_at_utc=run_started_at_utc,
+        )
+        if proactive_rows:
+            report["db"]["proactive_chat_history"] = [
+                {
+                    "chat_history_id": row.chat_history_id,
+                    "content_preview": row.content_preview,
+                    "created_at": row.created_at,
+                    "silent": not row.has_assistant_reply,
+                }
+                for row in proactive_rows
+            ]
+            _record_proactive_from_db(report, proactive_rows)
 
     ctx_line = ctx_rows.strip().split("\n")[0] if ctx_rows.strip() else ""
     parts = ctx_line.split("|") if ctx_line else []
