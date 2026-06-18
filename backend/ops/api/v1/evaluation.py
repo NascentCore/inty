@@ -1,9 +1,8 @@
 """评测系统API端点 - 专门用于评测聊天系统效果"""
 
-import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.ops.schemas.evaluation import (
@@ -503,7 +502,13 @@ async def monitor_evaluation_session(
         while True:
             try:
                 await websocket.receive_text()
+            except WebSocketDisconnect:
+                break
             except Exception:
+                logger.exception(
+                    "evaluation monitor websocket receive failed session_id={}",
+                    session_id,
+                )
                 break
 
     except Exception as e:
@@ -948,7 +953,7 @@ async def get_evaluation_templates(
         # 构建查询条件
         conditions = [EvaluationTemplate.creator_id == current_user.id]
         if include_public:
-            conditions.append(EvaluationTemplate.is_public == True)
+            conditions.append(EvaluationTemplate.is_public)
 
         stmt = (
             select(EvaluationTemplate)

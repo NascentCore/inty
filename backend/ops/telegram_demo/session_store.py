@@ -20,7 +20,6 @@ from app.services.agentic_channel.endpoints import (
 from app.services.agentic_channel.presence import (
     clear_presences_for_tests,
     ensure_presence,
-    stop_all_presences,
 )
 
 _scopes_by_address: dict[str, AgentScope] = {}
