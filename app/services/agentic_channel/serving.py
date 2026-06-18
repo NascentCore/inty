@@ -164,7 +164,7 @@ async def drain_and_deliver_user_chat_turn(
     send_text: SendTextFn,
 ) -> UserChatTurnDeliveryResult:
     """Drain one input batch while pumping OutputQueue ready messages to ``send_text``."""
-    # TODO(!3487): Remove when inbound uses enqueue + wake; ScopeQueueServing owns drain+pump.
+    # TODO(!3493): Remove when Weixin migrates; ScopeQueueServing owns drain+pump (!3487 App-WS done #3512).
     # TODO(!3402): Return typed Channel handle result instead of str from presence.
     assert delivery_wire_id != ""
     stop_event = asyncio.Event()
