@@ -36,7 +36,7 @@ Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**�
 在此之上，需要叠加面向特定人群的**产品功能**，来实现陪伴的商业化体验，即**陪伴价值用户可感知、用户有付费意愿**。
 如 [多 agent 世界引擎、sub-agent](/docs/companion_harness/FR_WORLD_ENGINE.md)。
 
-### Concepts & naming
+### Domain concepts
 
 - agentic companion: the thing user interact with to form companionship with,
   it's an abstract union of various static and runtime data and mechanisms,
