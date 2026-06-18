@@ -18,8 +18,8 @@ Companion Harness 提供了**活着的关系**的存在框架；在此之上，i
 大模型会说话，但不会**记得你、惦记你、在你沉默时仍过自己的日子（分享给你）**。
 
 我们认为 AI 突破现有局限成为长期伴侣的关键是：长期自主性，也就是产生用户预期以外的反馈；但这些行为和反馈始终以用户伴侣的视角呈现。
-
 自主性体现在：
+
 - Autonomy: agents have their own autonomous activities to build up their own identity and novelty.
 - App、微信、Telegram, users can interact with agents through channels used by humans, all are consistent.
 
