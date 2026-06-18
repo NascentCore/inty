@@ -26,6 +26,8 @@ from app.services.agentic_channel.companion_guest_provision import (
 
 async def delete_guest_scope_for_test(scope: AgentScope) -> None:
     """Delete companion guest scope rows created by agentic_channel fixtures."""
+    # TODO(companion-test-fixture-cleanup): Replace scattered direct guest-scope
+    # cleanup in companion/telegram tests with this helper.
     async with AsyncSessionLocal() as db:
         await db.execute(
             delete(CompanionBond).where(CompanionBond.user_id == scope.user_id)

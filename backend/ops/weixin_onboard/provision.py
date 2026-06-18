@@ -11,7 +11,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
@@ -40,6 +42,7 @@ from app.services.agentic_channel.endpoints import (
 from app.services.agentic_channel.errors import (
     ChannelEndpointConflictError,
     CompanionBondInvariantError,
+    integrity_error_detail,
 )
 
 _WEIXIN_CHANNEL = CompanionRuntimeChannel.WECHAT_WEIXIN
@@ -103,6 +106,25 @@ async def _require_active_weixin_scope(scope: AgentScope) -> None:
         await require_active_companion_bond(db, scope)
 
 
+async def _provision_result_after_bind_race(
+    ilink_user_id: str,
+) -> ProvisionResult:
+    assert ilink_user_id != ""
+    scope = await _resolve_existing_weixin_scope(ilink_user_id)
+    if scope is None:
+        raise ChannelEndpointConflictError(
+            "weixin endpoint bind violates unique constraint"
+        )
+    await _require_active_weixin_scope(scope)
+    jwt = create_access_token(scope.user_id)
+    return ProvisionResult(
+        user_id=scope.user_id,
+        agent_id=scope.agent_id,
+        jwt=jwt,
+        is_new_user=False,
+    )
+
+
 async def provision_inty_for_ilink_user(
     *, ilink_user_id: str
 ) -> ProvisionResult:
@@ -120,27 +142,52 @@ async def provision_inty_for_ilink_user(
         )
 
     async with AsyncSessionLocal() as db:
+        pending_user_id = ""
+        pending_agent_id = ""
         stale_user = await _user_by_ilink_user_id(db, ilink_user_id)
         if stale_user is not None:
             raise CompanionBondInvariantError(
                 "weixin iLink user exists without channel endpoint bond"
             )
-        scope = await provision_guest_scope(
-            db,
-            ProvisionGuestScopeInput(
-                kind=CompanionGuestAgentKind.WEIXIN,
-                nickname_prefix="Weixin",
-                meta_data={"ilink_user_id": ilink_user_id},
-            ),
-        )
-        await upsert_endpoint_in_session(
-            db,
-            scope,
-            channel=_WEIXIN_CHANNEL,
-            channel_address=ilink_user_id,
-            channel_user_id=ilink_user_id,
-        )
-        await db.commit()
+        try:
+            scope = await provision_guest_scope(
+                db,
+                ProvisionGuestScopeInput(
+                    kind=CompanionGuestAgentKind.WEIXIN,
+                    nickname_prefix="Weixin",
+                    meta_data={"ilink_user_id": ilink_user_id},
+                ),
+            )
+            pending_user_id = scope.user_id
+            pending_agent_id = scope.agent_id
+            await upsert_endpoint_in_session(
+                db,
+                scope,
+                channel=_WEIXIN_CHANNEL,
+                channel_address=ilink_user_id,
+                channel_user_id=ilink_user_id,
+            )
+            await db.commit()
+        except ChannelEndpointConflictError as exc:
+            logger.warning(
+                "weixin onboard bind conflict ilink_user_id={} user_id={} agent_id={} error={}",
+                ilink_user_id,
+                pending_user_id,
+                pending_agent_id,
+                exc,
+            )
+            await db.rollback()
+            return await _provision_result_after_bind_race(ilink_user_id)
+        except IntegrityError as exc:
+            logger.warning(
+                "weixin onboard integrity error ilink_user_id={} user_id={} agent_id={} {}",
+                ilink_user_id,
+                pending_user_id,
+                pending_agent_id,
+                integrity_error_detail(exc),
+            )
+            await db.rollback()
+            return await _provision_result_after_bind_race(ilink_user_id)
         user_id = scope.user_id
         agent_id = scope.agent_id
 

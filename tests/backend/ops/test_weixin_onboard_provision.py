@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 import pytest
@@ -101,6 +102,39 @@ async def test_provision_create_and_reuse(async_db_session: AsyncSession) -> Non
     assert second.jwt != ""
 
     await _delete_user_and_agents(async_db_session, first.user_id)
+
+
+@pytest.mark.asyncio
+async def test_concurrent_provision_reuses_winning_endpoint(
+    async_db_session: AsyncSession,
+) -> None:
+    await async_engine.dispose()
+    ilink_user_id = f"ilink-{uuid.uuid4().hex}"
+
+    results = await asyncio.gather(
+        provision_inty_for_ilink_user(ilink_user_id=ilink_user_id),
+        provision_inty_for_ilink_user(ilink_user_id=ilink_user_id),
+    )
+    assert results[0].user_id == results[1].user_id
+    assert results[0].agent_id == results[1].agent_id
+    assert sum(1 for result in results if result.is_new_user) == 1
+
+    endpoint_rows = await async_db_session.execute(
+        select(AgentChannelEndpoint).where(
+            AgentChannelEndpoint.channel_address == ilink_user_id
+        )
+    )
+    endpoints = endpoint_rows.scalars().all()
+    assert len(endpoints) == 1
+    bond_rows = await async_db_session.execute(
+        select(CompanionBond).where(
+            CompanionBond.user_id == results[0].user_id
+        )
+    )
+    bonds = bond_rows.scalars().all()
+    assert len(bonds) == 1
+
+    await _delete_user_and_agents(async_db_session, results[0].user_id)
 
 
 @pytest.mark.asyncio
