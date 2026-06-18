@@ -9,6 +9,7 @@ Read [Companion Harness Design](/docs/companion_harness/DESIGN.md) to understand
   onboard users to this whole new experience of AI companionship,
   because, inevitably, an AI companion is totally new, people can only engage it through familiar manners,
   and then form a meaningful bonding with iMate through long-term interactions.
+- 产品功能还包括商业化功能
 
 ## iMate's Visions
 
