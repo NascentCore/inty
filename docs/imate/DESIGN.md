@@ -10,3 +10,9 @@ Read [Companion Harness Design](/docs/companion_harness/DESIGN.md) to understand
   onboard users to this whole new experience of AI companionship,
   because, inevitably, an AI companion is totally new, people can only engage it through familiar manners,
   and then form a meaningful bonding with Inty through long-term interactions.
+
+## iMate's Visions
+
+1. A friendly environment, contrary to **harmful environment**:
+   https://user8.bearblog.dev/the-world-is-too-complicated/
+   https://news.ycombinator.com/item?id=48158065
