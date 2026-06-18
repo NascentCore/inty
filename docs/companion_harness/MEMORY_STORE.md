@@ -1,19 +1,15 @@
-# Companion Memory Store
+# Memory Store for agentic companion
 
 ## 一句话
 
-MemoryStore 是 Companion Harness 的「工作区状态层」：人设、对话与控制面文档；持久化到 Postgres `companion_memory_document_versions`；MemoryStore 不复用 legacy `memory` 表。
+MemoryStore 是 Companion Harness 的「工作区状态层」：人设、对话与控制面文档；
+持久化到 Postgres `companion_memory_document_versions`；
+MemoryStore 不复用 legacy `memory` 表。
 
-- **进程内注册表**：`memory_registry.get_memory_store(scope, dsn=...)` 始终挂上 `SqlAlchemyMemoryRepository`，**必须**传入非空 `dsn`（与 `CompanionConfig.memory_pg_dsn`、仓库根 `config.yaml` 的 `database.url` 同源）；不存在「注册表里仅内存、不写库」的路径。纯逻辑测试应直接构造 `MemoryStore(scope, repository=None)` 并绕过注册表；需要走注册表 + ORM 的测试与 `experimental/harness_seeding_demo` 的播种脚本假定 **`database.url` 已配置且库可达**（与 `tests/app/core/companion_harness/companion_memory_registry_dsn.py` 的约定一致）。
-- 不在范围：分层 Markdown 记忆（episodic / gist / semantic）的策展机制 —— 见 [`dreaming_consolidation`](/app/core/companion_harness/memory/dreaming_consolidation.py)。
-- 不在范围：跨 transport / turn / tool 的整体职责切分 —— 见 [`DESIGN.md`](/docs/companion_harness/DESIGN.md)。
-- 不在范围：legacy 主站 `memory` 表与节日 / 日常抽取管线（避免混淆）。
+MemoryStore stores MemDoc.
+MemDoc is human-redable with file-system-like semantic addressing.
 
----
-
-## Memory doc 与 prompt slice
-
-两套概念，不要混用：
+## MemDoc 与 prompt slice
 
 | 概念 | 职责 | 典型落点 |
 |------|------|----------|
@@ -26,17 +22,7 @@ MemoryStore 是 Companion Harness 的「工作区状态层」：人设、对话�
 - **Non-persistable slice** 无 Memory doc 对应体，或仅有包内种子、不以会话文档为真源：`BOOTSTRAP`、`TOOLS`、`SIGNIFICANCE_PERCEPTION`、`AXIOM` / `SAFETY` 等。
 - **Slice 还可来自代码**：固定 doctrine、channel output-format、`user-time-context` 尾缀、inner-tick 合成句等——这些不是 Memory doc，但是 prompt slice。
 
-数据流（persistable）：
-
-```text
-template seed → MemoryStore.write_document → load_prompt_bundle → system message(s)
-```
-
-`context.json`、`.companion_*` JSON 是**控制面**，不是 prompt slice，也不走 1:1 markdown 映射。
-
----
-
-## 当前 MemoryStore：四类状态
+## 当前 MemDoc：四类状态
 
 MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口都是 POSIX 格式相对路径（对模型友好），权威存储在 Postgres `companion_memory_document_versions`，每条文档由 `document_kind` 标签分类。
 
@@ -69,12 +55,3 @@ MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口
 - **`context.json`**：会话元数据 —— experience profile、bootstrap 标志、跳过开关、session id。**禁止**用通用文档写工具直接覆盖；改用字段级 setter 工具（如 experience profile 工具）确保语义。
 - **`.companion_*` / `.inty_v2_*` 状态文件**：管线节拍计数、压实状态、定时队列等快照；由各子系统覆盖式写入，间接影响管线触发与上下文规模。
 - 这一层不属于人设 system 切片；它决定**这一轮怎么走**，不决定**这一轮说什么**。
-
-### 4. 生图索引（`generated_images/`）
-
-- 索引行（`index.jsonl`）随 MemoryStore 一致管理；二进制产物可走对象存储，索引行可记 `gcs_http_url` 等。
-- `generate_image` / `modify_image` 成功后追加索引；后续改图工具按最新记录解析默认源。
-
-## References
-
-[Future ideas](/docs/companion_harness/todos/MEMORY_STORE.md)
