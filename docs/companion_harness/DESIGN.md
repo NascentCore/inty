@@ -19,12 +19,16 @@ Companion Harness 提供了**活着的关系**的存在框架；在此之上，i
 
 我们认为 AI 突破现有局限成为长期伴侣的关键是：长期自主性，也就是产生用户预期以外的反馈；但这些行为和反馈始终以用户伴侣的视角呈现。
 
-单一最重要的下一步是 Companion Relationship System (CRS)：先把 relationship state、time frames、memory consolidation 和 prompt activation 收束成同一套 harness 机制，让所有 autonomous activity 与 channel delivery 都围绕同一段关系演化。
+自主性体现在：
+- Autonomy: agents have their own autonomous activities to build up their own identity and novelty.
+- App、微信、Telegram, users can interact with agents through channels used by humans, all are consistent.
 
-Only reference Epic GitHub issues. Do not include details.
-State of the Epic GitHub issues are in the GitHub issues themselves.
+据此，单一最重要的下一步是 Companion Relationship System (CRS)：
+先把 relationship state、time frames、memory consolidation 和 prompt activation 收束成同一套 harness 机制，
+让所有 autonomous activity 与 channel delivery 都围绕同一段关系演化。
 
-Epic [#3341](https://github.com/nascentcore/inty/issues/3341) — psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
+Epic [#3341](https://github.com/nascentcore/inty/issues/3341)
+psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
 
 ## 目标态：内核与产品
 
