@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Point this repo at .githooks/ (pre-commit: ruff F401 fix + black on staged app/ backend/ .py).
+# Point this repo at .githooks/ (pre-commit: ruff F401 fix + black on staged app/ backend/ tests/ .py).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"

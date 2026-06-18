@@ -1,5 +1,5 @@
 # Shared ruff helpers for git hooks.
-# Scope: app/ backend/ (same paths as python-black.sh). Rule: F401 unused imports only.
+# Scope: app/ backend/ tests/ (same paths as python-black.sh). Rule: F401 unused imports only.
 
 RUFF_UNUSED_IMPORT_RULE="F401"
 

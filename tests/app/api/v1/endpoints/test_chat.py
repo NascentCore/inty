@@ -918,7 +918,9 @@ def _patch_companion_ws_queue_turn(
     *,
     run_companion_chat_turn_for_api,
 ) -> None:
-    async def fake_run_app_ws_user_turn_via_queues(queue_input):
+    async def fake_enqueue_app_ws_user_turn_and_wake(
+        queue_input, *, companion_ws_foreground_pending=None
+    ):
         turn_result = await run_companion_chat_turn_for_api(
             user_id=queue_input.scope.user_id,
             agent_id=queue_input.scope.agent_id,
@@ -938,9 +940,12 @@ def _patch_companion_ws_queue_turn(
             text = turn_result.assistant_text.strip()
             if text:
                 await queue_input.send_text(text)
-            return UserChatTurnDeliveryResult(
-                delivered_text=text,
-                tool_background_started=turn_result.tool_background_started,
+            from app.services.agentic_companion.ws_queue_serving import (
+                AppWsUserTurnEnqueueResult,
+            )
+
+            return AppWsUserTurnEnqueueResult(
+                queue_message_id=queue_input.delivery_flags.queue_message_id
             )
         raise TypeError("run_companion_chat_turn_for_api must return CompanionTurnResult")
 
@@ -954,8 +959,8 @@ def _patch_companion_ws_queue_turn(
             run_companion_chat_turn_for_api,
         )
     monkeypatch.setattr(
-        "app.api.v1.endpoints.chat_ws.run_app_ws_user_turn_via_queues",
-        fake_run_app_ws_user_turn_via_queues,
+        "app.api.v1.endpoints.chat_ws.enqueue_app_ws_user_turn_and_wake",
+        fake_enqueue_app_ws_user_turn_and_wake,
     )
 
 

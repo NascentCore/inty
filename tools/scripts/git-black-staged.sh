@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fix staged Python under app/ and backend/: ruff F401 (unused imports), then black; re-stage.
+# Fix staged Python under app/, backend/, tests/: ruff F401 (unused imports), then black; re-stage.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"

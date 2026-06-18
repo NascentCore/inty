@@ -4,8 +4,7 @@ Legacy chat-completion interfaces are in ``chat.py``.
 Do not mix these 2, i.e., agentic companion and chat completion should be independent.
 
 
-TODO(!3487): USER_CHAT enqueue + wake via ``AgentChannelPresence``; silent send-only inbound.
-TODO(!3488): ``AppWsChannelAdapter`` + single scope ``Coordinator``; retire per-connection queue drain.
+TODO(!3488): ``AppWsChannelAdapter`` on ``turn_channel_up``; one ``Coordinator`` per scope.
 """
 
 import asyncio
@@ -97,7 +96,8 @@ from app.services.agentic_companion.session import Session
 from app.services.agentic_companion.ws_queue_serving import (
     AppWsQueueDeliveryFlags,
     AppWsUserTurnQueueInput,
-    run_app_ws_user_turn_via_queues,
+    enqueue_app_ws_user_turn_and_wake,
+    stop_app_ws_scope_queue_serving,
 )
 from app.services.agentic_companion.ws_turn_support import (
     companion_ai_meta_from_queue_delivery,
@@ -527,6 +527,12 @@ async def _try_handle_ws_user_signed_out_frame(
         recv_msg_uuid = (frame.message_id or "").strip()
         uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
         if ws_leased_agent_id_box[0] == agent_id:
+            await stop_app_ws_scope_queue_serving(
+                AgentScope(
+                    user_id=str(current_user.id),
+                    agent_id=agent_id,
+                )
+            )
             companion_presence_registry().release(
                 current_user.id,
                 agent_id,
@@ -1338,7 +1344,7 @@ async def _agent_chat_ws_completions_impl(
                                 agent_id=agent_id,
                             )
                             wire_id = f"app:{ws_conn_id}"
-                            delivery_result = await run_app_ws_user_turn_via_queues(
+                            await enqueue_app_ws_user_turn_and_wake(
                                 AppWsUserTurnQueueInput(
                                     scope=scope,
                                     wire_id=wire_id,
@@ -1348,7 +1354,8 @@ async def _agent_chat_ws_completions_impl(
                                     background_output_sink=companion_background_sink,
                                     delivery_flags=delivery_flags,
                                     send_text=send_user_reply,
-                                )
+                                ),
+                                companion_ws_foreground_pending=companion_ws_foreground_pending,
                             )
                             if (
                                 companion_preset_uid is not None
@@ -1359,29 +1366,6 @@ async def _agent_chat_ws_completions_impl(
                                     companion_ws_foreground_pending=companion_ws_foreground_pending,
                                     client_message_id=companion_preset_uid,
                                     queue_message_id=delivery_flags.queue_message_id,
-                                )
-                            if (
-                                companion_preset_uid is not None
-                                and companion_ws_foreground_pending is not None
-                                and not delivery_result.tool_background_started
-                            ):
-                                _clear_ws_foreground_pending_aliases(
-                                    companion_ws_foreground_pending=companion_ws_foreground_pending,
-                                    client_message_id=companion_preset_uid,
-                                    queue_message_id=delivery_flags.queue_message_id,
-                                )
-                            if (
-                                not delivery_result.delivered_text.strip()
-                                and not delivery_result.tool_background_started
-                            ):
-                                logger.error(
-                                    "Companion queue chat returned no content agent_id={} user_id={}",
-                                    agent_id,
-                                    current_user.id,
-                                )
-                                raise HTTPException(
-                                    status_code=500,
-                                    detail="Chat returned no content",
                                 )
                             if companion_ws_inner_tick_ctx is not None:
                                 apply_companion_ws_inner_tick_coords(
@@ -1925,6 +1909,12 @@ async def chat_completions_websocket(
         )
         leased_agent_id = ws_leased_agent_id_box[0]
         if leased_agent_id is not None:
+            await stop_app_ws_scope_queue_serving(
+                AgentScope(
+                    user_id=str(current_user.id),
+                    agent_id=leased_agent_id,
+                )
+            )
             companion_presence_registry().release(
                 current_user.id,
                 leased_agent_id,

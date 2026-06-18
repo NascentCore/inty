@@ -31,6 +31,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.serving import (
+    DeliverReadyOutputFn,
     SendTextFn,
     channel_output_pump,
     drain_scope_once_via_companion,
@@ -75,15 +76,17 @@ class ScopeQueueServing:
         scope: AgentScope,
         *,
         background_output_sink,
-        send_text: SendTextFn,
+        send_text: SendTextFn | None = None,
+        deliver_ready: DeliverReadyOutputFn | None = None,
         on_drain_complete: OnDrainCompleteFn,
     ) -> None:
         assert scope is not None
-        assert send_text is not None
+        assert (send_text is not None) != (deliver_ready is not None)
         assert on_drain_complete is not None
         self._scope = scope
         self._background_output_sink = background_output_sink
         self._send_text = send_text
+        self._deliver_ready = deliver_ready
         self._on_drain_complete = on_drain_complete
         self._wake = asyncio.Event()
         self._stop = asyncio.Event()
@@ -137,6 +140,7 @@ class ScopeQueueServing:
             await channel_output_pump(
                 self._scope,
                 send_text=self._send_text,
+                deliver_ready=self._deliver_ready,
                 stop_event=self._stop,
                 poll_interval_sec=_SCOPE_OUTPUT_PUMP_POLL_SEC,
             )

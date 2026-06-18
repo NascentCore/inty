@@ -1,14 +1,20 @@
 """APP WebSocket helpers for the agentic companion serving pipeline.
 
-TODO(!3487): Enqueue + wake only; remove ``drain_and_deliver_user_chat_turn`` await.
-TODO(!3488): ``AppWsChannelAdapter`` on ``turn_channel_up``; one ``Coordinator`` per scope.
+Per-scope ``ScopeQueueServing`` wakes on enqueue; inbound handlers return after
+Postgres commit. Delivery hooks are registered per input ``queue_message_id`` so
+concurrent enqueues on one scope cannot overwrite each other's drain completion
+or OutputQueue send routing.
+
+TODO(!3488): ``AppWsChannelAdapter`` on ``turn_channel_up`` + one ``Coordinator`` per scope
+on ``AgentChannelPresence``; retire this WS-local queue registry.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from threading import Lock
+from typing import TYPE_CHECKING, Any
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.types import (
@@ -21,16 +27,19 @@ from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.services.agentic_channel.scope_queue_serving import (
+    OnDrainCompleteFn,
+    ScopeDrainCompletion,
+    ScopeQueueServing,
+)
 from app.services.agentic_channel.serving import (
     SendTextFn,
-    UserChatTurnDeliveryResult,
-    drain_and_deliver_user_chat_turn,
     enqueue_inbound_wire_message,
 )
-from app.services.agentic_channel.turn import ensure_memory_store_session
 from app.services.agentic_companion.ws_turn_support import (
     image_asset_baseline_for_scope_store,
 )
+from app.services.agentic_channel.turn import ensure_memory_store_session
 
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -61,10 +70,214 @@ class AppWsUserTurnQueueInput:
     send_text: SendTextFn
 
 
-async def run_app_ws_user_turn_via_queues(
+@dataclass(frozen=True)
+class AppWsUserTurnEnqueueResult:
+    """Outcome of enqueue + wake without awaiting drain or OutputQueue delivery."""
+
+    queue_message_id: str
+
+
+@dataclass(frozen=True)
+class _AppWsScopeTurnDelivery:
+    """Per input-queue message WS delivery hooks."""
+
+    send_text: SendTextFn
+    delivery_flags: AppWsQueueDeliveryFlags
+    client_message_id: str | None
+    companion_ws_foreground_pending: dict[str, dict[str, Any]] | None
+
+
+_scope_turn_delivery: dict[str, dict[str, _AppWsScopeTurnDelivery]] = {}
+_scope_queue_serving: dict[str, ScopeQueueServing] = {}
+_registry_lock = Lock()
+
+
+def clear_app_ws_scope_queue_for_tests() -> None:
+    """Drop WS scope queue registries (tests only)."""
+    with _registry_lock:
+        _scope_turn_delivery.clear()
+        _scope_queue_serving.clear()
+
+
+def _scope_key(scope: AgentScope) -> str:
+    return scope.registry_key()
+
+
+def _register_scope_turn_delivery(
+    scope: AgentScope,
+    queue_message_id: str,
+    *,
+    send_text: SendTextFn,
+    delivery_flags: AppWsQueueDeliveryFlags,
+    client_message_id: str | None,
+    companion_ws_foreground_pending: dict[str, dict[str, Any]] | None,
+) -> None:
+    assert queue_message_id != ""
+    key = _scope_key(scope)
+    with _registry_lock:
+        per_scope = _scope_turn_delivery.setdefault(key, {})
+        per_scope[queue_message_id] = _AppWsScopeTurnDelivery(
+            send_text=send_text,
+            delivery_flags=delivery_flags,
+            client_message_id=client_message_id,
+            companion_ws_foreground_pending=companion_ws_foreground_pending,
+        )
+
+
+def _lookup_scope_turn_delivery(
+    scope: AgentScope,
+    queue_message_id: str,
+) -> _AppWsScopeTurnDelivery | None:
+    key = _scope_key(scope)
+    with _registry_lock:
+        return _scope_turn_delivery.get(key, {}).get(queue_message_id)
+
+
+def _lookup_scope_turn_delivery_for_output(
+    scope: AgentScope,
+    message_ids: tuple[str, ...],
+) -> _AppWsScopeTurnDelivery | None:
+    for message_id in message_ids:
+        state = _lookup_scope_turn_delivery(scope, message_id)
+        if state is not None:
+            return state
+    return None
+
+
+def _remove_scope_turn_delivery(
+    scope: AgentScope,
+    queue_message_id: str,
+) -> _AppWsScopeTurnDelivery | None:
+    key = _scope_key(scope)
+    with _registry_lock:
+        per_scope = _scope_turn_delivery.get(key)
+        if per_scope is None:
+            return None
+        return per_scope.pop(queue_message_id, None)
+
+
+async def _scope_deliver_ready_output(
+    scope: AgentScope,
+    text: str,
+    message_ids: tuple[str, ...],
+) -> None:
+    state = _lookup_scope_turn_delivery_for_output(scope, message_ids)
+    assert state is not None
+    await state.send_text(text)
+
+
+def _clear_turn_foreground_pending(
+    state: _AppWsScopeTurnDelivery,
+    *,
+    queue_message_id: str,
+    drop_client_alias: bool,
+    drop_queue_alias: bool,
+) -> None:
+    pending = state.companion_ws_foreground_pending
+    if pending is None:
+        return
+    if drop_client_alias:
+        client_message_id = state.client_message_id
+        if client_message_id is not None:
+            pending.pop(client_message_id, None)
+    if drop_queue_alias and state.delivery_flags.queue_message_id:
+        pending.pop(state.delivery_flags.queue_message_id, None)
+    if not drop_client_alias and not drop_queue_alias:
+        pending.pop(queue_message_id, None)
+
+
+async def _on_app_ws_scope_drain_complete(
+    scope: AgentScope,
+    completion: ScopeDrainCompletion,
+) -> None:
+    input_message_ids = completion.input_message_ids
+    assert input_message_ids
+    if completion.tool_background_started:
+        primary_message_id = input_message_ids[-1]
+        for message_id in input_message_ids:
+            state = _remove_scope_turn_delivery(scope, message_id)
+            if state is None:
+                continue
+            state.delivery_flags.tool_background_started = True
+            if message_id != primary_message_id:
+                _clear_turn_foreground_pending(
+                    state,
+                    queue_message_id=message_id,
+                    drop_client_alias=False,
+                    drop_queue_alias=False,
+                )
+            else:
+                _clear_turn_foreground_pending(
+                    state,
+                    queue_message_id=message_id,
+                    drop_client_alias=True,
+                    drop_queue_alias=False,
+                )
+        return
+    for message_id in input_message_ids:
+        state = _remove_scope_turn_delivery(scope, message_id)
+        if state is None:
+            continue
+        state.delivery_flags.tool_background_started = False
+        _clear_turn_foreground_pending(
+            state,
+            queue_message_id=message_id,
+            drop_client_alias=True,
+            drop_queue_alias=True,
+        )
+
+
+def _make_on_drain_complete(scope: AgentScope) -> OnDrainCompleteFn:
+    async def on_drain_complete(completion: ScopeDrainCompletion) -> None:
+        await _on_app_ws_scope_drain_complete(scope, completion)
+
+    return on_drain_complete
+
+
+async def _ensure_app_ws_scope_queue_serving(
+    scope: AgentScope,
+    *,
+    background_output_sink,
+) -> ScopeQueueServing:
+    key = _scope_key(scope)
+    with _registry_lock:
+        existing = _scope_queue_serving.get(key)
+        if existing is not None:
+            return existing
+
+        async def deliver_ready(
+            text: str, message_ids: tuple[str, ...]
+        ) -> None:
+            await _scope_deliver_ready_output(scope, text, message_ids)
+
+        serving = ScopeQueueServing(
+            scope,
+            background_output_sink=background_output_sink,
+            deliver_ready=deliver_ready,
+            on_drain_complete=_make_on_drain_complete(scope),
+        )
+        _scope_queue_serving[key] = serving
+        created = serving
+    await created.start()
+    return created
+
+
+async def stop_app_ws_scope_queue_serving(scope: AgentScope) -> None:
+    """Stop per-scope WS queue workers (WS disconnect / agent lease release)."""
+    key = _scope_key(scope)
+    with _registry_lock:
+        serving = _scope_queue_serving.pop(key, None)
+        _scope_turn_delivery.pop(key, None)
+    if serving is not None:
+        await serving.stop()
+
+
+async def enqueue_app_ws_user_turn_and_wake(
     queue_input: AppWsUserTurnQueueInput,
-) -> UserChatTurnDeliveryResult:
-    """Enqueue one WS user message, drain one batch, pull OutputQueue for delivery."""
+    *,
+    companion_ws_foreground_pending: dict[str, dict[str, Any]] | None,
+) -> AppWsUserTurnEnqueueResult:
+    """Enqueue one WS user message and wake scope queue worker; do not await drain."""
     assert queue_input.wire_id != ""
     assert queue_input.user_text.strip() != ""
     inbound = InboundWireMessage(
@@ -83,15 +296,19 @@ async def run_app_ws_user_turn_via_queues(
     )
     queue_input.delivery_flags.image_asset_baseline_initialized = True
     queue_input.delivery_flags.memory_store = session.store
-    result = await drain_and_deliver_user_chat_turn(
+
+    _register_scope_turn_delivery(
         queue_input.scope,
-        runtime_channel=CompanionRuntimeChannel.APP,
-        delivery_wire_id=queue_input.wire_id,
-        implicit_signal_bundle=queue_input.implicit_signal_bundle,
-        background_output_sink=queue_input.background_output_sink,
+        queue_message_id,
         send_text=queue_input.send_text,
+        delivery_flags=queue_input.delivery_flags,
+        client_message_id=queue_input.client_message_id,
+        companion_ws_foreground_pending=companion_ws_foreground_pending,
     )
-    queue_input.delivery_flags.tool_background_started = (
-        result.tool_background_started
+
+    serving = await _ensure_app_ws_scope_queue_serving(
+        queue_input.scope,
+        background_output_sink=queue_input.background_output_sink,
     )
-    return result
+    serving.wake(runtime_channel=CompanionRuntimeChannel.APP)
+    return AppWsUserTurnEnqueueResult(queue_message_id=queue_message_id)

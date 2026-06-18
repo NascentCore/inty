@@ -1,7 +1,7 @@
 # Shared Python black helpers for fmt.sh and git hooks.
-# Config: pyproject.toml [tool.black] (80 cols). Scope: app/ backend/.
+# Config: pyproject.toml [tool.black] (80 cols). Scope: app/ backend/ tests/.
 
-PYTHON_FORMAT_PATHS=(app backend)
+PYTHON_FORMAT_PATHS=(app backend tests)
 
 is_python_format_path() {
     local file="$1"
