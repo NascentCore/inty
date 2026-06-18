@@ -7,6 +7,7 @@ WebSocket and Weixin adapters translate :class:`Downlink` into
 
 TODO(channel-outbound-affordances): Extend ``Downlink`` (or adapter port) with reply threading
   and emoji reaction targets; map transcript UUIDs ↔ channel message IDs — #3440
+TODO(!3451, !3452): Carry user-visible image assets explicitly for native channel image bubbles.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ class DownlinkKind(StrEnum):
     SCHEDULED = "scheduled"  # Due ``schedule_queue`` reminder inner-tick
     TOOL_BACKGROUND = "tool_background"  # Async ``tool_background`` loop produced user-visible text
     BOOTSTRAP_INTERIM = "bootstrap_interim"  # Bootstrap sync tool-loop LLM round before ``USER_CHAT_BOOTSTRAP`` ends
-    # TODO(#3402): Add ``USER_VISIBLE_CHUNK`` for user-turn per-round delivery; retire ``BOOTSTRAP_INTERIM``.
+    # TODO(!3402): Add ``USER_VISIBLE_CHUNK`` for user-turn per-round delivery; retire ``BOOTSTRAP_INTERIM``.
 
 
 @dataclass(frozen=True)

@@ -21,7 +21,9 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.loop.channel_adapter import RecordingChannelAdapter
+from app.core.companion_harness.loop.channel_adapter import (
+    RecordingChannelAdapter,
+)
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.loop.parity.golden import (
     GoldenScenario,
@@ -75,7 +77,7 @@ async def _run_scenario(
     bundle = build_golden_scenario(golden)
     channel = RecordingChannelAdapter()
     result = await run_agentic_loop(
-        bundle.loop_input,
+        bundle.loop_context,
         llm_loop_mode=mode,
         channel=channel,
     )
@@ -98,7 +100,7 @@ async def _compare_legacy(scenario: SmokeScenario) -> None:
     bundle = build_golden_scenario(golden)
     channel = RecordingChannelAdapter()
     sidecar = await run_agentic_loop(
-        bundle.loop_input,
+        bundle.loop_context,
         llm_loop_mode=UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM,
         channel=channel,
     )
@@ -112,15 +114,15 @@ async def _compare_legacy(scenario: SmokeScenario) -> None:
         BootstrapInTurnSyncToolLoopInput(
             store=legacy_store,
             llm_client=legacy_bundle.llm_client,  # type: ignore[arg-type]
-            messages=legacy_bundle.loop_input.openai_messages,
-            tools_for_turn=legacy_bundle.loop_input.openai_tools,
+            messages=legacy_bundle.loop_context.openai_messages,
+            tools_for_turn=legacy_bundle.loop_context.openai_tools,
             memory_bootstrap_type="none",
             repository_only_store_text=False,
-            trace_id=legacy_bundle.loop_input.trace_id,
-            user_text=legacy_bundle.loop_input.user_text,
+            trace_id=legacy_bundle.loop_context.trace_id,
+            user_text=legacy_bundle.loop_context.user_text,
             ts_user=datetime(2026, 1, 1, tzinfo=timezone.utc),
-            user_msg_uuid=legacy_bundle.loop_input.user_msg_uuid,
-            transcript_rel=legacy_bundle.loop_input.transcript_rel,
+            user_msg_uuid=legacy_bundle.loop_context.user_msg_uuid,
+            transcript_rel=legacy_bundle.loop_context.transcript_rel,
             bootstrap_interim_output_sink=None,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(

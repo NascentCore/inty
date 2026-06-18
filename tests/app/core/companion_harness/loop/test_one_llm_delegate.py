@@ -94,7 +94,7 @@ async def test_one_llm_delegate_per_call_interim_and_terminal(tmp_path: Path) ->
     )
     assert result.assistant_text == "terminal line"
     assert len(channel.events) == 2
-    assert channel.events[0].kind == DownlinkKind.BOOTSTRAP_INTERIM
+    assert channel.events[0].kind == DownlinkKind.USER_REPLY
     assert channel.events[0].assistant_text == "interim line"
     assert channel.events[1].kind == DownlinkKind.USER_REPLY
     assert channel.events[1].assistant_text == "terminal line"

@@ -12,6 +12,20 @@ Companion Harness is agentic harness for simulating an autonomous Intelligence E
 - **DO NOT CONSIDER DATABASE DATA VALIDITY AFTER BREAKING CHANGES, AS WE ARE NOT RUNNING ANY PERSISTENT INSTANCE YET**
 - **DO NOT INCLUDE COMMERCIALIZATION FEATURES, AS WE ARE BUILDING A PROTOTYPE**
 
+## Tech stack
+
+- Python 3.12
+- Pydantic v2
+- LLM client (OpenAI-compatible), with [models catalog](/app/utils/models_catalog.py)
+- Configs: `config.yaml` + `/app/utils/config.py` / `/app/core/config.py`。
+- Persistency: PostgreSQL + SQLAlchemy；MemoryStore → `companion_memory_document_versions`
+  - Alembic 迁移：`/backend/alembic/`
+- Observability
+  - LangSmith for llm call tracing
+  - loguru logging
+  - `/app/core/companion_harness/companion/runtime_events.py`
+    agentic-native introspection, potentially useful for users to understand the agent's situation. It's like a person's health reports.
+
 ## Objectives
 
 Evolve the following architecture pattern for companion harness and the whole agentic companion,
@@ -62,3 +76,4 @@ Any forms of speculative features that does not fit the current prototype state.
 
 - All external system dependencies should be wrapped in custom class to hide all interfaces and only expose needed ones.
 - Use named `dataclass` types to pass data between functions
+- All remote API calls should be async

@@ -13,7 +13,9 @@ and cultivate long-term emotional bonding with human users.
 ## Your responsibility
 
 Work with the human partners, to design and implement Python [agentic harness](/app/core/companion_harness/).
-Read [users list](.agents/USERS.md) to know your human partner's identity and then their preferences.
+
+- Read [users list](/.agents/USERS.md) to know your human partner's identity and then their preferences.
+- Read [cursor commands](/.cursor/commands/) and [skills](/.cursor/skills/) to execute relevant tasks, instead of doing it yourself.
 
 ### General instructions
 
@@ -42,6 +44,8 @@ Read [users list](.agents/USERS.md) to know your human partner's identity and th
 **IMPORTANT: `/api/v1/chat/ws` should only use companion harness, technocore, livingsphere. All others are in maintenance mode and should not be changed.**
 
 **DO NOT BOTHER WITH /experimental/**
+
+Always run from repo root and use repo-root-relative paths to reference files.
 
 You should only changes and use code in the following dirs:
 
@@ -131,18 +135,17 @@ You should only changes and use code in the following dirs:
 
 #### Code documentation
 
-- Package docstring in `__init__.py`, `__init__.py` should only has docstring, do not include any code
-- Module docstring at the top of `.py` file
-- Function/class docstring: how does the code work, intended usage scenarios
-- Code lines comment: keep key design decisions documented in the code
-- Do not use double-tick '``'
-- Do not use tables, use bullet points to record dimentional content
+- Package docstring in `__init__.py`, `__init__.py` should only has docstring.
+  Document the package's design and intended.
+  In human readable languages, without referencing code.
+- Module docstring at the top of `.py` file.
+  Document the package's design and intended.
+  In human readable languages, without referencing code.
+- Function/class docstring: Document the package's design and intended.
+  In human readable languages, without referencing code.
 
-#### Dedicated docs/ dir
-
-- [docs](/docs/)
-
-Donts
+### Donts
 
 - Do not touch any `AGENTS.md`, they are maintained by human partners
 - Do not use double-tick quote names ``channel_runtime``
+- Do not use tables, use bullet points

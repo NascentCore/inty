@@ -71,8 +71,9 @@ def _input_row_to_record(
 def _output_row_to_record(
     row: AgenticCompanionOutputQueueRow,
 ) -> OutputQueueRecord:
+    # TODO(!3504): Rename DB column ``in_reply_to_input_ids_json`` → ``message_ids_json``.
     raw_ids = json.loads(row.in_reply_to_input_ids_json or "[]")
-    in_reply = tuple(str(x) for x in raw_ids)
+    message_ids = tuple(str(x) for x in raw_ids)
     delivery_channel = (
         CompanionRuntimeChannel(row.delivery_channel)
         if row.delivery_channel
@@ -87,7 +88,7 @@ def _output_row_to_record(
         kind=DownlinkKind(row.kind),
         text=row.text,
         created_at_utc=row.created_at,
-        in_reply_to_input_ids=in_reply,
+        message_ids=message_ids,
         trace_id=row.trace_id,
         langsmith_trace_id=row.langsmith_trace_id,
         langsmith_run_id=row.langsmith_run_id,
@@ -228,7 +229,7 @@ class PostgresOutputQueueRepository:
             kind=output.kind.value,
             text=output.text,
             in_reply_to_input_ids_json=json.dumps(
-                list(output.in_reply_to_input_ids),
+                list(output.message_ids),
                 ensure_ascii=False,
             ),
             trace_id=output.trace_id,

@@ -100,6 +100,7 @@ async def test_run_in_turn_sync_tool_loop_user_before_assistant_transcript(
             user_msg_uuid="user-uuid-1",
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
+            emit_every_assistant_round=False,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
                     channel=CompanionRuntimeChannel.APP,
@@ -108,6 +109,7 @@ async def test_run_in_turn_sync_tool_loop_user_before_assistant_transcript(
             ),
             max_tool_rounds=4,
             after_tool_messages_appended=None,
+            caller_persisted_user_transcript=False,
         )
     )
 
@@ -117,6 +119,58 @@ async def test_run_in_turn_sync_tool_loop_user_before_assistant_transcript(
     assert rows[1]["reply_to"] == "user-uuid-1"
     assert result.assistant_text == "done"
     assert result.skip_final_transcript_assistant_row is True
+    assert result.loop_persisted_user_transcript is True
+
+
+@pytest.mark.asyncio
+async def test_run_in_turn_sync_tool_loop_reports_when_caller_persisted_user(
+    tmp_path: Path,
+) -> None:
+    scope = CompanionScope("in-turn-sync-prepersisted", "agent", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    store.append_jsonl_record(
+        "transcript.jsonl",
+        {
+            "role": "user",
+            "content": "hi",
+            "ts": "2026-01-01T00:00:00+00:00",
+            "uuid": "user-uuid-prepersisted",
+            "trace_id": "trace-prepersisted",
+        },
+    )
+    client = _FakeSyncToolLoopLLMClient([_final_response(content="done")])
+
+    result = await run_in_turn_sync_tool_loop(
+        InTurnSyncToolLoopInput(
+            store=store,
+            llm_client=client,  # type: ignore[arg-type]
+            messages=({"role": "user", "content": "hi"},),
+            tools_for_turn=(),
+            write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
+            langsmith_foreground_source=SOURCE_BOOTSTRAP_TRACK,
+            repository_only_store_text=False,
+            trace_id="trace-prepersisted",
+            user_text="hi",
+            ts_user=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            user_msg_uuid="user-uuid-prepersisted",
+            transcript_rel="transcript.jsonl",
+            interim_output_sink=None,
+            emit_every_assistant_round=False,
+            langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
+                TurnRuntimeContext(
+                    channel=CompanionRuntimeChannel.APP,
+                    implicit_signal_bundle=None,
+                )
+            ),
+            max_tool_rounds=4,
+            after_tool_messages_appended=None,
+            caller_persisted_user_transcript=True,
+        )
+    )
+
+    rows = _transcript_rows(store)
+    assert [row["role"] for row in rows] == ["user", "assistant"]
+    assert result.loop_persisted_user_transcript is False
 
 
 @pytest.mark.asyncio
@@ -169,6 +223,7 @@ async def test_run_in_turn_sync_tool_loop_interim_sink_on_tool_round(
             user_msg_uuid="user-uuid-2",
             transcript_rel="transcript.jsonl",
             interim_output_sink=_sink,
+            emit_every_assistant_round=False,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
                     channel=CompanionRuntimeChannel.APP,
@@ -177,6 +232,7 @@ async def test_run_in_turn_sync_tool_loop_interim_sink_on_tool_round(
             ),
             max_tool_rounds=4,
             after_tool_messages_appended=None,
+            caller_persisted_user_transcript=False,
         )
     )
 
@@ -189,6 +245,54 @@ async def test_run_in_turn_sync_tool_loop_interim_sink_on_tool_round(
     assert interim[0].had_tool_calls is True
     assert result.assistant_text == "terminal line"
     assert result.skip_final_transcript_assistant_row is True
+
+
+@pytest.mark.asyncio
+async def test_run_in_turn_sync_tool_loop_emit_every_assistant_round_terminal(
+    tmp_path: Path,
+) -> None:
+    scope = CompanionScope("in-turn-sync-emit-all", "agent", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    store.write_document("transcript.jsonl", "")
+    interim: list[BootstrapInterimOutput] = []
+
+    async def _sink(ev: BootstrapInterimOutput) -> None:
+        interim.append(ev)
+
+    client = _FakeSyncToolLoopLLMClient([_final_response(content="terminal only")])
+
+    result = await run_in_turn_sync_tool_loop(
+        InTurnSyncToolLoopInput(
+            store=store,
+            llm_client=client,  # type: ignore[arg-type]
+            messages=({"role": "user", "content": "hi"},),
+            tools_for_turn=(),
+            write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
+            langsmith_foreground_source=SOURCE_BOOTSTRAP_TRACK,
+            repository_only_store_text=False,
+            trace_id="trace-emit-all",
+            user_text="hi",
+            ts_user=datetime(2026, 1, 5, tzinfo=timezone.utc),
+            user_msg_uuid="user-uuid-emit-all",
+            transcript_rel="transcript.jsonl",
+            interim_output_sink=_sink,
+            emit_every_assistant_round=True,
+            langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
+                TurnRuntimeContext(
+                    channel=CompanionRuntimeChannel.APP,
+                    implicit_signal_bundle=None,
+                )
+            ),
+            max_tool_rounds=4,
+            after_tool_messages_appended=None,
+            caller_persisted_user_transcript=False,
+        )
+    )
+
+    assert result.assistant_text == "terminal only"
+    assert len(interim) == 1
+    assert interim[0].text == "terminal only"
+    assert interim[0].had_tool_calls is False
 
 
 @pytest.mark.asyncio
@@ -293,6 +397,7 @@ async def test_run_in_turn_sync_tool_loop_after_tool_hook_refreshes_openai_tools
             user_msg_uuid="user-uuid-refresh",
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
+            emit_every_assistant_round=False,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
                     channel=CompanionRuntimeChannel.APP,
@@ -301,6 +406,7 @@ async def test_run_in_turn_sync_tool_loop_after_tool_hook_refreshes_openai_tools
             ),
             max_tool_rounds=4,
             after_tool_messages_appended=_refresh_tools,
+            caller_persisted_user_transcript=False,
         )
     )
 

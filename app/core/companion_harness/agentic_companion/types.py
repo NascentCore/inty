@@ -68,6 +68,18 @@ class QueueSequence:
         assert self.value >= 0
 
 
+@dataclass(frozen=True)
+class UserMessageBatch:
+    """InputQueue batch claimed for one AgenticLoop user-track turn."""
+
+    batch_id: str
+    message_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        assert self.batch_id != ""
+        assert self.message_ids
+
+
 class UserInputMessage(BaseModel):
     """One inbound user message appended to InputQueue."""
 
@@ -93,7 +105,7 @@ class AgentOutputMessage(BaseModel):
     kind: DownlinkKind
     text: str
     created_at_utc: datetime
-    in_reply_to_input_ids: tuple[str, ...] = Field(default_factory=tuple)
+    message_ids: tuple[str, ...] = Field(default_factory=tuple)
     trace_id: str | None = None
     langsmith_trace_id: str | None = None
     langsmith_run_id: str | None = None
@@ -130,7 +142,7 @@ class OutputQueueRecord(BaseModel):
     kind: DownlinkKind
     text: str
     created_at_utc: datetime
-    in_reply_to_input_ids: tuple[str, ...] = Field(default_factory=tuple)
+    message_ids: tuple[str, ...] = Field(default_factory=tuple)
     trace_id: str | None = None
     langsmith_trace_id: str | None = None
     langsmith_run_id: str | None = None
@@ -177,6 +189,9 @@ class AgenticCompanionRunResult(BaseModel):
     assistant_text: str
     tool_background_started: bool
     output_message_ids: tuple[str, ...] = Field(default_factory=tuple)
+    # TODO(!3490): ``input_message_ids`` lets ``ScopeDrainCompletion`` clear legacy
+    # ``foreground_pending`` per claimed InputQueue row; drop after queue cleanup.
+    input_message_ids: tuple[str, ...]
 
 
 class TranscriptProjectionRecord(BaseModel):

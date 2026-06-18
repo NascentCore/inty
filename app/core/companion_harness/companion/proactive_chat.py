@@ -29,7 +29,10 @@ from .models import (
     TranscriptProjection,
     load_transcript_projection_from_store,
 )
-from .transcript_anchor import last_real_user_transcript_anchor, parse_transcript_row_ts
+from .transcript_anchor import (
+    last_real_user_transcript_anchor,
+    parse_transcript_row_ts,
+)
 
 PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
     "## Proactive Messaging\n"
@@ -40,6 +43,8 @@ PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
     "- If you have something meaningful, respond appropriately.\n"
     "- If there is nothing appropriate to say right now, respond with exactly: [SILENT]\n"
 )
+# TODO(!3463): During interactive bootstrap, add bootstrap-specific proactive copy that
+# reinforces finishing USER.md / IDENTITY.md / STYLE.md / COMPANIONSHIP.md gathering.
 
 PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER = (
     "[SYSTEM PROACTIVE CHAT] The user has not sent a new message for some time."

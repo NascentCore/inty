@@ -8,6 +8,9 @@ from typing import Any
 from loguru import logger
 
 from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.core.companion_harness.companion.models import (
+    user_visible_assistant_text,
+)
 from app.db.session import AsyncSessionLocal
 from app.schemas.biz_action import ActionType, BizAction
 from app.schemas.chat import ChatCompletionRequest
@@ -68,10 +71,10 @@ async def deliver_visible_inner_tick_turn(
         )
 
     companion_reply = deliver_input.companion_turn.assistant_text
-    reply_stripped = (
-        str(companion_reply).strip() if companion_reply is not None else ""
+    reply_stripped = user_visible_assistant_text(
+        str(companion_reply) if companion_reply is not None else ""
     )
-    if not reply_stripped:
+    if reply_stripped is None:
         return
 
     companion_ai_meta = companion_ai_meta_from_turn_result(

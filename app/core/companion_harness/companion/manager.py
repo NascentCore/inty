@@ -262,6 +262,8 @@ class CompanionManager:
         preset_user_msg_uuid: str | None,
         runtime_context: TurnRuntimeContext,
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
+        agentic_output_queue=None,
+        user_message_batch=None,
     ) -> CompanionTurnDeps:
         return CompanionTurnDeps(
             store=session.store,
@@ -278,6 +280,8 @@ class CompanionManager:
             ),
             tool_bg_idle_event=session.tool_bg_idle,
             bootstrap_interim_output_sink=bootstrap_interim_output_sink,
+            agentic_output_queue=agentic_output_queue,
+            user_message_batch=user_message_batch,
         )
 
     # TODO(companion-multimodal-user-turn): Phase 1c — accept ``CompanionUserTurnInput``
@@ -295,6 +299,8 @@ class CompanionManager:
             implicit_signal_bundle=None,
         ),
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
+        agentic_output_queue=None,
+        user_message_batch=None,
     ) -> CompanionTurnResult:
         return await run_companion_user_chat_turn(
             user_text,
@@ -304,6 +310,8 @@ class CompanionManager:
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
                 bootstrap_interim_output_sink=bootstrap_interim_output_sink,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
             ),
         )
 

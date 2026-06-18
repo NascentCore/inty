@@ -29,6 +29,9 @@ class OpenAICompatibleAsyncOptions:
     api_key: str | None
     default_headers: dict[str, str] | None = None
     timeout: float | None = None
+    wrap_langsmith: bool = False
+    chat_name: str | None = None
+    completions_name: str | None = None
     use_fake_openai: bool = False
 
 
@@ -77,4 +80,18 @@ def create_async_client(options: OpenAICompatibleAsyncOptions) -> Any:
         kwargs["default_headers"] = options.default_headers
     if options.timeout is not None:
         kwargs["timeout"] = options.timeout
-    return AsyncOpenAI(**kwargs)
+    base_client = AsyncOpenAI(**kwargs)
+
+    if not options.wrap_langsmith:
+        return base_client
+
+    from app.core.companion_harness.llm.langsmith_completion_enrich import (
+        _ensure_langsmith_handle_container_end_patch,
+    )
+
+    _ensure_langsmith_handle_container_end_patch()
+    return wrappers.wrap_openai(
+        base_client,
+        chat_name=options.chat_name,
+        completions_name=options.completions_name,
+    )

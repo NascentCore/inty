@@ -10,7 +10,7 @@ PG_USER="${PG_USER:-postgres}"
 PG_PASSWORD="${PG_PASSWORD:-sxwl666!}"
 PG_DB="${PG_DB:-inty}"
 PG_PORT="${PG_PORT:-5432}"
-CONTAINER_NAME="${INTY_CLOUD_AGENT_PG_CONTAINER:-inty-cloudagent-pg}"
+CONTAINER_NAME="${INTY_PG_CONTAINER:-pg-inty}"
 
 wait_pg() {
   for _ in $(seq 1 60); do

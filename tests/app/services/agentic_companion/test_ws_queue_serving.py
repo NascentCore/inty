@@ -11,10 +11,7 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.services.agentic_channel.serving import (
-    DrainScopeOnceResult,
-    UserChatTurnDeliveryResult,
-)
+from app.services.agentic_channel.serving import UserChatTurnDeliveryResult
 from app.services.agentic_companion.ws_queue_serving import (
     AppWsQueueDeliveryFlags,
     AppWsUserTurnQueueInput,
@@ -46,10 +43,6 @@ async def test_run_app_ws_user_turn_via_queues_enqueues_and_delivers() -> None:
         send_text=send_text,
     )
 
-    async def fake_deliver(*_args, **kwargs):
-        await kwargs["send_text"]("companion reply")
-        return "companion reply"
-
     with (
         patch(
             "app.services.agentic_companion.ws_queue_serving.enqueue_inbound_wire_message",
@@ -57,17 +50,20 @@ async def test_run_app_ws_user_turn_via_queues_enqueues_and_delivers() -> None:
             return_value="queue-msg-1",
         ) as enqueue_mock,
         patch(
-            "app.services.agentic_companion.ws_queue_serving.drain_scope_once_via_companion",
+            "app.services.agentic_companion.ws_queue_serving.ensure_memory_store_session",
             new_callable=AsyncMock,
-            return_value=DrainScopeOnceResult(
-                reply_text="companion reply",
+        ),
+        patch(
+            "app.services.agentic_companion.ws_queue_serving.image_asset_baseline_for_scope_store",
+            return_value=2,
+        ),
+        patch(
+            "app.services.agentic_companion.ws_queue_serving.drain_and_deliver_user_chat_turn",
+            new_callable=AsyncMock,
+            return_value=UserChatTurnDeliveryResult(
+                delivered_text="companion reply",
                 tool_background_started=False,
             ),
-        ) as drain_mock,
-        patch(
-            "app.services.agentic_companion.ws_queue_serving.deliver_pending_output_for_wire",
-            new_callable=AsyncMock,
-            side_effect=fake_deliver,
         ) as deliver_mock,
     ):
         result = await run_app_ws_user_turn_via_queues(queue_input)
@@ -77,15 +73,15 @@ async def test_run_app_ws_user_turn_via_queues_enqueues_and_delivers() -> None:
         tool_background_started=False,
     )
     assert flags.queue_message_id == "queue-msg-1"
+    assert flags.image_asset_baseline == 2
+    assert flags.image_asset_baseline_initialized is True
     assert flags.tool_background_started is False
     enqueue_mock.assert_awaited_once()
     inbound = enqueue_mock.await_args.args[0]
     assert inbound.channel == CompanionRuntimeChannel.APP
     assert inbound.wire_id == "app:conn-1"
     assert inbound.client_message_id == "11111111-1111-4111-8111-111111111111"
-    drain_mock.assert_awaited_once()
     deliver_mock.assert_awaited_once()
-    assert sent == ["companion reply"]
 
 
 @pytest.mark.asyncio
@@ -115,21 +111,25 @@ async def test_run_app_ws_user_turn_via_queues_propagates_tool_background_flag()
             return_value="queue-msg-2",
         ),
         patch(
-            "app.services.agentic_companion.ws_queue_serving.drain_scope_once_via_companion",
+            "app.services.agentic_companion.ws_queue_serving.ensure_memory_store_session",
             new_callable=AsyncMock,
-            return_value=DrainScopeOnceResult(
-                reply_text="tb-reply",
-                tool_background_started=True,
-            ),
         ),
         patch(
-            "app.services.agentic_companion.ws_queue_serving.deliver_pending_output_for_wire",
+            "app.services.agentic_companion.ws_queue_serving.image_asset_baseline_for_scope_store",
+            return_value=0,
+        ),
+        patch(
+            "app.services.agentic_companion.ws_queue_serving.drain_and_deliver_user_chat_turn",
             new_callable=AsyncMock,
-            return_value="tb-reply",
+            return_value=UserChatTurnDeliveryResult(
+                delivered_text="tb-reply",
+                tool_background_started=True,
+            ),
         ),
     ):
         result = await run_app_ws_user_turn_via_queues(queue_input)
 
     assert result.tool_background_started is True
     assert flags.tool_background_started is True
+    assert flags.image_asset_baseline_initialized is True
     assert flags.queue_message_id == "queue-msg-2"

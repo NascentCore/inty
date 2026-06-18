@@ -4,6 +4,9 @@ from app.core.companion_harness.companion.bootstrap import (
     build_bootstrap_tool_call_section,
     load_bootstrap_spec_text,
 )
+from app.core.companion_harness.experience_profile.context_mode import (
+    EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING,
+)
 from app.core.companion_harness.tools.companion_tool_definitions import (
     CompanionToolName,
 )
@@ -96,6 +99,24 @@ def test_bootstrap_output_contract_names_memory_store_write_paths_only() -> None
     assert "SOUL.md" in joined and "MEMORY.md" in joined
     assert "companion_update_prompt_slice" not in joined
     assert "schedule_task" not in joined
+
+
+def test_bootstrap_omits_experience_profile_context_mode_clause() -> None:
+    bundle = PromptBundle(
+        identity="identity",
+        soul="soul",
+        user_md="user",
+        memory_md="",
+    )
+    joined = "\n".join(
+        _system_contents(
+            build_system_messages_for_bootstrap_track(
+                bundle,
+                ContextMeta(context_mode="intimate"),
+            )
+        )
+    )
+    assert EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING not in joined
 
 
 def test_bootstrap_omits_capability_package_slices() -> None:

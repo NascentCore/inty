@@ -14,6 +14,7 @@ from app.core.companion_harness.agentic_companion.types import (
     QueueBatchId,
     QueueMessageId,
     QueueStatus,
+    UserMessageBatch,
     WireId,
 )
 from app.core.companion_harness.companion.runtime_channel import (
@@ -73,3 +74,13 @@ def test_input_batch_preserves_order() -> None:
     assert QueueBatchId("b1").value == batch.batch_id
     assert WireId("w1").value == records[0].wire_id
     assert [m.text for m in batch.messages] == ["a", "b"]
+
+
+def test_user_message_batch_requires_non_empty_ids() -> None:
+    batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
+    assert batch.batch_id == "batch-1"
+    assert batch.message_ids == ("input-1",)
+    with pytest.raises(AssertionError):
+        UserMessageBatch(batch_id="", message_ids=("input-1",))
+    with pytest.raises(AssertionError):
+        UserMessageBatch(batch_id="batch-1", message_ids=())

@@ -23,7 +23,7 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
 )
-from app.core.companion_harness.loop.contract import AgenticLoopInput
+from app.core.companion_harness.loop.contract import LegacyAgenticLoopContext
 from app.core.companion_harness.loop.parity.fixtures import (
     FakeDualLlmClient,
     FakeSyncToolLoopLLMClient,
@@ -49,11 +49,11 @@ class GoldenScenario(StrEnum):
 
 @dataclass(frozen=True)
 class GoldenScenarioBundle:
-    """One golden scenario: store, fake client, and ``AgenticLoopInput``."""
+    """One golden scenario: store, fake client, and legacy loop context."""
 
     store: MemoryStore
     llm_client: FakeSyncToolLoopLLMClient | FakeDualLlmClient
-    loop_input: AgenticLoopInput
+    loop_context: LegacyAgenticLoopContext
     expected_mode: str
 
 
@@ -90,8 +90,8 @@ def _base_loop_input(
     skip_foreground_envelope: bool,
     dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None,
     dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None,
-) -> AgenticLoopInput:
-    return AgenticLoopInput(
+) -> LegacyAgenticLoopContext:
+    return LegacyAgenticLoopContext(
         store=store,
         llm_client=llm_client,  # type: ignore[arg-type]
         openai_messages=openai_messages,
@@ -153,7 +153,7 @@ def build_golden_scenario(scenario: GoldenScenario) -> GoldenScenarioBundle:
                 ]
             )
             msgs = ({"role": "user", "content": "go"},)
-            loop_input = _base_loop_input(
+            loop_context = _base_loop_input(
                 store=store,
                 llm_client=client,
                 openai_messages=msgs,
@@ -168,7 +168,7 @@ def build_golden_scenario(scenario: GoldenScenario) -> GoldenScenarioBundle:
             return GoldenScenarioBundle(
                 store=store,
                 llm_client=client,
-                loop_input=loop_input,
+                loop_context=loop_context,
                 expected_mode="in_turn_single_llm",
             )
         case GoldenScenario.TOOL_FEEDBACK_TERMINAL:
@@ -177,7 +177,7 @@ def build_golden_scenario(scenario: GoldenScenario) -> GoldenScenarioBundle:
                 [final_response(content="smoke ok")]
             )
             msgs = ({"role": "user", "content": "feedback"},)
-            loop_input = _base_loop_input(
+            loop_context = _base_loop_input(
                 store=store,
                 llm_client=client,
                 openai_messages=msgs,
@@ -192,7 +192,7 @@ def build_golden_scenario(scenario: GoldenScenario) -> GoldenScenarioBundle:
             return GoldenScenarioBundle(
                 store=store,
                 llm_client=client,
-                loop_input=loop_input,
+                loop_context=loop_context,
                 expected_mode="in_turn_single_llm",
             )
         case GoldenScenario.DUAL_LLM_FG_THEN_TOOL:
@@ -206,7 +206,7 @@ def build_golden_scenario(scenario: GoldenScenario) -> GoldenScenarioBundle:
                 fg_response=dual_llm_fg_response(text="foreground ok"),
                 tool_sync_handler=_tool_sync,
             )
-            loop_input = _base_loop_input(
+            loop_context = _base_loop_input(
                 store=store,
                 llm_client=client,
                 openai_messages=msgs,
@@ -221,7 +221,7 @@ def build_golden_scenario(scenario: GoldenScenario) -> GoldenScenarioBundle:
             return GoldenScenarioBundle(
                 store=store,
                 llm_client=client,
-                loop_input=loop_input,
+                loop_context=loop_context,
                 expected_mode="dual_llm",
             )
         case GoldenScenario.MAINTENANCE_SKIP_FG:
@@ -235,7 +235,7 @@ def build_golden_scenario(scenario: GoldenScenario) -> GoldenScenarioBundle:
                 fg_response=dual_llm_fg_response(text="unused"),
                 tool_sync_handler=_tool_sync,
             )
-            loop_input = _base_loop_input(
+            loop_context = _base_loop_input(
                 store=store,
                 llm_client=client,
                 openai_messages=msgs,
@@ -250,7 +250,7 @@ def build_golden_scenario(scenario: GoldenScenario) -> GoldenScenarioBundle:
             return GoldenScenarioBundle(
                 store=store,
                 llm_client=client,
-                loop_input=loop_input,
+                loop_context=loop_context,
                 expected_mode="dual_llm",
             )
         case _:

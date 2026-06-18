@@ -15,7 +15,6 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.companion import AgenticCompanion
 from app.core.companion_harness.agentic_companion.postgres_queue import (
     PostgresInputQueueRepository,
-    PostgresOutputQueueRepository,
 )
 from app.core.companion_harness.agentic_companion.types import InboundWireMessage
 from app.core.companion_harness.companion.models import CompanionTurnResult
@@ -86,7 +85,6 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> N
                 companion = AgenticCompanion(
                     scope=scope,
                     input_repo=PostgresInputQueueRepository(db),
-                    output_repo=PostgresOutputQueueRepository(db),
                 )
                 result = await companion.drain_once(
                     resolved_chat_model=object(),

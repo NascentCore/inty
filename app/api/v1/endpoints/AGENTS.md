@@ -1,10 +1,9 @@
-# `app/api/v1/endpoints/`：对外 HTTP / WebSocket 端点实现
+# 对外 HTTP / WebSocket 端点实现
 
-**一句话**：FastAPI 路由层的 **「门脸」**——鉴权、DTO、事务边界与错误码；重逻辑委托给 `services` 与 `core`。
+## Agentic companion
 
-## 读者
-
-- 新增或修改 **REST / WS** 行为的后端工程师；需要知道「某能力挂在哪个域」的编码智能体。
+This is the new paradigm of companionship.
+The old http-based paradigm is roleplay.
 
 ## 全局纪律
 

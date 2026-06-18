@@ -1,12 +1,18 @@
-"""Per-call-streaming deliverables and output queue."""
+"""Per-call-streaming deliverables and output queue.
+
+TODO(!3460): Retire this sidecar queue in favor of
+agentic_companion/output_queue.py as the only user-visible OutputQueue.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
-from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutput,
+)
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
 if TYPE_CHECKING:
@@ -34,8 +40,28 @@ class LoopDeliverable:
     turn_recall: str | None
 
 
-class AgenticLoopOutputQueue:
-    """Per-call-streaming queue: each push immediately projects and delivers on channel."""
+class AgenticLoopOutputSink(Protocol):
+    """Per-call-streaming sink for agentic loop mechanisms (channel or durable queue)."""
+
+    @property
+    def deliverables(self) -> tuple[LoopDeliverable, ...]:
+        """Audit mirror of everything pushed."""
+
+    async def push_bootstrap_interim(
+        self, interim: BootstrapInterimOutput
+    ) -> None:
+        """Push one interim assistant round."""
+
+    async def push_user_reply(self, *, assistant_text: str) -> None:
+        """Push user-visible assistant text."""
+
+
+class AgenticLoopOutputQueue(AgenticLoopOutputSink):
+    """Per-call-streaming queue: each push immediately projects and delivers on channel.
+
+    TODO(!3460): Legacy parity tests only; production should use the single
+    agentic_companion OutputQueue through direct AgenticLoop user-turn methods.
+    """
 
     def __init__(self, channel: LoopChannelAdapter) -> None:
         self._channel = channel

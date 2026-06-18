@@ -2,11 +2,12 @@
 
 If not in plan mode, do nothing and stop!
 
-Review and revise the plan:
+Review and revise the implementation plan:
 
-- The plan's objectives are reasonable
+- The plan's objectives are clear and reasonable
 - The plan's logical design is sound
 - The plan's implementation steps are sufficiently granular
+- The plan's target state matches objectives
 
 ## Use alembic cli to generate database version files
 
@@ -15,12 +16,12 @@ Review and revise the plan:
 
 ## Testing
 
-- Plan should include writing and running tests.
+- Plan should include testing.
 - Tests are done at the key juncture between procedures of the plan.
 
 ## Refactoring
 
-When refactoring, the implementation plan should following the following overall procedures:
+When refactoring, follow the procedures below:
 
 1. implement the new design in code with minimal changes to the existing code
 2. test the new code

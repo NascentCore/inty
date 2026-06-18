@@ -46,6 +46,17 @@ AI_PRIVATE_HYDRATED_SOURCE = "ai_private"
 PROACTIVE_CHAT_SILENT_TOKEN = "[SILENT]"
 
 
+def user_visible_assistant_text(text: str) -> str | None:
+    """Normalize assistant text for user-visible delivery; ``None`` when the channel stays quiet.
+
+    Shared gate for OutputQueue append and channel downlink (!3251 ``[SILENT]``).
+    """
+    stripped = text.strip()
+    if not stripped or stripped == PROACTIVE_CHAT_SILENT_TOKEN:
+        return None
+    return stripped
+
+
 class TranscriptProjection(StrEnum):
     """Which ``transcript.jsonl`` rows a consumer sees."""
 
@@ -160,6 +171,10 @@ class CompanionTurnResult(BaseModel):
             "assistant frames mirror this as meta_data.tool_background_started on the "
             "HTTP/WS payload."
         ),
+    )
+    output_message_ids: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description="OutputQueue message ids appended during AgenticLoop queue-serving turns.",
     )
     assistant_source: AssistantTurnSource = "chat"
     inner_tick_activity: str | None = Field(
@@ -361,7 +376,9 @@ def load_prompt_bundle(
             HARNESS_MD, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         channels_md=_read_memory_document_required(store, "CHANNELS.md"),
-        companionship_md=_read_memory_document_required(store, "COMPANIONSHIP.md"),
+        companionship_md=_read_memory_document_required(
+            store, "COMPANIONSHIP.md"
+        ),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),

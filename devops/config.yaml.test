@@ -41,9 +41,9 @@ agent:
   sub_user_text_to_image_model: "imagen-3.0-generate-002"
   free_user_chat_image_model: "Nano Banana"
   sub_user_chat_image_model: "Nano Banana Pro"
-  # 免费模型用于测试
-  sub_user_chat_model: "z-ai/glm-4.5-air:free"
-  free_user_chat_model: "z-ai/glm-4.5-air:free"
+  # OpenRouter chat model for E2E (``z-ai/glm-4.5-air:free`` retired on provider).
+  sub_user_chat_model: "deepseek/deepseek-v4-flash"
+  free_user_chat_model: "deepseek/deepseek-v4-flash"
   # Agent 聊天轻量数据缓存 TTL（秒），默认 1200（20 分钟）
   agent_config_cache_ttl_seconds: 1200
   # 测试环境无需追踪

@@ -181,6 +181,36 @@ def ast_readable_id_references_in_source(
     return _collect_readable_id_hits(tree, relative_path)
 
 
+def app_ws_queue_delivery_ctx_uses_legacy_chat_row_id(
+    relative_path: str,
+) -> list[str]:
+    """Return hits when ``AppWsQueueDeliveryCtx`` binds ``chat_id`` to ``str(chat.id)``."""
+    tree = parse_module_ast(relative_path)
+    hits: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not isinstance(func, ast.Name) or func.id != "AppWsQueueDeliveryCtx":
+            continue
+        for kw in node.keywords:
+            if kw.arg != "chat_id":
+                continue
+            value = kw.value
+            if (
+                isinstance(value, ast.Call)
+                and isinstance(value.func, ast.Name)
+                and value.func.id == "str"
+                and len(value.args) == 1
+                and isinstance(value.args[0], ast.Attribute)
+                and isinstance(value.args[0].value, ast.Name)
+                and value.args[0].value.id == "chat"
+                and value.args[0].attr == "id"
+            ):
+                hits.append(f"{relative_path}:L{kw.lineno}:legacy_chat_row_id")
+    return hits
+
+
 def companion_surface_readable_id_references() -> list[str]:
     """Aggregate ``readable_id`` references across production companion modules.
 

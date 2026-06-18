@@ -18,9 +18,11 @@ from tests.app.companion_ws_bootstrap.constants import (
     DEFAULT_PG_HOST,
     DEFAULT_PG_PORT,
     ENV_E2E_RELAX_SUBSCRIPTION,
+    ENV_INTY_CONFIG_YAML,
     ENV_SERVER_STDERR_INHERIT,
     POLL_INTERVAL_SEC,
     SERVER_READY_TIMEOUT_SEC,
+    inty_config_yaml_path,
 )
 
 
@@ -33,13 +35,16 @@ class IntySubprocessContext:
     config_path: Path
 
 
-def repo_root_from_here() -> Path:
-    """Repository root: .../tests/companion_ws_bootstrap/server.py -> parents[2]."""
-    return Path(__file__).resolve().parents[2]
-
-
-def default_test_config_path(repo_root: Path) -> Path:
-    return repo_root / "devops" / "config.yaml.test"
+def require_inty_config_yaml() -> Path:
+    """Require ``INTY_CONFIG_YAML`` in the environment; validate the file exists."""
+    cfg = inty_config_yaml_path()
+    if cfg is None:
+        raise RuntimeError(
+            f"Set {ENV_INTY_CONFIG_YAML} before running companion WS E2E"
+        )
+    if not cfg.is_file():
+        raise FileNotFoundError(f"{ENV_INTY_CONFIG_YAML}={cfg} is not a file")
+    return cfg
 
 
 def postgres_tcp_reachable(
@@ -80,22 +85,19 @@ def wait_http_ready(base_url: str, *, timeout_sec: float) -> None:
 @contextmanager
 def run_inty_backend_subprocess(
     *,
-    repo_root: Path | None = None,
-    config_path: Path | None = None,
     port: int | None = None,
 ) -> Iterator[IntySubprocessContext]:
-    """Start ``uvicorn backend.inty.main:app`` with ``INTY_CONFIG_YAML``; yield frozen context."""
-    root = repo_root or repo_root_from_here()
-    cfg = config_path or default_test_config_path(root)
-    if not cfg.is_file():
-        raise FileNotFoundError(f"missing test config: {cfg}")
+    """Start ``uvicorn backend.inty.main:app``; child inherits ``INTY_CONFIG_YAML``.
+
+    Assumes pytest is invoked from the repository root with ``INTY_CONFIG_YAML`` exported.
+    """
+    cfg = require_inty_config_yaml()
     bind_port = port if port is not None else allocate_loopback_port()
     base_url = f"http://127.0.0.1:{bind_port}"
     env = os.environ.copy()
-    repo = str(root)
+    repo = os.getcwd()
     prev_pp = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = repo if not prev_pp else f"{repo}{os.pathsep}{prev_pp}"
-    env["INTY_CONFIG_YAML"] = str(cfg.resolve())
     # Guest limits apply when environment=test and debug=true unless subscription bypass sees this flag.
     env[ENV_E2E_RELAX_SUBSCRIPTION] = "1"
     cmd = [
@@ -116,7 +118,7 @@ def run_inty_backend_subprocess(
     )
     proc = subprocess.Popen(
         cmd,
-        cwd=str(root),
+        cwd=repo,
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=None if inherit_stderr else subprocess.DEVNULL,

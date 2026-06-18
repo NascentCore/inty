@@ -42,7 +42,9 @@ from app.services.agentic_companion.inner_tick_scope import (
     InnerTickModelSource,
     resolve_inner_tick_scope_coords_for_triple,
 )
-from app.services.agentic_companion.inner_tick_turn_scope import inner_tick_turn_scope
+from app.services.agentic_companion.inner_tick_turn_scope import (
+    inner_tick_turn_scope,
+)
 from app.services.agentic_companion.scope_inner_tick_state import (
     get_scope_inner_tick_state,
 )
@@ -50,7 +52,9 @@ from app.services.agentic_companion.session import InnerTickCoords
 from app.utils.models_catalog import GenAIModel
 
 
-def _scope_throttle_snapshot(scope: CompanionScope) -> InnerTickThrottleSnapshot:
+def _scope_throttle_snapshot(
+    scope: CompanionScope,
+) -> InnerTickThrottleSnapshot:
     tick_state = get_scope_inner_tick_state(scope)
     return InnerTickThrottleSnapshot(
         last_maintenance_monotonic=tick_state.last_maintenance_inner_tick_monotonic(),
@@ -123,9 +127,12 @@ async def try_fire_autonomy_for_scope(
         return False
     kernel_input, scope_session = ctx_pair
 
-    if autonomy_inner_tick_remain_seconds(
-        kernel_input.mem_store, kernel_input.throttle
-    ) > 0:
+    if (
+        autonomy_inner_tick_remain_seconds(
+            kernel_input.mem_store, kernel_input.throttle
+        )
+        > 0
+    ):
         return False
 
     async with inner_tick_turn_scope(session=scope_session):
@@ -220,9 +227,12 @@ async def try_fire_maintenance_for_scope(
         return False
     kernel_input, scope_session = ctx_pair
 
-    if maintenance_inner_tick_remain_seconds(
-        kernel_input.mem_store, kernel_input.throttle
-    ) > 0:
+    if (
+        maintenance_inner_tick_remain_seconds(
+            kernel_input.mem_store, kernel_input.throttle
+        )
+        > 0
+    ):
         return False
 
     async with inner_tick_turn_scope(session=scope_session):
@@ -302,15 +312,17 @@ async def try_fire_dreaming_for_scope(
         return False
 
     idle_seconds = (
-        global_config_loaded_from_config_yaml.app.features.companion_harness.dreaming_idle_seconds
+        global_config_loaded_from_config_yaml.agent.companion_harness.dreaming_idle_seconds
     )
 
-    scope_session = await companion_chat_service.resolve_companion_session_for_api_turn(
-        user_id=resolved.user_id,
-        agent_id=resolved.agent_id,
-        chat_id=resolved.chat_row_id,
-        resolved_chat_model=resolved.model_override,
-        session_id=None,
+    scope_session = (
+        await companion_chat_service.resolve_companion_session_for_api_turn(
+            user_id=resolved.user_id,
+            agent_id=resolved.agent_id,
+            chat_id=resolved.chat_row_id,
+            resolved_chat_model=resolved.model_override,
+            session_id=None,
+        )
     )
     async with inner_tick_turn_scope(session=scope_session):
         outcome = await asyncio.to_thread(

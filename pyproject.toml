@@ -17,6 +17,10 @@ dev = [
 line-length = 80
 target-version = ["py312"]
 
+[tool.ruff]
+line-length = 80
+target-version = "py312"
+
 [tool.pylint.main]
 rcfile = "pylintrc"
 

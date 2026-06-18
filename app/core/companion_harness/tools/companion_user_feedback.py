@@ -9,7 +9,7 @@ Design:
   at tool-call time (user-turn LangSmith trace + inty_trace_id / user_msg_uuid).
 - GitHub REST lives in ``app.utils.github.issues``; issue title/body/labels in
   ``companion_user_feedback_github_issue`` (companion-domain, not generic utils).
-- Token: ``features.companion_harness.user_feedback_github_token``, else ``GH_TOKEN``.
+- Token: agent.companion_harness.user_feedback_github.token, else GH_TOKEN.
 """
 
 from __future__ import annotations
@@ -208,7 +208,9 @@ def _snapshot_to_record(snapshot: HarnessSnapshot) -> dict[str, Any]:
     }
 
 
-def append_user_feedback_record(store: MemoryStore, record: dict[str, Any]) -> None:
+def append_user_feedback_record(
+    store: MemoryStore, record: dict[str, Any]
+) -> None:
     store.append_jsonl_record(USER_FEEDBACK_JSONL_REL, record)
 
 
@@ -310,9 +312,9 @@ def start_github_issue_job(
 def load_user_feedback_github_config() -> tuple[str, str]:
     from app.core.config import global_config_loaded_from_config_yaml
 
-    harness_cfg = global_config_loaded_from_config_yaml.app.features.companion_harness
-    repo = harness_cfg.user_feedback_github_repo.strip()
-    token = harness_cfg.user_feedback_github_token.strip()
+    harness_cfg = global_config_loaded_from_config_yaml.agent.companion_harness
+    repo = harness_cfg.user_feedback_github.repo.strip()
+    token = harness_cfg.user_feedback_github.token.strip()
     if not token:
         token = os.environ.get("GH_TOKEN", "").strip()
     return repo, token

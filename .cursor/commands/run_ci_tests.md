@@ -24,7 +24,7 @@ docker run --rm --name inty-ci-pg \
   -p 5432:5432 -d postgres:16
 ```
 
-- `tests/alembic/test_custom_config.sh` 需要 **`psql`**、`openssl`、`devops/config.yaml.local`
+- `tests/alembic/test_custom_config.sh` 需要 **`psql`**、`openssl`、`devops/config.yaml.test`
 
 ## Steps
 

@@ -70,13 +70,17 @@ from app.services.agentic_companion.inner_tick_scope import (
     InnerTickScopeCoords,
     resolve_inner_tick_scope_coords,
 )
-from app.services.agentic_companion.inner_tick_turn_scope import inner_tick_turn_scope
+from app.services.agentic_companion.inner_tick_turn_scope import (
+    inner_tick_turn_scope,
+)
 from app.services.agentic_companion.ws_implicit_signals import (
     implicit_signal_bundle_from_tc_box,
 )
 
 
-def _throttle_snapshot(fire_input: InnerTickFireInput) -> InnerTickThrottleSnapshot:
+def _throttle_snapshot(
+    fire_input: InnerTickFireInput,
+) -> InnerTickThrottleSnapshot:
     coordinator = fire_input.coordinator
     return InnerTickThrottleSnapshot(
         last_maintenance_monotonic=coordinator.last_maintenance_inner_tick_monotonic(),
@@ -350,9 +354,12 @@ async def try_fire_autonomy_inner_tick(
         return False
     kernel_input, scope_session = ctx_pair
 
-    if autonomy_inner_tick_remain_seconds(
-        kernel_input.mem_store, kernel_input.throttle
-    ) > 0:
+    if (
+        autonomy_inner_tick_remain_seconds(
+            kernel_input.mem_store, kernel_input.throttle
+        )
+        > 0
+    ):
         return False
 
     coordinator = fire_input.coordinator
@@ -452,9 +459,12 @@ async def try_fire_maintenance_inner_tick(
         return False
     kernel_input, scope_session = ctx_pair
 
-    if maintenance_inner_tick_remain_seconds(
-        kernel_input.mem_store, kernel_input.throttle
-    ) > 0:
+    if (
+        maintenance_inner_tick_remain_seconds(
+            kernel_input.mem_store, kernel_input.throttle
+        )
+        > 0
+    ):
         return False
 
     coordinator = fire_input.coordinator
@@ -512,8 +522,9 @@ async def try_fire_maintenance_inner_tick(
             meta_data=dump_chat_ws_companion_wire_meta(user_meta),
         )
 
-        if companion_turn.tool_background_started and coordinator.has_foreground_pending(
-            preset_uid
+        if (
+            companion_turn.tool_background_started
+            and coordinator.has_foreground_pending(preset_uid)
         ):
             coordinator.update_foreground_pending(
                 preset_uid,
@@ -592,15 +603,17 @@ async def try_fire_dreaming_inner_tick(
         return False
 
     idle_seconds = (
-        global_config_loaded_from_config_yaml.app.features.companion_harness.dreaming_idle_seconds
+        global_config_loaded_from_config_yaml.agent.companion_harness.dreaming_idle_seconds
     )
 
-    scope_session = await companion_chat_service.resolve_companion_session_for_api_turn(
-        user_id=coords.user_id,
-        agent_id=coords.agent_id,
-        chat_id=coords.chat_row_id,
-        resolved_chat_model=coords.model_override,
-        session_id=None,
+    scope_session = (
+        await companion_chat_service.resolve_companion_session_for_api_turn(
+            user_id=coords.user_id,
+            agent_id=coords.agent_id,
+            chat_id=coords.chat_row_id,
+            resolved_chat_model=coords.model_override,
+            session_id=None,
+        )
     )
     async with inner_tick_turn_scope(session=scope_session):
         outcome = await asyncio.to_thread(
