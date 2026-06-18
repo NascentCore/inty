@@ -189,6 +189,24 @@ VM 宿主机任务（Alembic、日报）用 [`scripts/render_vm_database_config.
 
 推荐顺序：先在 dev 验证本地 Postgres 与 `host.docker.internal` → GitHub Actions **Run workflow** 选手动 environment **prod** 部署 Ops → 再部署 backend（及按需 push worker）。VM 上 Alembic 用 [alembic_upgrade_prod_db.yaml](../.github/workflows/alembic_upgrade_prod_db.yaml)（workflow 内会把 `host.docker.internal` 替换为 `localhost`）。
 
+### Post-cutover：Cloud SQL 降本
+
+<!-- TODO: Track Cloud SQL right-size / IntelliMate DB cleanup on epic #3495 after !3498 soak. -->
+
+IntelliMate **dev/prod** 迁到本地 Docker 并验证稳定后，应削减 `inty-prod` 上不再使用的 IntelliMate 资源以节省费用。
+
+**注意**：**不能删除整个 `inty-prod` 实例**——iMate 逻辑库（`imate`、`inty-imate-dev`、`inty-imate` 等）仍共用该实例（见 [GCP.md](GCP.md)）。
+
+建议在 !3498 prod E2E 通过并观察一段时间后再操作：
+
+- 确认无 IntelliMate 服务仍连 `10.41.177.3` 的 `inty` / `inty-dev`（`inty-backend-prod` 等已用 `host.docker.internal`）
+- 停止对 Cloud SQL 的增量同步（`sync_cloudsql_inty_incremental.sh` 仅作灾备时再跑）
+- GCP 控制台对 `inty-prod` **降配**（vCPU、内存、磁盘）或移除不再需要的**只读副本**
+- 可选：在 Cloud SQL 上对已废弃的 `inty` / `inty-dev` 做最终 `pg_dump` 归档后 `DROP DATABASE`
+- 实例本身保留，直至 iMate 迁出或另有托管方案
+
+Console：[inty-prod 实例](https://console.cloud.google.com/sql/instances/inty-prod/overview?project=alien-paratext-461204-i9)
+
 ## 与后端 / Ops 的连接
 
 [`config.yaml.dev`](config.yaml.dev) 与 [`config.yaml.prod`](config.yaml.prod) 均使用 `host: host.docker.internal`、`port: 5432`（构建进 Docker 镜像）：
