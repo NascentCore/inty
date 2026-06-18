@@ -17,7 +17,7 @@ DataStream 比较麻烦，因为需要从主数据库同步数据、要重启数
 - **GCP zone**：asia-southeast1-a
 - **数据库**
   - **IntelliMate dev / prod**：均已迁到 dev-instance VM 上的 Docker Postgres（[`config.yaml.dev`](config.yaml.dev) → `inty-dev`，[`config.yaml.prod`](config.yaml.prod) → `inty`）；操作与重同步见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)
-  - **Cloud SQL 实例 `inty-prod`**：仍为 IntelliMate 迁移 **源库**；**iMate 等其它逻辑库** 仍在此实例上（见下文 iMate 小节）
+  - **Cloud SQL 实例 `inty-prod`**：IntelliMate 迁出后的 **源库 / 归档**；**iMate 等其它逻辑库** 仍在此实例上（见下文 iMate 小节）。IntelliMate cutover 稳定后应对实例 **降配**（勿删整实例），见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)「Post-cutover：Cloud SQL 降本」
   - [看板](https://console.cloud.google.com/sql/instances/inty-prod/system-insights?project=alien-paratext-461204-i9)
   - [查询性能分析](https://console.cloud.google.com/sql/instances/inty-prod/insights;duration=P1D;sort_by=TOTAL_EXEC_TIME/executed?project=alien-paratext-461204-i9)
   - **历史**：IntelliMate prod 曾通过 [`config.yaml.prod`](config.yaml.prod) 连 Cloud SQL 主库；现已改为本地 Docker，见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)
