@@ -15,35 +15,20 @@ Companion Harness 提供了**活着的关系**的存在框架；在此之上，i
 
 ## 重要下一步工作
 
-大模型会说话，但不会**记得你、惦记你、在你沉默时仍过自己的日子（分享给你）**。
-
-我们认为 AI 突破现有局限成为长期伴侣的关键是：长期自主性，也就是产生用户预期以外的反馈；但这些行为和反馈始终以用户伴侣的视角呈现。
+LLM 会说话，但不会**记得你、惦记你、在你沉默时仍过自己的日子（分享给你）**，无法成为伴侣。
+我们认为突破的关键是：**长期自主性**，也就是产生用户预期以外的反馈（这些行为和反馈始终以用户伴侣的视角呈现）。
+这是让 AI 成为物理世界活人（5-10 年业界的整体进展）之前最可行的技术方案。
 自主性体现在：
 
 - Autonomy: agents have their own autonomous activities to build up their own identity and novelty.
-- App、微信、Telegram, users can interact with agents through channels used by humans, all are consistent.
+- App、Weixin/WeChat、Telegram, users can interact with agents through channels used by humans, all are consistent.
 
-所有工作都围绕这个目标：
+据此，单一最重要的下一步是 Companion Relationship System (CRS)：
+把 relationship state、time frames、memory consolidation 和 prompt activation 收束成同一套 harness 机制，
+让所有 autonomous activity 与 channel delivery 都围绕同一段关系演化。
 
-### Telegram production integration
-
-Epic [#3395](https://github.com/nascentcore/inty/issues/3395) — Telegram × Bots API 接入路径（Option A / B + channel tools）
-
-### Companion Relationship System (CRS)
-
-Epic [#3341](https://github.com/nascentcore/inty/issues/3341) — psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
-
-### 将智能体运行环境收束成可移植可迁移的组件
-
-- [ ] 用于支持 autonomous companion，可以在用户不在线时持续运行，同时可以暂停和重启（如 token 预算不足时）— Epic [#3373](https://github.com/NascentCore/inty/issues/3373)
-
-### 推理编排显式化（参考 [Pie](https://pie-project.org/) 研究）
-
-Epic [#3393](https://github.com/nascentcore/inty/issues/3393) — turn program spec × prompt_stack stable/volatile seam × tool_background scratch working memory.
-
-### 更稳固健壮的异步多层级任务执行系统
-
-Epic [#3394](https://github.com/nascentcore/inty/issues/3394) — sub-tasks & sub-agents, fan-in / fan-out, async & parallel execution.
+Epic [#3341](https://github.com/nascentcore/inty/issues/3341)
+psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
 
 ## 目标态：内核与产品
 
