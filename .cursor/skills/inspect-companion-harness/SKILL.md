@@ -4,7 +4,7 @@ description: >-
   For humans to understand the companion harness' working conditions.
   Currently, inspect MemoryDoc in Postgres (MemoryStore document versions).
   Covers companion_memory_document_versions, scope triples, and SQL templates for
-  identity/transcript/context, etc. Load DB credentials from repo config.yaml.
+  identity/transcript/context, etc. Load DB credentials from INTY_CONFIG_YAML (devops/config.yaml.local).
   
   Sub-skills:
   show-memory-document (print STYLE.md etc. via Python script)
@@ -48,7 +48,9 @@ PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STY
 
 ## 配置里取连接信息
 
-1. 仓库根目录读取 **`config.yaml`**（若无则用 **`INTY_CONFIG_YAML`** 指向的 yaml，如 **`devops/config.yaml.local`**；跑 pytest / CI 常见 **`devops/config.yaml.test`**）。Python 脚本在 import `app.*` 前会设置 **`INTY_CONFIG_YAML`**（与 **`app/core/config.py`** 相同机制）。
+<!-- TODO(local-dev-database-skills): link to canonical Postgres prereq; https://github.com/NascentCore/inty/issues/3529 -->
+
+1. 本地开发统一 **`export INTY_CONFIG_YAML=devops/config.yaml.local`**（与 Ops 后端同源；见 [`launch-inty-backend`](../launch-inty-backend/SKILL.md)）。**pytest / CI 后端**用 **`devops/config.yaml.test`** — **`database` DSN 与 local 相同**，连 Ops 已 migrate 的同一 Postgres；**smoke 假定库已按 local 配好，勿改密码**。Python 脚本在 import `app.*` 前会设置 **`INTY_CONFIG_YAML`**（与 **`app/core/config.py`** 相同机制）。
 2. 使用块 **`database`**：`host`、`port`、`user`、`password`、`db`。
 3. 用 **`psql`** 或任意 Postgres 客户端连接；shell 示例：`PGPASSWORD='<password>' psql -h <host> -p <port> -U <user> -d <db>`。
 

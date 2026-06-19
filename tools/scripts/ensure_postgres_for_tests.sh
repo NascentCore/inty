@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Ensure Postgres 16 on :5432 for pytest (CI parity: postgres/sxwl666!/inty).
+# Ensure Postgres 16 on :15432 for pytest (CI parity: postgres/sxwl666!/inty).
+# TODO(local-dev-database-skills): align with canonical skill doc — https://github.com/NascentCore/inty/issues/3529
 # Prefers Docker postgres:16; falls back to distro postgresql when Docker overlayfs is blocked.
 set -euo pipefail
 
@@ -9,7 +10,7 @@ cd "$ROOT"
 PG_USER="${PG_USER:-postgres}"
 PG_PASSWORD="${PG_PASSWORD:-sxwl666!}"
 PG_DB="${PG_DB:-inty}"
-PG_PORT="${PG_PORT:-5432}"
+PG_PORT="${PG_PORT:-15432}"
 CONTAINER_NAME="${INTY_PG_CONTAINER:-pg-inty}"
 
 wait_pg() {
@@ -86,9 +87,6 @@ fi
 if [[ -f .venv/bin/python ]]; then
   export PYTHONPATH=.
   export ALEMBIC_CONFIG=backend/alembic/alembic.ini
-  # TODO(INTY_CONFIG_YAML): export INTY_CONFIG_YAML=devops/config.yaml.test instead of cp
-  if [[ ! -f config.yaml ]]; then
-    cp devops/config.yaml.test config.yaml
-  fi
+  export INTY_CONFIG_YAML=devops/config.yaml.test
   .venv/bin/python -m alembic upgrade head
 fi

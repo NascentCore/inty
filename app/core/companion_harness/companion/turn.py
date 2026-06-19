@@ -109,6 +109,7 @@ from .in_turn_sync_tool_loop import (
 from .prompt_stack import refresh_companion_turn_prompt_stack
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
+    refresh_single_llm_bootstrap_chat_prompt_prefix,
     refresh_single_llm_user_chat_prompt_prefix,
 )
 from app.core.companion_harness.loop.agentic_loop import AgenticLoop
@@ -472,6 +473,15 @@ async def _run_companion_turn_core(
                             runtime_context=runtime_context,
                         )
 
+                    async def _bootstrap_single_llm_after_tool_round(
+                        messages_with_tool_results: list[dict[str, Any]],
+                    ) -> list[dict[str, Any]]:
+                        return refresh_single_llm_bootstrap_chat_prompt_prefix(
+                            store=store,
+                            messages=messages_with_tool_results,
+                            runtime_context=runtime_context,
+                        )
+
                     async def _settled_single_llm_after_tool_round(
                         messages_with_tool_results: list[dict[str, Any]],
                     ) -> list[dict[str, Any]]:
@@ -489,6 +499,24 @@ async def _run_companion_turn_core(
                         legacy_llm_client=llm_client,
                     )
                     if track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+                        transcript_window = loaded_state.transcript_window
+                        if track_uses_ai_private_splice(track):
+                            transcript_window = expand_manifest_rows(
+                                store,
+                                loaded_state.transcript_window,
+                            )
+                        bootstrap_prompt_plan = PromptBuilder(
+                            bundle=bundle,
+                            context=context,
+                            runtime_context=runtime_context,
+                        ).build_bootstrap_user_chat_prompt(
+                            transcript_window=transcript_window,
+                            user_text=user_text,
+                            tail_user_ts=ts_user,
+                            tools=tuple(tools_for_turn),
+                            implicit_sign_on_turn=implicit_sign_on_turn,
+                            tail_splice_thoughts=ai_private_splice_plan.thoughts,
+                        )
                         loop_context = build_bootstrap_user_chat_loop_context(
                             messages=messages,
                             tools_for_turn=tools_for_turn,
@@ -501,12 +529,17 @@ async def _run_companion_turn_core(
                             langsmith_slice=langsmith_slice,
                             runtime_context=runtime_context,
                             memory_bootstrap_type=memory_bootstrap_type,
-                            stack_depth=len(prompt_plan.system_messages),
+                            stack_depth=sum(
+                                1
+                                for message in bootstrap_prompt_plan.messages
+                                if message.role.value == "system"
+                            ),
                             langsmith_trace_id=langsmith_trace_acc,
                             langsmith_run_id=langsmith_llm_run_acc,
-                            after_tool_messages_appended=_agentic_loop_after_tool_round,
+                            after_tool_messages_appended=_bootstrap_single_llm_after_tool_round,
                             output_queue=agentic_output_queue,
                             user_message_batch=user_message_batch,
+                            prompt_plan=bootstrap_prompt_plan,
                         )
                         loop_out = await agentic_loop.run_single_llm_user_turn(
                             context=loop_context

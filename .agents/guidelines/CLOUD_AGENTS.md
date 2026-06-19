@@ -49,7 +49,7 @@ Sections below (Android SDK at `/opt/android-sdk`, `evaluation/node_modules`, em
 
 ## Service overview
 
-The primary service for development is the **Python backend** (FastAPI/Uvicorn on port 8000), backed by **PostgreSQL 16** (Docker, port 5432). Standard commands are documented in `backend/README.md` and the CI workflow `.github/workflows/ci_backend.yaml`.
+The primary service for development is the **Python backend** (FastAPI/Uvicorn on port 8000), backed by **PostgreSQL** (Docker, port **15432**). Standard commands are documented in `backend/README.md` and the CI workflow `.github/workflows/ci_backend.yaml`.
 
 The **Android app** (`android_app/`) builds with Gradle 8.14+ and Java 21. CI workflow: `.github/workflows/ci_android_app.yaml`.
 
@@ -86,12 +86,11 @@ Use dev tools as `uv run ruff …` / `uv run black …`, or after `source .venv/
 ### Starting services
 
 1. **PostgreSQL** (preferred): run from repo root after install/update:
-   - `./tools/scripts/ensure_postgres_for_tests.sh` — Docker container `pg-inty` (`postgres:16` on `:5432`) when Docker works, otherwise starts distro PostgreSQL; runs `alembic upgrade head`.
+   - `./tools/scripts/ensure_postgres_for_tests.sh` — Docker container `pg-inty` (`postgres:16` on **`:15432`**) when Docker works, otherwise starts distro PostgreSQL; **`INTY_CONFIG_YAML=devops/config.yaml.test`** then `alembic upgrade head` (same DSN as `config.yaml.local`).
    - Cloud Agent VM start hook: `.cursor/cloud-agent-start.sh` (same script).
-   - Manual Docker only: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
-   - Verify readiness: `PGPASSWORD='sxwl666!' psql -h localhost -U postgres -d inty -c 'SELECT 1'`
-2. **Inty backend (port 8000)**: `source .venv/bin/activate && ./backend/inty/start.sh --test`
-   - `config.yaml` is auto-provisioned by the update script; no manual copy needed.
+   - Manual Docker only: `sudo docker run --rm --name pg-inty -p 15432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
+   - Verify readiness: `PGPASSWORD='sxwl666!' psql -h localhost -U postgres -d inty -c 'SELECT 1'` (**assume DB matches `config.yaml.local`; do not alter password during smoke**)
+2. **Inty backend (port 8000)**: `export INTY_CONFIG_YAML=devops/config.yaml.test && source .venv/bin/activate && ./backend/inty/start.sh --test`
    - `--test` and `--dev` share the same seeds; `--dev` uses uvicorn `--reload`, `--test` does not (CI). Neither runs the evaluation static build (that is Ops `backend/ops/start.sh --local` only).
    - **`Environment.TEST` in Python** comes from `config.yaml` (`app.environment`), not from the `--test` CLI flag.
    - The server runs on `http://localhost:8000`

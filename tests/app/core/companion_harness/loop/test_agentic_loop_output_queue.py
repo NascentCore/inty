@@ -47,7 +47,14 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
 )
-from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutput,
+)
+from app.core.companion_harness.prompt_builder import (
+    PromptMessage,
+    PromptMessageRole,
+    PromptPlan,
+)
 from app.services.agentic_companion.downlink import DownlinkKind
 
 
@@ -100,6 +107,17 @@ def _assert_user_transcript_row(store: MemoryStore) -> None:
     assert transcript_row["uuid"] == "user-msg-1"
 
 
+def _default_prompt_plan() -> PromptPlan:
+    return PromptPlan(
+        messages=(
+            PromptMessage(role=PromptMessageRole.SYSTEM, content="sys"),
+            PromptMessage(role=PromptMessageRole.USER, content="hi"),
+        ),
+        tools=(),
+        tool_choice=None,
+    )
+
+
 def _loop_context(*, output_queue: OutputQueue) -> AgenticLoopContext:
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     return AgenticLoopContext(
@@ -127,6 +145,7 @@ def _loop_context(*, output_queue: OutputQueue) -> AgenticLoopContext:
         output_queue=output_queue,
         user_message_batch=batch,
         context_meta=None,
+        prompt_plan=_default_prompt_plan(),
     )
 
 
@@ -162,11 +181,17 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
     domain.append_user_reply = AsyncMock(side_effect=[ready_a, ready_b])  # type: ignore[method-assign]
     context = _loop_context(output_queue=domain)
 
-    async def _fake_sync_loop(loop_input):  # type: ignore[no-untyped-def]
-        await loop_input.interim_output_sink(
+    async def _fake_prompt_plan_loop(  # type: ignore[no-untyped-def]
+        ctx,
+        *,
+        store,
+        llm_client,
+        interim_output_sink,
+    ):
+        await interim_output_sink(
             _bootstrap_interim(text="first"),
         )
-        await loop_input.interim_output_sink(
+        await interim_output_sink(
             BootstrapInterimOutput(
                 text="second",
                 user_msg_uuid="user-msg-1",
@@ -192,8 +217,8 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
         )
 
     with patch(
-        "app.core.companion_harness.loop.agentic_loop.run_in_turn_sync_tool_loop",
-        new=AsyncMock(side_effect=_fake_sync_loop),
+        "app.core.companion_harness.loop.agentic_loop._run_prompt_plan_tool_loop",
+        new=AsyncMock(side_effect=_fake_prompt_plan_loop),
     ):
         store = _loop_store()
         result = await AgenticLoop(
@@ -206,7 +231,9 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
     append_inputs = [
         call.args[0] for call in domain.append_user_reply.await_args_list
     ]
-    assert all(isinstance(item, OutputQueueAppendInput) for item in append_inputs)
+    assert all(
+        isinstance(item, OutputQueueAppendInput) for item in append_inputs
+    )
     assert append_inputs[0].message_ids == ("input-1",)
     assert append_inputs[0].batch_id == "batch-1"
     _assert_user_transcript_row(store)
@@ -218,8 +245,14 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
     domain.append_user_reply = AsyncMock()
     context = _loop_context(output_queue=domain)
 
-    async def _fake_sync_loop(loop_input):  # type: ignore[no-untyped-def]
-        await loop_input.interim_output_sink(
+    async def _fake_prompt_plan_loop(  # type: ignore[no-untyped-def]
+        ctx,
+        *,
+        store,
+        llm_client,
+        interim_output_sink,
+    ):
+        await interim_output_sink(
             _bootstrap_interim(text="   "),
         )
         from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
@@ -236,8 +269,8 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
         )
 
     with patch(
-        "app.core.companion_harness.loop.agentic_loop.run_in_turn_sync_tool_loop",
-        new=AsyncMock(side_effect=_fake_sync_loop),
+        "app.core.companion_harness.loop.agentic_loop._run_prompt_plan_tool_loop",
+        new=AsyncMock(side_effect=_fake_prompt_plan_loop),
     ):
         result = await AgenticLoop(
             store=_loop_store(),
@@ -255,8 +288,14 @@ async def test_agentic_loop_skips_silent_assistant_output() -> None:
     domain.append_user_reply = AsyncMock()
     context = _loop_context(output_queue=domain)
 
-    async def _fake_sync_loop(loop_input):  # type: ignore[no-untyped-def]
-        await loop_input.interim_output_sink(
+    async def _fake_prompt_plan_loop(  # type: ignore[no-untyped-def]
+        ctx,
+        *,
+        store,
+        llm_client,
+        interim_output_sink,
+    ):
+        await interim_output_sink(
             _bootstrap_interim(text=PROACTIVE_CHAT_SILENT_TOKEN),
         )
         from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
@@ -273,8 +312,8 @@ async def test_agentic_loop_skips_silent_assistant_output() -> None:
         )
 
     with patch(
-        "app.core.companion_harness.loop.agentic_loop.run_in_turn_sync_tool_loop",
-        new=AsyncMock(side_effect=_fake_sync_loop),
+        "app.core.companion_harness.loop.agentic_loop._run_prompt_plan_tool_loop",
+        new=AsyncMock(side_effect=_fake_prompt_plan_loop),
     ):
         result = await AgenticLoop(
             store=_loop_store(),
@@ -329,9 +368,6 @@ async def test_agentic_loop_uses_prompt_plan_path_when_set() -> None:
         )
 
     with patch(
-        "app.core.companion_harness.loop.agentic_loop.run_in_turn_sync_tool_loop",
-        new=AsyncMock(),
-    ) as legacy_mock, patch(
         "app.core.companion_harness.loop.agentic_loop._run_prompt_plan_tool_loop",
         new=AsyncMock(side_effect=_fake_prompt_plan_loop),
     ) as prompt_plan_mock:
@@ -342,12 +378,13 @@ async def test_agentic_loop_uses_prompt_plan_path_when_set() -> None:
         ).run_single_llm_user_turn(context=context)
 
     prompt_plan_mock.assert_awaited_once()
-    legacy_mock.assert_not_awaited()
     assert result.assistant_text == "done"
 
 
 @pytest.mark.asyncio
-async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -> None:
+async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -> (
+    None
+):
     from app.core.companion_harness.loop.agentic_loop import (
         _run_prompt_plan_tool_loop,
     )
@@ -376,6 +413,22 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
         tools=({"type": "function", "function": {"name": "generate_image"}},),
         tool_choice=None,
     )
+    refreshed_tools = (
+        {
+            "type": "function",
+            "function": {"name": "memory_store_read_document"},
+        },
+    )
+
+    async def _refresh_after_tool_round(
+        messages_with_tool_results: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        messages_with_tool_results[0] = {
+            "role": "system",
+            "content": "refreshed sys",
+        }
+        return list(refreshed_tools)
+
     llm_client = MagicMock()
     llm_client.resolve_model.return_value = SimpleNamespace(
         id_on_provider="test/model"
@@ -402,6 +455,11 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
             {"role": "system", "content": "sys"},
             {"role": "user", "content": "hi"},
         ]
+        await after_tool_messages_appended(openai_messages)
+        assert openai_messages[0] == {
+            "role": "system",
+            "content": "refreshed sys",
+        }
         next_resp, _trace_id = await continue_chat(openai_messages)
         return SimpleNamespace(
             trace_id="trace-next",
@@ -410,6 +468,10 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
         )
 
     store = _loop_store()
+    context = replace(
+        context,
+        after_tool_messages_appended=_refresh_after_tool_round,
+    )
     with patch(
         "app.core.companion_harness.loop.agentic_loop.resolve_openai_tool_call_loop_async",
         new=AsyncMock(side_effect=_fake_resolver),
@@ -431,6 +493,7 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
     assert initial_call.kwargs["tool_choice"] is None
     assert initial_call.kwargs["high_reasoning"] is True
     continuation_call = llm_client.chat_completion.await_args_list[1]
+    assert continuation_call.kwargs["tools"] == list(refreshed_tools)
     expected_extra = _langsmith_slice().foreground_invocation_extra(
         source=SOURCE_SINGLE_COMPLETION,
         extra_metadata=None,
@@ -530,12 +593,15 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
         )
 
     store = _loop_store()
-    with patch(
-        "app.core.companion_harness.loop.agentic_loop.run_dual_llm_foreground_chat",
-        new=AsyncMock(return_value=fg_result),
-    ), patch(
-        "app.core.companion_harness.loop.agentic_loop.run_tool_background_loop",
-        new=AsyncMock(side_effect=_fake_tool_loop),
+    with (
+        patch(
+            "app.core.companion_harness.loop.agentic_loop.run_dual_llm_foreground_chat",
+            new=AsyncMock(return_value=fg_result),
+        ),
+        patch(
+            "app.core.companion_harness.loop.agentic_loop.run_tool_background_loop",
+            new=AsyncMock(side_effect=_fake_tool_loop),
+        ),
     ):
         result = await AgenticLoop(
             store=store,
@@ -620,12 +686,15 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
             )
         )
 
-    with patch(
-        "app.core.companion_harness.loop.agentic_loop.run_dual_llm_foreground_chat",
-        new=AsyncMock(return_value=fg_result),
-    ), patch(
-        "app.core.companion_harness.loop.agentic_loop.run_tool_background_loop",
-        new=AsyncMock(side_effect=_fake_tool_loop),
+    with (
+        patch(
+            "app.core.companion_harness.loop.agentic_loop.run_dual_llm_foreground_chat",
+            new=AsyncMock(return_value=fg_result),
+        ),
+        patch(
+            "app.core.companion_harness.loop.agentic_loop.run_tool_background_loop",
+            new=AsyncMock(side_effect=_fake_tool_loop),
+        ),
     ):
         result = await AgenticLoop(
             store=_loop_store(),
@@ -693,12 +762,15 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
         force_tools_first_round=False,
     )
 
-    with patch(
-        "app.core.companion_harness.loop.agentic_loop.run_dual_llm_foreground_chat",
-        new=AsyncMock(return_value=fg_result),
-    ), patch(
-        "app.core.companion_harness.loop.agentic_loop.run_tool_background_loop",
-        new=AsyncMock(),
+    with (
+        patch(
+            "app.core.companion_harness.loop.agentic_loop.run_dual_llm_foreground_chat",
+            new=AsyncMock(return_value=fg_result),
+        ),
+        patch(
+            "app.core.companion_harness.loop.agentic_loop.run_tool_background_loop",
+            new=AsyncMock(),
+        ),
     ):
         result = await AgenticLoop(
             store=_loop_store(),
@@ -708,4 +780,3 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
 
     domain.append_user_reply.assert_not_awaited()
     assert result.output_message_ids == ()
-

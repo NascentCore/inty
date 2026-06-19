@@ -1,7 +1,7 @@
-# Used for running backend server in tests.
+# Used for running backend server in CI tests.
 # External services and tracing are disabled or faked so CI does not depend on third-party APIs.
+# Database DSN matches devops/config.yaml.local (same local Postgres Ops migrates).
 # app.debug true: tolerate missing Firebase JSON in CI; OpenAPI on. Log level comes from logging.level / INTY_* only.
-
 app:
   debug: true
   backend_cors_origins: ["http://localhost:3000"]
@@ -20,7 +20,14 @@ logging:
   level: "INFO"
 
 database:
-  host: "localhost"
+  # Same DSN as devops/config.yaml.local — pytest / CI backend share the local Postgres
+  # instance Ops prepares (localhost:15432, db inty). Smoke docs assume DB is already
+  # compatible; do not alter Postgres password as a test step.
+  host: localhost
+  port: 15432
+  user: postgres
+  password: "sxwl666!"
+  db: inty
   # Small pools: default PG max_connections=100; pytest shares DB with the uvicorn on :8000.
   pool_size: 16
   max_overflow: 4

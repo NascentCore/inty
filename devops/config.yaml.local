@@ -1,6 +1,6 @@
-# For running an actual backend server locally
-# With all dependent services running locally or faked out
-# Can be used to run end-to-end testing of the full app
+# For running an actual backend server locally.
+# With all dependent services running locally or faked out.
+# Can be used to run end-to-end testing of the full app.
 app:
   debug: true
   environment: local
@@ -32,9 +32,8 @@ security:
   access_token_expire_minutes: 10080
 
 database:
-  # Read-only replica: 34.87.163.31
   host: localhost
-  port: 5433
+  port: 15432
   user: postgres
   # Read-only replica: sxwl666A!
   password: "sxwl666!"

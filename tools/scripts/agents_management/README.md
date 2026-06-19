@@ -25,12 +25,12 @@ python copy_agent.py --name "Amber" \
 # Copy agent from dev to production
 python copy_agent.py --name "Amber" \
   --source-pg "postgresql://postgres:sxwl666!@localhost:15432/devdb" \
-  --dest-pg "postgresql://postgres:sxwl666!@localhost:5432/inty"
+  --dest-pg "postgresql://postgres:sxwl666!@localhost:15432/inty"
 
 # Copy with force overwrite
 python copy_agent.py --name "Amber" --force \
   --source-pg "postgresql://postgres:sxwl666!@localhost:15432/devdb" \
-  --dest-pg "postgresql://postgres:sxwl666!@localhost:5432/inty"
+  --dest-pg "postgresql://postgres:sxwl666!@localhost:15432/inty"
 ```
 
 ### Notes

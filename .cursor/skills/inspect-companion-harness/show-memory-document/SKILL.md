@@ -20,7 +20,7 @@ description: >-
 
 仓库根执行（`PYTHONPATH=.`）。CLI 为 **Cyclopts**；`--help` 看全参数。
 
-**配置**：与后端相同 — 先读 **`INTY_CONFIG_YAML`** 环境变量，否则 **`config.yaml`**；`--config` 会写入 `INTY_CONFIG_YAML`（见 `app/core/config.py`）。本地 Ops 常见：
+**配置**：与后端相同 — 先读 **`INTY_CONFIG_YAML`** 环境变量，否则 **`devops/config.yaml.local`**；`--config` 会写入 `INTY_CONFIG_YAML`（见 `app/core/config.py`）。本地 Ops：
 
 ```bash
 export INTY_CONFIG_YAML=devops/config.yaml.local
@@ -40,7 +40,7 @@ PYTHONPATH=. python .cursor/skills/scripts/companion_memory_show_document.py STY
 | `DOCUMENT`（位置参数） | 逻辑路径：`STYLE.md`、`context.json`、`memory/daily/2026-05-18.md` 等 |
 | `--agent-id` | WebSocket/API 的 `agent_id`（ORM 列 `companion_id`） |
 | `--user-id` / `--chat-id` | MemoryStore 作用域三元组 |
-| `--config` | 覆盖 `INTY_CONFIG_YAML`；未设时沿用 env 或 `config.yaml` |
+| `--config` | 覆盖 `INTY_CONFIG_YAML`；未设时沿用 env 或 `devops/config.yaml.local` |
 | `--limit N` | 打印最近 N 个版本（默认 1） |
 | `--meta-only` | 只打 `sequence_id` / `created_at` / 字数，不打正文 |
 | `--list-scopes` | 列出该 agent 下所有 `(user_id, chat_id)` |

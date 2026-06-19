@@ -30,7 +30,7 @@ get_postgres_params() {
     PG_USER="${PG_USER:-postgres}"
     PG_PASSWORD="${PG_PASSWORD:-sxwl666!}"
     PG_HOST="${PG_HOST:-localhost}"
-    PG_PORT="${PG_PORT:-5432}"
+    PG_PORT="${PG_PORT:-15432}"
 }
 
 # 尝试连接管理数据库
@@ -100,7 +100,7 @@ write_custom_config() {
             sed -i "$@"
         fi
     }
-    # Align Alembic config with the same PG_* params used for psql (CI :5432, not local :5433).
+    # Align Alembic config with the same PG_* params used for psql (local/CI :15432).
     if grep -qE '^  port:' "$config_path"; then
         _sed_inplace "s/^  port:.*/  port: ${PG_PORT}/" "$config_path"
     fi

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only checks for user_analytics_report (daily). Run from inty repo root.
 
-Loads database settings from ./config.yaml (never printed). See sibling SKILL.md.
+Loads database settings from INTY_CONFIG_YAML or devops/config.yaml.local (never printed). See sibling SKILL.md.
 """
 
 from __future__ import annotations
@@ -16,12 +16,28 @@ from pathlib import Path
 def _repo_root() -> Path:
     here = Path(__file__).resolve()
     for p in [here.parent, *here.parents]:
-        if (p / "config.yaml").is_file() and (p / "app" / "models").is_dir():
+        if (p / "app" / "models").is_dir():
             return p
     raise SystemExit(
-        "Could not find repo root (need config.yaml and app/models/). "
+        "Could not find repo root (need app/models/). "
         "Run this script from the inty checkout; use repo-root PYTHONPATH for imports."
     )
+
+
+def _config_path(root: Path) -> Path:
+    import os
+
+    # TODO(INTY_CONFIG_YAML): use resolve_inty_config_yaml_path() from app.utils.config
+    # https://github.com/NascentCore/inty/issues/3530
+    raw = (
+        os.environ.get("INTY_CONFIG_YAML") or "devops/config.yaml.local"
+    ).strip()
+    path = Path(raw)
+    if not path.is_absolute():
+        path = (root / path).resolve()
+    if not path.is_file():
+        raise SystemExit(f"Config not found: {path}")
+    return path
 
 
 def main() -> None:
@@ -49,11 +65,11 @@ def main() -> None:
     except ImportError as e:
         raise SystemExit(f"psycopg2 required: {e}") from e
 
-    cfg_path = root / "config.yaml"
+    cfg_path = _config_path(root)
     cfg = yaml.safe_load(cfg_path.read_text())["database"]
     conn = psycopg2.connect(
         host=cfg["host"],
-        port=cfg.get("port", 5432),
+        port=cfg.get("port", 15432),
         user=cfg["user"],
         password=cfg["password"],
         dbname=cfg["db"],

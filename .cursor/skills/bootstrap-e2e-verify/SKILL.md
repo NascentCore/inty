@@ -19,7 +19,8 @@ Orchestration only — details live in linked skills / AGENTS.
 ## Prereq
 
 - Repo root cwd.
-- Ops `:8001` up — [`launch-inty-backend`](../launch-inty-backend/SKILL.md) (do not duplicate `start.sh` here).
+- Postgres **`localhost:15432`** / db **`inty`** — 与 `devops/config.yaml.local` **`database`** 一致（**假定已配好，勿改密码**）。
+- Ops `:8001` up — [`launch-inty-backend`](../launch-inty-backend/SKILL.md)（`INTY_CONFIG_YAML=devops/config.yaml.local`；`start.sh` 自动 migrate；勿单独 `alembic upgrade head`；勿在此重复 `start.sh` 全文）。
 - Bearer: [`.inty_ops_bearer_token`](../../../.inty_ops_bearer_token).
 
 Domain: [`companion/AGENTS.md`](../../../app/core/companion_harness/companion/AGENTS.md) (bootstrap carve-outs).

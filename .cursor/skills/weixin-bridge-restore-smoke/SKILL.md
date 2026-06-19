@@ -26,19 +26,19 @@ description: >-
 
 ## 前置条件
 
-1. **Postgres** 已起，且 migration 含 `ops_wechat_demo_bridges`（`backend/ops/start.sh` 会 `alembic upgrade head`）。
-2. **Ops** 本地：`export INTY_CONFIG_YAML=devops/config.yaml.local`（或你的 local yaml），仓库根执行  
-   `./backend/ops/start.sh --local --no-build-frontend`  
-   默认 **`http://127.0.0.1:8001`**。
-3. **Inty API Base**：onboard 页默认 `http://127.0.0.1:8001`（扫码后自动 provision user/agent）。
-4. **单 Ops 实例**：多 Pod 会重复 restore 同一行（`TODO(weixin-bridge-multi-replica)`）。
+1. **Postgres** on **`localhost:15432`**，库 **`inty`** — 与 [`devops/config.yaml.local`](../../../devops/config.yaml.local) **`database`** 一致；**假定已配好，勿改密码**。
+2. **Schema**：`export INTY_CONFIG_YAML=devops/config.yaml.local` 后 **启动一次 Ops**（[`launch-inty-backend`](../launch-inty-backend/SKILL.md)）— `backend/ops/start.sh` **自动** `alembic upgrade head`（含 `ops_wechat_demo_bridges`）。**勿**单独跑 `alembic upgrade head`。
+3. **Ops** 监听 **`http://127.0.0.1:8001`**（手动 smoke 需保持运行；仅 pytest 时 migrate 完成即可停）。
+4. **Inty API Base**：onboard 页默认 `http://127.0.0.1:8001`（扫码后自动 provision user/agent）。
+5. **单 Ops 实例**：多 Pod 会重复 restore 同一行（`TODO(weixin-bridge-multi-replica)`）。
 
-先跑 CI 相关用例（可选但推荐）：
+先跑 CI 相关用例（可选但推荐；前提：上节 Ops 已至少启动过一次）。pytest 用 **`devops/config.yaml.test`**（**同一 Postgres DSN**，见 launch skill）：
 
 ```bash
 cd /path/to/inty
 source .venv/bin/activate
 export PYTHONPATH=.
+export INTY_CONFIG_YAML=devops/config.yaml.test
 pytest tests/backend/ops/test_weixin_session_restore.py \
   tests/backend/ops/test_weixin_session_persistence.py -q
 ```
@@ -59,7 +59,7 @@ ORDER BY updated_at DESC
 LIMIT 5;
 ```
 
-连接串从仓库根 `config.yaml`（或 `INTY_CONFIG_YAML`）的 `database.async_url` / `database.url` 取。
+连接串从 **`INTY_CONFIG_YAML=devops/config.yaml.local`** 的 `database.async_url` / `database.url` 取。
 
 ### 2. Inbound DM 与 peer 持久化
 

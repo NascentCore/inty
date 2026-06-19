@@ -78,8 +78,8 @@ def main() -> int:
     )
     p.add_argument(
         "--config",
-        default="config.yaml",
-        help="Repo-root YAML with app/agent blocks (default: config.yaml)",
+        default="devops/config.yaml.local",
+        help="Inty YAML with app/agent blocks (default: devops/config.yaml.local)",
     )
     p.add_argument(
         "--project-name",

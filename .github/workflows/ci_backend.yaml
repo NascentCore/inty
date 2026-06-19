@@ -59,7 +59,7 @@ jobs:
         # Cannot access env var here. So use hardcoded image.
         image: postgres:16
         ports:
-          - 5432:5432
+          - 15432:5432
         env:
           POSTGRES_USER: ${{ env.PG_USER }}
           POSTGRES_PASSWORD: ${{ env.PG_PASSWORD }}

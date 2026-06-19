@@ -1036,6 +1036,7 @@ class RootConfig(Config):
 
 # TODO(INTY_CONFIG_YAML): add resolve_inty_config_yaml_path() — INTY_CONFIG_YAML or config.yaml;
 # used by app.core.config, backend/alembic/env.py, and standalone scripts.
+# https://github.com/NascentCore/inty/issues/3530
 
 
 def load_config(path: str) -> Config:

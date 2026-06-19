@@ -22,7 +22,8 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
 ## Prereq
 
 - Repo root cwd.
-- Ops `:8001` running with `INTY_CONFIG_YAML=devops/config.yaml.local` — see [`launch-inty-backend`](../launch-inty-backend/SKILL.md).
+- Postgres **`localhost:15432`** / db **`inty`** — 与 `devops/config.yaml.local` **`database`** 一致（**假定已配好，勿改密码**）。
+- Ops `:8001` running — see [`launch-inty-backend`](../launch-inty-backend/SKILL.md)（`INTY_CONFIG_YAML=devops/config.yaml.local`；`start.sh` **自动 migrate**；勿单独 `alembic upgrade head`）。
 - REPL environment sane — see [`examine-local-inty-repl-env`](../examine-local-inty-repl-env/SKILL.md).
 - Create a fresh bootstrap agent — see [`create-bootstrap-test-agent`](../create-bootstrap-test-agent/SKILL.md).
 

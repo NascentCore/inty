@@ -2,7 +2,7 @@
 name: examine-local-inty-repl-env
 description: >-
   Checklist and commands to verify local Inty Ops backend + inty_v2_repl environment
-  (venv, config.yaml, bearer, API port, LangSmith trace IDs and clickable URLs in REPL
+  (venv, INTY_CONFIG_YAML, bearer, API port, LangSmith trace IDs and clickable URLs in REPL
   metadata). For human partners—especially non-engineers—confirming dev setup before
   product evaluation.
   Triggers: 检查本地环境、REPL 没有 langsmith url、环境对不对、
@@ -46,10 +46,11 @@ python -c "import langsmith; print('langsmith package: ok')" 2>&1 || echo "langs
 
 **期望**：存在 `.venv`；`langsmith` 可 import（来自根目录 `requirements.txt`）。
 
-### B. 后端配置（`config.yaml`）
+### B. 后端配置（`INTY_CONFIG_YAML`）
 
 ```bash
-test -f "${INTY_CONFIG_YAML:-config.yaml}" && echo "config: ${INTY_CONFIG_YAML:-config.yaml}" || echo "config: MISSING"
+export INTY_CONFIG_YAML=devops/config.yaml.local
+test -f "${INTY_CONFIG_YAML}" && echo "config: ${INTY_CONFIG_YAML}" || echo "config: MISSING"
 ```
 
 智能体用 **只读** 方式确认（勿输出 secret 全文）：
@@ -73,7 +74,7 @@ test -f .inty_ops_bearer_token && echo "bearer file: .inty_ops_bearer_token pres
 
 ### D. REPL 专用 `.env`（与后端 **分离**）
 
-REPL **只**加载 [`tools/inty_v2_repl/.env`](../../../tools/inty_v2_repl/.env)，**不**读仓库根 `config.yaml`（[`repl_dotenv.py`](../../../tools/inty_v2_repl/repl_dotenv.py)）。
+REPL **只**加载 [`tools/inty_v2_repl/.env`](../../../tools/inty_v2_repl/.env)，**不**读 **`INTY_CONFIG_YAML`**（[`repl_dotenv.py`](../../../tools/inty_v2_repl/repl_dotenv.py)）。
 
 ```bash
 REPL_ENV=tools/inty_v2_repl/.env
@@ -111,7 +112,7 @@ else echo "INTY_ACCESS_TOKEN: DIFFERS — paste bearer file into .env"; fi
 | `INTY_ACCESS_TOKEN` | REPL 鉴权来源（写在 `.env`）；与 `.inty_ops_bearer_token` **已相同则不必再抄** |
 | `INTY_API_BASE_URL` | 与 Ops 一致，本地通常 `http://127.0.0.1:8001` |
 | `INTY_V2_CHAT_AGENT_ID` | 可选；也可用 `--agent-id` |
-| `LANGCHAIN_API_KEY` | **必填** 才能在 metadata 行出现 `langsmith_trace_url=`；值可与 `config.yaml` 的 `agent.langchain_api_key` 相同 |
+| `LANGCHAIN_API_KEY` | **必填** 才能在 metadata 行出现 `langsmith_trace_url=`；值可与 `devops/config.yaml.local` 的 `agent.langchain_api_key` 相同 |
 
 **可选（仅 SDK 失败时的拼接兜底）**：`LANGSMITH_WORKSPACE_ID` + `LANGSMITH_PROJECT_ID`（LangSmith UI 里的 **session UUID**，不是 `LANGSMITH_PROJECT` 字符串名）。后端启动时**不会**自动写入这两项。
 
@@ -180,7 +181,7 @@ else:
 
 1. **从未配 REPL**  
    `cp tools/inty_v2_repl/.env.example tools/inty_v2_repl/.env`  
-   `INTY_API_BASE_URL=http://127.0.0.1:8001`、`LANGCHAIN_API_KEY`（与 `config.yaml` 的 `agent.langchain_api_key` 相同）。  
+   `INTY_API_BASE_URL=http://127.0.0.1:8001`、`LANGCHAIN_API_KEY`（与 `devops/config.yaml.local` 的 `agent.langchain_api_key` 相同）。  
    **`INTY_ACCESS_TOKEN`**：用 `cat .inty_ops_bearer_token` 填入；**若 `.env` 里已有且与文件相同，不要重复覆盖**。
 
 2. **后端未起**  
@@ -190,7 +191,7 @@ else:
    几乎总是 REPL 缺 `LANGCHAIN_API_KEY`；改 `.env` 后 **重启 REPL**。
 
 4. **连 id 都没有**  
-   查服务端 `config.yaml` tracing / sample rate / `langchain_api_key`；重启 Ops。
+   查服务端 `devops/config.yaml.local` tracing / sample rate / `langchain_api_key`；重启 Ops。
 
 5. **EU / 自建 LangSmith**  
    REPL `.env` 增加 `LANGCHAIN_ENDPOINT`（与组织一致）。

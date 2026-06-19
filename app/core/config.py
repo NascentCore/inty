@@ -4,7 +4,7 @@ Path: ``INTY_CONFIG_YAML`` when set, otherwise ``config.yaml`` in the current wo
 
 Migration (grep ``TODO(INTY_CONFIG_YAML)``): shared ``resolve_inty_config_yaml_path()`` in
 ``app.utils.config``; entrypoints export env instead of ``cp devops/config.yaml.*`` — see
-workspace TODO list ``resolve-helper`` … ``skills-verify``.
+https://github.com/NascentCore/inty/issues/3530 and skill dedupe https://github.com/NascentCore/inty/issues/3529.
 """
 
 import getpass
@@ -14,35 +14,14 @@ from loguru import logger
 
 from app.utils.config import (
     # TODO: 删除这些间接倒入，在调用处替换为直接倒入 app.utils.*
-    APIEndpointsConfig,
-    AgentConfig,
-    AppConfig,
-    CloudflareConfig,
     Config,
-    DatabaseSettings,
-    ElevenLabsConfig,
-    EmbeddingConfig,
     Environment,
-    FeaturesConfig,
-    FirebaseConfig,
-    GCSConfig,
-    GEMINI_2_5_FLASH,
-    GEMINI_2_5_FLASH_LITE,
-    GeminiLiveConfig,
-    GoogleOAuthConfig,
-    GooglePlayConfig,
-    LoggingConfig,
-    MemoryExtractionConfig,
-    PushNotificationConfig,
-    SecurityConfig,
-    UserAnalyticsReportConfig,
-    VerificationConfig,
-    # End of 间接倒入
     _validate_config,
     load_config,
 )
 
 # TODO(INTY_CONFIG_YAML): use resolve_inty_config_yaml_path() from app.utils.config
+# https://github.com/NascentCore/inty/issues/3530
 _CONFIG_PATH = (
     os.environ.get("INTY_CONFIG_YAML") or "config.yaml"
 ).strip() or "config.yaml"

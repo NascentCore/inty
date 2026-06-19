@@ -14,14 +14,14 @@
 ## Prerequisites
 
 - **Python 3.12**，当前工作目录为**仓库根目录**
-- **PostgreSQL** 可连（CI 等价：`postgres:16`，`PG_USER=postgres`，`PG_PASSWORD=sxwl666!`，`PG_DB=inty`，端口 **5432**）；本机 5432 无 PG 时：
+- **PostgreSQL** 可连（与 **`devops/config.yaml.local`** / **`devops/config.yaml.test`** 的 **`database`** 相同：`postgres` @ **`localhost:15432`**，db **`inty`**）；**假定本机库已按该 DSN 配好，勿在 smoke 里改密码**。本机 15432 无 PG 时：
 
 ```bash
 docker run --rm --name inty-ci-pg \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD='sxwl666!' \
   -e POSTGRES_DB=inty \
-  -p 5432:5432 -d postgres:16
+  -p 15432:5432 -d postgres:16
 ```
 
 - `tests/alembic/test_custom_config.sh` 需要 **`psql`**、`openssl`、`devops/config.yaml.test`
@@ -119,7 +119,7 @@ docker run --rm --name inty-ci-pg \
 
 ## 与真实 CI 的差异（心里有数即可）
 
-- **配置落地**：CI job 写 `cp devops/config.yaml.test config.yaml`；本地推荐 **`INTY_CONFIG_YAML`**，避免动默认 `config.yaml`
+- **配置落地**：CI job 写 `cp devops/config.yaml.test config.yaml`；本地推荐 **`INTY_CONFIG_YAML=devops/config.yaml.test`**（**`database` 与 `config.yaml.local` 相同 DSN**，共用 Ops / Docker 准备的 Postgres），避免动默认 `config.yaml`
 - **Runner**：本机 OS/负载与 `ubuntu-latest` 可能不同；偶发时序/端口问题在 CI 上可能不出现或相反
 - **cache**：CI 会 cache pip 与 `.venv`；本地可省略，结果应一致
 
