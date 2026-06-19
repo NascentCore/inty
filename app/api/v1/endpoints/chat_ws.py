@@ -1664,7 +1664,7 @@ async def chat_completions_websocket(
         coordinator=companion_ws,
     )
     poll_secs = float(
-        global_config_loaded_from_config_yaml.app.features.companion_ws_proactive_chat_poll_seconds
+        global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat.poll_seconds
     )
 
     async def _run_ws_inner_tick_poll(ctx: dict[str, Any]) -> None:

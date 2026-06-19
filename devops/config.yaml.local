@@ -16,9 +16,6 @@ app:
     subscribed_user_image_gen_24h_limit: 8
     free_user_agent_creation_24h_limit: 1
     subscribed_user_agent_creation_24h_limit: 2
-  features:
-    # WS companion bootstrap: NONE | USER_INTERACTIVE
-    companion_memory_bootstrap_type: USER_INTERACTIVE
 
 sentry:
   # dev-inty/default
@@ -64,6 +61,13 @@ agent:
   # intellimate-dev project, inty-testing api key, personal access token
   langchain_api_key: "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"
   companion_harness:
+    # WS companion bootstrap: NONE | USER_INTERACTIVE
+    memory_bootstrap_type: USER_INTERACTIVE
+    # Fast proactive rhythm for local REPL / regression (defaults: idle 30s, poll 60s).
+    inner_tick:
+      proactive_chat:
+        base_idle_seconds: 10
+        poll_seconds: 5
     user_feedback_github:
       token: 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
   # 模型本地无法访问，IP 被限制

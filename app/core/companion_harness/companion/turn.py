@@ -831,15 +831,11 @@ async def _run_companion_turn_core(
                         else None
                     )
                     if implicit_sign_on_turn:
-                        greet_feats = (
-                            global_config_loaded_from_config_yaml.app.features
+                        greet_cfg = (
+                            global_config_loaded_from_config_yaml.agent.companion_harness.implicit_sign_on_greeting
                         )
-                        greet_timeout_sec = float(
-                            greet_feats.companion_implicit_sign_on_greeting_llm_timeout_sec
-                        )
-                        greet_max_attempts = int(
-                            greet_feats.companion_implicit_sign_on_greeting_llm_max_attempts
-                        )
+                        greet_timeout_sec = float(greet_cfg.llm_timeout_sec)
+                        greet_max_attempts = int(greet_cfg.llm_max_attempts)
                         resp = await llm_client.chat_completion_with_retrial(
                             messages=messages,
                             model=resolved_model,

@@ -5,7 +5,7 @@
 
 WebSocket **proactive chat rhythm** lives in ``proactive_chat.py``;
 the unified WS worker fires proactive / scheduled / autonomy / maintenance
-on ``companion_ws_proactive_chat_poll_seconds``.
+on ``agent.companion_harness.inner_tick.proactive_chat.poll_seconds``.
 
 See ``docs/companion_harness/DESIGN.md`` for scheduling semantics and transport boundaries.
 

@@ -106,7 +106,7 @@ class WeixinInprocessPresence:
             coordinator=self._coordinator,
         )
         poll_secs = float(
-            global_config_loaded_from_config_yaml.app.features.companion_ws_proactive_chat_poll_seconds
+            global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat.poll_seconds
         )
         delivery = inner_tick_delivery_for_weixin(
             self._push_weixin_assistant_text

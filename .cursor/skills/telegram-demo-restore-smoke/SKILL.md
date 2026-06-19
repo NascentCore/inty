@@ -29,7 +29,7 @@ description: >-
 
 ## Optional: proactive after restore
 
-- Wait for `companion_ws_proactive_chat_poll_seconds` after bootstrap complete.
+- Wait for `agent.companion_harness.inner_tick.proactive_chat.poll_seconds` after bootstrap complete.
 - Or check logs for `inner_tick_turn=True` on Telegram path.
 
 ## DB verify
@@ -39,3 +39,7 @@ SELECT telegram_chat_id, user_id, agent_id, chat_id
 FROM ops_telegram_demo_bindings;
 SELECT id, last_update_id FROM ops_telegram_demo_poll_state;
 ```
+
+## Pre-ad paid flight (TODO)
+
+Expand this skill with pause playbook + pre-flight checklist before first Telegram paid ad dollar — #3536 (epic #3531). Blockers: #3532, #3533, #3534.

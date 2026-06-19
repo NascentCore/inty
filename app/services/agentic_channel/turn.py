@@ -1,10 +1,27 @@
-"""Agent-channel user turns via companion harness (MemoryStore-only, no chat_history)."""
+"""Agent-channel user turns driven by the companion harness, persisted to MemoryStore only.
+
+The turn seam between an external human channel (Telegram, Weixin, SMS, …) and the
+companion harness for one user bound to one Inty agent. Sessions are addressed by a
+synthetic MemoryStore key derived from the scope, never a legacy ``chats`` row, so all
+state lives in MemoryStore with no ``chat_history`` writes. Sessions are resolved through
+the companion manager and must already carry their minimal seed; an unseeded store is a
+programming error, not something repaired mid-turn.
+
+Usage scenarios:
+
+- Provisioning / WS bootstrap: ensure a seeded session exists before any turn runs.
+- Onboarding greeting: run an implicit "user signed on" turn so the agent speaks first.
+- Inbound user turn: execute one user message; caller already holds the scope turn lock
+  (asserted, not acquired). Injects the one-time session-system message for interactive
+  bootstrap, backfills client time from MemoryStore, then delegates to the manager.
+"""
 
 from __future__ import annotations
 
 import json
 import time
 import uuid
+from datetime import datetime, timezone
 
 from loguru import logger
 
@@ -13,7 +30,10 @@ from app.core.companion_harness.companion.manager import CompanionSession
 from app.core.companion_harness.companion.scope_turn_lock import (
     assert_scope_turn_lock_held_by_current_task,
 )
-from app.core.companion_harness.companion.models import load_context_meta
+from app.core.companion_harness.companion.models import (
+    CompanionTurnResult,
+    load_context_meta,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
@@ -30,6 +50,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.config import global_config_loaded_from_config_yaml
+from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_companion.channel_user_time_context import (
     client_time_from_memory_store,
 )
@@ -38,9 +59,40 @@ from app.services.companion_chat_service import (
     _companion_manager_for_resolved_model,
     _companion_runtime_config_fingerprint,
     _companion_tool_model_api_id,
+    run_companion_implicit_sign_on_greeting_turn_for_api,
 )
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel
+
+_TELEGRAM_ONBOARD_GREETING_USER_TEXT = (
+    "The user opened the Telegram chat through onboarding."
+)
+
+
+async def run_implicit_sign_on_greeting_for_scope(
+    *,
+    scope: AgentScope,
+) -> CompanionTurnResult:
+    """Run one implicit sign-on greeting turn for an agent-channel scope."""
+    from app.services.agentic_channel.provision import (
+        resolve_chat_model_for_scope,
+    )
+
+    model = await resolve_chat_model_for_scope(scope)
+    bundle = ImplicitSignalBundle(
+        client_time=None,
+        user_signed_on=True,
+        server_received_at_utc=datetime.now(timezone.utc),
+    )
+    return await run_companion_implicit_sign_on_greeting_turn_for_api(
+        user_id=scope.user_id,
+        agent_id=scope.agent_id,
+        chat_id=scope.memory_store_chat_id(),
+        user_text=_TELEGRAM_ONBOARD_GREETING_USER_TEXT,
+        resolved_chat_model=model,
+        implicit_signal_bundle=bundle,
+        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+    )
 
 
 def _mark_agent_channel_session_system_written(
@@ -82,8 +134,8 @@ async def _maybe_append_agent_channel_session_system(
         ):
             return
 
-    feats = global_config_loaded_from_config_yaml.app.features
-    text = (feats.companion_ws_session_system_text or "").strip() or (
+    harness = global_config_loaded_from_config_yaml.agent.companion_harness
+    text = (harness.ws.session_system_text or "").strip() or (
         DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT
     )
     trace_id = str(uuid.uuid4())

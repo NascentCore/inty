@@ -177,16 +177,16 @@ def clear_companion_chat_service_caches() -> None:
 
 def _companion_runtime_config_fingerprint() -> str:
     cfg = global_config_loaded_from_config_yaml
-    feats = cfg.app.features
-    raw = feats.companion_transcript_compaction
+    harness = cfg.agent.companion_harness
+    raw = harness.transcript.compaction
     raw_json = json.dumps(raw, sort_keys=True) if raw is not None else ""
     parts = [
         "companion_scope_path_free_v1",
-        str(feats.companion_default_context_mode),
+        str(harness.default_context_mode),
         raw_json,
-        str(feats.companion_transcript_llm_window_max_messages or ""),
-        str(feats.companion_memory_bootstrap_type),
-        str(feats.companion_ws_session_system_text or ""),
+        str(harness.transcript.llm_window_max_messages or ""),
+        str(harness.memory_bootstrap_type),
+        str(harness.ws.session_system_text or ""),
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_store_text).
         "companion_repo_only_store_v2",
         "companion_db_memory_documents_v4_orm",
@@ -204,7 +204,7 @@ def _companion_manager_for_resolved_model(
 ) -> CompanionManager:
     _ = runtime_fingerprint
     cfg = global_config_loaded_from_config_yaml
-    feats = cfg.app.features
+    harness = cfg.agent.companion_harness
     api_key = cfg.agent.chat_llm_api_key or cfg.agent.api_key
     timeout_raw = os.getenv(
         # TODO(app-config-centralization): Move this to app.core.config, and do not use env var.
@@ -229,7 +229,7 @@ def _companion_manager_for_resolved_model(
         soul_model=chat_m,
         async_chat_front_timeout_sec=async_chat_timeout,
     )
-    tc_raw = feats.companion_transcript_compaction
+    tc_raw = harness.transcript.compaction
     transcript_compaction = (
         TranscriptCompactionConfig.model_validate(tc_raw)
         if tc_raw is not None
@@ -241,11 +241,11 @@ def _companion_manager_for_resolved_model(
     companion_cfg = CompanionConfig(
         memory_pg_dsn=db_url,
         llm=llm,
-        default_context_mode=feats.companion_default_context_mode,
+        default_context_mode=harness.default_context_mode,
         transcript_compaction=transcript_compaction,
-        transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
+        transcript_llm_window_max_messages=harness.transcript.llm_window_max_messages,
         repository_only_store_text=True,
-        memory_bootstrap_type=feats.companion_memory_bootstrap_type,
+        memory_bootstrap_type=harness.memory_bootstrap_type,
     )
     return CompanionManager(companion_cfg)
 
@@ -293,8 +293,8 @@ async def _maybe_append_companion_ws_session_system(
     if meta.companion_ws_session_system_written:
         return
 
-    feats = global_config_loaded_from_config_yaml.app.features
-    text = (feats.companion_ws_session_system_text or "").strip() or (
+    harness = global_config_loaded_from_config_yaml.agent.companion_harness
+    text = (harness.ws.session_system_text or "").strip() or (
         DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT
     )
     trace_id = str(uuid.uuid4())

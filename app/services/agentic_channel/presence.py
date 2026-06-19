@@ -94,7 +94,7 @@ class AgentChannelPresence:
             coordinator=self._coordinator,
         )
         poll_secs = float(
-            global_config_loaded_from_config_yaml.app.features.companion_ws_proactive_chat_poll_seconds
+            global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat.poll_seconds
         )
         delivery = inner_tick_delivery_for_telegram(
             self.send_assistant_text,
