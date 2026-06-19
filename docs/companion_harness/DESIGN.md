@@ -66,13 +66,13 @@ Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**�
 └───────────────────┬──────────────────┘
                     │
 ┌───────────────────▼──────────────────┐
-│  Channel layer (Exo─runtime)         │
+│  Gateways (formerly Channel)         │
 │  Realtime channel  │  IM channel     │
 │  iMate App · REPL · WeChat · Telegram│
 └───────────────────┬──────────────────┘
                     │
 ┌───────────────────▼──────────────────┐
-│  Governance (minimal in prototype)   │
+│  API governance (minimal)            │
 │  auth · usage · visible history ·    │
 │  protocol adaptation                 │
 └───────────────────┬──────────────────┘
