@@ -59,6 +59,7 @@ class WeixinQrFlow:
                     timeout_ms=QR_TIMEOUT_MS,
                 )
             except Exception as exc:
+                logger.exception("weixin QR fetch failed")
                 self.phase = WeixinQrPhase.FAILED
                 self.error = f"fetch QR failed: {exc}"
                 return None
