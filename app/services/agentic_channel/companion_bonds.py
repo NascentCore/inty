@@ -176,18 +176,29 @@ async def has_active_companion_bond(
 async def list_active_companion_agent_scope_keys(
     db: AsyncSession,
 ) -> frozenset[tuple[str, str]]:
-    """Return (user_id, agent_id) keys for every ACTIVE companion bond."""
+    """Return valid, unambiguous (user_id, agent_id) keys for ACTIVE bonds."""
     result = await db.execute(
-        select(CompanionBond.user_id, CompanionBond.agent_id).where(
-            CompanionBond.state == CompanionBondState.ACTIVE,
-        )
+        select(CompanionBond)
+        .where(CompanionBond.state == CompanionBondState.ACTIVE)
+        .order_by(CompanionBond.created_at.asc(), CompanionBond.id.asc())
     )
+    bonds = list(result.scalars().all())
+    user_counts: dict[str, int] = {}
+    agent_counts: dict[str, int] = {}
+    for bond in bonds:
+        user_counts[bond.user_id] = user_counts.get(bond.user_id, 0) + 1
+        agent_counts[bond.agent_id] = agent_counts.get(bond.agent_id, 0) + 1
+
     keys: set[tuple[str, str]] = set()
-    for user_id, agent_id in result.all():
-        uid = str(user_id or "").strip()
-        aid = str(agent_id or "").strip()
-        if uid and aid:
-            keys.add((uid, aid))
+    for bond in bonds:
+        if user_counts[bond.user_id] != 1 or agent_counts[bond.agent_id] != 1:
+            continue
+        scope = _active_scope_from_single_bond(bond)
+        try:
+            await _require_live_scope_rows(db, scope)
+        except CompanionBondInvariantError:
+            continue
+        keys.add((scope.user_id, scope.agent_id))
     return frozenset(keys)
 
 

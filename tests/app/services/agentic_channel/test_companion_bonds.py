@@ -206,6 +206,52 @@ async def test_list_active_companion_agent_scope_keys() -> None:
 
 
 @pytest.mark.asyncio
+async def test_list_active_companion_agent_scope_keys_skips_conflicts() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, scope)
+        second_agent = await add_companion_guest_agent_for_user(
+            db,
+            user_id=scope.user_id,
+            kind=CompanionGuestAgentKind.TELEGRAM,
+        )
+        second = AgentScope(user_id=scope.user_id, agent_id=second_agent.id)
+        db.add(
+            CompanionBond(
+                id=str(uuid.uuid4()),
+                user_id=second.user_id,
+                agent_id=second.agent_id,
+                state=CompanionBondState.ACTIVE,
+            )
+        )
+        await db.flush()
+
+        keys = await list_active_companion_agent_scope_keys(db)
+        assert (scope.user_id, scope.agent_id) not in keys
+        assert (second.user_id, second.agent_id) not in keys
+        await db.rollback()
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_list_active_companion_agent_scope_keys_skips_deleted_rows() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, scope)
+        agent_row = await db.execute(select(Agent).where(Agent.id == scope.agent_id))
+        agent = agent_row.scalar_one()
+        agent.deleted_at = datetime.now(UTC)
+        await db.flush()
+
+        keys = await list_active_companion_agent_scope_keys(db)
+        assert (scope.user_id, scope.agent_id) not in keys
+        await db.rollback()
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
 async def test_deactivate_companion_bond_and_runtime_stops_presence() -> None:
     clear_presences_for_tests()
     async with AsyncSessionLocal() as db:
