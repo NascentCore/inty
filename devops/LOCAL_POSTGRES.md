@@ -2,228 +2,128 @@
 
 <!-- CREATED_BY_AGENT -->
 
-IntelliMate **dev** 与 **prod** 的数据库均已从 GCP Cloud SQL 迁到 **dev-instance VM 上的同一 Docker Postgres 实例**；Cloud SQL 实例 `inty-prod` 仍作为 **源库 / 历史 / iMate 等其它逻辑库**（见 [GCP.md](GCP.md)）。
+IntelliMate **dev** 与 **prod** 共用 **dev-instance VM** 上同一 Docker Postgres 实例（容器 `inty-dev-postgres`），通过不同逻辑库隔离：
 
-## 新旧对比
+- **dev**：`inty-dev`（[`config.yaml.dev`](config.yaml.dev)）
+- **prod**：`inty`（[`config.yaml.prod`](config.yaml.prod)）
 
-| 项 | 旧（Cloud SQL） | 新（本地 Docker） |
-| --- | --- | --- |
-| dev 配置 | [`config.yaml.dev`](config.yaml.dev) | 同上 |
-| prod 配置 | [`config.yaml.prod`](config.yaml.prod) | 同上 |
-| dev 逻辑库 | `inty-dev` | `inty-dev`（不变） |
-| prod 逻辑库 | `inty` | `inty`（不变） |
-| `database.host` | `10.41.177.3`（Cloud SQL 私网 IP） | `host.docker.internal`（容器部署；宿主机直连用 `localhost`） |
-| `database.port` | 默认 `5432` | `5432` |
-| dev `replica_host` | `10.41.177.17`（只读副本） | 已移除 |
-| prod `replica_host` | 未配置（读路径回退主库） | 未配置（本地无副本） |
-| 运行位置 | Cloud SQL 实例 `inty-prod` 上的逻辑库 | 同一 VM 容器 `inty-dev-postgres` 内两个库 |
-| 扩展 | `vector`（dev/prod）；prod 另有 `uuid-ossp` | 同上（镜像 / restore 带入） |
-| 备份 / HA | Cloud SQL 托管 | Docker volume，需自行维护 |
+两份配置的 `database.host` / `port` / `user` / `password` **必须一致**；仅 `database.db` 不同。Cloud SQL `inty-prod`（`10.41.177.3`）仍作源库 / 灾备 / iMate 等其它逻辑库（见 [GCP.md](GCP.md)）。
 
 ## 容器约定
 
-- **容器名**：`inty-dev-postgres`（历史命名；现承载 dev **与** prod 两个逻辑库）
-- **镜像**：`pgvector/pgvector:pg17`（与 Cloud SQL `inty-prod` 主版本一致）
-- **数据卷**：`inty-dev-postgres-data`（Docker **named volume**；与容器生命周期解耦，见下文「Volume 耐久性」）
+- **容器名**：`inty-dev-postgres`（历史命名；承载 dev + prod 两个逻辑库）
+- **镜像**：`pgvector/pgvector:pg17`
+- **数据卷**：`inty-dev-postgres-data`（named volume；与容器生命周期解耦）
 - **端口**：宿主机 `5432` → 容器 `5432`
-- **逻辑库**：`inty-dev`（dev）、`inty`（prod）
-- **账号**：与 [`config.yaml.dev`](config.yaml.dev) / [`config.yaml.prod`](config.yaml.prod) 中 `database` 段一致（`postgres` / 密码相同）
+- **超级用户**：`postgres`；密码由 `ensure_*` 从 config 对齐（见下文）
 
-### 启动 / 确保 / 验证（推荐脚本）
-
-在 VM 上、仓库根目录执行：
+## 日常运维（VM，仓库根目录）
 
 ```bash
-# 幂等：创建/启动容器，始终挂载 canonical named volume
+# 幂等：启动/创建容器、pg_hba、将 postgres 密码与 config 对齐
 devops/scripts/ensure_inty_dev_postgres_container.sh
 
-# 只读检查挂载与 restart policy（不改状态）
+# 只读检查挂载与 restart policy
 devops/scripts/ensure_inty_dev_postgres_container.sh --check-only
 
-# 耐久性验证；加 --restart-test 会在 restart 前后对比库 fingerprint
+# 换镜像或容器漂移时：删容器重建，保留 volume
+devops/scripts/ensure_inty_dev_postgres_container.sh --recreate
+
+# 耐久性验证；--restart-test 对比 restart 前后库 fingerprint
 devops/scripts/verify_local_postgres_durability.sh
 devops/scripts/verify_local_postgres_durability.sh --restart-test
+
+# 逻辑备份（inty-dev + inty）→ /opt/inty/backups/postgres/
+devops/scripts/backup_local_postgres.sh
 ```
 
-手动启停（仅当脚本不可用时）：
+定时任务见 [`.github/workflows/local_postgres_maintenance.yaml`](../.github/workflows/local_postgres_maintenance.yaml)。
 
-```bash
-docker start inty-dev-postgres   # 日常启动
-docker stop inty-dev-postgres    # 停止
-```
+### 密码与宿主机访问
+
+- `POSTGRES_PASSWORD` 环境变量**仅在空库 initdb 时**生效；已有 volume 上的密码以库内 catalog 为准。
+- [`ensure_inty_dev_postgres_container.sh`](scripts/ensure_inty_dev_postgres_container.sh) 每次 ensure 会：
+  1. 校验 `config.yaml.dev` 与 `config.yaml.prod` 的 host/port/user/password 一致
+  2. 补全 `pg_hba.conf` 宿主机规则（`host all all all scram-sha-256`）
+  3. `ALTER USER postgres` 使实例密码与 config 一致
+- 宿主机脚本（sync、Alembic、REPL）用 `localhost:5432`；密码从对应 config 的 `database.password` 读取（可用 `PGPASSWORD` 覆盖）。
 
 就绪检查：
 
 ```bash
-PGPASSWORD='<password>' psql -h localhost -U postgres -d inty-dev -c 'SELECT 1'
-PGPASSWORD='<password>' psql -h localhost -U postgres -d inty -c 'SELECT 1'
+devops/scripts/ensure_inty_dev_postgres_container.sh
+PGPASSWORD="$(grep -A12 '^database:' devops/config.yaml.dev | grep password: | head -1 | sed -E 's/.*password:[[:space:]]*"?([^"#]*)"?.*/\1/')"
+psql -h localhost -U postgres -d inty-dev -c 'SELECT 1'
+psql -h localhost -U postgres -d inty -c 'SELECT 1'
 ```
 
 ### Volume 耐久性
 
-**Named volume 在以下操作中保留数据**：
+**保留数据**：`docker stop/start/restart`、宿主机 reboot（`unless-stopped`）、`docker rm inty-dev-postgres`（named volume 不随 `-v` 删除）。
 
-- `docker stop` / `docker start` / `docker restart`
-- 宿主机 reboot（容器 `--restart unless-stopped` 时自动拉起）
-- `docker rm inty-dev-postgres`（含 `-v` 也不会删除 **named** volume）
+**会丢数据**：`docker volume rm inty-dev-postgres-data`、`docker volume prune`（unused volume）、重建时挂载错误 volume。
 
-**会丢数据或导致「空库」的误操作**：
+防护：[`guard_docker_volume_prune.sh`](scripts/guard_docker_volume_prune.sh)（`guard_docker_volume_prune.sh || docker volume prune`）。
 
-- `docker volume rm inty-dev-postgres-data`
-- `docker volume prune`（容器已删、volume 变为 unused 时会被清掉）
-- 重建容器时挂载了**不同** volume 名或未挂 `-v`
+## 从 Cloud SQL 同步
 
-**防护措施（已脚本化）**：
+源库：`10.41.177.3`（Cloud SQL `inty-prod`）。dump/restore 客户端须 **PostgreSQL 17**。
 
-- [`ensure_inty_dev_postgres_container.sh`](scripts/ensure_inty_dev_postgres_container.sh)：唯一推荐的创建/重建入口；volume label `inty.critical=postgres-data`，容器 label `inty.critical=postgres`
-- [`guard_docker_volume_prune.sh`](scripts/guard_docker_volume_prune.sh)：若保护 volume 存在则 **拒绝** 执行 `docker volume prune`（用法：`guard_docker_volume_prune.sh || docker volume prune`）
-- [`backup_local_postgres.sh`](scripts/backup_local_postgres.sh)：dump `inty-dev` 与 `inty` 到 `/opt/inty/backups/postgres/`（定时见 [`.github/workflows/local_postgres_maintenance.yaml`](../.github/workflows/local_postgres_maintenance.yaml)）
-
-首次创建（`ensure_*` 脚本会自动执行；**禁止** `docker volume rm`）：
+### 增量同步（推荐，prod / dev 逻辑库）
 
 ```bash
-devops/scripts/ensure_inty_dev_postgres_container.sh
-# prod 逻辑库若不存在，需单独 CREATE DATABASE（见下文重同步）
-```
-
-## 从 Cloud SQL 重新同步
-
-源库在 Cloud SQL 实例 `inty-prod`（`10.41.177.3`）。客户端须 **PostgreSQL 17**（宿主机 `pg_dump` 14 会版本不匹配）。
-
-### dev（`inty-dev`）
-
-```bash
-DUMP=/tmp/inty-dev.dump
-rm -f "$DUMP"
-
-docker run --rm \
-  -e PGPASSWORD='<cloud-sql password>' \
-  -v /tmp:/tmp \
-  postgres:17 \
-  pg_dump -h 10.41.177.3 -U postgres -d inty-dev --format=custom -f /tmp/inty-dev.dump
-
-PGPASSWORD='<local password>' psql -h localhost -U postgres -d inty-dev \
-  -c 'CREATE EXTENSION IF NOT EXISTS vector;'
-
-docker run --rm \
-  -e PGPASSWORD='<local password>' \
-  --network host \
-  -v /tmp:/tmp \
-  postgres:17 \
-  pg_restore -h localhost -U postgres -d inty-dev \
-  --clean --if-exists --no-owner --no-privileges /tmp/inty-dev.dump
-```
-
-### prod（`inty`）
-
-```bash
-DUMP=/tmp/inty-prod.dump
-rm -f "$DUMP"
-
-docker run --rm \
-  -e PGPASSWORD='<cloud-sql password>' \
-  -v /tmp:/tmp \
-  postgres:17 \
-  pg_dump -h 10.41.177.3 -U postgres -d inty --format=custom -f /tmp/inty-prod.dump
-
-PGPASSWORD='<local password>' psql -h localhost -U postgres -d postgres \
-  -c 'DROP DATABASE IF EXISTS inty;' \
-  -c 'CREATE DATABASE inty;'
-
-PGPASSWORD='<local password>' psql -h localhost -U postgres -d inty \
-  -c 'CREATE EXTENSION IF NOT EXISTS vector;'
-
-docker run --rm \
-  -e PGPASSWORD='<local password>' \
-  --network host \
-  -v /tmp:/tmp \
-  postgres:17 \
-  pg_restore -h localhost -U postgres -d inty \
-  --clean --if-exists --no-owner --no-privileges /tmp/inty-prod.dump
-```
-
-迁移后建议对比表数量、扩展与关键表行数；迁移窗口内远端若有写入，个别表会有少量行数差。
-
-### 主版本升级（PG16 → PG17 等）
-
-本地 Docker 数据目录不能通过仅改镜像完成大版本升级；须用 [`upgrade_inty_dev_postgres_major.sh`](scripts/upgrade_inty_dev_postgres_major.sh) 在 canonical volume 上执行 `pg_upgrade`（内置 pgvector 16+17 合成镜像，非 vanilla `tianon/postgres-upgrade`），再 `docker rm` 容器并由 `ensure_*` 以新镜像重建；脚本会补全 `pg_hba` 宿主机访问规则并将 superuser 密码与 `config.yaml.dev` 对齐。
-
-```bash
-devops/scripts/backup_local_postgres.sh
-devops/scripts/upgrade_inty_dev_postgres_major.sh
-devops/scripts/verify_local_postgres_durability.sh --restart-test
-```
-
-### 增量同步（Cloud SQL → 本地，prod / dev）
-
-Cloud SQL 若仍在接收写入，不必整库重 dump。对含 `created_at` 的表，复制 `remote.created_at > local.max(created_at)` 的行即可（prod 上常见：`chat_history`、`subscription_usage`、`voice_cache`）。
-
-**检查差额**（默认只读；TODO !3497 — 在 VM 上执行并记录结果）：
-
-```bash
-devops/scripts/sync_cloudsql_inty_incremental.sh --check-only
+devops/scripts/sync_cloudsql_inty_incremental.sh --check-only --db inty
+devops/scripts/sync_cloudsql_inty_incremental.sh --apply --db inty
 devops/scripts/sync_cloudsql_inty_incremental.sh --check-only --db inty-dev
 ```
 
-**执行增量复制**：
+对有 `created_at` 且远端行数更多的表，复制 `remote.created_at > local.max(created_at)` 的行；可重复 `--apply`。本地行数多于远端、或无 `created_at` 的表会跳过（需整库 resync）。
+
+### 整库 resync（`pg_dump` / `pg_restore`）
+
+**dev（`inty-dev`）**
 
 ```bash
-devops/scripts/sync_cloudsql_inty_incremental.sh --apply
-devops/scripts/sync_cloudsql_inty_incremental.sh --apply --db inty-dev
+DUMP=/tmp/inty-dev.dump
+docker run --rm -e PGPASSWORD='<cloud-sql password>' -v /tmp:/tmp postgres:17 \
+  pg_dump -h 10.41.177.3 -U postgres -d inty-dev --format=custom -f /tmp/inty-dev.dump
+PGPASSWORD='<password>' psql -h localhost -U postgres -d inty-dev -c 'CREATE EXTENSION IF NOT EXISTS vector;'
+docker run --rm -e PGPASSWORD='<password>' --network host -v /tmp:/tmp postgres:17 \
+  pg_restore -h localhost -U postgres -d inty-dev --clean --if-exists --no-owner --no-privileges /tmp/inty-dev.dump
 ```
 
-脚本行为：
+**prod（`inty`）**
 
-- 逐表对比 Cloud SQL（`10.41.177.3`）与本地 `localhost:5432` 行数
-- 对有 `created_at` 且远端更多的表做 `\copy` 增量导入（`created_at > local.max(created_at)`）
-- 单列主键表经 staging + `ON CONFLICT DO NOTHING`，可安全重复 `--apply`
-- FK 依赖表按固定优先级同步（`users` → `agents` → `chats` → …）；`--apply` 最多重试 5 轮（`APPLY_MAX_PASSES`）
-- `chat_history` 同步后更新 `chat_history_id_seq`
-- 本地行数多于远端、或无 `created_at` 的表：跳过并提示需整库 resync（见上文 `pg_dump` / `pg_restore`）
+```bash
+DUMP=/tmp/inty-prod.dump
+docker run --rm -e PGPASSWORD='<cloud-sql password>' -v /tmp:/tmp postgres:17 \
+  pg_dump -h 10.41.177.3 -U postgres -d inty --format=custom -f /tmp/inty-prod.dump
+PGPASSWORD='<password>' psql -h localhost -U postgres -d postgres \
+  -c 'DROP DATABASE IF EXISTS inty WITH (FORCE);' -c 'CREATE DATABASE inty;'
+PGPASSWORD='<password>' psql -h localhost -U postgres -d inty -c 'CREATE EXTENSION IF NOT EXISTS vector;'
+docker run --rm -e PGPASSWORD='<password>' --network host -v /tmp:/tmp postgres:17 \
+  pg_restore -h localhost -U postgres -d inty --clean --if-exists --no-owner --no-privileges /tmp/inty-prod.dump
+```
 
-VM 宿主机任务（Alembic、日报）用 [`scripts/render_vm_database_config.sh`](scripts/render_vm_database_config.sh) 把 `host.docker.internal` 渲染为 `localhost`。
+VM 宿主机任务用 [`scripts/render_vm_database_config.sh`](scripts/render_vm_database_config.sh) 将 `host.docker.internal` 渲染为 `localhost`。
 
-密码默认从 [`config.yaml.prod`](config.yaml.prod) / [`config.yaml.dev`](config.yaml.dev) 的 `database.password` 读取；可用 `PGPASSWORD` 覆盖。
-
-### Prod 容器部署（手动）
+## Prod 容器部署
 
 <!-- TODO(!3498): Manual prod backend/push-worker deploy + E2E verify after local Postgres cutover (epic #3495). -->
 
-[`config.yaml.prod`](config.yaml.prod) 已指向本地 Docker（`host.docker.internal`），但 **prod 后端 / Ops / push worker 不会随 push 自动部署**：
+[`config.yaml.prod`](config.yaml.prod) 已指向本地 Docker（`host.docker.internal`）。prod 后端 / Ops / push worker **不会随 push 自动部署**——在 GitHub Actions 选手动 environment **prod** 部署 Ops → backend → push worker。见 [RELEASE.md](RELEASE.md) 与各 workflow。
 
-- [build_and_deploy_backend.yml](../.github/workflows/build_and_deploy_backend.yml)：`config.yaml.prod` 不在 push paths；prod schedule 已关闭
-- [build_and_deploy_ops.yml](../.github/workflows/build_and_deploy_ops.yml)：同上
-- [build_and_deploy_push_worker.yml](../.github/workflows/build_and_deploy_push_worker.yml)：同上；prod 定时部署已关闭
+## Post-cutover：Cloud SQL 降本
 
-推荐顺序：先在 dev 验证本地 Postgres 与 `host.docker.internal` → GitHub Actions **Run workflow** 选手动 environment **prod** 部署 Ops → 再部署 backend（及按需 push worker）。VM 上 Alembic 用 [alembic_upgrade_prod_db.yaml](../.github/workflows/alembic_upgrade_prod_db.yaml)（workflow 内会把 `host.docker.internal` 替换为 `localhost`）。
+<!-- TODO: Track Cloud SQL right-size on epic #3495 after !3498 soak. -->
 
-### Post-cutover：Cloud SQL 降本
-
-<!-- TODO: Track Cloud SQL right-size / IntelliMate DB cleanup on epic #3495 after !3498 soak. -->
-
-IntelliMate **dev/prod** 迁到本地 Docker 并验证稳定后，应削减 `inty-prod` 上不再使用的 IntelliMate 资源以节省费用。
-
-**注意**：**不能删除整个 `inty-prod` 实例**——iMate 逻辑库（`imate`、`inty-imate-dev`、`inty-imate` 等）仍共用该实例（见 [GCP.md](GCP.md)）。
-
-建议在 !3498 prod E2E 通过并观察一段时间后再操作：
-
-- 确认无 IntelliMate 服务仍连 `10.41.177.3` 的 `inty` / `inty-dev`（`inty-backend-prod` 等已用 `host.docker.internal`）
-- 停止对 Cloud SQL 的增量同步（`sync_cloudsql_inty_incremental.sh` 仅作灾备时再跑）
-- GCP 控制台对 `inty-prod` **降配**（vCPU、内存、磁盘）或移除不再需要的**只读副本**
-- 可选：在 Cloud SQL 上对已废弃的 `inty` / `inty-dev` 做最终 `pg_dump` 归档后 `DROP DATABASE`
-- 实例本身保留，直至 iMate 迁出或另有托管方案
-
-Console：[inty-prod 实例](https://console.cloud.google.com/sql/instances/inty-prod/overview?project=alien-paratext-461204-i9)
+IntelliMate dev/prod 稳定运行于本地 Docker 后，对 `inty-prod` 降配（**勿删整个实例**——iMate 逻辑库仍在）。见 [GCP.md](GCP.md)。
 
 ## 与后端 / Ops 的连接
 
-[`config.yaml.dev`](config.yaml.dev) 与 [`config.yaml.prod`](config.yaml.prod) 均使用 `host: host.docker.internal`、`port: 5432`（构建进 Docker 镜像）：
-
-- **在 VM 宿主机上直接跑** `backend/inty/start.sh`、`backend/ops/start.sh --local`、REPL、Alembic：可直接连 `localhost:5432`。
-- **Docker 部署的** `inty-backend-dev` / `inty-backend-prod` / Ops 容器：容器内 `localhost` 指向容器自身，**不能**直接访问宿主机 Postgres。需在部署时增加宿主机网关（例如 `docker run ... --add-host=host.docker.internal:host-gateway` 且 `database.host: host.docker.internal`），或将 Postgres 与后端接入同一 user-defined network 并用容器名 `inty-dev-postgres` 作为 host。见 [RELEASE.md](RELEASE.md) 与各 workflow。
+- **VM 宿主机**（REPL、Alembic、`start.sh --local`）：`localhost:5432`
+- **Docker 部署的后端**：`host.docker.internal`（需 `--add-host=host.docker.internal:host-gateway`）
 
 ## 相关文档
 
-- 环境总览：[README.md](README.md)
-- Cloud SQL（源库 / iMate 逻辑库）：[GCP.md](GCP.md)
-- 运维操作：[SOPS.md](SOPS.md)
+- [README.md](README.md)、[GCP.md](GCP.md)、[SOPS.md](SOPS.md)

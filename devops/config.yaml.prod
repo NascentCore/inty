@@ -32,7 +32,8 @@ security:
   access_token_expire_minutes: 10080
 
 database:
-  host: host.docker.internal
+  # Same Docker Postgres instance as config.yaml.dev (host/port/user/password); logical db is inty.
+  host: "host.docker.internal"
   port: 5432
   user: "postgres"
   password: "sxwl666A!"

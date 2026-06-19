@@ -10,7 +10,8 @@ ENSURE_PATH = Path(__file__).parent / "scripts" / "ensure_inty_dev_postgres_cont
 VERIFY_PATH = Path(__file__).parent / "scripts" / "verify_local_postgres_durability.sh"
 BACKUP_PATH = Path(__file__).parent / "scripts" / "backup_local_postgres.sh"
 GUARD_PATH = Path(__file__).parent / "scripts" / "guard_docker_volume_prune.sh"
-UPGRADE_PATH = Path(__file__).parent / "scripts" / "upgrade_inty_dev_postgres_major.sh"
+CONFIG_DEV = Path(__file__).parent / "config.yaml.dev"
+CONFIG_PROD = Path(__file__).parent / "config.yaml.prod"
 
 
 def read_bash_function_body(script_path: Path, function_name: str) -> str:
@@ -36,7 +37,32 @@ def test_lib_declares_canonical_volume_and_container():
     assert 'readonly INTY_PG_BACKUP_RETENTION_DAYS="14"' in text
     assert "prune_old_backups" in text
     assert "postgres_server_version_major" in text
+    assert "assert_dev_prod_database_server_credentials_match" in text
+    assert "align_postgres_superuser_password" in text
+    assert "postgres_host_auth_works" in text
+    assert "finalize_postgres_instance_access" in text
+    assert "sql_escape_pg_literal" in text
     assert "unless-stopped" not in text  # policy lives in ensure script
+
+
+def test_dev_prod_configs_share_server_credentials():
+    completed = subprocess.run(
+        [
+            "bash",
+            "-c",
+            f'source "{LIB_PATH}"; assert_dev_prod_database_server_credentials_match',
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_backup_asserts_shared_server_credentials():
+    text = BACKUP_PATH.read_text(encoding="utf-8")
+    assert "assert_dev_prod_database_server_credentials_match" in text
+    assert "INTY_PG_USER" in text
 
 
 def test_ensure_binds_named_volume_and_restart_policy():
@@ -45,7 +71,9 @@ def test_ensure_binds_named_volume_and_restart_policy():
     assert "docker update --restart unless-stopped" in text
     assert "ensure_restart_policy" in text
     assert "assert_image_matches_canonical" in text
-    assert "--recreate-after-upgrade" in text
+    assert "--recreate" in text
+    assert "finalize_postgres_instance_access" in text
+    assert "assert_dev_prod_database_server_credentials_match" in text
     assert '-v "${INTY_PG_VOLUME}:/var/lib/postgresql/data"' in text
     assert "docker volume create" in text
     assert "INTY_PG_VOLUME_LABEL" in text
@@ -71,26 +99,16 @@ def test_verify_checks_restart_policy_and_volume():
     assert "database_fingerprint" in text
     assert "check_server_version" in text
     assert "INTY_PG_MAJOR_VERSION" in text
+    assert "assert_dev_prod_database_server_credentials_match" in text
     assert "VERIFY_TAG" in text
     assert "RESULT: PASS" in text
-
-
-def test_upgrade_script_runs_pg_upgrade_on_canonical_volume():
-    text = UPGRADE_PATH.read_text(encoding="utf-8")
-    assert "pg_upgrade" in text
-    assert "pgvector-postgres-upgrade" in text
-    assert "backup_local_postgres.sh" in text
-    assert "INTY_PG_VOLUME" in text
-    assert "verify_local_postgres_durability.sh" in text
-    assert "--restart-test" in text
-    assert "ensure_inty_dev_postgres_container.sh" in text
-    assert "--recreate-after-upgrade" in text
 
 
 def test_verify_restart_test_compares_fingerprints():
     body = read_bash_function_body(VERIFY_PATH, "check_database_connectivity")
     assert "RESTART_TEST" in body
     assert "docker restart" in body
+    assert "finalize_postgres_instance_access" in body
 
 
 def test_backup_dumps_both_logical_databases():
@@ -101,6 +119,29 @@ def test_backup_dumps_both_logical_databases():
     assert "docker exec" in text
     assert "prune_old_backups" in text
     assert "INTY_PG_BACKUP_RETENTION_DAYS" in text
+
+
+def test_finalize_aligns_password_only_when_host_auth_fails():
+    body = read_bash_function_body(LIB_PATH, "finalize_postgres_instance_access")
+    assert "postgres_host_auth_works" in body
+    assert "align_postgres_superuser_password" in body
+    text = BACKUP_PATH.read_text(encoding="utf-8")
+    assert "assert_dev_prod_database_server_credentials_match" in text
+    assert "INTY_PG_USER" in text
+
+
+def test_sql_escape_pg_literal_doubles_single_quotes():
+    completed = subprocess.run(
+        [
+            "bash",
+            "-c",
+            'source "' + str(LIB_PATH) + "\"; sql_escape_pg_literal \"a'b\"",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.stdout == "a''b"
 
 
 WORKFLOW_PATH = Path(__file__).parents[1] / ".github" / "workflows" / "local_postgres_maintenance.yaml"

@@ -111,7 +111,8 @@ check_database_connectivity() {
 
   local dev_before="${dev_fp}" prod_before="${prod_fp}"
   docker restart "${INTY_PG_CONTAINER}" >/dev/null
-  wait_for_postgres_ready
+  wait_for_postgres_ready_via_docker
+  finalize_postgres_instance_access
 
   dev_fp="$(database_fingerprint "${INTY_PG_DEV_DB}")"
   prod_fp="$(database_fingerprint "${INTY_PG_PROD_DB}")"
@@ -124,6 +125,7 @@ check_database_connectivity() {
 }
 
 parse_args "$@"
+assert_dev_prod_database_server_credentials_match
 check_container_wiring
 check_server_version
 check_database_connectivity
