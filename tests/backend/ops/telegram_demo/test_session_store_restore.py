@@ -14,7 +14,9 @@ from app.db.session import AsyncSessionLocal
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
+from app.db.session import AsyncSessionLocal
 from app.models.companion_bond import CompanionBond
+from app.services.agentic_channel.companion_bonds import deactivate_companion_bond
 from app.models.user import User
 from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
 from app.services.agentic_channel.presence import clear_presences_for_tests
@@ -69,5 +71,27 @@ async def test_restore_loads_endpoints_into_memory() -> None:
     assert restored is not None
     assert restored.user_id == provision.scope.user_id
     assert restored.agent_id == provision.scope.agent_id
+
+    await _cleanup_provision(provision.scope.user_id)
+
+
+@pytest.mark.asyncio
+async def test_restore_skips_inactive_companion_bond() -> None:
+    telegram_chat_id = f"tg-inactive-{uuid.uuid4().hex}"
+    channel_user_id = f"tu-{uuid.uuid4().hex}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        await deactivate_companion_bond(db, provision.scope)
+        await db.commit()
+
+    session_store.clear_all_for_tests()
+    api = TelegramBotApi(bot_token="restore-inactive-test")
+    await session_store.restore_persisted_bindings(api=api)
+
+    assert session_store.get_scope_for_telegram_address(telegram_chat_id) is None
 
     await _cleanup_provision(provision.scope.user_id)

@@ -17,9 +17,15 @@ from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.companion_bond import CompanionBond, CompanionBondState
 from app.models.user import User
+from app.services.agentic_channel.companion_bond_runtime import (
+    deactivate_companion_bond_and_runtime,
+)
 from app.services.agentic_channel.companion_bonds import (
     active_companion_scope_for_user,
     create_active_companion_bond,
+    deactivate_companion_bond,
+    has_active_companion_bond,
+    list_active_companion_agent_scope_keys,
     require_active_companion_bond,
 )
 from app.services.agentic_channel.companion_guest_provision import (
@@ -28,6 +34,11 @@ from app.services.agentic_channel.companion_guest_provision import (
     add_guest_user,
 )
 from app.services.agentic_channel.errors import CompanionBondInvariantError
+from app.services.agentic_channel.presence import (
+    clear_presences_for_tests,
+    ensure_presence,
+    get_presence,
+)
 
 
 async def _create_unbonded_scope(
@@ -129,5 +140,60 @@ async def test_require_active_companion_bond_rejects_deleted_rows() -> None:
         with pytest.raises(CompanionBondInvariantError):
             await require_active_companion_bond(db, scope)
         await db.rollback()
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_deactivate_companion_bond_marks_inactive() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, scope)
+        await db.commit()
+
+        bond = await deactivate_companion_bond(db, scope)
+        assert bond.state == CompanionBondState.INACTIVE
+        assert bond.inactive_at is not None
+        assert not await has_active_companion_bond(db, scope)
+        with pytest.raises(CompanionBondInvariantError):
+            await require_active_companion_bond(db, scope)
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_list_active_companion_agent_scope_keys() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, scope)
+        await db.commit()
+        keys = await list_active_companion_agent_scope_keys(db)
+        assert (scope.user_id, scope.agent_id) in keys
+        await deactivate_companion_bond(db, scope)
+        await db.commit()
+        keys_after = await list_active_companion_agent_scope_keys(db)
+        assert (scope.user_id, scope.agent_id) not in keys_after
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_deactivate_companion_bond_and_runtime_stops_presence() -> None:
+    clear_presences_for_tests()
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, scope)
+        await db.commit()
+
+    await ensure_presence(scope)
+    assert get_presence(scope) is not None
+
+    await deactivate_companion_bond_and_runtime(
+        scope,
+        reason="test_inactive",
+    )
+    assert get_presence(scope) is None
+
+    async with AsyncSessionLocal() as db:
         await _delete_scope(db, scope)
         await db.commit()

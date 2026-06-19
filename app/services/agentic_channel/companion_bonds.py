@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -122,6 +123,67 @@ async def require_active_companion_bond(
         )
     await _require_live_scope_rows(db, scope)
     return exact[0]
+
+
+async def has_active_companion_bond_for_agent(
+    db: AsyncSession,
+    agent_id: str,
+) -> bool:
+    """Return whether ``agent_id`` participates in exactly one ACTIVE bond."""
+    assert agent_id != ""
+    result = await db.execute(
+        select(CompanionBond).where(
+            CompanionBond.agent_id == agent_id,
+            CompanionBond.state == CompanionBondState.ACTIVE,
+        )
+    )
+    bonds = list(result.scalars().all())
+    return len(bonds) == 1
+
+
+async def has_active_companion_bond(
+    db: AsyncSession,
+    scope: AgentScope,
+) -> bool:
+    """Return whether ``scope`` has exactly one ACTIVE bond row."""
+    assert scope.user_id != ""
+    assert scope.agent_id != ""
+    bonds = await _active_bonds_for_scope_keys(db, scope)
+    exact = [
+        bond
+        for bond in bonds
+        if bond.user_id == scope.user_id and bond.agent_id == scope.agent_id
+    ]
+    return len(exact) == 1
+
+
+async def list_active_companion_agent_scope_keys(
+    db: AsyncSession,
+) -> frozenset[tuple[str, str]]:
+    """Return ``(user_id, agent_id)`` keys for every ACTIVE companion bond."""
+    result = await db.execute(
+        select(CompanionBond.user_id, CompanionBond.agent_id).where(
+            CompanionBond.state == CompanionBondState.ACTIVE,
+        )
+    )
+    keys: set[tuple[str, str]] = set()
+    for user_id, agent_id in result.all():
+        uid = str(user_id or "").strip()
+        aid = str(agent_id or "").strip()
+        if uid and aid:
+            keys.add((uid, aid))
+    return frozenset(keys)
+
+
+async def deactivate_companion_bond(
+    db: AsyncSession,
+    scope: AgentScope,
+) -> CompanionBond:
+    """Mark one ACTIVE bond INACTIVE (caller commits)."""
+    bond = await require_active_companion_bond(db, scope)
+    bond.state = CompanionBondState.INACTIVE
+    bond.inactive_at = datetime.now(UTC)
+    return bond
 
 
 async def active_companion_scope_for_user(
