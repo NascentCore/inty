@@ -101,12 +101,14 @@ jobs:
               echo "keys_dir=/opt/inty-dev" >> $GITHUB_OUTPUT
               echo "app_label=inty-backend" >> $GITHUB_OUTPUT
               echo "langchain_project=inty-backend-dev" >> $GITHUB_OUTPUT
+              echo "logical_db=inty-dev" >> $GITHUB_OUTPUT
               ;;
             prod)
               echo "config_file=devops/config.yaml.prod" >> $GITHUB_OUTPUT
               echo "keys_dir=/opt/inty-prod" >> $GITHUB_OUTPUT
               echo "app_label=inty-backend" >> $GITHUB_OUTPUT
               echo "langchain_project=inty-backend-prod" >> $GITHUB_OUTPUT
+              echo "logical_db=inty" >> $GITHUB_OUTPUT
               ;;
             imate-dev)
               echo "config_file=devops/config.yaml.imate_dev" >> $GITHUB_OUTPUT
@@ -125,6 +127,15 @@ jobs:
               exit 1
               ;;
           esac
+
+      - name: Assert baked config targets VM inty-pg
+        run: |
+          set -euo pipefail
+          cfg="${{ steps.map.outputs.config_file }}"
+          grep -q 'host: "host.docker.internal"' "${cfg}"
+          grep -q 'port: 5432' "${cfg}"
+          db="$(grep -A12 '^database:' "${cfg}" | grep '^  db:' | head -1 | sed -E 's/.*db:[[:space:]]*"?([^"#]*)"?.*/\1/')"
+          test "${db}" = "${{ steps.map.outputs.logical_db }}"
 
       - uses: docker/login-action@v3
         with:
@@ -162,6 +173,23 @@ jobs:
             sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
             sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
 
+      - name: Ensure inty-pg before deploy
+        uses: appleboy/ssh-action@v1.2.5
+        timeout-minutes: 10
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            REPO_DIR="${INTY_REPO_DIR:-$HOME/inty}"
+            cd "${REPO_DIR}"
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
+            devops/scripts/ensure_inty_dev_postgres_container.sh
+            sudo docker exec inty-pg psql -U postgres -d ${{ steps.map.outputs.logical_db }} -At -c 'SELECT 1'
+
       - name: Deploy backend to ${{ steps.prep.outputs.environment }}
         uses: appleboy/ssh-action@v1.2.5
         timeout-minutes: 30
@@ -172,6 +200,7 @@ jobs:
           script: |
             sudo docker stop ${{ vars.INTY_BACKEND_CONTAINER_NAME }} || true
             sudo docker rm ${{ vars.INTY_BACKEND_CONTAINER_NAME }} || true
+            # config.yaml.{dev,prod} use database.host host.docker.internal -> VM inty-pg on :5432
             LOCAL_PG_DOCKER_HOST_ARGS="--add-host=host.docker.internal:host-gateway"
             sudo docker run --detach --log-driver=gcplogs \
               --name ${{ vars.INTY_BACKEND_CONTAINER_NAME }} \
