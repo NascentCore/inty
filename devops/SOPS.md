@@ -207,7 +207,7 @@ devops/scripts/sync_cloudsql_inty_incremental.sh --apply
 
 ### 从 Cloud SQL 同步 IntelliMate dev / prod 到本地 Docker
 
-见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。要点：用 `postgres:17` 容器做 `pg_dump` / `pg_restore`；本地镜像须为 `pgvector/pgvector:pg16`；restore 前在目标库 `CREATE EXTENSION vector`（prod 还需 `uuid-ossp`，通常由 dump restore 带入）。
+见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。要点：用 `postgres:17` 容器做 `pg_dump` / `pg_restore`；本地运行镜像须为 `pgvector/pgvector:pg17`（与 Cloud SQL 同主版本）；restore 前在目标库 `CREATE EXTENSION vector`（prod 还需 `uuid-ossp`，通常由 dump restore 带入）。大版本升级见 `upgrade_inty_dev_postgres_major.sh`。
 
 ### 通用 dump / restore 示例
 

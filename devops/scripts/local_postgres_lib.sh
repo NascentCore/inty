@@ -7,7 +7,9 @@
 
 readonly INTY_PG_CONTAINER="inty-dev-postgres"
 readonly INTY_PG_VOLUME="inty-dev-postgres-data"
-readonly INTY_PG_IMAGE="pgvector/pgvector:pg16"
+readonly INTY_PG_MAJOR_VERSION="17"
+readonly INTY_PG_IMAGE="pgvector/pgvector:pg17"
+readonly INTY_PG_IMAGE_PREVIOUS="pgvector/pgvector:pg16"
 readonly INTY_PG_PORT="5432"
 readonly INTY_PG_VOLUME_LABEL="inty.critical=postgres-data"
 readonly INTY_PG_CONTAINER_LABEL="inty.critical=postgres"
@@ -77,6 +79,15 @@ container_data_volume_name() {
     "${INTY_PG_CONTAINER}" 2>/dev/null
 }
 
+container_image() {
+  docker inspect -f '{{.Config.Image}}' "${INTY_PG_CONTAINER}" 2>/dev/null
+}
+
+postgres_server_version_major() {
+  psql -h localhost -p "${INTY_PG_PORT}" -U postgres -d postgres -At -c 'SHOW server_version;' \
+    | cut -d. -f1
+}
+
 volume_exists() {
   docker volume inspect "${INTY_PG_VOLUME}" >/dev/null 2>&1
 }
@@ -98,6 +109,21 @@ wait_for_postgres_ready() {
   done
   echo "Postgres not ready on localhost:${INTY_PG_PORT} after ${attempts}s" >&2
   return 1
+}
+
+ensure_pg_hba_host_access() {
+  if ! container_running; then
+    return
+  fi
+  docker exec "${INTY_PG_CONTAINER}" bash -c '
+    set -euo pipefail
+    hba="${PGDATA}/pg_hba.conf"
+    if grep -qE "^host[[:space:]]+all[[:space:]]+all[[:space:]]+all[[:space:]]+" "${hba}"; then
+      exit 0
+    fi
+    echo "host all all all scram-sha-256" >> "${hba}"
+    psql -U postgres -d postgres -At -c "SELECT pg_reload_conf()" >/dev/null
+  '
 }
 
 prune_old_backups() {
