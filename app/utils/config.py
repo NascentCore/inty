@@ -460,7 +460,8 @@ class AgentConfig(BaseModel):
     # the dual-LLM tool loop can scale separately. Empty string falls back to the chat
     # model at companion_chat_service wiring time (resolved_chat_model GenAIModel).
     # TODO(!3398): If user chat stays single-LLM, this applies mainly to inner-tick tool_background.
-    companion_tool_call_model: str = "google/gemini-3-flash-preview"
+    # TODO: Move this config entry into CompanionHarnessConfig.
+    companion_tool_call_model: str = "xiaomi/mimo-v2.5"
     # 免费用户商业化触达：定期返回一条“付费专属预览”消息并引导订阅。
     enable_free_user_premium_preview: bool = False
     # 触发频率（按聊天次数）：例如 5 表示每 5 条聊天触发一次；<=0 表示关闭。
@@ -480,7 +481,7 @@ class AgentConfig(BaseModel):
     class CompanionHarnessConfig(BaseModel):
         # TODO: Change to Chinese OSS model when releasing to prod.
         dreaming_llm: str = Field(
-            default="google/gemini-3.5-flash",
+            default="xiaomi/mimo-v2.5",
             description="The model to use for dreaming.",
         )
         dreaming_idle_seconds: int = Field(
