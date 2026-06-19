@@ -19,6 +19,8 @@ Inty 后端服务（及关联服务和代码）部署到云端服务器
 
 ## Database setup
 
+See [LOCAL_POSTGRES](/devops/LOCAL_POSTGRES.md) for more details.
+
 - Use `postgres:17` Docker container image to deploy local DB server to support Inty backends
 - For local development, smoke testing, CI testing use `config.yaml.local`
   - Database configs in `config.yaml.test` must be kept compatible with `config.yaml.local`
