@@ -9,14 +9,13 @@ This repo configures Cloud Agents **in code** via [`.cursor/environment.json`](.
 ### What this repo uses
 
 - **Mode**: install-script (no committed `Dockerfile` or `snapshot` ID in `environment.json`).
-- **`install`** (Cursor “update” command): [`bash .cursor/cloud-agent-install.sh`](../../.cursor/cloud-agent-install.sh) — idempotent; runs on every agent boot. Cursor checkpoints the VM after a slow install so later boots reuse cached layers.
+- **`install`** (Cursor “update” command): [`bash .cursor/cloud-agent-install.sh`](../../.cursor/cloud-agent-install.sh) — idempotent; runs on every agent boot. System apt packages live in [`.cursor/cloud-agent-apt.sh`](../../.cursor/cloud-agent-apt.sh). Cursor checkpoints the VM after a slow install so later boots reuse cached layers.
 - **`start`**: [`bash .cursor/cloud-agent-start.sh`](../../.cursor/cloud-agent-start.sh) → `tools/scripts/ensure_postgres_for_tests.sh` (Postgres on `:5432`).
 - **`ports`**: `8000` (Inty API), `8001` (Ops / REPL), `5432` (PostgreSQL).
 
 ### `install` provisions (committed script)
 
-- **Apt**: Python 3.12 + venv/dev headers, `libpq-dev`, `postgresql`, `docker.io`.
-- **`gcloud`**: Google Cloud CLI (`google-cloud-cli` apt package) for `devops/fetch_inty_container_logs.sh` and other GCP ops. **Auth is not installed here** — use Cursor Secrets (service account JSON → `GOOGLE_APPLICATION_CREDENTIALS`, or interactive `gcloud auth login` during dashboard setup then snapshot).
+- **Apt** ([`.cursor/cloud-agent-apt.sh`](../../.cursor/cloud-agent-apt.sh)): Python 3.12 + venv/dev headers, `libpq-dev`, `postgresql`, `docker.io`, `google-cloud-cli`.
 - **Python**: `.venv` from `requirements.txt` + `tests/requirements.txt`; dev tools (`uv`, `ruff`, `black`, `pylint`, `vulture`) into `.venv/bin/`.
 - **Config**: copies `devops/config.yaml.test` → `config.yaml` when missing.
 
@@ -123,13 +122,14 @@ For targeted testing after changing specific modules, see the module-to-task map
 
 ```bash
 cd evaluation
+npm install            # not in committed install script; run once or use dashboard snapshot
 npm run test          # vitest
 npm run type-check    # tsc --noEmit
 npm run build         # vite build (production bundle)
 npx eslint . --ext .ts,.tsx  # lint
 ```
 
-The update script pre-installs `node_modules`, so these commands work out-of-the-box. See also `evaluation/AGENTS.md`.
+See also `evaluation/AGENTS.md`. On snapshot VMs `node_modules` may already exist.
 
 ## Lint / formatting
 
@@ -139,18 +139,18 @@ After `source .venv/bin/activate` (or `uv run`):
 - `uv run ruff check <paths>` — unused imports (`F401`), etc.
 - No strict linter is enforced in CI for the backend currently
 
-### Android SDK
+### Android SDK (snapshot / manual setup)
 
-Pre-installed at `/opt/android-sdk` with `ANDROID_HOME` and `ANDROID_SDK_ROOT` set in `~/.bashrc`. Packages: `platform-tools`, `emulator`, `build-tools;35.0.0`, `build-tools;36.0.0`, `platforms;android-36`, `system-images;android-36;google_apis;x86_64`. Java 21 (OpenJDK) is the system JDK.
+When present (dashboard snapshot or manual install), SDK is typically at `/opt/android-sdk` with `ANDROID_HOME` and `ANDROID_SDK_ROOT` in `~/.bashrc`. Packages: `platform-tools`, `emulator`, `build-tools;35.0.0`, `build-tools;36.0.0`, `platforms;android-36`, `system-images;android-36;google_apis;x86_64`. Java 21 (OpenJDK) is the system JDK.
 
-- `android_app/local.properties` is gitignored; the update script auto-generates it with `sdk.dir=/opt/android-sdk`.
+- `android_app/local.properties` is gitignored; set `sdk.dir=/opt/android-sdk` when using the snapshot SDK.
 - The SDK directory must be owned by the current user (not root) so Gradle can auto-install additional SDK components.
 
 ## Android emulator (no-KVM)
 
 Cloud Agent VMs run inside Firecracker and **do not have KVM** (`/dev/kvm` absent, no `vmx`/`svm` CPU flags). The Android emulator still works using software-only CPU emulation, but boots significantly slower (~4 min vs ~20 s with KVM).
 
-**Pre-created AVD:** `test_avd` (Pixel 6, API 36, google_apis/x86_64). The update script creates it automatically.
+**Pre-created AVD:** `test_avd` (Pixel 6, API 36, google_apis/x86_64). Created during dashboard snapshot setup, not by the committed install script.
 
 **Starting the emulator (headless, no-KVM):**
 
@@ -192,6 +192,7 @@ echo "Emulator booted"
 
 ## Gotchas
 
+- **`gcloud` auth**: install script only installs the CLI. For `devops/fetch_inty_container_logs.sh`, set Cursor Secrets with a GCP service account (`GOOGLE_APPLICATION_CREDENTIALS` pointing at the key file path) or use a dashboard snapshot taken after `gcloud auth login`.
 - Docker in Cloud Agent VMs requires `fuse-overlayfs` storage driver and `iptables-legacy`. The dockerd must be started manually: `sudo dockerd &>/tmp/dockerd.log &`
 - `psycopg2` (non-binary) build requires `python3.12-dev` and `libpq-dev` system packages.
 - Creating the venv requires `python3.12-venv` system package (not pre-installed in Cloud Agent VMs).

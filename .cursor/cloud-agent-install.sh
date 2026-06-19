@@ -6,36 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-readonly GCLOUD_APT_LIST="/etc/apt/sources.list.d/google-cloud-sdk.list"
-readonly GCLOUD_APT_KEYRING="/usr/share/keyrings/cloud.google.gpg"
-
-need_apt=
-command -v python3.12 >/dev/null 2>&1 || need_apt=1
-dpkg -s python3.12-venv >/dev/null 2>&1 || need_apt=1
-dpkg -s python3.12-dev >/dev/null 2>&1 || need_apt=1
-dpkg -s libpq-dev >/dev/null 2>&1 || need_apt=1
-command -v psql >/dev/null 2>&1 || need_apt=1
-command -v docker >/dev/null 2>&1 || need_apt=1
-
-if [[ -n "${need_apt}" ]]; then
-  sudo apt-get update -qq
-  sudo apt-get install -y -qq \
-    python3.12 python3.12-venv python3.12-dev libpq-dev \
-    postgresql postgresql-contrib docker.io
-fi
-
-if ! command -v gcloud >/dev/null 2>&1; then
-  sudo apt-get update -qq
-  sudo apt-get install -y -qq apt-transport-https ca-certificates gnupg curl
-  if [[ ! -f "${GCLOUD_APT_LIST}" ]]; then
-    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
-      | sudo gpg --dearmor -o "${GCLOUD_APT_KEYRING}"
-    echo "deb [signed-by=${GCLOUD_APT_KEYRING}] https://packages.cloud.google.com/apt cloud-sdk main" \
-      | sudo tee "${GCLOUD_APT_LIST}" > /dev/null
-  fi
-  sudo apt-get update -qq
-  sudo apt-get install -y -qq google-cloud-cli
-fi
+bash "${ROOT}/.cursor/cloud-agent-apt.sh"
 
 if [[ ! -d .venv ]]; then
   python3.12 -m venv .venv
@@ -54,3 +25,5 @@ python -m pip install 'uv>=0.9' 'black>=24' 'pylint>=3.2' 'ruff>=0.9' 'vulture>=
 if [[ ! -f config.yaml ]]; then
   cp devops/config.yaml.test config.yaml
 fi
+
+# TODO(INTY_CLOUD_AGENT_ANDROID): move Android SDK / AVD setup from dashboard snapshot into install or cloud-agent-android.sh
