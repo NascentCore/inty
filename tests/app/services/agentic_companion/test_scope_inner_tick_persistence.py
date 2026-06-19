@@ -13,13 +13,18 @@ from app.services.agentic_companion.scope_inner_tick_persistence import (
 
 
 @pytest.mark.asyncio
-async def test_fetch_initialized_companion_scopes_delegates_to_listing() -> None:
-    expected = [CompanionScope("u", "a", "c")]
+async def test_fetch_initialized_companion_scopes_filters_inactive_bonds() -> None:
+    active = CompanionScope("user-active", "agent-active", "chat-active")
+    inactive = CompanionScope("user-old", "agent-old", "chat-old")
     with patch(
         "app.services.agentic_companion.scope_inner_tick_persistence.list_companion_memory_scopes",
         new_callable=AsyncMock,
-        return_value=expected,
-    ) as listing:
-        scopes = await fetch_initialized_companion_scopes()
-    assert scopes == expected
-    listing.assert_awaited_once()
+        return_value=[active, inactive],
+    ):
+        with patch(
+            "app.services.agentic_companion.scope_inner_tick_persistence.list_active_companion_agent_scope_keys",
+            new_callable=AsyncMock,
+            return_value=frozenset({("user-active", "agent-active")}),
+        ):
+            scopes = await fetch_initialized_companion_scopes()
+    assert scopes == [active]

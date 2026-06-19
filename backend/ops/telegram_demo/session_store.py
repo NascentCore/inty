@@ -8,11 +8,13 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
+from app.db.session import AsyncSessionLocal
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.services.agentic_channel.adapters.telegram import (
     TelegramChannelAdapter,
 )
 from app.services.agentic_channel.channel_runtime import turn_channel_up
+from app.services.agentic_channel.companion_bonds import has_active_companion_bond
 from app.services.agentic_channel.endpoints import (
     EndpointRecord,
     list_endpoints_for_channel,
@@ -70,18 +72,35 @@ async def activate_telegram_scope(
 
 
 async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
-    """Reload Telegram endpoints from Postgres and restart presences."""
+    """Reload Telegram endpoints with ACTIVE companion bonds and restart presences."""
     assert api is not None
     records = await list_endpoints_for_channel(
         channel=CompanionRuntimeChannel.TELEGRAM
     )
+    restored_count = 0
+    skipped_inactive = 0
     for record in records:
+        scope = record.to_scope()
         try:
+            # TODO(!3491): Move ACTIVE-bond restore filtering into a shared
+            # agent_channel restore service used by Telegram, Weixin, and future channels.
+            async with AsyncSessionLocal() as db:
+                bond_active = await has_active_companion_bond(db, scope)
+            if not bond_active:
+                skipped_inactive += 1
+                logger.info(
+                    "telegram-demo restore skipped inactive bond channel_address={} user_id={} agent_id={}",
+                    record.channel_address,
+                    scope.user_id,
+                    scope.agent_id,
+                )
+                continue
             await activate_telegram_scope(
                 record=record,
                 api=api,
                 reason="restore",
             )
+            restored_count += 1
         except Exception:
             logger.exception(
                 "telegram-demo restore failed channel_address={}",
@@ -89,6 +108,8 @@ async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
             )
     if records:
         logger.info(
-            "telegram-demo: restored {} agent_channel endpoint(s)",
+            "telegram-demo: restored {} agent_channel endpoint(s) skipped_inactive={} total={}",
+            restored_count,
+            skipped_inactive,
             len(records),
         )

@@ -9,6 +9,10 @@ from enum import StrEnum
 
 from loguru import logger
 
+from app.db.session import AsyncSessionLocal
+from app.services.agentic_channel.companion_bonds import (
+    has_active_companion_bond_for_agent,
+)
 from backend.ops.schemas.weixin_session import (
     WeixinOnboardSessionCreate,
     WeixinSessionPhase,
@@ -454,6 +458,21 @@ async def _restore_persisted_session(
     record: PersistedWeixinBridge,
 ) -> None:
     """Reattach bridge; register in-memory session before channel.start (poll 404 window)."""
+    # TODO(!3491): Move ACTIVE-bond restore filtering into a shared
+    # agent_channel restore service used by Telegram, Weixin, and future channels.
+    async with AsyncSessionLocal() as db:
+        bond_active = await has_active_companion_bond_for_agent(
+            db,
+            record.agent_id,
+        )
+    if not bond_active:
+        logger.info(
+            "weixin restore skipped inactive bond session_id={} agent_id={}",
+            record.session_id,
+            record.agent_id,
+        )
+        await delete_bridge(record.session_id)
+        return
     session = _WeixinSession(
         session_id=record.session_id,
         inty_api_base_url=record.inty_api_base_url,

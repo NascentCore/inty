@@ -17,6 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import async_engine
 from app.models.agent import Agent, AgentStatus
+from app.models.companion_bond import CompanionBond, CompanionBondState
 from app.models.ops_weixin_bridge import OpsWeixinBridge
 from app.models.registry import load_model_modules
 from app.models.user import AuthType, Gender, User
@@ -104,8 +105,19 @@ def agent_id(sync_db_session):
             creator_id=user_id,
         )
     )
+    sync_db_session.add(
+        CompanionBond(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            agent_id=aid,
+            state=CompanionBondState.ACTIVE,
+        )
+    )
     sync_db_session.commit()
     yield aid
+    sync_db_session.execute(
+        delete(CompanionBond).where(CompanionBond.agent_id == aid)
+    )
     sync_db_session.execute(
         delete(OpsWeixinBridge).where(OpsWeixinBridge.agent_id == aid)
     )
