@@ -3,11 +3,12 @@
 # CREATED_BY_AGENT
 #
 # Safe operations only: never removes volumes, never runs docker volume prune.
+# Aligns postgres superuser password with devops/config.yaml.{dev,prod} on every run.
 #
 # Usage (from repo root, on the VM):
 #   devops/scripts/ensure_inty_dev_postgres_container.sh
 #   devops/scripts/ensure_inty_dev_postgres_container.sh --check-only
-#   devops/scripts/ensure_inty_dev_postgres_container.sh --recreate-after-upgrade
+#   devops/scripts/ensure_inty_dev_postgres_container.sh --recreate
 
 set -euo pipefail
 
@@ -16,14 +17,14 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/local_postgres_lib.sh"
 
 MODE="ensure"
-RECREATE_AFTER_UPGRADE="false"
+RECREATE="false"
 
 usage() {
-  sed -n '2,10p' "$0" | sed 's/^# \?//'
+  sed -n '2,11p' "$0" | sed 's/^# \?//'
   echo
   echo "Options:"
-  echo "  --check-only              verify container + volume wiring; do not start or create"
-  echo "  --recreate-after-upgrade  remove stopped container and create fresh on INTY_PG_IMAGE"
+  echo "  --check-only   verify container + volume wiring; do not start or create"
+  echo "  --recreate     remove container and create fresh on INTY_PG_IMAGE (volume retained)"
 }
 
 parse_args() {
@@ -33,8 +34,8 @@ parse_args() {
         MODE="check"
         shift
         ;;
-      --recreate-after-upgrade)
-        RECREATE_AFTER_UPGRADE="true"
+      --recreate)
+        RECREATE="true"
         shift
         ;;
       -h | --help)
@@ -69,7 +70,7 @@ assert_image_matches_canonical() {
   if [[ "${image}" == "${INTY_PG_IMAGE}" ]]; then
     return
   fi
-  if [[ "${RECREATE_AFTER_UPGRADE}" == "true" && "${MODE}" != "check" ]]; then
+  if [[ "${RECREATE}" == "true" && "${MODE}" != "check" ]]; then
     if container_running; then
       docker stop "${INTY_PG_CONTAINER}" >/dev/null
     fi
@@ -79,7 +80,7 @@ assert_image_matches_canonical() {
     return
   fi
   echo "Container ${INTY_PG_CONTAINER} image is '${image}', expected ${INTY_PG_IMAGE}." >&2
-  echo "Run devops/scripts/upgrade_inty_dev_postgres_major.sh or ensure with --recreate-after-upgrade after pg_upgrade." >&2
+  echo "Run ensure with --recreate to replace the container (volume is retained)." >&2
   exit 1
 }
 
@@ -121,7 +122,7 @@ run_postgres_container() {
     --restart unless-stopped \
     --label "${INTY_PG_CONTAINER_LABEL}" \
     --label "inty.volume=${INTY_PG_VOLUME}" \
-    -e POSTGRES_USER=postgres \
+    -e POSTGRES_USER="${INTY_PG_USER}" \
     -e "POSTGRES_PASSWORD=${PGPASSWORD}" \
     -e "POSTGRES_DB=${INTY_PG_DEV_DB}" \
     -p "${INTY_PG_PORT}:5432" \
@@ -135,6 +136,9 @@ ensure_container() {
   if container_running; then
     assert_canonical_mount
     ensure_restart_policy
+    if [[ "${MODE}" != "check" ]]; then
+      finalize_postgres_instance_access
+    fi
     echo "container ${INTY_PG_CONTAINER}: running (volume ${INTY_PG_VOLUME})"
     return
   fi
@@ -147,8 +151,7 @@ ensure_container() {
       exit 1
     fi
     docker start "${INTY_PG_CONTAINER}" >/dev/null
-    wait_for_postgres_ready
-    ensure_pg_hba_host_access
+    finalize_postgres_instance_access
     echo "container ${INTY_PG_CONTAINER}: started"
     return
   fi
@@ -159,12 +162,12 @@ ensure_container() {
   fi
 
   run_postgres_container
-  wait_for_postgres_ready
-  ensure_pg_hba_host_access
+  finalize_postgres_instance_access
   echo "container ${INTY_PG_CONTAINER}: created and running"
 }
 
 parse_args "$@"
 require_docker
+assert_dev_prod_database_server_credentials_match
 ensure_volume
 ensure_container

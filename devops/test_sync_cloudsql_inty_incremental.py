@@ -67,6 +67,12 @@ def read_local_pg_password() -> str | None:
     return match.group(1) if match else None
 
 
+def test_sync_script_asserts_shared_server_credentials():
+    text = SCRIPT_PATH.read_text(encoding="utf-8")
+    assert "assert_dev_prod_database_server_credentials_match" in text
+    assert "local_postgres_lib.sh" in text
+
+
 def test_render_vm_database_config_rewrites_host(tmp_path: Path):
     source = tmp_path / "config.yaml"
     dest = tmp_path / "config.vm.yaml"
@@ -94,6 +100,8 @@ def test_import_csv_to_table_uses_on_conflict_for_single_pk():
     body = read_bash_function_body("import_csv_to_table")
     assert "ON CONFLICT" in body
     assert "sync_incr_staging" in body
+    assert "BEGIN;" in body
+    assert "COMMIT;" in body
 
 
 def test_apply_incremental_sync_retries_until_match():

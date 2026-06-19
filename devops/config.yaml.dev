@@ -1,3 +1,5 @@
+# Config for the shared dev environment for the whole team.
+# Share the same database as config.yaml.prod.
 app:
   debug: true
   environment: dev
@@ -27,9 +29,10 @@ security:
   access_token_expire_minutes: 10080
 
 database:
-  host: host.docker.internal
+  # Same Docker Postgres instance as config.yaml.prod (host/port/user/password); logical db is inty-dev.
+  host: "host.docker.internal"
   port: 5432
-  user: postgres
+  user: "postgres"
   password: "sxwl666A!"
   db: "inty-dev"
   pool_size: 20

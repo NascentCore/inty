@@ -2,8 +2,6 @@
 # Incrementally sync Cloud SQL rows into local Docker Postgres (created_at cutoff).
 # CREATED_BY_AGENT
 #
-# TODO(!3497): Run --check-only on the VM for inty-dev and inty before prod cutover (epic #3495).
-#
 # Compares remote vs local row counts; for tables with created_at, copies rows where
 # remote.created_at > local.max(created_at). Single-column PK tables use staging +
 # ON CONFLICT DO NOTHING to tolerate re-runs. Updates chat_history_id_seq when needed.
@@ -23,12 +21,13 @@
 set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# shellcheck source=local_postgres_lib.sh
+source "${SCRIPT_DIR}/local_postgres_lib.sh"
 
 CLOUDSQL_HOST="${CLOUDSQL_HOST:-10.41.177.3}"
 LOCAL_PG_HOST="${LOCAL_PG_HOST:-localhost}"
 LOCAL_PG_PORT="${LOCAL_PG_PORT:-5432}"
-PGUSER="${PGUSER:-postgres}"
+PGUSER="${INTY_PG_USER}"
 APPLY_MAX_PASSES="${APPLY_MAX_PASSES:-5}"
 
 DB="inty"
@@ -94,23 +93,8 @@ assert_non_empty() {
   fi
 }
 
-config_file_for_db() {
-  case "${DB}" in
-    inty) echo "${REPO_ROOT}/devops/config.yaml.prod" ;;
-    inty-dev) echo "${REPO_ROOT}/devops/config.yaml.dev" ;;
-  esac
-}
-
 load_password() {
-  if [[ -n "${PGPASSWORD:-}" ]]; then
-    return
-  fi
-  local cfg
-  cfg="$(config_file_for_db)"
-  assert_non_empty "${cfg}" "config file missing for db ${DB}"
-  PGPASSWORD="$(grep -A8 '^database:' "${cfg}" | grep 'password:' | head -1 | sed -E 's/^[[:space:]]*password:[[:space:]]*"?([^"#]*)"?.*/\1/')"
-  export PGPASSWORD
-  assert_non_empty "${PGPASSWORD}" "could not read database.password from ${cfg}"
+  load_pg_password "$(inty_pg_config_path_for_db "${DB}")"
 }
 
 psql_remote() {
@@ -229,9 +213,11 @@ import_csv_to_table() {
     local quoted_pk
     quoted_pk="$(join_quoted_column_identifiers "${pk_cols[0]}")"
     psql_local -v ON_ERROR_STOP=1 <<SQL
+BEGIN;
 CREATE TEMP TABLE sync_incr_staging (LIKE public."${tbl}" INCLUDING ALL) ON COMMIT DROP;
 \\copy sync_incr_staging (${quoted_cols}) FROM '${csv_path}' WITH (FORMAT csv, HEADER true)
 INSERT INTO public."${tbl}" SELECT ${quoted_cols} FROM sync_incr_staging ON CONFLICT (${quoted_pk}) DO NOTHING;
+COMMIT;
 SQL
   else
     psql_local -c "\\copy public.\"${tbl}\" (${quoted_cols}) FROM '${csv_path}' WITH (FORMAT csv, HEADER true)"
@@ -342,6 +328,7 @@ apply_incremental_sync() {
 
 main() {
   parse_args "$@"
+  assert_dev_prod_database_server_credentials_match
   load_password
   TMP_DIR="$(mktemp -d)"
 

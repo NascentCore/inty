@@ -53,7 +53,7 @@ dump_database() {
   tmp_in_container="/tmp/${db}-${stamp}.dump"
 
   docker exec -e PGPASSWORD="${PGPASSWORD}" "${INTY_PG_CONTAINER}" \
-    pg_dump -U postgres -d "${db}" --format=custom -f "${tmp_in_container}"
+    pg_dump -U "${INTY_PG_USER}" -d "${db}" --format=custom -f "${tmp_in_container}"
   docker cp "${INTY_PG_CONTAINER}:${tmp_in_container}" "${dest}"
   docker exec "${INTY_PG_CONTAINER}" rm -f "${tmp_in_container}"
   echo "backup ${db}: ${dest} ($(du -h "${dest}" | awk '{print $1}'))"
@@ -61,6 +61,7 @@ dump_database() {
 
 parse_args "$@"
 require_docker
+assert_dev_prod_database_server_credentials_match
 if ! container_running; then
   echo "container ${INTY_PG_CONTAINER} is not running" >&2
   exit 1
