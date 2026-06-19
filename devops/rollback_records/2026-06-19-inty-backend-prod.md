@@ -68,6 +68,14 @@ docker run --detach \
 
 If the remote digest is unavailable but the local image was not pruned, use `inty-backend-prod-rollback:20260619T0746Z-4a7c0a98` in the final command instead of the remote digest.
 
+## 2026-06-19 部署时间线（摘要）
+
+1. **07:47 UTC** — 捕获上表 `4a7c0a98` 运行态（本文件）。
+2. 部署 main **`6c46b2f8c`** — release IntelliMate（`64615013`）出现聊天 UI 不刷新等问题；当前镜像打本地 tag `inty-backend-prod-broken:20260619T0757Z-6c46b2f8c` 备查。
+3. **回滚** 至 `4a7c0a98` 镜像，prod 恢复。
+4. 创建分支 **`intellimate-client-compat-local-postgres-prod`**（`4a7c0a98` + local Postgres devops only）。
+5. 本地 `inty` 曾处于 main Alembic head → compat 部署启动失败；见 [Alembic compat 记录](./2026-06-19-inty-pg-alembic-compat-prod.md)。
+
 ## Related
 
 - [inty 逻辑库 Alembic 与 compat prod 后端不一致](./2026-06-19-inty-pg-alembic-compat-prod.md) — local Postgres `inty` migration 版本与 compat 分支部署的约束

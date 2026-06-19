@@ -115,9 +115,9 @@ VM 宿主机任务用 [`scripts/render_vm_database_config.sh`](scripts/render_vm
 
 ### Alembic 与 compat prod 后端
 
-若 prod 跑 **`intellimate-client-compat-local-postgres-prod`**（Alembic head `20260512_phone_call_bindings`），对逻辑库 **`inty`** 执行 main 线 migration 或 sync 抬高 `alembic_version` 后，**`inty-backend-prod` 重启会失败**（`Can't locate revision`）。不重启可能暂时无感，但 `inty-pg` 重启、sync、删改现有表仍可能影响运行中容器。
+若 prod 跑 **`intellimate-client-compat-local-postgres-prod`**（Alembic head 以该分支 `alembic heads` 为准），对逻辑库 **`inty`** 执行 main 线 migration 或整库 restore 抬高 `alembic_version` 后，**`inty-backend-prod` / `inty-ops-prod` / prod push worker 重启会失败**（`Can't locate revision`）。不重启可能暂时无感，但 `inty-pg` 重启、sync、删改现有表仍可能影响运行中容器。
 
-详见 [rollback_records/2026-06-19-inty-pg-alembic-compat-prod.md](rollback_records/2026-06-19-inty-pg-alembic-compat-prod.md)。
+改库或重启前检查、手动回退 SQL 见 [rollback_records/2026-06-19-inty-pg-alembic-compat-prod.md](rollback_records/2026-06-19-inty-pg-alembic-compat-prod.md)。
 
 ## Post-cutover：Cloud SQL 降本
 
