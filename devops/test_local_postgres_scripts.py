@@ -30,7 +30,8 @@ def read_bash_function_body(script_path: Path, function_name: str) -> str:
 
 def test_lib_declares_canonical_volume_and_container():
     text = LIB_PATH.read_text(encoding="utf-8")
-    assert 'readonly INTY_PG_CONTAINER="inty-dev-postgres"' in text
+    assert 'readonly INTY_PG_CONTAINER="inty-pg"' in text
+    assert 'readonly INTY_PG_CONTAINER_LEGACY="inty-dev-postgres"' in text
     assert 'readonly INTY_PG_VOLUME="inty-dev-postgres-data"' in text
     assert 'readonly INTY_PG_MAJOR_VERSION="17"' in text
     assert 'readonly INTY_PG_IMAGE="pgvector/pgvector:pg17"' in text
@@ -43,6 +44,14 @@ def test_lib_declares_canonical_volume_and_container():
     assert "finalize_postgres_instance_access" in text
     assert "sql_escape_pg_literal" in text
     assert "unless-stopped" not in text  # policy lives in ensure script
+
+
+def test_ensure_migrates_legacy_container_name():
+    body = read_bash_function_body(LIB_PATH, "migrate_legacy_container_name")
+    assert "INTY_PG_CONTAINER_LEGACY" in body
+    assert "docker rename" in body
+    text = ENSURE_PATH.read_text(encoding="utf-8")
+    assert "migrate_legacy_container_name" in text
 
 
 def test_dev_prod_configs_share_server_credentials():

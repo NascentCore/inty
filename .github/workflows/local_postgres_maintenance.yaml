@@ -1,5 +1,5 @@
 # CREATED_BY_AGENT
-# Daily backup + weekly durability verify for VM Docker Postgres (inty-dev-postgres).
+# Daily backup + weekly durability verify for VM Docker Postgres (inty-pg).
 # Replaces VM crontab entries documented in devops/SOPS.md (!3496).
 name: Local Postgres maintenance
 

@@ -151,7 +151,7 @@ WHERE chat_id = (
 
 ## IntelliMate 本地 Postgres（Docker）
 
-IntelliMate dev（`inty-dev`）与 prod（`inty`）均在 VM 容器 `inty-dev-postgres`；完整说明见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。
+IntelliMate dev（`inty-dev`）与 prod（`inty`）均在 VM 容器 `inty-pg`；完整说明见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)。
 
 **推荐入口（幂等 / 可验证）**：
 
@@ -174,8 +174,8 @@ devops/scripts/guard_docker_volume_prune.sh && docker volume prune
 常用命令：
 
 ```bash
-docker start inty-dev-postgres
-docker stop inty-dev-postgres
+docker start inty-pg
+docker stop inty-pg
 PGPASSWORD='<见 config.yaml.dev / config.yaml.prod>' psql -h localhost -U postgres -d inty-dev
 PGPASSWORD='<见 config.yaml.prod>' psql -h localhost -U postgres -d inty
 ```

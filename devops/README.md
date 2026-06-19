@@ -15,7 +15,7 @@
 
 - 共享同一台 gcp VM
 - 差别在配置文件：[dev](config.yaml.dev) [prod](config.yaml.prod)
-- **IntelliMate 数据库（dev + prod）**：均使用 **VM 上 Docker Postgres**（容器 `inty-dev-postgres`，逻辑库 `inty-dev` / `inty`），不再连 Cloud SQL；见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)
+- **IntelliMate 数据库（dev + prod）**：均使用 **VM 上 Docker Postgres**（容器 `inty-pg`，逻辑库 `inty-dev` / `inty`），不再连 Cloud SQL；见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)
 - **Ops 平台**：evaluation Web UI 与完整 `/api/v1`，独立镜像与工作流部署；workflow [build_and_deploy_ops.yml](../.github/workflows/build_and_deploy_ops.yml)，dev 与 prod 同 VM、不同 host 端口（8001 / 8011），nginx 将 ops.inty.cc → 8011、dev.ops.inty.cc → 8001。手动选择 GitHub Environment `imate-dev` / `imate-prod` / **`imate`** 可部署 iMate 相关 Ops（容器 `inty-ops-imate-*` 或 `inty-ops-imate`，与 IntelliMate 的 `inty-ops-dev` 等并行）。
 - **iMate（第二 Inty 后端实例）**：与 IntelliMate **并行**，独立库、独立 GCS bucket、独立容器与域名；不得 stop/rm `inty-backend-dev` / `inty-backend-prod`。
   - 配置：[config.yaml.imate_dev](config.yaml.imate_dev)、[config.yaml.imate_prod](config.yaml.imate_prod)、[config.yaml.imate](config.yaml.imate)（构建期注入镜像，与 IntelliMate 同一 [Dockerfile](docker/Dockerfile)）。
