@@ -63,32 +63,6 @@ async def test_append_failed_db_produces_no_ready_marker() -> None:
 async def test_multiple_appends_pulled_in_order() -> None:
     scope = AgentScope(user_id="u2", agent_id="a2")
     queue = OutputQueue(scope=scope)
-    record_a = AgentOutputMessage(
-        message_id="msg-a",
-        scope=scope,
-        batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
-        text="first",
-        created_at_utc=datetime.now(timezone.utc),
-        message_ids=("input-1",),
-        trace_id=None,
-        langsmith_trace_id=None,
-        langsmith_run_id=None,
-        turn_recall=None,
-    )
-    record_b = AgentOutputMessage(
-        message_id="msg-b",
-        scope=scope,
-        batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
-        text="second",
-        created_at_utc=datetime.now(timezone.utc),
-        message_ids=("input-1",),
-        trace_id=None,
-        langsmith_trace_id=None,
-        langsmith_run_id=None,
-        turn_recall=None,
-    )
 
     class _FakeRecord:
         def __init__(self, message_id: str, text: str, sequence: int) -> None:

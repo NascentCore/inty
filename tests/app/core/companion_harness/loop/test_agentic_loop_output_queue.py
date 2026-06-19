@@ -6,7 +6,6 @@ import json
 from dataclasses import replace
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from typing import Any
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -215,7 +214,6 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
 
 @pytest.mark.asyncio
 async def test_agentic_loop_skips_empty_assistant_output() -> None:
-    scope = AgentScope(user_id="u2", agent_id="a2")
     domain = MagicMock(spec=OutputQueue)
     domain.append_user_reply = AsyncMock()
     context = _loop_context(output_queue=domain)
@@ -253,7 +251,6 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
 
 @pytest.mark.asyncio
 async def test_agentic_loop_skips_silent_assistant_output() -> None:
-    scope = AgentScope(user_id="u2b", agent_id="a2b")
     domain = MagicMock(spec=OutputQueue)
     domain.append_user_reply = AsyncMock()
     context = _loop_context(output_queue=domain)
@@ -297,7 +294,6 @@ async def test_agentic_loop_uses_prompt_plan_path_when_set() -> None:
         PromptPlan,
     )
 
-    scope = AgentScope(user_id="u3", agent_id="a3")
     domain = MagicMock(spec=OutputQueue)
     domain.append_user_reply = AsyncMock()
     context = _loop_context(output_queue=domain)
@@ -562,7 +558,6 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
     from app.core.companion_harness.prompting.bundle import PromptBundle
     from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
-    scope = AgentScope(user_id="u5", agent_id="a5")
     domain = MagicMock(spec=OutputQueue)
     domain.append_user_reply = AsyncMock()
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))

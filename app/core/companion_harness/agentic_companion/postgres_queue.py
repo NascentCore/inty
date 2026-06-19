@@ -100,7 +100,7 @@ def _output_row_to_record(
 
 
 class PostgresInputQueueRepository:
-    """SQLAlchemy async implementation of ``InputQueueRepository``."""
+    """SQLAlchemy async durable inbound user message queue."""
 
     def __init__(self, db: AsyncSession) -> None:
         assert db is not None
@@ -210,7 +210,7 @@ class PostgresInputQueueRepository:
 
 
 class PostgresOutputQueueRepository:
-    """SQLAlchemy async implementation of ``OutputQueueRepository``."""
+    """SQLAlchemy async durable agent output queue."""
 
     def __init__(self, db: AsyncSession) -> None:
         assert db is not None

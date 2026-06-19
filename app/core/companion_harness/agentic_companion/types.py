@@ -8,7 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -192,20 +191,6 @@ class AgenticCompanionRunResult(BaseModel):
     # TODO(!3490): ``input_message_ids`` lets ``ScopeDrainCompletion`` clear legacy
     # ``foreground_pending`` per claimed InputQueue row; drop after queue cleanup.
     input_message_ids: tuple[str, ...]
-
-
-class TranscriptProjectionRecord(BaseModel):
-    """One transcript.jsonl row linked to a queue message."""
-
-    model_config = ConfigDict(frozen=True)
-
-    queue_message_id: str = Field(min_length=1)
-    queue_kind: Literal["input", "output"]
-    role: Literal["user", "assistant", "system"]
-    content: str
-    timestamp: str = Field(min_length=1)
-    trace_id: str | None = None
-    reply_to: str | None = None
 
 
 class InboundWireMessage(BaseModel):
