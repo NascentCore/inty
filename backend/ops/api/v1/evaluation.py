@@ -92,11 +92,11 @@ async def get_evaluation_sessions(
 
         return sessions
 
-    except Exception as e:
-        logger.error(f"获取评测会话列表失败: {str(e)}")
+    except Exception:
+        logger.exception("获取评测会话列表失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch evaluation sessions"
-        )
+        ) from None
 
 
 @router.post(
@@ -129,16 +129,20 @@ async def create_evaluation_session(
             config=session_in.config,
         )
 
-        logger.info(f"用户 {current_user.id} 创建评测会话: {session.id}")
+        logger.info(
+            "用户 {} 创建评测会话: {}",
+            current_user.id,
+            session.id,
+        )
         return session
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"创建评测会话失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("创建评测会话失败")
         raise HTTPException(
             status_code=500, detail="Failed to create evaluation session"
-        )
+        ) from None
 
 
 @router.post(
@@ -174,16 +178,20 @@ async def start_evaluation_session(
 
         success = await evaluation_service.start_session(session_id)
 
-        logger.info(f"用户 {current_user.id} 启动评测会话: {session_id}")
+        logger.info(
+            "用户 {} 启动评测会话: {}",
+            current_user.id,
+            session_id,
+        )
         return {"success": success, "message": "评测会话已启动"}
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"启动评测会话失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("启动评测会话失败")
         raise HTTPException(
             status_code=500, detail="Failed to start evaluation session"
-        )
+        ) from None
 
 
 @router.get(
@@ -219,11 +227,11 @@ async def get_evaluation_session(
 
         return session
 
-    except Exception as e:
-        logger.error(f"获取评测会话详情失败: {str(e)}")
+    except Exception:
+        logger.exception("获取评测会话详情失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch session details"
-        )
+        ) from None
 
 
 @router.get(
