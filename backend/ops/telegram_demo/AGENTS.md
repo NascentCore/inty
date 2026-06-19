@@ -8,7 +8,7 @@ Ops **telegram-demo**: Telegram Bot API long-poll ↔ companion harness.
 |-------|------|
 | ``app/external_services/telegram_bot_api.py`` | Bot API HTTP (getUpdates, sendMessage, getMe) |
 | ``backend/ops/telegram_demo/`` | Provision, Postgres binding, in-process presence, transport |
-| ``GET /telegram-demo`` | Team QR: ``https://t.me/{username}?start=onboard`` |
+| ``GET /telegram`` | Team QR: ``https://t.me/{username}?start=onboard`` |
 | ``GET /api/v1/telegram-demo/bot-info`` | JSON bot id / username |
 | ``GET /api/v1/telegram-demo/bindings`` | Debug: persisted binding rows |
 | ``companion_chat_service.run_user_chat`` | Same kernel as WebSocket; ``runtime_channel=TELEGRAM`` |
@@ -21,7 +21,7 @@ Ops **telegram-demo**: Telegram Bot API long-poll ↔ companion harness.
 
 ## User-visible behavior (v2)
 
-1. Teammate opens ``GET /telegram-demo``, scans **team QR** (``start=onboard``).
+1. Teammate opens ``GET /telegram``, scans **team QR** (``start=onboard``).
 2. Ops auto-provisions **guest** ``User`` + PRIVATE ``Agent`` per ``telegram_chat_id``
    (identity: ``user_id`` / ``agent_id`` only; legacy ``readable_id`` unused).
 3. User sends **text**; harness replies (中文 OK).

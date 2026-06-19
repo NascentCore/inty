@@ -79,8 +79,8 @@ _TELEGRAM_DEMO_HTML = """<!DOCTYPE html>
 
 
 def configure_telegram_demo_web_routes(app: FastAPI) -> None:
-    """Mount ``GET /telegram-demo`` (onboard demo; not in OpenAPI)."""
+    """Mount ``GET /telegram`` (onboard page; not in OpenAPI)."""
 
-    @app.get("/telegram-demo", include_in_schema=False)
+    @app.get("/telegram", include_in_schema=False)
     async def telegram_demo_onboard_page() -> HTMLResponse:
         return HTMLResponse(_TELEGRAM_DEMO_HTML)

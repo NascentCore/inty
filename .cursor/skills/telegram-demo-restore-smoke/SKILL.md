@@ -16,7 +16,7 @@ description: >-
 
 ## Smoke steps
 
-1. Open `http://127.0.0.1:8001/telegram-demo` → scan team QR with Telegram.
+1. Open `http://127.0.0.1:8001/telegram` → scan team QR with Telegram.
 2. Send a user message; confirm bot replies.
 3. Check bindings:
    ```bash
