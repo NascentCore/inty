@@ -5,6 +5,6 @@
   "ports": [
     { "name": "Inty API", "port": 8000 },
     { "name": "Ops / REPL", "port": 8001 },
-    { "name": "PostgreSQL", "port": 5432 }
+    { "name": "PostgreSQL", "port": 15432 }
   ]
 }

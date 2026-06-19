@@ -22,6 +22,7 @@ python -m pip install -r requirements.txt -r tests/requirements.txt
 python -m pip install 'uv>=0.9' 'black>=24' 'pylint>=3.2' 'ruff>=0.9' 'vulture>=2.14'
 
 # TODO(INTY_CONFIG_YAML): export INTY_CONFIG_YAML=devops/config.yaml.test instead of cp
+export INTY_CONFIG_YAML="${INTY_CONFIG_YAML:-devops/config.yaml.test}"
 if [[ ! -f config.yaml ]]; then
   cp devops/config.yaml.test config.yaml
 fi

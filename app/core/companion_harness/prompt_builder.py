@@ -1,11 +1,10 @@
-"""Typed prompt assembly for queue-served user chat with a single language model.
+"""Typed prompt assembly for queue-served single-LLM user chat (settled + bootstrap).
 
-Builds structured system, transcript, and tail-user sections for settled user
-turns that run through the agentic loop and in-turn tool calling. Legacy prompt
-builders for non-queue paths stay unchanged until follow-up migration work.
+Builds ``PromptPlan`` objects for AgenticLoop single-LLM execution: system slices,
+transcript window, optional private-thought splice, time context, and tail user.
+Legacy non-AgenticLoop prompt_stack paths stay unchanged until follow-up migration.
 
-TODO(!3398): First step toward prompt-stack migration; legacy callers remain
-unchanged until follow-up issues land.
+TODO(!3398): Dual-LLM and non-user_turn tracks still use legacy prompt_stack entrypoints.
 https://github.com/NascentCore/inty/issues/3398
 
 TODO(!3453): Named-slot system slices should use declarative templates instead
@@ -31,8 +30,19 @@ from app.core.companion_harness.companion.prompt_stack import (
     replace_leading_system_messages_inplace,
     weixin_clawbot_contact_alias_system_message,
 )
+from app.core.companion_harness.companion.prompts.system_messages import (
+    _auxiliary_system_messages,
+    _doctrine_system_messages,
+)
 from app.core.companion_harness.prompting.tracks import (
-    build_settled_user_turn_single_llm_system_messages,
+    _capability_bootstrap_single_llm_system_messages,
+    _capability_settled_single_llm_system_messages,
+    _contextual_bootstrap_user_turn_system_messages,
+    _contextual_settled_user_turn_system_messages,
+    _output_bootstrap_single_llm_system_messages,
+    _output_settled_single_llm_system_messages,
+    _persona_bootstrap_user_turn_system_messages,
+    _persona_settled_user_turn_system_messages,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
@@ -53,6 +63,10 @@ from app.core.companion_harness.memory.transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    build_openai_bootstrap_track_tools,
+    build_openai_repl_tools,
+)
 
 
 class PromptMessageRole(StrEnum):
@@ -127,9 +141,25 @@ def _system_dicts_to_prompt_messages(
     return openai_dialogue_dicts_to_prompt_messages(system_dicts)
 
 
+def _append_runtime_channel_system_extras(
+    *,
+    system_dicts: list[dict[str, Any]],
+    bundle: PromptBundle,
+    runtime_context: TurnRuntimeContext,
+) -> list[dict[str, Any]]:
+    out = append_runtime_output_format_system_message(
+        system_messages=system_dicts,
+        bundle=bundle,
+        runtime_context=runtime_context,
+    )
+    if runtime_context.channel == CompanionRuntimeChannel.WECHAT_WEIXIN:
+        out.append(weixin_clawbot_contact_alias_system_message())
+    return out
+
+
 @dataclass(frozen=True)
 class PromptBuilder:
-    """Assembles prompt plans for queue-served settled user chat.
+    """Assembles ``PromptPlan`` for queue-served single-LLM user chat (settled + bootstrap).
 
     Given memory bundle, context metadata, and runtime channel signals, produces
     a prompt plan with system doctrine, transcript window, optional private
@@ -140,9 +170,45 @@ class PromptBuilder:
     context: ContextMeta
     runtime_context: TurnRuntimeContext
 
-    def build_user_chat_prompt(
+    def settled_single_llm_system_messages(self) -> list[dict[str, Any]]:
+        """Settled ``user_turn`` single-LLM in-turn tools system prefix."""
+        out: list[dict[str, Any]] = []
+        out.extend(_doctrine_system_messages())
+        out.extend(_auxiliary_system_messages())
+        out.extend(_capability_settled_single_llm_system_messages(self.bundle))
+        out.extend(
+            _persona_settled_user_turn_system_messages(
+                bundle=self.bundle,
+                context=self.context,
+                include_significance_perception_slice=False,
+            )
+        )
+        out.extend(_output_settled_single_llm_system_messages())
+        out.extend(_contextual_settled_user_turn_system_messages(self.context))
+        return out
+
+    def bootstrap_single_llm_system_messages(self) -> list[dict[str, Any]]:
+        """Bootstrap ``user_turn`` single-LLM in-turn tools system prefix."""
+        out: list[dict[str, Any]] = []
+        out.extend(_doctrine_system_messages())
+        out.extend(_auxiliary_system_messages())
+        out.extend(_capability_bootstrap_single_llm_system_messages())
+        out.extend(
+            _persona_bootstrap_user_turn_system_messages(
+                bundle=self.bundle,
+                context=self.context,
+            )
+        )
+        out.extend(_output_bootstrap_single_llm_system_messages())
+        out.extend(
+            _contextual_bootstrap_user_turn_system_messages(self.context)
+        )
+        return out
+
+    def _build_single_llm_user_chat_prompt(
         self,
         *,
+        system_dicts: list[dict[str, Any]],
         transcript_window: list[ChatMessage],
         user_text: str,
         tail_user_ts: datetime,
@@ -150,22 +216,11 @@ class PromptBuilder:
         implicit_sign_on_turn: bool,
         tail_splice_thoughts: tuple[AiPrivateThought, ...],
     ) -> PromptPlan:
-        """Assemble initial single-LLM user-chat prompt with in-turn tools enabled."""
-        assert user_text.strip() != ""
-        system_dicts = build_settled_user_turn_single_llm_system_messages(
-            self.bundle,
-            self.context,
-        )
-        system_dicts = append_runtime_output_format_system_message(
-            system_messages=system_dicts,
+        system_dicts = _append_runtime_channel_system_extras(
+            system_dicts=system_dicts,
             bundle=self.bundle,
             runtime_context=self.runtime_context,
         )
-        if (
-            self.runtime_context.channel
-            == CompanionRuntimeChannel.WECHAT_WEIXIN
-        ):
-            system_dicts.append(weixin_clawbot_contact_alias_system_message())
         messages: list[PromptMessage] = list(
             _system_dicts_to_prompt_messages(system_dicts)
         )
@@ -208,6 +263,50 @@ class PromptBuilder:
             tool_choice=None,
         )
 
+    def build_user_chat_prompt(
+        self,
+        *,
+        transcript_window: list[ChatMessage],
+        user_text: str,
+        tail_user_ts: datetime,
+        tools: tuple[dict[str, Any], ...],
+        implicit_sign_on_turn: bool,
+        tail_splice_thoughts: tuple[AiPrivateThought, ...],
+    ) -> PromptPlan:
+        """Assemble initial settled single-LLM user-chat prompt with in-turn tools."""
+        assert user_text.strip() != ""
+        return self._build_single_llm_user_chat_prompt(
+            system_dicts=self.settled_single_llm_system_messages(),
+            transcript_window=transcript_window,
+            user_text=user_text,
+            tail_user_ts=tail_user_ts,
+            tools=tools,
+            implicit_sign_on_turn=implicit_sign_on_turn,
+            tail_splice_thoughts=tail_splice_thoughts,
+        )
+
+    def build_bootstrap_user_chat_prompt(
+        self,
+        *,
+        transcript_window: list[ChatMessage],
+        user_text: str,
+        tail_user_ts: datetime,
+        tools: tuple[dict[str, Any], ...],
+        implicit_sign_on_turn: bool,
+        tail_splice_thoughts: tuple[AiPrivateThought, ...],
+    ) -> PromptPlan:
+        """Assemble initial bootstrap single-LLM user-chat prompt with in-turn tools."""
+        assert user_text.strip() != ""
+        return self._build_single_llm_user_chat_prompt(
+            system_dicts=self.bootstrap_single_llm_system_messages(),
+            transcript_window=transcript_window,
+            user_text=user_text,
+            tail_user_ts=tail_user_ts,
+            tools=tools,
+            implicit_sign_on_turn=implicit_sign_on_turn,
+            tail_splice_thoughts=tail_splice_thoughts,
+        )
+
 
 def refresh_single_llm_user_chat_prompt_prefix(
     *,
@@ -215,21 +314,41 @@ def refresh_single_llm_user_chat_prompt_prefix(
     messages: list[dict[str, Any]],
     runtime_context: TurnRuntimeContext,
 ) -> list[dict[str, Any]]:
-    """Replace leading system messages after a tool round on single-LLM ``USER_CHAT``.
-
-    Does not fall back to tool-background compact prompt (``build_system_messages_for_tool_track``).
-    """
+    """Refresh settled single-LLM system prefix; return tools for later rounds."""
     context = load_context_meta(store=store)
     bundle = load_prompt_bundle(store, meta=context)
-    refreshed = build_settled_user_turn_single_llm_system_messages(
-        bundle, context
+    builder = PromptBuilder(
+        bundle=bundle,
+        context=context,
+        runtime_context=runtime_context,
     )
-    refreshed = append_runtime_output_format_system_message(
-        system_messages=refreshed,
+    refreshed = _append_runtime_channel_system_extras(
+        system_dicts=builder.settled_single_llm_system_messages(),
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    if runtime_context.channel == CompanionRuntimeChannel.WECHAT_WEIXIN:
-        refreshed.append(weixin_clawbot_contact_alias_system_message())
     replace_leading_system_messages_inplace(messages, refreshed)
-    return messages
+    return build_openai_repl_tools()
+
+
+def refresh_single_llm_bootstrap_chat_prompt_prefix(
+    *,
+    store: MemoryStore,
+    messages: list[dict[str, Any]],
+    runtime_context: TurnRuntimeContext,
+) -> list[dict[str, Any]]:
+    """Refresh bootstrap single-LLM system prefix; return tools for later rounds."""
+    context = load_context_meta(store=store)
+    bundle = load_prompt_bundle(store, meta=context)
+    builder = PromptBuilder(
+        bundle=bundle,
+        context=context,
+        runtime_context=runtime_context,
+    )
+    refreshed = _append_runtime_channel_system_extras(
+        system_dicts=builder.bootstrap_single_llm_system_messages(),
+        bundle=bundle,
+        runtime_context=runtime_context,
+    )
+    replace_leading_system_messages_inplace(messages, refreshed)
+    return build_openai_bootstrap_track_tools()

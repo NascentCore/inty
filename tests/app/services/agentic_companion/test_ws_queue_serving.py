@@ -11,10 +11,16 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+)
+from app.services.agentic_companion.downlink import DownlinkKind
+from app.services.agentic_channel.serving import _deliver_ready_message
 from app.services.agentic_companion.ws_queue_serving import (
     AppWsQueueDeliveryFlags,
     AppWsUserTurnEnqueueResult,
     AppWsUserTurnQueueInput,
+    _make_on_drain_complete,
     _on_app_ws_scope_drain_complete,
     _register_scope_turn_delivery,
     _scope_deliver_ready_output,
@@ -22,7 +28,9 @@ from app.services.agentic_companion.ws_queue_serving import (
     enqueue_app_ws_user_turn_and_wake,
     stop_app_ws_scope_queue_serving,
 )
-from app.services.agentic_channel.scope_queue_serving import ScopeDrainCompletion
+from app.services.agentic_channel.scope_queue_serving import (
+    ScopeDrainCompletion,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -97,7 +105,9 @@ async def test_enqueue_app_ws_user_turn_and_wake_without_drain() -> None:
     assert inbound.wire_id == "app:conn-1"
     assert inbound.client_message_id == "11111111-1111-4111-8111-111111111111"
     ensure_mock.assert_awaited_once()
-    wake_mock.assert_called_once_with(runtime_channel=CompanionRuntimeChannel.APP)
+    wake_mock.assert_called_once_with(
+        runtime_channel=CompanionRuntimeChannel.APP
+    )
     drain_mock.assert_not_awaited()
 
 
@@ -153,7 +163,9 @@ async def test_stop_app_ws_scope_queue_serving_clears_registry() -> None:
 
 
 @pytest.mark.asyncio
-async def test_drain_complete_clears_only_matching_queue_message_state() -> None:
+async def test_drain_complete_clears_only_matching_queue_message_state() -> (
+    None
+):
     scope = AgentScope(user_id="user-conc", agent_id="agent-conc")
     pending: dict[str, dict[str, str]] = {
         "client-a": {"turn": "a"},
@@ -237,3 +249,176 @@ async def test_deliver_ready_output_routes_by_input_message_ids() -> None:
 
     assert sent_by_turn["a"] == ["reply for a"]
     assert sent_by_turn["b"] == ["reply for b"]
+
+
+@pytest.mark.asyncio
+async def test_deliver_ready_output_survives_drain_complete() -> None:
+    """Regression (REPL race): drain completion must keep WS send routing alive."""
+    scope = AgentScope(user_id="user-race", agent_id="agent-race")
+    input_id = "queue-msg-race"
+    sent: list[str] = []
+
+    async def send_text(text: str) -> None:
+        sent.append(text)
+
+    _register_scope_turn_delivery(
+        scope,
+        input_id,
+        send_text=send_text,
+        delivery_flags=AppWsQueueDeliveryFlags(queue_message_id=input_id),
+        client_message_id="client-race",
+        companion_ws_foreground_pending=None,
+    )
+
+    await _on_app_ws_scope_drain_complete(
+        scope,
+        ScopeDrainCompletion(
+            input_message_ids=(input_id,),
+            tool_background_started=False,
+        ),
+    )
+
+    await _scope_deliver_ready_output(
+        scope,
+        "reply after drain complete",
+        (input_id,),
+    )
+
+    assert sent == ["reply after drain complete"]
+
+
+@pytest.mark.asyncio
+async def test_deliver_ready_message_delivers_after_drain_complete() -> None:
+    """Output pump delivers and acks a reply pumped after drain completion."""
+    scope = AgentScope(user_id="user-pump-race", agent_id="agent-pump-race")
+    input_id = "queue-msg-pump-race"
+    sent: list[str] = []
+
+    async def send_text(text: str) -> None:
+        sent.append(text)
+
+    _register_scope_turn_delivery(
+        scope,
+        input_id,
+        send_text=send_text,
+        delivery_flags=AppWsQueueDeliveryFlags(queue_message_id=input_id),
+        client_message_id="client-pump-race",
+        companion_ws_foreground_pending=None,
+    )
+    on_drain_complete = _make_on_drain_complete(scope)
+    await on_drain_complete(
+        ScopeDrainCompletion(
+            input_message_ids=(input_id,),
+            tool_background_started=False,
+        ),
+    )
+
+    async def deliver_ready(text: str, message_ids: tuple[str, ...]) -> None:
+        await _scope_deliver_ready_output(scope, text, message_ids)
+
+    fake_queue = MagicMock()
+    fake_queue.ack_delivered = AsyncMock()
+    fake_queue.mark_delivery_failed = AsyncMock()
+    ready = ReadyOutputMessage(
+        message_id="out-race-1",
+        batch_id="batch-race-1",
+        kind=DownlinkKind.USER_REPLY,
+        text="queued bootstrap reply",
+        sequence=1,
+        message_ids=(input_id,),
+    )
+    with patch(
+        "app.services.agentic_channel.serving.get_output_queue_for_scope",
+        return_value=fake_queue,
+    ):
+        delivered = await _deliver_ready_message(
+            message=ready,
+            send_text=None,
+            deliver_ready=deliver_ready,
+            scope=scope,
+        )
+
+    assert delivered == "queued bootstrap reply"
+    assert sent == ["queued bootstrap reply"]
+    fake_queue.mark_delivery_failed.assert_not_awaited()
+    fake_queue.ack_delivered.assert_awaited_once()
+    ack = fake_queue.ack_delivered.await_args.args[0]
+    assert ack.message_id == "out-race-1"
+
+
+@pytest.mark.asyncio
+async def test_background_reply_delivers_after_drain_complete() -> None:
+    """Background tool replies arrive after drain completion under the same input id."""
+    scope = AgentScope(user_id="user-bg", agent_id="agent-bg")
+    input_id = "queue-msg-bg"
+    sent: list[str] = []
+
+    async def send_text(text: str) -> None:
+        sent.append(text)
+
+    _register_scope_turn_delivery(
+        scope,
+        input_id,
+        send_text=send_text,
+        delivery_flags=AppWsQueueDeliveryFlags(queue_message_id=input_id),
+        client_message_id="client-bg",
+        companion_ws_foreground_pending=None,
+    )
+
+    await _on_app_ws_scope_drain_complete(
+        scope,
+        ScopeDrainCompletion(
+            input_message_ids=(input_id,),
+            tool_background_started=True,
+        ),
+    )
+
+    await _scope_deliver_ready_output(scope, "foreground reply", (input_id,))
+    await _scope_deliver_ready_output(
+        scope, "background tool reply", (input_id,)
+    )
+
+    assert sent == ["foreground reply", "background tool reply"]
+
+
+@pytest.mark.asyncio
+async def test_tool_background_drain_clears_non_primary_client_aliases() -> (
+    None
+):
+    """Only the primary input id remains pending while background tools run."""
+    scope = AgentScope(user_id="user-bg-clean", agent_id="agent-bg-clean")
+    pending: dict[str, dict[str, str]] = {
+        "client-a": {"turn": "a"},
+        "queue-msg-a": {"turn": "a"},
+        "client-b": {"turn": "b"},
+        "queue-msg-b": {"turn": "b"},
+    }
+    _register_scope_turn_delivery(
+        scope,
+        "queue-msg-a",
+        send_text=AsyncMock(),
+        delivery_flags=AppWsQueueDeliveryFlags(queue_message_id="queue-msg-a"),
+        client_message_id="client-a",
+        companion_ws_foreground_pending=pending,
+    )
+    _register_scope_turn_delivery(
+        scope,
+        "queue-msg-b",
+        send_text=AsyncMock(),
+        delivery_flags=AppWsQueueDeliveryFlags(queue_message_id="queue-msg-b"),
+        client_message_id="client-b",
+        companion_ws_foreground_pending=pending,
+    )
+
+    await _on_app_ws_scope_drain_complete(
+        scope,
+        ScopeDrainCompletion(
+            input_message_ids=("queue-msg-a", "queue-msg-b"),
+            tool_background_started=True,
+        ),
+    )
+
+    assert "client-a" not in pending
+    assert "queue-msg-a" not in pending
+    assert "client-b" not in pending
+    assert pending["queue-msg-b"] == {"turn": "b"}

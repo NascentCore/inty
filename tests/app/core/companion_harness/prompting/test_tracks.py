@@ -1,4 +1,4 @@
-"""Byte-identical equivalence tests for track-composed settled user_turn assembly."""
+"""Byte-identical equivalence tests for track-composed user_turn assembly."""
 
 from __future__ import annotations
 
@@ -9,16 +9,27 @@ from app.core.companion_harness.companion.models import (
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
     ExperienceDirectives,
     ExperienceSessionIntent,
 )
+from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
-    build_settled_user_turn_single_llm_system_messages,
 )
+
+
+def _runtime_context() -> TurnRuntimeContext:
+    return TurnRuntimeContext(
+        channel=CompanionRuntimeChannel.APP,
+        implicit_signal_bundle=None,
+    )
 
 
 def _bundle() -> PromptBundle:
@@ -28,6 +39,7 @@ def _bundle() -> PromptBundle:
         style_md="style\n",
         user_md="user\n",
         memory_md="memory\n",
+        memory_daily_today_md="daily gist\n",
         tools_md="# Tools\ngenerate_image rules\n",
         harness_md="# Harness\n",
         channels_md="# Channels\n",
@@ -52,10 +64,64 @@ def test_settled_single_llm_matches_legacy_build_system_messages() -> None:
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
     )
-    composed = build_settled_user_turn_single_llm_system_messages(
+    builder = PromptBuilder(
+        bundle=bundle,
+        context=context,
+        runtime_context=_runtime_context(),
+    )
+    composed = builder.settled_single_llm_system_messages()
+    assert composed == legacy
+
+
+def test_bootstrap_single_llm_matches_legacy_build_system_messages_default_context() -> (
+    None
+):
+    bundle = _bundle()
+    context = ContextMeta()
+    legacy = build_system_messages(
         bundle,
         context,
+        enable_tools=True,
+        inner_tick_turn=False,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        interactive_bootstrap_active=True,
+        include_significance_perception_slice=False,
     )
+    builder = PromptBuilder(
+        bundle=bundle,
+        context=context,
+        runtime_context=_runtime_context(),
+    )
+    composed = builder.bootstrap_single_llm_system_messages()
+    assert composed == legacy
+
+
+def test_bootstrap_single_llm_matches_legacy_with_directives_and_private_memory() -> (
+    None
+):
+    bundle = _bundle()
+    context = ContextMeta(
+        context_mode="intimate",
+        experience_directives=ExperienceDirectives(
+            intent=ExperienceSessionIntent.DEEP_CONVERSATION,
+            tone=ExperienceDirectiveTone.WARM,
+        ),
+    )
+    legacy = build_system_messages(
+        bundle,
+        context,
+        enable_tools=True,
+        inner_tick_turn=False,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        interactive_bootstrap_active=True,
+        include_significance_perception_slice=False,
+    )
+    builder = PromptBuilder(
+        bundle=bundle,
+        context=context,
+        runtime_context=_runtime_context(),
+    )
+    composed = builder.bootstrap_single_llm_system_messages()
     assert composed == legacy
 
 

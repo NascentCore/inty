@@ -17,7 +17,7 @@ description: >-
 
 ### What `devops/config.yaml.local` drives (aligned with local Ops backend)
 
-Default **`--config`** is [`devops/config.yaml.local`](../../../devops/config.yaml.local) — same file as **`INTY_CONFIG_YAML=devops/config.yaml.local`** when launching Ops locally (see [`launch-inty-backend`](../launch-inty-backend/SKILL.md)). Repo-root **`config.yaml`** is often **`devops/config.yaml.test`** for pytest and uses a different LangSmith key/project; do not use it for companion REPL traces unless you override **`--config`**.
+Default **`--config`** is [`devops/config.yaml.local`](../../../devops/config.yaml.local) — same file as **`INTY_CONFIG_YAML=devops/config.yaml.local`** when launching Ops locally (see [`launch-inty-backend`](../launch-inty-backend/SKILL.md)). **`devops/config.yaml.test`** shares the same **`database` DSN** (local Postgres Ops prepares); pytest / CI use test yaml for agent/tracing knobs only — do not use test yaml for companion REPL traces unless you override **`--config`**.
 
 The helper script applies the same LangSmith-related process env as [`app/core/config.py`](../../../app/core/config.py) `set_langsmith_environment_variables`:
 

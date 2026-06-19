@@ -85,7 +85,7 @@ def parse_args():
     parser.add_argument(
         "--dest-pg",
         required=False,
-        default="postgresql://postgres:sxwl666!@localhost:5432/inty",
+        default="postgresql://postgres:sxwl666!@localhost:15432/inty",
         help="Destination PostgreSQL URL",
     )
     return parser.parse_args()

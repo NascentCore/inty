@@ -5,7 +5,7 @@ from googleapiclient.discovery import Resource
 from googleapiclient.errors import HttpError
 from loguru import logger
 
-from app.core.config import GooglePlayConfig
+from app.utils.config import GooglePlayConfig
 from app.schemas.version import VersionReminderAction
 
 

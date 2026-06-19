@@ -2,7 +2,7 @@
 name: inty-backend-inspect
 description: >-
   General Inty backend investigation: correlate local Ops logs, LangSmith traces, and Postgres
-  (DSN from repo config.yaml) using ws_conn_id, trace/run IDs, user_msg_uuid, inty_trace_id.
+  (DSN from INTY_CONFIG_YAML / devops/config.yaml.local) using ws_conn_id, trace/run IDs, user_msg_uuid, inty_trace_id.
   Covers WebSocket / REPL issues, stuck tool_background blocking turn_lock, and timestamp-specific
   verification (message.timestamp vs UserTimeContext).
 ---
@@ -16,8 +16,8 @@ description: >-
 | 数据源 | 典型用途 | 如何接入 |
 |--------|----------|----------|
 | **本地文件日志**（Ops / uvicorn） | 进程内时间顺序、是否 crash/reload、companion 各阶段、`ws_conn_id` 前缀行 | `backend/ops/start.sh` 默认把 Loguru 文件日志写到 **cwd 下** `.inty/inty.log`（可用 `--workspace DIR` 改为 `DIR/inty.log`）；见 [`launch-inty-backend`](../launch-inty-backend/SKILL.md)；先 `stat`/`tail` 确认**覆盖事发时段** |
-| **LangSmith** | 上游 LLM 输入输出、span 是否 `pending`、父子 trace | 项目名与 API key 与后端进程一致：见 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)「What `config.yaml` drives」；与 [`app/core/config.py`](../../../app/core/config.py) `set_langsmith_environment_variables` 同源 |
-| **本地 Postgres** | 落库消息、`created_at`、meta 里的回合键 | 连接信息在仓库根 **`config.yaml`** 的 **`database`** 段（`host` / `port` / `user` / `password` / `db`），与 [`app/utils/config.py`](../../../app/utils/config.py) `DatabaseSettings` 一致；**勿**把密码写进技能或 git |
+| **LangSmith** | 上游 LLM 输入输出、span 是否 `pending`、父子 trace | 项目名与 API key 与后端进程一致：见 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)「What `devops/config.yaml.local` drives」；与 [`app/core/config.py`](../../../app/core/config.py) `set_langsmith_environment_variables` 同源 |
+| **本地 Postgres** | 落库消息、`created_at`、meta 里的回合键 | 连接信息在 **`devops/config.yaml.local`** 的 **`database`** 段（`host` / `port` / `user` / `password` / `db`），经 **`INTY_CONFIG_YAML`** 加载；与 [`app/utils/config.py`](../../../app/utils/config.py) `DatabaseSettings` 一致；**勿**把密码写进技能或 git |
 
 **工作流（建议顺序）**：(1) 从 REPL/终端或用户描述收集 **至少一个关联键** → (2) **grep 日志** 定 UTC/本地时间窗口与是否缺日志 → (3) **LangSmith** 按 UTC 时间窗或 `trace_id` 拉全 trace → (4) **psql** 用 `user_msg_uuid` / `session_id` / 时间窗对齐 `chat_history` → (5) 下结论（哪一层断裂）。
 
@@ -74,7 +74,7 @@ description: >-
 
 ### C. LangSmith
 
-- 配置与 **`config.yaml` + 环境变量** 一致（见 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)）。
+- 配置与 **`INTY_CONFIG_YAML=devops/config.yaml.local`** + 环境变量一致（见 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)）。
 - **`list_runs` `limit` ≤ 100**；大窗需分段或收窄 `start_time`（UTC）。
 - 对 `user_msg_uuid` **勿只依赖 metadata filter**（可能 0 命中）；可 **时间窗 + 子串匹配** 序列化 run，或用 [`.cursor/skills/scripts/langsmith_find_companion_run_by_user_msg_uuid.py`](../scripts/langsmith_find_companion_run_by_user_msg_uuid.py)。
 - **下载全 trace**（仓库根、venv）：
@@ -86,7 +86,7 @@ python .cursor/skills/scripts/download_run.py --trace-id "<TRACE_UUID>"
 
 （参数与默认输出路径见同目录 [`langsmith-download-run`](../langsmith-download-run/SKILL.md)、**`python .cursor/skills/scripts/download_run.py --help`**。）
 
-### D. Postgres（`config.yaml` → `database`）
+### D. Postgres（`devops/config.yaml.local` → `database`）
 
 用 **`meta_data->>'user_msg_uuid'`**、**`session_id`**、**`created_at` 时间窗`** 对齐日志与 trace。Companion **MemoryStore / MemDoc** 落库（`IDENTITY.md`、`context.json`、`transcript.jsonl` 等）优先用 Python 脚本（Cyclopts CLI；配置同后端 **`INTY_CONFIG_YAML`** / `--config`）：
 
@@ -97,7 +97,7 @@ PYTHONPATH=. python .cursor/skills/scripts/companion_memory_list_agent_documents
 
 见 [`inspect-companion-harness/list-agent-documents`](../inspect-companion-harness/list-agent-documents/SKILL.md)、单文档 [`show-memory-document`](../inspect-companion-harness/show-memory-document/SKILL.md)。
 
-`chat_history` 示例（把连接参数换成你本机 `config.yaml` 中的值）：
+`chat_history` 示例（把连接参数换成你本机 `devops/config.yaml.local` 中的值）：
 
 ```bash
 psql -h <host> -p <port> -U <user> -d <db> -c "
@@ -179,4 +179,4 @@ python3 .cursor/skills/scripts/langsmith_find_companion_run_by_user_msg_uuid.py 
 ## 实现边界
 
 - 技能 **不**改产品代码；LangSmith 辅助脚本见 [`.cursor/skills/scripts/langsmith_find_companion_run_by_user_msg_uuid.py`](../scripts/langsmith_find_companion_run_by_user_msg_uuid.py)。
-- **不要**在 Markdown 或 git 中粘贴 `config.yaml` 里的密码或 API key。
+- **不要**在 Markdown 或 git 中粘贴 `devops/config.yaml.local` 里的密码或 API key。

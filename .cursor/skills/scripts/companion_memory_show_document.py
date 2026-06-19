@@ -151,7 +151,7 @@ def main(
             name="--config",
             help=(
                 "Inty YAML path (sets INTY_CONFIG_YAML). "
-                "When omitted: existing INTY_CONFIG_YAML env, else config.yaml."
+                "When omitted: existing INTY_CONFIG_YAML env, else devops/config.yaml.local."
             ),
         ),
     ] = None,

@@ -15,7 +15,7 @@
 #   PGPASSWORD              overrides password read from devops/config.yaml.{prod,dev}
 #   CLOUDSQL_HOST           default 10.41.177.3
 #   LOCAL_PG_HOST           default localhost
-#   LOCAL_PG_PORT           default 5432
+#   LOCAL_PG_PORT           default 15432
 #   APPLY_MAX_PASSES        default 5 (apply mode retries until all tables match)
 
 set -euo pipefail
@@ -26,7 +26,7 @@ source "${SCRIPT_DIR}/local_postgres_lib.sh"
 
 CLOUDSQL_HOST="${CLOUDSQL_HOST:-10.41.177.3}"
 LOCAL_PG_HOST="${LOCAL_PG_HOST:-localhost}"
-LOCAL_PG_PORT="${LOCAL_PG_PORT:-5432}"
+LOCAL_PG_PORT="${LOCAL_PG_PORT:-15432}"
 PGUSER="${INTY_PG_USER}"
 APPLY_MAX_PASSES="${APPLY_MAX_PASSES:-5}"
 

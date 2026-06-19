@@ -163,6 +163,17 @@ async def _wait_bridge_running(session_id: str) -> None:
     raise AssertionError(f"session {session_id} did not reach bridge_running")
 
 
+async def _wait_bridges_cleared() -> None:
+    deadline = asyncio.get_running_loop().time() + 5.0
+    while asyncio.get_running_loop().time() < deadline:
+        if await list_bridges() == []:
+            return
+        await asyncio.sleep(0.05)
+    raise AssertionError(
+        "persisted bridges were not cleared after failed restore"
+    )
+
+
 @pytest.mark.asyncio
 async def test_restore_scenarios(agent_id: str) -> None:
     """Single async test: global ``AsyncSessionLocal`` breaks a second async DB test."""
@@ -193,7 +204,7 @@ async def test_restore_scenarios(agent_id: str) -> None:
     await upsert_bridge(_bridge_record(fail_session_id, agent_id))
 
     await session_store.restore_persisted_sessions()
-    await asyncio.sleep(0.2)
+    await _wait_bridges_cleared()
 
     assert await session_store.get_session(fail_session_id) is None
     assert await list_bridges() == []
@@ -233,7 +244,9 @@ async def test_restore_scenarios(agent_id: str) -> None:
     updated = record.model_copy(
         update={
             "last_peer_id": "peer-new",
-            "last_peer_seen_at": datetime(2026, 5, 25, 13, 0, tzinfo=timezone.utc),
+            "last_peer_seen_at": datetime(
+                2026, 5, 25, 13, 0, tzinfo=timezone.utc
+            ),
         }
     )
     await upsert_bridge(updated)

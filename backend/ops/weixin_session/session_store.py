@@ -73,6 +73,8 @@ class _WeixinSession:
 
 _lock = asyncio.Lock()
 _sessions: dict[str, _WeixinSession] = {}
+# Strong refs: bare create_task() is weak-held by the loop and may be GC'd mid-restore.
+_restore_tasks: set[asyncio.Task[None]] = set()
 
 
 def _phase_blocks_lifecycle(phase: _StorePhase) -> bool:
@@ -254,10 +256,12 @@ async def restore_persisted_sessions() -> None:
     Manual release smoke: ``.cursor/skills/weixin-bridge-restore-smoke/SKILL.md``.
     """
     for record in await list_bridges():
-        asyncio.create_task(
+        task = asyncio.create_task(
             _restore_persisted_session(record),
             name=f"weixin_restore_{record.session_id}",
         )
+        _restore_tasks.add(task)
+        task.add_done_callback(_restore_tasks.discard)
 
 
 async def _stop_session_tasks(session: _WeixinSession) -> None:

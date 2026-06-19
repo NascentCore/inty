@@ -3,7 +3,7 @@ name: inty-alembic-revision
 description: >-
   Create new Alembic revision files at repo root with `backend/alembic/alembic.ini`:
   `revision --autogenerate` (schema diff) or empty `revision` (manual SQL).
-  Covers PYTHONPATH, config.yaml, Postgres baseline, and repo rules in
+  Covers PYTHONPATH, INTY_CONFIG_YAML, Postgres baseline, and repo rules in
   `/backend/alembic/AGENTS.md`. Use when adding DB migrations, autogenerate from models,
   or empty revision stubs.
 ---
@@ -31,7 +31,7 @@ export ALEMBIC_CONFIG=backend/alembic/alembic.ini
 export INTY_CONFIG_YAML=devops/config.yaml.test
 ```
 
-**不要** `cp devops/config.yaml.test config.yaml`——会覆盖仓库根 `config.yaml`（本地 Ops 常用 `devops/config.yaml.local`）。
+**不要** `cp devops/config.yaml.test config.yaml`——本地统一用 **`INTY_CONFIG_YAML`** 指向目标 yaml。
 
 可选等价写法（不显式 export ini）：
 
@@ -39,9 +39,9 @@ export INTY_CONFIG_YAML=devops/config.yaml.test
 python -m alembic -c backend/alembic/alembic.ini <subcommand> ...
 ```
 
-`backend/alembic/env.py` 经 `app.core.config` 读库 URL；路径由 `INTY_CONFIG_YAML` 决定（未设则回落 `config.yaml`）。按需改 yaml 里 `database.host` 等为可连的 Postgres（本地多为 `localhost`）。
+`backend/alembic/env.py` 经 `app.core.config` 读库 URL；路径由 **`INTY_CONFIG_YAML`** 决定。按需改 yaml 里 `database.host` 等为可连的 Postgres（本地多为 `localhost:15432`）。
 
-非 test 配置时改 `INTY_CONFIG_YAML`，例如 `export INTY_CONFIG_YAML=devops/config.yaml.local`。
+**`devops/config.yaml.test`** 与 **`devops/config.yaml.local`** 的 **`database` DSN 相同**（同一 Postgres）；autogenerate / upgrade 任选其一即可，本地常用 **`config.yaml.test`**。
 
 也可用 Alembic `-x config=`（绝对路径），绕过 `app.core.config`（见 `backend/alembic/env.py`）：
 

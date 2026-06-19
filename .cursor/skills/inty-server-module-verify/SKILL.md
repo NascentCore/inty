@@ -99,6 +99,10 @@ OK (6.97s)
 
 （仅 `--create-agent` 时会出现第一行 `created_agent_id`。）
 
+## Cleanup（Agent 必做）
+
+若你为本轮验证**自行拉起** Ops（见上节「运行示例」），测完按 [`launch-inty-backend`](../launch-inty-backend/SKILL.md) **Terminate Ops** 停掉；汇报中说明 Ops 是否已停止、**`:8001` 是否空闲**。勿终止用户会话开始时已在运行的 Ops。
+
 ## 常见故障
 
 | 现象 | 可能原因 |

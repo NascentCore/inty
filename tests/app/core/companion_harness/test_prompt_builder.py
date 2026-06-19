@@ -14,20 +14,21 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
-from app.core.companion_harness.prompting.tracks import (
-    build_settled_user_turn_single_llm_system_messages,
-)
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
     PromptMessage,
     PromptMessageRole,
     openai_dialogue_dicts_to_prompt_messages,
     prompt_messages_to_openai_dicts,
+    refresh_single_llm_bootstrap_chat_prompt_prefix,
     refresh_single_llm_user_chat_prompt_prefix,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_repl_tools,
+)
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    CompanionToolName,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -105,9 +106,14 @@ def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> (
     )
     single_llm = "\n".join(
         str(m.get("content") or "")
-        for m in build_settled_user_turn_single_llm_system_messages(
-            bundle, context
-        )
+        for m in PromptBuilder(
+            bundle=bundle,
+            context=context,
+            runtime_context=TurnRuntimeContext(
+                channel=CompanionRuntimeChannel.APP,
+                implicit_signal_bundle=None,
+            ),
+        ).settled_single_llm_system_messages()
     )
     assert "禁止在本路发起任何 tool_calls" in dual_foreground
     assert "禁止在本路发起任何 tool_calls" not in single_llm
@@ -161,13 +167,53 @@ def test_refresh_single_llm_user_chat_prompt_prefix_avoids_tool_background_compa
         messages=messages,
         runtime_context=runtime,
     )
-    assert refreshed_messages is messages
+    assert refreshed_messages is not messages
+    assert any(
+        tool["function"]["name"] == "generate_image"
+        for tool in refreshed_messages
+    )
     refreshed_joined = "\n".join(
         str(m.get("content") or "")
         for m in messages
         if m.get("role") == "system"
     )
     assert "并行 chat 路已承担对用户话术" not in refreshed_joined
+    assert messages[-1]["role"] == "tool"
+
+
+def test_refresh_single_llm_bootstrap_prompt_prefix_returns_bootstrap_tools() -> (
+    None
+):
+    store = MemoryStore(
+        scope=CompanionScope("user-boot", "agent-boot", "chat-boot"),
+        repository=None,
+    )
+    store.write_document("context.json", '{"context_mode":"bootstrap"}')
+    store.write_document("IDENTITY.md", "id")
+    store.write_document("USER.md", "user")
+    runtime = TurnRuntimeContext(
+        channel=CompanionRuntimeChannel.APP,
+        implicit_signal_bundle=None,
+    )
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": "stale"},
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "", "tool_calls": []},
+        {"role": "tool", "content": "{}", "tool_call_id": "call-1"},
+    ]
+
+    refreshed_tools = refresh_single_llm_bootstrap_chat_prompt_prefix(
+        store=store,
+        messages=messages,
+        runtime_context=runtime,
+    )
+
+    assert any(
+        tool["function"]["name"]
+        == CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE.value
+        for tool in refreshed_tools
+    )
+    assert messages[0]["content"] != "stale"
     assert messages[-1]["role"] == "tool"
 
 

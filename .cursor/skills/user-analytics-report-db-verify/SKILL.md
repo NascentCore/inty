@@ -13,7 +13,7 @@ disable-model-invocation: true
 ## Before you start
 
 - **Production daily rollups** come from GitHub Actions (`daily_intellimate_user_activity_report.yaml`), not push worker (`user_analytics_report` defaults all off). See `docs/FR_USER_ANALYTICS_REPORTS.md`.
-- Needs **network access** to the DB host in repo-root `config.yaml` (`database` section). Do **not** paste passwords, DSNs, or full `config.yaml` into chat.
+- Needs **network access** to the DB host in **`devops/config.yaml.local`** (`database` section; set via **`INTY_CONFIG_YAML`**). Do **not** paste passwords, DSNs, or full config into chat.
 - Prefer a **read-only** DB role for queries.
 - Repo doc with SQL templates: [tests/docs/TEST_USER_ANALYTICS_REPORT_DB_VERIFICATION.md](../../../tests/docs/TEST_USER_ANALYTICS_REPORT_DB_VERIFICATION.md).
 
@@ -23,11 +23,12 @@ In **daily** reports, `stats.total_new_users` is **not** “signups that calenda
 
 ## Preferred execution
 
-From the **inty repo root** (where `config.yaml` exists), with venv active and deps installed (`psycopg2`, `pyyaml`, project tree on `PYTHONPATH` for Pydantic):
+From the **inty repo root**, with venv active and deps installed (`psycopg2`, `pyyaml`, project tree on `PYTHONPATH` for Pydantic):
 
 ```bash
 source .venv/bin/activate
 export PYTHONPATH=.
+export INTY_CONFIG_YAML=devops/config.yaml.local
 python .cursor/skills/user-analytics-report-db-verify/scripts/verify_user_analytics_report_db.py
 python .cursor/skills/user-analytics-report-db-verify/scripts/verify_user_analytics_report_db.py --date 2026-05-12
 ```

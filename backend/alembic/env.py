@@ -14,6 +14,7 @@ def _load_runtime_config() -> Config:
     否则使用 app.core.config 的 global_config_loaded_from_config_yaml（需 config.yaml 存在）。
 
     TODO(INTY_CONFIG_YAML): else branch — load via resolve_inty_config_yaml_path() + load_config().
+    https://github.com/NascentCore/inty/issues/3530
     """
     x_args = context.get_x_argument(as_dictionary=True)
     config_path = x_args.get("config", None)

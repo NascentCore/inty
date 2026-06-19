@@ -5,6 +5,14 @@ Postgres commit. Delivery hooks are registered per input ``queue_message_id`` so
 concurrent enqueues on one scope cannot overwrite each other's drain completion
 or OutputQueue send routing.
 
+Routing hooks outlive drain completion: the foreground reply is appended to the
+OutputQueue during the turn and the background tool loop appends later replies
+under the same input ids, both delivered asynchronously by the output pump. Drain
+completion therefore only clears the foreground-pending waiter; it must not drop
+the send routing, or the pump would race the input worker and lose those replies.
+Routing is dropped only when scope serving stops (WS teardown), which is safe
+because one ``AsyncSession`` is bound per connection.
+
 TODO(!3488): ``AppWsChannelAdapter`` on ``turn_channel_up`` + one ``Coordinator`` per scope
 on ``AgentChannelPresence``; retire this WS-local queue registry.
 """
@@ -144,18 +152,6 @@ def _lookup_scope_turn_delivery_for_output(
     return None
 
 
-def _remove_scope_turn_delivery(
-    scope: AgentScope,
-    queue_message_id: str,
-) -> _AppWsScopeTurnDelivery | None:
-    key = _scope_key(scope)
-    with _registry_lock:
-        per_scope = _scope_turn_delivery.get(key)
-        if per_scope is None:
-            return None
-        return per_scope.pop(queue_message_id, None)
-
-
 async def _scope_deliver_ready_output(
     scope: AgentScope,
     text: str,
@@ -195,7 +191,7 @@ async def _on_app_ws_scope_drain_complete(
     if completion.tool_background_started:
         primary_message_id = input_message_ids[-1]
         for message_id in input_message_ids:
-            state = _remove_scope_turn_delivery(scope, message_id)
+            state = _lookup_scope_turn_delivery(scope, message_id)
             if state is None:
                 continue
             state.delivery_flags.tool_background_started = True
@@ -203,8 +199,8 @@ async def _on_app_ws_scope_drain_complete(
                 _clear_turn_foreground_pending(
                     state,
                     queue_message_id=message_id,
-                    drop_client_alias=False,
-                    drop_queue_alias=False,
+                    drop_client_alias=True,
+                    drop_queue_alias=True,
                 )
             else:
                 _clear_turn_foreground_pending(
@@ -215,7 +211,7 @@ async def _on_app_ws_scope_drain_complete(
                 )
         return
     for message_id in input_message_ids:
-        state = _remove_scope_turn_delivery(scope, message_id)
+        state = _lookup_scope_turn_delivery(scope, message_id)
         if state is None:
             continue
         state.delivery_flags.tool_background_started = False

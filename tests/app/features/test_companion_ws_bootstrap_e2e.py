@@ -1,7 +1,7 @@
 """
 E2E: ``/api/v1/chat/ws`` greeting via ``user_signed_on`` + ``message_id`` returns assistant JSON.
 
-Requires PostgreSQL reachable at 127.0.0.1:5432 with migrations applied.
+Requires PostgreSQL reachable at 127.0.0.1:15432 with migrations applied.
 Export ``INTY_CONFIG_YAML`` before pytest; the subprocess uvicorn inherits it.
 
 Enable with ``INTY_COMPANION_WS_BOOTSTRAP_E2E=1`` or ``INTY_COMPANION_WS_IMPLICIT_SIGNON_E2E=1``. Calls the real chat model from that config (network).
@@ -31,7 +31,9 @@ from tests.app.companion_ws_bootstrap.server import (
     postgres_tcp_reachable,
     run_inty_backend_subprocess,
 )
-from app.core.companion_harness.experience_profile.context_mode import ExperienceContextMode
+from app.core.companion_harness.experience_profile.context_mode import (
+    ExperienceContextMode,
+)
 
 from tests.app.companion_ws_bootstrap.ws_client import (
     connect_send_implicit_sign_on_and_expect_assistant,
@@ -54,9 +56,11 @@ def running_inty_backend():
             "to run companion WS implicit sign-on E2E"
         )
     if not postgres_tcp_reachable():
-        pytest.skip("PostgreSQL not reachable at 127.0.0.1:5432")
+        pytest.skip("PostgreSQL not reachable at 127.0.0.1:15432")
     if inty_config_yaml_path() is None:
-        pytest.skip(f"Set {ENV_INTY_CONFIG_YAML} before running companion WS E2E")
+        pytest.skip(
+            f"Set {ENV_INTY_CONFIG_YAML} before running companion WS E2E"
+        )
     with run_inty_backend_subprocess() as ctx:
         yield ctx
 
@@ -75,7 +79,9 @@ def bootstrap_e2e_client(running_inty_backend):
 @pytest.mark.noci
 @pytest.mark.slow
 @pytest.mark.asyncio
-async def test_ws_implicit_user_signed_on_returns_assistant(bootstrap_e2e_client):
+async def test_ws_implicit_user_signed_on_returns_assistant(
+    bootstrap_e2e_client,
+):
     agent_id = bootstrap_e2e_client.create_agent()
     token = bootstrap_e2e_client.token
     assert token

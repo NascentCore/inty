@@ -10,9 +10,9 @@ description: >-
 
 ## Prerequisites
 
-1. Postgres running; migration includes `ops_telegram_demo_bindings` and `ops_telegram_demo_poll_state`.
-2. `agent.channels.telegram.bot_token` configured in `INTY_CONFIG_YAML`.
-3. Ops on `:8001` (`backend/ops/start.sh --local --no-build-frontend`).
+1. Postgres on **`localhost:15432`**，db **`inty`** — matches [`devops/config.yaml.local`](../../../devops/config.yaml.local) **`database`**；**assume already configured; do not change password** during smoke.
+2. `export INTY_CONFIG_YAML=devops/config.yaml.local`；`agent.channels.telegram.bot_token` 已配置。
+3. Ops on **`:8001`**：`backend/ops/start.sh --local --no-build-frontend`（启动时 **自动 migrate**；含 `ops_telegram_demo_bindings` / `ops_telegram_demo_poll_state`）。**勿**单独 `alembic upgrade head` — 见 [`launch-inty-backend`](../launch-inty-backend/SKILL.md)。
 
 ## Smoke steps
 

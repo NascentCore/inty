@@ -27,9 +27,7 @@ from app.core.companion_harness.companion.dual_llm_foreground_chat import (
     run_dual_llm_foreground_chat,
 )
 from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
-    InTurnSyncToolLoopInput,
     InTurnSyncToolLoopResult,
-    run_in_turn_sync_tool_loop,
 )
 from app.core.companion_harness.companion.transcript_user_row import (
     TranscriptUserRowBuildInput,
@@ -411,40 +409,17 @@ class AgenticLoop:
                 langsmith_run_id=interim.langsmith_run_id,
             )
 
-        if context.prompt_plan is not None:
-            sync_result = await _run_prompt_plan_tool_loop(
-                context,
-                store=self.store,
-                llm_client=self.llm_client,
-                interim_output_sink=_emit_user_reply,
+        if context.prompt_plan is None:
+            raise RuntimeError(
+                "run_single_llm_user_turn requires prompt_plan; "
+                "build context via PromptBuilder before invoking AgenticLoop"
             )
-        else:
-            # TODO(!3460): Bootstrap queue path still uses openai_messages without
-            # PromptPlan; migrate to PromptPlan then delete this legacy fallback.
-            # TODO(!3465): Keep OutputQueue delivery policy here at the AgenticLoop
-            # adapter boundary; the shared sync loop should only emit assistant rounds.
-            sync_result = await run_in_turn_sync_tool_loop(
-                InTurnSyncToolLoopInput(
-                    store=self.store,
-                    llm_client=self.legacy_llm_client,
-                    messages=context.openai_messages,
-                    tools_for_turn=context.openai_tools,
-                    write_allowlist=context.write_allowlist,
-                    langsmith_foreground_source=context.langsmith.foreground_source,
-                    repository_only_store_text=context.repository_only_store_text,
-                    trace_id=context.trace_id,
-                    user_text=context.user_text,
-                    ts_user=context.ts_user,
-                    user_msg_uuid=context.user_msg_uuid,
-                    transcript_rel=context.transcript_rel,
-                    interim_output_sink=_emit_user_reply,
-                    emit_every_assistant_round=True,
-                    langsmith_slice=context.langsmith.turn_slice,
-                    max_tool_rounds=context.max_tool_rounds,
-                    after_tool_messages_appended=context.after_tool_messages_appended,
-                    caller_persisted_user_transcript=True,
-                )
-            )
+        sync_result = await _run_prompt_plan_tool_loop(
+            context,
+            store=self.store,
+            llm_client=self.llm_client,
+            interim_output_sink=_emit_user_reply,
+        )
         return AgenticLoopOutput(
             assistant_text=sync_result.assistant_text,
             significance_meta=None,

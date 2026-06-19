@@ -24,18 +24,40 @@ From repository root: `uv venv`, `source .venv/bin/activate`, then
 根目录 `requirements.txt` 含 **`langsmith`**；仅装 `tools/inty_v2_repl/requirements.txt` 会导致 REPL metadata **无法** 解析 `langsmith_trace_url=`。
 
 Use `INTY_CONFIG_YAML` env var to specify the config file for launching the ops variant
-of Inty backend.
+of Inty backend. Local engineers use **`devops/config.yaml.local`** (Postgres **`localhost:15432`**, db **`inty`**).
+
+### Postgres（smoke 前置）
+
+<!-- TODO(local-dev-database-skills): dedupe this block — link-only in consumer skills; https://github.com/NascentCore/inty/issues/3529 -->
+
+本地 smoke / pytest 共用 **同一 Postgres**（`devops/config.yaml.local` 的 **`database`** 段：`localhost:15432`，user **`postgres`**，db **`inty`**）。**假定**本机库已按该段配好；**不要**在 smoke 步骤里改 Postgres 密码或跑 `ALTER USER`。
+
+- **Ops / REPL**：`INTY_CONFIG_YAML=devops/config.yaml.local`
+- **pytest / CI 后端**（`:8000`）：`INTY_CONFIG_YAML=devops/config.yaml.test` — **`database` DSN 与 local 相同**，仅 agent / tracing 等不同（见 [`devops/config.yaml.test`](../../../devops/config.yaml.test) 文件头注释）
+
+本机尚无 Postgres 时（仓库根）：
+
+```bash
+./tools/scripts/ensure_postgres_for_tests.sh
+# 或：docker run -d --name inty-ci-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -p 15432:5432 postgres:16
+```
 
 ```bash
 export INTY_CONFIG_YAML=devops/config.yaml.local
 backend/ops/start.sh --local --debug --no-build-frontend
 ```
 
+### DB migrations（启动时自动执行）
+
+[`backend/ops/start.sh`](../../../backend/ops/start.sh) 与 [`backend/inty/start.sh`](../../../backend/inty/start.sh) 在拉起 uvicorn **之前** 固定执行 **`alembic upgrade head`**（`ALEMBIC_CONFIG=backend/alembic/alembic.ini`，库 URL 来自 **`INTY_CONFIG_YAML`**）。
+
+本地 smoke / pytest / REPL 回归：**不要**再单独跑 `alembic upgrade head`。Postgres（**`localhost:15432`**）已起后，**至少启动一次 Ops**（见上节命令）即可把 schema 升到 head；Ops 可保持运行，或在 migrate 日志出现后再 Ctrl+C，再跑只连 DB 的 pytest。
+
 `INTY_CONFIG_YAML` 使用仓库根目录为相对路径基准；**不传 `--workspace` 时**默认工作目录为仓库根下 **`.inty`**，文件日志 **`.inty/inty.log`**（启动时若已存在会先删除再写）；需要把日志放到其它目录时再传 **`--workspace DIR`**（见 **`backend/ops/start.sh --help`**）。
 
 ### 服务端 LangSmith（tracing 出 id）
 
-后端从 **`config.yaml`**（或 `INTY_CONFIG_YAML`）写入进程环境（[`app/core/config.py`](../../../app/core/config.py)）：
+后端从 **`INTY_CONFIG_YAML`**（本地固定为 **`devops/config.yaml.local`**）写入进程环境（[`app/core/config.py`](../../../app/core/config.py)）：
 
 - `agent.langchain_api_key` → `LANGCHAIN_API_KEY`
 - `agent.langsmith_tracing_enabled` → `LANGSMITH_TRACING_V2`
@@ -45,7 +67,7 @@ backend/ops/start.sh --local --debug --no-build-frontend
 
 ## REPL `.env`（与后端分离）
 
-REPL **只**读 [`tools/inty_v2_repl/.env`](../../../tools/inty_v2_repl/.env)，**不**加载 `config.yaml`。Ops 已起、token 正确，仍可能 **只有 id 没有 url**。
+REPL **只**读 [`tools/inty_v2_repl/.env`](../../../tools/inty_v2_repl/.env)，**不**加载 `INTY_CONFIG_YAML`。Ops 已起、token 正确，仍可能 **只有 id 没有 url**。
 
 首次或缺文件时：
 
@@ -58,13 +80,15 @@ cp tools/inty_v2_repl/.env.example tools/inty_v2_repl/.env
 | `INTY_ACCESS_TOKEN` | 写入 **`tools/inty_v2_repl/.env`**（与 **`.inty_ops_bearer_token`** 相同）；**已一致则不必再抄** |
 | `INTY_API_BASE_URL` | 与 Ops 一致，默认 **`http://127.0.0.1:8001`**（`PORT` 覆盖时同步） |
 | `INTY_V2_CHAT_AGENT_ID` | 可选；或 `repl --agent-id` |
-| **`LANGCHAIN_API_KEY`** | **推荐**：与 `config.yaml` 的 **`agent.langchain_api_key`** 相同；否则 metadata 常有 `langsmith_trace_id=` 但 **无** `langsmith_trace_url=` |
+| **`LANGCHAIN_API_KEY`** | **推荐**：与 `devops/config.yaml.local` 的 **`agent.langchain_api_key`** 相同；否则 metadata 常有 `langsmith_trace_id=` 但 **无** `langsmith_trace_url=` |
 
 改 REPL `.env` 后 **重启 REPL**。无 feature flag；URL 解析失败会静默省略 url 字段（[`tools/inty_v2_repl/main.py`](../../../tools/inty_v2_repl/main.py)）。
 
 ## Terminate Ops
 
-若用户要求终止通过本 skill 拉起的 inty 后端，只终止 Ops 后端进程组（`backend/ops/start.sh` 与对应 `uvicorn :8001`）；不要默认杀 REPL，除非用户明确要求。
+**Agent 规则**：若你为本轮 smoke / E2E / REPL 回归**自行启动**了 `backend/ops/start.sh`（含后台 `&`），**完成后必须终止** Ops，并向用户确认 **`:8001` 已无监听**——除非会话开始时 Ops **已在运行**，或用户明确要求保持运行。
+
+只终止 Ops 后端进程组（`backend/ops/start.sh` 与对应 `uvicorn :8001`）；**不要**默认杀 REPL，除非用户明确要求。
 
 **首选**：在运行 `backend/ops/start.sh` 的那个前台终端按 **Ctrl+C**（会连带停 uvicorn）。
 

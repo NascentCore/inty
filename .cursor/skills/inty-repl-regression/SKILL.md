@@ -22,7 +22,8 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
 ## Prereq
 
 - Repo root cwd.
-- Ops `:8001` running with `INTY_CONFIG_YAML=devops/config.yaml.local` — see [`launch-inty-backend`](../launch-inty-backend/SKILL.md).
+- Postgres **`localhost:15432`** / db **`inty`** — 与 `devops/config.yaml.local` **`database`** 一致（**假定已配好，勿改密码**）。
+- Ops `:8001` running — see [`launch-inty-backend`](../launch-inty-backend/SKILL.md)（`INTY_CONFIG_YAML=devops/config.yaml.local`；`start.sh` **自动 migrate**；勿单独 `alembic upgrade head`）。
 - REPL environment sane — see [`examine-local-inty-repl-env`](../examine-local-inty-repl-env/SKILL.md).
 - Create a fresh bootstrap agent — see [`create-bootstrap-test-agent`](../create-bootstrap-test-agent/SKILL.md).
 
@@ -164,6 +165,10 @@ For proactive:
 - Implicit sign-on greeting is legacy non-queue path and may hit LLM timeout after backend restart; do not treat that as AgenticLoop / OutputQueue failure.
 - A dual-mode tool-background initial run can produce natural text internally without being delivered; verify OutputQueue before calling it user-visible duplication.
 - One queue-served user turn may deliver multiple `source=chat` WS frames (AgenticLoop interim / multi-round tool output); the driver drains trailing downlinks after each turn (up to turn timeout) and records any late `source=chat` frames during proactive wait — they were already delivered on the WebSocket, not withheld by the backend.
+
+## Cleanup（Agent 必做）
+
+若你为本轮回归**自行拉起** Ops，测完按 [`launch-inty-backend`](../launch-inty-backend/SKILL.md) **Terminate Ops** 停掉；汇报中说明 **`:8001` 是否空闲**。勿终止用户会话开始时已在运行的 Ops。
 
 ## Report
 

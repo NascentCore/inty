@@ -4,7 +4,7 @@ description: >-
   Read the companion session experience profile from Postgres: context.json fields
   context_mode and post_bootstrap_context_mode in companion_memory_document_versions
   (document_kind context_json). Use when debugging bootstrap vs settled profile for a
-  given agent_id (companion_id). Same config.yaml database block as parent skill.
+  given agent_id (companion_id). Same devops/config.yaml.local database block as parent skill.
 ---
 
 # Companion：从数据库读 `context_mode`
@@ -18,7 +18,7 @@ description: >-
 
 ## 连接与表（与父技能一致）
 
-- **`config.yaml`** 的 **`database`** 块；用 **`psql`** 连接。
+- **`devops/config.yaml.local`**（经 **`INTY_CONFIG_YAML`**）的 **`database`** 块；用 **`psql`** 连接。
 - **表**：`companion_memory_document_versions`
 - **逻辑文档**：`context.json` → **`document_kind = 'context_json'`**；根级文档 **`calendar_date IS NULL`**。
 

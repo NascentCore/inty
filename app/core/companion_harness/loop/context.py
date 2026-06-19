@@ -266,6 +266,7 @@ def build_bootstrap_user_chat_loop_context(
     after_tool_messages_appended: AfterToolMessagesHook,
     output_queue: OutputQueue,
     user_message_batch: UserMessageBatch,
+    prompt_plan: PromptPlan,
 ) -> AgenticLoopContext:
     """Assemble bootstrap ``USER_CHAT_BOOTSTRAP`` context for single-LLM ``AgenticLoop``."""
     assert user_text.strip() != ""
@@ -295,7 +296,7 @@ def build_bootstrap_user_chat_loop_context(
         high_reasoning=False,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
-        context_meta=None,
+        prompt_plan=prompt_plan,
         companion_turn_track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
         memory_bootstrap_type=memory_bootstrap_type,
         stack_depth=stack_depth,

@@ -56,8 +56,8 @@ dev 环境预制了 3 个测试用户（使用`python tools/scripts/create_email
   - `config.yaml.dev` / `config.yaml.prod`：IntelliMate 部署环境配置（构建期注入进入镜像；具体机制见 `RELEASE.md`）
     - **dev / prod**：`database` 均指向 VM 本地 Docker Postgres（[LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)）
   - `config.yaml.imate_dev` / `config.yaml.imate_prod`：iMate 第二实例配置
-  - `config.yaml.local`：工程师本机运行配置参考（只读副本等；**不是** dev-instance 上 IntelliMate dev 部署库，后者见 [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)）
-  - `config.yaml.test`：CI/本地测试配置（工作流会 `cp devops/config.yaml.test config.yaml`）
+  - `config.yaml.local`：工程师本机 Ops / REPL 配置；通过 **`export INTY_CONFIG_YAML=devops/config.yaml.local`** 加载（Postgres **`localhost:15432`**，db **`inty`**）
+  - `config.yaml.test`：CI / 本地 pytest 配置（**`INTY_CONFIG_YAML=devops/config.yaml.test`**）；**`database` 段与 `config.yaml.local` 相同 DSN**，可连 Ops 已 migrate 的同一 Postgres；差异仅在 agent / tracing / 外部服务 mock
 - **nginx/**：反向代理配置与校验脚本
   - `nginx/nginx.conf`：Nginx 主配置
   - `nginx/conf.d/sxwl.ai.conf`：站点配置

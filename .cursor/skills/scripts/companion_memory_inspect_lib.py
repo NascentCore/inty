@@ -43,15 +43,19 @@ def repo_root_from_cwd() -> Path:
 
 
 def resolve_inty_config_yaml_path(config_override: str | None) -> Path:
-    """Resolve config path like ``app.core.config`` (``INTY_CONFIG_YAML`` or ``config.yaml``).
+    """Resolve config path like ``app.core.config`` (``INTY_CONFIG_YAML`` or local yaml).
 
     Precedence: explicit ``--config`` / CLI override, then ``INTY_CONFIG_YAML`` env,
-    then repo-root ``config.yaml``. Always writes the resolved path back to
+    then ``devops/config.yaml.local``. Always writes the resolved path back to
     ``INTY_CONFIG_YAML`` before any ``app.*`` import.
+
+    TODO(INTY_CONFIG_YAML): move to app.utils.config — https://github.com/NascentCore/inty/issues/3530
     """
     root = repo_root_from_cwd()
     raw = (
-        config_override or os.environ.get("INTY_CONFIG_YAML") or "config.yaml"
+        config_override
+        or os.environ.get("INTY_CONFIG_YAML")
+        or "devops/config.yaml.local"
     ).strip()
     if not raw:
         raise SystemExit("Config path is empty")
