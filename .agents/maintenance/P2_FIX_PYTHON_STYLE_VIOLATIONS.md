@@ -18,3 +18,11 @@ Maintenance agents fix **one TODO per commit** when possible. Mark `claimed` wit
 - [x] **STYLE-2026-05** Google 2.4 / hygiene: backend/ops **unused imports** (`ruff F401` on `agent_channel.py`, `evaluation.py`, `telegram_demo/persistence.py`, `telegram_demo/session_store.py`, `weixin_channel/session.py`). Fixed in `cursor/agent-maintenance-tasks-6417`.
 - [x] **STYLE-2026-06** Google 2.4 "Exceptions": `backend/ops/api/v1/evaluation.py` WebSocket monitor loop breaks on broad `Exception` without logging. Narrow to `WebSocketDisconnect`; log unexpected failures. Fixed in `cursor/agent-maintenance-tasks-6417`.
 - [x] **STYLE-2026-07** Google 2.4 / hygiene: `backend/ops/api/v1/evaluation.py` uses `is_public == True` (`ruff E712`). Use truth check on column. Fixed in `cursor/agent-maintenance-tasks-6417`.
+
+## 2026-06-19 scan
+
+### Open violations
+
+- [x] **STYLE-2026-08** PY_STYLE_RULES logging: `backend/ops/main.py` formats exceptions into log messages (`f"...{str(e)}"`). Use structured loguru placeholders + `exc_info` / `logger.exception`. Fixed in `cursor/agent-maintenance-tasks-1924`.
+- [x] **STYLE-2026-09** Google 2.4 "Exceptions": `backend/ops/weixin_channel/weixin_qr_flow.py` QR fetch (`except Exception` ~L61) sets `self.error` without logging. Log with `logger.exception` before failure return. Fixed in `cursor/agent-maintenance-tasks-1924`.
+- [x] **STYLE-2026-10** PY_STYLE_RULES + B904: `backend/ops/api/v1/evaluation.py` session list/create/start/detail handlers use f-string error logs and bare `raise HTTPException`. Structured logging; `raise ... from e` / `from None`. Fixed in `cursor/agent-maintenance-tasks-1924`.
