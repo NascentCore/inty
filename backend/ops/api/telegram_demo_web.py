@@ -21,7 +21,7 @@ _TELEGRAM_DEMO_HTML = """<!DOCTYPE html>
 <body>
   <h1>Telegram ↔ Inty Demo</h1>
   <p class="hint">
-    全队共用 <strong>@iMate_fairy_bot</strong>；每人扫码后会自动创建独立的 companion（guest user + agent）。
+    每人扫码后会自动创建独立的 companion（guest user + agent）。
   </p>
   <div id="bot-info"></div>
   <div id="qr"></div>
