@@ -2,6 +2,35 @@
 
 > 适用于在 Cursor Cloud 中运行的自动化 Agent。
 
+## Environment setup (Cursor contract)
+
+This repo configures Cloud Agents **in code** via [`.cursor/environment.json`](../../.cursor/environment.json). Cursor resolves config in order: **repo `.cursor/environment.json`** → personal saved environment → team saved environment ([docs](https://cursor.com/docs/cloud-agent/setup#environment-setup-options)).
+
+### What this repo uses
+
+- **Mode**: install-script (no committed `Dockerfile` or `snapshot` ID in `environment.json`).
+- **`install`** (Cursor “update” command): [`bash .cursor/cloud-agent-install.sh`](../../.cursor/cloud-agent-install.sh) — idempotent; runs on every agent boot. Cursor checkpoints the VM after a slow install so later boots reuse cached layers.
+- **`start`**: [`bash .cursor/cloud-agent-start.sh`](../../.cursor/cloud-agent-start.sh) → `tools/scripts/ensure_postgres_for_tests.sh` (Postgres on `:5432`).
+- **`ports`**: `8000` (Inty API), `8001` (Ops / REPL), `5432` (PostgreSQL).
+
+### `install` provisions (committed script)
+
+- **Apt**: Python 3.12 + venv/dev headers, `libpq-dev`, `postgresql`, `docker.io`.
+- **`gcloud`**: Google Cloud CLI (`google-cloud-cli` apt package) for `devops/fetch_inty_container_logs.sh` and other GCP ops. **Auth is not installed here** — use Cursor Secrets (service account JSON → `GOOGLE_APPLICATION_CREDENTIALS`, or interactive `gcloud auth login` during dashboard setup then snapshot).
+- **Python**: `.venv` from `requirements.txt` + `tests/requirements.txt`; dev tools (`uv`, `ruff`, `black`, `pylint`, `vulture`) into `.venv/bin/`.
+- **Config**: copies `devops/config.yaml.test` → `config.yaml` when missing.
+
+### Not in `install` (on-demand or dashboard snapshot)
+
+Sections below (Android SDK at `/opt/android-sdk`, `evaluation/node_modules`, emulator AVD) describe **optional snapshot/dashboard setup**, not the committed install script. If missing on a fresh VM, either run the relevant setup during agent-driven environment creation and save a snapshot, or add steps to `cloud-agent-install.sh`.
+
+### Faster cold starts (optional)
+
+- **Dashboard snapshot**: after first successful guided setup, save a VM snapshot and add `"snapshot": "snapshot-…"` to `environment.json`.
+- **Dockerfile**: for heavy system deps (complex Docker, Tailscale), add `.cursor/Dockerfile` + `"build": { "dockerfile": "Dockerfile" }` per Cursor docs.
+
+## Agent workflow rules
+
 1. **分支约束**
    - 仅在任务指定分支开发，不切换到其他分支。
    - 本地缺失该分支时先创建同名分支，再开始改动。
@@ -26,14 +55,12 @@ The **Android app** (`android_app/`) builds with Gradle 8.14+ and Java 21. CI wo
 
 ## Update script
 
-Cloud Agent `install` is wired in [`.cursor/environment.json`](../../.cursor/environment.json) → [`bash .cursor/cloud-agent-install.sh`](../../.cursor/cloud-agent-install.sh). Cursor runs it on each agent boot (idempotent).
+See **Environment setup (Cursor contract)** above. Quick verify after boot:
 
-The install script:
-
-- Creates `.venv` (Python 3.12) when missing.
-- Installs backend runtime **and** test deps from `requirements.txt` + `tests/requirements.txt` (pytest, pytest-asyncio, google-genai, Pillow, pydantic, pydantic-settings, loguru, langsmith, google-cloud-storage, etc.).
-- Installs Python dev tools **into `.venv`** (not global PATH): `uv`, `black`, `pylint`, `ruff`, `vulture` via `pip` (see script comment: do not `uv sync --group dev` here — it would replace the app venv).
-- Auto-provisions `config.yaml` from `devops/config.yaml.test` when missing.
+```bash
+command -v gcloud && gcloud version | head -1
+source .venv/bin/activate && command -v uv && uv --version
+```
 
 ### Verify Python dev tools (agents: read this before reporting “not installed”)
 
