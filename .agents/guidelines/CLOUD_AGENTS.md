@@ -18,6 +18,7 @@ This repo configures Cloud Agents **in code** via [`.cursor/environment.json`](.
 - **Apt** ([`.cursor/cloud-agent-apt.sh`](../../.cursor/cloud-agent-apt.sh)): Python 3.12 + venv/dev headers, `libpq-dev`, `postgresql`, `docker.io`, `google-cloud-cli`.
 - **Python**: `.venv` from `requirements.txt` + `tests/requirements.txt`; dev tools (`uv`, `ruff`, `black`, `pylint`, `vulture`) into `.venv/bin/`.
 - **Config**: copies `devops/config.yaml.test` → `config.yaml` when missing.
+- **`gcloud` auth** (not in install script): use Cursor Secrets (`GOOGLE_APPLICATION_CREDENTIALS`) or dashboard snapshot after `gcloud auth login` — required for `devops/fetch_inty_container_logs.sh`.
 
 ### Not in `install` (on-demand or dashboard snapshot)
 
