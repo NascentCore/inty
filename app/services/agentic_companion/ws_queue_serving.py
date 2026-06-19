@@ -25,6 +25,10 @@ from threading import Lock
 from typing import TYPE_CHECKING, Any
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputDeliveryUnroutableError,
+    ReadyOutputMessage,
+)
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
 )
@@ -41,13 +45,13 @@ from app.services.agentic_channel.scope_queue_serving import (
     ScopeQueueServing,
 )
 from app.services.agentic_channel.serving import (
-    SendTextFn,
+    DeliverReadyMessageFn,
     enqueue_inbound_wire_message,
 )
 from app.services.agentic_companion.ws_turn_support import (
     image_asset_baseline_for_scope_store,
 )
-from app.services.agentic_channel.turn import ensure_memory_store_session
+from app.services.agentic_channel.session import ensure_memory_store_session
 
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -75,7 +79,7 @@ class AppWsUserTurnQueueInput:
     implicit_signal_bundle: ImplicitSignalBundle
     background_output_sink: BackgroundToolEventSink | None
     delivery_flags: AppWsQueueDeliveryFlags
-    send_text: SendTextFn
+    send_text: DeliverReadyMessageFn
 
 
 @dataclass(frozen=True)
@@ -89,7 +93,7 @@ class AppWsUserTurnEnqueueResult:
 class _AppWsScopeTurnDelivery:
     """Per input-queue message WS delivery hooks."""
 
-    send_text: SendTextFn
+    send_text: DeliverReadyMessageFn
     delivery_flags: AppWsQueueDeliveryFlags
     client_message_id: str | None
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None
@@ -115,7 +119,7 @@ def _register_scope_turn_delivery(
     scope: AgentScope,
     queue_message_id: str,
     *,
-    send_text: SendTextFn,
+    send_text: DeliverReadyMessageFn,
     delivery_flags: AppWsQueueDeliveryFlags,
     client_message_id: str | None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None,
@@ -141,6 +145,17 @@ def _lookup_scope_turn_delivery(
         return _scope_turn_delivery.get(key, {}).get(queue_message_id)
 
 
+def _pop_scope_turn_delivery(scope: AgentScope, queue_message_id: str) -> None:
+    key = _scope_key(scope)
+    with _registry_lock:
+        per_scope = _scope_turn_delivery.get(key)
+        if per_scope is None:
+            return
+        per_scope.pop(queue_message_id, None)
+        if not per_scope:
+            _scope_turn_delivery.pop(key, None)
+
+
 def _lookup_scope_turn_delivery_for_output(
     scope: AgentScope,
     message_ids: tuple[str, ...],
@@ -154,12 +169,12 @@ def _lookup_scope_turn_delivery_for_output(
 
 async def _scope_deliver_ready_output(
     scope: AgentScope,
-    text: str,
-    message_ids: tuple[str, ...],
+    message: ReadyOutputMessage,
 ) -> None:
-    state = _lookup_scope_turn_delivery_for_output(scope, message_ids)
-    assert state is not None
-    await state.send_text(text)
+    state = _lookup_scope_turn_delivery_for_output(scope, message.message_ids)
+    if state is None:
+        raise OutputDeliveryUnroutableError(scope, message.message_ids)
+    await state.send_text(message)
 
 
 def _clear_turn_foreground_pending(
@@ -202,6 +217,7 @@ async def _on_app_ws_scope_drain_complete(
                     drop_client_alias=True,
                     drop_queue_alias=True,
                 )
+                _pop_scope_turn_delivery(scope, message_id)
             else:
                 _clear_turn_foreground_pending(
                     state,
@@ -221,6 +237,7 @@ async def _on_app_ws_scope_drain_complete(
             drop_client_alias=True,
             drop_queue_alias=True,
         )
+        _pop_scope_turn_delivery(scope, message_id)
 
 
 def _make_on_drain_complete(scope: AgentScope) -> OnDrainCompleteFn:
@@ -241,16 +258,15 @@ async def _ensure_app_ws_scope_queue_serving(
         if existing is not None:
             return existing
 
-        async def deliver_ready(
-            text: str, message_ids: tuple[str, ...]
-        ) -> None:
-            await _scope_deliver_ready_output(scope, text, message_ids)
+        async def deliver_message(message: ReadyOutputMessage) -> None:
+            await _scope_deliver_ready_output(scope, message)
 
         serving = ScopeQueueServing(
             scope,
             background_output_sink=background_output_sink,
-            deliver_ready=deliver_ready,
+            deliver_message=deliver_message,
             on_drain_complete=_make_on_drain_complete(scope),
+            runtime_channel=CompanionRuntimeChannel.APP,
         )
         _scope_queue_serving[key] = serving
         created = serving

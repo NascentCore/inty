@@ -16,6 +16,8 @@ from app.core.companion_harness.agentic_companion.companion import (
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputDeliveryAck,
     OutputDeliveryFailure,
+    OutputDeliverySkip,
+    OutputDeliveryUnroutableError,
     ReadyOutputMessage,
     get_output_queue_for_scope,
 )
@@ -35,8 +37,7 @@ from app.db.session import AsyncSessionLocal
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 
-SendTextFn = Callable[[str], Awaitable[None]]
-DeliverReadyOutputFn = Callable[[str, tuple[str, ...]], Awaitable[None]]
+DeliverReadyMessageFn = Callable[[ReadyOutputMessage], Awaitable[None]]
 
 _CHANNEL_OUTPUT_PUMP_POLL_SEC = 0.02
 
@@ -72,11 +73,9 @@ class UserChatTurnDeliveryResult:
 async def _deliver_ready_message(
     *,
     message: ReadyOutputMessage,
-    send_text: SendTextFn | None,
-    deliver_ready: DeliverReadyOutputFn | None,
+    deliver_message: DeliverReadyMessageFn,
     scope: AgentScope,
 ) -> str | None:
-    assert (send_text is not None) != (deliver_ready is not None)
     text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
     if not text:
         output_queue = get_output_queue_for_scope(scope)
@@ -88,11 +87,22 @@ async def _deliver_ready_message(
         )
         return None
     try:
-        if deliver_ready is not None:
-            await deliver_ready(text, message.message_ids)
-        else:
-            assert send_text is not None
-            await send_text(text)
+        await deliver_message(message)
+    except OutputDeliveryUnroutableError as exc:
+        logger.warning(
+            "output delivery unroutable scope={} message_id={} error={}",
+            scope.registry_key(),
+            message.message_id,
+            exc,
+        )
+        output_queue = get_output_queue_for_scope(scope)
+        await output_queue.skip_delivery(
+            OutputDeliverySkip(
+                message_id=message.message_id,
+                error_message=repr(exc),
+            )
+        )
+        return None
     except Exception as exc:
         logger.warning(
             "output delivery failed scope={} message_id={} error={}",
@@ -121,32 +131,37 @@ async def _deliver_ready_message(
 async def channel_output_pump(
     scope: AgentScope,
     *,
-    send_text: SendTextFn | None = None,
-    deliver_ready: DeliverReadyOutputFn | None = None,
+    deliver_message: DeliverReadyMessageFn,
     stop_event: asyncio.Event,
+    delivery_channel: CompanionRuntimeChannel | None = None,
+    delivery_wire_id: str | None = None,
     poll_interval_sec: float = _CHANNEL_OUTPUT_PUMP_POLL_SEC,
 ) -> str:
     """Pull in-memory ready OutputQueue messages until ``stop_event`` and queue drained."""
     assert poll_interval_sec > 0.0
-    assert (send_text is not None) != (deliver_ready is not None)
+    assert deliver_message is not None
     output_queue = get_output_queue_for_scope(scope)
     last_reply = ""
     while not stop_event.is_set():
-        for message in await output_queue.pull_ready_batch():
+        for message in await output_queue.pull_ready_batch(
+            delivery_channel=delivery_channel,
+            delivery_wire_id=delivery_wire_id,
+        ):
             delivered = await _deliver_ready_message(
                 message=message,
-                send_text=send_text,
-                deliver_ready=deliver_ready,
+                deliver_message=deliver_message,
                 scope=scope,
             )
             if delivered is not None:
                 last_reply = delivered
         await asyncio.sleep(poll_interval_sec)
-    for message in await output_queue.pull_ready_batch():
+    for message in await output_queue.pull_ready_batch(
+        delivery_channel=delivery_channel,
+        delivery_wire_id=delivery_wire_id,
+    ):
         delivered = await _deliver_ready_message(
             message=message,
-            send_text=send_text,
-            deliver_ready=deliver_ready,
+            deliver_message=deliver_message,
             scope=scope,
         )
         if delivered is not None:
@@ -161,18 +176,21 @@ async def drain_and_deliver_user_chat_turn(
     delivery_wire_id: str,
     implicit_signal_bundle: ImplicitSignalBundle,
     background_output_sink,
-    send_text: SendTextFn,
+    deliver_message: DeliverReadyMessageFn,
 ) -> UserChatTurnDeliveryResult:
-    """Drain one input batch while pumping OutputQueue ready messages to ``send_text``."""
+    """Drain one input batch while pumping OutputQueue ready messages."""
     # TODO(!3493): Remove when Weixin migrates; ScopeQueueServing owns drain+pump (!3487 App-WS done #3512).
     # TODO(!3402): Return typed Channel handle result instead of str from presence.
     assert delivery_wire_id != ""
+
     stop_event = asyncio.Event()
     pump_task = asyncio.create_task(
         channel_output_pump(
             scope,
-            send_text=send_text,
+            deliver_message=deliver_message,
             stop_event=stop_event,
+            delivery_channel=runtime_channel,
+            delivery_wire_id=delivery_wire_id,
         ),
         name=f"channel_output_pump_{scope.registry_key()}",
     )
@@ -254,7 +272,7 @@ async def handle_sync_user_turn_via_queues(
     runtime_channel: CompanionRuntimeChannel,
     implicit_signal_bundle: ImplicitSignalBundle,
     background_output_sink,
-    send_text: SendTextFn,
+    deliver_message: DeliverReadyMessageFn,
 ) -> UserChatTurnDeliveryResult:
     """Enqueue inbound user text, drain one batch, pull OutputQueue for delivery."""
     await enqueue_inbound_wire_message(inbound)
@@ -264,5 +282,5 @@ async def handle_sync_user_turn_via_queues(
         delivery_wire_id=inbound.wire_id,
         implicit_signal_bundle=implicit_signal_bundle,
         background_output_sink=background_output_sink,
-        send_text=send_text,
+        deliver_message=deliver_message,
     )

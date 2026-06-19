@@ -65,7 +65,11 @@ async def telegram_demo_bot_info() -> APIResponse[TelegramBotInfoData]:
     include_in_schema=False,
 )
 async def telegram_demo_bindings() -> APIResponse[TelegramBindingsData]:
-    """Debug: list Postgres-persisted Telegram agent_channel endpoints."""
+    """Debug: list Postgres-persisted Telegram agent_channel endpoints.
+
+    TODO(telegram-launch-reciprocity-metrics): Add bootstrap / proactive / reciprocity flags
+    per binding for launch north-star — #3535 (epic #3531).
+    """
     rows = await list_endpoints_for_channel(
         channel=CompanionRuntimeChannel.TELEGRAM
     )

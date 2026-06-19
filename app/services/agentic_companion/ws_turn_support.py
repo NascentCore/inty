@@ -16,7 +16,7 @@ from app.schemas.chat_websocket import (
     ChatWsGeneratedImageMeta,
     dump_chat_ws_companion_wire_meta,
 )
-from app.services.agentic_channel.turn import ensure_memory_store_session
+from app.services.agentic_channel.session import ensure_memory_store_session
 
 
 def image_asset_baseline_for_scope_store(store) -> int:

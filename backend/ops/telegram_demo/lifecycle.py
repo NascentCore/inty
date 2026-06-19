@@ -1,4 +1,8 @@
-"""Ops telegram-demo process lifecycle: long-poll start/stop on Ops boot/shutdown."""
+"""Ops telegram-demo process lifecycle: long-poll start/stop on Ops boot/shutdown.
+
+TODO(telegram-launch-idle-shutdown): Periodic sweeper: last real user message > 24h →
+  ``deactivate_companion_bond_and_runtime`` — #3534 (epic #3531).
+"""
 
 from __future__ import annotations
 

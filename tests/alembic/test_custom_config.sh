@@ -103,6 +103,9 @@ write_custom_config() {
     # Align Alembic config with the same PG_* params used for psql (local/CI :15432).
     if grep -qE '^  port:' "$config_path"; then
         _sed_inplace "s/^  port:.*/  port: ${PG_PORT}/" "$config_path"
+    else
+        _sed_inplace "/^  host:/a\\
+  port: ${PG_PORT}" "$config_path"
     fi
     if grep -qE '^  db:' "$config_path"; then
         _sed_inplace "s/^  db:.*/  db: ${dbname}/" "$config_path"

@@ -75,7 +75,7 @@ class CompanionConfig(BaseModel):
     # Transcript/context/ai_private 等与约定 md 一律仅走 MemoryStore（见 companion_tool_runtime）
     repository_only_store_text: bool = True
 
-    # Bootstrap: app.features.companion_memory_bootstrap_type (NONE | USER_INTERACTIVE).
+    # Bootstrap: agent.companion_harness.memory_bootstrap_type (NONE | USER_INTERACTIVE).
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value
 
     # Context: default experience profile id written to new sessions (context.json context_mode).

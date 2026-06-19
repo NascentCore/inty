@@ -178,7 +178,7 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
         sequence=2,
         message_ids=("input-1",),
     )
-    domain.append_user_reply = AsyncMock(side_effect=[ready_a, ready_b])  # type: ignore[method-assign]
+    domain.append_visible_message = AsyncMock(side_effect=[ready_a, ready_b])  # type: ignore[method-assign]
     context = _loop_context(output_queue=domain)
 
     async def _fake_prompt_plan_loop(  # type: ignore[no-untyped-def]
@@ -229,12 +229,13 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
 
     assert result.output_message_ids == ("msg-a", "msg-b")
     append_inputs = [
-        call.args[0] for call in domain.append_user_reply.await_args_list
+        call.args[0] for call in domain.append_visible_message.await_args_list
     ]
     assert all(
         isinstance(item, OutputQueueAppendInput) for item in append_inputs
     )
     assert append_inputs[0].message_ids == ("input-1",)
+    assert append_inputs[0].kind == DownlinkKind.USER_REPLY
     assert append_inputs[0].batch_id == "batch-1"
     _assert_user_transcript_row(store)
 
@@ -242,7 +243,7 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
 @pytest.mark.asyncio
 async def test_agentic_loop_skips_empty_assistant_output() -> None:
     domain = MagicMock(spec=OutputQueue)
-    domain.append_user_reply = AsyncMock()
+    domain.append_visible_message = AsyncMock()
     context = _loop_context(output_queue=domain)
 
     async def _fake_prompt_plan_loop(  # type: ignore[no-untyped-def]
@@ -278,14 +279,14 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
             legacy_llm_client=MagicMock(),
         ).run_single_llm_user_turn(context=context)
 
-    domain.append_user_reply.assert_not_awaited()
+    domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()
 
 
 @pytest.mark.asyncio
 async def test_agentic_loop_skips_silent_assistant_output() -> None:
     domain = MagicMock(spec=OutputQueue)
-    domain.append_user_reply = AsyncMock()
+    domain.append_visible_message = AsyncMock()
     context = _loop_context(output_queue=domain)
 
     async def _fake_prompt_plan_loop(  # type: ignore[no-untyped-def]
@@ -321,7 +322,7 @@ async def test_agentic_loop_skips_silent_assistant_output() -> None:
             legacy_llm_client=MagicMock(),
         ).run_single_llm_user_turn(context=context)
 
-    domain.append_user_reply.assert_not_awaited()
+    domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()
 
 
@@ -334,7 +335,7 @@ async def test_agentic_loop_uses_prompt_plan_path_when_set() -> None:
     )
 
     domain = MagicMock(spec=OutputQueue)
-    domain.append_user_reply = AsyncMock()
+    domain.append_visible_message = AsyncMock()
     context = _loop_context(output_queue=domain)
     prompt_plan = PromptPlan(
         messages=(
@@ -525,12 +526,12 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
     ready_tool = ReadyOutputMessage(
         message_id="msg-tool",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=DownlinkKind.TOOL_BACKGROUND,
         text="tool reply",
         sequence=2,
         message_ids=("input-1",),
     )
-    domain.append_user_reply = AsyncMock(side_effect=[ready_fg, ready_tool])  # type: ignore[method-assign]
+    domain.append_visible_message = AsyncMock(side_effect=[ready_fg, ready_tool])  # type: ignore[method-assign]
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     context = AgenticLoopContext(
         openai_messages=({"role": "user", "content": "hi"},),
@@ -612,6 +613,11 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
     assert result.output_message_ids == ("msg-fg", "msg-tool")
     assert result.tool_background_started is False
     assert result.turn_recall == "recall-1"
+    append_inputs = [
+        call.args[0] for call in domain.append_visible_message.await_args_list
+    ]
+    assert append_inputs[0].kind == DownlinkKind.USER_REPLY
+    assert append_inputs[1].kind == DownlinkKind.TOOL_BACKGROUND
     _assert_user_transcript_row(store)
 
 
@@ -625,7 +631,7 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
     from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
     domain = MagicMock(spec=OutputQueue)
-    domain.append_user_reply = AsyncMock()
+    domain.append_visible_message = AsyncMock()
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     context = AgenticLoopContext(
         openai_messages=({"role": "user", "content": "hi"},),
@@ -702,7 +708,7 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
             legacy_llm_client=MagicMock(),
         ).run_dual_llm_user_turn(context=context)
 
-    domain.append_user_reply.assert_not_awaited()
+    domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()
 
 
@@ -715,7 +721,7 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
     from app.core.companion_harness.prompting.bundle import PromptBundle
 
     domain = MagicMock(spec=OutputQueue)
-    domain.append_user_reply = AsyncMock()
+    domain.append_visible_message = AsyncMock()
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     context = AgenticLoopContext(
         openai_messages=({"role": "user", "content": "hi"},),
@@ -778,5 +784,5 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
             legacy_llm_client=MagicMock(),
         ).run_dual_llm_user_turn(context=context)
 
-    domain.append_user_reply.assert_not_awaited()
+    domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()

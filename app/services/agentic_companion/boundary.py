@@ -31,6 +31,8 @@ AGENTIC_COMPANION_ALLOWED_HARNESS_PREFIXES: Final[tuple[str, ...]] = (
     "app.core.companion_harness.agentic_companion.types",
     "app.core.companion_harness.memory.memory_store",
     "app.core.companion_harness.memory.companion_scope_listing",
+    "app.core.companion_harness.memory.client_time_from_memory_store",
+    "app.core.companion_harness.memory.user_timezone_from_user_md",
     "app.core.companion_harness.tools",
 )
 

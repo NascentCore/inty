@@ -31,24 +31,41 @@ from app.services.agentic_channel.scope_queue_serving import (
     ScopeDrainCompletion,
     ScopeQueueServing,
 )
-from app.services.agentic_channel.serving import (
-    enqueue_inbound_wire_message,
+from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputQueueAppendInput,
+    ReadyOutputMessage,
+    get_output_queue_for_scope,
 )
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
 )
+from app.core.companion_harness.companion.models import (
+    user_visible_assistant_text,
+)
+from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_companion.downlink import (
     Downlink,
     DownlinkKind,
     downlink_delivers_user_visible_text,
-    tool_background_downlink,
 )
 from app.services.agentic_companion.inner_tick_delivery import (
     inner_tick_delivery_for_telegram,
 )
 from app.services.agentic_companion.inner_tick_poll import run_inner_tick_poll
+from app.core.companion_harness.companion.utc import (
+    strip_leading_transcript_timestamp_prefixes,
+)
+from app.services.agentic_channel.provision import resolve_chat_model_for_scope
+from app.services.agentic_channel.serving import enqueue_inbound_wire_message
+from app.services.companion_chat_service import (
+    run_companion_implicit_sign_on_greeting_turn_for_api,
+)
 from app.services.agentic_companion.session import Coordinator, Session
 from app.services.chat_service import generate_session_id
+
+_SIGN_ON_GREETING_USER_TEXT = (
+    "The user opened the Telegram chat through onboarding."
+)
 
 _presences: dict[str, AgentChannelPresence] = {}
 _presence_start_locks: dict[str, asyncio.Lock] = {}
@@ -79,6 +96,30 @@ class AgentChannelPresence:
     def scope(self) -> AgentScope:
         return self._scope
 
+    async def _append_telegram_visible_output(
+        self,
+        *,
+        kind: DownlinkKind,
+        text: str,
+        trace_id: str | None,
+    ) -> None:
+        visible = user_visible_assistant_text(text)
+        if visible is None:
+            return
+        output_queue = get_output_queue_for_scope(self._scope)
+        await output_queue.append_visible_message(
+            OutputQueueAppendInput(
+                kind=kind,
+                batch_id="",
+                text=visible,
+                message_ids=(),
+                trace_id=trace_id,
+                langsmith_trace_id=None,
+                langsmith_run_id=None,
+                turn_recall=None,
+            )
+        )
+
     async def start(self) -> None:
         if self._session is not None:
             return
@@ -88,17 +129,22 @@ class AgentChannelPresence:
             agent_id=self._scope.agent_id,
             chat_id=synthetic_chat_id,
         )
-        downlink = _ActiveChannelDownlink(self._scope)
         self._session = Session.from_coordinator(
-            downlink=downlink,
+            downlink=_NoopSessionDownlink(),
             coordinator=self._coordinator,
         )
         poll_secs = float(
             global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat.poll_seconds
         )
-        delivery = inner_tick_delivery_for_telegram(
-            self.send_assistant_text,
-        )
+
+        async def _push_proactive_output(text: str) -> None:
+            await self._append_telegram_visible_output(
+                kind=DownlinkKind.PROACTIVE,
+                text=text,
+                trace_id=None,
+            )
+
+        delivery = inner_tick_delivery_for_telegram(_push_proactive_output)
 
         async def _run_poll(_ctx: dict) -> None:
             await run_inner_tick_poll(
@@ -119,8 +165,9 @@ class AgentChannelPresence:
         self._queue_serving = ScopeQueueServing(
             self._scope,
             background_output_sink=self._coordinator.background_sink,
-            send_text=self._send_user_reply_via_active_channel,
+            deliver_message=self._deliver_output_via_active_channel,
             on_drain_complete=self._on_queue_drain_complete,
+            runtime_channel=CompanionRuntimeChannel.TELEGRAM,
         )
         await self._queue_serving.start()
 
@@ -138,38 +185,30 @@ class AgentChannelPresence:
             self._session = None
         self._coordinator.sign_out()
 
-    async def send_assistant_text(self, text: str) -> None:
-        registry = get_scope_channel_registry(self._scope)
-        active = registry.active_channel()
-        if active is None:
-            logger.warning(
-                "agent_channel proactive drop: no ACTIVE channel scope={}",
-                self._scope.registry_key(),
-            )
+    async def _deliver_output_via_active_channel(
+        self, message: ReadyOutputMessage
+    ) -> None:
+        text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
+        if not text:
             return
-        downlink = registry.downlinks.get(active)
-        if downlink is None:
+        if message.kind == DownlinkKind.TOOL_BACKGROUND:
             return
-        from app.services.agentic_companion.downlink import Downlink
-
-        await downlink.deliver(
-            Downlink(
-                kind=DownlinkKind.PROACTIVE,
-                assistant_text=text,
-                turn=None,
-                tool_output=None,
-                bootstrap_interim=None,
-                scheduled_task_id=None,
-                transcript_user_text=None,
-            )
+        event = Downlink(
+            kind=message.kind,
+            assistant_text=text,
+            turn=None,
+            tool_output=None,
+            bootstrap_interim=None,
+            scheduled_task_id=None,
+            transcript_user_text=None,
         )
-
-    async def _send_user_reply_via_active_channel(self, text: str) -> None:
+        if not downlink_delivers_user_visible_text(event):
+            return
         registry = get_scope_channel_registry(self._scope)
         active = registry.active_channel()
         if active is None:
             raise RuntimeError(
-                f"no ACTIVE channel for user_reply scope={self._scope.registry_key()}"
+                f"no ACTIVE channel for output scope={self._scope.registry_key()}"
             )
         downlink = registry.downlinks.get(active)
         if downlink is None:
@@ -177,15 +216,42 @@ class AgentChannelPresence:
                 f"no downlink for channel={active.value} "
                 f"scope={self._scope.registry_key()}"
             )
-        await downlink.deliver(
-            Downlink(
-                kind=DownlinkKind.USER_REPLY,
-                assistant_text=text,
-                turn=None,
-                tool_output=None,
-                bootstrap_interim=None,
-                scheduled_task_id=None,
-                transcript_user_text=None,
+        await downlink.deliver(event)
+
+    async def greet_on_sign_on(
+        self, *, runtime_channel: CompanionRuntimeChannel
+    ) -> None:
+        """Run implicit sign-on greeting and append visible text to OutputQueue."""
+        assert runtime_channel is not None
+        model = await resolve_chat_model_for_scope(self._scope)
+        bundle = ImplicitSignalBundle(
+            client_time=None,
+            user_signed_on=True,
+            server_received_at_utc=datetime.now(timezone.utc),
+        )
+        turn = await run_companion_implicit_sign_on_greeting_turn_for_api(
+            user_id=self._scope.user_id,
+            agent_id=self._scope.agent_id,
+            chat_id=self._scope.memory_store_chat_id(),
+            user_text=_SIGN_ON_GREETING_USER_TEXT,
+            resolved_chat_model=model,
+            implicit_signal_bundle=bundle,
+            runtime_channel=runtime_channel,
+        )
+        visible = user_visible_assistant_text(turn.assistant_text)
+        if visible is None:
+            return
+        output_queue = get_output_queue_for_scope(self._scope)
+        await output_queue.append_visible_message(
+            OutputQueueAppendInput(
+                kind=DownlinkKind.PROACTIVE,
+                batch_id="",
+                text=visible,
+                message_ids=(),
+                trace_id=None,
+                langsmith_trace_id=None,
+                langsmith_run_id=None,
+                turn_recall=None,
             )
         )
 
@@ -283,12 +349,7 @@ class AgentChannelPresence:
                 )
                 continue
             self._coordinator.set_foreground_pending(ev.user_msg_uuid, ctx)
-            registry = get_scope_channel_registry(self._scope)
-            active = registry.active_channel()
-            if active is None:
-                continue
-            downlink = registry.downlinks.get(active)
-            if downlink is None:
+            if not ev.output_to_user:
                 continue
             try:
                 scope_lock = get_scope_turn_lock(
@@ -299,37 +360,20 @@ class AgentChannelPresence:
                     )
                 )
                 async with scope_lock:
-                    await downlink.deliver(
-                        tool_background_downlink(tool_output=ev)
+                    await self._append_telegram_visible_output(
+                        kind=DownlinkKind.TOOL_BACKGROUND,
+                        text=ev.text,
+                        trace_id=ev.trace_id,
                     )
             except Exception:
-                logger.exception("agent_channel tool_bg deliver failed")
+                logger.exception("agent_channel tool_bg append failed")
 
 
-class _ActiveChannelDownlink:
-    """Routes Session downlink events to the ACTIVE channel adapter."""
-
-    def __init__(self, scope: AgentScope) -> None:
-        self._scope = scope
+class _NoopSessionDownlink:
+    """Session compatibility shim; Telegram agent text is emitted via OutputQueue."""
 
     async def deliver(self, event) -> None:
-        if event.kind not in {
-            DownlinkKind.USER_REPLY,
-            DownlinkKind.PROACTIVE,
-            DownlinkKind.SCHEDULED,
-            DownlinkKind.MAINTENANCE,
-        }:
-            return
-        if not downlink_delivers_user_visible_text(event):
-            return
-        registry = get_scope_channel_registry(self._scope)
-        active = registry.active_channel()
-        if active is None:
-            return
-        downlink = registry.downlinks.get(active)
-        if downlink is None:
-            return
-        await downlink.deliver(event)
+        _ = event
 
 
 async def ensure_presence(scope: AgentScope) -> AgentChannelPresence:

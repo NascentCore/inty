@@ -974,7 +974,23 @@ def _patch_companion_ws_queue_turn(
             queue_input.delivery_flags.image_asset_baseline_initialized = True
             text = turn_result.assistant_text.strip()
             if text:
-                await queue_input.send_text(text)
+                from app.core.companion_harness.agentic_companion.output_queue import (
+                    ReadyOutputMessage,
+                )
+                from app.services.agentic_companion.downlink import DownlinkKind
+
+                await queue_input.send_text(
+                    ReadyOutputMessage(
+                        message_id="mock-out",
+                        batch_id="batch-mock",
+                        kind=DownlinkKind.USER_REPLY,
+                        text=text,
+                        sequence=1,
+                        message_ids=(
+                            queue_input.delivery_flags.queue_message_id,
+                        ),
+                    )
+                )
             from app.services.agentic_companion.ws_queue_serving import (
                 AppWsUserTurnEnqueueResult,
             )
@@ -2013,8 +2029,8 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     )
 
     monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_proactive_chat_poll_seconds",
+        global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat,
+        "poll_seconds",
         0.05,
     )
     from app.services.agentic_companion import (
@@ -2101,8 +2117,8 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
     )
 
     monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_proactive_chat_poll_seconds",
+        global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat,
+        "poll_seconds",
         0.05,
     )
     from app.services.agentic_companion import (

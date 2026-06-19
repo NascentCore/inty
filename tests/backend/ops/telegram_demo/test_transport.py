@@ -9,7 +9,7 @@ import uuid
 from io import BytesIO
 from urllib.error import HTTPError
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import delete
@@ -27,12 +27,21 @@ from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
 from app.models.companion_bond import CompanionBond
 from app.models.user import User
-from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
+from app.services.agentic_channel.channel_runtime import (
+    clear_registries_for_tests,
+)
 from app.services.agentic_channel.endpoints import resolve_scope
 from app.services.agentic_channel.presence import clear_presences_for_tests
-from app.services.agentic_channel.provision import provision_agent_for_channel_onboard
+from app.services.agentic_channel.provision import (
+    provision_agent_for_channel_onboard,
+)
 from backend.ops.telegram_demo import session_store
-from backend.ops.telegram_demo.transport import TelegramTransport
+from backend.ops.telegram_demo.transport import (
+    TelegramTransport,
+    _IDENTITY_MISMATCH,
+    _ONBOARD_HINT,
+    _WELCOME_RETURNING,
+)
 
 
 class _FakeResponse:
@@ -63,6 +72,21 @@ def _fake_urlopen(request, timeout=15):
     if url.endswith("/sendMessage"):
         return _FakeResponse({"ok": True, "result": {}})
     raise HTTPError(url, 404, "not found", hdrs=None, fp=BytesIO())
+
+
+def test_transport_onboard_copy_is_english() -> None:
+    messages = (
+        _WELCOME_RETURNING,
+        _ONBOARD_HINT,
+        _IDENTITY_MISMATCH,
+    )
+
+    assert "/telegram" in _ONBOARD_HINT
+    assert "/start" in _ONBOARD_HINT
+    assert all(
+        not any("\u4e00" <= char <= "\u9fff" for char in message)
+        for message in messages
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -117,7 +141,7 @@ async def test_handle_inbound_channel_user_id_mismatch_notifies() -> None:
         local_received_at=time.time(),
     )
     await transport._handle_inbound(inbound)
-    assert any("身份" in message for message in sent)
+    assert any("match" in message.lower() for message in sent)
     await _cleanup_scope(provision.scope)
 
 
@@ -176,18 +200,25 @@ async def test_concurrent_onboard_both_welcome_without_assert() -> None:
         sent.append(text)
 
     transport._send_channel_text = capture  # type: ignore[method-assign]
-    inbound = TelegramIncomingMessage(
-        update_id=10,
-        chat_id=telegram_chat_id,
-        channel_user_id=channel_user_id,
-        text="/start",
-        local_received_at=time.time(),
-    )
-    await asyncio.gather(
-        transport._handle_onboard(inbound=inbound),
-        transport._handle_onboard(inbound=inbound),
-    )
-    assert all("欢迎" in message for message in sent)
+    mock_presence = MagicMock()
+    mock_presence.greet_on_sign_on = AsyncMock()
+
+    with patch(
+        "backend.ops.telegram_demo.transport.get_presence",
+        return_value=mock_presence,
+    ):
+        inbound = TelegramIncomingMessage(
+            update_id=10,
+            chat_id=telegram_chat_id,
+            channel_user_id=channel_user_id,
+            text="/start",
+            local_received_at=time.time(),
+        )
+        await asyncio.gather(
+            transport._handle_onboard(inbound=inbound),
+            transport._handle_onboard(inbound=inbound),
+        )
+    assert mock_presence.greet_on_sign_on.await_count >= 1
     scope = await resolve_scope(
         channel=CompanionRuntimeChannel.TELEGRAM,
         channel_address=telegram_chat_id,
@@ -239,3 +270,82 @@ async def test_handle_inbound_sends_channel_error_from_presence() -> None:
 
     assert sent == ["Companion 回合失败，请查看 Ops 日志。"]
     await _cleanup_scope(provision.scope)
+
+
+@pytest.mark.asyncio
+async def test_onboard_new_user_triggers_greeting() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-greet-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    sent: list[str] = []
+    api = TelegramBotApi(bot_token="greet-test-token", urlopen=_fake_urlopen)
+    transport = TelegramTransport(api=api)
+
+    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+        sent.append(text)
+
+    transport._send_channel_text = capture  # type: ignore[method-assign]
+    mock_presence = MagicMock()
+    mock_presence.greet_on_sign_on = AsyncMock()
+
+    with patch(
+        "backend.ops.telegram_demo.transport.get_presence",
+        return_value=mock_presence,
+    ):
+        inbound = TelegramIncomingMessage(
+            update_id=50,
+            chat_id=telegram_chat_id,
+            channel_user_id=channel_user_id,
+            text="/start onboard",
+            local_received_at=time.time(),
+        )
+        await transport._handle_onboard(inbound=inbound)
+
+    assert sent == []
+    mock_presence.greet_on_sign_on.assert_awaited_once()
+    scope = await resolve_scope(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=telegram_chat_id,
+    )
+    assert scope is not None
+    await _cleanup_scope(scope)
+
+
+@pytest.mark.asyncio
+async def test_onboard_greeting_failure_falls_back() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-greet-fail-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    sent: list[str] = []
+    api = TelegramBotApi(bot_token="greet-fail-token", urlopen=_fake_urlopen)
+    transport = TelegramTransport(api=api)
+
+    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+        sent.append(text)
+
+    transport._send_channel_text = capture  # type: ignore[method-assign]
+    mock_presence = MagicMock()
+    mock_presence.greet_on_sign_on = AsyncMock(
+        side_effect=RuntimeError("greeting failed")
+    )
+
+    with patch(
+        "backend.ops.telegram_demo.transport.get_presence",
+        return_value=mock_presence,
+    ):
+        inbound = TelegramIncomingMessage(
+            update_id=51,
+            chat_id=telegram_chat_id,
+            channel_user_id=channel_user_id,
+            text="/start onboard",
+            local_received_at=time.time(),
+        )
+        await transport._handle_onboard(inbound=inbound)
+
+    assert sent == []
+    scope = await resolve_scope(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=telegram_chat_id,
+    )
+    assert scope is not None
+    await _cleanup_scope(scope)

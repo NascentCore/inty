@@ -31,8 +31,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.serving import (
-    DeliverReadyOutputFn,
-    SendTextFn,
+    DeliverReadyMessageFn,
     channel_output_pump,
     drain_scope_once_via_companion,
 )
@@ -76,23 +75,22 @@ class ScopeQueueServing:
         scope: AgentScope,
         *,
         background_output_sink,
-        send_text: SendTextFn | None = None,
-        deliver_ready: DeliverReadyOutputFn | None = None,
+        deliver_message: DeliverReadyMessageFn,
         on_drain_complete: OnDrainCompleteFn,
+        runtime_channel: CompanionRuntimeChannel,
     ) -> None:
         assert scope is not None
-        assert (send_text is not None) != (deliver_ready is not None)
+        assert deliver_message is not None
         assert on_drain_complete is not None
         self._scope = scope
         self._background_output_sink = background_output_sink
-        self._send_text = send_text
-        self._deliver_ready = deliver_ready
+        self._deliver_message = deliver_message
         self._on_drain_complete = on_drain_complete
         self._wake = asyncio.Event()
         self._stop = asyncio.Event()
         self._input_task: asyncio.Task[None] | None = None
         self._pump_task: asyncio.Task[None] | None = None
-        self._runtime_channel = CompanionRuntimeChannel.TELEGRAM
+        self._runtime_channel = runtime_channel
         self._started = False
 
     async def start(self) -> None:
@@ -139,9 +137,12 @@ class ScopeQueueServing:
         try:
             await channel_output_pump(
                 self._scope,
-                send_text=self._send_text,
-                deliver_ready=self._deliver_ready,
+                deliver_message=self._deliver_message,
                 stop_event=self._stop,
+                delivery_channel=self._runtime_channel,
+                delivery_wire_id=(
+                    f"{self._runtime_channel.value}:{self._scope.registry_key()}"
+                ),
                 poll_interval_sec=_SCOPE_OUTPUT_PUMP_POLL_SEC,
             )
         except asyncio.CancelledError:

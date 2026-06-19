@@ -51,6 +51,11 @@ _DEFAULT_SETTLED_TURN = "今天天气怎么样？"
 _RECV_POLL_SEC = 0.25
 _TURN_REPLY_TIMEOUT_SEC = 180.0
 _TURN_TRAILING_QUIET_SEC = 5.0
+# Match devops/config.yaml.local fast proactive: idle 10s + poll 5s + LLM slack.
+_DEFAULT_PROACTIVE_WAIT_SEC = 60.0
+_PROACTIVE_RECV_CHUNK_SEC = 5.0
+_POST_PROACTIVE_DRAIN_QUIET_SEC = 5.0
+_POST_PROACTIVE_DRAIN_MAX_SEC = 20.0
 
 
 @dataclass(frozen=True)
@@ -239,7 +244,7 @@ def _is_inner_tick_proactive(meta: dict[str, Any]) -> bool:
     return lane == "inner_tick" and activity == "proactive_chat"
 
 
-# --- strict-mode DB verification (unit-tested; see tests/cursor/skills/scripts/) ---
+# --- proactive DB verification (unit-tested; see tests/cursor/skills/scripts/) ---
 
 
 def _query_proactive_chat_history_rows(
@@ -350,7 +355,6 @@ def run_regression(
     proactive_wait_sec: float,
     report_path: Path,
     token_path: str,
-    strict: bool,
     stderr: TextIO,
 ) -> int:
     _ensure_import_path(repo_root)
@@ -479,7 +483,10 @@ def run_regression(
         while time.monotonic() < proactive_deadline:
             text, meta, err = _wait_downlink(
                 bridge,
-                timeout_sec=min(10.0, proactive_deadline - time.monotonic()),
+                timeout_sec=min(
+                    _PROACTIVE_RECV_CHUNK_SEC,
+                    proactive_deadline - time.monotonic(),
+                ),
                 label="proactive",
             )
             if err is not None and err[0] == 408:
@@ -516,6 +523,24 @@ def run_regression(
                 f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
                 flush=True,
             )
+        print(
+            f"{_TAG} post-proactive drain "
+            f"(quiet={_POST_PROACTIVE_DRAIN_QUIET_SEC}s, "
+            f"max={_POST_PROACTIVE_DRAIN_MAX_SEC}s) before disconnect...",
+            flush=True,
+        )
+        for text, meta in _drain_until_quiet(
+            bridge,
+            quiet_sec=_POST_PROACTIVE_DRAIN_QUIET_SEC,
+            max_sec=_POST_PROACTIVE_DRAIN_MAX_SEC,
+        ):
+            if str(meta.get("source") or "") == "chat":
+                _record_trailing_downlink(
+                    report,
+                    label="post_proactive",
+                    text=text,
+                    meta=meta,
+                )
     finally:
         bridge.stop()
 
@@ -601,7 +626,10 @@ LIMIT 8;
         "pending" not in in_q and "failed" not in in_q and bool(in_q.strip())
     )
     out_all_delivered = (
-        "pending" not in out_q and "failed" not in out_q and bool(out_q.strip())
+        "pending" not in out_q
+        and "failed" not in out_q
+        and "skipped" not in out_q
+        and bool(out_q.strip())
     )
 
     summary = {
@@ -623,20 +651,15 @@ LIMIT 8;
     print(f"{_TAG} report written to {report_path}", flush=True)
     print(f"{_TAG} SUMMARY: {json.dumps(summary, ensure_ascii=False)}", flush=True)
 
-    queue_ok = (
+    passed = (
         settled_ok
         and not report["errors"]
         and in_all_delivered
         and out_all_delivered
+        and bootstrap_done == "true"
+        and proactive_present
     )
-    if strict:
-        strict_ok = (
-            queue_ok
-            and bootstrap_done == "true"
-            and proactive_present
-        )
-        return 0 if strict_ok else 1
-    return 0 if queue_ok else 1
+    return 0 if passed else 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -687,18 +710,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--proactive-wait-sec",
         type=float,
-        default=120.0,
-        help="Seconds to wait for inner-tick proactive after settled turn",
+        default=_DEFAULT_PROACTIVE_WAIT_SEC,
+        help=(
+            "Seconds to wait for inner-tick proactive after settled turn "
+            f"(default {_DEFAULT_PROACTIVE_WAIT_SEC:g})"
+        ),
     )
     p.add_argument(
         "--report",
         default="",
         help="JSON report path (default: tmp/repl-regression-<agent_id>.json)",
-    )
-    p.add_argument(
-        "--strict",
-        action="store_true",
-        help="Also require bootstrap complete and proactive inner-tick",
     )
     p.add_argument(
         "--create-timeout",
@@ -759,7 +780,6 @@ def main(argv: list[str] | None = None) -> int:
         proactive_wait_sec=proactive_wait,
         report_path=report_path,
         token_path=str(args.token_file).strip(),
-        strict=bool(args.strict),
         stderr=sys.stderr,
     )
 

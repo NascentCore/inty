@@ -1,4 +1,4 @@
-"""Unit tests for ``run_inty_repl_regression.py`` strict-mode DB verification helpers.
+"""Unit tests for ``run_inty_repl_regression.py`` proactive DB verification helpers.
 
 The skill script lives under ``.cursor/skills/scripts/`` and is loaded by file path
 (see ``_load_regression_module``) because it is a CLI utility, not an ``app/`` module.
@@ -36,12 +36,10 @@ def _load_regression_module():
 def test_parse_proactive_chat_history_rows() -> None:
     mod = _load_regression_module()
 
-    rows = mod._parse_proactive_chat_history_rows(
-        """
+    rows = mod._parse_proactive_chat_history_rows("""
 {"chat_history_id":"1","content_preview":"[SYSTEM PROACTIVE CHAT] a|b","created_at":"2026-06-18 00:15:04+00","has_assistant_reply":false}
 {"chat_history_id":"2","content_preview":"[SYSTEM PROACTIVE CHAT] c","created_at":"2026-06-18 00:16:04+00","has_assistant_reply":true}
-"""
-    )
+""")
 
     assert len(rows) == 2
     assert rows[0].chat_history_id == "1"

@@ -9,9 +9,11 @@ from app.services.agentic_companion.scope_inner_tick_worker import (
 )
 
 
-def test_scope_inner_tick_poll_interval_uses_min_of_presence_and_dreaming() -> None:
+def test_scope_inner_tick_poll_interval_uses_min_of_presence_and_dreaming() -> (
+    None
+):
     cfg = MagicMock()
-    cfg.app.features.companion_ws_proactive_chat_poll_seconds = 60.0
+    cfg.agent.companion_harness.inner_tick.proactive_chat.poll_seconds = 60.0
     cfg.agent.companion_harness.dreaming_idle_seconds = 300
     import app.services.agentic_companion.scope_inner_tick_worker as worker_mod
 

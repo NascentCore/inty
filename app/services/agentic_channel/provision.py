@@ -47,7 +47,7 @@ from app.services.agentic_channel.errors import (
     ChannelEndpointConflictError,
     integrity_error_detail,
 )
-from app.services.agentic_channel.turn import ensure_memory_store_session
+from app.services.agentic_channel.session import ensure_memory_store_session
 from app.services.global_services import subscription_service
 
 

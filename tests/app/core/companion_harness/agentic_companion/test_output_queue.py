@@ -14,13 +14,24 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputDeliveryAck,
     OutputDeliveryFailure,
+    OutputDeliverySkip,
+    OutputDeliveryUnroutableError,
     OutputQueue,
     OutputQueueAppendInput,
     ReadyOutputMessage,
     clear_output_queues_for_tests,
     get_output_queue_for_scope,
 )
-from app.core.companion_harness.agentic_companion.types import AgentOutputMessage
+from app.core.companion_harness.agentic_companion.types import (
+    AgentOutputMessage,
+    OutputQueueRecord,
+    QueueClaim,
+    QueueStatus,
+    WireId,
+)
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
+)
 from app.services.agentic_companion.downlink import DownlinkKind
 
 
@@ -31,8 +42,11 @@ def _clear_registry() -> None:
     clear_output_queues_for_tests()
 
 
-def _append_input(*, batch_id: str, text: str) -> OutputQueueAppendInput:
+def _append_input(
+    *, batch_id: str, text: str, kind: DownlinkKind = DownlinkKind.USER_REPLY
+) -> OutputQueueAppendInput:
     return OutputQueueAppendInput(
+        kind=kind,
         batch_id=batch_id,
         text=text,
         message_ids=("input-1",),
@@ -53,10 +67,56 @@ async def test_append_failed_db_produces_no_ready_marker() -> None:
         side_effect=RuntimeError("db down"),
     ):
         with pytest.raises(RuntimeError, match="db down"):
-            await queue.append_user_reply(
+            await queue.append_visible_message(
                 _append_input(batch_id="batch-1", text="hello")
             )
     assert await queue.pull_ready_batch() == ()
+
+
+@pytest.mark.asyncio
+async def test_append_agent_initiated_uses_synthetic_batch_id() -> None:
+    scope = AgentScope(user_id="u-agent", agent_id="a-agent")
+    queue = OutputQueue(scope=scope)
+
+    class _FakeRecord:
+        def __init__(self, message_id: str, text: str, sequence: int) -> None:
+            self.message_id = message_id
+            self.text = text
+            self.sequence = sequence
+
+    with patch(
+        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+    ) as session_cls:
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        session_cls.return_value = session
+        repo = AsyncMock()
+        repo.append_agent_output = AsyncMock(
+            return_value=_FakeRecord("msg-proactive", "hello", 1)
+        )
+        with patch(
+            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            return_value=repo,
+        ):
+            ready = await queue.append_visible_message(
+                OutputQueueAppendInput(
+                    kind=DownlinkKind.PROACTIVE,
+                    batch_id="",
+                    text="hello",
+                    message_ids=(),
+                    trace_id=None,
+                    langsmith_trace_id=None,
+                    langsmith_run_id=None,
+                    turn_recall=None,
+                )
+            )
+
+    assert ready.kind == DownlinkKind.PROACTIVE
+    assert ready.message_ids == ()
+    assert ready.batch_id.startswith("agent-initiated:")
+    persisted = repo.append_agent_output.await_args.args[0]
+    assert persisted.kind == DownlinkKind.PROACTIVE
 
 
 @pytest.mark.asyncio
@@ -88,10 +148,10 @@ async def test_multiple_appends_pulled_in_order() -> None:
             "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
-            await queue.append_user_reply(
+            await queue.append_visible_message(
                 _append_input(batch_id="batch-1", text="first")
             )
-            await queue.append_user_reply(
+            await queue.append_visible_message(
                 _append_input(batch_id="batch-1", text="second")
             )
 
@@ -169,6 +229,107 @@ async def test_mark_failed_requeues_in_flight_message() -> None:
                 )
             )
     assert await queue.pull_ready_batch() == (ready,)
+
+
+@pytest.mark.asyncio
+async def test_skip_delivery_calls_mark_skipped_without_requeue() -> None:
+    scope = AgentScope(user_id="u-skip", agent_id="a-skip")
+    queue = OutputQueue(scope=scope)
+    ready = ReadyOutputMessage(
+        message_id="msg-skip",
+        batch_id="batch-1",
+        kind=DownlinkKind.USER_REPLY,
+        text="skip me",
+        sequence=1,
+        message_ids=("input-1",),
+    )
+    queue._ready.append(ready)
+    assert await queue.pull_ready_batch() == (ready,)
+    with patch(
+        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+    ) as session_cls:
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        session_cls.return_value = session
+        repo = AsyncMock()
+        with patch(
+            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            return_value=repo,
+        ):
+            await queue.skip_delivery(
+                OutputDeliverySkip(
+                    message_id=ready.message_id,
+                    error_message="no delivery hook",
+                )
+            )
+    repo.mark_skipped.assert_awaited_once_with(
+        ready.message_id,
+        error_message="no delivery hook",
+    )
+    assert await queue.pull_ready_batch() == ()
+
+
+@pytest.mark.asyncio
+async def test_pull_ready_batch_claims_persisted_pending_after_memory_loss() -> (
+    None
+):
+    scope = AgentScope(user_id="u-recover", agent_id="a-recover")
+    queue = OutputQueue(scope=scope)
+    record = OutputQueueRecord(
+        message_id="msg-recovered",
+        scope=scope,
+        sequence=7,
+        status=QueueStatus.CLAIMED,
+        batch_id="agent-initiated:recover",
+        kind=DownlinkKind.PROACTIVE,
+        text="recovered line",
+        created_at_utc=datetime.now(timezone.utc),
+        message_ids=(),
+    )
+    claim = QueueClaim(
+        record=record,
+        delivery_channel=CompanionRuntimeChannel.TELEGRAM,
+        delivery_wire_id=WireId(value="telegram:u-recover:a-recover"),
+    )
+
+    with patch(
+        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+    ) as session_cls:
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        session_cls.return_value = session
+        repo = AsyncMock()
+        repo.claim_pending_for_delivery = AsyncMock(return_value=(claim,))
+        with patch(
+            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            return_value=repo,
+        ):
+            batch = await queue.pull_ready_batch(
+                delivery_channel=CompanionRuntimeChannel.TELEGRAM,
+                delivery_wire_id="telegram:u-recover:a-recover",
+            )
+
+    assert tuple(message.message_id for message in batch) == ("msg-recovered",)
+    repo.claim_pending_for_delivery.assert_awaited_once_with(
+        scope,
+        delivery_channel=CompanionRuntimeChannel.TELEGRAM,
+        delivery_wire_id="telegram:u-recover:a-recover",
+        limit=100,
+    )
+    session.commit.assert_awaited_once()
+
+
+def test_output_delivery_unroutable_error_carries_scope_and_message_ids() -> (
+    None
+):
+    scope = AgentScope(user_id="u-err", agent_id="a-err")
+    message_ids = ("queue-msg-1",)
+    error = OutputDeliveryUnroutableError(scope, message_ids)
+    assert error.scope is scope
+    assert error.message_ids == message_ids
+    assert "queue-msg-1" in str(error)
 
 
 @pytest.mark.asyncio
@@ -266,7 +427,7 @@ async def test_concurrent_append_and_pull_deliver_every_message() -> None:
             done = asyncio.Event()
             pump_task = asyncio.create_task(pump_until_done(done))
             for index in range(message_count):
-                await queue.append_user_reply(
+                await queue.append_visible_message(
                     _append_input(
                         batch_id=f"batch-{index}",
                         text=f"hello-{index}",
@@ -278,7 +439,9 @@ async def test_concurrent_append_and_pull_deliver_every_message() -> None:
             await pump_task
 
     assert len(pulled_ids) == message_count
-    assert pulled_ids == {f"msg-{index}" for index in range(1, message_count + 1)}
+    assert pulled_ids == {
+        f"msg-{index}" for index in range(1, message_count + 1)
+    }
 
 
 def test_registry_returns_one_instance_per_scope() -> None:
