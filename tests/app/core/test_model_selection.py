@@ -4,9 +4,9 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from app.core.config import (
-    AgentConfig,
     global_config_loaded_from_config_yaml as global_config,
 )
+from app.utils.config import AgentConfig
 from app.core.model_selection import (
     select_chat_image_model,
     select_chat_model,
@@ -47,7 +47,10 @@ def test_select_chat_model_resolves_nickname_to_id():
         sub_user_chat_model=GEMINI_2_5_FLASH_LITE.nickname,
     )
     mock_config = SimpleNamespace(agent=mock_agent)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml",
+        mock_config,
+    ):
         model_free = select_chat_model(user=user, is_subscribed=False)
         assert model_free is DEEPSEEK_V3_2
         model_sub = select_chat_model(user=user, is_subscribed=True)
@@ -67,7 +70,10 @@ def test_select_chat_tts_model_subscribed_user_uses_sub_model():
         sub_user_chat_tts_model="gemini-2.5-pro-tts",
     )
     mock_config = SimpleNamespace(agent=mock_agent)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml",
+        mock_config,
+    ):
         model = select_chat_tts_model(user=user, is_subscribed=True)
         assert model == "gemini-2.5-pro-tts"
 
@@ -94,7 +100,10 @@ def test_select_text_to_image_model_falls_back_to_vertex_image_model_when_sub_us
         free_user_text_to_image_model="free-image-model",
     )
     mock_config = SimpleNamespace(agent=mock_agent_config)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml",
+        mock_config,
+    ):
         model = select_text_to_image_model(user=user, is_subscribed=True)
         assert model == "fallback-vertex-model"
 
@@ -109,7 +118,10 @@ def test_select_text_to_image_model_falls_back_to_vertex_image_model_when_free_u
         free_user_text_to_image_model=None,
     )
     mock_config = SimpleNamespace(agent=mock_agent_config)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml",
+        mock_config,
+    ):
         model = select_text_to_image_model(user=user, is_subscribed=False)
         assert model == "fallback-vertex-model"
 
@@ -122,7 +134,10 @@ def test_select_chat_image_model_returns_gen_ai_model():
         sub_user_chat_image_model=NANO_BANANA_PRO.nickname,
     )
     mock_config = SimpleNamespace(agent=mock_agent)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml",
+        mock_config,
+    ):
         model_free = select_chat_image_model(user=user, is_subscribed=False)
         assert model_free is NANO_BANANA
         model_sub = select_chat_image_model(user=user, is_subscribed=True)
@@ -137,14 +152,19 @@ def test_select_chat_image_model_uses_fal_nickname():
         sub_user_chat_image_model=SEEDREAM_V4_5_EDIT.nickname,
     )
     mock_config = SimpleNamespace(agent=mock_agent)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+    with patch(
+        "app.core.model_selection.global_config_loaded_from_config_yaml",
+        mock_config,
+    ):
         model_free = select_chat_image_model(user=user, is_subscribed=False)
         assert model_free is Z_IMAGE_TURBO_IMAGE_TO_IMAGE
         model_sub = select_chat_image_model(user=user, is_subscribed=True)
         assert model_sub is SEEDREAM_V4_5_EDIT
 
 
-def test_devops_yaml_chat_model_strings_resolve_without_validation_error() -> None:
+def test_devops_yaml_chat_model_strings_resolve_without_validation_error() -> (
+    None
+):
     """Smoke: devops 中聊天/工具模型字段仍为字符串时，须能解析为 GenAIModel 且 id 与 resolve_chat_model_to_id 一致。"""
     from pathlib import Path
 
@@ -169,6 +189,6 @@ def test_devops_yaml_chat_model_strings_resolve_without_validation_error() -> No
                 continue
             s = str(raw).strip()
             m = resolve_chat_text_model(s)
-            assert m.id_on_provider == resolve_chat_model_to_id(s), (
-                f"{path.name} agent.{key}={s!r}"
-            )
+            assert m.id_on_provider == resolve_chat_model_to_id(
+                s
+            ), f"{path.name} agent.{key}={s!r}"

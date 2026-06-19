@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.core.config import GooglePlayConfig
+from app.utils.config import GooglePlayConfig
 from app.external_services.fakes.android_publisher import FakeAndroidPublisher
 from app.external_services.google_play_service import GooglePlayService
 from app.schemas.version import VersionReminderAction
@@ -67,7 +67,9 @@ class TestVerifySubscriptionPurchase:
         package_name = google_play_config.package_name
 
         # 设置有效订阅响应
-        future_time = int((datetime.now(timezone.utc).timestamp() + 86400) * 1000)
+        future_time = int(
+            (datetime.now(timezone.utc).timestamp() + 86400) * 1000
+        )
         fake_service.set_subscription_response(
             package_name,
             product_id,
@@ -80,8 +82,10 @@ class TestVerifySubscriptionPurchase:
             },
         )
 
-        is_valid, purchase_info = google_play_service.verify_subscription_purchase(
-            product_id, purchase_token
+        is_valid, purchase_info = (
+            google_play_service.verify_subscription_purchase(
+                product_id, purchase_token
+            )
         )
 
         assert is_valid is True
@@ -110,8 +114,10 @@ class TestVerifySubscriptionPurchase:
             },
         )
 
-        is_valid, purchase_info = google_play_service.verify_subscription_purchase(
-            product_id, purchase_token
+        is_valid, purchase_info = (
+            google_play_service.verify_subscription_purchase(
+                product_id, purchase_token
+            )
         )
 
         assert is_valid is False
@@ -126,7 +132,9 @@ class TestVerifySubscriptionPurchase:
         package_name = google_play_config.package_name
 
         # 设置待支付订阅响应
-        future_time = int((datetime.now(timezone.utc).timestamp() + 86400) * 1000)
+        future_time = int(
+            (datetime.now(timezone.utc).timestamp() + 86400) * 1000
+        )
         fake_service.set_subscription_response(
             package_name,
             product_id,
@@ -137,8 +145,10 @@ class TestVerifySubscriptionPurchase:
             },
         )
 
-        is_valid, purchase_info = google_play_service.verify_subscription_purchase(
-            product_id, purchase_token
+        is_valid, purchase_info = (
+            google_play_service.verify_subscription_purchase(
+                product_id, purchase_token
+            )
         )
 
         assert is_valid is False
@@ -169,8 +179,10 @@ class TestVerifySubscriptionPurchase:
             },
         )
 
-        is_valid, purchase_info = google_play_service.verify_subscription_purchase(
-            product_id, purchase_token
+        is_valid, purchase_info = (
+            google_play_service.verify_subscription_purchase(
+                product_id, purchase_token
+            )
         )
 
         assert is_valid is True  # 在宽限期内仍然有效
@@ -201,8 +213,10 @@ class TestVerifySubscriptionPurchase:
             },
         )
 
-        is_valid, purchase_info = google_play_service.verify_subscription_purchase(
-            product_id, purchase_token
+        is_valid, purchase_info = (
+            google_play_service.verify_subscription_purchase(
+                product_id, purchase_token
+            )
         )
 
         assert is_valid is False  # 已过期且不在宽限期
@@ -216,11 +230,17 @@ class TestVerifySubscriptionPurchase:
         package_name = google_play_config.package_name
 
         # 设置 400 错误
-        error = FakeAndroidPublisher.create_http_error(400, "Invalid product ID")
-        fake_service.set_subscription_error(package_name, product_id, purchase_token, error)
+        error = FakeAndroidPublisher.create_http_error(
+            400, "Invalid product ID"
+        )
+        fake_service.set_subscription_error(
+            package_name, product_id, purchase_token, error
+        )
 
-        is_valid, purchase_info = google_play_service.verify_subscription_purchase(
-            product_id, purchase_token
+        is_valid, purchase_info = (
+            google_play_service.verify_subscription_purchase(
+                product_id, purchase_token
+            )
         )
 
         assert is_valid is False
@@ -235,11 +255,17 @@ class TestVerifySubscriptionPurchase:
         package_name = google_play_config.package_name
 
         # 设置 500 错误
-        error = FakeAndroidPublisher.create_http_error(500, "Internal server error")
-        fake_service.set_subscription_error(package_name, product_id, purchase_token, error)
+        error = FakeAndroidPublisher.create_http_error(
+            500, "Internal server error"
+        )
+        fake_service.set_subscription_error(
+            package_name, product_id, purchase_token, error
+        )
 
-        is_valid, purchase_info = google_play_service.verify_subscription_purchase(
-            product_id, purchase_token
+        is_valid, purchase_info = (
+            google_play_service.verify_subscription_purchase(
+                product_id, purchase_token
+            )
         )
 
         assert is_valid is False
@@ -262,8 +288,10 @@ class TestVerifySubscriptionPurchase:
         fake_service._subscriptions.get = raise_exception
 
         try:
-            is_valid, purchase_info = google_play_service.verify_subscription_purchase(
-                product_id, purchase_token
+            is_valid, purchase_info = (
+                google_play_service.verify_subscription_purchase(
+                    product_id, purchase_token
+                )
             )
 
             assert is_valid is False
@@ -397,8 +425,12 @@ class TestVerifyProductPurchase:
         package_name = google_play_config.package_name
 
         # 设置 400 错误
-        error = FakeAndroidPublisher.create_http_error(400, "Invalid product ID")
-        fake_service.set_product_error(package_name, product_id, purchase_token, error)
+        error = FakeAndroidPublisher.create_http_error(
+            400, "Invalid product ID"
+        )
+        fake_service.set_product_error(
+            package_name, product_id, purchase_token, error
+        )
 
         is_valid, purchase_info = google_play_service.verify_product_purchase(
             product_id, purchase_token
@@ -424,8 +456,10 @@ class TestVerifyProductPurchase:
         fake_service._products.get = raise_exception
 
         try:
-            is_valid, purchase_info = google_play_service.verify_product_purchase(
-                product_id, purchase_token
+            is_valid, purchase_info = (
+                google_play_service.verify_product_purchase(
+                    product_id, purchase_token
+                )
             )
 
             assert is_valid is False
@@ -455,7 +489,9 @@ class TestCheckVersionRequirement:
         assert result["force_update"] is False
         assert result["message"] == "Version check disabled"
 
-    def test_version_check_update_required(self, fake_service, google_play_config):
+    def test_version_check_update_required(
+        self, fake_service, google_play_config
+    ):
         """测试客户端版本低于最新版本（建议更新）"""
         config = GooglePlayConfig(
             package_name=google_play_config.package_name,
@@ -551,7 +587,9 @@ class TestCheckVersionRequirement:
         assert "error" in result
         assert result["message"] == "Unable to fetch version info"
 
-    def test_version_check_compare_failure(self, fake_service, google_play_config):
+    def test_version_check_compare_failure(
+        self, fake_service, google_play_config
+    ):
         """测试版本比较失败时的保守处理（要求更新）"""
         config = GooglePlayConfig(
             package_name=google_play_config.package_name,
@@ -601,7 +639,9 @@ class TestGetAppVersionInfo:
             release_track="production",
             fallback_tracks=["production", "internal"],
         )
-        service = GooglePlayService(android_publisher_service=fake_service, config=config)
+        service = GooglePlayService(
+            android_publisher_service=fake_service, config=config
+        )
 
         version_info = service.get_app_version_info()
 
@@ -628,7 +668,10 @@ class TestGetAppVersionInfo:
                         "status": "completed",
                         "releaseNotes": [
                             {"language": "zh-CN", "text": "中文更新日志"},
-                            {"language": "en-US", "text": "English release notes"},
+                            {
+                                "language": "en-US",
+                                "text": "English release notes",
+                            },
                         ],
                     }
                 ]
@@ -651,7 +694,9 @@ class TestGetAppVersionInfo:
 
         # 设置主轨道错误
         error = FakeAndroidPublisher.create_http_error(404, "Track not found")
-        fake_service.set_track_error(package_name, "edit_1", "production", error)
+        fake_service.set_track_error(
+            package_name, "edit_1", "production", error
+        )
 
         # 设置备用轨道响应
         fake_service.set_track_response(
@@ -683,7 +728,9 @@ class TestGetAppVersionInfo:
 
         # 设置所有轨道错误
         error = FakeAndroidPublisher.create_http_error(404, "Track not found")
-        fake_service.set_track_error(package_name, "edit_1", "production", error)
+        fake_service.set_track_error(
+            package_name, "edit_1", "production", error
+        )
         fake_service.set_track_error(package_name, "edit_1", "internal", error)
 
         version_info = google_play_service.get_app_version_info()
@@ -749,7 +796,10 @@ class TestGetAppVersionInfo:
                         "name": "2.0.0",
                         "status": "completed",
                         "releaseNotes": [
-                            {"language": "en-US", "text": "English release notes"}
+                            {
+                                "language": "en-US",
+                                "text": "English release notes",
+                            }
                         ],
                     }
                 ]
