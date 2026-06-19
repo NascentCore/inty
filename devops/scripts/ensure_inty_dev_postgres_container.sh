@@ -7,6 +7,7 @@
 # Usage (from repo root, on the VM):
 #   devops/scripts/ensure_inty_dev_postgres_container.sh
 #   devops/scripts/ensure_inty_dev_postgres_container.sh --check-only
+#   devops/scripts/ensure_inty_dev_postgres_container.sh --recreate-after-upgrade
 
 set -euo pipefail
 
@@ -15,12 +16,14 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/local_postgres_lib.sh"
 
 MODE="ensure"
+RECREATE_AFTER_UPGRADE="false"
 
 usage() {
   sed -n '2,10p' "$0" | sed 's/^# \?//'
   echo
   echo "Options:"
-  echo "  --check-only   verify container + volume wiring; do not start or create"
+  echo "  --check-only              verify container + volume wiring; do not start or create"
+  echo "  --recreate-after-upgrade  remove stopped container and create fresh on INTY_PG_IMAGE"
 }
 
 parse_args() {
@@ -28,6 +31,10 @@ parse_args() {
     case "$1" in
       --check-only)
         MODE="check"
+        shift
+        ;;
+      --recreate-after-upgrade)
+        RECREATE_AFTER_UPGRADE="true"
         shift
         ;;
       -h | --help)
@@ -51,6 +58,29 @@ assert_canonical_mount() {
     echo "Do not docker rm and recreate manually. Fix mount or ask ops before proceeding." >&2
     exit 1
   fi
+}
+
+assert_image_matches_canonical() {
+  if ! container_exists; then
+    return
+  fi
+  local image
+  image="$(container_image)"
+  if [[ "${image}" == "${INTY_PG_IMAGE}" ]]; then
+    return
+  fi
+  if [[ "${RECREATE_AFTER_UPGRADE}" == "true" && "${MODE}" != "check" ]]; then
+    if container_running; then
+      docker stop "${INTY_PG_CONTAINER}" >/dev/null
+    fi
+    assert_canonical_mount
+    docker rm "${INTY_PG_CONTAINER}" >/dev/null
+    echo "container ${INTY_PG_CONTAINER}: removed for recreate (${image} -> ${INTY_PG_IMAGE})"
+    return
+  fi
+  echo "Container ${INTY_PG_CONTAINER} image is '${image}', expected ${INTY_PG_IMAGE}." >&2
+  echo "Run devops/scripts/upgrade_inty_dev_postgres_major.sh or ensure with --recreate-after-upgrade after pg_upgrade." >&2
+  exit 1
 }
 
 ensure_volume() {
@@ -100,6 +130,8 @@ run_postgres_container() {
 }
 
 ensure_container() {
+  assert_image_matches_canonical
+
   if container_running; then
     assert_canonical_mount
     ensure_restart_policy
@@ -116,6 +148,7 @@ ensure_container() {
     fi
     docker start "${INTY_PG_CONTAINER}" >/dev/null
     wait_for_postgres_ready
+    ensure_pg_hba_host_access
     echo "container ${INTY_PG_CONTAINER}: started"
     return
   fi
@@ -127,6 +160,7 @@ ensure_container() {
 
   run_postgres_container
   wait_for_postgres_ready
+  ensure_pg_hba_host_access
   echo "container ${INTY_PG_CONTAINER}: created and running"
 }
 

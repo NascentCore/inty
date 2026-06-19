@@ -78,6 +78,20 @@ check_container_wiring() {
   echo "wiring: restart=${restart_policy} volume=${mounted}"
 }
 
+check_server_version() {
+  load_pg_password
+  if ! command -v psql >/dev/null 2>&1; then
+    echo "psql not installed on host; skipping server_version check" >&2
+    return
+  fi
+  local major
+  major="$(postgres_server_version_major)"
+  echo "server_version major: ${major}"
+  if [[ "${major}" != "${INTY_PG_MAJOR_VERSION}" ]]; then
+    emit_result false "server_version major is ${major}, expected ${INTY_PG_MAJOR_VERSION}"
+  fi
+}
+
 check_database_connectivity() {
   load_pg_password
   if ! command -v psql >/dev/null 2>&1; then
@@ -111,5 +125,6 @@ check_database_connectivity() {
 
 parse_args "$@"
 check_container_wiring
+check_server_version
 check_database_connectivity
 emit_result true "container wiring OK; databases reachable"

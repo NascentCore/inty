@@ -10,6 +10,7 @@ ENSURE_PATH = Path(__file__).parent / "scripts" / "ensure_inty_dev_postgres_cont
 VERIFY_PATH = Path(__file__).parent / "scripts" / "verify_local_postgres_durability.sh"
 BACKUP_PATH = Path(__file__).parent / "scripts" / "backup_local_postgres.sh"
 GUARD_PATH = Path(__file__).parent / "scripts" / "guard_docker_volume_prune.sh"
+UPGRADE_PATH = Path(__file__).parent / "scripts" / "upgrade_inty_dev_postgres_major.sh"
 
 
 def read_bash_function_body(script_path: Path, function_name: str) -> str:
@@ -30,8 +31,11 @@ def test_lib_declares_canonical_volume_and_container():
     text = LIB_PATH.read_text(encoding="utf-8")
     assert 'readonly INTY_PG_CONTAINER="inty-dev-postgres"' in text
     assert 'readonly INTY_PG_VOLUME="inty-dev-postgres-data"' in text
+    assert 'readonly INTY_PG_MAJOR_VERSION="17"' in text
+    assert 'readonly INTY_PG_IMAGE="pgvector/pgvector:pg17"' in text
     assert 'readonly INTY_PG_BACKUP_RETENTION_DAYS="14"' in text
     assert "prune_old_backups" in text
+    assert "postgres_server_version_major" in text
     assert "unless-stopped" not in text  # policy lives in ensure script
 
 
@@ -40,6 +44,8 @@ def test_ensure_binds_named_volume_and_restart_policy():
     assert "--restart unless-stopped" in text
     assert "docker update --restart unless-stopped" in text
     assert "ensure_restart_policy" in text
+    assert "assert_image_matches_canonical" in text
+    assert "--recreate-after-upgrade" in text
     assert '-v "${INTY_PG_VOLUME}:/var/lib/postgresql/data"' in text
     assert "docker volume create" in text
     assert "INTY_PG_VOLUME_LABEL" in text
@@ -63,8 +69,22 @@ def test_verify_checks_restart_policy_and_volume():
     text = VERIFY_PATH.read_text(encoding="utf-8")
     assert "unless-stopped" in text
     assert "database_fingerprint" in text
+    assert "check_server_version" in text
+    assert "INTY_PG_MAJOR_VERSION" in text
     assert "VERIFY_TAG" in text
     assert "RESULT: PASS" in text
+
+
+def test_upgrade_script_runs_pg_upgrade_on_canonical_volume():
+    text = UPGRADE_PATH.read_text(encoding="utf-8")
+    assert "pg_upgrade" in text
+    assert "pgvector-postgres-upgrade" in text
+    assert "backup_local_postgres.sh" in text
+    assert "INTY_PG_VOLUME" in text
+    assert "verify_local_postgres_durability.sh" in text
+    assert "--restart-test" in text
+    assert "ensure_inty_dev_postgres_container.sh" in text
+    assert "--recreate-after-upgrade" in text
 
 
 def test_verify_restart_test_compares_fingerprints():

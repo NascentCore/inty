@@ -23,7 +23,7 @@ IntelliMate **dev** 与 **prod** 的数据库均已从 GCP Cloud SQL 迁到 **de
 ## 容器约定
 
 - **容器名**：`inty-dev-postgres`（历史命名；现承载 dev **与** prod 两个逻辑库）
-- **镜像**：`pgvector/pgvector:pg16`
+- **镜像**：`pgvector/pgvector:pg17`（与 Cloud SQL `inty-prod` 主版本一致）
 - **数据卷**：`inty-dev-postgres-data`（Docker **named volume**；与容器生命周期解耦，见下文「Volume 耐久性」）
 - **端口**：宿主机 `5432` → 容器 `5432`
 - **逻辑库**：`inty-dev`（dev）、`inty`（prod）
@@ -142,9 +142,17 @@ docker run --rm \
   --clean --if-exists --no-owner --no-privileges /tmp/inty-prod.dump
 ```
 
-常见无害 warning：`SET transaction_timeout`（PG17 dump → PG16 本地实例参数差异）。
-
 迁移后建议对比表数量、扩展与关键表行数；迁移窗口内远端若有写入，个别表会有少量行数差。
+
+### 主版本升级（PG16 → PG17 等）
+
+本地 Docker 数据目录不能通过仅改镜像完成大版本升级；须用 [`upgrade_inty_dev_postgres_major.sh`](scripts/upgrade_inty_dev_postgres_major.sh) 在 canonical volume 上执行 `pg_upgrade`（内置 pgvector 16+17 合成镜像，非 vanilla `tianon/postgres-upgrade`），再 `docker rm` 容器并由 `ensure_*` 以新镜像重建；脚本会补全 `pg_hba` 宿主机访问规则并将 superuser 密码与 `config.yaml.dev` 对齐。
+
+```bash
+devops/scripts/backup_local_postgres.sh
+devops/scripts/upgrade_inty_dev_postgres_major.sh
+devops/scripts/verify_local_postgres_durability.sh --restart-test
+```
 
 ### 增量同步（Cloud SQL → 本地，prod / dev）
 
