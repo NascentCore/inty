@@ -5,12 +5,12 @@ from __future__ import annotations
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.db.session import AsyncSessionLocal
 from app.services.agentic_channel.channel_runtime import (
     ChannelRuntimeState,
     get_scope_channel_registry,
     turn_channel_down,
 )
-from app.db.session import AsyncSessionLocal
 from app.services.agentic_channel.companion_bonds import (
     deactivate_companion_bond,
 )

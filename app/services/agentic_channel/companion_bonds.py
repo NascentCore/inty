@@ -129,7 +129,7 @@ async def has_active_companion_bond_for_agent(
     db: AsyncSession,
     agent_id: str,
 ) -> bool:
-    """Return whether ``agent_id`` participates in exactly one ACTIVE bond."""
+    """Return whether agent_id has exactly one valid ACTIVE bond."""
     assert agent_id != ""
     result = await db.execute(
         select(CompanionBond).where(
@@ -138,14 +138,24 @@ async def has_active_companion_bond_for_agent(
         )
     )
     bonds = list(result.scalars().all())
-    return len(bonds) == 1
+    if len(bonds) != 1:
+        return False
+    scope = _active_scope_from_single_bond(bonds[0])
+    conflicts = await _active_bonds_for_scope_keys(db, scope)
+    if len(conflicts) != 1:
+        return False
+    try:
+        await _require_live_scope_rows(db, scope)
+    except CompanionBondInvariantError:
+        return False
+    return True
 
 
 async def has_active_companion_bond(
     db: AsyncSession,
     scope: AgentScope,
 ) -> bool:
-    """Return whether ``scope`` has exactly one ACTIVE bond row."""
+    """Return whether scope has exactly one valid ACTIVE bond row."""
     assert scope.user_id != ""
     assert scope.agent_id != ""
     bonds = await _active_bonds_for_scope_keys(db, scope)
@@ -154,13 +164,19 @@ async def has_active_companion_bond(
         for bond in bonds
         if bond.user_id == scope.user_id and bond.agent_id == scope.agent_id
     ]
-    return len(exact) == 1
+    if len(bonds) != 1 or len(exact) != 1:
+        return False
+    try:
+        await _require_live_scope_rows(db, scope)
+    except CompanionBondInvariantError:
+        return False
+    return True
 
 
 async def list_active_companion_agent_scope_keys(
     db: AsyncSession,
 ) -> frozenset[tuple[str, str]]:
-    """Return ``(user_id, agent_id)`` keys for every ACTIVE companion bond."""
+    """Return (user_id, agent_id) keys for every ACTIVE companion bond."""
     result = await db.execute(
         select(CompanionBond.user_id, CompanionBond.agent_id).where(
             CompanionBond.state == CompanionBondState.ACTIVE,

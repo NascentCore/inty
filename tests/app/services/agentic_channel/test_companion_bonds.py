@@ -25,6 +25,7 @@ from app.services.agentic_channel.companion_bonds import (
     create_active_companion_bond,
     deactivate_companion_bond,
     has_active_companion_bond,
+    has_active_companion_bond_for_agent,
     list_active_companion_agent_scope_keys,
     require_active_companion_bond,
 )
@@ -157,6 +158,33 @@ async def test_deactivate_companion_bond_marks_inactive() -> None:
         assert not await has_active_companion_bond(db, scope)
         with pytest.raises(CompanionBondInvariantError):
             await require_active_companion_bond(db, scope)
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_has_active_companion_bond_fails_closed_on_conflict() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, scope)
+        second_agent = await add_companion_guest_agent_for_user(
+            db,
+            user_id=scope.user_id,
+            kind=CompanionGuestAgentKind.TELEGRAM,
+        )
+        db.add(
+            CompanionBond(
+                id=str(uuid.uuid4()),
+                user_id=scope.user_id,
+                agent_id=second_agent.id,
+                state=CompanionBondState.ACTIVE,
+            )
+        )
+        await db.flush()
+
+        assert not await has_active_companion_bond(db, scope)
+        assert not await has_active_companion_bond_for_agent(db, scope.agent_id)
+        await db.rollback()
         await _delete_scope(db, scope)
         await db.commit()
 
