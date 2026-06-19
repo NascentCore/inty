@@ -43,13 +43,15 @@ def test_lib_declares_canonical_volume_and_container():
     assert "postgres_host_auth_works" in text
     assert "finalize_postgres_instance_access" in text
     assert "sql_escape_pg_literal" in text
-    assert "unless-stopped" not in text  # policy lives in ensure script
+    assert "resolve_docker_access" in text
+    assert "docker_cmd" in text
+    assert "probe_logical_database" in text
 
 
 def test_ensure_migrates_legacy_container_name():
     body = read_bash_function_body(LIB_PATH, "migrate_legacy_container_name")
     assert "INTY_PG_CONTAINER_LEGACY" in body
-    assert "docker rename" in body
+    assert "docker_cmd rename" in body
     text = ENSURE_PATH.read_text(encoding="utf-8")
     assert "migrate_legacy_container_name" in text
 
@@ -77,14 +79,14 @@ def test_backup_asserts_shared_server_credentials():
 def test_ensure_binds_named_volume_and_restart_policy():
     text = ENSURE_PATH.read_text(encoding="utf-8")
     assert "--restart unless-stopped" in text
-    assert "docker update --restart unless-stopped" in text
+    assert "docker_cmd update --restart unless-stopped" in text
     assert "ensure_restart_policy" in text
     assert "assert_image_matches_canonical" in text
     assert "--recreate" in text
     assert "finalize_postgres_instance_access" in text
     assert "assert_dev_prod_database_server_credentials_match" in text
     assert '-v "${INTY_PG_VOLUME}:/var/lib/postgresql/data"' in text
-    assert "docker volume create" in text
+    assert "docker_cmd volume create" in text
     assert "INTY_PG_VOLUME_LABEL" in text
     assert "assert_canonical_mount" in text
 
@@ -93,7 +95,7 @@ def test_ensure_restart_policy_skips_check_only_mode():
     body = read_bash_function_body(ENSURE_PATH, "ensure_restart_policy")
     assert '"${MODE}" == "check"' in body
     assert "container_restart_policy" in body
-    assert "docker update --restart unless-stopped" in body
+    assert "docker_cmd update --restart unless-stopped" in body
 
 
 def test_ensure_refuses_wrong_mount():
@@ -116,7 +118,7 @@ def test_verify_checks_restart_policy_and_volume():
 def test_verify_restart_test_compares_fingerprints():
     body = read_bash_function_body(VERIFY_PATH, "check_database_connectivity")
     assert "RESTART_TEST" in body
-    assert "docker restart" in body
+    assert "docker_cmd restart" in body
     assert "finalize_postgres_instance_access" in body
 
 
@@ -125,7 +127,7 @@ def test_backup_dumps_both_logical_databases():
     assert "INTY_PG_DEV_DB" in text
     assert "INTY_PG_PROD_DB" in text
     assert "pg_dump" in text
-    assert "docker exec" in text
+    assert "docker_cmd exec" in text
     assert "prune_old_backups" in text
     assert "INTY_PG_BACKUP_RETENTION_DAYS" in text
 
@@ -157,6 +159,7 @@ WORKFLOW_PATH = Path(__file__).parents[1] / ".github" / "workflows" / "local_pos
 BACKEND_DEPLOY_WORKFLOW_PATH = (
     Path(__file__).parents[1] / ".github" / "workflows" / "build_and_deploy_backend.yml"
 )
+PROBE_PATH = Path(__file__).parent / "scripts" / "probe_inty_pg_logical_database.sh"
 
 
 def test_maintenance_workflow_serializes_verify_after_backup():
@@ -175,8 +178,14 @@ def test_backend_deploy_workflow_ensures_inty_pg_and_host_gateway():
     assert 'host: "host.docker.internal"' in text
     assert "Ensure inty-pg before deploy" in text
     assert "ensure_inty_dev_postgres_container.sh" in text
-    assert "docker exec inty-pg psql" in text
+    assert "probe_inty_pg_logical_database.sh" in text
     assert "host.docker.internal:host-gateway" in text
+
+
+def test_probe_script_delegates_to_lib():
+    text = PROBE_PATH.read_text(encoding="utf-8")
+    assert "probe_logical_database" in text
+    assert "local_postgres_lib.sh" in text
 
 
 def test_guard_refuses_when_protected_volume_exists():

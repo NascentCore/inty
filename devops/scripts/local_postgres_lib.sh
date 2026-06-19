@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared constants and helpers for IntelliMate local Docker Postgres on the VM.
+# TODO: Share resolve_docker_access with tools/scripts/ensure_postgres_for_tests.sh docker_pg().
 # CREATED_BY_AGENT
 #
 # Source from devops/scripts/*.sh:
@@ -76,11 +76,34 @@ assert_non_empty() {
   fi
 }
 
-require_docker() {
-  if ! command -v docker >/dev/null 2>&1; then
-    echo "docker not found in PATH" >&2
+DOCKER=(docker)
+_docker_access_resolved=false
+
+resolve_docker_access() {
+  if docker info >/dev/null 2>&1; then
+    DOCKER=(docker)
+  elif sudo docker info >/dev/null 2>&1; then
+    DOCKER=(sudo docker)
+  else
+    echo "docker not accessible (tried docker and sudo docker)" >&2
     exit 1
   fi
+  _docker_access_resolved=true
+}
+
+docker_cmd() {
+  if [[ "${_docker_access_resolved}" != "true" ]]; then
+    if ! command -v docker >/dev/null 2>&1; then
+      echo "docker not found in PATH" >&2
+      exit 1
+    fi
+    resolve_docker_access
+  fi
+  "${DOCKER[@]}" "$@"
+}
+
+require_docker() {
+  docker_cmd version >/dev/null
 }
 
 assert_dev_prod_database_server_credentials_match() {
@@ -128,33 +151,33 @@ migrate_legacy_container_name() {
   if container_exists; then
     return
   fi
-  if docker container inspect "${INTY_PG_CONTAINER_LEGACY}" >/dev/null 2>&1; then
-    docker rename "${INTY_PG_CONTAINER_LEGACY}" "${INTY_PG_CONTAINER}"
+  if docker_cmd container inspect "${INTY_PG_CONTAINER_LEGACY}" >/dev/null 2>&1; then
+    docker_cmd rename "${INTY_PG_CONTAINER_LEGACY}" "${INTY_PG_CONTAINER}"
     echo "container ${INTY_PG_CONTAINER_LEGACY}: renamed to ${INTY_PG_CONTAINER}"
   fi
 }
 
 container_exists() {
-  docker container inspect "${INTY_PG_CONTAINER}" >/dev/null 2>&1
+  docker_cmd container inspect "${INTY_PG_CONTAINER}" >/dev/null 2>&1
 }
 
 container_running() {
   container_exists \
-    && [[ "$(docker inspect -f '{{.State.Running}}' "${INTY_PG_CONTAINER}" 2>/dev/null)" == "true" ]]
+    && [[ "$(docker_cmd inspect -f '{{.State.Running}}' "${INTY_PG_CONTAINER}" 2>/dev/null)" == "true" ]]
 }
 
 container_restart_policy() {
-  docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "${INTY_PG_CONTAINER}" 2>/dev/null
+  docker_cmd inspect -f '{{.HostConfig.RestartPolicy.Name}}' "${INTY_PG_CONTAINER}" 2>/dev/null
 }
 
 container_data_volume_name() {
-  docker inspect -f \
+  docker_cmd inspect -f \
     '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{if eq .Type "volume"}}{{.Name}}{{end}}{{end}}{{end}}' \
     "${INTY_PG_CONTAINER}" 2>/dev/null
 }
 
 container_image() {
-  docker inspect -f '{{.Config.Image}}' "${INTY_PG_CONTAINER}" 2>/dev/null
+  docker_cmd inspect -f '{{.Config.Image}}' "${INTY_PG_CONTAINER}" 2>/dev/null
 }
 
 postgres_server_version_major() {
@@ -163,7 +186,7 @@ postgres_server_version_major() {
 }
 
 volume_exists() {
-  docker volume inspect "${INTY_PG_VOLUME}" >/dev/null 2>&1
+  docker_cmd volume inspect "${INTY_PG_VOLUME}" >/dev/null 2>&1
 }
 
 database_fingerprint() {
@@ -176,7 +199,7 @@ wait_for_postgres_ready_via_docker() {
   local attempts="${1:-30}"
   local i
   for ((i = 1; i <= attempts; i++)); do
-    if docker exec "${INTY_PG_CONTAINER}" \
+    if docker_cmd exec "${INTY_PG_CONTAINER}" \
       psql -U "${INTY_PG_USER}" -d postgres -At -c 'SELECT 1' >/dev/null 2>&1; then
       return 0
     fi
@@ -204,7 +227,7 @@ ensure_pg_hba_host_access() {
   if ! container_running; then
     return
   fi
-  docker exec "${INTY_PG_CONTAINER}" bash -c '
+  docker_cmd exec "${INTY_PG_CONTAINER}" bash -c '
     set -euo pipefail
     hba="${PGDATA}/pg_hba.conf"
     if grep -qE "^host[[:space:]]+all[[:space:]]+all[[:space:]]+all[[:space:]]+" "${hba}"; then
@@ -229,7 +252,7 @@ align_postgres_superuser_password() {
   wait_for_postgres_ready_via_docker
   local escaped_pass
   escaped_pass="$(sql_escape_pg_literal "${PGPASSWORD}")"
-  docker exec "${INTY_PG_CONTAINER}" \
+  docker_cmd exec "${INTY_PG_CONTAINER}" \
     psql -U "${INTY_PG_USER}" -d postgres -v ON_ERROR_STOP=1 -At \
     -c "ALTER USER ${INTY_PG_USER} PASSWORD '${escaped_pass}';" >/dev/null
 }
@@ -251,6 +274,24 @@ finalize_postgres_instance_access() {
   fi
   align_postgres_superuser_password
   wait_for_postgres_ready
+}
+
+probe_logical_database() {
+  local db="$1"
+  assert_non_empty "${db}" "database name required"
+  if ! container_running; then
+    echo "container ${INTY_PG_CONTAINER} is not running" >&2
+    exit 1
+  fi
+  load_pg_password
+  if command -v psql >/dev/null 2>&1 \
+    && psql -h localhost -p "${INTY_PG_PORT}" -U "${INTY_PG_USER}" -d "${db}" -At -c 'SELECT 1' \
+      >/dev/null 2>&1; then
+    psql -h localhost -p "${INTY_PG_PORT}" -U "${INTY_PG_USER}" -d "${db}" -At -c 'SELECT 1'
+    return
+  fi
+  docker_cmd exec "${INTY_PG_CONTAINER}" \
+    psql -U "${INTY_PG_USER}" -d "${db}" -At -c 'SELECT 1'
 }
 
 prune_old_backups() {

@@ -110,7 +110,7 @@ check_database_connectivity() {
   fi
 
   local dev_before="${dev_fp}" prod_before="${prod_fp}"
-  docker restart "${INTY_PG_CONTAINER}" >/dev/null
+  docker_cmd restart "${INTY_PG_CONTAINER}" >/dev/null
   wait_for_postgres_ready_via_docker
   finalize_postgres_instance_access
 

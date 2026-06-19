@@ -110,6 +110,23 @@ def test_apply_incremental_sync_retries_until_match():
     assert "collect_mismatches" in body
 
 
+def test_apply_aborts_when_source_behind_target():
+    text = SCRIPT_PATH.read_text(encoding="utf-8")
+    assert "assert_source_not_behind_target" in text
+    apply_body = read_bash_function_body("apply_incremental_sync")
+    assert "assert_source_not_behind_target || return 1" in apply_body
+    assert "abort_if_source_behind_target source_behind || return 1" in apply_body
+    assert_body = read_bash_function_body("assert_source_not_behind_target")
+    assert "Refusing to sync" in assert_body
+    assert "_source_behind_ref" in read_bash_function_body("collect_mismatches")
+
+
+def test_check_mode_blocks_apply_when_source_behind():
+    body = read_bash_function_body("report_sync_status")
+    assert "--apply blocked" in body
+    assert "return 3" in body
+
+
 def test_table_has_created_at_queries_remote_not_local():
     """Incremental copy filters remote rows by created_at; check must hit Cloud SQL."""
     body = read_bash_function_body("table_has_created_at")

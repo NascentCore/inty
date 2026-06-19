@@ -167,7 +167,7 @@ jobs:
             git checkout main
             git pull --ff-only origin main
             devops/scripts/ensure_inty_dev_postgres_container.sh
-            sudo docker exec inty-pg psql -U postgres -d ${{ steps.map.outputs.logical_db }} -At -c 'SELECT 1'
+            devops/scripts/probe_inty_pg_logical_database.sh ${{ steps.map.outputs.logical_db }}
 
       - name: Deploy backend to ${{ steps.prep.outputs.environment }}
         uses: appleboy/ssh-action@v1.2.5

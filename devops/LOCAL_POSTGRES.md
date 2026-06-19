@@ -77,7 +77,7 @@ devops/scripts/sync_cloudsql_inty_incremental.sh --apply --db inty
 devops/scripts/sync_cloudsql_inty_incremental.sh --check-only --db inty-dev
 ```
 
-对有 `created_at` 且远端行数更多的表，复制 `remote.created_at > local.max(created_at)` 的行；可重复 `--apply`。本地行数多于远端、或无 `created_at` 的表会跳过（需整库 resync）。
+对有 `created_at` 且远端行数更多的表，复制 `remote.created_at > local.max(created_at)` 的行；可重复 `--apply`。若**任一表**远端行数少于本地（源库落后），`--apply` **整库拒绝**并退出；无 `created_at` 且远端更多的表会跳过（需整库 resync）。
 
 ### 整库 resync（`pg_dump` / `pg_restore`）
 

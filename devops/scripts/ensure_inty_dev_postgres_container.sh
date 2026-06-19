@@ -72,10 +72,10 @@ assert_image_matches_canonical() {
   fi
   if [[ "${RECREATE}" == "true" && "${MODE}" != "check" ]]; then
     if container_running; then
-      docker stop "${INTY_PG_CONTAINER}" >/dev/null
+      docker_cmd stop "${INTY_PG_CONTAINER}" >/dev/null
     fi
     assert_canonical_mount
-    docker rm "${INTY_PG_CONTAINER}" >/dev/null
+    docker_cmd rm "${INTY_PG_CONTAINER}" >/dev/null
     echo "container ${INTY_PG_CONTAINER}: removed for recreate (${image} -> ${INTY_PG_IMAGE})"
     return
   fi
@@ -93,7 +93,7 @@ ensure_volume() {
     echo "volume ${INTY_PG_VOLUME}: missing" >&2
     exit 1
   fi
-  docker volume create \
+  docker_cmd volume create \
     --label "${INTY_PG_VOLUME_LABEL}" \
     "${INTY_PG_VOLUME}"
   echo "volume ${INTY_PG_VOLUME}: created with label ${INTY_PG_VOLUME_LABEL}"
@@ -111,13 +111,13 @@ ensure_restart_policy() {
   if [[ "${restart_policy}" == "unless-stopped" ]]; then
     return
   fi
-  docker update --restart unless-stopped "${INTY_PG_CONTAINER}" >/dev/null
+  docker_cmd update --restart unless-stopped "${INTY_PG_CONTAINER}" >/dev/null
   echo "container ${INTY_PG_CONTAINER}: restart policy ${restart_policy} -> unless-stopped"
 }
 
 run_postgres_container() {
   load_pg_password
-  docker run -d \
+  docker_cmd run -d \
     --name "${INTY_PG_CONTAINER}" \
     --restart unless-stopped \
     --label "${INTY_PG_CONTAINER_LABEL}" \
@@ -150,7 +150,7 @@ ensure_container() {
       echo "container ${INTY_PG_CONTAINER}: stopped" >&2
       exit 1
     fi
-    docker start "${INTY_PG_CONTAINER}" >/dev/null
+    docker_cmd start "${INTY_PG_CONTAINER}" >/dev/null
     finalize_postgres_instance_access
     echo "container ${INTY_PG_CONTAINER}: started"
     return

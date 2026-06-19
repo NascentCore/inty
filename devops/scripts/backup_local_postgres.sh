@@ -52,10 +52,10 @@ dump_database() {
   dest="${OUTPUT_DIR}/${db}-${stamp}.dump"
   tmp_in_container="/tmp/${db}-${stamp}.dump"
 
-  docker exec -e PGPASSWORD="${PGPASSWORD}" "${INTY_PG_CONTAINER}" \
+  docker_cmd exec -e PGPASSWORD="${PGPASSWORD}" "${INTY_PG_CONTAINER}" \
     pg_dump -U "${INTY_PG_USER}" -d "${db}" --format=custom -f "${tmp_in_container}"
-  docker cp "${INTY_PG_CONTAINER}:${tmp_in_container}" "${dest}"
-  docker exec "${INTY_PG_CONTAINER}" rm -f "${tmp_in_container}"
+  docker_cmd cp "${INTY_PG_CONTAINER}:${tmp_in_container}" "${dest}"
+  docker_cmd exec "${INTY_PG_CONTAINER}" rm -f "${tmp_in_container}"
   echo "backup ${db}: ${dest} ($(du -h "${dest}" | awk '{print $1}'))"
 }
 

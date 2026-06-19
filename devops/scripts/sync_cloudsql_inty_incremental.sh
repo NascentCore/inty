@@ -5,6 +5,7 @@
 # Compares remote vs local row counts; for tables with created_at, copies rows where
 # remote.created_at > local.max(created_at). Single-column PK tables use staging +
 # ON CONFLICT DO NOTHING to tolerate re-runs. Updates chat_history_id_seq when needed.
+# Refuses --apply when any table has fewer rows on Cloud SQL than local (source behind target).
 #
 # Usage (from repo root):
 #   devops/scripts/sync_cloudsql_inty_incremental.sh --check-only
@@ -253,10 +254,12 @@ sync_table_incremental() {
 collect_mismatches() {
   local -n _mismatched_ref="$1"
   local -n _skipped_ref="$2"
+  local -n _source_behind_ref="$3"
   local tbl remote_count local_count delta
 
   _mismatched_ref=()
   _skipped_ref=()
+  _source_behind_ref=()
 
   while IFS= read -r tbl; do
     [[ -z "${tbl}" ]] && continue
@@ -268,8 +271,8 @@ collect_mismatches() {
     delta=$((remote_count - local_count))
     echo "MISMATCH ${tbl}: remote=${remote_count} local=${local_count} delta=${delta}"
     if [[ "${delta}" -lt 0 ]]; then
-      echo "  skip: local has more rows than Cloud SQL; needs manual investigation or full resync"
-      _skipped_ref+=("${tbl}")
+      echo "  blocked: source lags behind target; investigate or full pg_dump/pg_restore"
+      _source_behind_ref+=("${tbl}")
       continue
     fi
     if [[ -z "$(table_has_created_at "${tbl}")" ]]; then
@@ -281,11 +284,43 @@ collect_mismatches() {
   done < <(list_public_tables)
 }
 
+assert_source_not_behind_target() {
+  local mismatched=()
+  local skipped=()
+  local source_behind=()
+
+  collect_mismatches mismatched skipped source_behind
+  if [[ ${#source_behind[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  echo
+  echo "Refusing to sync: Cloud SQL is behind local on ${#source_behind[@]} table(s)." >&2
+  echo "Resolve divergence before --apply (see LOCAL_POSTGRES.md for full pg_dump/pg_restore)." >&2
+  return 1
+}
+
+abort_if_source_behind_target() {
+  local -n _source_behind_ref="$1"
+  if [[ ${#_source_behind_ref[@]} -eq 0 ]]; then
+    return 0
+  fi
+  echo "Local has more rows than Cloud SQL on ${#_source_behind_ref[@]} table(s); aborting." >&2
+  return 1
+}
+
 report_sync_status() {
   local mismatched=()
   local skipped=()
+  local source_behind=()
 
-  collect_mismatches mismatched skipped
+  collect_mismatches mismatched skipped source_behind
+
+  if [[ ${#source_behind[@]} -gt 0 ]]; then
+    echo
+    echo "--apply blocked: source lags behind target on ${#source_behind[@]} table(s)."
+    return 3
+  fi
 
   if [[ ${#mismatched[@]} -eq 0 ]]; then
     if [[ ${#skipped[@]} -eq 0 ]]; then
@@ -302,9 +337,13 @@ report_sync_status() {
 apply_incremental_sync() {
   local pass mismatched=()
   local skipped=()
+  local source_behind=()
+
+  assert_source_not_behind_target || return 1
 
   for (( pass = 1; pass <= APPLY_MAX_PASSES; pass++ )); do
-    collect_mismatches mismatched skipped
+    collect_mismatches mismatched skipped source_behind
+    abort_if_source_behind_target source_behind || return 1
     if [[ ${#mismatched[@]} -eq 0 ]]; then
       echo "All public tables match after pass ${pass}."
       return 0
@@ -319,7 +358,8 @@ apply_incremental_sync() {
     done
   done
 
-  collect_mismatches mismatched skipped
+  collect_mismatches mismatched skipped source_behind
+  abort_if_source_behind_target source_behind || return 1
   if [[ ${#mismatched[@]} -gt 0 ]]; then
     echo "Sync incomplete after ${APPLY_MAX_PASSES} pass(es); re-run --apply or use full pg_dump/pg_restore." >&2
     return 1
@@ -336,12 +376,17 @@ main() {
   echo
 
   if [[ "${MODE}" == "check" ]]; then
-    if report_sync_status; then
-      exit 0
-    fi
-    echo
-    echo "Run with --apply to copy rows where created_at > local.max(created_at)."
-    exit 2
+    report_sync_status
+    local status=$?
+    case "${status}" in
+      0) exit 0 ;;
+      3) exit 3 ;;
+      *)
+        echo
+        echo "Run with --apply to copy rows where created_at > local.max(created_at)."
+        exit 2
+        ;;
+    esac
   fi
 
   apply_incremental_sync
