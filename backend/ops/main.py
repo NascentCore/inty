@@ -142,8 +142,8 @@ async def startup_event():
         logger.info("Telegram demo poll scheduled")
         await start_scope_inner_tick_worker()
         logger.info("Scope inner-tick worker scheduled")
-    except Exception as e:
-        logger.error(f"Ops 应用启动过程中出错: {str(e)}")
+    except Exception:
+        logger.exception("Ops 应用启动过程中出错")
 
 
 async def _preload_database_connections():
@@ -158,8 +158,8 @@ async def _preload_database_connections():
                 cur.execute("SELECT 1")
                 cur.fetchone()
         await cache_service.start_cleanup_task()
-    except Exception as e:
-        logger.error(f"数据库连接池初始化失败: {str(e)}")
+    except Exception:
+        logger.exception("数据库连接池初始化失败")
 
 
 async def _preload_database_tables(db: AsyncSession):
@@ -168,8 +168,8 @@ async def _preload_database_tables(db: AsyncSession):
         await db.execute(select(Agent).limit(1))
         await db.execute(select(User).limit(1))
         await db.execute(text("SELECT 1 FROM chat_history LIMIT 1"))
-    except Exception as e:
-        logger.warning(f"数据库表预初始化失败（可忽略）: {str(e)}")
+    except Exception:
+        logger.warning("数据库表预初始化失败（可忽略）", exc_info=True)
 
 
 async def _preload_popular_agent_data(db: AsyncSession):
@@ -182,10 +182,14 @@ async def _preload_popular_agent_data(db: AsyncSession):
         for agent_db in popular_agents:
             try:
                 await agent_service.get_agent_for_chat(db, agent_db.id)
-            except Exception as e:
-                logger.warning(f"预加载Agent数据失败 {agent_db.id}: {str(e)}")
-    except Exception as e:
-        logger.error(f"预加载热门Agent数据失败: {str(e)}")
+            except Exception:
+                logger.warning(
+                    "预加载Agent数据失败 agent_id={}",
+                    agent_db.id,
+                    exc_info=True,
+                )
+    except Exception:
+        logger.exception("预加载热门Agent数据失败")
 
 
 @app.on_event("shutdown")
@@ -202,8 +206,8 @@ async def shutdown_event():
         from app.services.cache_service import cache_service
 
         cache_service.stop_cleanup_task()
-    except Exception as e:
-        logger.error(f"应用关闭过程中出错: {str(e)}")
+    except Exception:
+        logger.exception("应用关闭过程中出错")
 
 
 if global_config_loaded_from_config_yaml.app.debug:
