@@ -8,7 +8,8 @@
 # TODO: Replace grep-based read_database_field_from_config with a small Python helper
 # that loads database.* via the same Pydantic path as the backend (app/utils/config.py).
 
-readonly INTY_PG_CONTAINER="inty-dev-postgres"
+readonly INTY_PG_CONTAINER="inty-pg"
+readonly INTY_PG_CONTAINER_LEGACY="inty-dev-postgres"
 readonly INTY_PG_VOLUME="inty-dev-postgres-data"
 readonly INTY_PG_MAJOR_VERSION="17"
 readonly INTY_PG_IMAGE="pgvector/pgvector:pg17"
@@ -121,6 +122,16 @@ load_pg_password() {
   PGPASSWORD="$(read_database_field_from_config "${cfg}" password)"
   export PGPASSWORD
   assert_non_empty "${PGPASSWORD}" "could not read database.password from ${cfg}"
+}
+
+migrate_legacy_container_name() {
+  if container_exists; then
+    return
+  fi
+  if docker container inspect "${INTY_PG_CONTAINER_LEGACY}" >/dev/null 2>&1; then
+    docker rename "${INTY_PG_CONTAINER_LEGACY}" "${INTY_PG_CONTAINER}"
+    echo "container ${INTY_PG_CONTAINER_LEGACY}: renamed to ${INTY_PG_CONTAINER}"
+  fi
 }
 
 container_exists() {

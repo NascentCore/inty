@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Idempotent start or (re)create inty-dev-postgres bound to the canonical named volume.
+# Idempotent start or (re)create inty-pg bound to the canonical named volume.
 # CREATED_BY_AGENT
 #
 # Safe operations only: never removes volumes, never runs docker volume prune.
@@ -170,4 +170,5 @@ parse_args "$@"
 require_docker
 assert_dev_prod_database_server_credentials_match
 ensure_volume
+migrate_legacy_container_name
 ensure_container

@@ -2,7 +2,7 @@
 
 <!-- CREATED_BY_AGENT -->
 
-IntelliMate **dev** 与 **prod** 共用 **dev-instance VM** 上同一 Docker Postgres 实例（容器 `inty-dev-postgres`），通过不同逻辑库隔离：
+IntelliMate **dev** 与 **prod** 共用 **dev-instance VM** 上同一 Docker Postgres 实例（容器 `inty-pg`），通过不同逻辑库隔离：
 
 - **dev**：`inty-dev`（[`config.yaml.dev`](config.yaml.dev)）
 - **prod**：`inty`（[`config.yaml.prod`](config.yaml.prod)）
@@ -11,7 +11,7 @@ IntelliMate **dev** 与 **prod** 共用 **dev-instance VM** 上同一 Docker Pos
 
 ## 容器约定
 
-- **容器名**：`inty-dev-postgres`（历史命名；承载 dev + prod 两个逻辑库）
+- **容器名**：`inty-pg`（承载 dev + prod 两个逻辑库；旧名 `inty-dev-postgres` 由 ensure 脚本自动 rename）
 - **镜像**：`pgvector/pgvector:pg17`
 - **数据卷**：`inty-dev-postgres-data`（named volume；与容器生命周期解耦）
 - **端口**：宿主机 `5432` → 容器 `5432`
@@ -59,7 +59,7 @@ psql -h localhost -U postgres -d inty -c 'SELECT 1'
 
 ### Volume 耐久性
 
-**保留数据**：`docker stop/start/restart`、宿主机 reboot（`unless-stopped`）、`docker rm inty-dev-postgres`（named volume 不随 `-v` 删除）。
+**保留数据**：`docker stop/start/restart`、宿主机 reboot（`unless-stopped`）、`docker rm inty-pg`（named volume 不随 `-v` 删除）。
 
 **会丢数据**：`docker volume rm inty-dev-postgres-data`、`docker volume prune`（unused volume）、重建时挂载错误 volume。
 
