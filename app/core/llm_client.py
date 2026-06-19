@@ -1,7 +1,4 @@
-"""Companion LLM clients: legacy ``CompanionLLMClient`` and ``AsyncLlmClient`` for AgenticLoop.
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
-https://github.com/NascentCore/inty/issues/3409"""
+"""Companion LLM clients: legacy ``CompanionLLMClient`` and ``AsyncLlmClient`` for AgenticLoop."""
 
 from __future__ import annotations
 
