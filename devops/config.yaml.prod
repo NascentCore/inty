@@ -65,7 +65,7 @@ agent:
   api_key: "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"
   base_url: "https://openrouter.ai/api/v1"
   # LangSmith try@sxwl.ai IntelliMate-prod project, inty-prod API key 名字
-  langchain_api_key: "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"
+  langchain_api_key: "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"
   force_default_prompts: false
   # DeepSeek v3.2 延时过高
   # free_user_chat_model: "DeepSeek V3.2"
