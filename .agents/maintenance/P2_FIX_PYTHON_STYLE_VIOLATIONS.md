@@ -10,3 +10,11 @@ Maintenance agents fix **one TODO per commit** when possible. Mark `claimed` wit
 - [x] **STYLE-2026-02** Google 2.4 "Exceptions": `app/core/companion_harness/agentic_companion/companion.py` worker loop swallows `drain_once` failures with `except Exception: pass`. Log with `logger.exception` and continue polling. Fixed in `cursor/agent-maintenance-tasks-826b`.
 - [x] **STYLE-2026-03** Google 2.4 "Exceptions": `backend/ops/schemas/festival_memory.py` `_validate_iana_timezone` catches broad `Exception`; narrow to `ZoneInfoNotFoundError`. Fixed in `cursor/agent-maintenance-tasks-826b`.
 - [x] **STYLE-2026-04** Google 2.4 "Exceptions": `backend/ops/weixin_channel/weixin_qr_flow.py` QR status poll loop silently continues on broad `Exception`. Log unexpected failures before retry. Fixed in `cursor/agent-maintenance-tasks-826b`.
+
+## 2026-06-18 scan
+
+### Open violations
+
+- [x] **STYLE-2026-05** Google 2.4 / hygiene: backend/ops **unused imports** (`ruff F401` on `agent_channel.py`, `evaluation.py`, `telegram_demo/persistence.py`, `telegram_demo/session_store.py`, `weixin_channel/session.py`). Fixed in `cursor/agent-maintenance-tasks-6417`.
+- [x] **STYLE-2026-06** Google 2.4 "Exceptions": `backend/ops/api/v1/evaluation.py` WebSocket monitor loop breaks on broad `Exception` without logging. Narrow to `WebSocketDisconnect`; log unexpected failures. Fixed in `cursor/agent-maintenance-tasks-6417`.
+- [x] **STYLE-2026-07** Google 2.4 / hygiene: `backend/ops/api/v1/evaluation.py` uses `is_public == True` (`ruff E712`). Use truth check on column. Fixed in `cursor/agent-maintenance-tasks-6417`.

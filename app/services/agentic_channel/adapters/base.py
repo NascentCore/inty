@@ -1,5 +1,7 @@
 """Channel adapter protocol for agent-channel stack.
 
+TODO(rename-channel-to-gateway): Rename ``ChannelAdapter`` to Gateway — adapters are gateways to
+human channels (weixin/wechat, telegram, sms-phone-number, etc.).
 TODO(companion-channel-tools): Extend protocol with channel tool execution hooks (or sibling
   port) so harness dispatch stays out of transport details — #3362
 TODO(channel-inbound-outbound-affordances): Add inbound envelope + outbound reply/reaction hooks

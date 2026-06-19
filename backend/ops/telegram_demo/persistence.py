@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
-
 from app.db.session import AsyncSessionLocal
 from app.models.ops_telegram_demo import OpsTelegramDemoPollState
 
