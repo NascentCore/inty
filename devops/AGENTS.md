@@ -16,3 +16,11 @@ Inty 后端服务（及关联服务和代码）部署到云端服务器
 - 所有系统配置文件须提交本代码仓库
 - 部署环境抽象：典型顺序是 **建库 → 为该环境写独立 config 变体 → 接入 CI/CD**——细节随基础设施演进，以同目录 README 为准。
 - iOS Android App 相关内容也在这里
+
+## Database setup
+
+- Use postgres 17 docker container image to deploy
+- For local development, smoke testing, CI testing use `config.yaml.local` to launch postgres 17 container
+  - Database configs in `config.yaml.test` must be kept compatible with `config.yaml.local`
+- For dev & prod development, use `config.yaml.dev` and `config.yaml.prod` respectively, to launch postgres 17 container
+  - Google Cloud CloudSQL was used before, but was deprecated because of high cost
