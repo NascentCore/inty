@@ -1,25 +1,12 @@
 #!/usr/bin/env bash
-# Idempotent Cloud Agent "update" step: Python venv + deps + default config.yaml.
+# Idempotent Cloud Agent "update" step: system tools + Python venv + deps + default config.yaml.
 # Runs from repository root (Cursor contract). Postgres is started in cloud-agent-start.sh.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-need_apt=
-command -v python3.12 >/dev/null 2>&1 || need_apt=1
-dpkg -s python3.12-venv >/dev/null 2>&1 || need_apt=1
-dpkg -s python3.12-dev >/dev/null 2>&1 || need_apt=1
-dpkg -s libpq-dev >/dev/null 2>&1 || need_apt=1
-command -v psql >/dev/null 2>&1 || need_apt=1
-command -v docker >/dev/null 2>&1 || need_apt=1
-
-if [[ -n "${need_apt}" ]]; then
-  sudo apt-get update -qq
-  sudo apt-get install -y -qq \
-    python3.12 python3.12-venv python3.12-dev libpq-dev \
-    postgresql postgresql-contrib docker.io
-fi
+bash "${ROOT}/.cursor/cloud-agent-apt.sh"
 
 if [[ ! -d .venv ]]; then
   python3.12 -m venv .venv
@@ -38,3 +25,5 @@ python -m pip install 'uv>=0.9' 'black>=24' 'pylint>=3.2' 'ruff>=0.9' 'vulture>=
 if [[ ! -f config.yaml ]]; then
   cp devops/config.yaml.test config.yaml
 fi
+
+# TODO(INTY_CLOUD_AGENT_ANDROID): move Android SDK / AVD setup from dashboard snapshot into install or cloud-agent-android.sh

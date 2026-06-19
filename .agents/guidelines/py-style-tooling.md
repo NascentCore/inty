@@ -57,6 +57,6 @@ def do_PUT(self):  # WSGI name, so pylint: disable=invalid-name
 3. **`tools/scripts/lint-python.sh`**：与 `fmt.sh` 对称的一键 check / `--fix`。
 4. **fmt 对齐**：`fmt.sh` 与定时 format workflow 使用 `pyproject.toml` 80 列。
 5. **CI**：`ci_backend.yaml` 增加 lint（可先 `pylint --errors-only`）。
-6. **Cloud Agent**：见 [CLOUD_AGENTS.md](CLOUD_AGENTS.md) **Verify Python dev tools**；`.cursor/cloud-agent-install.sh` 用 `pip` 把 `uv`/`ruff` 等装进 `.venv`（非全局 PATH）。
+6. **Cloud Agent**：见 [CLOUD_AGENTS.md](CLOUD_AGENTS.md) **Verify Python dev tools**；`.cursor/cloud-agent-install.sh` 用 `pip` 把 `uv`/`ruff` 等装进 `.venv`（非全局 PATH）；系统 apt 包（含 `gcloud`）在 `.cursor/cloud-agent-apt.sh`。
 7. **消噪 / 格式化 PR**：全库 black 80、pylint 配置收紧。
 8. **Pyink**（可选）：替换 Black。
