@@ -86,7 +86,9 @@ cp tools/inty_v2_repl/.env.example tools/inty_v2_repl/.env
 
 ## Terminate Ops
 
-若用户要求终止通过本 skill 拉起的 inty 后端，只终止 Ops 后端进程组（`backend/ops/start.sh` 与对应 `uvicorn :8001`）；不要默认杀 REPL，除非用户明确要求。
+**Agent 规则**：若你为本轮 smoke / E2E / REPL 回归**自行启动**了 `backend/ops/start.sh`（含后台 `&`），**完成后必须终止** Ops，并向用户确认 **`:8001` 已无监听**——除非会话开始时 Ops **已在运行**，或用户明确要求保持运行。
+
+只终止 Ops 后端进程组（`backend/ops/start.sh` 与对应 `uvicorn :8001`）；**不要**默认杀 REPL，除非用户明确要求。
 
 **首选**：在运行 `backend/ops/start.sh` 的那个前台终端按 **Ctrl+C**（会连带停 uvicorn）。
 
