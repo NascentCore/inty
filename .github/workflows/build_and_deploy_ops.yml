@@ -1,4 +1,4 @@
-name: Release - Inty Ops 平台
+name: Release - Inty Ops 后端（支持所有客户端）
 
 on:
   push:
