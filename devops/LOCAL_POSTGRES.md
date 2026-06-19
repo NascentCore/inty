@@ -113,6 +113,12 @@ VM 宿主机任务用 [`scripts/render_vm_database_config.sh`](scripts/render_vm
 
 [`config.yaml.prod`](config.yaml.prod) 已指向本地 Docker（`host.docker.internal`）。prod 后端 / Ops / push worker **不会随 push 自动部署**——在 GitHub Actions 选手动 environment **prod** 部署 Ops → backend → push worker。见 [RELEASE.md](RELEASE.md) 与各 workflow。
 
+### Alembic 与 compat prod 后端
+
+若 prod 跑 **`intellimate-client-compat-local-postgres-prod`**（Alembic head `20260512_phone_call_bindings`），对逻辑库 **`inty`** 执行 main 线 migration 或 sync 抬高 `alembic_version` 后，**`inty-backend-prod` 重启会失败**（`Can't locate revision`）。不重启可能暂时无感，但 `inty-pg` 重启、sync、删改现有表仍可能影响运行中容器。
+
+详见 [rollback_records/2026-06-19-inty-pg-alembic-compat-prod.md](rollback_records/2026-06-19-inty-pg-alembic-compat-prod.md)。
+
 ## Post-cutover：Cloud SQL 降本
 
 <!-- TODO: Track Cloud SQL right-size on epic #3495 after !3498 soak. -->
