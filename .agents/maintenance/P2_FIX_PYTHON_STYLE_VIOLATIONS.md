@@ -23,6 +23,6 @@ Maintenance agents fix **one TODO per commit** when possible. Mark `claimed` wit
 
 ### Open violations
 
-- [ ] **STYLE-2026-08** PY_STYLE_RULES logging: `backend/ops/main.py` formats exceptions into log messages (`f"...{str(e)}"`). Use structured loguru placeholders + `exc_info` / `logger.exception`. **claimed** `cursor/agent-maintenance-tasks-1924`.
-- [ ] **STYLE-2026-09** Google 2.4 "Exceptions": `backend/ops/weixin_channel/weixin_qr_flow.py` QR fetch (`except Exception` ~L61) sets `self.error` without logging. Log with `logger.exception` before failure return. **claimed** `cursor/agent-maintenance-tasks-1924`.
-- [ ] **STYLE-2026-10** PY_STYLE_RULES + B904: `backend/ops/api/v1/evaluation.py` session list/create/start/detail handlers use f-string error logs and bare `raise HTTPException`. Structured logging; `raise ... from e` / `from None`. **claimed** `cursor/agent-maintenance-tasks-1924`.
+- [x] **STYLE-2026-08** PY_STYLE_RULES logging: `backend/ops/main.py` formats exceptions into log messages (`f"...{str(e)}"`). Use structured loguru placeholders + `exc_info` / `logger.exception`. Fixed in `cursor/agent-maintenance-tasks-1924`.
+- [x] **STYLE-2026-09** Google 2.4 "Exceptions": `backend/ops/weixin_channel/weixin_qr_flow.py` QR fetch (`except Exception` ~L61) sets `self.error` without logging. Log with `logger.exception` before failure return. Fixed in `cursor/agent-maintenance-tasks-1924`.
+- [x] **STYLE-2026-10** PY_STYLE_RULES + B904: `backend/ops/api/v1/evaluation.py` session list/create/start/detail handlers use f-string error logs and bare `raise HTTPException`. Structured logging; `raise ... from e` / `from None`. Fixed in `cursor/agent-maintenance-tasks-1924`.
