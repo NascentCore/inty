@@ -154,6 +154,9 @@ def test_sql_escape_pg_literal_doubles_single_quotes():
 
 
 WORKFLOW_PATH = Path(__file__).parents[1] / ".github" / "workflows" / "local_postgres_maintenance.yaml"
+BACKEND_DEPLOY_WORKFLOW_PATH = (
+    Path(__file__).parents[1] / ".github" / "workflows" / "build_and_deploy_backend.yml"
+)
 
 
 def test_maintenance_workflow_serializes_verify_after_backup():
@@ -162,6 +165,18 @@ def test_maintenance_workflow_serializes_verify_after_backup():
     assert "needs.backup.result == 'skipped'" in text
     assert "devops/scripts/backup_local_postgres.sh" in text
     assert "find /opt/inty/backups/postgres" not in text
+
+
+def test_backend_deploy_workflow_ensures_inty_pg_and_host_gateway():
+    text = BACKEND_DEPLOY_WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "devops/config.yaml.prod" in text
+    assert "logical_db=inty" in text
+    assert "Assert baked config targets VM inty-pg" in text
+    assert 'host: "host.docker.internal"' in text
+    assert "Ensure inty-pg before deploy" in text
+    assert "ensure_inty_dev_postgres_container.sh" in text
+    assert "docker exec inty-pg psql" in text
+    assert "host.docker.internal:host-gateway" in text
 
 
 def test_guard_refuses_when_protected_volume_exists():
