@@ -487,7 +487,7 @@ async def _try_handle_ws_user_signed_on_frame(
             user_id=str(current_user.id),
             arm_proactive_coords=True,
         )
-        greeting_task = inflight_turn_tracker.spawn(
+        inflight_turn_tracker.spawn(
             _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                 db=db,
                 agent_id=agent_id,

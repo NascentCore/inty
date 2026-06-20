@@ -282,6 +282,17 @@ class AgentChannelPresence:
         turn_ctx.memory_store = session.store
         queue_message_id = await enqueue_inbound_wire_message(inbound)
         turn_ctx.queue_message_id = queue_message_id
+        self._coordinator.set_foreground_pending(
+            queue_message_id,
+            {
+                "session_id": turn_ctx.session_id,
+                "agent_id": turn_ctx.agent_id,
+                "user_id": self._scope.user_id,
+                "chat_id": turn_ctx.chat_id,
+                "request": turn_ctx.request,
+                "effective_local_id": turn_ctx.effective_local_id,
+            },
+        )
         adapter.register_turn_context(
             turn_ctx,
             client_message_id=client_message_id,
@@ -411,6 +422,7 @@ class AgentChannelPresence:
                 await downlink.deliver(
                     tool_background_downlink(tool_output=ev)
                 )
+                self._coordinator.remove_foreground_pending(ev.user_msg_uuid)
             except Exception:
                 logger.exception("agent_channel tool_bg deliver failed")
 

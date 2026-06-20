@@ -129,6 +129,180 @@ async def test_app_ws_user_reply_downlink_sets_queue_message_id_meta() -> None:
 
 
 @pytest.mark.asyncio
+async def test_app_ws_user_reply_updates_queue_foreground_pending() -> None:
+    scope = AgentScope(user_id="user-app-ws-pending", agent_id="agent-pending")
+    outbound_queue: asyncio.Queue = asyncio.Queue()
+    db = AsyncMock()
+    queue_message_id = "queue-msg-pending-1"
+    foreground_pending = {
+        queue_message_id: {
+            "session_id": "session-pending",
+            "agent_id": "agent-pending",
+        }
+    }
+    turn_ctx = AppWsTurnContext(
+        db=db,
+        session_id="session-pending",
+        agent_id="agent-pending",
+        chat_id="chat-pending",
+        request=ChatCompletionRequest(
+            messages=[{"role": "user", "content": "hi"}]
+        ),
+        last_user_message={"role": "user", "content": "hi"},
+        last_user_text="hi",
+        effective_local_id=None,
+        client_message_id=None,
+        queue_message_id=queue_message_id,
+    )
+    adapter = AppWsChannelAdapter(
+        scope=scope,
+        outbound_queue=outbound_queue,
+        db=db,
+        foreground_ctx_lookup=lambda uid: foreground_pending.get(uid),
+    )
+    adapter.register_turn_context(turn_ctx, client_message_id=None)
+
+    with (
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize.persist_companion_user_message_for_queue_delivery",
+            new_callable=AsyncMock,
+            return_value=404,
+        ),
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize.chat_history_service.add_ai_message_sync_async",
+            new_callable=AsyncMock,
+            return_value=505,
+        ),
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize.chat_history_service.get_ai_message_info_by_id",
+            new_callable=AsyncMock,
+            return_value={
+                "id": 505,
+                "meta_data": {},
+                "timestamp": "2025-01-01T00:00:00+00:00",
+                "audio_url": None,
+            },
+        ),
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize.agent_status_line_for_chat_header",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+    ):
+        await adapter.as_downlink().deliver(
+            Downlink(
+                kind=DownlinkKind.USER_REPLY,
+                assistant_text="reply",
+                turn=None,
+                tool_output=None,
+                bootstrap_interim=None,
+                scheduled_task_id=None,
+                transcript_user_text=None,
+                message_ids=(queue_message_id,),
+            )
+        )
+
+    assert (
+        foreground_pending[queue_message_id]["foreground_user_message_id"]
+        == 404
+    )
+
+
+@pytest.mark.asyncio
+async def test_app_ws_user_reply_uses_latest_context_for_batch() -> None:
+    scope = AgentScope(user_id="user-app-ws-batch", agent_id="agent-batch")
+    outbound_queue: asyncio.Queue = asyncio.Queue()
+    db = AsyncMock()
+    first_ctx = AppWsTurnContext(
+        db=db,
+        session_id="session-first",
+        agent_id="agent-batch",
+        chat_id="chat-batch",
+        request=ChatCompletionRequest(
+            messages=[{"role": "user", "content": "first"}]
+        ),
+        last_user_message={"role": "user", "content": "first"},
+        last_user_text="first",
+        effective_local_id="local-first",
+        client_message_id="client-first",
+        queue_message_id="queue-first",
+    )
+    latest_ctx = AppWsTurnContext(
+        db=db,
+        session_id="session-latest",
+        agent_id="agent-batch",
+        chat_id="chat-batch",
+        request=ChatCompletionRequest(
+            messages=[{"role": "user", "content": "latest"}]
+        ),
+        last_user_message={"role": "user", "content": "latest"},
+        last_user_text="latest",
+        effective_local_id="local-latest",
+        client_message_id="client-latest",
+        queue_message_id="queue-latest",
+    )
+    adapter = AppWsChannelAdapter(
+        scope=scope,
+        outbound_queue=outbound_queue,
+        db=db,
+        foreground_ctx_lookup=lambda _uid: None,
+    )
+    adapter.register_turn_context(first_ctx, client_message_id="client-first")
+    adapter.register_turn_context(latest_ctx, client_message_id="client-latest")
+    expected_meta = companion_ai_meta_from_queue_delivery(
+        queue_message_id="queue-latest",
+        tool_background_started=False,
+    )
+
+    with (
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize.persist_companion_user_message_for_queue_delivery",
+            new_callable=AsyncMock,
+            return_value=601,
+        ),
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize.chat_history_service.add_ai_message_sync_async",
+            new_callable=AsyncMock,
+            return_value=602,
+        ),
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize.chat_history_service.get_ai_message_info_by_id",
+            new_callable=AsyncMock,
+            return_value={
+                "id": 602,
+                "meta_data": expected_meta,
+                "timestamp": "2025-01-01T00:00:00+00:00",
+                "audio_url": None,
+            },
+        ),
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize.agent_status_line_for_chat_header",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+    ):
+        await adapter.as_downlink().deliver(
+            Downlink(
+                kind=DownlinkKind.USER_REPLY,
+                assistant_text="batch reply",
+                turn=None,
+                tool_output=None,
+                bootstrap_interim=None,
+                scheduled_task_id=None,
+                transcript_user_text=None,
+                message_ids=("queue-first", "queue-latest"),
+            )
+        )
+
+    payload = await outbound_queue.get()
+    assert payload["data"]["local_id"] == "local-latest"
+    assert (
+        payload["data"]["choices"][0]["message"]["meta_data"]["user_msg_uuid"]
+        == "queue-latest"
+    )
+
+
+@pytest.mark.asyncio
 async def test_app_ws_turn_context_dropped_on_drain_complete() -> None:
     scope = AgentScope(user_id="user-drain", agent_id="agent-drain")
     adapter = AppWsChannelAdapter(

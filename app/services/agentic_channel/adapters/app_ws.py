@@ -152,7 +152,7 @@ class AppWsChannelAdapter:
     def _lookup_turn_context(
         self, message_ids: tuple[str, ...]
     ) -> AppWsTurnContext | None:
-        for message_id in message_ids:
+        for message_id in reversed(message_ids):
             ctx = self._turn_contexts.get(message_id)
             if ctx is not None:
                 return ctx
@@ -209,6 +209,9 @@ class _AppWsChannelDownlink:
             )
         )
         ctx.foreground_user_message_id = companion_user_row_id
+        pending_ctx = self._adapter._foreground_ctx_lookup(ctx.queue_message_id)
+        if pending_ctx is not None:
+            pending_ctx["foreground_user_message_id"] = companion_user_row_id
         if ctx.client_message_id is not None:
             pending_ctx = self._adapter._foreground_ctx_lookup(
                 ctx.client_message_id

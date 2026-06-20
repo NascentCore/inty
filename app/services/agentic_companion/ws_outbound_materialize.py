@@ -68,7 +68,7 @@ async def materialize_queue_user_reply_ws_payload(
     tool_background_started: bool,
     memory_store: MemoryStore | None,
     image_asset_baseline: int,
-) -> WsOutboundPayload:
+) -> tuple[WsOutboundPayload, int | None]:
     """Persist chat_history and build one queue-delivered USER_REPLY completion frame."""
     assert text.strip() != ""
     assert queue_message_id != ""
