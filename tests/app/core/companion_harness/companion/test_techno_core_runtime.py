@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
 from app.core.companion_harness.companion.models import load_context_meta, load_prompt_bundle
 from app.core.companion_harness.memory.memory_registry import shutdown_all_memory_stores

@@ -17,7 +17,7 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
     create_companion_turn_root_run,
     end_companion_turn_root_run_safe,
 )
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     InnerTickActivity,

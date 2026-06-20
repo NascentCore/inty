@@ -37,7 +37,7 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from app.core.companion_harness.companion.llm_client import (
+from app.core.llms.client import (
     AsyncLlmClient,
     CompanionLLMClient,
     LLM_SCENE_CHAT,

@@ -33,7 +33,7 @@ from app.services.memory_service import (
     build_festival_memory_metadata,
     resolve_festival_name_and_date,
 )
-from app.utils.openai_client import chat_completion_for_extraction
+from app.core.llms.openai_client import chat_completion_for_extraction
 from app.utils.openrouter_memory import (
     DEFAULT_MEMORY_EXTRACTION_MODEL as DEFAULT_FESTIVAL_EXTRACTION_MODEL,
 )

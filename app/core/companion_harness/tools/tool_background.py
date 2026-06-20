@@ -51,7 +51,7 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from app.core.companion_harness.companion.llm_client import LLM_SCENE_TOOL_CALL
+from app.core.llms.client import LLM_SCENE_TOOL_CALL
 from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,

@@ -30,7 +30,7 @@ from app.techno_core.seeding import ensure_techno_core_seeded
 from .langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
-from .llm_client import CompanionLLMClient, CompanionLLMConfig
+from app.core.llms.client import CompanionLLMClient, CompanionLLMConfig
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig,
 )

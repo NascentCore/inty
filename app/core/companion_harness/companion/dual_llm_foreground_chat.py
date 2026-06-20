@@ -31,7 +31,7 @@ from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from .llm_client import CompanionLLMClient
+from app.core.llms.client import CompanionLLMClient
 from .llm_runtime_events import record_llm_inference_failure
 from .models import InnerTickActivity
 

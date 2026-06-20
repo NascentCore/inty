@@ -261,7 +261,7 @@ def _generate_openai_image(
 ) -> TextToImageGenerationResult:
     openai_client = request.provider_args.get("openai_client")
     if openai_client is None:
-        from app.utils.openai_client import get_base_openai_client
+        from app.core.llms.openai_client import get_base_openai_client
 
         client = get_base_openai_client()
     else:

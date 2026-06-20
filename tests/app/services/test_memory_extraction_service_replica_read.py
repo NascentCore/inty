@@ -38,7 +38,7 @@ def _load_memory_extraction_service_module():
     fake_openrouter_module = types.ModuleType("app.utils.openrouter_memory")
     fake_openrouter_module.DEFAULT_MEMORY_EXTRACTION_MODEL = "mistralai/devstral-2512"
 
-    fake_openai_client_module = types.ModuleType("app.utils.openai_client")
+    fake_openai_client_module = types.ModuleType("app.core.llms.openai_client")
 
     async def _dummy_chat_completion_for_extraction(*args, **kwargs):
         return ("dummy", None, None)
@@ -53,7 +53,7 @@ def _load_memory_extraction_service_module():
             "app.models.memory": fake_memory_model_module,
             "app.services.chat_history_service": fake_chat_history_module,
             "app.services.chat_service": fake_chat_service_module,
-            "app.utils.openai_client": fake_openai_client_module,
+            "app.core.llms.openai_client": fake_openai_client_module,
             "app.utils.openrouter_memory": fake_openrouter_module,
         },
     ):

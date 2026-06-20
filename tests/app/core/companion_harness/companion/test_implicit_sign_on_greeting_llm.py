@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.llm_runtime_events import (
     record_llm_inference_failure,
 )
@@ -247,7 +247,7 @@ def test_implicit_sign_on_greeting_llm_cancelled_skips_further_attempts(
 
     async def _exercise() -> None:
         with patch(
-            "app.core.companion_harness.companion.llm_client.asyncio.wait_for",
+            "app.core.llms.client.asyncio.wait_for",
             side_effect=_counting_wait_for,
         ):
             with pytest.raises(asyncio.CancelledError):

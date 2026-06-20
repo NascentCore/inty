@@ -17,7 +17,7 @@ from app.core.companion_harness.companion.dual_llm_foreground_chat import (
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
-from app.core.companion_harness.companion.llm_client import (
+from app.core.llms.client import (
     CompanionLLMConfig,
     LLM_SCENE_CHAT,
 )

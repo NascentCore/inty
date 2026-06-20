@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.models import InnerTickActivity, load_transcript_from_store
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,

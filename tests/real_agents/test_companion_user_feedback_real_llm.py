@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from app.core.companion_harness.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
+from app.core.llms.client import CompanionLLMClient, CompanionLLMConfig
 from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
