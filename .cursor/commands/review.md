@@ -2,6 +2,8 @@
 
 Review the pending changes.
 
+Review architecture of the pending changes' fitness to the [companion harness design](/docs/companion_harness/DESIGN.md)
+
 ## Instructions
 
 ### Review
