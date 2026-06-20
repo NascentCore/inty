@@ -5,9 +5,9 @@ session management, MemoryStore-backed workspace documents, prompt assembly, tur
 memory updates, async tool background work, and connection-level
 WebSocket coordination.
 
-TODO(companion-multimodal-user-turn): Phase 1 — user chat accepts images via — #3293
-``CompanionUserTurnInput`` (see ``user_turn_input.py``) and ``run_user_chat``;
-Weixin/WS are channel adapters (Phase 2 for Weixin).
+TODO(companion-multimodal-user-turn): Phase 1 — user chat accepts images through a
+future harness user-turn value object and ``run_user_chat``; Weixin/WS are channel
+adapters (Phase 2 for Weixin).
 https://github.com/NascentCore/inty/issues/3293
 
 

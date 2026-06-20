@@ -356,14 +356,6 @@ def _assemble_proactive_chat_life_currents_hint_prompt(
     )
 
 
-def _repl_online_ack_clause() -> str:
-    return (
-        "本轮（REPL 会话恢复）\n\n"
-        "用户刚回到本对话窗口。请结合上文**承接**同一语境；若尚无比拼的上下文则简短自然问候；"
-        "可正常调用工具。勿提系统、上线或主动聊天机制。"
-    )
-
-
 def weixin_clawbot_contact_alias_system_message() -> dict[str, Any]:
     """Channel-specific system message for Weixin-visible ClawBot contact naming.
 
@@ -740,7 +732,6 @@ def _contextual_system_messages(
     inner_tick_turn: bool,
     tick_proactive: bool,
     tick_autonomy: bool,
-    repl_online_ack_turn: bool,
     ai_private_text: str,
     proactive_life_currents_block: str | None,
     interactive_bootstrap_active: bool,
@@ -759,8 +750,6 @@ def _contextual_system_messages(
     )
     if directive_clause is not None:
         out.append(_system_message(directive_clause))
-    if repl_online_ack_turn:
-        out.append(_system_message(_repl_online_ack_clause()))
     if not inner_tick_turn:
         out.append(_system_message(_infer_time_zone_prompt_slice()))
     if tick_proactive:
@@ -787,7 +776,6 @@ def build_system_messages(
     enable_user_profile_tool: bool = False,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
-    repl_online_ack_turn: bool = False,
     ai_private_text: str = "",
     async_foreground_chat_stack: bool = False,
     tool_side_compact: bool = False,
@@ -847,7 +835,6 @@ def build_system_messages(
             inner_tick_turn=inner_tick_turn,
             tick_proactive=tick_proactive,
             tick_autonomy=tick_autonomy,
-            repl_online_ack_turn=repl_online_ack_turn,
             ai_private_text=ai_private_text,
             proactive_life_currents_block=proactive_life_currents_block,
             interactive_bootstrap_active=interactive_bootstrap_active,
@@ -969,7 +956,6 @@ def build_system_messages_for_inner_tick_autonomy(
             inner_tick_turn=True,
             tick_proactive=False,
             tick_autonomy=True,
-            repl_online_ack_turn=False,
             ai_private_text="",
             proactive_life_currents_block=None,
             interactive_bootstrap_active=False,
