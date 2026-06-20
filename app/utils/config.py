@@ -167,10 +167,92 @@ class APIEndpointsConfig(BaseModel):
 
 
 class CompanionMemoryBootstrapType(StrEnum):
-    """WS companion MemoryStore bootstrap mode (app.features.companion_memory_bootstrap_type)."""
+    """WS companion MemoryStore bootstrap mode (agent.companion_harness.memory_bootstrap_type)."""
 
     NONE = "NONE"
     USER_INTERACTIVE = "USER_INTERACTIVE"
+
+
+def _normalize_companion_memory_bootstrap_type(
+    raw: str,
+    *,
+    config_path: str,
+) -> str:
+    normalized = (raw or "").strip().upper()
+    allowed = {member.value for member in CompanionMemoryBootstrapType}
+    if normalized not in allowed:
+        raise ValueError(
+            f"{config_path} must be one of {sorted(allowed)}, got {raw!r}"
+        )
+    return normalized
+
+
+def _validate_companion_transcript_llm_window_max_messages(
+    window_max_messages: Optional[int],
+    *,
+    config_path: str,
+) -> None:
+    if window_max_messages is None:
+        return
+    if window_max_messages < 2 or window_max_messages > 500:
+        raise ValueError(f"{config_path} must be between 2 and 500")
+
+
+def _validate_companion_transcript_compaction(
+    compaction: Optional[dict[str, Any]],
+) -> None:
+    if compaction is None:
+        return
+    from app.core.companion_harness.memory.transcript_compaction import (
+        CompactionConfig as CompanionTranscriptCompactionConfig,
+    )
+
+    CompanionTranscriptCompactionConfig.model_validate(compaction)
+
+
+def _validate_companion_tool_bg_idle_wait_timeout_sec(
+    timeout_sec: float,
+    *,
+    config_path: str,
+) -> None:
+    if timeout_sec < 1.0 or timeout_sec > 3600.0:
+        raise ValueError(f"{config_path} must be between 1 and 3600")
+
+
+def _validate_companion_implicit_sign_on_greeting_llm_timeout_sec(
+    timeout_sec: float,
+    *,
+    config_path: str,
+) -> None:
+    if timeout_sec < 1.0 or timeout_sec > 60.0:
+        raise ValueError(f"{config_path} must be between 1 and 60")
+
+
+def _validate_companion_implicit_sign_on_greeting_llm_max_attempts(
+    max_attempts: int,
+    *,
+    config_path: str,
+) -> None:
+    if max_attempts < 1 or max_attempts > 5:
+        raise ValueError(f"{config_path} must be between 1 and 5")
+
+
+def _validate_companion_proactive_chat_base_idle_seconds(
+    base_idle_seconds: float,
+    *,
+    config_path: str,
+) -> None:
+    if base_idle_seconds < 10.0 or base_idle_seconds > 3600.0:
+        raise ValueError(f"{config_path} must be between 10 and 3600")
+
+
+def _validate_companion_proactive_chat_stop_after_silence_minutes(
+    stop_after_silence_minutes: float,
+    *,
+    config_path: str,
+) -> None:
+    if stop_after_silence_minutes < 1.0 or stop_after_silence_minutes > 1440.0:
+        raise ValueError(f"{config_path} must be between 1 and 1440")
 
 
 class FeaturesConfig(BaseModel):
@@ -182,62 +264,6 @@ class FeaturesConfig(BaseModel):
     # Chat WebSocket: max seconds to wait for the next text frame before closing (ping/pong resets the wait).
     # Long-running LLM or tools do not extend this window unless the client sends ping or another frame.
     chat_ws_idle_timeout_seconds: int = 60
-    # Default experience profile id (context.json field context_mode), e.g. intimate.
-    companion_default_context_mode: str = "intimate"
-    # OpenAI message-list compaction for companion kernel (same stack as WS): older transcript
-    # dialogue is folded into a structured system snapshot when over budget. Default matches
-    # app.utils.companion_feature_defaults.DEFAULT_COMPANION_FEATURE_COMPACTION.
-    # Set to null in YAML to disable.
-    companion_transcript_compaction: Optional[dict[str, Any]] = Field(
-        default_factory=lambda: dict(DEFAULT_COMPANION_FEATURE_COMPACTION)
-    )
-    # Optional: max transcript rows loaded before compaction (default: kernel TRANSCRIPT_WINDOW_MAX_MESSAGES).
-    companion_transcript_llm_window_max_messages: Optional[int] = None
-    # WS companion: NONE = seed minimal docs only, always run_turn;
-    # USER_INTERACTIVE = always run_turn with slice tools until model calls companion_bootstrap_user_interactive_complete.
-    companion_memory_bootstrap_type: str = (
-        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-    )
-    # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
-    companion_ws_session_system_text: Optional[str] = None
-    # Base quiet period (seconds) before proactive chat may fire; rhythm adapts from real-user gaps
-    # up to 2× this value. WS proactive is always on when inner-tick coords are armed (signed on).
-    # NOTE: proactive chat is not gated by daily message count; usage limits will use token
-    # consumption via ``app.features.companion_harness.initial_token_budget`` (#3471), not
-    # ``limits.free_user_chat_24h_limit``.
-    # See docs/companion_harness/DESIGN.md (proactive rhythm).
-    companion_ws_proactive_chat_base_idle_seconds: float = 30.0
-    # Stop proactive chat and cap each proactive wait when silence since last real user message
-    # exceeds this many minutes. See docs/companion_harness/DESIGN.md.
-    companion_ws_proactive_chat_stop_after_silence_minutes: float = 30.0
-    # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
-    # See docs/companion_harness/DESIGN.md (inner-tick worker poll).
-    companion_ws_proactive_chat_poll_seconds: float = 60.0
-    # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
-    # See docs/companion_harness/DESIGN.md (maintenance min_gap).
-    companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
-    # Seconds to wait on ``CompanionSession.tool_bg_idle`` before LivingSphere jsonl compact
-    # (dreaming consolidation LivingSphere compact waits for tool_background idle).
-    companion_tool_bg_idle_wait_timeout_sec: float = 120.0
-    # Implicit ``user_signed_on`` greeting: per-attempt LLM wait (``CHAT_ONLY_SYNC`` path).
-    companion_implicit_sign_on_greeting_llm_timeout_sec: float = 12.0
-    # Max LLM attempts for that greeting (includes the first call; 2 = one retry).
-    companion_implicit_sign_on_greeting_llm_max_attempts: int = 2
-
-    @model_validator(mode="after")
-    def normalize_companion_fields(self) -> "FeaturesConfig":
-        raw = (self.companion_memory_bootstrap_type or "").strip().upper()
-        allowed = {m.value for m in CompanionMemoryBootstrapType}
-        if raw not in allowed:
-            raise ValueError(
-                "app.features.companion_memory_bootstrap_type must be one of "
-                f"{sorted(allowed)}, got {self.companion_memory_bootstrap_type!r}"
-            )
-        self.companion_memory_bootstrap_type = raw
-        self.companion_default_context_mode = normalize_experience_profile_id(
-            self.companion_default_context_mode
-        )
-        return self
 
     @model_validator(mode="after")
     def validate_feature_ranges(self) -> "FeaturesConfig":
@@ -246,54 +272,6 @@ class FeaturesConfig(BaseModel):
         if ws_idle < 10 or ws_idle > 3600:
             raise ValueError(
                 "app.features.chat_ws_idle_timeout_seconds must be between 10 and 3600"
-            )
-
-        from app.core.companion_harness.memory.transcript_compaction import (
-            CompactionConfig as CompanionTranscriptCompactionConfig,
-        )
-
-        if self.companion_transcript_llm_window_max_messages is not None:
-            w = self.companion_transcript_llm_window_max_messages
-            if w < 2 or w > 500:
-                raise ValueError(
-                    "app.features.companion_transcript_llm_window_max_messages "
-                    "must be between 2 and 500"
-                )
-        if self.companion_transcript_compaction is not None:
-            CompanionTranscriptCompactionConfig.model_validate(
-                self.companion_transcript_compaction
-            )
-        tb_wait = self.companion_tool_bg_idle_wait_timeout_sec
-        if tb_wait < 1.0 or tb_wait > 3600.0:
-            raise ValueError(
-                "app.features.companion_tool_bg_idle_wait_timeout_sec "
-                "must be between 1 and 3600"
-            )
-        greet_timeout = self.companion_implicit_sign_on_greeting_llm_timeout_sec
-        if greet_timeout < 1.0 or greet_timeout > 60.0:
-            raise ValueError(
-                "app.features.companion_implicit_sign_on_greeting_llm_timeout_sec "
-                "must be between 1 and 60"
-            )
-        greet_attempts = (
-            self.companion_implicit_sign_on_greeting_llm_max_attempts
-        )
-        if greet_attempts < 1 or greet_attempts > 5:
-            raise ValueError(
-                "app.features.companion_implicit_sign_on_greeting_llm_max_attempts "
-                "must be between 1 and 5"
-            )
-        pc_idle = self.companion_ws_proactive_chat_base_idle_seconds
-        if pc_idle < 10.0 or pc_idle > 3600.0:
-            raise ValueError(
-                "app.features.companion_ws_proactive_chat_base_idle_seconds "
-                "must be between 10 and 3600"
-            )
-        pc_stop = self.companion_ws_proactive_chat_stop_after_silence_minutes
-        if pc_stop < 1.0 or pc_stop > 1440.0:
-            raise ValueError(
-                "app.features.companion_ws_proactive_chat_stop_after_silence_minutes "
-                "must be between 1 and 1440"
             )
         return self
 
@@ -479,6 +457,8 @@ class AgentConfig(BaseModel):
     channels: AgentChannelsConfig = Field(default_factory=AgentChannelsConfig)
 
     class CompanionHarnessConfig(BaseModel):
+        model_config = ConfigDict(extra="ignore")
+
         # TODO: Change to Chinese OSS model when releasing to prod.
         dreaming_llm: str = Field(
             default="xiaomi/mimo-v2.5",
@@ -492,6 +472,131 @@ class AgentConfig(BaseModel):
                 "``dreaming_due`` may run. Independent of the once-per-UTC-day cap "
                 "(see ``companion.dreaming`` module doc)."
             ),
+        )
+        default_context_mode: str = Field(
+            default="intimate",
+            description=(
+                "Default experience profile id (context.json field context_mode)."
+            ),
+        )
+        memory_bootstrap_type: str = Field(
+            default=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
+            description=(
+                "NONE = seed minimal docs only, always run_turn; "
+                "USER_INTERACTIVE = run_turn with slice tools until bootstrap complete."
+            ),
+        )
+
+        class TranscriptConfig(BaseModel):
+            model_config = ConfigDict(extra="ignore")
+
+            compaction: Optional[dict[str, Any]] = Field(
+                default_factory=lambda: dict(
+                    DEFAULT_COMPANION_FEATURE_COMPACTION
+                ),
+                description=(
+                    "OpenAI message-list compaction for companion kernel. "
+                    "Set to null in YAML to disable."
+                ),
+            )
+            llm_window_max_messages: Optional[int] = Field(
+                default=None,
+                description=(
+                    "Max transcript rows loaded before compaction "
+                    "(default: kernel TRANSCRIPT_WINDOW_MAX_MESSAGES)."
+                ),
+            )
+
+        transcript: TranscriptConfig = Field(default_factory=TranscriptConfig)
+
+        class WsConfig(BaseModel):
+            model_config = ConfigDict(extra="ignore")
+
+            session_system_text: Optional[str] = Field(
+                default=None,
+                description=(
+                    "Overrides default text for the one-shot system row on first "
+                    "USER_INTERACTIVE WS turn."
+                ),
+            )
+
+        ws: WsConfig = Field(default_factory=WsConfig)
+
+        class InnerTickConfig(BaseModel):
+            model_config = ConfigDict(extra="ignore")
+
+            class ProactiveChatConfig(BaseModel):
+                model_config = ConfigDict(extra="ignore")
+
+                base_idle_seconds: float = Field(
+                    default=30.0,
+                    description=(
+                        "Base quiet period before proactive chat may fire; rhythm "
+                        "adapts from real-user gaps up to 2× this value."
+                    ),
+                )
+                stop_after_silence_minutes: float = Field(
+                    default=30.0,
+                    description=(
+                        "Stop proactive chat when silence since last real user "
+                        "message exceeds this many minutes."
+                    ),
+                )
+                poll_seconds: float = Field(
+                    default=60.0,
+                    description=(
+                        "Seconds between unified inner-tick worker wakeups "
+                        "(proactive + maintenance eligibility checks)."
+                    ),
+                )
+
+            class MaintenanceConfig(BaseModel):
+                model_config = ConfigDict(extra="ignore")
+
+                min_gap_seconds: float = Field(
+                    default=120.0,
+                    description=(
+                        "Minimum seconds between successful maintenance inner-tick "
+                        "fires."
+                    ),
+                )
+
+            proactive_chat: ProactiveChatConfig = Field(
+                default_factory=ProactiveChatConfig
+            )
+            maintenance: MaintenanceConfig = Field(
+                default_factory=MaintenanceConfig
+            )
+
+        inner_tick: InnerTickConfig = Field(default_factory=InnerTickConfig)
+
+        tool_bg_idle_wait_timeout_sec: float = Field(
+            default=120.0,
+            description=(
+                "Seconds to wait on CompanionSession.tool_bg_idle before LivingSphere "
+                "jsonl compact."
+            ),
+        )
+
+        class ImplicitSignOnGreetingConfig(BaseModel):
+            model_config = ConfigDict(extra="ignore")
+
+            llm_timeout_sec: float = Field(
+                default=12.0,
+                description=(
+                    "Implicit user_signed_on greeting: per-attempt LLM wait."
+                ),
+            )
+            llm_max_attempts: int = Field(
+                default=2,
+                description=(
+                    "Max LLM attempts for implicit sign-on greeting "
+                    "(includes the first call; 2 = one retry)."
+                ),
+            )
+
+        implicit_sign_on_greeting: ImplicitSignOnGreetingConfig = Field(
+            default_factory=ImplicitSignOnGreetingConfig
         )
 
         class UserFeedbackGithubConfig(BaseModel):
@@ -531,6 +636,65 @@ class AgentConfig(BaseModel):
                 return value
 
         user_turn: UserTurnConfig = Field(default_factory=UserTurnConfig)
+
+        @model_validator(mode="after")
+        def normalize_companion_fields(
+            self,
+        ) -> "AgentConfig.CompanionHarnessConfig":
+            self.memory_bootstrap_type = (
+                _normalize_companion_memory_bootstrap_type(
+                    self.memory_bootstrap_type,
+                    config_path="agent.companion_harness.memory_bootstrap_type",
+                )
+            )
+            self.default_context_mode = normalize_experience_profile_id(
+                self.default_context_mode
+            )
+            return self
+
+        @model_validator(mode="after")
+        def validate_companion_ranges(
+            self,
+        ) -> "AgentConfig.CompanionHarnessConfig":
+            _validate_companion_transcript_llm_window_max_messages(
+                self.transcript.llm_window_max_messages,
+                config_path=(
+                    "agent.companion_harness.transcript.llm_window_max_messages"
+                ),
+            )
+            _validate_companion_transcript_compaction(
+                self.transcript.compaction
+            )
+            _validate_companion_tool_bg_idle_wait_timeout_sec(
+                self.tool_bg_idle_wait_timeout_sec,
+                config_path="agent.companion_harness.tool_bg_idle_wait_timeout_sec",
+            )
+            _validate_companion_implicit_sign_on_greeting_llm_timeout_sec(
+                self.implicit_sign_on_greeting.llm_timeout_sec,
+                config_path=(
+                    "agent.companion_harness.implicit_sign_on_greeting.llm_timeout_sec"
+                ),
+            )
+            _validate_companion_implicit_sign_on_greeting_llm_max_attempts(
+                self.implicit_sign_on_greeting.llm_max_attempts,
+                config_path=(
+                    "agent.companion_harness.implicit_sign_on_greeting.llm_max_attempts"
+                ),
+            )
+            _validate_companion_proactive_chat_base_idle_seconds(
+                self.inner_tick.proactive_chat.base_idle_seconds,
+                config_path=(
+                    "agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds"
+                ),
+            )
+            _validate_companion_proactive_chat_stop_after_silence_minutes(
+                self.inner_tick.proactive_chat.stop_after_silence_minutes,
+                config_path=(
+                    "agent.companion_harness.inner_tick.proactive_chat"
+                    ".stop_after_silence_minutes"
+                ),
+            )
+            return self
 
     companion_harness: CompanionHarnessConfig = Field(
         default_factory=CompanionHarnessConfig

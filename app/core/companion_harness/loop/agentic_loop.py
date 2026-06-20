@@ -21,6 +21,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
     OutputQueueAppendInput,
 )
+from app.services.agentic_companion.downlink import DownlinkKind
 from app.core.companion_harness.agentic_companion.types import UserMessageBatch
 from app.core.companion_harness.companion.dual_llm_foreground_chat import (
     DualLlmForegroundChatInput,
@@ -110,9 +111,10 @@ class _UserVisibleOutputAppender:
     batch: UserMessageBatch
     persisted_ids: list[str] = field(default_factory=list)
 
-    async def append_user_reply(
+    async def append_visible_message(
         self,
         *,
+        kind: DownlinkKind,
         text: str,
         trace_id: str,
         langsmith_trace_id: str,
@@ -122,8 +124,9 @@ class _UserVisibleOutputAppender:
         visible = user_visible_assistant_text(text)
         if visible is None:
             return
-        ready = await self.output_queue.append_user_reply(
+        ready = await self.output_queue.append_visible_message(
             OutputQueueAppendInput(
+                kind=kind,
                 batch_id=self.batch.batch_id,
                 text=visible,
                 message_ids=self.batch.message_ids,
@@ -169,7 +172,8 @@ class _DomainToolBackgroundAppendSink:
             event = await self._pending.get()
             if event is None:
                 return
-            await self._appender.append_user_reply(
+            await self._appender.append_visible_message(
+                kind=DownlinkKind.TOOL_BACKGROUND,
                 text=event.text,
                 trace_id=event.trace_id or self._trace_id,
                 langsmith_trace_id=event.langsmith_trace_id,
@@ -402,7 +406,8 @@ class AgenticLoop:
         )
 
         async def _emit_user_reply(interim: BootstrapInterimOutput) -> None:
-            await appender.append_user_reply(
+            await appender.append_visible_message(
+                kind=DownlinkKind.USER_REPLY,
                 text=interim.text,
                 trace_id=interim.trace_id,
                 langsmith_trace_id=interim.langsmith_trace_id,
@@ -480,7 +485,8 @@ class AgenticLoop:
         )
         fg_text = fg_result.assistant_text.strip()
         if fg_text:
-            await appender.append_user_reply(
+            await appender.append_visible_message(
+                kind=DownlinkKind.USER_REPLY,
                 text=fg_text,
                 trace_id=context.trace_id,
                 langsmith_trace_id=fg_result.langsmith_trace_id,

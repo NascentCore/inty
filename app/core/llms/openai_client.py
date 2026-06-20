@@ -9,11 +9,10 @@ chat uses that endpoint (e.g. LiteLLM); otherwise chat uses base_url + api_key.
 
 LangSmith tracing is done at call site (e.g. agent._call_openai_api_with_retry),
 not via client wrapping.
-"""
 
-# LLM provider 标识，用于 meta_data.llm_provider（openrouter / litellm）
-LLM_PROVIDER_OPENROUTER = "openrouter"
-LLM_PROVIDER_LITELLM = "litellm"
+# TODO(merge-llm-client): Move core.companion_harness.companion.llm_client to core.llm_client
+# and merge this module into core.llm_client.
+"""
 
 # TODO: 写一个 Wrapper 来完成常见功能，包括：
 # 1. structured output

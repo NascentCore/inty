@@ -31,6 +31,12 @@ from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
 )
 from app.services import agent_service
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+)
+from app.core.companion_harness.companion.utc import (
+    strip_leading_transcript_timestamp_prefixes,
+)
 from app.services.agentic_channel.serving import (
     drain_and_deliver_user_chat_turn,
     enqueue_inbound_wire_message,
@@ -106,7 +112,7 @@ class WeixinInprocessPresence:
             coordinator=self._coordinator,
         )
         poll_secs = float(
-            global_config_loaded_from_config_yaml.app.features.companion_ws_proactive_chat_poll_seconds
+            global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat.poll_seconds
         )
         delivery = inner_tick_delivery_for_weixin(
             self._push_weixin_assistant_text
@@ -214,8 +220,15 @@ class WeixinInprocessPresence:
                 server_received_at_utc=datetime.now(timezone.utc),
             )
 
-            async def send_user_reply(text: str) -> None:
+            async def deliver_weixin_message(
+                message: ReadyOutputMessage,
+            ) -> None:
                 assert self._downlink is not None
+                text = strip_leading_transcript_timestamp_prefixes(
+                    message.text.strip()
+                )
+                if not text:
+                    return
                 await self._downlink.send_assistant_text(text)
 
             delivery_result = await drain_and_deliver_user_chat_turn(
@@ -224,7 +237,7 @@ class WeixinInprocessPresence:
                 delivery_wire_id=wire_id,
                 implicit_signal_bundle=implicit_bundle,
                 background_output_sink=self._coordinator.background_sink,
-                send_text=send_user_reply,
+                deliver_message=deliver_weixin_message,
             )
             if not delivery_result.tool_background_started:
                 self._coordinator.remove_foreground_pending(queue_message_id)

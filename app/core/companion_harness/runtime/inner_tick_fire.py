@@ -31,7 +31,9 @@ from app.core.companion_harness.companion.proactive_chat import (
     ProactiveChatConfig,
     next_proactive_chat_wait_seconds,
 )
-from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import (
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.companion.schedule_queue import (
     ScheduleTask,
     mark_task_fired,
@@ -39,7 +41,9 @@ from app.core.companion_harness.companion.schedule_queue import (
     next_due_task_for_execution,
     scheduled_task_synthetic_user_text,
 )
-from app.core.companion_harness.companion.turn_routes import BackgroundToolEventSink
+from app.core.companion_harness.companion.turn_routes import (
+    BackgroundToolEventSink,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.config import global_config_loaded_from_config_yaml
 
@@ -87,27 +91,24 @@ class InnerTickKernelResult:
 
 
 def _maintenance_schedule_overrides() -> InnerTickScheduleOverrides:
-    feats = global_config_loaded_from_config_yaml.app.features
+    harness = global_config_loaded_from_config_yaml.agent.companion_harness
     return InnerTickScheduleOverrides(
         enabled=True,
-        min_gap_seconds=float(
-            feats.companion_ws_maintenance_inner_tick_min_gap_seconds
-        ),
-        poll_seconds=float(feats.companion_ws_proactive_chat_poll_seconds),
+        min_gap_seconds=float(harness.inner_tick.maintenance.min_gap_seconds),
+        poll_seconds=float(harness.inner_tick.proactive_chat.poll_seconds),
     )
 
 
 def proactive_chat_remain_seconds(mem_store: MemoryStore) -> float:
     """Seconds until proactive chat is due; ``0`` means due now."""
-    feats = global_config_loaded_from_config_yaml.app.features
+    harness = global_config_loaded_from_config_yaml.agent.companion_harness
+    proactive = harness.inner_tick.proactive_chat
     return next_proactive_chat_wait_seconds(
         mem_store,
         ProactiveChatConfig(
-            base_idle_sec=float(
-                feats.companion_ws_proactive_chat_base_idle_seconds
-            ),
+            base_idle_sec=float(proactive.base_idle_seconds),
             stop_after_silence_minutes=float(
-                feats.companion_ws_proactive_chat_stop_after_silence_minutes
+                proactive.stop_after_silence_minutes
             ),
         ),
     )
@@ -154,12 +155,14 @@ async def kernel_fire_scheduled(
         exec_time_utc=due_task.exec_time_utc,
     )
     try:
-        companion_turn = await kernel_input.manager.run_inner_tick_scheduled_turn(
-            kernel_input.session,
-            synthetic_user_text,
-            background_output_sink=None,
-            preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
-            runtime_context=kernel_input.runtime_context,
+        companion_turn = (
+            await kernel_input.manager.run_inner_tick_scheduled_turn(
+                kernel_input.session,
+                synthetic_user_text,
+                background_output_sink=None,
+                preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
+                runtime_context=kernel_input.runtime_context,
+            )
         )
     except Exception as exc:
         if not getattr(exc, "companion_tool_background_started", False):
@@ -188,11 +191,13 @@ async def kernel_fire_proactive(
     kernel_input: InnerTickKernelInput,
 ) -> InnerTickKernelResult:
     """Run one proactive chat inner-tick turn; caller holds ``turn_lock``."""
-    companion_turn = await kernel_input.manager.run_inner_tick_proactive_chat_turn(
-        kernel_input.session,
-        background_output_sink=None,
-        preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
-        runtime_context=kernel_input.runtime_context,
+    companion_turn = (
+        await kernel_input.manager.run_inner_tick_proactive_chat_turn(
+            kernel_input.session,
+            background_output_sink=None,
+            preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
+            runtime_context=kernel_input.runtime_context,
+        )
     )
     hb_user_text = (
         companion_turn.transcript_user_content

@@ -6,17 +6,21 @@ presence per paired user — ``companion_harness`` AGENTS.md「Concurrency (prot
 
 from __future__ import annotations
 
-import hashlib
 import json
-import os
 import threading
 import time
 import uuid
-from functools import lru_cache
 from typing import Any
 
 from loguru import logger
 
+from app.core.companion_harness.companion.manager_factory import (
+    DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT,
+    clear_companion_manager_cache,
+    companion_manager_for_resolved_model,
+    companion_runtime_config_fingerprint,
+    companion_tool_model_api_id,
+)
 from app.core.companion_harness.companion.runtime_events import (
     append_runtime_event,
 )
@@ -26,18 +30,13 @@ from app.core.companion_harness.companion.dreaming_observability import (
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
 )
-from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
     BootstrapInterimOutputSink,
 )
 from app.core.companion_harness.companion.manager import (
-    CompanionConfig,
     CompanionManager,
     CompanionSession,
-)
-from app.core.companion_harness.memory.memory_registry import (
-    MEMORY_STORE_REGISTRY_REQUIRES_DSN,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.implicit_signal_messages import (
@@ -51,35 +50,15 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
-from app.core.companion_harness.memory.transcript_compaction import (
-    CompactionConfig as TranscriptCompactionConfig,
-)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
-from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
-
-DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
-    "（会话入线，内部指令）用户已进入本聊天。请在本轮及之后延续自然陪伴：可先简短问候，"
-    "并温和邀请对方说说此刻状态或想聊的事；不要提及系统、连接、初始化、工具名。"
-)
+from app.utils.models_catalog import GenAIModel
 
 
-def _companion_tool_call_model_yaml(agent: object) -> str:
-    """Stripped ``AgentConfig.companion_tool_call_model``; empty means use chat model id."""
-    return (getattr(agent, "companion_tool_call_model", "") or "").strip()
-
-
-def _companion_tool_model_api_id(chat_model_api_id: str) -> str:
-    """OpenRouter-style id for tool rounds; defaults to chat model when YAML override is empty.
-
-    TODO(#3398): Scope of separate tool model vs single chat model for user turns — epic #3398.
-    """
-    cfg = global_config_loaded_from_config_yaml
-    raw = _companion_tool_call_model_yaml(cfg.agent)
-    if not raw:
-        return chat_model_api_id
-    return resolve_chat_text_model(raw).id_on_provider
+def clear_companion_chat_service_caches() -> None:
+    """For tests or hot reload when config path changes."""
+    clear_companion_manager_cache()
 
 
 def companion_memory_store_if_ready(
@@ -91,11 +70,11 @@ def companion_memory_store_if_ready(
 ) -> MemoryStore | None:
     """Return the session MemoryStore when minimal companion documents are initialized."""
     chat_api_id = resolved_chat_model.id_on_provider
-    tool_api_id = _companion_tool_model_api_id(chat_api_id)
-    manager = _companion_manager_for_resolved_model(
+    tool_api_id = companion_tool_model_api_id(chat_api_id)
+    manager = companion_manager_for_resolved_model(
         chat_api_id,
         tool_api_id,
-        _companion_runtime_config_fingerprint(),
+        companion_runtime_config_fingerprint(),
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     if not session.is_initialized:
@@ -117,11 +96,11 @@ def companion_session_tool_bg_idle_event(
     https://github.com/NascentCore/inty/issues/3123
     """
     chat_api_id = resolved_chat_model.id_on_provider
-    tool_api_id = _companion_tool_model_api_id(chat_api_id)
-    manager = _companion_manager_for_resolved_model(
+    tool_api_id = companion_tool_model_api_id(chat_api_id)
+    manager = companion_manager_for_resolved_model(
         chat_api_id,
         tool_api_id,
-        _companion_runtime_config_fingerprint(),
+        companion_runtime_config_fingerprint(),
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     return session.tool_bg_idle
@@ -137,11 +116,11 @@ def run_dreaming_batch_for_api(
 ) -> DreamingBatchOutcome:
     """Resolve ``CompanionSession`` and run ``run_dreaming_batch_if_due``."""
     chat_api_id = resolved_chat_model.id_on_provider
-    tool_api_id = _companion_tool_model_api_id(chat_api_id)
-    manager = _companion_manager_for_resolved_model(
+    tool_api_id = companion_tool_model_api_id(chat_api_id)
+    manager = companion_manager_for_resolved_model(
         chat_api_id,
         tool_api_id,
-        _companion_runtime_config_fingerprint(),
+        companion_runtime_config_fingerprint(),
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     return run_dreaming_batch_if_due(
@@ -160,94 +139,14 @@ def append_companion_ws_runtime_event(
 ) -> None:
     """Append one WS control-frame audit record to ``.companion_runtime_events.jsonl``."""
     chat_api_id = resolved_chat_model.id_on_provider
-    tool_api_id = _companion_tool_model_api_id(chat_api_id)
-    manager = _companion_manager_for_resolved_model(
+    tool_api_id = companion_tool_model_api_id(chat_api_id)
+    manager = companion_manager_for_resolved_model(
         chat_api_id,
         tool_api_id,
-        _companion_runtime_config_fingerprint(),
+        companion_runtime_config_fingerprint(),
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     append_runtime_event(session.store, record)
-
-
-def clear_companion_chat_service_caches() -> None:
-    """For tests or hot reload when config path changes."""
-    _companion_manager_for_resolved_model.cache_clear()
-
-
-def _companion_runtime_config_fingerprint() -> str:
-    cfg = global_config_loaded_from_config_yaml
-    feats = cfg.app.features
-    raw = feats.companion_transcript_compaction
-    raw_json = json.dumps(raw, sort_keys=True) if raw is not None else ""
-    parts = [
-        "companion_scope_path_free_v1",
-        str(feats.companion_default_context_mode),
-        raw_json,
-        str(feats.companion_transcript_llm_window_max_messages or ""),
-        str(feats.companion_memory_bootstrap_type),
-        str(feats.companion_ws_session_system_text or ""),
-        # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_store_text).
-        "companion_repo_only_store_v2",
-        "companion_db_memory_documents_v4_orm",
-        os.getenv("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600") or "",
-        _companion_tool_call_model_yaml(cfg.agent),
-    ]
-    return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
-
-
-@lru_cache(maxsize=64)
-def _companion_manager_for_resolved_model(
-    chat_model_api_id: str,
-    tool_model_api_id: str,
-    runtime_fingerprint: str,
-) -> CompanionManager:
-    _ = runtime_fingerprint
-    cfg = global_config_loaded_from_config_yaml
-    feats = cfg.app.features
-    api_key = cfg.agent.chat_llm_api_key or cfg.agent.api_key
-    timeout_raw = os.getenv(
-        # TODO(app-config-centralization): Move this to app.core.config, and do not use env var.
-        "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC",
-        "600",
-    ).strip()
-    try:
-        async_chat_timeout = float(timeout_raw) if timeout_raw else 600.0
-    except ValueError:
-        async_chat_timeout = 600.0
-    chat_m = resolve_chat_text_model(chat_model_api_id)
-    tool_m = resolve_chat_text_model(tool_model_api_id)
-    llm = CompanionLLMConfig(
-        api_key=api_key,
-        api_base=cfg.agent.chat_llm_base_url or cfg.agent.base_url,
-        default_model=chat_m,
-        chat_model=chat_m,
-        tool_model=tool_m,
-        memory_model=chat_m,
-        day_summary_model=chat_m,
-        user_model=chat_m,
-        soul_model=chat_m,
-        async_chat_front_timeout_sec=async_chat_timeout,
-    )
-    tc_raw = feats.companion_transcript_compaction
-    transcript_compaction = (
-        TranscriptCompactionConfig.model_validate(tc_raw)
-        if tc_raw is not None
-        else None
-    )
-    db_url = (cfg.database.url or "").strip()
-    if not db_url:
-        raise RuntimeError(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
-    companion_cfg = CompanionConfig(
-        memory_pg_dsn=db_url,
-        llm=llm,
-        default_context_mode=feats.companion_default_context_mode,
-        transcript_compaction=transcript_compaction,
-        transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
-        repository_only_store_text=True,
-        memory_bootstrap_type=feats.companion_memory_bootstrap_type,
-    )
-    return CompanionManager(companion_cfg)
 
 
 def _mark_companion_ws_session_system_written_in_store(
@@ -293,8 +192,8 @@ async def _maybe_append_companion_ws_session_system(
     if meta.companion_ws_session_system_written:
         return
 
-    feats = global_config_loaded_from_config_yaml.app.features
-    text = (feats.companion_ws_session_system_text or "").strip() or (
+    harness = global_config_loaded_from_config_yaml.agent.companion_harness
+    text = (harness.ws.session_system_text or "").strip() or (
         DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT
     )
     trace_id = str(uuid.uuid4())
@@ -338,10 +237,10 @@ async def _companion_session_for_api_turn(
     session_id: str | None,
 ) -> tuple[CompanionManager, CompanionSession, str, float, float]:
     chat_api_id = resolved_chat_model.id_on_provider
-    tool_api_id = _companion_tool_model_api_id(chat_api_id)
+    tool_api_id = companion_tool_model_api_id(chat_api_id)
     t_mgr0 = time.perf_counter()
-    manager = _companion_manager_for_resolved_model(
-        chat_api_id, tool_api_id, _companion_runtime_config_fingerprint()
+    manager = companion_manager_for_resolved_model(
+        chat_api_id, tool_api_id, companion_runtime_config_fingerprint()
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     manager_session_ms = (time.perf_counter() - t_mgr0) * 1000.0
@@ -374,9 +273,9 @@ def _companion_manager_session_ref(
 ) -> tuple[CompanionManager, CompanionSession]:
     """Lightweight manager + session lookup for scope lock acquisition (no ws_system)."""
     chat_api_id = resolved_chat_model.id_on_provider
-    tool_api_id = _companion_tool_model_api_id(chat_api_id)
-    manager = _companion_manager_for_resolved_model(
-        chat_api_id, tool_api_id, _companion_runtime_config_fingerprint()
+    tool_api_id = companion_tool_model_api_id(chat_api_id)
+    manager = companion_manager_for_resolved_model(
+        chat_api_id, tool_api_id, companion_runtime_config_fingerprint()
     )
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     return manager, session

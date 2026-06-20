@@ -23,8 +23,9 @@ from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.services.agentic_channel.turn import run_agent_turn
 from app.utils.models_catalog import GenAIModel
+
+from .turn import run_agent_turn
 
 from .output_queue import get_output_queue_for_scope
 from .postgres_queue import PostgresInputQueueRepository

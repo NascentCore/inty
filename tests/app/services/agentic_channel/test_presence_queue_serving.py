@@ -2,17 +2,24 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
-from app.services.agentic_channel.scope_queue_serving import ScopeDrainCompletion
+from app.services.agentic_companion.downlink import DownlinkKind
+from app.services.agentic_channel.channel_runtime import (
+    clear_registries_for_tests,
+)
+from app.services.agentic_channel.scope_queue_serving import (
+    ScopeDrainCompletion,
+)
 from app.services.agentic_channel.presence import (
     AgentChannelPresence,
     clear_presences_for_tests,
@@ -44,7 +51,9 @@ async def test_ensure_presence_starts_queue_serving_once() -> None:
 
 @pytest.mark.asyncio
 async def test_stop_presence_stops_queue_serving() -> None:
-    scope = AgentScope(user_id="user-stop-presence", agent_id="agent-stop-presence")
+    scope = AgentScope(
+        user_id="user-stop-presence", agent_id="agent-stop-presence"
+    )
     with patch(
         "app.services.agentic_channel.presence.ScopeQueueServing.stop",
         new_callable=AsyncMock,
@@ -122,7 +131,9 @@ async def test_queue_drain_complete_keeps_only_tool_background_anchor() -> None:
 
 
 @pytest.mark.asyncio
-async def test_queue_drain_complete_removes_all_without_tool_background() -> None:
+async def test_queue_drain_complete_removes_all_without_tool_background() -> (
+    None
+):
     scope = AgentScope(user_id="user-cleanup-all", agent_id="agent-cleanup-all")
     presence = AgentChannelPresence(scope)
     presence._coordinator.set_foreground_pending("m1", {"value": 1})
@@ -140,16 +151,46 @@ async def test_queue_drain_complete_removes_all_without_tool_background() -> Non
 
 
 @pytest.mark.asyncio
-async def test_send_user_reply_without_active_channel_raises_for_output_retry() -> None:
+async def test_send_user_reply_without_active_channel_raises_for_output_retry() -> (
+    None
+):
     scope = AgentScope(user_id="user-no-active", agent_id="agent-no-active")
     presence = AgentChannelPresence(scope)
+    message = ReadyOutputMessage(
+        message_id="out-1",
+        batch_id="batch-1",
+        kind=DownlinkKind.USER_REPLY,
+        text="hello",
+        message_ids=("m1",),
+        sequence=1,
+    )
 
     with pytest.raises(RuntimeError, match="no ACTIVE channel"):
-        await presence._send_user_reply_via_active_channel("hello")
+        await presence._deliver_output_via_active_channel(message)
 
 
 @pytest.mark.asyncio
-async def test_handle_user_text_returns_validation_error_before_enqueue() -> None:
+async def test_tool_background_output_is_hidden_without_active_channel() -> (
+    None
+):
+    scope = AgentScope(user_id="user-tool-hidden", agent_id="agent-tool-hidden")
+    presence = AgentChannelPresence(scope)
+    message = ReadyOutputMessage(
+        message_id="out-tool",
+        batch_id="agent-initiated:tool",
+        kind=DownlinkKind.TOOL_BACKGROUND,
+        text="tool follow-up",
+        message_ids=(),
+        sequence=1,
+    )
+
+    await presence._deliver_output_via_active_channel(message)
+
+
+@pytest.mark.asyncio
+async def test_handle_user_text_returns_validation_error_before_enqueue() -> (
+    None
+):
     scope = AgentScope(user_id="user-missing", agent_id="agent-missing")
     presence = AgentChannelPresence(scope)
     presence._queue_serving = MagicMock()

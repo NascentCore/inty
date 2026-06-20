@@ -73,7 +73,7 @@ def living_sphere_curator_output_rejection_reason(body: str) -> str | None:
 
 def _tool_bg_idle_wait_timeout_sec() -> float:
     return float(
-        global_config_loaded_from_config_yaml.app.features.companion_tool_bg_idle_wait_timeout_sec
+        global_config_loaded_from_config_yaml.agent.companion_harness.tool_bg_idle_wait_timeout_sec
     )
 
 

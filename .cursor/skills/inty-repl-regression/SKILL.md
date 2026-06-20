@@ -48,12 +48,11 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
   --api-base http://127.0.0.1:8001
 ```
 
-- Default exit **0** when settled queue turn passes and InputQueue / OutputQueue rows are all `delivered` (bootstrap completion is LLM-dependent; reported but not required).
-- Pass `--strict` to also require `workspace_bootstrap_user_interactive_completed` and inner-tick proactive.
-- Proactive idle is ~30s base + 60s poll — use `--proactive-wait-sec 180` when bootstrap + proactive are required (`--strict`).
+- Exit **0** only when settled queue turn passes, bootstrap is complete (`workspace_bootstrap_user_interactive_completed`), inner-tick proactive is present, and InputQueue / OutputQueue rows are all `delivered`.
+- Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (10s) and `poll_seconds` (5s) in `devops/config.yaml.local` for fast local regression; default `--proactive-wait-sec` is **60**.
 - JSON report: `tmp/repl-regression-<AGENT_ID>.json` unless `--report` is set.
 - Skips `meta_data.source=greeting` downlinks when waiting for proactive (post-restart sign-on is not inner-tick proactive).
-- Unit tests for the strict-mode DB JSON parser: `tests/cursor/skills/scripts/test_run_inty_repl_regression.py` (skill script is not an `app/` module).
+- Unit tests for the proactive DB JSON parser: `tests/cursor/skills/scripts/test_run_inty_repl_regression.py` (skill script is not an `app/` module).
 
 ### Manual REPL (bootstrap quality judgment)
 
@@ -146,7 +145,7 @@ For proactive:
   - current tail user message with `[SYSTEM PROACTIVE CHAT] Time since...`
   - historical proactive synthetic user rows when still in transcript window
 - `[SILENT]` is a valid output.
-- When assistant output is `[SILENT]`, no WS downlink is sent; strict mode still passes if `chat_history` has a synthetic `[SYSTEM PROACTIVE CHAT]` user row for this agent after the run started (driver checks DB after the proactive wait).
+- When assistant output is `[SILENT]`, no WS downlink is sent; regression still passes if `chat_history` has a synthetic `[SYSTEM PROACTIVE CHAT]` user row for this agent after the run started (driver checks DB after the proactive wait).
 
 ## Pass Criteria
 

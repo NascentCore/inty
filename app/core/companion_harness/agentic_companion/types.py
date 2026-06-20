@@ -25,6 +25,7 @@ class QueueStatus(StrEnum):
     CLAIMED = "claimed"
     DELIVERED = "delivered"
     FAILED = "failed"
+    SKIPPED = "skipped"
 
 
 @dataclass(frozen=True)

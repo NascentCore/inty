@@ -29,6 +29,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+)
+from app.core.companion_harness.companion.utc import (
+    strip_leading_transcript_timestamp_prefixes,
+)
 from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
@@ -1334,7 +1340,16 @@ async def _agent_chat_ws_completions_impl(
                                 delivery_flags=delivery_flags,
                             )
 
-                            async def send_user_reply(text: str) -> None:
+                            async def send_user_reply(
+                                message: ReadyOutputMessage,
+                            ) -> None:
+                                text = (
+                                    strip_leading_transcript_timestamp_prefixes(
+                                        message.text.strip()
+                                    )
+                                )
+                                if not text:
+                                    return
                                 await _deliver_app_ws_user_reply_from_queue(
                                     delivery_ctx, text
                                 )
@@ -1664,7 +1679,7 @@ async def chat_completions_websocket(
         coordinator=companion_ws,
     )
     poll_secs = float(
-        global_config_loaded_from_config_yaml.app.features.companion_ws_proactive_chat_poll_seconds
+        global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat.poll_seconds
     )
 
     async def _run_ws_inner_tick_poll(ctx: dict[str, Any]) -> None:

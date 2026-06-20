@@ -133,7 +133,8 @@ if [ "$LOCAL" = true ]; then
   echo "cd evaluation && npm run dev"
 
   echo "Starting ops backend server with reloading on port $OPS_PORT..."
-  python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" --reload "${UVICORN_LOG_LEVEL[@]}"
+  # No reloading
+  python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" "${UVICORN_LOG_LEVEL[@]}"
 else
   echo "Starting ops backend server on port $OPS_PORT..."
   python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" "${UVICORN_LOG_LEVEL[@]}"

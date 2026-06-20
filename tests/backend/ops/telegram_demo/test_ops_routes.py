@@ -15,12 +15,8 @@ from backend.ops.main import app
 
 
 def test_ops_mounts_telegram_demo_page() -> None:
-    paths = [
-        route.path
-        for route in app.routes
-        if isinstance(route, APIRoute)
-    ]
-    assert "/telegram-demo" in paths
+    paths = [route.path for route in app.routes if isinstance(route, APIRoute)]
+    assert "/telegram" in paths
 
 
 @dataclass(frozen=True)

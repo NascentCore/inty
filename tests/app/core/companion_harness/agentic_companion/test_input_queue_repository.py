@@ -197,3 +197,53 @@ async def test_output_queue_append_claim_and_deliver() -> None:
             await db.commit()
     finally:
         await _cleanup_scope(scope)
+
+
+@pytest.mark.asyncio
+async def test_output_queue_mark_skipped_persists_terminal_status() -> None:
+    scope = await create_guest_scope_for_test(
+        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        nickname_prefix="output_queue_skipped",
+        meta_data={"test": True},
+    )
+    try:
+        async with AsyncSessionLocal() as db:
+            output_repo = PostgresOutputQueueRepository(db)
+            await output_repo.append_agent_output(
+                AgentOutputMessage(
+                    message_id="out-skip",
+                    scope=scope,
+                    batch_id="batch-1",
+                    kind=DownlinkKind.USER_REPLY,
+                    text="orphan reply",
+                    created_at_utc=datetime.now(timezone.utc),
+                    message_ids=("in-orphan",),
+                )
+            )
+            await output_repo.claim_pending_for_delivery(
+                scope,
+                delivery_channel=CompanionRuntimeChannel.TELEGRAM,
+                delivery_wire_id="wire-a",
+                limit=4,
+            )
+            await output_repo.mark_skipped(
+                "out-skip",
+                error_message="no delivery hook",
+            )
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            row = (
+                await db.execute(
+                    select(AgenticCompanionOutputQueueRow).where(
+                        AgenticCompanionOutputQueueRow.id == "out-skip"
+                    )
+                )
+            ).scalar_one()
+        assert row.status == QueueStatus.SKIPPED.value
+        assert row.error_message == "no delivery hook"
+        assert row.delivery_channel is None
+        assert row.delivery_wire_id is None
+        assert row.claimed_at is None
+    finally:
+        await _cleanup_scope(scope)

@@ -167,15 +167,17 @@ def test_implicit_sign_on_greeting_llm_timeout_retries_then_raises(
 ) -> None:
     from app.core.companion_harness.companion import turn as turn_mod
 
-    feats = turn_mod.global_config_loaded_from_config_yaml.app.features
+    greet_cfg = (
+        turn_mod.global_config_loaded_from_config_yaml.agent.companion_harness.implicit_sign_on_greeting
+    )
     monkeypatch.setattr(
-        feats,
-        "companion_implicit_sign_on_greeting_llm_timeout_sec",
+        greet_cfg,
+        "llm_timeout_sec",
         0.1,
     )
     monkeypatch.setattr(
-        feats,
-        "companion_implicit_sign_on_greeting_llm_max_attempts",
+        greet_cfg,
+        "llm_max_attempts",
         2,
     )
     scope = CompanionScope("turn-t", "a", f"it-greet-timeout-{tmp_path.name}")
@@ -201,8 +203,8 @@ def test_implicit_sign_on_greeting_llm_retries_then_succeeds(
     from app.core.companion_harness.companion import turn as turn_mod
 
     monkeypatch.setattr(
-        turn_mod.global_config_loaded_from_config_yaml.app.features,
-        "companion_implicit_sign_on_greeting_llm_max_attempts",
+        turn_mod.global_config_loaded_from_config_yaml.agent.companion_harness.implicit_sign_on_greeting,
+        "llm_max_attempts",
         2,
     )
     scope = CompanionScope("turn-t", "a", f"it-greet-retry-{tmp_path.name}")
@@ -228,8 +230,8 @@ def test_implicit_sign_on_greeting_llm_cancelled_skips_further_attempts(
     from app.core.companion_harness.companion import turn as turn_mod
 
     monkeypatch.setattr(
-        turn_mod.global_config_loaded_from_config_yaml.app.features,
-        "companion_implicit_sign_on_greeting_llm_max_attempts",
+        turn_mod.global_config_loaded_from_config_yaml.agent.companion_harness.implicit_sign_on_greeting,
+        "llm_max_attempts",
         3,
     )
     scope = CompanionScope("turn-t", "a", f"it-greet-cancel-{tmp_path.name}")

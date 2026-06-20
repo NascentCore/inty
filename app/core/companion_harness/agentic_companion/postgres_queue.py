@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import and_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
@@ -31,6 +31,8 @@ from .types import (
     UserInputMessage,
     WireId,
 )
+
+_OUTPUT_CLAIM_STALE_AFTER = timedelta(minutes=5)
 
 
 def _utc_now() -> datetime:
@@ -253,13 +255,22 @@ class PostgresOutputQueueRepository:
         assert delivery_wire_id != ""
         assert limit > 0
         user_filter, agent_filter = _output_scope_filters(scope)
+        stale_claimed_before = _utc_now() - _OUTPUT_CLAIM_STALE_AFTER
         stmt = (
             select(AgenticCompanionOutputQueueRow)
             .where(
                 user_filter,
                 agent_filter,
-                AgenticCompanionOutputQueueRow.status
-                == QueueStatus.PENDING.value,
+                or_(
+                    AgenticCompanionOutputQueueRow.status
+                    == QueueStatus.PENDING.value,
+                    and_(
+                        AgenticCompanionOutputQueueRow.status
+                        == QueueStatus.CLAIMED.value,
+                        AgenticCompanionOutputQueueRow.claimed_at
+                        < stale_claimed_before,
+                    ),
+                ),
             )
             .order_by(AgenticCompanionOutputQueueRow.sequence_id.asc())
             .limit(limit)
@@ -315,6 +326,28 @@ class PostgresOutputQueueRepository:
             .where(AgenticCompanionOutputQueueRow.id == message_id)
             .values(
                 status=QueueStatus.PENDING.value,
+                failed_at=failed_at,
+                error_message=error_message.strip(),
+                delivery_channel=None,
+                delivery_wire_id=None,
+                claimed_at=None,
+            )
+        )
+
+    async def mark_skipped(
+        self,
+        message_id: str,
+        *,
+        error_message: str,
+    ) -> None:
+        assert message_id != ""
+        assert error_message.strip() != ""
+        failed_at = _utc_now()
+        await self._db.execute(
+            update(AgenticCompanionOutputQueueRow)
+            .where(AgenticCompanionOutputQueueRow.id == message_id)
+            .values(
+                status=QueueStatus.SKIPPED.value,
                 failed_at=failed_at,
                 error_message=error_message.strip(),
                 delivery_channel=None,

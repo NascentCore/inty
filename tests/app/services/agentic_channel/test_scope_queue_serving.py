@@ -12,6 +12,10 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+)
+from app.services.agentic_companion.downlink import DownlinkKind
 from app.services.agentic_channel.scope_queue_serving import (
     ScopeDrainCompletion,
     ScopeQueueServing,
@@ -48,8 +52,9 @@ async def test_wake_triggers_drain_until_empty() -> None:
     serving = ScopeQueueServing(
         scope,
         background_output_sink=None,
-        send_text=AsyncMock(),
+        deliver_message=AsyncMock(),
         on_drain_complete=on_complete,
+        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
@@ -88,8 +93,9 @@ async def test_drain_failure_does_not_kill_worker() -> None:
     serving = ScopeQueueServing(
         scope,
         background_output_sink=None,
-        send_text=AsyncMock(),
+        deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
+        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
@@ -128,8 +134,9 @@ async def test_tool_background_batch_still_reports_completion() -> None:
     serving = ScopeQueueServing(
         scope,
         background_output_sink=None,
-        send_text=AsyncMock(),
+        deliver_message=AsyncMock(),
         on_drain_complete=on_complete,
+        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
@@ -154,8 +161,9 @@ async def test_start_recovers_after_pump_task_exits() -> None:
     serving = ScopeQueueServing(
         scope,
         background_output_sink=None,
-        send_text=AsyncMock(),
+        deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
+        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
@@ -187,8 +195,9 @@ async def test_stop_cancels_input_and_pump_tasks() -> None:
     serving = ScopeQueueServing(
         scope,
         background_output_sink=None,
-        send_text=AsyncMock(),
+        deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
+        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
@@ -214,20 +223,25 @@ async def test_stop_cancels_input_and_pump_tasks() -> None:
 
 
 @pytest.mark.asyncio
-async def test_output_pump_delivers_via_send_text() -> None:
+async def test_output_pump_delivers_via_deliver_message() -> None:
     scope = AgentScope(user_id="user-pump", agent_id="agent-pump")
     sent: list[str] = []
 
-    async def send_text(text: str) -> None:
-        sent.append(text)
+    async def deliver_message(message: ReadyOutputMessage) -> None:
+        sent.append(message.text)
 
-    class _Ready:
-        message_id = "out-1"
-        text = "pumped reply"
+    ready = ReadyOutputMessage(
+        message_id="out-1",
+        batch_id="batch-1",
+        kind=DownlinkKind.USER_REPLY,
+        text="pumped reply",
+        sequence=1,
+        message_ids=("input-1",),
+    )
 
     fake_queue = MagicMock()
     fake_queue.pull_ready_batch = AsyncMock(
-        side_effect=chain([[_Ready()]], repeat([])),
+        side_effect=chain([[ready]], repeat([])),
     )
     fake_queue.ack_delivered = AsyncMock()
     stop = asyncio.Event()
@@ -238,7 +252,9 @@ async def test_output_pump_delivers_via_send_text() -> None:
         from app.services.agentic_channel.serving import channel_output_pump
 
         task = asyncio.create_task(
-            channel_output_pump(scope, send_text=send_text, stop_event=stop)
+            channel_output_pump(
+                scope, deliver_message=deliver_message, stop_event=stop
+            )
         )
         await asyncio.sleep(0.05)
         stop.set()
@@ -252,16 +268,21 @@ async def test_output_pump_delivers_via_send_text() -> None:
 async def test_output_pump_marks_delivery_failure_retryable() -> None:
     scope = AgentScope(user_id="user-pump-fail", agent_id="agent-pump-fail")
 
-    async def send_text(_text: str) -> None:
+    async def deliver_message(_message: ReadyOutputMessage) -> None:
         raise RuntimeError("send failed")
 
-    class _Ready:
-        message_id = "out-2"
-        text = "will retry"
+    ready = ReadyOutputMessage(
+        message_id="out-2",
+        batch_id="batch-1",
+        kind=DownlinkKind.USER_REPLY,
+        text="will retry",
+        sequence=1,
+        message_ids=("input-1",),
+    )
 
     fake_queue = MagicMock()
     fake_queue.pull_ready_batch = AsyncMock(
-        side_effect=chain([[_Ready()]], repeat([])),
+        side_effect=chain([[ready]], repeat([])),
     )
     fake_queue.ack_delivered = AsyncMock()
     fake_queue.mark_delivery_failed = AsyncMock()
@@ -273,7 +294,9 @@ async def test_output_pump_marks_delivery_failure_retryable() -> None:
         from app.services.agentic_channel.serving import channel_output_pump
 
         task = asyncio.create_task(
-            channel_output_pump(scope, send_text=send_text, stop_event=stop)
+            channel_output_pump(
+                scope, deliver_message=deliver_message, stop_event=stop
+            )
         )
         await asyncio.sleep(0.05)
         stop.set()

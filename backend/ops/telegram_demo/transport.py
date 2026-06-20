@@ -7,6 +7,9 @@ TODO(telegram-reply-reaction-inbound): Route reply_to + emoji reaction updates i
   inbound envelope (not flat text only) — #3441 (epic #3440)
 TODO(!3501): Optional transport-level text coalescing (Hermes ``_flush_text_batch``); prefer
   ``ScopeQueueServing`` post-drain quiet window for durable InputQueue semantics.
+TODO(telegram-launch-onboard-bond-gate): Fail-closed ACTIVE ``companion_bonds`` check before
+  ``activate_telegram_scope`` / ``ensure_presence``; catch ``CompanionBondInvariantError`` — #3533
+  (epic #3531).
 """
 
 from __future__ import annotations
@@ -55,18 +58,16 @@ from backend.ops.telegram_demo.session_store import (
     remember_scope,
 )
 
-_WELCOME_NEW = (
-    "欢迎！已为你创建 companion，可以直接发中文消息。"
-    "完成 bootstrap 后 companion 会更了解你。"
+_WELCOME_RETURNING = (
+    "Welcome back! Your companion is ready. Just send a message."
 )
-_WELCOME_RETURNING = "欢迎回来！已绑定 companion，可以直接发消息聊天。"
 _ONBOARD_HINT = (
-    "请先打开 Ops /telegram-demo 页面扫码，"
-    "或在对话中发送 /start onboard 完成绑定。"
+    "Open the Ops /telegram page to scan the QR code, "
+    "or send /start onboard here to connect."
 )
 _IDENTITY_MISMATCH = (
-    "Telegram 用户身份与绑定记录不符，无法处理消息。"
-    "请确认使用同一 Telegram 账号。"
+    "This Telegram account does not match our records. "
+    "Please use the same account you used when connecting."
 )
 
 
@@ -117,8 +118,7 @@ class TelegramTransport:
         text: str,
         scope: AgentScope | None = None,
     ) -> None:
-        """Send one Channel-local user-visible string via Telegram adapter downlink."""
-        # TODO(!3402): Share outbound helper with AgentChannelPresence.send_user_reply.
+        """Send one Telegram control notice that is not companion output."""
         assert chat_id != ""
         assert text != ""
         if scope is not None:
@@ -316,11 +316,20 @@ class TelegramTransport:
             api=self._api,
             reason="onboard",
         )
-        await self._send_channel_text(
-            chat_id=inbound.chat_id,
-            text=_WELCOME_NEW,
-            scope=provision.scope,
-        )
+        presence = get_presence(provision.scope)
+        if presence is None:
+            presence = await ensure_presence(provision.scope)
+        try:
+            await presence.greet_on_sign_on(
+                runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+            )
+        except Exception:
+            logger.exception(
+                "telegram onboard greeting failed chat_id={} user_id={} agent_id={}",
+                inbound.chat_id,
+                provision.scope.user_id,
+                provision.scope.agent_id,
+            )
 
     async def _ensure_active(
         self,

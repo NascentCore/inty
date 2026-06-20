@@ -12,6 +12,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputDeliveryUnroutableError,
     ReadyOutputMessage,
 )
 from app.services.agentic_companion.downlink import DownlinkKind
@@ -20,6 +21,7 @@ from app.services.agentic_companion.ws_queue_serving import (
     AppWsQueueDeliveryFlags,
     AppWsUserTurnEnqueueResult,
     AppWsUserTurnQueueInput,
+    _lookup_scope_turn_delivery,
     _make_on_drain_complete,
     _on_app_ws_scope_drain_complete,
     _register_scope_turn_delivery,
@@ -38,14 +40,29 @@ def _clear_ws_scope_queue_registry() -> None:
     clear_app_ws_scope_queue_for_tests()
 
 
+def _ready_message(
+    *,
+    text: str,
+    message_ids: tuple[str, ...],
+) -> ReadyOutputMessage:
+    return ReadyOutputMessage(
+        message_id="msg-ready",
+        batch_id="batch-1",
+        kind=DownlinkKind.USER_REPLY,
+        text=text,
+        sequence=1,
+        message_ids=message_ids,
+    )
+
+
 @pytest.mark.asyncio
 async def test_enqueue_app_ws_user_turn_and_wake_without_drain() -> None:
     scope = AgentScope(user_id="user-ws", agent_id="agent-ws")
     flags = AppWsQueueDeliveryFlags()
     sent: list[str] = []
 
-    async def send_text(text: str) -> None:
-        sent.append(text)
+    async def send_text(message: ReadyOutputMessage) -> None:
+        sent.append(message.text)
 
     queue_input = AppWsUserTurnQueueInput(
         scope=scope,
@@ -206,6 +223,71 @@ async def test_drain_complete_clears_only_matching_queue_message_state() -> (
     assert pending["queue-msg-b"] == {"turn": "b"}
     assert flags_a.tool_background_started is False
     assert flags_b.tool_background_started is False
+    assert _lookup_scope_turn_delivery(scope, "queue-msg-a") is not None
+    assert _lookup_scope_turn_delivery(scope, "queue-msg-b") is not None
+
+
+@pytest.mark.asyncio
+async def test_tool_background_drain_keeps_primary_delivery_hook_for_late_output() -> (
+    None
+):
+    scope = AgentScope(user_id="user-late", agent_id="agent-late")
+    sent: list[str] = []
+
+    async def send_text(message: ReadyOutputMessage) -> None:
+        sent.append(message.text)
+
+    _register_scope_turn_delivery(
+        scope,
+        "queue-msg-late",
+        send_text=send_text,
+        delivery_flags=AppWsQueueDeliveryFlags(
+            queue_message_id="queue-msg-late"
+        ),
+        client_message_id="client-late",
+        companion_ws_foreground_pending=None,
+    )
+
+    await _on_app_ws_scope_drain_complete(
+        scope,
+        ScopeDrainCompletion(
+            input_message_ids=("queue-msg-late",),
+            tool_background_started=True,
+        ),
+    )
+    await _scope_deliver_ready_output(
+        scope,
+        _ready_message(
+            text="late trailing reply", message_ids=("queue-msg-late",)
+        ),
+    )
+
+    assert sent == ["late trailing reply"]
+    assert _lookup_scope_turn_delivery(scope, "queue-msg-late") is not None
+
+
+@pytest.mark.asyncio
+async def test_deliver_ready_output_raises_when_hook_missing() -> None:
+    scope = AgentScope(user_id="user-missing", agent_id="agent-missing")
+    with pytest.raises(OutputDeliveryUnroutableError) as exc_info:
+        await _scope_deliver_ready_output(
+            scope,
+            _ready_message(
+                text="orphan reply", message_ids=("missing-queue-msg",)
+            ),
+        )
+    assert exc_info.value.message_ids == ("missing-queue-msg",)
+
+
+@pytest.mark.asyncio
+async def test_deliver_ready_output_raises_when_message_ids_empty() -> None:
+    scope = AgentScope(user_id="user-empty", agent_id="agent-empty")
+    with pytest.raises(OutputDeliveryUnroutableError) as exc_info:
+        await _scope_deliver_ready_output(
+            scope,
+            _ready_message(text="orphan reply", message_ids=()),
+        )
+    assert exc_info.value.message_ids == ()
 
 
 @pytest.mark.asyncio
@@ -213,11 +295,11 @@ async def test_deliver_ready_output_routes_by_input_message_ids() -> None:
     scope = AgentScope(user_id="user-route", agent_id="agent-route")
     sent_by_turn: dict[str, list[str]] = {"a": [], "b": []}
 
-    async def send_a(text: str) -> None:
-        sent_by_turn["a"].append(text)
+    async def send_a(message: ReadyOutputMessage) -> None:
+        sent_by_turn["a"].append(message.text)
 
-    async def send_b(text: str) -> None:
-        sent_by_turn["b"].append(text)
+    async def send_b(message: ReadyOutputMessage) -> None:
+        sent_by_turn["b"].append(message.text)
 
     _register_scope_turn_delivery(
         scope,
@@ -238,13 +320,11 @@ async def test_deliver_ready_output_routes_by_input_message_ids() -> None:
 
     await _scope_deliver_ready_output(
         scope,
-        "reply for a",
-        ("queue-msg-a",),
+        _ready_message(text="reply for a", message_ids=("queue-msg-a",)),
     )
     await _scope_deliver_ready_output(
         scope,
-        "reply for b",
-        ("queue-msg-b",),
+        _ready_message(text="reply for b", message_ids=("queue-msg-b",)),
     )
 
     assert sent_by_turn["a"] == ["reply for a"]
@@ -258,8 +338,8 @@ async def test_deliver_ready_output_survives_drain_complete() -> None:
     input_id = "queue-msg-race"
     sent: list[str] = []
 
-    async def send_text(text: str) -> None:
-        sent.append(text)
+    async def send_text(message: ReadyOutputMessage) -> None:
+        sent.append(message.text)
 
     _register_scope_turn_delivery(
         scope,
@@ -280,8 +360,9 @@ async def test_deliver_ready_output_survives_drain_complete() -> None:
 
     await _scope_deliver_ready_output(
         scope,
-        "reply after drain complete",
-        (input_id,),
+        _ready_message(
+            text="reply after drain complete", message_ids=(input_id,)
+        ),
     )
 
     assert sent == ["reply after drain complete"]
@@ -294,8 +375,8 @@ async def test_deliver_ready_message_delivers_after_drain_complete() -> None:
     input_id = "queue-msg-pump-race"
     sent: list[str] = []
 
-    async def send_text(text: str) -> None:
-        sent.append(text)
+    async def send_text(message: ReadyOutputMessage) -> None:
+        sent.append(message.text)
 
     _register_scope_turn_delivery(
         scope,
@@ -313,8 +394,8 @@ async def test_deliver_ready_message_delivers_after_drain_complete() -> None:
         ),
     )
 
-    async def deliver_ready(text: str, message_ids: tuple[str, ...]) -> None:
-        await _scope_deliver_ready_output(scope, text, message_ids)
+    async def deliver_message(message: ReadyOutputMessage) -> None:
+        await _scope_deliver_ready_output(scope, message)
 
     fake_queue = MagicMock()
     fake_queue.ack_delivered = AsyncMock()
@@ -333,8 +414,7 @@ async def test_deliver_ready_message_delivers_after_drain_complete() -> None:
     ):
         delivered = await _deliver_ready_message(
             message=ready,
-            send_text=None,
-            deliver_ready=deliver_ready,
+            deliver_message=deliver_message,
             scope=scope,
         )
 
@@ -353,8 +433,8 @@ async def test_background_reply_delivers_after_drain_complete() -> None:
     input_id = "queue-msg-bg"
     sent: list[str] = []
 
-    async def send_text(text: str) -> None:
-        sent.append(text)
+    async def send_text(message: ReadyOutputMessage) -> None:
+        sent.append(message.text)
 
     _register_scope_turn_delivery(
         scope,
@@ -373,9 +453,13 @@ async def test_background_reply_delivers_after_drain_complete() -> None:
         ),
     )
 
-    await _scope_deliver_ready_output(scope, "foreground reply", (input_id,))
     await _scope_deliver_ready_output(
-        scope, "background tool reply", (input_id,)
+        scope,
+        _ready_message(text="foreground reply", message_ids=(input_id,)),
+    )
+    await _scope_deliver_ready_output(
+        scope,
+        _ready_message(text="background tool reply", message_ids=(input_id,)),
     )
 
     assert sent == ["foreground reply", "background tool reply"]

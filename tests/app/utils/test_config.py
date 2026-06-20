@@ -258,24 +258,15 @@ def test_local_only_guest_user_image_gen_limit_in_local_environment(config):
     assert config.app.limits.test_only_guest_user_image_gen_24h_limit == 5
 
 
-def test_local_only_guest_user_image_gen_limit_zero_in_non_local_environment(config):
+def test_local_only_guest_user_image_gen_limit_zero_in_non_local_environment(
+    config,
+):
     config.app.environment = Environment.PROD
     config.app.limits.test_only_guest_user_image_gen_24h_limit = 0
 
     # 应该不抛出异常
     _validate_config(config)
     assert config.app.limits.test_only_guest_user_image_gen_24h_limit == 0
-
-
-def test_features_config_default_companion_transcript_compaction():
-    f = FeaturesConfig()
-    assert f.companion_transcript_compaction is not None
-    assert f.companion_transcript_compaction == DEFAULT_COMPANION_FEATURE_COMPACTION
-
-
-def test_features_config_companion_transcript_compaction_null_disables():
-    f = FeaturesConfig(companion_transcript_compaction=None)
-    assert f.companion_transcript_compaction is None
 
 
 def test_agent_config_companion_harness_settings() -> None:
@@ -292,76 +283,141 @@ def test_agent_config_companion_harness_settings() -> None:
     )
 
     assert agent.companion_harness.dreaming_idle_seconds == 33
-    assert agent.companion_harness.user_feedback_github.repo == "nascentcore/test"
+    assert (
+        agent.companion_harness.user_feedback_github.repo == "nascentcore/test"
+    )
     assert agent.companion_harness.user_feedback_github.token == "gh_test"
 
 
-def test_features_config_uses_pydantic_validation():
-    f = FeaturesConfig.model_validate(
-        {
-            "companion_memory_bootstrap_type": "user_interactive",
-            "unknown_key": "ignored",
-        }
+def test_companion_harness_config_default_transcript_compaction() -> None:
+    agent = AgentConfig(api_key="test", langchain_api_key="test")
+    assert agent.companion_harness.transcript.compaction is not None
+    assert (
+        agent.companion_harness.transcript.compaction
+        == DEFAULT_COMPANION_FEATURE_COMPACTION
     )
-    assert f.companion_memory_bootstrap_type == (
+
+
+def test_companion_harness_config_transcript_compaction_null_disables() -> None:
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={"transcript": {"compaction": None}},
+    )
+    assert agent.companion_harness.transcript.compaction is None
+
+
+def test_companion_harness_memory_bootstrap_type_normalizes_case() -> None:
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={"memory_bootstrap_type": "user_interactive"},
+    )
+    assert agent.companion_harness.memory_bootstrap_type == (
         CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     )
+
+
+def test_companion_harness_proactive_chat_base_idle_out_of_range_raises() -> (
+    None
+):
+    with pytest.raises(ValueError, match="base_idle_seconds"):
+        AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            companion_harness={
+                "inner_tick": {"proactive_chat": {"base_idle_seconds": 5.0}}
+            },
+        )
+
+
+def test_features_config_uses_pydantic_validation():
+    f = FeaturesConfig.model_validate({"unknown_key": "ignored"})
+    assert f.experimental_enable_chat_with_user_time_context is True
     assert not hasattr(f, "unknown_key")
 
 
-def test_companion_transcript_compaction_config_validates(config):
-    config.app.features = FeaturesConfig(
-        companion_transcript_compaction={
-            "max_context_chars": 12000,
-            "keep_recent_messages": 24,
-            "max_messages_per_episode": 6,
-            "max_episodic_entries": 8,
-            "max_semantic_entries": 8,
-            "summary_max_chars": 800,
-            "retrieval_episode_count": 3,
-            "retrieval_semantic_count": 4,
-            "retrieval_open_loop_count": 3,
+def test_companion_transcript_compaction_config_validates():
+    AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={
+            "transcript": {
+                "compaction": {
+                    "max_context_chars": 12000,
+                    "keep_recent_messages": 24,
+                    "max_messages_per_episode": 6,
+                    "max_episodic_entries": 8,
+                    "max_semantic_entries": 8,
+                    "summary_max_chars": 800,
+                    "retrieval_episode_count": 3,
+                    "retrieval_semantic_count": 4,
+                    "retrieval_open_loop_count": 3,
+                },
+                "llm_window_max_messages": 80,
+            }
         },
-        companion_transcript_llm_window_max_messages=80,
     )
-    _validate_config(config)
 
 
 def test_companion_transcript_compaction_invalid_raises():
     with pytest.raises(Exception):
-        FeaturesConfig(
-            companion_transcript_compaction={"max_context_chars": 50},
+        AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            companion_harness={
+                "transcript": {"compaction": {"max_context_chars": 50}}
+            },
         )
 
 
 def test_companion_transcript_window_out_of_range_raises():
     with pytest.raises(ValueError, match="window_max_messages"):
-        FeaturesConfig(companion_transcript_llm_window_max_messages=1)
+        AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            companion_harness={"transcript": {"llm_window_max_messages": 1}},
+        )
 
 
 def test_implicit_sign_on_greeting_llm_timeout_out_of_range_raises():
     with pytest.raises(ValueError, match="timeout_sec"):
-        FeaturesConfig(
-            companion_implicit_sign_on_greeting_llm_timeout_sec=0.5,
+        AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            companion_harness={
+                "implicit_sign_on_greeting": {"llm_timeout_sec": 0.5}
+            },
         )
 
 
 def test_implicit_sign_on_greeting_llm_max_attempts_out_of_range_raises():
     with pytest.raises(ValueError, match="max_attempts"):
-        FeaturesConfig(
-            companion_implicit_sign_on_greeting_llm_max_attempts=6,
+        AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            companion_harness={
+                "implicit_sign_on_greeting": {"llm_max_attempts": 6}
+            },
         )
 
 
 def test_proactive_chat_base_idle_seconds_default(config):
     _validate_config(config)
-    assert config.app.features.companion_ws_proactive_chat_base_idle_seconds == 30.0
+    assert (
+        config.agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds
+        == 30.0
+    )
 
 
 def test_proactive_chat_base_idle_seconds_out_of_range_raises():
     with pytest.raises(ValueError, match="base_idle_seconds"):
-        FeaturesConfig(
-            companion_ws_proactive_chat_base_idle_seconds=5.0,
+        AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            companion_harness={
+                "inner_tick": {"proactive_chat": {"base_idle_seconds": 5.0}}
+            },
         )
 
 
@@ -681,8 +737,7 @@ def test_tts_config_model_validate_ignores_unknown_keys():
 
     assert settings.use_fake_tts is True
     assert (
-        settings.voice_message_narration_mode
-        == "dialogue_and_stage_directions"
+        settings.voice_message_narration_mode == "dialogue_and_stage_directions"
     )
 
 
@@ -791,34 +846,30 @@ def test_app_config_model_validate_ignores_unknown_keys():
     assert not hasattr(app_config, "unknown_key")
 
 
-def test_features_config_companion_memory_bootstrap_type_default():
-    f = FeaturesConfig()
-    assert f.companion_memory_bootstrap_type == (
+def test_companion_harness_memory_bootstrap_type_default() -> None:
+    agent = AgentConfig(api_key="test", langchain_api_key="test")
+    assert agent.companion_harness.memory_bootstrap_type == (
         CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     )
 
 
-def test_features_config_companion_memory_bootstrap_type_normalizes_case():
-    f = FeaturesConfig(companion_memory_bootstrap_type="user_interactive")
-    assert f.companion_memory_bootstrap_type == (
-        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-    )
+def test_companion_harness_memory_bootstrap_type_invalid_raises() -> None:
+    with pytest.raises(ValueError, match="memory_bootstrap_type"):
+        AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            companion_harness={"memory_bootstrap_type": "BOGUS"},
+        )
 
 
-def test_features_config_companion_memory_bootstrap_type_invalid_raises():
-    with pytest.raises(ValueError, match="companion_memory_bootstrap_type"):
-        FeaturesConfig(companion_memory_bootstrap_type="BOGUS")
-
-
-def _minimal_yaml_for_load_config(extra_features: str) -> str:
+def _minimal_yaml_for_load_config(extra_app_content: str = "") -> str:
     return f"""
 app:
   name: loadcfg-bootstrap-test
   environment: test
   gcp_service_account_key: ".secrets/inty-backend-key.json"
-  features:
-{extra_features}
-security:
+  features: {{}}
+{extra_app_content}security:
   secret_key: "test-secret"
 database:
   host: localhost
@@ -834,23 +885,66 @@ elevenlabs:
 """
 
 
-def test_load_config_explicit_companion_memory_bootstrap_type():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
+def _minimal_yaml_for_load_config_harness(extra_companion_harness: str) -> str:
+    return f"""
+app:
+  name: loadcfg-bootstrap-test
+  environment: test
+  gcp_service_account_key: ".secrets/inty-backend-key.json"
+security:
+  secret_key: "test-secret"
+database:
+  host: localhost
+agent:
+  api_key: "test-openrouter"
+  langchain_api_key: "test-langchain"
+  companion_harness:
+{extra_companion_harness}
+gcs:
+  bucket: "test-bucket"
+firebase:
+  service_account_path: "test-firebase.json"
+elevenlabs:
+  api_key: "test-eleven"
+"""
+
+
+def test_load_config_companion_harness_memory_bootstrap_type():
+    yaml_text = _minimal_yaml_for_load_config_harness(
+        "    memory_bootstrap_type: USER_INTERACTIVE\n",
     )
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.yaml"
         path.write_text(yaml_text, encoding="utf-8")
         cfg = load_config(str(path))
-    assert cfg.app.features.companion_memory_bootstrap_type == (
+    assert cfg.agent.companion_harness.memory_bootstrap_type == (
         CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     )
 
 
+def test_load_config_companion_harness_inner_tick_proactive_chat():
+    yaml_text = _minimal_yaml_for_load_config_harness(
+        "\n".join(
+            [
+                "    inner_tick:",
+                "      proactive_chat:",
+                "        base_idle_seconds: 10",
+                "        poll_seconds: 5",
+                "",
+            ]
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+    proactive = cfg.agent.companion_harness.inner_tick.proactive_chat
+    assert proactive.base_idle_seconds == 10.0
+    assert proactive.poll_seconds == 5.0
+
+
 def test_load_config_database_settings_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "database:\n  host: localhost\n",
         "\n".join(
             [
@@ -877,10 +971,8 @@ def test_load_config_database_settings_uses_pydantic_validation():
 
 
 def test_load_config_firebase_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
-        "firebase:\n  service_account_path: \"test-firebase.json\"\n",
+    yaml_text = _minimal_yaml_for_load_config().replace(
+        'firebase:\n  service_account_path: "test-firebase.json"\n',
         "\n".join(
             [
                 "firebase:",
@@ -899,9 +991,7 @@ def test_load_config_firebase_uses_pydantic_validation():
 
 
 def test_load_config_google_play_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "elevenlabs:\n",
         "\n".join(
             [
@@ -925,9 +1015,7 @@ def test_load_config_google_play_uses_pydantic_validation():
 
 
 def test_load_config_cloudflare_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "elevenlabs:\n",
         "\n".join(
             [
@@ -951,9 +1039,7 @@ def test_load_config_cloudflare_uses_pydantic_validation():
 
 
 def test_load_config_google_oauth_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "security:\n",
         "\n".join(
             [
@@ -973,13 +1059,14 @@ def test_load_config_google_oauth_uses_pydantic_validation():
 
     assert cfg.google_oauth.client_id == "google-client"
     assert cfg.google_oauth.client_secret == "google-secret"
-    assert cfg.google_oauth.redirect_uri == "https://example.com/oauth/google/callback"
+    assert (
+        cfg.google_oauth.redirect_uri
+        == "https://example.com/oauth/google/callback"
+    )
 
 
 def test_load_config_verification_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "security:\n",
         "\n".join(
             [
@@ -1002,7 +1089,6 @@ def test_load_config_api_endpoints_uses_pydantic_validation():
     yaml_text = _minimal_yaml_for_load_config(
         "\n".join(
             [
-                "    companion_memory_bootstrap_type: USER_INTERACTIVE",
                 "  api_endpoints:",
                 "    disable_api_v1_chat_completions: true",
                 "    unknown_key: ignored",
@@ -1022,7 +1108,6 @@ def test_load_config_app_limits_uses_pydantic_validation():
     yaml_text = _minimal_yaml_for_load_config(
         "\n".join(
             [
-                "    companion_memory_bootstrap_type: USER_INTERACTIVE",
                 "  limits:",
                 "    guest_user_chat_24h_limit: 3",
                 "    guest_user_voice_24h_limit: 3",
@@ -1042,9 +1127,7 @@ def test_load_config_app_limits_uses_pydantic_validation():
 
 
 def test_load_config_embedding_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "agent:\n",
         "\n".join(
             [
@@ -1068,10 +1151,8 @@ def test_load_config_embedding_uses_pydantic_validation():
 
 
 def test_load_config_gcs_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
-        "gcs:\n  bucket: \"test-bucket\"\n",
+    yaml_text = _minimal_yaml_for_load_config().replace(
+        'gcs:\n  bucket: "test-bucket"\n',
         "\n".join(
             [
                 "gcs:",
@@ -1094,9 +1175,7 @@ def test_load_config_gcs_uses_pydantic_validation():
 
 
 def test_load_config_gemini_live_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "elevenlabs:\n",
         "\n".join(
             [
@@ -1119,10 +1198,8 @@ def test_load_config_gemini_live_uses_pydantic_validation():
 
 
 def test_load_config_elevenlabs_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
-        "elevenlabs:\n  api_key: \"test-eleven\"\n",
+    yaml_text = _minimal_yaml_for_load_config().replace(
+        'elevenlabs:\n  api_key: "test-eleven"\n',
         "\n".join(
             [
                 "elevenlabs:",
@@ -1145,9 +1222,7 @@ def test_load_config_elevenlabs_uses_pydantic_validation():
 
 
 def test_load_config_memory_extraction_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "agent:\n",
         "\n".join(
             [
@@ -1172,9 +1247,7 @@ def test_load_config_memory_extraction_uses_pydantic_validation():
 
 
 def test_load_config_push_notification_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "elevenlabs:\n",
         "\n".join(
             [
@@ -1198,9 +1271,7 @@ def test_load_config_push_notification_uses_pydantic_validation():
 
 
 def test_load_config_user_analytics_report_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "elevenlabs:\n",
         "\n".join(
             [
@@ -1224,9 +1295,7 @@ def test_load_config_user_analytics_report_uses_pydantic_validation():
 
 
 def test_load_config_surprise_snap_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "elevenlabs:\n",
         "\n".join(
             [
@@ -1253,9 +1322,7 @@ def test_load_config_surprise_snap_uses_pydantic_validation():
 
 
 def test_load_config_fal_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "elevenlabs:\n",
         "\n".join(
             [
@@ -1275,9 +1342,7 @@ def test_load_config_fal_uses_pydantic_validation():
 
 
 def test_load_config_tts_uses_pydantic_validation():
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "elevenlabs:\n",
         "\n".join(
             [
@@ -1296,15 +1361,12 @@ def test_load_config_tts_uses_pydantic_validation():
 
     assert cfg.tts.use_fake_tts is True
     assert (
-        cfg.tts.voice_message_narration_mode
-        == "dialogue_and_stage_directions"
+        cfg.tts.voice_message_narration_mode == "dialogue_and_stage_directions"
     )
 
 
 def test_load_config_weixin_channel_split_multiline_default_false() -> None:
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    )
+    yaml_text = _minimal_yaml_for_load_config()
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.yaml"
         path.write_text(yaml_text, encoding="utf-8")
@@ -1313,9 +1375,7 @@ def test_load_config_weixin_channel_split_multiline_default_false() -> None:
 
 
 def test_load_config_weixin_channel_split_multiline_true() -> None:
-    yaml_text = _minimal_yaml_for_load_config(
-        "    companion_memory_bootstrap_type: USER_INTERACTIVE\n",
-    ).replace(
+    yaml_text = _minimal_yaml_for_load_config().replace(
         "elevenlabs:\n",
         "\n".join(
             [

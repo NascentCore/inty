@@ -13,21 +13,26 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputDeliveryUnroutableError,
+    ReadyOutputMessage,
+)
 from app.services.agentic_channel.serving import (
     DrainScopeOnceResult,
     UserChatTurnDeliveryResult,
+    _deliver_ready_message,
     channel_output_pump,
     drain_and_deliver_user_chat_turn,
 )
+from app.services.agentic_companion.downlink import DownlinkKind
 
 
 @pytest.mark.asyncio
 async def test_drain_and_deliver_runs_pump_concurrently() -> None:
     scope = AgentScope(user_id="user-a", agent_id="agent-a")
-    sent: list[str] = []
 
-    async def send_text(text: str) -> None:
-        sent.append(text)
+    async def deliver_message(_message: ReadyOutputMessage) -> None:
+        return None
 
     with patch(
         "app.services.agentic_channel.serving.drain_scope_once_via_companion",
@@ -54,7 +59,7 @@ async def test_drain_and_deliver_runs_pump_concurrently() -> None:
                     server_received_at_utc=None,
                 ),
                 background_output_sink=None,
-                send_text=send_text,
+                deliver_message=deliver_message,
             )
 
     assert result == UserChatTurnDeliveryResult(
@@ -93,7 +98,7 @@ async def test_drain_and_deliver_returns_empty_when_pump_empty() -> None:
                     server_received_at_utc=None,
                 ),
                 background_output_sink=None,
-                send_text=AsyncMock(),
+                deliver_message=AsyncMock(),
             )
 
     assert result.delivered_text == ""
@@ -105,16 +110,21 @@ async def test_channel_output_pump_delivers_ready_batch_and_acks() -> None:
     scope = AgentScope(user_id="user-c", agent_id="agent-c")
     sent: list[str] = []
 
-    async def send_text(text: str) -> None:
-        sent.append(text)
+    async def deliver_message(message: ReadyOutputMessage) -> None:
+        sent.append(message.text)
 
-    class _Ready:
-        message_id = "msg-1"
-        text = "queued reply"
+    ready = ReadyOutputMessage(
+        message_id="msg-1",
+        batch_id="batch-1",
+        kind=DownlinkKind.USER_REPLY,
+        text="queued reply",
+        sequence=1,
+        message_ids=("input-1",),
+    )
 
     fake_queue = MagicMock()
     fake_queue.pull_ready_batch = AsyncMock(
-        side_effect=chain([(_Ready(),)], repeat(()))
+        side_effect=chain([[ready]], repeat(()))
     )
     fake_queue.ack_delivered = AsyncMock()
     stop = asyncio.Event()
@@ -123,7 +133,9 @@ async def test_channel_output_pump_delivers_ready_batch_and_acks() -> None:
         return_value=fake_queue,
     ):
         task = asyncio.create_task(
-            channel_output_pump(scope, send_text=send_text, stop_event=stop)
+            channel_output_pump(
+                scope, deliver_message=deliver_message, stop_event=stop
+            )
         )
         await asyncio.sleep(0.05)
         stop.set()
@@ -132,3 +144,67 @@ async def test_channel_output_pump_delivers_ready_batch_and_acks() -> None:
     assert last == "queued reply"
     assert sent == ["queued reply"]
     fake_queue.ack_delivered.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_deliver_ready_message_skips_unroutable_output() -> None:
+    scope = AgentScope(user_id="user-skip", agent_id="agent-skip")
+    message = ReadyOutputMessage(
+        message_id="msg-skip",
+        batch_id="batch-1",
+        kind=DownlinkKind.USER_REPLY,
+        text="orphan reply",
+        sequence=1,
+        message_ids=("queue-msg-1",),
+    )
+
+    async def deliver_message(_message: ReadyOutputMessage) -> None:
+        raise OutputDeliveryUnroutableError(scope, ("queue-msg-1",))
+
+    fake_queue = MagicMock()
+    fake_queue.skip_delivery = AsyncMock()
+    with patch(
+        "app.services.agentic_channel.serving.get_output_queue_for_scope",
+        return_value=fake_queue,
+    ):
+        result = await _deliver_ready_message(
+            message=message,
+            deliver_message=deliver_message,
+            scope=scope,
+        )
+
+    assert result is None
+    fake_queue.skip_delivery.assert_awaited_once()
+    fake_queue.mark_delivery_failed.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_deliver_ready_message_retries_transport_failure() -> None:
+    scope = AgentScope(user_id="user-retry", agent_id="agent-retry")
+    message = ReadyOutputMessage(
+        message_id="msg-retry",
+        batch_id="batch-1",
+        kind=DownlinkKind.USER_REPLY,
+        text="retry reply",
+        sequence=1,
+        message_ids=("queue-msg-1",),
+    )
+
+    async def deliver_message(_message: ReadyOutputMessage) -> None:
+        raise RuntimeError("transport broken")
+
+    fake_queue = MagicMock()
+    fake_queue.mark_delivery_failed = AsyncMock()
+    with patch(
+        "app.services.agentic_channel.serving.get_output_queue_for_scope",
+        return_value=fake_queue,
+    ):
+        result = await _deliver_ready_message(
+            message=message,
+            deliver_message=deliver_message,
+            scope=scope,
+        )
+
+    assert result is None
+    fake_queue.mark_delivery_failed.assert_awaited_once()
+    fake_queue.skip_delivery.assert_not_called()
