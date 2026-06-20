@@ -269,11 +269,11 @@ async def get_evaluation_results(
         results = await evaluation_service.get_session_results(session_id)
         return results
 
-    except Exception as e:
-        logger.error(f"获取评测结果失败: {str(e)}")
+    except Exception:
+        logger.exception("获取评测结果失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch evaluation results"
-        )
+        ) from None
 
 
 @router.post(
@@ -309,14 +309,14 @@ async def cancel_evaluation_session(
 
         success = await evaluation_service.cancel_session(session_id)
 
-        logger.info(f"用户 {current_user.id} 取消评测会话: {session_id}")
+        logger.info("用户 {} 取消评测会话: {}", current_user.id, session_id)
         return {"success": success, "message": "评测会话已取消"}
 
-    except Exception as e:
-        logger.error(f"取消评测会话失败: {str(e)}")
+    except Exception:
+        logger.exception("取消评测会话失败")
         raise HTTPException(
             status_code=500, detail="Failed to cancel evaluation session"
-        )
+        ) from None
 
 
 @router.post(
@@ -360,7 +360,10 @@ async def parse_questions_file(
         validation = QuestionParserService.validate_questions(questions)
 
         logger.info(
-            f"用户 {current_user.id} 上传问题文件: {file.filename}, 解析出 {len(questions)} 个问题"
+            "用户 {} 上传问题文件: {}, 解析出 {} 个问题",
+            current_user.id,
+            file.filename,
+            len(questions),
         )
 
         return {
@@ -373,11 +376,11 @@ async def parse_questions_file(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"解析问题文件失败: {str(e)}")
+    except Exception:
+        logger.exception("解析问题文件失败")
         raise HTTPException(
-            status_code=400, detail=f"Failed to parse file: {str(e)}"
-        )
+            status_code=400, detail="Failed to parse file"
+        ) from None
 
 
 @router.get(
@@ -397,11 +400,11 @@ async def get_scoring_models(
         models = await scoring_service.get_available_models()
         return models
 
-    except Exception as e:
-        logger.error(f"获取评分模型失败: {str(e)}")
+    except Exception:
+        logger.exception("获取评分模型失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch scoring models"
-        )
+        ) from None
 
 
 @router.post(
@@ -423,11 +426,11 @@ async def validate_scoring_criteria(
         validation = scoring_service.validate_scoring_criteria(criteria)
         return validation
 
-    except Exception as e:
-        logger.error(f"验证评分标准失败: {str(e)}")
+    except Exception:
+        logger.exception("验证评分标准失败")
         raise HTTPException(
             status_code=500, detail="Failed to validate scoring criteria"
-        )
+        ) from None
 
 
 @router.get(
@@ -460,11 +463,11 @@ async def get_evaluation_stats(
             "total_agents_tested": 0,
         }
 
-    except Exception as e:
-        logger.error(f"获取评测统计失败: {str(e)}")
+    except Exception:
+        logger.exception("获取评测统计失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch statistics"
-        )
+        ) from None
 
 
 # WebSocket端点用于实时监控评测进度
@@ -519,8 +522,8 @@ async def monitor_evaluation_session(
                 )
                 break
 
-    except Exception as e:
-        logger.error(f"WebSocket连接错误: {str(e)}")
+    except Exception:
+        logger.exception("WebSocket连接错误")
     finally:
         # 移除连接
         evaluation_service = EvaluationService(db)
@@ -567,13 +570,16 @@ async def get_evaluation_agents(
             )
 
         logger.info(
-            f"用户 {current_user.id} 获取评测智能体列表: {type}, 数量: {len(agents)}"
+            "用户 {} 获取评测智能体列表: {}, 数量: {}",
+            current_user.id,
+            type,
+            len(agents),
         )
         return agents
 
-    except Exception as e:
-        logger.error(f"获取智能体列表失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch agents")
+    except Exception:
+        logger.exception("获取智能体列表失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch agents") from None
 
 
 @router.post(
@@ -599,12 +605,12 @@ async def create_evaluation_agent(
             db=db, agent_in=agent_in, creator_id=current_user.id
         )
 
-        logger.info(f"用户 {current_user.id} 创建评测智能体: {agent.id}")
+        logger.info("用户 {} 创建评测智能体: {}", current_user.id, agent.id)
         return agent
 
-    except Exception as e:
-        logger.error(f"创建智能体失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to create agent")
+    except Exception:
+        logger.exception("创建智能体失败")
+        raise HTTPException(status_code=500, detail="Failed to create agent") from None
 
 
 @router.put(
@@ -641,14 +647,14 @@ async def update_evaluation_agent(
             db=db, agent_id=agent_id, agent_in=agent_in
         )
 
-        logger.info(f"用户 {current_user.id} 更新智能体: {agent_id}")
+        logger.info("用户 {} 更新智能体: {}", current_user.id, agent_id)
         return updated_agent
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"更新智能体失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to update agent")
+    except Exception:
+        logger.exception("更新智能体失败")
+        raise HTTPException(status_code=500, detail="Failed to update agent") from None
 
 
 @router.delete(
@@ -681,14 +687,14 @@ async def delete_evaluation_agent(
 
         await agent_service.delete_agent(db=db, agent_id=agent_id)
 
-        logger.info(f"用户 {current_user.id} 删除智能体: {agent_id}")
+        logger.info("用户 {} 删除智能体: {}", current_user.id, agent_id)
         return {"message": "智能体已删除"}
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"删除智能体失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to delete agent")
+    except Exception:
+        logger.exception("删除智能体失败")
+        raise HTTPException(status_code=500, detail="Failed to delete agent") from None
 
 
 @router.get(
@@ -773,12 +779,12 @@ async def check_background_aspect_ratio(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"检查背景图宽高比失败: {str(e)}")
+    except Exception:
+        logger.exception("检查背景图宽高比失败")
         raise HTTPException(
             status_code=500,
             detail="Failed to validate background image aspect ratio",
-        )
+        ) from None
 
 
 @router.post(
@@ -832,17 +838,20 @@ async def upload_cropped_background(
         )
 
         logger.info(
-            f"用户 {current_user.id} 为智能体 {agent_id} 上传裁剪后的背景图: {result.data.url}"
+            "用户 {} 为智能体 {} 上传裁剪后的背景图: {}",
+            current_user.id,
+            agent_id,
+            result.data.url,
         )
         return APIResponse.success(data=updated_agent)
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"上传裁剪后的背景图失败: {str(e)}")
+    except Exception:
+        logger.exception("上传裁剪后的背景图失败")
         raise HTTPException(
             status_code=500, detail="Failed to upload cropped background image"
-        )
+        ) from None
 
 
 @router.post(
@@ -865,7 +874,9 @@ async def deploy_agent_to_production(
         # 这里应该实现实际的部署逻辑
         # 暂时返回模拟响应
         logger.info(
-            f"用户 {current_user.id} 请求部署智能体 {agent_id} 到生产环境"
+            "用户 {} 请求部署智能体 {} 到生产环境",
+            current_user.id,
+            agent_id,
         )
 
         return {
@@ -875,9 +886,9 @@ async def deploy_agent_to_production(
             "deploy_time": "2025-07-26T00:00:00Z",
         }
 
-    except Exception as e:
-        logger.error(f"部署智能体失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to deploy agent")
+    except Exception:
+        logger.exception("部署智能体失败")
+        raise HTTPException(status_code=500, detail="Failed to deploy agent") from None
 
 
 # =============================================================================
@@ -925,14 +936,14 @@ async def create_evaluation_template(
         await db.commit()
         await db.refresh(template)
 
-        logger.info(f"用户 {current_user.id} 创建评测模板: {template.id}")
+        logger.info("用户 {} 创建评测模板: {}", current_user.id, template.id)
         return template
 
-    except Exception as e:
-        logger.error(f"创建评测模板失败: {str(e)}")
+    except Exception:
+        logger.exception("创建评测模板失败")
         raise HTTPException(
             status_code=500, detail="Failed to create evaluation template"
-        )
+        ) from None
 
 
 @router.get(
@@ -975,11 +986,11 @@ async def get_evaluation_templates(
 
         return templates
 
-    except Exception as e:
-        logger.error(f"获取评测模板失败: {str(e)}")
+    except Exception:
+        logger.exception("获取评测模板失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch evaluation templates"
-        )
+        ) from None
 
 
 # =============================================================================
@@ -1021,15 +1032,17 @@ async def create_batch_evaluation(
             sessions.append(session)
 
         logger.info(
-            f"用户 {current_user.id} 批量创建 {len(sessions)} 个评测会话"
+            "用户 {} 批量创建 {} 个评测会话",
+            current_user.id,
+            len(sessions),
         )
         return sessions
 
-    except Exception as e:
-        logger.error(f"批量创建评测失败: {str(e)}")
+    except Exception:
+        logger.exception("批量创建评测失败")
         raise HTTPException(
             status_code=500, detail="Failed to create evaluations in batch"
-        )
+        ) from None
 
 
 @router.post(
@@ -1051,7 +1064,9 @@ async def export_evaluation_results(
         # 这里应该实现实际的导出逻辑
         # 暂时返回下载链接
         logger.info(
-            f"用户 {current_user.id} 导出评测结果: {len(export_request.session_ids)} 个会话"
+            "用户 {} 导出评测结果: {} 个会话",
+            current_user.id,
+            len(export_request.session_ids),
         )
 
         return {
@@ -1060,11 +1075,11 @@ async def export_evaluation_results(
             "session_count": len(export_request.session_ids),
         }
 
-    except Exception as e:
-        logger.error(f"导出评测结果失败: {str(e)}")
+    except Exception:
+        logger.exception("导出评测结果失败")
         raise HTTPException(
             status_code=500, detail="Failed to export evaluation results"
-        )
+        ) from None
 
 
 @router.post(
@@ -1086,7 +1101,7 @@ async def compare_evaluation_sessions(
     try:
         # 这里应该实现实际的对比逻辑
         # 暂时返回模拟数据
-        logger.info(f"用户 {current_user.id} 对比评测会话: {session_ids}")
+        logger.info("用户 {} 对比评测会话: {}", current_user.id, session_ids)
 
         return {
             "agents": [],
@@ -1099,11 +1114,11 @@ async def compare_evaluation_sessions(
             },
         }
 
-    except Exception as e:
-        logger.error(f"对比评测会话失败: {str(e)}")
+    except Exception:
+        logger.exception("对比评测会话失败")
         raise HTTPException(
             status_code=500, detail="Failed to compare evaluation sessions"
-        )
+        ) from None
 
 
 # =============================================================================
@@ -1244,12 +1259,12 @@ async def get_new_users(
         return data
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取用户统计失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取用户统计失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch user statistics"
-        )
+        ) from None
 
 
 @router.get(
@@ -1289,12 +1304,12 @@ async def get_user_activity(
         return data
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取用户活动失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取用户活动失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch user activity"
-        )
+        ) from None
 
 
 @router.get(
@@ -1345,12 +1360,12 @@ async def get_conversation_rounds(
         return data
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取对话轮数失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取对话轮数失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch conversation turns"
-        )
+        ) from None
 
 
 @router.get(
@@ -1401,12 +1416,12 @@ async def get_user_rounds_distribution(
         return data
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取用户轮数分布失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取用户轮数分布失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch user turn distribution"
-        )
+        ) from None
 
 
 @router.get(
@@ -1456,12 +1471,12 @@ async def get_popular_agents(
         )
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取热门角色失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取热门角色失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch popular agents"
-        )
+        ) from None
 
 
 @router.get(
@@ -1511,12 +1526,12 @@ async def get_users_hitting_limit(
         return data
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取达到限制的用户失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取达到限制的用户失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch users who hit limits"
-        )
+        ) from None
 
 
 @router.get(
@@ -1567,12 +1582,12 @@ async def get_agent_analytics(
         return data
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取角色分析失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取角色分析失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch agent analysis"
-        )
+        ) from None
 
 
 @router.get(
@@ -1623,12 +1638,12 @@ async def get_user_sessions_detail(
         return data
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取用户会话详情失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取用户会话详情失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch user session details"
-        )
+        ) from None
 
 
 @router.get(
@@ -1724,12 +1739,12 @@ async def get_conversations_detail(
         return result
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取对话详情失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取对话详情失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch conversation details"
-        )
+        ) from None
 
 
 @router.get(
@@ -1786,15 +1801,15 @@ async def get_user_agent_conversations_detail_paginated(
         return result
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"获取分页对话详情失败: {str(e)}")
+    except Exception:
+        logger.exception("获取分页对话详情失败")
         raise HTTPException(
             status_code=500,
             detail="Failed to fetch paginated conversation details",
-        )
+        ) from None
 
 
 @router.get(
@@ -1845,12 +1860,12 @@ async def get_user_analytics_stats(
         return data
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取统计数据失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取统计数据失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch statistics"
-        )
+        ) from None
 
 
 @router.get(
@@ -2010,11 +2025,11 @@ async def get_user_analytics_reports(
 
         return UserAnalyticsReportsResponse(reports=reports)
 
-    except Exception as e:
-        logger.error(f"获取预计算报告失败: {str(e)}")
+    except Exception:
+        logger.exception("获取预计算报告失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch precomputed reports"
-        )
+        ) from None
 
 
 @router.get(
@@ -2064,12 +2079,12 @@ async def get_daily_voice_audios(
             voice_call_audios=[to_group(g) for g in voice_call_groups],
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取日报语音录音失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取日报语音录音失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch daily voice audios"
-        )
+        ) from None
 
 
 @router.get(
@@ -2122,12 +2137,12 @@ async def get_llm_latency_trend(
     except HTTPException:
         raise
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取 LLM 延迟趋势失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取 LLM 延迟趋势失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch LLM latency trend"
-        )
+        ) from None
 
 
 @router.get(
@@ -2183,13 +2198,13 @@ async def get_image_generation_latency_trend(
     except HTTPException:
         raise
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取生图耗时趋势失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取生图耗时趋势失败")
         raise HTTPException(
             status_code=500,
             detail="Failed to fetch image generation duration trend",
-        )
+        ) from None
 
 
 @router.get(
@@ -2243,13 +2258,13 @@ async def get_image_generation_failure_analytics(
     except HTTPException:
         raise
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取生图失败分析失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取生图失败分析失败")
         raise HTTPException(
             status_code=500,
             detail="Failed to fetch image generation failure analytics",
-        )
+        ) from None
 
 
 @router.get(
@@ -2301,12 +2316,12 @@ async def get_live_chat_latency_trend(
     except HTTPException:
         raise
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取 Live Chat 延迟趋势失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取 Live Chat 延迟趋势失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch Live Chat latency trend"
-        )
+        ) from None
 
 
 @router.get(
@@ -2358,12 +2373,12 @@ async def get_live_chat_basic_stats(
     except HTTPException:
         raise
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取 Live Chat 基础统计失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception:
+        logger.exception("获取 Live Chat 基础统计失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch Live Chat base statistics"
-        )
+        ) from None
 
 
 @router.get(
@@ -2454,14 +2469,14 @@ async def get_user_daily_messages(
         }
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"获取用户每日消息统计失败: {str(e)}")
+    except Exception:
+        logger.exception("获取用户每日消息统计失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch daily user message stats"
-        )
+        ) from None
 
 
 @router.get(
@@ -2493,11 +2508,11 @@ async def get_user_today_stats(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"获取用户当日统计失败: {str(e)}")
+    except Exception:
+        logger.exception("获取用户当日统计失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch today's user stats"
-        )
+        ) from None
 
 
 @router.get(
@@ -2578,9 +2593,11 @@ async def get_user_generated_images(
                 cdn_url = image_transform_service.transform_desktop(
                     resource.url
                 )
-            except Exception as e:
+            except Exception:
                 logger.warning(
-                    f"转换图片URL失败: {resource.url}, 错误: {str(e)}"
+                    "转换图片URL失败: {}, 错误见堆栈",
+                    resource.url,
+                    exc_info=True,
                 )
                 cdn_url = resource.url  # 使用原始URL作为fallback
             reference_image_url = metadata.get("reference_image_url")
@@ -2619,17 +2636,19 @@ async def get_user_generated_images(
                 total += 1
 
         logger.debug(
-            f"获取用户 {user_info['id']} 的生成图片，共 {len(images)} 张"
+            "获取用户 {} 的生成图片，共 {} 张",
+            user_info["id"],
+            len(images),
         )
         return {"images": images, "total": total}
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"获取用户生成图片失败: {str(e)}")
+    except Exception:
+        logger.exception("获取用户生成图片失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch user generated images"
-        )
+        ) from None
 
 
 @router.get(
@@ -2661,11 +2680,11 @@ async def get_user_sessions(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"获取用户会话列表失败: {str(e)}")
+    except Exception:
+        logger.exception("获取用户会话列表失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch user sessions"
-        )
+        ) from None
 
 
 @router.get(
@@ -2691,11 +2710,11 @@ async def get_session_messages(
 
         return result
 
-    except Exception as e:
-        logger.error(f"获取会话消息失败: {str(e)}")
+    except Exception:
+        logger.exception("获取会话消息失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch session messages"
-        )
+        ) from None
 
 
 # =============================================================================
@@ -2738,14 +2757,14 @@ async def get_all_agents_image_counts(
         # 构建返回数据
         counts = {row.agent_id: row.count for row in rows}
 
-        logger.debug(f"获取所有角色图片数量，共 {len(counts)} 个角色有图片")
+        logger.debug("获取所有角色图片数量，共 {} 个角色有图片", len(counts))
         return {"counts": counts}
 
-    except Exception as e:
-        logger.error(f"获取角色图片数量失败: {str(e)}")
+    except Exception:
+        logger.exception("获取角色图片数量失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch agent image counts"
-        )
+        ) from None
 
 
 @router.get(
@@ -2878,11 +2897,11 @@ async def get_agent_generated_images(
                 }
             )
 
-        logger.debug(f"获取角色 {agent_id} 的生成图片，共 {len(images)} 张")
+        logger.debug("获取角色 {} 的生成图片，共 {} 张", agent_id, len(images))
         return {"images": images, "total": len(images)}
 
-    except Exception as e:
-        logger.error(f"获取角色生成图片失败: {str(e)}")
+    except Exception:
+        logger.exception("获取角色生成图片失败")
         raise HTTPException(
             status_code=500, detail="Failed to fetch agent generated images"
-        )
+        ) from None
