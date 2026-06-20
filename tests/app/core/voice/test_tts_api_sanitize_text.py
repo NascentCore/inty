@@ -17,7 +17,7 @@ class TestSanitizeTextForGeminiTts:
         ]
         assert dialogue == [
             "",
-            '\n"So, you\'re tired aren\'t you?"\n',
+            "\n\"So, you're tired aren't you?\"\n",
             '\n"sir, what can I do for you..?"\n',
         ]
 
@@ -25,7 +25,7 @@ class TestSanitizeTextForGeminiTts:
         text = '(Stage direction here.) "Dialogue only."'
         stage_directions, dialogue = sanitize_text_for_gemini_tts(text)
         assert stage_directions == ["Stage direction here."]
-        assert dialogue == ['', ' "Dialogue only."']
+        assert dialogue == ["", ' "Dialogue only."']
 
     def test_no_parens(self):
         text = '"Just dialogue."'
@@ -37,7 +37,7 @@ class TestSanitizeTextForGeminiTts:
         text = '(First.) "A" (Second.) "B" (Third.) "C"'
         stage_directions, dialogue = sanitize_text_for_gemini_tts(text)
         assert stage_directions == ["First.", "Second.", "Third."]
-        assert dialogue == ['', ' "A" ', ' "B" ', ' "C"']
+        assert dialogue == ["", ' "A" ', ' "B" ', ' "C"']
 
     def test_empty_string(self):
         stage_directions, dialogue = sanitize_text_for_gemini_tts("")

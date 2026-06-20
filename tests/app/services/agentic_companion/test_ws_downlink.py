@@ -19,7 +19,9 @@ async def test_ws_downlink_delivers_tool_background_payload() -> None:
     queue: asyncio.Queue[WsOutboundPayload] = asyncio.Queue()
     seen_tool: list[ToolOutputEvent] = []
 
-    async def tool_materializer(tool_output: ToolOutputEvent) -> WsOutboundPayload:
+    async def tool_materializer(
+        tool_output: ToolOutputEvent,
+    ) -> WsOutboundPayload:
         seen_tool.append(tool_output)
         return {"source": "tool_bg", "text": tool_output.text}
 

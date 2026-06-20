@@ -32,6 +32,12 @@ def last_real_user_transcript_anchor(
         if row.role != "user" or row.proactive_chat is True:
             continue
         row_uuid = row.uuid
-        uuid = row_uuid.strip() if isinstance(row_uuid, str) and row_uuid.strip() else None
-        return RealUserTranscriptAnchor(ts=parse_transcript_row_ts(row.ts), uuid=uuid)
+        uuid = (
+            row_uuid.strip()
+            if isinstance(row_uuid, str) and row_uuid.strip()
+            else None
+        )
+        return RealUserTranscriptAnchor(
+            ts=parse_transcript_row_ts(row.ts), uuid=uuid
+        )
     return RealUserTranscriptAnchor(ts=None, uuid=None)

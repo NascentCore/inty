@@ -23,7 +23,9 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutput,
+)
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
 )
@@ -64,9 +66,7 @@ class _FakeSyncToolLoopLLMClient:
 
     def chat_completion(self, **kwargs: Any) -> SimpleNamespace:
         tools = kwargs.get("tools")
-        self.tools_per_call.append(
-            tuple(tools) if tools is not None else ()
-        )
+        self.tools_per_call.append(tuple(tools) if tools is not None else ())
         return next(self._responses)
 
 
@@ -259,7 +259,9 @@ async def test_run_in_turn_sync_tool_loop_emit_every_assistant_round_terminal(
     async def _sink(ev: BootstrapInterimOutput) -> None:
         interim.append(ev)
 
-    client = _FakeSyncToolLoopLLMClient([_final_response(content="terminal only")])
+    client = _FakeSyncToolLoopLLMClient(
+        [_final_response(content="terminal only")]
+    )
 
     result = await run_in_turn_sync_tool_loop(
         InTurnSyncToolLoopInput(
@@ -308,7 +310,9 @@ async def test_run_bootstrap_track_sync_tool_loop_returns_result(
     scope = CompanionScope("bootstrap-wrapper", "agent", tmp_path.name)
     store = MemoryStore(scope=scope, repository=None)
     store.write_document("transcript.jsonl", "")
-    client = _FakeSyncToolLoopLLMClient([_final_response(content="bootstrap ok")])
+    client = _FakeSyncToolLoopLLMClient(
+        [_final_response(content="bootstrap ok")]
+    )
 
     result = await run_bootstrap_track_sync_tool_loop(
         BootstrapInTurnSyncToolLoopInput(
@@ -347,7 +351,10 @@ async def test_run_in_turn_sync_tool_loop_after_tool_hook_refreshes_openai_tools
     refreshed_tools = (
         {
             "type": "function",
-            "function": {"name": "refreshed_tool", "parameters": {"type": "object"}},
+            "function": {
+                "name": "refreshed_tool",
+                "parameters": {"type": "object"},
+            },
         },
     )
 

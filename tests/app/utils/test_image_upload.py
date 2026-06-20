@@ -35,9 +35,7 @@ def _assert_served_image_url(url: str) -> None:
         assert url.startswith("file:"), url
         assert gcs_cfg.bucket in url.replace("\\", "/"), url
     else:
-        assert (
-            "cdn.example.com" in url or "storage.googleapis.com" in url
-        ), url
+        assert "cdn.example.com" in url or "storage.googleapis.com" in url, url
 
 
 def _assert_fallback_public_url_after_cdn_failure(url: str) -> None:
@@ -56,13 +54,13 @@ def create_test_user(db: Session, user_id: str) -> User:
     existing_user = db.query(User).filter(User.id == user_id).one_or_none()
     if existing_user:
         return existing_user
-    
+
     # 生成唯一的readable_id
     readable_id = str(random.randint(10000000, 99999999))
     # 确保readable_id唯一
     while db.query(User).filter(User.readable_id == readable_id).one_or_none():
         readable_id = str(random.randint(10000000, 99999999))
-    
+
     # 创建新的测试用户
     test_user = User(
         id=user_id,
@@ -74,7 +72,6 @@ def create_test_user(db: Session, user_id: str) -> User:
     db.commit()
     db.refresh(test_user)
     return test_user
-
 
 
 def register_user(db: Session, user_in) -> User:
@@ -103,7 +100,9 @@ class TestUploadImage:
     """Test cases for upload_image function."""
 
     @pytest.mark.asyncio
-    async def test_upload_png_file_creates_resource_records_with_correct_metadata(self):
+    async def test_upload_png_file_creates_resource_records_with_correct_metadata(
+        self,
+    ):
         """
         Test that uploading a PNG file creates resource records with correct metadata.
         """
@@ -113,7 +112,9 @@ class TestUploadImage:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -134,7 +135,9 @@ class TestUploadImage:
             file_content = f.read()
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.png", headers={"content-type": "image/png"}
+            file=file_obj,
+            filename="test.png",
+            headers={"content-type": "image/png"},
         )
         base_path = "images/uploads"
 
@@ -158,7 +161,9 @@ class TestUploadImage:
 
         # 验证数据库中的资源记录
         resources = db.query(Resource).filter(Resource.user_id == user_id).all()
-        assert len(resources) == 3, f"Expected 3 resources, got {len(resources)}"
+        assert (
+            len(resources) == 3
+        ), f"Expected 3 resources, got {len(resources)}"
 
         # 验证每个资源记录都有正确的元数据
         for resource in resources:
@@ -188,7 +193,9 @@ class TestUploadImage:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -209,7 +216,9 @@ class TestUploadImage:
             file_content = f.read()
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.png", headers={"content-type": "image/png"}
+            file=file_obj,
+            filename="test.png",
+            headers={"content-type": "image/png"},
         )
         base_path = "images/uploads"
 
@@ -227,7 +236,9 @@ class TestUploadImage:
         assert result.code == 200
 
         # 检查资源记录数量 - 这里应该发现重复记录的问题
-        all_resources = db.query(Resource).filter(Resource.user_id == user_id).all()
+        all_resources = (
+            db.query(Resource).filter(Resource.user_id == user_id).all()
+        )
 
         print(f"Total resource records created: {len(all_resources)}")
         for i, resource in enumerate(all_resources):
@@ -274,7 +285,9 @@ class TestImageUploadValidation:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -289,7 +302,9 @@ class TestImageUploadValidation:
         large_file_data = b"x" * (10 * 1024 * 1024)  # 10MB
         file_obj = BytesIO(large_file_data)
         upload_file = UploadFile(
-            file=file_obj, filename="large.jpg", headers={"content-type": "image/jpeg"}
+            file=file_obj,
+            filename="large.jpg",
+            headers={"content-type": "image/jpeg"},
         )
 
         async with async_session() as async_db:
@@ -318,7 +333,9 @@ class TestImageUploadValidation:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -357,7 +374,9 @@ class TestImageUploadValidation:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -398,7 +417,9 @@ class TestImageUploadValidation:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -412,7 +433,9 @@ class TestImageUploadValidation:
         # 使用真正不支持的格式（.txt 而不是 .gif，因为现在支持 GIF 和 AVIF）
         file_obj = BytesIO(b"fake text data")
         upload_file = UploadFile(
-            file=file_obj, filename="test.txt", headers={"content-type": "text/plain"}
+            file=file_obj,
+            filename="test.txt",
+            headers={"content-type": "text/plain"},
         )
 
         async with async_session() as async_db:
@@ -442,7 +465,9 @@ class TestImageUploadCompression:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -464,7 +489,9 @@ class TestImageUploadCompression:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.png", headers={"content-type": "image/png"}
+            file=file_obj,
+            filename="test.png",
+            headers={"content-type": "image/png"},
         )
 
         # 使用fake GCS，不需要mock upload_to_gcs
@@ -491,7 +518,9 @@ class TestImageUploadCompression:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -513,7 +542,9 @@ class TestImageUploadCompression:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="large.jpg", headers={"content-type": "image/jpeg"}
+            file=file_obj,
+            filename="large.jpg",
+            headers={"content-type": "image/jpeg"},
         )
 
         # 确保使用fake GCS
@@ -544,7 +575,9 @@ class TestImageUploadDifferentFormats:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -565,7 +598,9 @@ class TestImageUploadDifferentFormats:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.jpg", headers={"content-type": "image/jpeg"}
+            file=file_obj,
+            filename="test.jpg",
+            headers={"content-type": "image/jpeg"},
         )
 
         # 使用fake GCS，不需要mock upload_to_gcs
@@ -592,7 +627,9 @@ class TestImageUploadDifferentFormats:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -613,7 +650,9 @@ class TestImageUploadDifferentFormats:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.webp", headers={"content-type": "image/webp"}
+            file=file_obj,
+            filename="test.webp",
+            headers={"content-type": "image/webp"},
         )
 
         # 使用fake GCS，不需要mock upload_to_gcs
@@ -644,7 +683,9 @@ class TestImageUploadCropping:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -665,7 +706,9 @@ class TestImageUploadCropping:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="frontal.png", headers={"content-type": "image/png"}
+            file=file_obj,
+            filename="frontal.png",
+            headers={"content-type": "image/png"},
         )
 
         # 确保使用fake GCS
@@ -695,7 +738,9 @@ class TestImageUploadCropping:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -752,7 +797,9 @@ class TestImageUploadErrorHandling:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -773,7 +820,9 @@ class TestImageUploadErrorHandling:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.jpg", headers={"content-type": "image/jpeg"}
+            file=file_obj,
+            filename="test.jpg",
+            headers={"content-type": "image/jpeg"},
         )
 
         with patch("app.utils.image_upload.upload_to_gcs") as mock_upload:
@@ -801,7 +850,9 @@ class TestImageUploadErrorHandling:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -822,7 +873,9 @@ class TestImageUploadErrorHandling:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.jpg", headers={"content-type": "image/jpeg"}
+            file=file_obj,
+            filename="test.jpg",
+            headers={"content-type": "image/jpeg"},
         )
 
         # 确保使用fake GCS
@@ -862,7 +915,9 @@ class TestImageUploadResourceRecords:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -884,7 +939,9 @@ class TestImageUploadResourceRecords:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.jpg", headers={"content-type": "image/jpeg"}
+            file=file_obj,
+            filename="test.jpg",
+            headers={"content-type": "image/jpeg"},
         )
 
         async with async_session() as async_db:
@@ -922,7 +979,9 @@ class TestImageUploadResourceRecords:
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
         Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
         db = SessionLocal()
 
         # 创建一个 async session
@@ -944,7 +1003,9 @@ class TestImageUploadResourceRecords:
 
         file_obj = BytesIO(file_content)
         upload_file = UploadFile(
-            file=file_obj, filename="test.png", headers={"content-type": "image/png"}
+            file=file_obj,
+            filename="test.png",
+            headers={"content-type": "image/png"},
         )
 
         # 使用fake GCS，不需要mock upload_to_gcs
@@ -962,19 +1023,30 @@ class TestImageUploadResourceRecords:
         assert len(resources) >= 2  # 至少有两个资源记录（原始PNG和压缩JPEG）
 
         # 检查压缩资源记录
-        compressed_resources = [r for r in resources if r.resource_metadata.get("content_type") == "image/jpeg"]
+        compressed_resources = [
+            r
+            for r in resources
+            if r.resource_metadata.get("content_type") == "image/jpeg"
+        ]
         assert len(compressed_resources) >= 1
 
         # 检查原始资源记录
-        original_resources = [r for r in resources if r.resource_metadata.get("content_type") == "image/png"]
+        original_resources = [
+            r
+            for r in resources
+            if r.resource_metadata.get("content_type") == "image/png"
+        ]
         assert len(original_resources) >= 1
 
         # 验证压缩效果
         compressed_resource = compressed_resources[0]
         original_resource = original_resources[0]
-        
+
         # 压缩后的文件应该更小
-        assert compressed_resource.resource_metadata["byte_size"] < original_resource.resource_metadata["byte_size"]
+        assert (
+            compressed_resource.resource_metadata["byte_size"]
+            < original_resource.resource_metadata["byte_size"]
+        )
 
         # 验证URL格式
         for resource in resources:

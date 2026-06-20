@@ -108,7 +108,9 @@ def test_inner_tick_delivery_rejects_multiple_media() -> None:
     from app.core.companion_harness.companion.runtime_channel import (
         CompanionRuntimeChannel,
     )
-    from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
+    from app.services.agentic_companion.inner_tick_delivery import (
+        InnerTickDelivery,
+    )
 
     async def _telegram_sink(_: str) -> None:
         return None

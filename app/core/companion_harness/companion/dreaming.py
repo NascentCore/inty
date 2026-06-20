@@ -65,7 +65,9 @@ from .models import (
     load_transcript_from_store,
     transcript_without_trailing_presence_signals,
 )
-from .transcript_anchor import parse_transcript_row_ts as parse_transcript_datetime
+from .transcript_anchor import (
+    parse_transcript_row_ts as parse_transcript_datetime,
+)
 
 _FIRST_DREAMING_LOOKBACK = timedelta(hours=24)
 

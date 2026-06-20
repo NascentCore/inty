@@ -81,7 +81,9 @@ def test_transcript_window_to_llm_dialogue_appends_tail_splice(
         scope=CompanionScope("dialogue", "a", tmp_path.name),
         repository=None,
     )
-    append_ai_private_thought(store, text="tail thought", after_user_msg_uuid=None)
+    append_ai_private_thought(
+        store, text="tail thought", after_user_msg_uuid=None
+    )
     transcript = [
         ChatMessage(
             role="user",
@@ -126,17 +128,20 @@ def test_persist_ai_private_splice_appends_manifest_and_marks_surfaced(
     assert len(rows) == 1
     assert rows[0].source == AI_PRIVATE_SPLICE_MANIFEST_SOURCE
     assert rows[0].ai_private_thought_uuids == [thought.uuid]
-    assert select_tail_splice_thoughts(
-        store,
-        [
-            ChatMessage(
-                role="user",
-                content="hi",
-                ts="2026-01-02T09:00:00+00:00",
-                uuid="user-1",
-            ),
-        ],
-    ) == []
+    assert (
+        select_tail_splice_thoughts(
+            store,
+            [
+                ChatMessage(
+                    role="user",
+                    content="hi",
+                    ts="2026-01-02T09:00:00+00:00",
+                    uuid="user-1",
+                ),
+            ],
+        )
+        == []
+    )
 
 
 def test_persist_ai_private_splice_skips_silent_reply(tmp_path: Path) -> None:

@@ -71,7 +71,9 @@ class TestLiveChatWebSocket:
         """测试无 token 时 WebSocket 连接被拒绝"""
         import websocket
 
-        ws_url = API_BASE_URL.replace("http://", "ws://").replace("https://", "wss://")
+        ws_url = API_BASE_URL.replace("http://", "ws://").replace(
+            "https://", "wss://"
+        )
         ws_url = f"{ws_url}/api/v1/live-chat/test-agent-id"
 
         try:
@@ -88,7 +90,9 @@ class TestLiveChatWebSocket:
         """测试无效 token 时 WebSocket 连接被拒绝"""
         import websocket
 
-        ws_url = API_BASE_URL.replace("http://", "ws://").replace("https://", "wss://")
+        ws_url = API_BASE_URL.replace("http://", "ws://").replace(
+            "https://", "wss://"
+        )
         ws_url = f"{ws_url}/api/v1/live-chat/test-agent-id?token=invalid_token"
 
         try:
@@ -115,7 +119,9 @@ class TestLiveChatWebSocket:
         """
         import websocket
 
-        ws_url = API_BASE_URL.replace("http://", "ws://").replace("https://", "wss://")
+        ws_url = API_BASE_URL.replace("http://", "ws://").replace(
+            "https://", "wss://"
+        )
 
         agents_response = integration_client.get("/api/v1/agents/")
         agents = agents_response.json().get("data", [])

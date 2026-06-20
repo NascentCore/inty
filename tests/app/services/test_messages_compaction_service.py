@@ -110,6 +110,9 @@ async def test_messages_compaction_upsert_and_get(db_session: AsyncSession):
         assert loaded_second is not None
         assert loaded_second["original_messages_count"] == 20
         assert loaded_second["compacted_messages_count"] == 1
-        assert loaded_second["compacted_messages"][0]["content"] == "updated compacted text"
+        assert (
+            loaded_second["compacted_messages"][0]["content"]
+            == "updated compacted text"
+        )
     finally:
         await _delete_compaction_row(db_session, key)

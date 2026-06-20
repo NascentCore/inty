@@ -11,7 +11,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
+from app.core.companion_harness.llm.chat_completions import (
+    create_chat_completion_sync,
+)
 from app.core.companion_harness.companion.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
@@ -32,8 +34,12 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.tools.tool_background import start_tool_background_job
-from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
+from app.core.companion_harness.tools.tool_background import (
+    start_tool_background_job,
+)
+from app.core.companion_harness.companion.turn import (
+    run_companion_user_chat_turn,
+)
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
@@ -51,7 +57,9 @@ def _idle_tool_bg() -> threading.Event:
     "app.core.companion_harness.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
     return_value=False,
 )
-def test_create_companion_turn_root_run_returns_none_when_disabled(_mock: MagicMock) -> None:
+def test_create_companion_turn_root_run_returns_none_when_disabled(
+    _mock: MagicMock,
+) -> None:
     assert (
         create_companion_turn_root_run(
             inty_trace_id="t1",
@@ -122,10 +130,15 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
     assert kwargs["inputs"]["companion_id"] == "c-7"
     assert kwargs["inputs"]["inty_turn_lane"] == "explicit_user_message"
     assert "inner_tick_activity" not in kwargs["inputs"]
-    assert kwargs["extra"]["metadata"]["ls_model_name"] == "stub/chat-route | stub/tool-route"
+    assert (
+        kwargs["extra"]["metadata"]["ls_model_name"]
+        == "stub/chat-route | stub/tool-route"
+    )
     assert kwargs["extra"]["metadata"]["inty_user_id"] == "u-42"
     assert kwargs["extra"]["metadata"]["inty_companion_id"] == "c-7"
-    assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "explicit_user_message"
+    assert (
+        kwargs["extra"]["metadata"]["inty_turn_lane"] == "explicit_user_message"
+    )
     assert "inner_tick_activity" not in kwargs["extra"]["metadata"]
     mock_root.post.assert_called_once()
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
@@ -149,7 +162,10 @@ def test_create_companion_turn_root_run_name_uses_unknown_when_ids_empty(
         langsmith_slice=_APP_SLICE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
-    assert kwargs["name"] == "agentic_companion_user_turn user=unknown agent=unknown"
+    assert (
+        kwargs["name"]
+        == "agentic_companion_user_turn user=unknown agent=unknown"
+    )
     assert kwargs["inputs"]["user_id"] == ""
     assert kwargs["inputs"]["companion_id"] == ""
     assert kwargs["inputs"]["inty_turn_lane"] == "explicit_user_message"
@@ -187,7 +203,10 @@ def test_create_companion_turn_root_run_implicit_signed_on_lane(
     assert kwargs["inputs"]["inty_turn_lane"] == "implicit_turn"
     assert kwargs["inputs"]["implicit_signal"] == "implicit_user_signed_on"
     assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "implicit_turn"
-    assert kwargs["extra"]["metadata"]["implicit_signal"] == "implicit_user_signed_on"
+    assert (
+        kwargs["extra"]["metadata"]["implicit_signal"]
+        == "implicit_user_signed_on"
+    )
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
@@ -214,7 +233,10 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
         langsmith_slice=_APP_SLICE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
-    assert kwargs["name"] == "agentic_companion_inner_tick maintenance user=u1 agent=a1"
+    assert (
+        kwargs["name"]
+        == "agentic_companion_inner_tick maintenance user=u1 agent=a1"
+    )
     assert kwargs["tags"] == [
         "agentic_companion",
         "inner_tick",
@@ -225,7 +247,10 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
     assert kwargs["inputs"]["transcript_newest_message_uuid"] == "tail-uuid-1"
     assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "inner_tick"
     assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "maintenance"
-    assert kwargs["extra"]["metadata"]["transcript_newest_message_uuid"] == "tail-uuid-1"
+    assert (
+        kwargs["extra"]["metadata"]["transcript_newest_message_uuid"]
+        == "tail-uuid-1"
+    )
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
@@ -252,11 +277,19 @@ def test_create_companion_turn_root_run_inner_tick_proactive_lane(
         langsmith_slice=_APP_SLICE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
-    assert kwargs["name"] == "agentic_companion_inner_tick proactive_chat user=u1 agent=a1"
+    assert (
+        kwargs["name"]
+        == "agentic_companion_inner_tick proactive_chat user=u1 agent=a1"
+    )
     assert kwargs["inputs"]["inner_tick_activity"] == "proactive_chat"
     assert kwargs["inputs"]["transcript_newest_message_uuid"] == "tail-uuid-2"
-    assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "proactive_chat"
-    assert kwargs["extra"]["metadata"]["transcript_newest_message_uuid"] == "tail-uuid-2"
+    assert (
+        kwargs["extra"]["metadata"]["inner_tick_activity"] == "proactive_chat"
+    )
+    assert (
+        kwargs["extra"]["metadata"]["transcript_newest_message_uuid"]
+        == "tail-uuid-2"
+    )
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
@@ -317,7 +350,10 @@ def test_create_companion_turn_root_run_inner_tick_dreaming_lane(
         langsmith_slice=_APP_SLICE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
-    assert kwargs["name"] == "agentic_companion_inner_tick dreaming user=u1 agent=a1"
+    assert (
+        kwargs["name"]
+        == "agentic_companion_inner_tick dreaming user=u1 agent=a1"
+    )
     assert kwargs["inputs"]["inner_tick_activity"] == "dreaming"
     assert kwargs["inputs"]["transcript_newest_message_uuid"] == "boundary-u1"
     assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "dreaming"
@@ -333,8 +369,12 @@ def test_end_companion_turn_root_run_safe_noop_for_none() -> None:
 
 
 @patch("app.core.companion_harness.tools.tool_background.threading.Thread")
-@patch("app.core.companion_harness.tools.tool_background.set_tool_background_db_loop")
-@patch("app.core.companion_harness.tools.tool_background.clear_tool_background_db_loop")
+@patch(
+    "app.core.companion_harness.tools.tool_background.set_tool_background_db_loop"
+)
+@patch(
+    "app.core.companion_harness.tools.tool_background.clear_tool_background_db_loop"
+)
 @patch("asyncio.run")
 @patch(
     "app.core.companion_harness.tools.tool_background.end_companion_turn_root_run_safe"
@@ -391,8 +431,12 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
 
 
 @patch("app.core.companion_harness.tools.tool_background.threading.Thread")
-@patch("app.core.companion_harness.tools.tool_background.set_tool_background_db_loop")
-@patch("app.core.companion_harness.tools.tool_background.clear_tool_background_db_loop")
+@patch(
+    "app.core.companion_harness.tools.tool_background.set_tool_background_db_loop"
+)
+@patch(
+    "app.core.companion_harness.tools.tool_background.clear_tool_background_db_loop"
+)
 @patch("asyncio.run")
 @patch(
     "app.core.companion_harness.tools.tool_background.end_companion_turn_root_run_safe"

@@ -16,11 +16,26 @@ from app.core.companion_harness.experience_profile.experience_directives import 
 @pytest.mark.parametrize(
     ("intent", "expected_context_mode"),
     [
-        (ExperienceSessionIntent.CASUAL_CHAT, ExperienceContextMode.EMOTIONAL_COMPANION.value),
-        (ExperienceSessionIntent.DEEP_CONVERSATION, ExperienceContextMode.INTIMATE.value),
-        (ExperienceSessionIntent.ROLEPLAY, ExperienceContextMode.ROLEPLAY.value),
-        (ExperienceSessionIntent.EMOTIONAL_SUPPORT, ExperienceContextMode.EMOTIONAL_COMPANION.value),
-        (ExperienceSessionIntent.REMOTE_ROMANCE, ExperienceContextMode.REMOTE_LOVER.value),
+        (
+            ExperienceSessionIntent.CASUAL_CHAT,
+            ExperienceContextMode.EMOTIONAL_COMPANION.value,
+        ),
+        (
+            ExperienceSessionIntent.DEEP_CONVERSATION,
+            ExperienceContextMode.INTIMATE.value,
+        ),
+        (
+            ExperienceSessionIntent.ROLEPLAY,
+            ExperienceContextMode.ROLEPLAY.value,
+        ),
+        (
+            ExperienceSessionIntent.EMOTIONAL_SUPPORT,
+            ExperienceContextMode.EMOTIONAL_COMPANION.value,
+        ),
+        (
+            ExperienceSessionIntent.REMOTE_ROMANCE,
+            ExperienceContextMode.REMOTE_LOVER.value,
+        ),
         (
             ExperienceSessionIntent.INTERACTIVE_FICTION,
             ExperienceContextMode.INTERACTIVE_FICTION.value,

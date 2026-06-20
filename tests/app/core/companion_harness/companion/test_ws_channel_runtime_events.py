@@ -42,7 +42,10 @@ def test_ws_channel_runtime_events_append_and_read(tmp_path) -> None:
     )
     assert len(out_rows) == 1
     assert out_rows[0]["kind"] == USER_SIGNED_OUT_RUNTIME_EVENT_KIND
-    assert out_rows[0]["received_message_uuid"] == "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    assert (
+        out_rows[0]["received_message_uuid"]
+        == "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    )
 
     drop_rows = read_runtime_events(
         store,

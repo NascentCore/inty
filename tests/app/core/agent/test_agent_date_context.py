@@ -40,7 +40,13 @@ def test_build_messages_with_date_system_prompts_only_inserts_today_prompt_for_n
         now_utc=datetime(2026, 2, 22, 8, 30, tzinfo=timezone.utc),
     )
 
-    assert [message.type for message in result] == ["human", "ai", "human", "system", "human"]
+    assert [message.type for message in result] == [
+        "human",
+        "ai",
+        "human",
+        "system",
+        "human",
+    ]
     assert _count_system_messages(result) == 1
     assert "2026-02-22" in result[3].content
 

@@ -8,7 +8,10 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from app.core.companion_harness.companion.models import ContextMeta, load_context_meta
+from app.core.companion_harness.companion.models import (
+    ContextMeta,
+    load_context_meta,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
@@ -94,7 +97,9 @@ def test_load_context_meta_repairs_intent_context_mode_drift(
     )
     meta = load_context_meta(store=store)
     assert meta.context_mode == "emotional_companion"
-    assert meta.experience_directives.intent == ExperienceSessionIntent.CASUAL_CHAT
+    assert (
+        meta.experience_directives.intent == ExperienceSessionIntent.CASUAL_CHAT
+    )
 
 
 def test_load_context_meta_legacy_json_without_directives(

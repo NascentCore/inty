@@ -15,7 +15,9 @@ from app.core.companion_harness.companion.inner_tick_schedule import (
 )
 
 
-def _write_transcript_store(scope: CompanionScope, rows: list[dict[str, object]]) -> MemoryStore:
+def _write_transcript_store(
+    scope: CompanionScope, rows: list[dict[str, object]]
+) -> MemoryStore:
     body = "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n"
     st = MemoryStore(scope=scope, repository=None)
     st.write_document("transcript.jsonl", body)
@@ -27,7 +29,9 @@ def test_inner_tick_env_unset_defaults_enabled() -> None:
         assert inner_tick_enabled_from_env() is True
 
 
-def test_next_inner_tick_short_transcript_returns_poll_chunk(tmp_path: Path) -> None:
+def test_next_inner_tick_short_transcript_returns_poll_chunk(
+    tmp_path: Path,
+) -> None:
     sc = CompanionScope("it", "a", f"short-{tmp_path.name}")
     store = _write_transcript_store(
         sc,
@@ -49,7 +53,9 @@ def test_next_inner_tick_short_transcript_returns_poll_chunk(tmp_path: Path) -> 
     assert 0.0 < w < 86400.0 * 10
 
 
-def test_next_inner_tick_overrides_enabled_false_disables(tmp_path: Path) -> None:
+def test_next_inner_tick_overrides_enabled_false_disables(
+    tmp_path: Path,
+) -> None:
     sc = CompanionScope("it", "a", f"ov-{tmp_path.name}")
     store = _write_transcript_store(
         sc,
@@ -77,7 +83,9 @@ def test_next_inner_tick_overrides_enabled_false_disables(tmp_path: Path) -> Non
     assert w >= 86400.0 * 300
 
 
-def test_next_inner_tick_incomplete_bootstrap_phase_disables(tmp_path: Path) -> None:
+def test_next_inner_tick_incomplete_bootstrap_phase_disables(
+    tmp_path: Path,
+) -> None:
     sc = CompanionScope("it", "a", f"boot-{tmp_path.name}")
     store = _write_transcript_store(
         sc,
@@ -98,7 +106,13 @@ def test_next_inner_tick_incomplete_bootstrap_phase_disables(tmp_path: Path) -> 
     )
     store.write_document(
         "context.json",
-        json.dumps({"context_mode": "unspecific", "workspace_bootstrap_user_interactive_completed": False}, ensure_ascii=False),
+        json.dumps(
+            {
+                "context_mode": "unspecific",
+                "workspace_bootstrap_user_interactive_completed": False,
+            },
+            ensure_ascii=False,
+        ),
     )
     w = next_inner_tick_wait_seconds(
         store,
@@ -108,7 +122,9 @@ def test_next_inner_tick_incomplete_bootstrap_phase_disables(tmp_path: Path) -> 
     assert w >= 86400.0 * 300
 
 
-def test_next_inner_tick_skips_when_transcript_unchanged(tmp_path: Path) -> None:
+def test_next_inner_tick_skips_when_transcript_unchanged(
+    tmp_path: Path,
+) -> None:
     sc = CompanionScope("it", "a", f"unchanged-{tmp_path.name}")
     rows = [
         {
@@ -133,7 +149,9 @@ def test_next_inner_tick_skips_when_transcript_unchanged(tmp_path: Path) -> None
     assert w >= 86400.0 * 300
 
 
-def test_transcript_tail_message_uuid_returns_last_business_row(tmp_path: Path) -> None:
+def test_transcript_tail_message_uuid_returns_last_business_row(
+    tmp_path: Path,
+) -> None:
     sc = CompanionScope("it", "a", f"tail-{tmp_path.name}")
     store = _write_transcript_store(
         sc,

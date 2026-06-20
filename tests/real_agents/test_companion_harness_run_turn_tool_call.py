@@ -20,7 +20,9 @@ import pytest
 from app.core.llms.client import CompanionLLMClient, CompanionLLMConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
+from app.core.companion_harness.companion.turn import (
+    run_companion_user_chat_turn,
+)
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
@@ -38,7 +40,9 @@ def _require_real_companion_harness_llm_test() -> None:
             "Set INTY_COMPANION_HARNESS_REAL_LLM_TEST=1 to run Companion Harness real LLM tests"
         )
     if not (os.getenv("OPENROUTER_API_KEY") or "").strip():
-        pytest.skip("OPENROUTER_API_KEY is required for Companion Harness real LLM tests")
+        pytest.skip(
+            "OPENROUTER_API_KEY is required for Companion Harness real LLM tests"
+        )
 
 
 class _InstrumentedCompanionLLMClient(CompanionLLMClient):
@@ -76,7 +80,9 @@ class _InstrumentedCompanionLLMClient(CompanionLLMClient):
 @pytest.mark.noci
 @pytest.mark.slow
 @pytest.mark.asyncio
-async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> None:
+async def test_run_turn_real_llm_lists_scope_then_names_hello_file(
+    tmp_path,
+) -> None:
     _require_real_companion_harness_llm_test()
 
     root = tmp_path
@@ -92,14 +98,16 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
 
     cfg = CompanionLLMConfig(
         api_key=os.environ["OPENROUTER_API_KEY"].strip(),
-        api_base=os.getenv("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"),
+        api_base=os.getenv(
+            "OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"
+        ),
         default_model=resolve_chat_text_model(_OPENROUTER_MODEL),
         chat_model=resolve_chat_text_model(_OPENROUTER_MODEL),
         tool_model=resolve_chat_text_model(_OPENROUTER_MODEL),
     )
     client = _InstrumentedCompanionLLMClient(cfg)
     user_prompt = (
-        "You MUST call the memory_store_list_paths tool first with relative_path \"\" (empty string) "
+        'You MUST call the memory_store_list_paths tool first with relative_path "" (empty string) '
         "to list the MemoryStore scope root. Do not guess. After you receive the tool output, reply in one "
         "short English sentence. That sentence MUST contain the exact substring hello.txt."
     )
@@ -125,7 +133,9 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
     )
 
     assert client.saw_assistant_tool_calls, "model never returned tool_calls"
-    assert client.chat_rounds >= 2, "expected at least one tool round and one final reply"
+    assert (
+        client.chat_rounds >= 2
+    ), "expected at least one tool round and one final reply"
     assert "hello.txt" in out.assistant_text.lower()
     tr = store.read_document("transcript.jsonl")
     assert "hello.txt" in tr.lower()

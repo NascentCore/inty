@@ -56,9 +56,7 @@ def _langsmith_url_cell(correlation: UserTurnCorrelation) -> str:
 def build_github_issue_title(snapshot: HarnessSnapshot) -> str:
     summary = snapshot.complaint_summary.replace("\n", " ").strip()
     title_tail = summary[:72]
-    title = (
-        f"{GITHUB_ISSUE_TITLE_PREFIX} {snapshot.complaint_category}: {title_tail}"
-    )
+    title = f"{GITHUB_ISSUE_TITLE_PREFIX} {snapshot.complaint_category}: {title_tail}"
     return title[:256]
 
 

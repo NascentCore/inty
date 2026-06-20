@@ -16,7 +16,10 @@ def test_returns_random_for_unspecified_request():
     assert res1.model == "gpt-test"
     assert res1.object == "chat.completion"
     assert res1.choices[0].message.role == "assistant"
-    assert res1.usage.total_tokens == res1.usage.prompt_tokens + res1.usage.completion_tokens
+    assert (
+        res1.usage.total_tokens
+        == res1.usage.prompt_tokens + res1.usage.completion_tokens
+    )
 
 
 def test_returns_registered_response_for_specific_request():
@@ -27,7 +30,9 @@ def test_returns_registered_response_for_specific_request():
         {"role": "user", "content": "Tell me a joke"},
     ]
 
-    client.register_response(messages=messages, content="Knock knock", model="gpt-x")
+    client.register_response(
+        messages=messages, content="Knock knock", model="gpt-x"
+    )
 
     res = client.chat.completions.create(model="gpt-x", messages=messages)
 
@@ -62,7 +67,9 @@ def test_request_key_includes_message_name_and_list_content_support():
         }
     ]
     client.register_response(messages=messages_list, content="C", model="m1")
-    res_list = client.chat.completions.create(messages=messages_list, model="m1")
+    res_list = client.chat.completions.create(
+        messages=messages_list, model="m1"
+    )
     assert res_list.choices[0].message.content == "C"
 
 
@@ -70,7 +77,9 @@ def test_stream_not_supported():
     client = FakeOpenAI()
 
     try:
-        client.chat.completions.create(messages=[{"role": "user", "content": "x"}], stream=True)
+        client.chat.completions.create(
+            messages=[{"role": "user", "content": "x"}], stream=True
+        )
         assert False, "Expected NotImplementedError"
     except NotImplementedError:
         pass

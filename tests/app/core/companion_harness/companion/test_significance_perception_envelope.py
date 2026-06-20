@@ -29,7 +29,9 @@ def test_parse_dual_llm_chat_envelope_accepts_markdown_json_fence() -> None:
     assert env.importance_round == 5
 
 
-def test_split_dual_llm_chat_branch_content_strips_fence_and_returns_meta() -> None:
+def test_split_dual_llm_chat_branch_content_strips_fence_and_returns_meta() -> (
+    None
+):
     inner = json.dumps(_envelope_dict(), ensure_ascii=False)
     split = split_dual_llm_chat_branch_content(f"```\n{inner}\n```")
     assert split.visible_text == "hello"
@@ -57,7 +59,9 @@ def test_split_dual_llm_chat_branch_message_reads_reasoning_envelope() -> None:
     assert split.output_to_user is True
 
 
-def test_parse_dual_llm_chat_envelope_from_message_reads_reasoning_details() -> None:
+def test_parse_dual_llm_chat_envelope_from_message_reads_reasoning_details() -> (
+    None
+):
     inner = json.dumps(_envelope_dict(), ensure_ascii=False)
     message = {
         "content": None,
@@ -68,7 +72,9 @@ def test_parse_dual_llm_chat_envelope_from_message_reads_reasoning_details() -> 
     assert env.user_facing_reply == "hello"
 
 
-def test_split_dual_llm_chat_branch_message_ignores_non_json_reasoning() -> None:
+def test_split_dual_llm_chat_branch_message_ignores_non_json_reasoning() -> (
+    None
+):
     message = {
         "content": None,
         "reasoning": "private reasoning, not a JSON envelope",
@@ -79,5 +85,7 @@ def test_split_dual_llm_chat_branch_message_ignores_non_json_reasoning() -> None
     assert split.output_to_user is None
 
 
-def test_parse_dual_llm_chat_envelope_invalid_inside_fence_returns_none() -> None:
+def test_parse_dual_llm_chat_envelope_invalid_inside_fence_returns_none() -> (
+    None
+):
     assert parse_dual_llm_chat_envelope_json("```json\nnot json\n```") is None

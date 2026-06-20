@@ -50,7 +50,10 @@ def test_foreground_invocation_extra_merges_channel_and_source() -> None:
         extra_metadata=None,
     )
     meta = extra["metadata"]
-    assert meta[INTY_LLM_SOURCE_METADATA_KEY] == SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE
+    assert (
+        meta[INTY_LLM_SOURCE_METADATA_KEY]
+        == SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE
+    )
     assert meta[INTY_RUNTIME_CHANNEL_METADATA_KEY] == "wechat_weixin"
     assert meta[INTY_RUNTIME_CHANNEL_SOURCE_METADATA_KEY] == "scope_registry"
 

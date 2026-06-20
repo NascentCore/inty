@@ -20,9 +20,13 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
+from app.core.companion_harness.companion.turn import (
+    run_companion_user_chat_turn,
+)
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutput,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
@@ -121,9 +125,7 @@ async def test_bootstrap_single_round_transcript_user_before_assistant(
     scope = CompanionScope("bootstrap-tr-order", "agent", tmp_path.name)
     store = MemoryStore(scope=scope, repository=None)
     _seed_bootstrap_workspace(store)
-    client = _FakeBootstrapLLMClient(
-        [_final_response(content="还没有名字呢")]
-    )
+    client = _FakeBootstrapLLMClient([_final_response(content="还没有名字呢")])
 
     out = await run_companion_user_chat_turn(
         "你叫啥？",
@@ -169,7 +171,9 @@ async def test_bootstrap_multi_round_transcript_user_before_all_assistants(
 
     out = await run_companion_user_chat_turn(
         "你就叫孔明吧",
-        deps=_bootstrap_deps(store, client, bootstrap_interim_output_sink=_sink),
+        deps=_bootstrap_deps(
+            store, client, bootstrap_interim_output_sink=_sink
+        ),
     )
 
     rows = _transcript_rows(store)

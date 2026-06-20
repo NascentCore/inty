@@ -8,7 +8,9 @@ from app.core.companion_harness.companion.ai_private_prompt import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    execute_tool_call,
+)
 
 
 async def test_ai_private_append_tool_records_thought(tmp_path: Path) -> None:

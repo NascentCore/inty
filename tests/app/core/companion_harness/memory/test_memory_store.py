@@ -58,8 +58,12 @@ def test_memory_store_read_if_exists_none(tmp_path) -> None:
 
 def test_memory_store_append_jsonl_record(tmp_path) -> None:
     store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
-    store.append_jsonl_record("transcript.jsonl", {"role": "user", "content": "a"})
-    store.append_jsonl_record("transcript.jsonl", {"role": "assistant", "content": "b"})
+    store.append_jsonl_record(
+        "transcript.jsonl", {"role": "user", "content": "a"}
+    )
+    store.append_jsonl_record(
+        "transcript.jsonl", {"role": "assistant", "content": "b"}
+    )
     body = store.read_document("transcript.jsonl")
     lines = [ln for ln in body.splitlines() if ln.strip()]
     assert len(lines) == 2

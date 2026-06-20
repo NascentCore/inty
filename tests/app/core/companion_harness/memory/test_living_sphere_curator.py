@@ -19,7 +19,10 @@ from app.living_sphere.models import (
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
     LivingSphereUpdate,
 )
-from app.living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown
+from app.living_sphere.seeding import (
+    LIVING_SPHERE_RELATIVE_PATH,
+    seed_living_sphere_markdown,
+)
 
 
 def test_document_kind_for_living_sphere_updates_jsonl() -> None:
@@ -31,7 +34,9 @@ def test_document_kind_for_living_sphere_updates_jsonl() -> None:
         parse_memory_store_relative_path,
     )
 
-    kind, cal = parse_memory_store_relative_path(LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH)
+    kind, cal = parse_memory_store_relative_path(
+        LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH
+    )
     assert kind == CompanionMemoryDocumentKind.LIVING_SPHERE_UPDATES_JSONL
     assert cal is None
 
@@ -43,7 +48,9 @@ def test_compact_waits_for_tool_background_idle(tmp_path: Path) -> None:
         scope=CompanionScope("t", "a", str(root.resolve())),
         repository=None,
     )
-    store.write_document(LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown())
+    store.write_document(
+        LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown()
+    )
     ev = threading.Event()
     ev.clear()
     appended: list[str] = []

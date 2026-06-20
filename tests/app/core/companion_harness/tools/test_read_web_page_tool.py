@@ -5,7 +5,9 @@ from unittest.mock import MagicMock, patch
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.tools.read_web_page import run_read_web_page_sync
+from app.core.companion_harness.tools.read_web_page import (
+    run_read_web_page_sync,
+)
 
 _HTML = """<!DOCTYPE html>
 <html><head><title>Example Article</title></head>
@@ -17,7 +19,9 @@ _HTML = """<!DOCTYPE html>
 """
 
 
-def test_run_read_web_page_writes_memory_and_returns_markdown(tmp_path: Path) -> None:
+def test_run_read_web_page_writes_memory_and_returns_markdown(
+    tmp_path: Path,
+) -> None:
     sc = CompanionScope("rwp", "a", tmp_path.name)
     store = MemoryStore(scope=sc, repository=None)
 

@@ -46,7 +46,9 @@ def _valid_envelope_dict() -> dict:
     }
 
 
-def test_resolve_tool_background_finish_envelope_skips_routing_for_autonomy() -> None:
+def test_resolve_tool_background_finish_envelope_skips_routing_for_autonomy() -> (
+    None
+):
     create_sync = MagicMock()
     out = resolve_tool_background_finish_envelope(
         inner_tick_turn=True,
@@ -64,7 +66,9 @@ def test_resolve_tool_background_finish_envelope_skips_routing_for_autonomy() ->
     assert out.importance_round == 5
 
 
-def test_resolve_tool_background_finish_envelope_routes_for_maintenance() -> None:
+def test_resolve_tool_background_finish_envelope_routes_for_maintenance() -> (
+    None
+):
     create_sync = MagicMock(return_value=_completion_response("not json"))
     out = resolve_tool_background_finish_envelope(
         inner_tick_turn=True,
@@ -117,25 +121,33 @@ def test_turn_recall_from_envelope_strips_empty() -> None:
         DualLlmChatBranchEnvelope,
     )
 
-    assert turn_recall_from_envelope(
-        DualLlmChatBranchEnvelope(
-            importance_round=5,
-            importance_user_message=5,
-            importance_assistant_message=5,
-            turn_recall="",
+    assert (
+        turn_recall_from_envelope(
+            DualLlmChatBranchEnvelope(
+                importance_round=5,
+                importance_user_message=5,
+                importance_assistant_message=5,
+                turn_recall="",
+            )
         )
-    ) is None
-    assert turn_recall_from_envelope(
-        DualLlmChatBranchEnvelope(
-            importance_round=5,
-            importance_user_message=5,
-            importance_assistant_message=5,
-            turn_recall="  用户提到下周见面  ",
+        is None
+    )
+    assert (
+        turn_recall_from_envelope(
+            DualLlmChatBranchEnvelope(
+                importance_round=5,
+                importance_user_message=5,
+                importance_assistant_message=5,
+                turn_recall="  用户提到下周见面  ",
+            )
         )
-    ) == "用户提到下周见面"
+        == "用户提到下周见面"
+    )
 
 
-def test_resolve_tool_bg_routing_fallback_on_invalid_then_conservative() -> None:
+def test_resolve_tool_bg_routing_fallback_on_invalid_then_conservative() -> (
+    None
+):
     create_sync = MagicMock(return_value=_completion_response("not json"))
     out = resolve_tool_bg_routing_sync(
         client=None,

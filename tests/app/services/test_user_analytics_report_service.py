@@ -99,7 +99,9 @@ def sample_popular_agents():
 
 
 @pytest.mark.asyncio
-async def test_compute_and_save_daily_report_skips_existing(mock_db, sample_stats):
+async def test_compute_and_save_daily_report_skips_existing(
+    mock_db, sample_stats
+):
     """已存在的日报应跳过"""
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = MagicMock()
@@ -115,16 +117,26 @@ async def test_compute_and_save_daily_report_skips_existing(mock_db, sample_stat
         ) as MockService,
     ):
         mock_service_instance = AsyncMock()
-        mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
+        mock_service_instance.get_analytics_stats = AsyncMock(
+            return_value=sample_stats
+        )
         mock_service_instance.get_active_session_ids_on_date = AsyncMock(
             return_value=set()
         )
         mock_service_instance.get_new_users = AsyncMock(return_value=[])
-        mock_service_instance.get_conversation_rounds = AsyncMock(return_value=[])
-        mock_service_instance.get_user_rounds_distribution = AsyncMock(return_value=[])
-        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(return_value=[])
+        mock_service_instance.get_conversation_rounds = AsyncMock(
+            return_value=[]
+        )
+        mock_service_instance.get_user_rounds_distribution = AsyncMock(
+            return_value=[]
+        )
+        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(
+            return_value=[]
+        )
         mock_service_instance.get_popular_agents = AsyncMock(return_value=[])
-        mock_service_instance.get_generated_images_on_date = AsyncMock(return_value=[])
+        mock_service_instance.get_generated_images_on_date = AsyncMock(
+            return_value=[]
+        )
         MockService.return_value = mock_service_instance
 
         result = await compute_and_save_daily_report(mock_db, date(2026, 2, 1))
@@ -157,14 +169,22 @@ async def test_compute_and_save_daily_report_creates_new(
         ) as MockService,
     ):
         mock_service_instance = AsyncMock()
-        mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
+        mock_service_instance.get_analytics_stats = AsyncMock(
+            return_value=sample_stats
+        )
         mock_service_instance.get_active_session_ids_on_date = AsyncMock(
             return_value=set()
         )
         mock_service_instance.get_new_users = AsyncMock(return_value=[])
-        mock_service_instance.get_conversation_rounds = AsyncMock(return_value=[])
-        mock_service_instance.get_user_rounds_distribution = AsyncMock(return_value=[])
-        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(return_value=[])
+        mock_service_instance.get_conversation_rounds = AsyncMock(
+            return_value=[]
+        )
+        mock_service_instance.get_user_rounds_distribution = AsyncMock(
+            return_value=[]
+        )
+        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(
+            return_value=[]
+        )
         mock_service_instance.get_popular_agents = AsyncMock(
             return_value=sample_popular_agents
         )
@@ -189,9 +209,14 @@ async def test_compute_and_save_daily_report_creates_new(
     mock_db.commit.assert_called_once()
     assert result.charts["generated_images"] == generated_images
     assert result.charts["popular_agents"] == sample_popular_agents
-    assert result.charts["daily_top_agents_by_rounds"][0]["agent_name"] == "Agent B"
+    assert (
+        result.charts["daily_top_agents_by_rounds"][0]["agent_name"]
+        == "Agent B"
+    )
     assert result.charts["daily_top_agents_by_rounds"][0]["total_rounds"] == 120
-    assert result.charts["daily_most_discussed_agent"]["agent_name"] == "Agent B"
+    assert (
+        result.charts["daily_most_discussed_agent"]["agent_name"] == "Agent B"
+    )
     mock_service_instance.get_generated_images_on_date.assert_awaited_once_with(
         datetime(2026, 2, 1, tzinfo=timezone.utc),
         datetime(2026, 2, 2, tzinfo=timezone.utc),
@@ -220,25 +245,37 @@ async def test_compute_and_save_daily_report_fallbacks_to_primary_when_replica_c
         ),
         patch(
             "app.services.user_analytics_report_service._read_daily_report_from_replica",
-            new=AsyncMock(side_effect=[replica_error] * REPLICA_READ_MAX_ATTEMPTS),
+            new=AsyncMock(
+                side_effect=[replica_error] * REPLICA_READ_MAX_ATTEMPTS
+            ),
         ) as mock_replica_reader,
         patch(
             "app.services.user_analytics_report_service.UserAnalyticsService"
         ) as MockService,
     ):
         mock_service_instance = AsyncMock()
-        mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
+        mock_service_instance.get_analytics_stats = AsyncMock(
+            return_value=sample_stats
+        )
         mock_service_instance.get_active_session_ids_on_date = AsyncMock(
             return_value=set()
         )
         mock_service_instance.get_new_users = AsyncMock(return_value=[])
-        mock_service_instance.get_conversation_rounds = AsyncMock(return_value=[])
-        mock_service_instance.get_user_rounds_distribution = AsyncMock(return_value=[])
-        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(return_value=[])
+        mock_service_instance.get_conversation_rounds = AsyncMock(
+            return_value=[]
+        )
+        mock_service_instance.get_user_rounds_distribution = AsyncMock(
+            return_value=[]
+        )
+        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(
+            return_value=[]
+        )
         mock_service_instance.get_popular_agents = AsyncMock(
             return_value=sample_popular_agents
         )
-        mock_service_instance.get_generated_images_on_date = AsyncMock(return_value=[])
+        mock_service_instance.get_generated_images_on_date = AsyncMock(
+            return_value=[]
+        )
         MockService.return_value = mock_service_instance
 
         result = await compute_and_save_daily_report(mock_db, date(2026, 2, 1))
@@ -254,7 +291,9 @@ async def test_compute_and_save_daily_report_fallbacks_to_primary_when_replica_c
 
 
 @pytest.mark.asyncio
-async def test_compute_and_save_weekly_report_skips_existing(mock_db, sample_stats):
+async def test_compute_and_save_weekly_report_skips_existing(
+    mock_db, sample_stats
+):
     """已存在的周报应跳过"""
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = MagicMock()
@@ -270,10 +309,14 @@ async def test_compute_and_save_weekly_report_skips_existing(mock_db, sample_sta
         ) as MockService,
     ):
         mock_service_instance = AsyncMock()
-        mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
+        mock_service_instance.get_analytics_stats = AsyncMock(
+            return_value=sample_stats
+        )
         MockService.return_value = mock_service_instance
 
-        result = await compute_and_save_weekly_report(mock_db, date(2026, 1, 27))
+        result = await compute_and_save_weekly_report(
+            mock_db, date(2026, 1, 27)
+        )
 
     assert result is None
     mock_db.add.assert_not_called()
@@ -281,7 +324,9 @@ async def test_compute_and_save_weekly_report_skips_existing(mock_db, sample_sta
 
 
 @pytest.mark.asyncio
-async def test_compute_and_save_weekly_report_creates_new(mock_db, sample_stats):
+async def test_compute_and_save_weekly_report_creates_new(
+    mock_db, sample_stats
+):
     """新周报应创建并保存"""
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None
@@ -297,10 +342,14 @@ async def test_compute_and_save_weekly_report_creates_new(mock_db, sample_stats)
         ) as MockService,
     ):
         mock_service_instance = AsyncMock()
-        mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
+        mock_service_instance.get_analytics_stats = AsyncMock(
+            return_value=sample_stats
+        )
         MockService.return_value = mock_service_instance
 
-        result = await compute_and_save_weekly_report(mock_db, date(2026, 1, 27))
+        result = await compute_and_save_weekly_report(
+            mock_db, date(2026, 1, 27)
+        )
 
     assert result is not None
     mock_db.add.assert_called_once()
@@ -327,9 +376,9 @@ async def test_compute_and_save_weekly_report_fallbacks_to_primary_when_replica_
         replica_db = AsyncMock(spec=AsyncSession)
         yield replica_db
 
-    service_get_stats_side_effects = [replica_error] * REPLICA_READ_MAX_ATTEMPTS + [
-        sample_stats
-    ]
+    service_get_stats_side_effects = [
+        replica_error
+    ] * REPLICA_READ_MAX_ATTEMPTS + [sample_stats]
 
     with (
         patch(
@@ -349,13 +398,21 @@ async def test_compute_and_save_weekly_report_fallbacks_to_primary_when_replica_
             side_effect=service_get_stats_side_effects
         )
         mock_service_instance.get_new_users = AsyncMock(return_value=[])
-        mock_service_instance.get_conversation_rounds = AsyncMock(return_value=[])
-        mock_service_instance.get_user_rounds_distribution = AsyncMock(return_value=[])
-        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(return_value=[])
+        mock_service_instance.get_conversation_rounds = AsyncMock(
+            return_value=[]
+        )
+        mock_service_instance.get_user_rounds_distribution = AsyncMock(
+            return_value=[]
+        )
+        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(
+            return_value=[]
+        )
         mock_service_instance.get_popular_agents = AsyncMock(return_value=[])
         MockService.return_value = mock_service_instance
 
-        result = await compute_and_save_weekly_report(mock_db, date(2026, 1, 27))
+        result = await compute_and_save_weekly_report(
+            mock_db, date(2026, 1, 27)
+        )
 
     assert result is not None
     assert (
@@ -385,13 +442,19 @@ async def test_get_missing_daily_report_dates_all_missing(mock_db):
     mock_result.scalars.return_value.all.return_value = []
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    with patch("app.services.user_analytics_report_service.datetime") as mock_dt:
+    with patch(
+        "app.services.user_analytics_report_service.datetime"
+    ) as mock_dt:
         mock_dt.now.return_value = MagicMock()
         mock_dt.now.return_value.date.return_value = date(2026, 2, 2)
         missing = await get_missing_daily_report_dates(mock_db, days=3)
 
     assert len(missing) == 3
-    assert set(missing) == {date(2026, 1, 30), date(2026, 1, 31), date(2026, 2, 1)}
+    assert set(missing) == {
+        date(2026, 1, 30),
+        date(2026, 1, 31),
+        date(2026, 2, 1),
+    }
 
 
 @pytest.mark.asyncio
@@ -400,7 +463,9 @@ async def test_get_missing_daily_report_dates_partial_existing(mock_db):
     mock_result.scalars.return_value.all.return_value = [date(2026, 2, 1)]
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    with patch("app.services.user_analytics_report_service.datetime") as mock_dt:
+    with patch(
+        "app.services.user_analytics_report_service.datetime"
+    ) as mock_dt:
         mock_dt.now.return_value = MagicMock()
         mock_dt.now.return_value.date.return_value = date(2026, 2, 2)
         missing = await get_missing_daily_report_dates(mock_db, days=3)
@@ -441,12 +506,18 @@ async def test_get_missing_weekly_report_dates_past_weeks(mock_db):
     mock_result.scalars.return_value.all.return_value = []
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    with patch("app.services.user_analytics_report_service.datetime") as mock_dt:
+    with patch(
+        "app.services.user_analytics_report_service.datetime"
+    ) as mock_dt:
         mock_dt.now.return_value = MagicMock()
         mock_dt.now.return_value.date.return_value = date(2026, 2, 2)
-        missing = await get_missing_weekly_report_dates_past_weeks(mock_db, weeks=7)
+        missing = await get_missing_weekly_report_dates_past_weeks(
+            mock_db, weeks=7
+        )
 
     assert len(missing) == 7
     assert all(d.weekday() == 0 for d in missing)
     base_expected = date(2026, 1, 26)
-    assert set(missing) == {base_expected - timedelta(days=i * 7) for i in range(7)}
+    assert set(missing) == {
+        base_expected - timedelta(days=i * 7) for i in range(7)
+    }

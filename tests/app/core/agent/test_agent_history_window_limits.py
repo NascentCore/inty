@@ -61,7 +61,12 @@ def test_get_relevant_history_for_user_tier_uses_configured_window(monkeypatch):
     )
 
     assert [message.content for message in free_user_history] == ["h3", "a3"]
-    assert [message.content for message in sub_user_history] == ["h2", "a2", "h3", "a3"]
+    assert [message.content for message in sub_user_history] == [
+        "h2",
+        "a2",
+        "h3",
+        "a3",
+    ]
 
 
 def test_official_assistant_uses_single_chat_messages_limit(monkeypatch):

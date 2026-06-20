@@ -187,4 +187,7 @@ async def test_run_background_tool_loop_continue_sync_receives_telegram_channel(
     assert continue_extra is not None
     assert continue_extra["name"] == SOURCE_TOOL_BACKGROUND_CONTINUE
     assert continue_extra["metadata"]["inty_runtime_channel"] == "telegram"
-    assert continue_extra["metadata"]["inty_runtime_channel_source"] == "explicit_turn"
+    assert (
+        continue_extra["metadata"]["inty_runtime_channel_source"]
+        == "explicit_turn"
+    )

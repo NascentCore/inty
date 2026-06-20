@@ -81,10 +81,18 @@ async def test_add_private_agent_normalizes_gender() -> None:
         await db.commit()
         assert male_agent.gender == Gender.MALE
         assert other_agent.gender == Gender.OTHER
-        assert_companion_guest_identity_has_no_readable_id(user=user, agent=male_agent)
-        assert_companion_guest_identity_has_no_readable_id(user=user, agent=other_agent)
-        assert_companion_guest_agent_leaves_legacy_character_fields_null(male_agent)
-        assert_companion_guest_agent_leaves_legacy_character_fields_null(other_agent)
+        assert_companion_guest_identity_has_no_readable_id(
+            user=user, agent=male_agent
+        )
+        assert_companion_guest_identity_has_no_readable_id(
+            user=user, agent=other_agent
+        )
+        assert_companion_guest_agent_leaves_legacy_character_fields_null(
+            male_agent
+        )
+        assert_companion_guest_agent_leaves_legacy_character_fields_null(
+            other_agent
+        )
         await db.execute(
             delete(CompanionBond).where(CompanionBond.user_id == user.id)
         )
@@ -105,9 +113,13 @@ async def test_provision_guest_scope_creates_linked_user_and_agent() -> None:
             ),
         )
         await db.commit()
-        user_row = await db.execute(select(User).where(User.id == scope.user_id))
+        user_row = await db.execute(
+            select(User).where(User.id == scope.user_id)
+        )
         user = user_row.scalar_one()
-        agent_row = await db.execute(select(Agent).where(Agent.id == scope.agent_id))
+        agent_row = await db.execute(
+            select(Agent).where(Agent.id == scope.agent_id)
+        )
         agent = agent_row.scalar_one()
         bond_row = await db.execute(
             select(CompanionBond).where(
@@ -119,7 +131,9 @@ async def test_provision_guest_scope_creates_linked_user_and_agent() -> None:
         assert user.auth_type == AuthType.GUEST
         assert user.meta_data == {"scope": True}
         assert user.nickname == guest_nickname(prefix="Scope", user_id=user.id)
-        assert_companion_guest_identity_has_no_readable_id(user=user, agent=agent)
+        assert_companion_guest_identity_has_no_readable_id(
+            user=user, agent=agent
+        )
         assert agent.creator_id == user.id
         assert agent.name.startswith("weixin-companion-")
         assert bond.state == CompanionBondState.ACTIVE

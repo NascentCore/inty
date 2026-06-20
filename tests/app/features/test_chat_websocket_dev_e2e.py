@@ -28,7 +28,9 @@ API_BASE_URL = os.getenv("INTY_API_BASE_URL", "http://localhost:8000")
 
 def _require_real_ws_test() -> None:
     if os.getenv("INTY_CHAT_WS_REAL_TEST") != "1":
-        pytest.skip("Set INTY_CHAT_WS_REAL_TEST=1 to run chat WebSocket real LLM tests")
+        pytest.skip(
+            "Set INTY_CHAT_WS_REAL_TEST=1 to run chat WebSocket real LLM tests"
+        )
 
 
 _ALLOWED_REAL_WS_ENVIRONMENTS = frozenset({"dev", "local"})
@@ -50,8 +52,10 @@ def _load_operator_config_assert_real_backend() -> dict:
 
 
 def _http_to_ws_base(http_base: str) -> str:
-    return http_base.replace("http://", "ws://").replace("https://", "wss://").rstrip(
-        "/"
+    return (
+        http_base.replace("http://", "ws://")
+        .replace("https://", "wss://")
+        .rstrip("/")
     )
 
 
@@ -94,7 +98,9 @@ async def test_chat_websocket_dev_ping_pong(integration_client: TestClient):
 @pytest.mark.noci
 @pytest.mark.slow
 @pytest.mark.asyncio
-async def test_chat_websocket_dev_real_llm_roundtrip(integration_client: TestClient):
+async def test_chat_websocket_dev_real_llm_roundtrip(
+    integration_client: TestClient,
+):
     import websockets
     from websockets.exceptions import InvalidStatus
 
@@ -139,7 +145,7 @@ async def test_chat_websocket_dev_real_llm_roundtrip(integration_client: TestCli
     inner = data.get("data") or {}
     choices = inner.get("choices") or []
     assert len(choices) >= 1
-    msg = (choices[0].get("message") or {})
+    msg = choices[0].get("message") or {}
     content = msg.get("content")
     assert isinstance(content, str)
     assert len(content.strip()) > 0
@@ -157,7 +163,9 @@ async def test_chat_websocket_dev_unauthorized_close_code():
     ws_base = _http_to_ws_base(API_BASE_URL)
     url = f"{ws_base}/api/v1/chat/ws"
     with pytest.raises(ConnectionClosedError) as excinfo:
-        async with websockets.connect(url, open_timeout=30, ping_interval=None) as ws:
+        async with websockets.connect(
+            url, open_timeout=30, ping_interval=None
+        ) as ws:
             await asyncio.wait_for(ws.recv(), timeout=10)
     assert excinfo.value.rcvd is not None
     assert excinfo.value.rcvd.code == 4001

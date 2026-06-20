@@ -13,7 +13,9 @@ from backend.ops.api.evaluation_web import (
 def _prepare_static_dir(tmp_path: Path) -> str:
     evaluation_dir = tmp_path / "evaluation"
     evaluation_dir.mkdir(parents=True, exist_ok=True)
-    (evaluation_dir / "index.html").write_text("evaluation-home", encoding="utf-8")
+    (evaluation_dir / "index.html").write_text(
+        "evaluation-home", encoding="utf-8"
+    )
     (evaluation_dir / "asset.txt").write_text("asset-content", encoding="utf-8")
     return str(tmp_path)
 

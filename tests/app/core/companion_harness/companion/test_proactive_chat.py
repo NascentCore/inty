@@ -50,7 +50,11 @@ def test_next_proactive_chat_wait_seconds_anchors_on_last_assistant_only(
     )
     store.append_jsonl_record(
         "transcript.jsonl",
-        {"role": "assistant", "content": "proactive reply", "ts": t3.isoformat()},
+        {
+            "role": "assistant",
+            "content": "proactive reply",
+            "ts": t3.isoformat(),
+        },
     )
     cfg = ProactiveChatConfig(
         base_idle_sec=10.0,
@@ -114,7 +118,9 @@ def test_rhythm_ignores_proactive_user_gaps(tmp_path: Path) -> None:
         "transcript.jsonl",
         {"role": "assistant", "content": "last", "ts": t7.isoformat()},
     )
-    cfg = ProactiveChatConfig(base_idle_sec=30.0, stop_after_silence_minutes=30.0)
+    cfg = ProactiveChatConfig(
+        base_idle_sec=30.0, stop_after_silence_minutes=30.0
+    )
     wait = next_proactive_chat_wait_seconds(
         store, cfg, now=t7 + timedelta(seconds=1)
     )
@@ -143,10 +149,15 @@ def test_proactive_chat_stops_after_silence_threshold(tmp_path: Path) -> None:
     assert next_proactive_chat_wait_seconds(store, cfg, now=still_active) <= 0.0
 
     past_silence = t0 + timedelta(minutes=2)
-    assert next_proactive_chat_wait_seconds(store, cfg, now=past_silence) == 86400.0 * 365.0
+    assert (
+        next_proactive_chat_wait_seconds(store, cfg, now=past_silence)
+        == 86400.0 * 365.0
+    )
 
 
-def test_proactive_chat_exponential_doubles_with_each_round(tmp_path: Path) -> None:
+def test_proactive_chat_exponential_doubles_with_each_round(
+    tmp_path: Path,
+) -> None:
     scope = CompanionScope("pc-exp", "a", tmp_path.name)
     store = MemoryStore(scope=scope, repository=None)
     t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from backend.ops.telegram_demo.binding import StartPayloadKind, parse_start_payload
+from backend.ops.telegram_demo.binding import (
+    StartPayloadKind,
+    parse_start_payload,
+)
 
 
 def test_parse_start_payload_bare_start() -> None:

@@ -119,5 +119,3 @@ def read_runtime_events(
         rows = [r for r in rows if str(r.get("kind") or "") in kinds]
     rows.sort(key=lambda r: str(r.get("ts") or ""), reverse=True)
     return rows[: max(0, limit)]
-
-

@@ -10,10 +10,14 @@ def test_get_subscription_usage(integration_client: TestClient):
         f"{integration_client.base_url}/api/v1/subscription/usage"
     )
 
-    logger.debug(f"Usage response: status={response.status_code}, body={response.text}")
+    logger.debug(
+        f"Usage response: status={response.status_code}, body={response.text}"
+    )
 
     assert response.status_code == 200, response.text
 
     usage_response = response.json()
 
-    assert usage_response.get("data") is not None, "Usage data should not be None"
+    assert (
+        usage_response.get("data") is not None
+    ), "Usage data should not be None"

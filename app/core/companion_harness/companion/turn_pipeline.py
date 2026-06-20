@@ -277,7 +277,9 @@ def build_companion_turn_prompt_plan(
             transcript_rows_to_openai_dialogue,
         )
 
-        return transcript_rows_to_openai_dialogue(loaded_state.transcript_window)
+        return transcript_rows_to_openai_dialogue(
+            loaded_state.transcript_window
+        )
 
     transcript_compaction_meta: dict[str, Any] | None = None
     if transcript_compaction is not None and not inner_tick_turn:

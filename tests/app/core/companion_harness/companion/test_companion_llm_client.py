@@ -13,11 +13,15 @@ from app.core.llms.client import (
     CompanionLLMClient,
     CompanionLLMConfig,
 )
-from app.core.companion_harness.providers.openai_compatible_clients import OpenAICompatibleClientOptions
+from app.core.companion_harness.providers.openai_compatible_clients import (
+    OpenAICompatibleClientOptions,
+)
 
 
 @pytest.mark.asyncio
-async def test_async_llm_client_is_distinct_class_with_chat_completion() -> None:
+async def test_async_llm_client_is_distinct_class_with_chat_completion() -> (
+    None
+):
     assert AsyncLlmClient is not CompanionLLMClient
     captured: dict[str, Any] = {}
 
@@ -206,7 +210,9 @@ def test_complete_text_passes_dreaming_consolidation_langsmith_extra(
 
         return _Resp()
 
-    monkeypatch.setattr(llm_client_module, "create_chat_completion_sync", _fake_sync)
+    monkeypatch.setattr(
+        llm_client_module, "create_chat_completion_sync", _fake_sync
+    )
     monkeypatch.setattr(
         llm_client_module,
         "get_openai_compatible_sync_client",
@@ -220,7 +226,10 @@ def test_complete_text_passes_dreaming_consolidation_langsmith_extra(
     )
     assert out == "curated"
     extra = captured.get("langsmith_extra") or {}
-    assert extra.get("name") == "agentic_companion_dreaming_consolidation-day_summary"
+    assert (
+        extra.get("name")
+        == "agentic_companion_dreaming_consolidation-day_summary"
+    )
     meta = extra.get("metadata") or {}
     assert meta.get("inty_llm_source") == "dreaming_consolidation_day_summary"
 

@@ -188,7 +188,9 @@ class CompanionSetExperienceProfileToolInput(BaseModel):
             "role-play, emotional support, remote romance, or interactive fiction."
         ),
     )
-    note: str = Field(description="Short internal audit note (not shown to user).")
+    note: str = Field(
+        description="Short internal audit note (not shown to user)."
+    )
     tone: ExperienceDirectiveTone | None = Field(
         default=None,
         description="Optional experience_directives.tone overlay; omit to leave unchanged.",
@@ -217,7 +219,9 @@ def tool_companion_set_experience_profile(
     existing_directives = ExperienceDirectives.model_validate(
         data.get("experience_directives") or {}
     )
-    directive_updates: dict[str, ExperienceSessionIntent | ExperienceDirectiveTone] = {
+    directive_updates: dict[
+        str, ExperienceSessionIntent | ExperienceDirectiveTone
+    ] = {
         "intent": tool_input.experience_intent,
     }
     if tool_input.tone is not None:

@@ -4,7 +4,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from backend.ops.schemas.festival_memory import FestivalMemoryExtractionRunRequest
+from backend.ops.schemas.festival_memory import (
+    FestivalMemoryExtractionRunRequest,
+)
 from backend.ops.api.v1 import festival_memory as festival_memory_endpoint
 
 
@@ -19,7 +21,9 @@ async def test_manual_festival_memory_extraction_uses_replica_read_path():
     )
     db = AsyncMock()
     current_user = SimpleNamespace(is_superuser=True)
-    mock_to_thread = AsyncMock(return_value=[("user-1", "agent-1"), ("user-2", "agent-2")])
+    mock_to_thread = AsyncMock(
+        return_value=[("user-1", "agent-1"), ("user-2", "agent-2")]
+    )
     mock_extract = AsyncMock(side_effect=[True, False])
 
     with (
@@ -28,7 +32,9 @@ async def test_manual_festival_memory_extraction_uses_replica_read_path():
             "resolve_sync_read_db_url",
             return_value="postgresql://replica-host:5432/inty",
         ) as mock_resolve_read_url,
-        patch.object(festival_memory_endpoint.asyncio, "to_thread", mock_to_thread),
+        patch.object(
+            festival_memory_endpoint.asyncio, "to_thread", mock_to_thread
+        ),
         patch.object(
             festival_memory_endpoint.festival_memory_service,
             "extract_festival_and_save",

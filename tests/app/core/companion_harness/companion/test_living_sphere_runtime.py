@@ -4,7 +4,10 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from app.core.companion_harness.companion.models import load_context_meta, load_prompt_bundle
+from app.core.companion_harness.companion.models import (
+    load_context_meta,
+    load_prompt_bundle,
+)
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
@@ -26,6 +29,8 @@ from app.living_sphere.seeding import (
     LIVING_SPHERE_RELATIVE_PATH,
     ensure_living_sphere_seeded,
 )
+
+
 def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
     root = tmp_path / "ls-seed"
     root.mkdir()
@@ -64,11 +69,15 @@ def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
 
 
 def test_inner_tick_tools_exclude_living_sphere_record_update() -> None:
-    names = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
+    names = {
+        t["function"]["name"] for t in build_openai_repl_tools_inner_tick()
+    }
     assert LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME not in names
 
 
-def test_repl_tools_include_living_sphere_record_update_after_bootstrap() -> None:
+def test_repl_tools_include_living_sphere_record_update_after_bootstrap() -> (
+    None
+):
     names = {t["function"]["name"] for t in build_openai_repl_tools()}
     assert LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME in names
 
@@ -106,8 +115,18 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
     idle = threading.Event()
     idle.set()
     rows = [
-        ChatMessage(role="user", content="加灯", ts="2026-01-02T09:00:00+00:00", uuid="u"),
-        ChatMessage(role="assistant", content="好", ts="2026-01-02T09:01:00+00:00", uuid="a"),
+        ChatMessage(
+            role="user",
+            content="加灯",
+            ts="2026-01-02T09:00:00+00:00",
+            uuid="u",
+        ),
+        ChatMessage(
+            role="assistant",
+            content="好",
+            ts="2026-01-02T09:01:00+00:00",
+            uuid="a",
+        ),
     ]
     consolidate_memory_during_dreaming(
         store,

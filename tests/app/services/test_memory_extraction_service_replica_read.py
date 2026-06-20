@@ -26,24 +26,34 @@ def _load_memory_extraction_service_module():
 
     fake_memory_model_module = types.ModuleType("app.models.memory")
     fake_memory_model_module.Memory = type("Memory", (), {})
-    fake_memory_model_module.MemoryExtractionLog = type("MemoryExtractionLog", (), {})
+    fake_memory_model_module.MemoryExtractionLog = type(
+        "MemoryExtractionLog", (), {}
+    )
 
-    fake_chat_history_module = types.ModuleType("app.services.chat_history_service")
+    fake_chat_history_module = types.ModuleType(
+        "app.services.chat_history_service"
+    )
     fake_chat_history_module.get_chat_history_connection = lambda: None
     fake_chat_history_module.get_chat_history_replica_connection = lambda: None
 
     fake_chat_service_module = types.ModuleType("app.services.chat_service")
-    fake_chat_service_module.generate_session_id = lambda chat_id: f"session-{chat_id}"
+    fake_chat_service_module.generate_session_id = (
+        lambda chat_id: f"session-{chat_id}"
+    )
 
     fake_openrouter_module = types.ModuleType("app.utils.openrouter_memory")
-    fake_openrouter_module.DEFAULT_MEMORY_EXTRACTION_MODEL = "mistralai/devstral-2512"
+    fake_openrouter_module.DEFAULT_MEMORY_EXTRACTION_MODEL = (
+        "mistralai/devstral-2512"
+    )
 
     fake_openai_client_module = types.ModuleType("app.core.llms.openai_client")
 
     async def _dummy_chat_completion_for_extraction(*args, **kwargs):
         return ("dummy", None, None)
 
-    fake_openai_client_module.chat_completion_for_extraction = _dummy_chat_completion_for_extraction
+    fake_openai_client_module.chat_completion_for_extraction = (
+        _dummy_chat_completion_for_extraction
+    )
 
     sys.modules.pop("app.services.memory_extraction_service", None)
     with patch.dict(
@@ -109,14 +119,18 @@ def test_get_all_messages_for_user_prefers_replica_connection():
             "get_chat_history_replica_connection",
             return_value=replica_conn,
         ) as mock_replica_conn,
-        patch.object(service, "get_chat_history_connection") as mock_primary_conn,
+        patch.object(
+            service, "get_chat_history_connection"
+        ) as mock_primary_conn,
         patch.object(
             service,
             "generate_session_id",
             side_effect=lambda chat_id: f"session-{chat_id}",
         ),
     ):
-        rows = service.get_all_messages_for_user("user-1", prefer_replica_read=True)
+        rows = service.get_all_messages_for_user(
+            "user-1", prefer_replica_read=True
+        )
 
     assert rows == [("user", "hi", None), ("assistant", "hello", None)]
     mock_replica_conn.assert_called_once()
@@ -154,7 +168,9 @@ def test_get_all_messages_for_user_fallbacks_to_primary_when_replica_fails():
             side_effect=lambda chat_id: f"session-{chat_id}",
         ),
     ):
-        rows = service.get_all_messages_for_user("user-1", prefer_replica_read=True)
+        rows = service.get_all_messages_for_user(
+            "user-1", prefer_replica_read=True
+        )
 
     assert rows == [("user", "fallback", None)]
     mock_primary_conn.assert_called_once()
@@ -226,7 +242,9 @@ def test_prepare_messages_sorts_by_importance_round() -> None:
             },
         ),
     ]
-    out = service._prepare_messages_for_memory_extraction(rows, use_significance=True)
+    out = service._prepare_messages_for_memory_extraction(
+        rows, use_significance=True
+    )
     assert [r[1] for r in out] == ["high", "low", "u"]
 
 
@@ -245,9 +263,13 @@ async def test_get_users_to_extract_passes_replica_read_url_to_sync_computation(
             "_resolve_sync_read_db_url",
             return_value="postgresql://replica-host:5432/inty",
         ),
-        patch.object(service.asyncio, "to_thread", AsyncMock(return_value=["user-1"])) as mock_to_thread,
+        patch.object(
+            service.asyncio, "to_thread", AsyncMock(return_value=["user-1"])
+        ) as mock_to_thread,
     ):
-        user_ids = await service.get_users_to_extract(db, prefer_replica_read=True)
+        user_ids = await service.get_users_to_extract(
+            db, prefer_replica_read=True
+        )
 
     assert user_ids == ["user-1"]
     assert mock_to_thread.await_count == 1
@@ -266,7 +288,9 @@ async def test_get_users_with_messages_in_utc_day_passes_replica_read_url():
             "_resolve_sync_read_db_url",
             return_value="postgresql://replica-host:5432/inty",
         ),
-        patch.object(service.asyncio, "to_thread", AsyncMock(return_value=["user-1"])) as mock_to_thread,
+        patch.object(
+            service.asyncio, "to_thread", AsyncMock(return_value=["user-1"])
+        ) as mock_to_thread,
     ):
         user_ids = await service.get_users_with_messages_in_utc_day(
             db, target_day, prefer_replica_read=True
@@ -274,6 +298,8 @@ async def test_get_users_with_messages_in_utc_day_passes_replica_read_url():
 
     assert user_ids == ["user-1"]
     called_args = mock_to_thread.await_args.args
-    assert called_args[0] is service._compute_users_with_messages_in_utc_day_sync
+    assert (
+        called_args[0] is service._compute_users_with_messages_in_utc_day_sync
+    )
     assert called_args[1] == target_day
     assert called_args[2] == "postgresql://replica-host:5432/inty"

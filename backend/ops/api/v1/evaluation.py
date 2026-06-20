@@ -2,7 +2,15 @@
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    WebSocketDisconnect,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.ops.schemas.evaluation import (
@@ -579,7 +587,9 @@ async def get_evaluation_agents(
 
     except Exception:
         logger.exception("获取智能体列表失败")
-        raise HTTPException(status_code=500, detail="Failed to fetch agents") from None
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch agents"
+        ) from None
 
 
 @router.post(
@@ -610,7 +620,9 @@ async def create_evaluation_agent(
 
     except Exception:
         logger.exception("创建智能体失败")
-        raise HTTPException(status_code=500, detail="Failed to create agent") from None
+        raise HTTPException(
+            status_code=500, detail="Failed to create agent"
+        ) from None
 
 
 @router.put(
@@ -654,7 +666,9 @@ async def update_evaluation_agent(
         raise
     except Exception:
         logger.exception("更新智能体失败")
-        raise HTTPException(status_code=500, detail="Failed to update agent") from None
+        raise HTTPException(
+            status_code=500, detail="Failed to update agent"
+        ) from None
 
 
 @router.delete(
@@ -694,7 +708,9 @@ async def delete_evaluation_agent(
         raise
     except Exception:
         logger.exception("删除智能体失败")
-        raise HTTPException(status_code=500, detail="Failed to delete agent") from None
+        raise HTTPException(
+            status_code=500, detail="Failed to delete agent"
+        ) from None
 
 
 @router.get(
@@ -888,7 +904,9 @@ async def deploy_agent_to_production(
 
     except Exception:
         logger.exception("部署智能体失败")
-        raise HTTPException(status_code=500, detail="Failed to deploy agent") from None
+        raise HTTPException(
+            status_code=500, detail="Failed to deploy agent"
+        ) from None
 
 
 # =============================================================================

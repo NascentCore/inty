@@ -82,7 +82,9 @@ def test_bootstrap_track_injects_typed_tool_call_section() -> None:
         assert tool_name.value in tool_section
 
 
-def test_bootstrap_output_contract_names_memory_store_write_paths_only() -> None:
+def test_bootstrap_output_contract_names_memory_store_write_paths_only() -> (
+    None
+):
     bundle = PromptBundle(
         identity="identity",
         soul="soul",
@@ -175,7 +177,9 @@ def test_persona_omits_companionship_during_bootstrap() -> None:
         _system_contents(
             build_system_messages_for_bootstrap_track(
                 bundle,
-                ContextMeta(workspace_bootstrap_user_interactive_completed=False),
+                ContextMeta(
+                    workspace_bootstrap_user_interactive_completed=False
+                ),
             )
         )
     )
@@ -199,7 +203,9 @@ def test_persona_injects_seed_companionship_after_bootstrap() -> None:
         _system_contents(
             build_system_messages(
                 bundle,
-                ContextMeta(workspace_bootstrap_user_interactive_completed=True),
+                ContextMeta(
+                    workspace_bootstrap_user_interactive_completed=True
+                ),
             )
         )
     )
@@ -207,7 +213,9 @@ def test_persona_injects_seed_companionship_after_bootstrap() -> None:
     assert "我们的关系" in joined
 
 
-def test_system_messages_omit_weixin_clawbot_alias_for_unknown_channel() -> None:
+def test_system_messages_omit_weixin_clawbot_alias_for_unknown_channel() -> (
+    None
+):
     bundle = PromptBundle(
         identity="identity",
         soul="soul",
@@ -223,7 +231,9 @@ def test_system_messages_omit_weixin_clawbot_alias_for_unknown_channel() -> None
     assert "Weixin / ClawBot 联系人显示名" not in system_text
 
 
-def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> None:
+def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> (
+    None
+):
     bundle = PromptBundle(
         identity="identity",
         soul="soul",

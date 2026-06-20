@@ -27,12 +27,16 @@ class _FakeGoogleGeneratedImage:
 
 
 class _FakeGoogleGenerateImagesResponse:
-    def __init__(self, generated_images: list[_FakeGoogleGeneratedImage]) -> None:
+    def __init__(
+        self, generated_images: list[_FakeGoogleGeneratedImage]
+    ) -> None:
         self.generated_images = generated_images
 
 
 class _FakeGoogleModels:
-    def generate_images(self, *, model: str, prompt: str, config):  # noqa: ARG002
+    def generate_images(
+        self, *, model: str, prompt: str, config
+    ):  # noqa: ARG002
         assert model == "imagen-4.0-fast-generate-001"
         assert prompt == "A friendly companion smiling at the camera"
         assert getattr(config, "number_of_images") == 2
@@ -51,9 +55,13 @@ class _FakeGoogleClient:
 
 
 class _FakeFalClient:
-    def subscribe(self, model: str, arguments: dict[str, object], with_logs: bool = False):  # noqa: ARG002
+    def subscribe(
+        self, model: str, arguments: dict[str, object], with_logs: bool = False
+    ):  # noqa: ARG002
         assert model == "fal-ai/z-image/turbo"
-        assert arguments["prompt"] == "A friendly companion smiling at the camera"
+        assert (
+            arguments["prompt"] == "A friendly companion smiling at the camera"
+        )
         assert arguments["num_images"] == 2
         assert arguments["image_size"] == "portrait_4_3"
         assert arguments["output_format"] == "png"
@@ -107,10 +115,15 @@ def test_text_to_image_google_prefix_dispatch(
     assert result.provider == TextToImageProvider.GOOGLE
     assert result.model == "google/imagen-4.0-fast-generate-001"
     assert len(result.images) == 2
-    assert all(img.provider == TextToImageProvider.GOOGLE for img in result.images)
-    assert all(img.gcs_uri and img.gcs_uri.startswith("gs://") for img in result.images)
     assert all(
-        img.public_url and img.public_url.startswith("https://storage.googleapis.com/")
+        img.provider == TextToImageProvider.GOOGLE for img in result.images
+    )
+    assert all(
+        img.gcs_uri and img.gcs_uri.startswith("gs://") for img in result.images
+    )
+    assert all(
+        img.public_url
+        and img.public_url.startswith("https://storage.googleapis.com/")
         for img in result.images
     )
 
@@ -130,7 +143,9 @@ def test_resolve_provider_and_model_openai_keeps_org_prefix() -> None:
 
 
 def test_resolve_provider_and_model_falai_keeps_org_prefix() -> None:
-    provider, provider_model = _resolve_provider_and_model("fal-ai/z-image/turbo")
+    provider, provider_model = _resolve_provider_and_model(
+        "fal-ai/z-image/turbo"
+    )
     assert provider == TextToImageProvider.FALAI
     assert provider_model == "fal-ai/z-image/turbo"
 
@@ -177,7 +192,9 @@ def test_text_to_image_openai_returns_png_bytes() -> None:
     assert len(result.images) == 2
     for img in result.images:
         assert img.provider == TextToImageProvider.OPENAI
-        assert img.image_bytes and isinstance(img.image_bytes, (bytes, bytearray))
+        assert img.image_bytes and isinstance(
+            img.image_bytes, (bytes, bytearray)
+        )
         assert img.width == 64
         assert img.height == 64
         assert img.format == "png"
@@ -205,7 +222,9 @@ def test_text_to_image_falai_prefix_dispatch_z_image_turbo() -> None:
     assert len(result.images) == 2
     for image in result.images:
         assert image.provider == TextToImageProvider.FALAI
-        assert image.url and image.url.startswith("https://fal.example/generated/")
+        assert image.url and image.url.startswith(
+            "https://fal.example/generated/"
+        )
         assert image.width == 1024
         assert image.height == 1365
         assert image.mime_type == "image/png"
@@ -234,7 +253,9 @@ def test_gcs_uri_to_public_url_fake_filesystem_vs_https(
             )
         ),
     )
-    assert _gcs_uri_to_public_url("gs://bk/o.jpg") == local_file.resolve().as_uri()
+    assert (
+        _gcs_uri_to_public_url("gs://bk/o.jpg") == local_file.resolve().as_uri()
+    )
 
     monkeypatch.setattr(
         app_config,

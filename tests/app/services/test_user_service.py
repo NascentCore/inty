@@ -14,7 +14,10 @@ from app.db.session import get_async_db
 from app.models.base import Base
 from app.models.user import AuthType, User
 from app.services.subscription_service import SubscriptionService
-from app.services.user_service import delete_user_account, generate_next_readable_id
+from app.services.user_service import (
+    delete_user_account,
+    generate_next_readable_id,
+)
 
 
 class TestUserDeletion:
@@ -25,7 +28,9 @@ class TestUserDeletion:
         """Test the real delete_user_account function with async database"""
 
         # Create async database engine
-        engine = create_async_engine(global_config_loaded_from_config_yaml.database.async_url)
+        engine = create_async_engine(
+            global_config_loaded_from_config_yaml.database.async_url
+        )
 
         # Create all tables
         async with engine.begin() as conn:
@@ -85,12 +90,20 @@ class TestUserDeletion:
 
             assert deleted_user is not None
             assert deleted_user.id == user_id
-            assert deleted_user.is_active is False  # Should be marked as inactive
-            assert deleted_user.deleted_at is not None  # Should have deletion timestamp
-            assert deleted_user.deletion_reason == "Test deletion with real function"
+            assert (
+                deleted_user.is_active is False
+            )  # Should be marked as inactive
+            assert (
+                deleted_user.deleted_at is not None
+            )  # Should have deletion timestamp
+            assert (
+                deleted_user.deletion_reason
+                == "Test deletion with real function"
+            )
 
             assert (
-                mock_subscription_service.get_user_subscription_status.call_count == 1
+                mock_subscription_service.get_user_subscription_status.call_count
+                == 1
             )
             assert (
                 mock_subscription_service.cancel_user_subscriptions_for_deletion.call_count

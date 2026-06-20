@@ -93,6 +93,7 @@ INNER_TICK_META = {
     "proactive_chat": True,
 }
 
+
 @pytest.mark.parametrize(
     "meta",
     [
@@ -102,8 +103,12 @@ INNER_TICK_META = {
         INNER_TICK_META,
     ],
 )
-def test_chat_websocket_queued_success_frame_model_validate(meta: dict[str, Any]) -> None:
-    frame = ChatWebSocketQueuedSuccessFrame.model_validate(_queued_success_frame(meta))
+def test_chat_websocket_queued_success_frame_model_validate(
+    meta: dict[str, Any],
+) -> None:
+    frame = ChatWebSocketQueuedSuccessFrame.model_validate(
+        _queued_success_frame(meta)
+    )
     assert frame.code == 200
     assert frame.agent_id == "agent-uuid"
     assert frame.status_line == "Online"
@@ -129,7 +134,9 @@ def test_chat_websocket_queued_success_frame_round_trip_dump() -> None:
 
 
 def test_chat_ws_completion_data_nested_meta_typing() -> None:
-    data = ChatWsCompletionData.model_validate(_base_completion_data(TOOL_BG_META))
+    data = ChatWsCompletionData.model_validate(
+        _base_completion_data(TOOL_BG_META)
+    )
     meta = data.choices[0].message.meta_data
     assert meta is not None
     assert meta.generated_image is not None

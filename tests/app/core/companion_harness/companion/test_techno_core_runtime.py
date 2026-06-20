@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 from app.core.llms.client import CompanionLLMConfig
-from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
-from app.core.companion_harness.companion.models import load_context_meta, load_prompt_bundle
-from app.core.companion_harness.memory.memory_registry import shutdown_all_memory_stores
+from app.core.companion_harness.companion.manager import (
+    CompanionConfig,
+    CompanionManager,
+)
+from app.core.companion_harness.companion.models import (
+    load_context_meta,
+    load_prompt_bundle,
+)
+from app.core.companion_harness.memory.memory_registry import (
+    shutdown_all_memory_stores,
+)
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
@@ -24,7 +32,9 @@ def test_companion_session_seeds_techno_core_and_injects_prompt() -> None:
             memory_pg_dsn=companion_memory_registry_dsn(),
         )
     )
-    session = manager.get_or_create_session("user-tc", "companion-tc", "chat-tc")
+    session = manager.get_or_create_session(
+        "user-tc", "companion-tc", "chat-tc"
+    )
 
     seeded = session.store.read_document(TECHNO_CORE_RELATIVE_PATH)
     assert "TechnoCore 是 Inty 的 AI-only 虚拟居留层" in seeded
@@ -46,9 +56,9 @@ def test_companion_session_seeds_techno_core_and_injects_prompt() -> None:
     )
     assert "TechnoCore 是 Inty 的 AI-only 虚拟居留层" in system_text
     assert "世界：TechnoCore" in system_text
-    assert system_text.index("TechnoCore 是 Inty 的 AI-only 虚拟居留层") < system_text.index(
-        "当前默认位置："
-    )
+    assert system_text.index(
+        "TechnoCore 是 Inty 的 AI-only 虚拟居留层"
+    ) < system_text.index("当前默认位置：")
 
     shutdown_all_memory_stores()
 

@@ -12,7 +12,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.core.config import global_config_loaded_from_config_yaml as global_config
+from app.core.config import (
+    global_config_loaded_from_config_yaml as global_config,
+)
 from app.core.voice.tts_api import (
     TTS_PROVIDER_ELEVENLABS,
     TTSResult,
@@ -40,7 +42,8 @@ def voice_service() -> VoiceService:
 @pytest.mark.asyncio
 @patch.object(VoiceService, "_call_tts_api", new_callable=AsyncMock)
 @patch(
-    "app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock
+    "app.services.voice_service.GCSService.upload_voice_file",
+    new_callable=AsyncMock,
 )
 async def test_generate_voice_google_voice_without_user_uses_gemini_default_model(
     mock_upload_voice_file: AsyncMock,
@@ -65,7 +68,9 @@ async def test_generate_voice_google_voice_without_user_uses_gemini_default_mode
     )
 
     called_kwargs = mock_call_tts_api.await_args.kwargs
-    assert called_kwargs["model"] == global_config.agent.free_user_chat_tts_model
+    assert (
+        called_kwargs["model"] == global_config.agent.free_user_chat_tts_model
+    )
 
 
 @pytest.mark.asyncio
@@ -104,8 +109,13 @@ async def test_generate_voice_rejects_unknown_model_even_if_prefix_matches(
 
 @pytest.mark.asyncio
 @patch.object(VoiceService, "_calculate_audio_duration", return_value=1.0)
-@patch("app.services.voice_service.ElevenLabsTTSAPI.synthesize", new_callable=AsyncMock)
-@patch("app.services.voice_service.GeminiTTSAPI.synthesize", new_callable=AsyncMock)
+@patch(
+    "app.services.voice_service.ElevenLabsTTSAPI.synthesize",
+    new_callable=AsyncMock,
+)
+@patch(
+    "app.services.voice_service.GeminiTTSAPI.synthesize", new_callable=AsyncMock
+)
 @patch(
     "app.services.voice_service.GeminiTTSAPI.synthesize_with_roleplay_prompt",
     new_callable=AsyncMock,
@@ -141,7 +151,10 @@ async def test_call_tts_api_rebinds_model_and_voice_when_fallback_to_elevenlabs(
 
 
 @pytest.mark.asyncio
-@patch("app.services.voice_service.ElevenLabsTTSAPI.synthesize", new_callable=AsyncMock)
+@patch(
+    "app.services.voice_service.ElevenLabsTTSAPI.synthesize",
+    new_callable=AsyncMock,
+)
 async def test_call_tts_api_rejects_gemini_model_on_elevenlabs_path(
     mock_elevenlabs_synthesize: AsyncMock,
     voice_service: VoiceService,
@@ -184,7 +197,10 @@ async def test_call_tts_api_uses_fake_tts_when_test_config_enables_it():
 
 
 @pytest.mark.asyncio
-@patch("app.services.voice_service.GeminiTTSAPI.synthesize_with_roleplay_prompt", new_callable=AsyncMock)
+@patch(
+    "app.services.voice_service.GeminiTTSAPI.synthesize_with_roleplay_prompt",
+    new_callable=AsyncMock,
+)
 async def test_call_tts_api_passes_voice_message_narration_mode_to_gemini(
     mock_gemini_prompted: AsyncMock,
     voice_service: VoiceService,
@@ -241,7 +257,9 @@ async def test_call_tts_api_uses_gemini_then_voice_changer_for_elevenlabs_voice(
     old_flag = (
         global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
     )
-    global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate = True
+    global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate = (
+        True
+    )
     try:
         mock_full_dialogue.return_value = TTSResult(
             audio_bytes=b"gemini-audio",
@@ -271,8 +289,13 @@ async def test_call_tts_api_uses_gemini_then_voice_changer_for_elevenlabs_voice(
         assert source_req.text == text
 
         changer_kwargs = mock_voice_changer.await_args.kwargs
-        assert changer_kwargs["target_voice_id"] == "11labs/JBFqnCBsd6RMkjVDRZzb"
-        assert changer_kwargs["model_id"] == voice_service.config.voice_change_model
+        assert (
+            changer_kwargs["target_voice_id"] == "11labs/JBFqnCBsd6RMkjVDRZzb"
+        )
+        assert (
+            changer_kwargs["model_id"]
+            == voice_service.config.voice_change_model
+        )
     finally:
         global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate = (
             old_flag
@@ -298,7 +321,9 @@ async def test_call_tts_api_does_not_use_voice_changer_for_gemini_voice(
     old_flag = (
         global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
     )
-    global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate = True
+    global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate = (
+        True
+    )
     try:
         mock_gemini_prompted.return_value = TTSResult(
             audio_bytes=b"gemini-voice",
@@ -324,7 +349,8 @@ async def test_call_tts_api_does_not_use_voice_changer_for_gemini_voice(
 @pytest.mark.asyncio
 @patch.object(VoiceService, "_call_tts_api", new_callable=AsyncMock)
 @patch(
-    "app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock
+    "app.services.voice_service.GCSService.upload_voice_file",
+    new_callable=AsyncMock,
 )
 async def test_generate_voice_keeps_original_text_for_voice_changer_path(
     mock_upload_voice_file: AsyncMock,
@@ -334,7 +360,9 @@ async def test_generate_voice_keeps_original_text_for_voice_changer_path(
     old_flag = (
         global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
     )
-    global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate = True
+    global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate = (
+        True
+    )
     try:
         raw_text = '(whispers) "Hi there."'
         mock_call_tts_api.return_value = (
@@ -343,9 +371,7 @@ async def test_generate_voice_keeps_original_text_for_voice_changer_path(
             "audio/mpeg",
             TTS_PROVIDER_ELEVENLABS,
         )
-        mock_upload_voice_file.return_value = (
-            "https://storage.googleapis.com/test-bucket/voice/202603/voice_test.mp3"
-        )
+        mock_upload_voice_file.return_value = "https://storage.googleapis.com/test-bucket/voice/202603/voice_test.mp3"
 
         await voice_service.generate_voice(
             text=raw_text,

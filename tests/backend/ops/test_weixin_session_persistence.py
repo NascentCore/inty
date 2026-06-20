@@ -7,7 +7,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from backend.ops.weixin_session.session_persistence import record_from_binding_fields
+from backend.ops.weixin_session.session_persistence import (
+    record_from_binding_fields,
+)
 
 
 def test_record_from_binding_fields_includes_weixin_creds() -> None:

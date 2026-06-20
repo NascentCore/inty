@@ -16,6 +16,8 @@ from backend.ops.weixin_channel.session import (
 
 async def _noop_ilink_session_expired() -> None:
     pass
+
+
 from backend.ops.weixin_channel.transport import WeixinInboundMessage
 from app.utils.config import WeixinChannelConfig
 
@@ -59,6 +61,7 @@ def test_weixin_adapter_split_multiline_reads_platform_extra() -> None:
     )
     assert adapter_false._split_multiline_messages is False
     assert adapter_true._split_multiline_messages is True
+
 
 def test_ws_ping_frame_wire_json() -> None:
     payload = ChatWsPingFrame().model_dump_json()
@@ -135,6 +138,7 @@ async def test_handle_inbound_voice_only_does_not_call_companion() -> None:
         on_binding_peer_updated=None,
         on_ilink_session_expired=_noop_ilink_session_expired,
     )
+
     class _RecordingTransport:
         def __init__(self) -> None:
             self.sent: list[tuple[str, str]] = []
@@ -183,6 +187,7 @@ async def test_handle_inbound_image_only_does_not_call_companion() -> None:
         on_binding_peer_updated=None,
         on_ilink_session_expired=_noop_ilink_session_expired,
     )
+
     class _RecordingTransport:
         def __init__(self) -> None:
             self.sent: list[tuple[str, str]] = []
@@ -231,6 +236,7 @@ async def test_handle_inbound_text_forwards_to_inprocess_presence() -> None:
         on_binding_peer_updated=None,
         on_ilink_session_expired=_noop_ilink_session_expired,
     )
+
     class _RecordingTransport:
         def __init__(self) -> None:
             self.sent: list[tuple[str, str]] = []

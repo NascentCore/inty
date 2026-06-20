@@ -60,6 +60,7 @@ def test_get_current_user_profile_happy_path(
     users_app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):
     """Ensure GET /api/v1/users/me returns the current user info."""
+
     async def fake_get_user_connector_count(db, user_id):
         assert db is None
         assert user_id == users_app.state.test_user.id
@@ -103,7 +104,10 @@ def test_register_device_token_happy_path(
     body = response.json()
     assert body["code"] == 200
     assert body["message"] == "Device token registered successfully"
-    assert recorded_args["call"] == (payload["token"], users_app.state.test_user.id)
+    assert recorded_args["call"] == (
+        payload["token"],
+        users_app.state.test_user.id,
+    )
 
 
 def test_user_list_accepts_null_readable_id() -> None:

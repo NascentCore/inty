@@ -33,7 +33,9 @@ def test_generation_deliver_true_when_image_paths_present() -> None:
     )
 
 
-def test_autonomy_inner_tick_never_delivers_despite_generation_deliver() -> None:
+def test_autonomy_inner_tick_never_delivers_despite_generation_deliver() -> (
+    None
+):
     assert not tool_background_should_deliver_to_user(
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.AUTONOMY,

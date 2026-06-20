@@ -26,7 +26,10 @@ class TestParseVoiceId:
         assert parse_voice_id("") == ("", "")
 
     def test_only_one_slash_splits(self):
-        assert parse_voice_id("11labs/id/with/slash") == ("11labs", "id/with/slash")
+        assert parse_voice_id("11labs/id/with/slash") == (
+            "11labs",
+            "id/with/slash",
+        )
 
 
 class TestIsGeminiVoice:
@@ -71,10 +74,11 @@ class TestSelectDefaultGeminiVoiceForImateGender:
         assert select_default_gemini_voice_for_imate_gender("MALE") == "Puck"
 
     def test_maps_female_to_zephyr(self):
-        assert select_default_gemini_voice_for_imate_gender("FEMALE") == "Zephyr"
+        assert (
+            select_default_gemini_voice_for_imate_gender("FEMALE") == "Zephyr"
+        )
 
     def test_unknown_gender_falls_back_to_default(self):
         assert (
-            select_default_gemini_voice_for_imate_gender("UNKNOWN")
-            == "Zephyr"
+            select_default_gemini_voice_for_imate_gender("UNKNOWN") == "Zephyr"
         )

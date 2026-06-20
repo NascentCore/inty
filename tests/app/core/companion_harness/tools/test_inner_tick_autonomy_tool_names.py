@@ -19,9 +19,7 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
 def test_inner_tick_autonomy_excludes_user_visible_side_effect_tools() -> None:
     names = {tool.value for tool in INNER_TICK_AUTONOMY_TOOL_NAMES}
     assert CompanionToolName.SCHEDULE_TASK.value not in names
-    assert (
-        CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value not in names
-    )
+    assert CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value not in names
 
 
 def test_inner_tick_autonomy_includes_open_work_tools() -> None:
@@ -57,14 +55,18 @@ def test_autonomy_write_allowlist_is_life_currents_only() -> None:
     )
 
 
-def test_autonomy_tool_schema_write_description_names_life_currents_only() -> None:
+def test_autonomy_tool_schema_write_description_names_life_currents_only() -> (
+    None
+):
     write_desc = REPL_DESCRIPTION_OVERRIDES_AUTONOMY[
         CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT
     ]
     assert "Only writable path via this tool: LIFE_CURRENTS.md" in write_desc
     tools = build_openai_repl_tools_inner_tick_autonomy()
     write_tool = next(
-        t for t in tools if t["function"]["name"] == "memory_store_write_document"
+        t
+        for t in tools
+        if t["function"]["name"] == "memory_store_write_document"
     )
     assert (
         "Only writable path via this tool: LIFE_CURRENTS.md"

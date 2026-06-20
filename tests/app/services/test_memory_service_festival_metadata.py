@@ -3,6 +3,7 @@ app.services.memory_service 的测试（节日元数据及相关辅助逻辑）�
 
 使用真实 memory_service 与真实 DB，不做 patch。
 """
+
 import uuid
 from datetime import date, datetime, timezone
 
@@ -14,7 +15,9 @@ from sqlalchemy.orm import sessionmaker
 from app.api.types.llm_config import LLMConfig
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import Agent, AgentStatus, Gender
-from app.models.memory import FestivalMemoryMetadata as RealFestivalMemoryMetadata
+from app.models.memory import (
+    FestivalMemoryMetadata as RealFestivalMemoryMetadata,
+)
 from app.models.memory import Memory
 from app.models.user import AuthType, User
 from app.services import memory_service
@@ -163,7 +166,10 @@ def test_metadata_to_llm_config_output_from_llm_config():
 def test_metadata_to_llm_config_output_none_when_neither():
     """metadata 无 llm_config 且无 llm 时返回 None。"""
     assert memory_service.metadata_to_llm_config_output({}) is None
-    assert memory_service.metadata_to_llm_config_output({"festival_name": "Y"}) is None
+    assert (
+        memory_service.metadata_to_llm_config_output({"festival_name": "Y"})
+        is None
+    )
 
 
 def test_resolve_festival_name_and_date_from_metadata():
@@ -241,7 +247,9 @@ async def test_get_festival_memories_for_user_agent_reads_metadata(
             },
         ]
     finally:
-        await db_session.execute(delete(Memory).where(Memory.user_id == user_id))
+        await db_session.execute(
+            delete(Memory).where(Memory.user_id == user_id)
+        )
         await db_session.execute(delete(Agent).where(Agent.id == agent_id))
         await db_session.execute(delete(User).where(User.id == user_id))
         await db_session.commit()
@@ -277,7 +285,10 @@ async def test_get_undelivered_festival_memories_reads_metadata(
         agent_id=agent_id,
         memory_type=memory_service.MEMORY_TYPE_FESTIVAL,
         content="Mother's Day content",
-        meta_data={"festival_name": "Mother's Day", "festival_date": "2026-05-10"},
+        meta_data={
+            "festival_name": "Mother's Day",
+            "festival_date": "2026-05-10",
+        },
         extracted_at=now,
         delivery_at=None,
     )
@@ -306,7 +317,9 @@ async def test_get_undelivered_festival_memories_reads_metadata(
             },
         ]
     finally:
-        await db_session.execute(delete(Memory).where(Memory.user_id == user_id))
+        await db_session.execute(
+            delete(Memory).where(Memory.user_id == user_id)
+        )
         await db_session.execute(delete(Agent).where(Agent.id == agent_id))
         await db_session.execute(delete(User).where(User.id == user_id))
         await db_session.commit()

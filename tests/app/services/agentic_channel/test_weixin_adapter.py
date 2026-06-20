@@ -4,7 +4,9 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.services.agentic_channel.adapters.weixin import WeixinChannelAdapterStub
+from app.services.agentic_channel.adapters.weixin import (
+    WeixinChannelAdapterStub,
+)
 
 
 def test_weixin_stub_channel_and_lifecycle() -> None:

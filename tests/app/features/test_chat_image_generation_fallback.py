@@ -90,7 +90,9 @@ async def test_chat_image_generation_fallback_returns_matched_image(
     mock_sub = AsyncMock()
     mock_sub.check_image_gen_limit.return_value = (True, 0, 10)
     mock_sub.get_user_subscription_status.return_value = (
-        SubscriptionStatusResponse(is_subscribed=False, subscription_status="free")
+        SubscriptionStatusResponse(
+            is_subscribed=False, subscription_status="free"
+        )
     )
     mock_sub.record_usage.return_value = None
     subscription_stub = _StubSubscriptionService()
@@ -99,7 +101,9 @@ async def test_chat_image_generation_fallback_returns_matched_image(
         mock_sub.get_user_subscription_status
     )
     subscription_stub.record_usage = mock_sub.record_usage
-    app.dependency_overrides[deps.get_subscription_service] = lambda: subscription_stub
+    app.dependency_overrides[deps.get_subscription_service] = (
+        lambda: subscription_stub
+    )
 
     # 3) 主生图强制失败，触发兜底
     monkeypatch.setattr(
@@ -167,7 +171,9 @@ async def test_chat_image_generation_fallback_returns_matched_image(
 
     # Resource：only_include_ai_character=True，generation_prompt 与 build_image_prompt 产出有重叠以便相似度 > 0
     # 使用唯一 URL 避免多次运行或并行时 pk_resources 冲突
-    fallback_gcs = f"gs://test-bucket/chat_images/fallback_{uuid.uuid4().hex[:8]}.jpg"
+    fallback_gcs = (
+        f"gs://test-bucket/chat_images/fallback_{uuid.uuid4().hex[:8]}.jpg"
+    )
     fallback_prompt = (
         "Create an image character emotional 可爱的女孩 在公园散步 "
         "User request: 给我画一张图片"
@@ -226,8 +232,12 @@ async def test_chat_image_generation_fallback_returns_matched_image(
         select(ChatHistory).where(ChatHistory.id == message_id)
     )
     updated_msg = result.scalar_one()
-    generated_image_meta = (updated_msg.meta_data or {}).get("generated_image", {})
-    assert generated_image_meta.get("generation_mode") == "fallback_matched_image"
+    generated_image_meta = (updated_msg.meta_data or {}).get(
+        "generated_image", {}
+    )
+    assert (
+        generated_image_meta.get("generation_mode") == "fallback_matched_image"
+    )
     assert generated_image_meta.get("original_request") == ai_message_content
 
     # 9) 可选：兜底图 id 已写入 chat.sent_fallback_images

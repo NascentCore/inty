@@ -105,7 +105,9 @@ def test_wrap_google_genai_client_falls_back_to_legacy_signature(monkeypatch):
     assert captured_kwargs[1] == {}
 
 
-def test_wrap_google_genai_client_returns_original_when_wrap_missing(monkeypatch):
+def test_wrap_google_genai_client_returns_original_when_wrap_missing(
+    monkeypatch,
+):
     original_client = object()
 
     monkeypatch.setattr(

@@ -9,7 +9,9 @@ import pytest
 
 def _load_push_scheduler_service_module():
     fake_config = types.SimpleNamespace(
-        push_notification=types.SimpleNamespace(enabled=True, festival_memory_enabled=False),
+        push_notification=types.SimpleNamespace(
+            enabled=True, festival_memory_enabled=False
+        ),
         memory_extraction=types.SimpleNamespace(
             enabled=True,
             cron_hour=3,
@@ -25,9 +27,13 @@ def _load_push_scheduler_service_module():
     fake_db_session_module.AsyncSessionLocalReplica = None
 
     fake_models_memory_module = types.ModuleType("app.models.memory")
-    fake_models_memory_module.FestivalMemoryConfig = type("FestivalMemoryConfig", (), {})
+    fake_models_memory_module.FestivalMemoryConfig = type(
+        "FestivalMemoryConfig", (), {}
+    )
 
-    fake_festival_memory_module = types.ModuleType("app.services.festival_memory_service")
+    fake_festival_memory_module = types.ModuleType(
+        "app.services.festival_memory_service"
+    )
     fake_festival_memory_module.DEFAULT_MIN_ROUNDS_IN_WINDOW = 3
 
     def _dummy_get_pairs(*args, **kwargs):
@@ -39,8 +45,12 @@ def _load_push_scheduler_service_module():
     def _dummy_resolve_sync_read_db_url(*args, **kwargs):
         return "postgresql://primary-host:5432/inty"
 
-    fake_festival_memory_module.get_pairs_with_min_rounds_in_window_sync = _dummy_get_pairs
-    fake_festival_memory_module.extract_festival_and_save = _dummy_extract_festival
+    fake_festival_memory_module.get_pairs_with_min_rounds_in_window_sync = (
+        _dummy_get_pairs
+    )
+    fake_festival_memory_module.extract_festival_and_save = (
+        _dummy_extract_festival
+    )
     fake_festival_memory_module.resolve_sync_read_db_url = (
         _dummy_resolve_sync_read_db_url
     )
@@ -84,9 +94,13 @@ def _load_push_scheduler_service_module():
         return None
 
     fake_push_notification_module.discover_new_users_for_push = _dummy_discover
-    fake_push_notification_module.discover_users_with_updated_tokens = _dummy_discover
+    fake_push_notification_module.discover_users_with_updated_tokens = (
+        _dummy_discover
+    )
     fake_push_notification_module.initialize_push_system = _dummy_init
-    fake_push_notification_module.process_festival_memory_push_batch = _dummy_process
+    fake_push_notification_module.process_festival_memory_push_batch = (
+        _dummy_process
+    )
     fake_push_notification_module.process_push_batch = _dummy_process
 
     fake_analytics_report_module = types.ModuleType(
@@ -223,8 +237,12 @@ async def test_run_memory_extraction_uses_replica_for_read_and_primary_for_write
             "AsyncSessionLocal",
             _SessionFactory([write_db]),
         ),
-        patch.object(push_scheduler_module, "memory_get_users_to_extract", mock_get_users),
-        patch.object(push_scheduler_module, "memory_extract_and_save", mock_extract),
+        patch.object(
+            push_scheduler_module, "memory_get_users_to_extract", mock_get_users
+        ),
+        patch.object(
+            push_scheduler_module, "memory_extract_and_save", mock_extract
+        ),
     ):
         scheduler = PushSchedulerService()
         await scheduler._run_memory_extraction()
@@ -234,9 +252,13 @@ async def test_run_memory_extraction_uses_replica_for_read_and_primary_for_write
     assert mock_get_users.await_args.kwargs == {"prefer_replica_read": True}
     assert mock_extract.await_count == 2
     assert mock_extract.await_args_list[0].args == (write_db, "u1")
-    assert mock_extract.await_args_list[0].kwargs == {"prefer_replica_read": True}
+    assert mock_extract.await_args_list[0].kwargs == {
+        "prefer_replica_read": True
+    }
     assert mock_extract.await_args_list[1].args == (write_db, "u2")
-    assert mock_extract.await_args_list[1].kwargs == {"prefer_replica_read": True}
+    assert mock_extract.await_args_list[1].kwargs == {
+        "prefer_replica_read": True
+    }
 
 
 @pytest.mark.asyncio
@@ -267,8 +289,12 @@ async def test_run_memory_extraction_daily_incremental_mode_uses_previous_day_wi
             "memory_extract_and_save_incremental_daily",
             mock_extract_incremental,
         ),
-        patch.object(push_scheduler_module, "memory_get_users_to_extract", AsyncMock()),
-        patch.object(push_scheduler_module, "memory_extract_and_save", AsyncMock()),
+        patch.object(
+            push_scheduler_module, "memory_get_users_to_extract", AsyncMock()
+        ),
+        patch.object(
+            push_scheduler_module, "memory_extract_and_save", AsyncMock()
+        ),
     ):
         push_scheduler_module.global_config_loaded_from_config_yaml.memory_extraction.workflow_mode = (
             "daily_incremental_summarization"
@@ -278,7 +304,9 @@ async def test_run_memory_extraction_daily_incremental_mode_uses_previous_day_wi
 
     mock_get_users_in_day.assert_awaited_once()
     assert mock_get_users_in_day.await_args.args[0] is read_db
-    assert mock_get_users_in_day.await_args.kwargs["prefer_replica_read"] is True
+    assert (
+        mock_get_users_in_day.await_args.kwargs["prefer_replica_read"] is True
+    )
     target_date = mock_get_users_in_day.await_args.kwargs["target_date_utc"]
     assert mock_extract_incremental.await_count == 1
     assert mock_extract_incremental.await_args.args == (write_db, "u1")
@@ -333,12 +361,20 @@ async def test_run_festival_memory_extraction_uses_replica_read_url_and_replica_
             "extract_festival_and_save",
             mock_extract,
         ),
-        patch.object(push_scheduler_module.asyncio, "to_thread", mock_to_thread),
-        patch.object(push_scheduler_module, "select", return_value=_DummyQuery()),
-        patch.object(push_scheduler_module, "update", return_value=_DummyQuery()),
+        patch.object(
+            push_scheduler_module.asyncio, "to_thread", mock_to_thread
+        ),
+        patch.object(
+            push_scheduler_module, "select", return_value=_DummyQuery()
+        ),
+        patch.object(
+            push_scheduler_module, "update", return_value=_DummyQuery()
+        ),
         patch.object(push_scheduler_module, "or_", return_value=True),
         patch.object(
-            push_scheduler_module, "FestivalMemoryConfig", _FakeFestivalMemoryConfig
+            push_scheduler_module,
+            "FestivalMemoryConfig",
+            _FakeFestivalMemoryConfig,
         ),
     ):
         scheduler = PushSchedulerService()
@@ -361,9 +397,13 @@ def test_start_memory_extraction_job_uses_cron_without_immediate_run():
     fake_scheduler = _FakeScheduler()
     with (
         patch.object(
-            push_scheduler_module, "AsyncIOScheduler", return_value=fake_scheduler
+            push_scheduler_module,
+            "AsyncIOScheduler",
+            return_value=fake_scheduler,
         ),
-        patch.object(push_scheduler_module.asyncio, "create_task", _close_coro_task),
+        patch.object(
+            push_scheduler_module.asyncio, "create_task", _close_coro_task
+        ),
     ):
         scheduler = PushSchedulerService()
         scheduler.start()

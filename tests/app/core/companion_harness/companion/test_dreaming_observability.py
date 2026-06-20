@@ -9,7 +9,10 @@ from app.core.companion_harness.companion.dreaming_observability import (
     DreamingBatchOutcome,
     build_inner_tick_dreaming_runtime_event_record,
 )
-from app.core.companion_harness.companion.models import ChatMessage, InnerTickActivity
+from app.core.companion_harness.companion.models import (
+    ChatMessage,
+    InnerTickActivity,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
@@ -123,7 +126,9 @@ def test_dreaming_batch_langsmith_scope_resolves_scope_registry_channel(
     clear_registries_for_tests()
     scope = AgentScope(user_id="u-scope", agent_id="a-scope")
     registry = get_scope_channel_registry(scope)
-    registry.states[CompanionRuntimeChannel.TELEGRAM] = ChannelRuntimeState.ACTIVE
+    registry.states[CompanionRuntimeChannel.TELEGRAM] = (
+        ChannelRuntimeState.ACTIVE
+    )
 
     mock_root = MagicMock()
     mock_create.return_value = mock_root
@@ -150,10 +155,10 @@ def test_dreaming_batch_langsmith_scope_resolves_scope_registry_channel(
     create_slice = mock_create.call_args.kwargs["langsmith_slice"]
     assert create_slice.runtime_channel == CompanionRuntimeChannel.TELEGRAM
     assert create_slice.channel_source == LangsmithChannelSource.SCOPE_REGISTRY
-    consolidation_extra = slice_.dreaming_consolidation_extra(model_role="memory")
-    assert (
-        consolidation_extra["metadata"]["inty_runtime_channel"] == "telegram"
+    consolidation_extra = slice_.dreaming_consolidation_extra(
+        model_role="memory"
     )
+    assert consolidation_extra["metadata"]["inty_runtime_channel"] == "telegram"
     assert (
         consolidation_extra["metadata"]["inty_runtime_channel_source"]
         == "scope_registry"

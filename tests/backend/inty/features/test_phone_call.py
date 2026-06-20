@@ -8,7 +8,10 @@ import pytest
 from fastapi.testclient import TestClient as FastAPITestClient
 
 from app.api import deps
-from app.services.phone_call_service import TwilioPcmBridgeCodec, phone_call_service
+from app.services.phone_call_service import (
+    TwilioPcmBridgeCodec,
+    phone_call_service,
+)
 from backend.inty.main import app
 from tests.app.api.v1.endpoints.conftest import _make_user
 
@@ -58,7 +61,9 @@ def configured_phone_call(monkeypatch):
     monkeypatch.setattr(cfg, "twilio_from_number", "+15005550006")
     monkeypatch.setattr(cfg, "twilio_account_sid", "AC_TEST")
     monkeypatch.setattr(cfg, "twilio_auth_token", "auth")
-    monkeypatch.setattr(cfg, "twilio_media_stream_base_url", "wss://voice.example")
+    monkeypatch.setattr(
+        cfg, "twilio_media_stream_base_url", "wss://voice.example"
+    )
     monkeypatch.setattr(phone_call_service.gemini_live_config, "enabled", True)
     return cfg
 
@@ -88,7 +93,9 @@ def test_phone_call_status_authenticated(configured_phone_call):
 
 
 @pytest.mark.asyncio
-async def test_start_outbound_call_normalizes_masks_and_binds(configured_phone_call):
+async def test_start_outbound_call_normalizes_masks_and_binds(
+    configured_phone_call,
+):
     fake_twilio = _FakeTwilio()
     db = _FakeDb()
     user = _make_user(user_id="user-phone")
@@ -107,7 +114,10 @@ async def test_start_outbound_call_normalizes_masks_and_binds(configured_phone_c
     assert result.status == "queued"
     assert result.to_number_masked == "+1***0123"
     assert fake_twilio.calls[0]["to_number"] == "+11234560123"
-    assert '<Stream url="wss://voice.example/api/v1/phone-calls/twilio-media?' in fake_twilio.calls[0]["twiml"]
+    assert (
+        '<Stream url="wss://voice.example/api/v1/phone-calls/twilio-media?'
+        in fake_twilio.calls[0]["twiml"]
+    )
     assert db.added[0].phone_number_hmac != "+11234560123"
     assert db.added[0].phone_number_masked == "+1***0123"
     assert db.committed is True
@@ -115,7 +125,9 @@ async def test_start_outbound_call_normalizes_masks_and_binds(configured_phone_c
 
 def test_call_me_at_phrase_extraction():
     assert (
-        phone_call_service.extract_call_me_at_number("Call me at 1234560123 please")
+        phone_call_service.extract_call_me_at_number(
+            "Call me at 1234560123 please"
+        )
         == "1234560123"
     )
     assert phone_call_service.extract_call_me_at_number("call me later") is None

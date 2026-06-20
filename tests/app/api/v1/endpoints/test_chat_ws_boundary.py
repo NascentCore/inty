@@ -7,12 +7,14 @@ from app.api.v1.endpoints import chat_ws_boundary as boundary
 
 def test_companion_ws_surface_imports_companion_harness() -> None:
     for rel in boundary.CHAT_WS_BOUNDARY_MODULE_PATHS:
-        assert boundary.module_imports_companion_harness(rel), (
-            f"{rel} must import from {boundary.CHAT_WS_REQUIRED_APP_CORE_PREFIX}"
-        )
+        assert boundary.module_imports_companion_harness(
+            rel
+        ), f"{rel} must import from {boundary.CHAT_WS_REQUIRED_APP_CORE_PREFIX}"
 
 
-def test_companion_ws_surface_does_not_import_maintenance_mode_modules() -> None:
+def test_companion_ws_surface_does_not_import_maintenance_mode_modules() -> (
+    None
+):
     for rel in boundary.CHAT_WS_BOUNDARY_MODULE_PATHS:
         hits = boundary.module_imports_forbidden_maintenance_modules(rel)
         assert hits == [], f"{rel} forbidden imports: {hits}"
@@ -32,7 +34,9 @@ def test_companion_production_surface_does_not_reference_readable_id() -> None:
     )
 
 
-def test_app_ws_queue_delivery_ctx_uses_agent_scope_inner_tick_chat_id() -> None:
+def test_app_ws_queue_delivery_ctx_uses_agent_scope_inner_tick_chat_id() -> (
+    None
+):
     hits = boundary.app_ws_queue_delivery_ctx_uses_legacy_chat_row_id(
         "app/api/v1/endpoints/chat_ws.py"
     )
@@ -53,4 +57,11 @@ getattr(obj, "readable_id")
 """
     hits = boundary.ast_readable_id_references_in_source("probe.py", source)
     kinds = {hit.split(":")[-1] for hit in hits}
-    assert kinds == {"name", "attribute", "keyword", "dict_key", "subscript", "getattr"}
+    assert kinds == {
+        "name",
+        "attribute",
+        "keyword",
+        "dict_key",
+        "subscript",
+        "getattr",
+    }

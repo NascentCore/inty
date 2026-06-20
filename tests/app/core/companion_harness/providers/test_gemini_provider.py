@@ -61,7 +61,9 @@ def test_newapi_options_clear_google_env_and_use_provider_cache(
 ) -> None:
     calls: list[dict[str, Any]] = []
     monkeypatch.setenv("GOOGLE_API_KEY", "ambient-google-key")
-    monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/tmp/ambient-creds.json")
+    monkeypatch.setenv(
+        "GOOGLE_APPLICATION_CREDENTIALS", "/tmp/ambient-creds.json"
+    )
 
     def _fake_client(**kwargs: Any) -> object:
         assert "GOOGLE_API_KEY" not in os.environ
@@ -91,7 +93,10 @@ def test_newapi_options_clear_google_env_and_use_provider_cache(
     assert http_options.api_version == "v1beta"
     assert http_options.headers["Authorization"] == "Bearer newapi-token"
     assert os.environ["GOOGLE_API_KEY"] == "ambient-google-key"
-    assert os.environ["GOOGLE_APPLICATION_CREDENTIALS"] == "/tmp/ambient-creds.json"
+    assert (
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+        == "/tmp/ambient-creds.json"
+    )
 
 
 def test_http_option_cache_key_is_order_insensitive_and_value_sensitive(
@@ -154,7 +159,9 @@ def test_langsmith_wrapped_client_is_cached_by_trace_options(
         wrap_calls.append({"client": client, **kwargs})
         return wrapped_client
 
-    monkeypatch.setattr(gemini, "wrap_google_genai_client_with_langsmith", _fake_wrap)
+    monkeypatch.setattr(
+        gemini, "wrap_google_genai_client_with_langsmith", _fake_wrap
+    )
 
     options = GeminiClientOptions(
         api_key="token",

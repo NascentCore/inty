@@ -7,8 +7,13 @@ from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.tools.companion_tool_definitions import MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST, MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
-from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
+)
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    execute_tool_call,
+)
 
 
 def _run_tool(
@@ -20,7 +25,9 @@ def _run_tool(
 ) -> str:
     if write_allowlist is not None:
         return asyncio.run(
-            execute_tool_call(store, name, args, write_allowlist=write_allowlist)
+            execute_tool_call(
+                store, name, args, write_allowlist=write_allowlist
+            )
         )
     return asyncio.run(execute_tool_call(store, name, args))
 

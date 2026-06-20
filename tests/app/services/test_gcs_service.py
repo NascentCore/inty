@@ -66,10 +66,10 @@ async def test_upload_voice_file_returns_file_uri_under_fake_gcs(
     assert url.startswith("file:")
     date_path = datetime.now().strftime("%Y%m")
     expected = (
-        fake_gcs.base_dir
-        / "test-bucket"
-        / f"voice/{date_path}/{file_name}"
-    ).resolve().as_uri()
+        (fake_gcs.base_dir / "test-bucket" / f"voice/{date_path}/{file_name}")
+        .resolve()
+        .as_uri()
+    )
     assert url == expected
     blob = fake_gcs.bucket("test-bucket").blob(f"voice/{date_path}/{file_name}")
     assert blob.exists() is True
@@ -102,8 +102,14 @@ async def test_upload_live_chat_audio_success(fake_gcs: FakeGCSClient):
     )
 
     expected_url = (
-        fake_gcs.base_dir / "test-bucket" / "live_chat/user1/agent1/sess1_voice1.wav"
-    ).resolve().as_uri()
+        (
+            fake_gcs.base_dir
+            / "test-bucket"
+            / "live_chat/user1/agent1/sess1_voice1.wav"
+        )
+        .resolve()
+        .as_uri()
+    )
     assert url == expected_url
 
     blob = fake_gcs.bucket("test-bucket").blob(
@@ -114,11 +120,16 @@ async def test_upload_live_chat_audio_success(fake_gcs: FakeGCSClient):
 
 
 @pytest.mark.asyncio
-async def test_upload_live_chat_audio_returns_none_on_upload_failure(stub_config):
+async def test_upload_live_chat_audio_returns_none_on_upload_failure(
+    stub_config,
+):
     """失败路径：upload_to_gcs 抛异常时返回 None，不影响调用方。"""
     from unittest.mock import patch
 
-    with patch("app.services.gcs_service.upload_to_gcs", side_effect=Exception("fake error")):
+    with patch(
+        "app.services.gcs_service.upload_to_gcs",
+        side_effect=Exception("fake error"),
+    ):
         service = GCSService()
         url = await service.upload_live_chat_audio(
             "user1", "agent1", "sess1", "voice1", b"wav"
@@ -127,7 +138,9 @@ async def test_upload_live_chat_audio_returns_none_on_upload_failure(stub_config
 
 
 @pytest.mark.asyncio
-async def test_upload_live_chat_audio_e2e_download_by_url(fake_gcs: FakeGCSClient):
+async def test_upload_live_chat_audio_e2e_download_by_url(
+    fake_gcs: FakeGCSClient,
+):
     """端到端：上传后按返回 URL 用 FakeGCS 下载，验证路径正确且文件可检索。"""
     wav_bytes = b"fake-wav-content"
     service = GCSService()

@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from app.utils.image import ImageFormat, parse_image_data_uri, save_image_data_to_file
+from app.utils.image import (
+    ImageFormat,
+    parse_image_data_uri,
+    save_image_data_to_file,
+)
 
 _TEST_JPG_PATH = Path("tests/files/test.jpg")
 

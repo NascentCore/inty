@@ -47,16 +47,22 @@ async def async_db_session():
 
 async def _delete_user_and_agents(db: AsyncSession, user_id: str) -> None:
     await db.execute(
-        delete(AgentChannelEndpoint).where(AgentChannelEndpoint.user_id == user_id)
+        delete(AgentChannelEndpoint).where(
+            AgentChannelEndpoint.user_id == user_id
+        )
     )
-    await db.execute(delete(CompanionBond).where(CompanionBond.user_id == user_id))
+    await db.execute(
+        delete(CompanionBond).where(CompanionBond.user_id == user_id)
+    )
     await db.execute(delete(Agent).where(Agent.creator_id == user_id))
     await db.execute(delete(User).where(User.id == user_id))
     await db.commit()
 
 
 @pytest.mark.asyncio
-async def test_provision_create_and_reuse(async_db_session: AsyncSession) -> None:
+async def test_provision_create_and_reuse(
+    async_db_session: AsyncSession,
+) -> None:
     """Single async test: global ``AsyncSessionLocal`` breaks a second async DB test."""
     await async_engine.dispose()
     ilink_user_id = f"ilink-{uuid.uuid4().hex}"
@@ -127,9 +133,7 @@ async def test_concurrent_provision_reuses_winning_endpoint(
     endpoints = endpoint_rows.scalars().all()
     assert len(endpoints) == 1
     bond_rows = await async_db_session.execute(
-        select(CompanionBond).where(
-            CompanionBond.user_id == results[0].user_id
-        )
+        select(CompanionBond).where(CompanionBond.user_id == results[0].user_id)
     )
     bonds = bond_rows.scalars().all()
     assert len(bonds) == 1

@@ -14,7 +14,9 @@ from app.core.companion_harness.companion.llm_runtime_events import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    execute_tool_call,
+)
 from app.core.companion_harness.tools.companion_user_feedback import (
     COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
     USER_FEEDBACK_JSONL_REL,
@@ -143,7 +145,9 @@ def test_build_harness_snapshot_reads_memory_docs(tmp_path) -> None:
     assert snap.complaint_category == "tone"
 
 
-def test_build_harness_snapshot_transcript_tail_is_recent_lines(tmp_path) -> None:
+def test_build_harness_snapshot_transcript_tail_is_recent_lines(
+    tmp_path,
+) -> None:
     scope = CompanionScope("u", "c", "chat")
     store = MemoryStore(scope=scope, repository=None)
     prefix = '{"role":"user","content":"EARLY_ONLY"}\n'

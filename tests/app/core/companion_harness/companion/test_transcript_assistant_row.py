@@ -11,7 +11,9 @@ from app.core.companion_harness.companion.transcript_assistant_row import (
     append_transcript_assistant_row,
     build_transcript_assistant_row,
 )
-from app.core.companion_harness.companion.models import load_transcript_from_store
+from app.core.companion_harness.companion.models import (
+    load_transcript_from_store,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
 

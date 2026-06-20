@@ -180,7 +180,9 @@ class TestBuildImagePrompt:
         assert "P" in result
         assert "m" in result
 
-    def test_personality_and_scenario_rendered_when_char_name_user_name_provided(self):
+    def test_personality_and_scenario_rendered_when_char_name_user_name_provided(
+        self,
+    ):
         """传入 char_name、user_name 时，personality 与 scenario 中的 {{ char }}、{{ user }} 被渲染。"""
         agent_data = {
             "scenario": "{{ char }} meets {{ user }} at a cafe.",
@@ -204,7 +206,9 @@ class TestBuildImagePrompt:
         assert "{{ char }}" not in result
         assert "{{ user }}" not in result
 
-    def test_personality_scenario_not_rendered_when_char_or_user_name_missing(self):
+    def test_personality_scenario_not_rendered_when_char_or_user_name_missing(
+        self,
+    ):
         """未传 char_name 或 user_name 时，personality/scenario 不进行 jinja2 渲染，保持原样。"""
         agent_data = {
             "scenario": "{{ char }} and {{ user }}",
@@ -224,7 +228,9 @@ class TestBuildImagePrompt:
         assert "{{ char }}" in result
         assert "{{ user }}" in result
 
-    def test_intro_fallback_rendered_when_scenario_empty_and_names_provided(self):
+    def test_intro_fallback_rendered_when_scenario_empty_and_names_provided(
+        self,
+    ):
         """scenario 为空时使用 intro；传入 char_name/user_name 时 intro 中的 {{ char }}/{{ user }} 被渲染。"""
         agent_data = {
             "scenario": "",
@@ -256,7 +262,9 @@ class TestSerializeGeminiResponseForLog:
         c.finish_reason = None
         c.safety_ratings = None
         c.content = Mock()
-        c.content.parts = None  # 会触发 'NoneType' object is not iterable 的根因
+        c.content.parts = (
+            None  # 会触发 'NoneType' object is not iterable 的根因
+        )
         response = Mock()
         response.prompt_feedback = None
         response.candidates = [c]

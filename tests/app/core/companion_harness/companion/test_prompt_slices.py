@@ -13,5 +13,10 @@ def test_channels_maps_to_workspace_rel() -> None:
 
 
 def test_companionship_maps_to_workspace_rel() -> None:
-    assert slice_to_workspace_rel(PromptSliceId.COMPANIONSHIP) == "COMPANIONSHIP.md"
-    assert PROMPT_SLICE_TO_REL[PromptSliceId.COMPANIONSHIP] == "COMPANIONSHIP.md"
+    assert (
+        slice_to_workspace_rel(PromptSliceId.COMPANIONSHIP)
+        == "COMPANIONSHIP.md"
+    )
+    assert (
+        PROMPT_SLICE_TO_REL[PromptSliceId.COMPANIONSHIP] == "COMPANIONSHIP.md"
+    )

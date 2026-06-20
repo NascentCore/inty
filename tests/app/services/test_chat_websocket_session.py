@@ -30,7 +30,9 @@ async def test_chat_ws_outbound_pump_fifo_order() -> None:
 
 
 @pytest.mark.asyncio
-async def test_chat_ws_outbound_pump_send_json_disconnect_exits_cleanly() -> None:
+async def test_chat_ws_outbound_pump_send_json_disconnect_exits_cleanly() -> (
+    None
+):
     ws = AsyncMock()
     ws.send_json = AsyncMock(side_effect=WebSocketDisconnect())
 

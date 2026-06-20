@@ -28,9 +28,7 @@ from app.services.memory_service import deliver_festival_memories_for_user_agent
 @pytest.fixture
 def sync_db_session():
     """Sync session for setup, assertions and cleanup; same DB as E2E."""
-    engine = create_engine(
-        global_config_loaded_from_config_yaml.database.url
-    )
+    engine = create_engine(global_config_loaded_from_config_yaml.database.url)
     Session = sessionmaker(bind=engine)
     session = Session()
     try:
@@ -130,7 +128,9 @@ async def test_deliver_festival_memories_for_user_agent_writes_chat_history_and_
 
         # Assert memory.delivery_at set
         sync_db_session.refresh(memory)
-        assert memory.delivery_at is not None, "memory.delivery_at should be set after delivery"
+        assert (
+            memory.delivery_at is not None
+        ), "memory.delivery_at should be set after delivery"
 
         # Assert chat_history: exactly one row for this session + festival_memory_prompt + this memory
         stmt = select(ChatHistory).where(*chat_history_filter)

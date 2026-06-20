@@ -41,7 +41,9 @@ def test_process_outputs_tts_fallback_success() -> None:
 
 
 def test_process_outputs_call_tts_api_success() -> None:
-    summary = _process_outputs_call_tts_api((b"audio", 2.5, "audio/wav", "gemini"))
+    summary = _process_outputs_call_tts_api(
+        (b"audio", 2.5, "audio/wav", "gemini")
+    )
     assert summary == {
         "status": "success",
         "audio_bytes_len": 5,
@@ -52,12 +54,16 @@ def test_process_outputs_call_tts_api_success() -> None:
 
 
 @pytest.mark.asyncio
-async def test_generate_voice_empty_text_records_failure_reason(monkeypatch) -> None:
+async def test_generate_voice_empty_text_records_failure_reason(
+    monkeypatch,
+) -> None:
     service = VoiceService()
     service.config.enabled = True
     run = SimpleNamespace(metadata={})
 
-    monkeypatch.setattr("app.services.voice_service.get_current_run_tree", lambda: run)
+    monkeypatch.setattr(
+        "app.services.voice_service.get_current_run_tree", lambda: run
+    )
 
     result = await service.generate_voice(text="   ")
 

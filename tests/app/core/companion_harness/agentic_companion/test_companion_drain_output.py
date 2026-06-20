@@ -12,11 +12,15 @@ from app.core.companion_harness.agent_channel.guest_agent_kind import (
     CompanionGuestAgentKind,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.companion import AgenticCompanion
+from app.core.companion_harness.agentic_companion.companion import (
+    AgenticCompanion,
+)
 from app.core.companion_harness.agentic_companion.postgres_queue import (
     PostgresInputQueueRepository,
 )
-from app.core.companion_harness.agentic_companion.types import InboundWireMessage
+from app.core.companion_harness.agentic_companion.types import (
+    InboundWireMessage,
+)
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
@@ -56,7 +60,9 @@ async def _cleanup_scope(scope: AgentScope) -> None:
 
 
 @pytest.mark.asyncio
-async def test_drain_skips_output_queue_when_tool_background_without_text() -> None:
+async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
+    None
+):
     scope = await create_guest_scope_for_test(
         kind=CompanionGuestAgentKind.AGENT_CHANNEL,
         nickname_prefix="companion_drain_tool_bg",

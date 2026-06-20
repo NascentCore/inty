@@ -24,9 +24,9 @@ def test_user_analytics_routes_use_replica_db_dependency() -> None:
             for dependency in route.dependant.dependencies
             if dependency.call is not None
         }
-        assert deps.get_async_replica_db in dependency_calls, (
-            f"{route.path} should use get_async_replica_db"
-        )
-        assert deps.get_async_db not in dependency_calls, (
-            f"{route.path} should not use get_async_db"
-        )
+        assert (
+            deps.get_async_replica_db in dependency_calls
+        ), f"{route.path} should use get_async_replica_db"
+        assert (
+            deps.get_async_db not in dependency_calls
+        ), f"{route.path} should not use get_async_db"

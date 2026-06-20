@@ -30,7 +30,9 @@ def test_is_ilink_session_expired_stale_unknown_error() -> None:
     )
 
 
-def test_is_ilink_session_expired_rejects_rate_limit_without_unknown_error() -> None:
+def test_is_ilink_session_expired_rejects_rate_limit_without_unknown_error() -> (
+    None
+):
     assert not is_ilink_session_expired(
         ILINK_RATE_LIMIT_ERRCODE,
         ILINK_RATE_LIMIT_ERRCODE,

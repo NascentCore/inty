@@ -7,7 +7,9 @@ import pytest
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
-from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutput,
+)
 from app.core.companion_harness.companion.websocket_coordinator import (
     BootstrapInterimDeliverCtx,
     CompanionWebSocketCoordinator,
@@ -72,9 +74,13 @@ async def test_companion_websocket_coordinator_bootstrap_interim_deliver_ctx_lif
 
 
 @pytest.mark.asyncio
-async def test_companion_websocket_coordinator_background_sink_queues_event() -> None:
+async def test_companion_websocket_coordinator_background_sink_queues_event() -> (
+    None
+):
     coordinator = CompanionWebSocketCoordinator.for_current_loop()
-    st = MemoryStore(scope=CompanionScope("u", "a", "c-ws-coord"), repository=None)
+    st = MemoryStore(
+        scope=CompanionScope("u", "a", "c-ws-coord"), repository=None
+    )
     event = ToolOutputEvent(
         scope_registry_key=st.scope.registry_key(),
         memory_store=st,
@@ -92,7 +98,9 @@ async def test_companion_websocket_coordinator_background_sink_queues_event() ->
 
 
 @pytest.mark.asyncio
-async def test_companion_websocket_coordinator_foreground_pending_lifecycle() -> None:
+async def test_companion_websocket_coordinator_foreground_pending_lifecycle() -> (
+    None
+):
     coordinator = CompanionWebSocketCoordinator.for_current_loop()
 
     coordinator.set_foreground_pending("user-msg-1", {"session_id": "s1"})
@@ -109,7 +117,9 @@ async def test_companion_websocket_coordinator_foreground_pending_lifecycle() ->
 
 
 @pytest.mark.asyncio
-async def test_companion_websocket_coordinator_inner_tick_refresh_preserves_same_coords_throttle() -> None:
+async def test_companion_websocket_coordinator_inner_tick_refresh_preserves_same_coords_throttle() -> (
+    None
+):
     coordinator = CompanionWebSocketCoordinator.for_current_loop()
 
     coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
@@ -135,7 +145,9 @@ async def test_companion_websocket_coordinator_inner_tick_refresh_preserves_same
 
 
 @pytest.mark.asyncio
-async def test_companion_websocket_coordinator_clear_inner_tick_coords() -> None:
+async def test_companion_websocket_coordinator_clear_inner_tick_coords() -> (
+    None
+):
     coordinator = CompanionWebSocketCoordinator.for_current_loop()
     coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
     assert coordinator.snapshot_inner_tick_coords() is not None

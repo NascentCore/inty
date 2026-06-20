@@ -20,7 +20,9 @@ from app.services.agentic_channel.endpoints import (
     bind_endpoint,
     list_endpoints_for_channel,
 )
-from app.services.agentic_channel.provision import provision_agent_for_channel_onboard
+from app.services.agentic_channel.provision import (
+    provision_agent_for_channel_onboard,
+)
 
 
 @pytest.mark.asyncio
@@ -70,7 +72,5 @@ async def test_provision_persists_endpoint_row() -> None:
         await db.execute(
             delete(Agent).where(Agent.creator_id == provision.scope.user_id)
         )
-        await db.execute(
-            delete(User).where(User.id == provision.scope.user_id)
-        )
+        await db.execute(delete(User).where(User.id == provision.scope.user_id))
         await db.commit()

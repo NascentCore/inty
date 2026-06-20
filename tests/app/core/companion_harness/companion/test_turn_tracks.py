@@ -95,7 +95,9 @@ async def test_user_chat_track_passes_non_inner_tick_flags(tmp_path) -> None:
         await run_companion_user_chat_turn("hello", deps=deps)
     assert run_turn_mock.await_args is not None
     assert run_turn_mock.await_args.args[0] == "hello"
-    assert run_turn_mock.await_args.kwargs["track"] == CompanionTurnTrack.USER_CHAT
+    assert (
+        run_turn_mock.await_args.kwargs["track"] == CompanionTurnTrack.USER_CHAT
+    )
 
 
 @pytest.mark.asyncio
@@ -143,7 +145,9 @@ async def test_user_chat_turn_selects_bootstrap_track_when_incomplete(
 
 
 @pytest.mark.asyncio
-async def test_user_chat_turn_plumbs_bootstrap_interim_output_sink(tmp_path) -> None:
+async def test_user_chat_turn_plumbs_bootstrap_interim_output_sink(
+    tmp_path,
+) -> None:
     scope = CompanionScope("turn-tracks-sink", "agent", tmp_path.name)
     st = MemoryStore(scope=scope, repository=None)
     st.write_document(
@@ -184,7 +188,10 @@ async def test_user_chat_turn_plumbs_bootstrap_interim_output_sink(tmp_path) -> 
     ) as run_turn_mock:
         await run_companion_user_chat_turn("hello", deps=deps)
     assert run_turn_mock.await_args is not None
-    assert run_turn_mock.await_args.kwargs["deps"].bootstrap_interim_output_sink is _sink
+    assert (
+        run_turn_mock.await_args.kwargs["deps"].bootstrap_interim_output_sink
+        is _sink
+    )
 
 
 @pytest.mark.asyncio
@@ -226,7 +233,9 @@ async def test_implicit_sign_on_track() -> None:
         == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
     )
     assert (
-        run_turn_mock.await_args.kwargs["deps"].runtime_context.implicit_signal_bundle
+        run_turn_mock.await_args.kwargs[
+            "deps"
+        ].runtime_context.implicit_signal_bundle
         is bundle
     )
 
@@ -243,7 +252,9 @@ async def test_proactive_inner_tick_track() -> None:
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
-        await run_companion_inner_tick_proactive_chat_turn(deps=_minimal_turn_deps())
+        await run_companion_inner_tick_proactive_chat_turn(
+            deps=_minimal_turn_deps()
+        )
     assert run_turn_mock.await_args is not None
     assert run_turn_mock.await_args.args[0] == ""
     assert (
@@ -289,7 +300,9 @@ async def test_maintenance_inner_tick_track() -> None:
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
-        await run_companion_inner_tick_maintenance_turn(deps=_minimal_turn_deps())
+        await run_companion_inner_tick_maintenance_turn(
+            deps=_minimal_turn_deps()
+        )
     assert run_turn_mock.await_args is not None
     assert (
         run_turn_mock.await_args.kwargs["track"]
