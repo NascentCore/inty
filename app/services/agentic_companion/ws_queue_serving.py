@@ -237,7 +237,8 @@ async def _on_app_ws_scope_drain_complete(
             drop_client_alias=True,
             drop_queue_alias=True,
         )
-        _pop_scope_turn_delivery(scope, message_id)
+        # Keep send routing until WS scope teardown so the output pump can deliver
+        # trailing foreground lines appended before drain completion returns.
 
 
 def _make_on_drain_complete(scope: AgentScope) -> OnDrainCompleteFn:

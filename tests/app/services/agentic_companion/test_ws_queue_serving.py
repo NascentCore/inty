@@ -223,7 +223,7 @@ async def test_drain_complete_clears_only_matching_queue_message_state() -> (
     assert pending["queue-msg-b"] == {"turn": "b"}
     assert flags_a.tool_background_started is False
     assert flags_b.tool_background_started is False
-    assert _lookup_scope_turn_delivery(scope, "queue-msg-a") is None
+    assert _lookup_scope_turn_delivery(scope, "queue-msg-a") is not None
     assert _lookup_scope_turn_delivery(scope, "queue-msg-b") is not None
 
 
@@ -338,8 +338,8 @@ async def test_deliver_ready_output_survives_drain_complete() -> None:
     input_id = "queue-msg-race"
     sent: list[str] = []
 
-    async def send_text(text: str) -> None:
-        sent.append(text)
+    async def send_text(message: ReadyOutputMessage) -> None:
+        sent.append(message.text)
 
     _register_scope_turn_delivery(
         scope,
@@ -360,8 +360,9 @@ async def test_deliver_ready_output_survives_drain_complete() -> None:
 
     await _scope_deliver_ready_output(
         scope,
-        "reply after drain complete",
-        (input_id,),
+        _ready_message(
+            text="reply after drain complete", message_ids=(input_id,)
+        ),
     )
 
     assert sent == ["reply after drain complete"]
@@ -374,8 +375,8 @@ async def test_deliver_ready_message_delivers_after_drain_complete() -> None:
     input_id = "queue-msg-pump-race"
     sent: list[str] = []
 
-    async def send_text(text: str) -> None:
-        sent.append(text)
+    async def send_text(message: ReadyOutputMessage) -> None:
+        sent.append(message.text)
 
     _register_scope_turn_delivery(
         scope,
@@ -393,8 +394,8 @@ async def test_deliver_ready_message_delivers_after_drain_complete() -> None:
         ),
     )
 
-    async def deliver_ready(text: str, message_ids: tuple[str, ...]) -> None:
-        await _scope_deliver_ready_output(scope, text, message_ids)
+    async def deliver_message(message: ReadyOutputMessage) -> None:
+        await _scope_deliver_ready_output(scope, message)
 
     fake_queue = MagicMock()
     fake_queue.ack_delivered = AsyncMock()
@@ -413,8 +414,7 @@ async def test_deliver_ready_message_delivers_after_drain_complete() -> None:
     ):
         delivered = await _deliver_ready_message(
             message=ready,
-            send_text=None,
-            deliver_ready=deliver_ready,
+            deliver_message=deliver_message,
             scope=scope,
         )
 
@@ -433,8 +433,8 @@ async def test_background_reply_delivers_after_drain_complete() -> None:
     input_id = "queue-msg-bg"
     sent: list[str] = []
 
-    async def send_text(text: str) -> None:
-        sent.append(text)
+    async def send_text(message: ReadyOutputMessage) -> None:
+        sent.append(message.text)
 
     _register_scope_turn_delivery(
         scope,
@@ -453,9 +453,13 @@ async def test_background_reply_delivers_after_drain_complete() -> None:
         ),
     )
 
-    await _scope_deliver_ready_output(scope, "foreground reply", (input_id,))
     await _scope_deliver_ready_output(
-        scope, "background tool reply", (input_id,)
+        scope,
+        _ready_message(text="foreground reply", message_ids=(input_id,)),
+    )
+    await _scope_deliver_ready_output(
+        scope,
+        _ready_message(text="background tool reply", message_ids=(input_id,)),
     )
 
     assert sent == ["foreground reply", "background tool reply"]
