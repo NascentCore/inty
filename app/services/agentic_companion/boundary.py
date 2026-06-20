@@ -38,7 +38,6 @@ AGENTIC_COMPANION_ALLOWED_HARNESS_PREFIXES: Final[tuple[str, ...]] = (
 )
 
 AGENTIC_COMPANION_FORBIDDEN_HARNESS_PREFIXES: Final[tuple[str, ...]] = (
-    "app.core.companion_harness.companion.turn_engine",
     "app.core.companion_harness.companion.turn_pipeline",
     "app.core.companion_harness.companion.turn",
     "app.core.companion_harness.companion.inner_tick_schedule",

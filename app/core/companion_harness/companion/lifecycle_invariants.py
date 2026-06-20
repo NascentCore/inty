@@ -20,7 +20,6 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 # run_companion_*_turn → _run_companion_turn_core transcript persistence
 AWAKE_TURN_KERNEL_MODULE_PATHS: Final[tuple[str, ...]] = (
     "app/core/companion_harness/companion/turn.py",
-    "app/core/companion_harness/companion/turn_engine.py",
 )
 
 # Broader awake surface: must not invoke memory consolidation
