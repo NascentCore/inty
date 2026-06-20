@@ -64,10 +64,11 @@ class _FakeLLMClient:
         max_attempts: int,
         per_attempt_timeout_sec: float,
         trace_id: str | None,
-        _attempt_log_label: str,
+        attempt_log_label: str,
         model: GenAIModel | None,
         **kwargs: Any,
     ) -> Any:
+        _ = attempt_log_label
         resolved = model or self.resolve_model("chat")
         model_id = resolved.id_on_provider
         resp = None
