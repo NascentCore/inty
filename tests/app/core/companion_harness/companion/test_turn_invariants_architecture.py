@@ -10,8 +10,7 @@ from pathlib import Path
 def _load_checker_module():
     repo_root = Path(__file__).resolve().parents[5]
     script_path = (
-        repo_root
-        / ".cursor/skills/scripts/check_companion_turn_invariants.py"
+        repo_root / ".cursor/skills/scripts/check_companion_turn_invariants.py"
     )
     module_name = "check_companion_turn_invariants"
     spec = importlib.util.spec_from_file_location(module_name, script_path)

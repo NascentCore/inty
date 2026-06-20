@@ -634,7 +634,9 @@ async def _dispatch(
         return tool_companion_record_user_feedback(store, arguments)
     if name == "companion_set_experience_profile":
         try:
-            tool_input = CompanionSetExperienceProfileToolInput.model_validate(arguments)
+            tool_input = CompanionSetExperienceProfileToolInput.model_validate(
+                arguments
+            )
         except ValidationError as exc:
             return _companion_tool_validation_error_message(exc)
         return tool_companion_set_experience_profile(store, tool_input)

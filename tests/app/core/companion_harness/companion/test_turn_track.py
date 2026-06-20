@@ -62,7 +62,9 @@ def test_turn_flags_for_track(
 
 
 def test_autonomy_suppresses_user_delivery() -> None:
-    assert inner_tick_activity_suppresses_user_delivery(InnerTickActivity.AUTONOMY)
+    assert inner_tick_activity_suppresses_user_delivery(
+        InnerTickActivity.AUTONOMY
+    )
     assert not inner_tick_activity_suppresses_user_delivery(
         InnerTickActivity.MAINTENANCE
     )

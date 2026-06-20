@@ -106,7 +106,9 @@ def build_ai_private_splice_plan(
     )
 
 
-def should_persist_ai_private_splice(persist_input: AiPrivateSplicePersistInput) -> bool:
+def should_persist_ai_private_splice(
+    persist_input: AiPrivateSplicePersistInput,
+) -> bool:
     assistant_text = persist_input.assistant_text.strip()
     return (
         track_uses_ai_private_splice(persist_input.track)

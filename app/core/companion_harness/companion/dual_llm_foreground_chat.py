@@ -38,7 +38,9 @@ from .models import InnerTickActivity
 CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 
 
-def build_chat_track_handoff_assistant_message(*, fg_text: str) -> dict[str, Any]:
+def build_chat_track_handoff_assistant_message(
+    *, fg_text: str
+) -> dict[str, Any]:
     """OpenAI assistant row injected into tool-path messages after foreground chat."""
     assert fg_text
     return {

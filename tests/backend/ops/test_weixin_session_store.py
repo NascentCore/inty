@@ -12,8 +12,13 @@ from backend.ops.schemas.weixin_session import (
     WeixinSessionView,
 )
 from backend.ops.weixin_session import session_store
-from backend.ops.weixin_channel.ilink_qr_client import ILINK_SESSION_EXPIRED_USER_MESSAGE
-from backend.ops.weixin_channel.session import WeixinChannelBinding, WeixinChannelSession
+from backend.ops.weixin_channel.ilink_qr_client import (
+    ILINK_SESSION_EXPIRED_USER_MESSAGE,
+)
+from backend.ops.weixin_channel.session import (
+    WeixinChannelBinding,
+    WeixinChannelSession,
+)
 from backend.ops.weixin_channel.weixin_qr_flow import WeixinQrFlow
 from app.db.session import async_engine
 
@@ -133,7 +138,9 @@ async def test_fail_weixin_ilink_session_expired_marks_failed() -> None:
     )
     async with session_store._lock:
         session_store._sessions["session-ilink-expired"] = session
-    await session_store.fail_weixin_ilink_session_expired("session-ilink-expired")
+    await session_store.fail_weixin_ilink_session_expired(
+        "session-ilink-expired"
+    )
     assert session.phase == session_store._StorePhase.FAILED
     assert session.error == ILINK_SESSION_EXPIRED_USER_MESSAGE
     async with session_store._lock:
@@ -141,7 +148,9 @@ async def test_fail_weixin_ilink_session_expired_marks_failed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_fail_weixin_ilink_session_expired_stops_restore_like_channel() -> None:
+async def test_fail_weixin_ilink_session_expired_stops_restore_like_channel() -> (
+    None
+):
     await async_engine.dispose()
     channel = _RecordingChannel()
     session_id = "session-restore-like-expired"
@@ -169,7 +178,9 @@ async def test_fail_weixin_ilink_session_expired_stops_restore_like_channel() ->
 
 
 @pytest.mark.asyncio
-async def test_fail_weixin_ilink_session_expired_idempotent_on_stopped() -> None:
+async def test_fail_weixin_ilink_session_expired_idempotent_on_stopped() -> (
+    None
+):
     session = _stopped_session()
     async with session_store._lock:
         session_store._sessions[session.session_id] = session
@@ -275,7 +286,9 @@ async def test_signal_qrcode_ready_while_running_sets_event() -> None:
         await asyncio.sleep(0.1)
 
     qr_task = asyncio.create_task(slow_run())
-    await session_store._signal_qrcode_ready_while_running(session, qr_flow, qr_task)
+    await session_store._signal_qrcode_ready_while_running(
+        session, qr_flow, qr_task
+    )
     assert session.qrcode_ready is not None
     assert session.qrcode_ready.is_set()
 
@@ -331,7 +344,9 @@ async def test_stop_other_onboard_sessions_only_same_weixin(
         "base_url": "https://ilinkai.weixin.qq.com",
         "user_id": "ilink-a",
     }
-    await session_store._stop_other_onboard_sessions_for_same_weixin(current, cred)
+    await session_store._stop_other_onboard_sessions_for_same_weixin(
+        current, cred
+    )
 
     assert stopped == ["same-user-old"]
 

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from app.core.companion_harness.companion.manager import CompanionSession
-from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import (
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.runtime.inner_tick_fire import (
     InnerTickKernelInput,
     InnerTickThrottleSnapshot,

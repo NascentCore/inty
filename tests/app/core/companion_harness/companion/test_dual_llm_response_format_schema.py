@@ -27,7 +27,9 @@ def _envelope_payload() -> dict[str, Any]:
     }
 
 
-def assert_dual_llm_response_format_schema_contract(fmt: dict[str, Any]) -> None:
+def assert_dual_llm_response_format_schema_contract(
+    fmt: dict[str, Any],
+) -> None:
     """Wire shape expected by OpenRouter/OpenAI ``json_schema`` + strict companion envelope."""
     assert fmt["type"] == "json_schema"
     js = fmt["json_schema"]
@@ -74,11 +76,15 @@ def test_split_dual_llm_chat_branch_message_turn_recall() -> None:
 
 
 def test_dual_llm_chat_response_format_schema_contract() -> None:
-    assert_dual_llm_response_format_schema_contract(DUAL_LLM_CHAT_RESPONSE_FORMAT)
+    assert_dual_llm_response_format_schema_contract(
+        DUAL_LLM_CHAT_RESPONSE_FORMAT
+    )
 
 
 def test_dual_llm_response_format_module_constant_matches_builder() -> None:
-    assert DUAL_LLM_CHAT_RESPONSE_FORMAT == _build_dual_llm_chat_response_format()
+    assert (
+        DUAL_LLM_CHAT_RESPONSE_FORMAT == _build_dual_llm_chat_response_format()
+    )
 
 
 def test_dual_llm_response_format_json_roundtrip() -> None:
@@ -110,7 +116,9 @@ def test_split_dual_llm_chat_branch_message_reads_content_envelope() -> None:
 def test_split_dual_llm_chat_branch_message_json_fence_in_content() -> None:
     inner = json.dumps(_envelope_payload(), ensure_ascii=False)
     fenced = f"```json\n{inner}\n```"
-    msg = SimpleNamespace(content=fenced, reasoning=None, reasoning_details=None)
+    msg = SimpleNamespace(
+        content=fenced, reasoning=None, reasoning_details=None
+    )
     split = split_dual_llm_chat_branch_message(msg)
     assert split.visible_text == "visible"
     assert split.significance_meta is not None
@@ -119,7 +127,12 @@ def test_split_dual_llm_chat_branch_message_json_fence_in_content() -> None:
 @pytest.mark.parametrize(
     "reasoning_details",
     [
-        [{"type": "text", "text": json.dumps(_envelope_payload(), ensure_ascii=False)}],
+        [
+            {
+                "type": "text",
+                "text": json.dumps(_envelope_payload(), ensure_ascii=False),
+            }
+        ],
         (
             {
                 "type": "reasoning.text",

@@ -15,7 +15,10 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.living_sphere.models import LivingSphereUpdate
-from app.living_sphere.seeding import LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown
+from app.living_sphere.seeding import (
+    LIVING_SPHERE_RELATIVE_PATH,
+    seed_living_sphere_markdown,
+)
 
 
 def _idle_tool_bg() -> threading.Event:
@@ -34,7 +37,9 @@ def _seed_store(store: MemoryStore) -> None:
         ("COMPANIONSHIP.md", "companionship\n"),
     ):
         store.write_document(name, body)
-    store.write_document(LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown())
+    store.write_document(
+        LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown()
+    )
 
 
 def _valid_md() -> str:

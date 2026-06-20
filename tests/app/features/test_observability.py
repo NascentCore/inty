@@ -46,7 +46,9 @@ def test_metrics_endpoint_exposes_http_metrics():
 @pytest.mark.noci
 def test_metrics_path_label_is_bounded_for_unmatched_routes():
     random_path = f"/no-such-path-{uuid.uuid4().hex}"
-    not_found_response = requests.get(f"{BASE_URL}{random_path}", timeout=TIMEOUT)
+    not_found_response = requests.get(
+        f"{BASE_URL}{random_path}", timeout=TIMEOUT
+    )
     assert not_found_response.status_code == 404
 
     metrics_response = requests.get(f"{BASE_URL}/metrics", timeout=TIMEOUT)

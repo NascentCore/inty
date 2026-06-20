@@ -42,7 +42,9 @@ def _build_legacy_response_with_tool_call(
     *, tool_name: str, tool_arguments: str, content: str
 ):
     function = SimpleNamespace(name=tool_name, arguments=tool_arguments)
-    tool_call = SimpleNamespace(id="tool-call-1", type="function", function=function)
+    tool_call = SimpleNamespace(
+        id="tool-call-1", type="function", function=function
+    )
     message = SimpleNamespace(content=content, tool_calls=[tool_call])
     choice = SimpleNamespace(message=message, finish_reason="tool_calls")
     return SimpleNamespace(choices=[choice], model="test-model", usage=None)
@@ -104,7 +106,9 @@ def test_clean_prompt_builder_matches_legacy_default_path():
         request=PromptBuildInput(
             user_profile=user_profile,
             chat_settings=new_chat_settings,
-            user_time_context=UserTimeContextSnapshot.model_validate(user_time_context),
+            user_time_context=UserTimeContextSnapshot.model_validate(
+                user_time_context
+            ),
             include_output_format_prompt=True,
         ),
     )
@@ -194,12 +198,18 @@ def test_agent_prompt_context_from_legacy_uses_llm_config_and_alias():
         agent_data={
             "name": "A",
             "settings": {
-                "llm_config": {"model": "anthropic/claude-3.5-sonnet", "temperature": 0.4}
+                "llm_config": {
+                    "model": "anthropic/claude-3.5-sonnet",
+                    "temperature": 0.4,
+                }
             },
         },
     )
     assert context_with_llm_config.resolved_llm_config() is not None
-    assert context_with_llm_config.resolved_llm_config().model == "anthropic/claude-3.5-sonnet"
+    assert (
+        context_with_llm_config.resolved_llm_config().model
+        == "anthropic/claude-3.5-sonnet"
+    )
 
     context_with_legacy_alias = AgentPromptContext.from_legacy_agent_data(
         agent_id="agent-llm-2",
@@ -209,7 +219,10 @@ def test_agent_prompt_context_from_legacy_uses_llm_config_and_alias():
         },
     )
     assert context_with_legacy_alias.resolved_llm_config() is not None
-    assert context_with_legacy_alias.resolved_llm_config().model == "openai/gpt-4o-mini"
+    assert (
+        context_with_legacy_alias.resolved_llm_config().model
+        == "openai/gpt-4o-mini"
+    )
 
 
 def test_agent_prompt_context_from_legacy_rejects_non_object_settings():
@@ -243,15 +256,21 @@ def test_clean_prompt_builder_honors_override_mode_and_suppresses_output_format(
         include_output_format_prompt=True,
     )
 
-    messages = build_system_messages(context=context, request=request, deps=deps)
+    messages = build_system_messages(
+        context=context, request=request, deps=deps
+    )
     contents = _contents(messages)
 
     expected_override_mode = "OVERRIDE_MODE_FOR_Luna"
     expected_suppressed_output = render(
-        prompts.get_mode_output_format_prompt_by_id("purity_mode_0725"), "Luna", "Alice"
+        prompts.get_mode_output_format_prompt_by_id("purity_mode_0725"),
+        "Luna",
+        "Alice",
     )
     assert any(expected_override_mode == content for content in contents)
-    assert not any(expected_suppressed_output == content for content in contents)
+    assert not any(
+        expected_suppressed_output == content for content in contents
+    )
 
 
 def test_clean_prompt_builder_uses_chat_mode_branch_and_output_format():
@@ -278,11 +297,17 @@ def test_clean_prompt_builder_uses_chat_mode_branch_and_output_format():
         include_output_format_prompt=True,
     )
 
-    messages = build_system_messages(context=context, request=request, deps=deps)
+    messages = build_system_messages(
+        context=context, request=request, deps=deps
+    )
     contents = _contents(messages)
-    selected_mode = render(prompts.get_mode_prompt_by_id("rp_mode_1225"), "Nova", "Alex")
+    selected_mode = render(
+        prompts.get_mode_prompt_by_id("rp_mode_1225"), "Nova", "Alex"
+    )
     selected_output = render(
-        prompts.get_mode_output_format_prompt_by_id("rp_mode_1225"), "Nova", "Alex"
+        prompts.get_mode_output_format_prompt_by_id("rp_mode_1225"),
+        "Nova",
+        "Alex",
     )
     default_mode = render(
         prompts.get_mode_prompt_by_id("purity_mode_0725"), "Nova", "Alex"
@@ -313,9 +338,13 @@ def test_clean_prompt_builder_uses_premium_mode_branch():
         include_output_format_prompt=True,
     )
 
-    messages = build_system_messages(context=context, request=request, deps=deps)
+    messages = build_system_messages(
+        context=context, request=request, deps=deps
+    )
     contents = _contents(messages)
-    premium_mode = render(prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt, "Mira", "Sam")
+    premium_mode = render(
+        prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt, "Mira", "Sam"
+    )
     premium_output = render(
         prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt, "Mira", "Sam"
     )
@@ -338,15 +367,20 @@ def test_clean_prompt_builder_excludes_time_context_when_disabled():
             utc_offset_minutes=480,
         ),
     )
-    messages = build_system_messages(context=context, request=request, deps=deps)
-    assert not any("##User Time Context" in (content or "") for content in _contents(messages))
+    messages = build_system_messages(
+        context=context, request=request, deps=deps
+    )
+    assert not any(
+        "##User Time Context" in (content or "")
+        for content in _contents(messages)
+    )
 
 
 def test_clean_prompt_builder_includes_christmas_prompts_when_enabled():
     deps = PromptAssemblyDeps(
-        render_prompt=lambda tmpl, char, user: tmpl.replace("{{char}}", char).replace(
-            "{{user}}", user or ""
-        ),
+        render_prompt=lambda tmpl, char, user: tmpl.replace(
+            "{{char}}", char
+        ).replace("{{user}}", user or ""),
         lookup_prompt_override=lambda *_: None,
         is_christmas_prompt_enabled=lambda: True,
     )
@@ -356,10 +390,18 @@ def test_clean_prompt_builder_includes_christmas_prompts_when_enabled():
         personality="Gentle and warm.",
     )
     request = PromptBuildInput(user_profile="Name: Pat")
-    messages = build_system_messages(context=context, request=request, deps=deps)
+    messages = build_system_messages(
+        context=context, request=request, deps=deps
+    )
     contents = _contents(messages)
-    assert any(content.startswith("##Seasonal Behavior (Christmas Week") for content in contents)
-    assert any(content.startswith("##Temporal Context – Christmas Week") for content in contents)
+    assert any(
+        content.startswith("##Seasonal Behavior (Christmas Week")
+        for content in contents
+    )
+    assert any(
+        content.startswith("##Temporal Context – Christmas Week")
+        for content in contents
+    )
 
 
 def test_clean_official_builder_always_appends_introduction_message():
@@ -378,7 +420,10 @@ def test_clean_official_builder_always_appends_introduction_message():
         request=PromptBuildInput(user_profile="Name: OfficialUser"),
         deps=deps,
     )
-    assert any(content.startswith("##Introduction The following Introduction") for content in _contents(messages))
+    assert any(
+        content.startswith("##Introduction The following Introduction")
+        for content in _contents(messages)
+    )
 
 
 def test_execute_official_assistant_tool_call_rejects_invalid_mbti_payloads():
@@ -405,10 +450,18 @@ def test_execute_official_assistant_tool_call_rejects_invalid_mbti_payloads():
 
 
 def test_chat_completion_snapshot_from_openai_response_maps_tool_calls():
-    raw_function = SimpleNamespace(name=OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME, arguments="{}")
-    raw_tool_call = SimpleNamespace(id="tc-1", type="function", function=raw_function)
-    raw_message = SimpleNamespace(content="I will call a tool.", tool_calls=[raw_tool_call])
-    raw_choice = SimpleNamespace(message=raw_message, finish_reason="tool_calls")
+    raw_function = SimpleNamespace(
+        name=OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME, arguments="{}"
+    )
+    raw_tool_call = SimpleNamespace(
+        id="tc-1", type="function", function=raw_function
+    )
+    raw_message = SimpleNamespace(
+        content="I will call a tool.", tool_calls=[raw_tool_call]
+    )
+    raw_choice = SimpleNamespace(
+        message=raw_message, finish_reason="tool_calls"
+    )
     raw_response = SimpleNamespace(choices=[raw_choice])
 
     snapshot = chat_completion_snapshot_from_openai_response(raw_response)
@@ -424,8 +477,12 @@ def test_chat_completion_snapshot_from_openai_response_maps_tool_calls():
 
 def test_openai_dicts_from_messages_keeps_tool_fields():
     messages = [
-        OpenAIChatMessageSnapshot(role="assistant", content="Tool calling...", tool_calls=[]),
-        OpenAIChatMessageSnapshot(role="tool", tool_call_id="tc-1", content="Tool result"),
+        OpenAIChatMessageSnapshot(
+            role="assistant", content="Tool calling...", tool_calls=[]
+        ),
+        OpenAIChatMessageSnapshot(
+            role="tool", tool_call_id="tc-1", content="Tool result"
+        ),
     ]
     payload = openai_dicts_from_messages(messages)
     assert payload[0] == {"role": "assistant", "content": "Tool calling..."}

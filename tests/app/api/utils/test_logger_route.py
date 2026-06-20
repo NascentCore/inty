@@ -8,7 +8,6 @@ from fastapi.testclient import TestClient
 from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
 
-
 # Create a test app with an endpoint that uses read_body
 app = FastAPI()
 

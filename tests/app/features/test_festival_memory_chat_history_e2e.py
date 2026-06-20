@@ -19,6 +19,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
 from tests.app.api.test_client import TestClient
 
+
 @pytest.fixture
 def db_session():
     """提供数据库会话，与后端共用 config.yaml 的 database.url。"""
@@ -90,8 +91,12 @@ def test_festival_memory_delivered_via_chat_history_api(
         ), f"Expected at least one message with type=festival_memory_prompt and festival_memory_id={memory_id}, got messages={messages}"
         # 5) 断言：投递后 memory.delivery_at 已更新
         db_session.refresh(memory)
-        assert memory.delivery_at is not None, "memory.delivery_at should be set after delivery"
-        assert getattr(memory.delivery_at, "tzinfo", None) is not None, "memory.delivery_at should be timezone-aware"
+        assert (
+            memory.delivery_at is not None
+        ), "memory.delivery_at should be set after delivery"
+        assert (
+            getattr(memory.delivery_at, "tzinfo", None) is not None
+        ), "memory.delivery_at should be timezone-aware"
     finally:
         # 6) 清理：删除本测试插入的 Memory
         db_session.delete(memory)
@@ -129,20 +134,22 @@ def test_festival_memory_delivery_at_set_and_second_get_idempotent(
         data1 = integration_client.get_agent_chat_messages(agent_id)
         messages1 = data1.get("messages", [])
         festival1 = _festival_prompts_for_memory(messages1, memory_id)
-        assert len(festival1) >= 1, (
-            f"Expected at least one festival_memory_prompt for memory_id={memory_id}, got messages={messages1}"
-        )
+        assert (
+            len(festival1) >= 1
+        ), f"Expected at least one festival_memory_prompt for memory_id={memory_id}, got messages={messages1}"
         # 2) Assert DB: delivery_at set
         db_session.refresh(memory)
-        assert memory.delivery_at is not None, "memory.delivery_at should be set after first GET"
+        assert (
+            memory.delivery_at is not None
+        ), "memory.delivery_at should be set after first GET"
         # 3) Second GET
         data2 = integration_client.get_agent_chat_messages(agent_id)
         messages2 = data2.get("messages", [])
         # 4) Idempotency: still exactly one prompt for this memory (no duplicate)
         festival2 = _festival_prompts_for_memory(messages2, memory_id)
-        assert len(festival2) == 1, (
-            f"Expected exactly one festival_memory_prompt for memory_id={memory_id} after second GET (idempotent), got count={len(festival2)}, messages={messages2}"
-        )
+        assert (
+            len(festival2) == 1
+        ), f"Expected exactly one festival_memory_prompt for memory_id={memory_id} after second GET (idempotent), got count={len(festival2)}, messages={messages2}"
     finally:
         db_session.delete(memory)
         db_session.commit()
@@ -188,9 +195,13 @@ def test_festival_memory_messages_gated_by_app_version(
         db_session.refresh(memory)
         assert memory.delivery_at is not None
         festival_high = [
-            m for m in data_high.get("messages", []) if m.get("type") == "festival_memory_prompt"
+            m
+            for m in data_high.get("messages", [])
+            if m.get("type") == "festival_memory_prompt"
         ]
-        assert len(festival_high) >= 1, "High-version GET should return delivered festival_memory_prompt"
+        assert (
+            len(festival_high) >= 1
+        ), "High-version GET should return delivered festival_memory_prompt"
 
         # 低版本 GET 不触发投递；服务端不按版本过滤列表，故可能仍返回已存在的 festival_memory_prompt（产品假定旧版客户端不会遇到该场景）
         data_low = integration_client.get_agent_chat_messages(
@@ -250,9 +261,9 @@ def test_festival_memory_old_app_version_get_messages_delivery_at_stays_null(
             len(festival_in_messages) == 0
         ), f"Expected no festival_memory_prompt when appVersionCode < min_ver, got {festival_in_messages}"
         db_session.refresh(memory)
-        assert memory.delivery_at is None, (
-            "When app version is too old, delivery must be skipped and delivery_at must remain null"
-        )
+        assert (
+            memory.delivery_at is None
+        ), "When app version is too old, delivery must be skipped and delivery_at must remain null"
     finally:
         db_session.delete(memory)
         db_session.commit()

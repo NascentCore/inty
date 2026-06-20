@@ -43,7 +43,9 @@ def test_should_trace_falls_back_to_sample_rate_when_email_not_in_allowlist(
 
 
 def test_get_user_email_for_trace_prefers_cached_auth_snapshot(monkeypatch):
-    agent = Agent(agent_id="agent_trace_test", name="TraceAgent", model_config={})
+    agent = Agent(
+        agent_id="agent_trace_test", name="TraceAgent", model_config={}
+    )
     monkeypatch.setattr(
         agent_module.cache_service,
         "get_user_auth_snapshot",

@@ -46,7 +46,9 @@ def _session(*, user_id: str, companion_id: str, chat_id: str) -> MagicMock:
 async def test_resolve_uses_scope_registry_for_agent_scope_chat_id() -> None:
     scope = AgentScope(user_id="u1", agent_id="a1")
     registry = get_scope_channel_registry(scope)
-    registry.states[CompanionRuntimeChannel.TELEGRAM] = ChannelRuntimeState.ACTIVE
+    registry.states[CompanionRuntimeChannel.TELEGRAM] = (
+        ChannelRuntimeState.ACTIVE
+    )
     session = _session(
         user_id="u1",
         companion_id="a1",
@@ -74,7 +76,9 @@ async def test_resolve_uses_user_registry_for_ws_chat_id() -> None:
 
 
 def test_resolve_defaults_to_app_when_no_registry_entry() -> None:
-    session = _session(user_id="u-empty", companion_id="a1", chat_id="chat-uuid-2")
+    session = _session(
+        user_id="u-empty", companion_id="a1", chat_id="chat-uuid-2"
+    )
 
     slice_ = resolve_langsmith_slice_for_session(session)
 

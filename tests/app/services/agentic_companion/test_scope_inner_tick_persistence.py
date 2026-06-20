@@ -13,7 +13,9 @@ from app.services.agentic_companion.scope_inner_tick_persistence import (
 
 
 @pytest.mark.asyncio
-async def test_fetch_initialized_companion_scopes_filters_inactive_bonds() -> None:
+async def test_fetch_initialized_companion_scopes_filters_inactive_bonds() -> (
+    None
+):
     active = CompanionScope("user-active", "agent-active", "chat-active")
     inactive = CompanionScope("user-old", "agent-old", "chat-old")
     with patch(

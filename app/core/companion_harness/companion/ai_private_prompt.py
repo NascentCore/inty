@@ -43,9 +43,15 @@ class AiPrivateThought(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    uuid: str = Field(description="Stable id for manifest references and surfaced markers.")
-    ts: str = Field(description="ISO8601 timestamp when the thought was recorded.")
-    text: str = Field(description="Inner monolog text about the user or relationship.")
+    uuid: str = Field(
+        description="Stable id for manifest references and surfaced markers."
+    )
+    ts: str = Field(
+        description="ISO8601 timestamp when the thought was recorded."
+    )
+    text: str = Field(
+        description="Inner monolog text about the user or relationship."
+    )
     after_user_msg_uuid: str | None = Field(
         default=None,
         description="Optional anchor to the user message this thought follows.",
@@ -120,7 +126,11 @@ def _parse_ai_private_jsonl_objects(
             text = legacy_text if legacy_text else ""
         if isinstance(raw_uuid, str) and isinstance(raw_ts, str) and text:
             after = obj.get("after_user_msg_uuid")
-            after_uuid = after.strip() if isinstance(after, str) and after.strip() else None
+            after_uuid = (
+                after.strip()
+                if isinstance(after, str) and after.strip()
+                else None
+            )
             thoughts.append(
                 AiPrivateThought(
                     uuid=raw_uuid.strip(),

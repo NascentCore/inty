@@ -37,7 +37,9 @@ def test_http_exception_uses_unified_error_envelope():
 
 def test_validation_exception_uses_unified_error_envelope():
     app = FastAPI()
-    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(
+        RequestValidationError, validation_exception_handler
+    )
 
     @app.get("/needs-int/{value}")
     async def needs_int(value: int):

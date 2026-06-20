@@ -21,7 +21,9 @@ class TestGetFestivalMemoriesForUserAgent:
         mock_result = MagicMock()
         mock_result.fetchall.return_value = []
         mock_db.execute = AsyncMock(return_value=mock_result)
-        out = await get_festival_memories_for_user_agent(mock_db, "user-1", "agent-1")
+        out = await get_festival_memories_for_user_agent(
+            mock_db, "user-1", "agent-1"
+        )
         assert out == []
 
 
@@ -47,7 +49,9 @@ class TestAssembleArgs:
         assert ext_llm_config.max_tokens == 4096
         assert ext_llm_config.temperature == 0.5
 
-    def test_with_invalid_temperature_or_max_tokens_raises_validation_error(self):
+    def test_with_invalid_temperature_or_max_tokens_raises_validation_error(
+        self,
+    ):
         """非法 numeric 的 dict 经 model_validate 会抛出 ValidationError。"""
         messages = [("user", "hi")]
         llm_config = {
@@ -136,7 +140,10 @@ async def test_summarize_memory_from_messages_includes_llm_config_in_metadata():
     assert memory.meta_data is not None
     llm_config = memory.meta_data.get("llm_config")
     assert isinstance(llm_config, dict)
-    assert isinstance(llm_config.get("model"), str) and len(llm_config["model"]) > 0
+    assert (
+        isinstance(llm_config.get("model"), str)
+        and len(llm_config["model"]) > 0
+    )
     assert llm_config.get("temperature") == 0.0
     assert llm_config.get("max_tokens") == 2000
 
@@ -215,11 +222,13 @@ def test_get_pairs_with_min_rounds_fallbacks_to_primary_when_replica_connect_fai
             side_effect=lambda chat_id: f"session-{chat_id}",
         ),
     ):
-        pairs = festival_memory_service.get_pairs_with_min_rounds_in_window_sync(
-            festival_date=date(2026, 2, 14),
-            db_url=replica_db_url,
-            min_rounds=15,
-            timezone_str="UTC",
+        pairs = (
+            festival_memory_service.get_pairs_with_min_rounds_in_window_sync(
+                festival_date=date(2026, 2, 14),
+                db_url=replica_db_url,
+                min_rounds=15,
+                timezone_str="UTC",
+            )
         )
 
     assert pairs == [("user-1", "agent-1")]
@@ -259,11 +268,13 @@ def test_get_pairs_with_min_rounds_skips_official_assistant_agent():
             side_effect=lambda chat_id: f"session-{chat_id}",
         ),
     ):
-        pairs = festival_memory_service.get_pairs_with_min_rounds_in_window_sync(
-            festival_date=date(2026, 2, 14),
-            db_url=primary_db_url,
-            min_rounds=15,
-            timezone_str="UTC",
+        pairs = (
+            festival_memory_service.get_pairs_with_min_rounds_in_window_sync(
+                festival_date=date(2026, 2, 14),
+                db_url=primary_db_url,
+                min_rounds=15,
+                timezone_str="UTC",
+            )
         )
 
     assert pairs == [("user-2", "agent-2")]

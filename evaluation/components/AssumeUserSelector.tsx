@@ -50,10 +50,10 @@ export const AssumeUserSelector: React.FC = () => {
         skip: 0,
       });
       const list = (result?.users ?? []).map((u) => ({
-          id: u.id,
-          label:
-            [u.nickname, userDisplayId(u)].filter(Boolean).join(" · ") || u.id,
-        }));
+        id: u.id,
+        label:
+          [u.nickname, userDisplayId(u)].filter(Boolean).join(" · ") || u.id,
+      }));
       setUsers(list);
     } catch {
       setUsers([]);

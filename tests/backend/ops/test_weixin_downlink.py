@@ -10,12 +10,16 @@ from app.services.agentic_companion.downlink import (
     proactive_downlink,
     tool_background_downlink,
 )
-from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutput,
+)
 from backend.ops.weixin_channel.weixin_downlink import WeixinDownlink
 
 
 @pytest.mark.asyncio
-async def test_weixin_downlink_send_assistant_text_without_downlink_event() -> None:
+async def test_weixin_downlink_send_assistant_text_without_downlink_event() -> (
+    None
+):
     transport = _RecordingWeixinTransport()
     downlink = WeixinDownlink(transport, lambda: "peer-9")
     await downlink.send_assistant_text("inner tick line")
@@ -23,7 +27,9 @@ async def test_weixin_downlink_send_assistant_text_without_downlink_event() -> N
 
 
 @pytest.mark.asyncio
-async def test_weixin_downlink_send_assistant_text_drops_without_peer_id() -> None:
+async def test_weixin_downlink_send_assistant_text_drops_without_peer_id() -> (
+    None
+):
     transport = _RecordingWeixinTransport()
     downlink = WeixinDownlink(transport, lambda: None)
     await downlink.send_assistant_text("lost")

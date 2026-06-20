@@ -7,7 +7,9 @@ from app.schemas.live_chat import LiveChatConfig
 
 
 def test_live_chat_config_accepts_valid_language_fields():
-    c = LiveChatConfig(speech_language_code="ar-SA", response_language_name="Arabic")
+    c = LiveChatConfig(
+        speech_language_code="ar-SA", response_language_name="Arabic"
+    )
     assert c.speech_language_code == "ar-SA"
     assert c.response_language_name == "Arabic"
 

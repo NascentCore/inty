@@ -62,7 +62,7 @@ def test_agent_extensions_field():
         visibility=AgentVisibility.PUBLIC,
         status=AgentStatus.APPROVED,
         extensions=initial_extensions,
-        creator_id=test_user.id  # Use the created user's ID
+        creator_id=test_user.id,  # Use the created user's ID
     )
 
     # 保存到数据库
@@ -106,7 +106,9 @@ def test_agent_extensions_field():
     db.refresh(final_agent)
 
     # 验证部分更新
-    assert final_agent.extensions == partial_update, "部分更新后的字段值应该更新正确"
+    assert (
+        final_agent.extensions == partial_update
+    ), "部分更新后的字段值应该更新正确"
 
     # 6. 测试清空 extensions
     final_agent.extensions = None

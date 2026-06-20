@@ -119,7 +119,9 @@ async def test_start_stores_agent_scope_inner_tick_coords() -> None:
         presence._coordinator.snapshot_inner_tick_coords()
     )
     assert coords is not None
-    expected = AgentScope(user_id="user-test", agent_id="agent-1").memory_store_chat_id()
+    expected = AgentScope(
+        user_id="user-test", agent_id="agent-1"
+    ).memory_store_chat_id()
     assert coords.chat_id == expected
 
 
@@ -171,9 +173,12 @@ async def test_start_inner_tick_scope_resolves_agent_scope_chat_id() -> None:
         model_source=InnerTickModelSource.CHAT_DEFAULT,
     )
     assert resolved is not None
-    assert resolved.chat_row_id == AgentScope(
-        user_id=user.id,
-        agent_id=agent_id,
-    ).memory_store_chat_id()
+    assert (
+        resolved.chat_row_id
+        == AgentScope(
+            user_id=user.id,
+            agent_id=agent_id,
+        ).memory_store_chat_id()
+    )
     assert resolved.chat_row_agent_id == agent_id
     await _delete_user(user.id)

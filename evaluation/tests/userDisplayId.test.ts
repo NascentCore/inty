@@ -4,9 +4,9 @@ import { userDisplayId } from "../utils/userDisplayId";
 
 describe("userDisplayId", () => {
   it("returns readable_id when set", () => {
-    expect(
-      userDisplayId({ id: "user-abc", readable_id: "12345678" }),
-    ).toBe("12345678");
+    expect(userDisplayId({ id: "user-abc", readable_id: "12345678" })).toBe(
+      "12345678",
+    );
   });
 
   it("falls back to id when readable_id is null or blank", () => {

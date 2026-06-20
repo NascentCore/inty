@@ -11,15 +11,21 @@ from app.core.companion_harness.companion.ai_private_prompt import (
     append_ai_private_thought,
     load_ai_private_thoughts,
 )
-from app.core.companion_harness.companion.models import AI_PRIVATE_SPLICE_MANIFEST_SOURCE
+from app.core.companion_harness.companion.models import (
+    AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
+from app.core.companion_harness.companion.turn import (
+    run_companion_user_chat_turn,
+)
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
+from app.core.companion_harness.llm.chat_completions import (
+    create_chat_completion_sync,
+)
 from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.utils.config import CompanionMemoryBootstrapType
@@ -73,7 +79,14 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
         scope=CompanionScope("manifest", "a", tmp_path.name),
         repository=None,
     )
-    for rel in ("IDENTITY.md", "SOUL.md", "STYLE.md", "USER.md", "MEMORY.md", "CHANNELS.md"):
+    for rel in (
+        "IDENTITY.md",
+        "SOUL.md",
+        "STYLE.md",
+        "USER.md",
+        "MEMORY.md",
+        "CHANNELS.md",
+    ):
         store.write_document(rel, f"{rel}\n")
     store.write_document("context.json", '{"context_mode":"intimate"}\n')
     store.append_jsonl_record(
@@ -119,7 +132,9 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
     body = store.read_document("transcript.jsonl")
     lines = [json.loads(line) for line in body.strip().splitlines()]
     manifest_rows = [
-        row for row in lines if row.get("source") == AI_PRIVATE_SPLICE_MANIFEST_SOURCE
+        row
+        for row in lines
+        if row.get("source") == AI_PRIVATE_SPLICE_MANIFEST_SOURCE
     ]
     assert len(manifest_rows) == 1
     assert manifest_rows[0]["ai_private_thought_uuids"] == [thought.uuid]

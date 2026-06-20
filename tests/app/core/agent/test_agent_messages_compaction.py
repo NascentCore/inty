@@ -48,7 +48,9 @@ def test_maybe_compact_history_for_user_tier_triggers_on_overflow(monkeypatch):
             submitted["kwargs"] = kwargs
             return _FakeFuture()
 
-    monkeypatch.setattr(agent_module, "get_compaction_executor", lambda: _FakeExecutor())
+    monkeypatch.setattr(
+        agent_module, "get_compaction_executor", lambda: _FakeExecutor()
+    )
 
     agent = _build_agent()
     agent._maybe_compact_history_for_user_tier(
@@ -66,7 +68,9 @@ def test_maybe_compact_history_for_user_tier_triggers_on_overflow(monkeypatch):
     assert "callback" in submitted
 
 
-def test_maybe_compact_history_for_user_tier_skips_when_within_limit(monkeypatch):
+def test_maybe_compact_history_for_user_tier_skips_when_within_limit(
+    monkeypatch,
+):
     monkeypatch.setattr(
         agent_module.global_config.app.limits,
         "free_user_chat_messages_limit",
@@ -78,13 +82,17 @@ def test_maybe_compact_history_for_user_tier_skips_when_within_limit(monkeypatch
     ]
 
     def fail_if_submit(*_args, **_kwargs):
-        raise AssertionError("compaction should not be submitted when history is within limit")
+        raise AssertionError(
+            "compaction should not be submitted when history is within limit"
+        )
 
     class _FakeExecutor:
         def submit(self, *_args, **_kwargs):
             return fail_if_submit()
 
-    monkeypatch.setattr(agent_module, "get_compaction_executor", lambda: _FakeExecutor())
+    monkeypatch.setattr(
+        agent_module, "get_compaction_executor", lambda: _FakeExecutor()
+    )
 
     agent = _build_agent()
     agent._maybe_compact_history_for_user_tier(
@@ -124,13 +132,17 @@ def test_maybe_compact_history_for_user_tier_returns_quickly_when_background_tas
                 time.sleep(6)
                 try:
                     future.set_result(fn(**kwargs))
-                except Exception as error:  # pragma: no cover - defensive for test stability
+                except (
+                    Exception
+                ) as error:  # pragma: no cover - defensive for test stability
                     future.set_exception(error)
 
             threading.Thread(target=run_slow_task, daemon=True).start()
             return future
 
-    monkeypatch.setattr(agent_module, "get_compaction_executor", lambda: _AsyncSlowExecutor())
+    monkeypatch.setattr(
+        agent_module, "get_compaction_executor", lambda: _AsyncSlowExecutor()
+    )
     monkeypatch.setattr(agent_module, "get_sync_engine", lambda: object())
 
     agent = _build_agent()
@@ -170,7 +182,9 @@ def test_maybe_compact_history_for_user_tier_returns_quickly_when_get_sync_engin
             def run_task():
                 try:
                     future.set_result(fn(**kwargs))
-                except Exception as error:  # pragma: no cover - defensive for test stability
+                except (
+                    Exception
+                ) as error:  # pragma: no cover - defensive for test stability
                     future.set_exception(error)
 
             threading.Thread(target=run_task, daemon=True).start()
@@ -180,9 +194,15 @@ def test_maybe_compact_history_for_user_tier_returns_quickly_when_get_sync_engin
         time.sleep(6)
         return object()
 
-    monkeypatch.setattr(agent_module, "get_compaction_executor", lambda: _FastAsyncExecutor())
+    monkeypatch.setattr(
+        agent_module, "get_compaction_executor", lambda: _FastAsyncExecutor()
+    )
     monkeypatch.setattr(agent_module, "get_sync_engine", slow_get_sync_engine)
-    monkeypatch.setattr(agent_module, "maybe_compact_and_save_overflow_history", lambda **_kwargs: True)
+    monkeypatch.setattr(
+        agent_module,
+        "maybe_compact_and_save_overflow_history",
+        lambda **_kwargs: True,
+    )
 
     agent = _build_agent()
 

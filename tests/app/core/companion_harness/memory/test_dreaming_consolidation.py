@@ -18,7 +18,13 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
         scope=CompanionScope("dream-mem", "agent", tmp_path.name),
         repository=None,
     )
-    for rel in ("MEMORY.md", "USER.md", "STYLE.md", "SOUL.md", "COMPANIONSHIP.md"):
+    for rel in (
+        "MEMORY.md",
+        "USER.md",
+        "STYLE.md",
+        "SOUL.md",
+        "COMPANIONSHIP.md",
+    ):
         store.write_document(rel, f"{rel} seed\n")
     rows = [
         ChatMessage(
@@ -80,7 +86,9 @@ def test_rewrite_companionship_md_uses_template_seed_when_missing(
     )
 
     store = MemoryStore(
-        scope=CompanionScope("dream-companionship-seed", "agent", tmp_path.name),
+        scope=CompanionScope(
+            "dream-companionship-seed", "agent", tmp_path.name
+        ),
         repository=None,
     )
     store.write_document("MEMORY.md", "memory seed\n")

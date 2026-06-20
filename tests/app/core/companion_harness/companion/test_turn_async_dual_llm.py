@@ -11,9 +11,14 @@ from typing import Any
 
 import pytest
 
-from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
+from app.core.companion_harness.llm.chat_completions import (
+    create_chat_completion_sync,
+)
 from app.core.llms.client import CompanionLLMConfig
-from app.core.companion_harness.companion.models import InnerTickActivity, load_transcript_from_store
+from app.core.companion_harness.companion.models import (
+    InnerTickActivity,
+    load_transcript_from_store,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
@@ -171,14 +176,18 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert client.chat_calls[0].get("tools") is None
     fg_msgs = client.chat_calls[0]["messages"]
     fg_system = [m for m in fg_msgs if m.get("role") == "system"]
-    assert len(fg_system) >= 2, "foreground chat should use multiple system messages (not one concatenated block)"
+    assert (
+        len(fg_system) >= 2
+    ), "foreground chat should use multiple system messages (not one concatenated block)"
     assert any(str(m.get("content") or "").strip() == "id" for m in fg_system)
     assert any(str(m.get("content") or "").strip() == "s" for m in fg_system)
     assert len(bg_jobs) == 1
     assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
     bg_msgs = bg_jobs[0]["request_messages"]
     bg_system = [m for m in bg_msgs if m.get("role") == "system"]
-    assert len(bg_system) >= 2, "background tool path should use multiple system messages"
+    assert (
+        len(bg_system) >= 2
+    ), "background tool path should use multiple system messages"
     assert bg_jobs[0]["tool_model"].id_on_provider == "m/tool"
     assert bg_jobs[0]["main_event_loop"] is loop
     assert bg_jobs[0]["force_tools_first_round"] is False
@@ -261,7 +270,9 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
     assert job["inner_tick_activity"] == InnerTickActivity.MAINTENANCE
     assert job["runtime_context"].implicit_signal_bundle is None
     assert job["main_event_loop"] is loop
-    expected = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
+    expected = {
+        t["function"]["name"] for t in build_openai_repl_tools_inner_tick()
+    }
     got = {t["function"]["name"] for t in job["tools"]}
     assert got == expected
     assert "generate_image" not in got

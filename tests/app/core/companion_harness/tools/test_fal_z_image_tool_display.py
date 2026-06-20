@@ -9,7 +9,9 @@ import pytest
 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.tools import fal_z_image_tool as fal_z_image_tool_mod
+from app.core.companion_harness.tools import (
+    fal_z_image_tool as fal_z_image_tool_mod,
+)
 from app.core.companion_harness.tools.image_gate import list_image_asset_records
 
 
@@ -51,4 +53,6 @@ async def test_generate_image_tool_text_lists_prompt_omits_internal_ids(
     rows = list_image_asset_records(store)
     assert len(rows) == 1
     assert rows[0].get("persona_revision_id") == "abc123deadbeef01"
-    assert rows[0].get("gcs_http_url") == "https://storage.example.invalid/out.png"
+    assert (
+        rows[0].get("gcs_http_url") == "https://storage.example.invalid/out.png"
+    )

@@ -26,7 +26,9 @@ def test_build_tool_background_transcript_body_merges_nl_and_digest() -> None:
     assert "demo_tool_ok" in body
 
 
-def test_build_tool_background_transcript_body_digest_only_when_nl_empty() -> None:
+def test_build_tool_background_transcript_body_digest_only_when_nl_empty() -> (
+    None
+):
     appended = [
         {"role": "tool", "tool_call_id": "c1", "content": "only_tool"},
     ]

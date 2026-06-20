@@ -7,7 +7,9 @@ import pytest
 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    execute_tool_call,
+)
 from app.living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
@@ -15,7 +17,9 @@ from app.living_sphere.models import (
 
 
 @pytest.mark.asyncio
-async def test_living_sphere_record_update_appends_jsonl(tmp_path: Path) -> None:
+async def test_living_sphere_record_update_appends_jsonl(
+    tmp_path: Path,
+) -> None:
     root = tmp_path / "ls-tool"
     root.mkdir()
     store = MemoryStore(
@@ -37,7 +41,9 @@ async def test_living_sphere_record_update_appends_jsonl(tmp_path: Path) -> None
 
 
 @pytest.mark.asyncio
-async def test_living_sphere_record_update_rejects_empty_change(tmp_path: Path) -> None:
+async def test_living_sphere_record_update_rejects_empty_change(
+    tmp_path: Path,
+) -> None:
     root = tmp_path / "ls-tool-err"
     root.mkdir()
     store = MemoryStore(

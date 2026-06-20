@@ -27,19 +27,25 @@ async def test_resolve_tts_model_gemini_without_user_uses_config(
         db=None,
         user=None,
     )
-    assert model == global_config_loaded_from_config_yaml.agent.free_user_chat_tts_model
+    assert (
+        model
+        == global_config_loaded_from_config_yaml.agent.free_user_chat_tts_model
+    )
     assert source == "config"
 
 
 @pytest.mark.asyncio
 async def test_voice_cache_get_cached_voice_returns_voice_generation_result():
-    with patch.object(
-        voice_cache_service.gcs_service,
-        "check_voice_file_exists",
-        return_value=True,
-    ), patch(
-        "app.services.voice_cache_service.VoiceCacheService._update_cache_hit_async",
-        new_callable=AsyncMock,
+    with (
+        patch.object(
+            voice_cache_service.gcs_service,
+            "check_voice_file_exists",
+            return_value=True,
+        ),
+        patch(
+            "app.services.voice_cache_service.VoiceCacheService._update_cache_hit_async",
+            new_callable=AsyncMock,
+        ),
     ):
         db = MagicMock()
         db.execute = AsyncMock(
@@ -66,7 +72,9 @@ async def test_voice_cache_get_cached_voice_returns_voice_generation_result():
 
 
 @pytest.mark.asyncio
-async def test_record_voice_usage_calls_subscription(voice_service: VoiceService):
+async def test_record_voice_usage_calls_subscription(
+    voice_service: VoiceService,
+):
     user = MagicMock()
     user.id = "user-1"
     db = MagicMock()
@@ -90,7 +98,8 @@ async def test_record_voice_usage_calls_subscription(voice_service: VoiceService
 @pytest.mark.asyncio
 @patch.object(VoiceService, "_call_tts_api", new_callable=AsyncMock)
 @patch(
-    "app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock
+    "app.services.voice_service.GCSService.upload_voice_file",
+    new_callable=AsyncMock,
 )
 async def test_generate_voice_no_quota_limit_check_succeeds(
     mock_upload: AsyncMock,

@@ -103,7 +103,9 @@ async def test_run_dual_llm_foreground_chat_skip_envelope() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_dual_llm_foreground_chat_handoff_appends_chat_track_row() -> None:
+async def test_run_dual_llm_foreground_chat_handoff_appends_chat_track_row() -> (
+    None
+):
     message = SimpleNamespace(
         content=_envelope_content(user_facing_reply="foreground ok"),
         tool_calls=None,
@@ -130,7 +132,9 @@ async def test_run_dual_llm_foreground_chat_handoff_appends_chat_track_row() -> 
 
 
 @pytest.mark.asyncio
-async def test_run_dual_llm_foreground_chat_empty_fg_forces_tools_first_round() -> None:
+async def test_run_dual_llm_foreground_chat_empty_fg_forces_tools_first_round() -> (
+    None
+):
     message = SimpleNamespace(
         content=_envelope_content(user_facing_reply=""),
         tool_calls=None,

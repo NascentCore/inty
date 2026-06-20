@@ -32,7 +32,10 @@ from app.core.companion_harness.companion.utc import local_date_str
 
 from .living_sphere_curator import compact_living_sphere_if_pending
 from .memory_store import MemoryStore
-from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS, load_template_seed_text
+from .memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+    load_template_seed_text,
+)
 
 # TODO(memdoc-path-constants): Curator read/write still hardcodes paths; use scope path constants. #3413
 

@@ -63,5 +63,7 @@ def test_companion_ai_meta_from_queue_delivery_generated_image() -> None:
             height=768,
         ),
     )
-    assert meta["generated_image"]["image_url"] == "file:///tmp/z_image_test.jpeg"
+    assert (
+        meta["generated_image"]["image_url"] == "file:///tmp/z_image_test.jpeg"
+    )
     assert meta["generated_image"]["width"] == 1024

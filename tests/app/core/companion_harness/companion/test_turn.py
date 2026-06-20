@@ -8,7 +8,9 @@ from typing import Any
 
 import pytest
 
-from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
+from app.core.companion_harness.llm.chat_completions import (
+    create_chat_completion_sync,
+)
 from app.core.llms.client import (
     CompanionLLMConfig,
 )
@@ -20,7 +22,7 @@ from app.core.companion_harness.companion.schedule_queue import (
 )
 from app.core.companion_harness.companion.turn import (
     _run_companion_turn_core,
-    run_companion_inner_tick_scheduled_turn
+    run_companion_inner_tick_scheduled_turn,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.companion.runtime_channel import (
@@ -137,7 +139,9 @@ async def test_bootstrap_turn_appends_user_row_when_loop_did_not_persist(
     _seed_workspace(store)
     client = _FakeLLMClient()
 
-    async def _bootstrap_loop_without_transcript_persist(*args: Any, **kwargs: Any):
+    async def _bootstrap_loop_without_transcript_persist(
+        *args: Any, **kwargs: Any
+    ):
         return InTurnSyncToolLoopResult(
             assistant_text="bootstrap reply",
             langsmith_trace_id="",
@@ -196,7 +200,9 @@ async def test_bootstrap_turn_skips_duplicate_user_row_when_loop_persisted(
     client = _FakeLLMClient()
     user_uuid = "bootstrap-user-uuid"
 
-    async def _bootstrap_loop_with_transcript_persist(*args: Any, **kwargs: Any):
+    async def _bootstrap_loop_with_transcript_persist(
+        *args: Any, **kwargs: Any
+    ):
         from app.core.companion_harness.companion.transcript_user_row import (
             TranscriptUserRowBuildInput,
             append_transcript_user_row,

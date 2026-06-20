@@ -3,9 +3,7 @@ from tests.app.api.test_client import TestClient
 
 def _assert_telegram_metadata(agent_payload: dict, agent_id: str) -> dict:
     telegram = (agent_payload.get("extensions") or {}).get("telegram")
-    assert isinstance(
-        telegram, dict
-    ), (
+    assert isinstance(telegram, dict), (
         f"expected telegram extension metadata for promoted agent {agent_id}: "
         f"{agent_payload}"
     )
@@ -16,9 +14,7 @@ def _assert_telegram_metadata(agent_payload: dict, agent_id: str) -> dict:
         "deep_link": f"https://t.me/inty_test_bot?start=agent_{agent_id}",
     }
     for key, expected_value in expected.items():
-        assert (
-            telegram.get(key) == expected_value
-        ), (
+        assert telegram.get(key) == expected_value, (
             f"unexpected telegram {key} for promoted agent {agent_id}: "
             f"{telegram}"
         )
@@ -47,7 +43,9 @@ def test_promote_private_agent_to_public_provisions_telegram_metadata(
             f"{integration_client.base_url}/api/v1/ai/agents/{agent_id}",
             json={"intro": "public-ready"},
         )
-        assert second_update_response.status_code == 200, second_update_response.text
+        assert (
+            second_update_response.status_code == 200
+        ), second_update_response.text
         second_updated_agent = second_update_response.json()
         telegram_after_second_update = (
             second_updated_agent.get("extensions") or {}

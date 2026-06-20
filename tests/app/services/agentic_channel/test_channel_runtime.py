@@ -16,7 +16,9 @@ from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
 from app.models.companion_bond import CompanionBond
 from app.models.user import User
-from app.services.agentic_channel.adapters.weixin import WeixinChannelAdapterStub
+from app.services.agentic_channel.adapters.weixin import (
+    WeixinChannelAdapterStub,
+)
 from app.services.agentic_channel.channel_runtime import (
     ChannelRuntimeState,
     clear_registries_for_tests,
@@ -103,7 +105,9 @@ async def test_turn_up_supersedes_prior_active_channel() -> None:
             adapter=wx_adapter,
             reason="test",
         )
-        assert registry.active_channel() == CompanionRuntimeChannel.WECHAT_WEIXIN
+        assert (
+            registry.active_channel() == CompanionRuntimeChannel.WECHAT_WEIXIN
+        )
         assert (
             registry.state_of(CompanionRuntimeChannel.TELEGRAM)
             == ChannelRuntimeState.INACTIVE

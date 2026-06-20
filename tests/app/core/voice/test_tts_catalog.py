@@ -39,19 +39,26 @@ def test_must_resolve_tts_model_by_nickname_unknown_raises():
 
 
 def test_is_model_belongs_to_provider():
-    assert is_model_belongs_to_provider("gemini-2.5-flash-tts", TTS_PROVIDER_GEMINI)
+    assert is_model_belongs_to_provider(
+        "gemini-2.5-flash-tts", TTS_PROVIDER_GEMINI
+    )
     assert is_model_belongs_to_provider(
         "eleven_multilingual_v2", TTS_PROVIDER_ELEVENLABS
     )
     assert not is_model_belongs_to_provider(
         "gemini-2.5-flash-tts", TTS_PROVIDER_ELEVENLABS
     )
-    assert not is_model_belongs_to_provider("unknown-model", TTS_PROVIDER_GEMINI)
+    assert not is_model_belongs_to_provider(
+        "unknown-model", TTS_PROVIDER_GEMINI
+    )
 
 
 def test_chat_tts_allowlist_is_gemini_only():
     assert len(CHAT_TTS_GEMINI_MODEL_ALLOWLIST) >= 2
-    assert all(model.provider == TTS_PROVIDER_GEMINI for model in CHAT_TTS_GEMINI_MODEL_ALLOWLIST)
+    assert all(
+        model.provider == TTS_PROVIDER_GEMINI
+        for model in CHAT_TTS_GEMINI_MODEL_ALLOWLIST
+    )
 
 
 def test_elevenlabs_default_allowlist_is_elevenlabs_only():

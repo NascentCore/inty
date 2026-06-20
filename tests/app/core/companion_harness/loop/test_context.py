@@ -61,7 +61,10 @@ def test_settled_dual_llm_context_packages_prebuilt_stacks() -> None:
     assert context.companion_turn_track == CompanionTurnTrack.USER_CHAT
     assert context.dual_llm_chat_msgs == chat_msgs
     assert context.dual_llm_tool_msgs == tool_msgs
-    assert context.langsmith.foreground_source == SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE
+    assert (
+        context.langsmith.foreground_source
+        == SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE
+    )
     assert context.prompt_plan is None
 
 

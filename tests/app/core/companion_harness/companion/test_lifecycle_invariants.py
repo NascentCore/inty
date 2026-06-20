@@ -16,7 +16,9 @@ def test_awake_turn_kernel_does_not_import_dreaming_consolidation() -> None:
         assert hits == [], f"{rel} forbidden imports: {hits}"
 
 
-def test_awake_turn_surface_does_not_call_consolidate_memory_during_dreaming() -> None:
+def test_awake_turn_surface_does_not_call_consolidate_memory_during_dreaming() -> (
+    None
+):
     for rel in inv.AWAKE_TURN_SURFACE_MODULE_PATHS:
         assert not inv.module_calls_named(
             rel, inv.DREAMING_MEMORY_CURATION_ENTRY
@@ -25,9 +27,7 @@ def test_awake_turn_surface_does_not_call_consolidate_memory_during_dreaming() -
 
 def test_awake_turn_kernel_only_appends_transcript_jsonl() -> None:
     for rel in inv.AWAKE_TURN_KERNEL_MODULE_PATHS:
-        write_lines = inv.module_calls_store_method(
-            rel, "write_document"
-        )
+        write_lines = inv.module_calls_store_method(rel, "write_document")
         assert write_lines == [], (
             f"{rel} must not call store.write_document "
             f"(lines {write_lines}); AwakeTurn kernel append-only"
@@ -47,7 +47,9 @@ def test_tool_background_log_append_is_tool_background_jsonl() -> None:
     assert not inv.module_calls_store_method(rel, "write_document")
 
 
-def test_dreaming_batch_orchestrator_calls_consolidate_memory_during_dreaming() -> None:
+def test_dreaming_batch_orchestrator_calls_consolidate_memory_during_dreaming() -> (
+    None
+):
     rel = inv.DREAMING_BATCH_ORCHESTRATOR_MODULE_PATH
     assert inv.function_body_calls_named(
         rel,
@@ -56,7 +58,9 @@ def test_dreaming_batch_orchestrator_calls_consolidate_memory_during_dreaming() 
     )
 
 
-def test_consolidate_memory_during_dreaming_only_referenced_from_allowlist() -> None:
+def test_consolidate_memory_during_dreaming_only_referenced_from_allowlist() -> (
+    None
+):
     referencers = inv.app_py_files_importing_or_calling(
         inv.DREAMING_MEMORY_CURATION_ENTRY
     )
@@ -71,7 +75,9 @@ def test_consolidate_memory_during_dreaming_only_referenced_from_allowlist() -> 
     )
 
 
-def test_dreaming_memory_curation_defined_in_dreaming_consolidation_module() -> None:
+def test_dreaming_memory_curation_defined_in_dreaming_consolidation_module() -> (
+    None
+):
     rel = inv.DREAMING_MEMORY_CURATION_MODULE_PATH
     tree = inv.parse_module_ast(rel)
     defs = [

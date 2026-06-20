@@ -14,7 +14,9 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     record_llm_inference_failure,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.companion.runtime_events import read_runtime_events
+from app.core.companion_harness.companion.runtime_events import (
+    read_runtime_events,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.llm.chat_completions import (
     OpenRouterInvalidJsonError,
@@ -31,10 +33,15 @@ def test_record_llm_inference_failure_skips_without_bind(tmp_path) -> None:
             client_message_en="x", provider_http_status=503
         ),
     )
-    assert read_runtime_events(store, kinds={"llm_inference_failure"}, limit=5) == []
+    assert (
+        read_runtime_events(store, kinds={"llm_inference_failure"}, limit=5)
+        == []
+    )
 
 
-def test_create_chat_completion_sync_writes_llm_inference_failure(tmp_path) -> None:
+def test_create_chat_completion_sync_writes_llm_inference_failure(
+    tmp_path,
+) -> None:
     scope = CompanionScope("lr", "a", f"{tmp_path.name}-ev")
     store = MemoryStore(scope=scope, repository=None)
     bind = LlmRuntimeEventBind(
@@ -51,7 +58,9 @@ def test_create_chat_completion_sync_writes_llm_inference_failure(tmp_path) -> N
             def create(**_kw):
                 raise RuntimeError("simulated transport failure")
 
-        client = SimpleNamespace(chat=SimpleNamespace(completions=_ChatCompletions))
+        client = SimpleNamespace(
+            chat=SimpleNamespace(completions=_ChatCompletions)
+        )
         with pytest.raises(CompanionLLMInferenceBackendError):
             create_chat_completion_sync(
                 client,
@@ -85,4 +94,7 @@ def test_exc_chain_detects_inference_errors() -> None:
     oj = OpenRouterInvalidJsonError("bad json body")
     assert exc_chain_includes_llm_inference_failure_root_causes(oj) is True
 
-    assert exc_chain_includes_llm_inference_failure_root_causes(RuntimeError("x")) is False
+    assert (
+        exc_chain_includes_llm_inference_failure_root_causes(RuntimeError("x"))
+        is False
+    )

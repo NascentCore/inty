@@ -12,7 +12,9 @@ from app.core.companion_harness.companion.models import (
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
-from app.core.companion_harness.companion.turn_pipeline import resolve_turn_runtime_flags
+from app.core.companion_harness.companion.turn_pipeline import (
+    resolve_turn_runtime_flags,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
@@ -59,7 +61,9 @@ def test_resolve_turn_runtime_flags_turn_type() -> None:
     )
 
 
-def test_build_system_messages_does_not_inject_user_time_context_system_slice() -> None:
+def test_build_system_messages_does_not_inject_user_time_context_system_slice() -> (
+    None
+):
     bundle = PromptBundle(
         identity="i",
         soul="s",
@@ -72,7 +76,9 @@ def test_build_system_messages_does_not_inject_user_time_context_system_slice() 
         ctx,
         enable_tools=False,
     )
-    joined = "\n".join(m.get("content") or "" for m in msgs if m.get("role") == "system")
+    joined = "\n".join(
+        m.get("content") or "" for m in msgs if m.get("role") == "system"
+    )
     assert "##User Time Context" not in joined
     assert "## user-time-context" not in joined
     assert "never include them in replies to the user" in joined

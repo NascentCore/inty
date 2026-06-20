@@ -30,7 +30,9 @@ def _minimal_manager_session() -> MagicMock:
 
 
 @pytest.mark.asyncio
-async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle() -> None:
+async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle() -> (
+    None
+):
     bundle = ImplicitSignalBundle(user_signed_on=True)
     stub = CompanionTurnResult(
         trace_id="t",
@@ -59,8 +61,16 @@ async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle
     assert result is stub
     assert track_mock.await_args is not None
     assert track_mock.await_args.args[0] == "hi"
-    assert track_mock.await_args.kwargs["deps"].runtime_context.implicit_signal_bundle is bundle
-    assert track_mock.await_args.kwargs["deps"].bootstrap_interim_output_sink is None
+    assert (
+        track_mock.await_args.kwargs[
+            "deps"
+        ].runtime_context.implicit_signal_bundle
+        is bundle
+    )
+    assert (
+        track_mock.await_args.kwargs["deps"].bootstrap_interim_output_sink
+        is None
+    )
 
 
 @pytest.mark.asyncio
@@ -73,7 +83,9 @@ async def test_manager_turns_do_not_serialize_without_dreaming() -> None:
     session = _minimal_manager_session()
     entered = 0
 
-    async def _track_turn(*args: object, **kwargs: object) -> CompanionTurnResult:
+    async def _track_turn(
+        *args: object, **kwargs: object
+    ) -> CompanionTurnResult:
         nonlocal entered
         entered += 1
         if entered == 2:

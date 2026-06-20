@@ -59,7 +59,9 @@ class TestSubscriptionService:
         # Assert
         assert is_allowed is True  # 3 < 12, so allowed
         assert agent_count == 3
-        assert limit == 12  # subscribed_user_agent_creation_24h_limit from config
+        assert (
+            limit == 12
+        )  # subscribed_user_agent_creation_24h_limit from config
 
         # Verify the subscription status was called
         subscription_service.get_user_subscription_status.assert_called_once_with(
@@ -136,7 +138,9 @@ class TestSubscriptionService:
 
         # Mock the database query for 24h image generation count
         mock_result = MagicMock()
-        mock_result.scalar.return_value = 2  # User has generated 2 images in 24h
+        mock_result.scalar.return_value = (
+            2  # User has generated 2 images in 24h
+        )
         mock_db.execute.return_value = mock_result
 
         random_user_id = str(uuid.uuid4())
@@ -151,7 +155,9 @@ class TestSubscriptionService:
         )
 
         is_allowed, used_count, limit = (
-            await subscription_service.check_image_gen_limit(db=mock_db, user=user)
+            await subscription_service.check_image_gen_limit(
+                db=mock_db, user=user
+            )
         )
         assert is_allowed is True  # 2 < 4 (free user limit)
         assert used_count == 2
@@ -172,7 +178,9 @@ class TestSubscriptionService:
 
         # Mock the database query for 24h image generation count
         mock_result = MagicMock()
-        mock_result.scalar.return_value = 5  # User has generated 5 images in 24h
+        mock_result.scalar.return_value = (
+            5  # User has generated 5 images in 24h
+        )
         mock_db.execute.return_value = mock_result
         random_user_id = str(uuid.uuid4())
         user = User(
@@ -186,7 +194,9 @@ class TestSubscriptionService:
         )
 
         is_allowed, used_count, limit = (
-            await subscription_service.check_image_gen_limit(db=mock_db, user=user)
+            await subscription_service.check_image_gen_limit(
+                db=mock_db, user=user
+            )
         )
         assert is_allowed is True  # 5 < 8 (subscribed user limit)
         assert used_count == 5
@@ -229,7 +239,9 @@ class TestSubscriptionService:
         assert limit == 6  # free_user_agent_creation_24h_limit
 
     @pytest.mark.asyncio
-    async def test_check_agent_creation_limit_subscribed_user_within_limit(self):
+    async def test_check_agent_creation_limit_subscribed_user_within_limit(
+        self,
+    ):
         """Test agent creation limit check for subscribed user within 24h limit"""
         mock_google_play_service = AsyncMock(spec=GooglePlayService)
         mock_db = AsyncMock(spec=AsyncSession)
@@ -314,7 +326,9 @@ class TestSubscriptionService:
         isolated_db = AsyncMock(spec=AsyncSession)
         usage_record = SimpleNamespace(id="usage-record-1")
 
-        async def fake_record_usage_impl(db, user_id, usage_type, usage_count, extra_data):
+        async def fake_record_usage_impl(
+            db, user_id, usage_type, usage_count, extra_data
+        ):
             if db is broken_db:
                 return None
             if db is isolated_db:
@@ -354,7 +368,9 @@ class TestRTDNSubscriptionNotification:
     """测试 RTDN 订阅通知处理路径，确保不触发懒加载错误"""
 
     @pytest.mark.asyncio
-    async def test_update_subscription_by_notification_type_with_plan_preloaded(self):
+    async def test_update_subscription_by_notification_type_with_plan_preloaded(
+        self,
+    ):
         """测试 _update_subscription_by_notification_type 当 plan 已预加载时正常工作"""
         mock_google_play_service = MagicMock(spec=GooglePlayService)
         mock_google_play_service.get_subscription_details.return_value = {
@@ -382,7 +398,9 @@ class TestRTDNSubscriptionNotification:
         subscription_service = SubscriptionService(mock_google_play_service)
 
         # 测试续费通知（notificationType=2）
-        notification_data = {"subscriptionNotification": {"notificationType": 2}}
+        notification_data = {
+            "subscriptionNotification": {"notificationType": 2}
+        }
 
         await subscription_service._update_subscription_by_notification_type(
             mock_db, mock_subscription, 2, notification_data
@@ -432,7 +450,9 @@ class TestRTDNSubscriptionNotification:
         subscription_service = SubscriptionService(mock_google_play_service)
 
         # 测试取消通知（notificationType=3）
-        notification_data = {"subscriptionNotification": {"notificationType": 3}}
+        notification_data = {
+            "subscriptionNotification": {"notificationType": 3}
+        }
 
         await subscription_service._update_subscription_by_notification_type(
             mock_db, mock_subscription, 3, notification_data
@@ -468,7 +488,9 @@ class TestRTDNSubscriptionNotification:
 
         subscription_service = SubscriptionService(mock_google_play_service)
 
-        notification_data = {"subscriptionNotification": {"notificationType": 2}}
+        notification_data = {
+            "subscriptionNotification": {"notificationType": 2}
+        }
 
         await subscription_service._create_renewal_transaction(
             mock_db, mock_subscription, notification_data
@@ -500,11 +522,15 @@ class TestRTDNSubscriptionNotification:
         mock_subscription.user_id = str(uuid.uuid4())
         mock_subscription.plan_id = mock_plan.id
         mock_subscription.plan = None  # plan 未预加载
-        mock_subscription.google_play_purchase_token = "test_token_renewal_defensive"
+        mock_subscription.google_play_purchase_token = (
+            "test_token_renewal_defensive"
+        )
 
         subscription_service = SubscriptionService(mock_google_play_service)
 
-        notification_data = {"subscriptionNotification": {"notificationType": 2}}
+        notification_data = {
+            "subscriptionNotification": {"notificationType": 2}
+        }
 
         await subscription_service._create_renewal_transaction(
             mock_db, mock_subscription, notification_data

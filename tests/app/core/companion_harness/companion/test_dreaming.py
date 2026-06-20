@@ -24,7 +24,9 @@ def _store(tmp_path: Path) -> MemoryStore:
     )
 
 
-def _write_transcript(store: MemoryStore, rows: list[dict[str, object]]) -> None:
+def _write_transcript(
+    store: MemoryStore, rows: list[dict[str, object]]
+) -> None:
     body = "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n"
     store.write_document("transcript.jsonl", body)
 

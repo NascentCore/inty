@@ -16,5 +16,8 @@ def test_chat_serialization_renders_agent_intro_and_opening_templates():
 
     serialized = chat.model_dump(mode="json")
 
-    assert serialized["agent_intro"] == "Your new neighbor, Sophia, says hi to you."
+    assert (
+        serialized["agent_intro"]
+        == "Your new neighbor, Sophia, says hi to you."
+    )
     assert serialized["agent_opening"] == "Hi, I'm Sophia."

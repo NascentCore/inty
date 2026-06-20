@@ -90,23 +90,31 @@ def test_calculate_crop_square_boundaries():
         _calculate_crop_square_boundaries(face_coords, 0.9, img_shape)
 
     # In certain bounary, expansion ration in [3.9, 4/3)
-    avatar_square = _calculate_crop_square_boundaries(face_coords, 3.9 / 3, img_shape)
+    avatar_square = _calculate_crop_square_boundaries(
+        face_coords, 3.9 / 3, img_shape
+    )
     assert avatar_square == (1, 6, 39, 39)
-    avatar_square = _calculate_crop_square_boundaries(face_coords, 3.99 / 3, img_shape)
+    avatar_square = _calculate_crop_square_boundaries(
+        face_coords, 3.99 / 3, img_shape
+    )
     assert avatar_square == (1, 6, 39, 39)
     avatar_square = _calculate_crop_square_boundaries(
         face_coords, 3.999999 / 3, img_shape
     )
     assert avatar_square == (1, 6, 39, 39)
 
-    avatar_square = _calculate_crop_square_boundaries(face_coords, 4 / 3, img_shape)
+    avatar_square = _calculate_crop_square_boundaries(
+        face_coords, 4 / 3, img_shape
+    )
     assert avatar_square == (0, 5, 40, 40)
 
     # The avatar square is limited by the image boundary for max_expansion_ratio >= 2.
     avatar_square = _calculate_crop_square_boundaries(face_coords, 2, img_shape)
     assert avatar_square == (0, 5, 40, 40)
 
-    avatar_square = _calculate_crop_square_boundaries(face_coords, 2.1, img_shape)
+    avatar_square = _calculate_crop_square_boundaries(
+        face_coords, 2.1, img_shape
+    )
     assert avatar_square == (0, 5, 40, 40)
 
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3, img_shape)
@@ -120,7 +128,9 @@ def test_calculate_crop_square_boundaries():
     avatar_square = _calculate_crop_square_boundaries(face_coords, 2, img_shape)
     assert avatar_square == (0, 5, 40, 40)
 
-    avatar_square = _calculate_crop_square_boundaries(face_coords, 2.1, img_shape)
+    avatar_square = _calculate_crop_square_boundaries(
+        face_coords, 2.1, img_shape
+    )
     assert avatar_square == (0, 5, 40, 40)
 
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3, img_shape)
@@ -131,24 +141,32 @@ def test_calculate_crop_square_boundaries():
     face_coords = (10, 10, 30, 20)
 
     # In certain bounary, expansion ration in [3.9, 4/3)
-    avatar_square = _calculate_crop_square_boundaries(face_coords, 3.9 / 3, img_shape)
+    avatar_square = _calculate_crop_square_boundaries(
+        face_coords, 3.9 / 3, img_shape
+    )
     # _draw_setup(img_shape, face_coords, avatar_square)
     assert avatar_square == (6, 1, 39, 39)
-    avatar_square = _calculate_crop_square_boundaries(face_coords, 3.99 / 3, img_shape)
+    avatar_square = _calculate_crop_square_boundaries(
+        face_coords, 3.99 / 3, img_shape
+    )
     assert avatar_square == (6, 1, 39, 39)
     avatar_square = _calculate_crop_square_boundaries(
         face_coords, 3.999999 / 3, img_shape
     )
     assert avatar_square == (6, 1, 39, 39)
 
-    avatar_square = _calculate_crop_square_boundaries(face_coords, 4 / 3, img_shape)
+    avatar_square = _calculate_crop_square_boundaries(
+        face_coords, 4 / 3, img_shape
+    )
     assert avatar_square == (5, 0, 40, 40)
 
     # The avatar square is limited by the image boundary for max_expansion_ratio >= 2.
     avatar_square = _calculate_crop_square_boundaries(face_coords, 2, img_shape)
     assert avatar_square == (5, 0, 40, 40)
 
-    avatar_square = _calculate_crop_square_boundaries(face_coords, 2.1, img_shape)
+    avatar_square = _calculate_crop_square_boundaries(
+        face_coords, 2.1, img_shape
+    )
     assert avatar_square == (5, 0, 40, 40)
 
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3, img_shape)
@@ -162,7 +180,9 @@ def test_calculate_crop_square_boundaries():
     avatar_square = _calculate_crop_square_boundaries(face_coords, 2, img_shape)
     assert avatar_square == (5, 0, 40, 40)
 
-    avatar_square = _calculate_crop_square_boundaries(face_coords, 2.1, img_shape)
+    avatar_square = _calculate_crop_square_boundaries(
+        face_coords, 2.1, img_shape
+    )
     assert avatar_square == (5, 0, 40, 40)
 
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3, img_shape)

@@ -43,7 +43,9 @@ async def db_session():
         max_overflow=0,
         pool_pre_ping=True,
     )
-    async_session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    async_session = sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
     async with async_session() as session:
         yield session
     await engine.dispose()
@@ -72,7 +74,9 @@ class TestImageGenerationService:
         assert "message_content_preview" not in output
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_by_model_raises_timeout_for_slow_gemini(self):
+    async def test_generate_chat_image_by_model_raises_timeout_for_slow_gemini(
+        self,
+    ):
         """Gemini 路径传入 timeout_seconds 后，慢请求应抛出 TimeoutError。"""
 
         async def fake_async_generate_images(
@@ -112,7 +116,9 @@ class TestImageGenerationService:
                 )
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_by_model_routes_nano_banana_nickname(self):
+    async def test_generate_chat_image_by_model_routes_nano_banana_nickname(
+        self,
+    ):
         """统一函数应支持 nickname，并自动路由到 Gemini 输入格式。"""
         captured = {}
 
@@ -139,12 +145,15 @@ class TestImageGenerationService:
             )
             return [result]
 
-        with patch(
-            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_images",
-            new=fake_async_generate_images,
-        ), patch(
-            "app.services.image_generation_service.get_genai_client",
-            return_value=FakeGeminiClient(),
+        with (
+            patch(
+                "app.core.google_genai.wrapped_client.WrappedClient.async_generate_images",
+                new=fake_async_generate_images,
+            ),
+            patch(
+                "app.services.image_generation_service.get_genai_client",
+                return_value=FakeGeminiClient(),
+            ),
         ):
             result = await image_generation_service.generate_chat_image_by_model(
                 chat_input=ChatImageGenModelInput(
@@ -168,7 +177,9 @@ class TestImageGenerationService:
         assert result.gcs_uri.startswith("gs://")
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_by_model_seedream_auto_fill_second_reference(self):
+    async def test_generate_chat_image_by_model_seedream_auto_fill_second_reference(
+        self,
+    ):
         """Seedream 在无自拍参考图时应自动补齐第二张参考图。"""
         captured = {}
 
@@ -181,16 +192,21 @@ class TestImageGenerationService:
             "app.services.image_generation_service.seedream_v4_5_edit",
             new=fake_seedream_v4_5_edit,
         ):
-            result = await image_generation_service.generate_chat_image_by_model(
-                chat_input=ChatImageGenModelInput(
-                    prompt="draw a romantic evening",
-                    reference_image_url="https://example.com/reference.jpg",
-                    message_history=[
-                        {"role": "assistant", "content": "let's watch the sunset"},
-                    ],
-                    model_id_on_provider=SEEDREAM_V4_5_EDIT.id_on_provider,
-                ),
-                gcs_uri_base="chat_images/agent-seedream",
+            result = (
+                await image_generation_service.generate_chat_image_by_model(
+                    chat_input=ChatImageGenModelInput(
+                        prompt="draw a romantic evening",
+                        reference_image_url="https://example.com/reference.jpg",
+                        message_history=[
+                            {
+                                "role": "assistant",
+                                "content": "let's watch the sunset",
+                            },
+                        ],
+                        model_id_on_provider=SEEDREAM_V4_5_EDIT.id_on_provider,
+                    ),
+                    gcs_uri_base="chat_images/agent-seedream",
+                )
             )
 
         args = captured["args"]
@@ -249,7 +265,9 @@ class TestImageGenerationService:
         )
         monkeypatch.setattr(
             "app.services.image_generation_service.image_transform_service.transform_desktop",
-            lambda url: "https://cdn.example.com/{}".format(url.split("/", 3)[-1]),
+            lambda url: "https://cdn.example.com/{}".format(
+                url.split("/", 3)[-1]
+            ),
         )
         monkeypatch.setattr(
             "app.services.image_generation_service.get_current_trace_info",
@@ -352,17 +370,20 @@ class TestImageGenerationService:
         await session.refresh(agent)
         assert len(agent.background_images) >= 1
         assert any(
-            u.startswith("gs://") and "chat_images/" in u for u in agent.background_images
+            u.startswith("gs://") and "chat_images/" in u
+            for u in agent.background_images
         )
 
-        res_stmt = select(Resource).where(
-            Resource.url == gen["image_url"]
-        )
+        res_stmt = select(Resource).where(Resource.url == gen["image_url"])
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
-        assert resource is not None, "Chat-generated image should be saved to resources table"
+        assert (
+            resource is not None
+        ), "Chat-generated image should be saved to resources table"
         assert resource.agent_id == agent_id
         assert resource.user_id == user_id
-        stored_prompt = resource.resource_metadata.get("generation_prompt") or ""
+        stored_prompt = (
+            resource.resource_metadata.get("generation_prompt") or ""
+        )
         assert len(stored_prompt) > 0
         assert "给我画一张图片" in stored_prompt
         assert resource.resource_metadata.get("gcs_url") == gen["image_url"]
@@ -374,7 +395,9 @@ class TestImageGenerationService:
         await session.delete(user)
         await session.commit()
 
-    def _make_fake_fal_result(self, gcs_uri_base: str, suffix: str) -> GeneratedImageProcessResult:
+    def _make_fake_fal_result(
+        self, gcs_uri_base: str, suffix: str
+    ) -> GeneratedImageProcessResult:
         """Build a deterministic GeneratedImageProcessResult for Fal path tests (no real Fal/GCS)."""
         bucket = global_config_loaded_from_config_yaml.gcs.bucket
         gcs_uri = f"gs://{bucket}/{gcs_uri_base}/fal_test_{suffix}.jpg"
@@ -494,10 +517,14 @@ class TestImageGenerationService:
 
         res_stmt = select(Resource).where(Resource.url == gen["image_url"])
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
-        assert resource is not None, "Fal z_image_turbo chat image should be saved to resources table"
+        assert (
+            resource is not None
+        ), "Fal z_image_turbo chat image should be saved to resources table"
         assert resource.agent_id == agent_id
         assert resource.user_id == user_id
-        stored_prompt = resource.resource_metadata.get("generation_prompt") or ""
+        stored_prompt = (
+            resource.resource_metadata.get("generation_prompt") or ""
+        )
         assert len(stored_prompt) > 0
         assert "draw me a portrait" in stored_prompt
         assert resource.resource_metadata.get("gcs_url") == gen["image_url"]
@@ -554,7 +581,10 @@ class TestImageGenerationService:
 
         chat_msg = ChatHistory(
             session_id=session_uuid,
-            message={"type": "user", "data": {"content": "generate a scene with us"}},
+            message={
+                "type": "user",
+                "data": {"content": "generate a scene with us"},
+            },
             meta_data=None,
         )
         session.add(chat_msg)
@@ -612,10 +642,14 @@ class TestImageGenerationService:
 
         res_stmt = select(Resource).where(Resource.url == gen["image_url"])
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
-        assert resource is not None, "Fal seedream chat image should be saved to resources table"
+        assert (
+            resource is not None
+        ), "Fal seedream chat image should be saved to resources table"
         assert resource.agent_id == agent_id
         assert resource.user_id == user_id
-        stored_prompt = resource.resource_metadata.get("generation_prompt") or ""
+        stored_prompt = (
+            resource.resource_metadata.get("generation_prompt") or ""
+        )
         assert len(stored_prompt) > 0
         assert "generate a scene with us" in stored_prompt
         assert resource.resource_metadata.get("gcs_url") == gen["image_url"]
@@ -705,7 +739,9 @@ class TestChatHistoryService:
         )
         monkeypatch.setattr(
             "app.services.image_generation_service.image_transform_service.transform_desktop",
-            lambda url: "https://cdn.example.com/{}".format(url.split("/", 3)[-1]),
+            lambda url: "https://cdn.example.com/{}".format(
+                url.split("/", 3)[-1]
+            ),
         )
 
         session = db_session
@@ -747,7 +783,10 @@ class TestChatHistoryService:
 
         chat_msg = ChatHistory(
             session_id=session_uuid,
-            message={"type": "user", "data": {"content": "please draw an image"}},
+            message={
+                "type": "user",
+                "data": {"content": "please draw an image"},
+            },
             meta_data=None,
         )
         session.add(chat_msg)
@@ -781,7 +820,9 @@ class TestChatHistoryService:
         assert agent.background_images[0] == "gs://test-bucket/original.jpg"
         assert len(agent.background_images) == 2
         bucket = global_config_loaded_from_config_yaml.gcs.bucket
-        assert agent.background_images[1].startswith(f"gs://{bucket}/chat_images/")
+        assert agent.background_images[1].startswith(
+            f"gs://{bucket}/chat_images/"
+        )
 
         row = (
             await session.execute(
@@ -795,9 +836,7 @@ class TestChatHistoryService:
         assert row.meta_data is not None
         assert row.meta_data.get("generated_image") is not None
 
-        res_stmt = select(Resource).where(
-            Resource.agent_id == agent_id
-        )
+        res_stmt = select(Resource).where(Resource.agent_id == agent_id)
         res_result = await session.execute(res_stmt)
         resources = res_result.scalars().all()
         for res in resources:
@@ -820,7 +859,9 @@ class TestChatHistoryService:
         )
 
         def fake_upload(file_data, content_type, bucket_name, path):
-            return "https://storage.googleapis.com/{}/{}".format(bucket_name, path)
+            return "https://storage.googleapis.com/{}/{}".format(
+                bucket_name, path
+            )
 
         monkeypatch.setattr(
             "app.core.google_genai.wrapped_client.upload_to_gcs",
@@ -828,7 +869,9 @@ class TestChatHistoryService:
         )
         monkeypatch.setattr(
             "app.services.image_generation_service.image_transform_service.transform_desktop",
-            lambda url: "https://cdn.example.com/{}".format(url.split("/", 3)[-1]),
+            lambda url: "https://cdn.example.com/{}".format(
+                url.split("/", 3)[-1]
+            ),
         )
         monkeypatch.setattr(
             "app.services.image_generation_service.get_current_trace_info",
@@ -942,7 +985,10 @@ class TestChatHistoryService:
         await session.refresh(agent)
         assert len(agent.background_images) == 2
         assert agent.background_images[0] == "gs://test-bucket/original.jpg"
-        assert gcs_uri in agent.background_images or agent.background_images[1] == gcs_uri
+        assert (
+            gcs_uri in agent.background_images
+            or agent.background_images[1] == gcs_uri
+        )
 
         # 3) Resource 表应有对应记录（user_id 传入时）
         res_stmt = select(Resource).where(Resource.url == gcs_uri)

@@ -34,7 +34,9 @@ def test_upload_image(integration_client: TestClient):
     assert response.status_code == 200, response.text
     upload_response = response.json()
 
-    assert upload_response.get("data") is not None, "Upload failed: no URL returned"
+    assert (
+        upload_response.get("data") is not None
+    ), "Upload failed: no URL returned"
     assert upload_response["data"]["url"].endswith(
         ".jpg"
     ), "Upload failed: URL does not end with .jpg"

@@ -8,7 +8,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import OutputQueue
+from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputQueue,
+)
 from app.core.companion_harness.agentic_companion.types import UserMessageBatch
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,

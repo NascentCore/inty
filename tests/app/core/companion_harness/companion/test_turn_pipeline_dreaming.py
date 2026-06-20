@@ -56,9 +56,7 @@ def test_load_companion_turn_state_applies_dreaming_checkpoint(
         DreamingState(
             last_processed_main_line_count=2,
             last_processed_main_uuid="a1",
-            last_processed_at=datetime(
-                2026, 1, 2, 12, 0, tzinfo=timezone.utc
-            ),
+            last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc),
             last_processed_latest_user_ts=datetime(
                 2026, 1, 2, 9, 0, tzinfo=timezone.utc
             ),

@@ -151,9 +151,11 @@ class TestClient:
                 "call create_user() before requesting chat completions"
             )
 
-        payload_messages = list(messages) if messages is not None else [
-            {"role": "user", "content": "Hello, how are you?"}
-        ]
+        payload_messages = (
+            list(messages)
+            if messages is not None
+            else [{"role": "user", "content": "Hello, how are you?"}]
+        )
 
         payload = {
             "messages": payload_messages,

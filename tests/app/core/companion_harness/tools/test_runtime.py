@@ -42,11 +42,17 @@ class _Response:
 
 
 def _resp(content: str, tool_calls: list[_ToolCall] | None) -> _Response:
-    return _Response(choices=[_Choice(message=_Message(content=content, tool_calls=tool_calls))])
+    return _Response(
+        choices=[
+            _Choice(message=_Message(content=content, tool_calls=tool_calls))
+        ]
+    )
 
 
 @pytest.mark.asyncio
-async def test_on_assistant_message_called_each_non_tool_and_tool_round() -> None:
+async def test_on_assistant_message_called_each_non_tool_and_tool_round() -> (
+    None
+):
     seen: list[tuple[str, bool]] = []
 
     async def on_assistant_message(message: Any) -> None:
@@ -63,7 +69,15 @@ async def test_on_assistant_message_called_each_non_tool_and_tool_round() -> Non
     round_two = _resp("closing line", None)
     round_one = _resp(
         "hello before tools",
-        [_ToolCall(id="tc1", type="function", function=_Fn(name="memory_store_write_document", arguments="{}"))],
+        [
+            _ToolCall(
+                id="tc1",
+                type="function",
+                function=_Fn(
+                    name="memory_store_write_document", arguments="{}"
+                ),
+            )
+        ],
     )
 
     async def continue_chat(
@@ -92,7 +106,9 @@ async def test_on_assistant_message_called_each_non_tool_and_tool_round() -> Non
                 for tc in (m.tool_calls or [])
             ],
         },
-        insert_system_message=lambda msgs, text: msgs.insert(0, {"role": "system", "content": text}),
+        insert_system_message=lambda msgs, text: msgs.insert(
+            0, {"role": "system", "content": text}
+        ),
         on_assistant_message=on_assistant_message,
     )
 

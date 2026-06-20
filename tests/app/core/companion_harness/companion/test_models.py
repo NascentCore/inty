@@ -24,7 +24,9 @@ from app.core.companion_harness.companion.models import (
 
 
 def test_chat_message_basic() -> None:
-    m = ChatMessage(role="user", content="hello", ts="2026-01-01T00:00:00+00:00")
+    m = ChatMessage(
+        role="user", content="hello", ts="2026-01-01T00:00:00+00:00"
+    )
     assert m.role == "user"
     assert m.content == "hello"
     assert m.ts == "2026-01-01T00:00:00+00:00"
@@ -41,7 +43,9 @@ def test_chat_message_timestamp_alias() -> None:
     assert m.ts == "2026-01-02T12:00:00Z"
 
 
-def test_load_prompt_bundle_reads_channels_from_memory_store(tmp_path: Path) -> None:
+def test_load_prompt_bundle_reads_channels_from_memory_store(
+    tmp_path: Path,
+) -> None:
     store = MemoryStore(
         scope=CompanionScope("models", "a", f"{tmp_path.name}-channels"),
         repository=None,
@@ -51,7 +55,9 @@ def test_load_prompt_bundle_reads_channels_from_memory_store(tmp_path: Path) -> 
     assert bundle.channels_md == "# Channels\ncustom channel contract\n"
 
 
-def test_load_prompt_bundle_loads_harness_from_package_template(tmp_path: Path) -> None:
+def test_load_prompt_bundle_loads_harness_from_package_template(
+    tmp_path: Path,
+) -> None:
     store = MemoryStore(
         scope=CompanionScope("models", "a", f"{tmp_path.name}-harness"),
         repository=None,
@@ -61,7 +67,9 @@ def test_load_prompt_bundle_loads_harness_from_package_template(tmp_path: Path) 
     assert "only communicate in text" in bundle.harness_md
 
 
-def test_load_prompt_bundle_reads_companionship_from_memory_store(tmp_path: Path) -> None:
+def test_load_prompt_bundle_reads_companionship_from_memory_store(
+    tmp_path: Path,
+) -> None:
     store = MemoryStore(
         scope=CompanionScope("models", "a", f"{tmp_path.name}-companionship"),
         repository=None,
@@ -90,9 +98,12 @@ def test_context_meta_bootstrap_string_is_plain_unknown_profile() -> None:
     c = ContextMeta(context_mode="bootstrap")
     assert c.context_mode == "bootstrap"
 
+
 def test_transcript_for_llm_turn_short() -> None:
     loaded = [
-        ChatMessage(role="user", content=str(i), ts=f"2026-01-01T00:{i:02d}:00Z")
+        ChatMessage(
+            role="user", content=str(i), ts=f"2026-01-01T00:{i:02d}:00Z"
+        )
         for i in range(19)
     ]
     assert transcript_for_llm_turn(loaded) == loaded
@@ -100,7 +111,9 @@ def test_transcript_for_llm_turn_short() -> None:
 
 def test_transcript_for_llm_turn_truncate() -> None:
     loaded = [
-        ChatMessage(role="user", content=str(i), ts=f"2026-01-01T00:{i:02d}:00Z")
+        ChatMessage(
+            role="user", content=str(i), ts=f"2026-01-01T00:{i:02d}:00Z"
+        )
         for i in range(25)
     ]
     out = transcript_for_llm_turn(loaded)
@@ -110,7 +123,9 @@ def test_transcript_for_llm_turn_truncate() -> None:
 
 def test_transcript_for_llm_turn_custom_window() -> None:
     loaded = [
-        ChatMessage(role="user", content=str(i), ts=f"2026-01-01T00:{i:02d}:00Z")
+        ChatMessage(
+            role="user", content=str(i), ts=f"2026-01-01T00:{i:02d}:00Z"
+        )
         for i in range(15)
     ]
     out = transcript_for_llm_turn(loaded, max_messages=8)
@@ -177,7 +192,11 @@ def test_load_transcript_valid_jsonl(tmp_path: Path) -> None:
     )
     rows = [
         {"role": "user", "content": "a", "ts": "2026-01-01T00:00:00Z"},
-        {"role": "assistant", "content": "b", "timestamp": "2026-01-01T00:01:00Z"},
+        {
+            "role": "assistant",
+            "content": "b",
+            "timestamp": "2026-01-01T00:01:00Z",
+        },
     ]
     store.write_document(
         "transcript.jsonl", "\n".join(json.dumps(r) for r in rows) + "\n"
@@ -188,7 +207,9 @@ def test_load_transcript_valid_jsonl(tmp_path: Path) -> None:
     assert msgs[1].role == "assistant" and msgs[1].content == "b"
 
 
-def test_is_transcript_row_user_visible_filters_manifest_and_proactive_user() -> None:
+def test_is_transcript_row_user_visible_filters_manifest_and_proactive_user() -> (
+    None
+):
     manifest = ChatMessage(
         role="system",
         content="[ai_private_splice]",
@@ -201,7 +222,9 @@ def test_is_transcript_row_user_visible_filters_manifest_and_proactive_user() ->
         ts="2026-01-01T00:01:00Z",
         proactive_chat=True,
     )
-    real_user = ChatMessage(role="user", content="hi", ts="2026-01-01T00:02:00Z")
+    real_user = ChatMessage(
+        role="user", content="hi", ts="2026-01-01T00:02:00Z"
+    )
     assert not is_transcript_row_user_visible(manifest)
     assert not is_transcript_row_user_visible(proactive)
     assert is_transcript_row_user_visible(real_user)

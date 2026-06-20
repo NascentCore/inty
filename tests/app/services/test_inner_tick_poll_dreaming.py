@@ -137,7 +137,9 @@ async def test_run_inner_tick_poll_falls_through_to_scheduled_only() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_scope_inner_tick_poll_order_maintenance_autonomy_dreaming() -> None:
+async def test_run_scope_inner_tick_poll_order_maintenance_autonomy_dreaming() -> (
+    None
+):
     scope = CompanionScope("u", "a", "c")
     with (
         patch.object(

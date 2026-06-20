@@ -6,7 +6,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.models.memory import FestivalMemoryMetadata as RealFestivalMemoryMetadata
+from app.models.memory import (
+    FestivalMemoryMetadata as RealFestivalMemoryMetadata,
+)
 
 
 def _build_festival_metadata(festival_name: str, festival_date: date) -> dict:
@@ -68,14 +70,19 @@ def _load_festival_memory_service_module():
     fake_llm_config_module.LLMConfig = _LLMConfig
 
     fake_core_config_module = types.ModuleType("app.core.config")
-    fake_core_config_module.global_config_loaded_from_config_yaml = types.SimpleNamespace(
-        database=types.SimpleNamespace(
-            url="postgresql://primary-host:5432/inty", async_replica_url=None
-        ),
-        memory_extraction=types.SimpleNamespace(model=None),
+    fake_core_config_module.global_config_loaded_from_config_yaml = (
+        types.SimpleNamespace(
+            database=types.SimpleNamespace(
+                url="postgresql://primary-host:5432/inty",
+                async_replica_url=None,
+            ),
+            memory_extraction=types.SimpleNamespace(model=None),
+        )
     )
 
-    fake_prompt_cfg_module = types.ModuleType("app.core.agent.agent_prompt_configs")
+    fake_prompt_cfg_module = types.ModuleType(
+        "app.core.agent.agent_prompt_configs"
+    )
     fake_prompt_cfg_module.INTELLIMATE_AGENT_ID = "official-agent"
 
     fake_agent_model_module = types.ModuleType("app.models.agent")
@@ -101,7 +108,9 @@ def _load_festival_memory_service_module():
     fake_user_model_module = types.ModuleType("app.models.user")
     fake_user_model_module.User = type("User", (), {"nickname": object()})
 
-    fake_chat_history_module = types.ModuleType("app.services.chat_history_service")
+    fake_chat_history_module = types.ModuleType(
+        "app.services.chat_history_service"
+    )
     fake_chat_history_module.get_chat_history_connection = lambda: None
     fake_chat_history_module.get_chat_history_replica_connection = lambda: None
 
@@ -110,7 +119,9 @@ def _load_festival_memory_service_module():
 
     fake_memory_service_module = types.ModuleType("app.services.memory_service")
     fake_memory_service_module.MEMORY_TYPE_FESTIVAL = "festival"
-    fake_memory_service_module.build_festival_memory_metadata = _build_festival_metadata
+    fake_memory_service_module.build_festival_memory_metadata = (
+        _build_festival_metadata
+    )
     fake_memory_service_module.metadata_to_llm_config_output = (
         _metadata_to_llm_config_output
     )
@@ -132,19 +143,39 @@ def _load_festival_memory_service_module():
 
     sys.modules.pop("app.services.festival_memory_service", None)
     with pytest.MonkeyPatch.context() as mp:
-        mp.setitem(sys.modules, "app.api.types.llm_config", fake_llm_config_module)
+        mp.setitem(
+            sys.modules, "app.api.types.llm_config", fake_llm_config_module
+        )
         mp.setitem(sys.modules, "app.core.config", fake_core_config_module)
         mp.setitem(
-            sys.modules, "app.core.agent.agent_prompt_configs", fake_prompt_cfg_module
+            sys.modules,
+            "app.core.agent.agent_prompt_configs",
+            fake_prompt_cfg_module,
         )
         mp.setitem(sys.modules, "app.models.agent", fake_agent_model_module)
         mp.setitem(sys.modules, "app.models.memory", fake_memory_model_module)
         mp.setitem(sys.modules, "app.models.user", fake_user_model_module)
-        mp.setitem(sys.modules, "app.services.chat_history_service", fake_chat_history_module)
-        mp.setitem(sys.modules, "app.services.chat_service", fake_chat_service_module)
-        mp.setitem(sys.modules, "app.services.memory_service", fake_memory_service_module)
-        mp.setitem(sys.modules, "app.core.llms.openai_client", fake_openai_client_module)
-        mp.setitem(sys.modules, "app.utils.openrouter_memory", fake_openrouter_module)
+        mp.setitem(
+            sys.modules,
+            "app.services.chat_history_service",
+            fake_chat_history_module,
+        )
+        mp.setitem(
+            sys.modules, "app.services.chat_service", fake_chat_service_module
+        )
+        mp.setitem(
+            sys.modules,
+            "app.services.memory_service",
+            fake_memory_service_module,
+        )
+        mp.setitem(
+            sys.modules,
+            "app.core.llms.openai_client",
+            fake_openai_client_module,
+        )
+        mp.setitem(
+            sys.modules, "app.utils.openrouter_memory", fake_openrouter_module
+        )
         module = importlib.import_module("app.services.festival_memory_service")
     return module
 
@@ -244,7 +275,9 @@ async def test_extract_festival_to_dict_passes_llm_config_to_summarizer():
         summarizer_calls.append({"args": args, "kwargs": kwargs})
         return fake_memory
 
-    service.summarize_memory_from_messages_between_user_and_agent = _capture_summarize
+    service.summarize_memory_from_messages_between_user_and_agent = (
+        _capture_summarize
+    )
 
     out = await service.extract_festival_to_dict(
         user_id="u-3",

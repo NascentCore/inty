@@ -33,7 +33,9 @@ def test_add_and_next_due_task(tmp_path: Path) -> None:
     assert due.task_text == "remind me"
 
 
-def test_next_due_task_for_execution_picks_earliest_ready(tmp_path: Path) -> None:
+def test_next_due_task_for_execution_picks_earliest_ready(
+    tmp_path: Path,
+) -> None:
     store = _store(Path(str(tmp_path) + "-ndue"))
     t_later = add_schedule_task(
         store,
@@ -82,7 +84,9 @@ def test_next_due_task_for_execution_picks_earliest_ready(tmp_path: Path) -> Non
     assert len(ids) == 2
 
 
-def test_add_schedule_task_accepts_z_and_rejects_naive_time(tmp_path: Path) -> None:
+def test_add_schedule_task_accepts_z_and_rejects_naive_time(
+    tmp_path: Path,
+) -> None:
     store = _store(tmp_path)
 
     add_schedule_task(

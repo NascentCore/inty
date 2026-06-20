@@ -16,11 +16,17 @@ from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
 from app.db.session import AsyncSessionLocal
 from app.models.companion_bond import CompanionBond
-from app.services.agentic_channel.companion_bonds import deactivate_companion_bond
+from app.services.agentic_channel.companion_bonds import (
+    deactivate_companion_bond,
+)
 from app.models.user import User
-from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
+from app.services.agentic_channel.channel_runtime import (
+    clear_registries_for_tests,
+)
 from app.services.agentic_channel.presence import clear_presences_for_tests
-from app.services.agentic_channel.provision import provision_agent_for_channel_onboard
+from app.services.agentic_channel.provision import (
+    provision_agent_for_channel_onboard,
+)
 from backend.ops.telegram_demo import session_store
 
 
@@ -35,7 +41,9 @@ async def _cleanup_provision(user_id: str) -> None:
                 AgentChannelEndpoint.user_id == user_id
             )
         )
-        await db.execute(delete(CompanionBond).where(CompanionBond.user_id == user_id))
+        await db.execute(
+            delete(CompanionBond).where(CompanionBond.user_id == user_id)
+        )
         await db.execute(delete(Agent).where(Agent.creator_id == user_id))
         await db.execute(delete(User).where(User.id == user_id))
         await db.commit()
@@ -62,7 +70,9 @@ async def test_restore_loads_endpoints_into_memory() -> None:
         channel_user_id=channel_user_id,
     )
     session_store.clear_all_for_tests()
-    assert session_store.get_scope_for_telegram_address(telegram_chat_id) is None
+    assert (
+        session_store.get_scope_for_telegram_address(telegram_chat_id) is None
+    )
 
     api = TelegramBotApi(bot_token="restore-test")
     await session_store.restore_persisted_bindings(api=api)
@@ -92,6 +102,8 @@ async def test_restore_skips_inactive_companion_bond() -> None:
     api = TelegramBotApi(bot_token="restore-inactive-test")
     await session_store.restore_persisted_bindings(api=api)
 
-    assert session_store.get_scope_for_telegram_address(telegram_chat_id) is None
+    assert (
+        session_store.get_scope_for_telegram_address(telegram_chat_id) is None
+    )
 
     await _cleanup_provision(provision.scope.user_id)

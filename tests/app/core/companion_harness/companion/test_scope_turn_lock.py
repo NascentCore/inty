@@ -99,7 +99,9 @@ async def test_scope_turn_lock_serializes_concurrent_holders() -> None:
 
 
 @pytest.mark.asyncio
-async def test_assert_scope_turn_lock_held_by_current_task_requires_holder() -> None:
+async def test_assert_scope_turn_lock_held_by_current_task_requires_holder() -> (
+    None
+):
     scope = CompanionScope("user-f", "agent-f", "chat-f")
     with pytest.raises(ScopeTurnLockNotHeldError, match="is not held"):
         assert_scope_turn_lock_held_by_current_task(scope)

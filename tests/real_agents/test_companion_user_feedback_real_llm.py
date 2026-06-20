@@ -20,14 +20,18 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
 )
-from app.core.companion_harness.companion.message_format import openai_assistant_message_dict
+from app.core.companion_harness.companion.message_format import (
+    openai_assistant_message_dict,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tool_definitions import (
     CompanionToolName,
     openai_tools_for_names,
 )
-from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    execute_tool_call,
+)
 from app.core.companion_harness.tools.companion_user_feedback import (
     COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
     USER_FEEDBACK_JSONL_REL,
@@ -46,7 +50,9 @@ def _require_real_companion_harness_llm_test() -> None:
             "Set INTY_COMPANION_HARNESS_REAL_LLM_TEST=1 to run Companion Harness real LLM tests"
         )
     if not (os.getenv("OPENROUTER_API_KEY") or "").strip():
-        pytest.skip("OPENROUTER_API_KEY is required for Companion Harness real LLM tests")
+        pytest.skip(
+            "OPENROUTER_API_KEY is required for Companion Harness real LLM tests"
+        )
 
 
 @pytest.mark.noci
@@ -64,7 +70,9 @@ async def test_real_llm_calls_companion_record_user_feedback(tmp_path) -> None:
 
     cfg = CompanionLLMConfig(
         api_key=os.environ["OPENROUTER_API_KEY"].strip(),
-        api_base=os.getenv("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"),
+        api_base=os.getenv(
+            "OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"
+        ),
         default_model=resolve_chat_text_model(_OPENROUTER_MODEL),
         chat_model=resolve_chat_text_model(_OPENROUTER_MODEL),
         tool_model=resolve_chat_text_model(_OPENROUTER_MODEL),
@@ -108,7 +116,9 @@ async def test_real_llm_calls_companion_record_user_feedback(tmp_path) -> None:
             tool_choice="auto",
         )
 
-        async def _execute_tool(name: str, raw_arguments: str) -> tuple[str, str | None]:
+        async def _execute_tool(
+            name: str, raw_arguments: str
+        ) -> tuple[str, str | None]:
             nonlocal saw_feedback_tool
             if name == COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
                 saw_feedback_tool = True
@@ -136,9 +146,9 @@ async def test_real_llm_calls_companion_record_user_feedback(tmp_path) -> None:
     finally:
         companion_llm_runtime_event_bind_ctx.reset(token)
 
-    assert saw_feedback_tool, (
-        f"real LLM did not call {COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME}"
-    )
+    assert (
+        saw_feedback_tool
+    ), f"real LLM did not call {COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME}"
     feedback_raw = store.read_document_if_exists(USER_FEEDBACK_JSONL_REL)
     assert feedback_raw
     row = json.loads(feedback_raw.strip().split("\n")[0])

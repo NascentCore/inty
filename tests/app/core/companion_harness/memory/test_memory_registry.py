@@ -17,7 +17,9 @@ from tests.app.core.companion_harness.companion_memory_registry_dsn import (
 
 
 def test_get_memory_store_blank_dsn_raises() -> None:
-    with pytest.raises(ValueError, match="companion MemoryStore registry requires"):
+    with pytest.raises(
+        ValueError, match="companion MemoryStore registry requires"
+    ):
         get_memory_store(CompanionScope("u0", "a0", "c0"), dsn="")
 
 

@@ -22,7 +22,9 @@ class ScopeInnerTickState:
     _maintenance_tool_bg_idle: threading.Event | None = field(
         default=None, repr=False
     )
-    _autonomy_tool_bg_idle: threading.Event | None = field(default=None, repr=False)
+    _autonomy_tool_bg_idle: threading.Event | None = field(
+        default=None, repr=False
+    )
 
     def last_maintenance_inner_tick_monotonic(self) -> float | None:
         return self.maintenance_fired_monotonic

@@ -44,9 +44,7 @@ class CompanionTurnLangsmithSlice:
     channel_source: LangsmithChannelSource
 
     @classmethod
-    def from_runtime_context(
-        cls, runtime_context: TurnRuntimeContext
-    ) -> Self:
+    def from_runtime_context(cls, runtime_context: TurnRuntimeContext) -> Self:
         return cls.from_channel(
             runtime_context.channel,
             LangsmithChannelSource.EXPLICIT_TURN,
@@ -108,7 +106,9 @@ class CompanionTurnLangsmithSlice:
             extra_metadata=merged,
         )
 
-    def dreaming_consolidation_extra(self, *, model_role: str) -> dict[str, Any]:
+    def dreaming_consolidation_extra(
+        self, *, model_role: str
+    ) -> dict[str, Any]:
         base = dreaming_consolidation_langsmith_extra(model_role=model_role)
         meta = dict(base.get("metadata") or {})
         meta.update(self._channel_metadata())

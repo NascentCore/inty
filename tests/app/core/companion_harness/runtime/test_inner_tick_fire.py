@@ -19,7 +19,10 @@ def test_proactive_chat_remain_seconds_returns_non_negative() -> None:
         last_autonomy_line_count=None,
     )
     assert throttle.last_maintenance_line_count is None
-    assert proactive_chat_remain_seconds.__name__ == "proactive_chat_remain_seconds"
+    assert (
+        proactive_chat_remain_seconds.__name__
+        == "proactive_chat_remain_seconds"
+    )
     assert (
         maintenance_inner_tick_remain_seconds.__name__
         == "maintenance_inner_tick_remain_seconds"

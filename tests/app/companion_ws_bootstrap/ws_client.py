@@ -11,7 +11,9 @@ from urllib.parse import urlencode
 
 import websockets
 
-from tests.app.companion_ws_bootstrap.constants import WS_KEEPALIVE_PING_INTERVAL_SEC
+from tests.app.companion_ws_bootstrap.constants import (
+    WS_KEEPALIVE_PING_INTERVAL_SEC,
+)
 
 
 class BackendChatWsError(RuntimeError):
@@ -92,9 +94,16 @@ async def recv_first_chat_completion_frame(
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise ValueError(f"non-json ws frame (prefix): {raw[:400]!r}") from exc
+            raise ValueError(
+                f"non-json ws frame (prefix): {raw[:400]!r}"
+            ) from exc
         msg_type = data.get("type")
-        if msg_type in ("pong", "client_context_ack", "user_signed_on_ack", "user_signed_out_ack"):
+        if msg_type in (
+            "pong",
+            "client_context_ack",
+            "user_signed_on_ack",
+            "user_signed_out_ack",
+        ):
             continue
         if "code" in data:
             return data
@@ -116,7 +125,9 @@ def assert_implicit_sign_on_assistant_payload(
         ) from exc
     assert content.strip(), f"empty assistant content: {data!r}"
     aid = data.get("agent_id")
-    assert aid == agent_id, f"agent_id mismatch: expected {agent_id!r}, got {aid!r}"
+    assert (
+        aid == agent_id
+    ), f"agent_id mismatch: expected {agent_id!r}, got {aid!r}"
     if expected_context_mode is not None:
         exp = expected_context_mode.strip().lower()
         got = str(meta.get("context_mode") or "").strip().lower()

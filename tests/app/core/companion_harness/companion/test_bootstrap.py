@@ -42,7 +42,9 @@ def _store(root: Path):
     )
 
 
-def test_interactive_bootstrap_active_requires_flag_and_incomplete_meta() -> None:
+def test_interactive_bootstrap_active_requires_flag_and_incomplete_meta() -> (
+    None
+):
     assert not interactive_bootstrap_active(
         feature_enabled=False,
         meta=ContextMeta(workspace_bootstrap_user_interactive_completed=False),
@@ -57,12 +59,17 @@ def test_interactive_bootstrap_active_requires_flag_and_incomplete_meta() -> Non
     )
 
 
-def test_tool_companion_set_experience_profile_updates_context(tmp_path: Path) -> None:
+def test_tool_companion_set_experience_profile_updates_context(
+    tmp_path: Path,
+) -> None:
     root = tmp_path
     st = _store(root)
     st.write_document(
         "context.json",
-        json.dumps({"context_mode": "intimate", "user_id": "u"}, ensure_ascii=False) + "\n",
+        json.dumps(
+            {"context_mode": "intimate", "user_id": "u"}, ensure_ascii=False
+        )
+        + "\n",
     )
     ok = tool_companion_set_experience_profile(
         st,
@@ -87,7 +94,10 @@ def test_tool_companion_set_experience_profile_repairs_drifted_context(
         json.dumps(
             {
                 "context_mode": "roleplay",
-                "experience_directives": {"intent": "casual_chat", "tone": "warm"},
+                "experience_directives": {
+                    "intent": "casual_chat",
+                    "tone": "warm",
+                },
             },
             ensure_ascii=False,
         )
@@ -125,10 +135,14 @@ def test_execute_tool_call_dispatch_set_experience_profile_missing_note(
     )
     assert r.startswith("ERROR:")
     assert "note" in r
-    assert json.loads(st.read_document("context.json"))["context_mode"] == "public"
+    assert (
+        json.loads(st.read_document("context.json"))["context_mode"] == "public"
+    )
 
 
-def test_execute_tool_call_dispatch_set_experience_profile(tmp_path: Path) -> None:
+def test_execute_tool_call_dispatch_set_experience_profile(
+    tmp_path: Path,
+) -> None:
     root = tmp_path
     st = _store(root)
     st.write_document(
@@ -148,12 +162,17 @@ def test_execute_tool_call_dispatch_set_experience_profile(tmp_path: Path) -> No
         )
     )
     assert r.startswith("OK ")
-    assert json.loads(st.read_document("context.json"))["context_mode"] == "emotional_companion"
+    assert (
+        json.loads(st.read_document("context.json"))["context_mode"]
+        == "emotional_companion"
+    )
     data = json.loads(st.read_document("context.json"))
     assert data["experience_directives"]["intent"] == "emotional_support"
 
 
-def test_tool_companion_set_experience_profile_sets_tone(tmp_path: Path) -> None:
+def test_tool_companion_set_experience_profile_sets_tone(
+    tmp_path: Path,
+) -> None:
     st = _store(tmp_path)
     st.write_document(
         "context.json",
@@ -174,7 +193,9 @@ def test_tool_companion_set_experience_profile_sets_tone(tmp_path: Path) -> None
     assert data["context_mode"] == "emotional_companion"
 
 
-def test_execute_tool_call_dispatch_set_experience_profile_tone(tmp_path: Path) -> None:
+def test_execute_tool_call_dispatch_set_experience_profile_tone(
+    tmp_path: Path,
+) -> None:
     st = _store(tmp_path)
     st.write_document(
         "context.json",
@@ -298,7 +319,9 @@ def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
         "chat_id": "c1",
         "workspace_bootstrap_user_interactive_completed": False,
     }
-    st.write_document("context.json", json.dumps(ctx, ensure_ascii=False) + "\n")
+    st.write_document(
+        "context.json", json.dumps(ctx, ensure_ascii=False) + "\n"
+    )
     out = tool_companion_bootstrap_user_interactive_complete(st, "done")
     assert out.startswith("OK ")
     data = json.loads(st.read_document("context.json"))
@@ -350,7 +373,10 @@ def test_execute_tool_call_dispatch_set_experience_profile_rejects_invalid_inten
         )
     )
     assert r.startswith("ERROR:")
-    assert json.loads(st.read_document("context.json"))["context_mode"] == "intimate"
+    assert (
+        json.loads(st.read_document("context.json"))["context_mode"]
+        == "intimate"
+    )
 
 
 def test_execute_tool_call_dispatch_write_and_complete(tmp_path: Path) -> None:
@@ -392,9 +418,12 @@ def test_execute_tool_call_dispatch_write_and_complete(tmp_path: Path) -> None:
         )
     )
     assert r2.startswith("OK ")
-    assert json.loads(st.read_document("context.json"))[
-        "workspace_bootstrap_user_interactive_completed"
-    ] is True
+    assert (
+        json.loads(st.read_document("context.json"))[
+            "workspace_bootstrap_user_interactive_completed"
+        ]
+        is True
+    )
 
 
 def test_memory_store_write_soul_allowed_after_interactive_bootstrap_complete(
@@ -418,7 +447,9 @@ def test_memory_store_write_soul_allowed_after_interactive_bootstrap_complete(
     assert st.read_document("SOUL.md") == "updated via store"
 
 
-def test_bootstrap_tool_schema_write_description_names_bootstrap_paths_only() -> None:
+def test_bootstrap_tool_schema_write_description_names_bootstrap_paths_only() -> (
+    None
+):
     bootstrap_csv = ", ".join(BOOTSTRAP_WRITABLE_REL_PATHS)
     write_desc = REPL_DESCRIPTION_OVERRIDES_BOOTSTRAP[
         CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT
@@ -448,6 +479,8 @@ def test_bootstrap_track_openai_tools_match_manifest() -> None:
         build_openai_bootstrap_track_tools,
     )
 
-    names = {t["function"]["name"] for t in build_openai_bootstrap_track_tools()}
+    names = {
+        t["function"]["name"] for t in build_openai_bootstrap_track_tools()
+    }
     expected = {n.value for n in BOOTSTRAP_TRACK_TOOL_NAMES}
     assert names == expected

@@ -24,4 +24,6 @@ def test_mixed_id_token_with_email_only_rejected():
         GoogleAuthRequest.model_validate(
             {"id_token": "x", "email": "a@example.com"},
         )
-    assert any(e.get("type") == "incompatible_auth" for e in exc_info.value.errors())
+    assert any(
+        e.get("type") == "incompatible_auth" for e in exc_info.value.errors()
+    )

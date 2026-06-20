@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 import requests
 
-
 BASE_URL = "http://localhost:8000"
 TIMEOUT = 15
 
@@ -31,11 +30,15 @@ def test_android_app_requests_flow():
 
     # 2) 检查版本（使用 header 传参）
     headers = session.headers.copy()
-    headers.update({
-        "appVersionCode": "100",
-        "appVersionName": "1.0.0",
-    })
-    r = session.post(f"{BASE_URL}/api/v1/version/check", headers=headers, timeout=TIMEOUT)
+    headers.update(
+        {
+            "appVersionCode": "100",
+            "appVersionName": "1.0.0",
+        }
+    )
+    r = session.post(
+        f"{BASE_URL}/api/v1/version/check", headers=headers, timeout=TIMEOUT
+    )
     assert r.status_code == 200
 
     # 3) 获取订阅计划
@@ -50,7 +53,9 @@ def test_android_app_requests_flow():
         "sort_seed": uuid.uuid4().hex[:8],
     }
     r = session.get(
-        f"{BASE_URL}/api/v1/ai/agents/recommend", params=recommend_params, timeout=TIMEOUT
+        f"{BASE_URL}/api/v1/ai/agents/recommend",
+        params=recommend_params,
+        timeout=TIMEOUT,
     )
     assert r.status_code == 200
 
@@ -61,28 +66,37 @@ def test_android_app_requests_flow():
         "visibility": "PUBLIC",
     }
     r = session.post(
-        f"{BASE_URL}/api/v1/ai/agents", json=create_agent_payload, timeout=TIMEOUT
+        f"{BASE_URL}/api/v1/ai/agents",
+        json=create_agent_payload,
+        timeout=TIMEOUT,
     )
     assert r.status_code == 200
     agent_resp = r.json()
     assert agent_resp.get("data")
-    agent_id = agent_resp["data"].get("id") or agent_resp["data"].get("data", {}).get("id")
+    agent_id = agent_resp["data"].get("id") or agent_resp["data"].get(
+        "data", {}
+    ).get("id")
     assert agent_id
 
     try:
         # 6) 我的角色列表
         r = session.get(
-            f"{BASE_URL}/api/v1/ai/agents/me", params={"skip": 0, "limit": 10}, timeout=TIMEOUT
+            f"{BASE_URL}/api/v1/ai/agents/me",
+            params={"skip": 0, "limit": 10},
+            timeout=TIMEOUT,
         )
         assert r.status_code == 200
 
         # 7) 角色详情
-        r = session.get(f"{BASE_URL}/api/v1/ai/agents/{agent_id}", timeout=TIMEOUT)
+        r = session.get(
+            f"{BASE_URL}/api/v1/ai/agents/{agent_id}", timeout=TIMEOUT
+        )
         assert r.status_code == 200
 
         # 8) 获取聊天设置（按 agent）
         r = session.get(
-            f"{BASE_URL}/api/v1/chats/agents/{agent_id}/settings", timeout=TIMEOUT
+            f"{BASE_URL}/api/v1/chats/agents/{agent_id}/settings",
+            timeout=TIMEOUT,
         )
         assert r.status_code == 200
 
@@ -111,7 +125,9 @@ def test_android_app_requests_flow():
             "language": "en",
         }
         r = session.post(
-            f"{BASE_URL}/api/v1/chat/completions/{agent_id}", json=chat_payload, timeout=TIMEOUT
+            f"{BASE_URL}/api/v1/chat/completions/{agent_id}",
+            json=chat_payload,
+            timeout=TIMEOUT,
         )
         assert r.status_code in (200, 500)
         message_id = None
@@ -136,7 +152,11 @@ def test_android_app_requests_flow():
             assert r.status_code == 200
 
         # 13) 会话列表
-        r = session.get(f"{BASE_URL}/api/v1/chats/", params={"skip": 0, "limit": 10}, timeout=TIMEOUT)
+        r = session.get(
+            f"{BASE_URL}/api/v1/chats/",
+            params={"skip": 0, "limit": 10},
+            timeout=TIMEOUT,
+        )
         assert r.status_code == 200
 
         # 14) 上传图片（可能依赖 GCS 配置失败，允许业务失败但 HTTP 可达）
@@ -158,17 +178,23 @@ def test_android_app_requests_flow():
             "order_id": f"order-{uuid.uuid4().hex[:8]}",
         }
         r = session.post(
-            f"{BASE_URL}/api/v1/subscription/verify", json=verify_payload, timeout=TIMEOUT
+            f"{BASE_URL}/api/v1/subscription/verify",
+            json=verify_payload,
+            timeout=TIMEOUT,
         )
         assert r.status_code == 200
 
     finally:
         # 清理：删除创建的角色与测试账号
         try:
-            session.delete(f"{BASE_URL}/api/v1/ai/agents/{agent_id}", timeout=TIMEOUT)
+            session.delete(
+                f"{BASE_URL}/api/v1/ai/agents/{agent_id}", timeout=TIMEOUT
+            )
         except Exception:
             pass
         try:
-            session.post(f"{BASE_URL}/api/v1/users/delete-account", timeout=TIMEOUT)
+            session.post(
+                f"{BASE_URL}/api/v1/users/delete-account", timeout=TIMEOUT
+            )
         except Exception:
             pass

@@ -312,8 +312,6 @@ def tool_background_should_deliver_to_user(
     return generation_deliver or output_to_user
 
 
-
-
 @dataclass(frozen=True)
 class ToolOutputEvent:
     scope_registry_key: str

@@ -38,7 +38,9 @@ async def _delete_user(user_id: str) -> None:
 
 
 @pytest.mark.asyncio
-async def test_resolve_inner_tick_scope_coords_accepts_agent_scope_chat_id() -> None:
+async def test_resolve_inner_tick_scope_coords_accepts_agent_scope_chat_id() -> (
+    None
+):
     user = await _create_guest_user()
     agent_id = "agent-inner-tick-test"
     scope = AgentScope(user_id=user.id, agent_id=agent_id)
@@ -69,7 +71,9 @@ async def test_resolve_inner_tick_scope_coords_accepts_agent_scope_chat_id() -> 
 
 
 @pytest.mark.asyncio
-async def test_resolve_inner_tick_scope_coords_rejects_mismatched_agent_scope() -> None:
+async def test_resolve_inner_tick_scope_coords_rejects_mismatched_agent_scope() -> (
+    None
+):
     user = await _create_guest_user()
     coordinator = Coordinator.for_loop(asyncio.get_running_loop())
 

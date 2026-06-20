@@ -42,7 +42,9 @@ admin_user = None
 class DummyUserWithGender:
     """Minimal user-like object with gender for recommend_agents_paginated tests."""
 
-    def __init__(self, user_id: str, nickname: str, is_superuser: bool, gender=None):
+    def __init__(
+        self, user_id: str, nickname: str, is_superuser: bool, gender=None
+    ):
         self.id = user_id
         self.nickname = nickname
         self.is_superuser = is_superuser
@@ -92,9 +94,7 @@ async def db_session():
 @pytest.mark.asyncio
 async def test_crop_avatar_from_background():
     random_filename = f"frontal-{uuid.uuid4().hex}"
-    expected_avatar_url = (
-        f"https://storage.googleapis.com/yx-test/{random_filename}-cropped-avatar.png"
-    )
+    expected_avatar_url = f"https://storage.googleapis.com/yx-test/{random_filename}-cropped-avatar.png"
     bucket_name, path = get_bucket_and_path_from_gcs_url(expected_avatar_url)
     gcs_client = get_gcs_client()
     bucket = gcs_client.bucket(bucket_name)
@@ -104,9 +104,9 @@ async def test_crop_avatar_from_background():
     # 上传 tests/files/frontal.png
     with open("tests/files/frontal.png", "rb") as f:
         file_content = f.read()
-    gcs_client.bucket("yx-test").blob(f"{random_filename}.png").upload_from_string(
-        file_content
-    )
+    gcs_client.bucket("yx-test").blob(
+        f"{random_filename}.png"
+    ).upload_from_string(file_content)
 
     crop_avatar_result = await _crop_avatar_from_background(
         f"https://storage.cloud.google.com/yx-test/{random_filename}.png",
@@ -115,10 +115,14 @@ async def test_crop_avatar_from_background():
     gcs_cfg = global_config_loaded_from_config_yaml.gcs
     if gcs_cfg.use_fake_gcs:
         expected_file_uri = (
-            Path(gcs_cfg.fake_gcs_base_dir).resolve()
-            / "yx-test"
-            / f"{random_filename}-cropped-avatar.png"
-        ).resolve().as_uri()
+            (
+                Path(gcs_cfg.fake_gcs_base_dir).resolve()
+                / "yx-test"
+                / f"{random_filename}-cropped-avatar.png"
+            )
+            .resolve()
+            .as_uri()
+        )
         assert cropped_avatar_url == expected_file_uri
     else:
         assert cropped_avatar_url == expected_avatar_url
@@ -224,7 +228,8 @@ def test_process_agent_image_urls():
             "https://storage.googleapis.com/test-bucket/photo2.jpg",
         ]
         assert (
-            result["avatar"] == "https://storage.googleapis.com/test-bucket/avatar.jpg"
+            result["avatar"]
+            == "https://storage.googleapis.com/test-bucket/avatar.jpg"
         )
         assert (
             result["background"]
@@ -265,10 +270,13 @@ async def test_update_agent_increments_version(db_session, monkeypatch):
     monkeypatch.setattr(agent_service, "agent_manager", dummy_agent_manager)
 
     agent_update = AgentUpdate(name="Updated Name")
-    updated_agent = await agent_service.update_agent(db_session, agent, agent_update)
+    updated_agent = await agent_service.update_agent(
+        db_session, agent, agent_update
+    )
 
     assert updated_agent.version == 2
     assert dummy_cache.invalidated == [agent.id]
+
 
 # TODO: See how to test the ordering of the agents returned from get_balanced_score_based_agents.
 # The ordering is deterministic but determined by random seed.
@@ -304,7 +312,9 @@ async def test_get_balanced_score_based_agents_pagination(db_session):
 
 
 @pytest.mark.asyncio
-async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session):
+async def test_get_balanced_score_based_agents_stable_with_sort_seed(
+    db_session,
+):
     """
     Test that the agents returned from get_balanced_score_based_agents are stable with the same sort seed.
     """
@@ -324,7 +334,9 @@ async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session)
     await db_session.commit()
 
     # Get the agents with balanced score based on the score
-    agents = await get_balanced_score_based_agents(db_session, 1, 10, "test-seed")
+    agents = await get_balanced_score_based_agents(
+        db_session, 1, 10, "test-seed"
+    )
     first_query_results = [agent.id for agent in agents]
 
     second_query_agents = await get_balanced_score_based_agents(
@@ -347,7 +359,9 @@ async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session)
 
 
 @pytest.mark.asyncio
-async def test_get_balanced_score_based_agents_female_user_opposite_gender_first(db_session):
+async def test_get_balanced_score_based_agents_female_user_opposite_gender_first(
+    db_session,
+):
     """
     女性用户时，所有男性角色排在任意女性/OTHER 之前（确定性）。
     """
@@ -392,7 +406,9 @@ async def test_get_balanced_score_based_agents_female_user_opposite_gender_first
 
 
 @pytest.mark.asyncio
-async def test_get_recommended_agents_paginated_excludes_private_always(db_session):
+async def test_get_recommended_agents_paginated_excludes_private_always(
+    db_session,
+):
     """推荐列表始终只返回公开角色，超级用户也不会看到私有角色。"""
     test_id = str(uuid.uuid4())[:6]
 
@@ -489,7 +505,9 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_filters
     )
     assert all(a.gender == Gender.FEMALE for a in page_male.list)
 
-    female_user = DummyUserWithGender("u-female", "female", False, Gender.FEMALE)
+    female_user = DummyUserWithGender(
+        "u-female", "female", False, Gender.FEMALE
+    )
     page_female = await agent_service.get_recommended_agents_paginated(
         db_session,
         current_user=female_user,  # type: ignore[arg-type]
@@ -532,7 +550,9 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_other_n
         sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
     )
     assert desc_page.total == with_gender_other_page.total
-    assert {a.id for a in desc_page.list} == {a.id for a in with_gender_other_page.list}
+    assert {a.id for a in desc_page.list} == {
+        a.id for a in with_gender_other_page.list
+    }
 
     with_gender_none_page = await agent_service.get_recommended_agents_paginated(
         db_session,
@@ -545,7 +565,9 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_other_n
 
 
 @pytest.mark.asyncio
-async def test_get_user_agents_returns_created_agents_ordered_by_created_at(db_session):
+async def test_get_user_agents_returns_created_agents_ordered_by_created_at(
+    db_session,
+):
     """
     单元测试 get_user_agents：使用本地数据库（config 见 devops/config.yaml.test），
     验证返回当前用户创建的、未删除的 agents，按 created_at 降序，并设置 agent.user。
@@ -596,14 +618,21 @@ async def test_get_user_agents_returns_created_agents_ordered_by_created_at(db_s
     ids = [a.id for a in agents]
     assert agent_a.id in ids and agent_b.id in ids
     # 按 created_at 降序，后创建的在前（agent_b 后 add，通常后 commit 故 created_at 可能更晚）
-    assert ids[0] == agent_b.id and ids[1] == agent_a.id or ids[0] == agent_a.id and ids[1] == agent_b.id
+    assert (
+        ids[0] == agent_b.id
+        and ids[1] == agent_a.id
+        or ids[0] == agent_a.id
+        and ids[1] == agent_b.id
+    )
     for agent in agents:
         assert agent.user == "TestCreator"
 
     # 无 nickname 时应为 "you"
     db_user.nickname = None
     current_user_no_nick = UserSchema.model_validate(db_user)
-    agents2 = await get_user_agents(db_session, current_user_no_nick, skip=0, limit=100)
+    agents2 = await get_user_agents(
+        db_session, current_user_no_nick, skip=0, limit=100
+    )
     for agent in agents2:
         assert agent.user == "you"
 
@@ -673,7 +702,9 @@ async def test_get_user_agents_validation_limit_invalid():
 
 
 @pytest.mark.asyncio
-async def test_get_agent_follow_fields_are_defaults_without_follow_table(db_session):
+async def test_get_agent_follow_fields_are_defaults_without_follow_table(
+    db_session,
+):
     """get_agent 不再依赖 agent_followers，关注字段返回默认值。"""
     creator = User(
         id=str(uuid.uuid4()),
@@ -748,7 +779,9 @@ async def test_get_user_followed_agents_returns_410():
 
 
 @pytest.mark.asyncio
-async def test_create_agent_enqueues_opening_voice_generation(db_session, monkeypatch):
+async def test_create_agent_enqueues_opening_voice_generation(
+    db_session, monkeypatch
+):
     """创建 Agent 时只投递后台任务，不在当前调用中等待语音生成。"""
     user = User(
         id=str(uuid.uuid4()),
@@ -774,7 +807,9 @@ async def test_create_agent_enqueues_opening_voice_generation(db_session, monkey
         "_enqueue_agent_opening_voice_generation",
         fake_enqueue,
     )
-    monkeypatch.setattr(agent_service, "generate_agent_opening_voice", generate_mock)
+    monkeypatch.setattr(
+        agent_service, "generate_agent_opening_voice", generate_mock
+    )
 
     agent_in = AgentCreate(
         name="Create Async Voice Agent",
@@ -792,7 +827,9 @@ async def test_create_agent_enqueues_opening_voice_generation(db_session, monkey
 
 
 @pytest.mark.asyncio
-async def test_update_agent_enqueues_opening_voice_generation(db_session, monkeypatch):
+async def test_update_agent_enqueues_opening_voice_generation(
+    db_session, monkeypatch
+):
     """更新 opening 时只投递后台任务，不在当前调用中等待语音生成。"""
     user = User(
         id=str(uuid.uuid4()),
@@ -838,7 +875,9 @@ async def test_update_agent_enqueues_opening_voice_generation(db_session, monkey
         "_enqueue_agent_opening_voice_generation",
         fake_enqueue,
     )
-    monkeypatch.setattr(agent_service, "generate_agent_opening_voice", generate_mock)
+    monkeypatch.setattr(
+        agent_service, "generate_agent_opening_voice", generate_mock
+    )
 
     updated_agent = await agent_service.update_agent(
         db_session,

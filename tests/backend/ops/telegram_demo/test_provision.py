@@ -92,7 +92,9 @@ async def test_provision_existing_agent_binds_bonded_scope() -> None:
     assert first.is_new_user is False
     assert first.scope == creator_scope
     async with AsyncSessionLocal() as db:
-        row = await db.execute(select(User).where(User.id == first.scope.user_id))
+        row = await db.execute(
+            select(User).where(User.id == first.scope.user_id)
+        )
         user = row.scalar_one()
         assert user.meta_data == {"test": True}
     await _cleanup_user(first.scope.user_id)
@@ -136,7 +138,9 @@ async def test_telegram_onboard_leaves_readable_id_unset() -> None:
             select(Agent).where(Agent.id == result.scope.agent_id)
         )
         agent = agent_row.scalar_one()
-        assert_companion_guest_identity_has_no_readable_id(user=user, agent=agent)
+        assert_companion_guest_identity_has_no_readable_id(
+            user=user, agent=agent
+        )
     await _cleanup_user(result.scope.user_id)
 
 

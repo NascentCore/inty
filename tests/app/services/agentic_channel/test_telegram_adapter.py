@@ -8,7 +8,9 @@ from urllib.error import HTTPError
 
 import pytest
 
-from app.services.agentic_channel.adapters.telegram import TelegramChannelAdapter
+from app.services.agentic_channel.adapters.telegram import (
+    TelegramChannelAdapter,
+)
 from app.services.agentic_companion.downlink import Downlink, DownlinkKind
 
 
@@ -62,7 +64,9 @@ async def test_telegram_adapter_deliver_proactive() -> None:
 
 
 @pytest.mark.asyncio
-async def test_telegram_adapter_strips_leading_transcript_timestamp_prefixes() -> None:
+async def test_telegram_adapter_strips_leading_transcript_timestamp_prefixes() -> (
+    None
+):
     from app.external_services.telegram_bot_api import TelegramBotApi
 
     sent: list[str] = []

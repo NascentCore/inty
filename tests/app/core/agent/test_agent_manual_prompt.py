@@ -1,8 +1,14 @@
 # CREATED_BY_AGENT
 from app.core.agent import agent as agent_module
 from app.core.agent import prompts
-from app.core.agent.agent import Agent, INTELLIMATE_AGENT_ID, INTELLIMATE_AGENT_NAME
-from app.core.user_time_context_prompt import suffix_user_text_with_time_context_lines
+from app.core.agent.agent import (
+    Agent,
+    INTELLIMATE_AGENT_ID,
+    INTELLIMATE_AGENT_NAME,
+)
+from app.core.user_time_context_prompt import (
+    suffix_user_text_with_time_context_lines,
+)
 from langchain_core.messages import SystemMessage
 
 
@@ -45,7 +51,7 @@ CHANGE_LOGS_PROMPT_CONTENT = "\n".join(
         "> CREATED_BY_AGENT",
         "",
         "> This content is injected into the Inty official assistant system message.",
-        "> Lines starting with \">\" will be removed during injection.",
+        '> Lines starting with ">" will be removed during injection.',
         "",
         "CHANGE_LOG_LINE_1",
         "CHANGE_LOG_LINE_2",
@@ -62,14 +68,20 @@ OFFICIAL_RENAME_MESSAGE_LINE = (
 def _patch_manual_and_change_logs(
     monkeypatch, manual_path, change_logs_path
 ) -> None:
-    monkeypatch.setattr(agent_module, "INTELLIMATE_USER_MANUAL_PATH", manual_path)
-    monkeypatch.setattr(agent_module, "INTELLIMATE_CHANGE_LOGS_PATH", change_logs_path)
+    monkeypatch.setattr(
+        agent_module, "INTELLIMATE_USER_MANUAL_PATH", manual_path
+    )
+    monkeypatch.setattr(
+        agent_module, "INTELLIMATE_CHANGE_LOGS_PATH", change_logs_path
+    )
     agent_module._load_intellimate_user_manual.cache_clear()
     agent_module._load_intellimate_change_logs.cache_clear()
 
 
 def test_intellimate_change_logs_default_path_points_to_android_app_docs():
-    expected_path = agent_module.REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
+    expected_path = (
+        agent_module.REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
+    )
     assert agent_module.INTELLIMATE_CHANGE_LOGS_PATH == expected_path
 
 
@@ -88,13 +100,20 @@ def test_intellimate_official_does_not_inject_change_logs_by_default(
         personality="Warm personality.",
     )
     contents = _get_contents(agent.build_system_messages("", None))
-    rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
+    rename_message = _find_message_by_prefix(
+        contents, OFFICIAL_RENAME_MESSAGE_PREFIX
+    )
 
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
-    assert not any(content.startswith("##IntelliMate Change Logs\n") for content in contents)
+    assert not any(
+        content.startswith("##IntelliMate Change Logs\n")
+        for content in contents
+    )
 
 
-def test_intellimate_official_adds_manual_tool_usage_guidance(tmp_path, monkeypatch):
+def test_intellimate_official_adds_manual_tool_usage_guidance(
+    tmp_path, monkeypatch
+):
     manual_path = tmp_path / "INTELLIMATE.md"
     manual_path.write_text(MANUAL_PROMPT_CONTENT, encoding="utf-8")
     change_logs_path = tmp_path / "CHANGE_LOGS.md"
@@ -108,16 +127,24 @@ def test_intellimate_official_adds_manual_tool_usage_guidance(tmp_path, monkeypa
     )
     contents = _get_contents(agent.build_system_messages("", None))
 
-    tool_usage_message = _find_message_by_prefix(contents, "##Official Assistant Tool Usage\n")
-    rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
+    tool_usage_message = _find_message_by_prefix(
+        contents, "##Official Assistant Tool Usage\n"
+    )
+    rename_message = _find_message_by_prefix(
+        contents, OFFICIAL_RENAME_MESSAGE_PREFIX
+    )
     assert tool_usage_message.startswith("##Official Assistant Tool Usage\n")
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
     assert "read_user_manual" in tool_usage_message
     assert "read_change_logs" in tool_usage_message
-    assert not any("##IntelliMate User Manual\n" in content for content in contents)
+    assert not any(
+        "##IntelliMate User Manual\n" in content for content in contents
+    )
 
 
-def test_intellimate_official_does_not_inject_change_logs_prompt(tmp_path, monkeypatch):
+def test_intellimate_official_does_not_inject_change_logs_prompt(
+    tmp_path, monkeypatch
+):
     manual_path = tmp_path / "INTELLIMATE.md"
     manual_path.write_text(MINIMAL_MANUAL_CONTENT, encoding="utf-8")
     change_logs_path = tmp_path / "CHANGE_LOGS.md"
@@ -131,12 +158,19 @@ def test_intellimate_official_does_not_inject_change_logs_prompt(tmp_path, monke
     )
     contents = _get_contents(agent.build_system_messages("", None))
 
-    tool_usage_message = _find_message_by_prefix(contents, "##Official Assistant Tool Usage\n")
-    rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
+    tool_usage_message = _find_message_by_prefix(
+        contents, "##Official Assistant Tool Usage\n"
+    )
+    rename_message = _find_message_by_prefix(
+        contents, OFFICIAL_RENAME_MESSAGE_PREFIX
+    )
     assert tool_usage_message.startswith("##Official Assistant Tool Usage\n")
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
     assert "read_change_logs" in tool_usage_message
-    assert not any(content.startswith("##IntelliMate Change Logs\n") for content in contents)
+    assert not any(
+        content.startswith("##IntelliMate Change Logs\n")
+        for content in contents
+    )
 
 
 def test_build_system_messages_for_intellimate_official_assistant_happy_case(
@@ -158,12 +192,19 @@ def test_build_system_messages_for_intellimate_official_assistant_happy_case(
         agent.build_system_messages_for_intellimate_official_assistant("", None)
     )
 
-    tool_usage_message = _find_message_by_prefix(contents, "##Official Assistant Tool Usage\n")
-    rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
+    tool_usage_message = _find_message_by_prefix(
+        contents, "##Official Assistant Tool Usage\n"
+    )
+    rename_message = _find_message_by_prefix(
+        contents, OFFICIAL_RENAME_MESSAGE_PREFIX
+    )
     assert tool_usage_message.startswith("##Official Assistant Tool Usage\n")
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
     assert "read_change_logs" in tool_usage_message
-    assert not any(content.startswith("##IntelliMate Change Logs\n") for content in contents)
+    assert not any(
+        content.startswith("##IntelliMate Change Logs\n")
+        for content in contents
+    )
 
     assert any("Warm personality." in c for c in contents)
 
@@ -179,14 +220,20 @@ def test_non_intellimate_official_does_not_inject_manual_prompt(monkeypatch):
     )
     contents = _get_contents(agent.build_system_messages("", None))
 
-    assert not any("##IntelliMate User Manual\n" in content for content in contents)
-    assert not any("##IntelliMate Change Logs\n" in content for content in contents)
+    assert not any(
+        "##IntelliMate User Manual\n" in content for content in contents
+    )
+    assert not any(
+        "##IntelliMate Change Logs\n" in content for content in contents
+    )
     assert not any(
         OFFICIAL_RENAME_MESSAGE_PREFIX in content for content in contents
     )
 
 
-def test_intellimate_official_has_empty_main_and_mode_prompts(tmp_path, monkeypatch):
+def test_intellimate_official_has_empty_main_and_mode_prompts(
+    tmp_path, monkeypatch
+):
     """IntelliMate 的 main_prompt 与 mode_prompt 应为空，不注入默认角色扮演提示词。"""
     manual_path = tmp_path / "INTELLIMATE.md"
     manual_path.write_text(MINIMAL_MANUAL_CONTENT, encoding="utf-8")
@@ -230,7 +277,9 @@ def test_build_system_messages_excludes_user_time_from_system(monkeypatch):
         "utc_offset_minutes": 480,
     }
     contents = _get_contents(
-        agent.build_system_messages("", None, user_time_context=user_time_context)
+        agent.build_system_messages(
+            "", None, user_time_context=user_time_context
+        )
     )
     combined = "\n".join(contents)
 
@@ -250,7 +299,9 @@ def test_openai_tail_user_message_includes_time_suffix(monkeypatch):
         "timezone": "Asia/Shanghai",
         "utc_offset_minutes": 480,
     }
-    expected = suffix_user_text_with_time_context_lines("hello", ctx, enabled=True)
+    expected = suffix_user_text_with_time_context_lines(
+        "hello", ctx, enabled=True
+    )
     msgs = [
         SystemMessage(content="sys"),
         HumanMessage(content="hello"),
@@ -280,14 +331,18 @@ def test_build_system_messages_can_omit_output_format_prompt():
         agent.build_system_messages("", None, include_output_format_prompt=True)
     )
     without_output_format = _get_contents(
-        agent.build_system_messages("", None, include_output_format_prompt=False)
+        agent.build_system_messages(
+            "", None, include_output_format_prompt=False
+        )
     )
 
-    output_format_marker = (
-        "All actions, expressions, psychology or scene descriptions must be enclosed in brackets ()."
+    output_format_marker = "All actions, expressions, psychology or scene descriptions must be enclosed in brackets ()."
+    assert any(
+        output_format_marker in content for content in with_output_format
     )
-    assert any(output_format_marker in content for content in with_output_format)
-    assert not any(output_format_marker in content for content in without_output_format)
+    assert not any(
+        output_format_marker in content for content in without_output_format
+    )
     assert any("## Purity Mode" in content for content in without_output_format)
 
 
@@ -306,9 +361,13 @@ def test_build_system_messages_for_chat_uses_official_builder(monkeypatch):
     )
 
     def _unexpected_default_builder(*args, **kwargs):
-        raise AssertionError("default builder should not be used for official assistant")
+        raise AssertionError(
+            "default builder should not be used for official assistant"
+        )
 
-    monkeypatch.setattr(agent, "build_system_messages", _unexpected_default_builder)
+    monkeypatch.setattr(
+        agent, "build_system_messages", _unexpected_default_builder
+    )
 
     result = agent._build_system_messages_for_chat(
         user_profile="Name: Alice",
@@ -334,12 +393,17 @@ def test_build_system_messages_for_chat_uses_default_builder_for_non_official(
         agent,
         "build_system_messages_for_intellimate_official_assistant",
         lambda *args, **kwargs: (_ for _ in ()).throw(
-            AssertionError("official builder should not be used for non-official agent")
+            AssertionError(
+                "official builder should not be used for non-official agent"
+            )
         ),
     )
 
     def _default_builder(
-        user_profile, chat_settings, user_time_context, include_output_format_prompt
+        user_profile,
+        chat_settings,
+        user_time_context,
+        include_output_format_prompt,
     ):
         captured["include_output_format_prompt"] = include_output_format_prompt
         return default_messages
@@ -357,8 +421,14 @@ def test_build_system_messages_for_chat_uses_default_builder_for_non_official(
 
 
 def test_official_tool_usage_prompt_guides_feature_question_answers():
-    assert "step-by-step" in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
-    assert "prerequisites" in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
+    assert (
+        "step-by-step"
+        in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
+    )
+    assert (
+        "prerequisites"
+        in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
+    )
     assert (
         "ask one concise clarifying question"
         in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE

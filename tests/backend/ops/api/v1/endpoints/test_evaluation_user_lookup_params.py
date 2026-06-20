@@ -73,11 +73,15 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
                 "created_at": None,
             }
 
-        async def get_user_daily_messages(self, user_id: str, start_date=None, end_date=None):
+        async def get_user_daily_messages(
+            self, user_id: str, start_date=None, end_date=None
+        ):
             return []
 
         async def get_daily_messages_for_all_users(self, start_date, end_date):
-            calls.append(("all_users", f"{start_date.date()}~{end_date.date()}"))
+            calls.append(
+                ("all_users", f"{start_date.date()}~{end_date.date()}")
+            )
             return []
 
         async def get_user_today_stats(self, user_id: str):
@@ -96,8 +100,16 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
                 }
             ]
 
-        async def get_session_messages(self, chat_id: str, page: int = 1, size: int = 50):
-            return {"messages": [], "total": 0, "page": page, "size": size, "has_more": False}
+        async def get_session_messages(
+            self, chat_id: str, page: int = 1, size: int = 50
+        ):
+            return {
+                "messages": [],
+                "total": 0,
+                "page": page,
+                "size": size,
+                "has_more": False,
+            }
 
         async def get_paginated_user_agent_conversations_detail(
             self,
@@ -122,7 +134,11 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
             calls.append(
                 (
                     "user_agent_activity_range_end",
-                    activity_end_date.date().isoformat() if activity_end_date else None,
+                    (
+                        activity_end_date.date().isoformat()
+                        if activity_end_date
+                        else None
+                    ),
                 )
             )
             return {
@@ -181,7 +197,9 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
         app.dependency_overrides.clear()
 
 
-def test_user_daily_messages_supports_lookup_by_user_id(evaluation_app: FastAPI):
+def test_user_daily_messages_supports_lookup_by_user_id(
+    evaluation_app: FastAPI,
+):
     with TestClient(evaluation_app) as client:
         resp = client.get(
             "/api/v1/evaluation/user-analytics/user-daily-messages",
@@ -220,14 +238,18 @@ def test_user_daily_messages_supports_date_range_without_identifier(
     body = resp.json()
     assert body["user_id"] == "ALL_USERS"
     assert body["auth_type"] == "ALL_USERS"
-    assert evaluation_app.state._calls == [("all_users", "2026-03-01~2026-03-09")]
+    assert evaluation_app.state._calls == [
+        ("all_users", "2026-03-01~2026-03-09")
+    ]
 
 
 def test_user_daily_messages_requires_date_range_when_identifier_missing(
     evaluation_app: FastAPI,
 ):
     with TestClient(evaluation_app) as client:
-        missing = client.get("/api/v1/evaluation/user-analytics/user-daily-messages")
+        missing = client.get(
+            "/api/v1/evaluation/user-analytics/user-daily-messages"
+        )
 
     assert missing.status_code == 400
 
@@ -244,13 +266,17 @@ def test_user_lookup_requires_exactly_one_identifier(
 ):
     with TestClient(evaluation_app) as client:
         missing = client.get(endpoint)
-        both = client.get(endpoint, params={"email": "a@example.com", "user_id": "u1"})
+        both = client.get(
+            endpoint, params={"email": "a@example.com", "user_id": "u1"}
+        )
 
     assert missing.status_code == 400
     assert both.status_code == 400
 
 
-def test_user_sessions_response_includes_agent_avatar_url(evaluation_app: FastAPI):
+def test_user_sessions_response_includes_agent_avatar_url(
+    evaluation_app: FastAPI,
+):
     with TestClient(evaluation_app) as client:
         resp = client.get(
             "/api/v1/evaluation/user-analytics/user-sessions",
@@ -294,7 +320,10 @@ def test_user_agent_conversations_detail_defaults_to_page_size_10(
     assert body["items"][0]["user_id"] == "user-1"
     assert body["items"][0]["agent_id"] == "agent-1"
     assert ("user_agent_page", "1:10") in evaluation_app.state._calls
-    assert ("user_agent_activity_range", "2026-03-01") in evaluation_app.state._calls
+    assert (
+        "user_agent_activity_range",
+        "2026-03-01",
+    ) in evaluation_app.state._calls
     assert (
         "user_agent_activity_range_end",
         "2026-03-09",

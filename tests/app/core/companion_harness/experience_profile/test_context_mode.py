@@ -11,7 +11,9 @@ from app.core.companion_harness.experience_profile.context_mode import (
 
 
 def _assert_clause_heading(out: str) -> None:
-    assert out.startswith(f"{EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING}\n\n"), out[:80]
+    assert out.startswith(
+        f"{EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING}\n\n"
+    ), out[:80]
 
 
 def test_experience_profile_system_clause_intimate_heading_and_body() -> None:
@@ -32,7 +34,9 @@ def test_experience_profile_system_clause_emotional_companion() -> None:
     assert "情感陪伴（emotional_companion）" in out
 
 
-def test_experience_profile_system_clause_unspecific_uses_emotional_companion_body() -> None:
+def test_experience_profile_system_clause_unspecific_uses_emotional_companion_body() -> (
+    None
+):
     out = experience_profile_system_clause("unspecific")
     _assert_clause_heading(out)
     assert "情感陪伴（emotional_companion）" in out
@@ -56,7 +60,9 @@ def test_experience_profile_system_clause_public() -> None:
     assert "public。不注入私人记忆层" in out
 
 
-def test_experience_profile_system_clause_bootstrap_is_unknown_profile() -> None:
+def test_experience_profile_system_clause_bootstrap_is_unknown_profile() -> (
+    None
+):
     out = experience_profile_system_clause("bootstrap")
     _assert_clause_heading(out)
     assert "bootstrap。不注入私人记忆层" in out
@@ -82,6 +88,8 @@ def test_experience_profile_injects_private_memory_covers_known_ids() -> None:
     assert experience_profile_injects_private_memory("intimate") is True
     assert experience_profile_injects_private_memory("remote_lover") is True
     assert experience_profile_injects_private_memory("unspecific") is True
-    assert experience_profile_injects_private_memory("emotional_companion") is True
+    assert (
+        experience_profile_injects_private_memory("emotional_companion") is True
+    )
     assert experience_profile_injects_private_memory("bootstrap") is False
     assert experience_profile_injects_private_memory("public") is False

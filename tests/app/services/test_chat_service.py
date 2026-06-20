@@ -21,7 +21,10 @@ from app.models.user import User
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
-from app.schemas.chat import ChatImageGenerationResponse, ChatMusicGenerationResponse
+from app.schemas.chat import (
+    ChatImageGenerationResponse,
+    ChatMusicGenerationResponse,
+)
 from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.schemas.subscription import SubscriptionStatusResponse
 from app.services import chat_history_service, chat_service
@@ -53,9 +56,11 @@ def _make_mock_subscription_svc():
     mock_svc = AsyncMock()
     mock_svc.check_image_gen_limit.return_value = (True, 2, 10)
     mock_svc.check_music_gen_limit.return_value = (True, 1, 2)
-    mock_svc.get_user_subscription_status.return_value = SubscriptionStatusResponse(
-        is_subscribed=False,
-        subscription_status="free",
+    mock_svc.get_user_subscription_status.return_value = (
+        SubscriptionStatusResponse(
+            is_subscribed=False,
+            subscription_status="free",
+        )
     )
     mock_svc.record_usage.return_value = None
     return mock_svc
@@ -65,7 +70,9 @@ class TestChatService:
     """测试聊天服务"""
 
     @pytest.mark.asyncio
-    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image")
+    @patch(
+        "app.services.image_generation_service.image_generation_service.generate_chat_image"
+    )
     async def test_generate_chat_image_success(
         self,
         mock_generate_image: AsyncMock,
@@ -184,7 +191,9 @@ class TestChatService:
         # 验证调用
         # 验证限额检查
         mock_subscription_svc.check_image_gen_limit.assert_called_once()
-        check_limit_call_args = mock_subscription_svc.check_image_gen_limit.call_args
+        check_limit_call_args = (
+            mock_subscription_svc.check_image_gen_limit.call_args
+        )
         assert check_limit_call_args[0][0] == db_session
         called_user = check_limit_call_args[0][1]
         assert called_user.id == user_id
@@ -208,7 +217,10 @@ class TestChatService:
         assert record_call_args[0][2] == "image_generation"
         assert record_call_args[0][3] == 1
         assert record_call_args[1]["extra_data"]["agent_id"] == agent_id
-        assert record_call_args[1]["extra_data"]["message_content"] == ai_message_content[:100]
+        assert (
+            record_call_args[1]["extra_data"]["message_content"]
+            == ai_message_content[:100]
+        )
 
         # 清理测试数据（可选，因为测试数据库可能会自动清理）
         await db_session.delete(ai_message)
@@ -219,8 +231,13 @@ class TestChatService:
         await db_session.commit()
 
     @pytest.mark.asyncio
-    @patch("app.services.chat_service._record_chat_image_failure", new_callable=AsyncMock)
-    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image")
+    @patch(
+        "app.services.chat_service._record_chat_image_failure",
+        new_callable=AsyncMock,
+    )
+    @patch(
+        "app.services.image_generation_service.image_generation_service.generate_chat_image"
+    )
     async def test_generate_chat_image_prohibited_content_returns_biz_error(
         self,
         mock_generate_image: AsyncMock,
@@ -299,7 +316,10 @@ class TestChatService:
             result.error_code
             == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"]
         )
-        assert result.message == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"]
+        assert (
+            result.message
+            == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"]
+        )
 
         await db_session.delete(ai_message)
         await db_session.delete(chat)
@@ -308,8 +328,13 @@ class TestChatService:
         await db_session.commit()
 
     @pytest.mark.asyncio
-    @patch("app.services.chat_service._record_chat_image_failure", new_callable=AsyncMock)
-    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image")
+    @patch(
+        "app.services.chat_service._record_chat_image_failure",
+        new_callable=AsyncMock,
+    )
+    @patch(
+        "app.services.image_generation_service.image_generation_service.generate_chat_image"
+    )
     async def test_generate_chat_image_fal_content_policy_violation_returns_biz_error(
         self,
         mock_generate_image: AsyncMock,
@@ -396,7 +421,10 @@ class TestChatService:
             result.error_code
             == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"]
         )
-        assert result.message == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"]
+        assert (
+            result.message
+            == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"]
+        )
 
         await db_session.delete(ai_message)
         await db_session.delete(chat)
@@ -472,10 +500,17 @@ class TestChatService:
 
         # 验证返回的是 UsageLimitExceeded
         assert isinstance(result, UsageLimitExceeded)
-        assert isinstance(result, BizError)  # UsageLimitExceeded 继承自 BizError
+        assert isinstance(
+            result, BizError
+        )  # UsageLimitExceeded 继承自 BizError
         assert result.code == BusinessErrorCode.GUEST_LOGIN_REQUIRED["code"]
-        assert result.error_code == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
-        assert result.message == BusinessErrorCode.GUEST_LOGIN_REQUIRED["message"]
+        assert (
+            result.error_code
+            == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
+        )
+        assert (
+            result.message == BusinessErrorCode.GUEST_LOGIN_REQUIRED["message"]
+        )
         assert result.used_count == 0
         assert result.daily_limit == 0
 
@@ -544,7 +579,9 @@ class TestChatService:
             10,
         )  # (is_allowed, used_count, daily_limit)
         mock_subscription_svc.get_user_subscription_status.return_value = (
-            SubscriptionStatusResponse(is_subscribed=False, subscription_status="free")
+            SubscriptionStatusResponse(
+                is_subscribed=False, subscription_status="free"
+            )
         )
 
         # 执行测试
@@ -559,12 +596,17 @@ class TestChatService:
 
         # 验证返回的是 UsageLimitExceeded
         assert isinstance(result, UsageLimitExceeded)
-        assert isinstance(result, BizError)  # UsageLimitExceeded 继承自 BizError
+        assert isinstance(
+            result, BizError
+        )  # UsageLimitExceeded 继承自 BizError
         assert result.code == BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"]
         assert (
-            result.error_code == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
+            result.error_code
+            == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
         )
-        assert result.message == BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"]
+        assert (
+            result.message == BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"]
+        )
         assert result.used_count == 10
         assert result.daily_limit == 10
 
@@ -578,7 +620,9 @@ class TestChatService:
         await db_session.commit()
 
     @pytest.mark.asyncio
-    @patch("app.services.music_generation_service.music_generation_service.generate_chat_music_for_message")
+    @patch(
+        "app.services.music_generation_service.music_generation_service.generate_chat_music_for_message"
+    )
     async def test_generate_chat_music_success(
         self,
         mock_generate_music: AsyncMock,
@@ -693,12 +737,14 @@ class TestChatService:
         await db_session.refresh(ai_message)
         db_message = ai_message
         assert db_message.audio_url == mock_music_result["audio_url"]
-        assert db_message.meta_data["generated_music"]["audio_url"] == mock_music_result[
-            "audio_url"
-        ]
-        assert db_message.meta_data["generated_music"]["model"] == mock_music_result[
-            "model"
-        ]
+        assert (
+            db_message.meta_data["generated_music"]["audio_url"]
+            == mock_music_result["audio_url"]
+        )
+        assert (
+            db_message.meta_data["generated_music"]["model"]
+            == mock_music_result["model"]
+        )
 
         await db_session.delete(ai_message)
         await db_session.delete(user_message)
@@ -770,8 +816,13 @@ class TestChatService:
 
         assert isinstance(result, UsageLimitExceeded)
         assert result.code == BusinessErrorCode.GUEST_LOGIN_REQUIRED["code"]
-        assert result.error_code == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
-        assert result.message == BusinessErrorCode.GUEST_LOGIN_REQUIRED["message"]
+        assert (
+            result.error_code
+            == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
+        )
+        assert (
+            result.message == BusinessErrorCode.GUEST_LOGIN_REQUIRED["message"]
+        )
         assert result.used_count == 0
         assert result.daily_limit == 0
         mock_subscription_svc.check_music_gen_limit.assert_called_once()
@@ -833,7 +884,9 @@ class TestChatService:
             6,
         )
         mock_subscription_svc.get_user_subscription_status.return_value = (
-            SubscriptionStatusResponse(is_subscribed=True, subscription_status="subscribed")
+            SubscriptionStatusResponse(
+                is_subscribed=True, subscription_status="subscribed"
+            )
         )
 
         result = await chat_service.generate_chat_music(
@@ -846,12 +899,18 @@ class TestChatService:
         )
 
         assert isinstance(result, UsageLimitExceeded)
-        assert result.code == BusinessErrorCode.MUSIC_GENERATION_LIMIT_REACHED["code"]
+        assert (
+            result.code
+            == BusinessErrorCode.MUSIC_GENERATION_LIMIT_REACHED["code"]
+        )
         assert (
             result.error_code
             == BusinessErrorCode.MUSIC_GENERATION_LIMIT_REACHED["error_code"]
         )
-        assert result.message == BusinessErrorCode.MUSIC_GENERATION_LIMIT_REACHED["message"]
+        assert (
+            result.message
+            == BusinessErrorCode.MUSIC_GENERATION_LIMIT_REACHED["message"]
+        )
         assert result.used_count == 6
         assert result.daily_limit == 6
         mock_subscription_svc.check_music_gen_limit.assert_called_once()
@@ -863,7 +922,9 @@ class TestChatService:
 
     @pytest.mark.asyncio
     @patch("app.core.model_selection.select_chat_image_model")
-    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image")
+    @patch(
+        "app.services.image_generation_service.image_generation_service.generate_chat_image"
+    )
     async def test_generate_chat_image_subscribed_premium_model_uses_60s_timeout(
         self,
         mock_generate_image: AsyncMock,
@@ -973,7 +1034,9 @@ class TestChatService:
         await db_session.commit()
 
     @pytest.mark.asyncio
-    @patch("app.services.chat_service.chat_history_service.update_message_metadata")
+    @patch(
+        "app.services.chat_service.chat_history_service.update_message_metadata"
+    )
     @patch(
         "app.services.image_generation_service.image_generation_service.generate_chat_image"
     )
@@ -1062,7 +1125,10 @@ class TestChatService:
             "image_metadata": {"width": 1024, "height": 1024, "format": "jpeg"},
             "prompt": "构建的提示词",
         }
-        mock_generate_image.side_effect = [Err429("429 RESOURCE_EXHAUSTED"), mock_image_result]
+        mock_generate_image.side_effect = [
+            Err429("429 RESOURCE_EXHAUSTED"),
+            mock_image_result,
+        ]
         mock_update_metadata.return_value = None
 
         result = await chat_service.generate_chat_image(
@@ -1080,7 +1146,9 @@ class TestChatService:
         fallback_model = (
             global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_fallback_model
         )
-        assert mock_generate_image.call_args_list[1][1]["model"] == fallback_model
+        assert (
+            mock_generate_image.call_args_list[1][1]["model"] == fallback_model
+        )
 
         record_kw = mock_subscription_svc.record_usage.call_args[1]
         assert record_kw["extra_data"]["model"] == fallback_model
@@ -1088,7 +1156,9 @@ class TestChatService:
 
         meta_update = mock_update_metadata.call_args[1]["metadata_update"]
         assert meta_update["generated_image"]["model"] == fallback_model
-        assert meta_update["generated_image"]["model_fallback_due_to_429"] is True
+        assert (
+            meta_update["generated_image"]["model_fallback_due_to_429"] is True
+        )
 
         await db_session.delete(ai_message)
         await db_session.delete(user_message)
@@ -1107,7 +1177,9 @@ class TestIs429ResourceExhausted:
 
         assert chat_service._is_429_resource_exhausted(E429()) is True
 
-    def test_returns_true_when_message_contains_429_and_resource_exhausted(self):
+    def test_returns_true_when_message_contains_429_and_resource_exhausted(
+        self,
+    ):
         assert (
             chat_service._is_429_resource_exhausted(
                 ValueError("Error 429 RESOURCE_EXHAUSTED quota")
@@ -1122,8 +1194,14 @@ class TestIs429ResourceExhausted:
         )
 
     def test_returns_false_for_other_errors(self):
-        assert chat_service._is_429_resource_exhausted(ValueError("bad request")) is False
-        assert chat_service._is_429_resource_exhausted(RuntimeError("500")) is False
+        assert (
+            chat_service._is_429_resource_exhausted(ValueError("bad request"))
+            is False
+        )
+        assert (
+            chat_service._is_429_resource_exhausted(RuntimeError("500"))
+            is False
+        )
 
         class E404(Exception):
             status_code = 404
@@ -1222,19 +1300,22 @@ class TestGetOrCreateChatByAgent:
             db.expunge(chat)
             # 直接使用SQL删除，避免ORM状态问题
             await db.execute(
-                text("DELETE FROM chats WHERE id = :chat_id"), {"chat_id": chat_id}
+                text("DELETE FROM chats WHERE id = :chat_id"),
+                {"chat_id": chat_id},
             )
         if agent:
             agent_id = agent.id
             db.expunge(agent)
             await db.execute(
-                text("DELETE FROM agents WHERE id = :agent_id"), {"agent_id": agent_id}
+                text("DELETE FROM agents WHERE id = :agent_id"),
+                {"agent_id": agent_id},
             )
         if user:
             user_id = user.id
             db.expunge(user)
             await db.execute(
-                text("DELETE FROM users WHERE id = :user_id"), {"user_id": user_id}
+                text("DELETE FROM users WHERE id = :user_id"),
+                {"user_id": user_id},
             )
         await db.commit()
 
@@ -1273,7 +1354,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, chat)
 
     @pytest.mark.asyncio
-    async def test_get_existing_chat_with_agent_cache(self, db_session: AsyncSession):
+    async def test_get_existing_chat_with_agent_cache(
+        self, db_session: AsyncSession
+    ):
         """测试从数据库获取已存在会话，Agent信息在缓存中"""
         user = await self._create_test_user(db_session)
         agent = await self._create_test_agent(db_session, user.id)
@@ -1304,7 +1387,10 @@ class TestGetOrCreateChatByAgent:
         assert retrieved_chat.agent_avatar == agent.avatar
         assert retrieved_chat.agent_intro == agent.intro
         assert retrieved_chat.agent_opening == agent.opening
-        assert retrieved_chat.agent_background_animated == agent.background_animated
+        assert (
+            retrieved_chat.agent_background_animated
+            == agent.background_animated
+        )
 
         # 验证会话缓存已更新
         cached_session = cache_service.get_session_info(session_key)
@@ -1350,7 +1436,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, chat)
 
     @pytest.mark.asyncio
-    async def test_get_existing_chat_with_messages(self, db_session: AsyncSession):
+    async def test_get_existing_chat_with_messages(
+        self, db_session: AsyncSession
+    ):
         """测试已存在会话且有消息，不重复添加开场白"""
         user = await self._create_test_user(db_session, nickname="TestUser")
         agent = await self._create_test_agent(
@@ -1383,7 +1471,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, chat)
 
     @pytest.mark.asyncio
-    async def test_get_existing_chat_empty_adds_opening(self, db_session: AsyncSession):
+    async def test_get_existing_chat_empty_adds_opening(
+        self, db_session: AsyncSession
+    ):
         """测试已存在会话但为空，自动添加Agent开场白"""
         user = await self._create_test_user(db_session, nickname="TestUser")
         agent = await self._create_test_agent(
@@ -1458,7 +1548,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, chat)
 
     @pytest.mark.asyncio
-    async def test_create_new_chat_with_agent_cache(self, db_session: AsyncSession):
+    async def test_create_new_chat_with_agent_cache(
+        self, db_session: AsyncSession
+    ):
         """测试创建新会话，Agent信息在缓存中"""
         user = await self._create_test_user(db_session)
         agent = await self._create_test_agent(db_session, user.id)
@@ -1509,7 +1601,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, new_chat)
 
     @pytest.mark.asyncio
-    async def test_create_new_chat_without_agent_cache(self, db_session: AsyncSession):
+    async def test_create_new_chat_without_agent_cache(
+        self, db_session: AsyncSession
+    ):
         """测试创建新会话，Agent信息不在缓存中"""
         user = await self._create_test_user(db_session)
         agent = await self._create_test_agent(db_session, user.id)
@@ -1575,7 +1669,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, new_chat)
 
     @pytest.mark.asyncio
-    async def test_create_new_chat_without_opening(self, db_session: AsyncSession):
+    async def test_create_new_chat_without_opening(
+        self, db_session: AsyncSession
+    ):
         """测试创建新会话，Agent没有开场白，正常创建但不添加消息"""
         user = await self._create_test_user(db_session)
         agent = await self._create_test_agent(
@@ -1605,7 +1701,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, new_chat)
 
     @pytest.mark.asyncio
-    async def test_create_new_chat_agent_not_found(self, db_session: AsyncSession):
+    async def test_create_new_chat_agent_not_found(
+        self, db_session: AsyncSession
+    ):
         """测试Agent不存在，抛出404错误"""
         user = await self._create_test_user(db_session)
         non_existent_agent_id = str(uuid.uuid4())
@@ -1625,7 +1723,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user)
 
     @pytest.mark.asyncio
-    async def test_get_chat_inactive_chat_ignored(self, db_session: AsyncSession):
+    async def test_get_chat_inactive_chat_ignored(
+        self, db_session: AsyncSession
+    ):
         """测试只查询is_active=True的会话"""
         user = await self._create_test_user(db_session)
         agent = await self._create_test_agent(db_session, user.id)
@@ -1633,7 +1733,10 @@ class TestGetOrCreateChatByAgent:
         # 创建非活跃的聊天会话
         inactive_chat_id = str(uuid.uuid4())
         inactive_chat = Chat(
-            id=inactive_chat_id, user_id=user.id, agent_id=agent.id, is_active=False
+            id=inactive_chat_id,
+            user_id=user.id,
+            agent_id=agent.id,
+            is_active=False,
         )
         db_session.add(inactive_chat)
         await db_session.commit()
@@ -1730,8 +1833,12 @@ class TestGetOrCreateChatByAgent:
         只有在数据被直接修改（如通过SQL）时才会触发。这里我们验证错误处理逻辑存在。
         """
         user = await self._create_test_user(db_session)
-        agent1 = await self._create_test_agent(db_session, user.id, name="Agent 1")
-        agent2 = await self._create_test_agent(db_session, user.id, name="Agent 2")
+        agent1 = await self._create_test_agent(
+            db_session, user.id, name="Agent 1"
+        )
+        agent2 = await self._create_test_agent(
+            db_session, user.id, name="Agent 2"
+        )
 
         # 创建一个聊天会话
         chat_id = str(uuid.uuid4())
@@ -1797,7 +1904,7 @@ class TestGetOrCreateChatByAgent:
         self, db_session: AsyncSession
     ):
         """测试当Chat对象在同一session中重用时，正确更新所有agent字段
-        
+
         这个测试重现了一个bug：当Chat对象在同一个SQLAlchemy session中被重用时
         （通过identity map），else块只更新了agent_is_deleted，但没有更新其他
         agent字段（agent_name, agent_avatar等）从cached_agent中获取的值。
@@ -1866,7 +1973,10 @@ class TestGetOrCreateChatByAgent:
         assert retrieved_chat.agent_name == "Updated Name"
         assert retrieved_chat.agent_opening == "Updated Opening"
         assert retrieved_chat.agent_intro == "Updated Intro"
-        assert retrieved_chat.agent_avatar == "https://example.com/updated_avatar.jpg"
+        assert (
+            retrieved_chat.agent_avatar
+            == "https://example.com/updated_avatar.jpg"
+        )
         assert retrieved_chat.id == chat.id  # 同一个chat对象
 
         await self._cleanup_test_data(db_session, user, agent, chat)
@@ -2029,7 +2139,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, chat)
 
     @pytest.mark.asyncio
-    async def test_opening_message_add_failure_handling(self, db_session: AsyncSession):
+    async def test_opening_message_add_failure_handling(
+        self, db_session: AsyncSession
+    ):
         """测试开场白添加失败时不影响chat创建"""
         user = await self._create_test_user(db_session, nickname="TestUser")
         agent = await self._create_test_agent(
@@ -2073,7 +2185,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, new_chat)
 
     @pytest.mark.asyncio
-    async def test_session_id_generation_consistency(self, db_session: AsyncSession):
+    async def test_session_id_generation_consistency(
+        self, db_session: AsyncSession
+    ):
         """测试session_id生成的一致性（相同chat_id总是生成相同的session_id）"""
         user = await self._create_test_user(db_session)
         agent = await self._create_test_agent(db_session, user.id)
@@ -2099,7 +2213,9 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, chat)
 
     @pytest.mark.asyncio
-    async def test_cached_agent_partial_fields_none(self, db_session: AsyncSession):
+    async def test_cached_agent_partial_fields_none(
+        self, db_session: AsyncSession
+    ):
         """测试cached_agent存在但某些字段为None的情况"""
         user = await self._create_test_user(db_session)
         agent = await self._create_test_agent(

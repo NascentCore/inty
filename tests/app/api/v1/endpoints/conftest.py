@@ -14,7 +14,6 @@ from app.models.user import AuthType
 from app.schemas.user import User
 from tests.app.api.test_client import TestClient
 
-
 API_BASE_URL = os.getenv("INTY_API_BASE_URL", "http://localhost:8000")
 
 
@@ -26,7 +25,9 @@ def _make_user(
     return User(
         id=user_id,
         readable_id=f"readable-{user_id}",
-        auth_type=auth_type.value if isinstance(auth_type, AuthType) else auth_type,
+        auth_type=(
+            auth_type.value if isinstance(auth_type, AuthType) else auth_type
+        ),
         is_active=True,
         is_superuser=is_superuser,
         created_at=datetime.now(timezone.utc),

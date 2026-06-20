@@ -58,7 +58,9 @@ def _seed_chat_message(
 
 def _cleanup_seeded_chat(db_session, chat_id: str) -> None:
     session_id = uuid.UUID(generate_session_id(chat_id))
-    db_session.query(ChatHistory).filter(ChatHistory.session_id == session_id).delete()
+    db_session.query(ChatHistory).filter(
+        ChatHistory.session_id == session_id
+    ).delete()
     db_session.query(Chat).filter(Chat.id == chat_id).delete()
     db_session.commit()
 
@@ -186,7 +188,11 @@ def test_vote_message_success_e2e(integration_client: TestClient):
     try:
         response = integration_client.client.post(
             f"{integration_client.base_url}/api/v1/chats/messages/vote",
-            json={"agent_id": agent_id, "message_id": message_id, "vote": "like"},
+            json={
+                "agent_id": agent_id,
+                "message_id": message_id,
+                "vote": "like",
+            },
         )
         assert response.status_code == 200, response.text
         payload = response.json()

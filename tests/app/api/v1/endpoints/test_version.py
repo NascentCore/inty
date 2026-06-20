@@ -104,7 +104,10 @@ def test_version_check_returns_google_play_result(version_app: FastAPI):
     assert body["code"] == 200
     assert body["data"]["current_version"] == "150"
     assert body["data"]["latest_version"] == "200"
-    assert body["data"]["reminder_action"] == VersionReminderAction.POP_UP_REMINDER.value
+    assert (
+        body["data"]["reminder_action"]
+        == VersionReminderAction.POP_UP_REMINDER.value
+    )
     assert version_app.state.fake_google_play_service.last_call == 150
 
 

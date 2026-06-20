@@ -8,7 +8,9 @@ import threading
 import pytest
 
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.turn_routes import BootstrapInterimOutput
+from app.core.companion_harness.companion.turn_routes import (
+    BootstrapInterimOutput,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.services.agentic_companion.downlink import (
@@ -30,7 +32,9 @@ class _RecordingDownlink:
 
 
 @pytest.mark.asyncio
-async def test_presence_coordinator_bootstrap_interim_sink_queues_output() -> None:
+async def test_presence_coordinator_bootstrap_interim_sink_queues_output() -> (
+    None
+):
     coordinator = Coordinator.for_current_loop()
     ev = BootstrapInterimOutput(
         text="hello before tools",
@@ -51,7 +55,9 @@ async def test_presence_coordinator_bootstrap_interim_sink_queues_output() -> No
 @pytest.mark.asyncio
 async def test_presence_coordinator_background_sink_queues_event() -> None:
     coordinator = Coordinator.for_current_loop()
-    st = MemoryStore(scope=CompanionScope("u", "a", "c-presence"), repository=None)
+    st = MemoryStore(
+        scope=CompanionScope("u", "a", "c-presence"), repository=None
+    )
     event = ToolOutputEvent(
         scope_registry_key=st.scope.registry_key(),
         memory_store=st,
@@ -67,7 +73,9 @@ async def test_presence_coordinator_background_sink_queues_event() -> None:
 
 
 @pytest.mark.asyncio
-async def test_presence_coordinator_inner_tick_refresh_preserves_throttle() -> None:
+async def test_presence_coordinator_inner_tick_refresh_preserves_throttle() -> (
+    None
+):
     coordinator = Coordinator.for_current_loop()
     coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
     coordinator.mark_maintenance_inner_tick_fired(123.5, 7)
@@ -101,7 +109,9 @@ async def test_presence_coordinator_inner_tick_overlap_flags() -> None:
 
 
 @pytest.mark.asyncio
-async def test_presence_coordinator_autonomy_throttle_and_overlap_flags() -> None:
+async def test_presence_coordinator_autonomy_throttle_and_overlap_flags() -> (
+    None
+):
     coordinator = Coordinator.for_current_loop()
     coordinator.store_inner_tick_coords(user_id="u1", agent_id="a1", chat_id=10)
     assert coordinator.last_autonomy_inner_tick_monotonic() is None
@@ -156,7 +166,9 @@ async def test_presence_session_inner_tick_worker_invokes_poll_runner() -> None:
     async def run_one_poll(snapshot: dict[str, object]) -> None:
         poll_calls.append(snapshot)
 
-    await session.start_inner_tick_worker(poll_seconds=0.05, run_one_poll=run_one_poll)
+    await session.start_inner_tick_worker(
+        poll_seconds=0.05, run_one_poll=run_one_poll
+    )
     await asyncio.sleep(0.12)
     await session.stop()
     assert poll_calls
@@ -174,7 +186,9 @@ async def test_presence_session_sign_out_stops_inner_tick_polls() -> None:
     async def run_one_poll(snapshot: dict[str, object]) -> None:
         poll_calls.append(snapshot)
 
-    await session.start_inner_tick_worker(poll_seconds=0.05, run_one_poll=run_one_poll)
+    await session.start_inner_tick_worker(
+        poll_seconds=0.05, run_one_poll=run_one_poll
+    )
     await asyncio.sleep(0.07)
     session.sign_out()
     count_after_sign_out = len(poll_calls)

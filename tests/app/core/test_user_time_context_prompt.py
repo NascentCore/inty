@@ -5,7 +5,9 @@ from __future__ import annotations
 import pytest
 
 from app.core.agent.agent import UserTimeContext
-from app.core.user_time_context_prompt import suffix_user_text_with_time_context_lines
+from app.core.user_time_context_prompt import (
+    suffix_user_text_with_time_context_lines,
+)
 
 
 def test_suffix_disabled_returns_unchanged() -> None:
@@ -15,18 +17,26 @@ def test_suffix_disabled_returns_unchanged() -> None:
         "utc_offset_minutes": 120,
     }
     assert (
-        suffix_user_text_with_time_context_lines("hi", ctx, enabled=False) == "hi"
+        suffix_user_text_with_time_context_lines("hi", ctx, enabled=False)
+        == "hi"
     )
 
 
 def test_suffix_enabled_empty_context_returns_unchanged() -> None:
-    assert suffix_user_text_with_time_context_lines("hi", None, enabled=True) == "hi"
-    assert suffix_user_text_with_time_context_lines("hi", {}, enabled=True) == "hi"
+    assert (
+        suffix_user_text_with_time_context_lines("hi", None, enabled=True)
+        == "hi"
+    )
+    assert (
+        suffix_user_text_with_time_context_lines("hi", {}, enabled=True) == "hi"
+    )
 
 
 def test_suffix_omits_blank_fields() -> None:
     ctx: UserTimeContext = {"local_time": "  ", "timezone": ""}
-    assert suffix_user_text_with_time_context_lines("x", ctx, enabled=True) == "x"
+    assert (
+        suffix_user_text_with_time_context_lines("x", ctx, enabled=True) == "x"
+    )
 
 
 def test_suffix_user_time_and_time_zone_lines() -> None:

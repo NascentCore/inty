@@ -9,7 +9,6 @@ import time
 import langsmith
 from langsmith import Client as LangSmithClient
 
-
 # 轮询 LangSmith 时的尝试次数与每页 run 数量（用于写入延迟）
 _LANGSMITH_POLL_ATTEMPTS = 3
 _LANGSMITH_RUNS_PAGE_SIZE = 10
@@ -32,7 +31,9 @@ def _inputs_contain_substring(obj: object, substring: str) -> bool:
     if isinstance(obj, str):
         return substring in obj
     if isinstance(obj, dict):
-        return any(_inputs_contain_substring(v, substring) for v in obj.values())
+        return any(
+            _inputs_contain_substring(v, substring) for v in obj.values()
+        )
     if isinstance(obj, list):
         return any(_inputs_contain_substring(v, substring) for v in obj)
     return False
@@ -49,7 +50,9 @@ def find_run_inputs_contain_string(
     proj = project_name or os.environ["LANGSMITH_PROJECT"]
 
     for attempt in range(_LANGSMITH_POLL_ATTEMPTS):
-        print(f"Attempt {attempt} to find run whose inputs contain: {substring!r}")
+        print(
+            f"Attempt {attempt} to find run whose inputs contain: {substring!r}"
+        )
         runs = ls_client.list_runs(
             project_name=proj,
             start_time=start_time,
@@ -71,7 +74,9 @@ def find_run_contains_random_string(
     ls_client = LangSmithClient()
 
     for attempt in range(_LANGSMITH_POLL_ATTEMPTS):
-        print(f"Attempt {attempt} to find the run with the random string: {random_str}")
+        print(
+            f"Attempt {attempt} to find the run with the random string: {random_str}"
+        )
         runs = ls_client.list_runs(
             project_name=os.environ["LANGSMITH_PROJECT"],
             start_time=start_time,

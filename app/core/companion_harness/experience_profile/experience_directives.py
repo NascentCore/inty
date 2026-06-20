@@ -124,9 +124,7 @@ def repair_context_json_dict(raw: dict[str, object]) -> dict[str, object]:
     return data
 
 
-EXPERIENCE_DIRECTIVES_SYSTEM_HEADING = (
-    "EXPERIENCE DIRECTIVES — 本会话体验细调（context.json experience_directives）\n\n"
-)
+EXPERIENCE_DIRECTIVES_SYSTEM_HEADING = "EXPERIENCE DIRECTIVES — 本会话体验细调（context.json experience_directives）\n\n"
 
 _TONE_CLAUSE_BODY: dict[ExperienceDirectiveTone, str] = {
     ExperienceDirectiveTone.WARM: "语气偏温暖、接纳，可适度表达关心。",

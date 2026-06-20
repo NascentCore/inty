@@ -31,7 +31,9 @@ class _CompletionWithBrokenTraceId:
 class _CompletionWithFailingCopy:
     langsmith_trace_id = None
 
-    def model_copy(self, *, update: dict[str, Any]) -> "_CompletionWithFailingCopy":
+    def model_copy(
+        self, *, update: dict[str, Any]
+    ) -> "_CompletionWithFailingCopy":
         assert update == {"langsmith_llm_run_id": "llm-run-1"}
         raise RuntimeError("copy failed")
 

@@ -50,7 +50,10 @@ def test_chat_completions_endpoint(integration_client: TestClient):
     assert message["content"].strip()
 
     usage = data["usage"]
-    assert usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"]
+    assert (
+        usage["total_tokens"]
+        == usage["prompt_tokens"] + usage["completion_tokens"]
+    )
 
 
 @pytest.fixture
@@ -96,14 +99,23 @@ def test_create_agent_limit_returns_business_error(
     with _client_with_user(agents_business_error_app, user) as client:
         response = client.post(
             "/api/v1/ai/agents",
-            json={"name": "Test Agent", "gender": "FEMALE", "visibility": "PUBLIC"},
+            json={
+                "name": "Test Agent",
+                "gender": "FEMALE",
+                "visibility": "PUBLIC",
+            },
         )
 
     body = response.json()
 
     assert response.status_code == 200
-    assert body["code"] == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["code"]
-    assert body["message"] == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["message"]
+    assert (
+        body["code"] == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["code"]
+    )
+    assert (
+        body["message"]
+        == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["message"]
+    )
     assert (
         body["data"]["error_code"]
         == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["error_code"]
@@ -136,9 +148,12 @@ def test_text_to_image_limit_returns_business_error(
     body = response.json()
 
     assert response.status_code == 200
-    assert body["code"] == BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED["code"]
     assert (
-        body["message"] == BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED["message"]
+        body["code"] == BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED["code"]
+    )
+    assert (
+        body["message"]
+        == BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED["message"]
     )
     assert (
         body["data"]["error_code"]
@@ -157,7 +172,9 @@ def test_text_to_image_endpoint(integration_client: TestClient, db_session):
     test_email = f"test-image-{uuid.uuid4().hex[:8]}@example.com"
 
     # 检查用户是否已存在
-    existing_user = db_session.query(User).filter(User.email == test_email).first()
+    existing_user = (
+        db_session.query(User).filter(User.email == test_email).first()
+    )
     if existing_user:
         # 如果用户已存在，使用现有用户
         user = existing_user
@@ -181,7 +198,9 @@ def test_text_to_image_endpoint(integration_client: TestClient, db_session):
     # 生成 token 并设置到 TestClient
     token = create_access_token(user.id)
     integration_client.token = token
-    integration_client.client.headers.update({"Authorization": f"Bearer {token}"})
+    integration_client.client.headers.update(
+        {"Authorization": f"Bearer {token}"}
+    )
 
     try:
         image_urls = integration_client.text_to_image(
@@ -195,7 +214,11 @@ def test_text_to_image_endpoint(integration_client: TestClient, db_session):
         # 清理：删除测试用户（如果是我们创建的）
         if is_new_user:
             # 先删除用户创建的 agents
-            agents = db_session.query(Agent).filter(Agent.creator_id == user.id).all()
+            agents = (
+                db_session.query(Agent)
+                .filter(Agent.creator_id == user.id)
+                .all()
+            )
             for agent in agents:
                 db_session.delete(agent)
 
@@ -481,8 +504,12 @@ def test_recommend_agents_text_match_finds_prompt_when_agent_url_differs_from_re
     db_session.commit()
 
     suffix = uuid.uuid4().hex[:12]
-    gcs_url = f"https://storage.googleapis.com/test-bucket/text-match-{suffix}/bg.jpg"
-    cdn_url = f"https://cdn.example.invalid/test-bucket/text-match-{suffix}/bg.jpg"
+    gcs_url = (
+        f"https://storage.googleapis.com/test-bucket/text-match-{suffix}/bg.jpg"
+    )
+    cdn_url = (
+        f"https://cdn.example.invalid/test-bucket/text-match-{suffix}/bg.jpg"
+    )
     unique_prompt = f"e2e_gcs_align_prompt_{suffix}"
 
     agent_id = integration_client.create_agent(
@@ -727,7 +754,9 @@ def test_update_agent_adds_energy_points(
 
 def test_agent_status_line_put_and_get_roundtrip(integration_client):
     integration_client.create_user()
-    agent_id = integration_client.create_agent(name="Status Line Agent", opening="")
+    agent_id = integration_client.create_agent(
+        name="Status Line Agent", opening=""
+    )
 
     try:
         tag = "Mood line for chat header test"
@@ -742,7 +771,9 @@ def test_agent_status_line_put_and_get_roundtrip(integration_client):
         ), f"PUT response should echo status_line, got {put_payload}"
 
         got = integration_client.get_agent(agent_id)
-        envelope = got.get("data") if isinstance(got.get("data"), dict) else None
+        envelope = (
+            got.get("data") if isinstance(got.get("data"), dict) else None
+        )
         agent_body = envelope if envelope is not None else got
         assert (
             agent_body.get("status_line") == tag

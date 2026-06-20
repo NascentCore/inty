@@ -55,8 +55,12 @@ def test_list_voices_includes_google_and_elevenlabs_voices(
     assert len(voices) > 0
 
     providers = _provider_set(voices)
-    assert "gemini" in providers, f"Expected gemini voices, got providers={providers}"
-    elevenlabs_filtered = _list_voices(integration_client, provider="elevenlabs")
+    assert (
+        "gemini" in providers
+    ), f"Expected gemini voices, got providers={providers}"
+    elevenlabs_filtered = _list_voices(
+        integration_client, provider="elevenlabs"
+    )
     _require_elevenlabs_voices_or_skip(elevenlabs_filtered)
     assert "elevenlabs" in providers, (
         f"Expected elevenlabs voices in default list when provider filter returns voices; "
@@ -70,7 +74,8 @@ def test_list_voices_includes_google_and_elevenlabs_voices(
         str(v.get("voice_id", "")).startswith("google/") for v in gemini_voices
     ), f"Expected google/ voice_id for gemini voices, got={gemini_voices[:3]}"
     assert any(
-        str(v.get("voice_id", "")).startswith("11labs/") for v in elevenlabs_voices
+        str(v.get("voice_id", "")).startswith("11labs/")
+        for v in elevenlabs_voices
     ), f"Expected 11labs/ voice_id for elevenlabs voices, got={elevenlabs_voices[:3]}"
 
 
@@ -88,5 +93,6 @@ def test_list_voices_provider_filter_returns_expected_provider_voices(
     _require_elevenlabs_voices_or_skip(elevenlabs_voices)
     assert _provider_set(elevenlabs_voices) == {"elevenlabs"}
     assert all(
-        str(v.get("voice_id", "")).startswith("11labs/") for v in elevenlabs_voices
+        str(v.get("voice_id", "")).startswith("11labs/")
+        for v in elevenlabs_voices
     ), f"Found non-11labs prefixed elevenlabs voice_ids: {elevenlabs_voices[:5]}"

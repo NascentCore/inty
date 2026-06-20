@@ -23,7 +23,11 @@ def test_upload_and_public_url_and_download(fake_client: FakeGCSClient):
     blob.upload_from_string(payload, content_type="text/plain")
 
     assert blob.exists() is True
-    expected_uri = (fake_client.base_dir / "inty-test" / "folder" / "a.txt").resolve().as_uri()
+    expected_uri = (
+        (fake_client.base_dir / "inty-test" / "folder" / "a.txt")
+        .resolve()
+        .as_uri()
+    )
     assert blob.public_url == expected_uri
     assert blob.download_as_bytes() == payload
 
@@ -111,10 +115,15 @@ def test_integration_with_app_external_services_gcs_module(
         assert downloaded == content
 
         # 复制
-        copied_url = gcs_module.copy_gcs_file(url, "unit/test/file-copy.dat", bucket)
-        assert copied_url == (
-            fake.base_dir / bucket / "unit/test/file-copy.dat"
-        ).resolve().as_uri()
+        copied_url = gcs_module.copy_gcs_file(
+            url, "unit/test/file-copy.dat", bucket
+        )
+        assert (
+            copied_url
+            == (fake.base_dir / bucket / "unit/test/file-copy.dat")
+            .resolve()
+            .as_uri()
+        )
 
         # 删除
         assert gcs_module.delete_from_gcs(bucket, path) is True

@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from app.schemas.biz_action import ActionType, BizAction
 from app.schemas.chat import ChatCompletionRequest
-from app.schemas.chat_websocket import ChatWebSocketQueuedSuccessFrame, ChatWsCompletionData
+from app.schemas.chat_websocket import (
+    ChatWebSocketQueuedSuccessFrame,
+    ChatWsCompletionData,
+)
 from app.services.chat_completion_wire import build_companion_ws_completion_data
 
 
@@ -31,7 +34,9 @@ def test_build_companion_ws_completion_data_validates_as_typed_frame() -> None:
         request=request,
         source_imate_id=None,
         user_message_id=42,
-        subscription_actions=[BizAction(action_type=ActionType.NONE, message="")],
+        subscription_actions=[
+            BizAction(action_type=ActionType.NONE, message="")
+        ],
         client_local_id="client-opt-id-1",
     )
     assert isinstance(completion, ChatWsCompletionData)

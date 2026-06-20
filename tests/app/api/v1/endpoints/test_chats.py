@@ -14,7 +14,9 @@ from app.core.voice.tts_api import VoiceMessageNarrationMode
 from app.models.user import AuthType
 from app.schemas.response import BusinessErrorCode
 from app.services import agent_service, chat_history_service, chat_service
-from app.services.global_services import subscription_service as global_subscription_service
+from app.services.global_services import (
+    subscription_service as global_subscription_service,
+)
 from app.services.voice_service import VoiceGenerationResult
 from app.services.voice_service import voice_service as global_voice_service
 from tests.app.api.v1.endpoints.conftest import (
@@ -55,7 +57,9 @@ def chats_business_error_app() -> FastAPI:
     app.dependency_overrides[deps.get_subscription_service] = (
         lambda: global_subscription_service
     )
-    app.dependency_overrides[deps.get_voice_service] = lambda: global_voice_service
+    app.dependency_overrides[deps.get_voice_service] = (
+        lambda: global_voice_service
+    )
 
     yield app
 
@@ -80,7 +84,9 @@ def _stub_voice_generation_dependencies(monkeypatch: pytest.MonkeyPatch):
     def fake_add_user_message(session_id, message, meta_data=None):
         return None
 
-    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        agent_service, "get_agent_for_chat", fake_get_agent_for_chat
+    )
     monkeypatch.setattr(
         chat_service,
         "get_chat_by_user_and_agent",
@@ -144,7 +150,9 @@ def test_generate_message_voice_limit_reached_for_signed_in_user(
     body = response.json()
 
     assert response.status_code == 200
-    assert body["code"] == BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED["code"]
+    assert (
+        body["code"] == BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED["code"]
+    )
     assert (
         body["data"]["error_code"]
         == BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED["error_code"]
@@ -187,7 +195,9 @@ def test_generate_message_voice_success_includes_gcs_urls(
     ):
         return True
 
-    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        agent_service, "get_agent_for_chat", fake_get_agent_for_chat
+    )
     monkeypatch.setattr(
         chat_service,
         "get_chat_by_user_and_agent",
@@ -223,7 +233,10 @@ def test_generate_message_voice_success_includes_gcs_urls(
 
     assert response.status_code == 200
     assert body["code"] == 200
-    assert body["data"]["gcs_url"] == "gs://test-bucket/voice/202603/voice_test.wav"
+    assert (
+        body["data"]["gcs_url"]
+        == "gs://test-bucket/voice/202603/voice_test.wav"
+    )
     assert (
         body["data"]["gcs_http_url"]
         == "https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav"
@@ -286,7 +299,9 @@ def test_generate_message_voice_prefers_chat_settings_voice_id(
 
     from app.services import chat_assistant_voice
 
-    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        agent_service, "get_agent_for_chat", fake_get_agent_for_chat
+    )
     monkeypatch.setattr(
         chat_service,
         "get_chat_by_user_and_agent",
@@ -389,7 +404,9 @@ def test_update_chat_settings_rejects_non_gemini_voice_id(
         return SimpleNamespace(id="chat-1", agent_id=agent_id)
 
     async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
-        return SimpleNamespace(id="settings-1", voice_enabled=False, voice_id=None)
+        return SimpleNamespace(
+            id="settings-1", voice_enabled=False, voice_id=None
+        )
 
     async def fake_get_subscription_status(db, user_id):
         return SimpleNamespace(is_subscribed=True)
@@ -445,7 +462,9 @@ def test_update_chat_settings_accepts_default_voice_sentinel_and_clears_voice_id
         return SimpleNamespace(id="chat-1", agent_id=agent_id)
 
     async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
-        return SimpleNamespace(id="settings-1", chat_id=chat_id, voice_id="google/Puck")
+        return SimpleNamespace(
+            id="settings-1", chat_id=chat_id, voice_id="google/Puck"
+        )
 
     async def fake_get_subscription_status(db, user_id):
         return SimpleNamespace(is_subscribed=True)
@@ -470,17 +489,23 @@ def test_update_chat_settings_accepts_default_voice_sentinel_and_clears_voice_id
 
     monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
     monkeypatch.setattr(
-        chat_service, "get_or_create_chat_by_agent", fake_get_or_create_chat_by_agent
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
     )
     monkeypatch.setattr(
-        chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
     )
     monkeypatch.setattr(
         global_subscription_service,
         "get_user_subscription_status",
         fake_get_subscription_status,
     )
-    monkeypatch.setattr(chat_service, "update_chat_settings", fake_update_chat_settings)
+    monkeypatch.setattr(
+        chat_service, "update_chat_settings", fake_update_chat_settings
+    )
 
     user = _make_user(auth_type=AuthType.GOOGLE)
     with _client_with_user(chats_business_error_app, user) as client:
@@ -522,11 +547,16 @@ def test_get_agent_chat_messages_recovers_when_festival_delivery_hits_missing_gr
 
     async def fake_get_unlocked_surprise_snap_message_ids(db, user_id):
         if not rollback_called:
-            raise MissingGreenlet("session should be rolled back before continuing")
+            raise MissingGreenlet(
+                "session should be rolled back before continuing"
+            )
         return set()
 
     def fake_get_messages_paginated(*args, **kwargs):
-        return {"messages": [{"id": 1, "role": "assistant", "content": "ok"}], "total": 1}
+        return {
+            "messages": [{"id": 1, "role": "assistant", "content": "ok"}],
+            "total": 1,
+        }
 
     monkeypatch.setattr(
         chats_v1.chat_service,
@@ -594,7 +624,10 @@ def test_get_agent_chat_messages_uses_cached_user_id_after_chat_creation_rollbac
 
     def fake_get_messages_paginated(*args, **kwargs):
         assert kwargs["user_id"] == "user-expire-1"
-        return {"messages": [{"id": 1, "role": "assistant", "content": "ok"}], "total": 1}
+        return {
+            "messages": [{"id": 1, "role": "assistant", "content": "ok"}],
+            "total": 1,
+        }
 
     monkeypatch.setattr(
         chats_v1.chat_service,
@@ -711,7 +744,9 @@ def test_get_agent_chat_settings_returns_chat_mode_when_agent_default_in_three(
     from app.core.agent.prompts import USER_FACING_CHAT_MODE_IDS
 
     async def fake_get_agent(db, agent_id):
-        return SimpleNamespace(id=agent_id, mode_prompt=USER_FACING_CHAT_MODE_IDS[0])
+        return SimpleNamespace(
+            id=agent_id, mode_prompt=USER_FACING_CHAT_MODE_IDS[0]
+        )
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
         return SimpleNamespace(id="chat-1", agent_id=agent_id)
@@ -733,10 +768,14 @@ def test_get_agent_chat_settings_returns_chat_mode_when_agent_default_in_three(
 
     monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
     monkeypatch.setattr(
-        chat_service, "get_or_create_chat_by_agent", fake_get_or_create_chat_by_agent
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
     )
     monkeypatch.setattr(
-        chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
     )
 
     user = _make_user(auth_type=AuthType.GOOGLE)
@@ -752,6 +791,7 @@ def test_get_agent_chat_settings_returns_null_chat_mode_when_agent_default_not_i
     monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
 ):
     """When agent mode_prompt is not in USER_FACING_CHAT_MODE_IDS, GET settings returns chat_mode=null, available_chat_modes=null."""
+
     async def fake_get_agent(db, agent_id):
         return SimpleNamespace(id=agent_id, mode_prompt="purity_mode_0725")
 
@@ -775,10 +815,14 @@ def test_get_agent_chat_settings_returns_null_chat_mode_when_agent_default_not_i
 
     monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
     monkeypatch.setattr(
-        chat_service, "get_or_create_chat_by_agent", fake_get_or_create_chat_by_agent
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
     )
     monkeypatch.setattr(
-        chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
     )
 
     user = _make_user(auth_type=AuthType.GOOGLE)
@@ -829,17 +873,23 @@ def test_update_chat_settings_accepts_valid_chat_mode(
 
     monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
     monkeypatch.setattr(
-        chat_service, "get_or_create_chat_by_agent", fake_get_or_create_chat_by_agent
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
     )
     monkeypatch.setattr(
-        chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
     )
     monkeypatch.setattr(
         global_subscription_service,
         "get_user_subscription_status",
         fake_get_subscription_status,
     )
-    monkeypatch.setattr(chat_service, "update_chat_settings", fake_update_chat_settings)
+    monkeypatch.setattr(
+        chat_service, "update_chat_settings", fake_update_chat_settings
+    )
 
     user = _make_user(auth_type=AuthType.GOOGLE)
     with _client_with_user(chats_business_error_app, user) as client:
@@ -854,6 +904,7 @@ def test_update_chat_settings_rejects_invalid_chat_mode(
     monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
 ):
     """PUT settings with chat_mode not in USER_FACING_CHAT_MODE_IDS returns 400."""
+
     async def fake_get_agent(db, agent_id):
         return SimpleNamespace(id=agent_id)
 
@@ -868,10 +919,14 @@ def test_update_chat_settings_rejects_invalid_chat_mode(
 
     monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
     monkeypatch.setattr(
-        chat_service, "get_or_create_chat_by_agent", fake_get_or_create_chat_by_agent
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
     )
     monkeypatch.setattr(
-        chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
     )
     monkeypatch.setattr(
         global_subscription_service,

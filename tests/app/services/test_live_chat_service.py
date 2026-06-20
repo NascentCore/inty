@@ -38,7 +38,10 @@ def test_build_system_instruction_includes_english_only_policy():
         history_messages=[],
     )
 
-    assert "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY" in instruction
+    assert (
+        "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY"
+        in instruction
+    )
     assert "YOU MUST SPEAK ONLY IN English AT ALL TIMES." in instruction
     assert "DO NOT code-switch or mix languages" in instruction
 
@@ -95,7 +98,9 @@ def test_build_live_config_sets_speech_language_code_when_supported():
 
     assert live_config.speech_config is not None
     assert live_config.speech_config.voice_config is not None
-    assert live_config.speech_config.voice_config.prebuilt_voice_config is not None
+    assert (
+        live_config.speech_config.voice_config.prebuilt_voice_config is not None
+    )
     assert (
         live_config.speech_config.voice_config.prebuilt_voice_config.voice_name
         == "Zephyr"
@@ -158,14 +163,19 @@ def test_build_system_instruction_from_text_chat_system_messages():
         SystemMessage(content="System B"),
     ]
 
-    instruction = service._build_system_instruction_from_text_chat_system_messages(
-        text_chat_system_messages
+    instruction = (
+        service._build_system_instruction_from_text_chat_system_messages(
+            text_chat_system_messages
+        )
     )
 
     assert "System A" in instruction
     assert "System B" in instruction
     assert "这是实时语音对话" in instruction
-    assert "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY" in instruction
+    assert (
+        "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY"
+        in instruction
+    )
     assert "YOU MUST SPEAK ONLY IN English AT ALL TIMES." in instruction
 
 
@@ -177,7 +187,10 @@ def test_build_prefill_turns_from_history_messages():
         HumanMessage(
             content=[
                 {"type": "text", "text": "Tell me more."},
-                {"type": "image_url", "image_url": {"url": "https://example.com/a.jpg"}},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/a.jpg"},
+                },
             ]
         ),
     ]
@@ -228,7 +241,9 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
             user_time_context=None,
             include_output_format_prompt=True,
         ):
-            self.include_output_format_prompt_value = include_output_format_prompt
+            self.include_output_format_prompt_value = (
+                include_output_format_prompt
+            )
             return [
                 SystemMessage(content="System Prompt A"),
                 SystemMessage(content="System Prompt B"),
@@ -245,7 +260,9 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
         return SimpleNamespace(premium_mode=False, style_prompt=None)
 
     monkeypatch.setattr(
-        live_chat_module.agent_service, "get_agent_for_chat", fake_get_agent_for_chat
+        live_chat_module.agent_service,
+        "get_agent_for_chat",
+        fake_get_agent_for_chat,
     )
     monkeypatch.setattr(
         live_chat_module.agent_manager, "get_agent", fake_get_agent
@@ -296,7 +313,9 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
         def __init__(self, fake_session):
             self.aio = SimpleNamespace(live=_FakeLiveAPI(fake_session))
 
-    monkeypatch.setattr(service, "_get_client", lambda: _FakeClient(_FakeGeminiSession()))
+    monkeypatch.setattr(
+        service, "_get_client", lambda: _FakeClient(_FakeGeminiSession())
+    )
 
     session = live_chat_module.LiveSession(
         session_id="session-1",
@@ -342,7 +361,9 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
     assert turns[1].parts[0].text == "A1"
     assert live_chat_module.LiveChatStatus.CONNECTED in status_events
     assert fake_agent_holder["agent"] is not None
-    assert fake_agent_holder["agent"].include_output_format_prompt_value is False
+    assert (
+        fake_agent_holder["agent"].include_output_format_prompt_value is False
+    )
 
 
 def test_opening_conversation_trigger_text_uses_language_or_fallback():
