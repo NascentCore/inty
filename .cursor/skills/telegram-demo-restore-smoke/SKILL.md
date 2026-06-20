@@ -2,7 +2,7 @@
 name: telegram-demo-restore-smoke
 description: >-
   Manual release smoke for Ops Telegram demo Postgres persistence and Ops-restart
-  restore. Use when verifying telegram binding resume, ops_telegram_demo_bindings,
+  restore. Use when verifying telegram binding resume, agent_channel_endpoints,
   restore_persisted_bindings, or release smoke before merge.
 ---
 
@@ -12,7 +12,7 @@ description: >-
 
 1. Postgres on **`localhost:15432`**，db **`inty`** — matches [`devops/config.yaml.local`](../../../devops/config.yaml.local) **`database`**；**assume already configured; do not change password** during smoke.
 2. `export INTY_CONFIG_YAML=devops/config.yaml.local`；`agent.channels.telegram.bot_token` 已配置。
-3. Ops on **`:8001`**：`backend/ops/start.sh --local --no-build-frontend`（启动时 **自动 migrate**；含 `ops_telegram_demo_bindings` / `ops_telegram_demo_poll_state`）。**勿**单独 `alembic upgrade head` — 见 [`launch-inty-backend`](../launch-inty-backend/SKILL.md)。
+3. Ops on **`:8001`**：`backend/ops/start.sh --local --no-build-frontend`（启动时 **自动 migrate**；含 `agent_channel_endpoints` / `ops_telegram_demo_poll_state`）。**勿**单独 `alembic upgrade head` — 见 [`launch-inty-backend`](../launch-inty-backend/SKILL.md)。
 
 ## Smoke steps
 
@@ -25,7 +25,7 @@ description: >-
    Expect `count >= 1` with your `telegram_chat_id`.
 4. **Restart Ops** (Ctrl+C on start.sh, relaunch).
 5. Send another message **without** re-scanning QR.
-6. Expect reply; logs should show `telegram-demo: restored N persisted binding(s)`.
+6. Expect reply; logs should show `telegram-demo: restored N agent_channel endpoint(s)`.
 
 ## Optional: proactive after restore
 
@@ -35,10 +35,20 @@ description: >-
 ## DB verify
 
 ```sql
-SELECT telegram_chat_id, user_id, agent_id, chat_id
-FROM ops_telegram_demo_bindings;
+SELECT channel_address, user_id, agent_id
+FROM agent_channel_endpoints
+WHERE channel = 'telegram';
 SELECT id, last_update_id FROM ops_telegram_demo_poll_state;
 ```
+
+## Cleanup（Agent 必做）
+
+若你为本轮 smoke**自行拉起** Ops（见 Prerequisites），测完按 [`launch-inty-backend`](../launch-inty-backend/SKILL.md) **Terminate Ops** 停掉；汇报中说明 **`:8001` 是否空闲**。勿终止用户会话开始时已在运行的 Ops。
+
+## 汇报
+
+- 全过：`[telegram-demo-restore-smoke] RESULT: PASS`
+- 任一步失败：`[telegram-demo-restore-smoke] RESULT: FAIL (<一步>)`
 
 ## Pre-ad paid flight (TODO)
 
