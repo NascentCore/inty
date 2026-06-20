@@ -142,14 +142,19 @@ class CompanionManager:
     https://github.com/NascentCore/inty/issues/3444
     """
 
-    def __init__(self, config: CompanionConfig) -> None:
+    def __init__(
+        self,
+        config: CompanionConfig,
+        llm_client: CompanionLLMClient | None = None,
+    ) -> None:
         self._config = config
         self._sessions: dict[str, CompanionSession] = {}
         self._lock = threading.Lock()
-        # TODO(code-structure): This class holds too many objects, this llm client should not be a member of this class. — #3409
-        # Instead, this should focus on managing the session lifecycle.
-        # And let the caller to provide the llm client when needed.
-        self._llm_client = CompanionLLMClient(config.llm)
+        self._llm_client = (
+            llm_client
+            if llm_client is not None
+            else CompanionLLMClient(config.llm)
+        )
 
     @staticmethod
     def _session_key(user_id: str, companion_id: str, chat_id: str) -> str:

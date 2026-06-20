@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from app.external_services.fakes.openai import FakeOpenAI
+import pytest
+
+from app.external_services.fakes.openai import (
+    FakeOpenAI,
+    FakeOpenAIScriptExhaustedError,
+    fake_step_dual_llm_envelope,
+    fake_step_text,
+    fake_step_tool_call,
+)
 
 
 def test_returns_random_for_unspecified_request():
@@ -74,3 +82,74 @@ def test_stream_not_supported():
         assert False, "Expected NotImplementedError"
     except NotImplementedError:
         pass
+
+
+def test_script_returns_steps_in_order():
+    script = (
+        fake_step_text("first"),
+        fake_step_text("second"),
+    )
+    client = FakeOpenAI(script=script)
+    messages = [{"role": "user", "content": "hi"}]
+
+    res1 = client.chat.completions.create(messages=messages)
+    res2 = client.chat.completions.create(messages=messages)
+
+    assert res1.choices[0].message.content == "first"
+    assert res2.choices[0].message.content == "second"
+    assert client.script_index == 2
+
+
+def test_script_tool_calls_shape():
+    script = (
+        fake_step_tool_call(
+            "memory_store_list_paths",
+            '{"relative_path": ""}',
+            tool_call_id="call_abc",
+        ),
+    )
+    client = FakeOpenAI(script=script)
+    res = client.chat.completions.create(
+        messages=[{"role": "user", "content": "list files"}]
+    )
+    msg = res.choices[0].message
+    assert msg.content == ""
+    assert len(msg.tool_calls) == 1
+    tc = msg.tool_calls[0]
+    assert tc.id == "call_abc"
+    assert tc.function.name == "memory_store_list_paths"
+    assert tc.function.arguments == '{"relative_path": ""}'
+    assert res.choices[0].finish_reason == "tool_calls"
+
+
+def test_script_exhaustion_raises():
+    client = FakeOpenAI(script=(fake_step_text("only"),))
+    client.chat.completions.create(messages=[{"role": "user", "content": "x"}])
+    with pytest.raises(FakeOpenAIScriptExhaustedError):
+        client.chat.completions.create(messages=[{"role": "user", "content": "y"}])
+
+
+@pytest.mark.asyncio
+async def test_async_create_uses_same_script():
+    client = FakeOpenAI(script=(fake_step_text("async-reply"),))
+    res = await client.async_client.chat.completions.create(
+        messages=[{"role": "user", "content": "hello"}]
+    )
+    assert res.choices[0].message.content == "async-reply"
+    assert client.script_index == 1
+
+
+def test_fake_step_dual_llm_envelope_produces_valid_json():
+    step = fake_step_dual_llm_envelope(
+        user_facing_reply="done",
+        output_to_user=False,
+        importance_round=5,
+        importance_user_message=4,
+        importance_assistant_message=6,
+        turn_recall="",
+    )
+    client = FakeOpenAI(script=(step,))
+    res = client.chat.completions.create(messages=[{"role": "user", "content": "x"}])
+    content = res.choices[0].message.content
+    assert '"user_facing_reply": "done"' in content
+    assert '"output_to_user": false' in content
