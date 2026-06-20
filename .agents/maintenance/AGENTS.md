@@ -10,5 +10,10 @@
 
 ## 例行任务
 
-- looking for files that can be deleted and delete them.
+- Looking for files that can be deleted and delete them.
 - Keep only at most 9 tasks, and remove the least important one from this dir.
+
+## Scope
+
+- Only focus on [companion harness](/app/core/companion_harness/).
+  Ignore other code.
