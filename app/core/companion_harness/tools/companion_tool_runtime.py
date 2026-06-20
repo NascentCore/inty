@@ -14,7 +14,8 @@ import json
 import time
 from datetime import date
 from pathlib import Path
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from pydantic import ValidationError
 

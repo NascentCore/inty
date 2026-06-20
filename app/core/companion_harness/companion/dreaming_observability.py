@@ -13,7 +13,8 @@ from __future__ import annotations
 import uuid
 from contextlib import contextmanager
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Iterator
+from collections.abc import Iterator
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
