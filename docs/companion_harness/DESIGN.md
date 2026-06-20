@@ -31,6 +31,8 @@ LLM 会说话，但不会**记得你、惦记你、在你沉默时仍过自己�
 Epic [#3341](https://github.com/nascentcore/inty/issues/3341)
 psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
 
+Tracked work index (TODO tags ↔ GitHub issues): [`TRACKED_WORK.md`](./TRACKED_WORK.md).
+
 ## 目标态：内核与产品
 
 Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**提供一个完整自洽的存在环境。

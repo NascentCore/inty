@@ -1,6 +1,6 @@
 """Pydantic 模型：消息、人格包、控制面元数据。
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -83,7 +83,7 @@ class InnerTickActivity(StrEnum):
     (user-directed inner speech; distinct from ``AUTONOMY`` virtual-space activity).
     ``DREAMING`` (sleeping batch, not a turn) **rolls up the whole day**: user-visible
     chat plus scheduled / proactive on ``transcript.jsonl``, and silent ``AUTONOMY`` /
-    ``MAINTENANCE`` traces — into MemoryDoc curation (``TODO(dreaming-day-rollup)``:
+    ``MAINTENANCE`` traces — into MemoryDoc curation (``TODO(dreaming-day-rollup)``: — #3376
     inner-tick / ai_private / LIFE_CURRENTS not yet merged; #3343 curator, #3366 reflection).
     """
 
@@ -98,7 +98,7 @@ def inner_tick_activity_suppresses_user_delivery(
 ) -> bool:
     """True when inner-tick ``tool_background`` must not push NL or images to the client.
 
-    TODO(cross-track-image-delivery): AUTONOMY may generate_images silently; proactive
+    TODO(cross-track-image-delivery): AUTONOMY may generate_images silently; proactive — #3285
     / user-chat need a coherent path to reference or deliver those assets. #3285 #3468
     """
     return inner_tick_activity == InnerTickActivity.AUTONOMY
@@ -290,7 +290,7 @@ def _read_memory_document_required(
 
 
 def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
-    # TODO(static-prompt-slice-memstore): Replace with MemoryStore reads for static prompt
+    # TODO(static-prompt-slice-memstore): Replace with MemoryStore reads for static prompt — #3506
     # slices (HARNESS, TOOLS, SIGNIFICANCE_PERCEPTION, OUTPUT_FORMAT_IM_DM). !3506
     text = load_template_seed_text(relative_path).strip()
     if max_chars > 0 and len(text) > max_chars:
@@ -563,6 +563,6 @@ def transcript_relative_path_for_turn_persistence(
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
-        # TODO(rename-memory-doc): split maintenance vs autonomy JSONL paths (see memory_store_scope).
+        # TODO(rename-memory-doc): split maintenance vs autonomy JSONL paths (see memory_store_scope). — #3400
         return "transcript_inner_tick.jsonl"
     return "transcript.jsonl"

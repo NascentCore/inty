@@ -32,7 +32,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     LIVING_SPHERE = "living_sphere"
     LIVING_SPHERE_UPDATES_JSONL = "living_sphere_updates_jsonl"
     TOOLS = "tools"
-    # TODO(static-prompt-slice-memstore): Add HARNESS + OUTPUT_FORMAT_IM_DM kinds; load static
+    # TODO(static-prompt-slice-memstore): Add HARNESS + OUTPUT_FORMAT_IM_DM kinds; load static — #3506
     # Capability slices from MemoryStore, not _template_doc_truncated. !3506
     # Package seed SIGNIFICANCE_PERCEPTION.md; scoring semantics consumed via PromptBundle, not ORM-only.
     SIGNIFICANCE_PERCEPTION = "significance_perception"
@@ -63,7 +63,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     INTY_V2_SCHEDULE_TASKS_JSON = "inty_v2_schedule_tasks_json"
 
 
-# TODO(memdoc-path-constants): Derive keys from canonical MemDoc path constants (shared with
+# TODO(memdoc-path-constants): Derive keys from canonical MemDoc path constants (shared with — #3413
 # MemoryStoreScopePaths) instead of duplicating literals. #3413
 _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "IDENTITY.md": (CompanionMemoryDocumentKind.IDENTITY, None),
@@ -91,7 +91,7 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         None,
     ),
     "transcript.jsonl": (CompanionMemoryDocumentKind.TRANSCRIPT, None),
-    # TODO(rename-memory-doc): transcript_inner_tick_maintenance.jsonl (with scope path + migration).
+    # TODO(rename-memory-doc): transcript_inner_tick_maintenance.jsonl (with scope path + migration). — #3400
     "transcript_inner_tick.jsonl": (
         CompanionMemoryDocumentKind.TRANSCRIPT_INNER_TICK,
         None,

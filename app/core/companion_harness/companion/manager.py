@@ -8,7 +8,7 @@
 （``scope_turn_lock``；#3272）。
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -137,7 +137,7 @@ class CompanionSession:
 class CompanionManager:
     """管理所有活跃 companion session 的生命周期。
 
-    TODO(companion-session-eviction): ``_sessions`` is append-only today; evict when scope
+    TODO(companion-session-eviction): ``_sessions`` is append-only today; evict when scope — #3444
     has no active presence and no in-flight turns/tool_background.
     https://github.com/NascentCore/inty/issues/3444
     """
@@ -146,7 +146,7 @@ class CompanionManager:
         self._config = config
         self._sessions: dict[str, CompanionSession] = {}
         self._lock = threading.Lock()
-        # TODO(code-structure): This class holds too many objects, this llm client should not be a member of this class.
+        # TODO(code-structure): This class holds too many objects, this llm client should not be a member of this class. — #3409
         # Instead, this should focus on managing the session lifecycle.
         # And let the caller to provide the llm client when needed.
         self._llm_client = CompanionLLMClient(config.llm)
@@ -284,7 +284,7 @@ class CompanionManager:
             user_message_batch=user_message_batch,
         )
 
-    # TODO(companion-multimodal-user-turn): Phase 1c — accept ``CompanionUserTurnInput``
+    # TODO(companion-multimodal-user-turn): Phase 1c — accept ``CompanionUserTurnInput`` — #3293
     # https://github.com/NascentCore/inty/issues/3293
     # instead of ``user_text: str``; forward to ``run_companion_user_chat_turn``.
     async def run_user_chat_turn(

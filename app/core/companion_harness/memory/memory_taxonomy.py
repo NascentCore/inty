@@ -3,14 +3,14 @@
 Maps logical paths to daily gist / semantic terminology used in system injection
 headings and docs. Daily gist lives at ``memory/daily/{date}.md``; semantic at ``MEMORY.md``.
 
-TODO(memory-hierarchy-design): Design conceptual & logical memory hierarchy (layers, naming,
+TODO(memory-hierarchy-design): Design conceptual & logical memory hierarchy (layers, naming, — #3405
 lifecycle, injection rules)—#3405. Current headings are placeholders until design closes;
 conversation options (Letta context hierarchy, five-layer sketch, etc.) are candidates only.
 """
 
 from __future__ import annotations
 
-# TODO(consolidate-memory-doc-definitions): Should include doc name, attributes, path to a MemDoc type.
+# TODO(consolidate-memory-doc-definitions): Should include doc name, attributes, path to a MemDoc type. — #3549
 # So to note scatter aspects of memory doc to multiple source files.
 
 # System injection section lead-in (plain text, no markdown H2; kept stable for tests).

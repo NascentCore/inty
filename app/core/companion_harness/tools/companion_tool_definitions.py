@@ -10,10 +10,10 @@ New tool checklist:
 4. Add ``_dispatch`` branch in ``companion_tool_runtime``
 5. Run ``test_companion_tool_definitions.py``
 
-TODO(abstraction): Group tools by defining tuple of LlmFunctionTool data objects.
+TODO(abstraction): Group tools by defining tuple of LlmFunctionTool data objects. — #3453
 Do not group by tool names.
 
-TODO(companion-channel-tools): Channel-specific tool schemas + ``CompanionToolName`` members
+TODO(companion-channel-tools): Channel-specific tool schemas + ``CompanionToolName`` members — #3362
   (e.g. companion_set_status_line); filter by ``runtime_context.channel`` — #3362
 TODO(telegram-meta-ops-tools): Telegram meta tools (e.g. telegram_set_bot_name) — #3397;
   gated on dedicated-bot bonding #3361; shared-bot path #3396
@@ -44,11 +44,11 @@ from app.techno_core.models import (
 
 MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 
-# TODO(ai-private-jsonl-write): ``ai_private.jsonl`` (inner thoughts *about the user*, MAINTENANCE)
+# TODO(ai-private-jsonl-write): ``ai_private.jsonl`` (inner thoughts *about the user*, MAINTENANCE) — #3375
 # is ORM-mapped but excluded here — not ``LIFE_CURRENTS.md`` (virtual-world activity, AUTONOMY).
 # Enable MAINTENANCE append via dedicated append-only tool (preferred) or allowlist + append-only runtime.
 # CRS Awake express / Dreaming learn — PR #3290; follow-up #3375 #3376; epic #3341.
-# TODO(track-write-policy): Collapse per-track ``memory_store_write_document`` policy into one
+# TODO(track-write-policy): Collapse per-track ``memory_store_write_document`` policy into one — #3367
 # ``TrackWritePolicy`` (allowlist + tool description override) keyed by ``CompanionTurnTrack``;
 # wire ``turn.py`` write_allowlist and ``build_openai_*_track_tools`` from that registry instead of
 # three parallel ``MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_*`` + ``REPL_DESCRIPTION_OVERRIDES_*`` pairs.

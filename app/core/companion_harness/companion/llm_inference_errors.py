@@ -10,7 +10,7 @@ maps to the client message; otherwise ``provider_http_status`` is ``None`` and a
 provider message is used.
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations

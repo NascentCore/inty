@@ -27,7 +27,7 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
         "SIGNIFICANCE_PERCEPTION.md",
     }
 )
-# TODO(static-prompt-slice-memstore): Split static prompt-slice seeds (HARNESS, TOOLS, …) from
+# TODO(static-prompt-slice-memstore): Split static prompt-slice seeds (HARNESS, TOOLS, …) from — #3506
 # mutable MemDoc seeds; persist static kinds in MemoryStore on init. !3506
 
 
@@ -65,7 +65,7 @@ def get_safety_system_text() -> str:
     return load_template_seed_text("SAFETY.md").strip()
 
 
-# TODO(memdoc-path-constants): Property return values are still string literals; export
+# TODO(memdoc-path-constants): Property return values are still string literals; export — #3413
 # module-level Final constants and migrate all call sites to use them. #3413
 @dataclass(frozen=True)
 class MemoryStoreScopePaths:
@@ -123,7 +123,7 @@ class MemoryStoreScopePaths:
 
     @property
     def transcript_inner_tick(self) -> str:
-        # TODO(rename-memory-doc): Rename to transcript_inner_tick_maintenance.jsonl
+        # TODO(rename-memory-doc): Rename to transcript_inner_tick_maintenance.jsonl — #3400
         # (maintenance-only inner tick; update ORM mapping + migrations together).
         return "transcript_inner_tick.jsonl"
 

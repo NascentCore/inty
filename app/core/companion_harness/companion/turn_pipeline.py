@@ -5,7 +5,7 @@ front half of that function as explicit stages so the production pipeline can
 be split without changing WebSocket, MemoryStore, or tool-background behavior.
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -150,7 +150,7 @@ def resolve_turn_runtime_flags(
     )
 
 
-# TODO(companion-multimodal-user-turn): Phase 1c — add ``_companion_tail_user_content_for_llm``
+# TODO(companion-multimodal-user-turn): Phase 1c — add ``_companion_tail_user_content_for_llm`` — #3293
 # https://github.com/NascentCore/inty/issues/3293
 # returning ``str | list[dict]``: when ``user_turn.image_data_urls`` non-empty and
 # ``chat_model_accepts_image_input(chat_model)``, emit OpenAI content parts (text +

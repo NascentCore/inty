@@ -12,7 +12,7 @@ chat not planned unless explicitly requested.
 - Scheduled activity: activities that are scheduled to be fired in the future
 - Maintenance: regular maintenance, background & hidden from users, to process & reorganize chat messages (restricted inner-tick tool set).
 - Autonomy: silent self-directed work during user idle — reads/writes ``LIFE_CURRENTS.md`` with an open tool set; never delivers to the user (see ``docs/companion_harness/AUTONOMY.md``).
-  - TODO(narrow-maintenance): Shrink maintenance to memory-reorg only; profile/MemoryDoc sync belongs in **dreaming**.
+  - TODO(narrow-maintenance): Shrink maintenance to memory-reorg only; profile/MemoryDoc sync belongs in **dreaming**. — #3375
 
 ## Memory phase invariants
 

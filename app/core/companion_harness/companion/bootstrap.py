@@ -13,7 +13,7 @@ bootstrap tool path is still responsible for persisting the relationship seed
 documents and flipping the bootstrap completion flag.
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -55,10 +55,10 @@ _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = tuple(
     sorted({*BOOTSTRAP_WRITABLE_REL_PATHS, *_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS})
 )
 
-# TODO(person-identity-schema): TEMPLATE_REFERENCE should show generic templates/IDENTITY.md schema once,
+# TODO(person-identity-schema): TEMPLATE_REFERENCE should show generic templates/IDENTITY.md schema once, — #3390
 # not separate USER.md + IDENTITY.md package seeds; runtime bootstrap still writes both paths. #3390
 
-# TODO(bootstrap-prompt-single-source): Bootstrap write/tool rules duplicated across
+# TODO(bootstrap-prompt-single-source): Bootstrap write/tool rules duplicated across — #3463
 # ``prompts/BOOTSTRAP.md``, ``build_bootstrap_tool_call_section``, and
 # ``_output_contract_text_interactive_bootstrap_tools``; derive all three from one typed
 # policy next to ``BOOTSTRAP_WRITABLE_REL_PATHS`` / ``BOOTSTRAP_TRACK_TOOL_NAMES``.
@@ -108,7 +108,7 @@ def interactive_bootstrap_active(
     current experience profile may already be ``bootstrap`` or a non-bootstrap
     mode because completion can preserve an externally chosen relationship mode.
 
-    TODO(bootstrap-max-turns): Harness-level cap (max user-chat rounds or wall
+    TODO(bootstrap-max-turns): Harness-level cap (max user-chat rounds or wall — #3463
     clock) before forcing best-effort MemoryDoc writes + complete — prompt-only
     pacing in ``BOOTSTRAP.md`` is insufficient when the model skips tools.
     But the principle is to let the LLM decide when to complete, not to force it.

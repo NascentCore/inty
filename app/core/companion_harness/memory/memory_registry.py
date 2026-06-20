@@ -1,6 +1,6 @@
 """Process-local MemoryStore registry keyed by ``CompanionScope`` only.
 
-TODO(companion-session-eviction): ``_MEMORY_STORES`` grows forever; wire ``shutdown_memory_store``
+TODO(companion-session-eviction): ``_MEMORY_STORES`` grows forever; wire ``shutdown_memory_store`` — #3444
 to presence stop / idle TTL eviction (not only tests).
 https://github.com/NascentCore/inty/issues/3444
 """

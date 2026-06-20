@@ -41,7 +41,7 @@ _AI_PRIVATE_SPLICE_TRACKS: frozenset[CompanionTurnTrack] = frozenset(
         CompanionTurnTrack.USER_CHAT,
         CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
         CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
-        # TODO(ai-private-splice-scheduled): INNER_TICK_SCHEDULED + GREETING if product wants parity
+        # TODO(ai-private-splice-scheduled): INNER_TICK_SCHEDULED + GREETING if product wants parity — #3375
     }
 )
 
@@ -125,7 +125,7 @@ def persist_ai_private_splice_if_applicable(
         return
     thought_uuids = [t.uuid for t in persist_input.splice_plan.thoughts]
     mark_ai_private_surfaced(persist_input.store, thought_uuids)
-    # TODO(ai-private-persist-atomic): surfaced marker + manifest append should share one write batch
+    # TODO(ai-private-persist-atomic): surfaced marker + manifest append should share one write batch — #3375
     manifest_row = build_ai_private_splice_manifest_row(
         thought_uuids=thought_uuids,
         reply_to_user_msg_uuid=persist_input.user_msg_uuid,

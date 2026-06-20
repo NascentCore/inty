@@ -3,7 +3,7 @@
 Persisted companion documents and transcript go through MemoryStore; tool paths align with
 ``memory_store_document_mapping``.
 
-TODO(companion-channel-tools): Dispatch channel-specific tools via adapter layer / agent row
+TODO(companion-channel-tools): Dispatch channel-specific tools via adapter layer / agent row — #3362
   writes (e.g. companion_set_status_line) using turn runtime_context — #3362
 """
 
@@ -120,7 +120,7 @@ _USER_PROFILE_SECTION = "## 身份信息"
 # ``TOOL_TAG_GENERATION`` / memory-store caps / allowlist: ``companion_tool_definitions``.
 
 
-# TODO(narrow-maintenance): ``ai_private.jsonl`` append tool for MAINTENANCE inner-tick; drop
+# TODO(narrow-maintenance): ``ai_private.jsonl`` append tool for MAINTENANCE inner-tick; drop — #3375
 # UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (MemoryDoc → DREAMING #3375).
 
 

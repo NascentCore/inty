@@ -44,7 +44,7 @@ TODO(!3465, !3466, !3467): Keep new queue-serving AgenticLoop + OutputQueue
 path clean; record non-queue bootstrap as backup-only and avoid letting legacy
 interim WS or transcript-persistence policy shape the shared single-LLM loop API.
 
-TODO(tool-bg-idle-starves-user-chat): Hung maintenance ``tool_background`` leaves
+TODO(tool-bg-idle-starves-user-chat): Hung maintenance ``tool_background`` leaves — #3123
 ``CompanionSession.tool_bg_idle`` cleared; the next proactive or user ``run_turn`` blocks here
 while the WebSocket ``turn_lock`` holder waits, so burst USER_MESSAGE can show only
 ``user-input`` with no ``chat`` (see ``chat.py`` USER_MESSAGE path, ``tool_background.py``).
@@ -212,7 +212,7 @@ async def _await_tool_background_idle_if_configured(
     idle_wait_timeout_sec: float,
     scope_registry_key: str,
 ) -> None:
-    # TODO(tool-bg-idle-starves-user-chat): Timeout logs WARNING but still proceeds;
+    # TODO(tool-bg-idle-starves-user-chat): Timeout logs WARNING but still proceeds; — #3123
     # a stuck tool_bg thread can wedge every later turn on this session until restart.
     # https://github.com/NascentCore/inty/issues/3123
     if tool_bg_idle_event is None:
@@ -230,12 +230,12 @@ async def _await_tool_background_idle_if_configured(
         )
 
 
-# TODO(companion-multimodal-user-turn): Phase 1c — ``user_turn: CompanionUserTurnInput``
+# TODO(companion-multimodal-user-turn): Phase 1c — ``user_turn: CompanionUserTurnInput`` — #3293
 # https://github.com/NascentCore/inty/issues/3293
 # through turn core; transcript user row uses ``user_turn.to_transcript_text()`` (caption
 # or ``"[image]"``); memory pipeline stays text-only. LLM tail content assembled in
 # turn_pipeline when chat model accepts IMAGE input.
-# TODO(track-driven-system-messages-building): Inline calling of this function in the callers.
+# TODO(track-driven-system-messages-building): Inline calling of this function in the callers. — #3453
 async def _run_companion_turn_core(
     user_text: str,
     *,
@@ -315,7 +315,7 @@ async def _run_companion_turn_core(
         idle_wait_timeout_sec = float(
             llm_client.config.async_chat_front_timeout_sec
         )
-    # TODO(tool-bg-idle-starves-user-chat): Maintenance often ends with tool_background still running;
+    # TODO(tool-bg-idle-starves-user-chat): Maintenance often ends with tool_background still running; — #3123
     # the next turn waits on ``tool_bg_idle`` here while holding WS ``turn_lock``.
     # https://github.com/NascentCore/inty/issues/3123
     await _await_tool_background_idle_if_configured(
@@ -955,7 +955,7 @@ async def _run_companion_turn_core(
             companion_llm_runtime_event_bind_ctx.reset(llm_runtime_bind_token)
 
     # 持久化 transcript
-    # TODO(code-path-straightforwardness): refactor this function to accept
+    # TODO(code-path-straightforwardness): refactor this function to accept — #3516
     # the transcript path (resolved at the time when turn track is determined) as an argument.
     rel_tr = (
         paths.transcript
@@ -990,7 +990,7 @@ async def _run_companion_turn_core(
         if inner_tick_turn:
             user_row["inner_tick"] = True
         if tick_proactive:
-            # TODO: use enum for message type, not bool proactive_chat
+            # TODO(#3401): use enum for message type, not bool proactive_chat
             user_row["proactive_chat"] = True
         if track == CompanionTurnTrack.INNER_TICK_SCHEDULED:
             user_row["scheduled"] = True

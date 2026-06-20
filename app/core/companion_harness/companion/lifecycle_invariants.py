@@ -6,7 +6,7 @@ append-only logs). DreamingBatch curates MemoryDocs only via consolidate_memory_
 Enforced by tests/app/core/companion_harness/companion/test_lifecycle_invariants.py.
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations

@@ -5,15 +5,15 @@ session management, MemoryStore-backed workspace documents, prompt assembly, tur
 memory updates, async tool background work, and connection-level
 WebSocket coordination.
 
-TODO(companion-multimodal-user-turn): Phase 1 — user chat accepts images via
+TODO(companion-multimodal-user-turn): Phase 1 — user chat accepts images via — #3293
 ``CompanionUserTurnInput`` (see ``user_turn_input.py``) and ``run_user_chat``;
 Weixin/WS are channel adapters (Phase 2 for Weixin).
 https://github.com/NascentCore/inty/issues/3293
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409
 
-TODO(companion-package-reorg): Move app/core/companion_harness/companion/autonomy
+TODO(companion-package-reorg): Move app/core/companion_harness/companion/autonomy — #3409
 to app/core/companion_harness/prompting/autonomy/
 """

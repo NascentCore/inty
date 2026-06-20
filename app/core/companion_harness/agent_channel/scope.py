@@ -1,6 +1,6 @@
 """Harness scope for agent-channel stack: one human user bound to one Inty agent.
 
-TODO(rename-channel-to-gateway): Rename agent-channel scope naming to Gateway — scopes route
+TODO(rename-channel-to-gateway): Rename agent-channel scope naming to Gateway — scopes route — #3548
 companion turns through gateways to human channels (weixin/wechat, telegram, sms-phone-number, etc.).
 """
 

@@ -11,7 +11,7 @@ TODO(!3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled
 TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
 hierarchy (design issue; options include in-context vs retrieval-required splits).
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409
 """
 
@@ -107,7 +107,7 @@ def append_runtime_output_format_system_message(
 def companion_tools_for_turn(
     *,
     track: CompanionTurnTrack,
-    # TODO(abstraction): The following 3 args should be removed, and reflect the combination in track: CompanionTureTrack
+    # TODO(abstraction): The following 3 args should be removed, and reflect the combination in track: CompanionTureTrack — #3453
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
     implicit_user_signed_on_turn: bool = False,
@@ -127,7 +127,7 @@ def companion_tools_for_turn(
                 inner_tick_turn
                 and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
             )
-            # TODO(cross-track-image-delivery): PROACTIVE_CHAT tools=[] — visual offers
+            # TODO(cross-track-image-delivery): PROACTIVE_CHAT tools=[] — visual offers — #3285
             # need AUTONOMY asset handoff or user-chat tool leg; see #3285 #3468.
             tools_for_turn = (
                 []
@@ -143,7 +143,7 @@ def companion_tools_for_turn(
     return tools_for_turn
 
 
-# TODO(structural-simplicity): Dissolve this function, and let caller directly call the
+# TODO(structural-simplicity): Dissolve this function, and let caller directly call the — #3516
 # track-denominated system messsages building API.
 def companion_system_messages_for_track(
     *,
