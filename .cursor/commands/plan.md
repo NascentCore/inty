@@ -1,4 +1,4 @@
-# Plan (with additional contexts)
+# Plan implementation
 
 This is to draft a solid implementation plan, after you have a sound design.
 
