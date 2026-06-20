@@ -7,7 +7,7 @@
 
 ## 概要（Executive Summary）
 
-Companion Harness 一套完整的智能体框架，由 LLM 驱动：1 人 1 Inty，长期关系，体感上要像”活人“，而不是用完即弃的任务 Bot；是 Inty 理念和愿景的核心载体。
+Companion Harness 是一套完整的智能体框架，由 LLM 驱动：1 人 1 Inty，长期关系，体感上要像”活人“，而不是用完即弃的任务 Bot；是 Inty 理念和愿景的核心载体。
 
 Companion Harness + LLM = Inty（陪伴智能体）；Inty + Memory = Personal Companion
 
@@ -117,6 +117,8 @@ relationship state 今天**隐含**在这些 MemDoc 里；CRS 的职责是把它
 
 **闭环（一句话）**：行为产生 relationship 信号 → consolidation 把信号写入 memory → prompt activation 把状态读回，塑造下一拍行为；activation 是 consolidation 的读侧逆操作，同一段 relationship，两个方向。
 
+闭环落地受一条 memory phase 不变式约束：**awake turn 只追加 transcript 与 tool 副作用，不做 MemDoc 整编；MemDoc curation 只在 dreaming 批处理里发生**。该不变式由代码与 CI 守护（权威定义见 [`companion/AGENTS.md`](/app/core/companion_harness/companion/AGENTS.md) 的 Memory phase invariants），本文不复述细节。
+
 - time frames：agent 的时间感，三个嵌套 horizon，决定各轴更新与 consolidation 的节律。
   - session rhythm：当轮节拍、沉默/quiet 间隔。
   - diurnal cycle：醒/眠日界，门控 dreaming。
@@ -186,9 +188,20 @@ LLM 会说话，但不会**记得你、惦记你、在你沉默时仍过自己�
 - Self-directed activities: agents have their own autonomous activities to build up their own identity and novelty.
 - Real-world channels: App、Weixin/WeChat、Telegram, users can interact with agents through channels used by humans, all are consistent.
 
-据此，单一最重要的下一步是 Companion Relationship System (CRS)：
-把 relationship state、time frames、memory consolidation 和 prompt activation 收束成同一套 harness 机制（机制展开见上文「记忆模型 / 关系状态」），
-让所有 autonomous activity 与 channel delivery 都围绕同一段关系演化。
+据此，单一最重要的下一步是 Companion Relationship System (CRS)。
+
+### CRS (Companion Relationship System)
+
+CRS 是把今天**隐含在 MemDoc 里**的 relationship state，收成显式、第一类 harness 状态的那套机制，让所有 autonomous activity 与 channel delivery 都围绕同一段关系演化。
+
+- 一句话职责：把 relationship state、time frames、memory consolidation、prompt activation 收束成**同一套**机制（上行 consolidation 与下行 activation 共用同一份关系状态）。
+- In-scope（CRS 拥有）：
+  - 显式 relationship state 模型（三轴：Attachment posture / Social Penetration depth / Gottman moment）。
+  - time frames（session rhythm / diurnal cycle / relationship history）对各轴更新与 consolidation 节律的门控。
+  - consolidation（写侧）与 prompt activation（读侧）的对称投影。
+- Out-of-scope（CRS 不碰）：channel 适配与传输、API governance、商业化/计费、world engine 多 agent 编排（见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)）。
+- 成功判据：见上文「成效判断」——回访再投入、正确回忆表露、成功 bid/repair、主动触达被感知为惦记。
+- 现状诚实声明：三轴 → mechanism 的映射（见上文「记忆模型 / 关系状态」）仍是 working hypothesis，**是否已接通须读代码确认**；这是 CRS 将验证的核心假设，而非既成事实。
 
 Epic [#3341](https://github.com/nascentcore/inty/issues/3341) — psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
 
