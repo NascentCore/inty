@@ -13,6 +13,7 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
 from app.services.agentic_companion.downlink import ChannelDownlink
+from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
 
 
 class _NoOpDownlink:
@@ -35,3 +36,8 @@ class WeixinChannelAdapterStub:
 
     async def on_turn_down(self, scope: AgentScope) -> None:
         assert scope is not None
+
+    def inner_tick_delivery(self) -> InnerTickDelivery:
+        raise NotImplementedError(
+            "WeixinChannelAdapterStub has no inner-tick delivery"
+        )

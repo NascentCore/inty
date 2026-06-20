@@ -181,17 +181,17 @@ def ast_readable_id_references_in_source(
     return _collect_readable_id_hits(tree, relative_path)
 
 
-def app_ws_queue_delivery_ctx_uses_legacy_chat_row_id(
+def app_ws_turn_context_uses_real_chat_row_id(
     relative_path: str,
 ) -> list[str]:
-    """Return hits when ``AppWsQueueDeliveryCtx`` binds ``chat_id`` to ``str(chat.id)``."""
+    """Return hits when ``AppWsTurnContext`` binds ``chat_id`` to ``str(chat.id)``."""
     tree = parse_module_ast(relative_path)
     hits: list[str] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         func = node.func
-        if not isinstance(func, ast.Name) or func.id != "AppWsQueueDeliveryCtx":
+        if not isinstance(func, ast.Name) or func.id != "AppWsTurnContext":
             continue
         for kw in node.keywords:
             if kw.arg != "chat_id":
@@ -207,7 +207,7 @@ def app_ws_queue_delivery_ctx_uses_legacy_chat_row_id(
                 and value.args[0].value.id == "chat"
                 and value.args[0].attr == "id"
             ):
-                hits.append(f"{relative_path}:L{kw.lineno}:legacy_chat_row_id")
+                hits.append(f"{relative_path}:L{kw.lineno}:real_chat_row_id")
     return hits
 
 

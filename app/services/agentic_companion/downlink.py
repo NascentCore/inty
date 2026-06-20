@@ -54,6 +54,7 @@ class Downlink:
     bootstrap_interim: BootstrapInterimOutput | None
     scheduled_task_id: str | None
     transcript_user_text: str | None
+    message_ids: tuple[str, ...] = ()
 
 
 class ChannelDownlink(Protocol):
@@ -74,6 +75,27 @@ def user_reply_downlink(*, turn: CompanionTurnResult) -> Downlink:
         bootstrap_interim=None,
         scheduled_task_id=None,
         transcript_user_text=None,
+        message_ids=(),
+    )
+
+
+def queue_user_reply_downlink(
+    *,
+    assistant_text: str,
+    message_ids: tuple[str, ...],
+) -> Downlink:
+    """OutputQueue-delivered user-chat reply correlated to inbound message ids."""
+    assert assistant_text.strip() != ""
+    assert message_ids
+    return Downlink(
+        kind=DownlinkKind.USER_REPLY,
+        assistant_text=assistant_text,
+        turn=None,
+        tool_output=None,
+        bootstrap_interim=None,
+        scheduled_task_id=None,
+        transcript_user_text=None,
+        message_ids=message_ids,
     )
 
 

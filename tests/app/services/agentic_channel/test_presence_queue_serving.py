@@ -166,7 +166,7 @@ async def test_send_user_reply_without_active_channel_raises_for_output_retry() 
     )
 
     with pytest.raises(RuntimeError, match="no ACTIVE channel"):
-        await presence._deliver_output_via_active_channel(message)
+        await presence._deliver_ready_via_active_channel(message)
 
 
 @pytest.mark.asyncio
@@ -184,7 +184,7 @@ async def test_tool_background_output_is_hidden_without_active_channel() -> (
         sequence=1,
     )
 
-    await presence._deliver_output_via_active_channel(message)
+    await presence._deliver_ready_via_active_channel(message)
 
 
 @pytest.mark.asyncio

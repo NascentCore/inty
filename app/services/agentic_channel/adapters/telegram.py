@@ -25,6 +25,9 @@ from app.services.agentic_companion.downlink import (
     DownlinkKind,
     downlink_delivers_user_visible_text,
 )
+from app.services.agentic_companion.inner_tick_delivery import (
+    inner_tick_delivery_for_telegram,
+)
 
 _TELEGRAM_TEXT_KINDS = frozenset(
     {
@@ -65,6 +68,24 @@ class TelegramChannelAdapter:
 
     async def on_turn_down(self, scope: AgentScope) -> None:
         assert scope is not None
+
+    def inner_tick_delivery(self):
+        downlink = self.as_downlink()
+
+        async def send_assistant_text(text: str) -> None:
+            await downlink.deliver(
+                Downlink(
+                    kind=DownlinkKind.PROACTIVE,
+                    assistant_text=text,
+                    turn=None,
+                    tool_output=None,
+                    bootstrap_interim=None,
+                    scheduled_task_id=None,
+                    transcript_user_text=None,
+                )
+            )
+
+        return inner_tick_delivery_for_telegram(send_assistant_text)
 
 
 class _TelegramChannelDownlink:

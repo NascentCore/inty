@@ -34,16 +34,15 @@ def test_companion_production_surface_does_not_reference_readable_id() -> None:
     )
 
 
-def test_app_ws_queue_delivery_ctx_uses_agent_scope_inner_tick_chat_id() -> (
-    None
-):
-    hits = boundary.app_ws_queue_delivery_ctx_uses_legacy_chat_row_id(
+def test_app_ws_turn_context_uses_real_chat_row_id() -> None:
+    hits = boundary.app_ws_turn_context_uses_real_chat_row_id(
         "app/api/v1/endpoints/chat_ws.py"
     )
-    assert hits == [], (
-        "AppWsQueueDeliveryCtx.chat_id must use agent_scope_inner_tick_chat_id "
-        f"for inner-tick correlation; hits: {hits}"
+    assert hits != [], (
+        "AppWsTurnContext.chat_id must use str(chat.id) for chat_history session "
+        "correlation"
     )
+    assert all(":real_chat_row_id" in hit for hit in hits)
 
 
 def test_ast_readable_id_references_detects_common_forms() -> None:

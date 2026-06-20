@@ -169,6 +169,26 @@ async def channel_output_pump(
     return last_reply
 
 
+async def flush_scope_output_queue_ready(
+    scope: AgentScope,
+    *,
+    deliver_message: DeliverReadyMessageFn,
+) -> None:
+    """Deliver every ready OutputQueue message once (no polling sleep)."""
+    assert deliver_message is not None
+    output_queue = get_output_queue_for_scope(scope)
+    while True:
+        batch = await output_queue.pull_ready_batch()
+        if not batch:
+            break
+        for message in batch:
+            await _deliver_ready_message(
+                message=message,
+                deliver_message=deliver_message,
+                scope=scope,
+            )
+
+
 async def drain_and_deliver_user_chat_turn(
     scope: AgentScope,
     *,
