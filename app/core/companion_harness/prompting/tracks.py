@@ -1,4 +1,4 @@
-"""Track/Phase prompt domain model and bool-free system-message slice builders.
+"""Phase prompt domain model and bool-free system-message slice builders.
 
 Single-LLM settled+bootstrap assembly lives in ``PromptBuilder``; dual-LLM chat leg
 and legacy non-AgenticLoop paths still compose slices here or via
@@ -44,26 +44,11 @@ from app.core.companion_harness.memory.memory_taxonomy import (
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
 
-class Track(StrEnum):
-    """Sustained companion activity stream routed through composed prompt assembly."""
-
-    USER_TURN = "user_turn"
-    # TODO(!3453): proactive_chat, scheduled_activity, sign_on_greeting (user-visible).
-    # TODO(!3453): monolog, autonomy, dreaming (hidden cognition).
-
-
 class Phase(StrEnum):
     """Phase within a user-visible track (e.g. bootstrap vs settled on user_turn)."""
 
     SETTLED = "settled"
     BOOTSTRAP = "bootstrap"
-
-
-class UserTurnLeg(StrEnum):
-    """Which system stack variant applies within settled ``user_turn``."""
-
-    SINGLE_LLM = "single_llm"
-    DUAL_LLM_CHAT = "dual_llm_chat"
 
 
 def _require_settled_phase(phase: Phase) -> None:

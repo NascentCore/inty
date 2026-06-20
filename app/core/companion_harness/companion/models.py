@@ -107,8 +107,8 @@ def inner_tick_activity_suppresses_user_delivery(
 class CompanionTurnTrack(StrEnum):
     """Active production turn entry tracks (1:1 with ``build_system_messages_for_*``).
 
-    Deprecated successor model: ``prompting.tracks.Track`` + ``Phase`` (settled
-    ``user_turn`` dual-chat leg and single-LLM queue path already migrated).
+    Newer prompt assembly code may still model phase-specific user-turn slices
+    separately, but runtime routing uses these concrete production tracks.
     """
 
     USER_CHAT = "user_chat"
@@ -228,7 +228,6 @@ class ChatMessage(BaseModel):
     )
     scheduled: bool | None = None
     presence: PresenceSignal | None = None
-    repl_online_ack: bool | None = None
     inner_tick: bool | None = None
     source: str | None = None
     ai_private_thought_uuids: list[str] | None = Field(

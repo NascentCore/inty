@@ -21,8 +21,7 @@ companion turn pipeline.
   as ``DualLlmChatBranchEnvelope``.
 - **Kernel return**: ``CompanionTurnResult.significance_perception`` (``models.py``) carries the dict;
   may be ``None`` if parse failed.
-- **Transcript**: ``turn.run_turn`` JSONL assistant row; ``turn_engine.persist_repl_turn_transcript_rows``
-  for REPL paths.
+- **Transcript**: ``turn.run_turn`` JSONL assistant row.
 - **Product DB / WS**: ``app/services/agentic_companion/ws_turn_support.companion_ai_meta_from_turn_result`` mirrors into
   ``chat_history`` / WS. Async ``tool_bg``: ``ToolOutputEvent.significance_perception`` via
   ``tool_bg_routing`` → ``chat_ws._build_companion_tool_background_ws_payload``.
