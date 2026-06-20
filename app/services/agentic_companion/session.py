@@ -124,7 +124,23 @@ def apply_inner_tick_coords(
 
 @dataclass
 class Coordinator:
-    """Channel-agnostic companion invariants for one signed-on (user, agent, chat) presence."""
+    """Channel-agnostic per-presence state for one signed-on (user, agent, chat) scope.
+
+    Shared by every channel (App-WS / Telegram / Weixin); exactly one per scope, owned by
+    the long-lived presence. Holds presence STATE, not IO machinery:
+
+    - inner_tick_context: the signed-on (user, agent, chat) triple that gates the
+    proactive/scheduled poll (the poll no-ops when it is empty), plus maintenance/autonomy
+    throttle markers.
+    - background_events + background_sink: thread-safe plumbing for inner-tick
+    (proactive/maintenance/autonomy) tool-background output, which is not yet routed
+    through OutputQueue (see !3489); queue USER_CHAT tool-leg bypasses this and appends to
+    OutputQueue in-process.
+    - foreground_pending: correlation map for the above inner-tick background events.
+
+    Distinct from ScopeQueueServing (owns the InputQueue drain + OutputQueue pump tasks) and
+    from OutputQueue (durable user-visible output): Coordinator is presence state only.
+    """
 
     loop: asyncio.AbstractEventLoop
     background_events: asyncio.Queue[ToolOutputEvent] = field(
