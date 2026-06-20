@@ -20,7 +20,7 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import run_companion_user_chat_turn
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.llm.chat_completions import create_chat_completion_sync
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model

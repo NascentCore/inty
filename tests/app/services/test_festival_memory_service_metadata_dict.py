@@ -118,7 +118,7 @@ def _load_festival_memory_service_module():
         _resolve_festival_name_and_date
     )
 
-    fake_openai_client_module = types.ModuleType("app.utils.openai_client")
+    fake_openai_client_module = types.ModuleType("app.core.llms.openai_client")
 
     async def _dummy_chat_completion_for_extraction(*args, **kwargs):
         return ("dummy summary", None, None)
@@ -143,7 +143,7 @@ def _load_festival_memory_service_module():
         mp.setitem(sys.modules, "app.services.chat_history_service", fake_chat_history_module)
         mp.setitem(sys.modules, "app.services.chat_service", fake_chat_service_module)
         mp.setitem(sys.modules, "app.services.memory_service", fake_memory_service_module)
-        mp.setitem(sys.modules, "app.utils.openai_client", fake_openai_client_module)
+        mp.setitem(sys.modules, "app.core.llms.openai_client", fake_openai_client_module)
         mp.setitem(sys.modules, "app.utils.openrouter_memory", fake_openrouter_module)
         module = importlib.import_module("app.services.festival_memory_service")
     return module

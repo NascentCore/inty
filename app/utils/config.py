@@ -40,7 +40,7 @@ from app.utils.companion_feature_defaults import (
 # 3. 【如有必要】删除该配置项在 app 客户端相关的使用，部署、发布验证一切正常。
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-# Chat LLM is invoked via OpenAI client (app.utils.openai_client) against OpenRouter (agent.base_url / agent.api_key).
+# Chat LLM is invoked via OpenAI client (app.core.llms.openai_client) against OpenRouter (agent.base_url / agent.api_key).
 # Model IDs are OpenRouter model names, e.g. google/gemini-2.5-flash-lite (GEMINI_2_5_FLASH_LITE), google/gemini-2.5-flash (GEMINI_2_5_FLASH).
 
 GEMINI_2_5_FLASH = models_catalog.GEMINI_2_5_FLASH.id_on_provider
@@ -446,7 +446,7 @@ def resolved_telegram_bot_token(agent: "AgentConfig") -> str:
 class AgentConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    # OpenRouter API key; chat is invoked via OpenAI client (app.utils.openai_client) against base_url.
+    # OpenRouter API key; chat is invoked via OpenAI client (app.core.llms.openai_client) against base_url.
     api_key: str = Field(...)
     langchain_api_key: str = Field(...)
     # DEPRECATED: Do not use. Use free_user_chat_model and sub_user_chat_model instead.

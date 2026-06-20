@@ -31,7 +31,7 @@ from app.services.chat_history_service import (
     get_chat_history_replica_connection,
 )
 from app.services.chat_service import generate_session_id
-from app.utils.openai_client import chat_completion_for_extraction
+from app.core.llms.openai_client import chat_completion_for_extraction
 from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
 
 MEMORY_TYPE_USER_COMMON = "user_common"

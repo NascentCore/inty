@@ -26,7 +26,7 @@ from app.core.companion_harness.companion.dreaming_observability import (
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
 )
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
     BootstrapInterimOutputSink,

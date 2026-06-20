@@ -62,7 +62,7 @@ from app.utils.models_catalog import (
     is_deepseek_on_openrouter,
     resolve_chat_model_to_id,
 )
-from app.utils.openai_client import (
+from app.core.llms.openai_client import (
     get_chat_llm_provider,
     get_chat_openai_client,
     langchain_message_to_openai_message,

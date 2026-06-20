@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.proactive_chat import (
     ProactiveChatConfig,
     next_proactive_chat_wait_seconds,

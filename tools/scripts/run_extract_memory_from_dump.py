@@ -27,7 +27,7 @@ from app.services.memory_extraction_service import (
     _load_prompt,
     _part1_from_content,
 )
-from app.utils.openai_client import chat_completion_for_extraction
+from app.core.llms.openai_client import chat_completion_for_extraction
 from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
 
 

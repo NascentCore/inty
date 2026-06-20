@@ -76,7 +76,7 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
 )
 from .langsmith_turn_slice import CompanionTurnLangsmithSlice
 
-from .llm_client import (
+from app.core.llms.client import (
     LLM_SCENE_CHAT,
     LLM_SCENE_INNER_TICK,
 )

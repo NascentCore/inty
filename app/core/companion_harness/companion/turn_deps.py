@@ -30,7 +30,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
 
-from .llm_client import CompanionLLMClient
+from app.core.llms.client import CompanionLLMClient
 from .runtime_channel import TurnRuntimeContext
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 

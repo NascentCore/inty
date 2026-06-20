@@ -30,7 +30,7 @@ from app.core.companion_harness.tools.runtime import (
     resolve_openai_tool_call_loop_async,
 )
 from .langsmith_turn_slice import CompanionTurnLangsmithSlice
-from .llm_client import CompanionLLMClient, LLM_SCENE_CHAT
+from app.core.llms.client import CompanionLLMClient, LLM_SCENE_CHAT
 from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
