@@ -1,5 +1,10 @@
 # Companion Harness: 架构说明
 
+> 本文描述的是 agentic companion 的**目标态理想设计**，不是现状清单。
+> `companion_harness` 目前仍处于 **PROTOTYPE** 状态。
+> 编码智能体与工程师在判断「某部分是否已实现」之前，**必须先读 `app/core/companion_harness/` 代码**，不要以本文为实现依据。
+> 本文用途：为 `app/core/companion_harness/` 的持续实现提供方向指引。
+
 ## 概要（Executive Summary）
 
 Companion Harness 一套完整的智能体框架，由 LLM 驱动：1 人 1 Inty，长期关系，体感上要像”活人“，而不是用完即弃的任务 Bot；是 Inty 理念和愿景的核心载体。
@@ -9,54 +14,38 @@ Companion Harness + LLM = Inty（陪伴智能体）；Inty + Memory = Personal C
 Companion Harness 干的就是这件事：把 LLM 放进一套有节律、有记忆、有副作用的状态机里，让「聊天」变成「关系」，即：用户与智能体体验、演化一段关系的框架。
 Companion Harness 提供了**活着的关系**的存在框架；在此之上，iMate 作为一款产品，是为用户提供一个**真心为你**的心灵港湾。
 
-### 现状
+## Mind Model（心智模型）
 
-以上是**目标态的理想设计**，不是现状清单。`companion_harness` 目前仍处于 **PROTOTYPE** 状态。
+Mind Model 是一种**实现范式**：用 LLM **物化（materialize）心理学研究发现的人类机制**来模拟一个人，并把这种「人格（personhood）」**显形（manifest）**出来——当前经由文本，很快扩展到其他 GenAI 模态（图像、语音），最终落到 humanoid robot。
 
-## 重要下一步工作
+当前的物化形态是两类相互喂养的过程：
 
-LLM 会说话，但不会**记得你、惦记你、在你沉默时仍过自己的日子（分享给你）**，无法成为伴侣。
-我们认为突破的关键是：**长期自主性**，也就是产生用户预期以外的反馈（这些行为和反馈始终以用户伴侣的视角呈现）。
-这是让 AI 成为物理世界活人（5-10 年业界的整体进展）之前最可行的技术方案。
-自主性体现在：
-
-- Dynamism: prompt slices keeps changing, chat appears very dynamic.
-- Self-directed activities: agents have their own autonomous activities to build up their own identity and novelty.
-- Real-world channels: App、Weixin/WeChat、Telegram, users can interact with agents through channels used by humans, all are consistent.
-
-据此，单一最重要的下一步是 Companion Relationship System (CRS)：
-把 relationship state、time frames、memory consolidation 和 prompt activation 收束成同一套 harness 机制，
-让所有 autonomous activity 与 channel delivery 都围绕同一段关系演化。
-
-Epic [#3341](https://github.com/nascentcore/inty/issues/3341)
-psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
+- **Outward loop（对外）**：此刻 Inty 说出口的话——user chat、greeting、proactive。
+- **Inner life（内在）**：用户看不见、却塑造后续话术的私下活动——对当轮的 appraisal（significance / recall）、monolog（ai_private）、autonomy、dreaming。
+  - 「自主性」与「在你沉默时仍过自己的日子（惦记你）」就来自 inner life；实现细节见代码与 [GLOSSARY.md](./GLOSSARY.md)，本文不内联。
 
 ## 目标态：内核与产品
 
 Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**提供一个完整自洽的存在环境。
-在此之上，需要叠加面向特定人群的**产品功能**，来实现陪伴的商业化体验，即**陪伴价值用户可感知、用户有付费意愿**。
-如 [多 agent 世界引擎、sub-agent](/docs/companion_harness/FR_WORLD_ENGINE.md)。
+在此之上叠加面向特定人群的**产品功能**，实现陪伴价值用户可感知。产品/商业化不是 harness prototype 的实现关注点（见 [AGENTS.md](/app/core/companion_harness/AGENTS.md) non-goals）。
+多 agent 世界引擎与 sub-agent 详见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)。
 
 ### Domain concepts
 
-- agentic companion: the thing user interact with to form companionship with,
-  it's an abstract union of various static and runtime data and mechanisms,
-  including agentic loops, memory, llms, programed loops like inner-tick, etc.
-  This concept is by nature vague at this point, as we are still evolving its design.
-  - inner-tick: a programmed loop where the agentic companion periodically wakes up and use llm to perform
-    some work.
-- agentic loop: multi-turn reasoning with llm(s), multiple agentic loops forms the central mind model for
-  simulating the thoughts and actions of an agentic companion. Agentic loop emits user-visible messages,
-  and non-user-visible data for later process and eventually influences the later steps of generating
-  user-visible messages (monolog & autonomy etc.).
-- channel: abstract the medium through witch the user interact with the agentic companion.
-  Right now we have the following channels:
-  - Weixin/WeChat (IM)
-  - Telegram (IM)
-  - App (WebSocket)
-- input & output queue: for buffering messages between user and agent.
+- relationship: 本框架的**第一类核心概念**——单一用户与单一 Inty 之间持续演化、被持久化的那段 bond，是整篇文档的锚。
+  - 当前工作假设（current working decomposition，CRS 将验证、非心理学 spec）按三个时间尺度拆为三轴：
+    - Attachment posture：disposition 层，慢，用户如何寻求/回避亲近，Inty 取何种依恋姿态。
+    - Social Penetration depth：intimacy 层，中速，相互自我表露走到多深、解锁了哪些话题。
+    - Gottman moment：interaction 层，快，逐轮的连接质量（bid / 错过 / rupture / repair）。
+- agentic companion: 用户与之建立陪伴关系的对象，是各种静态/运行时数据与机制的抽象集合（agentic loop、memory、llms、inner-tick 等程序化循环）。当前概念仍模糊，设计在演进中。
+  - inner-tick: 一个程序化循环，companion 周期性醒来并用 LLM 做一些工作。
+- agentic loop: 与 LLM 的多轮推理；多个 agentic loop 组成模拟思考与行动的 central mind model。既产出用户可见消息，也产出非用户可见数据（monolog、autonomy 等），影响后续可见话术。
+- channel: 用户与 agentic companion 交互的媒介抽象；当前有 Weixin/WeChat (IM)、Telegram (IM)、App (WebSocket)。
+- input & output queue: 在用户与 agent 之间缓冲消息。
+- Prompt slice: 当轮注入 LLM 的 system 文本块；可 1:1 来自 MemDoc，也可仅来自包内模板或 Python 组装（见 [MEMORY_STORE.md](./MEMORY_STORE.md)）。
+- Living Sphere / Techno Core: 见 [LIVING_SPHERE.md](./LIVING_SPHERE.md)——LivingSphere 是用户可改写的私密虚拟小家，TechnoCore 是只读的集体居留层。
 - Interaction patterns:
-  - proactive: proactively poking user from agent, a user-visible behavior pattern
+  - proactive: 由 agent 主动搭话，一种用户可见的行为模式。
 
 ## 目标架构图
 
@@ -118,14 +107,26 @@ Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**�
  inner tick (proactive · scheduled · autonomy · maintenance) ──► triggers turn programs
 ```
 
-## 记忆模型
+## 记忆模型 / 关系状态
 
 当前 companion 的「世界」主要由 MemoryStore 中的一组版本化 markdown 文档、transcript 和工具副作用构成，**还不是独立 world engine**（目标态见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)）。
+relationship state 今天**隐含**在这些 MemDoc 里；CRS 的职责是把它收成显式、第一类的状态。记忆细节见 [MEMORY_STORE.md](./MEMORY_STORE.md) 与 [MEMORY_PROJECTION.md](./MEMORY_PROJECTION.md)，本文不展开字段。
 
 - `*.md` refer to semantic content
 - `*.jsonl` refer to episodic content
 
-TODO(memory-hierarchy-design): Design conceptual & logical memory hierarchy; replace `*.md` / `*.jsonl` stub below after !3405 closes (conversation options are candidates, not the spec).
+**闭环（一句话）**：行为产生 relationship 信号 → consolidation 把信号写入 memory → prompt activation 把状态读回，塑造下一拍行为；activation 是 consolidation 的读侧逆操作，同一段 relationship，两个方向。
+
+- time frames：agent 的时间感，三个嵌套 horizon，决定各轴更新与 consolidation 的节律。
+  - session rhythm：当轮节拍、沉默/quiet 间隔。
+  - diurnal cycle：醒/眠日界，门控 dreaming。
+  - relationship history：关系已持续多久、里程碑、「一周没聊了」。
+- axis → mechanism 映射（current working hypothesis，请读代码确认是否已接通）：
+  - Gottman moment → 逐轮 appraisal 信号（significance perception / turn recall）。
+  - Social Penetration depth → dreaming / memory consolidation。
+  - Attachment posture → 长寿命语义记忆与 prompt 姿态。
+
+TODO(memory-hierarchy-design): Design conceptual & logical memory hierarchy; replace `*.md` / `*.jsonl` stub above after !3405 closes (conversation options are candidates, not the spec).
 
 ## Turn 轨道：用户与智能体交互及慢周期后台数据处理支持 (Runtime Loops)
 
@@ -146,22 +147,58 @@ TODO(memory-hierarchy-design): Design conceptual & logical memory hierarchy; rep
 - **`MAINTENANCE`** (monolog)
   - 触发：idle poll
   - 用户可见：否
-- `AUTONOMY`
+- `AUTONOMY`（见 [AUTONOMY.md](./AUTONOMY.md)）
   - 触发：inner-tick
   - 用户可见：否（非直接）
 - **Dreaming（非 turn）**
   - 触发：inner-tick
   - 用户可见：否（`InnerTickActivity.DREAMING`）非直接，会修改 MemDoc 从而影响后续聊天
 
-## Channels (could be extended to become a broader 'Exo-Runtime Design')
+## Channels
 
-Channels are medium for user to interact with agents.
-In other words, constructs between end users and the core-agentic-harness runtime.
-They provide different content modality & representation formats, and conventions of interaction. It's like a social scenarios:
-a bar is for casual encountering, coffee shop is for general friends, etc. Telegram, WhatsApp, Weixin all have different canonical types of interaction patterns.
+Channels 是同一段持续 relationship 的**可互换显形面（manifestation surface）**，不是各自独立的对话：同一份 relationship state、memory 与 mind 驱动每一个 channel，channel 只在模态与交互惯例上不同。
+就像社交场景：bar 适合萍水相逢，coffee shop 适合一般朋友——Telegram、WhatsApp、Weixin 各有其惯用的交互模式。
+关系的连续性与身份归属在 harness 内核（不在单 channel）；跨 channel 的身份解析见 [FR_CROSS_CHANNEL_USER_IDENTITY.md](./FR_CROSS_CHANNEL_USER_IDENTITY.md)。
 
 Currently-supported channels:
 
 - Websocket
 - Telegram
 - Weixin/WeChat
+
+## 成效判断（What "good" looks like）
+
+不是指标，是 relationship 模型应当推动的**定性信号**（current working stance，将由 prototype 修正）；评测机制见 [evaluation/](/evaluation/)。
+
+- 用户**跨周回访、持续再投入**（retention，最终代理指标）。
+- Inty **正确回忆并引用过往表露**（penetration depth 在起作用）。
+- **成功的 bid / repair**（Gottman moment 质量）。
+- **主动触达让人觉得被惦记，而非被打扰**。
+
+## 重要下一步工作
+
+LLM 会说话，但不会**记得你、惦记你、在你沉默时仍过自己的日子（分享给你）**，无法成为伴侣。
+我们认为突破的关键是：**长期自主性**，也就是产生用户预期以外的反馈（这些行为和反馈始终以用户伴侣的视角呈现）。
+这是让 AI 成为物理世界活人（5-10 年业界的整体进展）之前最可行的技术方案。
+自主性体现在：
+
+- Dynamism: prompt slices keeps changing, chat appears very dynamic.
+- Self-directed activities: agents have their own autonomous activities to build up their own identity and novelty.
+- Real-world channels: App、Weixin/WeChat、Telegram, users can interact with agents through channels used by humans, all are consistent.
+
+据此，单一最重要的下一步是 Companion Relationship System (CRS)：
+把 relationship state、time frames、memory consolidation 和 prompt activation 收束成同一套 harness 机制（机制展开见上文「记忆模型 / 关系状态」），
+让所有 autonomous activity 与 channel delivery 都围绕同一段关系演化。
+
+Epic [#3341](https://github.com/nascentcore/inty/issues/3341) — psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
+
+## 文档地图 / See also
+
+- [GLOSSARY.md](./GLOSSARY.md) — 术语与方向（上行/下行、前台/后台、节拍/模式）。
+- [MEMORY_STORE.md](./MEMORY_STORE.md) — MemoryStore 工作区状态层：MemDoc 与 prompt slice、持久化表。
+- [MEMORY_PROJECTION.md](./MEMORY_PROJECTION.md) — prompt 作为版本化 slice 空间的确定性投影。
+- [AUTONOMY.md](./AUTONOMY.md) — inner-tick `AUTONOMY` 轨道与 `LIFE_CURRENTS.md`。
+- [LIVING_SPHERE.md](./LIVING_SPHERE.md) — 用户–伴侣私密虚拟小家与只读 TechnoCore。
+- [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — 多 agent 世界引擎、harness 作为 actor supervisor、sub-agent。
+- [FR_CROSS_CHANNEL_USER_IDENTITY.md](./FR_CROSS_CHANNEL_USER_IDENTITY.md) — 跨 channel 身份解析到单一 canonical user。
+- [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — 仅供灵感的点子集。
