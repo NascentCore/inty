@@ -39,7 +39,7 @@ class _FakeLLMClient:
         self.config = CompanionLLMConfig(api_base="https://example.invalid/v1")
         self.calls: list[dict[str, Any]] = []
 
-    def sync_client_for_route(self, route: str) -> object:
+    def sync_client_for_route(self, _route: str) -> object:
         return object()
 
     def resolve_model(self, role: str) -> GenAIModel:
@@ -64,7 +64,7 @@ class _FakeLLMClient:
         max_attempts: int,
         per_attempt_timeout_sec: float,
         trace_id: str | None,
-        attempt_log_label: str,
+        _attempt_log_label: str,
         model: GenAIModel | None,
         **kwargs: Any,
     ) -> Any:

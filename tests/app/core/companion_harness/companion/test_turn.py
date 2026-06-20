@@ -40,7 +40,7 @@ class _FakeLLMClient:
         self.config = CompanionLLMConfig(api_base="https://example.invalid/v1")
         self.calls: list[dict[str, Any]] = []
 
-    def sync_client_for_route(self, route: str) -> object:
+    def sync_client_for_route(self, _route: str) -> object:
         return object()
 
     @property
