@@ -9,6 +9,8 @@ Review and revise the implementation plan:
 - The plan's implementation steps are sufficiently granular
 - The plan's target state matches objectives
 
+Review architecture of the pending changes' fitness to the [companion harness design](/docs/companion_harness/DESIGN.md)
+
 ## Use alembic cli to generate database version files
 
 - After adding new models in orm/, use alembic skill to create new version file
