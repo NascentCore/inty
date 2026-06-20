@@ -11,7 +11,7 @@
 ## 例行任务
 
 - Looking for files that can be deleted and delete them.
-- Keep only at most 9 tasks, and remove the least important one from this dir.
+- Keep only at most 5 tasks, and remove the least important one from this dir.
 
 ## Scope
 
