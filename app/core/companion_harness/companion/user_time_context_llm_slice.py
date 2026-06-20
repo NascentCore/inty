@@ -12,7 +12,8 @@ https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from app.core.user_time_context_llm_meta import (
     build_user_time_context_meta_lines,

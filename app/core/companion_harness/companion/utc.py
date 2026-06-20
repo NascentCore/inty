@@ -6,7 +6,7 @@ https://github.com/NascentCore/inty/issues/3409"""
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 _LLM_TS_SUFFIX_UTC = " UTC"
 _TRANSCRIPT_TIMESTAMP_PREFIX_RE = re.compile(
@@ -16,7 +16,7 @@ _TRANSCRIPT_TIMESTAMP_PREFIX_RE = re.compile(
 
 def utc_now() -> datetime:
     """Current UTC wall time with second precision."""
-    return datetime.now(timezone.utc).replace(microsecond=0)
+    return datetime.now(UTC).replace(microsecond=0)
 
 
 def utc_iso_ts() -> str:
@@ -25,7 +25,7 @@ def utc_iso_ts() -> str:
 
 
 def utc_date_str() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return datetime.now(UTC).strftime("%Y-%m-%d")
 
 
 def local_iso_ts() -> str:
@@ -44,15 +44,15 @@ def parse_utc_iso_ts(ts: str, *, allow_naive: bool) -> datetime:
     if dt.tzinfo is None:
         if not allow_naive:
             raise ValueError("timestamp must include timezone offset or Z")
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
 def format_transcript_ts_for_llm_dt(dt: datetime) -> str:
     """Human-readable UTC label from a timezone-aware or naive datetime."""
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    dt_utc = dt.astimezone(timezone.utc).replace(microsecond=0)
+        dt = dt.replace(tzinfo=UTC)
+    dt_utc = dt.astimezone(UTC).replace(microsecond=0)
     return dt_utc.strftime("%Y-%m-%d %H:%M:%S") + _LLM_TS_SUFFIX_UTC
 
 

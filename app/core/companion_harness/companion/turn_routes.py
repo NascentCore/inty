@@ -17,7 +17,8 @@ https://github.com/NascentCore/inty/issues/3409"""
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 

@@ -153,7 +153,7 @@ class AgenticCompanion:
                         self._stop.wait(),
                         timeout=poll_seconds,
                     )
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
 
         self._worker_task = asyncio.create_task(

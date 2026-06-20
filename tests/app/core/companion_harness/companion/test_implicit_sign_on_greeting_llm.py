@@ -39,7 +39,7 @@ class _FakeLLMClient:
         self.config = CompanionLLMConfig(api_base="https://example.invalid/v1")
         self.calls: list[dict[str, Any]] = []
 
-    def sync_client_for_route(self, route: str) -> object:
+    def sync_client_for_route(self, _route: str) -> object:
         return object()
 
     def resolve_model(self, role: str) -> GenAIModel:
@@ -68,6 +68,7 @@ class _FakeLLMClient:
         model: GenAIModel | None,
         **kwargs: Any,
     ) -> Any:
+        _ = attempt_log_label
         resolved = model or self.resolve_model("chat")
         model_id = resolved.id_on_provider
         resp = None

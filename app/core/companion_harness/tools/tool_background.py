@@ -22,7 +22,8 @@ import time
 import uuid
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Callable, Protocol
+from collections.abc import Callable
+from typing import Any, Protocol
 
 from loguru import logger
 from openai import BadRequestError

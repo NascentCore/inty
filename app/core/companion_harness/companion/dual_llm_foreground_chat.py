@@ -140,7 +140,7 @@ async def run_dual_llm_foreground_chat(
         ls_lr = langsmith_llm_run_id_from_completion(resp)
         if ls_lr:
             langsmith_run_acc = ls_lr
-    except asyncio.TimeoutError as exc:
+    except TimeoutError as exc:
         record_llm_inference_failure(
             model=chat_model.id_on_provider,
             exc=exc,
