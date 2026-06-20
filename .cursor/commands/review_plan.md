@@ -7,6 +7,7 @@ Review and revise the implementation plan:
 - The plan's objectives are clear and reasonable
 - The plan's logical design is sound
 - The plan's implementation steps are sufficiently granular
+  - Include data types definitions (with key doc string to describe the data type's role in the design) and core logics
 - The plan's target state matches objectives
 
 Review architecture of the pending changes' fitness to the [companion harness design](/docs/companion_harness/DESIGN.md)
