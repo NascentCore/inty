@@ -7,7 +7,7 @@ import json
 import os
 from functools import lru_cache
 
-from app.core.companion_harness.companion.llm_client import CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.manager import (
     CompanionConfig,
     CompanionManager,
