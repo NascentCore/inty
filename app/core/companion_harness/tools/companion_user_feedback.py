@@ -256,7 +256,7 @@ def _github_issue_worker(
     github_repo: str,
     github_token: str,
 ) -> None:
-    # TODO(companion-user-feedback): MemoryStore.append_jsonl_record is read-modify-write;
+    # TODO(companion-user-feedback): MemoryStore.append_jsonl_record is read-modify-write; — #3552
     # concurrent appends from other turns may race — consider append-only repo API.
     # Lazy import avoids import cycle (github_issue module imports HarnessSnapshot here).
     from app.core.companion_harness.tools.companion_user_feedback_github_issue import (

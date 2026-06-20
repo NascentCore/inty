@@ -27,7 +27,7 @@ from app.living_sphere.seeding import (
     ensure_living_sphere_seeded,
 )
 
-# TODO(offline-batch): Large-scale LivingSphere compact (cross-scope backfill / backlog) must be a
+# TODO(offline-batch): Large-scale LivingSphere compact (cross-scope backfill / backlog) must be a — #3547
 # separate deployable + managed cloud offline executor (cf. backend/push_worker)—NOT a longer cron
 # on awake turns. Reuse compact_* merge semantics only; batching, sharding, and cursor locking
 # are offline concerns. Do not treat offline as a simple extension of per-turn online compact.

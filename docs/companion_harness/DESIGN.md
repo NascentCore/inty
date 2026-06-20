@@ -24,6 +24,8 @@ Mind Model 是一种**实现范式**：用 LLM **物化（materialize）心理�
 - **Inner life（内在）**：用户看不见、却塑造后续话术的私下活动——对当轮的 appraisal（significance / recall）、monolog（ai_private）、autonomy、dreaming。
   - 「自主性」与「在你沉默时仍过自己的日子（惦记你）」就来自 inner life；实现细节见代码与 [GLOSSARY.md](./GLOSSARY.md)，本文不内联。
 
+Tracked work index (TODO tags ↔ GitHub issues): [`TRACKED_WORK.md`](./TRACKED_WORK.md).
+
 ## 目标态：内核与产品
 
 Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**提供一个完整自洽的存在环境。

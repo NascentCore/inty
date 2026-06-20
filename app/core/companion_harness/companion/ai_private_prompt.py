@@ -9,7 +9,7 @@ Surfaced consumption appends marker rows ``{kind: surfaced, ref_uuid, ts}`` (app
 Kernel maintenance inner-tick turns load history via ``get_ai_private_jsonl_text_for_prompt``;
 ``get_ai_private_text_for_prompt`` remains for ``ai_private.md`` only (tests, tooling, optional merge).
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from app.core.companion_harness.companion.transcript_anchor import (
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
-# TODO(rename-memory-doc): Rename ai_private.md to AI_PRIVATE.md
+# TODO(rename-memory-doc): Rename ai_private.md to AI_PRIVATE.md — #3400
 _AI_PRIVATE_MD_REL = "ai_private.md"
 
 AI_PRIVATE_JSONL_REL = "ai_private.jsonl"

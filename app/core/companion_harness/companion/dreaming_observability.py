@@ -5,7 +5,7 @@
 ``CompanionTurnResult`` or REPL assistant metadata.
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -117,7 +117,7 @@ def record_dreaming_batch_observability(
 ) -> None:
     """Persist runtime event and close LangSmith parent for one dreaming batch.
 
-    TODO(dreaming-batch-langsmith-finally): Callers that raise before this runs leave the parent
+    TODO(dreaming-batch-langsmith-finally): Callers that raise before this runs leave the parent — #3551
     open — see ``run_dreaming_batch_if_due``; end parent in try/finally on failure paths.
     """
     from app.core.companion_harness.companion.llm_chat_runtime import (

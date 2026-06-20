@@ -29,7 +29,7 @@ companion turn pipeline.
 - **Memory extraction (optional)**: ``memory_extraction.use_significance_perception_in_extraction`` →
   ``memory_extraction_service`` sorts by ``meta_data.significance_perception.importance_round``.
 
-TODO(crs-turn-recall): ``importance_*`` scores are **moment-level significance perception**, not
+TODO(crs-turn-recall): ``importance_*`` scores are **moment-level significance perception**, not — #3343
 ``turn_recall`` (ephemeral per-turn memory depth / Turn Brief). Phase A (#3342) plumbs
 ``turn_recall`` on the envelope, transcript, and WS meta; Phase B (#3343) wires prompt +
 dreaming curator. CRS epic #3341; do not conflate with ``relationship_phase``
@@ -43,7 +43,7 @@ TODO(#3398): Envelope is shared by single-LLM in-turn sync and dual-LLM ``tool_b
 epic tracks whether user chat stays on one chat model or splits chat vs ``companion_tool_call_model``.
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations

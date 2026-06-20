@@ -11,7 +11,7 @@ that return value (maintenance inner tick skips foreground—see ``turn`` module
 TODO(#3398): Debate single-LLM in-turn sync vs dual-LLM (foreground chat + ``tool_background``) for user chat.
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ class TurnRouteMode(str, Enum):
     introduce ``AgenticLoopMechanism`` and resolve via ``resolve_agentic_loop(track, config)``.
     """
 
-    # TODO: rename members to drop ``_SYNC`` / avoid leaking execution-strategy names;
+    # TODO(#3401): rename members to drop ``_SYNC`` / avoid leaking execution-strategy names;
     # prefer track-aligned or product semantics (e.g. inner-tick mode labels).
     PROACTIVE_CHAT_SYNC = "proactive_chat_sync"
     INNER_TICK_SYNC = "inner_tick_sync"

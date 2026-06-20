@@ -16,7 +16,7 @@ Field provenance:
   ``bootstrap_interim_output_sink``.
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 class CompanionTurnDeps:
     """Immutable dependencies for one ``run_turn`` execution.
 
-    TODO(companion-langsmith-slice): hoist ``langsmith_slice`` here when more modules
+    TODO(companion-langsmith-slice): hoist ``langsmith_slice`` here when more modules — #3553
     need turn-bound channel observability without param drilling.
 
     Unpacked once at the top of ``_run_companion_turn_core``; inner helpers continue

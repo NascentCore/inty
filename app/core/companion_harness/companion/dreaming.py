@@ -8,7 +8,7 @@ checkpoint and settle it into applicable MemoryDocs: user-visible dialogue on
 silent awake inner-tick footprints (``AUTONOMY``, ``MAINTENANCE`` — inner-tick
 transcript, ``LIFE_CURRENTS.md``, ``ai_private.jsonl``, related tool/jsonl traces).
 
-``TODO(dreaming-day-rollup)``: ``dreaming_candidate_slice`` today gates on
+``TODO(dreaming-day-rollup)``: ``dreaming_candidate_slice`` today gates on — #3376
 ``transcript.jsonl`` only; merge inner-tick / ai_private / LIFE_CURRENTS into
 ``consolidate_memory_during_dreaming`` input (#3343; optional #3366).
 
@@ -29,7 +29,7 @@ the next conversation continues from the consolidated memories instead.
 day** (``dreaming_due`` compares ``DreamingState.last_processed_calendar_date`` to
 ``now``). Same-day chat after a morning dream waits until the next UTC day even when
 ``dreaming_idle_seconds`` is satisfied. User-local timezone for the day boundary is
-planned (``TODO(user-feature)``).
+planned (``TODO(user-feature)``). — #3325
 
 Concurrency: dreaming runs on the **scope inner-tick worker** (#3255) under
 ``CompanionSession.turn_lock`` (#3272). Maintenance and AUTONOMY use the same worker.
@@ -39,12 +39,12 @@ Prototype invariant: ``transcript.jsonl`` must not change while a dreaming batch
 presence; #3271 cluster lock). ``dreaming_race_guard_matches`` re-checks that invariant;
 ``run_dreaming_batch_if_due`` raises on mismatch — not a soft retry path.
 
-TODO(dreaming-transcript-invariant): If ``dreaming_idle_seconds`` is lowered below
+TODO(dreaming-transcript-invariant): If ``dreaming_idle_seconds`` is lowered below — #3376
 tool_background worst-case runtime, gate dreaming on ``tool_bg_idle`` or revisit this
 assumption (see #3123).
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -164,7 +164,7 @@ def dreaming_candidate_slice(
     """Return checkpoint-after rows for dreaming consolidation.
 
     Today only ``transcript.jsonl`` (user-visible chat, proactive, scheduled).
-    TODO(dreaming-day-rollup): Merge same-day ``transcript_inner_tick.jsonl``
+    TODO(dreaming-day-rollup): Merge same-day ``transcript_inner_tick.jsonl`` — #3376
     (AUTONOMY / MAINTENANCE), ``LIFE_CURRENTS.md``, and related tool/jsonl traces
     into the candidate slice passed to ``consolidate_memory_during_dreaming``;
     extend ``DreamingCandidate`` / race guard if inner-tick boundaries need separate
@@ -174,7 +174,7 @@ def dreaming_candidate_slice(
     Without checkpoint: at most the last 24h on the main transcript.
     """
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    # TODO(dreaming-day-rollup): merge paths.transcript_inner_tick + LIFE_CURRENTS.md
+    # TODO(dreaming-day-rollup): merge paths.transcript_inner_tick + LIFE_CURRENTS.md — #3376
     # into candidate rows; ai_private dreaming render partial in #3420 (#3376).
     raw_rows = transcript_without_trailing_presence_signals(
         load_transcript_from_store(store, paths.transcript)
@@ -238,7 +238,7 @@ def dreaming_due(
         and state.last_processed_calendar_date.date() == now_utc.date()
     ):
         # Intentional: one successful dream per scope per UTC calendar day.
-        # TODO(user-feature): Use user/client's timezone for the day boundary.
+        # TODO(user-feature): Use user/client's timezone for the day boundary. — #3325
         return None
     candidate = dreaming_candidate_slice(store, now=now)
     if candidate is None:

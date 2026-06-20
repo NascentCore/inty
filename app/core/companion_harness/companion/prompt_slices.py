@@ -12,10 +12,10 @@ user-time tail) with **no** Memory doc.
 ``PromptSliceId.MEMORY`` → ``MEMORY.md``. Daily gist: ``memory/daily/<date>.md``
 (dreaming-written); see ``memory_taxonomy``.
 
-TODO(static-prompt-slice-memstore): Static package slices (HARNESS, TOOLS, …) need
+TODO(static-prompt-slice-memstore): Static package slices (HARNESS, TOOLS, …) need — #3506
 dedicated MemoryStore kinds—not PromptSliceId persistables, not generic MemDocs. !3506
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409
 """
 

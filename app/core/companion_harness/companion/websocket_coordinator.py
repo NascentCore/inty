@@ -9,12 +9,12 @@ Prototype: that accept **is** the only wire for the paired user (no multi-tab).
 Turns serialize on scope ``CompanionSession.turn_lock`` (#3272). See
 ``session.Coordinator`` and ``companion_harness`` AGENTS.md「Concurrency (prototype)」.
 
-TODO(ws-disconnect-lifecycle): https://github.com/NascentCore/inty/issues/3256 — on shutdown
+TODO(ws-disconnect-lifecycle): https://github.com/NascentCore/inty/issues/3256 — on shutdown — #3256
 or WebSocket session end, do not cancel in-flight turns; persist-first with delivery state,
 mark undelivered, replay after ``user_signed_on``.
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations

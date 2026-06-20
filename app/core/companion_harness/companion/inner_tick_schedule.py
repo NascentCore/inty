@@ -10,7 +10,7 @@ on ``agent.companion_harness.inner_tick.proactive_chat.poll_seconds``.
 See ``docs/companion_harness/DESIGN.md`` for scheduling semantics and transport boundaries.
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -101,7 +101,7 @@ def transcript_tail_message_uuid(store: MemoryStore) -> str | None:
     """``uuid`` of the last ``transcript.jsonl`` row in the maintenance gate view.
 
     Maintenance turns persist to ``transcript_inner_tick.jsonl``
-    (TODO(rename-memory-doc): ``transcript_inner_tick_maintenance.jsonl``); this reflects main-track
+    (TODO(rename-memory-doc): ``transcript_inner_tick_maintenance.jsonl``); this reflects main-track — #3400
     state only (same source as ``next_inner_tick_wait_seconds``).
     """
     msgs = _maintenance_transcript_messages(store)

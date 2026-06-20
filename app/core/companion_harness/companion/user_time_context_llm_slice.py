@@ -4,10 +4,10 @@ Delegates line formatting to :mod:`app.core.user_time_context_llm_meta` so the
 harness ``## user-time-context`` **system** slice matches the classic agent
 tail-user suffix contract.
 
-# TODO(code-structure): Move this to app.core.companion_harness.companion.prompts.user_time_context_slice.py
+# TODO(code-structure): Move this to app.core.companion_harness.companion.prompts.user_time_context_slice.py — #3409
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations

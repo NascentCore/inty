@@ -12,7 +12,7 @@ MemoryStore tools.
 
 **Capability (package + store):** harness innate limits (``HARNESS.md``) → channel
 contracts (``CHANNELS.md``) → tool contracts (``TOOLS.md``). Static harness/tool seeds
-are package-authoritative today; TODO(static-prompt-slice-memstore): persist as
+are package-authoritative today; TODO(static-prompt-slice-memstore): persist as — #3506
 non-mutable MemoryStore kinds (!3506). Mutable channel contract remains ``CHANNELS.md``.
 
 Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdown ``##`` headings.
@@ -38,10 +38,10 @@ before replacing these prompt entrypoints with track-composed templates.
 
 Post-transcript slices (e.g. ``## user-time-context`` in ``turn_pipeline``) are not built here.
 
-TODO(code-consistency): All tool name should be template swapped with LllmFunctionTool.name.
+TODO(code-consistency): All tool name should be template swapped with LllmFunctionTool.name. — #3413
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -166,7 +166,7 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
     )
 
 
-# TODO(cross-track-image-delivery): Foreground still denies generate_image despite this
+# TODO(cross-track-image-delivery): Foreground still denies generate_image despite this — #3285
 # contract; enforce or route image intent to tool leg only. #3285
 def _output_contract_text_chat_branch_mirrored_tools() -> str:
     return (
@@ -268,7 +268,7 @@ def _output_contract_text_with_tools(
     return base
 
 
-# TODO(bootstrap-prompt-single-source): Keep in sync with ``bootstrap.py`` until single-source policy lands.
+# TODO(bootstrap-prompt-single-source): Keep in sync with ``bootstrap.py`` until single-source policy lands. — #3463
 # CRS #3328 (relationship seed); #3367 (TrackWritePolicy registry).
 # Bootstrap completion timing stays LLM-driven (``companion_bootstrap_user_interactive_complete``);
 # no harness max-turn auto-complete — see ``bootstrap.py`` module docstring.
@@ -294,7 +294,7 @@ def _output_contract_text_interactive_bootstrap_tools() -> str:
     return base
 
 
-# TODO(cross-track-image-delivery): Proactive has no tools — must not offer to show
+# TODO(cross-track-image-delivery): Proactive has no tools — must not offer to show — #3285
 # sketches/images; align with LIFE_CURRENTS + AUTONOMY silent assets. #3285
 def _proactive_chat_clause() -> str:
     return (
@@ -324,7 +324,7 @@ def _infer_time_zone_prompt_slice() -> str:
 
 
 _LIFE_CURRENTS_PROACTIVE_HEADER = "## 你最近在做的事（仅供参考）"
-# TODO(cross-track-image-delivery): Drawing/image activities in LIFE_CURRENTS must not
+# TODO(cross-track-image-delivery): Drawing/image activities in LIFE_CURRENTS must not — #3285
 # become「要不要看」offers without a deliverable generated_images path. #3285
 _LIFE_CURRENTS_PROACTIVE_FOOTER = (
     "此处只描述你在阁楼 / LivingSphere / TechnoCore / 联网检索或生图里**真的做过**的环境侧小事；"
@@ -640,7 +640,7 @@ def _persona_system_messages(
     include_significance_perception_slice: bool,
     interactive_bootstrap_active: bool,
 ) -> list[dict[str, Any]]:
-    # TODO(crs-persona-slice-registry): Registry for persistable persona slices
+    # TODO(crs-persona-slice-registry): Registry for persistable persona slices — #3341
     # (inject order, heading, gate) instead of per-doc conditionals — #3367 / #3343.
     out: list[dict[str, Any]] = [
         _system_message(bundle.identity.strip()),
@@ -733,7 +733,7 @@ def _output_system_messages(
     return out
 
 
-# TODO(structual-simplicity): Dissolve this function, the caller calls the body based on the provided arguments.
+# TODO(structual-simplicity): Dissolve this function, the caller calls the body based on the provided arguments. — #3516
 def _contextual_system_messages(
     *,
     context: ContextMeta,
@@ -745,7 +745,7 @@ def _contextual_system_messages(
     proactive_life_currents_block: str | None,
     interactive_bootstrap_active: bool,
 ) -> list[dict[str, Any]]:
-    # TODO(experience-profile): collapse harness context_mode user-facing clause into
+    # TODO(experience-profile): collapse harness context_mode user-facing clause into — #3343
     # experience_directives when intent is set (#3343).
     out: list[dict[str, Any]] = []
     if not interactive_bootstrap_active:
@@ -778,7 +778,7 @@ def _contextual_system_messages(
     return out
 
 
-# TODO(track-driven-system-messages-building): Inline calling of this function in the callers.
+# TODO(track-driven-system-messages-building): Inline calling of this function in the callers. — #3453
 def build_system_messages(
     bundle: PromptBundle,
     context: ContextMeta,

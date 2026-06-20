@@ -1,6 +1,6 @@
 """REPL-grade turn helpers: transcript row persistence via MemoryStore.
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def persist_repl_turn_transcript_rows(
     if inner_tick_turn:
         user_row["inner_tick"] = True
     if inner_tick_proactive_chat:
-        # TODO: use enum for message type, not bool proactive_chat
+        # TODO(#3401): use enum for message type, not bool proactive_chat
         user_row["proactive_chat"] = True
     if repl_online_ack:
         user_row["repl_online_ack"] = True

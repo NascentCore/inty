@@ -17,7 +17,7 @@ Each successful append emits a short **loguru** line: ``INFO`` for ``llm_inferen
 ``tool_background_failure`` kinds, ``DEBUG`` for other kinds (see ``append_runtime_event``).
 
 
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout).
+TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations

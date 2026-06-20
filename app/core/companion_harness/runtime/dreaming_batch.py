@@ -45,10 +45,10 @@ def run_dreaming_batch_if_due(
     Prototype: ``transcript.jsonl`` must not change during the batch; mismatch after
     ``consolidate_memory_during_dreaming`` raises ``DreamingTranscriptBoundaryMismatchError``
     (see ``companion.dreaming`` module doc — #3272, #3271, tool_bg timing TODO).
-    TODO(dreaming-day-rollup): inner-tick merge may require boundary guard on
+    TODO(dreaming-day-rollup): inner-tick merge may require boundary guard on — #3376
     ``transcript_inner_tick.jsonl`` too (#3376).
 
-    TODO(dreaming-cluster-lock): Postgres advisory lock per scope when running multi-process
+    TODO(dreaming-cluster-lock): Postgres advisory lock per scope when running multi-process — #3550
     backend — https://github.com/NascentCore/inty/issues/3271
 
     Callable from scope inner-tick worker (#3255 / PR #3387); caller holds scope
@@ -68,7 +68,7 @@ def run_dreaming_batch_if_due(
 
     inty_trace_id = new_dreaming_batch_trace_id()
 
-    # TODO(dreaming-batch-langsmith-finally): On ``DreamingTranscriptBoundaryMismatchError`` (or
+    # TODO(dreaming-batch-langsmith-finally): On ``DreamingTranscriptBoundaryMismatchError`` (or — #3551
     # any batch failure inside ``dreaming_batch_langsmith_scope``), ``record_dreaming_batch_observability``
     # is skipped — LangSmith parent may not get ``end_companion_turn_root_run_safe``. Use try/finally
     # to always end the parent (failure outcome + optional runtime event) before re-raise.
