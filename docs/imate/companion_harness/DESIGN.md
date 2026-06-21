@@ -45,8 +45,6 @@ Mind Model 是一种**实现范式**：用 LLM **物化（materialize）心理�
 - **Inner life（内在）**：用户看不见、却塑造后续话术的私下活动——对当轮的 appraisal（significance / recall）、monolog（ai_private）、autonomy、dreaming。
   - 「自主性」与「在你沉默时仍过自己的日子（惦记你）」就来自 inner life；实现细节见代码与 [GLOSSARY.md](./GLOSSARY.md)，本文不内联。
 
-Tracked work index (TODO tags ↔ GitHub issues): [`TRACKED_WORK.md`](./TRACKED_WORK.md).
-
 ## 目标态：内核与产品
 
 Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**提供一个完整自洽的存在环境。
@@ -151,7 +149,7 @@ relationship state 今天**隐含**在这些 MemDoc 里；CRS 的职责是把它
   - Social Penetration depth → dreaming / memory consolidation。
   - Attachment posture → 长寿命语义记忆与 prompt 姿态。
 
-TODO(memory-hierarchy-design): Design conceptual & logical memory hierarchy; replace `*.md` / `*.jsonl` stub above after !3405 closes (conversation options are candidates, not the spec).
+**Open design work**: conceptual & logical memory hierarchy; replace the `*.md` / `*.jsonl` stub above once that design lands (conversation options are candidates, not the spec).
 
 ## Turn 轨道：用户与智能体交互及慢周期后台数据处理支持 (Runtime Loops)
 
@@ -226,7 +224,7 @@ CRS 是把今天**隐含在 MemDoc 里**的 relationship state，收成显式、
 - 成功判据：见上文「成效判断」——回访再投入、正确回忆表露、成功 bid/repair、主动触达被感知为惦记。
 - 现状诚实声明：三轴 → mechanism 的映射（见上文「记忆模型 / 关系状态」）仍是 working hypothesis，**是否已接通须读代码确认**；这是 CRS 将验证的核心假设，而非既成事实。
 
-Epic [#3341](https://github.com/nascentcore/inty/issues/3341) — psychology × time frames × harness (SDCM: Attachment + Gottman moment + Social Penetration depth).
+CRS 把 psychology × time frames × harness 收束为同一套机制（SDCM: Attachment + Gottman moment + Social Penetration depth）。
 
 ## 文档地图 / See also
 
