@@ -1,7 +1,6 @@
 """CI-gated harness orchestration tests using scripted FakeOpenAI transport.
 
-TODO(!3563): Add scripted tests for maintenance, autonomy, dreaming, proactive+background-tool tracks (Epic !3561).
-TODO(!3563): Read ``user_turn.llm_loop_mode`` from config when sizing scripts instead of hardcoding step counts.
+TODO(!3563): Expand scripted tracks (maintenance, autonomy, dreaming, proactive+background-tool); read ``user_turn.llm_loop_mode`` from config when sizing scripts.
 """
 
 from __future__ import annotations

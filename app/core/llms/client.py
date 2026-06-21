@@ -1,6 +1,6 @@
 """Companion LLM clients: legacy ``CompanionLLMClient`` and ``AsyncLlmClient`` for AgenticLoop.
 
-TODO(!3565): Unit-test provider-error paths (JSON retry, transient retry, malformed completions) with scripted transport fakes (Epic !3561).
+TODO(!3565): Unit-test provider-error paths (JSON retry, transient retry, malformed completions) with scripted transport fakes.
 """
 
 from __future__ import annotations

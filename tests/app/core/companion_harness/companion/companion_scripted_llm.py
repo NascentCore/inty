@@ -1,6 +1,6 @@
 """Wire a real CompanionLLMClient to one shared scripted FakeOpenAI for harness tests.
 
-TODO(!3562): When headless ``AgenticCompanion.drain_once`` tests land, consider promoting this helper into ``app/core/llms/`` if production-adjacent code needs it (Epic !3561).
+TODO(!3562): When headless ``AgenticCompanion.drain_once`` tests land, consider promoting this helper into ``app/core/llms/`` if production-adjacent code needs it.
 """
 
 from __future__ import annotations
