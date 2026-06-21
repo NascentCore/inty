@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from app.core.llms.client import CompanionLLMConfig
 from app.external_services.fakes.openai import fake_step_text
-from tests.fixtures.companion_scripted_llm import (
+from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     assert_all_routes_share_fake,
     companion_llm_client_with_scripted_transport,
 )

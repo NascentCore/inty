@@ -42,7 +42,7 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
     create_guest_scope_for_test,
     delete_guest_scope_for_test,
 )
-from tests.fixtures.companion_scripted_llm import (
+from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     companion_llm_client_with_scripted_transport,
 )
 
