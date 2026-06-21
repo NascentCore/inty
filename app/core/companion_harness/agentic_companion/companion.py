@@ -1,6 +1,7 @@
 """AgenticCompanion: per-scope serving runtime draining InputQueue into AgenticLoop.
 
 TODO(!3493): Weixin ``drain_and_deliver`` caller should enqueue + wake only (!3487 App-WS done #3512).
+TODO(!3562): Headless scripted ``drain_once`` CI tests inject ``InjectedCompanionRuntime``.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from app.core.companion_harness.companion.turn_routes import (
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.models_catalog import GenAIModel
 
-from .turn import run_agent_turn
+from .turn import InjectedCompanionRuntime, run_agent_turn
 
 from .output_queue import get_output_queue_for_scope
 from .postgres_queue import PostgresInputQueueRepository
@@ -67,6 +68,7 @@ class AgenticCompanion:
         runtime_channel: CompanionRuntimeChannel,
         background_output_sink: BackgroundToolEventSink | None,
         implicit_signal_bundle: ImplicitSignalBundle,
+        injected_runtime: InjectedCompanionRuntime | None = None,
     ) -> AgenticCompanionRunResult | None:
         batch = await self.input_repo.claim_pending_batch(self.scope)
         if batch is None:
@@ -98,6 +100,7 @@ class AgenticCompanion:
                     implicit_signal_bundle=implicit_signal_bundle,
                     agentic_output_queue=domain_output_queue,
                     user_message_batch=user_message_batch,
+                    injected_runtime=injected_runtime,
                 )
             assert isinstance(turn, CompanionTurnResult)
             output_ids = list(turn.output_message_ids)
