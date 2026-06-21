@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from app.core.companion_harness.companion.dreaming import (
@@ -63,7 +63,7 @@ def test_dreaming_without_checkpoint_looks_back_24h(tmp_path: Path) -> None:
         ],
     )
     candidate = dreaming_candidate_slice(
-        store, now=datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+        store, now=datetime(2026, 1, 2, 12, 0, tzinfo=UTC)
     )
     assert candidate is not None
     assert [row.content for row in candidate.rows] == ["new", "new reply"]
@@ -89,7 +89,7 @@ def test_dreaming_due_uses_idle_seconds(tmp_path: Path) -> None:
             },
         ],
     )
-    now = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 2, 12, 0, tzinfo=UTC)
     assert dreaming_due(store, now=now, dreaming_idle_seconds=7200) is not None
     assert dreaming_due(store, now=now, dreaming_idle_seconds=14400) is None
 
@@ -131,12 +131,12 @@ def test_dreaming_due_skips_after_same_day_checkpoint(tmp_path: Path) -> None:
         DreamingState(
             last_processed_main_line_count=2,
             last_processed_main_uuid="a1",
-            last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc),
+            last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=UTC),
             last_processed_latest_user_ts=datetime(
-                2026, 1, 2, 9, 0, tzinfo=timezone.utc
+                2026, 1, 2, 9, 0, tzinfo=UTC
             ),
             last_processed_calendar_date=datetime(
-                2026, 1, 2, 12, 0, tzinfo=timezone.utc
+                2026, 1, 2, 12, 0, tzinfo=UTC
             ),
         ),
     )
@@ -144,7 +144,7 @@ def test_dreaming_due_skips_after_same_day_checkpoint(tmp_path: Path) -> None:
     assert (
         dreaming_due(
             store,
-            now=datetime(2026, 1, 2, 23, 0, tzinfo=timezone.utc),
+            now=datetime(2026, 1, 2, 23, 0, tzinfo=UTC),
             dreaming_idle_seconds=7200,
         )
         is None
@@ -187,19 +187,19 @@ def test_dreaming_due_allows_next_day_after_checkpoint(tmp_path: Path) -> None:
         DreamingState(
             last_processed_main_line_count=2,
             last_processed_main_uuid="a1",
-            last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc),
+            last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=UTC),
             last_processed_latest_user_ts=datetime(
-                2026, 1, 2, 9, 0, tzinfo=timezone.utc
+                2026, 1, 2, 9, 0, tzinfo=UTC
             ),
             last_processed_calendar_date=datetime(
-                2026, 1, 2, 12, 0, tzinfo=timezone.utc
+                2026, 1, 2, 12, 0, tzinfo=UTC
             ),
         ),
     )
 
     candidate = dreaming_due(
         store,
-        now=datetime(2026, 1, 3, 9, 0, tzinfo=timezone.utc),
+        now=datetime(2026, 1, 3, 9, 0, tzinfo=UTC),
         dreaming_idle_seconds=7200,
     )
 
@@ -215,12 +215,12 @@ def test_dreaming_state_roundtrip_uses_datetime(tmp_path: Path) -> None:
     state = DreamingState(
         last_processed_main_line_count=2,
         last_processed_main_uuid="a",
-        last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc),
+        last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=UTC),
         last_processed_latest_user_ts=datetime(
-            2026, 1, 2, 9, 0, tzinfo=timezone.utc
+            2026, 1, 2, 9, 0, tzinfo=UTC
         ),
         last_processed_calendar_date=datetime(
-            2026, 1, 2, 0, 0, tzinfo=timezone.utc
+            2026, 1, 2, 0, 0, tzinfo=UTC
         ),
     )
     save_dreaming_state(store, state)
@@ -252,12 +252,12 @@ def test_apply_dreaming_checkpoint_to_prompt_rows() -> None:
     state = DreamingState(
         last_processed_main_line_count=2,
         last_processed_main_uuid="a1",
-        last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc),
+        last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=UTC),
         last_processed_latest_user_ts=datetime(
-            2026, 1, 2, 9, 0, tzinfo=timezone.utc
+            2026, 1, 2, 9, 0, tzinfo=UTC
         ),
         last_processed_calendar_date=datetime(
-            2026, 1, 2, 0, 0, tzinfo=timezone.utc
+            2026, 1, 2, 0, 0, tzinfo=UTC
         ),
     )
     assert apply_dreaming_checkpoint_to_prompt_rows(rows, state) == rows[2:]
