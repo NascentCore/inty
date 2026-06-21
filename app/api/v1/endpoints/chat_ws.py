@@ -1212,12 +1212,29 @@ async def _agent_chat_ws_completions_impl(
                                 or registry.active_channel()
                                 != ChannelKind.APP_WS
                             ):
-                                await _turn_up_app_ws_channel(
-                                    scope=scope,
-                                    outbound_queue=ws_outbound_queue,
-                                    user_id=str(current_user.id),
-                                    arm_proactive_coords=False,
-                                )
+                                try:
+                                    await _turn_up_app_ws_channel(
+                                        scope=scope,
+                                        outbound_queue=ws_outbound_queue,
+                                        user_id=str(current_user.id),
+                                        arm_proactive_coords=False,
+                                    )
+                                except CompanionBondInvariantError as exc:
+                                    raise CompanionInferenceUpstreamHTTPException(
+                                        status_code=409,
+                                        detail="companion bond conflict",
+                                        ws_extra={
+                                            "reason": "companion_bond_conflict",
+                                        },
+                                    ) from exc
+                                except ChannelEndpointConflictError as exc:
+                                    raise CompanionInferenceUpstreamHTTPException(
+                                        status_code=409,
+                                        detail="channel endpoint conflict",
+                                        ws_extra={
+                                            "reason": "channel_endpoint_conflict",
+                                        },
+                                    ) from exc
                                 channel_presence = get_presence(scope)
                             assert channel_presence is not None
                             await channel_presence.enqueue_app_ws_user_turn(

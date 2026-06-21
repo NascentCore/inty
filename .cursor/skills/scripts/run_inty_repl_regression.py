@@ -452,8 +452,10 @@ def _query_active_companion_bond_agent_id(
         config_path,
         f"""
 SELECT state FROM companion_bonds
-WHERE user_id = '{user_id}' AND agent_id = '{agent_id}'
-ORDER BY created_at ASC, id ASC
+WHERE user_id = '{user_id}'
+  AND agent_id = '{agent_id}'
+  AND state = 'ACTIVE'
+ORDER BY created_at DESC, id DESC
 LIMIT 1;
 """,
     )
