@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Protocol
+from typing import Any, Protocol
 
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.turn_routes import (
@@ -55,6 +55,7 @@ class Downlink:
     scheduled_task_id: str | None
     transcript_user_text: str | None
     message_ids: tuple[str, ...] = ()
+    output_message: Any | None = None
 
 
 class ChannelDownlink(Protocol):
@@ -76,6 +77,7 @@ def user_reply_downlink(*, turn: CompanionTurnResult) -> Downlink:
         scheduled_task_id=None,
         transcript_user_text=None,
         message_ids=(),
+        output_message=None,
     )
 
 
@@ -83,6 +85,7 @@ def queue_user_reply_downlink(
     *,
     assistant_text: str,
     message_ids: tuple[str, ...],
+    output_message: Any | None = None,
 ) -> Downlink:
     """OutputQueue-delivered user-chat reply correlated to inbound message ids."""
     assert assistant_text.strip() != ""
@@ -96,6 +99,7 @@ def queue_user_reply_downlink(
         scheduled_task_id=None,
         transcript_user_text=None,
         message_ids=message_ids,
+        output_message=output_message,
     )
 
 
@@ -115,6 +119,7 @@ def proactive_downlink(
         bootstrap_interim=None,
         scheduled_task_id=None,
         transcript_user_text=transcript_user_text,
+        output_message=None,
     )
 
 
@@ -134,6 +139,7 @@ def maintenance_downlink(
         bootstrap_interim=None,
         scheduled_task_id=None,
         transcript_user_text=transcript_user_text,
+        output_message=None,
     )
 
 
@@ -155,6 +161,7 @@ def scheduled_downlink(
         bootstrap_interim=None,
         scheduled_task_id=scheduled_task_id.strip(),
         transcript_user_text=transcript_user_text,
+        output_message=None,
     )
 
 
@@ -169,6 +176,7 @@ def tool_background_downlink(*, tool_output: ToolOutputEvent) -> Downlink:
         bootstrap_interim=None,
         scheduled_task_id=None,
         transcript_user_text=None,
+        output_message=None,
     )
 
 
@@ -186,6 +194,7 @@ def bootstrap_interim_downlink(
         bootstrap_interim=interim,
         scheduled_task_id=None,
         transcript_user_text=None,
+        output_message=None,
     )
 
 

@@ -99,6 +99,108 @@ async def test_input_queue_append_and_claim_batch_order() -> None:
 
 
 @pytest.mark.asyncio
+async def test_append_user_message_idempotent_for_client_message_id() -> None:
+    scope = await create_guest_scope_for_test(
+        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        nickname_prefix="input_queue_dedup",
+        meta_data={"test": True},
+    )
+    try:
+        now = datetime.now(timezone.utc)
+        client_id = "client-msg-dedup-1"
+        async with AsyncSessionLocal() as db:
+            repo = PostgresInputQueueRepository(db)
+            first = await repo.append_user_message(
+                InboundWireMessage(
+                    scope=scope,
+                    channel=CompanionRuntimeChannel.APP,
+                    wire_id="app:wire-1",
+                    text="hello",
+                    received_at_utc=now,
+                    client_message_id=client_id,
+                    local_id="local-1",
+                    chat_history_user_row_id=99,
+                )
+            )
+            second = await repo.append_user_message(
+                InboundWireMessage(
+                    scope=scope,
+                    channel=CompanionRuntimeChannel.APP,
+                    wire_id="app:wire-1",
+                    text="hello resend",
+                    received_at_utc=now,
+                    client_message_id=client_id,
+                    local_id="local-1",
+                    chat_history_user_row_id=99,
+                )
+            )
+            await db.commit()
+
+        assert first.message_id == client_id
+        assert second.message_id == client_id
+        assert second.local_id == "local-1"
+        assert second.chat_history_user_row_id == 99
+
+        async with AsyncSessionLocal() as db:
+            rows = list(
+                (
+                    await db.execute(
+                        select(AgenticCompanionInputQueueRow).where(
+                            AgenticCompanionInputQueueRow.user_id
+                            == scope.user_id,
+                            AgenticCompanionInputQueueRow.agent_id
+                            == scope.agent_id,
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+        assert len(rows) == 1
+        assert rows[0].id == client_id
+        assert rows[0].text == "hello"
+    finally:
+        await _cleanup_scope(scope)
+
+
+@pytest.mark.asyncio
+async def test_get_records_by_ids_returns_app_ws_metadata() -> None:
+    scope = await create_guest_scope_for_test(
+        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        nickname_prefix="input_queue_lookup",
+        meta_data={"test": True},
+    )
+    try:
+        now = datetime.now(timezone.utc)
+        client_id = "client-msg-lookup-1"
+        async with AsyncSessionLocal() as db:
+            repo = PostgresInputQueueRepository(db)
+            await repo.append_user_message(
+                InboundWireMessage(
+                    scope=scope,
+                    channel=CompanionRuntimeChannel.APP,
+                    wire_id="app:wire-2",
+                    text="lookup me",
+                    received_at_utc=now,
+                    client_message_id=client_id,
+                    local_id="local-lookup",
+                    chat_history_user_row_id=42,
+                )
+            )
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            repo = PostgresInputQueueRepository(db)
+            records = await repo.get_records_by_ids(scope, (client_id,))
+
+        assert len(records) == 1
+        assert records[0].local_id == "local-lookup"
+        assert records[0].chat_history_user_row_id == 42
+    finally:
+        await _cleanup_scope(scope)
+
+
+@pytest.mark.asyncio
 async def test_mark_batch_failed_persists_after_commit() -> None:
     scope = await create_guest_scope_for_test(
         kind=CompanionGuestAgentKind.AGENT_CHANNEL,

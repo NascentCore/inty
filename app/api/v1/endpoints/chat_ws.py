@@ -53,6 +53,7 @@ from app.core.companion_harness.companion.websocket_coordinator import (
 )
 from app.core.model_selection import select_chat_model
 from app.models.user import User
+from app.models.agentic_companion_queue import AgenticCompanionInputQueueRow
 from app.schemas.biz_action import BizAction, ActionType
 from app.schemas.chat import (
     ChatCompletionRequest,
@@ -82,7 +83,6 @@ from app.services.chat_websocket_session import chat_ws_outbound_pump
 from app.services.ws_session_messages import WsOutboundPayload
 from app.services.agentic_channel.adapters.app_ws import (
     AppWsChannelAdapter,
-    AppWsTurnContext,
 )
 from app.services.agentic_channel.channel_runtime import (
     get_scope_channel_registry,
@@ -95,7 +95,6 @@ from app.services.agentic_channel.presence import (
     ensure_presence,
     get_presence,
 )
-from app.services.agentic_channel.serving import flush_scope_output_queue_ready
 from app.services.agentic_companion.downlink import tool_background_downlink
 from app.services.agentic_companion.presence_registry import (
     PresenceBusyError,
@@ -148,7 +147,6 @@ router = APIRouter(route_class=LoggerRoute)
 async def _turn_up_app_ws_channel(
     *,
     scope: AgentScope,
-    db: AsyncSession,
     outbound_queue: asyncio.Queue[WsOutboundPayload],
     user_id: str,
     arm_proactive_coords: bool,
@@ -165,10 +163,6 @@ async def _turn_up_app_ws_channel(
     adapter = AppWsChannelAdapter(
         scope=scope,
         outbound_queue=outbound_queue,
-        db=db,
-        foreground_ctx_lookup=lambda uid: presence.coordinator.foreground_pending.get(
-            uid
-        ),
     )
     await turn_channel_up(
         scope,
@@ -190,11 +184,6 @@ async def _turn_down_app_ws_channel(scope: AgentScope, *, reason: str) -> None:
     """Mark APP channel inactive and clear proactive coords on the per-scope presence."""
     assert reason != ""
     presence = get_presence(scope)
-    if presence is not None:
-        await flush_scope_output_queue_ready(
-            scope,
-            deliver_message=presence._deliver_ready_via_active_channel,
-        )
     await turn_channel_down(scope, CompanionRuntimeChannel.APP, reason=reason)
     if presence is not None:
         presence.coordinator.sign_out()
@@ -482,7 +471,6 @@ async def _try_handle_ws_user_signed_on_frame(
         inner_tick_chat_id = agent_scope.memory_store_chat_id()
         await _turn_up_app_ws_channel(
             scope=agent_scope,
-            db=db,
             outbound_queue=outbound_queue,
             user_id=str(current_user.id),
             arm_proactive_coords=True,
@@ -1164,6 +1152,23 @@ async def _agent_chat_ws_completions_impl(
                             assert ws_outbound_queue is not None
                             assert ws_conn_id is not None
                             assert ws_conn_id != ""
+                            existing_input_row = None
+                            if companion_preset_uid is not None:
+                                existing_input_row = await db.get(
+                                    AgenticCompanionInputQueueRow,
+                                    companion_preset_uid,
+                                )
+                            if existing_input_row is not None:
+                                companion_user_row_id = (
+                                    existing_input_row.chat_history_user_row_id
+                                )
+                            else:
+                                companion_user_row_id = await _persist_companion_user_message_for_bg(
+                                    session_id=session_id,
+                                    last_user_message=last_user_message,
+                                    effective_local_id=effective_local_id,
+                                    implicit_greeting_turn=False,
+                                )
                             scope = AgentScope(
                                 user_id=str(current_user.id),
                                 agent_id=agent_id,
@@ -1177,29 +1182,18 @@ async def _agent_chat_ws_completions_impl(
                             ):
                                 await _turn_up_app_ws_channel(
                                     scope=scope,
-                                    db=db,
                                     outbound_queue=ws_outbound_queue,
                                     user_id=str(current_user.id),
                                     arm_proactive_coords=False,
                                 )
                                 channel_presence = get_presence(scope)
                             assert channel_presence is not None
-                            turn_ctx = AppWsTurnContext(
-                                db=db,
-                                session_id=session_id,
-                                agent_id=agent_id,
-                                chat_id=str(chat.id),
-                                request=request,
-                                last_user_message=last_user_message,
-                                last_user_text=last_user_text,
-                                effective_local_id=effective_local_id,
-                                client_message_id=companion_preset_uid,
-                            )
                             await channel_presence.enqueue_app_ws_user_turn(
                                 wire_id=f"app:{ws_conn_id}",
                                 user_text=last_user_text,
                                 client_message_id=companion_preset_uid,
-                                turn_ctx=turn_ctx,
+                                local_id=effective_local_id,
+                                chat_history_user_row_id=companion_user_row_id,
                             )
                             if companion_ws_inner_tick_ctx is not None:
                                 apply_companion_ws_inner_tick_coords(

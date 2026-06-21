@@ -54,14 +54,6 @@ from app.services.companion_chat_service import (
     run_companion_implicit_sign_on_greeting_turn_for_api,
 )
 from app.services.agentic_companion.session import Coordinator, Session
-from app.services.agentic_channel.adapters.app_ws import (
-    AppWsChannelAdapter,
-    AppWsTurnContext,
-)
-from app.services.agentic_channel.session import ensure_memory_store_session
-from app.services.agentic_companion.ws_turn_support import (
-    image_asset_baseline_for_scope_store,
-)
 from app.services.chat_service import generate_session_id
 
 _SIGN_ON_GREETING_USER_TEXT = (
@@ -213,6 +205,7 @@ class AgentChannelPresence:
             queue_user_reply_downlink(
                 assistant_text=text,
                 message_ids=message.message_ids,
+                output_message=message,
             )
         )
 
@@ -259,7 +252,8 @@ class AgentChannelPresence:
         wire_id: str,
         user_text: str,
         client_message_id: str | None,
-        turn_ctx: AppWsTurnContext,
+        local_id: str | None,
+        chat_history_user_row_id: int | None,
     ) -> str:
         """Enqueue one App WS user message and wake scope queue worker."""
         assert wire_id != ""
@@ -271,36 +265,10 @@ class AgentChannelPresence:
             text=user_text.strip(),
             received_at_utc=datetime.now(timezone.utc),
             client_message_id=client_message_id,
+            local_id=local_id,
+            chat_history_user_row_id=chat_history_user_row_id,
         )
-        registry = get_scope_channel_registry(self._scope)
-        adapter = registry.adapters.get(CompanionRuntimeChannel.APP)
-        assert isinstance(adapter, AppWsChannelAdapter)
-        session = await ensure_memory_store_session(self._scope)
-        turn_ctx.image_asset_baseline = image_asset_baseline_for_scope_store(
-            session.store
-        )
-        turn_ctx.memory_store = session.store
         queue_message_id = await enqueue_inbound_wire_message(inbound)
-        turn_ctx.queue_message_id = queue_message_id
-        self._coordinator.set_foreground_pending(
-            queue_message_id,
-            {
-                "session_id": turn_ctx.session_id,
-                "agent_id": turn_ctx.agent_id,
-                "user_id": self._scope.user_id,
-                "chat_id": turn_ctx.chat_id,
-                "request": turn_ctx.request,
-                "effective_local_id": turn_ctx.effective_local_id,
-            },
-        )
-        adapter.register_turn_context(
-            turn_ctx,
-            client_message_id=client_message_id,
-        )
-        adapter.bind_queue_message_id(
-            client_message_id=client_message_id,
-            queue_message_id=queue_message_id,
-        )
         assert self._queue_serving is not None
         self._queue_serving.wake(runtime_channel=CompanionRuntimeChannel.APP)
         return queue_message_id
@@ -308,10 +276,6 @@ class AgentChannelPresence:
     async def _on_queue_drain_complete(
         self, completion: ScopeDrainCompletion
     ) -> None:
-        registry = get_scope_channel_registry(self._scope)
-        app_adapter = registry.adapters.get(CompanionRuntimeChannel.APP)
-        if isinstance(app_adapter, AppWsChannelAdapter):
-            app_adapter.on_queue_drain_complete(completion)
         input_message_ids = completion.input_message_ids
         assert input_message_ids
         if completion.tool_background_started:
@@ -401,6 +365,19 @@ class AgentChannelPresence:
     async def _tool_background_consumer(self) -> None:
         while True:
             ev = await self._coordinator.background_events.get()
+            registry = get_scope_channel_registry(self._scope)
+            active = registry.active_channel()
+            if active == CompanionRuntimeChannel.APP:
+                downlink = registry.downlinks.get(active)
+                if downlink is None:
+                    continue
+                try:
+                    await downlink.deliver(
+                        tool_background_downlink(tool_output=ev)
+                    )
+                except Exception:
+                    logger.exception("agent_channel tool_bg deliver failed")
+                continue
             ctx = self._coordinator.pop_foreground_pending(ev.user_msg_uuid)
             if ctx is None:
                 logger.warning(
@@ -412,16 +389,12 @@ class AgentChannelPresence:
             if not ev.output_to_user:
                 continue
             try:
-                registry = get_scope_channel_registry(self._scope)
-                active = registry.active_channel()
                 if active is None:
                     continue
                 downlink = registry.downlinks.get(active)
                 if downlink is None:
                     continue
-                await downlink.deliver(
-                    tool_background_downlink(tool_output=ev)
-                )
+                await downlink.deliver(tool_background_downlink(tool_output=ev))
                 self._coordinator.remove_foreground_pending(ev.user_msg_uuid)
             except Exception:
                 logger.exception("agent_channel tool_bg deliver failed")

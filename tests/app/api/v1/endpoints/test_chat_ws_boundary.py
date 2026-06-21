@@ -34,17 +34,6 @@ def test_companion_production_surface_does_not_reference_readable_id() -> None:
     )
 
 
-def test_app_ws_turn_context_uses_real_chat_row_id() -> None:
-    hits = boundary.app_ws_turn_context_uses_real_chat_row_id(
-        "app/api/v1/endpoints/chat_ws.py"
-    )
-    assert hits != [], (
-        "AppWsTurnContext.chat_id must use str(chat.id) for chat_history session "
-        "correlation"
-    )
-    assert all(":real_chat_row_id" in hit for hit in hits)
-
-
 def test_ast_readable_id_references_detects_common_forms() -> None:
     source = """
 x = obj.readable_id

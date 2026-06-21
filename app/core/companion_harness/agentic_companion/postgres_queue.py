@@ -22,6 +22,7 @@ from app.services.agentic_companion.downlink import DownlinkKind
 from .types import (
     AgentOutputMessage,
     AgenticCompanionInputBatch,
+    GeneratedImageRef,
     InboundWireMessage,
     InputQueueRecord,
     OutputQueueRecord,
@@ -33,6 +34,8 @@ from .types import (
 )
 
 _OUTPUT_CLAIM_STALE_AFTER = timedelta(minutes=5)
+_OUTPUT_RETRY_AFTER = timedelta(seconds=2)
+_OUTPUT_MAX_DELIVERY_ATTEMPTS = 3
 
 
 def _utc_now() -> datetime:
@@ -66,7 +69,26 @@ def _input_row_to_record(
         text=row.text,
         received_at_utc=row.created_at,
         client_message_id=row.client_message_id,
+        local_id=row.local_id,
+        chat_history_user_row_id=row.chat_history_user_row_id,
         batch_id=row.batch_id,
+    )
+
+
+def _generated_image_refs_from_json(
+    raw: str | None,
+) -> tuple[GeneratedImageRef, ...]:
+    rows = json.loads(raw or "[]")
+    assert isinstance(rows, list)
+    return tuple(GeneratedImageRef.model_validate(row) for row in rows)
+
+
+def _generated_image_refs_to_json(
+    images: tuple[GeneratedImageRef, ...],
+) -> str:
+    return json.dumps(
+        [image.model_dump(exclude_none=True) for image in images],
+        ensure_ascii=False,
     )
 
 
@@ -95,6 +117,10 @@ def _output_row_to_record(
         langsmith_trace_id=row.langsmith_trace_id,
         langsmith_run_id=row.langsmith_run_id,
         turn_recall=row.turn_recall,
+        tool_background_started=bool(row.tool_background_started),
+        generated_images=_generated_image_refs_from_json(
+            row.generated_images_json
+        ),
         delivery_channel=delivery_channel,
         delivery_wire_id=row.delivery_wire_id,
         delivery_attempt_count=int(row.delivery_attempt_count or 0),
@@ -111,7 +137,27 @@ class PostgresInputQueueRepository:
     async def append_user_message(
         self, inbound: InboundWireMessage
     ) -> UserInputMessage:
-        message_id = str(uuid.uuid4())
+        message_id = inbound.client_message_id or str(uuid.uuid4())
+        if inbound.client_message_id is not None:
+            existing = await self._db.get(
+                AgenticCompanionInputQueueRow,
+                inbound.client_message_id,
+            )
+            if existing is not None:
+                return UserInputMessage(
+                    message_id=existing.id,
+                    scope=AgentScope(
+                        user_id=existing.user_id,
+                        agent_id=existing.agent_id,
+                    ),
+                    channel=CompanionRuntimeChannel(existing.channel),
+                    wire_id=existing.wire_id,
+                    text=existing.text,
+                    received_at_utc=existing.created_at,
+                    client_message_id=existing.client_message_id,
+                    local_id=existing.local_id,
+                    chat_history_user_row_id=existing.chat_history_user_row_id,
+                )
         row = AgenticCompanionInputQueueRow(
             id=message_id,
             user_id=inbound.scope.user_id,
@@ -120,6 +166,8 @@ class PostgresInputQueueRepository:
             channel=inbound.channel.value,
             wire_id=inbound.wire_id,
             client_message_id=inbound.client_message_id,
+            local_id=inbound.local_id,
+            chat_history_user_row_id=inbound.chat_history_user_row_id,
             text=inbound.text,
         )
         self._db.add(row)
@@ -133,7 +181,29 @@ class PostgresInputQueueRepository:
             text=inbound.text,
             received_at_utc=row.created_at,
             client_message_id=inbound.client_message_id,
+            local_id=inbound.local_id,
+            chat_history_user_row_id=inbound.chat_history_user_row_id,
         )
+
+    async def get_records_by_ids(
+        self,
+        scope: AgentScope,
+        message_ids: tuple[str, ...],
+    ) -> tuple[InputQueueRecord, ...]:
+        """Load durable input rows for OutputQueue downlink correlation."""
+        assert message_ids
+        user_filter, agent_filter = _scope_filters(scope)
+        stmt = (
+            select(AgenticCompanionInputQueueRow)
+            .where(
+                user_filter,
+                agent_filter,
+                AgenticCompanionInputQueueRow.id.in_(message_ids),
+            )
+            .order_by(AgenticCompanionInputQueueRow.sequence_id.asc())
+        )
+        result = await self._db.execute(stmt)
+        return tuple(_input_row_to_record(row) for row in result.scalars())
 
     async def claim_pending_batch(
         self, scope: AgentScope
@@ -238,6 +308,10 @@ class PostgresOutputQueueRepository:
             langsmith_trace_id=output.langsmith_trace_id,
             langsmith_run_id=output.langsmith_run_id,
             turn_recall=output.turn_recall,
+            tool_background_started=output.tool_background_started,
+            generated_images_json=_generated_image_refs_to_json(
+                output.generated_images
+            ),
         )
         self._db.add(row)
         await self._db.flush()
@@ -256,14 +330,22 @@ class PostgresOutputQueueRepository:
         assert limit > 0
         user_filter, agent_filter = _output_scope_filters(scope)
         stale_claimed_before = _utc_now() - _OUTPUT_CLAIM_STALE_AFTER
+        retry_ready_before = _utc_now() - _OUTPUT_RETRY_AFTER
         stmt = (
             select(AgenticCompanionOutputQueueRow)
             .where(
                 user_filter,
                 agent_filter,
                 or_(
-                    AgenticCompanionOutputQueueRow.status
-                    == QueueStatus.PENDING.value,
+                    and_(
+                        AgenticCompanionOutputQueueRow.status
+                        == QueueStatus.PENDING.value,
+                        or_(
+                            AgenticCompanionOutputQueueRow.failed_at.is_(None),
+                            AgenticCompanionOutputQueueRow.failed_at
+                            <= retry_ready_before,
+                        ),
+                    ),
                     and_(
                         AgenticCompanionOutputQueueRow.status
                         == QueueStatus.CLAIMED.value,
@@ -321,11 +403,20 @@ class PostgresOutputQueueRepository:
         assert message_id != ""
         assert error_message.strip() != ""
         failed_at = _utc_now()
+        row = await self._db.get(AgenticCompanionOutputQueueRow, message_id)
+        if row is None:
+            return
+        attempts = int(row.delivery_attempt_count or 0)
+        status = (
+            QueueStatus.SKIPPED.value
+            if attempts >= _OUTPUT_MAX_DELIVERY_ATTEMPTS
+            else QueueStatus.PENDING.value
+        )
         await self._db.execute(
             update(AgenticCompanionOutputQueueRow)
             .where(AgenticCompanionOutputQueueRow.id == message_id)
             .values(
-                status=QueueStatus.PENDING.value,
+                status=status,
                 failed_at=failed_at,
                 error_message=error_message.strip(),
                 delivery_channel=None,

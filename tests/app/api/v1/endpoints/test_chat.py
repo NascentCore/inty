@@ -973,6 +973,7 @@ def _patch_companion_ws_queue_turn(
         _presences,
     )
     from app.services.agentic_companion.downlink import (
+        DownlinkKind,
         queue_user_reply_downlink,
     )
 
@@ -988,7 +989,6 @@ def _patch_companion_ws_queue_turn(
     async def fake_turn_up_app_ws_channel(
         *,
         scope: AgentScope,
-        db,
         outbound_queue,
         user_id: str,
         arm_proactive_coords: bool,
@@ -1002,10 +1002,6 @@ def _patch_companion_ws_queue_turn(
         adapter = AppWsChannelAdapter(
             scope=scope,
             outbound_queue=outbound_queue,
-            db=db,
-            foreground_ctx_lookup=lambda uid: presence.coordinator.foreground_pending.get(
-                uid
-            ),
         )
         registry = get_scope_channel_registry(scope)
         registry.states[CompanionRuntimeChannel.APP] = (
@@ -1060,10 +1056,11 @@ def _patch_companion_ws_queue_turn(
         wire_id: str,
         user_text: str,
         client_message_id: str | None,
-        turn_ctx,
+        local_id: str | None,
+        chat_history_user_row_id: int | None,
     ) -> str:
         implicit_bundle = ImplicitSignalBundle(
-            client_time=turn_ctx.request.user_time_context,
+            client_time=None,
             user_signed_on=False,
             server_received_at_utc=datetime.now(timezone.utc),
         )
@@ -1080,24 +1077,29 @@ def _patch_companion_ws_queue_turn(
             if client_message_id is not None
             else "queue-synthetic"
         )
-        turn_ctx.queue_message_id = queue_message_id
         if isinstance(turn_result, CompanionTurnResult):
-            turn_ctx.tool_background_started = (
-                turn_result.tool_background_started
-            )
             text = turn_result.assistant_text.strip()
             if text:
                 registry = get_scope_channel_registry(self._scope)
                 adapter = registry.adapters.get(CompanionRuntimeChannel.APP)
                 if adapter is not None:
-                    adapter.register_turn_context(
-                        turn_ctx,
-                        client_message_id=client_message_id,
+                    from app.core.companion_harness.agentic_companion.output_queue import (
+                        ReadyOutputMessage,
                     )
+
                     await adapter.as_downlink().deliver(
                         queue_user_reply_downlink(
                             assistant_text=text,
                             message_ids=(queue_message_id,),
+                            output_message=ReadyOutputMessage(
+                                message_id=f"out-{queue_message_id}",
+                                batch_id="batch-fake",
+                                kind=DownlinkKind.USER_REPLY,
+                                text=text,
+                                sequence=1,
+                                message_ids=(queue_message_id,),
+                                tool_background_started=turn_result.tool_background_started,
+                            ),
                         )
                     )
         return queue_message_id

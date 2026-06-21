@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,11 +12,6 @@ from app.core.companion_harness.agentic_companion.output_queue import (
 )
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
-)
-from app.schemas.chat import ChatCompletionRequest
-from app.services.agentic_channel.adapters.app_ws import (
-    AppWsChannelAdapter,
-    AppWsTurnContext,
 )
 from app.services.agentic_companion.downlink import DownlinkKind
 from app.services.agentic_channel.channel_runtime import (
@@ -157,68 +151,30 @@ async def test_queue_drain_complete_removes_all_without_tool_background() -> (
 
 
 @pytest.mark.asyncio
-async def test_enqueue_app_ws_user_turn_registers_queue_foreground_pending() -> (
-    None
-):
+async def test_enqueue_app_ws_user_turn_enqueues_durable_app_metadata() -> None:
     scope = AgentScope(user_id="user-app-pending", agent_id="agent-app-pending")
     presence = AgentChannelPresence(scope)
     presence._queue_serving = MagicMock()
-    turn_ctx = AppWsTurnContext(
-        db=AsyncMock(),
-        session_id="session-app-pending",
-        agent_id=scope.agent_id,
-        chat_id="chat-app-pending",
-        request=ChatCompletionRequest(
-            messages=[{"role": "user", "content": "hi"}]
-        ),
-        last_user_message={"role": "user", "content": "hi"},
-        last_user_text="hi",
-        effective_local_id="local-app-pending",
-        client_message_id="client-app-pending",
-    )
-    adapter = AppWsChannelAdapter(
-        scope=scope,
-        outbound_queue=asyncio.Queue(),
-        db=AsyncMock(),
-        foreground_ctx_lookup=lambda uid: presence._coordinator.foreground_pending.get(
-            uid
-        ),
-    )
 
-    with (
-        patch(
-            "app.services.agentic_channel.presence.get_scope_channel_registry",
-        ) as registry_mock,
-        patch(
-            "app.services.agentic_channel.presence.ensure_memory_store_session",
-            new_callable=AsyncMock,
-        ) as memory_session_mock,
-        patch(
-            "app.services.agentic_channel.presence.image_asset_baseline_for_scope_store",
-            return_value=7,
-        ),
-        patch(
-            "app.services.agentic_channel.presence.enqueue_inbound_wire_message",
-            new_callable=AsyncMock,
-            return_value="queue-app-pending",
-        ),
-    ):
-        registry_mock.return_value.adapters = {
-            CompanionRuntimeChannel.APP: adapter
-        }
-        memory_session_mock.return_value.store = MagicMock()
+    with patch(
+        "app.services.agentic_channel.presence.enqueue_inbound_wire_message",
+        new_callable=AsyncMock,
+        return_value="client-app-pending",
+    ) as enqueue_mock:
         queue_message_id = await presence.enqueue_app_ws_user_turn(
             wire_id="app:wire-pending",
             user_text="hi",
             client_message_id="client-app-pending",
-            turn_ctx=turn_ctx,
+            local_id="local-app-pending",
+            chat_history_user_row_id=42,
         )
 
-    assert queue_message_id == "queue-app-pending"
-    pending = presence._coordinator.foreground_pending["queue-app-pending"]
-    assert pending["session_id"] == "session-app-pending"
-    assert pending["request"] is turn_ctx.request
-    assert adapter._lookup_turn_context(("queue-app-pending",)) is turn_ctx
+    assert queue_message_id == "client-app-pending"
+    inbound = enqueue_mock.await_args.args[0]
+    assert inbound.client_message_id == "client-app-pending"
+    assert inbound.local_id == "local-app-pending"
+    assert inbound.chat_history_user_row_id == 42
+    assert not presence._coordinator.foreground_pending
 
 
 @pytest.mark.asyncio

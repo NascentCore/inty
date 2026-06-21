@@ -197,7 +197,7 @@ async def test_ack_delivered_and_mark_failed_call_repository() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mark_failed_requeues_in_flight_message() -> None:
+async def test_mark_failed_waits_for_repository_retry() -> None:
     scope = AgentScope(user_id="u4", agent_id="a4")
     queue = OutputQueue(scope=scope)
     ready = ReadyOutputMessage(
@@ -228,7 +228,7 @@ async def test_mark_failed_requeues_in_flight_message() -> None:
                     error_message="transport broken",
                 )
             )
-    assert await queue.pull_ready_batch() == (ready,)
+    assert await queue.pull_ready_batch() == ()
 
 
 @pytest.mark.asyncio

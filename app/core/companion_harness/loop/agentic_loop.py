@@ -23,6 +23,9 @@ from app.core.companion_harness.agentic_companion.output_queue import (
 )
 from app.services.agentic_companion.downlink import DownlinkKind
 from app.core.companion_harness.agentic_companion.types import UserMessageBatch
+from app.core.companion_harness.agentic_companion.types import (
+    GeneratedImageRef,
+)
 from app.core.companion_harness.companion.dual_llm_foreground_chat import (
     DualLlmForegroundChatInput,
     run_dual_llm_foreground_chat,
@@ -71,10 +74,29 @@ from app.core.companion_harness.tools.tool_background import (
     ToolOutputEvent,
     run_tool_background_loop,
 )
+from app.core.companion_harness.tools.image_gate import (
+    generated_image_meta_from_asset_record,
+    list_image_asset_records,
+)
 
 from .context import AgenticLoopContext, AgenticLoopOutput
 
 _DRAIN_SENTINEL: ToolOutputEvent | None = None
+
+
+def _generated_image_refs_since(
+    store: MemoryStore,
+    baseline_index: int,
+) -> tuple[GeneratedImageRef, ...]:
+    records = list_image_asset_records(store)
+    if baseline_index < 0 or baseline_index > len(records):
+        return ()
+    refs: list[GeneratedImageRef] = []
+    for row in records[baseline_index:]:
+        meta = generated_image_meta_from_asset_record(row)
+        if meta is not None:
+            refs.append(GeneratedImageRef.model_validate(meta))
+    return tuple(refs)
 
 
 def _append_user_transcript_row(
@@ -109,6 +131,8 @@ class _UserVisibleOutputAppender:
 
     output_queue: OutputQueue
     batch: UserMessageBatch
+    store: MemoryStore
+    image_asset_baseline: int
     persisted_ids: list[str] = field(default_factory=list)
 
     async def append_visible_message(
@@ -120,6 +144,7 @@ class _UserVisibleOutputAppender:
         langsmith_trace_id: str,
         langsmith_run_id: str,
         turn_recall: str | None = None,
+        tool_background_started: bool = False,
     ) -> None:
         visible = user_visible_assistant_text(text)
         if visible is None:
@@ -134,6 +159,15 @@ class _UserVisibleOutputAppender:
                 langsmith_trace_id=langsmith_trace_id,
                 langsmith_run_id=langsmith_run_id,
                 turn_recall=turn_recall,
+                tool_background_started=tool_background_started,
+                generated_images=(
+                    _generated_image_refs_since(
+                        self.store,
+                        self.image_asset_baseline,
+                    )
+                    if kind == DownlinkKind.USER_REPLY
+                    else ()
+                ),
             )
         )
         self.persisted_ids.append(ready.message_id)
@@ -403,6 +437,8 @@ class AgenticLoop:
         appender = _UserVisibleOutputAppender(
             output_queue=context.output_queue,
             batch=context.user_message_batch,
+            store=self.store,
+            image_asset_baseline=len(list_image_asset_records(self.store)),
         )
 
         async def _emit_user_reply(interim: BootstrapInterimOutput) -> None:
@@ -451,6 +487,8 @@ class AgenticLoop:
         appender = _UserVisibleOutputAppender(
             output_queue=context.output_queue,
             batch=context.user_message_batch,
+            store=self.store,
+            image_asset_baseline=len(list_image_asset_records(self.store)),
         )
         llm_client = self.legacy_llm_client
         chat_msgs = context.dual_llm_chat_msgs
