@@ -16,7 +16,7 @@ from app.services.agentic_companion.downlink import DownlinkKind
 
 
 @pytest.mark.asyncio
-async def test_greet_on_sign_on_appends_proactive_output() -> None:
+async def test_greet_on_sign_on_appends_user_reply_output() -> None:
     scope = AgentScope(user_id="user-greet", agent_id="agent-greet")
     presence = AgentChannelPresence(scope)
     fake_model = MagicMock()
@@ -55,6 +55,6 @@ async def test_greet_on_sign_on_appends_proactive_output() -> None:
     assert kwargs["implicit_signal_bundle"].server_received_at_utc is not None
     fake_queue.append_visible_message.assert_awaited_once()
     append_input = fake_queue.append_visible_message.await_args.args[0]
-    assert append_input.kind == DownlinkKind.PROACTIVE
+    assert append_input.kind == DownlinkKind.USER_REPLY
     assert append_input.text == "Hello from Inty."
     assert append_input.message_ids == ()

@@ -7,3 +7,5 @@ Run the following tests one by one:
 - REPL regression tests
 
 Investigate and fix all failed tests.
+
+After all tests passed, update the associated PR with the test passed checkbox.

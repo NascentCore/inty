@@ -19,6 +19,7 @@ import asyncio
 import json
 import os
 import ssl
+import subprocess
 import sys
 import time
 import urllib.error
@@ -34,6 +35,7 @@ _REPO_ROOT: Path | None = None
 
 # Final-line marker so humans and agents can grep / summarize without parsing assistant body text.
 _VERIFY_TAG = "[inty-server-module-verify]"
+_SMOKE_USER_ID = "user-testing"
 
 
 def _emit_verify_result(
@@ -169,6 +171,63 @@ def _http_post_json(
         except json.JSONDecodeError as err:
             raise RuntimeError(f"HTTP {e.code}: {raw[:800]}") from err
     return json.loads(raw)
+
+
+def _local_config_path(repo_root: Path) -> Path:
+    raw = (os.environ.get("INTY_CONFIG_YAML") or "").strip()
+    if raw:
+        p = Path(raw)
+        return p if p.is_absolute() else repo_root / p
+    return repo_root / "devops/config.yaml.local"
+
+
+def _psql(repo_root: Path, config_path: Path, query: str) -> str:
+    import yaml
+
+    cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    db = cfg["database"]
+    env = {**dict(os.environ), "PGPASSWORD": str(db["password"])}
+    cmd = [
+        "psql",
+        "-h",
+        str(db["host"]),
+        "-p",
+        str(db["port"]),
+        "-U",
+        str(db["user"]),
+        "-d",
+        str(db["db"]),
+        "-t",
+        "-A",
+        "-c",
+        query,
+    ]
+    return subprocess.check_output(cmd, env=env, text=True, cwd=repo_root)
+
+
+def _deactivate_active_companion_bonds_for_user(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+) -> int:
+    """Mark ACTIVE companion bonds INACTIVE before --create-agent smoke."""
+    assert user_id != ""
+    raw = _psql(
+        repo_root,
+        config_path,
+        f"""
+UPDATE companion_bonds
+SET state = 'INACTIVE',
+    inactive_at = NOW()
+WHERE user_id = '{user_id}'
+  AND state = 'ACTIVE';
+SELECT COUNT(*) FROM companion_bonds
+WHERE user_id = '{user_id}' AND state = 'ACTIVE';
+""",
+    )
+    lines = [line.strip() for line in raw.strip().splitlines() if line.strip()]
+    return int(lines[-1]) if lines else 0
 
 
 def _create_smoke_agent(
@@ -364,6 +423,36 @@ async def _run(args: argparse.Namespace) -> int:
 
     agent_id: str
     if create_agent:
+        repo_root = _ensure_sys_path()
+        config_path = _local_config_path(repo_root)
+        if not config_path.is_file():
+            print(
+                f"config not found for bond cleanup: {config_path}",
+                file=sys.stderr,
+            )
+            _emit_verify_result(
+                ok=False,
+                exit_code=2,
+                detail=f"config not found: {config_path}",
+            )
+            return 2
+        remaining = _deactivate_active_companion_bonds_for_user(
+            repo_root,
+            config_path,
+            user_id=_SMOKE_USER_ID,
+        )
+        if remaining:
+            print(
+                f"{_VERIFY_TAG} warning: {remaining} ACTIVE companion bond(s) "
+                f"remain for user {_SMOKE_USER_ID!r} after deactivate",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"{_VERIFY_TAG} deactivated prior ACTIVE companion bonds for "
+                f"user {_SMOKE_USER_ID!r}",
+                file=sys.stderr,
+            )
         try:
             agent_id = _create_smoke_agent(
                 api_base=api_base,

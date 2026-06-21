@@ -237,5 +237,45 @@ async def test_handle_user_text_returns_validation_error_before_enqueue() -> (
                 runtime_channel=ChannelKind.TELEGRAM,
             )
 
-    assert "无法找到" in reply
+    assert "Could not find your Inty user" in reply
     enqueue_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_telegram_user_chat_enqueues_inbound_in_user_language() -> None:
+    scope = AgentScope(user_id="user-lang", agent_id="agent-lang")
+    presence = AgentChannelPresence(scope)
+    wake_mock = MagicMock()
+    presence._queue_serving = MagicMock()
+    presence._queue_serving.wake = wake_mock
+
+    inty_user = MagicMock()
+    agent_data = MagicMock()
+
+    with patch(
+        "app.services.agentic_channel.presence.AsyncSessionLocal"
+    ) as session_local:
+        db = AsyncMock()
+        session_local.return_value.__aenter__.return_value = db
+        user_result = MagicMock()
+        user_result.scalar_one_or_none.return_value = inty_user
+        db.execute = AsyncMock(return_value=user_result)
+        with patch(
+            "app.services.agentic_channel.presence.agent_service.get_agent_for_chat",
+            new_callable=AsyncMock,
+            return_value=agent_data,
+        ):
+            with patch(
+                "app.services.agentic_channel.presence.enqueue_inbound_wire_message",
+                new_callable=AsyncMock,
+                return_value="queued-msg-cn",
+            ) as enqueue_mock:
+                reply = await presence.handle_user_text(
+                    "你好",
+                    runtime_channel=ChannelKind.TELEGRAM,
+                )
+
+    assert reply == ""
+    inbound = enqueue_mock.await_args.args[0]
+    assert inbound.text == "你好"
+    wake_mock.assert_called_once_with(runtime_channel=ChannelKind.TELEGRAM)
