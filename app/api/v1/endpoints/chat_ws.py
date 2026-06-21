@@ -89,7 +89,14 @@ from app.services.agentic_channel.channel_runtime import (
     turn_channel_down,
     turn_channel_up,
 )
-from app.services.agentic_channel.endpoints import bind_endpoint
+from app.services.agentic_channel.errors import (
+    ChannelEndpointConflictError,
+    CompanionBondInvariantError,
+)
+from app.services.agentic_channel.provision import (
+    OwnedChannelProvisionInput,
+    provision_owned_agent_for_channel,
+)
 from app.services.agentic_channel.presence import (
     AgentChannelPresence,
     ensure_presence,
@@ -151,13 +158,15 @@ async def _turn_up_app_ws_channel(
     user_id: str,
     arm_proactive_coords: bool,
 ) -> AgentChannelPresence:
-    """Bind APP endpoint, ensure per-scope presence, and register the WS channel adapter."""
+    """Provision APP bond+endpoint, ensure per-scope presence, register WS adapter."""
     assert user_id != ""
-    await bind_endpoint(
-        scope,
-        channel=ChannelKind.APP_WS,
-        channel_address=scope.registry_key(),
-        channel_user_id=user_id,
+    await provision_owned_agent_for_channel(
+        input=OwnedChannelProvisionInput(
+            channel=ChannelKind.APP_WS,
+            channel_address=scope.registry_key(),
+            channel_user_id=user_id,
+            scope=scope,
+        ),
     )
     presence = await ensure_presence(scope)
     adapter = AppWsChannelAdapter(
@@ -470,12 +479,33 @@ async def _try_handle_ws_user_signed_on_frame(
             agent_id=agent_id,
         )
         inner_tick_chat_id = agent_scope.memory_store_chat_id()
-        await _turn_up_app_ws_channel(
-            scope=agent_scope,
-            outbound_queue=outbound_queue,
-            user_id=str(current_user.id),
-            arm_proactive_coords=True,
-        )
+        try:
+            await _turn_up_app_ws_channel(
+                scope=agent_scope,
+                outbound_queue=outbound_queue,
+                user_id=str(current_user.id),
+                arm_proactive_coords=True,
+            )
+        except CompanionBondInvariantError:
+            presence_registry.release(current_user.id, agent_id, ws_conn_id)
+            ws_leased_agent_id_box[0] = None
+            await websocket.send_json(
+                ChatWsUserSignedOnAckFrame(
+                    ok=False,
+                    reason="companion_bond_conflict",
+                ).model_dump(exclude_none=True)
+            )
+            return True
+        except ChannelEndpointConflictError:
+            presence_registry.release(current_user.id, agent_id, ws_conn_id)
+            ws_leased_agent_id_box[0] = None
+            await websocket.send_json(
+                ChatWsUserSignedOnAckFrame(
+                    ok=False,
+                    reason="channel_endpoint_conflict",
+                ).model_dump(exclude_none=True)
+            )
+            return True
         greeting_task = inflight_turn_tracker.spawn(
             _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                 db=db,
@@ -1182,12 +1212,29 @@ async def _agent_chat_ws_completions_impl(
                                 or registry.active_channel()
                                 != ChannelKind.APP_WS
                             ):
-                                await _turn_up_app_ws_channel(
-                                    scope=scope,
-                                    outbound_queue=ws_outbound_queue,
-                                    user_id=str(current_user.id),
-                                    arm_proactive_coords=False,
-                                )
+                                try:
+                                    await _turn_up_app_ws_channel(
+                                        scope=scope,
+                                        outbound_queue=ws_outbound_queue,
+                                        user_id=str(current_user.id),
+                                        arm_proactive_coords=False,
+                                    )
+                                except CompanionBondInvariantError as exc:
+                                    raise CompanionInferenceUpstreamHTTPException(
+                                        status_code=409,
+                                        detail="companion bond conflict",
+                                        ws_extra={
+                                            "reason": "companion_bond_conflict",
+                                        },
+                                    ) from exc
+                                except ChannelEndpointConflictError as exc:
+                                    raise CompanionInferenceUpstreamHTTPException(
+                                        status_code=409,
+                                        detail="channel endpoint conflict",
+                                        ws_extra={
+                                            "reason": "channel_endpoint_conflict",
+                                        },
+                                    ) from exc
                                 channel_presence = get_presence(scope)
                             assert channel_presence is not None
                             await channel_presence.enqueue_app_ws_user_turn(

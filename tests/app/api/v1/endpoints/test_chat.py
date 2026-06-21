@@ -15,7 +15,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.testclient import TestClient as FastAPITestClient
 from jose import jwt
 from loguru import logger
-from sqlalchemy import create_engine, delete
+from sqlalchemy import create_engine, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -23,6 +23,15 @@ from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.api.v1.endpoints import chat_ws as chat_ws_v1
 from app.core.agent import agent as agent_module
+from app.core.companion_harness.agent_channel.guest_agent_kind import (
+    CompanionGuestAgentKind,
+)
+from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.db.session import AsyncSessionLocal
+from app.models.agent import Agent
+from app.models.agent_channel_endpoint import AgentChannelEndpoint
+from app.models.companion_bond import CompanionBond, CompanionBondState
 from app.core.companion_harness.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
@@ -49,6 +58,13 @@ from app.services.global_services import (
     subscription_service as global_subscription_service,
 )
 from app.utils.models_catalog import GenAIModel
+from app.services.agentic_channel.companion_guest_provision import (
+    add_companion_guest_agent_for_user,
+)
+from tests.app.services.agentic_channel.companion_test_fixtures import (
+    create_guest_scope_for_test,
+    delete_guest_scope_for_test,
+)
 from tests.app.api.test_client import TestClient
 from tests.app.api.v1.endpoints.conftest import (
     _client_with_user,
@@ -952,6 +968,7 @@ def _patch_companion_ws_queue_turn(
     monkeypatch: pytest.MonkeyPatch,
     *,
     run_companion_chat_turn_for_api,
+    mock_channel_turn_up: bool = True,
 ) -> None:
     from datetime import datetime, timezone
     from unittest.mock import AsyncMock, MagicMock
@@ -1157,16 +1174,17 @@ def _patch_companion_ws_queue_turn(
         "app.services.agentic_companion.ws_outbound_materialize.resolve_chat_model_for_scope",
         fake_resolve_chat_model_for_scope,
     )
-    monkeypatch.setattr(
-        chat_ws_v1,
-        "_turn_up_app_ws_channel",
-        fake_turn_up_app_ws_channel,
-    )
-    monkeypatch.setattr(
-        chat_ws_v1,
-        "_turn_down_app_ws_channel",
-        fake_turn_down_app_ws_channel,
-    )
+    if mock_channel_turn_up:
+        monkeypatch.setattr(
+            chat_ws_v1,
+            "_turn_up_app_ws_channel",
+            fake_turn_up_app_ws_channel,
+        )
+        monkeypatch.setattr(
+            chat_ws_v1,
+            "_turn_down_app_ws_channel",
+            fake_turn_down_app_ws_channel,
+        )
     monkeypatch.setattr(
         AgentChannelPresence,
         "enqueue_app_ws_user_turn",
@@ -1350,6 +1368,197 @@ def _setup_companion_ws_chat_test_env(
         "_agent_status_line_for_chat_header",
         fake_agent_status_line,
     )
+
+
+def _setup_companion_ws_provision_test_env(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str,
+) -> None:
+    """Companion WS stubs that exercise real bond + endpoint provision on sign-on."""
+    companion_chat_service.clear_companion_chat_service_caches()
+
+    async def noop_run_companion(**_kwargs):
+        return CompanionTurnResult(assistant_text="")
+
+    _patch_companion_ws_queue_turn(
+        monkeypatch,
+        run_companion_chat_turn_for_api=noop_run_companion,
+        mock_channel_turn_up=False,
+    )
+
+    async def fake_get_or_create_chat_by_agent(
+        db, user_id, agent_id, **_kwargs
+    ):
+        return SimpleNamespace(id=chat_id, agent_id=agent_id)
+
+    async def fake_get_agent_for_chat(db, agent_id=None, **_kwargs):
+        return {
+            "id": agent_id,
+            "name": "Luna",
+            "voice_id": "voice-1",
+            "gender": "FEMALE",
+        }
+
+    async def fake_check_chat_limit(db, user):
+        return True, 0, 100
+
+    async def fake_get_user_current_subscription(db, user_id, **_kwargs):
+        return None
+
+    async def fake_get_or_create_chat_settings(
+        db, cid, user_id, aid, **_kwargs
+    ):
+        return SimpleNamespace(
+            voice_enabled=False,
+            voice_id=None,
+            style_prompt=None,
+            premium_mode=False,
+            language="en",
+        )
+
+    async def fake_record_usage(*args, **kwargs):
+        return None
+
+    async def fake_mark_user_push_notifications_as_read(db, uid):
+        return 0
+
+    async def fake_try_trigger_surprise_snap(db, session_id, uid, aid):
+        return None
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(
+        agent_service, "get_agent_for_chat", fake_get_agent_for_chat
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "check_chat_limit",
+        fake_check_chat_limit,
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "get_user_current_subscription",
+        fake_get_user_current_subscription,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "record_usage",
+        fake_record_usage,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "mark_user_push_notifications_as_read",
+        fake_mark_user_push_notifications_as_read,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "try_trigger_surprise_snap",
+        fake_try_trigger_surprise_snap,
+    )
+
+    test_user = _make_user(user_id=user_id, auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return test_user
+
+    monkeypatch.setattr(
+        chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user
+    )
+
+    async def fake_agent_status_line(db, aid):
+        return None
+
+    monkeypatch.setattr(
+        chat_ws_v1,
+        "_agent_status_line_for_chat_header",
+        fake_agent_status_line,
+    )
+
+
+async def _create_unbonded_owned_scope() -> AgentScope:
+    from app.services.agentic_channel.companion_guest_provision import (
+        GuestUserInput,
+        add_guest_user,
+    )
+
+    async with AsyncSessionLocal() as db:
+        user = await add_guest_user(
+            db,
+            GuestUserInput(
+                nickname_prefix="WsBond",
+                meta_data={"test": True},
+            ),
+        )
+        agent = await add_companion_guest_agent_for_user(
+            db,
+            user_id=user.id,
+            kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        )
+        await db.commit()
+        return AgentScope(user_id=user.id, agent_id=agent.id)
+
+
+async def _dispose_async_engine_pool() -> None:
+    from app.db.session import async_engine
+
+    await async_engine.dispose()
+
+
+def _run_async_db(coro):
+    """Run async DB work without leaving asyncpg connections on a closed loop."""
+    try:
+        return asyncio.run(coro)
+    finally:
+        asyncio.run(_dispose_async_engine_pool())
+
+
+def _assert_owned_bond_and_app_ws_endpoint_sync(scope: AgentScope) -> None:
+    engine = create_engine(global_config_loaded_from_config_yaml.database.url)
+    Session = sessionmaker(bind=engine)
+    with Session() as db:
+        bond = db.execute(
+            select(CompanionBond).where(
+                CompanionBond.user_id == scope.user_id,
+                CompanionBond.agent_id == scope.agent_id,
+            )
+        ).scalar_one()
+        assert bond.state == CompanionBondState.ACTIVE
+        endpoint = db.execute(
+            select(AgentChannelEndpoint).where(
+                AgentChannelEndpoint.channel == ChannelKind.APP_WS.value,
+                AgentChannelEndpoint.channel_address == scope.registry_key(),
+            )
+        ).scalar_one()
+        assert endpoint.user_id == scope.user_id
+        assert endpoint.agent_id == scope.agent_id
+
+
+def _cleanup_owned_scope_rows_sync(scope: AgentScope) -> None:
+    engine = create_engine(global_config_loaded_from_config_yaml.database.url)
+    Session = sessionmaker(bind=engine)
+    with Session() as db:
+        db.execute(
+            delete(AgentChannelEndpoint).where(
+                AgentChannelEndpoint.user_id == scope.user_id
+            )
+        )
+        db.execute(
+            delete(CompanionBond).where(CompanionBond.user_id == scope.user_id)
+        )
+        db.execute(delete(Agent).where(Agent.creator_id == scope.user_id))
+        db.execute(delete(UserModel).where(UserModel.id == scope.user_id))
+        db.commit()
 
 
 def _setup_companion_ws_chat_test_env_with_postgres(
@@ -2410,6 +2619,95 @@ def test_chat_websocket_companion_user_signed_on_invalid_message_id(
     assert ack["reason"] == "invalid_message_id"
 
     companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_user_signed_on_provisions_bond_and_endpoint(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    scope = _run_async_db(_create_unbonded_owned_scope())
+    _setup_companion_ws_provision_test_env(
+        monkeypatch,
+        user_id=scope.user_id,
+        agent_id=scope.agent_id,
+        chat_id="chat-signon-bond-1",
+    )
+    msg_uuid = "cccccccc-bbbb-4ccc-bbbb-111111111111"
+    try:
+        with FastAPITestClient(chat_business_error_app) as client:
+            with client.websocket_connect("/api/v1/chat/ws") as websocket:
+                websocket.send_json(
+                    {
+                        "type": "user_signed_on",
+                        "agent_id": scope.agent_id,
+                        "message_id": msg_uuid,
+                    }
+                )
+                ack = websocket.receive_json()
+        assert ack["type"] == "user_signed_on_ack"
+        assert ack["ok"] is True
+        _run_async_db(_dispose_async_engine_pool())
+        _assert_owned_bond_and_app_ws_endpoint_sync(scope)
+    finally:
+        _cleanup_owned_scope_rows_sync(scope)
+        companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_user_signed_on_companion_bond_conflict(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    bonded_scope = _run_async_db(
+        create_guest_scope_for_test(
+            kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+            nickname_prefix="Bonded",
+            meta_data={"test": True},
+        )
+    )
+
+    async def _add_second_agent() -> str:
+        async with AsyncSessionLocal() as db:
+            second_agent = await add_companion_guest_agent_for_user(
+                db,
+                user_id=bonded_scope.user_id,
+                kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+            )
+            await db.commit()
+            return second_agent.id
+
+    second_agent_id = _run_async_db(_add_second_agent())
+    _setup_companion_ws_provision_test_env(
+        monkeypatch,
+        user_id=bonded_scope.user_id,
+        agent_id=second_agent_id,
+        chat_id="chat-signon-conflict-1",
+    )
+    msg_uuid = "dddddddd-bbbb-4ccc-bbbb-222222222222"
+    try:
+        with FastAPITestClient(chat_business_error_app) as client:
+            with client.websocket_connect("/api/v1/chat/ws") as websocket:
+                websocket.send_json(
+                    {
+                        "type": "user_signed_on",
+                        "agent_id": second_agent_id,
+                        "message_id": msg_uuid,
+                    }
+                )
+                ack = websocket.receive_json()
+        assert ack["type"] == "user_signed_on_ack"
+        assert ack["ok"] is False
+        assert ack["reason"] == "companion_bond_conflict"
+    finally:
+        _run_async_db(_dispose_async_engine_pool())
+        _run_async_db(delete_guest_scope_for_test(bonded_scope))
+
+        async def _delete_second_agent() -> None:
+            async with AsyncSessionLocal() as db:
+                await db.execute(
+                    delete(Agent).where(Agent.id == second_agent_id)
+                )
+                await db.commit()
+
+        _run_async_db(_delete_second_agent())
+        companion_chat_service.clear_companion_chat_service_caches()
 
 
 def test_v1_chat_completions_http_rejects_removed_implicit_user_signed_on_message_type(

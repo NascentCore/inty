@@ -25,12 +25,12 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
-from app.models.agent import Agent
 from app.models.user import User
 from app.core.companion_harness.agent_channel.guest_agent_kind import (
     companion_guest_agent_kind_for_channel,
 )
 from app.services.agentic_channel.companion_bonds import (
+    ensure_active_companion_bond_for_owned_scope,
     require_active_companion_bond,
 )
 from app.services.agentic_channel.companion_guest_provision import (
@@ -59,9 +59,92 @@ class ChannelProvisionResult:
     channel_user_id: str
 
 
+@dataclass(frozen=True)
+class OwnedChannelProvisionInput:
+    """Bundled inputs for owned-scope channel provision (caller-known user + agent)."""
+
+    channel: ChannelKind
+    channel_address: str
+    channel_user_id: str
+    scope: AgentScope
+
+
 async def _require_active_bond_for_scope(scope: AgentScope) -> None:
     async with AsyncSessionLocal() as db:
         await require_active_companion_bond(db, scope)
+
+
+async def _try_finish_existing_channel_provision(
+    *,
+    channel: ChannelKind,
+    channel_address: str,
+    channel_user_id: str,
+    expected_scope: AgentScope | None,
+) -> ChannelProvisionResult | None:
+    """Return existing endpoint provision when resolved; None when no row exists."""
+    by_address = await resolve_scope(
+        channel=channel, channel_address=channel_address
+    )
+    by_user = await resolve_scope_by_channel_user_id(
+        channel=channel, channel_user_id=channel_user_id
+    )
+    if by_address is None and by_user is None:
+        return None
+    if (
+        expected_scope is not None
+        and by_address is None
+        and by_user is not None
+        and by_user.user_id == expected_scope.user_id
+        and by_user.registry_key() != expected_scope.registry_key()
+    ):
+        return None
+    await assert_inbound_endpoint_identity(
+        channel=channel,
+        channel_address=channel_address,
+        channel_user_id=channel_user_id,
+    )
+    if by_address is not None and by_user is not None:
+        if by_address.registry_key() != by_user.registry_key():
+            logger.warning(
+                "agent_channel provision scope split channel={} channel_address={} channel_user_id={} by_address={} by_user={}",
+                channel.value,
+                channel_address,
+                channel_user_id,
+                by_address.registry_key(),
+                by_user.registry_key(),
+            )
+            raise ChannelEndpointConflictError(
+                "channel_address and channel_user_id resolve to different scopes"
+            )
+        resolved = by_address
+    elif by_address is not None:
+        resolved = by_address
+    else:
+        assert by_user is not None
+        resolved = by_user
+    if (
+        expected_scope is not None
+        and resolved.registry_key() != expected_scope.registry_key()
+    ):
+        raise ChannelEndpointConflictError(
+            f"existing endpoint scope {resolved.registry_key()} "
+            f"does not match {expected_scope.registry_key()}"
+        )
+    logger.info(
+        "agent_channel provision existing scope channel={} channel_address={} channel_user_id={} user_id={} agent_id={}",
+        channel.value,
+        channel_address,
+        channel_user_id,
+        resolved.user_id,
+        resolved.agent_id,
+    )
+    await _require_active_bond_for_scope(resolved)
+    return ChannelProvisionResult(
+        scope=resolved,
+        is_new_user=False,
+        channel_address=channel_address,
+        channel_user_id=channel_user_id,
+    )
 
 
 async def _provision_result_after_bind_race(
@@ -121,78 +204,14 @@ async def provision_agent_for_channel_onboard(
     assert channel_address != ""
     assert channel_user_id != ""
 
-    by_address = await resolve_scope(
-        channel=channel, channel_address=channel_address
+    existing = await _try_finish_existing_channel_provision(
+        channel=channel,
+        channel_address=channel_address,
+        channel_user_id=channel_user_id,
+        expected_scope=None,
     )
-    by_user = await resolve_scope_by_channel_user_id(
-        channel=channel, channel_user_id=channel_user_id
-    )
-    if by_address is not None or by_user is not None:
-        await assert_inbound_endpoint_identity(
-            channel=channel,
-            channel_address=channel_address,
-            channel_user_id=channel_user_id,
-        )
-    if by_address is not None and by_user is not None:
-        if by_address.registry_key() != by_user.registry_key():
-            logger.warning(
-                "agent_channel onboard scope split channel={} channel_address={} channel_user_id={} by_address={} by_user={}",
-                channel.value,
-                channel_address,
-                channel_user_id,
-                by_address.registry_key(),
-                by_user.registry_key(),
-            )
-            raise ChannelEndpointConflictError(
-                "channel_address and channel_user_id resolve to different scopes"
-            )
-        logger.info(
-            "agent_channel onboard existing scope channel={} channel_address={} channel_user_id={} user_id={} agent_id={}",
-            channel.value,
-            channel_address,
-            channel_user_id,
-            by_address.user_id,
-            by_address.agent_id,
-        )
-        await _require_active_bond_for_scope(by_address)
-        return ChannelProvisionResult(
-            scope=by_address,
-            is_new_user=False,
-            channel_address=channel_address,
-            channel_user_id=channel_user_id,
-        )
-    if by_address is not None:
-        logger.info(
-            "agent_channel onboard existing by_address channel={} channel_address={} channel_user_id={} user_id={} agent_id={}",
-            channel.value,
-            channel_address,
-            channel_user_id,
-            by_address.user_id,
-            by_address.agent_id,
-        )
-        await _require_active_bond_for_scope(by_address)
-        return ChannelProvisionResult(
-            scope=by_address,
-            is_new_user=False,
-            channel_address=channel_address,
-            channel_user_id=channel_user_id,
-        )
-    if by_user is not None:
-        logger.info(
-            "agent_channel onboard existing by_user channel={} channel_address={} channel_user_id={} user_id={} agent_id={}",
-            channel.value,
-            channel_address,
-            channel_user_id,
-            by_user.user_id,
-            by_user.agent_id,
-        )
-        await _require_active_bond_for_scope(by_user)
-        return ChannelProvisionResult(
-            scope=by_user,
-            is_new_user=False,
-            channel_address=channel_address,
-            channel_user_id=channel_user_id,
-        )
+    if existing is not None:
+        return existing
 
     async with AsyncSessionLocal() as db:
         pending_user_id = ""
@@ -266,49 +285,32 @@ async def provision_agent_for_channel_onboard(
     )
 
 
-async def provision_agent_for_existing_agent(
+async def provision_owned_agent_for_channel(
     *,
-    channel: ChannelKind,
-    channel_address: str,
-    channel_user_id: str,
-    agent_id: str,
+    input: OwnedChannelProvisionInput,
 ) -> ChannelProvisionResult:
-    """Bind channel endpoint to an existing companion agent (tests only; not wired in transport).
+    """Provision owned user+agent scope: bond ensure, endpoint bind, MemoryStore."""
+    assert input.channel_address != ""
+    assert input.channel_user_id != ""
+    channel = input.channel
+    channel_address = input.channel_address
+    channel_user_id = input.channel_user_id
+    scope = input.scope
 
-    The existing agent must already have an active companion bond.
-    """
-    assert channel_address != ""
-    assert channel_user_id != ""
-    assert agent_id != ""
-
-    existing = await resolve_scope(
-        channel=channel, channel_address=channel_address
+    existing = await _try_finish_existing_channel_provision(
+        channel=channel,
+        channel_address=channel_address,
+        channel_user_id=channel_user_id,
+        expected_scope=scope,
     )
     if existing is not None:
-        await assert_inbound_endpoint_identity(
-            channel=channel,
-            channel_address=channel_address,
-            channel_user_id=channel_user_id,
-        )
-        await _require_active_bond_for_scope(existing)
-        return ChannelProvisionResult(
-            scope=existing,
-            is_new_user=False,
-            channel_address=channel_address,
-            channel_user_id=channel_user_id,
-        )
+        return existing
 
+    pending_user_id = scope.user_id
+    pending_agent_id = scope.agent_id
     async with AsyncSessionLocal() as db:
-        agent_row = await db.execute(select(Agent).where(Agent.id == agent_id))
-        agent = agent_row.scalar_one_or_none()
-        if agent is None:
-            raise ValueError(f"companion agent not found: {agent_id}")
-        scope = AgentScope(user_id=agent.creator_id, agent_id=agent_id)
-        await require_active_companion_bond(db, scope)
-
-        pending_user_id = scope.user_id
-        pending_agent_id = scope.agent_id
         try:
+            await ensure_active_companion_bond_for_owned_scope(db, scope)
             await upsert_endpoint_in_session(
                 db,
                 scope,
@@ -319,12 +321,12 @@ async def provision_agent_for_existing_agent(
             await db.commit()
         except ChannelEndpointConflictError as exc:
             logger.warning(
-                "agent_channel bind existing agent conflict channel={} channel_address={} channel_user_id={} agent_id={} user_id={} error={}",
+                "agent_channel owned provision bind conflict channel={} channel_address={} channel_user_id={} user_id={} agent_id={} error={}",
                 channel.value,
                 channel_address,
                 channel_user_id,
-                agent_id,
                 pending_user_id,
+                pending_agent_id,
                 exc,
             )
             await db.rollback()
@@ -335,12 +337,12 @@ async def provision_agent_for_existing_agent(
             )
         except IntegrityError as exc:
             logger.warning(
-                "agent_channel bind existing agent integrity error channel={} channel_address={} channel_user_id={} agent_id={} user_id={} {}",
+                "agent_channel owned provision integrity error channel={} channel_address={} channel_user_id={} user_id={} agent_id={} {}",
                 channel.value,
                 channel_address,
                 channel_user_id,
-                agent_id,
                 pending_user_id,
+                pending_agent_id,
                 integrity_error_detail(exc),
             )
             await db.rollback()
@@ -350,6 +352,14 @@ async def provision_agent_for_existing_agent(
                 channel_user_id=channel_user_id,
             )
 
+    logger.info(
+        "agent_channel owned provision created channel={} channel_address={} channel_user_id={} user_id={} agent_id={}",
+        channel.value,
+        channel_address,
+        channel_user_id,
+        scope.user_id,
+        scope.agent_id,
+    )
     await ensure_memory_store_session(scope)
     return ChannelProvisionResult(
         scope=scope,

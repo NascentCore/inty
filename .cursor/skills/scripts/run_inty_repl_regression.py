@@ -411,6 +411,58 @@ def _psql(repo_root: Path, config_path: Path, query: str) -> str:
     return subprocess.check_output(cmd, env=env, text=True, cwd=repo_root)
 
 
+def _deactivate_active_companion_bonds_for_user(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+) -> int:
+    """Mark ACTIVE companion bonds INACTIVE for one user before --create-agent."""
+    assert user_id != ""
+    raw = _psql(
+        repo_root,
+        config_path,
+        f"""
+UPDATE companion_bonds
+SET state = 'INACTIVE',
+    inactive_at = NOW()
+WHERE user_id = '{user_id}'
+  AND state = 'ACTIVE';
+SELECT COUNT(*) FROM companion_bonds
+WHERE user_id = '{user_id}' AND state = 'ACTIVE';
+""",
+    )
+    lines = [line.strip() for line in raw.strip().splitlines() if line.strip()]
+    remaining = int(lines[-1]) if lines else 0
+    return remaining
+
+
+def _query_active_companion_bond_agent_id(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> str | None:
+    """Return ACTIVE bond state for user+agent, or None when no row."""
+    assert user_id != ""
+    assert agent_id != ""
+    raw = _psql(
+        repo_root,
+        config_path,
+        f"""
+SELECT state FROM companion_bonds
+WHERE user_id = '{user_id}'
+  AND agent_id = '{agent_id}'
+  AND state = 'ACTIVE'
+ORDER BY created_at DESC, id DESC
+LIMIT 1;
+""",
+    )
+    line = raw.strip()
+    return line if line else None
+
+
 def _is_inner_tick_proactive(meta: dict[str, Any]) -> bool:
     if meta.get("source") == "greeting":
         return False
@@ -863,11 +915,24 @@ LIMIT 8;
         and bool(out_q.strip())
     )
 
+    companion_bond_state = _query_active_companion_bond_agent_id(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+    )
+    report["companion_bond"] = {
+        "user_id": user_id,
+        "agent_id": agent_id,
+        "state": companion_bond_state,
+    }
+
     summary = {
         "bootstrap": "complete" if bootstrap_done == "true" else "incomplete",
         "context_mode": context_mode,
         "settled_queue_turn": "pass" if settled_ok and not report["errors"] else "fail",
         "proactive_inner_tick": "present" if proactive_present else "missing",
+        "companion_bond_state": companion_bond_state or "missing",
         "input_queue_counts": in_q.strip(),
         "output_queue_counts": out_q.strip(),
         "input_all_delivered": in_all_delivered,
@@ -961,11 +1026,35 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
 
     _ensure_import_path(repo_root)
+    config_path = Path(str(args.config).strip())
+    if not config_path.is_absolute():
+        config_path = repo_root / config_path
+    if not config_path.is_file():
+        print(f"error: config not found: {config_path}", file=sys.stderr)
+        return 2
+
     agent_id = str(args.agent_id).strip()
     if args.create_agent:
         if agent_id:
             print(
                 f"{_TAG} warning: --agent-id ignored when --create-agent is set",
+                file=sys.stderr,
+            )
+        remaining = _deactivate_active_companion_bonds_for_user(
+            repo_root,
+            config_path,
+            user_id=str(args.user_id).strip(),
+        )
+        if remaining:
+            print(
+                f"{_TAG} warning: {remaining} ACTIVE companion bond(s) remain for "
+                f"user {args.user_id!r} after deactivate",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"{_TAG} deactivated prior ACTIVE companion bonds for "
+                f"user {args.user_id!r}",
                 file=sys.stderr,
             )
         agent_id = _create_agent_id(
@@ -977,13 +1066,6 @@ def main(argv: list[str] | None = None) -> int:
         )
     if not agent_id:
         print("error: pass --agent-id or --create-agent", file=sys.stderr)
-        return 2
-
-    config_path = Path(str(args.config).strip())
-    if not config_path.is_absolute():
-        config_path = repo_root / config_path
-    if not config_path.is_file():
-        print(f"error: config not found: {config_path}", file=sys.stderr)
         return 2
 
     report_raw = str(args.report).strip()

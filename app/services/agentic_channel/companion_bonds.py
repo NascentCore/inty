@@ -120,6 +120,24 @@ async def create_active_companion_bond(
     return bond
 
 
+async def ensure_active_companion_bond_for_owned_scope(
+    db: AsyncSession,
+    scope: AgentScope,
+) -> CompanionBond:
+    """Ensure one ACTIVE bond for caller-owned scope; fail closed on cross-agent conflict."""
+    assert scope.user_id != ""
+    assert scope.agent_id != ""
+    await _require_live_scope_rows(db, scope)
+    bond = await get_companion_bond_for_scope(db, scope)
+    if bond is not None and bond.state == CompanionBondState.ACTIVE:
+        return bond
+    if bond is not None:
+        raise CompanionBondInvariantError(
+            f"companion bond for {scope.registry_key()} is not ACTIVE"
+        )
+    return await create_active_companion_bond(db, scope)
+
+
 async def require_active_companion_bond(
     db: AsyncSession,
     scope: AgentScope,

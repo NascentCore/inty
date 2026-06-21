@@ -25,8 +25,9 @@ from app.core.companion_harness.agent_channel.guest_agent_kind import (
     CompanionGuestAgentKind,
 )
 from app.services.agentic_channel.provision import (
+    OwnedChannelProvisionInput,
     provision_agent_for_channel_onboard,
-    provision_agent_for_existing_agent,
+    provision_owned_agent_for_channel,
 )
 from tests.app.services.agentic_channel.companion_test_fixtures import (
     assert_companion_guest_identity_has_no_readable_id,
@@ -83,11 +84,13 @@ async def test_provision_existing_agent_binds_bonded_scope() -> None:
     creator_scope = await _create_creator_scope()
     address = f"tg-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
-    first = await provision_agent_for_existing_agent(
-        channel=ChannelKind.TELEGRAM,
-        channel_address=address,
-        channel_user_id=channel_user_id,
-        agent_id=creator_scope.agent_id,
+    first = await provision_owned_agent_for_channel(
+        input=OwnedChannelProvisionInput(
+            channel=ChannelKind.TELEGRAM,
+            channel_address=address,
+            channel_user_id=channel_user_id,
+            scope=creator_scope,
+        ),
     )
     assert first.is_new_user is False
     assert first.scope == creator_scope

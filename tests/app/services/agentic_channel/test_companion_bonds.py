@@ -21,6 +21,7 @@ from app.services.agentic_channel.companion_bonds import (
     active_companion_scope_for_user,
     create_active_companion_bond,
     deactivate_companion_bond,
+    ensure_active_companion_bond_for_owned_scope,
     get_companion_bond_for_scope,
     has_active_companion_bond,
     has_active_companion_bond_for_agent,
@@ -61,6 +62,70 @@ async def _delete_scope(db: AsyncSession, scope: AgentScope) -> None:
     )
     await db.execute(delete(Agent).where(Agent.creator_id == scope.user_id))
     await db.execute(delete(User).where(User.id == scope.user_id))
+
+
+@pytest.mark.asyncio
+async def test_ensure_active_companion_bond_for_owned_scope_creates() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        bond = await ensure_active_companion_bond_for_owned_scope(db, scope)
+        await db.commit()
+        assert bond.state == CompanionBondState.ACTIVE
+        assert bond.user_id == scope.user_id
+        assert bond.agent_id == scope.agent_id
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_ensure_active_companion_bond_for_owned_scope_idempotent() -> (
+    None
+):
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        first = await ensure_active_companion_bond_for_owned_scope(db, scope)
+        second = await ensure_active_companion_bond_for_owned_scope(db, scope)
+        assert first.id == second.id
+        await db.commit()
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_ensure_active_companion_bond_for_owned_scope_rejects_conflict() -> (
+    None
+):
+    async with AsyncSessionLocal() as db:
+        first = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, first)
+        second_agent = await add_companion_guest_agent_for_user(
+            db,
+            user_id=first.user_id,
+            kind=CompanionGuestAgentKind.TELEGRAM,
+        )
+        second = AgentScope(user_id=first.user_id, agent_id=second_agent.id)
+        with pytest.raises(CompanionBondInvariantError):
+            await ensure_active_companion_bond_for_owned_scope(db, second)
+        await db.rollback()
+        await _delete_scope(db, first)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_ensure_active_companion_bond_for_owned_scope_rejects_inactive() -> (
+    None
+):
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        bond = await create_active_companion_bond(db, scope)
+        bond.state = CompanionBondState.INACTIVE
+        bond.inactive_at = datetime.now(UTC)
+        await db.flush()
+        with pytest.raises(CompanionBondInvariantError):
+            await ensure_active_companion_bond_for_owned_scope(db, scope)
+        await db.rollback()
+        await _delete_scope(db, scope)
+        await db.commit()
 
 
 @pytest.mark.asyncio
