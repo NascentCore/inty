@@ -62,20 +62,20 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.llms.client import CompanionLLMClient
+from app.core.llms.client import LlmClient
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel
 
 
 @dataclass(frozen=True)
 class InjectedCompanionRuntime:
-    """Test-only manager wiring: explicit config plus scripted ``CompanionLLMClient``.
+    """Test-only manager wiring: explicit config plus scripted ``LlmClient``.
 
     Production callers omit ``injected_runtime`` on ``run_agent_turn`` / ``drain_once``.
     """
 
     companion_config: CompanionConfig
-    llm_client: CompanionLLMClient
+    llm_client: LlmClient
 
 
 def _assert_session_initialized(session: CompanionSession) -> None:
@@ -222,7 +222,10 @@ async def run_agent_turn(
     assert user_text.strip() != ""
     t0 = time.perf_counter()
     if injected_runtime is not None:
-        assert resolved_chat_model == injected_runtime.companion_config.llm.chat_model
+        assert (
+            resolved_chat_model
+            == injected_runtime.companion_config.llm.chat_model
+        )
         manager, session = manager_and_session_for_injected_runtime(
             scope,
             injected=injected_runtime,

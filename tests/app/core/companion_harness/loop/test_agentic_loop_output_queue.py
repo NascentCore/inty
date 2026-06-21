@@ -116,7 +116,7 @@ def _tail() -> tuple[TurnTailUserMessage, ...]:
         TurnTailUserMessage(
             message_id="user-msg-1",
             text="hi",
-            received_at_utc=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            received_at_utc=datetime(2026, 1, 1, tzinfo=UTC),
         ),
     )
 

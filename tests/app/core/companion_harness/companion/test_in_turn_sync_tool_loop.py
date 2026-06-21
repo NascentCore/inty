@@ -119,7 +119,7 @@ async def test_run_in_turn_sync_tool_loop_user_before_assistant_transcript(
             tail_user_messages=_tail(
                 message_id="user-uuid-1",
                 text="hi",
-                ts=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                ts=datetime(2026, 1, 1, tzinfo=UTC),
             ),
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
@@ -179,7 +179,7 @@ async def test_run_in_turn_sync_tool_loop_reports_when_caller_persisted_user(
             tail_user_messages=_tail(
                 message_id="user-uuid-prepersisted",
                 text="hi",
-                ts=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                ts=datetime(2026, 1, 1, tzinfo=UTC),
             ),
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
@@ -252,7 +252,7 @@ async def test_run_in_turn_sync_tool_loop_interim_sink_on_tool_round(
             tail_user_messages=_tail(
                 message_id="user-uuid-2",
                 text="go",
-                ts=datetime(2026, 1, 2, tzinfo=timezone.utc),
+                ts=datetime(2026, 1, 2, tzinfo=UTC),
             ),
             transcript_rel="transcript.jsonl",
             interim_output_sink=_sink,
@@ -312,7 +312,7 @@ async def test_run_in_turn_sync_tool_loop_emit_every_assistant_round_terminal(
             tail_user_messages=_tail(
                 message_id="user-uuid-emit-all",
                 text="hi",
-                ts=datetime(2026, 1, 5, tzinfo=timezone.utc),
+                ts=datetime(2026, 1, 5, tzinfo=UTC),
             ),
             transcript_rel="transcript.jsonl",
             interim_output_sink=_sink,
@@ -367,7 +367,7 @@ async def test_run_bootstrap_track_sync_tool_loop_returns_result(
             tail_user_messages=_tail(
                 message_id="user-bootstrap",
                 text="hi",
-                ts=datetime(2026, 1, 3, tzinfo=timezone.utc),
+                ts=datetime(2026, 1, 3, tzinfo=UTC),
             ),
             transcript_rel="transcript.jsonl",
             bootstrap_interim_output_sink=None,
@@ -448,7 +448,7 @@ async def test_run_in_turn_sync_tool_loop_after_tool_hook_refreshes_openai_tools
             tail_user_messages=_tail(
                 message_id="user-uuid-refresh",
                 text="go",
-                ts=datetime(2026, 1, 4, tzinfo=timezone.utc),
+                ts=datetime(2026, 1, 4, tzinfo=UTC),
             ),
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,

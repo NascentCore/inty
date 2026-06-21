@@ -344,7 +344,7 @@ async def test_output_pump_claims_after_wake_sets_runtime_channel() -> None:
     assert kwargs.get("resolve_delivery_target") is not None
     channel, wire_id = serving._resolve_output_delivery_target()
     assert channel == ChannelKind.APP_WS
-    assert wire_id == f"app:{scope.registry_key()}"
+    assert wire_id == f"app_ws:{scope.registry_key()}"
 
 
 @pytest.mark.asyncio

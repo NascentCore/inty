@@ -113,12 +113,12 @@ def test_build_user_chat_prompt_preserves_multi_user_tail() -> None:
             TurnTailUserMessage(
                 message_id="user-1",
                 text="first",
-                received_at_utc=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                received_at_utc=datetime(2026, 1, 1, tzinfo=UTC),
             ),
             TurnTailUserMessage(
                 message_id="user-2",
                 text="second",
-                received_at_utc=datetime(2026, 1, 1, 0, 1, tzinfo=timezone.utc),
+                received_at_utc=datetime(2026, 1, 1, 0, 1, tzinfo=UTC),
             ),
         ),
         tools=(),

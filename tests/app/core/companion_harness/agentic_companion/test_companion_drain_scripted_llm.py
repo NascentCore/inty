@@ -35,9 +35,11 @@ from app.core.companion_harness.agentic_companion.types import (
     QueueStatus,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
-from app.core.companion_harness.memory.memory_registry import shutdown_all_memory_stores
+from app.core.companion_harness.memory.memory_registry import (
+    shutdown_all_memory_stores,
+)
 from app.core.companion_harness.tools.tool_background import (
     TOOL_RESULTS_TRANSCRIPT_MARKER,
 )
@@ -54,6 +56,8 @@ from app.models.agentic_companion_queue import (
 )
 from app.models.companion_bond import CompanionBond
 from app.models.user import User
+from app.core.companion_harness.loop.config import BatchUserMessagesLlmCallMode
+from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import DEEPSEEK_V3_2
@@ -129,7 +133,7 @@ async def test_drain_user_chat_no_tools_delivers_foreground() -> None:
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     wire_id="wire-drain-no-tool",
                     text="hello",
                     received_at_utc=now,
@@ -144,7 +148,7 @@ async def test_drain_user_chat_no_tools_delivers_foreground() -> None:
             )
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
-                runtime_channel=CompanionRuntimeChannel.APP,
+                runtime_channel=ChannelKind.APP_WS,
                 background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
@@ -163,8 +167,10 @@ async def test_drain_user_chat_no_tools_delivers_foreground() -> None:
                 (
                     await db.execute(
                         select(AgenticCompanionInputQueueRow).where(
-                            AgenticCompanionInputQueueRow.user_id == scope.user_id,
-                            AgenticCompanionInputQueueRow.agent_id == scope.agent_id,
+                            AgenticCompanionInputQueueRow.user_id
+                            == scope.user_id,
+                            AgenticCompanionInputQueueRow.agent_id
+                            == scope.agent_id,
                         )
                     )
                 )
@@ -175,8 +181,10 @@ async def test_drain_user_chat_no_tools_delivers_foreground() -> None:
                 (
                     await db.execute(
                         select(AgenticCompanionOutputQueueRow).where(
-                            AgenticCompanionOutputQueueRow.user_id == scope.user_id,
-                            AgenticCompanionOutputQueueRow.agent_id == scope.agent_id,
+                            AgenticCompanionOutputQueueRow.user_id
+                            == scope.user_id,
+                            AgenticCompanionOutputQueueRow.agent_id
+                            == scope.agent_id,
                         )
                     )
                 )
@@ -229,7 +237,7 @@ async def test_drain_user_chat_background_tool_round() -> None:
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     wire_id="wire-drain-tool-bg",
                     text="what files do I have?",
                     received_at_utc=now,
@@ -244,7 +252,7 @@ async def test_drain_user_chat_background_tool_round() -> None:
             )
             await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
-                runtime_channel=CompanionRuntimeChannel.APP,
+                runtime_channel=ChannelKind.APP_WS,
                 background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
@@ -289,7 +297,7 @@ async def test_drain_empty_input_queue_returns_none() -> None:
             )
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
-                runtime_channel=CompanionRuntimeChannel.APP,
+                runtime_channel=ChannelKind.APP_WS,
                 background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
@@ -314,6 +322,13 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
         nickname_prefix="drain_batch",
         meta_data={"test": "scripted_drain_batch"},
     )
+    cfg = (
+        global_config_loaded_from_config_yaml.agent.companion_harness.user_turn
+    )
+    original_mode = cfg.batch_user_messages_llm_call_mode
+    cfg.batch_user_messages_llm_call_mode = (
+        BatchUserMessagesLlmCallMode.JOIN_TO_ONE_USER_MESSAGE.value
+    )
     try:
         now = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
@@ -321,7 +336,7 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     wire_id="wire-batch",
                     text="line one",
                     received_at_utc=now,
@@ -330,7 +345,7 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     wire_id="wire-batch",
                     text="line two",
                     received_at_utc=now,
@@ -345,7 +360,7 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
             )
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
-                runtime_channel=CompanionRuntimeChannel.APP,
+                runtime_channel=ChannelKind.APP_WS,
                 background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
@@ -360,8 +375,10 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
                 (
                     await db.execute(
                         select(AgenticCompanionInputQueueRow).where(
-                            AgenticCompanionInputQueueRow.user_id == scope.user_id,
-                            AgenticCompanionInputQueueRow.agent_id == scope.agent_id,
+                            AgenticCompanionInputQueueRow.user_id
+                            == scope.user_id,
+                            AgenticCompanionInputQueueRow.agent_id
+                            == scope.agent_id,
                         )
                     )
                 )
@@ -370,7 +387,9 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
             )
 
         assert len(input_rows) == 2
-        assert all(row.status == QueueStatus.DELIVERED.value for row in input_rows)
+        assert all(
+            row.status == QueueStatus.DELIVERED.value for row in input_rows
+        )
 
         store = memory_store_for_injected_runtime(scope, injected)
         user_rows = [
@@ -382,6 +401,7 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
         assert user_rows[0].get("content") == "line one\nline two"
         assert fake.script_index == len(script)
     finally:
+        cfg.batch_user_messages_llm_call_mode = original_mode
         await _cleanup_guest_scope_with_queues(scope)
 
 
@@ -404,7 +424,7 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     wire_id="wire-bootstrap",
                     text="hi, I'm new here",
                     received_at_utc=now,
@@ -419,7 +439,7 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
             )
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
-                runtime_channel=CompanionRuntimeChannel.APP,
+                runtime_channel=ChannelKind.APP_WS,
                 background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
@@ -441,7 +461,9 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
         assert "user" in scripted_transcript_roles(store)
         assert "assistant" in scripted_transcript_roles(store)
         ctx = json.loads(store.read_document("context.json"))
-        assert ctx.get("workspace_bootstrap_user_interactive_completed") is False
+        assert (
+            ctx.get("workspace_bootstrap_user_interactive_completed") is False
+        )
         assert fake.script_index == 1
     finally:
         await _cleanup_guest_scope_with_queues(scope)
