@@ -18,7 +18,11 @@ from app.models.user import Gender
 
 
 class AgentStatus(StrEnum):
-    """AI角色状态"""
+    """STALE: user-created agent approval workflow was never implemented.
+
+    Column ``agents.status`` remains for schema compatibility; do not gate runtime
+    behavior on these values.
+    """
 
     PENDING = "PENDING"
     APPROVED = "APPROVED"
@@ -80,7 +84,13 @@ class Agent(Base):
     )
     category = Column(String)
     status = Column(
-        Enum(AgentStatus, name="agentstatus"), default=AgentStatus.PENDING
+        Enum(AgentStatus, name="agentstatus"),
+        default=AgentStatus.PENDING,
+        comment=(
+            "STALE: intended for user-created agent approval; workflow never "
+            "shipped—do not use for access control or companion lifecycle"
+        ),
+        info={"stale": True},
     )
     source = Column(
         Enum(AgentSource, name="agentsource"),

@@ -83,6 +83,7 @@ class ScopeQueueServing:
         assert scope is not None
         assert deliver_message is not None
         assert on_drain_complete is not None
+        assert runtime_channel is not None
         self._scope = scope
         self._background_output_sink = background_output_sink
         self._deliver_message = deliver_message
@@ -91,7 +92,7 @@ class ScopeQueueServing:
         self._stop = asyncio.Event()
         self._input_task: asyncio.Task[None] | None = None
         self._pump_task: asyncio.Task[None] | None = None
-        self._runtime_channel: CompanionRuntimeChannel | None = None
+        self._runtime_channel = runtime_channel
         self._started = False
 
     async def start(self) -> None:

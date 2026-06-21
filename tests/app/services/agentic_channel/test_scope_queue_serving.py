@@ -348,9 +348,16 @@ async def test_output_pump_claims_after_wake_sets_runtime_channel() -> None:
 
 
 @pytest.mark.asyncio
-async def test_no_drain_before_first_wake() -> None:
-    scope = AgentScope(user_id="user-no-wake", agent_id="agent-no-wake")
-    drain_mock = AsyncMock()
+async def test_drain_on_start_uses_constructor_runtime_channel() -> None:
+    scope = AgentScope(user_id="user-start-drain", agent_id="agent-start-drain")
+    drain_mock = AsyncMock(
+        return_value=DrainScopeOnceResult(
+            reply_text="",
+            tool_background_started=False,
+            batch_drained=False,
+            input_message_ids=(),
+        )
+    )
     serving = ScopeQueueServing(
         scope,
         background_output_sink=None,
@@ -366,4 +373,7 @@ async def test_no_drain_before_first_wake() -> None:
         await asyncio.sleep(0.05)
         await serving.stop()
 
-    drain_mock.assert_not_awaited()
+    drain_mock.assert_awaited()
+    assert drain_mock.await_args.kwargs["runtime_channel"] == (
+        CompanionRuntimeChannel.TELEGRAM
+    )
