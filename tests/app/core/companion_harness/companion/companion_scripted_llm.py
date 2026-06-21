@@ -1,12 +1,17 @@
 """Wire a real CompanionLLMClient to one shared scripted FakeOpenAI for harness tests.
 
-TODO(!3562): ``build_scripted_injected_runtime`` feeds headless ``AgenticCompanion.drain_once`` CI tests.
+TODO(#3562): ``build_scripted_injected_runtime`` feeds headless ``AgenticCompanion.drain_once`` CI tests.
+TODO(#3563): Consolidate transcript assertion helpers shared with orchestration drain tests.
 """
 
 from __future__ import annotations
 
+import json
+
+from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.turn import InjectedCompanionRuntime
-from app.core.companion_harness.companion.manager import CompanionConfig
+from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.llms.client import CompanionLLMClient, CompanionLLMConfig
 from app.external_services.fakes.openai import FakeCompletionStep, FakeOpenAI
 from app.utils.config import CompanionMemoryBootstrapType
@@ -16,7 +21,7 @@ from tests.app.core.companion_harness.companion_memory_registry_dsn import (
 )
 
 
-def _scripted_llm_config() -> CompanionLLMConfig:
+def scripted_harness_llm_config() -> CompanionLLMConfig:
     return CompanionLLMConfig(
         api_key="test-key",
         api_base="https://example.invalid/v1",
@@ -46,7 +51,7 @@ def build_scripted_injected_runtime(
     script: tuple[FakeCompletionStep, ...],
 ) -> tuple[InjectedCompanionRuntime, FakeOpenAI]:
     """Build test ``InjectedCompanionRuntime`` with NONE bootstrap and scripted transport."""
-    llm_config = _scripted_llm_config()
+    llm_config = scripted_harness_llm_config()
     client, fake = companion_llm_client_with_scripted_transport(llm_config, script)
     companion_config = CompanionConfig(
         llm=llm_config,
@@ -59,6 +64,50 @@ def build_scripted_injected_runtime(
         llm_client=client,
     )
     return injected, fake
+
+
+def memory_store_for_injected_runtime(
+    scope: AgentScope,
+    injected: InjectedCompanionRuntime,
+) -> MemoryStore:
+    """Read MemoryStore for a scope after a turn using the same injected config."""
+    manager = CompanionManager(
+        injected.companion_config,
+        llm_client=injected.llm_client,
+    )
+    return manager.get_or_create_session(
+        scope.user_id,
+        scope.agent_id,
+        scope.memory_store_chat_id(),
+    ).store
+
+
+def scripted_transcript_roles(store: MemoryStore) -> list[str]:
+    raw = store.read_document("transcript.jsonl")
+    rows = [
+        json.loads(line)
+        for line in raw.strip().splitlines()
+        if line.strip()
+    ]
+    return [row["role"] for row in rows]
+
+
+def scripted_transcript_rows(store: MemoryStore) -> list[dict[str, object]]:
+    raw = store.read_document("transcript.jsonl")
+    return [
+        json.loads(line)
+        for line in raw.strip().splitlines()
+        if line.strip()
+    ]
+
+
+def scripted_tool_background_done_rows(store: MemoryStore) -> list[dict[str, object]]:
+    raw = store.read_document("tool_background.jsonl")
+    return [
+        json.loads(line)
+        for line in raw.strip().splitlines()
+        if line.strip()
+    ]
 
 
 def assert_all_routes_share_fake(client: CompanionLLMClient, fake: FakeOpenAI) -> None:

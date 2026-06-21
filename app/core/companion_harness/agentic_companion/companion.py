@@ -1,7 +1,7 @@
 """AgenticCompanion: per-scope serving runtime draining InputQueue into AgenticLoop.
 
 TODO(!3493): Weixin ``drain_and_deliver`` caller should enqueue + wake only (!3487 App-WS done #3512).
-TODO(!3562): Headless scripted ``drain_once`` CI tests inject ``InjectedCompanionRuntime``.
+TODO(#3562): Headless scripted ``drain_once`` CI tests inject ``InjectedCompanionRuntime``.
 """
 
 from __future__ import annotations

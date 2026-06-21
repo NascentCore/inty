@@ -7,7 +7,6 @@ Script step counts assume default ``user_turn.llm_loop_mode=dual_llm``:
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 
 import pytest
@@ -20,7 +19,6 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.companion import (
     AgenticCompanion,
 )
-from app.core.companion_harness.agentic_companion.turn import InjectedCompanionRuntime
 from app.core.companion_harness.agentic_companion.output_queue import (
     clear_output_queues_for_tests,
     get_output_queue_for_scope,
@@ -32,7 +30,6 @@ from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
     QueueStatus,
 )
-from app.core.companion_harness.companion.manager import CompanionManager
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
@@ -57,10 +54,13 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.models_catalog import DEEPSEEK_V3_2
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     build_scripted_injected_runtime,
+    memory_store_for_injected_runtime,
+    scripted_tool_background_done_rows,
+    scripted_transcript_roles,
+    scripted_transcript_rows,
 )
 from tests.app.services.agentic_channel.companion_test_fixtures import (
     create_guest_scope_for_test,
-    delete_guest_scope_for_test,
 )
 
 
@@ -72,7 +72,7 @@ def _implicit_bundle() -> ImplicitSignalBundle:
     )
 
 
-async def _cleanup_scope(scope: AgentScope) -> None:
+async def _cleanup_guest_scope_with_queues(scope: AgentScope) -> None:
     async with AsyncSessionLocal() as db:
         await db.execute(
             delete(AgenticCompanionInputQueueRow).where(
@@ -90,49 +90,6 @@ async def _cleanup_scope(scope: AgentScope) -> None:
         await db.execute(delete(Agent).where(Agent.creator_id == scope.user_id))
         await db.execute(delete(User).where(User.id == scope.user_id))
         await db.commit()
-
-
-def _transcript_roles(store: object) -> list[str]:
-    raw = store.read_document("transcript.jsonl")
-    rows = [
-        json.loads(line)
-        for line in raw.strip().splitlines()
-        if line.strip()
-    ]
-    return [row["role"] for row in rows]
-
-
-def _transcript_rows(store: object) -> list[dict[str, object]]:
-    raw = store.read_document("transcript.jsonl")
-    return [
-        json.loads(line)
-        for line in raw.strip().splitlines()
-        if line.strip()
-    ]
-
-
-def _tool_background_done_rows(store: object) -> list[dict[str, object]]:
-    raw = store.read_document("tool_background.jsonl")
-    return [
-        json.loads(line)
-        for line in raw.strip().splitlines()
-        if line.strip()
-    ]
-
-
-def _memory_store_for_injected(
-    scope: AgentScope,
-    injected: InjectedCompanionRuntime,
-) -> object:
-    manager = CompanionManager(
-        injected.companion_config,
-        llm_client=injected.llm_client,
-    )
-    return manager.get_or_create_session(
-        scope.user_id,
-        scope.agent_id,
-        scope.memory_store_chat_id(),
-    ).store
 
 
 @pytest.fixture(autouse=True)
@@ -227,14 +184,13 @@ async def test_drain_user_chat_no_tools_delivers_foreground() -> None:
         assert len(output_rows) >= 1
         assert any(row.text == "Hi, I'm here." for row in output_rows)
 
-        store = _memory_store_for_injected(scope, injected)
-        roles = _transcript_roles(store)
+        store = memory_store_for_injected_runtime(scope, injected)
+        roles = scripted_transcript_roles(store)
         assert "user" in roles
         assert "assistant" in roles
         assert fake.script_index == len(script)
     finally:
-        await _cleanup_scope(scope)
-        await delete_guest_scope_for_test(scope)
+        await _cleanup_guest_scope_with_queues(scope)
 
 
 @pytest.mark.asyncio
@@ -294,18 +250,17 @@ async def test_drain_user_chat_background_tool_round() -> None:
         ready = await output_queue.pull_ready_batch()
         assert [row.text for row in ready] == ["I'll list your scope root."]
 
-        store = _memory_store_for_injected(scope, injected)
-        transcript = _transcript_rows(store)
+        store = memory_store_for_injected_runtime(scope, injected)
+        transcript = scripted_transcript_rows(store)
         assert any(row.get("source") == "tool_bg" for row in transcript)
         assert any(
             TOOL_RESULTS_TRANSCRIPT_MARKER in str(row.get("content", ""))
             for row in transcript
         )
-        done_rows = _tool_background_done_rows(store)
+        done_rows = scripted_tool_background_done_rows(store)
         assert len(done_rows) == 1
         assert done_rows[0].get("kind") == "tool_background_done"
         assert done_rows[0].get("tool_calls_count") == 1
         assert fake.script_index == len(script)
     finally:
-        await _cleanup_scope(scope)
-        await delete_guest_scope_for_test(scope)
+        await _cleanup_guest_scope_with_queues(scope)

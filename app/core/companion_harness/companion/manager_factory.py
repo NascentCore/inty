@@ -71,10 +71,9 @@ def companion_runtime_config_fingerprint() -> str:
 
 def companion_config_for_resolved_model(
     resolved_chat_model: GenAIModel,
+    resolved_tool_model: GenAIModel,
 ) -> CompanionConfig:
-    """Assemble ``CompanionConfig`` from global harness yaml and one resolved chat model."""
-    chat_api_id = resolved_chat_model.id_on_provider
-    tool_api_id = companion_tool_model_api_id(chat_api_id)
+    """Assemble ``CompanionConfig`` from global harness yaml and resolved chat/tool models."""
     cfg = global_config_loaded_from_config_yaml
     harness = cfg.agent.companion_harness
     api_key = cfg.agent.chat_llm_api_key or cfg.agent.api_key
@@ -86,8 +85,8 @@ def companion_config_for_resolved_model(
         async_chat_timeout = float(timeout_raw) if timeout_raw else 600.0
     except ValueError:
         async_chat_timeout = 600.0
-    chat_m = resolve_chat_text_model(chat_api_id)
-    tool_m = resolve_chat_text_model(tool_api_id)
+    chat_m = resolved_chat_model
+    tool_m = resolved_tool_model
     llm = CompanionLLMConfig(
         api_key=api_key,
         api_base=cfg.agent.chat_llm_base_url or cfg.agent.base_url,
@@ -127,7 +126,7 @@ def companion_manager_for_resolved_model(
     runtime_fingerprint: str,
 ) -> CompanionManager:
     _ = runtime_fingerprint
-    _ = tool_model_api_id
     chat_m = resolve_chat_text_model(chat_model_api_id)
-    companion_cfg = companion_config_for_resolved_model(chat_m)
+    tool_m = resolve_chat_text_model(tool_model_api_id)
+    companion_cfg = companion_config_for_resolved_model(chat_m, tool_m)
     return CompanionManager(companion_cfg)

@@ -66,7 +66,10 @@ from app.utils.models_catalog import GenAIModel
 
 @dataclass(frozen=True)
 class InjectedCompanionRuntime:
-    """Test-only manager wiring: explicit config plus scripted ``CompanionLLMClient``."""
+    """Test-only manager wiring: explicit config plus scripted ``CompanionLLMClient``.
+
+    Production callers omit ``injected_runtime`` on ``run_agent_turn`` / ``drain_once``.
+    """
 
     companion_config: CompanionConfig
     llm_client: CompanionLLMClient

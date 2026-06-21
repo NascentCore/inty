@@ -25,7 +25,6 @@ from app.core.companion_harness.memory.memory_registry import shutdown_all_memor
 from app.core.companion_harness.tools.tool_background import (
     TOOL_RESULTS_TRANSCRIPT_MARKER,
 )
-from app.core.llms.client import CompanionLLMConfig
 from app.external_services.fakes.openai import (
     FakeCompletionStep,
     FakeOpenAI,
@@ -44,17 +43,11 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
 )
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     companion_llm_client_with_scripted_transport,
+    scripted_harness_llm_config,
+    scripted_tool_background_done_rows,
+    scripted_transcript_roles,
+    scripted_transcript_rows,
 )
-
-
-def _llm_config() -> CompanionLLMConfig:
-    return CompanionLLMConfig(
-        api_key="test-key",
-        api_base="https://example.invalid/v1",
-        default_model=DEEPSEEK_V3_2,
-        chat_model=DEEPSEEK_V3_2,
-        tool_model=DEEPSEEK_V3_2,
-    )
 
 
 async def _build_scripted_manager(
@@ -67,7 +60,7 @@ async def _build_scripted_manager(
         nickname_prefix="harn",
         meta_data={"test": "scripted_llm"},
     )
-    llm_config = _llm_config()
+    llm_config = scripted_harness_llm_config()
     client, fake = companion_llm_client_with_scripted_transport(llm_config, script)
     config = CompanionConfig(
         llm=llm_config,
@@ -82,34 +75,6 @@ async def _build_scripted_manager(
         scope.memory_store_chat_id(),
     )
     return manager, session, fake, scope
-
-
-def _transcript_roles(store: object) -> list[str]:
-    raw = store.read_document("transcript.jsonl")
-    rows = [
-        json.loads(line)
-        for line in raw.strip().splitlines()
-        if line.strip()
-    ]
-    return [row["role"] for row in rows]
-
-
-def _transcript_rows(store: object) -> list[dict[str, object]]:
-    raw = store.read_document("transcript.jsonl")
-    return [
-        json.loads(line)
-        for line in raw.strip().splitlines()
-        if line.strip()
-    ]
-
-
-def _tool_background_done_rows(store: object) -> list[dict[str, object]]:
-    raw = store.read_document("tool_background.jsonl")
-    return [
-        json.loads(line)
-        for line in raw.strip().splitlines()
-        if line.strip()
-    ]
 
 
 @pytest.fixture(autouse=True)
@@ -157,7 +122,7 @@ async def test_user_chat_no_tools_delivers_foreground_to_output_queue() -> None:
         texts = [row.text for row in ready]
         assert texts == ["Hi, I'm here."]
         assert result.assistant_text.strip() == "Hi, I'm here."
-        assert _transcript_roles(session.store) == ["user", "assistant"]
+        assert scripted_transcript_roles(session.store) == ["user", "assistant"]
         assert fake.script_index == len(script)
     finally:
         await delete_guest_scope_for_test(scope)
@@ -205,13 +170,13 @@ async def test_user_chat_background_tool_round_persists_side_effects() -> None:
 
         ready = await output_queue.pull_ready_batch()
         assert [row.text for row in ready] == ["I'll list your scope root."]
-        transcript = _transcript_rows(session.store)
+        transcript = scripted_transcript_rows(session.store)
         assert any(row.get("source") == "tool_bg" for row in transcript)
         assert any(
             TOOL_RESULTS_TRANSCRIPT_MARKER in str(row.get("content", ""))
             for row in transcript
         )
-        done_rows = _tool_background_done_rows(session.store)
+        done_rows = scripted_tool_background_done_rows(session.store)
         assert len(done_rows) == 1
         assert done_rows[0].get("kind") == "tool_background_done"
         assert done_rows[0].get("tool_calls_count") == 1
@@ -252,8 +217,8 @@ async def test_bootstrap_turn_delivers_and_persists_context() -> None:
         assert result.assistant_text.strip() == (
             "Welcome! What kind of companion do you want?"
         )
-        assert "user" in _transcript_roles(session.store)
-        assert "assistant" in _transcript_roles(session.store)
+        assert "user" in scripted_transcript_roles(session.store)
+        assert "assistant" in scripted_transcript_roles(session.store)
         ctx_raw = session.store.read_document("context.json")
         ctx = json.loads(ctx_raw)
         assert ctx.get("workspace_bootstrap_user_interactive_completed") is False
@@ -279,7 +244,7 @@ async def test_proactive_chat_returns_assistant_text_and_transcript() -> None:
         )
 
         assert result.assistant_text.strip() == "Just checking in on you."
-        roles = _transcript_roles(session.store)
+        roles = scripted_transcript_roles(session.store)
         assert "user" in roles
         assert "assistant" in roles
         assert fake.script_index == 1
