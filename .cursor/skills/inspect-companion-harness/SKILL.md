@@ -3,6 +3,9 @@ name: inspect-companion-harness
 description: >-
   For humans to understand the companion harness' working conditions.
   Currently, inspect MemoryDoc in Postgres (MemoryStore document versions).
+
+  Report any issues/bugs in the companion working state as well.
+
   Covers companion_memory_document_versions, scope triples, and SQL templates for
   identity/transcript/context, etc. Load DB credentials from INTY_CONFIG_YAML (devops/config.yaml.local).
   
