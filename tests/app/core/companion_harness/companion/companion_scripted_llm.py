@@ -8,8 +8,13 @@ from __future__ import annotations
 import json
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.turn import InjectedCompanionRuntime
-from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
+from app.core.companion_harness.agentic_companion.turn import (
+    InjectedCompanionRuntime,
+)
+from app.core.companion_harness.companion.manager import (
+    CompanionConfig,
+    CompanionManager,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.llms.client import CompanionLLMClient, CompanionLLMConfig
 from app.external_services.fakes.openai import FakeCompletionStep, FakeOpenAI
@@ -53,7 +58,9 @@ def build_scripted_injected_runtime(
 ) -> tuple[InjectedCompanionRuntime, FakeOpenAI]:
     """Build test ``InjectedCompanionRuntime`` with scripted transport and bootstrap mode."""
     llm_config = scripted_harness_llm_config()
-    client, fake = companion_llm_client_with_scripted_transport(llm_config, script)
+    client, fake = companion_llm_client_with_scripted_transport(
+        llm_config, script
+    )
     companion_config = CompanionConfig(
         llm=llm_config,
         memory_pg_dsn=companion_memory_registry_dsn(),
@@ -86,9 +93,7 @@ def memory_store_for_injected_runtime(
 def scripted_transcript_roles(store: MemoryStore) -> list[str]:
     raw = store.read_document("transcript.jsonl")
     rows = [
-        json.loads(line)
-        for line in raw.strip().splitlines()
-        if line.strip()
+        json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
     return [row["role"] for row in rows]
 
@@ -96,25 +101,27 @@ def scripted_transcript_roles(store: MemoryStore) -> list[str]:
 def scripted_transcript_rows(store: MemoryStore) -> list[dict[str, object]]:
     raw = store.read_document("transcript.jsonl")
     return [
-        json.loads(line)
-        for line in raw.strip().splitlines()
-        if line.strip()
+        json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
 
 
-def scripted_tool_background_done_rows(store: MemoryStore) -> list[dict[str, object]]:
+def scripted_tool_background_done_rows(
+    store: MemoryStore,
+) -> list[dict[str, object]]:
     raw = store.read_document("tool_background.jsonl")
     return [
-        json.loads(line)
-        for line in raw.strip().splitlines()
-        if line.strip()
+        json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
 
 
-def assert_all_routes_share_fake(client: CompanionLLMClient, fake: FakeOpenAI) -> None:
+def assert_all_routes_share_fake(
+    client: CompanionLLMClient, fake: FakeOpenAI
+) -> None:
     """Assert every route slot points at the same scripted FakeOpenAI instance."""
     assert client._client is fake  # noqa: SLF001
     assert client._client_dual_chat is fake  # noqa: SLF001
     assert client._client_dual_tool is fake  # noqa: SLF001
     assert client._client_inner_tick is fake  # noqa: SLF001
-    assert client.async_llm_client._async_client is fake.async_client  # noqa: SLF001
+    assert (
+        client.async_llm_client._async_client is fake.async_client
+    )  # noqa: SLF001

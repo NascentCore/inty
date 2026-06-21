@@ -37,7 +37,9 @@ from app.core.companion_harness.agentic_companion.types import (
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.core.companion_harness.memory.memory_registry import shutdown_all_memory_stores
+from app.core.companion_harness.memory.memory_registry import (
+    shutdown_all_memory_stores,
+)
 from app.core.companion_harness.tools.tool_background import (
     TOOL_RESULTS_TRANSCRIPT_MARKER,
 )
@@ -163,8 +165,10 @@ async def test_drain_user_chat_no_tools_delivers_foreground() -> None:
                 (
                     await db.execute(
                         select(AgenticCompanionInputQueueRow).where(
-                            AgenticCompanionInputQueueRow.user_id == scope.user_id,
-                            AgenticCompanionInputQueueRow.agent_id == scope.agent_id,
+                            AgenticCompanionInputQueueRow.user_id
+                            == scope.user_id,
+                            AgenticCompanionInputQueueRow.agent_id
+                            == scope.agent_id,
                         )
                     )
                 )
@@ -175,8 +179,10 @@ async def test_drain_user_chat_no_tools_delivers_foreground() -> None:
                 (
                     await db.execute(
                         select(AgenticCompanionOutputQueueRow).where(
-                            AgenticCompanionOutputQueueRow.user_id == scope.user_id,
-                            AgenticCompanionOutputQueueRow.agent_id == scope.agent_id,
+                            AgenticCompanionOutputQueueRow.user_id
+                            == scope.user_id,
+                            AgenticCompanionOutputQueueRow.agent_id
+                            == scope.agent_id,
                         )
                     )
                 )
@@ -360,8 +366,10 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
                 (
                     await db.execute(
                         select(AgenticCompanionInputQueueRow).where(
-                            AgenticCompanionInputQueueRow.user_id == scope.user_id,
-                            AgenticCompanionInputQueueRow.agent_id == scope.agent_id,
+                            AgenticCompanionInputQueueRow.user_id
+                            == scope.user_id,
+                            AgenticCompanionInputQueueRow.agent_id
+                            == scope.agent_id,
                         )
                     )
                 )
@@ -370,7 +378,9 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
             )
 
         assert len(input_rows) == 2
-        assert all(row.status == QueueStatus.DELIVERED.value for row in input_rows)
+        assert all(
+            row.status == QueueStatus.DELIVERED.value for row in input_rows
+        )
 
         store = memory_store_for_injected_runtime(scope, injected)
         user_rows = [
@@ -441,7 +451,9 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
         assert "user" in scripted_transcript_roles(store)
         assert "assistant" in scripted_transcript_roles(store)
         ctx = json.loads(store.read_document("context.json"))
-        assert ctx.get("workspace_bootstrap_user_interactive_completed") is False
+        assert (
+            ctx.get("workspace_bootstrap_user_interactive_completed") is False
+        )
         assert fake.script_index == 1
     finally:
         await _cleanup_guest_scope_with_queues(scope)

@@ -218,7 +218,10 @@ async def run_agent_turn(
     assert user_text.strip() != ""
     t0 = time.perf_counter()
     if injected_runtime is not None:
-        assert resolved_chat_model == injected_runtime.companion_config.llm.chat_model
+        assert (
+            resolved_chat_model
+            == injected_runtime.companion_config.llm.chat_model
+        )
         manager, session = manager_and_session_for_injected_runtime(
             scope,
             injected=injected_runtime,

@@ -9,7 +9,9 @@ from app.core.companion_harness.companion.manager_factory import (
 from app.utils.models_catalog import DEEPSEEK_V3_2, resolve_chat_text_model
 
 
-def test_companion_config_for_resolved_model_honors_distinct_tool_model() -> None:
+def test_companion_config_for_resolved_model_honors_distinct_tool_model() -> (
+    None
+):
     chat_m = DEEPSEEK_V3_2
     tool_api_id = companion_tool_model_api_id(chat_m.id_on_provider)
     tool_m = resolve_chat_text_model(tool_api_id)

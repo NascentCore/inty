@@ -138,7 +138,9 @@ def test_script_exhaustion_raises():
     client = FakeOpenAI(script=(fake_step_text("only"),))
     client.chat.completions.create(messages=[{"role": "user", "content": "x"}])
     with pytest.raises(FakeOpenAIScriptExhaustedError):
-        client.chat.completions.create(messages=[{"role": "user", "content": "y"}])
+        client.chat.completions.create(
+            messages=[{"role": "user", "content": "y"}]
+        )
 
 
 @pytest.mark.asyncio
@@ -166,5 +168,7 @@ def test_fake_step_dual_llm_envelope_produces_valid_json():
     assert env.output_to_user is False
 
     client = FakeOpenAI(script=(step,))
-    res = client.chat.completions.create(messages=[{"role": "user", "content": "x"}])
+    res = client.chat.completions.create(
+        messages=[{"role": "user", "content": "x"}]
+    )
     assert res.choices[0].message.content == step.content

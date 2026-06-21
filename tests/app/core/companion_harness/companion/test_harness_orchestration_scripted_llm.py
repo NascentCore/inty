@@ -20,12 +20,18 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     get_output_queue_for_scope,
 )
 from app.core.companion_harness.agentic_companion.types import UserMessageBatch
-from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager, CompanionSession
+from app.core.companion_harness.companion.manager import (
+    CompanionConfig,
+    CompanionManager,
+    CompanionSession,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
-from app.core.companion_harness.memory.memory_registry import shutdown_all_memory_stores
+from app.core.companion_harness.memory.memory_registry import (
+    shutdown_all_memory_stores,
+)
 from app.core.companion_harness.tools.tool_background import (
     TOOL_RESULTS_TRANSCRIPT_MARKER,
 )
@@ -65,7 +71,9 @@ async def _build_scripted_manager(
         meta_data={"test": "scripted_llm"},
     )
     llm_config = scripted_harness_llm_config()
-    client, fake = companion_llm_client_with_scripted_transport(llm_config, script)
+    client, fake = companion_llm_client_with_scripted_transport(
+        llm_config, script
+    )
     config = CompanionConfig(
         llm=llm_config,
         memory_pg_dsn=companion_memory_registry_dsn(),
@@ -108,7 +116,9 @@ async def test_user_chat_no_tools_delivers_foreground_to_output_queue() -> None:
         output_queue = get_output_queue_for_scope(scope)
         batch_id = str(uuid.uuid4())
         user_msg_id = str(uuid.uuid4())
-        user_batch = UserMessageBatch(batch_id=batch_id, message_ids=(user_msg_id,))
+        user_batch = UserMessageBatch(
+            batch_id=batch_id, message_ids=(user_msg_id,)
+        )
 
         result = await manager.run_user_chat_turn(
             session,
@@ -158,7 +168,9 @@ async def test_user_chat_background_tool_round_persists_side_effects() -> None:
         output_queue = get_output_queue_for_scope(scope)
         batch_id = str(uuid.uuid4())
         user_msg_id = str(uuid.uuid4())
-        user_batch = UserMessageBatch(batch_id=batch_id, message_ids=(user_msg_id,))
+        user_batch = UserMessageBatch(
+            batch_id=batch_id, message_ids=(user_msg_id,)
+        )
 
         await manager.run_user_chat_turn(
             session,
@@ -200,7 +212,9 @@ async def test_bootstrap_turn_delivers_and_persists_context() -> None:
         output_queue = get_output_queue_for_scope(scope)
         batch_id = str(uuid.uuid4())
         user_msg_id = str(uuid.uuid4())
-        user_batch = UserMessageBatch(batch_id=batch_id, message_ids=(user_msg_id,))
+        user_batch = UserMessageBatch(
+            batch_id=batch_id, message_ids=(user_msg_id,)
+        )
 
         result = await manager.run_user_chat_turn(
             session,
@@ -225,7 +239,9 @@ async def test_bootstrap_turn_delivers_and_persists_context() -> None:
         assert "assistant" in scripted_transcript_roles(session.store)
         ctx_raw = session.store.read_document("context.json")
         ctx = json.loads(ctx_raw)
-        assert ctx.get("workspace_bootstrap_user_interactive_completed") is False
+        assert (
+            ctx.get("workspace_bootstrap_user_interactive_completed") is False
+        )
         assert fake.script_index == 1
     finally:
         await delete_guest_scope_for_test(scope)

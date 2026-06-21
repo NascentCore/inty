@@ -10,7 +10,9 @@ from tests.app.core.companion_harness.companion.companion_scripted_llm import (
 )
 
 
-def test_companion_llm_client_with_scripted_transport_wires_all_routes() -> None:
+def test_companion_llm_client_with_scripted_transport_wires_all_routes() -> (
+    None
+):
     script = (fake_step_text("wired"),)
     client, fake = companion_llm_client_with_scripted_transport(
         CompanionLLMConfig(api_key="test-key"),
