@@ -35,6 +35,20 @@ async def test_telegram_bot_info_returns_username() -> None:
     assert resp.data.bot_username == "inty_bot"
 
 
+async def test_telegram_bot_info_502_when_get_me_fails() -> None:
+    with (
+        patch(
+            "backend.ops.api.v1.telegram.resolved_telegram_bot_token",
+            return_value="test-token",
+        ),
+        patch("backend.ops.api.v1.telegram.TelegramBotApi") as mock_api_cls,
+    ):
+        mock_api_cls.return_value.get_me.side_effect = ValueError("bad token")
+        with pytest.raises(HTTPException) as exc_info:
+            await telegram_bot_info()
+    assert exc_info.value.status_code == 502
+
+
 @pytest.mark.asyncio
 async def test_telegram_bot_info_503_when_token_missing() -> None:
     with patch(

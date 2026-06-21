@@ -6,49 +6,55 @@ from dataclasses import dataclass
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import APIRouter
 from fastapi.routing import APIRoute
+from fastapi.testclient import TestClient
 
-from app.api.constants import API_V1_PREFIX
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
+from app.core.config import global_config_loaded_from_config_yaml
 from backend.ops.api.telegram_web import _TELEGRAM_ONBOARD_HTML
-from backend.ops.api.v1 import telegram, telegram_demo
+from backend.ops.api.v1.router import api_router
 from backend.ops.main import app
 
 
-def _telegram_api_paths(*, debug: bool) -> list[str]:
-    router = APIRouter(prefix=API_V1_PREFIX)
-    router.include_router(telegram.router)
-    if debug:
-        router.include_router(telegram_demo.router)
-    return [route.path for route in router.routes if isinstance(route, APIRoute)]
+def _telegram_paths_on_api_router() -> list[str]:
+    return [
+        route.path
+        for route in api_router.routes
+        if isinstance(route, APIRoute) and "telegram" in route.path
+    ]
 
 
 def test_ops_mounts_telegram_onboard_page() -> None:
     paths = [route.path for route in app.routes if isinstance(route, APIRoute)]
     assert "/telegram" in paths
-
-
-def test_telegram_product_api_paths() -> None:
-    paths = _telegram_api_paths(debug=False)
     assert "/api/v1/telegram/bot-info" in paths
-    assert "/api/v1/telegram-demo/bindings" not in paths
 
 
-def test_telegram_debug_bindings_only_when_debug() -> None:
-    debug_paths = _telegram_api_paths(debug=True)
-    prod_paths = _telegram_api_paths(debug=False)
-    assert "/api/v1/telegram-demo/bindings" in debug_paths
-    assert "/api/v1/telegram-demo/bindings" not in prod_paths
-    assert "/api/v1/telegram/bot-info" in prod_paths
+def test_api_router_telegram_product_route_always_mounted() -> None:
+    paths = _telegram_paths_on_api_router()
+    assert "/api/v1/telegram/bot-info" in paths
+
+
+def test_api_router_debug_bindings_follows_config() -> None:
+    paths = _telegram_paths_on_api_router()
+    if global_config_loaded_from_config_yaml.app.debug:
+        assert "/api/v1/telegram-demo/bindings" in paths
+    else:
+        assert "/api/v1/telegram-demo/bindings" not in paths
 
 
 def test_telegram_onboard_html_uses_product_api() -> None:
     assert "/api/v1/telegram" in _TELEGRAM_ONBOARD_HTML
     assert "telegram-demo" not in _TELEGRAM_ONBOARD_HTML
     assert "Demo" not in _TELEGRAM_ONBOARD_HTML
+
+
+def test_telegram_bot_info_http_route_exists() -> None:
+    client = TestClient(app)
+    response = client.get("/api/v1/telegram/bot-info")
+    assert response.status_code in (200, 502, 503)
 
 
 @dataclass(frozen=True)

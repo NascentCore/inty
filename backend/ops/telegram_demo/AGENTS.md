@@ -26,7 +26,7 @@ Ops **telegram-demo**: Telegram Bot API long-poll ↔ companion harness.
    (identity: ``user_id`` / ``agent_id`` only; legacy ``readable_id`` unused).
 3. User sends **text**; harness replies (中文 OK).
 4. **Inner-tick** proactive / maintenance downlink via ``sendMessage`` (per-binding worker).
-5. Ops restart: bindings + presences restore from ``ops_telegram_demo_bindings``.
+5. Ops restart: bindings + presences restore from ``agent_channel_endpoints`` (poll offset in ``ops_telegram_demo_poll_state``).
 
 ## Multi-user routing
 
