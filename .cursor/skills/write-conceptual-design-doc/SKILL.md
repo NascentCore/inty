@@ -5,7 +5,7 @@ description: >-
   not by copying existing doc wording. Covers doc tiers, code discovery order,
   ASCII diagrams, Epic pointers, and self-check against source. Use when the user
   asks to write or update DESIGN.md, architecture overview, companion harness
-  design doc, or docs/companion_harness documentation from code.
+  design doc, or docs/imate/companion_harness documentation from code.
 ---
 
 Three-layer:

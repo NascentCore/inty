@@ -10,7 +10,7 @@ This is to draft a solid implementation plan, after you have a sound design.
 
 When working on [companion harness](/app/core/companion_harness/)
 
-- Read [companion harness design](/docs/companion_harness/DESIGN.md)
+- Read [companion harness design](/docs/imate/companion_harness/DESIGN.md)
 - Focus on architecture soundness, do not do duct-tape
 
 ## Conventions

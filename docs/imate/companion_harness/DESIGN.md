@@ -1,18 +1,19 @@
 # Companion Harness: 架构说明
 
 > 本文描述的是 agentic companion 的**目标态理想设计**，不是现状清单。
-> `companion_harness` 目前仍处于 **PROTOTYPE** 状态。
+> `companion_harness` 目前仍处于 **PROTOTYPE** 状态，可以不考虑向前兼容。
 > 编码智能体与工程师在判断「某部分是否已实现」之前，**必须先读 `app/core/companion_harness/` 代码**，不要以本文为实现依据。
 > 本文用途：为 `app/core/companion_harness/` 的持续实现提供方向指引。
 
 ## 概要（Executive Summary）
 
-Companion Harness 是一套完整的智能体框架，由 LLM 驱动：1 人 1 Inty，长期关系，体感上要像”活人“，而不是用完即弃的任务 Bot；是 Inty 理念和愿景的核心载体。
+Companion Harness 是一套基于 LLM 的智能体框架，来运行一个 Inty 实体是 Inty 理念和愿景（1 人 1 Inty，长期关系，Inty 给用户的体感上像”活人“，而不是用完即弃的任务 Bot）的载体。
 
-Companion Harness + LLM = Inty（陪伴智能体）；Inty + Memory = Personal Companion
+Companion Harness + LLM = Inty（陪伴智能体）；
+Inty + Memory = Personal Companion（即用户通过长期与 Inty 交互形成陪伴的实体）。
 
 Companion Harness 干的就是这件事：把 LLM 放进一套有节律、有记忆、有副作用的状态机里，让「聊天」变成「关系」，即：用户与智能体体验、演化一段关系的框架。
-Companion Harness 提供了**活着的关系**的存在框架；在此之上，iMate 作为一款产品，是为用户提供一个**真心为你**的心灵港湾。
+Companion Harness 提供了**活着的关系**的存在框架；在此之上，iMate 作为一款产品，是为用户提供一个**真心为你**的心灵港湾，或者说是为 Inty 与用户提供的一个完整的陪伴体验，类似于某种为了人的情感幸福而存在的一种服务（highly visionary/unclear）。
 
 ## Mind Model（心智模型）
 

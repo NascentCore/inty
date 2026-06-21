@@ -1,6 +1,6 @@
 # iMate Product Deisgn (not a PRD)
 
-Read [Companion Harness Design](/docs/companion_harness/DESIGN.md) to understand the underlying foundation.
+Read [Companion Harness Design](/docs/imate/companion_harness/DESIGN.md) to understand the underlying foundation.
 
 - The shape of the product is an App as the central hub (but not the center of interaction),
   as users can interact with Inty in whatever format they like.
