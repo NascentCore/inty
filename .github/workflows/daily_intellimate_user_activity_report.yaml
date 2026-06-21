@@ -46,9 +46,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      - name: Use prod IntelliMate DB config (primary when replica omitted)
-        # TODO(INTY_CONFIG_YAML): replace render script with INTY_CONFIG_YAML=devops/config.yaml.prod on run step env
-        run: devops/scripts/render_vm_database_config.sh devops/config.yaml.prod config.yaml
+      - name: Render prod config for VM host (localhost, not host.docker.internal)
+        # config.yaml.prod targets Docker (host: "host.docker.internal"); this job runs on the VM host.
+        # render_vm_database_config.sh rewrites database.host; it must handle quoted YAML and fail if not.
+        # Long-term: devops/config.yaml.prod.vm + INTY_CONFIG_YAML (issues/3530).
+        run: devops/scripts/render_vm_database_config.sh devops/config.yaml.prod /tmp/config.prod.vm.yaml
 
       - name: Resolve report date (T-1 UTC if unset)
         id: resolve
@@ -68,6 +70,7 @@ jobs:
       - name: Run daily usage report
         env:
           PYTHONPATH: .
+          INTY_CONFIG_YAML: /tmp/config.prod.vm.yaml
           EVENT_NAME: ${{ github.event_name }}
           INPUT_FORCE: ${{ github.event.inputs.force }}
         run: |
@@ -76,7 +79,7 @@ jobs:
           if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "${INPUT_FORCE:-}" = "true" ]; then
             CMD="$CMD --force"
           fi
-          echo "Running: $CMD"
+          echo "Running: $CMD (INTY_CONFIG_YAML=$INTY_CONFIG_YAML)"
           eval "$CMD"
 
       - name: Write summary

@@ -107,6 +107,8 @@ docker run --rm -e PGPASSWORD='<password>' --network host -v /tmp:/tmp postgres:
 
 VM 宿主机任务用 [`scripts/render_vm_database_config.sh`](scripts/render_vm_database_config.sh) 将 `host.docker.internal` 渲染为 `localhost`。
 
+**注意（易踩坑）**：`config.yaml.prod` 里 `database.host` 带引号（`host: "host.docker.internal"`）。纯文本 sed 若只匹配无引号形式会**静默失败**，宿主机任务仍连 `host.docker.internal`，报错 `[Errno -2] Name or service not known`（不是 Postgres 密码或 schema 问题）。脚本现已做引号兼容并在渲染后 **fail-fast** 校验。长期更稳妥：独立 `config.yaml.prod.vm`（显式 `localhost`）+ `INTY_CONFIG_YAML`（见 issues/3530）。
+
 ## Prod 容器部署
 
 <!-- TODO(!3498): Manual prod backend/push-worker deploy + E2E verify after local Postgres cutover (epic #3495). -->
