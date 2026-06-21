@@ -78,12 +78,11 @@ def test_schedule_queue_rejects_legacy_array_document(tmp_path: Path) -> None:
         + "\n",
     )
     future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
-    add_schedule_task(store, exec_time_utc=future, task_text="new")
-    body = json.loads(store.read_document(rel))
-    assert isinstance(body.get("tasks"), list)
-    ids = {t["id"] for t in body["tasks"]}
-    assert legacy_id in ids
-    assert len(ids) == 2
+    with pytest.raises(
+        ValueError,
+        match="schedule tasks document must be a JSON object",
+    ):
+        add_schedule_task(store, exec_time_utc=future, task_text="new")
 
 
 def test_add_schedule_task_accepts_z_and_rejects_naive_time(
