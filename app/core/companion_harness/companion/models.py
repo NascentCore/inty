@@ -221,11 +221,7 @@ class ChatMessage(BaseModel):
     uuid: str | None = None
     trace_id: str | None = None
     reply_to: str | None = None
-    # TODO: remove validation_alias for heartbeat; no backward compat needed
-    proactive_chat: bool | None = Field(
-        default=None,
-        validation_alias=AliasChoices("proactive_chat", "heartbeat"),
-    )
+    proactive_chat: bool | None = None
     scheduled: bool | None = None
     presence: PresenceSignal | None = None
     inner_tick: bool | None = None

@@ -203,18 +203,8 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
         description="Client optimistic id; stored under ``localId`` on wire / DB JSON.",
     )
     inner_tick: Optional[bool] = None
-    # TODO: remove validation_alias for heartbeat; no backward compat needed
-    proactive_chat: Optional[bool] = Field(
-        default=None,
-        validation_alias=AliasChoices("proactive_chat", "heartbeat"),
-    )
-    # TODO: remove validation_alias for companion_proactive_heartbeat; no backward compat needed
-    companion_proactive_chat: Optional[bool] = Field(
-        default=None,
-        validation_alias=AliasChoices(
-            "companion_proactive_chat", "companion_proactive_heartbeat"
-        ),
-    )
+    proactive_chat: Optional[bool] = None
+    companion_proactive_chat: Optional[bool] = None
     # TODO(#3400): Rename wire field when ``INNER_TICK_MONOLOG`` track lands (keep alias for compat).
     companion_maintenance_inner_tick: Optional[bool] = None
     companion_scheduled_reminder: Optional[bool] = None

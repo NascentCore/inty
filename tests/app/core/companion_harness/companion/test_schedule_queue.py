@@ -55,16 +55,18 @@ def test_next_due_task_for_execution_picks_earliest_ready(
     second = next_due_task_for_execution(store)
     assert second is not None
     assert second.id == t_later
+
+
+def test_schedule_queue_rejects_legacy_array_document(tmp_path: Path) -> None:
     store = _store(Path(str(tmp_path) + "-legacy"))
     rel = _schedule_document_rel()
-    legacy_id = "11111111-1111-1111-1111-111111111111"
     past = "2025-01-01T00:00:00+00:00"
     store.write_document(
         rel,
         json.dumps(
             [
                 {
-                    "id": legacy_id,
+                    "id": "11111111-1111-1111-1111-111111111111",
                     "exec_time_utc": past,
                     "task_text": "legacy",
                     "status": "pending",
@@ -76,12 +78,11 @@ def test_next_due_task_for_execution_picks_earliest_ready(
         + "\n",
     )
     future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
-    add_schedule_task(store, exec_time_utc=future, task_text="new")
-    body = json.loads(store.read_document(rel))
-    assert isinstance(body.get("tasks"), list)
-    ids = {t["id"] for t in body["tasks"]}
-    assert legacy_id in ids
-    assert len(ids) == 2
+    with pytest.raises(
+        ValueError,
+        match="schedule tasks document must be a JSON object",
+    ):
+        add_schedule_task(store, exec_time_utc=future, task_text="new")
 
 
 def test_add_schedule_task_accepts_z_and_rejects_naive_time(

@@ -97,48 +97,14 @@ def _schedule_document_rel() -> str:
     return DEFAULT_MEMORY_STORE_SCOPE_PATHS.schedule_queue_json
 
 
-def _legacy_list_item_to_task(raw: dict[str, Any]) -> ScheduleTask:
-    created = raw.get("created_at_utc") or raw.get("created_at")
-    if not created:
-        created = utc_iso_ts()
-    fired = raw.get("fired_at_utc") or raw.get("fired_at")
-    return ScheduleTask(
-        id=str(raw["id"]),
-        exec_time_utc=str(raw["exec_time_utc"]),
-        task_text=str(raw.get("task_text", "")),
-        status=str(raw.get("status", "pending")),  # type: ignore[arg-type]
-        created_at_utc=str(created),
-        fired_at_utc=str(fired) if fired is not None else None,
-        attempts=int(raw.get("attempts", 0)),
-        next_retry_utc=(
-            str(raw["next_retry_utc"])
-            if raw.get("next_retry_utc") is not None
-            else None
-        ),
-        last_error=(
-            str(raw["last_error"])
-            if raw.get("last_error") is not None
-            else None
-        ),
-    )
-
-
 def _load_tasks(store: MemoryStore) -> list[ScheduleTask]:
     rel = _schedule_document_rel()
     raw_body = store.read_document_if_exists(rel)
     if raw_body is None or not raw_body.strip():
         return []
     loaded = json.loads(raw_body)
-    if isinstance(loaded, list):
-        out: list[ScheduleTask] = []
-        for x in loaded:
-            if isinstance(x, dict):
-                out.append(_legacy_list_item_to_task(x))
-        return out
     if not isinstance(loaded, dict):
-        raise ValueError(
-            "schedule tasks document must be a JSON object or legacy array"
-        )
+        raise ValueError("schedule tasks document must be a JSON object")
     raw_tasks = loaded.get("tasks", [])
     if not isinstance(raw_tasks, list):
         raise ValueError("schedule tasks: key 'tasks' must be an array")
