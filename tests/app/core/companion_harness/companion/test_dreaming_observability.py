@@ -115,7 +115,7 @@ def test_dreaming_batch_langsmith_scope_resolves_scope_registry_channel(
         LangsmithChannelSource,
     )
     from app.core.companion_harness.companion.runtime_channel import (
-        CompanionRuntimeChannel,
+        ChannelKind,
     )
     from app.services.agentic_channel.channel_runtime import (
         ChannelRuntimeState,
@@ -126,9 +126,7 @@ def test_dreaming_batch_langsmith_scope_resolves_scope_registry_channel(
     clear_registries_for_tests()
     scope = AgentScope(user_id="u-scope", agent_id="a-scope")
     registry = get_scope_channel_registry(scope)
-    registry.states[CompanionRuntimeChannel.TELEGRAM] = (
-        ChannelRuntimeState.ACTIVE
-    )
+    registry.states[ChannelKind.TELEGRAM] = ChannelRuntimeState.ACTIVE
 
     mock_root = MagicMock()
     mock_create.return_value = mock_root
@@ -148,12 +146,12 @@ def test_dreaming_batch_langsmith_scope_resolves_scope_registry_channel(
         parent_run_enabled=True,
     ) as (root, slice_):
         assert root is mock_root
-        assert slice_.runtime_channel == CompanionRuntimeChannel.TELEGRAM
+        assert slice_.runtime_channel == ChannelKind.TELEGRAM
         assert slice_.channel_source == LangsmithChannelSource.SCOPE_REGISTRY
 
     mock_create.assert_called_once()
     create_slice = mock_create.call_args.kwargs["langsmith_slice"]
-    assert create_slice.runtime_channel == CompanionRuntimeChannel.TELEGRAM
+    assert create_slice.runtime_channel == ChannelKind.TELEGRAM
     assert create_slice.channel_source == LangsmithChannelSource.SCOPE_REGISTRY
     consolidation_extra = slice_.dreaming_consolidation_extra(
         model_role="memory"

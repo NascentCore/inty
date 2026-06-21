@@ -15,7 +15,7 @@ from app.core.companion_harness.companion.models import (
     AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -117,7 +117,7 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
         repository_only_store_text=False,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
         background_output_sink=None,

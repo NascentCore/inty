@@ -13,7 +13,7 @@ from loguru import logger
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.scope_turn_lock import (
@@ -30,6 +30,7 @@ from .turn import InjectedCompanionRuntime, run_agent_turn
 from .output_queue import get_output_queue_for_scope
 from .postgres_queue import PostgresInputQueueRepository
 from .types import (
+    AgenticLoopInputBatch,
     AgenticCompanionInputBatch,
     AgenticCompanionRunResult,
     UserMessageBatch,
@@ -48,6 +49,17 @@ def _batch_input_ids(batch: AgenticCompanionInputBatch) -> tuple[str, ...]:
     return tuple(msg.message_id for msg in batch.messages)
 
 
+def _agentic_loop_input_batch(
+    batch: AgenticCompanionInputBatch,
+) -> AgenticLoopInputBatch:
+    return AgenticLoopInputBatch(
+        batch_id=batch.batch_id,
+        scope=batch.scope,
+        messages=batch.messages,
+        primary_user_msg_uuid=batch.messages[-1].message_id,
+    )
+
+
 @dataclass
 class AgenticCompanion:
     """AgenticCompanion is the runtime of a companion, which responds to user messages and drives the autonomous activities of the agent.
@@ -64,7 +76,7 @@ class AgenticCompanion:
         self,
         *,
         resolved_chat_model: GenAIModel,
-        runtime_channel: CompanionRuntimeChannel,
+        runtime_channel: ChannelKind,
         background_output_sink: BackgroundToolEventSink | None,
         implicit_signal_bundle: ImplicitSignalBundle,
         injected_runtime: InjectedCompanionRuntime | None = None,
@@ -73,6 +85,7 @@ class AgenticCompanion:
         if batch is None:
             return None
         user_text = _batch_user_text(batch)
+        input_batch = _agentic_loop_input_batch(batch)
         preset_uid = batch.messages[-1].message_id
         in_reply_ids = _batch_input_ids(batch)
         domain_output_queue = get_output_queue_for_scope(self.scope)
@@ -100,6 +113,7 @@ class AgenticCompanion:
                     agentic_output_queue=domain_output_queue,
                     user_message_batch=user_message_batch,
                     injected_runtime=injected_runtime,
+                    input_batch=input_batch,
                 )
             assert isinstance(turn, CompanionTurnResult)
             output_ids = list(turn.output_message_ids)
@@ -127,7 +141,7 @@ class AgenticCompanion:
         *,
         poll_seconds: float,
         resolved_chat_model: GenAIModel,
-        runtime_channel: CompanionRuntimeChannel,
+        runtime_channel: ChannelKind,
         background_output_sink: BackgroundToolEventSink | None,
         implicit_signal_bundle: ImplicitSignalBundle,
     ) -> None:

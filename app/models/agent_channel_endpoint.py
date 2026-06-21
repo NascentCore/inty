@@ -1,7 +1,7 @@
 """ORM for agent-channel endpoint bindings (multi-medium, no legacy chats row).
 
-TODO(rename-channel-to-gateway): Rename model/table to gateway terminology — rows bind a scope
-to a human channel endpoint (weixin/wechat, telegram, sms-phone-number, etc.).
+TODO(rename-channel-to-gateway): Store ``GatewayKind`` wire values; optional model/table — #3548
+rename is out of scope for #3548 — track separately if needed.
 """
 
 import sqlalchemy as sa

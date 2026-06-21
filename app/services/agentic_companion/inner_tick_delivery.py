@@ -10,7 +10,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.core.companion_harness.companion.models import (
     user_visible_assistant_text,
@@ -33,7 +33,7 @@ class InnerTickDelivery:
     ws_outbound_queue: asyncio.Queue | None
     weixin_assistant_text: WeixinAssistantTextSink | None
     telegram_assistant_text: TelegramAssistantTextSink | None
-    runtime_channel: CompanionRuntimeChannel
+    runtime_channel: ChannelKind
 
     def __post_init__(self) -> None:
         count = sum(
@@ -75,7 +75,7 @@ def inner_tick_delivery_for_ws(
         ws_outbound_queue=outbound_queue,
         weixin_assistant_text=None,
         telegram_assistant_text=None,
-        runtime_channel=CompanionRuntimeChannel.APP,
+        runtime_channel=ChannelKind.APP_WS,
     )
 
 
@@ -87,7 +87,7 @@ def inner_tick_delivery_for_weixin(
         ws_outbound_queue=None,
         weixin_assistant_text=assistant_text,
         telegram_assistant_text=None,
-        runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+        runtime_channel=ChannelKind.WECHAT_WEIXIN,
     )
 
 
@@ -99,5 +99,5 @@ def inner_tick_delivery_for_telegram(
         ws_outbound_queue=None,
         weixin_assistant_text=None,
         telegram_assistant_text=assistant_text,
-        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+        runtime_channel=ChannelKind.TELEGRAM,
     )

@@ -37,6 +37,9 @@ from app.utils.config import (
     _validate_config,
     load_config,
 )
+from app.core.companion_harness.loop.config import (
+    BatchUserMessagesLlmCallMode,
+)
 
 
 @pytest.fixture
@@ -859,6 +862,44 @@ def test_companion_harness_memory_bootstrap_type_invalid_raises() -> None:
             api_key="test",
             langchain_api_key="test",
             companion_harness={"memory_bootstrap_type": "BOGUS"},
+        )
+
+
+def test_companion_harness_batch_user_messages_mode_default() -> None:
+    agent = AgentConfig(api_key="test", langchain_api_key="test")
+    assert (
+        agent.companion_harness.user_turn.batch_user_messages_llm_call_mode
+        == BatchUserMessagesLlmCallMode.MULTI_USER_MESSAGES.value
+    )
+
+
+def test_companion_harness_batch_user_messages_join_mode() -> None:
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={
+            "user_turn": {
+                "batch_user_messages_llm_call_mode": (
+                    BatchUserMessagesLlmCallMode.JOIN_TO_ONE_USER_MESSAGE.value
+                )
+            }
+        },
+    )
+
+    assert (
+        agent.companion_harness.user_turn.batch_user_messages_llm_call_mode
+        == BatchUserMessagesLlmCallMode.JOIN_TO_ONE_USER_MESSAGE.value
+    )
+
+
+def test_companion_harness_batch_user_messages_invalid_raises() -> None:
+    with pytest.raises(ValueError, match="batch_user_messages_llm_call_mode"):
+        AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            companion_harness={
+                "user_turn": {"batch_user_messages_llm_call_mode": "BOGUS"}
+            },
         )
 
 

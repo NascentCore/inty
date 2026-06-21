@@ -19,7 +19,7 @@
 
 | TODO tag | Issue | Notes |
 |----------|-------|-------|
-| `companion-package-reorg` | [#3409](https://github.com/NascentCore/inty/issues/3409) | `companion/` flat → sub-packages |
+| `companion-package-reorg` | [#3409](https://github.com/NascentCore/inty/issues/3409) | `companion/` flat → sub-packages; enum → `agent_channel/gateway.py` |
 | `dreaming-day-rollup` | [#3376](https://github.com/NascentCore/inty/issues/3376) | Inner-tick merge into dreaming |
 | `companion-multimodal-user-turn` | [#3293](https://github.com/NascentCore/inty/issues/3293) | User-turn images + Weixin inbound |
 | `static-prompt-slice-memstore` | [#3506](https://github.com/NascentCore/inty/issues/3506) | Store-backed static prompt slices |
@@ -33,7 +33,7 @@
 | `telegram-meta-ops-tools` | [#3397](https://github.com/NascentCore/inty/issues/3397) | Telegram Bots API meta tools |
 | `ws-disconnect-lifecycle` | [#3256](https://github.com/NascentCore/inty/issues/3256) | WS mid-turn persist-first |
 | `companion-ws-bootstrap-downlink` | [#3209](https://github.com/NascentCore/inty/issues/3209) | WS UserVisibleChunk downlink |
-| `rename-channel-to-gateway` | [#3548](https://github.com/NascentCore/inty/issues/3548) | Channel → Gateway naming |
+| `rename-channel-to-gateway` | [#3548](https://github.com/NascentCore/inty/issues/3548) | `ChannelKind` → `GatewayKind`; traits in `gateway_traits.py`; adapters declare kind |
 | `person-identity-schema` | [#3390](https://github.com/NascentCore/inty/issues/3390) | IDENTITY.md template seeds |
 | `crs-write-lattice` | [#3367](https://github.com/NascentCore/inty/issues/3367) | TrackWritePolicy registry |
 | `track-write-policy` | [#3367](https://github.com/NascentCore/inty/issues/3367) | Same as CRS write lattice |

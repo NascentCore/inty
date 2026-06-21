@@ -10,7 +10,7 @@ import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.agentic_companion.output_queue import (
@@ -51,7 +51,7 @@ async def test_drain_and_deliver_runs_pump_concurrently() -> None:
         ) as pump_mock:
             result = await drain_and_deliver_user_chat_turn(
                 scope,
-                runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+                runtime_channel=ChannelKind.TELEGRAM,
                 delivery_wire_id="telegram:user-a:agent-a",
                 implicit_signal_bundle=ImplicitSignalBundle(
                     client_time=None,
@@ -90,7 +90,7 @@ async def test_drain_and_deliver_returns_empty_when_pump_empty() -> None:
         ):
             result = await drain_and_deliver_user_chat_turn(
                 scope,
-                runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+                runtime_channel=ChannelKind.WECHAT_WEIXIN,
                 delivery_wire_id="weixin:binding-1",
                 implicit_signal_bundle=ImplicitSignalBundle(
                     client_time=None,

@@ -22,6 +22,9 @@ from app.core.companion_harness.agentic_companion.types import (
 from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
     BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
 )
+from app.core.companion_harness.companion.turn_tail_user import (
+    TurnTailUserMessage,
+)
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
@@ -83,6 +86,8 @@ class AgenticLoopContext:
     user_text: str
     ts_user: datetime
     user_msg_uuid: str
+    # TODO(#3516): Drop legacy scalar tail fields once all loop callers use tail_user_messages only.
+    tail_user_messages: tuple[TurnTailUserMessage, ...]
     transcript_rel: str
     langsmith: AgenticLoopLangsmithContext
     inner_tick_turn: bool
@@ -145,6 +150,7 @@ def build_settled_user_chat_loop_context(
     after_tool_messages_appended: AfterToolMessagesHook,
     output_queue: OutputQueue,
     user_message_batch: UserMessageBatch,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
     prompt_plan: PromptPlan | None = None,
 ) -> AgenticLoopContext:
     """Assemble settled ``USER_CHAT`` context for single-LLM ``AgenticLoop``."""
@@ -170,6 +176,7 @@ def build_settled_user_chat_loop_context(
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         runtime_context=runtime_context,
+        tail_user_messages=tail_user_messages,
         max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
         after_tool_messages_appended=after_tool_messages_appended,
         high_reasoning=False,
@@ -201,6 +208,7 @@ def build_settled_dual_llm_user_chat_loop_context(
     langsmith_run_id: str,
     output_queue: OutputQueue,
     user_message_batch: UserMessageBatch,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
     dual_llm_chat_msgs: tuple[dict[str, Any], ...],
     dual_llm_tool_msgs: tuple[dict[str, Any], ...],
     prompt_bundle: PromptBundle,
@@ -231,6 +239,7 @@ def build_settled_dual_llm_user_chat_loop_context(
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         runtime_context=runtime_context,
+        tail_user_messages=tail_user_messages,
         max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
         after_tool_messages_appended=None,
         high_reasoning=False,
@@ -266,6 +275,7 @@ def build_bootstrap_user_chat_loop_context(
     after_tool_messages_appended: AfterToolMessagesHook,
     output_queue: OutputQueue,
     user_message_batch: UserMessageBatch,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
     prompt_plan: PromptPlan,
 ) -> AgenticLoopContext:
     """Assemble bootstrap ``USER_CHAT_BOOTSTRAP`` context for single-LLM ``AgenticLoop``."""
@@ -291,6 +301,7 @@ def build_bootstrap_user_chat_loop_context(
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         runtime_context=runtime_context,
+        tail_user_messages=tail_user_messages,
         max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
         after_tool_messages_appended=after_tool_messages_appended,
         high_reasoning=False,

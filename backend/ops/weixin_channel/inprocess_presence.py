@@ -20,7 +20,7 @@ from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.core.companion_harness.companion.scope_turn_lock import (
     companion_scope_from_foreground_ctx,
@@ -192,7 +192,7 @@ class WeixinInprocessPresence:
             wire_id = f"weixin:{self._binding.user_id}"
             inbound = InboundWireMessage(
                 scope=scope,
-                channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+                channel=ChannelKind.WECHAT_WEIXIN,
                 wire_id=wire_id,
                 text=stripped,
                 received_at_utc=datetime.now(timezone.utc),
@@ -233,7 +233,7 @@ class WeixinInprocessPresence:
 
             delivery_result = await drain_and_deliver_user_chat_turn(
                 scope,
-                runtime_channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+                runtime_channel=ChannelKind.WECHAT_WEIXIN,
                 delivery_wire_id=wire_id,
                 implicit_signal_bundle=implicit_bundle,
                 background_output_sink=self._coordinator.background_sink,

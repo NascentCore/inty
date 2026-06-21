@@ -632,6 +632,14 @@ class AgentConfig(BaseModel):
                     "in_turn_single_llm | dual_llm"
                 ),
             )
+            batch_user_messages_llm_call_mode: str = Field(
+                default="MULTI_USER_MESSAGES",
+                description=(
+                    "How a claimed InputQueue batch is represented in one "
+                    "user-turn LLM call: "
+                    "JOIN_TO_ONE_USER_MESSAGE | MULTI_USER_MESSAGES"
+                ),
+            )
 
             @field_validator("llm_loop_mode")
             @classmethod
@@ -641,6 +649,18 @@ class AgentConfig(BaseModel):
                 )
 
                 UserTurnLlmLoopMode(value)
+                return value
+
+            @field_validator("batch_user_messages_llm_call_mode")
+            @classmethod
+            def _validate_batch_user_messages_llm_call_mode(
+                cls, value: str
+            ) -> str:
+                from app.core.companion_harness.loop.config import (
+                    BatchUserMessagesLlmCallMode,
+                )
+
+                BatchUserMessagesLlmCallMode(value)
                 return value
 
         user_turn: UserTurnConfig = Field(default_factory=UserTurnConfig)

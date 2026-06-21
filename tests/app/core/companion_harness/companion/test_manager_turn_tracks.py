@@ -14,7 +14,7 @@ from app.core.companion_harness.companion.manager import (
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -53,7 +53,7 @@ async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle
             session,
             "hi",
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.APP,
+                channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=bundle,
             ),
         )

@@ -27,7 +27,7 @@ from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.serving import (
@@ -78,7 +78,7 @@ class ScopeQueueServing:
         background_output_sink,
         deliver_message: DeliverReadyMessageFn,
         on_drain_complete: OnDrainCompleteFn,
-        runtime_channel: CompanionRuntimeChannel,
+        runtime_channel: ChannelKind,
     ) -> None:
         assert scope is not None
         assert deliver_message is not None
@@ -117,7 +117,7 @@ class ScopeQueueServing:
             name=f"scope_input_worker_{self._scope.registry_key()}",
         )
 
-    def wake(self, *, runtime_channel: CompanionRuntimeChannel) -> None:
+    def wake(self, *, runtime_channel: ChannelKind) -> None:
         assert runtime_channel is not None
         self._runtime_channel = runtime_channel
         self._wake.set()
@@ -137,7 +137,7 @@ class ScopeQueueServing:
 
     def _resolve_output_delivery_target(
         self,
-    ) -> tuple[CompanionRuntimeChannel | None, str | None]:
+    ) -> tuple[ChannelKind | None, str | None]:
         delivery_channel = self._runtime_channel
         if delivery_channel is None:
             return None, None

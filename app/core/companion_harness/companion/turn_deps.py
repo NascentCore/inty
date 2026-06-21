@@ -39,6 +39,7 @@ if TYPE_CHECKING:
         OutputQueue,
     )
     from app.core.companion_harness.agentic_companion.types import (
+        AgenticLoopInputBatch,
         UserMessageBatch,
     )
 
@@ -158,3 +159,4 @@ class CompanionTurnDeps:
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None
     agentic_output_queue: OutputQueue | None = None
     user_message_batch: UserMessageBatch | None = None
+    input_batch: AgenticLoopInputBatch | None = None

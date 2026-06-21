@@ -28,7 +28,7 @@ from app.core.companion_harness.companion.turn import (
     run_inner_tick_autonomy,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
@@ -44,7 +44,7 @@ def _minimal_turn_deps(**overrides: object) -> CompanionTurnDeps:
         repository_only_store_text=True,
         memory_bootstrap_type="NONE",
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
         background_output_sink=None,
@@ -199,7 +199,7 @@ async def test_user_chat_track_rejects_implicit_sign_on_bundle() -> None:
     bundle = ImplicitSignalBundle(user_signed_on=True)
     deps = _minimal_turn_deps(
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=bundle,
         ),
     )
@@ -222,7 +222,7 @@ async def test_implicit_sign_on_track() -> None:
     ) as run_turn_mock:
         deps = _minimal_turn_deps(
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.APP,
+                channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=bundle,
             ),
         )
@@ -320,7 +320,7 @@ async def test_autonomy_inner_tick_track_forwards_runtime_context() -> None:
     bundle = ImplicitSignalBundle(user_signed_on=True)
     deps = _minimal_turn_deps(
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=bundle,
         ),
     )

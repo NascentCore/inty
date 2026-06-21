@@ -1,6 +1,6 @@
 ---
 name: rewrite companion design
-overview: Rewrite `docs/companion_harness/DESIGN.md` into a clearer DESIGN-tier hub for ideal LLM+harness agentic companion architecture, while preserving the existing bilingual tone, conceptual granularity, and role as guidance for ongoing `app/core/companion_harness/` implementation.
+overview: Rewrite `docs/imate/companion_harness/DESIGN.md` into a clearer DESIGN-tier hub for ideal LLM+harness agentic companion architecture, while preserving the existing bilingual tone, conceptual granularity, and role as guidance for ongoing `app/core/companion_harness/` implementation.
 todos:
   - id: rewrite-directive-summary
     content: Add the top directive and refresh the executive summary without changing the doc's tone.
@@ -27,7 +27,7 @@ isProject: false
 
 ## Scope
 
-Rewrite only `docs/companion_harness/DESIGN.md`.
+Rewrite only `docs/imate/companion_harness/DESIGN.md`.
 
 Do not change code, sibling docs, AGENTS files, diagrams beyond necessary wording/placement, or implementation behavior. The rewrite should preserve the current doc's style: concise Mandarin architecture prose, English concept names and identifiers, nested bullets, no tables, ASCII diagrams with English labels, and DESIGN-tier granularity.
 
@@ -60,7 +60,7 @@ Do not change code, sibling docs, AGENTS files, diagrams beyond necessary wordin
 5. Move `重要下一步工作` near the end, after architecture and runtime concepts.
 6. Keep `目标态：内核与产品`, but align wording with prototype non-goals:
    - Avoid over-emphasizing commercialization as an implementation concern for the harness prototype.
-   - Link world-engine / sub-agent detail to `docs/companion_harness/FR_WORLD_ENGINE.md`.
+   - Link world-engine / sub-agent detail to `docs/imate/companion_harness/FR_WORLD_ENGINE.md`.
 7. Expand `Domain concepts` at the same bullet granularity as today:
    - Add `relationship` as the first-class center.
    - Define the current working decomposition: `Attachment posture`, `Social Penetration depth`, `Gottman moment`.
@@ -92,16 +92,16 @@ Do not change code, sibling docs, AGENTS files, diagrams beyond necessary wordin
     - Cross-reference the `记忆模型 / 关系状态` section instead of restating relationship state / time frames / consolidation / activation, to avoid duplication.
     - Do not add implementation subplans here.
 14. Add `文档地图 / See also`:
-    - One-line purpose for each sibling doc in `docs/companion_harness/`.
+    - One-line purpose for each sibling doc in `docs/imate/companion_harness/`.
     - Include `GLOSSARY.md`, `MEMORY_STORE.md`, `MEMORY_PROJECTION.md`, `AUTONOMY.md`, `LIVING_SPHERE.md`, `FR_WORLD_ENGINE.md`, `FR_CROSS_CHANNEL_USER_IDENTITY.md`, and `SPECULATIVE_IDEAS.md`.
 
 ## Verification
 
-- Read the rewritten `docs/companion_harness/DESIGN.md` end-to-end and check that it still sounds like the existing doc: concise, conceptual, bilingual, and architecture-level.
+- Read the rewritten `docs/imate/companion_harness/DESIGN.md` end-to-end and check that it still sounds like the existing doc: concise, conceptual, bilingual, and architecture-level.
 - Confirm diagrams remain ASCII and diagram labels remain English.
 - Confirm no markdown tables were introduced.
 - Confirm the doc does not claim implementation reality without telling readers to inspect code.
-- Confirm every sibling doc in `docs/companion_harness/` is either linked in context or listed in the doc map.
+- Confirm every sibling doc in `docs/imate/companion_harness/` is either linked in context or listed in the doc map.
 - Confirm every markdown link in the doc resolves to an existing path (sibling docs, `evaluation/`, code paths, epic URL).
 - Confirm the doc stays within the DESIGN-tier length budget (around 200 lines) and that new sections did not change the existing granularity.
 - Confirm the rewrite guides `app/core/companion_harness/` implementation direction without drifting into product/commercialization detail or SPEC-level field lists.

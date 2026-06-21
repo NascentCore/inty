@@ -1,8 +1,9 @@
 """Runtime communication channel selection for companion prompt assembly.
 
-TODO(rename-channel-to-gateway): Rename ``CompanionRuntimeChannel`` (and siblings) to Gateway — — #3548
-these values are gateways to human channels (weixin/wechat, telegram, sms-phone-number, etc.).
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
+TODO(rename-channel-to-gateway): Rename interim ``ChannelKind`` → ``GatewayKind``; move enum + — #3548
+``TurnRuntimeContext`` to ``agent_channel/gateway.py`` (#3409). Harness traits in
+``agent_channel/gateway_traits.py`` (functions/registry, not class hierarchy).
+TODO(companion-package-reorg): Delete this module after ``agent_channel/gateway.py`` lands — #3409
 https://github.com/NascentCore/inty/issues/3409"""
 
 from __future__ import annotations
@@ -13,23 +14,30 @@ from enum import StrEnum
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 
-class CompanionRuntimeChannel(StrEnum):
-    """Human-facing medium carrying this companion turn."""
+class ChannelKind(StrEnum):
+    """Human-facing medium between the companion and the human users.
 
-    APP = "app"
+    This enum is used to identify the channel type for the companion turn.
+    Each type of channel ties to a specific Gateway class,
+    which orchestrates the communication between the companion and the human users.
+    """
+
+    # Refer to the websocket channel for connecting iOS and Android apps.
+    APP_WS = "app_ws"
+
+    # Refer to the Weixin/WeChat channel for connecting to Weixin/WeChat apps.
     WECHAT_WEIXIN = "wechat_weixin"
+
+    # Refer to the Telegram channel for connecting to Telegram apps.
     TELEGRAM = "telegram"
 
 
-def is_im_runtime_channel(channel: CompanionRuntimeChannel) -> bool:
+def is_im_runtime_channel(channel: ChannelKind) -> bool:
     """True when the turn is delivered on an instant-messaging surface (not the app)."""
     match channel:
-        case (
-            CompanionRuntimeChannel.WECHAT_WEIXIN
-            | CompanionRuntimeChannel.TELEGRAM
-        ):
+        case ChannelKind.WECHAT_WEIXIN | ChannelKind.TELEGRAM:
             return True
-        case CompanionRuntimeChannel.APP:
+        case ChannelKind.APP_WS:
             return False
 
 
@@ -37,5 +45,5 @@ def is_im_runtime_channel(channel: CompanionRuntimeChannel) -> bool:
 class TurnRuntimeContext:
     """Runtime facts for one companion turn, separate from prompt documents."""
 
-    channel: CompanionRuntimeChannel
+    channel: ChannelKind
     implicit_signal_bundle: ImplicitSignalBundle | None

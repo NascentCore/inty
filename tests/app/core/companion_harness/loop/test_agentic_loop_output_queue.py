@@ -6,6 +6,7 @@ import json
 from dataclasses import replace
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -28,7 +29,7 @@ from app.core.companion_harness.companion.models import (
     InnerTickActivity,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -49,6 +50,9 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
 )
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
+)
+from app.core.companion_harness.companion.turn_tail_user import (
+    TurnTailUserMessage,
 )
 from app.core.companion_harness.prompt_builder import (
     PromptMessage,
@@ -80,7 +84,7 @@ def _clear_registry() -> None:
 
 def _runtime_context() -> TurnRuntimeContext:
     return TurnRuntimeContext(
-        channel=CompanionRuntimeChannel.APP,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     )
 
@@ -105,6 +109,16 @@ def _assert_user_transcript_row(store: MemoryStore) -> None:
     assert transcript_row["role"] == "user"
     assert transcript_row["content"] == "hi"
     assert transcript_row["uuid"] == "user-msg-1"
+
+
+def _tail() -> tuple[TurnTailUserMessage, ...]:
+    return (
+        TurnTailUserMessage(
+            message_id="user-msg-1",
+            text="hi",
+            received_at_utc=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        ),
+    )
 
 
 def _default_prompt_plan() -> PromptPlan:
@@ -139,6 +153,7 @@ def _loop_context(*, output_queue: OutputQueue) -> AgenticLoopContext:
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         runtime_context=_runtime_context(),
+        tail_user_messages=_tail(),
         max_tool_rounds=4,
         after_tool_messages_appended=None,
         high_reasoning=False,
@@ -552,6 +567,7 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         runtime_context=_runtime_context(),
+        tail_user_messages=_tail(),
         max_tool_rounds=4,
         after_tool_messages_appended=None,
         high_reasoning=False,
@@ -652,6 +668,7 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         runtime_context=_runtime_context(),
+        tail_user_messages=_tail(),
         max_tool_rounds=4,
         after_tool_messages_appended=None,
         high_reasoning=False,
@@ -742,6 +759,7 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         runtime_context=_runtime_context(),
+        tail_user_messages=_tail(),
         max_tool_rounds=4,
         after_tool_messages_appended=None,
         high_reasoning=False,

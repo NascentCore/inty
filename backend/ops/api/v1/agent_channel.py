@@ -1,7 +1,7 @@
 """Ops-only API: agent-channel debug endpoints.
 
-TODO(rename-channel-to-gateway): Rename routes/types to Gateway — endpoints expose bonded human
-channels (weixin/wechat, telegram, sms-phone-number, etc.) for a companion scope.
+TODO(rename-channel-to-gateway): Ops debug routes for bonded gateways; use ``GatewayKind`` — #3548
+from ``agent_channel/gateway.py``. External route paths may alias during migration.
 """
 
 from __future__ import annotations

@@ -3,6 +3,7 @@
 ``AgentScope`` and synthetic MemoryStore keys live in ``agent_channel.scope``;
 service-layer bind/resolve/runtime is in ``app.services.agentic_channel``.
 
-TODO(rename-channel-to-gateway): Rename "Channel" to "Gateway" — these layers are gateways to — #3548
-human channels (weixin/wechat, telegram, sms-phone-number, etc.).
+TODO(rename-channel-to-gateway): Add ``agent_channel/gateway.py`` (``GatewayKind`` enum) and — #3548
+``gateway_traits.py`` (harness traits as functions/registry). Adapters declare gateway kind;
+they do not own the canonical enum.
 """

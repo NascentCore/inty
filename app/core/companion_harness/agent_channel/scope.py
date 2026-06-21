@@ -1,7 +1,7 @@
 """Harness scope for agent-channel stack: one human user bound to one Inty agent.
 
-TODO(rename-channel-to-gateway): Rename agent-channel scope naming to Gateway — scopes route — #3548
-companion turns through gateways to human channels (weixin/wechat, telegram, sms-phone-number, etc.).
+TODO(rename-channel-to-gateway): Keep ``AgentScope`` here; import ``GatewayKind`` from — #3548
+``agent_channel/gateway.py`` once #3409 lands. Scope routes turns; enum stays canonical in gateway.py.
 """
 
 from __future__ import annotations

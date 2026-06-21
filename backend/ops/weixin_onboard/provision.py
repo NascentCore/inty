@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.core.security import create_access_token
 from app.db.session import AsyncSessionLocal
@@ -45,7 +45,7 @@ from app.services.agentic_channel.errors import (
     integrity_error_detail,
 )
 
-_WEIXIN_CHANNEL = CompanionRuntimeChannel.WECHAT_WEIXIN
+_WEIXIN_CHANNEL = ChannelKind.WECHAT_WEIXIN
 
 
 @dataclass(frozen=True)

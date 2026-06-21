@@ -16,14 +16,17 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
+)
+from app.core.companion_harness.companion.turn_tail_user import (
+    TurnTailUserMessage,
 )
 
 
 def runtime_context_for_builder_tests() -> TurnRuntimeContext:
     return TurnRuntimeContext(
-        channel=CompanionRuntimeChannel.APP,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     )
 
@@ -44,14 +47,22 @@ def user_message_batch_for_builder_tests() -> UserMessageBatch:
 
 def base_user_chat_loop_builder_kwargs() -> dict:
     """Minimal kwargs shared by bootstrap and settled context builder tests."""
+    ts_user = datetime(2026, 1, 1, tzinfo=timezone.utc)
     return {
         "messages": [{"role": "user", "content": "hi"}],
         "tools_for_turn": [],
         "repository_only_store_text": False,
         "trace_id": "trace-1",
         "user_text": "hi",
-        "ts_user": datetime(2026, 1, 1, tzinfo=UTC),
+        "ts_user": ts_user,
         "user_msg_uuid": "user-msg-1",
+        "tail_user_messages": (
+            TurnTailUserMessage(
+                message_id="user-msg-1",
+                text="hi",
+                received_at_utc=ts_user,
+            ),
+        ),
         "transcript_rel": "transcript.jsonl",
         "langsmith_slice": langsmith_slice_for_builder_tests(),
         "runtime_context": runtime_context_for_builder_tests(),

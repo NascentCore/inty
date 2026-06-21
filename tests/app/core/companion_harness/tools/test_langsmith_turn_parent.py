@@ -29,7 +29,7 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     LangsmithChannelSource,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -304,7 +304,7 @@ def test_create_companion_turn_root_run_includes_runtime_channel(
     mock_root = MagicMock()
     mock_rt_cls.return_value = mock_root
     telegram_slice = CompanionTurnLangsmithSlice.from_channel(
-        CompanionRuntimeChannel.TELEGRAM,
+        ChannelKind.TELEGRAM,
         LangsmithChannelSource.EXPLICIT_TURN,
     )
     create_companion_turn_root_run(
@@ -562,7 +562,7 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
             repository_only_store_text=False,
             memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.TELEGRAM,
+                channel=ChannelKind.TELEGRAM,
                 implicit_signal_bundle=None,
             ),
             background_output_sink=None,
@@ -578,7 +578,7 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
     assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
     assert len(parent_kwargs) == 1
     slice_ = parent_kwargs[0]["langsmith_slice"]
-    assert slice_.runtime_channel == CompanionRuntimeChannel.TELEGRAM
+    assert slice_.runtime_channel == ChannelKind.TELEGRAM
     assert slice_.channel_source == LangsmithChannelSource.EXPLICIT_TURN
     assert len(client.chat_calls) == 1
     fg_meta = client.chat_calls[0]["langsmith_extra"]["metadata"]

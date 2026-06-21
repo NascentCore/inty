@@ -1,7 +1,7 @@
 """Per-scope channel runtime state: bonded endpoints vs ACTIVE downlink.
 
-TODO(rename-channel-to-gateway): Rename channel runtime/registry types to Gateway — they track
-which gateway (weixin/wechat, telegram, sms-phone-number, etc.) is active for a scope.
+TODO(rename-channel-to-gateway): Rename runtime/registry types to Gateway; key by — #3548
+``GatewayKind`` from ``agent_channel/gateway.py``. Transport only — no harness traits here.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.services.agentic_channel.adapters.base import ChannelAdapter
 from app.services.agentic_channel.endpoints import get_endpoint_for_scope
@@ -30,23 +30,17 @@ class ScopeChannelRegistry:
     """Process-local runtime state for one ``AgentScope``."""
 
     scope: AgentScope
-    states: dict[CompanionRuntimeChannel, ChannelRuntimeState] = field(
-        default_factory=dict
-    )
-    downlinks: dict[CompanionRuntimeChannel, ChannelDownlink] = field(
-        default_factory=dict
-    )
-    adapters: dict[CompanionRuntimeChannel, ChannelAdapter] = field(
-        default_factory=dict
-    )
+    states: dict[ChannelKind, ChannelRuntimeState] = field(default_factory=dict)
+    downlinks: dict[ChannelKind, ChannelDownlink] = field(default_factory=dict)
+    adapters: dict[ChannelKind, ChannelAdapter] = field(default_factory=dict)
 
-    def active_channel(self) -> CompanionRuntimeChannel | None:
+    def active_channel(self) -> ChannelKind | None:
         for channel, state in self.states.items():
             if state == ChannelRuntimeState.ACTIVE:
                 return channel
         return None
 
-    def state_of(self, channel: CompanionRuntimeChannel) -> ChannelRuntimeState:
+    def state_of(self, channel: ChannelKind) -> ChannelRuntimeState:
         return self.states.get(channel, ChannelRuntimeState.INACTIVE)
 
 
@@ -69,7 +63,7 @@ def clear_registries_for_tests() -> None:
 
 async def turn_channel_up(
     scope: AgentScope,
-    channel: CompanionRuntimeChannel,
+    channel: ChannelKind,
     *,
     adapter: ChannelAdapter,
     reason: str,
@@ -101,7 +95,7 @@ async def turn_channel_up(
 
 async def turn_channel_down(
     scope: AgentScope,
-    channel: CompanionRuntimeChannel,
+    channel: ChannelKind,
     *,
     reason: str,
 ) -> None:

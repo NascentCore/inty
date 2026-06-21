@@ -115,6 +115,7 @@ from app.core.companion_harness.prompt_builder import (
 from app.core.companion_harness.loop.agentic_loop import AgenticLoop
 from app.core.companion_harness.loop.config import (
     UserTurnLlmLoopMode,
+    resolved_user_turn_batch_messages_llm_call_mode,
     resolved_user_turn_llm_loop_mode,
 )
 from app.core.companion_harness.loop.context import (
@@ -140,6 +141,10 @@ from .turn_pipeline import (
     build_companion_turn_prompt_plan,
     load_companion_turn_state,
     resolve_turn_runtime_flags,
+)
+from .turn_tail_user import (
+    append_tail_user_transcript_rows,
+    resolve_turn_tail_user_messages,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
@@ -272,6 +277,7 @@ async def _run_companion_turn_core(
     bootstrap_interim_output_sink = deps.bootstrap_interim_output_sink
     agentic_output_queue = deps.agentic_output_queue
     user_message_batch = deps.user_message_batch
+    input_batch = deps.input_batch
     t0 = time.perf_counter()
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
@@ -344,11 +350,25 @@ async def _run_companion_turn_core(
     context = loaded_state.context
     bundle = loaded_state.bundle
     ts_user = utc_now()
+    user_msg_uuid = (
+        preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
+    )
+    tail_user_messages = resolve_turn_tail_user_messages(
+        mode=resolved_user_turn_batch_messages_llm_call_mode(),
+        input_batch=input_batch,
+        user_text=(
+            USER_SIGNED_ON_TRIGGER_USER_TEXT
+            if implicit_sign_on_turn
+            else user_text
+        ),
+        ts_user=ts_user,
+        user_msg_uuid=user_msg_uuid,
+    )
+    user_msg_uuid = tail_user_messages[-1].message_id
     prompt_plan = build_companion_turn_prompt_plan(
         store=store,
         loaded_state=loaded_state,
-        user_text=user_text,
-        tail_user_ts=ts_user,
+        tail_user_messages=tail_user_messages,
         memory_bootstrap_type=memory_bootstrap_type,
         track=track,
         tick_proactive=tick_proactive,
@@ -361,9 +381,6 @@ async def _run_companion_turn_core(
     route_mode = prompt_plan.route_mode
     messages = prompt_plan.messages
     use_dual_structured_chat = prompt_plan.use_dual_structured_chat
-    user_msg_uuid = (
-        preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
-    )
     trace_id = str(uuid.uuid4())
     langsmith_trace_acc = ""
     langsmith_llm_run_acc = ""
@@ -511,8 +528,7 @@ async def _run_companion_turn_core(
                             runtime_context=runtime_context,
                         ).build_bootstrap_user_chat_prompt(
                             transcript_window=transcript_window,
-                            user_text=user_text,
-                            tail_user_ts=ts_user,
+                            tail_user_messages=tail_user_messages,
                             tools=tuple(tools_for_turn),
                             implicit_sign_on_turn=implicit_sign_on_turn,
                             tail_splice_thoughts=ai_private_splice_plan.thoughts,
@@ -539,6 +555,7 @@ async def _run_companion_turn_core(
                             after_tool_messages_appended=_bootstrap_single_llm_after_tool_round,
                             output_queue=agentic_output_queue,
                             user_message_batch=user_message_batch,
+                            tail_user_messages=tail_user_messages,
                             prompt_plan=bootstrap_prompt_plan,
                         )
                         loop_out = await agentic_loop.run_single_llm_user_turn(
@@ -559,8 +576,7 @@ async def _run_companion_turn_core(
                             runtime_context=runtime_context,
                         ).build_user_chat_prompt(
                             transcript_window=transcript_window,
-                            user_text=user_text,
-                            tail_user_ts=ts_user,
+                            tail_user_messages=tail_user_messages,
                             tools=tuple(tools_for_turn),
                             implicit_sign_on_turn=implicit_sign_on_turn,
                             tail_splice_thoughts=ai_private_splice_plan.thoughts,
@@ -587,6 +603,7 @@ async def _run_companion_turn_core(
                             after_tool_messages_appended=_settled_single_llm_after_tool_round,
                             output_queue=agentic_output_queue,
                             user_message_batch=user_message_batch,
+                            tail_user_messages=tail_user_messages,
                             prompt_plan=single_llm_prompt_plan,
                         )
                         loop_out = await agentic_loop.run_single_llm_user_turn(
@@ -632,6 +649,7 @@ async def _run_companion_turn_core(
                             langsmith_run_id=langsmith_llm_run_acc,
                             output_queue=agentic_output_queue,
                             user_message_batch=user_message_batch,
+                            tail_user_messages=tail_user_messages,
                             dual_llm_chat_msgs=tuple(chat_msgs),
                             dual_llm_tool_msgs=tuple(tool_msgs),
                             prompt_bundle=bundle,
@@ -677,6 +695,7 @@ async def _run_companion_turn_core(
                             ts_user=ts_user,
                             user_msg_uuid=user_msg_uuid,
                             transcript_rel=rel_tr_bootstrap,
+                            tail_user_messages=tail_user_messages,
                             bootstrap_interim_output_sink=(
                                 bootstrap_interim_output_sink
                             ),
@@ -980,22 +999,37 @@ async def _run_companion_turn_core(
             "implicit_user_signed_on": True,
         }
         store.append_jsonl_record(rel_tr, sign_on_row)
-    else:
-        user_row: dict[str, Any] = {
-            "role": "user",
-            "content": user_text,
-            "ts": ts_user.isoformat(),
-            "uuid": user_msg_uuid,
-        }
-        if inner_tick_turn:
-            user_row["inner_tick"] = True
-        if tick_proactive:
-            # TODO(#3401): use enum for message type, not bool proactive_chat
-            user_row["proactive_chat"] = True
-        if track == CompanionTurnTrack.INNER_TICK_SCHEDULED:
-            user_row["scheduled"] = True
-        user_row["trace_id"] = trace_id
-        if not in_turn_sync_persisted_transcript:
+    elif not in_turn_sync_persisted_transcript:
+        needs_turn_track_user_row_metadata = (
+            inner_tick_turn
+            or tick_proactive
+            or track == CompanionTurnTrack.INNER_TICK_SCHEDULED
+        )
+        if (
+            len(tail_user_messages) > 1
+            or not needs_turn_track_user_row_metadata
+        ):
+            append_tail_user_transcript_rows(
+                store,
+                rel_tr,
+                tail_user_messages=tail_user_messages,
+                trace_id=trace_id,
+            )
+        else:
+            user_row: dict[str, Any] = {
+                "role": "user",
+                "content": tail_user_messages[0].text,
+                "ts": tail_user_messages[0].received_at_utc.isoformat(),
+                "uuid": tail_user_messages[0].message_id,
+            }
+            if inner_tick_turn:
+                user_row["inner_tick"] = True
+            if tick_proactive:
+                # TODO(#3401): use enum for message type, not bool proactive_chat
+                user_row["proactive_chat"] = True
+            if track == CompanionTurnTrack.INNER_TICK_SCHEDULED:
+                user_row["scheduled"] = True
+            user_row["trace_id"] = trace_id
             store.append_jsonl_record(rel_tr, user_row)
     last_text = strip_leading_transcript_timestamp_prefixes(last_text)
     persist_ai_private_splice_if_applicable(
@@ -1038,7 +1072,9 @@ async def _run_companion_turn_core(
         langsmith_llm_run_acc or "",
     )
     transcript_user_content = (
-        USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
+        USER_SIGNED_ON_TRIGGER_USER_TEXT
+        if implicit_sign_on_turn
+        else "\n".join(message.text for message in tail_user_messages)
     )
     return CompanionTurnResult(
         assistant_text=last_text,

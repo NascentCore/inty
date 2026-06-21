@@ -13,7 +13,9 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_SINGLE_COMPLETION,
 )
 from app.core.companion_harness.loop.config import (
+    BatchUserMessagesLlmCallMode,
     UserTurnLlmLoopMode,
+    resolved_user_turn_batch_messages_llm_call_mode,
     resolved_user_turn_llm_loop_mode,
 )
 from app.core.companion_harness.loop.context import (
@@ -70,3 +72,10 @@ def test_settled_dual_llm_context_packages_prebuilt_stacks() -> None:
 
 def test_resolved_user_turn_llm_loop_mode_defaults_to_dual_llm() -> None:
     assert resolved_user_turn_llm_loop_mode() == UserTurnLlmLoopMode.DUAL_LLM
+
+
+def test_resolved_user_turn_batch_messages_mode_defaults_to_multi() -> None:
+    assert (
+        resolved_user_turn_batch_messages_llm_call_mode()
+        == BatchUserMessagesLlmCallMode.MULTI_USER_MESSAGES
+    )

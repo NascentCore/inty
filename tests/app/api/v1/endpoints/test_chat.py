@@ -958,7 +958,7 @@ def _patch_companion_ws_queue_turn(
 
     from app.core.companion_harness.agent_channel.scope import AgentScope
     from app.core.companion_harness.companion.runtime_channel import (
-        CompanionRuntimeChannel,
+        ChannelKind,
     )
     from app.schemas.implicit_signals import ImplicitSignalBundle
     from app.services.agentic_channel.adapters.app_ws import AppWsChannelAdapter
@@ -1024,11 +1024,9 @@ def _patch_companion_ws_queue_turn(
             outbound_queue=outbound_queue,
         )
         registry = get_scope_channel_registry(scope)
-        registry.states[CompanionRuntimeChannel.APP] = (
-            ChannelRuntimeState.ACTIVE
-        )
-        registry.adapters[CompanionRuntimeChannel.APP] = adapter
-        registry.downlinks[CompanionRuntimeChannel.APP] = adapter.as_downlink()
+        registry.states[ChannelKind.APP_WS] = ChannelRuntimeState.ACTIVE
+        registry.adapters[ChannelKind.APP_WS] = adapter
+        registry.downlinks[ChannelKind.APP_WS] = adapter.as_downlink()
         if presence._session is None:
             presence._session = Session.from_coordinator(
                 downlink=adapter.as_downlink(),
@@ -1101,14 +1099,14 @@ def _patch_companion_ws_queue_turn(
             text = turn_result.assistant_text.strip()
             if text:
                 registry = get_scope_channel_registry(self._scope)
-                adapter = registry.adapters.get(CompanionRuntimeChannel.APP)
+                adapter = registry.adapters.get(ChannelKind.APP_WS)
                 if adapter is not None:
                     input_record = InputQueueRecord(
                         message_id=queue_message_id,
                         scope=self._scope,
                         sequence=1,
                         status=QueueStatus.DELIVERED,
-                        channel=CompanionRuntimeChannel.APP,
+                        channel=ChannelKind.APP_WS,
                         wire_id=wire_id,
                         text=user_text.strip(),
                         received_at_utc=datetime.now(timezone.utc),

@@ -9,7 +9,7 @@ import pytest
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.services.agentic_channel.presence import AgentChannelPresence
 from app.services.agentic_companion.downlink import DownlinkKind
@@ -38,7 +38,7 @@ async def test_greet_on_sign_on_appends_proactive_output() -> None:
                 return_value=fake_queue,
             ):
                 await presence.greet_on_sign_on(
-                    runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+                    runtime_channel=ChannelKind.TELEGRAM,
                 )
 
     resolve_mock.assert_awaited_once_with(scope)
@@ -50,7 +50,7 @@ async def test_greet_on_sign_on_appends_proactive_output() -> None:
     assert kwargs["user_text"] != ""
     assert "/start" not in kwargs["user_text"]
     assert kwargs["resolved_chat_model"] is fake_model
-    assert kwargs["runtime_channel"] == CompanionRuntimeChannel.TELEGRAM
+    assert kwargs["runtime_channel"] == ChannelKind.TELEGRAM
     assert kwargs["implicit_signal_bundle"].user_signed_on is True
     assert kwargs["implicit_signal_bundle"].server_received_at_utc is not None
     fake_queue.append_visible_message.assert_awaited_once()

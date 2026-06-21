@@ -6,6 +6,7 @@
 
 > 这里的内容被拷贝到 IntelliMate 官方助手 Inty 系统消息（成为提示词的一部分）
 > 拷贝时，以 > 开头的文本行会被删除掉
+> 用于让 official assistant 机器人回答用户使用中的问题
 
 This guide gives IntelliMate users a clear, plain-language map of where to find help when they feel lost. It consolidates the Android client documentation and reorganizes it for non-technical readers.
 

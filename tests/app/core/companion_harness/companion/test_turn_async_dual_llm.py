@@ -20,7 +20,7 @@ from app.core.companion_harness.companion.models import (
     load_transcript_from_store,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -56,7 +56,7 @@ def _default_turn_deps(
         repository_only_store_text=False,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
         background_output_sink=None,

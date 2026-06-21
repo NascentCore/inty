@@ -106,7 +106,7 @@ def test_inner_tick_delivery_rejects_multiple_media() -> None:
     import pytest
 
     from app.core.companion_harness.companion.runtime_channel import (
-        CompanionRuntimeChannel,
+        ChannelKind,
     )
     from app.services.agentic_companion.inner_tick_delivery import (
         InnerTickDelivery,
@@ -120,5 +120,5 @@ def test_inner_tick_delivery_rejects_multiple_media() -> None:
             ws_outbound_queue=asyncio.Queue(),
             weixin_assistant_text=None,
             telegram_assistant_text=_telegram_sink,
-            runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+            runtime_channel=ChannelKind.TELEGRAM,
         )

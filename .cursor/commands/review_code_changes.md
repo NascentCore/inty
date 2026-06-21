@@ -46,7 +46,7 @@ that means the code lacks hierarchy.
 
 ## References
 
-- Consider [style rules](/.agents/guidelines/PY_STYLE_RULES.md)
+- Consider [style rules](/.agents/guidelines/PYTHON_STYLES.md)
 
 ## Checklist
 

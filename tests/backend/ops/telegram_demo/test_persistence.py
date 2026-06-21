@@ -9,7 +9,7 @@ from sqlalchemy import delete
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -30,13 +30,11 @@ async def test_provision_persists_endpoint_row() -> None:
     telegram_chat_id = f"tg-persist-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     provision = await provision_agent_for_channel_onboard(
-        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
-    rows = await list_endpoints_for_channel(
-        channel=CompanionRuntimeChannel.TELEGRAM
-    )
+    rows = await list_endpoints_for_channel(channel=ChannelKind.TELEGRAM)
     match = [r for r in rows if r.channel_address == telegram_chat_id]
     assert len(match) == 1
     assert match[0].channel_user_id == channel_user_id
@@ -48,13 +46,11 @@ async def test_provision_persists_endpoint_row() -> None:
     )
     await bind_endpoint(
         scope,
-        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
-    rows = await list_endpoints_for_channel(
-        channel=CompanionRuntimeChannel.TELEGRAM
-    )
+    rows = await list_endpoints_for_channel(channel=ChannelKind.TELEGRAM)
     match = [r for r in rows if r.channel_address == telegram_chat_id]
     assert len(match) == 1
 

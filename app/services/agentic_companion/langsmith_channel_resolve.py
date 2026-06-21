@@ -14,7 +14,7 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 )
 from app.core.companion_harness.companion.manager import CompanionSession
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.services.agentic_channel.channel_runtime import (
     get_scope_channel_registry,
@@ -45,14 +45,14 @@ def resolve_langsmith_slice_for_session(
             scope.registry_key(),
         )
         return CompanionTurnLangsmithSlice.from_channel(
-            CompanionRuntimeChannel.APP,
+            ChannelKind.APP_WS,
             LangsmithChannelSource.DEFAULT_APP,
         )
 
     user_active = active_channel_for_user(session.user_id)
     if user_active is not None:
         return CompanionTurnLangsmithSlice.from_channel(
-            CompanionRuntimeChannel(user_active.value),
+            ChannelKind(user_active.value),
             LangsmithChannelSource.USER_REGISTRY,
         )
 

@@ -16,7 +16,7 @@ from sqlalchemy import delete
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.external_services.telegram_bot_api import (
@@ -126,7 +126,7 @@ async def test_handle_inbound_channel_user_id_mismatch_notifies() -> None:
     telegram_chat_id = f"tg-chat-{tag}"
     channel_user_id = f"tg-user-{tag}"
     provision = await provision_agent_for_channel_onboard(
-        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
@@ -225,7 +225,7 @@ async def test_concurrent_onboard_both_welcome_without_assert() -> None:
         )
     assert mock_presence.greet_on_sign_on.await_count >= 1
     scope = await resolve_scope(
-        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
     )
     assert scope is not None
@@ -238,7 +238,7 @@ async def test_handle_inbound_sends_channel_error_from_presence() -> None:
     telegram_chat_id = f"tg-chat-{tag}"
     channel_user_id = f"tg-user-{tag}"
     provision = await provision_agent_for_channel_onboard(
-        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
@@ -256,7 +256,7 @@ async def test_handle_inbound_sends_channel_error_from_presence() -> None:
             self,
             user_text: str,
             *,
-            runtime_channel: CompanionRuntimeChannel,
+            runtime_channel: ChannelKind,
         ) -> str:
             return "Companion 回合失败，请查看 Ops 日志。"
 
@@ -283,7 +283,7 @@ async def test_handle_inbound_resumes_paused_companion_runtime() -> None:
     telegram_chat_id = f"tg-paused-{tag}"
     channel_user_id = f"tg-user-{tag}"
     provision = await provision_agent_for_channel_onboard(
-        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
@@ -299,7 +299,7 @@ async def test_handle_inbound_resumes_paused_companion_runtime() -> None:
             self,
             user_text: str,
             *,
-            runtime_channel: CompanionRuntimeChannel,
+            runtime_channel: ChannelKind,
         ) -> str:
             self.texts.append(user_text)
             return ""
@@ -361,7 +361,7 @@ async def test_onboard_new_user_triggers_greeting() -> None:
     assert sent == []
     mock_presence.greet_on_sign_on.assert_awaited_once()
     scope = await resolve_scope(
-        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
     )
     assert scope is not None
@@ -401,7 +401,7 @@ async def test_onboard_greeting_failure_falls_back() -> None:
 
     assert sent == []
     scope = await resolve_scope(
-        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
     )
     assert scope is not None

@@ -28,7 +28,10 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
 )
-from app.core.companion_harness.agentic_companion.types import UserMessageBatch
+from app.core.companion_harness.agentic_companion.types import (
+    AgenticLoopInputBatch,
+    UserMessageBatch,
+)
 from app.core.companion_harness.companion.manager import (
     CompanionConfig,
     CompanionManager,
@@ -42,7 +45,7 @@ from app.core.companion_harness.companion.manager_factory import (
 )
 from app.core.companion_harness.companion.models import load_context_meta
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope_turn_lock import (
@@ -203,13 +206,14 @@ async def run_agent_turn(
     scope: AgentScope,
     user_text: str,
     resolved_chat_model: GenAIModel,
-    runtime_channel: CompanionRuntimeChannel,
+    runtime_channel: ChannelKind,
     background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
     implicit_signal_bundle,
     agentic_output_queue: OutputQueue | None = None,
     user_message_batch: UserMessageBatch | None = None,
     injected_runtime: InjectedCompanionRuntime | None = None,
+    input_batch: AgenticLoopInputBatch | None = None,
 ) -> object:
     """Run one user-chat turn without ``chat_history`` writes.
 
@@ -246,6 +250,7 @@ async def run_agent_turn(
         ),
         agentic_output_queue=agentic_output_queue,
         user_message_batch=user_message_batch,
+        input_batch=input_batch,
     )
     logger.info(
         "agent_channel turn finished scope={} channel={} total_ms={:.0f}",

@@ -12,7 +12,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     ReadyOutputMessage,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.services.agentic_companion.downlink import DownlinkKind
 from app.services.agentic_channel.channel_runtime import (
@@ -100,14 +100,12 @@ async def test_handle_user_text_enqueues_and_wakes_without_drain() -> None:
                 ) as drain_mock:
                     reply = await presence.handle_user_text(
                         "hello",
-                        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+                        runtime_channel=ChannelKind.TELEGRAM,
                     )
 
     assert reply == ""
     enqueue_mock.assert_awaited_once()
-    wake_mock.assert_called_once_with(
-        runtime_channel=CompanionRuntimeChannel.TELEGRAM
-    )
+    wake_mock.assert_called_once_with(runtime_channel=ChannelKind.TELEGRAM)
     drain_mock.assert_not_awaited()
 
 
@@ -236,7 +234,7 @@ async def test_handle_user_text_returns_validation_error_before_enqueue() -> (
         ) as enqueue_mock:
             reply = await presence.handle_user_text(
                 "hello",
-                runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+                runtime_channel=ChannelKind.TELEGRAM,
             )
 
     assert "无法找到" in reply

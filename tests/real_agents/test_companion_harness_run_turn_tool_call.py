@@ -25,7 +25,7 @@ from app.core.companion_harness.companion.turn import (
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.utils.config import CompanionMemoryBootstrapType
@@ -121,7 +121,7 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(
             repository_only_store_text=False,
             memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.APP,
+                channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
             background_output_sink=None,

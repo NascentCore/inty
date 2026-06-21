@@ -1,7 +1,7 @@
 """Per-user active runtime channel registry (prototype: in-process only).
 
-TODO(rename-channel-to-gateway): Rename registry/types to Gateway — tracks which human-channel
-gateway (weixin/wechat, telegram, sms-phone-number, etc.) is active per user.
+TODO(rename-channel-to-gateway): Rename registry/types to Gateway; key by ``GatewayKind`` — #3548
+from ``agent_channel/gateway.py``.
 TODO(telegram-demo-channel-multiplex): Unify with Weixin bridge and WS presence in one registry — #3350
 """
 
@@ -10,14 +10,14 @@ from __future__ import annotations
 from enum import StrEnum
 
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 
 
 class ActiveRuntimeChannel(StrEnum):
-    APP = CompanionRuntimeChannel.APP.value
-    WECHAT_WEIXIN = CompanionRuntimeChannel.WECHAT_WEIXIN.value
-    TELEGRAM = CompanionRuntimeChannel.TELEGRAM.value
+    APP = ChannelKind.APP_WS.value
+    WECHAT_WEIXIN = ChannelKind.WECHAT_WEIXIN.value
+    TELEGRAM = ChannelKind.TELEGRAM.value
 
 
 _active_by_user_id: dict[str, ActiveRuntimeChannel] = {}

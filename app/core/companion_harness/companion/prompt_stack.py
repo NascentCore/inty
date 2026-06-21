@@ -13,6 +13,9 @@ hierarchy (design issue; options include in-context vs retrieval-required splits
 
 TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409
+
+TODO(rename-channel-to-gateway): Move ``output_format_prompt_slice_for_runtime_channel`` to — #3548
+``agent_channel/gateway_traits.py`` (#3409).
 """
 
 from __future__ import annotations
@@ -42,7 +45,7 @@ from .models import (
 from .turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
     is_im_runtime_channel,
 )
@@ -75,13 +78,13 @@ def replace_leading_system_messages_inplace(
 def output_format_prompt_slice_for_runtime_channel(
     *,
     bundle: PromptBundle,
-    runtime_channel: CompanionRuntimeChannel,
+    runtime_channel: ChannelKind,
 ) -> str:
     """Resolve channel output-format text from the runtime communication medium."""
     match runtime_channel:
         case channel if is_im_runtime_channel(channel):
             return bundle.output_format_im_dm_md
-        case CompanionRuntimeChannel.APP:
+        case ChannelKind.APP_WS:
             return ""
 
 
@@ -219,7 +222,7 @@ def companion_system_messages_for_track(
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    if runtime_context.channel == CompanionRuntimeChannel.WECHAT_WEIXIN:
+    if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
         out.append(weixin_clawbot_contact_alias_system_message())
     return out
 
@@ -233,7 +236,7 @@ def companion_turn_tools_and_system_messages(
     track: CompanionTurnTrack,
     implicit_user_signed_on_turn: bool = False,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-        channel=CompanionRuntimeChannel.APP,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     ),
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], TurnRouteMode]:
@@ -281,7 +284,7 @@ def refresh_companion_turn_prompt_stack(
     messages: list[dict[str, Any]],
     track: CompanionTurnTrack,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-        channel=CompanionRuntimeChannel.APP,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     ),
 ) -> list[dict[str, Any]]:
@@ -354,7 +357,7 @@ def refresh_companion_turn_prompt_stack(
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    if runtime_context.channel == CompanionRuntimeChannel.WECHAT_WEIXIN:
+    if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
         refreshed.append(weixin_clawbot_contact_alias_system_message())
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn

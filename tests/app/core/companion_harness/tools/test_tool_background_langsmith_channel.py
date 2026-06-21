@@ -15,7 +15,7 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 )
 from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -90,7 +90,7 @@ def test_initial_tool_bg_completion_sync_receives_telegram_channel() -> None:
         return _tool_call_response()
 
     telegram_slice = CompanionTurnLangsmithSlice.from_channel(
-        CompanionRuntimeChannel.TELEGRAM,
+        ChannelKind.TELEGRAM,
         LangsmithChannelSource.EXPLICIT_TURN,
     )
     _initial_tool_bg_completion_with_fallbacks(
@@ -171,7 +171,7 @@ async def test_run_background_tool_loop_continue_sync_receives_telegram_channel(
         chat_completion_sync=fake_sync,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             implicit_signal_bundle=None,
         ),
         force_tools_first_round=False,

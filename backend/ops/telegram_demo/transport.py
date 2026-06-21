@@ -20,7 +20,7 @@ from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.external_services.telegram_bot_api import (
     TelegramBotApi,
@@ -128,7 +128,7 @@ class TelegramTransport:
         assert text != ""
         if scope is not None:
             registry = get_scope_channel_registry(scope)
-            downlink = registry.downlinks.get(CompanionRuntimeChannel.TELEGRAM)
+            downlink = registry.downlinks.get(ChannelKind.TELEGRAM)
             if downlink is not None:
                 await downlink.deliver(
                     Downlink(
@@ -164,7 +164,7 @@ class TelegramTransport:
             await self._handle_onboard(inbound=inbound)
             return
         scope = await resolve_scope(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=inbound.chat_id,
         )
         if scope is None:
@@ -175,7 +175,7 @@ class TelegramTransport:
             return
         try:
             await assert_inbound_endpoint_identity(
-                channel=CompanionRuntimeChannel.TELEGRAM,
+                channel=ChannelKind.TELEGRAM,
                 channel_address=inbound.chat_id,
                 channel_user_id=inbound.channel_user_id,
             )
@@ -202,7 +202,7 @@ class TelegramTransport:
             presence = await ensure_presence(scope)
         channel_error = await presence.handle_user_text(
             inbound.text,
-            runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+            runtime_channel=ChannelKind.TELEGRAM,
         )
         if channel_error:
             await self._send_channel_text(
@@ -215,13 +215,13 @@ class TelegramTransport:
         self, *, inbound: TelegramIncomingMessage
     ) -> None:
         existing = await resolve_scope(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=inbound.chat_id,
         )
         if existing is not None:
             try:
                 await assert_inbound_endpoint_identity(
-                    channel=CompanionRuntimeChannel.TELEGRAM,
+                    channel=ChannelKind.TELEGRAM,
                     channel_address=inbound.chat_id,
                     channel_user_id=inbound.channel_user_id,
                 )
@@ -258,7 +258,7 @@ class TelegramTransport:
             return
         try:
             provision = await provision_agent_for_channel_onboard(
-                channel=CompanionRuntimeChannel.TELEGRAM,
+                channel=ChannelKind.TELEGRAM,
                 channel_address=inbound.chat_id,
                 channel_user_id=inbound.channel_user_id,
             )
@@ -315,7 +315,7 @@ class TelegramTransport:
         record = EndpointRecord(
             user_id=provision.scope.user_id,
             agent_id=provision.scope.agent_id,
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=provision.channel_address,
             channel_user_id=provision.channel_user_id,
         )
@@ -329,7 +329,7 @@ class TelegramTransport:
             presence = await ensure_presence(provision.scope)
         try:
             await presence.greet_on_sign_on(
-                runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+                runtime_channel=ChannelKind.TELEGRAM,
             )
         except Exception:
             logger.exception(
@@ -352,7 +352,7 @@ class TelegramTransport:
         logger.info(
             "runtime_resume scope={} channel={}",
             scope.registry_key(),
-            CompanionRuntimeChannel.TELEGRAM.value,
+            ChannelKind.TELEGRAM.value,
         )
 
     async def _ensure_active(
@@ -369,7 +369,7 @@ class TelegramTransport:
         )
         await turn_channel_up(
             scope,
-            CompanionRuntimeChannel.TELEGRAM,
+            ChannelKind.TELEGRAM,
             adapter=adapter,
             reason=reason,
         )

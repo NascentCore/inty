@@ -13,7 +13,7 @@ from sqlalchemy import select
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
@@ -164,7 +164,7 @@ class AgentChannelPresence:
             background_output_sink=self._coordinator.background_sink,
             deliver_message=self._deliver_ready_via_active_channel,
             on_drain_complete=self._on_queue_drain_complete,
-            runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+            runtime_channel=ChannelKind.TELEGRAM,
         )
         await self._queue_serving.start()
 
@@ -213,9 +213,7 @@ class AgentChannelPresence:
             )
         )
 
-    async def greet_on_sign_on(
-        self, *, runtime_channel: CompanionRuntimeChannel
-    ) -> None:
+    async def greet_on_sign_on(self, *, runtime_channel: ChannelKind) -> None:
         """Run implicit sign-on greeting and append visible text to OutputQueue."""
         assert runtime_channel is not None
         model = await resolve_chat_model_for_scope(self._scope)
@@ -265,7 +263,7 @@ class AgentChannelPresence:
         assert user_text.strip() != ""
         inbound = InboundWireMessage(
             scope=self._scope,
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             wire_id=wire_id,
             text=user_text.strip(),
             received_at_utc=datetime.now(timezone.utc),
@@ -275,7 +273,7 @@ class AgentChannelPresence:
         )
         queue_message_id = await enqueue_inbound_wire_message(inbound)
         assert self._queue_serving is not None
-        self._queue_serving.wake(runtime_channel=CompanionRuntimeChannel.APP)
+        self._queue_serving.wake(runtime_channel=ChannelKind.APP_WS)
         return queue_message_id
 
     async def _on_queue_drain_complete(
@@ -298,7 +296,7 @@ class AgentChannelPresence:
         self,
         user_text: str,
         *,
-        runtime_channel: CompanionRuntimeChannel,
+        runtime_channel: ChannelKind,
     ) -> str:
         """Run one user-chat turn; return Channel error text or ``""`` when delivered via queue."""
         stripped = user_text.strip()
@@ -372,7 +370,7 @@ class AgentChannelPresence:
             ev = await self._coordinator.background_events.get()
             registry = get_scope_channel_registry(self._scope)
             active = registry.active_channel()
-            if active == CompanionRuntimeChannel.APP:
+            if active == ChannelKind.APP_WS:
                 downlink = registry.downlinks.get(active)
                 if downlink is None:
                     continue

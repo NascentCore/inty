@@ -11,7 +11,6 @@ https://github.com/NascentCore/inty/issues/3409"""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
 from loguru import logger
@@ -25,8 +24,9 @@ from .proactive_chat import (
     PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
     PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
 )
-from .implicit_signal_messages import (
-    USER_SIGNED_ON_TRIGGER_USER_TEXT,
+from .turn_tail_user import (
+    TurnTailUserMessage,
+    append_tail_user_messages_for_llm,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
@@ -66,7 +66,6 @@ from .transcript_ai_private import (
     transcript_window_to_llm_dialogue,
 )
 from .turn_routes import TurnRouteMode
-from .utc import transcript_message_content_for_llm_at
 from .user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
 )
@@ -150,25 +149,6 @@ def resolve_turn_runtime_flags(
     )
 
 
-# TODO(companion-multimodal-user-turn): Phase 1c — add ``_companion_tail_user_content_for_llm`` — #3293
-# https://github.com/NascentCore/inty/issues/3293
-# returning ``str | list[dict]``: when ``user_turn.image_data_urls`` non-empty and
-# ``chat_model_accepts_image_input(chat_model)``, emit OpenAI content parts (text +
-# ``image_url``); else str tail only. Replace ``messages.append({"role":"user","content":...})``
-# below to use multimodal content when applicable.
-def _companion_tail_user_body_for_llm(
-    *,
-    user_text: str,
-    implicit_sign_on_turn: bool,
-    tail_user_ts: datetime,
-) -> str:
-    """Tail **user** message with optional per-message UTC prefix for the LLM."""
-    body = (
-        USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
-    )
-    return transcript_message_content_for_llm_at(content=body, at=tail_user_ts)
-
-
 def _companion_user_time_context_system_for_llm(
     *,
     implicit_signal_bundle: ImplicitSignalBundle | None,
@@ -235,8 +215,7 @@ def build_companion_turn_prompt_plan(
     *,
     store: MemoryStore,
     loaded_state: CompanionTurnLoadedState,
-    user_text: str,
-    tail_user_ts: datetime,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
     memory_bootstrap_type: str,
     track: CompanionTurnTrack,
     tick_proactive: bool,
@@ -338,12 +317,11 @@ def build_companion_turn_prompt_plan(
     )
     if time_ctx_system is not None:
         messages.append({"role": "system", "content": time_ctx_system})
-    tail_user = _companion_tail_user_body_for_llm(
-        user_text=user_text,
+    append_tail_user_messages_for_llm(
+        messages,
+        tail_user_messages=tail_user_messages,
         implicit_sign_on_turn=implicit_sign_on_turn,
-        tail_user_ts=tail_user_ts,
     )
-    messages.append({"role": "user", "content": tail_user})
 
     return CompanionTurnPromptPlan(
         tools_for_turn=tools_for_turn,

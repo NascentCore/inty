@@ -1,11 +1,15 @@
-"""Companion guest onboard kind mapped from ``CompanionRuntimeChannel``."""
+"""Companion guest onboard kind mapped from ``ChannelKind``.
+
+TODO(rename-channel-to-gateway): Move ``companion_guest_agent_kind_for_channel`` to — #3548
+``agent_channel/gateway_traits.py`` when ``gateway.py`` lands (#3409).
+"""
 
 from __future__ import annotations
 
 from enum import StrEnum
 
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 
 
@@ -18,15 +22,15 @@ class CompanionGuestAgentKind(StrEnum):
 
 
 def companion_guest_agent_kind_for_channel(
-    channel: CompanionRuntimeChannel,
+    channel: ChannelKind,
 ) -> CompanionGuestAgentKind:
     """Map runtime channel to default onboard agent copy template."""
     match channel:
-        case CompanionRuntimeChannel.TELEGRAM:
+        case ChannelKind.TELEGRAM:
             return CompanionGuestAgentKind.TELEGRAM
-        case CompanionRuntimeChannel.WECHAT_WEIXIN:
+        case ChannelKind.WECHAT_WEIXIN:
             return CompanionGuestAgentKind.WEIXIN
-        case CompanionRuntimeChannel.APP:
+        case ChannelKind.APP_WS:
             return CompanionGuestAgentKind.AGENT_CHANNEL
         case _:
             raise AssertionError(
