@@ -59,8 +59,15 @@ class Experiment:
     name: str
     description: str
     layout_zone: str
+    kind: str
+    temperature: float | None
     steps: tuple[StackStep, ...]
     probes: tuple[Probe, ...]
+    system_content: str
+    user_first: str
+    user_second: str
+    expect_first: str
+    expect_second: str
 
 
 @dataclass(frozen=True)
@@ -80,8 +87,10 @@ class RunArtifact:
 
     experiment_name: str
     layout_zone: str
+    kind: str
     model_id: str
     config_yaml: str
+    temperature: float | None
     probe_results: tuple[ProbeResult, ...]
 
 
@@ -133,21 +142,30 @@ def _load_step(raw: dict[str, Any]) -> StackStep:
 
 def load_experiment(path: Path) -> Experiment:
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    steps = tuple(_load_step(step) for step in raw["steps"])
+    steps = tuple(_load_step(step) for step in raw.get("steps", []))
     probes = tuple(
         Probe(
             id=str(probe["id"]),
-            question=str(probe["question"]),
+            question=str(probe.get("question", "")),
             expect_contains=tuple(str(x) for x in probe["expect_contains"]),
         )
-        for probe in raw["probes"]
+        for probe in raw.get("probes", [])
     )
+    temperature_raw = raw.get("temperature")
+    temperature = float(temperature_raw) if temperature_raw is not None else None
     return Experiment(
         name=str(raw["name"]),
         description=str(raw["description"]),
         layout_zone=str(raw["layout_zone"]),
+        kind=str(raw.get("kind", "stack_probes")),
+        temperature=temperature,
         steps=steps,
         probes=probes,
+        system_content=str(raw.get("system_content", "")),
+        user_first=str(raw.get("user_first", "")),
+        user_second=str(raw.get("user_second", "")),
+        expect_first=str(raw.get("expect_first", "")),
+        expect_second=str(raw.get("expect_second", "")),
     )
 
 
@@ -190,13 +208,58 @@ def _assert_mid_transcript_shape(
     )
 
 
+def _passed(content: str, expect_contains: tuple[str, ...]) -> bool:
+    return all(expected.lower() in content.lower() for expected in expect_contains)
+
+
 def print_experiment_stack(experiment: Experiment) -> None:
+    if experiment.kind == "two_user_comparison":
+        print(f"\n## {experiment.name} [{experiment.layout_zone}]")
+        print(experiment.description)
+        print("\n### alternating wire (turn 1)")
+        print(
+            json.dumps(
+                [
+                    {"role": "system", "content": experiment.system_content},
+                    {"role": "user", "content": experiment.user_first},
+                ],
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        print("\n### alternating wire (turn 2 adds assistant + second user)")
+        print(
+            json.dumps(
+                [
+                    {"role": "system", "content": experiment.system_content},
+                    {"role": "user", "content": experiment.user_first},
+                    {"role": "assistant", "content": "<turn-1-response>"},
+                    {"role": "user", "content": experiment.user_second},
+                ],
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        print("\n### successive wire (single call)")
+        print(
+            json.dumps(
+                [
+                    {"role": "system", "content": experiment.system_content},
+                    {"role": "user", "content": experiment.user_first},
+                    {"role": "user", "content": experiment.user_second},
+                ],
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return
     base = _base_engine(experiment)
     print(f"\n## {experiment.name} [{experiment.layout_zone}]")
     print(experiment.description)
     for probe in experiment.probes:
         probe_stack = base.clone()
-        probe_stack.push(role="user", content=probe.question)
+        if probe.question:
+            probe_stack.push(role="user", content=probe.question)
         messages = probe_stack.messages()
         _assert_mid_transcript_shape(experiment, messages)
         print(f"\n### probe={probe.id}")
@@ -240,44 +303,209 @@ def build_llm_client():
     return LlmClient(llm_cfg)
 
 
+async def _chat_completion(
+    llm_client,
+    messages: list[dict[str, str]],
+    temperature: float | None,
+) -> tuple[str, float]:
+    async_llm = llm_client.async_llm_client
+    chat_model = async_llm.resolve_model("chat")
+    api_model = chat_model.id_on_provider
+    create_kw: dict[str, Any] = {
+        "model": api_model,
+        "messages": messages,
+    }
+    if temperature is not None:
+        create_kw["temperature"] = temperature
+    t0 = time.perf_counter()
+    raw = await async_llm._async_client.chat.completions.create(**create_kw)
+    latency_ms = (time.perf_counter() - t0) * 1000.0
+    content = raw.choices[0].message.content
+    assert isinstance(content, str)
+    return content, latency_ms
+
+
+def _wire_messages(rows: list[tuple[str, str]]) -> list[dict[str, str]]:
+    return [{"role": role, "content": content} for role, content in rows]
+
+
+async def run_two_user_comparison(
+    experiment: Experiment, llm_client
+) -> RunArtifact:
+    assert experiment.system_content
+    assert experiment.user_first
+    assert experiment.user_second
+    assert experiment.expect_first
+    assert experiment.expect_second
+    temperature = experiment.temperature
+    model_id = llm_client.async_llm_client.resolve_model("chat").id_on_provider
+    results: list[ProbeResult] = []
+
+    alternating_turn_1_messages = _wire_messages(
+        [
+            ("system", experiment.system_content),
+            ("user", experiment.user_first),
+        ]
+    )
+    alternating_turn_1_response, latency_1 = await _chat_completion(
+        llm_client,
+        alternating_turn_1_messages,
+        temperature,
+    )
+    passed_turn_1 = _passed(alternating_turn_1_response, (experiment.expect_first,))
+    results.append(
+        ProbeResult(
+            probe_id="alternating_turn_1",
+            messages=tuple(
+                StackMessage(role=m["role"], content=m["content"])
+                for m in alternating_turn_1_messages
+            ),
+            response=alternating_turn_1_response,
+            passed=passed_turn_1,
+            latency_ms=latency_1,
+        )
+    )
+    print("\n## alternating_turn_1")
+    print(f"passed={passed_turn_1} latency_ms={latency_1:.0f}")
+    print(alternating_turn_1_response)
+
+    alternating_turn_2_messages = _wire_messages(
+        [
+            ("system", experiment.system_content),
+            ("user", experiment.user_first),
+            ("assistant", alternating_turn_1_response),
+            ("user", experiment.user_second),
+        ]
+    )
+    alternating_turn_2_response, latency_2 = await _chat_completion(
+        llm_client,
+        alternating_turn_2_messages,
+        temperature,
+    )
+    passed_turn_2 = _passed(
+        alternating_turn_2_response, (experiment.expect_second,)
+    )
+    results.append(
+        ProbeResult(
+            probe_id="alternating_turn_2",
+            messages=tuple(
+                StackMessage(role=m["role"], content=m["content"])
+                for m in alternating_turn_2_messages
+            ),
+            response=alternating_turn_2_response,
+            passed=passed_turn_2,
+            latency_ms=latency_2,
+        )
+    )
+    print("\n## alternating_turn_2")
+    print(f"passed={passed_turn_2} latency_ms={latency_2:.0f}")
+    print(alternating_turn_2_response)
+
+    successive_messages = _wire_messages(
+        [
+            ("system", experiment.system_content),
+            ("user", experiment.user_first),
+            ("user", experiment.user_second),
+        ]
+    )
+    successive_response, latency_s = await _chat_completion(
+        llm_client,
+        successive_messages,
+        temperature,
+    )
+    passed_successive = _passed(
+        successive_response,
+        (experiment.expect_first, experiment.expect_second),
+    )
+    results.append(
+        ProbeResult(
+            probe_id="successive_single_turn",
+            messages=tuple(
+                StackMessage(role=m["role"], content=m["content"])
+                for m in successive_messages
+            ),
+            response=successive_response,
+            passed=passed_successive,
+            latency_ms=latency_s,
+        )
+    )
+    print("\n## successive_single_turn")
+    print(f"passed={passed_successive} latency_ms={latency_s:.0f}")
+    print(successive_response)
+
+    combined_alternating = (
+        f"{alternating_turn_1_response}\n{alternating_turn_2_response}"
+    )
+    passed_equivalent = _passed(
+        successive_response,
+        (experiment.expect_first, experiment.expect_second),
+    ) and _passed(combined_alternating, (experiment.expect_first, experiment.expect_second))
+    results.append(
+        ProbeResult(
+            probe_id="successive_covers_both_questions",
+            messages=tuple(
+                StackMessage(role=m["role"], content=m["content"])
+                for m in successive_messages
+            ),
+            response=successive_response,
+            passed=passed_equivalent,
+            latency_ms=latency_s,
+        )
+    )
+    print("\n## successive_covers_both_questions")
+    print(f"passed={passed_equivalent}")
+    print(
+        "combined_alternating="
+        + json.dumps(combined_alternating, ensure_ascii=False)
+    )
+
+    return RunArtifact(
+        experiment_name=experiment.name,
+        layout_zone=experiment.layout_zone,
+        kind=experiment.kind,
+        model_id=model_id,
+        config_yaml=_config_yaml_path(),
+        temperature=temperature,
+        probe_results=tuple(results),
+    )
+
+
 async def run_experiment(experiment: Experiment, llm_client) -> RunArtifact:
+    if experiment.kind == "two_user_comparison":
+        return await run_two_user_comparison(experiment, llm_client)
     base = _base_engine(experiment)
     model_id = llm_client.async_llm_client.resolve_model("chat").id_on_provider
     results: list[ProbeResult] = []
     for probe in experiment.probes:
         probe_stack = base.clone()
-        probe_stack.push(role="user", content=probe.question)
+        if probe.question:
+            probe_stack.push(role="user", content=probe.question)
         messages = probe_stack.messages()
         _assert_mid_transcript_shape(experiment, messages)
-        t0 = time.perf_counter()
-        response = await llm_client.async_llm_client.chat_completion(
-            messages=probe_stack.to_messages(),
-            tools=[],
-            tool_choice=None,
+        response, latency_ms = await _chat_completion(
+            llm_client,
+            probe_stack.to_messages(),
+            experiment.temperature,
         )
-        latency_ms = (time.perf_counter() - t0) * 1000.0
-        content = response.choices[0].message.content
-        assert isinstance(content, str)
-        passed = all(
-            expected.lower() in content.lower()
-            for expected in probe.expect_contains
-        )
+        passed = _passed(response, probe.expect_contains)
         result = ProbeResult(
             probe_id=probe.id,
             messages=messages,
-            response=content,
+            response=response,
             passed=passed,
             latency_ms=latency_ms,
         )
         results.append(result)
         print(f"\n## {experiment.name} :: {probe.id}")
         print(f"passed={passed} latency_ms={latency_ms:.0f}")
-        print(content)
+        print(response)
     return RunArtifact(
         experiment_name=experiment.name,
         layout_zone=experiment.layout_zone,
+        kind=experiment.kind,
         model_id=model_id,
         config_yaml=_config_yaml_path(),
+        temperature=experiment.temperature,
         probe_results=tuple(results),
     )
 
