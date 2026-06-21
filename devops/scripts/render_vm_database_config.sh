@@ -33,4 +33,7 @@ if [[ ! -f "${SOURCE_YAML}" ]]; then
   exit 1
 fi
 
-sed 's/host: host.docker.internal/host: localhost/' "${SOURCE_YAML}" > "${DEST_YAML}"
+sed -E \
+  -e 's/(^[[:space:]]*host:[[:space:]]*)"host\.docker\.internal"/\1"localhost"/' \
+  -e 's/(^[[:space:]]*host:[[:space:]]*)host\.docker\.internal/\1localhost/' \
+  "${SOURCE_YAML}" > "${DEST_YAML}"
