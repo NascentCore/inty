@@ -9,7 +9,7 @@ import json
 import threading
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 from loguru import logger
@@ -240,7 +240,7 @@ def next_due_task_for_execution(store: MemoryStore) -> ScheduleTask | None:
     ready time, then ``created_at_utc``, then ``id``. Used by WebSocket inner-tick
     to pull one reminder per poll.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     tasks = _load_tasks(store)
     return _pick_next_due_task(store, tasks, now=now, in_flight_ids=set())
 
@@ -307,7 +307,7 @@ def mark_task_retry(store: MemoryStore, task_id: str, error_text: str) -> bool:
     tasks = _load_tasks(store)
     changed = False
     out: list[ScheduleTask] = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for t in tasks:
         if t.id != task_id:
             out.append(t)
