@@ -19,7 +19,7 @@ https://github.com/NascentCore/inty/issues/3409"""
 from __future__ import annotations
 
 import statistics
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel, Field
 
@@ -159,7 +159,7 @@ def build_proactive_chat_transcript_user_marker(
     now: datetime | None = None,
 ) -> str:
     """English one-liner for proactive-chat tail user placeholder and transcript."""
-    t = now if now is not None else datetime.now(timezone.utc)
+    t = now if now is not None else datetime.now(UTC)
     last_u = _last_real_user_ts(msgs)
     last_a = _last_assistant_ts(msgs)
     if last_u is None:
@@ -193,7 +193,7 @@ def next_proactive_chat_wait_seconds(
     if last_asst is None:
         return _NEVER
 
-    t = now if now is not None else datetime.now(timezone.utc)
+    t = now if now is not None else datetime.now(UTC)
     stop_sec = config.stop_after_silence_minutes * 60.0
     last_real_user = _last_real_user_ts(msgs)
     if last_real_user is not None:

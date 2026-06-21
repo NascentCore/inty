@@ -10,7 +10,7 @@ lock contract.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core.companion_harness.companion.dreaming import (
@@ -60,7 +60,7 @@ def run_dreaming_batch_if_due(
 
     candidate = dreaming_due(
         session.store,
-        now=datetime.now(timezone.utc),
+        now=datetime.now(UTC),
         dreaming_idle_seconds=idle_seconds,
     )
     if candidate is None:
@@ -97,7 +97,7 @@ def run_dreaming_batch_if_due(
         )
         assert_dreaming_transcript_boundary_unchanged(session.store, candidate)
         state = dreaming_state_from_candidate(
-            candidate, processed_at=datetime.now(timezone.utc)
+            candidate, processed_at=datetime.now(UTC)
         )
         save_dreaming_state(session.store, state)
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from app.core.companion_harness.companion.proactive_chat import (
@@ -27,7 +27,7 @@ def test_next_proactive_chat_wait_seconds_anchors_on_last_assistant_only(
     """After proactive chat rows, scheduling uses last assistant + rhythm (not min_gap)."""
     scope = CompanionScope("pc-gap", "a", tmp_path.name)
     store = MemoryStore(scope=scope, repository=None)
-    t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
     t1 = t0 + timedelta(seconds=30)
     t2 = t1 + timedelta(seconds=5)
     t3 = t2 + timedelta(seconds=5)
@@ -73,7 +73,7 @@ def test_rhythm_ignores_proactive_user_gaps(tmp_path: Path) -> None:
     """Real-user gaps drive rhythm; proactive synthetic user rows are excluded."""
     scope = CompanionScope("pc-rhythm", "a", tmp_path.name)
     store = MemoryStore(scope=scope, repository=None)
-    t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
     t1 = t0 + timedelta(seconds=1)
     t2 = t1 + timedelta(seconds=50)
     t3 = t2 + timedelta(seconds=1)
@@ -131,7 +131,7 @@ def test_rhythm_ignores_proactive_user_gaps(tmp_path: Path) -> None:
 def test_proactive_chat_stops_after_silence_threshold(tmp_path: Path) -> None:
     scope = CompanionScope("pc-stop", "a", tmp_path.name)
     store = MemoryStore(scope=scope, repository=None)
-    t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
     t1 = t0 + timedelta(seconds=5)
     store.append_jsonl_record(
         "transcript.jsonl",
@@ -160,7 +160,7 @@ def test_proactive_chat_exponential_doubles_with_each_round(
 ) -> None:
     scope = CompanionScope("pc-exp", "a", tmp_path.name)
     store = MemoryStore(scope=scope, repository=None)
-    t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
     t1 = t0 + timedelta(seconds=1)
     store.append_jsonl_record(
         "transcript.jsonl",

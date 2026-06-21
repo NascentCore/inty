@@ -5,7 +5,7 @@ Used by ``test_context.py`` and ``test_bootstrap_user_chat_loop_context.py``.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
@@ -50,7 +50,7 @@ def base_user_chat_loop_builder_kwargs() -> dict:
         "repository_only_store_text": False,
         "trace_id": "trace-1",
         "user_text": "hi",
-        "ts_user": datetime(2026, 1, 1, tzinfo=timezone.utc),
+        "ts_user": datetime(2026, 1, 1, tzinfo=UTC),
         "user_msg_uuid": "user-msg-1",
         "transcript_rel": "transcript.jsonl",
         "langsmith_slice": langsmith_slice_for_builder_tests(),

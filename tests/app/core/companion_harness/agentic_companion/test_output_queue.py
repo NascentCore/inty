@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -164,7 +164,7 @@ async def test_multiple_appends_pulled_in_order() -> None:
 async def test_ack_delivered_and_mark_failed_call_repository() -> None:
     scope = AgentScope(user_id="u3", agent_id="a3")
     queue = OutputQueue(scope=scope)
-    delivered_at = datetime.now(timezone.utc)
+    delivered_at = datetime.now(UTC)
     with patch(
         "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
@@ -284,7 +284,7 @@ async def test_pull_ready_batch_claims_persisted_pending_after_memory_loss() -> 
         batch_id="agent-initiated:recover",
         kind=DownlinkKind.PROACTIVE,
         text="recovered line",
-        created_at_utc=datetime.now(timezone.utc),
+        created_at_utc=datetime.now(UTC),
         message_ids=(),
     )
     claim = QueueClaim(
@@ -380,7 +380,7 @@ async def test_concurrent_append_and_pull_deliver_every_message() -> None:
     message_count = 64
     pulled_ids: set[str] = set()
     pulled_lock = asyncio.Lock()
-    delivered_at = datetime.now(timezone.utc)
+    delivered_at = datetime.now(UTC)
 
     class _FakeRecord:
         def __init__(self, message_id: str, text: str, sequence: int) -> None:

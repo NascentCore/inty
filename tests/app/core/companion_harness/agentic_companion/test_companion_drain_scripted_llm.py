@@ -11,7 +11,7 @@ TODO(#3563): Add sequential back-to-back drain smoke and config-aware script siz
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import delete, select
@@ -73,7 +73,7 @@ def _implicit_bundle() -> ImplicitSignalBundle:
     return ImplicitSignalBundle(
         client_time=None,
         user_signed_on=False,
-        server_received_at_utc=datetime.now(timezone.utc),
+        server_received_at_utc=datetime.now(UTC),
     )
 
 
@@ -123,7 +123,7 @@ async def test_drain_user_chat_no_tools_delivers_foreground() -> None:
         meta_data={"test": "scripted_drain"},
     )
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
             input_repo = PostgresInputQueueRepository(db)
             await input_repo.append_user_message(
@@ -223,7 +223,7 @@ async def test_drain_user_chat_background_tool_round() -> None:
         meta_data={"test": "scripted_drain_tool_bg"},
     )
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
             input_repo = PostgresInputQueueRepository(db)
             await input_repo.append_user_message(
@@ -315,7 +315,7 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
         meta_data={"test": "scripted_drain_batch"},
     )
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
             input_repo = PostgresInputQueueRepository(db)
             await input_repo.append_user_message(
@@ -398,7 +398,7 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
         meta_data={"test": "scripted_drain_bootstrap"},
     )
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
             input_repo = PostgresInputQueueRepository(db)
             await input_repo.append_user_message(

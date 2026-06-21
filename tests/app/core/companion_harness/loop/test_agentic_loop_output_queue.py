@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -127,7 +127,7 @@ def _loop_context(*, output_queue: OutputQueue) -> AgenticLoopContext:
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
         transcript_rel="transcript.jsonl",
         langsmith=AgenticLoopLangsmithContext(
@@ -540,7 +540,7 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
         transcript_rel="transcript.jsonl",
         langsmith=AgenticLoopLangsmithContext(
@@ -640,7 +640,7 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
         transcript_rel="transcript.jsonl",
         langsmith=AgenticLoopLangsmithContext(
@@ -730,7 +730,7 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
         transcript_rel="transcript.jsonl",
         langsmith=AgenticLoopLangsmithContext(

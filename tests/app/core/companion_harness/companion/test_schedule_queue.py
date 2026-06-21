@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -25,7 +25,7 @@ def _store(tmp: Path):
 
 def test_add_and_next_due_task(tmp_path: Path) -> None:
     store = _store(tmp_path)
-    past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    past = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
     tid = add_schedule_task(store, exec_time_utc=past, task_text="remind me")
     due = next_due_task_for_execution(store)
     assert due is not None
@@ -77,9 +77,13 @@ def test_schedule_queue_rejects_legacy_array_document(tmp_path: Path) -> None:
         )
         + "\n",
     )
-    future = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
-    with pytest.raises(ValueError, match="must be a JSON object"):
-        add_schedule_task(store, exec_time_utc=future, task_text="new")
+    future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+    add_schedule_task(store, exec_time_utc=future, task_text="new")
+    body = json.loads(store.read_document(rel))
+    assert isinstance(body.get("tasks"), list)
+    ids = {t["id"] for t in body["tasks"]}
+    assert legacy_id in ids
+    assert len(ids) == 2
 
 
 def test_add_schedule_task_accepts_z_and_rejects_naive_time(

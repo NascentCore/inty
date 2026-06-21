@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core.companion_harness.companion.models import ChatMessage, ContextMeta
@@ -73,7 +73,7 @@ def test_build_user_chat_prompt_allows_tools_and_sets_tool_choice_none() -> (
             )
         ],
         user_text="画夜空",
-        tail_user_ts=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        tail_user_ts=datetime(2026, 1, 1, tzinfo=UTC),
         tools=tools,
         implicit_sign_on_turn=False,
         tail_splice_thoughts=(),

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -96,7 +96,7 @@ async def test_run_in_turn_sync_tool_loop_user_before_assistant_transcript(
             repository_only_store_text=False,
             trace_id="trace-1",
             user_text="hi",
-            ts_user=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            ts_user=datetime(2026, 1, 1, tzinfo=UTC),
             user_msg_uuid="user-uuid-1",
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
@@ -151,7 +151,7 @@ async def test_run_in_turn_sync_tool_loop_reports_when_caller_persisted_user(
             repository_only_store_text=False,
             trace_id="trace-prepersisted",
             user_text="hi",
-            ts_user=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            ts_user=datetime(2026, 1, 1, tzinfo=UTC),
             user_msg_uuid="user-uuid-prepersisted",
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
@@ -219,7 +219,7 @@ async def test_run_in_turn_sync_tool_loop_interim_sink_on_tool_round(
             repository_only_store_text=False,
             trace_id="trace-2",
             user_text="go",
-            ts_user=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            ts_user=datetime(2026, 1, 2, tzinfo=UTC),
             user_msg_uuid="user-uuid-2",
             transcript_rel="transcript.jsonl",
             interim_output_sink=_sink,
@@ -274,7 +274,7 @@ async def test_run_in_turn_sync_tool_loop_emit_every_assistant_round_terminal(
             repository_only_store_text=False,
             trace_id="trace-emit-all",
             user_text="hi",
-            ts_user=datetime(2026, 1, 5, tzinfo=timezone.utc),
+            ts_user=datetime(2026, 1, 5, tzinfo=UTC),
             user_msg_uuid="user-uuid-emit-all",
             transcript_rel="transcript.jsonl",
             interim_output_sink=_sink,
@@ -324,7 +324,7 @@ async def test_run_bootstrap_track_sync_tool_loop_returns_result(
             repository_only_store_text=False,
             trace_id="trace-bootstrap",
             user_text="hi",
-            ts_user=datetime(2026, 1, 3, tzinfo=timezone.utc),
+            ts_user=datetime(2026, 1, 3, tzinfo=UTC),
             user_msg_uuid="user-bootstrap",
             transcript_rel="transcript.jsonl",
             bootstrap_interim_output_sink=None,
@@ -400,7 +400,7 @@ async def test_run_in_turn_sync_tool_loop_after_tool_hook_refreshes_openai_tools
             repository_only_store_text=False,
             trace_id="trace-refresh",
             user_text="go",
-            ts_user=datetime(2026, 1, 4, tzinfo=timezone.utc),
+            ts_user=datetime(2026, 1, 4, tzinfo=UTC),
             user_msg_uuid="user-uuid-refresh",
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
