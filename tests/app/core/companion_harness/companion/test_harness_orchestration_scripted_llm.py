@@ -37,7 +37,6 @@ from app.external_services.fakes.openai import (
     fake_step_tool_call,
 )
 from app.utils.config import CompanionMemoryBootstrapType
-from app.utils.models_catalog import DEEPSEEK_V3_2
 from tests.app.core.companion_harness.companion_memory_registry_dsn import (
     companion_memory_registry_dsn,
 )
