@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.llms.client import CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig, CompanionLLMClient
 from app.core.companion_harness.companion.manager import (
     CompanionConfig,
     CompanionManager,
@@ -100,3 +100,10 @@ async def test_manager_turns_do_not_serialize_without_dreaming() -> None:
         await asyncio.gather(task_a, task_b)
 
     assert entered == 2
+
+
+def test_companion_manager_accepts_injected_llm_client() -> None:
+    config = CompanionConfig(llm=CompanionLLMConfig(api_key="k"))
+    injected = CompanionLLMClient(config.llm)
+    manager = CompanionManager(config, llm_client=injected)
+    assert manager._llm_client is injected  # noqa: SLF001

@@ -399,6 +399,7 @@ class FakeOpenAI:
             self._seed_prefix = f"{seed}-"
         else:
             self._seed_prefix = ""
+        self._image_call_index = 0
 
     @property
     def script_index(self) -> int:
@@ -429,8 +430,6 @@ class FakeOpenAI:
 
     def _random_content(self) -> str:
         return f"fake-response-{self._seed_prefix}{uuid.uuid4().hex}"
-
-    _image_call_index: int = 0
 
 
 def _parse_size(size: str) -> tuple[int, int]:

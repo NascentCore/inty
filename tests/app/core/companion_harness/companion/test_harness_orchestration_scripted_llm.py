@@ -16,12 +16,15 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     get_output_queue_for_scope,
 )
 from app.core.companion_harness.agentic_companion.types import UserMessageBatch
-from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager
+from app.core.companion_harness.companion.manager import CompanionConfig, CompanionManager, CompanionSession
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.memory.memory_registry import shutdown_all_memory_stores
+from app.core.companion_harness.tools.tool_background import (
+    TOOL_RESULTS_TRANSCRIPT_MARKER,
+)
 from app.core.llms.client import CompanionLLMConfig
 from app.external_services.fakes.openai import (
     FakeCompletionStep,
@@ -58,7 +61,7 @@ async def _build_scripted_manager(
     *,
     script: tuple[FakeCompletionStep, ...],
     memory_bootstrap_type: str,
-) -> tuple[CompanionManager, object, FakeOpenAI, AgentScope]:
+) -> tuple[CompanionManager, CompanionSession, FakeOpenAI, AgentScope]:
     scope = await create_guest_scope_for_test(
         kind=CompanionGuestAgentKind.AGENT_CHANNEL,
         nickname_prefix="harn",
@@ -89,6 +92,24 @@ def _transcript_roles(store: object) -> list[str]:
         if line.strip()
     ]
     return [row["role"] for row in rows]
+
+
+def _transcript_rows(store: object) -> list[dict[str, object]]:
+    raw = store.read_document("transcript.jsonl")
+    return [
+        json.loads(line)
+        for line in raw.strip().splitlines()
+        if line.strip()
+    ]
+
+
+def _tool_background_done_rows(store: object) -> list[dict[str, object]]:
+    raw = store.read_document("tool_background.jsonl")
+    return [
+        json.loads(line)
+        for line in raw.strip().splitlines()
+        if line.strip()
+    ]
 
 
 @pytest.fixture(autouse=True)
@@ -184,9 +205,16 @@ async def test_user_chat_background_tool_round_persists_side_effects() -> None:
 
         ready = await output_queue.pull_ready_batch()
         assert [row.text for row in ready] == ["I'll list your scope root."]
-        roles = _transcript_roles(session.store)
-        assert "user" in roles
-        assert "assistant" in roles
+        transcript = _transcript_rows(session.store)
+        assert any(row.get("source") == "tool_bg" for row in transcript)
+        assert any(
+            TOOL_RESULTS_TRANSCRIPT_MARKER in str(row.get("content", ""))
+            for row in transcript
+        )
+        done_rows = _tool_background_done_rows(session.store)
+        assert len(done_rows) == 1
+        assert done_rows[0].get("kind") == "tool_background_done"
+        assert done_rows[0].get("tool_calls_count") == 1
         assert fake.script_index == len(script)
     finally:
         await delete_guest_scope_for_test(scope)

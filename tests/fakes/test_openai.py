@@ -9,6 +9,9 @@ from app.external_services.fakes.openai import (
     fake_step_text,
     fake_step_tool_call,
 )
+from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+    parse_dual_llm_chat_envelope_json,
+)
 
 
 def test_returns_random_for_unspecified_request():
@@ -148,8 +151,11 @@ def test_fake_step_dual_llm_envelope_produces_valid_json():
         importance_assistant_message=6,
         turn_recall="",
     )
+    env = parse_dual_llm_chat_envelope_json(step.content)
+    assert env is not None
+    assert env.user_facing_reply == "done"
+    assert env.output_to_user is False
+
     client = FakeOpenAI(script=(step,))
     res = client.chat.completions.create(messages=[{"role": "user", "content": "x"}])
-    content = res.choices[0].message.content
-    assert '"user_facing_reply": "done"' in content
-    assert '"output_to_user": false' in content
+    assert res.choices[0].message.content == step.content
