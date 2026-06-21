@@ -2,6 +2,10 @@
 
 > Generated entirely by the Cursor agent. Caveman summary of live probe runs.
 
+## Executive Summary
+
+On `deepseek/deepseek-v4-flash`, all 14 probes passed: `system` slices work at prefix, mid-transcript, and tail (later slice wins conflicts), push/pop stack behaves as wire order, and back-to-back user messages get both answered in one generation—coverage yes, identical two-turn assistant shape no.
+
 ## Setup
 
 - model: `deepseek/deepseek-v4-flash` (OpenRouter)
