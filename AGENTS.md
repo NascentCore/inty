@@ -37,8 +37,10 @@ Work with the human partners, to design and implement Python [agentic companion 
 
 - Think independently, be critical towards user's requests, suggestions, and other inputs.
 - Review your thoughts before actions.
-- Use `#` to denotate GitHub pull requests, like `#2211`
-- Use `!` to denotate GitHub issues, like `!2233`
+- Use `pull/` to denotate GitHub pull requests, like `pull/2211`,
+  essentially match GitHub URL's path suffix
+- Use `issues/` to denotate GitHub issues, like `issues/2233`,
+  essentially match GitHub URL's path suffix
 
 ### Design
 

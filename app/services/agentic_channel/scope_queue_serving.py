@@ -34,6 +34,7 @@ from app.services.agentic_channel.serving import (
     DeliverReadyMessageFn,
     channel_output_pump,
     drain_scope_once_via_companion,
+    flush_scope_output_queue_ready,
 )
 
 _SCOPE_INPUT_FALLBACK_POLL_SEC = 1.0
@@ -82,6 +83,7 @@ class ScopeQueueServing:
         assert scope is not None
         assert deliver_message is not None
         assert on_drain_complete is not None
+        assert runtime_channel is not None
         self._scope = scope
         self._background_output_sink = background_output_sink
         self._deliver_message = deliver_message
@@ -133,16 +135,24 @@ class ScopeQueueServing:
         self._pump_task = None
         self._started = False
 
+    def _resolve_output_delivery_target(
+        self,
+    ) -> tuple[CompanionRuntimeChannel | None, str | None]:
+        delivery_channel = self._runtime_channel
+        if delivery_channel is None:
+            return None, None
+        return (
+            delivery_channel,
+            f"{delivery_channel.value}:{self._scope.registry_key()}",
+        )
+
     async def _run_output_pump(self) -> None:
         try:
             await channel_output_pump(
                 self._scope,
                 deliver_message=self._deliver_message,
                 stop_event=self._stop,
-                delivery_channel=self._runtime_channel,
-                delivery_wire_id=(
-                    f"{self._runtime_channel.value}:{self._scope.registry_key()}"
-                ),
+                resolve_delivery_target=self._resolve_output_delivery_target,
                 poll_interval_sec=_SCOPE_OUTPUT_PUMP_POLL_SEC,
             )
         except asyncio.CancelledError:
@@ -168,6 +178,10 @@ class ScopeQueueServing:
                 continue
 
     async def _drain_pending_batches(self) -> None:
+        # TODO(#3567): skip drain when token budget paused; pair with stop() on exhaustion.
+        runtime_channel = self._runtime_channel
+        if runtime_channel is None:
+            return
         while not self._stop.is_set():
             implicit_bundle = ImplicitSignalBundle(
                 client_time=None,
@@ -177,7 +191,7 @@ class ScopeQueueServing:
             try:
                 drain_result = await drain_scope_once_via_companion(
                     self._scope,
-                    runtime_channel=self._runtime_channel,
+                    runtime_channel=runtime_channel,
                     implicit_signal_bundle=implicit_bundle,
                     background_output_sink=self._background_output_sink,
                 )
@@ -190,6 +204,16 @@ class ScopeQueueServing:
             if not drain_result.batch_drained:
                 break
             if drain_result.input_message_ids:
+                try:
+                    await flush_scope_output_queue_ready(
+                        self._scope,
+                        deliver_message=self._deliver_message,
+                    )
+                except Exception:
+                    logger.exception(
+                        "scope_output_flush failed scope={}",
+                        self._scope.registry_key(),
+                    )
                 await self._on_drain_complete(
                     ScopeDrainCompletion(
                         input_message_ids=drain_result.input_message_ids,

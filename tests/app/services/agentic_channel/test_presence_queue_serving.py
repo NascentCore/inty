@@ -8,6 +8,7 @@ import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputDeliveryUnroutableError,
     ReadyOutputMessage,
 )
 from app.core.companion_harness.companion.runtime_channel import (
@@ -151,6 +152,33 @@ async def test_queue_drain_complete_removes_all_without_tool_background() -> (
 
 
 @pytest.mark.asyncio
+async def test_enqueue_app_ws_user_turn_enqueues_durable_app_metadata() -> None:
+    scope = AgentScope(user_id="user-app-pending", agent_id="agent-app-pending")
+    presence = AgentChannelPresence(scope)
+    presence._queue_serving = MagicMock()
+
+    with patch(
+        "app.services.agentic_channel.presence.enqueue_inbound_wire_message",
+        new_callable=AsyncMock,
+        return_value="client-app-pending",
+    ) as enqueue_mock:
+        queue_message_id = await presence.enqueue_app_ws_user_turn(
+            wire_id="app:wire-pending",
+            user_text="hi",
+            client_message_id="client-app-pending",
+            local_id="local-app-pending",
+            chat_history_user_row_id=42,
+        )
+
+    assert queue_message_id == "client-app-pending"
+    inbound = enqueue_mock.await_args.args[0]
+    assert inbound.client_message_id == "client-app-pending"
+    assert inbound.local_id == "local-app-pending"
+    assert inbound.chat_history_user_row_id == 42
+    assert not presence._coordinator.foreground_pending
+
+
+@pytest.mark.asyncio
 async def test_send_user_reply_without_active_channel_raises_for_output_retry() -> (
     None
 ):
@@ -166,13 +194,11 @@ async def test_send_user_reply_without_active_channel_raises_for_output_retry() 
     )
 
     with pytest.raises(RuntimeError, match="no ACTIVE channel"):
-        await presence._deliver_output_via_active_channel(message)
+        await presence._deliver_ready_via_active_channel(message)
 
 
 @pytest.mark.asyncio
-async def test_tool_background_output_is_hidden_without_active_channel() -> (
-    None
-):
+async def test_tool_background_without_input_ids_raises_unroutable() -> None:
     scope = AgentScope(user_id="user-tool-hidden", agent_id="agent-tool-hidden")
     presence = AgentChannelPresence(scope)
     message = ReadyOutputMessage(
@@ -184,7 +210,8 @@ async def test_tool_background_output_is_hidden_without_active_channel() -> (
         sequence=1,
     )
 
-    await presence._deliver_output_via_active_channel(message)
+    with pytest.raises(OutputDeliveryUnroutableError):
+        await presence._deliver_ready_via_active_channel(message)
 
 
 @pytest.mark.asyncio

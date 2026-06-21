@@ -38,6 +38,9 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 
 DeliverReadyMessageFn = Callable[[ReadyOutputMessage], Awaitable[None]]
+DeliveryTargetResolver = Callable[
+    [], tuple[CompanionRuntimeChannel | None, str | None]
+]
 
 _CHANNEL_OUTPUT_PUMP_POLL_SEC = 0.02
 
@@ -135,17 +138,25 @@ async def channel_output_pump(
     stop_event: asyncio.Event,
     delivery_channel: CompanionRuntimeChannel | None = None,
     delivery_wire_id: str | None = None,
+    resolve_delivery_target: DeliveryTargetResolver | None = None,
     poll_interval_sec: float = _CHANNEL_OUTPUT_PUMP_POLL_SEC,
 ) -> str:
     """Pull in-memory ready OutputQueue messages until ``stop_event`` and queue drained."""
     assert poll_interval_sec > 0.0
     assert deliver_message is not None
     output_queue = get_output_queue_for_scope(scope)
+
+    def _delivery_target() -> tuple[CompanionRuntimeChannel | None, str | None]:
+        if resolve_delivery_target is not None:
+            return resolve_delivery_target()
+        return delivery_channel, delivery_wire_id
+
     last_reply = ""
     while not stop_event.is_set():
+        channel, wire_id = _delivery_target()
         for message in await output_queue.pull_ready_batch(
-            delivery_channel=delivery_channel,
-            delivery_wire_id=delivery_wire_id,
+            delivery_channel=channel,
+            delivery_wire_id=wire_id,
         ):
             delivered = await _deliver_ready_message(
                 message=message,
@@ -155,9 +166,10 @@ async def channel_output_pump(
             if delivered is not None:
                 last_reply = delivered
         await asyncio.sleep(poll_interval_sec)
+    channel, wire_id = _delivery_target()
     for message in await output_queue.pull_ready_batch(
-        delivery_channel=delivery_channel,
-        delivery_wire_id=delivery_wire_id,
+        delivery_channel=channel,
+        delivery_wire_id=wire_id,
     ):
         delivered = await _deliver_ready_message(
             message=message,
@@ -167,6 +179,26 @@ async def channel_output_pump(
         if delivered is not None:
             last_reply = delivered
     return last_reply
+
+
+async def flush_scope_output_queue_ready(
+    scope: AgentScope,
+    *,
+    deliver_message: DeliverReadyMessageFn,
+) -> None:
+    """Deliver every ready OutputQueue message once (no polling sleep)."""
+    assert deliver_message is not None
+    output_queue = get_output_queue_for_scope(scope)
+    while True:
+        batch = await output_queue.pull_ready_batch()
+        if not batch:
+            break
+        for message in batch:
+            await _deliver_ready_message(
+                message=message,
+                deliver_message=deliver_message,
+                scope=scope,
+            )
 
 
 async def drain_and_deliver_user_chat_turn(
@@ -213,6 +245,7 @@ async def drain_and_deliver_user_chat_turn(
 async def enqueue_inbound_wire_message(
     inbound: InboundWireMessage,
 ) -> str:
+    # TODO(#3566): reject before durable InputQueue write when token budget exhausted.
     """Append one pending user message to durable InputQueue."""
     async with AsyncSessionLocal() as db:
         input_repo = PostgresInputQueueRepository(db)

@@ -1912,7 +1912,7 @@ async def search_agents(
         base_conditions = [
             Agent.visibility == AgentVisibility.PUBLIC,
             Agent.deleted_at.is_(None),
-            # Agent.status == AgentStatus.APPROVED  # 如果需要只搜索已审核的
+            # agents.status is STALE (approval workflow never shipped); do not filter on it
         ]
 
         # 如果有搜索条件，添加OR条件

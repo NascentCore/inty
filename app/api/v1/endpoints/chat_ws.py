@@ -10,7 +10,6 @@ TODO(!3488): ``AppWsChannelAdapter`` on ``turn_channel_up``; one ``Coordinator``
 import asyncio
 import json
 import uuid
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
@@ -29,14 +28,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
-    ReadyOutputMessage,
-)
-from app.core.companion_harness.companion.utc import (
-    strip_leading_transcript_timestamp_prefixes,
-)
-from app.core.companion_harness.tools.image_gate import (
-    generated_image_meta_from_index_slice,
+from app.core.companion_harness.companion.runtime_channel import (
+    CompanionRuntimeChannel,
 )
 from app.core.companion_harness.companion.scope_turn_lock import (
     companion_scope_from_foreground_ctx,
@@ -60,6 +53,7 @@ from app.core.companion_harness.companion.websocket_coordinator import (
 )
 from app.core.model_selection import select_chat_model
 from app.models.user import User
+from app.models.agentic_companion_queue import AgenticCompanionInputQueueRow
 from app.schemas.biz_action import BizAction, ActionType
 from app.schemas.chat import (
     ChatCompletionRequest,
@@ -87,27 +81,27 @@ from app.services import agent_service, chat_history_service, chat_service
 from app.services import companion_chat_service
 from app.services.chat_websocket_session import chat_ws_outbound_pump
 from app.services.ws_session_messages import WsOutboundPayload
+from app.services.agentic_channel.adapters.app_ws import (
+    AppWsChannelAdapter,
+)
+from app.services.agentic_channel.channel_runtime import (
+    get_scope_channel_registry,
+    turn_channel_down,
+    turn_channel_up,
+)
+from app.services.agentic_channel.endpoints import bind_endpoint
+from app.services.agentic_channel.presence import (
+    AgentChannelPresence,
+    ensure_presence,
+    get_presence,
+)
 from app.services.agentic_companion.downlink import tool_background_downlink
-from app.services.agentic_companion.inner_tick_delivery import (
-    inner_tick_delivery_for_ws,
-)
-from app.services.agentic_companion.inner_tick_poll import (
-    run_inner_tick_poll,
-)
 from app.services.agentic_companion.presence_registry import (
     PresenceBusyError,
     companion_presence_registry,
 )
-from app.services.agentic_companion.session import Session
-from app.services.agentic_companion.ws_queue_serving import (
-    AppWsQueueDeliveryFlags,
-    AppWsUserTurnQueueInput,
-    enqueue_app_ws_user_turn_and_wake,
-    stop_app_ws_scope_queue_serving,
-)
-from app.services.agentic_companion.ws_turn_support import (
-    companion_ai_meta_from_queue_delivery,
-    generated_image_meta_from_baseline,
+from app.services.agentic_companion.ws_outbound_materialize import (
+    materialize_tool_background_ws_payload,
 )
 from app.services.agentic_companion.ws_channel_guard import (
     register_app_ws_channel,
@@ -148,6 +142,52 @@ from app.api.v1.endpoints.chat_ws_companion_support import (
 from app.api.utils.logger_route import LoggerRoute
 
 router = APIRouter(route_class=LoggerRoute)
+
+
+async def _turn_up_app_ws_channel(
+    *,
+    scope: AgentScope,
+    outbound_queue: asyncio.Queue[WsOutboundPayload],
+    user_id: str,
+    arm_proactive_coords: bool,
+) -> AgentChannelPresence:
+    """Bind APP endpoint, ensure per-scope presence, and register the WS channel adapter."""
+    assert user_id != ""
+    await bind_endpoint(
+        scope,
+        channel=CompanionRuntimeChannel.APP,
+        channel_address=scope.registry_key(),
+        channel_user_id=user_id,
+    )
+    presence = await ensure_presence(scope)
+    adapter = AppWsChannelAdapter(
+        scope=scope,
+        outbound_queue=outbound_queue,
+    )
+    await turn_channel_up(
+        scope,
+        CompanionRuntimeChannel.APP,
+        adapter=adapter,
+        reason="app_ws_channel_up",
+    )
+    if arm_proactive_coords:
+        inner_tick_chat_id = scope.memory_store_chat_id()
+        presence.coordinator.store_inner_tick_coords(
+            user_id=scope.user_id,
+            agent_id=scope.agent_id,
+            chat_id=inner_tick_chat_id,
+        )
+    return presence
+
+
+async def _turn_down_app_ws_channel(scope: AgentScope, *, reason: str) -> None:
+    # TODO(#3567): token-budget pause may need stop_presence, not only sign_out + turn_down.
+    """Mark APP channel inactive and clear proactive coords on the per-scope presence."""
+    assert reason != ""
+    presence = get_presence(scope)
+    await turn_channel_down(scope, CompanionRuntimeChannel.APP, reason=reason)
+    if presence is not None:
+        presence.coordinator.sign_out()
 
 
 def _chat_ws_error_payload_from_http_exception(
@@ -430,10 +470,11 @@ async def _try_handle_ws_user_signed_on_frame(
             agent_id=agent_id,
         )
         inner_tick_chat_id = agent_scope.memory_store_chat_id()
-        companion_ws.store_inner_tick_coords(
-            user_id=current_user.id,
-            agent_id=agent_id,
-            chat_id=inner_tick_chat_id,
+        await _turn_up_app_ws_channel(
+            scope=agent_scope,
+            outbound_queue=outbound_queue,
+            user_id=str(current_user.id),
+            arm_proactive_coords=True,
         )
         greeting_task = inflight_turn_tracker.spawn(
             _enqueue_companion_greeting_ws_turn_after_user_signed_on(
@@ -533,11 +574,12 @@ async def _try_handle_ws_user_signed_out_frame(
         recv_msg_uuid = (frame.message_id or "").strip()
         uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
         if ws_leased_agent_id_box[0] == agent_id:
-            await stop_app_ws_scope_queue_serving(
+            await _turn_down_app_ws_channel(
                 AgentScope(
                     user_id=str(current_user.id),
                     agent_id=agent_id,
-                )
+                ),
+                reason="user_signed_out",
             )
             companion_presence_registry().release(
                 current_user.id,
@@ -752,88 +794,6 @@ async def _resolve_assumed_chat_websocket_user(
     return operator_schema
 
 
-async def _build_companion_tool_background_ws_payload(
-    *,
-    db: AsyncSession,
-    agent_id: str,
-    session_id: str,
-    ev: ToolOutputEvent,
-    request: ChatCompletionRequest,
-    effective_local_id: Optional[str],
-    foreground_user_message_id: Optional[int] = None,
-) -> WsOutboundPayload:
-    # TODO(issue#3208): wrap ``build_companion_ws_completion_data`` in ChatWebSocketQueuedSuccessFrame.
-    gi = generated_image_meta_from_index_slice(
-        ev.memory_store, ev.image_asset_baseline
-    )
-    tb_paths: list[str] | None = (
-        list(ev.local_image_paths) if ev.local_image_paths else None
-    )
-    sig = ev.significance_perception if ev.significance_perception else None
-    meta_data = dump_chat_ws_companion_wire_meta(
-        ChatWsCompanionWireMessageMetaData(
-            source="tool_bg",
-            trace_id=ev.trace_id or None,
-            reply_to_user_msg_uuid=ev.user_msg_uuid or None,
-            tool_bg_output_to_user=ev.output_to_user,
-            tool_bg_generation_deliver=ev.generation_deliver,
-            langsmith_trace_id=ev.langsmith_trace_id or None,
-            langsmith_run_id=ev.langsmith_run_id or None,
-            generated_image=gi or None,
-            tool_bg_local_image_paths=tb_paths,
-            significance_perception=sig,
-            turn_recall=ev.turn_recall or None,
-            inner_tick_activity=ev.inner_tick_activity,
-        )
-    )
-    ai_message_id = await chat_history_service.add_ai_message_sync_async(
-        session_id,
-        ev.text,
-        agent_id=agent_id,
-        meta_data=meta_data,
-    )
-    latest_message_info = None
-    try:
-        if ai_message_id is not None:
-            latest_message_info = (
-                await chat_history_service.get_ai_message_info_by_id(
-                    db, ai_message_id
-                )
-            )
-    except Exception as e:
-        logger.warning(f"tool_bg get_ai_message_info_by_id failed: {e}")
-    user_message_id = foreground_user_message_id
-    if user_message_id is None:
-        try:
-            user_message_id = (
-                await chat_history_service.get_latest_user_message_id(
-                    db, session_id
-                )
-            )
-        except Exception as e:
-            logger.warning(f"tool_bg get_latest_user_message_id failed: {e}")
-    subscription_actions = [
-        BizAction(action_type=ActionType.NONE, message=""),
-    ]
-    completion = build_companion_ws_completion_data(
-        response_text_content=ev.text,
-        response_content_parts=None,
-        last_user_text="",
-        latest_message_info=latest_message_info,
-        audio_url=None,
-        request=request,
-        source_imate_id=request.target_imate_id,
-        user_message_id=user_message_id,
-        subscription_actions=subscription_actions,
-        client_local_id=effective_local_id,
-    )
-    payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
-    out = payload.model_dump(exclude_none=True)
-    out["agent_id"] = agent_id
-    out["status_line"] = await _agent_status_line_for_chat_header(db, agent_id)
-    return out
-
-
 # TODO(companion-ws-bootstrap-downlink): move materialize into WebSocketDownlink; drop parallel consumer. #3209 #3398
 async def _deliver_bootstrap_interim_queued(
     queued: BootstrapInterimQueued,
@@ -904,135 +864,6 @@ async def _companion_ws_bootstrap_interim_consumer(
             await _deliver_bootstrap_interim_queued(queued)
         except Exception:
             logger.exception("companion_ws bootstrap_interim deliver failed")
-
-
-@dataclass(frozen=True)
-class AppWsQueueDeliveryCtx:
-    """Values needed to materialize one queue-delivered App WS completion frame."""
-
-    db: AsyncSession
-    user_id: str
-    agent_id: str
-    chat_id: str
-    session_id: str
-    request: ChatCompletionRequest
-    last_user_message: Any
-    last_user_text: str
-    effective_local_id: str | None
-    companion_preset_uid: str | None
-    companion_ws_foreground_pending: dict[str, dict[str, Any]] | None
-    outbound_queue: asyncio.Queue[WsOutboundPayload]
-    delivery_flags: AppWsQueueDeliveryFlags
-
-
-async def _deliver_app_ws_user_reply_from_queue(
-    ctx: AppWsQueueDeliveryCtx,
-    text: str,
-) -> None:
-    """Persist chat_history and enqueue one WS completion for OutputQueue-delivered text."""
-    assert text.strip() != ""
-    companion_user_row_id = await _persist_companion_user_message_for_bg(
-        session_id=ctx.session_id,
-        last_user_message=ctx.last_user_message,
-        effective_local_id=ctx.effective_local_id,
-        implicit_greeting_turn=False,
-    )
-    if (
-        ctx.companion_preset_uid is not None
-        and ctx.companion_ws_foreground_pending is not None
-        and ctx.companion_preset_uid in ctx.companion_ws_foreground_pending
-    ):
-        ctx.companion_ws_foreground_pending[ctx.companion_preset_uid][
-            "foreground_user_message_id"
-        ] = companion_user_row_id
-    generated_image = None
-    if ctx.delivery_flags.memory_store is not None:
-        assert ctx.delivery_flags.image_asset_baseline_initialized
-        generated_image = generated_image_meta_from_baseline(
-            ctx.delivery_flags.memory_store,
-            ctx.delivery_flags.image_asset_baseline,
-        )
-    companion_ai_meta = companion_ai_meta_from_queue_delivery(
-        queue_message_id=ctx.delivery_flags.queue_message_id,
-        tool_background_started=ctx.delivery_flags.tool_background_started,
-        generated_image=generated_image,
-    )
-    ai_message_id = await chat_history_service.add_ai_message_sync_async(
-        ctx.session_id,
-        text,
-        agent_id=ctx.agent_id,
-        meta_data=companion_ai_meta,
-    )
-    latest_message_info = None
-    try:
-        if ai_message_id is not None:
-            latest_message_info = (
-                await chat_history_service.get_ai_message_info_by_id(
-                    ctx.db, ai_message_id
-                )
-            )
-    except Exception as e:
-        logger.warning(f"queue deliver get_ai_message_info_by_id failed: {e}")
-    user_message_id = companion_user_row_id
-    if user_message_id is None:
-        try:
-            user_message_id = (
-                await chat_history_service.get_latest_user_message_id(
-                    ctx.db, ctx.session_id
-                )
-            )
-        except Exception as e:
-            logger.warning(
-                f"queue deliver get_latest_user_message_id failed: {e}"
-            )
-    response_text_content, response_content_parts = (
-        _normalize_chat_response_content(text)
-    )
-    completion = build_companion_ws_completion_data(
-        response_text_content=response_text_content,
-        response_content_parts=response_content_parts,
-        last_user_text=ctx.last_user_text,
-        latest_message_info=latest_message_info,
-        audio_url=None,
-        request=ctx.request,
-        source_imate_id=ctx.request.target_imate_id,
-        user_message_id=user_message_id,
-        subscription_actions=None,
-        client_local_id=ctx.effective_local_id,
-    )
-    payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
-    out = payload.model_dump(exclude_none=True)
-    out["agent_id"] = ctx.agent_id
-    out["status_line"] = await _agent_status_line_for_chat_header(
-        ctx.db, ctx.agent_id
-    )
-    await ctx.outbound_queue.put(out)
-
-
-def _alias_ws_foreground_pending_for_queue_message(
-    *,
-    companion_ws_foreground_pending: dict[str, dict[str, Any]],
-    client_message_id: str,
-    queue_message_id: str,
-) -> None:
-    """Map queue message id to the same foreground ctx as the client message id."""
-    assert client_message_id != ""
-    assert queue_message_id != ""
-    ctx = companion_ws_foreground_pending.get(client_message_id)
-    if ctx is None:
-        return
-    companion_ws_foreground_pending[queue_message_id] = ctx
-
-
-def _clear_ws_foreground_pending_aliases(
-    *,
-    companion_ws_foreground_pending: dict[str, dict[str, Any]],
-    client_message_id: str,
-    queue_message_id: str,
-) -> None:
-    companion_ws_foreground_pending.pop(client_message_id, None)
-    if queue_message_id:
-        companion_ws_foreground_pending.pop(queue_message_id, None)
 
 
 async def _agent_chat_ws_completions_impl(
@@ -1323,65 +1154,49 @@ async def _agent_chat_ws_completions_impl(
                             assert ws_outbound_queue is not None
                             assert ws_conn_id is not None
                             assert ws_conn_id != ""
-                            delivery_flags = AppWsQueueDeliveryFlags()
-                            delivery_ctx = AppWsQueueDeliveryCtx(
-                                db=db,
-                                user_id=str(current_user.id),
-                                agent_id=agent_id,
-                                chat_id=agent_scope_inner_tick_chat_id,
-                                session_id=session_id,
-                                request=request,
-                                last_user_message=last_user_message,
-                                last_user_text=last_user_text,
-                                effective_local_id=effective_local_id,
-                                companion_preset_uid=companion_preset_uid,
-                                companion_ws_foreground_pending=companion_ws_foreground_pending,
-                                outbound_queue=ws_outbound_queue,
-                                delivery_flags=delivery_flags,
-                            )
-
-                            async def send_user_reply(
-                                message: ReadyOutputMessage,
-                            ) -> None:
-                                text = (
-                                    strip_leading_transcript_timestamp_prefixes(
-                                        message.text.strip()
-                                    )
+                            existing_input_row = None
+                            if companion_preset_uid is not None:
+                                existing_input_row = await db.get(
+                                    AgenticCompanionInputQueueRow,
+                                    companion_preset_uid,
                                 )
-                                if not text:
-                                    return
-                                await _deliver_app_ws_user_reply_from_queue(
-                                    delivery_ctx, text
+                            if existing_input_row is not None:
+                                companion_user_row_id = (
+                                    existing_input_row.chat_history_user_row_id
                                 )
-
+                            else:
+                                companion_user_row_id = await _persist_companion_user_message_for_bg(
+                                    session_id=session_id,
+                                    last_user_message=last_user_message,
+                                    effective_local_id=effective_local_id,
+                                    implicit_greeting_turn=False,
+                                )
                             scope = AgentScope(
                                 user_id=str(current_user.id),
                                 agent_id=agent_id,
                             )
-                            wire_id = f"app:{ws_conn_id}"
-                            await enqueue_app_ws_user_turn_and_wake(
-                                AppWsUserTurnQueueInput(
-                                    scope=scope,
-                                    wire_id=wire_id,
-                                    user_text=last_user_text,
-                                    client_message_id=companion_preset_uid,
-                                    implicit_signal_bundle=companion_implicit_bundle,
-                                    background_output_sink=companion_background_sink,
-                                    delivery_flags=delivery_flags,
-                                    send_text=send_user_reply,
-                                ),
-                                companion_ws_foreground_pending=companion_ws_foreground_pending,
-                            )
+                            channel_presence = get_presence(scope)
+                            registry = get_scope_channel_registry(scope)
                             if (
-                                companion_preset_uid is not None
-                                and companion_ws_foreground_pending is not None
-                                and delivery_flags.queue_message_id
+                                channel_presence is None
+                                or registry.active_channel()
+                                != CompanionRuntimeChannel.APP
                             ):
-                                _alias_ws_foreground_pending_for_queue_message(
-                                    companion_ws_foreground_pending=companion_ws_foreground_pending,
-                                    client_message_id=companion_preset_uid,
-                                    queue_message_id=delivery_flags.queue_message_id,
+                                await _turn_up_app_ws_channel(
+                                    scope=scope,
+                                    outbound_queue=ws_outbound_queue,
+                                    user_id=str(current_user.id),
+                                    arm_proactive_coords=False,
                                 )
+                                channel_presence = get_presence(scope)
+                            assert channel_presence is not None
+                            await channel_presence.enqueue_app_ws_user_turn(
+                                wire_id=f"app:{ws_conn_id}",
+                                user_text=last_user_text,
+                                client_message_id=companion_preset_uid,
+                                local_id=effective_local_id,
+                                chat_history_user_row_id=companion_user_row_id,
+                            )
                             if companion_ws_inner_tick_ctx is not None:
                                 apply_companion_ws_inner_tick_coords(
                                     companion_ws_inner_tick_ctx,
@@ -1401,10 +1216,8 @@ async def _agent_chat_ws_completions_impl(
                             and companion_ws_foreground_pending is not None
                             and not bg_started_on_exc
                         ):
-                            _clear_ws_foreground_pending_aliases(
-                                companion_ws_foreground_pending=companion_ws_foreground_pending,
-                                client_message_id=companion_preset_uid,
-                                queue_message_id="",
+                            companion_ws_foreground_pending.pop(
+                                companion_preset_uid, None
                             )
                         if bg_started_on_exc:
                             try:
@@ -1589,9 +1402,8 @@ async def chat_completions_websocket(
     ),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
-    # TODO(commercialization-cleanup): Companion subscription / ``record_usage`` / limit checks
-    # stay in this WS orchestration layer and ``inner_tick_fire.py`` — never in
-    # ``app/core/companion_harness`` (see harness AGENTS.md).
+    # TODO(#3568): Companion subscription check_chat_limit / record_usage on user turns.
+    # TODO(commercialization-cleanup): keep subscription out of ``app/core/companion_harness``.
     # Concurrency (see ``session.Coordinator``, ``companion_harness`` AGENTS.md):
     # - Prototype: one signed-on presence per paired user (no multi-tab). Each ``accept()``
     #   is that single wire; turns serialize on scope ``CompanionSession.turn_lock`` (#3272).
@@ -1653,14 +1465,13 @@ async def chat_completions_websocket(
     inflight_turn_tracker = ChatWsInflightTurnTracker()
     ChatWsInflightShutdownRegistry.register(inflight_turn_tracker)
     ws_leased_agent_id_box: list[Optional[str]] = [None]
-    ws_delivery = inner_tick_delivery_for_ws(outbound_queue)
 
     async def _ws_tool_background_materializer(
         tool_ev: ToolOutputEvent,
     ) -> WsOutboundPayload:
         ctx = companion_ws.pop_foreground_pending(tool_ev.user_msg_uuid)
         assert ctx is not None
-        return await _build_companion_tool_background_ws_payload(
+        return await materialize_tool_background_ws_payload(
             db=db,
             agent_id=str(ctx["agent_id"]),
             session_id=str(ctx["session_id"]),
@@ -1673,34 +1484,6 @@ async def chat_completions_websocket(
     ws_downlink = WebSocketDownlink(
         outbound_queue,
         _ws_tool_background_materializer,
-    )
-    presence = Session.from_coordinator(
-        downlink=ws_downlink,
-        coordinator=companion_ws,
-    )
-    poll_secs = float(
-        global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat.poll_seconds
-    )
-
-    async def _run_ws_inner_tick_poll(ctx: dict[str, Any]) -> None:
-        inner_tick_user_for_log = ctx["user_id"]
-        try:
-            await run_inner_tick_poll(
-                delivery=ws_delivery,
-                coordinator=companion_ws,
-                ws_conn_id=ws_conn_id,
-                tc_box=tc_box,
-            )
-        except Exception:
-            logger.exception(
-                "companion_ws_inner_tick worker failed ws_conn_id={} user_id={}",
-                ws_conn_id,
-                inner_tick_user_for_log,
-            )
-
-    await presence.start_inner_tick_worker(
-        poll_seconds=poll_secs,
-        run_one_poll=_run_ws_inner_tick_poll,
     )
 
     idle = _chat_ws_idle_timeout_seconds()
@@ -1924,11 +1707,12 @@ async def chat_completions_websocket(
         )
         leased_agent_id = ws_leased_agent_id_box[0]
         if leased_agent_id is not None:
-            await stop_app_ws_scope_queue_serving(
+            await _turn_down_app_ws_channel(
                 AgentScope(
                     user_id=str(current_user.id),
                     agent_id=leased_agent_id,
-                )
+                ),
+                reason="ws_disconnect",
             )
             companion_presence_registry().release(
                 current_user.id,
@@ -1936,7 +1720,6 @@ async def chat_completions_websocket(
                 ws_conn_id,
             )
             ws_leased_agent_id_box[0] = None
-        await presence.stop()
         bootstrap_interim_consumer_task.cancel()
         try:
             await bootstrap_interim_consumer_task

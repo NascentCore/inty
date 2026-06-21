@@ -953,54 +953,193 @@ def _patch_companion_ws_queue_turn(
     *,
     run_companion_chat_turn_for_api,
 ) -> None:
-    async def fake_enqueue_app_ws_user_turn_and_wake(
-        queue_input, *, companion_ws_foreground_pending=None
+    from datetime import datetime, timezone
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.core.companion_harness.agent_channel.scope import AgentScope
+    from app.core.companion_harness.companion.runtime_channel import (
+        CompanionRuntimeChannel,
+    )
+    from app.schemas.implicit_signals import ImplicitSignalBundle
+    from app.services.agentic_channel.adapters.app_ws import AppWsChannelAdapter
+    from app.services.agentic_channel.channel_runtime import (
+        ChannelRuntimeState,
+        clear_registries_for_tests,
+        get_scope_channel_registry,
+    )
+    from app.services.agentic_channel.presence import (
+        AgentChannelPresence,
+        clear_presences_for_tests,
+        _presences,
+    )
+    from app.core.companion_harness.agentic_companion.output_queue import (
+        ReadyOutputMessage,
+    )
+    from app.core.companion_harness.agentic_companion.types import (
+        InputQueueRecord,
+        QueueStatus,
+    )
+    from app.services.agentic_companion.downlink import DownlinkKind
+    from app.services.agentic_companion.ws_outbound_materialize import (
+        materialize_queue_user_reply_from_durable,
+    )
+
+    from app.core.config import global_config_loaded_from_config_yaml
+    from app.services.agentic_companion.inner_tick_poll import (
+        run_inner_tick_poll,
+    )
+    from app.services.agentic_companion.session import Session
+
+    clear_presences_for_tests()
+    clear_registries_for_tests()
+
+    captured_implicit_bundles: list[ImplicitSignalBundle] = []
+
+    def capture_implicit_signal_bundle(**kwargs):
+        bundle = ImplicitSignalBundle(**kwargs)
+        captured_implicit_bundles.append(bundle)
+        return bundle
+
+    monkeypatch.setattr(
+        chat_ws_v1,
+        "ImplicitSignalBundle",
+        capture_implicit_signal_bundle,
+    )
+
+    async def fake_turn_up_app_ws_channel(
+        *,
+        scope: AgentScope,
+        outbound_queue,
+        user_id: str,
+        arm_proactive_coords: bool,
     ):
-        turn_result = await run_companion_chat_turn_for_api(
-            user_id=queue_input.scope.user_id,
-            agent_id=queue_input.scope.agent_id,
-            user_text=queue_input.user_text,
-            preset_user_msg_uuid=queue_input.client_message_id,
-            implicit_signal_bundle=queue_input.implicit_signal_bundle,
-            background_output_sink=queue_input.background_output_sink,
+        key = scope.registry_key()
+        presence = _presences.get(key)
+        if presence is None:
+            presence = AgentChannelPresence(scope)
+            presence._queue_serving = MagicMock()
+            _presences[key] = presence
+        adapter = AppWsChannelAdapter(
+            scope=scope,
+            outbound_queue=outbound_queue,
         )
+        registry = get_scope_channel_registry(scope)
+        registry.states[CompanionRuntimeChannel.APP] = (
+            ChannelRuntimeState.ACTIVE
+        )
+        registry.adapters[CompanionRuntimeChannel.APP] = adapter
+        registry.downlinks[CompanionRuntimeChannel.APP] = adapter.as_downlink()
+        if presence._session is None:
+            presence._session = Session.from_coordinator(
+                downlink=adapter.as_downlink(),
+                coordinator=presence.coordinator,
+            )
+        if arm_proactive_coords:
+            inner_tick_chat_id = scope.memory_store_chat_id()
+            presence.coordinator.store_inner_tick_coords(
+                user_id=scope.user_id,
+                agent_id=scope.agent_id,
+                chat_id=inner_tick_chat_id,
+            )
+            poll_secs = float(
+                global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat.poll_seconds
+            )
+
+            async def _run_poll(_ctx: dict) -> None:
+                delivery = adapter.inner_tick_delivery()
+                await run_inner_tick_poll(
+                    delivery=delivery,
+                    coordinator=presence.coordinator,
+                    ws_conn_id=None,
+                    tc_box=None,
+                )
+
+            await presence._session.start_inner_tick_worker(
+                poll_seconds=poll_secs,
+                run_one_poll=_run_poll,
+            )
+        return presence
+
+    async def fake_turn_down_app_ws_channel(scope, *, reason: str) -> None:
+        key = scope.registry_key()
+        presence = _presences.get(key)
+        if presence is None:
+            return
+        presence.coordinator.sign_out()
+        if presence._session is not None:
+            await presence._session.stop()
+            presence._session = None
+
+    async def fake_enqueue_app_ws_user_turn(
+        self,
+        *,
+        wire_id: str,
+        user_text: str,
+        client_message_id: str | None,
+        local_id: str | None,
+        chat_history_user_row_id: int | None,
+    ) -> str:
+        implicit_bundle = (
+            captured_implicit_bundles[-1]
+            if captured_implicit_bundles
+            else ImplicitSignalBundle(
+                client_time=None,
+                user_signed_on=False,
+                server_received_at_utc=datetime.now(timezone.utc),
+            )
+        )
+        turn_result = await run_companion_chat_turn_for_api(
+            user_id=self._scope.user_id,
+            agent_id=self._scope.agent_id,
+            user_text=user_text,
+            preset_user_msg_uuid=client_message_id,
+            implicit_signal_bundle=implicit_bundle,
+            background_output_sink=None,
+        )
+        queue_message_id = client_message_id or "queue-synthetic"
         if isinstance(turn_result, CompanionTurnResult):
-            queue_input.delivery_flags.queue_message_id = (
-                f"queue-{queue_input.client_message_id}"
-            )
-            queue_input.delivery_flags.tool_background_started = (
-                turn_result.tool_background_started
-            )
-            queue_input.delivery_flags.image_asset_baseline_initialized = True
             text = turn_result.assistant_text.strip()
             if text:
-                from app.core.companion_harness.agentic_companion.output_queue import (
-                    ReadyOutputMessage,
-                )
-                from app.services.agentic_companion.downlink import DownlinkKind
-
-                await queue_input.send_text(
-                    ReadyOutputMessage(
-                        message_id="mock-out",
-                        batch_id="batch-mock",
+                registry = get_scope_channel_registry(self._scope)
+                adapter = registry.adapters.get(CompanionRuntimeChannel.APP)
+                if adapter is not None:
+                    input_record = InputQueueRecord(
+                        message_id=queue_message_id,
+                        scope=self._scope,
+                        sequence=1,
+                        status=QueueStatus.DELIVERED,
+                        channel=CompanionRuntimeChannel.APP,
+                        wire_id=wire_id,
+                        text=user_text.strip(),
+                        received_at_utc=datetime.now(timezone.utc),
+                        client_message_id=client_message_id,
+                        local_id=local_id,
+                        chat_history_user_row_id=chat_history_user_row_id,
+                        batch_id="batch-fake",
+                    )
+                    ready = ReadyOutputMessage(
+                        message_id=f"out-{queue_message_id}",
+                        batch_id="batch-fake",
                         kind=DownlinkKind.USER_REPLY,
                         text=text,
                         sequence=1,
-                        message_ids=(
-                            queue_input.delivery_flags.queue_message_id,
-                        ),
+                        message_ids=(queue_message_id,),
+                        tool_background_started=turn_result.tool_background_started,
                     )
-                )
-            from app.services.agentic_companion.ws_queue_serving import (
-                AppWsUserTurnEnqueueResult,
-            )
+                    payload = await materialize_queue_user_reply_from_durable(
+                        db=AsyncMock(),
+                        scope=self._scope,
+                        message=ready,
+                        input_records=(input_record,),
+                    )
+                    await adapter._outbound_queue.put(payload)
+        return queue_message_id
 
-            return AppWsUserTurnEnqueueResult(
-                queue_message_id=queue_input.delivery_flags.queue_message_id
-            )
-        raise TypeError(
-            "run_companion_chat_turn_for_api must return CompanionTurnResult"
-        )
+    async def fake_resolve_chat_model_for_scope(_scope):
+        return SimpleNamespace(id_on_provider="test/chat-model")
+
+    async def fake_agent_status_line_for_materialize(db, agent_id):
+        return None
 
     for attr in (
         "run_companion_implicit_sign_on_greeting_turn_for_api",
@@ -1011,9 +1150,29 @@ def _patch_companion_ws_queue_turn(
             attr,
             run_companion_chat_turn_for_api,
         )
+
     monkeypatch.setattr(
-        "app.api.v1.endpoints.chat_ws.enqueue_app_ws_user_turn_and_wake",
-        fake_enqueue_app_ws_user_turn_and_wake,
+        "app.services.agentic_companion.ws_outbound_materialize.agent_status_line_for_chat_header",
+        fake_agent_status_line_for_materialize,
+    )
+    monkeypatch.setattr(
+        "app.services.agentic_companion.ws_outbound_materialize.resolve_chat_model_for_scope",
+        fake_resolve_chat_model_for_scope,
+    )
+    monkeypatch.setattr(
+        chat_ws_v1,
+        "_turn_up_app_ws_channel",
+        fake_turn_up_app_ws_channel,
+    )
+    monkeypatch.setattr(
+        chat_ws_v1,
+        "_turn_down_app_ws_channel",
+        fake_turn_down_app_ws_channel,
+    )
+    monkeypatch.setattr(
+        AgentChannelPresence,
+        "enqueue_app_ws_user_turn",
+        fake_enqueue_app_ws_user_turn,
     )
 
 
@@ -1714,9 +1873,7 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured["preset_user_msg_uuids"][1] == second_turn_uuid
     assert captured.get("agent_chat_called") is not True
     assert captured["ai_save"][1] == "companion-ws-reply"
-    assert (
-        captured["ai_save"][3]["user_msg_uuid"] == f"queue-{second_turn_uuid}"
-    )
+    assert captured["ai_save"][3]["user_msg_uuid"] == second_turn_uuid
     assert (
         body["data"]["choices"][0]["message"]["meta_data"]
         == captured["ai_metas"][0]

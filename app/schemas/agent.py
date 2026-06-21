@@ -300,7 +300,12 @@ class AgentInDB(AgentBase):
     id: str
     # DEPRECATED: app 显示 ID 而非 readable_id
     readable_id: Optional[str] = None
-    status: AgentStatus
+    status: AgentStatus = Field(
+        description=(
+            "STALE: legacy approval column; user-created agent review workflow "
+            "was never implemented—do not rely on this value"
+        ),
+    )
     creator_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None

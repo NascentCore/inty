@@ -15,10 +15,6 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.scope_turn_lock import (
-    get_scope_turn_lock,
-)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
@@ -32,6 +28,7 @@ from app.services.agentic_channel.scope_queue_serving import (
     ScopeQueueServing,
 )
 from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputDeliveryUnroutableError,
     OutputQueueAppendInput,
     ReadyOutputMessage,
     get_output_queue_for_scope,
@@ -44,12 +41,9 @@ from app.core.companion_harness.companion.models import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_companion.downlink import (
-    Downlink,
     DownlinkKind,
-    downlink_delivers_user_visible_text,
-)
-from app.services.agentic_companion.inner_tick_delivery import (
-    inner_tick_delivery_for_telegram,
+    queue_user_reply_downlink,
+    tool_background_downlink,
 )
 from app.services.agentic_companion.inner_tick_poll import run_inner_tick_poll
 from app.core.companion_harness.companion.utc import (
@@ -120,6 +114,10 @@ class AgentChannelPresence:
             )
         )
 
+    @property
+    def coordinator(self) -> Coordinator:
+        return self._coordinator
+
     async def start(self) -> None:
         if self._session is not None:
             return
@@ -137,16 +135,15 @@ class AgentChannelPresence:
             global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat.poll_seconds
         )
 
-        async def _push_proactive_output(text: str) -> None:
-            await self._append_telegram_visible_output(
-                kind=DownlinkKind.PROACTIVE,
-                text=text,
-                trace_id=None,
-            )
-
-        delivery = inner_tick_delivery_for_telegram(_push_proactive_output)
-
         async def _run_poll(_ctx: dict) -> None:
+            registry = get_scope_channel_registry(self._scope)
+            active = registry.active_channel()
+            if active is None:
+                return
+            adapter = registry.adapters.get(active)
+            if adapter is None:
+                return
+            delivery = adapter.inner_tick_delivery()
             await run_inner_tick_poll(
                 delivery=delivery,
                 coordinator=self._coordinator,
@@ -165,7 +162,7 @@ class AgentChannelPresence:
         self._queue_serving = ScopeQueueServing(
             self._scope,
             background_output_sink=self._coordinator.background_sink,
-            deliver_message=self._deliver_output_via_active_channel,
+            deliver_message=self._deliver_ready_via_active_channel,
             on_drain_complete=self._on_queue_drain_complete,
             runtime_channel=CompanionRuntimeChannel.TELEGRAM,
         )
@@ -185,25 +182,17 @@ class AgentChannelPresence:
             self._session = None
         self._coordinator.sign_out()
 
-    async def _deliver_output_via_active_channel(
+    async def _deliver_ready_via_active_channel(
         self, message: ReadyOutputMessage
     ) -> None:
         text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
         if not text:
             return
-        if message.kind == DownlinkKind.TOOL_BACKGROUND:
-            return
-        event = Downlink(
-            kind=message.kind,
-            assistant_text=text,
-            turn=None,
-            tool_output=None,
-            bootstrap_interim=None,
-            scheduled_task_id=None,
-            transcript_user_text=None,
-        )
-        if not downlink_delivers_user_visible_text(event):
-            return
+        if not message.message_ids:
+            raise OutputDeliveryUnroutableError(
+                self._scope,
+                message.message_ids,
+            )
         registry = get_scope_channel_registry(self._scope)
         active = registry.active_channel()
         if active is None:
@@ -216,7 +205,13 @@ class AgentChannelPresence:
                 f"no downlink for channel={active.value} "
                 f"scope={self._scope.registry_key()}"
             )
-        await downlink.deliver(event)
+        await downlink.deliver(
+            queue_user_reply_downlink(
+                assistant_text=text,
+                message_ids=message.message_ids,
+                output_message=message,
+            )
+        )
 
     async def greet_on_sign_on(
         self, *, runtime_channel: CompanionRuntimeChannel
@@ -254,6 +249,34 @@ class AgentChannelPresence:
                 turn_recall=None,
             )
         )
+
+    async def enqueue_app_ws_user_turn(
+        self,
+        *,
+        wire_id: str,
+        user_text: str,
+        client_message_id: str | None,
+        local_id: str | None,
+        chat_history_user_row_id: int | None,
+    ) -> str:
+        # TODO(#3566): gate enqueue + wake when token budget exhausted (avoid durable backlog).
+        """Enqueue one App WS user message and wake scope queue worker."""
+        assert wire_id != ""
+        assert user_text.strip() != ""
+        inbound = InboundWireMessage(
+            scope=self._scope,
+            channel=CompanionRuntimeChannel.APP,
+            wire_id=wire_id,
+            text=user_text.strip(),
+            received_at_utc=datetime.now(timezone.utc),
+            client_message_id=client_message_id,
+            local_id=local_id,
+            chat_history_user_row_id=chat_history_user_row_id,
+        )
+        queue_message_id = await enqueue_inbound_wire_message(inbound)
+        assert self._queue_serving is not None
+        self._queue_serving.wake(runtime_channel=CompanionRuntimeChannel.APP)
+        return queue_message_id
 
     async def _on_queue_drain_complete(
         self, completion: ScopeDrainCompletion
@@ -296,6 +319,12 @@ class AgentChannelPresence:
                     return "找不到这个 companion，请确认 agent_id 是否正确。"
 
             synthetic_chat_id = self._scope.memory_store_chat_id()
+            if self._coordinator.snapshot_inner_tick_coords() is None:
+                self._coordinator.store_inner_tick_coords(
+                    user_id=self._scope.user_id,
+                    agent_id=self._scope.agent_id,
+                    chat_id=synthetic_chat_id,
+                )
             session_id = generate_session_id(synthetic_chat_id)
             wire_id = f"{runtime_channel.value}:{self._scope.registry_key()}"
             inbound = InboundWireMessage(
@@ -341,6 +370,19 @@ class AgentChannelPresence:
     async def _tool_background_consumer(self) -> None:
         while True:
             ev = await self._coordinator.background_events.get()
+            registry = get_scope_channel_registry(self._scope)
+            active = registry.active_channel()
+            if active == CompanionRuntimeChannel.APP:
+                downlink = registry.downlinks.get(active)
+                if downlink is None:
+                    continue
+                try:
+                    await downlink.deliver(
+                        tool_background_downlink(tool_output=ev)
+                    )
+                except Exception:
+                    logger.exception("agent_channel tool_bg deliver failed")
+                continue
             ctx = self._coordinator.pop_foreground_pending(ev.user_msg_uuid)
             if ctx is None:
                 logger.warning(
@@ -352,21 +394,15 @@ class AgentChannelPresence:
             if not ev.output_to_user:
                 continue
             try:
-                scope_lock = get_scope_turn_lock(
-                    CompanionScope(
-                        user_id=self._scope.user_id,
-                        companion_id=self._scope.agent_id,
-                        chat_id=self._scope.memory_store_chat_id(),
-                    )
-                )
-                async with scope_lock:
-                    await self._append_telegram_visible_output(
-                        kind=DownlinkKind.TOOL_BACKGROUND,
-                        text=ev.text,
-                        trace_id=ev.trace_id,
-                    )
+                if active is None:
+                    continue
+                downlink = registry.downlinks.get(active)
+                if downlink is None:
+                    continue
+                await downlink.deliver(tool_background_downlink(tool_output=ev))
+                self._coordinator.remove_foreground_pending(ev.user_msg_uuid)
             except Exception:
-                logger.exception("agent_channel tool_bg append failed")
+                logger.exception("agent_channel tool_bg deliver failed")
 
 
 class _NoopSessionDownlink:
@@ -394,6 +430,7 @@ async def ensure_presence(scope: AgentScope) -> AgentChannelPresence:
 
 
 async def stop_presence(scope: AgentScope) -> None:
+    # TODO(#3567): call on token-budget pause; contrast with sign_out-only channel teardown.
     key = scope.registry_key()
     presence = _presences.pop(key, None)
     if presence is not None:

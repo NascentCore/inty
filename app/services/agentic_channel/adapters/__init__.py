@@ -18,5 +18,5 @@ Implementations:
 - ``weixin.WeixinChannelAdapterStub`` — no-op downlink; docs
   ``channel_address=peer_id``, ``channel_user_id=wxid`` (production bridge unchanged).
 
-TODO(!3488): ``app_ws.AppWsChannelAdapter`` — WS completion materialization for OutputQueue delivery.
+- ``app_ws.AppWsChannelAdapter`` — WS completion materialization for OutputQueue delivery.
 """

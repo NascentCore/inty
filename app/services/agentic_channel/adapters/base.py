@@ -17,6 +17,7 @@ from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
 )
 from app.services.agentic_companion.downlink import ChannelDownlink
+from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
 
 
 class ChannelAdapter(Protocol):
@@ -31,3 +32,6 @@ class ChannelAdapter(Protocol):
     async def on_turn_up(self, scope: AgentScope) -> None: ...
 
     async def on_turn_down(self, scope: AgentScope) -> None: ...
+
+    def inner_tick_delivery(self) -> InnerTickDelivery:
+        """Return proactive/scheduled delivery sink while this channel is ACTIVE."""

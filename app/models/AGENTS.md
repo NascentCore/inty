@@ -7,3 +7,4 @@ SQLAlchemy 模型定义 **表结构与关系**；Alembic 迁移应与之 **同�
 - 所有数据表定义必须定义为 `app.models.Base` 子类，否则无法被 Alembic 识别。
 - 勿与 `pydantic model` 混淆，这里的 model 是 sqlalchemey schema。
 - 使用 `Pydantic model_validate / model_dump`，不要手写 mapper
+- The data types here overlapps with the data types defined under [app api schemas](/app/schemas/)

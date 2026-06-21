@@ -60,10 +60,14 @@ async def test_wake_triggers_drain_until_empty() -> None:
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
         drain_mock,
     ):
-        await serving.start()
-        serving.wake(runtime_channel=CompanionRuntimeChannel.TELEGRAM)
-        await asyncio.sleep(0.05)
-        await serving.stop()
+        with patch(
+            "app.services.agentic_channel.scope_queue_serving.flush_scope_output_queue_ready",
+            new_callable=AsyncMock,
+        ):
+            await serving.start()
+            serving.wake(runtime_channel=CompanionRuntimeChannel.TELEGRAM)
+            await asyncio.sleep(0.05)
+            await serving.stop()
 
     assert drain_mock.await_count == 3
     on_complete.assert_awaited()
@@ -304,3 +308,72 @@ async def test_output_pump_marks_delivery_failure_retryable() -> None:
 
     fake_queue.ack_delivered.assert_not_awaited()
     fake_queue.mark_delivery_failed.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_output_pump_claims_after_wake_sets_runtime_channel() -> None:
+    scope = AgentScope(user_id="user-pump-wake", agent_id="agent-pump-wake")
+    deliver_mock = AsyncMock()
+    serving = ScopeQueueServing(
+        scope,
+        background_output_sink=None,
+        deliver_message=deliver_mock,
+        on_drain_complete=AsyncMock(),
+        runtime_channel=CompanionRuntimeChannel.APP,
+    )
+    fake_queue = MagicMock()
+    fake_queue.pull_ready_batch = AsyncMock(return_value=())
+    fake_queue.ack_delivered = AsyncMock()
+    stop = asyncio.Event()
+    with patch(
+        "app.services.agentic_channel.scope_queue_serving.channel_output_pump",
+        new_callable=AsyncMock,
+    ) as pump_mock:
+        with patch(
+            "app.services.agentic_channel.serving.get_output_queue_for_scope",
+            return_value=fake_queue,
+        ):
+            await serving.start()
+            await asyncio.sleep(0.02)
+            serving.wake(runtime_channel=CompanionRuntimeChannel.APP)
+            await asyncio.sleep(0.02)
+            stop.set()
+            await serving.stop()
+
+    _, kwargs = pump_mock.await_args
+    assert kwargs.get("resolve_delivery_target") is not None
+    channel, wire_id = serving._resolve_output_delivery_target()
+    assert channel == CompanionRuntimeChannel.APP
+    assert wire_id == f"app:{scope.registry_key()}"
+
+
+@pytest.mark.asyncio
+async def test_drain_on_start_uses_constructor_runtime_channel() -> None:
+    scope = AgentScope(user_id="user-start-drain", agent_id="agent-start-drain")
+    drain_mock = AsyncMock(
+        return_value=DrainScopeOnceResult(
+            reply_text="",
+            tool_background_started=False,
+            batch_drained=False,
+            input_message_ids=(),
+        )
+    )
+    serving = ScopeQueueServing(
+        scope,
+        background_output_sink=None,
+        deliver_message=AsyncMock(),
+        on_drain_complete=AsyncMock(),
+        runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+    )
+    with patch(
+        "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
+        drain_mock,
+    ):
+        await serving.start()
+        await asyncio.sleep(0.05)
+        await serving.stop()
+
+    drain_mock.assert_awaited()
+    assert drain_mock.await_args.kwargs["runtime_channel"] == (
+        CompanionRuntimeChannel.TELEGRAM
+    )

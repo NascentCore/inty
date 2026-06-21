@@ -1,10 +1,6 @@
-# `app/schemas/`：跨边界的数据形状（Wire & DTO）
+# `app/schemas/` Python backend service API Pydantic data types**
 
-**一句话**：放 **会离开 Python 进程边界的 Pydantic 模型**——HTTP JSON、WebSocket 帧、以及其它 **序列化契约**；是后端、移动端与排障工具 **对齐字段名的罗塞塔石碑**。
-
-## 读者
-
-- 改 API 或 WS 载荷、需要理解 `meta_data` 键、或在多语言客户端间对齐枚举的人。
+Closely related to [SQLAlchemey database persistent data types](/app/models/).
 
 ## 归属规则
 

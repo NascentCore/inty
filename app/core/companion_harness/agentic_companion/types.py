@@ -92,6 +92,24 @@ class UserInputMessage(BaseModel):
     text: str = Field(min_length=1)
     received_at_utc: datetime
     client_message_id: str | None = None
+    local_id: str | None = Field(
+        default=None,
+        description="Client optimistic-bubble id echoed by App-WS downlink.",
+    )
+    chat_history_user_row_id: int | None = Field(
+        default=None,
+        description="Visible-history user row written by App-WS uplink.",
+    )
+
+
+class GeneratedImageRef(BaseModel):
+    """Wire-safe generated image metadata emitted with one OutputQueue line."""
+
+    model_config = ConfigDict(frozen=True)
+
+    image_url: str = Field(min_length=1)
+    width: int = Field(ge=0, default=0)
+    height: int = Field(ge=0, default=0)
 
 
 class AgentOutputMessage(BaseModel):
@@ -110,6 +128,10 @@ class AgentOutputMessage(BaseModel):
     langsmith_trace_id: str | None = None
     langsmith_run_id: str | None = None
     turn_recall: str | None = None
+    tool_background_started: bool = False
+    generated_images: tuple[GeneratedImageRef, ...] = Field(
+        default_factory=tuple
+    )
 
 
 class InputQueueRecord(BaseModel):
@@ -126,6 +148,8 @@ class InputQueueRecord(BaseModel):
     text: str = Field(min_length=1)
     received_at_utc: datetime
     client_message_id: str | None = None
+    local_id: str | None = None
+    chat_history_user_row_id: int | None = None
     batch_id: str | None = None
 
 
@@ -147,6 +171,10 @@ class OutputQueueRecord(BaseModel):
     langsmith_trace_id: str | None = None
     langsmith_run_id: str | None = None
     turn_recall: str | None = None
+    tool_background_started: bool = False
+    generated_images: tuple[GeneratedImageRef, ...] = Field(
+        default_factory=tuple
+    )
     delivery_channel: CompanionRuntimeChannel | None = None
     delivery_wire_id: str | None = None
     delivery_attempt_count: int = Field(ge=0, default=0)
@@ -205,6 +233,14 @@ class InboundWireMessage(BaseModel):
     text: str = Field(min_length=1)
     received_at_utc: datetime
     client_message_id: str | None = None
+    local_id: str | None = Field(
+        default=None,
+        description="Client optimistic-bubble id echoed by App-WS downlink.",
+    )
+    chat_history_user_row_id: int | None = Field(
+        default=None,
+        description="Visible-history user row written by App-WS uplink.",
+    )
 
 
 class OutboundWireDelivery(BaseModel):

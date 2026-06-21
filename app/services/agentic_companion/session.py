@@ -124,7 +124,23 @@ def apply_inner_tick_coords(
 
 @dataclass
 class Coordinator:
-    """Channel-agnostic companion invariants for one signed-on (user, agent, chat) presence."""
+    """Channel-agnostic per-presence state for one signed-on (user, agent, chat) scope.
+
+    Shared by every channel (App-WS / Telegram / Weixin); exactly one per scope, owned by
+    the long-lived presence. Holds presence STATE, not IO machinery:
+
+    - inner_tick_context: the signed-on (user, agent, chat) triple that gates the
+    proactive/scheduled poll (the poll no-ops when it is empty), plus maintenance/autonomy
+    throttle markers.
+    - background_events + background_sink: thread-safe plumbing for inner-tick
+    (proactive/maintenance/autonomy) tool-background output, which is not yet routed
+    through OutputQueue (see !3489); queue USER_CHAT tool-leg bypasses this and appends to
+    OutputQueue in-process.
+    - foreground_pending: correlation map for the above inner-tick background events.
+
+    Distinct from ScopeQueueServing (owns the InputQueue drain + OutputQueue pump tasks) and
+    from OutputQueue (durable user-visible output): Coordinator is presence state only.
+    """
 
     loop: asyncio.AbstractEventLoop
     background_events: asyncio.Queue[ToolOutputEvent] = field(
@@ -302,6 +318,9 @@ class Coordinator:
 
     def register_implicit_greeting_turn(self, task: asyncio.Task[Any]) -> None:
         """Track the detached ``user_signed_on`` greeting task for user-chat preemption."""
+        prior = self._implicit_greeting_turn_task
+        if prior is not None and not prior.done():
+            prior.cancel()
         self._implicit_greeting_turn_task = task
 
         def _on_done(done_task: asyncio.Task[Any]) -> None:
@@ -380,9 +399,6 @@ class Session:
     def sign_out(self) -> None:
         self.coordinator.inner_tick_context.clear()
 
-    async def cancel_implicit_greeting_if_running(self) -> bool:
-        return await self.coordinator.cancel_implicit_greeting_turn_if_running()
-
     def background_sink(self, event: ToolOutputEvent) -> None:
         self.coordinator.background_sink(event)
 
@@ -452,6 +468,9 @@ class Session:
             name="inner_tick",
         )
 
+    async def cancel_implicit_greeting_if_running(self) -> bool:
+        return await self.coordinator.cancel_implicit_greeting_turn_if_running()
+
     async def stop(self) -> None:
         self._inner_tick_stop.set()
         task = self._inner_tick_task
@@ -459,7 +478,7 @@ class Session:
         if task is not None and (not task.done()):
             await asyncio.gather(task, return_exceptions=True)
         # TODO(#3314): Session shutdown should cancel/drain every registered
-        # lifecycle child, not only the poll worker and implicit greeting task.
+        # lifecycle child, not only the poll worker.
         # TODO(companion-session-eviction): Also release process-local CompanionSession /
         # MemoryStore for this scope when safe (#3444).
         await self.cancel_implicit_greeting_if_running()

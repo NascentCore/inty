@@ -74,6 +74,16 @@ class AgenticCompanionInputQueueRow(Base):
         nullable=True,
         comment="Client-supplied message id when available",
     )
+    local_id = Column(
+        String,
+        nullable=True,
+        comment="Client optimistic-bubble id echoed by App-WS downlink",
+    )
+    chat_history_user_row_id = Column(
+        Integer,
+        nullable=True,
+        comment="App visible-history user row id for downlink correlation",
+    )
     text = Column(
         Text,
         nullable=False,
@@ -173,6 +183,18 @@ class AgenticCompanionOutputQueueRow(Base):
     langsmith_trace_id = Column(String, nullable=True)
     langsmith_run_id = Column(String, nullable=True)
     turn_recall = Column(Text, nullable=True)
+    tool_background_started = Column(
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.text("false"),
+        comment="Whether the foreground turn started a user-visible tool background leg",
+    )
+    generated_images_json = Column(
+        Text,
+        nullable=False,
+        server_default=sa.text("'[]'"),
+        comment="JSON array of generated image refs emitted with this output line",
+    )
     delivery_channel = Column(String, nullable=True)
     delivery_wire_id = Column(String, nullable=True)
     delivery_attempt_count = Column(Integer, nullable=False, server_default="0")

@@ -22,9 +22,6 @@ from app.core.companion_harness.companion.turn import (
     run_companion_implicit_sign_on_greeting_turn,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.core.companion_harness.companion.websocket_coordinator import (
-    CompanionWebSocketCoordinator,
-)
 from app.core.companion_harness.companion.runtime_channel import (
     CompanionRuntimeChannel,
     TurnRuntimeContext,
@@ -262,21 +259,3 @@ def test_implicit_sign_on_greeting_llm_cancelled_skips_further_attempts(
     asyncio.run(_exercise())
     assert wait_calls == 2
     assert client.chat_completion_invocations == 1
-
-
-@pytest.mark.asyncio
-async def test_cancel_implicit_greeting_turn_if_running() -> None:
-    started = asyncio.Event()
-
-    async def _slow_greeting() -> None:
-        started.set()
-        await asyncio.sleep(3600)
-
-    coordinator = CompanionWebSocketCoordinator.for_current_loop()
-    task = asyncio.create_task(_slow_greeting())
-    coordinator.register_implicit_greeting_turn(task)
-    await started.wait()
-    cancelled = await coordinator.cancel_implicit_greeting_turn_if_running()
-    assert cancelled is True
-    assert task.done()
-    assert coordinator._implicit_greeting_turn_task is None

@@ -337,7 +337,7 @@ class ChatWsCompletionData(BaseModel):
     user_message_id: Optional[int] = None
     business_actions: list[BizAction]
     choices: list[ChatWsCompletionChoice]
-    usage: ChatWsCompletionUsage
+    usage: Optional[ChatWsCompletionUsage] = None
     local_id: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("localId", "local_id"),

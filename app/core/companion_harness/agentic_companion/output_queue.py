@@ -26,6 +26,7 @@ from app.services.agentic_companion.downlink import DownlinkKind
 from .postgres_queue import PostgresOutputQueueRepository
 from .types import (
     AgentOutputMessage,
+    GeneratedImageRef,
     OutputQueueRecord,
     QueueAck,
     QueueMessageId,
@@ -54,6 +55,8 @@ class OutputQueueAppendInput:
     langsmith_trace_id: str | None
     langsmith_run_id: str | None
     turn_recall: str | None
+    tool_background_started: bool = False
+    generated_images: tuple[GeneratedImageRef, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -70,6 +73,8 @@ class ReadyOutputMessage:
     text: str
     sequence: int
     message_ids: tuple[str, ...]
+    tool_background_started: bool = False
+    generated_images: tuple[GeneratedImageRef, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -153,6 +158,8 @@ class OutputQueue:
                 langsmith_trace_id=append_input.langsmith_trace_id,
                 langsmith_run_id=append_input.langsmith_run_id,
                 turn_recall=append_input.turn_recall,
+                tool_background_started=append_input.tool_background_started,
+                generated_images=append_input.generated_images,
             )
             async with AsyncSessionLocal() as db:
                 repo = PostgresOutputQueueRepository(db)
@@ -165,6 +172,12 @@ class OutputQueue:
                 text=record.text,
                 sequence=record.sequence,
                 message_ids=append_input.message_ids,
+                tool_background_started=getattr(
+                    record,
+                    "tool_background_started",
+                    False,
+                ),
+                generated_images=getattr(record, "generated_images", ()),
             )
             self._ready.append(ready)
         return ready
@@ -186,6 +199,8 @@ class OutputQueue:
             text=record.text,
             sequence=record.sequence,
             message_ids=record.message_ids,
+            tool_background_started=record.tool_background_started,
+            generated_images=record.generated_images,
         )
 
     async def _claim_pending_from_repository(
@@ -266,9 +281,7 @@ class OutputQueue:
             )
             await db.commit()
         async with self._memory_lock:
-            message = self._in_flight.pop(failure.message_id, None)
-            if message is not None:
-                self._enqueue_ready_ordered(message)
+            self._in_flight.pop(failure.message_id, None)
 
     async def skip_delivery(self, skip: OutputDeliverySkip) -> None:
         """Mark delivery skipped; durable row is terminal and not requeued."""
