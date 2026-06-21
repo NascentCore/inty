@@ -22,7 +22,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.api.deps import get_async_db
 from app.api.utils.health_check_payload import build_health_check_data
 from backend.ops.api.evaluation_web import configure_evaluation_web_routes
-from backend.ops.api.telegram_demo_web import configure_telegram_demo_web_routes
+from backend.ops.api.telegram_web import configure_telegram_web_routes
 from backend.ops.api.weixin_web import configure_weixin_web_routes
 from app.services.agentic_companion.scope_inner_tick_lifecycle import (
     start_scope_inner_tick_worker,
@@ -111,7 +111,7 @@ configure_evaluation_web_routes(
     api_only_mode_enabled=False,
 )
 configure_weixin_web_routes(app=app)
-configure_telegram_demo_web_routes(app=app)
+configure_telegram_web_routes(app=app)
 
 init_firebase()
 

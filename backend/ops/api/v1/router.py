@@ -4,10 +4,13 @@ from fastapi import APIRouter
 
 from app.api.constants import API_V1_PREFIX
 
+from app.core.config import global_config_loaded_from_config_yaml
+
 from backend.ops.api.v1 import (
     agent_channel,
     evaluation,
     festival_memory,
+    telegram,
     telegram_demo,
     weixin,
 )
@@ -32,10 +35,16 @@ api_router.include_router(
     include_in_schema=False,
 )
 api_router.include_router(
-    telegram_demo.router,
-    tags=["telegram-demo"],
+    telegram.router,
+    tags=["telegram-onboard"],
     include_in_schema=False,
 )
+if global_config_loaded_from_config_yaml.app.debug:
+    api_router.include_router(
+        telegram_demo.router,
+        tags=["telegram-demo"],
+        include_in_schema=False,
+    )
 api_router.include_router(
     agent_channel.router,
     tags=["agent-channel"],

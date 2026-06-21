@@ -62,7 +62,7 @@ _WELCOME_RETURNING = (
     "Welcome back! Your companion is ready. Just send a message."
 )
 _ONBOARD_HINT = (
-    "Open the Ops /telegram page to scan the QR code, "
+    "Open /telegram to scan the QR code, "
     "or send /start onboard here to connect."
 )
 _IDENTITY_MISMATCH = (

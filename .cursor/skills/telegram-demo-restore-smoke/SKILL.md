@@ -16,13 +16,14 @@ description: >-
 
 ## Smoke steps
 
-1. Open `http://127.0.0.1:8001/telegram` → scan team QR with Telegram.
+1. Open product onboard page — local `http://127.0.0.1:8001/telegram` or public `https://dev.ops.inty.cc/telegram` → scan team QR with Telegram.
 2. Send a user message; confirm bot replies.
-3. Check bindings:
+3. Check bindings (**requires `app.debug: true` on Ops**, e.g. local/dev):
    ```bash
    curl -s http://127.0.0.1:8001/api/v1/telegram-demo/bindings | jq
    ```
-   Expect `count >= 1` with your `telegram_chat_id`.
+   Product bot metadata: `curl -s http://127.0.0.1:8001/api/v1/telegram/bot-info | jq`
+   Expect bindings `count >= 1` with your `telegram_chat_id`.
 4. **Restart Ops** (Ctrl+C on start.sh, relaunch).
 5. Send another message **without** re-scanning QR.
 6. Expect reply; logs should show `telegram-demo: restored N agent_channel endpoint(s)`.

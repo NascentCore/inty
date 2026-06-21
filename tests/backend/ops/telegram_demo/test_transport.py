@@ -83,6 +83,7 @@ def test_transport_onboard_copy_is_english() -> None:
 
     assert "/telegram" in _ONBOARD_HINT
     assert "/start" in _ONBOARD_HINT
+    assert "Ops" not in _ONBOARD_HINT
     assert all(
         not any("\u4e00" <= char <= "\u9fff" for char in message)
         for message in messages
