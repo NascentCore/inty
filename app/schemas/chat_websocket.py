@@ -105,7 +105,8 @@ class ChatWsUserSignedOnAckFrame(BaseModel):
     """**Server → client (immediate)** result of ``user_signed_on`` handling.
 
     Known ``reason`` values include ``not_supported``, ``invalid_payload``, ``missing_message_id``,
-    ``invalid_message_id``, ``agent_mismatch``, ``server_error``; the wire may carry other strings
+    ``invalid_message_id``, ``agent_mismatch``, ``companion_bond_conflict``,
+    ``channel_endpoint_conflict``, ``server_error``; the wire may carry other strings
     for forward compatibility. ``proactive_heartbeat_disabled`` is legacy (coords are armed for
     scheduled companion reminders even when proactive and maintenance inner-tick are disabled).
     """
