@@ -1,4 +1,8 @@
-"""CI-gated harness orchestration tests using scripted FakeOpenAI transport."""
+"""CI-gated harness orchestration tests using scripted FakeOpenAI transport.
+
+TODO(#3563): Expand scripted tracks (maintenance, autonomy, dreaming, proactive+tool);
+read ``user_turn.llm_loop_mode`` from config when sizing scripts.
+"""
 
 from __future__ import annotations
 

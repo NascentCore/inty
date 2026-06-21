@@ -1,7 +1,6 @@
 """Wire a real CompanionLLMClient to one shared scripted FakeOpenAI for harness tests.
 
-TODO(#3562): ``build_scripted_injected_runtime`` feeds headless ``AgenticCompanion.drain_once`` CI tests.
-TODO(#3563): Consolidate transcript assertion helpers shared with orchestration drain tests.
+TODO(#3563): Read ``user_turn.llm_loop_mode`` when sizing FakeOpenAI script step counts.
 """
 
 from __future__ import annotations
