@@ -3,10 +3,12 @@
 Script step counts assume default ``user_turn.llm_loop_mode=dual_llm``:
 - No-tool USER_CHAT: 2 steps (reply + empty routing)
 - Tool-bg round: 4 steps (see #3559 orchestration test)
+- Bootstrap USER_INTERACTIVE: 1 step (single assistant reply)
 """
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -51,6 +53,7 @@ from app.models.agentic_companion_queue import (
 from app.models.companion_bond import CompanionBond
 from app.models.user import User
 from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import DEEPSEEK_V3_2
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     build_scripted_injected_runtime,
@@ -262,5 +265,181 @@ async def test_drain_user_chat_background_tool_round() -> None:
         assert done_rows[0].get("kind") == "tool_background_done"
         assert done_rows[0].get("tool_calls_count") == 1
         assert fake.script_index == len(script)
+    finally:
+        await _cleanup_guest_scope_with_queues(scope)
+
+
+@pytest.mark.asyncio
+async def test_drain_empty_input_queue_returns_none() -> None:
+    injected, fake = build_scripted_injected_runtime(
+        (fake_step_text("unused"), fake_step_text("")),
+    )
+    scope = await create_guest_scope_for_test(
+        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        nickname_prefix="drain_empty",
+        meta_data={"test": "scripted_drain_empty"},
+    )
+    try:
+        async with AsyncSessionLocal() as db:
+            companion = AgenticCompanion(
+                scope=scope,
+                input_repo=PostgresInputQueueRepository(db),
+            )
+            result = await companion.drain_once(
+                resolved_chat_model=DEEPSEEK_V3_2,
+                runtime_channel=CompanionRuntimeChannel.APP,
+                background_output_sink=None,
+                implicit_signal_bundle=_implicit_bundle(),
+                injected_runtime=injected,
+            )
+            await db.commit()
+
+        assert result is None
+        assert fake.script_index == 0
+    finally:
+        await _cleanup_guest_scope_with_queues(scope)
+
+
+@pytest.mark.asyncio
+async def test_drain_multi_message_batch_merges_user_text() -> None:
+    script = (
+        fake_step_text("Got both lines."),
+        fake_step_text(""),
+    )
+    injected, fake = build_scripted_injected_runtime(script)
+    scope = await create_guest_scope_for_test(
+        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        nickname_prefix="drain_batch",
+        meta_data={"test": "scripted_drain_batch"},
+    )
+    try:
+        now = datetime.now(timezone.utc)
+        async with AsyncSessionLocal() as db:
+            input_repo = PostgresInputQueueRepository(db)
+            await input_repo.append_user_message(
+                InboundWireMessage(
+                    scope=scope,
+                    channel=CompanionRuntimeChannel.APP,
+                    wire_id="wire-batch",
+                    text="line one",
+                    received_at_utc=now,
+                )
+            )
+            await input_repo.append_user_message(
+                InboundWireMessage(
+                    scope=scope,
+                    channel=CompanionRuntimeChannel.APP,
+                    wire_id="wire-batch",
+                    text="line two",
+                    received_at_utc=now,
+                )
+            )
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            companion = AgenticCompanion(
+                scope=scope,
+                input_repo=PostgresInputQueueRepository(db),
+            )
+            result = await companion.drain_once(
+                resolved_chat_model=DEEPSEEK_V3_2,
+                runtime_channel=CompanionRuntimeChannel.APP,
+                background_output_sink=None,
+                implicit_signal_bundle=_implicit_bundle(),
+                injected_runtime=injected,
+            )
+            await db.commit()
+
+        assert result is not None
+        assert len(result.input_message_ids) == 2
+
+        async with AsyncSessionLocal() as db:
+            input_rows = (
+                (
+                    await db.execute(
+                        select(AgenticCompanionInputQueueRow).where(
+                            AgenticCompanionInputQueueRow.user_id == scope.user_id,
+                            AgenticCompanionInputQueueRow.agent_id == scope.agent_id,
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+
+        assert len(input_rows) == 2
+        assert all(row.status == QueueStatus.DELIVERED.value for row in input_rows)
+
+        store = memory_store_for_injected_runtime(scope, injected)
+        user_rows = [
+            row
+            for row in scripted_transcript_rows(store)
+            if row.get("role") == "user"
+        ]
+        assert len(user_rows) == 1
+        assert user_rows[0].get("content") == "line one\nline two"
+        assert fake.script_index == len(script)
+    finally:
+        await _cleanup_guest_scope_with_queues(scope)
+
+
+@pytest.mark.asyncio
+async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
+    script = (fake_step_text("Welcome! What kind of companion do you want?"),)
+    injected, fake = build_scripted_injected_runtime(
+        script,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
+    )
+    scope = await create_guest_scope_for_test(
+        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        nickname_prefix="drain_bootstrap",
+        meta_data={"test": "scripted_drain_bootstrap"},
+    )
+    try:
+        now = datetime.now(timezone.utc)
+        async with AsyncSessionLocal() as db:
+            input_repo = PostgresInputQueueRepository(db)
+            await input_repo.append_user_message(
+                InboundWireMessage(
+                    scope=scope,
+                    channel=CompanionRuntimeChannel.APP,
+                    wire_id="wire-bootstrap",
+                    text="hi, I'm new here",
+                    received_at_utc=now,
+                )
+            )
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            companion = AgenticCompanion(
+                scope=scope,
+                input_repo=PostgresInputQueueRepository(db),
+            )
+            result = await companion.drain_once(
+                resolved_chat_model=DEEPSEEK_V3_2,
+                runtime_channel=CompanionRuntimeChannel.APP,
+                background_output_sink=None,
+                implicit_signal_bundle=_implicit_bundle(),
+                injected_runtime=injected,
+            )
+            await db.commit()
+
+        assert result is not None
+        assert result.assistant_text.strip() == (
+            "Welcome! What kind of companion do you want?"
+        )
+
+        output_queue = get_output_queue_for_scope(scope)
+        ready = await output_queue.pull_ready_batch()
+        assert [row.text for row in ready] == [
+            "Welcome! What kind of companion do you want?"
+        ]
+
+        store = memory_store_for_injected_runtime(scope, injected)
+        assert "user" in scripted_transcript_roles(store)
+        assert "assistant" in scripted_transcript_roles(store)
+        ctx = json.loads(store.read_document("context.json"))
+        assert ctx.get("workspace_bootstrap_user_interactive_completed") is False
+        assert fake.script_index == 1
     finally:
         await _cleanup_guest_scope_with_queues(scope)
