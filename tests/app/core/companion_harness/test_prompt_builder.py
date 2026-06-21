@@ -11,8 +11,11 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
+)
+from app.core.companion_harness.companion.turn_tail_user import (
+    TurnTailUserMessage,
 )
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
@@ -60,7 +63,7 @@ def test_build_user_chat_prompt_allows_tools_and_sets_tool_choice_none() -> (
         bundle=_bundle(),
         context=ContextMeta(),
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     )
@@ -72,8 +75,13 @@ def test_build_user_chat_prompt_allows_tools_and_sets_tool_choice_none() -> (
                 ts="2026-01-01T00:00:00+00:00",
             )
         ],
-        user_text="画夜空",
-        tail_user_ts=datetime(2026, 1, 1, tzinfo=UTC),
+        tail_user_messages=(
+            TurnTailUserMessage(
+                message_id="user-1",
+                text="画夜空",
+                received_at_utc=datetime(2026, 1, 1, tzinfo=UTC),
+            ),
+        ),
         tools=tools,
         implicit_sign_on_turn=False,
         tail_splice_thoughts=(),
@@ -88,6 +96,42 @@ def test_build_user_chat_prompt_allows_tools_and_sets_tool_choice_none() -> (
     assert any("hello" in message.content for message in plan.messages)
     assert plan.messages[-1].role == PromptMessageRole.USER
     assert "画夜空" in plan.messages[-1].content
+
+
+def test_build_user_chat_prompt_preserves_multi_user_tail() -> None:
+    builder = PromptBuilder(
+        bundle=_bundle(),
+        context=ContextMeta(),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    )
+    plan = builder.build_user_chat_prompt(
+        transcript_window=[],
+        tail_user_messages=(
+            TurnTailUserMessage(
+                message_id="user-1",
+                text="first",
+                received_at_utc=datetime(2026, 1, 1, tzinfo=UTC),
+            ),
+            TurnTailUserMessage(
+                message_id="user-2",
+                text="second",
+                received_at_utc=datetime(2026, 1, 1, 0, 1, tzinfo=UTC),
+            ),
+        ),
+        tools=(),
+        implicit_sign_on_turn=False,
+        tail_splice_thoughts=(),
+    )
+
+    assert [message.role for message in plan.messages[-2:]] == [
+        PromptMessageRole.USER,
+        PromptMessageRole.USER,
+    ]
+    assert "first" in plan.messages[-2].content
+    assert "second" in plan.messages[-1].content
 
 
 def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> (
@@ -110,7 +154,7 @@ def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> (
             bundle=bundle,
             context=context,
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.APP,
+                channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         ).settled_single_llm_system_messages()
@@ -144,7 +188,7 @@ def test_refresh_single_llm_user_chat_prompt_prefix_avoids_tool_background_compa
     store.write_document("IDENTITY.md", "id")
     store.write_document("USER.md", "user")
     runtime = TurnRuntimeContext(
-        channel=CompanionRuntimeChannel.APP,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     )
     compact_prefix = build_system_messages_for_tool_track(
@@ -192,7 +236,7 @@ def test_refresh_single_llm_bootstrap_prompt_prefix_returns_bootstrap_tools() ->
     store.write_document("IDENTITY.md", "id")
     store.write_document("USER.md", "user")
     runtime = TurnRuntimeContext(
-        channel=CompanionRuntimeChannel.APP,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     )
     messages: list[dict[str, Any]] = [

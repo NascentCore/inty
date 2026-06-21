@@ -1,0 +1,10 @@
+name: two_user_message_patterns
+description: Compare alternating user/assistant turns vs two successive user messages in one prompt.
+layout_zone: successive_user
+kind: two_user_comparison
+temperature: 0
+system_content: "You are a precise assistant. Answer every user message in the conversation. When a user asks for a marker like A=4 or B=6, include that exact marker in your reply."
+user_first: "First question: What is 2+2? Reply including exactly A=4."
+user_second: "Second question: What is 3+3? Reply including exactly B=6."
+expect_first: "A=4"
+expect_second: "B=6"

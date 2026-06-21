@@ -30,7 +30,7 @@ from app.core.companion_harness.tools.runtime import (
     resolve_openai_tool_call_loop_async,
 )
 from .langsmith_turn_slice import CompanionTurnLangsmithSlice
-from app.core.llms.client import CompanionLLMClient, LLM_SCENE_CHAT
+from app.core.llms.client import LLM_SCENE_CHAT, LlmClient
 from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
@@ -39,9 +39,9 @@ from .message_format import openai_assistant_message_dict
 from .models import CompanionTurnTrack, InnerTickActivity
 from .prompt_stack import refresh_companion_turn_prompt_stack
 from .turn_routes import BootstrapInterimOutput, BootstrapInterimOutputSink
-from .transcript_user_row import (
-    TranscriptUserRowBuildInput,
-    append_transcript_user_row,
+from .turn_tail_user import (
+    TurnTailUserMessage,
+    append_tail_user_transcript_rows,
 )
 from .utc import utc_iso_ts
 
@@ -53,7 +53,7 @@ class InTurnSyncToolLoopInput:
     """Inputs for one in-turn sync tool loop."""
 
     store: MemoryStore
-    llm_client: CompanionLLMClient
+    llm_client: LlmClient
     messages: tuple[dict[str, Any], ...]
     tools_for_turn: tuple[dict[str, Any], ...]
     write_allowlist: frozenset[str]
@@ -63,6 +63,7 @@ class InTurnSyncToolLoopInput:
     user_text: str
     ts_user: datetime
     user_msg_uuid: str
+    tail_user_messages: tuple[TurnTailUserMessage, ...]
     transcript_rel: str
     # TODO(!3465): Replace delivery-policy flags with caller-owned assistant
     # round event adapters; this loop should not know AgenticLoop vs legacy.
@@ -108,7 +109,7 @@ class BootstrapInTurnSyncToolLoopInput:
     """
 
     store: MemoryStore
-    llm_client: CompanionLLMClient
+    llm_client: LlmClient
     messages: tuple[dict[str, Any], ...]
     tools_for_turn: tuple[dict[str, Any], ...]
     memory_bootstrap_type: str
@@ -117,6 +118,7 @@ class BootstrapInTurnSyncToolLoopInput:
     user_text: str
     ts_user: datetime
     user_msg_uuid: str
+    tail_user_messages: tuple[TurnTailUserMessage, ...]
     transcript_rel: str
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None
     langsmith_slice: CompanionTurnLangsmithSlice
@@ -142,15 +144,11 @@ async def run_in_turn_sync_tool_loop(
     user_msg_uuid = loop_input.user_msg_uuid
     persist_user_row_in_loop = not loop_input.caller_persisted_user_transcript
     if persist_user_row_in_loop:
-        append_transcript_user_row(
+        append_tail_user_transcript_rows(
             store,
             transcript_rel,
-            TranscriptUserRowBuildInput(
-                content=loop_input.user_text,
-                uuid=user_msg_uuid,
-                trace_id=trace_id,
-            ),
-            ts=loop_input.ts_user.isoformat(),
+            tail_user_messages=loop_input.tail_user_messages,
+            trace_id=trace_id,
         )
     working_messages = deepcopy(list(loop_input.messages))
     loop_tools = list(loop_input.tools_for_turn)
@@ -348,6 +346,7 @@ async def run_bootstrap_track_sync_tool_loop(
             user_text=loop_input.user_text,
             ts_user=loop_input.ts_user,
             user_msg_uuid=loop_input.user_msg_uuid,
+            tail_user_messages=loop_input.tail_user_messages,
             transcript_rel=loop_input.transcript_rel,
             interim_output_sink=loop_input.bootstrap_interim_output_sink,
             emit_every_assistant_round=False,

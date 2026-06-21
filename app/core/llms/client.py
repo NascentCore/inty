@@ -1,4 +1,4 @@
-"""Companion LLM clients: legacy ``CompanionLLMClient`` and ``AsyncLlmClient`` for AgenticLoop.
+"""Companion LLM clients: ``LlmClient`` and ``AsyncLlmClient`` for AgenticLoop.
 
 TODO(#3565): Unit-test provider-error paths (JSON retry, transient retry, malformed completions)
 with scripted transport fakes.
@@ -104,7 +104,7 @@ class CompanionLLMConfig(BaseModel):
         )
 
 
-class CompanionLLMClient:
+class LlmClient:
     """Manages OpenAI-compatible clients for companion interactions."""
 
     def __init__(self, config: CompanionLLMConfig) -> None:
@@ -175,7 +175,7 @@ class CompanionLLMClient:
 
     @property
     def async_llm_client(self) -> AsyncLlmClient:
-        """Lazy ``AsyncLlmClient`` for AgenticLoop; one instance per ``CompanionLLMClient``."""
+        """Lazy ``AsyncLlmClient`` for AgenticLoop; one instance per ``LlmClient``."""
         if self._async_llm_client is None:
             self._async_llm_client = AsyncLlmClient(self._config)
         return self._async_llm_client

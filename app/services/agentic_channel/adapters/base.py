@@ -1,7 +1,8 @@
 """Channel adapter protocol for agent-channel stack.
 
-TODO(rename-channel-to-gateway): Rename ``ChannelAdapter`` to Gateway — adapters are gateways to
-human channels (weixin/wechat, telegram, sms-phone-number, etc.).
+TODO(rename-channel-to-gateway): Rename ``ChannelAdapter`` → ``Gateway`` (Protocol); each — #3548
+implementation declares ``gateway_kind: GatewayKind`` from ``agent_channel/gateway.py``.
+Adapters must not define the canonical enum.
 TODO(companion-channel-tools): Extend protocol with channel tool execution hooks (or sibling
   port) so harness dispatch stays out of transport details — #3362
 TODO(channel-inbound-outbound-affordances): Add inbound envelope + outbound reply/reaction hooks
@@ -14,7 +15,7 @@ from typing import Protocol
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.services.agentic_companion.downlink import ChannelDownlink
 from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
@@ -24,7 +25,7 @@ class ChannelAdapter(Protocol):
     """Transport-specific hooks for one ``CompanionRuntimeChannel``."""
 
     @property
-    def channel(self) -> CompanionRuntimeChannel: ...
+    def channel(self) -> ChannelKind: ...
 
     def as_downlink(self) -> ChannelDownlink:
         """Return downlink used while this channel is ACTIVE."""

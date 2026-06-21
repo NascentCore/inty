@@ -29,7 +29,7 @@ from app.api import deps
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.core.companion_harness.companion.scope_turn_lock import (
     companion_scope_from_foreground_ctx,
@@ -155,7 +155,7 @@ async def _turn_up_app_ws_channel(
     assert user_id != ""
     await bind_endpoint(
         scope,
-        channel=CompanionRuntimeChannel.APP,
+        channel=ChannelKind.APP_WS,
         channel_address=scope.registry_key(),
         channel_user_id=user_id,
     )
@@ -166,7 +166,7 @@ async def _turn_up_app_ws_channel(
     )
     await turn_channel_up(
         scope,
-        CompanionRuntimeChannel.APP,
+        ChannelKind.APP_WS,
         adapter=adapter,
         reason="app_ws_channel_up",
     )
@@ -185,7 +185,7 @@ async def _turn_down_app_ws_channel(scope: AgentScope, *, reason: str) -> None:
     """Mark APP channel inactive and clear proactive coords on the per-scope presence."""
     assert reason != ""
     presence = get_presence(scope)
-    await turn_channel_down(scope, CompanionRuntimeChannel.APP, reason=reason)
+    await turn_channel_down(scope, ChannelKind.APP_WS, reason=reason)
     if presence is not None:
         presence.coordinator.sign_out()
 
@@ -1180,7 +1180,7 @@ async def _agent_chat_ws_completions_impl(
                             if (
                                 channel_presence is None
                                 or registry.active_channel()
-                                != CompanionRuntimeChannel.APP
+                                != ChannelKind.APP_WS
                             ):
                                 await _turn_up_app_ws_channel(
                                     scope=scope,

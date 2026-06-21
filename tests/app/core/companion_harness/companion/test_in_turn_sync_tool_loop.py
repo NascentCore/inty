@@ -19,12 +19,15 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 )
 from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
+)
+from app.core.companion_harness.companion.turn_tail_user import (
+    TurnTailUserMessage,
 )
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_BOOTSTRAP_TRACK,
@@ -76,6 +79,21 @@ def _transcript_rows(store: MemoryStore) -> list[dict[str, Any]]:
     return [json.loads(line) for line in body.splitlines() if line.strip()]
 
 
+def _tail(
+    *,
+    message_id: str,
+    text: str,
+    ts: datetime,
+) -> tuple[TurnTailUserMessage, ...]:
+    return (
+        TurnTailUserMessage(
+            message_id=message_id,
+            text=text,
+            received_at_utc=ts,
+        ),
+    )
+
+
 @pytest.mark.asyncio
 async def test_run_in_turn_sync_tool_loop_user_before_assistant_transcript(
     tmp_path: Path,
@@ -98,12 +116,17 @@ async def test_run_in_turn_sync_tool_loop_user_before_assistant_transcript(
             user_text="hi",
             ts_user=datetime(2026, 1, 1, tzinfo=UTC),
             user_msg_uuid="user-uuid-1",
+            tail_user_messages=_tail(
+                message_id="user-uuid-1",
+                text="hi",
+                ts=datetime(2026, 1, 1, tzinfo=UTC),
+            ),
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
             emit_every_assistant_round=False,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,
                 )
             ),
@@ -153,12 +176,17 @@ async def test_run_in_turn_sync_tool_loop_reports_when_caller_persisted_user(
             user_text="hi",
             ts_user=datetime(2026, 1, 1, tzinfo=UTC),
             user_msg_uuid="user-uuid-prepersisted",
+            tail_user_messages=_tail(
+                message_id="user-uuid-prepersisted",
+                text="hi",
+                ts=datetime(2026, 1, 1, tzinfo=UTC),
+            ),
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
             emit_every_assistant_round=False,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,
                 )
             ),
@@ -221,12 +249,17 @@ async def test_run_in_turn_sync_tool_loop_interim_sink_on_tool_round(
             user_text="go",
             ts_user=datetime(2026, 1, 2, tzinfo=UTC),
             user_msg_uuid="user-uuid-2",
+            tail_user_messages=_tail(
+                message_id="user-uuid-2",
+                text="go",
+                ts=datetime(2026, 1, 2, tzinfo=UTC),
+            ),
             transcript_rel="transcript.jsonl",
             interim_output_sink=_sink,
             emit_every_assistant_round=False,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,
                 )
             ),
@@ -276,12 +309,17 @@ async def test_run_in_turn_sync_tool_loop_emit_every_assistant_round_terminal(
             user_text="hi",
             ts_user=datetime(2026, 1, 5, tzinfo=UTC),
             user_msg_uuid="user-uuid-emit-all",
+            tail_user_messages=_tail(
+                message_id="user-uuid-emit-all",
+                text="hi",
+                ts=datetime(2026, 1, 5, tzinfo=UTC),
+            ),
             transcript_rel="transcript.jsonl",
             interim_output_sink=_sink,
             emit_every_assistant_round=True,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,
                 )
             ),
@@ -326,11 +364,16 @@ async def test_run_bootstrap_track_sync_tool_loop_returns_result(
             user_text="hi",
             ts_user=datetime(2026, 1, 3, tzinfo=UTC),
             user_msg_uuid="user-bootstrap",
+            tail_user_messages=_tail(
+                message_id="user-bootstrap",
+                text="hi",
+                ts=datetime(2026, 1, 3, tzinfo=UTC),
+            ),
             transcript_rel="transcript.jsonl",
             bootstrap_interim_output_sink=None,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,
                 )
             ),
@@ -402,12 +445,17 @@ async def test_run_in_turn_sync_tool_loop_after_tool_hook_refreshes_openai_tools
             user_text="go",
             ts_user=datetime(2026, 1, 4, tzinfo=UTC),
             user_msg_uuid="user-uuid-refresh",
+            tail_user_messages=_tail(
+                message_id="user-uuid-refresh",
+                text="go",
+                ts=datetime(2026, 1, 4, tzinfo=UTC),
+            ),
             transcript_rel="transcript.jsonl",
             interim_output_sink=None,
             emit_every_assistant_round=False,
             langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
                 TurnRuntimeContext(
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,
                 )
             ),

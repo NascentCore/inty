@@ -7,14 +7,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.llms.client import CompanionLLMConfig, CompanionLLMClient
+from app.core.llms.client import CompanionLLMConfig, LlmClient
 from app.core.companion_harness.companion.manager import (
     CompanionConfig,
     CompanionManager,
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -53,7 +53,7 @@ async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle
             session,
             "hi",
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.APP,
+                channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=bundle,
             ),
         )
@@ -116,6 +116,6 @@ async def test_manager_turns_do_not_serialize_without_dreaming() -> None:
 
 def test_companion_manager_accepts_injected_llm_client() -> None:
     config = CompanionConfig(llm=CompanionLLMConfig(api_key="k"))
-    injected = CompanionLLMClient(config.llm)
+    injected = LlmClient(config.llm)
     manager = CompanionManager(config, llm_client=injected)
     assert manager._llm_client is injected  # noqa: SLF001

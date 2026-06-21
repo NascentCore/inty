@@ -32,6 +32,10 @@ from backend.ops.telegram_demo.lifecycle import (
     start_telegram_demo,
     stop_telegram_demo,
 )
+from backend.ops.telegram_demo.idle_sweeper import (
+    start_idle_sweeper,
+    stop_idle_sweeper,
+)
 from backend.ops.weixin_session.session_store import restore_persisted_sessions
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
@@ -140,6 +144,8 @@ async def startup_event():
         logger.info("Weixin bridge restore scheduled")
         await start_telegram_demo()
         logger.info("Telegram demo poll scheduled")
+        await start_idle_sweeper()
+        logger.info("Telegram idle sweeper scheduled")
         await start_scope_inner_tick_worker()
         logger.info("Scope inner-tick worker scheduled")
     except Exception:
@@ -196,6 +202,7 @@ async def _preload_popular_agent_data(db: AsyncSession):
 async def shutdown_event():
     try:
         await stop_scope_inner_tick_worker()
+        await stop_idle_sweeper()
         await stop_telegram_demo()
         from app.core.companion_harness.companion.websocket_coordinator import (
             ChatWsInflightShutdownRegistry,

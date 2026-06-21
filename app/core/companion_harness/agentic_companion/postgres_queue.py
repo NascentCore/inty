@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.models.agentic_companion_queue import (
     AgenticCompanionInputQueueRow,
@@ -64,7 +64,7 @@ def _input_row_to_record(
         scope=AgentScope(user_id=row.user_id, agent_id=row.agent_id),
         sequence=int(row.sequence_id),
         status=QueueStatus(row.status),
-        channel=CompanionRuntimeChannel(row.channel),
+        channel=ChannelKind(row.channel),
         wire_id=row.wire_id,
         text=row.text,
         received_at_utc=row.created_at,
@@ -99,9 +99,7 @@ def _output_row_to_record(
     raw_ids = json.loads(row.in_reply_to_input_ids_json or "[]")
     message_ids = tuple(str(x) for x in raw_ids)
     delivery_channel = (
-        CompanionRuntimeChannel(row.delivery_channel)
-        if row.delivery_channel
-        else None
+        ChannelKind(row.delivery_channel) if row.delivery_channel else None
     )
     return OutputQueueRecord(
         message_id=row.id,
@@ -150,7 +148,7 @@ class PostgresInputQueueRepository:
                         user_id=existing.user_id,
                         agent_id=existing.agent_id,
                     ),
-                    channel=CompanionRuntimeChannel(existing.channel),
+                    channel=ChannelKind(existing.channel),
                     wire_id=existing.wire_id,
                     text=existing.text,
                     received_at_utc=existing.created_at,
@@ -322,7 +320,7 @@ class PostgresOutputQueueRepository:
         self,
         scope: AgentScope,
         *,
-        delivery_channel: CompanionRuntimeChannel,
+        delivery_channel: ChannelKind,
         delivery_wire_id: str,
         limit: int,
     ) -> tuple[QueueClaim, ...]:

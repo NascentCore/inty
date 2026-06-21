@@ -13,7 +13,7 @@ from app.core.companion_harness.agentic_companion.postgres_queue import (
     PostgresInputQueueRepository,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
@@ -50,8 +50,8 @@ class AppWsChannelAdapter:
         self._outbound_queue = outbound_queue
 
     @property
-    def channel(self) -> CompanionRuntimeChannel:
-        return CompanionRuntimeChannel.APP
+    def channel(self) -> ChannelKind:
+        return ChannelKind.APP_WS
 
     def as_downlink(self) -> ChannelDownlink:
         return _AppWsChannelDownlink(adapter=self)

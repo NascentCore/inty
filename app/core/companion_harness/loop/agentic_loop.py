@@ -33,9 +33,8 @@ from app.core.companion_harness.companion.dual_llm_foreground_chat import (
 from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
     InTurnSyncToolLoopResult,
 )
-from app.core.companion_harness.companion.transcript_user_row import (
-    TranscriptUserRowBuildInput,
-    append_transcript_user_row,
+from app.core.companion_harness.companion.turn_tail_user import (
+    append_tail_user_transcript_rows,
 )
 from app.core.companion_harness.companion.llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
@@ -43,9 +42,9 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
 )
 from app.core.llms.client import (
     AsyncLlmClient,
-    CompanionLLMClient,
     LLM_SCENE_CHAT,
     LLM_SCENE_INNER_TICK,
+    LlmClient,
 )
 from app.core.companion_harness.companion.message_format import (
     openai_assistant_message_dict,
@@ -109,15 +108,11 @@ def _append_user_transcript_row(
     Pairs with ``in_turn_sync_persisted_transcript`` in ``turn.py``: turn end must
     not append the user row again when AgenticLoop owns persistence.
     """
-    append_transcript_user_row(
+    append_tail_user_transcript_rows(
         store,
         context.transcript_rel,
-        TranscriptUserRowBuildInput(
-            content=context.user_text,
-            uuid=context.user_msg_uuid,
-            trace_id=context.trace_id,
-        ),
-        ts=context.ts_user.isoformat(),
+        tail_user_messages=context.tail_user_messages,
+        trace_id=context.trace_id,
     )
 
 
@@ -422,7 +417,7 @@ class AgenticLoop:
         *,
         store: MemoryStore,
         llm_client: AsyncLlmClient,
-        legacy_llm_client: CompanionLLMClient,
+        legacy_llm_client: LlmClient,
     ) -> None:
         """Bind stable agent dependencies used across loop runs."""
         self.store = store

@@ -11,7 +11,7 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     LangsmithChannelSource,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.services.agentic_channel.channel_runtime import (
     ChannelRuntimeState,
@@ -46,9 +46,7 @@ def _session(*, user_id: str, companion_id: str, chat_id: str) -> MagicMock:
 async def test_resolve_uses_scope_registry_for_agent_scope_chat_id() -> None:
     scope = AgentScope(user_id="u1", agent_id="a1")
     registry = get_scope_channel_registry(scope)
-    registry.states[CompanionRuntimeChannel.TELEGRAM] = (
-        ChannelRuntimeState.ACTIVE
-    )
+    registry.states[ChannelKind.TELEGRAM] = ChannelRuntimeState.ACTIVE
     session = _session(
         user_id="u1",
         companion_id="a1",
@@ -57,7 +55,7 @@ async def test_resolve_uses_scope_registry_for_agent_scope_chat_id() -> None:
 
     slice_ = resolve_langsmith_slice_for_session(session)
 
-    assert slice_.runtime_channel == CompanionRuntimeChannel.TELEGRAM
+    assert slice_.runtime_channel == ChannelKind.TELEGRAM
     assert slice_.channel_source == LangsmithChannelSource.SCOPE_REGISTRY
 
 
@@ -71,7 +69,7 @@ async def test_resolve_uses_user_registry_for_ws_chat_id() -> None:
 
     slice_ = resolve_langsmith_slice_for_session(session)
 
-    assert slice_.runtime_channel == CompanionRuntimeChannel.APP
+    assert slice_.runtime_channel == ChannelKind.APP_WS
     assert slice_.channel_source == LangsmithChannelSource.USER_REGISTRY
 
 
@@ -82,7 +80,7 @@ def test_resolve_defaults_to_app_when_no_registry_entry() -> None:
 
     slice_ = resolve_langsmith_slice_for_session(session)
 
-    assert slice_.runtime_channel == CompanionRuntimeChannel.APP
+    assert slice_.runtime_channel == ChannelKind.APP_WS
     assert slice_.channel_source == LangsmithChannelSource.DEFAULT_APP
 
 
@@ -96,7 +94,7 @@ def test_resolve_agent_scope_without_active_channel_defaults_app() -> None:
 
     slice_ = resolve_langsmith_slice_for_session(session)
 
-    assert slice_.runtime_channel == CompanionRuntimeChannel.APP
+    assert slice_.runtime_channel == ChannelKind.APP_WS
     assert slice_.channel_source == LangsmithChannelSource.DEFAULT_APP
 
 

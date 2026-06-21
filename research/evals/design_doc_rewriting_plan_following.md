@@ -9,11 +9,11 @@ Two coupled abilities:
 1. **Design understanding** — Can the model absorb an ambiguous architecture doc, a stakeholder grill, and implicit constraints (tone, granularity, prototype non-goals) and turn them into a coherent target shape?
 2. **Plan following** — Given an explicit rewrite plan, can the model execute it without dropping requirements, over-specifying, or changing voice?
 
-This is **not** a code-generation eval. Only `docs/companion_harness/DESIGN.md` may change.
+This is **not** a code-generation eval. Only `docs/imate/companion_harness/DESIGN.md` may change.
 
 ## Background (conversation arc)
 
-1. **Input**: [`docs/companion_harness/DESIGN.md`](../../docs/companion_harness/DESIGN.md) (pre-rewrite, ~168 lines) — high-level companion harness architecture, mixed vision + prototype reality, several undefined load-bearing terms (relationship, time frames, prompt activation).
+1. **Input**: [`docs/imate/companion_harness/DESIGN.md`](../../docs/imate/companion_harness/DESIGN.md) (pre-rewrite, ~168 lines) — high-level companion harness architecture, mixed vision + prototype reality, several undefined load-bearing terms (relationship, time frames, prompt activation).
 2. **Grill-me** ([`.agents/skills/grill-me/SKILL.md`](../../.agents/skills/grill-me/SKILL.md)): One question at a time until shared understanding. Key decisions:
    - **Audience**: coding agents + engineers + product; doc describes **ideal** LLM+harness agentic companion design.
    - **Ideal vs built**: No per-component `[BUILT]` tags; **top directive** — read `app/core/companion_harness/` before judging reality vs design.
@@ -23,7 +23,7 @@ This is **not** a code-generation eval. Only `docs/companion_harness/DESIGN.md` 
    - **Prompt activation**: Read-side inverse of consolidation; closed loop stated briefly.
    - **Mind Model**: Implementation paradigm — materialize psychology mechanisms via LLMs; manifest personhood through text → other GenAI modalities → humanoid robot.
    - **Channels**: One continuous bond; channels are interchangeable manifestation surfaces; link `FR_CROSS_CHANNEL_USER_IDENTITY.md`.
-   - **Hub doc**: One-line definitions + links to all sibling docs in `docs/companion_harness/`.
+   - **Hub doc**: One-line definitions + links to all sibling docs in `docs/imate/companion_harness/`.
    - **成效判断**: Brief qualitative success signals; link `evaluation/`.
    - **Tone & granularity**: **Identical to existing doc** — concise Mandarin prose, English concept names, nested bullets, no tables, DESIGN-tier (~200 lines), link out for depth; prototype to discover complexity, not pre-specify in the doc.
 
@@ -40,18 +40,18 @@ This is **not** a code-generation eval. Only `docs/companion_harness/DESIGN.md` 
 
 ### Materials to give the candidate model
 
-- Pre-rewrite DESIGN.md: `docs/companion_harness/DESIGN.md` at commit **before** any rewrite branch (or git tag `design-doc-pre-rewrite` if tagged)
+- Pre-rewrite DESIGN.md: `docs/imate/companion_harness/DESIGN.md` at commit **before** any rewrite branch (or git tag `design-doc-pre-rewrite` if tagged)
 - Rewrite plan: [`research/evals/design_doc_rewriting_plan.md`](./design_doc_rewriting_plan.md)
-- Optional context: [`app/core/companion_harness/AGENTS.md`](../../app/core/companion_harness/AGENTS.md), sibling docs under `docs/companion_harness/`
+- Optional context: [`app/core/companion_harness/AGENTS.md`](../../app/core/companion_harness/AGENTS.md), sibling docs under `docs/imate/companion_harness/`
 
 Do **not** give the candidate the grill-me transcript or the three execution branches unless testing recovery from partial specs.
 
 ### Prompt template
 
 ```text
-Read and understand docs/companion_harness/DESIGN.md.
+Read and understand docs/imate/companion_harness/DESIGN.md.
 
-Follow research/evals/design_doc_rewriting_plan.md exactly to rewrite docs/companion_harness/DESIGN.md.
+Follow research/evals/design_doc_rewriting_plan.md exactly to rewrite docs/imate/companion_harness/DESIGN.md.
 
 Constraints:
 - Rewrite only DESIGN.md.
@@ -61,7 +61,7 @@ Constraints:
 
 ### What the candidate must produce
 
-- A single updated `docs/companion_harness/DESIGN.md` (diff against pre-rewrite baseline).
+- A single updated `docs/imate/companion_harness/DESIGN.md` (diff against pre-rewrite baseline).
 
 ## Scoring rubric (100 points)
 
@@ -118,27 +118,27 @@ Use these three branches only for **calibrator** runs, not as the sole gold stan
 To diff a reference branch:
 
 ```bash
-git show design_doc_rewriting_exec_opus48:docs/companion_harness/DESIGN.md
+git show design_doc_rewriting_exec_opus48:docs/imate/companion_harness/DESIGN.md
 ```
 
 ## Automated checks (optional)
 
 ```bash
 # Line count
-wc -l docs/companion_harness/DESIGN.md
+wc -l docs/imate/companion_harness/DESIGN.md
 
 # No tables (pipe-heavy lines — heuristic)
-rg '^\|.+\|' docs/companion_harness/DESIGN.md && echo FAIL || echo OK
+rg '^\|.+\|' docs/imate/companion_harness/DESIGN.md && echo FAIL || echo OK
 
 # Sibling doc map present
 for f in GLOSSARY MEMORY_STORE MEMORY_PROJECTION AUTONOMY LIVING_SPHERE FR_WORLD_ENGINE FR_CROSS_CHANNEL_USER_IDENTITY SPECULATIVE_IDEAS; do
-  rg -q "$f" docs/companion_harness/DESIGN.md || echo "missing link: $f"
+  rg -q "$f" docs/imate/companion_harness/DESIGN.md || echo "missing link: $f"
 done
 
 # CRS ordering: 重要下一步工作 should appear after 记忆模型
 python3 -c "
 from pathlib import Path
-t = Path('docs/companion_harness/DESIGN.md').read_text()
+t = Path('docs/imate/companion_harness/DESIGN.md').read_text()
 assert t.index('记忆模型') < t.index('重要下一步工作'), 'CRS should follow memory section'
 print('section order OK')
 "
@@ -158,5 +158,5 @@ print('section order OK')
 ## Related files
 
 - Plan: [`design_doc_rewriting_plan.md`](./design_doc_rewriting_plan.md)
-- Target doc: [`docs/companion_harness/DESIGN.md`](../../docs/companion_harness/DESIGN.md)
+- Target doc: [`docs/imate/companion_harness/DESIGN.md`](../../docs/imate/companion_harness/DESIGN.md)
 - Write-design-doc skill: [`.cursor/skills/write-design-doc/SKILL.md`](../../.cursor/skills/write-design-doc/SKILL.md)

@@ -1,0 +1,20 @@
+name: prefix_baseline
+description: Leading system prefix controls the answer before transcript rows.
+layout_zone: prefix
+steps:
+  - push:
+      role: system
+      content: "Prefix baseline instruction: whenever the user asks for the active stack codeword, answer exactly PREFIX-BASE."
+  - push:
+      role: user
+      content: "Hello, we are starting a normal conversation."
+  - push:
+      role: assistant
+      content: "Hello. I am ready for the stack probe."
+probes:
+  - id: repeat_prefix_codeword
+    question: "What is the active stack codeword? Answer with only the codeword."
+    expect_contains: ["PREFIX-BASE"]
+  - id: prefix_stability
+    question: "Repeat the current active codeword exactly."
+    expect_contains: ["PREFIX-BASE"]

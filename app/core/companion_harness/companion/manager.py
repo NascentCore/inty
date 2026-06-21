@@ -30,7 +30,7 @@ from app.techno_core.seeding import ensure_techno_core_seeded
 from .langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
-from app.core.llms.client import CompanionLLMClient, CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig, LlmClient
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig,
 )
@@ -40,7 +40,7 @@ from app.core.companion_harness.memory.memory_registry import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult
-from .runtime_channel import CompanionRuntimeChannel, TurnRuntimeContext
+from .runtime_channel import ChannelKind, TurnRuntimeContext
 from .scope import CompanionScope
 from .scope_turn_lock import (
     ScopeTurnLock,
@@ -108,7 +108,7 @@ class CompanionSession:
         *,
         scope: CompanionScope,
         store: MemoryStore,
-        llm_client: CompanionLLMClient,
+        llm_client: LlmClient,
         config: CompanionConfig,
     ) -> None:
         self.scope = scope
@@ -145,15 +145,13 @@ class CompanionManager:
     def __init__(
         self,
         config: CompanionConfig,
-        llm_client: CompanionLLMClient | None = None,
+        llm_client: LlmClient | None = None,
     ) -> None:
         self._config = config
         self._sessions: dict[str, CompanionSession] = {}
         self._lock = threading.Lock()
         self._llm_client = (
-            llm_client
-            if llm_client is not None
-            else CompanionLLMClient(config.llm)
+            llm_client if llm_client is not None else LlmClient(config.llm)
         )
 
     @staticmethod
@@ -269,6 +267,7 @@ class CompanionManager:
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
         agentic_output_queue=None,
         user_message_batch=None,
+        input_batch=None,
     ) -> CompanionTurnDeps:
         return CompanionTurnDeps(
             store=session.store,
@@ -287,6 +286,7 @@ class CompanionManager:
             bootstrap_interim_output_sink=bootstrap_interim_output_sink,
             agentic_output_queue=agentic_output_queue,
             user_message_batch=user_message_batch,
+            input_batch=input_batch,
         )
 
     # TODO(companion-multimodal-user-turn): Phase 1c — accept ``CompanionUserTurnInput`` — #3293
@@ -300,12 +300,13 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
         agentic_output_queue=None,
         user_message_batch=None,
+        input_batch=None,
     ) -> CompanionTurnResult:
         return await run_companion_user_chat_turn(
             user_text,
@@ -317,6 +318,7 @@ class CompanionManager:
                 bootstrap_interim_output_sink=bootstrap_interim_output_sink,
                 agentic_output_queue=agentic_output_queue,
                 user_message_batch=user_message_batch,
+                input_batch=input_batch,
             ),
         )
 
@@ -328,7 +330,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
@@ -350,7 +352,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
@@ -372,7 +374,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
@@ -394,7 +396,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
@@ -415,7 +417,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:

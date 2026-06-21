@@ -2,7 +2,7 @@
 
 Review the pending changes.
 
-Review architecture of the pending changes' fitness to the [companion harness design](/docs/companion_harness/DESIGN.md)
+Review architecture of the pending changes' fitness to the [companion harness design](/docs/imate/companion_harness/DESIGN.md)
 
 ## Instructions
 
@@ -46,7 +46,7 @@ that means the code lacks hierarchy.
 
 ## References
 
-- Consider [style rules](/.agents/guidelines/PY_STYLE_RULES.md)
+- Consider [style rules](/.agents/guidelines/PYTHON_STYLES.md)
 
 ## Checklist
 

@@ -18,7 +18,7 @@ from app.core.companion_harness.companion.dreaming_observability import (
 )
 from app.core.companion_harness.companion.manager import CompanionSession
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -81,7 +81,7 @@ async def _scope_kernel_context(
         model_override=resolved_model,
         throttle=_scope_throttle_snapshot(scope),
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=implicit_signal_bundle,
         ),
         preset_uid=preset_uid,

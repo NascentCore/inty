@@ -5,11 +5,11 @@ from __future__ import annotations
 import uuid
 
 import pytest
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -63,18 +63,18 @@ async def test_bind_and_resolve_by_address() -> None:
     try:
         record = await bind_endpoint(
             scope,
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=address,
             channel_user_id=user_id,
         )
         assert record.channel_address == address
         resolved = await resolve_scope(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=address,
         )
         assert resolved == scope
         by_user = await resolve_scope_by_channel_user_id(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_user_id=user_id,
         )
         assert by_user == scope
@@ -90,14 +90,14 @@ async def test_channel_user_id_conflict_rejects_second_user() -> None:
     try:
         await bind_endpoint(
             scope_a,
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=f"addr-a-{uuid.uuid4().hex}",
             channel_user_id=shared_user_id,
         )
         with pytest.raises(ChannelEndpointConflictError):
             await bind_endpoint(
                 scope_b,
-                channel=CompanionRuntimeChannel.TELEGRAM,
+                channel=ChannelKind.TELEGRAM,
                 channel_address=f"addr-b-{uuid.uuid4().hex}",
                 channel_user_id=shared_user_id,
             )
@@ -113,23 +113,23 @@ async def test_inbound_channel_user_id_mismatch() -> None:
     try:
         await bind_endpoint(
             scope,
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=address,
             channel_user_id="111",
         )
         assert await inbound_channel_user_id_matches(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=address,
             channel_user_id="111",
         )
         assert not await inbound_channel_user_id_matches(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=address,
             channel_user_id="222",
         )
         with pytest.raises(ChannelEndpointConflictError):
             await assert_inbound_endpoint_identity(
-                channel=CompanionRuntimeChannel.TELEGRAM,
+                channel=ChannelKind.TELEGRAM,
                 channel_address=address,
                 channel_user_id="222",
             )

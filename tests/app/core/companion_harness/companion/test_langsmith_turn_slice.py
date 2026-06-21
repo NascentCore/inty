@@ -7,7 +7,7 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     LangsmithChannelSource,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
@@ -22,27 +22,27 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
 def test_from_runtime_context_uses_explicit_turn_source() -> None:
     slice_ = CompanionTurnLangsmithSlice.from_runtime_context(
         TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             implicit_signal_bundle=None,
         )
     )
-    assert slice_.runtime_channel == CompanionRuntimeChannel.TELEGRAM
+    assert slice_.runtime_channel == ChannelKind.TELEGRAM
     assert slice_.channel_source == LangsmithChannelSource.EXPLICIT_TURN
 
 
 def test_app_default_tags_app_with_default_source() -> None:
     slice_ = CompanionTurnLangsmithSlice.app_default()
-    assert slice_.runtime_channel == CompanionRuntimeChannel.APP
+    assert slice_.runtime_channel == ChannelKind.APP_WS
     assert slice_.channel_source == LangsmithChannelSource.DEFAULT_APP
-    assert slice_.parent_tags() == ["runtime_channel_app"]
+    assert slice_.parent_tags() == ["runtime_channel_app_ws"]
     meta = slice_.parent_metadata_fragment()
-    assert meta[INTY_RUNTIME_CHANNEL_METADATA_KEY] == "app"
+    assert meta[INTY_RUNTIME_CHANNEL_METADATA_KEY] == "app_ws"
     assert meta[INTY_RUNTIME_CHANNEL_SOURCE_METADATA_KEY] == "default_app"
 
 
 def test_foreground_invocation_extra_merges_channel_and_source() -> None:
     slice_ = CompanionTurnLangsmithSlice.from_channel(
-        CompanionRuntimeChannel.WECHAT_WEIXIN,
+        ChannelKind.WECHAT_WEIXIN,
         LangsmithChannelSource.SCOPE_REGISTRY,
     )
     extra = slice_.foreground_invocation_extra(
@@ -65,12 +65,12 @@ def test_tool_call_extra_includes_channel_metadata() -> None:
         extra_metadata=None,
     )
     assert extra["name"] == SOURCE_TOOL_BACKGROUND_INITIAL
-    assert extra["metadata"][INTY_RUNTIME_CHANNEL_METADATA_KEY] == "app"
+    assert extra["metadata"][INTY_RUNTIME_CHANNEL_METADATA_KEY] == "app_ws"
 
 
 def test_dreaming_consolidation_extra_preserves_role_name() -> None:
     slice_ = CompanionTurnLangsmithSlice.from_channel(
-        CompanionRuntimeChannel.TELEGRAM,
+        ChannelKind.TELEGRAM,
         LangsmithChannelSource.SCOPE_REGISTRY,
     )
     extra = slice_.dreaming_consolidation_extra(model_role="memory")

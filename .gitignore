@@ -138,6 +138,7 @@ tmp/
 .cursor/hooks/state
 
 output/
+experimental/llm_messages_stack_exploration/runs/
 
 # Android App Bundle二进制包文件
 *.aab

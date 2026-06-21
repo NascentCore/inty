@@ -63,6 +63,8 @@ agent:
   companion_harness:
     # WS companion bootstrap: NONE | USER_INTERACTIVE
     memory_bootstrap_type: USER_INTERACTIVE
+    # Local Telegram idle-pause smoke only (production default 960 min).
+    agent_scope_idle_timeout_minutes: 5
     # Fast proactive rhythm for local REPL / regression (defaults: idle 30s, poll 60s).
     inner_tick:
       proactive_chat:

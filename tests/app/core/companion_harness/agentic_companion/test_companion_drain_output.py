@@ -27,7 +27,7 @@ from app.core.companion_harness.agentic_companion.types import (
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -78,7 +78,7 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.TELEGRAM,
+                    channel=ChannelKind.TELEGRAM,
                     wire_id="wire-tool-bg",
                     text="trigger tools",
                     received_at_utc=datetime.now(UTC),
@@ -102,7 +102,7 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
                 )
                 result = await companion.drain_once(
                     resolved_chat_model=object(),
-                    runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+                    runtime_channel=ChannelKind.TELEGRAM,
                     background_output_sink=None,
                     implicit_signal_bundle=ImplicitSignalBundle(
                         client_time=None,

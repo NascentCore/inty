@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.services.agentic_companion.downlink import DownlinkKind
@@ -206,7 +206,7 @@ class OutputQueue:
     async def _claim_pending_from_repository(
         self,
         *,
-        delivery_channel: CompanionRuntimeChannel,
+        delivery_channel: ChannelKind,
         delivery_wire_id: str,
     ) -> tuple[ReadyOutputMessage, ...]:
         async with AsyncSessionLocal() as db:
@@ -225,7 +225,7 @@ class OutputQueue:
     async def pull_ready_batch(
         self,
         *,
-        delivery_channel: CompanionRuntimeChannel | None = None,
+        delivery_channel: ChannelKind | None = None,
         delivery_wire_id: str | None = None,
     ) -> tuple[ReadyOutputMessage, ...]:
         """Return ready messages in order and hold them in-flight until ack/failed."""

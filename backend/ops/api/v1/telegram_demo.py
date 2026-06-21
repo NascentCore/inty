@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.schemas.response import APIResponse
 from app.services.agentic_channel.endpoints import list_endpoints_for_channel
@@ -39,9 +39,7 @@ async def telegram_demo_bindings() -> APIResponse[TelegramBindingsData]:
     TODO(telegram-launch-reciprocity-metrics): Add bootstrap / proactive / reciprocity flags
     per binding for launch north-star — #3535 (epic #3531).
     """
-    rows = await list_endpoints_for_channel(
-        channel=CompanionRuntimeChannel.TELEGRAM
-    )
+    rows = await list_endpoints_for_channel(channel=ChannelKind.TELEGRAM)
     return APIResponse.success(
         data=TelegramBindingsData(
             count=len(rows),

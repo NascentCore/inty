@@ -48,6 +48,16 @@ class CompanionBond(Base):
         nullable=True,
         comment="When this bond stopped being active",
     )
+    runtime_paused_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When this active bond's runtime was paused for cost control",
+    )
+    last_resumed_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When this active bond's runtime was last resumed",
+    )
     created_at = Column(
         DateTime(timezone=True),
         server_default=sa.text("now()"),

@@ -12,6 +12,13 @@ class UserTurnLlmLoopMode(StrEnum):
     DUAL_LLM = "dual_llm"
 
 
+class BatchUserMessagesLlmCallMode(StrEnum):
+    """How one claimed InputQueue batch is represented in a user-turn LLM call."""
+
+    JOIN_TO_ONE_USER_MESSAGE = "JOIN_TO_ONE_USER_MESSAGE"
+    MULTI_USER_MESSAGES = "MULTI_USER_MESSAGES"
+
+
 def resolved_user_turn_llm_loop_mode() -> UserTurnLlmLoopMode:
     """Read agent.companion_harness.user_turn.llm_loop_mode from global config."""
     from app.core.config import global_config_loaded_from_config_yaml
@@ -20,3 +27,15 @@ def resolved_user_turn_llm_loop_mode() -> UserTurnLlmLoopMode:
         global_config_loaded_from_config_yaml.agent.companion_harness.user_turn.llm_loop_mode
     )
     return UserTurnLlmLoopMode(raw)
+
+
+def resolved_user_turn_batch_messages_llm_call_mode() -> (
+    BatchUserMessagesLlmCallMode
+):
+    """Read agent.companion_harness.user_turn.batch_user_messages_llm_call_mode."""
+    from app.core.config import global_config_loaded_from_config_yaml
+
+    raw = (
+        global_config_loaded_from_config_yaml.agent.companion_harness.user_turn.batch_user_messages_llm_call_mode
+    )
+    return BatchUserMessagesLlmCallMode(raw)

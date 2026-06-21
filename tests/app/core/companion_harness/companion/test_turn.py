@@ -26,7 +26,7 @@ from app.core.companion_harness.companion.turn import (
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
@@ -94,7 +94,7 @@ def test_run_turn_inner_tick_scheduled_semantics(
                 repository_only_store_text=False,
                 memory_bootstrap_type="NONE",
                 runtime_context=TurnRuntimeContext(
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,
                 ),
                 background_output_sink=None,
@@ -167,7 +167,7 @@ async def test_bootstrap_turn_appends_user_row_when_loop_did_not_persist(
             repository_only_store_text=False,
             memory_bootstrap_type="USER_INTERACTIVE",
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.APP,
+                channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
             background_output_sink=None,
@@ -243,7 +243,7 @@ async def test_bootstrap_turn_skips_duplicate_user_row_when_loop_persisted(
             repository_only_store_text=False,
             memory_bootstrap_type="USER_INTERACTIVE",
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.APP,
+                channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
             background_output_sink=None,

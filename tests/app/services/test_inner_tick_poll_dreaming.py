@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.services.agentic_companion import inner_tick_poll
@@ -19,7 +19,7 @@ def _poll_delivery() -> InnerTickDelivery:
         ws_outbound_queue=asyncio.Queue(),
         weixin_assistant_text=None,
         telegram_assistant_text=None,
-        runtime_channel=CompanionRuntimeChannel.APP,
+        runtime_channel=ChannelKind.APP_WS,
     )
 
 

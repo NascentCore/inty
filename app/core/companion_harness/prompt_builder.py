@@ -15,7 +15,6 @@ https://github.com/NascentCore/inty/issues/3453
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
@@ -45,12 +44,15 @@ from app.core.companion_harness.prompting.tracks import (
     _persona_settled_user_turn_system_messages,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.turn_pipeline import (
-    _companion_tail_user_body_for_llm,
     _companion_user_time_context_system_for_llm,
+)
+from app.core.companion_harness.companion.turn_tail_user import (
+    TurnTailUserMessage,
+    tail_user_message_contents_for_llm,
 )
 from app.core.companion_harness.companion.transcript_ai_private import (
     AiPrivateThought,
@@ -152,7 +154,7 @@ def _append_runtime_channel_system_extras(
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    if runtime_context.channel == CompanionRuntimeChannel.WECHAT_WEIXIN:
+    if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
         out.append(weixin_clawbot_contact_alias_system_message())
     return out
 
@@ -210,8 +212,7 @@ class PromptBuilder:
         *,
         system_dicts: list[dict[str, Any]],
         transcript_window: list[ChatMessage],
-        user_text: str,
-        tail_user_ts: datetime,
+        tail_user_messages: tuple[TurnTailUserMessage, ...],
         tools: tuple[dict[str, Any], ...],
         implicit_sign_on_turn: bool,
         tail_splice_thoughts: tuple[AiPrivateThought, ...],
@@ -249,14 +250,13 @@ class PromptBuilder:
                     content=time_ctx_system,
                 )
             )
-        tail_user = _companion_tail_user_body_for_llm(
-            user_text=user_text,
+        for tail_user in tail_user_message_contents_for_llm(
+            tail_user_messages=tail_user_messages,
             implicit_sign_on_turn=implicit_sign_on_turn,
-            tail_user_ts=tail_user_ts,
-        )
-        messages.append(
-            PromptMessage(role=PromptMessageRole.USER, content=tail_user)
-        )
+        ):
+            messages.append(
+                PromptMessage(role=PromptMessageRole.USER, content=tail_user)
+            )
         return PromptPlan(
             messages=tuple(messages),
             tools=tools,
@@ -267,19 +267,17 @@ class PromptBuilder:
         self,
         *,
         transcript_window: list[ChatMessage],
-        user_text: str,
-        tail_user_ts: datetime,
+        tail_user_messages: tuple[TurnTailUserMessage, ...],
         tools: tuple[dict[str, Any], ...],
         implicit_sign_on_turn: bool,
         tail_splice_thoughts: tuple[AiPrivateThought, ...],
     ) -> PromptPlan:
         """Assemble initial settled single-LLM user-chat prompt with in-turn tools."""
-        assert user_text.strip() != ""
+        assert tail_user_messages
         return self._build_single_llm_user_chat_prompt(
             system_dicts=self.settled_single_llm_system_messages(),
             transcript_window=transcript_window,
-            user_text=user_text,
-            tail_user_ts=tail_user_ts,
+            tail_user_messages=tail_user_messages,
             tools=tools,
             implicit_sign_on_turn=implicit_sign_on_turn,
             tail_splice_thoughts=tail_splice_thoughts,
@@ -289,19 +287,17 @@ class PromptBuilder:
         self,
         *,
         transcript_window: list[ChatMessage],
-        user_text: str,
-        tail_user_ts: datetime,
+        tail_user_messages: tuple[TurnTailUserMessage, ...],
         tools: tuple[dict[str, Any], ...],
         implicit_sign_on_turn: bool,
         tail_splice_thoughts: tuple[AiPrivateThought, ...],
     ) -> PromptPlan:
         """Assemble initial bootstrap single-LLM user-chat prompt with in-turn tools."""
-        assert user_text.strip() != ""
+        assert tail_user_messages
         return self._build_single_llm_user_chat_prompt(
             system_dicts=self.bootstrap_single_llm_system_messages(),
             transcript_window=transcript_window,
-            user_text=user_text,
-            tail_user_ts=tail_user_ts,
+            tail_user_messages=tail_user_messages,
             tools=tools,
             implicit_sign_on_turn=implicit_sign_on_turn,
             tail_splice_thoughts=tail_splice_thoughts,

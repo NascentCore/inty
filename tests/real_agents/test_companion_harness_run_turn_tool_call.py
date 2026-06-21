@@ -5,8 +5,8 @@ Enable: INTY_COMPANION_HARNESS_REAL_LLM_TEST=1 and OPENROUTER_API_KEY.
 Uses OpenRouter model nvidia/nemotron-3-super-120b-a12b:free.
 Marked noci (skipped in default CI).
 
-TODO(real-llm-tests): _InstrumentedCompanionLLMClient.chat_completion must accept and
-  forward langsmith_extra (and high_reasoning) like CompanionLLMClient — turn.py passes
+TODO(real-llm-tests): _InstrumentedLlmClient.chat_completion must accept and
+  forward langsmith_extra (and high_reasoning) like LlmClient — turn.py passes
   langsmith_extra on foreground chat; missing kwarg breaks this test at runtime.
 """
 
@@ -17,7 +17,7 @@ from typing import Any
 
 import pytest
 
-from app.core.llms.client import CompanionLLMClient, CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig, LlmClient
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import (
@@ -25,7 +25,7 @@ from app.core.companion_harness.companion.turn import (
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.utils.config import CompanionMemoryBootstrapType
@@ -45,7 +45,7 @@ def _require_real_companion_harness_llm_test() -> None:
         )
 
 
-class _InstrumentedCompanionLLMClient(CompanionLLMClient):
+class _InstrumentedLlmClient(LlmClient):
     def __init__(self, config: CompanionLLMConfig) -> None:
         super().__init__(config)
         self.chat_rounds = 0
@@ -105,7 +105,7 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(
         chat_model=resolve_chat_text_model(_OPENROUTER_MODEL),
         tool_model=resolve_chat_text_model(_OPENROUTER_MODEL),
     )
-    client = _InstrumentedCompanionLLMClient(cfg)
+    client = _InstrumentedLlmClient(cfg)
     user_prompt = (
         'You MUST call the memory_store_list_paths tool first with relative_path "" (empty string) '
         "to list the MemoryStore scope root. Do not guess. After you receive the tool output, reply in one "
@@ -121,7 +121,7 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(
             repository_only_store_text=False,
             memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.APP,
+                channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
             background_output_sink=None,

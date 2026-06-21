@@ -1,0 +1,23 @@
+name: mid_transcript_system
+description: A system slice appears after assistant dialogue and before the probe user turn.
+layout_zone: mid_transcript
+steps:
+  - push:
+      role: system
+      content: "Prefix instruction: if asked for a codeword, answer exactly PREFIX-OLD."
+  - push:
+      role: user
+      content: "Earlier user turn: remember the first instruction."
+  - push:
+      role: assistant
+      content: "Earlier assistant turn: I remember the first instruction."
+  - push:
+      role: system
+      content: "Mid-transcript system instruction: the active stack codeword is MID-SYSTEM. Answer exactly MID-SYSTEM when asked."
+probes:
+  - id: repeat_mid_codeword
+    question: "What is the active stack codeword? Answer with only the codeword."
+    expect_contains: ["MID-SYSTEM"]
+  - id: mid_over_prefix
+    question: "Use the system instruction closest to this question and repeat the active codeword."
+    expect_contains: ["MID-SYSTEM"]

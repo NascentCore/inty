@@ -51,7 +51,7 @@
 
 | 术语 | 定义 |
 |------|------|
-| **Inner-tick** | 用户空闲时的**合成轮次**（主动搭话、定时提醒、维护整理等）。实现见 `inner_tick_schedule.py` / `agentic_companion/session.py`；架构见 [DESIGN.md](/docs/companion_harness/DESIGN.md)。 |
+| **Inner-tick** | 用户空闲时的**合成轮次**（主动搭话、定时提醒、维护整理等）。实现见 `inner_tick_schedule.py` / `agentic_companion/session.py`；架构见 [DESIGN.md](/docs/imate/companion_harness/DESIGN.md)。 |
 | **Proactive chat rhythm** | 两次 proactive 尝试之间，自**最后 assistant 时间戳**起至少等待的 quiet 时长；由真实用户消息间隔自适应，默认约 30–60s。不是 worker poll 周期本身。 |
 | **monolog** | **非独立运行时循环**；工作记忆中「AI 自说自话」类材料，供内在节拍等注入提示时使用。代码中称为 ai_private |
 | **World Engine（世界引擎）** | **计划中**：harness 作为 actor supervisor，以共享 AgentHarness 驱动 per-agent clock 的 companion 与 sub-agent；agent 间经 mailbox 交往。见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)。 |

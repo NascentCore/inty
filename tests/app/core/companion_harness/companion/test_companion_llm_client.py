@@ -10,8 +10,8 @@ import pytest
 from app.core.llms import client as llm_client_module
 from app.core.llms.client import (
     AsyncLlmClient,
-    CompanionLLMClient,
     CompanionLLMConfig,
+    LlmClient,
 )
 from app.core.companion_harness.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
@@ -22,7 +22,7 @@ from app.core.companion_harness.providers.openai_compatible_clients import (
 async def test_async_llm_client_is_distinct_class_with_chat_completion() -> (
     None
 ):
-    assert AsyncLlmClient is not CompanionLLMClient
+    assert AsyncLlmClient is not LlmClient
     captured: dict[str, Any] = {}
 
     class _FakeCompletions:
@@ -91,8 +91,8 @@ async def test_async_llm_client_passes_langsmith_extra() -> None:
     assert captured["langsmith_extra"] == langsmith_extra
 
 
-def test_companion_llm_client_reuses_async_llm_client() -> None:
-    companion = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
+def test_llm_client_reuses_async_llm_client() -> None:
+    companion = LlmClient(CompanionLLMConfig(api_key="test-key"))
     first = companion.async_llm_client
     second = companion.async_llm_client
     assert first is second
@@ -152,7 +152,7 @@ def test_async_llm_client_uses_langsmith_wrapper_options(
     assert options.completions_name == "companion_AsyncOpenAI"
 
 
-def test_companion_llm_clients_use_distinct_langsmith_chat_names(
+def test_llm_clients_use_distinct_langsmith_chat_names(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured_options: list[OpenAICompatibleClientOptions] = []
@@ -167,7 +167,7 @@ def test_companion_llm_clients_use_distinct_langsmith_chat_names(
         _fake_get_client,
     )
 
-    client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
+    client = LlmClient(CompanionLLMConfig(api_key="test-key"))
     client.sync_client_for_route("chat")
     client.sync_client_for_route("tool")
     client.sync_client_for_route("inner_tick")
@@ -219,7 +219,7 @@ def test_complete_text_passes_dreaming_consolidation_langsmith_extra(
         lambda *_a, **_k: object(),
     )
 
-    client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
+    client = LlmClient(CompanionLLMConfig(api_key="test-key"))
     out = client.complete_text(
         [{"role": "user", "content": "hello"}],
         model_role="day_summary",
@@ -243,7 +243,7 @@ def _ok_completion() -> Any:
 async def test_chat_completion_with_retrial_succeeds_after_transient_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
+    client = LlmClient(CompanionLLMConfig(api_key="test-key"))
     calls = 0
 
     def _flaky(**_kwargs: Any) -> Any:
@@ -277,7 +277,7 @@ async def test_chat_completion_with_retrial_succeeds_after_transient_error(
 async def test_chat_completion_with_retrial_times_out_per_attempt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
+    client = LlmClient(CompanionLLMConfig(api_key="test-key"))
     calls = 0
 
     def _slow(**_kwargs: Any) -> Any:

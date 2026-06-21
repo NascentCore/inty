@@ -35,7 +35,7 @@ from app.core.companion_harness.companion.models import (
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.runtime.inner_tick_fire import (
@@ -389,7 +389,7 @@ async def try_fire_autonomy_inner_tick(
     ws_conn_id = fire_input.ws_conn_id
     ws_implicit = implicit_signal_bundle_from_tc_box(fire_input.tc_box)
     autonomy_runtime = TurnRuntimeContext(
-        channel=CompanionRuntimeChannel.APP,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=ws_implicit,
     )
     kernel_input = InnerTickKernelInput(

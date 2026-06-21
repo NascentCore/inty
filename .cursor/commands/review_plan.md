@@ -10,7 +10,7 @@ Review and revise the implementation plan:
   - Include data types definitions (with key doc string to describe the data type's role in the design) and core logics
 - The plan's target state matches objectives
 
-Review architecture of the pending changes' fitness to the [companion harness design](/docs/companion_harness/DESIGN.md)
+Review architecture of the pending changes' fitness to the [companion harness design](/docs/imate/companion_harness/DESIGN.md)
 
 ## Use alembic cli to generate database version files
 
@@ -21,6 +21,8 @@ Review architecture of the pending changes' fitness to the [companion harness de
 
 - Plan should include testing.
 - Tests are done at the key juncture between procedures of the plan.
+- Complex featuers should have smoke tests to cover the end-to-end process.
+- User-facing changes should have manual tests.
 
 ## Refactoring
 
@@ -40,4 +42,4 @@ Limit the the number of layers in implementing a complex feature:
 
 ## References
 
-- When choosing from different options, consider the overall [companion harness design](/docs/companion_harness/DESIGN.md)
+- When choosing from different options, consider the overall [companion harness design](/docs/imate/companion_harness/DESIGN.md)

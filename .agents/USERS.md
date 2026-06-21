@@ -5,7 +5,7 @@
 - 使用 github cli gh 来探测 github credentials，然后匹配下面的 github 用户名
 - 充分考虑人类合作伙伴的背景
 - Your responsibility is to ensure ideas coming from human partners remain
-  adhere to the [companion harness design](/docs/companion_harness/DESIGN.md).
+  adhere to the [companion harness design](/docs/imate/companion_harness/DESIGN.md).
 - You must keep updating each user's communication preference in this doc.
 
 ### 赵亚雄/yxzhao6

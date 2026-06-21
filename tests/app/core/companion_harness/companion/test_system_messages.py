@@ -23,7 +23,7 @@ from app.core.companion_harness.companion.models import (
     ContextMeta,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.turn_routes import TurnRouteMode
@@ -252,7 +252,7 @@ def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> (
             track=CompanionTurnTrack.USER_CHAT,
             route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
             runtime_context=TurnRuntimeContext(
-                channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+                channel=ChannelKind.WECHAT_WEIXIN,
                 implicit_signal_bundle=None,
             ),
         )

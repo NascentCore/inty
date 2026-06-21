@@ -16,7 +16,7 @@ from app.core.companion_harness.companion.proactive_chat import (
     next_proactive_chat_wait_seconds,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -101,7 +101,7 @@ def _bootstrap_deps(
         repository_only_store_text=False,
         memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
         runtime_context=TurnRuntimeContext(
-            channel=CompanionRuntimeChannel.APP,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
         background_output_sink=None,

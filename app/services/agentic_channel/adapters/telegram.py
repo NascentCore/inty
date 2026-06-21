@@ -13,7 +13,7 @@ import asyncio
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
@@ -54,8 +54,8 @@ class TelegramChannelAdapter:
         self._channel_address = channel_address
 
     @property
-    def channel(self) -> CompanionRuntimeChannel:
-        return CompanionRuntimeChannel.TELEGRAM
+    def channel(self) -> ChannelKind:
+        return ChannelKind.TELEGRAM
 
     def as_downlink(self) -> ChannelDownlink:
         return _TelegramChannelDownlink(

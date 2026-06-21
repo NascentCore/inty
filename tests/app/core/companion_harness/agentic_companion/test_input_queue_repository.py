@@ -23,7 +23,7 @@ from app.core.companion_harness.agentic_companion.types import (
     QueueStatus,
 )
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -73,7 +73,7 @@ async def test_input_queue_append_and_claim_batch_order() -> None:
             await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.TELEGRAM,
+                    channel=ChannelKind.TELEGRAM,
                     wire_id="wire-a",
                     text="first",
                     received_at_utc=now,
@@ -82,7 +82,7 @@ async def test_input_queue_append_and_claim_batch_order() -> None:
             await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.TELEGRAM,
+                    channel=ChannelKind.TELEGRAM,
                     wire_id="wire-a",
                     text="second",
                     received_at_utc=now,
@@ -113,7 +113,7 @@ async def test_append_user_message_idempotent_for_client_message_id() -> None:
             first = await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     wire_id="app:wire-1",
                     text="hello",
                     received_at_utc=now,
@@ -125,7 +125,7 @@ async def test_append_user_message_idempotent_for_client_message_id() -> None:
             second = await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     wire_id="app:wire-1",
                     text="hello resend",
                     received_at_utc=now,
@@ -178,7 +178,7 @@ async def test_get_records_by_ids_returns_app_ws_metadata() -> None:
             await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.APP,
+                    channel=ChannelKind.APP_WS,
                     wire_id="app:wire-2",
                     text="lookup me",
                     received_at_utc=now,
@@ -214,7 +214,7 @@ async def test_mark_batch_failed_persists_after_commit() -> None:
             await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=CompanionRuntimeChannel.TELEGRAM,
+                    channel=ChannelKind.TELEGRAM,
                     wire_id="wire-a",
                     text="will fail",
                     received_at_utc=now,
@@ -280,7 +280,7 @@ async def test_output_queue_append_claim_and_deliver() -> None:
             output_repo = PostgresOutputQueueRepository(db)
             claims = await output_repo.claim_pending_for_delivery(
                 scope,
-                delivery_channel=CompanionRuntimeChannel.TELEGRAM,
+                delivery_channel=ChannelKind.TELEGRAM,
                 delivery_wire_id="wire-a",
                 limit=4,
             )
@@ -324,7 +324,7 @@ async def test_output_queue_mark_skipped_persists_terminal_status() -> None:
             )
             await output_repo.claim_pending_for_delivery(
                 scope,
-                delivery_channel=CompanionRuntimeChannel.TELEGRAM,
+                delivery_channel=ChannelKind.TELEGRAM,
                 delivery_wire_id="wire-a",
                 limit=4,
             )

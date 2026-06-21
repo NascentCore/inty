@@ -146,11 +146,11 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 | `inner-tick-poll-multi-track` (#3273) | poll | 单次 wake 尝试所有 due track，不单 fire 一个 |
 | `scope-inner-tick-worker` (#3255) | 调度 | dreaming / maintenance / autonomy 迁出 presence poll；Epic [#3373](https://github.com/NascentCore/inty/issues/3373) |
 
-`companion/AGENTS.md` 中 `TODO(narrow-maintenance)` 建议 human 改为：「Shrink MAINTENANCE to ai_private / transcript reorg; MemoryDoc sync → DREAMING」（勿写「memory-reorg」以免与 dreaming 混淆）。
+`companion/AGENTS.md` 中 `TODO(narrow-maintenance)` 建议 human 改为：「Shrink MAINTENANCE to ai_private / transcript reorg; MemoryDoc sync → DREAMING」（勿写「memory-reorg」以免与 dreaming 混淆）。 — #3375
 
 ## See also
 
 - [`AXIOM.md`](/app/core/companion_harness/companion/prompts/AXIOM.md)：长期项目（唯一）
-- [`DESIGN.md`](/docs/companion_harness/DESIGN.md)：inner-tick worker、proactive rhythm、maintenance 与 transport 关系
-- [`MEMORY_STORE.md`](/docs/companion_harness/MEMORY_STORE.md)：`document_kind` / 写入白名单机制
-- [`FR_WORLD_ENGINE.md`](/docs/companion_harness/FR_WORLD_ENGINE.md)：sub-agent 与 mailbox 交往（**他者**）；本设计是 companion **对自己**的 `LIFE_CURRENTS` 自主轨道——互补，非替代
+- [`DESIGN.md`](/docs/imate/companion_harness/DESIGN.md)：inner-tick worker、proactive rhythm、maintenance 与 transport 关系
+- [`MEMORY_STORE.md`](/docs/imate/companion_harness/MEMORY_STORE.md)：`document_kind` / 写入白名单机制
+- [`FR_WORLD_ENGINE.md`](/docs/imate/companion_harness/FR_WORLD_ENGINE.md)：sub-agent 与 mailbox 交往（**他者**）；本设计是 companion **对自己**的 `LIFE_CURRENTS` 自主轨道——互补，非替代

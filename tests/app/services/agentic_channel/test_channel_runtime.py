@@ -9,7 +9,7 @@ from sqlalchemy import delete
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -70,13 +70,13 @@ async def test_turn_up_supersedes_prior_active_channel() -> None:
     try:
         await bind_endpoint(
             scope,
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=f"tg-1-{uuid.uuid4().hex}",
             channel_user_id=f"tu-1-{uuid.uuid4().hex}",
         )
         await bind_endpoint(
             scope,
-            channel=CompanionRuntimeChannel.WECHAT_WEIXIN,
+            channel=ChannelKind.WECHAT_WEIXIN,
             channel_address=f"wx-peer-{uuid.uuid4().hex}",
             channel_user_id=f"wx-user-{uuid.uuid4().hex}",
         )
@@ -92,24 +92,22 @@ async def test_turn_up_supersedes_prior_active_channel() -> None:
         )
         await turn_channel_up(
             scope,
-            CompanionRuntimeChannel.TELEGRAM,
+            ChannelKind.TELEGRAM,
             adapter=tg_adapter,
             reason="test",
         )
-        assert registry.active_channel() == CompanionRuntimeChannel.TELEGRAM
+        assert registry.active_channel() == ChannelKind.TELEGRAM
 
         wx_adapter = WeixinChannelAdapterStub()
         await turn_channel_up(
             scope,
-            CompanionRuntimeChannel.WECHAT_WEIXIN,
+            ChannelKind.WECHAT_WEIXIN,
             adapter=wx_adapter,
             reason="test",
         )
+        assert registry.active_channel() == ChannelKind.WECHAT_WEIXIN
         assert (
-            registry.active_channel() == CompanionRuntimeChannel.WECHAT_WEIXIN
-        )
-        assert (
-            registry.state_of(CompanionRuntimeChannel.TELEGRAM)
+            registry.state_of(ChannelKind.TELEGRAM)
             == ChannelRuntimeState.INACTIVE
         )
     finally:
@@ -122,14 +120,14 @@ async def test_turn_down_idempotent() -> None:
     try:
         await bind_endpoint(
             scope,
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=f"tg-2-{uuid.uuid4().hex}",
             channel_user_id=f"tu-2-{uuid.uuid4().hex}",
         )
         registry = get_scope_channel_registry(scope)
         await turn_channel_down(
             scope,
-            CompanionRuntimeChannel.TELEGRAM,
+            ChannelKind.TELEGRAM,
             reason="noop",
         )
         assert registry.active_channel() is None

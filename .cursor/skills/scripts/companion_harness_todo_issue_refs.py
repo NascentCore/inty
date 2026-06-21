@@ -57,7 +57,7 @@ TAG_TO_ISSUE: dict[str, int] = {
 
 ROOTS = (
     Path("app/core/companion_harness"),
-    Path("docs/companion_harness"),
+    Path("docs/imate/companion_harness"),
 )
 
 ISSUE_REF_RE = re.compile(r"(?:!|#)\d+")

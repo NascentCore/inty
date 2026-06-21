@@ -6,7 +6,7 @@ from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.external_services.telegram_bot_api import TelegramBotApi
@@ -15,6 +15,7 @@ from app.services.agentic_channel.adapters.telegram import (
 )
 from app.services.agentic_channel.channel_runtime import turn_channel_up
 from app.services.agentic_channel.companion_bonds import (
+    get_companion_bond_for_scope,
     has_active_companion_bond,
 )
 from app.services.agentic_channel.endpoints import (
@@ -70,7 +71,7 @@ async def activate_telegram_scope(
     )
     await turn_channel_up(
         scope,
-        CompanionRuntimeChannel.TELEGRAM,
+        ChannelKind.TELEGRAM,
         adapter=adapter,
         reason=reason,
     )
@@ -80,9 +81,7 @@ async def activate_telegram_scope(
 async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
     """Reload Telegram endpoints with ACTIVE companion bonds and restart presences."""
     assert api is not None
-    records = await list_endpoints_for_channel(
-        channel=CompanionRuntimeChannel.TELEGRAM
-    )
+    records = await list_endpoints_for_channel(channel=ChannelKind.TELEGRAM)
     restored_count = 0
     skipped_inactive = 0
     for record in records:
@@ -92,10 +91,24 @@ async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
             # agent_channel restore service used by Telegram, Weixin, and future channels.
             async with AsyncSessionLocal() as db:
                 bond_active = await has_active_companion_bond(db, scope)
+                bond = (
+                    await get_companion_bond_for_scope(db, scope)
+                    if bond_active
+                    else None
+                )
             if not bond_active:
                 skipped_inactive += 1
                 logger.info(
                     "telegram-demo restore skipped inactive bond channel_address={} user_id={} agent_id={}",
+                    record.channel_address,
+                    scope.user_id,
+                    scope.agent_id,
+                )
+                continue
+            if bond is not None and bond.runtime_paused_at is not None:
+                skipped_inactive += 1
+                logger.info(
+                    "telegram-demo restore skipped paused runtime channel_address={} user_id={} agent_id={}",
                     record.channel_address,
                     scope.user_id,
                     scope.agent_id,

@@ -20,12 +20,13 @@ from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.external_services.telegram_bot_api import (
     TelegramBotApi,
     TelegramIncomingMessage,
 )
+from app.db.session import AsyncSessionLocal
 from app.services.agentic_channel.adapters.telegram import (
     TelegramChannelAdapter,
 )
@@ -40,6 +41,10 @@ from app.services.agentic_channel.endpoints import (
 )
 from app.services.agentic_channel.errors import ChannelEndpointConflictError
 from app.services.agentic_channel.presence import ensure_presence, get_presence
+from app.services.agentic_channel.companion_bonds import (
+    get_companion_bond_for_scope,
+    resume_companion_bond_runtime,
+)
 from app.services.agentic_channel.provision import (
     ChannelProvisionResult,
     provision_agent_for_channel_onboard,
@@ -123,7 +128,7 @@ class TelegramTransport:
         assert text != ""
         if scope is not None:
             registry = get_scope_channel_registry(scope)
-            downlink = registry.downlinks.get(CompanionRuntimeChannel.TELEGRAM)
+            downlink = registry.downlinks.get(ChannelKind.TELEGRAM)
             if downlink is not None:
                 await downlink.deliver(
                     Downlink(
@@ -159,7 +164,7 @@ class TelegramTransport:
             await self._handle_onboard(inbound=inbound)
             return
         scope = await resolve_scope(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=inbound.chat_id,
         )
         if scope is None:
@@ -170,7 +175,7 @@ class TelegramTransport:
             return
         try:
             await assert_inbound_endpoint_identity(
-                channel=CompanionRuntimeChannel.TELEGRAM,
+                channel=ChannelKind.TELEGRAM,
                 channel_address=inbound.chat_id,
                 channel_user_id=inbound.channel_user_id,
             )
@@ -186,6 +191,7 @@ class TelegramTransport:
                 scope=scope,
             )
             return
+        await self._resume_if_paused(scope=scope)
         await self._ensure_active(
             inbound=inbound,
             scope=scope,
@@ -196,7 +202,7 @@ class TelegramTransport:
             presence = await ensure_presence(scope)
         channel_error = await presence.handle_user_text(
             inbound.text,
-            runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+            runtime_channel=ChannelKind.TELEGRAM,
         )
         if channel_error:
             await self._send_channel_text(
@@ -209,13 +215,13 @@ class TelegramTransport:
         self, *, inbound: TelegramIncomingMessage
     ) -> None:
         existing = await resolve_scope(
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=inbound.chat_id,
         )
         if existing is not None:
             try:
                 await assert_inbound_endpoint_identity(
-                    channel=CompanionRuntimeChannel.TELEGRAM,
+                    channel=ChannelKind.TELEGRAM,
                     channel_address=inbound.chat_id,
                     channel_user_id=inbound.channel_user_id,
                 )
@@ -231,6 +237,7 @@ class TelegramTransport:
                     scope=existing,
                 )
                 return
+            await self._resume_if_paused(scope=existing)
             await self._ensure_active(
                 inbound=inbound,
                 scope=existing,
@@ -251,7 +258,7 @@ class TelegramTransport:
             return
         try:
             provision = await provision_agent_for_channel_onboard(
-                channel=CompanionRuntimeChannel.TELEGRAM,
+                channel=ChannelKind.TELEGRAM,
                 channel_address=inbound.chat_id,
                 channel_user_id=inbound.channel_user_id,
             )
@@ -268,6 +275,7 @@ class TelegramTransport:
             )
             return
         if not provision.is_new_user:
+            await self._resume_if_paused(scope=provision.scope)
             await self._ensure_active(
                 inbound=inbound,
                 scope=provision.scope,
@@ -307,7 +315,7 @@ class TelegramTransport:
         record = EndpointRecord(
             user_id=provision.scope.user_id,
             agent_id=provision.scope.agent_id,
-            channel=CompanionRuntimeChannel.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=provision.channel_address,
             channel_user_id=provision.channel_user_id,
         )
@@ -321,7 +329,7 @@ class TelegramTransport:
             presence = await ensure_presence(provision.scope)
         try:
             await presence.greet_on_sign_on(
-                runtime_channel=CompanionRuntimeChannel.TELEGRAM,
+                runtime_channel=ChannelKind.TELEGRAM,
             )
         except Exception:
             logger.exception(
@@ -330,6 +338,22 @@ class TelegramTransport:
                 provision.scope.user_id,
                 provision.scope.agent_id,
             )
+
+    async def _resume_if_paused(self, *, scope: AgentScope) -> None:
+        """Clear runtime pause flag before normal Telegram runtime activation."""
+        async with AsyncSessionLocal() as db:
+            bond = await get_companion_bond_for_scope(db, scope)
+            if bond is None or bond.runtime_paused_at is None:
+                return
+            resumed = await resume_companion_bond_runtime(db, scope)
+            if not resumed:
+                return
+            await db.commit()
+        logger.info(
+            "runtime_resume scope={} channel={}",
+            scope.registry_key(),
+            ChannelKind.TELEGRAM.value,
+        )
 
     async def _ensure_active(
         self,
@@ -345,7 +369,7 @@ class TelegramTransport:
         )
         await turn_channel_up(
             scope,
-            CompanionRuntimeChannel.TELEGRAM,
+            ChannelKind.TELEGRAM,
             adapter=adapter,
             reason=reason,
         )

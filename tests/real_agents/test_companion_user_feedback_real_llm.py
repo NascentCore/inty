@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from app.core.llms.client import CompanionLLMClient, CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig, LlmClient
 from app.core.companion_harness.companion.llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
@@ -77,7 +77,7 @@ async def test_real_llm_calls_companion_record_user_feedback(tmp_path) -> None:
         chat_model=resolve_chat_text_model(_OPENROUTER_MODEL),
         tool_model=resolve_chat_text_model(_OPENROUTER_MODEL),
     )
-    client = CompanionLLMClient(cfg)
+    client = LlmClient(cfg)
     tools = openai_tools_for_names(
         (CompanionToolName.COMPANION_RECORD_USER_FEEDBACK,),
         description_overrides={},

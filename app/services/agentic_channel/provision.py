@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
-    CompanionRuntimeChannel,
+    ChannelKind,
 )
 from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
@@ -66,7 +66,7 @@ async def _require_active_bond_for_scope(scope: AgentScope) -> None:
 
 async def _provision_result_after_bind_race(
     *,
-    channel: CompanionRuntimeChannel,
+    channel: ChannelKind,
     channel_address: str,
     channel_user_id: str,
 ) -> ChannelProvisionResult:
@@ -113,7 +113,7 @@ async def _provision_result_after_bind_race(
 
 async def provision_agent_for_channel_onboard(
     *,
-    channel: CompanionRuntimeChannel,
+    channel: ChannelKind,
     channel_address: str,
     channel_user_id: str,
 ) -> ChannelProvisionResult:
@@ -268,7 +268,7 @@ async def provision_agent_for_channel_onboard(
 
 async def provision_agent_for_existing_agent(
     *,
-    channel: CompanionRuntimeChannel,
+    channel: ChannelKind,
     channel_address: str,
     channel_user_id: str,
     agent_id: str,
