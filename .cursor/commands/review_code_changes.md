@@ -16,6 +16,7 @@ Review architecture of the pending changes' fitness to the [companion harness de
 
 - Propose architecture improvement to improve structural clarity
 - Propose wholistic solution instead of duct-tape fixes
+- Consolidate overlapping or repeated code paths into shared constructs
 
 ### Identify code smells
 
