@@ -8,6 +8,9 @@ report under ``tmp/`` and prints a one-line SUMMARY.
 
 Layout:
 - Driver: ``run_regression`` / ``main`` for end-to-end WS and Postgres checks.
+- Settled turn: wait for InputQueue idle after bootstrap-finish, match WS
+  ``user_msg_uuid`` to the sent turn, wait for InputQueue ``delivered``, then
+  start proactive wait.
 - Strict-mode DB verification: below ``_is_inner_tick_proactive``; when no
   proactive WS frame arrives, it queries ``chat_history`` for silent inner ticks.
   ``_parse_proactive_chat_history_rows`` is unit-tested in
@@ -49,8 +52,10 @@ _DEFAULT_BOOTSTRAP_FINISH_TURN = (
 )
 _DEFAULT_SETTLED_TURN = "今天天气怎么样？"
 _RECV_POLL_SEC = 0.25
+_INPUT_QUEUE_POLL_SEC = 0.5
 _TURN_REPLY_TIMEOUT_SEC = 180.0
 _TURN_TRAILING_QUIET_SEC = 5.0
+_PRE_SETTLED_WS_DRAIN_QUIET_SEC = 3.0
 # Match devops/config.yaml.local fast proactive: idle 10s + poll 5s + LLM slack.
 _DEFAULT_PROACTIVE_WAIT_SEC = 60.0
 _PROACTIVE_RECV_CHUNK_SEC = 5.0
@@ -206,6 +211,180 @@ def _send_turn(bridge: Any, agent_id: str, text: str) -> str:
     msg_uuid = str(uuid.uuid4())
     bridge.post_turn(agent_id, text, msg_uuid)
     return msg_uuid
+
+
+def _parse_input_queue_status_counts(raw: str) -> dict[str, int]:
+    """Parse ``status|count`` lines from InputQueue GROUP BY query."""
+    counts: dict[str, int] = {}
+    for line in raw.strip().splitlines():
+        if not line.strip():
+            continue
+        status, count_s = line.split("|", 1)
+        counts[status] = int(count_s)
+    return counts
+
+
+def _input_queue_has_in_flight(counts: dict[str, int]) -> bool:
+    """True when any InputQueue row is still pending or claimed."""
+    return counts.get("pending", 0) > 0 or counts.get("claimed", 0) > 0
+
+
+def _query_input_queue_status_counts(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+) -> dict[str, int]:
+    assert agent_id != ""
+    raw = _psql(
+        repo_root,
+        config_path,
+        "SELECT status, COUNT(*) FROM agentic_companion_input_queue "
+        f"WHERE agent_id = '{agent_id}' GROUP BY status ORDER BY status;",
+    )
+    return _parse_input_queue_status_counts(raw)
+
+
+def _query_input_status_for_client_message_id(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+    client_message_id: str,
+) -> str:
+    assert agent_id != ""
+    assert client_message_id != ""
+    return _psql(
+        repo_root,
+        config_path,
+        "SELECT status FROM agentic_companion_input_queue "
+        f"WHERE agent_id = '{agent_id}' "
+        f"AND client_message_id = '{client_message_id}' "
+        "ORDER BY sequence_id DESC LIMIT 1;",
+    ).strip()
+
+
+def _wait_input_queue_idle(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+    timeout_sec: float,
+    label: str,
+    stderr: TextIO,
+) -> bool:
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        counts = _query_input_queue_status_counts(
+            repo_root, config_path, agent_id=agent_id
+        )
+        if not _input_queue_has_in_flight(counts):
+            print(
+                f"{_TAG} input queue idle ({label}) counts={counts}",
+                flush=True,
+            )
+            return True
+        time.sleep(_INPUT_QUEUE_POLL_SEC)
+    counts = _query_input_queue_status_counts(
+        repo_root, config_path, agent_id=agent_id
+    )
+    print(
+        f"{_TAG} ERROR timeout waiting for input queue idle ({label}) "
+        f"counts={counts}",
+        file=stderr,
+        flush=True,
+    )
+    return False
+
+
+def _wait_input_delivered(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+    client_message_id: str,
+    timeout_sec: float,
+    label: str,
+    stderr: TextIO,
+) -> bool:
+    assert client_message_id != ""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        status = _query_input_status_for_client_message_id(
+            repo_root,
+            config_path,
+            agent_id=agent_id,
+            client_message_id=client_message_id,
+        )
+        match status:
+            case "delivered":
+                print(
+                    f"{_TAG} input delivered ({label}) "
+                    f"client_message_id={client_message_id}",
+                    flush=True,
+                )
+                return True
+            case "failed":
+                print(
+                    f"{_TAG} ERROR input failed ({label}) "
+                    f"client_message_id={client_message_id}",
+                    file=stderr,
+                    flush=True,
+                )
+                return False
+            case _:
+                time.sleep(_INPUT_QUEUE_POLL_SEC)
+    print(
+        f"{_TAG} ERROR timeout waiting for input delivered ({label}) "
+        f"client_message_id={client_message_id} last_status={status!r}",
+        file=stderr,
+        flush=True,
+    )
+    return False
+
+
+def _downlink_user_msg_uuid(meta: dict[str, Any]) -> str:
+    return str(meta.get("user_msg_uuid") or "").strip()
+
+
+def _wait_downlink_for_user_msg_uuid(
+    bridge: Any,
+    report: dict[str, Any],
+    *,
+    expected_user_msg_uuid: str,
+    timeout_sec: float,
+    label: str,
+    trailing_label: str,
+) -> tuple[str | None, dict[str, Any], tuple[int, str] | None]:
+    """Accept only a WS downlink whose ``user_msg_uuid`` matches the sent turn."""
+    assert expected_user_msg_uuid != ""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        text, err, meta = bridge.try_pop_queued_chat()
+        if err is not None:
+            return None, {}, err
+        if text is None:
+            time.sleep(_RECV_POLL_SEC)
+            continue
+        actual = _downlink_user_msg_uuid(meta)
+        if actual == expected_user_msg_uuid:
+            return text, meta, None
+        _record_trailing_downlink(
+            report,
+            label=trailing_label,
+            text=text,
+            meta=meta,
+        )
+        print(
+            f"{_TAG} skip downlink for {label}: user_msg_uuid={actual!r} "
+            f"expected={expected_user_msg_uuid!r}",
+            flush=True,
+        )
+    return (
+        None,
+        {},
+        (408, f"timeout waiting for {label} user_msg_uuid={expected_user_msg_uuid}"),
+    )
 
 
 def _psql(repo_root: Path, config_path: Path, query: str) -> str:
@@ -447,13 +626,39 @@ def run_regression(
                 flush=True,
             )
         _drain_turn_trailing_frames(bridge, report, label="bootstrap-finish")
+        if not _wait_input_queue_idle(
+            repo_root,
+            config_path,
+            agent_id=agent_id,
+            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+            label="pre-settled",
+            stderr=stderr,
+        ):
+            report["errors"].append(
+                {"turn": "pre-settled", "error": (408, "input queue not idle")}
+            )
+
+        for text, meta in _drain_until_quiet(
+            bridge,
+            quiet_sec=_PRE_SETTLED_WS_DRAIN_QUIET_SEC,
+            max_sec=30.0,
+        ):
+            _record_trailing_downlink(
+                report,
+                label="pre_settled",
+                text=text,
+                meta=meta,
+            )
 
         print(f"{_TAG} settled turn: {settled_turn!r}", flush=True)
-        _send_turn(bridge, agent_id, settled_turn)
-        text, meta, err = _wait_downlink(
+        settled_msg_uuid = _send_turn(bridge, agent_id, settled_turn)
+        text, meta, err = _wait_downlink_for_user_msg_uuid(
             bridge,
+            report,
+            expected_user_msg_uuid=settled_msg_uuid,
             timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
             label="settled",
+            trailing_label="settled_mismatch",
         )
         if err is not None:
             report["errors"].append({"turn": "settled", "error": err})
@@ -464,83 +669,103 @@ def run_regression(
                 {
                     "kind": "settled",
                     "user": settled_turn,
+                    "user_msg_uuid": settled_msg_uuid,
                     "text_preview": text[:120],
                     "meta": meta,
                 }
             )
             print(
                 f"{_TAG} settled reply={text[:80]!r} "
+                f"user_msg_uuid={settled_msg_uuid} "
                 f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
                 flush=True,
             )
         _drain_turn_trailing_frames(bridge, report, label="settled")
 
-        print(
-            f"{_TAG} waiting up to {proactive_wait_sec}s for inner-tick proactive...",
-            flush=True,
+        settled_input_delivered = _wait_input_delivered(
+            repo_root,
+            config_path,
+            agent_id=agent_id,
+            client_message_id=settled_msg_uuid,
+            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+            label="settled",
+            stderr=stderr,
         )
-        proactive_deadline = time.monotonic() + proactive_wait_sec
-        while time.monotonic() < proactive_deadline:
-            text, meta, err = _wait_downlink(
-                bridge,
-                timeout_sec=min(
-                    _PROACTIVE_RECV_CHUNK_SEC,
-                    proactive_deadline - time.monotonic(),
-                ),
-                label="proactive",
+        if not settled_input_delivered:
+            report["errors"].append(
+                {
+                    "turn": "settled-delivered",
+                    "error": (408, f"input not delivered: {settled_msg_uuid}"),
+                }
             )
-            if err is not None and err[0] == 408:
-                continue
-            if err is not None:
-                report["errors"].append({"turn": "proactive", "error": err})
-                break
-            if text is None:
-                continue
-            if not _is_inner_tick_proactive(meta):
-                kind = meta.get("source") or meta.get("inner_tick_activity")
+        else:
+            print(
+                f"{_TAG} waiting up to {proactive_wait_sec}s for inner-tick proactive "
+                f"(after settled input delivered)...",
+                flush=True,
+            )
+            proactive_deadline = time.monotonic() + proactive_wait_sec
+            while time.monotonic() < proactive_deadline:
+                text, meta, err = _wait_downlink(
+                    bridge,
+                    timeout_sec=min(
+                        _PROACTIVE_RECV_CHUNK_SEC,
+                        proactive_deadline - time.monotonic(),
+                    ),
+                    label="proactive",
+                )
+                if err is not None and err[0] == 408:
+                    continue
+                if err is not None:
+                    report["errors"].append({"turn": "proactive", "error": err})
+                    break
+                if text is None:
+                    continue
+                if not _is_inner_tick_proactive(meta):
+                    kind = meta.get("source") or meta.get("inner_tick_activity")
+                    if str(meta.get("source") or "") == "chat":
+                        _record_trailing_downlink(
+                            report,
+                            label="proactive_wait_late",
+                            text=text,
+                            meta=meta,
+                        )
+                    else:
+                        print(
+                            f"{_TAG} ignore non-proactive downlink source={kind!r}",
+                            flush=True,
+                        )
+                    continue
+                report["proactive"].append(
+                    {
+                        "text_preview": text[:120],
+                        "meta": meta,
+                        "silent": text.strip() == "[SILENT]",
+                    }
+                )
+                print(
+                    f"{_TAG} proactive text={text[:80]!r} "
+                    f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
+                    flush=True,
+                )
+            print(
+                f"{_TAG} post-proactive drain "
+                f"(quiet={_POST_PROACTIVE_DRAIN_QUIET_SEC}s, "
+                f"max={_POST_PROACTIVE_DRAIN_MAX_SEC}s) before disconnect...",
+                flush=True,
+            )
+            for text, meta in _drain_until_quiet(
+                bridge,
+                quiet_sec=_POST_PROACTIVE_DRAIN_QUIET_SEC,
+                max_sec=_POST_PROACTIVE_DRAIN_MAX_SEC,
+            ):
                 if str(meta.get("source") or "") == "chat":
                     _record_trailing_downlink(
                         report,
-                        label="proactive_wait_late",
+                        label="post_proactive",
                         text=text,
                         meta=meta,
                     )
-                else:
-                    print(
-                        f"{_TAG} ignore non-proactive downlink source={kind!r}",
-                        flush=True,
-                    )
-                continue
-            report["proactive"].append(
-                {
-                    "text_preview": text[:120],
-                    "meta": meta,
-                    "silent": text.strip() == "[SILENT]",
-                }
-            )
-            print(
-                f"{_TAG} proactive text={text[:80]!r} "
-                f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
-                flush=True,
-            )
-        print(
-            f"{_TAG} post-proactive drain "
-            f"(quiet={_POST_PROACTIVE_DRAIN_QUIET_SEC}s, "
-            f"max={_POST_PROACTIVE_DRAIN_MAX_SEC}s) before disconnect...",
-            flush=True,
-        )
-        for text, meta in _drain_until_quiet(
-            bridge,
-            quiet_sec=_POST_PROACTIVE_DRAIN_QUIET_SEC,
-            max_sec=_POST_PROACTIVE_DRAIN_MAX_SEC,
-        ):
-            if str(meta.get("source") or "") == "chat":
-                _record_trailing_downlink(
-                    report,
-                    label="post_proactive",
-                    text=text,
-                    meta=meta,
-                )
     finally:
         bridge.stop()
 
@@ -620,10 +845,16 @@ LIMIT 8;
 
     proactive_present = bool(report["proactive"])
     settled_ok = any(
-        t.get("kind") == "settled" and t.get("text_preview") for t in report["turns"]
+        t.get("kind") == "settled"
+        and t.get("text_preview")
+        and t.get("user_msg_uuid")
+        for t in report["turns"]
     )
     in_all_delivered = (
-        "pending" not in in_q and "failed" not in in_q and bool(in_q.strip())
+        "pending" not in in_q
+        and "claimed" not in in_q
+        and "failed" not in in_q
+        and bool(in_q.strip())
     )
     out_all_delivered = (
         "pending" not in out_q

@@ -67,38 +67,44 @@ def resolve_turn_tail_user_messages(
     user_text: str,
     ts_user: datetime,
     user_msg_uuid: str,
+    implicit_sign_on_turn: bool,
 ) -> tuple[TurnTailUserMessage, ...]:
     """Resolve how the current turn's user batch appears to LLM and transcript.
 
     ``CompanionTurnResult.transcript_user_content`` uses ``"\\n".join`` of row
     texts when this turn persists multiple user rows; JSONL rows stay per-message.
+
+    Implicit sign-on turns always expose exactly one tail user message.
     """
     if input_batch is None:
-        return (
+        tail = (
             _single_tail_user_message(
                 user_text=user_text,
                 ts_user=ts_user,
                 user_msg_uuid=user_msg_uuid,
             ),
         )
-
-    if mode == BatchUserMessagesLlmCallMode.JOIN_TO_ONE_USER_MESSAGE:
-        return (
+    elif mode == BatchUserMessagesLlmCallMode.JOIN_TO_ONE_USER_MESSAGE:
+        tail = (
             TurnTailUserMessage(
                 message_id=input_batch.primary_user_msg_uuid,
                 text=_joined_input_batch_text(input_batch),
                 received_at_utc=input_batch.messages[-1].received_at_utc,
             ),
         )
-
-    return tuple(
-        TurnTailUserMessage(
-            message_id=msg.message_id,
-            text=msg.text,
-            received_at_utc=msg.received_at_utc,
+    else:
+        tail = tuple(
+            TurnTailUserMessage(
+                message_id=msg.message_id,
+                text=msg.text,
+                received_at_utc=msg.received_at_utc,
+            )
+            for msg in input_batch.messages
         )
-        for msg in input_batch.messages
-    )
+
+    if implicit_sign_on_turn:
+        assert len(tail) == 1
+    return tail
 
 
 def tail_user_message_contents_for_llm(

@@ -46,3 +46,29 @@ def test_parse_proactive_chat_history_rows() -> None:
     assert rows[0].content_preview.endswith("a|b")
     assert rows[0].has_assistant_reply is False
     assert rows[1].has_assistant_reply is True
+
+
+def test_parse_input_queue_status_counts() -> None:
+    mod = _load_regression_module()
+
+    counts = mod._parse_input_queue_status_counts("claimed|1\ndelivered|6\n")
+    assert counts == {"claimed": 1, "delivered": 6}
+
+
+def test_input_queue_has_in_flight() -> None:
+    mod = _load_regression_module()
+
+    assert mod._input_queue_has_in_flight({"delivered": 3}) is False
+    assert (
+        mod._input_queue_has_in_flight({"pending": 1, "delivered": 2}) is True
+    )
+    assert (
+        mod._input_queue_has_in_flight({"claimed": 1, "delivered": 2}) is True
+    )
+
+
+def test_downlink_user_msg_uuid() -> None:
+    mod = _load_regression_module()
+
+    assert mod._downlink_user_msg_uuid({"user_msg_uuid": "abc"}) == "abc"
+    assert mod._downlink_user_msg_uuid({}) == ""
