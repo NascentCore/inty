@@ -7,15 +7,35 @@
 
 ## 概要（Executive Summary）
 
-Companion Harness 是一套基于 LLM 的智能体框架，来运行一个 Inty 实体是 Inty 理念和愿景（1 人 1 Inty，长期关系，Inty 给用户的体感上像”活人“，而不是用完即弃的任务 Bot）的载体。
+Companion Harness 是一套基于 LLM 的智能体框架，来运行一个 Inty 实体是 Inty 理念和愿景（1 人 1 Inty，长期关系，Inty 给用户的体感上像”活人“，而不是用完即弃的任务 Bot）的载体。下图展示了其作为核心机制、对接 LLM 与向用户提供 Inty 抽象体验，并从 Inty-User 互动中收集记忆来持续完善的过程。
 
-Companion Harness + LLM = Inty（陪伴智能体）；
-Inty + Memory = Personal Companion（即用户通过长期与 Inty 交互形成陪伴的实体）。
+```companion-harness-conceptual-layers
+                    +------------------------+
+                    |     Companionship      |
+                    |  User + Inty + Memory  |
+                    |  (mutually beneficial) |
+                    +-----------+------------+
+                                │
+  +------------------+          │          +--------+
+  |       Inty       |◄─── interaction ───►|  User  |
+  +--------+---------+                     +--------+
+           ▲                                    │
+           │                           produces │
++---------------------+                         │
+|  Companion Harness  |◄────── Memory ◄─────────┘
+|  (Memory injected)  |  (from interaction)
++---------------------+
+           ▲
+           │
+  +------------------+
+  |       LLM        |
+  +------------------+
+```
 
 Companion Harness 干的就是这件事：把 LLM 放进一套有节律、有记忆、有副作用的状态机里，让「聊天」变成「关系」，即：用户与智能体体验、演化一段关系的框架。
 Companion Harness 提供了**活着的关系**的存在框架；在此之上，iMate 作为一款产品，是为用户提供一个**真心为你**的心灵港湾，或者说是为 Inty 与用户提供的一个完整的陪伴体验，类似于某种为了人的情感幸福而存在的一种服务（highly visionary/unclear）。
 
-## Mind Model（心智模型）
+## Mind Model：一种使用 LLM 模拟心理学上情感关系发展互动机制的模型
 
 Mind Model 是一种**实现范式**：用 LLM **物化（materialize）心理学研究发现的人类机制**来模拟一个人，并把这种「人格（personhood）」**显形（manifest）**出来——当前经由文本，很快扩展到其他 GenAI 模态（图像、语音），最终落到 humanoid robot。
 
@@ -52,7 +72,7 @@ Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**�
 
 ## 目标架构图
 
-```bird's-eye view
+```bird's-eye-view-components-diagram
 ┌──────────────────────────────────────┐
 │  Users side                          │
 └───────────────────┬──────────────────┘
@@ -87,14 +107,14 @@ Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**�
 └─────────────────────────────────────┘
 ```
 
-### Harness 内核（职责展开）
+### Harness Pipelines
 
-```
+```harness-pipelines
 ┌─ Entry & orchestration ─────────────────────────────────────────────────┐
 │  inbound events · session mgmt  ──►  track routing · turn orchestration │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-                                     ▼
+└──────────────────────────────────┬──────────────────────────────────────┘
+                                   │
+                                   ▼
 ┌─ Awake turns ───────────────────────────────────────────────────────────┐
 │  turn programs  ──►  prompt assembly  ──►  LLM call  ──►  llm client    │
 │  chat · greeting · proactive · autonomy · maintenance (monolog)         │
