@@ -6,7 +6,7 @@ OutputQueue skip (see test_companion_drain_scripted_llm.py).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -81,7 +81,7 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
                     channel=CompanionRuntimeChannel.TELEGRAM,
                     wire_id="wire-tool-bg",
                     text="trigger tools",
-                    received_at_utc=datetime.now(timezone.utc),
+                    received_at_utc=datetime.now(UTC),
                 )
             )
             await db.commit()
@@ -107,7 +107,7 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
                     implicit_signal_bundle=ImplicitSignalBundle(
                         client_time=None,
                         user_signed_on=False,
-                        server_received_at_utc=datetime.now(timezone.utc),
+                        server_received_at_utc=datetime.now(UTC),
                     ),
                 )
                 await db.commit()

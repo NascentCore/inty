@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 from app.core.companion_harness.companion.dreaming import DreamingCandidate
@@ -18,7 +18,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 
 
 def _candidate() -> DreamingCandidate:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return DreamingCandidate(
         rows=[
             ChatMessage(

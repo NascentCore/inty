@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -120,7 +120,7 @@ def _upload_local_image_file_to_gcs_for_fal(
     file_data = image_path.read_bytes()
     if len(file_data) == 0:
         raise ValueError("source image file is empty")
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     gcs_path = (
         f"{gcs_uri_base}/i2i_src_{timestamp}_{uuid.uuid4().hex[:8]}.{ext_value}"
     )

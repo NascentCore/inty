@@ -50,7 +50,7 @@ https://github.com/NascentCore/inty/issues/3409"""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -96,8 +96,8 @@ class DreamingState(BaseModel):
     @classmethod
     def _normalize_aware_utc(cls, value: datetime) -> datetime:
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value.astimezone(timezone.utc)
+            return value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)
 
 
 @dataclass(frozen=True)
@@ -267,7 +267,7 @@ def dreaming_race_guard_matches(
     ``consolidate_memory_during_dreaming``; ``run_dreaming_batch_if_due`` raises
     ``DreamingTranscriptBoundaryMismatchError`` when it does not.
     """
-    fresh = dreaming_candidate_slice(store, now=datetime.now(timezone.utc))
+    fresh = dreaming_candidate_slice(store, now=datetime.now(UTC))
     if fresh is None:
         return False
     return (
@@ -321,5 +321,5 @@ def _start_index_after_checkpoint(
 
 def _aware_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)

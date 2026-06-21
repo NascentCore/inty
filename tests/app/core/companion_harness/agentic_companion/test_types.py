@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -34,7 +34,7 @@ def test_inbound_wire_message_fields() -> None:
         channel=CompanionRuntimeChannel.TELEGRAM,
         wire_id="wire-1",
         text="hello",
-        received_at_utc=datetime.now(timezone.utc),
+        received_at_utc=datetime.now(UTC),
     )
     assert inbound.scope.user_id == "u1"
     assert inbound.text == "hello"
@@ -42,7 +42,7 @@ def test_inbound_wire_message_fields() -> None:
 
 def test_input_batch_preserves_order() -> None:
     scope = AgentScope(user_id="u1", agent_id="a1")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     records = (
         InputQueueRecord(
             message_id="m1",

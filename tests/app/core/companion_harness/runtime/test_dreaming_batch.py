@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -23,7 +23,7 @@ from app.core.companion_harness.runtime.dreaming_batch import (
 
 
 def _dreaming_candidate() -> DreamingCandidate:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return DreamingCandidate(
         rows=[
             ChatMessage(

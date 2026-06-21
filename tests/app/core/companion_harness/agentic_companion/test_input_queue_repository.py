@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import delete, select
@@ -67,7 +67,7 @@ async def test_input_queue_append_and_claim_batch_order() -> None:
         meta_data={"test": True},
     )
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
             repo = PostgresInputQueueRepository(db)
             await repo.append_user_message(
@@ -106,7 +106,7 @@ async def test_append_user_message_idempotent_for_client_message_id() -> None:
         meta_data={"test": True},
     )
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         client_id = "client-msg-dedup-1"
         async with AsyncSessionLocal() as db:
             repo = PostgresInputQueueRepository(db)
@@ -171,7 +171,7 @@ async def test_get_records_by_ids_returns_app_ws_metadata() -> None:
         meta_data={"test": True},
     )
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         client_id = "client-msg-lookup-1"
         async with AsyncSessionLocal() as db:
             repo = PostgresInputQueueRepository(db)
@@ -208,7 +208,7 @@ async def test_mark_batch_failed_persists_after_commit() -> None:
         meta_data={"test": True},
     )
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
             repo = PostgresInputQueueRepository(db)
             await repo.append_user_message(
@@ -269,7 +269,7 @@ async def test_output_queue_append_claim_and_deliver() -> None:
                     batch_id="batch-1",
                     kind=DownlinkKind.USER_REPLY,
                     text="hello back",
-                    created_at_utc=datetime.now(timezone.utc),
+                    created_at_utc=datetime.now(UTC),
                     message_ids=("in-1",),
                 )
             )
@@ -293,7 +293,7 @@ async def test_output_queue_append_claim_and_deliver() -> None:
             await output_repo.mark_delivered(
                 QueueAck(
                     message_id=QueueMessageId(value="out-1"),
-                    delivered_at_utc=datetime.now(timezone.utc),
+                    delivered_at_utc=datetime.now(UTC),
                 )
             )
             await db.commit()
@@ -318,7 +318,7 @@ async def test_output_queue_mark_skipped_persists_terminal_status() -> None:
                     batch_id="batch-1",
                     kind=DownlinkKind.USER_REPLY,
                     text="orphan reply",
-                    created_at_utc=datetime.now(timezone.utc),
+                    created_at_utc=datetime.now(UTC),
                     message_ids=("in-orphan",),
                 )
             )
