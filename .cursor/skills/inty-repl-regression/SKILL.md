@@ -24,6 +24,8 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
 - Repo root cwd.
 - Postgres **`localhost:15432`** / db **`inty`** — 与 `devops/config.yaml.local` **`database`** 一致（**假定已配好，勿改密码**）。
 - Ops `:8001` running — see [`launch-inty-backend`](../launch-inty-backend/SKILL.md)（`INTY_CONFIG_YAML=devops/config.yaml.local`；`start.sh` **自动 migrate**；勿单独 `alembic upgrade head`）。
+  - Start: `./backend/ops/start.sh --local --no-build-frontend`（仓库根、已激活 venv）。
+  - **勿**给 uvicorn 加 `--reload`：文件变更触发的进程重启会断开 WS、打断 queue/proactive 等待，导致回归 flaky；`start.sh --local` 已不带 reload。
 - REPL environment sane — see [`examine-local-inty-repl-env`](../examine-local-inty-repl-env/SKILL.md).
 - Create a fresh bootstrap agent — see [`create-bootstrap-test-agent`](../create-bootstrap-test-agent/SKILL.md).
 

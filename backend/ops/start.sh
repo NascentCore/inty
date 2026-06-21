@@ -27,7 +27,7 @@ Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-bui
                          Existing log file is removed at startup. With --debug: console INFO, file DEBUG.
 
   Flags (--local|--dev only):
-    --local|--dev        Use devops/config.yaml.local (unless INTY_CONFIG_YAML already set); seed admin + report fixtures; uvicorn --reload; write JWT and agent id for user-testing.
+    --local|--dev        Use devops/config.yaml.local (unless INTY_CONFIG_YAML already set); seed admin + report fixtures; write JWT and agent id for user-testing.
     --build-frontend     Run evaluation/build.sh before uvicorn (default: on).
     --no-build-frontend  Skip that step; use existing app/static/evaluation.
 
@@ -132,8 +132,7 @@ if [ "$LOCAL" = true ]; then
   echo "在另外一个 terminal 窗口运行下面的命令来启动评测平台 UI"
   echo "cd evaluation && npm run dev"
 
-  echo "Starting ops backend server with reloading on port $OPS_PORT..."
-  # No reloading
+  echo "Starting ops backend server on port $OPS_PORT..."
   python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" "${UVICORN_LOG_LEVEL[@]}"
 else
   echo "Starting ops backend server on port $OPS_PORT..."

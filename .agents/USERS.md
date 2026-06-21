@@ -13,6 +13,7 @@
 - Companion Harness 开发者，Inty 构思者，1984 年出生，计算机科学博士，14 年专业工作经验（Amazon、Google、AI startups）
 - 对代码理解深刻
 - 细粒度配置开关：未实际使用则倾向删除，而非继续维护组合式配置。
+- REPL 回归测 Ops 时 **不要** 用 uvicorn `--reload`（会导致 brittle 进程重启）。
 
 ### 王琢誉/wangz233
 
