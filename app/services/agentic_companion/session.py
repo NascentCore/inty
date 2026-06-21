@@ -162,6 +162,9 @@ class Coordinator:
     _inner_tick_autonomy_tool_bg_idle: threading.Event | None = field(
         default=None, repr=False
     )
+    _implicit_greeting_turn_task: asyncio.Task[Any] | None = field(
+        default=None, repr=False
+    )
 
     @classmethod
     def for_current_loop(cls) -> Coordinator:
@@ -313,6 +316,28 @@ class Coordinator:
             for ctx in self.foreground_pending.values()
         )
 
+    def register_implicit_greeting_turn(self, task: asyncio.Task[Any]) -> None:
+        """Track the detached ``user_signed_on`` greeting task for user-chat preemption."""
+        prior = self._implicit_greeting_turn_task
+        if prior is not None and not prior.done():
+            prior.cancel()
+        self._implicit_greeting_turn_task = task
+
+        def _on_done(done_task: asyncio.Task[Any]) -> None:
+            if self._implicit_greeting_turn_task is done_task:
+                self._implicit_greeting_turn_task = None
+
+        task.add_done_callback(_on_done)
+
+    async def cancel_implicit_greeting_turn_if_running(self) -> bool:
+        """Cancel in-flight implicit greeting so user chat can take scope ``turn_lock``."""
+        task = self._implicit_greeting_turn_task
+        if task is None or task.done():
+            return False
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        return True
+
     def sign_out(self) -> None:
         """Clear inner-tick coords when a channel presence stops."""
         self.inner_tick_context.clear()
@@ -443,6 +468,9 @@ class Session:
             name="inner_tick",
         )
 
+    async def cancel_implicit_greeting_if_running(self) -> bool:
+        return await self.coordinator.cancel_implicit_greeting_turn_if_running()
+
     async def stop(self) -> None:
         self._inner_tick_stop.set()
         task = self._inner_tick_task
@@ -453,3 +481,4 @@ class Session:
         # lifecycle child, not only the poll worker.
         # TODO(companion-session-eviction): Also release process-local CompanionSession /
         # MemoryStore for this scope when safe (#3444).
+        await self.cancel_implicit_greeting_if_running()

@@ -8,6 +8,7 @@ import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputDeliveryUnroutableError,
     ReadyOutputMessage,
 )
 from app.core.companion_harness.companion.runtime_channel import (
@@ -197,9 +198,7 @@ async def test_send_user_reply_without_active_channel_raises_for_output_retry() 
 
 
 @pytest.mark.asyncio
-async def test_tool_background_output_is_hidden_without_active_channel() -> (
-    None
-):
+async def test_tool_background_without_input_ids_raises_unroutable() -> None:
     scope = AgentScope(user_id="user-tool-hidden", agent_id="agent-tool-hidden")
     presence = AgentChannelPresence(scope)
     message = ReadyOutputMessage(
@@ -211,7 +210,8 @@ async def test_tool_background_output_is_hidden_without_active_channel() -> (
         sequence=1,
     )
 
-    await presence._deliver_ready_via_active_channel(message)
+    with pytest.raises(OutputDeliveryUnroutableError):
+        await presence._deliver_ready_via_active_channel(message)
 
 
 @pytest.mark.asyncio

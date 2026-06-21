@@ -28,6 +28,7 @@ from app.services.agentic_channel.scope_queue_serving import (
     ScopeQueueServing,
 )
 from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputDeliveryUnroutableError,
     OutputQueueAppendInput,
     ReadyOutputMessage,
     get_output_queue_for_scope,
@@ -187,8 +188,11 @@ class AgentChannelPresence:
         text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
         if not text:
             return
-        if message.kind == DownlinkKind.TOOL_BACKGROUND:
-            return
+        if not message.message_ids:
+            raise OutputDeliveryUnroutableError(
+                self._scope,
+                message.message_ids,
+            )
         registry = get_scope_channel_registry(self._scope)
         active = registry.active_channel()
         if active is None:

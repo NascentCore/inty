@@ -134,20 +134,24 @@ class ScopeQueueServing:
         self._pump_task = None
         self._started = False
 
-    async def _run_output_pump(self) -> None:
+    def _resolve_output_delivery_target(
+        self,
+    ) -> tuple[CompanionRuntimeChannel | None, str | None]:
         delivery_channel = self._runtime_channel
-        delivery_wire_id = None
-        if delivery_channel is not None:
-            delivery_wire_id = (
-                f"{delivery_channel.value}:{self._scope.registry_key()}"
-            )
+        if delivery_channel is None:
+            return None, None
+        return (
+            delivery_channel,
+            f"{delivery_channel.value}:{self._scope.registry_key()}",
+        )
+
+    async def _run_output_pump(self) -> None:
         try:
             await channel_output_pump(
                 self._scope,
                 deliver_message=self._deliver_message,
                 stop_event=self._stop,
-                delivery_channel=delivery_channel,
-                delivery_wire_id=delivery_wire_id,
+                resolve_delivery_target=self._resolve_output_delivery_target,
                 poll_interval_sec=_SCOPE_OUTPUT_PUMP_POLL_SEC,
             )
         except asyncio.CancelledError:
