@@ -53,4 +53,4 @@ SELECT id, last_update_id FROM ops_telegram_demo_poll_state;
 
 ## Pre-ad paid flight (TODO)
 
-Expand this skill with pause playbook + pre-flight checklist before first Telegram paid ad dollar — #3536 (epic #3531). Blockers: #3532, #3533, #3534.
+Expand this skill with pause playbook + pre-flight checklist before first Telegram paid ad dollar — #3536 (epic #3531). Blockers: #3532, #3533.
