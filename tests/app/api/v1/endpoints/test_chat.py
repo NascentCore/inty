@@ -954,7 +954,7 @@ def _patch_companion_ws_queue_turn(
     run_companion_chat_turn_for_api,
 ) -> None:
     from datetime import datetime, timezone
-    from unittest.mock import MagicMock
+    from unittest.mock import AsyncMock, MagicMock
 
     from app.core.companion_harness.agent_channel.scope import AgentScope
     from app.core.companion_harness.companion.runtime_channel import (
@@ -972,9 +972,16 @@ def _patch_companion_ws_queue_turn(
         clear_presences_for_tests,
         _presences,
     )
-    from app.services.agentic_companion.downlink import (
-        DownlinkKind,
-        queue_user_reply_downlink,
+    from app.core.companion_harness.agentic_companion.output_queue import (
+        ReadyOutputMessage,
+    )
+    from app.core.companion_harness.agentic_companion.types import (
+        InputQueueRecord,
+        QueueStatus,
+    )
+    from app.services.agentic_companion.downlink import DownlinkKind
+    from app.services.agentic_companion.ws_outbound_materialize import (
+        materialize_queue_user_reply_from_durable,
     )
 
     from app.core.config import global_config_loaded_from_config_yaml
@@ -985,6 +992,19 @@ def _patch_companion_ws_queue_turn(
 
     clear_presences_for_tests()
     clear_registries_for_tests()
+
+    captured_implicit_bundles: list[ImplicitSignalBundle] = []
+
+    def capture_implicit_signal_bundle(**kwargs):
+        bundle = ImplicitSignalBundle(**kwargs)
+        captured_implicit_bundles.append(bundle)
+        return bundle
+
+    monkeypatch.setattr(
+        chat_ws_v1,
+        "ImplicitSignalBundle",
+        capture_implicit_signal_bundle,
+    )
 
     async def fake_turn_up_app_ws_channel(
         *,
@@ -1059,10 +1079,14 @@ def _patch_companion_ws_queue_turn(
         local_id: str | None,
         chat_history_user_row_id: int | None,
     ) -> str:
-        implicit_bundle = ImplicitSignalBundle(
-            client_time=None,
-            user_signed_on=False,
-            server_received_at_utc=datetime.now(timezone.utc),
+        implicit_bundle = (
+            captured_implicit_bundles[-1]
+            if captured_implicit_bundles
+            else ImplicitSignalBundle(
+                client_time=None,
+                user_signed_on=False,
+                server_received_at_utc=datetime.now(timezone.utc),
+            )
         )
         turn_result = await run_companion_chat_turn_for_api(
             user_id=self._scope.user_id,
@@ -1072,37 +1096,47 @@ def _patch_companion_ws_queue_turn(
             implicit_signal_bundle=implicit_bundle,
             background_output_sink=None,
         )
-        queue_message_id = (
-            f"queue-{client_message_id}"
-            if client_message_id is not None
-            else "queue-synthetic"
-        )
+        queue_message_id = client_message_id or "queue-synthetic"
         if isinstance(turn_result, CompanionTurnResult):
             text = turn_result.assistant_text.strip()
             if text:
                 registry = get_scope_channel_registry(self._scope)
                 adapter = registry.adapters.get(CompanionRuntimeChannel.APP)
                 if adapter is not None:
-                    from app.core.companion_harness.agentic_companion.output_queue import (
-                        ReadyOutputMessage,
+                    input_record = InputQueueRecord(
+                        message_id=queue_message_id,
+                        scope=self._scope,
+                        sequence=1,
+                        status=QueueStatus.DELIVERED,
+                        channel=CompanionRuntimeChannel.APP,
+                        wire_id=wire_id,
+                        text=user_text.strip(),
+                        received_at_utc=datetime.now(timezone.utc),
+                        client_message_id=client_message_id,
+                        local_id=local_id,
+                        chat_history_user_row_id=chat_history_user_row_id,
+                        batch_id="batch-fake",
                     )
-
-                    await adapter.as_downlink().deliver(
-                        queue_user_reply_downlink(
-                            assistant_text=text,
-                            message_ids=(queue_message_id,),
-                            output_message=ReadyOutputMessage(
-                                message_id=f"out-{queue_message_id}",
-                                batch_id="batch-fake",
-                                kind=DownlinkKind.USER_REPLY,
-                                text=text,
-                                sequence=1,
-                                message_ids=(queue_message_id,),
-                                tool_background_started=turn_result.tool_background_started,
-                            ),
-                        )
+                    ready = ReadyOutputMessage(
+                        message_id=f"out-{queue_message_id}",
+                        batch_id="batch-fake",
+                        kind=DownlinkKind.USER_REPLY,
+                        text=text,
+                        sequence=1,
+                        message_ids=(queue_message_id,),
+                        tool_background_started=turn_result.tool_background_started,
                     )
+                    payload = await materialize_queue_user_reply_from_durable(
+                        db=AsyncMock(),
+                        scope=self._scope,
+                        message=ready,
+                        input_records=(input_record,),
+                    )
+                    await adapter._outbound_queue.put(payload)
         return queue_message_id
+
+    async def fake_resolve_chat_model_for_scope(_scope):
+        return SimpleNamespace(id_on_provider="test/chat-model")
 
     async def fake_agent_status_line_for_materialize(db, agent_id):
         return None
@@ -1120,6 +1154,10 @@ def _patch_companion_ws_queue_turn(
     monkeypatch.setattr(
         "app.services.agentic_companion.ws_outbound_materialize.agent_status_line_for_chat_header",
         fake_agent_status_line_for_materialize,
+    )
+    monkeypatch.setattr(
+        "app.services.agentic_companion.ws_outbound_materialize.resolve_chat_model_for_scope",
+        fake_resolve_chat_model_for_scope,
     )
     monkeypatch.setattr(
         chat_ws_v1,
@@ -1835,9 +1873,7 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured["preset_user_msg_uuids"][1] == second_turn_uuid
     assert captured.get("agent_chat_called") is not True
     assert captured["ai_save"][1] == "companion-ws-reply"
-    assert (
-        captured["ai_save"][3]["user_msg_uuid"] == f"queue-{second_turn_uuid}"
-    )
+    assert captured["ai_save"][3]["user_msg_uuid"] == second_turn_uuid
     assert (
         body["data"]["choices"][0]["message"]["meta_data"]
         == captured["ai_metas"][0]
