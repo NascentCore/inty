@@ -28,7 +28,7 @@ from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.images.fal import ZImageTurboInput, z_image_turbo
 from app.core.model_selection import select_text_to_image_model
-from app.core.user_privilege.superuser_check import is_superuser
+from app.api.core.user_privilege.superuser_check import is_superuser
 from app.utils.models_catalog import (
     ModelNameFamily,
     Z_IMAGE_TURBO,

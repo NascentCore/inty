@@ -3,7 +3,7 @@ Check if a user has privilege to access premium features.
 """
 
 from app.models.subscription import SubscriptionStatus
-from app.core.user_privilege.superuser_check import is_superuser
+from app.api.core.user_privilege.superuser_check import is_superuser
 from app.schemas.user import User as UserSchema
 
 

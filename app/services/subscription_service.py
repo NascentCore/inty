@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import Environment, global_config_loaded_from_config_yaml
-from app.core.user_privilege.superuser_check import (
+from app.api.core.user_privilege.superuser_check import (
     SUPERUSER_LIMIT_CHECK_RESULT,
     is_superuser,
 )
