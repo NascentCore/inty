@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import time
 import uuid
+from dataclasses import dataclass
 
 from loguru import logger
 
@@ -28,7 +29,11 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
 )
 from app.core.companion_harness.agentic_companion.types import UserMessageBatch
-from app.core.companion_harness.companion.manager import CompanionSession
+from app.core.companion_harness.companion.manager import (
+    CompanionConfig,
+    CompanionManager,
+    CompanionSession,
+)
 from app.core.companion_harness.companion.manager_factory import (
     DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT,
     companion_manager_for_resolved_model,
@@ -54,8 +59,54 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.llms.client import CompanionLLMClient
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel
+
+
+@dataclass(frozen=True)
+class InjectedCompanionRuntime:
+    """Test-only manager wiring: explicit config plus scripted ``CompanionLLMClient``.
+
+    Production callers omit ``injected_runtime`` on ``run_agent_turn`` / ``drain_once``.
+    """
+
+    companion_config: CompanionConfig
+    llm_client: CompanionLLMClient
+
+
+def _assert_session_initialized(session: CompanionSession) -> None:
+    if session.is_initialized:
+        return
+    if (
+        session.config.memory_bootstrap_type
+        == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    ):
+        raise RuntimeError(
+            "Companion MemoryStore not seeded (interactive bootstrap requires minimal documents in store)"
+        )
+    raise RuntimeError(
+        "Companion MemoryStore not initialized (expected minimal seed at session create)"
+    )
+
+
+def manager_and_session_for_injected_runtime(
+    scope: AgentScope,
+    *,
+    injected: InjectedCompanionRuntime,
+) -> tuple[CompanionManager, CompanionSession]:
+    """Resolve manager and session from injected config and LLM client (bypasses LRU factory)."""
+    manager = CompanionManager(
+        injected.companion_config,
+        llm_client=injected.llm_client,
+    )
+    session = manager.get_or_create_session(
+        scope.user_id,
+        scope.agent_id,
+        scope.memory_store_chat_id(),
+    )
+    _assert_session_initialized(session)
+    return manager, session
 
 
 def _mark_agent_channel_session_system_written(
@@ -129,7 +180,7 @@ def manager_and_session_for_scope(
     scope: AgentScope,
     *,
     resolved_chat_model: GenAIModel,
-) -> tuple[object, CompanionSession]:
+) -> tuple[CompanionManager, CompanionSession]:
     chat_api_id = resolved_chat_model.id_on_provider
     tool_api_id = companion_tool_model_api_id(chat_api_id)
     manager = companion_manager_for_resolved_model(
@@ -143,17 +194,7 @@ def manager_and_session_for_scope(
         scope.agent_id,
         synthetic_chat_id,
     )
-    if not session.is_initialized:
-        if (
-            session.config.memory_bootstrap_type
-            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-        ):
-            raise RuntimeError(
-                "Companion MemoryStore not seeded (interactive bootstrap requires minimal documents in store)"
-            )
-        raise RuntimeError(
-            "Companion MemoryStore not initialized (expected minimal seed at session create)"
-        )
+    _assert_session_initialized(session)
     return manager, session
 
 
@@ -168,6 +209,7 @@ async def run_agent_turn(
     implicit_signal_bundle,
     agentic_output_queue: OutputQueue | None = None,
     user_message_batch: UserMessageBatch | None = None,
+    injected_runtime: InjectedCompanionRuntime | None = None,
 ) -> object:
     """Run one user-chat turn without ``chat_history`` writes.
 
@@ -175,9 +217,15 @@ async def run_agent_turn(
     """
     assert user_text.strip() != ""
     t0 = time.perf_counter()
-    manager, session = manager_and_session_for_scope(
-        scope, resolved_chat_model=resolved_chat_model
-    )
+    if injected_runtime is not None:
+        manager, session = manager_and_session_for_injected_runtime(
+            scope,
+            injected=injected_runtime,
+        )
+    else:
+        manager, session = manager_and_session_for_scope(
+            scope, resolved_chat_model=resolved_chat_model
+        )
     assert_scope_turn_lock_held_by_current_task(session.scope)
     await _maybe_append_agent_channel_session_system(session=session)
     bundle = implicit_signal_bundle

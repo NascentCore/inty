@@ -19,7 +19,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
 from app.core.config import global_config_loaded_from_config_yaml
-from app.utils.models_catalog import resolve_chat_text_model
+from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
     "（会话入线，内部指令）用户已进入本聊天。请在本轮及之后延续自然陪伴：可先简短问候，"
@@ -69,13 +69,11 @@ def companion_runtime_config_fingerprint() -> str:
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
 
 
-@lru_cache(maxsize=64)
-def companion_manager_for_resolved_model(
-    chat_model_api_id: str,
-    tool_model_api_id: str,
-    runtime_fingerprint: str,
-) -> CompanionManager:
-    _ = runtime_fingerprint
+def companion_config_for_resolved_model(
+    resolved_chat_model: GenAIModel,
+    resolved_tool_model: GenAIModel,
+) -> CompanionConfig:
+    """Assemble ``CompanionConfig`` from global harness yaml and resolved chat/tool models."""
     cfg = global_config_loaded_from_config_yaml
     harness = cfg.agent.companion_harness
     api_key = cfg.agent.chat_llm_api_key or cfg.agent.api_key
@@ -87,8 +85,8 @@ def companion_manager_for_resolved_model(
         async_chat_timeout = float(timeout_raw) if timeout_raw else 600.0
     except ValueError:
         async_chat_timeout = 600.0
-    chat_m = resolve_chat_text_model(chat_model_api_id)
-    tool_m = resolve_chat_text_model(tool_model_api_id)
+    chat_m = resolved_chat_model
+    tool_m = resolved_tool_model
     llm = CompanionLLMConfig(
         api_key=api_key,
         api_base=cfg.agent.chat_llm_base_url or cfg.agent.base_url,
@@ -110,7 +108,7 @@ def companion_manager_for_resolved_model(
     db_url = (cfg.database.url or "").strip()
     if not db_url:
         raise RuntimeError(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
-    companion_cfg = CompanionConfig(
+    return CompanionConfig(
         memory_pg_dsn=db_url,
         llm=llm,
         default_context_mode=harness.default_context_mode,
@@ -119,4 +117,16 @@ def companion_manager_for_resolved_model(
         repository_only_store_text=True,
         memory_bootstrap_type=harness.memory_bootstrap_type,
     )
+
+
+@lru_cache(maxsize=64)
+def companion_manager_for_resolved_model(
+    chat_model_api_id: str,
+    tool_model_api_id: str,
+    runtime_fingerprint: str,
+) -> CompanionManager:
+    _ = runtime_fingerprint
+    chat_m = resolve_chat_text_model(chat_model_api_id)
+    tool_m = resolve_chat_text_model(tool_model_api_id)
+    companion_cfg = companion_config_for_resolved_model(chat_m, tool_m)
     return CompanionManager(companion_cfg)
