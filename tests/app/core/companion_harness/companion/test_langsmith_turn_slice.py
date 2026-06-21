@@ -34,9 +34,9 @@ def test_app_default_tags_app_with_default_source() -> None:
     slice_ = CompanionTurnLangsmithSlice.app_default()
     assert slice_.runtime_channel == ChannelKind.APP_WS
     assert slice_.channel_source == LangsmithChannelSource.DEFAULT_APP
-    assert slice_.parent_tags() == ["runtime_channel_app"]
+    assert slice_.parent_tags() == ["runtime_channel_app_ws"]
     meta = slice_.parent_metadata_fragment()
-    assert meta[INTY_RUNTIME_CHANNEL_METADATA_KEY] == "app"
+    assert meta[INTY_RUNTIME_CHANNEL_METADATA_KEY] == "app_ws"
     assert meta[INTY_RUNTIME_CHANNEL_SOURCE_METADATA_KEY] == "default_app"
 
 
@@ -65,7 +65,7 @@ def test_tool_call_extra_includes_channel_metadata() -> None:
         extra_metadata=None,
     )
     assert extra["name"] == SOURCE_TOOL_BACKGROUND_INITIAL
-    assert extra["metadata"][INTY_RUNTIME_CHANNEL_METADATA_KEY] == "app"
+    assert extra["metadata"][INTY_RUNTIME_CHANNEL_METADATA_KEY] == "app_ws"
 
 
 def test_dreaming_consolidation_extra_preserves_role_name() -> None:

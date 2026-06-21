@@ -159,7 +159,7 @@ def test_resolve_tool_bg_routing_fallback_on_invalid_then_conservative() -> (
     )
     create_sync.assert_called_once()
     extra = create_sync.call_args.kwargs["langsmith_extra"]
-    assert extra["metadata"]["inty_runtime_channel"] == "app"
+    assert extra["metadata"]["inty_runtime_channel"] == "app_ws"
     assert out.output_to_user is False
     assert out.user_facing_reply == ""
     assert out.importance_round == 5

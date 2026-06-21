@@ -118,7 +118,7 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
         "agentic_companion",
         "user_turn",
         "explicit_user_message",
-        "runtime_channel_app",
+        "runtime_channel_app_ws",
     ]
     assert kwargs["inputs"]["inty_trace_id"] == "t1"
     assert kwargs["inputs"]["user_msg_uuid"] == "u1"
@@ -198,7 +198,7 @@ def test_create_companion_turn_root_run_implicit_signed_on_lane(
         "agentic_companion",
         "implicit_turn",
         "implicit_user_signed_on",
-        "runtime_channel_app",
+        "runtime_channel_app_ws",
     ]
     assert kwargs["inputs"]["inty_turn_lane"] == "implicit_turn"
     assert kwargs["inputs"]["implicit_signal"] == "implicit_user_signed_on"
@@ -240,7 +240,7 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
     assert kwargs["tags"] == [
         "agentic_companion",
         "inner_tick",
-        "runtime_channel_app",
+        "runtime_channel_app_ws",
     ]
     assert kwargs["inputs"]["inty_turn_lane"] == "inner_tick"
     assert kwargs["inputs"]["inner_tick_activity"] == "maintenance"
