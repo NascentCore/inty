@@ -765,6 +765,8 @@ async def _run_companion_turn_core(
                         else:
                             push_output_event(ev)
 
+                    # TODO(!3580): Migrate INNER_TICK_MAINTENANCE / INNER_TICK_AUTONOMY
+                    # to AgenticLoop single-LLM; remove skip_foreground_envelope path.
                     skip_foreground_envelope = (
                         inner_tick_turn and not tick_proactive
                     )
