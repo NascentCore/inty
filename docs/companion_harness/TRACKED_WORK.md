@@ -72,6 +72,16 @@
 
 See [#3374](https://github.com/NascentCore/inty/issues/3374) epic; child issues linked from `manager.py`, `chat_completions.py`, `turn.py`, inner-tick fire modules.
 
+## Companion pause / token limit gating (#3566–#3568)
+
+| Issue | Topic |
+|-------|-------|
+| [#3566](https://github.com/NascentCore/inty/issues/3566) | Reject user enqueue before durable InputQueue when budget exhausted |
+| [#3567](https://github.com/NascentCore/inty/issues/3567) | Layered pause composition (`sign_out` + `stop_presence` + channel teardown) |
+| [#3568](https://github.com/NascentCore/inty/issues/3568) | Companion WS `check_chat_limit` / `record_usage` (subscription layer) |
+
+Parent epics: [#3476](https://github.com/NascentCore/inty/issues/3476), [#3374](https://github.com/NascentCore/inty/issues/3374).
+
 ## Issues created this consolidation run
 
 - [#3547](https://github.com/NascentCore/inty/issues/3547) LivingSphere offline batch

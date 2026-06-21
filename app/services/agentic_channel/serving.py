@@ -245,6 +245,7 @@ async def drain_and_deliver_user_chat_turn(
 async def enqueue_inbound_wire_message(
     inbound: InboundWireMessage,
 ) -> str:
+    # TODO(#3566): reject before durable InputQueue write when token budget exhausted.
     """Append one pending user message to durable InputQueue."""
     async with AsyncSessionLocal() as db:
         input_repo = PostgresInputQueueRepository(db)

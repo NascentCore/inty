@@ -178,6 +178,7 @@ class ScopeQueueServing:
                 continue
 
     async def _drain_pending_batches(self) -> None:
+        # TODO(#3567): skip drain when token budget paused; pair with stop() on exhaustion.
         runtime_channel = self._runtime_channel
         if runtime_channel is None:
             return

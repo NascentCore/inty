@@ -181,6 +181,7 @@ async def _turn_up_app_ws_channel(
 
 
 async def _turn_down_app_ws_channel(scope: AgentScope, *, reason: str) -> None:
+    # TODO(#3567): token-budget pause may need stop_presence, not only sign_out + turn_down.
     """Mark APP channel inactive and clear proactive coords on the per-scope presence."""
     assert reason != ""
     presence = get_presence(scope)
@@ -1401,9 +1402,8 @@ async def chat_completions_websocket(
     ),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
-    # TODO(commercialization-cleanup): Companion subscription / ``record_usage`` / limit checks
-    # stay in this WS orchestration layer and ``inner_tick_fire.py`` — never in
-    # ``app/core/companion_harness`` (see harness AGENTS.md).
+    # TODO(#3568): Companion subscription check_chat_limit / record_usage on user turns.
+    # TODO(commercialization-cleanup): keep subscription out of ``app/core/companion_harness``.
     # Concurrency (see ``session.Coordinator``, ``companion_harness`` AGENTS.md):
     # - Prototype: one signed-on presence per paired user (no multi-tab). Each ``accept()``
     #   is that single wire; turns serialize on scope ``CompanionSession.turn_lock`` (#3272).

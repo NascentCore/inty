@@ -259,6 +259,7 @@ class AgentChannelPresence:
         local_id: str | None,
         chat_history_user_row_id: int | None,
     ) -> str:
+        # TODO(#3566): gate enqueue + wake when token budget exhausted (avoid durable backlog).
         """Enqueue one App WS user message and wake scope queue worker."""
         assert wire_id != ""
         assert user_text.strip() != ""
@@ -429,6 +430,7 @@ async def ensure_presence(scope: AgentScope) -> AgentChannelPresence:
 
 
 async def stop_presence(scope: AgentScope) -> None:
+    # TODO(#3567): call on token-budget pause; contrast with sign_out-only channel teardown.
     key = scope.registry_key()
     presence = _presences.pop(key, None)
     if presence is not None:
