@@ -1,4 +1,8 @@
-"""Tests for AgenticCompanion OutputQueue writes on drain_once."""
+"""Tests for AgenticCompanion OutputQueue writes on drain_once.
+
+TODO(#3563): Replace mock ``run_agent_turn`` with scripted ``drain_once`` for tool-bg-only
+OutputQueue skip (see test_companion_drain_scripted_llm.py).
+"""
 
 from __future__ import annotations
 

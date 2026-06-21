@@ -4,6 +4,8 @@ Script step counts assume default ``user_turn.llm_loop_mode=dual_llm``:
 - No-tool USER_CHAT: 2 steps (reply + empty routing)
 - Tool-bg round: 4 steps (see #3559 orchestration test)
 - Bootstrap USER_INTERACTIVE: 1 step (single assistant reply)
+
+TODO(#3563): Add sequential back-to-back drain smoke and config-aware script sizing.
 """
 
 from __future__ import annotations
