@@ -1,0 +1,24 @@
+name: push_pop_pop_system
+description: Pop a mid-stack system codeword and verify the remaining base instruction controls the answer.
+layout_zone: push_pop
+steps:
+  - push:
+      role: system
+      content: "Base fallback: if no active codeword instruction is visible, answer exactly NO-ACTIVE-CODEWORD."
+  - push:
+      role: user
+      content: "Earlier user turn before temporary codeword."
+  - push:
+      role: assistant
+      content: "Earlier assistant turn before temporary codeword."
+  - push:
+      role: system
+      content: "Temporary codeword: REMOVE-ME."
+  - pop: true
+probes:
+  - id: popped_system_absent
+    question: "What is the active stack codeword? If none is visible, answer with the fallback phrase."
+    expect_contains: ["NO-ACTIVE-CODEWORD"]
+  - id: fallback_after_pop
+    question: "Repeat the fallback phrase exactly if no active codeword instruction remains."
+    expect_contains: ["NO-ACTIVE-CODEWORD"]

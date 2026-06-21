@@ -21,6 +21,8 @@ Review architecture of the pending changes' fitness to the [companion harness de
 
 - Plan should include testing.
 - Tests are done at the key juncture between procedures of the plan.
+- Complex featuers should have smoke tests to cover the end-to-end process.
+- User-facing changes should have manual tests.
 
 ## Refactoring
 

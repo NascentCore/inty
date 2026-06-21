@@ -30,7 +30,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
 
-from app.core.llms.client import CompanionLLMClient
+from app.core.llms.client import LlmClient
 from .runtime_channel import TurnRuntimeContext
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 
@@ -64,7 +64,7 @@ class CompanionTurnDeps:
         rows when the round completes.
 
     llm_client
-        ``CompanionLLMClient`` bound to this session's model routing (chat vs tool
+        ``LlmClient`` bound to this session's model routing (chat vs tool
         roles, API base, timeouts). All in-turn ``chat_completion`` calls and
         ``tool_background`` dispatch use this client; LangSmith parent runs also
         resolve model ids from it.
@@ -145,7 +145,7 @@ class CompanionTurnDeps:
     """
 
     store: MemoryStore
-    llm_client: CompanionLLMClient
+    llm_client: LlmClient
     transcript_compaction: TranscriptCompactionConfig | None
     transcript_llm_window_max_messages: int | None
     repository_only_store_text: bool

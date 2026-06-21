@@ -43,9 +43,9 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
 )
 from app.core.llms.client import (
     AsyncLlmClient,
-    CompanionLLMClient,
     LLM_SCENE_CHAT,
     LLM_SCENE_INNER_TICK,
+    LlmClient,
 )
 from app.core.companion_harness.companion.message_format import (
     openai_assistant_message_dict,
@@ -422,7 +422,7 @@ class AgenticLoop:
         *,
         store: MemoryStore,
         llm_client: AsyncLlmClient,
-        legacy_llm_client: CompanionLLMClient,
+        legacy_llm_client: LlmClient,
     ) -> None:
         """Bind stable agent dependencies used across loop runs."""
         self.store = store

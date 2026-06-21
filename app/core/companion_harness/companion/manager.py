@@ -30,7 +30,7 @@ from app.techno_core.seeding import ensure_techno_core_seeded
 from .langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
-from app.core.llms.client import CompanionLLMClient, CompanionLLMConfig
+from app.core.llms.client import CompanionLLMConfig, LlmClient
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig,
 )
@@ -108,7 +108,7 @@ class CompanionSession:
         *,
         scope: CompanionScope,
         store: MemoryStore,
-        llm_client: CompanionLLMClient,
+        llm_client: LlmClient,
         config: CompanionConfig,
     ) -> None:
         self.scope = scope
@@ -145,15 +145,13 @@ class CompanionManager:
     def __init__(
         self,
         config: CompanionConfig,
-        llm_client: CompanionLLMClient | None = None,
+        llm_client: LlmClient | None = None,
     ) -> None:
         self._config = config
         self._sessions: dict[str, CompanionSession] = {}
         self._lock = threading.Lock()
         self._llm_client = (
-            llm_client
-            if llm_client is not None
-            else CompanionLLMClient(config.llm)
+            llm_client if llm_client is not None else LlmClient(config.llm)
         )
 
     @staticmethod

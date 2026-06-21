@@ -21,10 +21,13 @@ from app.services.agentic_channel.companion_bonds import (
     active_companion_scope_for_user,
     create_active_companion_bond,
     deactivate_companion_bond,
+    get_companion_bond_for_scope,
     has_active_companion_bond,
     has_active_companion_bond_for_agent,
     list_active_companion_agent_scope_keys,
+    pause_companion_bond_runtime,
     require_active_companion_bond,
+    resume_companion_bond_runtime,
 )
 from app.services.agentic_channel.companion_guest_provision import (
     GuestUserInput,
@@ -154,6 +157,56 @@ async def test_deactivate_companion_bond_marks_inactive() -> None:
         assert not await has_active_companion_bond(db, scope)
         with pytest.raises(CompanionBondInvariantError):
             await require_active_companion_bond(db, scope)
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_pause_and_resume_companion_bond_runtime() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, scope)
+        await db.commit()
+
+        changed = await pause_companion_bond_runtime(db, scope)
+        assert changed is True
+        bond = await require_active_companion_bond(db, scope)
+        assert bond.state == CompanionBondState.ACTIVE
+        assert bond.runtime_paused_at is not None
+        await db.commit()
+
+        paused_twice = await pause_companion_bond_runtime(db, scope)
+        assert paused_twice is False
+
+        keys = await list_active_companion_agent_scope_keys(db)
+        assert (scope.user_id, scope.agent_id) not in keys
+
+        changed = await resume_companion_bond_runtime(db, scope)
+        assert changed is True
+        assert bond.runtime_paused_at is None
+        assert bond.last_resumed_at is not None
+        await db.commit()
+
+        keys_after_resume = await list_active_companion_agent_scope_keys(db)
+        assert (scope.user_id, scope.agent_id) in keys_after_resume
+
+        changed_again = await resume_companion_bond_runtime(db, scope)
+        assert changed_again is False
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_get_companion_bond_for_scope_returns_exact_unique_bond() -> None:
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        bond = await create_active_companion_bond(db, scope)
+        await db.commit()
+
+        found = await get_companion_bond_for_scope(db, scope)
+        assert found is not None
+        assert found.id == bond.id
+
         await _delete_scope(db, scope)
         await db.commit()
 

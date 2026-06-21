@@ -30,7 +30,7 @@ from app.core.companion_harness.tools.runtime import (
     resolve_openai_tool_call_loop_async,
 )
 from .langsmith_turn_slice import CompanionTurnLangsmithSlice
-from app.core.llms.client import CompanionLLMClient, LLM_SCENE_CHAT
+from app.core.llms.client import LLM_SCENE_CHAT, LlmClient
 from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
@@ -53,7 +53,7 @@ class InTurnSyncToolLoopInput:
     """Inputs for one in-turn sync tool loop."""
 
     store: MemoryStore
-    llm_client: CompanionLLMClient
+    llm_client: LlmClient
     messages: tuple[dict[str, Any], ...]
     tools_for_turn: tuple[dict[str, Any], ...]
     write_allowlist: frozenset[str]
@@ -108,7 +108,7 @@ class BootstrapInTurnSyncToolLoopInput:
     """
 
     store: MemoryStore
-    llm_client: CompanionLLMClient
+    llm_client: LlmClient
     messages: tuple[dict[str, Any], ...]
     tools_for_turn: tuple[dict[str, Any], ...]
     memory_bootstrap_type: str

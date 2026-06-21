@@ -32,6 +32,10 @@ from app.services.agentic_channel.channel_runtime import (
 )
 from app.services.agentic_channel.endpoints import resolve_scope
 from app.services.agentic_channel.presence import clear_presences_for_tests
+from app.services.agentic_channel.companion_bonds import (
+    get_companion_bond_for_scope,
+    pause_companion_bond_runtime,
+)
 from app.services.agentic_channel.provision import (
     provision_agent_for_channel_onboard,
 )
@@ -270,6 +274,58 @@ async def test_handle_inbound_sends_channel_error_from_presence() -> None:
         await transport._handle_inbound(inbound)
 
     assert sent == ["Companion 回合失败，请查看 Ops 日志。"]
+    await _cleanup_scope(provision.scope)
+
+
+@pytest.mark.asyncio
+async def test_handle_inbound_resumes_paused_companion_runtime() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-paused-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=CompanionRuntimeChannel.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        await pause_companion_bond_runtime(db, provision.scope)
+        await db.commit()
+
+    class _CapturePresence:
+        def __init__(self) -> None:
+            self.texts: list[str] = []
+
+        async def handle_user_text(
+            self,
+            user_text: str,
+            *,
+            runtime_channel: CompanionRuntimeChannel,
+        ) -> str:
+            self.texts.append(user_text)
+            return ""
+
+    presence = _CapturePresence()
+    api = TelegramBotApi(bot_token="route-test-token", urlopen=_fake_urlopen)
+    transport = TelegramTransport(api=api)
+    with patch(
+        "backend.ops.telegram_demo.transport.get_presence",
+        return_value=presence,
+    ):
+        inbound = TelegramIncomingMessage(
+            update_id=21,
+            chat_id=telegram_chat_id,
+            channel_user_id=channel_user_id,
+            text="I am back",
+            local_received_at=time.time(),
+        )
+        await transport._handle_inbound(inbound)
+
+    assert presence.texts == ["I am back"]
+    async with AsyncSessionLocal() as db:
+        bond = await get_companion_bond_for_scope(db, provision.scope)
+        assert bond is not None
+        assert bond.runtime_paused_at is None
+        assert bond.last_resumed_at is not None
     await _cleanup_scope(provision.scope)
 
 

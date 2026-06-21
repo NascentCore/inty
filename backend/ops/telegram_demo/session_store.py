@@ -15,6 +15,7 @@ from app.services.agentic_channel.adapters.telegram import (
 )
 from app.services.agentic_channel.channel_runtime import turn_channel_up
 from app.services.agentic_channel.companion_bonds import (
+    get_companion_bond_for_scope,
     has_active_companion_bond,
 )
 from app.services.agentic_channel.endpoints import (
@@ -92,10 +93,24 @@ async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
             # agent_channel restore service used by Telegram, Weixin, and future channels.
             async with AsyncSessionLocal() as db:
                 bond_active = await has_active_companion_bond(db, scope)
+                bond = (
+                    await get_companion_bond_for_scope(db, scope)
+                    if bond_active
+                    else None
+                )
             if not bond_active:
                 skipped_inactive += 1
                 logger.info(
                     "telegram-demo restore skipped inactive bond channel_address={} user_id={} agent_id={}",
+                    record.channel_address,
+                    scope.user_id,
+                    scope.agent_id,
+                )
+                continue
+            if bond is not None and bond.runtime_paused_at is not None:
+                skipped_inactive += 1
+                logger.info(
+                    "telegram-demo restore skipped paused runtime channel_address={} user_id={} agent_id={}",
                     record.channel_address,
                     scope.user_id,
                     scope.agent_id,

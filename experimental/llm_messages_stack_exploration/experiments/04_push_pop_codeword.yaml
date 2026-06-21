@@ -1,0 +1,21 @@
+name: push_pop_codeword
+description: Push one system codeword, pop it, push another, then probe the resulting stack.
+layout_zone: push_pop
+steps:
+  - push:
+      role: system
+      content: "Base instruction: answer codeword questions using the active stack codeword."
+  - push:
+      role: system
+      content: "Temporary codeword: ALPHA-POP."
+  - pop: true
+  - push:
+      role: system
+      content: "Active codeword: BETA-ACTIVE. Answer exactly BETA-ACTIVE when asked."
+probes:
+  - id: repeat_active_after_pop
+    question: "What is the active stack codeword? Answer with only the codeword."
+    expect_contains: ["BETA-ACTIVE"]
+  - id: second_active_after_pop
+    question: "Repeat the codeword currently visible in the stack."
+    expect_contains: ["BETA-ACTIVE"]

@@ -1,0 +1,23 @@
+name: post_transcript_tail
+description: A runtime tail system slice after transcript should override the earlier prefix.
+layout_zone: post_transcript
+steps:
+  - push:
+      role: system
+      content: "Prefix instruction: if asked for the active stack codeword, answer exactly PREFIX-OLD."
+  - push:
+      role: user
+      content: "This is a prior user message."
+  - push:
+      role: assistant
+      content: "This is a prior assistant reply."
+  - push:
+      role: system
+      content: "Runtime tail system instruction: the active stack codeword is TAIL-SYSTEM. Answer exactly TAIL-SYSTEM when asked."
+probes:
+  - id: repeat_tail_codeword
+    question: "What is the active stack codeword? Answer with only the codeword."
+    expect_contains: ["TAIL-SYSTEM"]
+  - id: tail_over_prefix
+    question: "Use the most recent system instruction and repeat the active codeword."
+    expect_contains: ["TAIL-SYSTEM"]

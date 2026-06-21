@@ -31,7 +31,7 @@ from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from app.core.llms.client import CompanionLLMClient
+from app.core.llms.client import LlmClient
 from .llm_runtime_events import record_llm_inference_failure
 from .models import InnerTickActivity
 
@@ -53,7 +53,7 @@ def build_chat_track_handoff_assistant_message(
 class DualLlmForegroundChatInput:
     """Inputs for one dual-LLM foreground chat envelope call."""
 
-    llm_client: CompanionLLMClient
+    llm_client: LlmClient
     chat_msgs: tuple[dict[str, Any], ...]
     tool_msgs: tuple[dict[str, Any], ...]
     chat_model: GenAIModel

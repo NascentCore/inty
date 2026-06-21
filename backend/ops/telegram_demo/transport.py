@@ -26,6 +26,7 @@ from app.external_services.telegram_bot_api import (
     TelegramBotApi,
     TelegramIncomingMessage,
 )
+from app.db.session import AsyncSessionLocal
 from app.services.agentic_channel.adapters.telegram import (
     TelegramChannelAdapter,
 )
@@ -40,6 +41,10 @@ from app.services.agentic_channel.endpoints import (
 )
 from app.services.agentic_channel.errors import ChannelEndpointConflictError
 from app.services.agentic_channel.presence import ensure_presence, get_presence
+from app.services.agentic_channel.companion_bonds import (
+    get_companion_bond_for_scope,
+    resume_companion_bond_runtime,
+)
 from app.services.agentic_channel.provision import (
     ChannelProvisionResult,
     provision_agent_for_channel_onboard,
@@ -186,6 +191,7 @@ class TelegramTransport:
                 scope=scope,
             )
             return
+        await self._resume_if_paused(scope=scope)
         await self._ensure_active(
             inbound=inbound,
             scope=scope,
@@ -231,6 +237,7 @@ class TelegramTransport:
                     scope=existing,
                 )
                 return
+            await self._resume_if_paused(scope=existing)
             await self._ensure_active(
                 inbound=inbound,
                 scope=existing,
@@ -268,6 +275,7 @@ class TelegramTransport:
             )
             return
         if not provision.is_new_user:
+            await self._resume_if_paused(scope=provision.scope)
             await self._ensure_active(
                 inbound=inbound,
                 scope=provision.scope,
@@ -330,6 +338,22 @@ class TelegramTransport:
                 provision.scope.user_id,
                 provision.scope.agent_id,
             )
+
+    async def _resume_if_paused(self, *, scope: AgentScope) -> None:
+        """Clear runtime pause flag before normal Telegram runtime activation."""
+        async with AsyncSessionLocal() as db:
+            bond = await get_companion_bond_for_scope(db, scope)
+            if bond is None or bond.runtime_paused_at is None:
+                return
+            resumed = await resume_companion_bond_runtime(db, scope)
+            if not resumed:
+                return
+            await db.commit()
+        logger.info(
+            "runtime_resume scope={} channel={}",
+            scope.registry_key(),
+            CompanionRuntimeChannel.TELEGRAM.value,
+        )
 
     async def _ensure_active(
         self,

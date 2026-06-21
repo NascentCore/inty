@@ -473,6 +473,14 @@ class AgentConfig(BaseModel):
                 "(see ``companion.dreaming`` module doc)."
             ),
         )
+        agent_scope_idle_timeout_minutes: int = Field(
+            default=960,
+            ge=1,
+            description=(
+                "Minutes since the latest user-activity anchor before a "
+                "companion agent scope's runtime is paused to save tokens/CPU."
+            ),
+        )
         default_context_mode: str = Field(
             default="intimate",
             description=(

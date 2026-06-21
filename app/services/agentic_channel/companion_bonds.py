@@ -15,6 +15,27 @@ from app.models.user import User
 from app.services.agentic_channel.errors import CompanionBondInvariantError
 
 
+async def get_companion_bond_for_scope(
+    db: AsyncSession,
+    scope: AgentScope,
+) -> CompanionBond | None:
+    """Return the exact bond row for scope, or None when not unique."""
+    assert scope.user_id != ""
+    assert scope.agent_id != ""
+    result = await db.execute(
+        select(CompanionBond)
+        .where(
+            CompanionBond.user_id == scope.user_id,
+            CompanionBond.agent_id == scope.agent_id,
+        )
+        .order_by(CompanionBond.created_at.asc(), CompanionBond.id.asc())
+    )
+    bonds = list(result.scalars().all())
+    if len(bonds) != 1:
+        return None
+    return bonds[0]
+
+
 async def _active_bonds_for_scope_keys(
     db: AsyncSession,
     scope: AgentScope,
@@ -176,10 +197,13 @@ async def has_active_companion_bond(
 async def list_active_companion_agent_scope_keys(
     db: AsyncSession,
 ) -> frozenset[tuple[str, str]]:
-    """Return valid, unambiguous (user_id, agent_id) keys for ACTIVE bonds."""
+    """Return valid, unambiguous keys for ACTIVE bonds with running runtime."""
     result = await db.execute(
         select(CompanionBond)
-        .where(CompanionBond.state == CompanionBondState.ACTIVE)
+        .where(
+            CompanionBond.state == CompanionBondState.ACTIVE,
+            CompanionBond.runtime_paused_at.is_(None),
+        )
         .order_by(CompanionBond.created_at.asc(), CompanionBond.id.asc())
     )
     bonds = list(result.scalars().all())
@@ -211,6 +235,31 @@ async def deactivate_companion_bond(
     bond.state = CompanionBondState.INACTIVE
     bond.inactive_at = datetime.now(UTC)
     return bond
+
+
+async def pause_companion_bond_runtime(
+    db: AsyncSession,
+    scope: AgentScope,
+) -> bool:
+    """Mark one ACTIVE bond runtime paused; return whether the flag was set."""
+    bond = await require_active_companion_bond(db, scope)
+    if bond.runtime_paused_at is not None:
+        return False
+    bond.runtime_paused_at = datetime.now(UTC)
+    return True
+
+
+async def resume_companion_bond_runtime(
+    db: AsyncSession,
+    scope: AgentScope,
+) -> bool:
+    """Clear runtime pause flag for one ACTIVE bond; return whether it changed."""
+    bond = await require_active_companion_bond(db, scope)
+    if bond.runtime_paused_at is None:
+        return False
+    bond.runtime_paused_at = None
+    bond.last_resumed_at = datetime.now(UTC)
+    return True
 
 
 async def active_companion_scope_for_user(
