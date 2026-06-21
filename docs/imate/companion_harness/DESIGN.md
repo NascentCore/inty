@@ -107,7 +107,7 @@ Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**�
 └─────────────────────────────────────┘
 ```
 
-### Harness Pipelines
+### Harness Pipelines: 多条内部工作流水线及触发机制
 
 ```harness-pipelines
 ┌─ Entry & orchestration ─────────────────────────────────────────────────┐
