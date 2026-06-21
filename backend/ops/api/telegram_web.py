@@ -1,15 +1,15 @@
-"""Serve Telegram demo onboard page (team QR → auto provision)."""
+"""Serve Telegram onboard page on Ops (team QR → auto provision)."""
 
 from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-_TELEGRAM_DEMO_HTML = """<!DOCTYPE html>
+_TELEGRAM_ONBOARD_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>Inty Telegram Demo</title>
+  <title>Inty Telegram Onboard</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
     .hint { font-size: 0.9rem; color: #444; margin: 0.75rem 0; }
@@ -19,7 +19,7 @@ _TELEGRAM_DEMO_HTML = """<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <h1>Telegram ↔ Inty Demo</h1>
+  <h1>Telegram ↔ Inty</h1>
   <p class="hint">
     每人扫码后会自动创建独立的 companion（guest user + agent）。
   </p>
@@ -32,11 +32,11 @@ _TELEGRAM_DEMO_HTML = """<!DOCTYPE html>
     <li>在 bot 里用<strong>中文</strong>聊天，完成 bootstrap（取名、关系等）</li>
     <li>bootstrap 结束后正常闲聊；空闲时可能收到 proactive 消息</li>
     <li><strong>一人一个 companion</strong>；仅支持文字；勿与 App WebSocket 同时用同一 guest 账号</li>
-    <li>Ops 重启后一般<strong>直接发消息</strong>即可；异常时再扫 QR 或发 <code>/start onboard</code></li>
-    <li>无回复：确认 Ops <code>/health</code>、查看 <code>.inty/inty.log</code></li>
+    <li>服务重启后一般<strong>直接发消息</strong>即可；异常时再扫 QR 或发 <code>/start onboard</code></li>
+    <li>无回复：确认 <code>/health</code>、查看 <code>.inty/inty.log</code></li>
   </ol>
   <script>
-    const API = "/api/v1/telegram-demo";
+    const API = "/api/v1/telegram";
 
     function setStatus(text) {
       document.getElementById("status").textContent = text;
@@ -78,9 +78,9 @@ _TELEGRAM_DEMO_HTML = """<!DOCTYPE html>
 """
 
 
-def configure_telegram_demo_web_routes(app: FastAPI) -> None:
+def configure_telegram_web_routes(app: FastAPI) -> None:
     """Mount ``GET /telegram`` (onboard page; not in OpenAPI)."""
 
     @app.get("/telegram", include_in_schema=False)
-    async def telegram_demo_onboard_page() -> HTMLResponse:
-        return HTMLResponse(_TELEGRAM_DEMO_HTML)
+    async def telegram_onboard_page() -> HTMLResponse:
+        return HTMLResponse(_TELEGRAM_ONBOARD_HTML)
