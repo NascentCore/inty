@@ -1,7 +1,11 @@
 """CI-gated harness orchestration tests using scripted FakeOpenAI transport.
 
-TODO(#3563): Expand scripted tracks (maintenance, autonomy, dreaming, proactive+tool);
-read ``user_turn.llm_loop_mode`` from config when sizing scripts.
+Covered: settled ``USER_CHAT`` (no-tools x ``dual_llm`` + ``in_turn_single_llm``;
+tool-bg ``dual_llm`` only), bootstrap, proactive single-shot.
+
+Excluded (documented): maintenance/autonomy (#3580), dreaming, proactive+tool (#3285),
+sequential double-drain. ``IN_TURN_SINGLE_LLM`` tool-bg uses in-turn sync tools — see
+``test_agentic_loop_output_queue.py``; not duplicated here.
 """
 
 from __future__ import annotations
@@ -35,6 +39,10 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )
+from app.core.companion_harness.loop.config import (
+    BatchUserMessagesLlmCallMode,
+    UserTurnLlmLoopMode,
+)
 from app.core.companion_harness.memory.memory_registry import (
     shutdown_all_memory_stores,
 )
@@ -44,12 +52,9 @@ from app.core.companion_harness.tools.tool_background import (
 from app.external_services.fakes.openai import (
     FakeCompletionStep,
     FakeOpenAI,
-    fake_step_dual_llm_envelope,
     fake_step_text,
-    fake_step_tool_call,
 )
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.companion_harness.loop.config import BatchUserMessagesLlmCallMode
 from app.utils.config import CompanionMemoryBootstrapType
 from tests.app.core.companion_harness.companion_memory_registry_dsn import (
     companion_memory_registry_dsn,
@@ -59,11 +64,14 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
     delete_guest_scope_for_test,
 )
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
+    SettledUserChatScriptScenario,
+    build_scripted_settled_user_chat_script,
     companion_llm_client_with_scripted_transport,
     scripted_harness_llm_config,
     scripted_tool_background_done_rows,
     scripted_transcript_roles,
     scripted_transcript_rows,
+    with_scripted_user_turn_llm_loop_mode,
 )
 
 
@@ -78,7 +86,9 @@ async def _build_scripted_manager(
         meta_data={"test": "scripted_llm"},
     )
     llm_config = scripted_harness_llm_config()
-    client, fake = companion_llm_client_with_scripted_transport(llm_config, script)
+    client, fake = companion_llm_client_with_scripted_transport(
+        llm_config, script
+    )
     config = CompanionConfig(
         llm=llm_config,
         memory_pg_dsn=companion_memory_registry_dsn(),
@@ -127,41 +137,54 @@ def _shutdown_memory_stores_after_test() -> None:
 
 
 @pytest.mark.asyncio
-async def test_user_chat_no_tools_delivers_foreground_to_output_queue() -> None:
-    script = (
-        fake_step_text("Hi, I'm here."),
-        fake_step_text(""),
+@pytest.mark.parametrize(
+    "llm_loop_mode",
+    [UserTurnLlmLoopMode.DUAL_LLM, UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM],
+)
+async def test_user_chat_no_tools_delivers_foreground_to_output_queue(
+    llm_loop_mode: UserTurnLlmLoopMode,
+) -> None:
+    built = build_scripted_settled_user_chat_script(
+        llm_loop_mode,
+        SettledUserChatScriptScenario.NO_TOOLS,
     )
     manager, session, fake, scope = await _build_scripted_manager(
-        script=script,
+        script=built.steps,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
     )
     try:
-        output_queue = get_output_queue_for_scope(scope)
-        batch_id = str(uuid.uuid4())
-        user_msg_id = str(uuid.uuid4())
-        user_batch = UserMessageBatch(
-            batch_id=batch_id, message_ids=(user_msg_id,)
-        )
+        with with_scripted_user_turn_llm_loop_mode(llm_loop_mode):
+            output_queue = get_output_queue_for_scope(scope)
+            batch_id = str(uuid.uuid4())
+            user_msg_id = str(uuid.uuid4())
+            user_batch = UserMessageBatch(
+                batch_id=batch_id, message_ids=(user_msg_id,)
+            )
 
-        result = await manager.run_user_chat_turn(
-            session,
-            "hello",
-            preset_user_msg_uuid=user_msg_id,
-            agentic_output_queue=output_queue,
-            user_message_batch=user_batch,
-            runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
-                implicit_signal_bundle=None,
-            ),
-        )
+            result = await manager.run_user_chat_turn(
+                session,
+                "hello",
+                preset_user_msg_uuid=user_msg_id,
+                agentic_output_queue=output_queue,
+                user_message_batch=user_batch,
+                runtime_context=TurnRuntimeContext(
+                    channel=ChannelKind.APP_WS,
+                    implicit_signal_bundle=None,
+                ),
+            )
 
-        ready = await output_queue.pull_ready_batch()
-        texts = [row.text for row in ready]
-        assert texts == ["Hi, I'm here."]
-        assert result.assistant_text.strip() == "Hi, I'm here."
-        assert scripted_transcript_roles(session.store) == ["user", "assistant"]
-        assert fake.script_index == len(script)
+            ready = await output_queue.pull_ready_batch()
+            assert built.expected_foreground_reply is not None
+            texts = [row.text for row in ready]
+            assert texts == [built.expected_foreground_reply]
+            assert (
+                result.assistant_text.strip() == built.expected_foreground_reply
+            )
+            assert scripted_transcript_roles(session.store) == [
+                "user",
+                "assistant",
+            ]
+            assert fake.script_index == built.expected_step_count
     finally:
         await delete_guest_scope_for_test(scope)
 
@@ -310,24 +333,12 @@ async def test_user_chat_join_mode_batch_persists_one_user_row() -> None:
 
 @pytest.mark.asyncio
 async def test_user_chat_background_tool_round_persists_side_effects() -> None:
-    script = (
-        fake_step_text("I'll list your scope root."),
-        fake_step_tool_call(
-            "memory_store_list_paths",
-            '{"relative_path": ""}',
-            tool_call_id="call_list_paths",
-        ),
-        fake_step_dual_llm_envelope(
-            user_facing_reply="Listing complete.",
-            output_to_user=False,
-            importance_round=5,
-            importance_user_message=5,
-            importance_assistant_message=5,
-            turn_recall="",
-        ),
+    built = build_scripted_settled_user_chat_script(
+        UserTurnLlmLoopMode.DUAL_LLM,
+        SettledUserChatScriptScenario.DUAL_LLM_TOOL_BACKGROUND,
     )
     manager, session, fake, scope = await _build_scripted_manager(
-        script=script,
+        script=built.steps,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
     )
     try:
@@ -351,7 +362,8 @@ async def test_user_chat_background_tool_round_persists_side_effects() -> None:
         )
 
         ready = await output_queue.pull_ready_batch()
-        assert [row.text for row in ready] == ["I'll list your scope root."]
+        assert built.expected_foreground_reply is not None
+        assert [row.text for row in ready] == [built.expected_foreground_reply]
         transcript = scripted_transcript_rows(session.store)
         assert any(row.get("source") == "tool_bg" for row in transcript)
         assert any(
@@ -362,7 +374,7 @@ async def test_user_chat_background_tool_round_persists_side_effects() -> None:
         assert len(done_rows) == 1
         assert done_rows[0].get("kind") == "tool_background_done"
         assert done_rows[0].get("tool_calls_count") == 1
-        assert fake.script_index == len(script)
+        assert fake.script_index == built.expected_step_count
     finally:
         await delete_guest_scope_for_test(scope)
 
