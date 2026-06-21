@@ -1,6 +1,7 @@
 """AgenticCompanion: per-scope serving runtime draining InputQueue into AgenticLoop.
 
 TODO(!3493): Weixin ``drain_and_deliver`` caller should enqueue + wake only (!3487 App-WS done #3512).
+TODO(!3562): CI-gated headless harness test — enqueue InputQueue, call ``drain_once``, assert OutputQueue + MemoryStore with scripted FakeOpenAI (Epic !3561).
 """
 
 from __future__ import annotations
