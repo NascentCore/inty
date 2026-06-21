@@ -27,5 +27,6 @@ jobs:
         run: |
           export PYTHONPATH=.
           export ALEMBIC_CONFIG=backend/alembic/alembic.ini
+          # VM host job: render Docker-baked host.docker.internal -> localhost (quoted YAML is subtle; see render script header).
           devops/scripts/render_vm_database_config.sh devops/config.yaml.prod /tmp/config.prod.vm.yaml
           alembic -x "config=/tmp/config.prod.vm.yaml" upgrade head

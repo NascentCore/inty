@@ -90,6 +90,57 @@ def test_render_vm_database_config_rewrites_host(tmp_path: Path):
     assert "host.docker.internal" not in dest.read_text(encoding="utf-8")
 
 
+def test_render_vm_database_config_rewrites_quoted_host(tmp_path: Path):
+    source = tmp_path / "config.yaml"
+    dest = tmp_path / "config.vm.yaml"
+    source.write_text(
+        'database:\n  host: "host.docker.internal"\n  port: 5432\n',
+        encoding="utf-8",
+    )
+    subprocess.run(
+        [str(RENDER_SCRIPT_PATH), str(source), str(dest)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    rendered = dest.read_text(encoding="utf-8")
+    assert 'host: "localhost"' in rendered
+    assert "host.docker.internal" not in rendered
+
+
+def test_render_vm_database_config_rewrites_prod_config():
+    dest = Path("/tmp/config.prod.vm.test.yaml")
+    subprocess.run(
+        [str(RENDER_SCRIPT_PATH), str(CONFIG_PROD), str(dest)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    rendered = dest.read_text(encoding="utf-8")
+    assert 'host: "localhost"' in rendered
+    assert "host.docker.internal" not in rendered
+
+
+def test_render_vm_database_config_rejects_leftover_docker_host(tmp_path: Path):
+    dest = tmp_path / "config.vm.yaml"
+    dest.write_text(
+        'database:\n  host: "host.docker.internal"\n  port: 5432\n',
+        encoding="utf-8",
+    )
+    completed = subprocess.run(
+        [
+            "bash",
+            "-c",
+            f'source "{RENDER_SCRIPT_PATH}"; assert_no_host_docker_internal "{dest}"',
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 1
+    assert "still references host.docker.internal" in completed.stderr
+
+
 def test_table_sync_priority_orders_users_before_dependents():
     users_prio = run_bash_function("table_sync_priority", "users")
     chat_settings_prio = run_bash_function("table_sync_priority", "chat_settings")
