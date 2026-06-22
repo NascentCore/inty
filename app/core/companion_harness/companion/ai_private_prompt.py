@@ -7,7 +7,7 @@ the environment lives in ``LIFE_CURRENTS.md`` (AUTONOMY track).
 Structured rows: ``AiPrivateThought`` (``uuid``, ``ts``, ``text``, optional ``after_user_msg_uuid``).
 Surfaced consumption appends marker rows ``{kind: surfaced, ref_uuid, ts}`` (append-only).
 Kernel maintenance inner-tick turns load history via ``get_ai_private_jsonl_text_for_prompt``;
-``get_ai_private_text_for_prompt`` remains for ``ai_private.md`` only (tests, tooling, optional merge).
+``get_ai_private_text_for_prompt`` remains for ``ai_private.md`` only (tests, tooling).
 
 TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
 https://github.com/NascentCore/inty/issues/3409"""
@@ -239,16 +239,3 @@ def get_ai_private_jsonl_text_for_prompt(
     lines_out.extend(legacy_lines)
     merged = "\n".join(lines_out)
     return _clip_chars(merged, max_chars)
-
-
-def get_ai_private_merged_text_for_prompt(
-    store: MemoryStore, *, max_chars: int = AI_PRIVATE_INJECT_MAX_CHARS
-) -> str:
-    """Concatenate ``ai_private.md`` then ``ai_private.jsonl`` under one character budget."""
-    md = get_ai_private_text_for_prompt(store, max_chars=max_chars)
-    jl = get_ai_private_jsonl_text_for_prompt(store, max_chars=max_chars)
-    if not jl.strip():
-        return md
-    sep = "\n\n---\n\n（ai_private.jsonl）\n\n"
-    combined = md.rstrip() + sep + jl.strip()
-    return _clip_chars(combined, max_chars)
