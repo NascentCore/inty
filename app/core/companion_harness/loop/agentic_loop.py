@@ -497,10 +497,6 @@ class AgenticLoop:
             openai_messages=chat_msgs,
             user_text=context.user_text,
         )
-        apply_agentic_loop_runtime_system_clauses(
-            openai_messages=tool_msgs,
-            user_text=context.user_text,
-        )
         chat_model = llm_client.resolve_model("chat")
         tool_model = llm_client.resolve_model("tool")
         tick_proactive = (

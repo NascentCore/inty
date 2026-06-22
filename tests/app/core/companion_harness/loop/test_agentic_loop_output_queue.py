@@ -662,8 +662,7 @@ async def test_dual_llm_user_turn_injects_reply_language_clause() -> None:
     fg_input = foreground_mock.await_args.args[0]
     assert fg_input.chat_msgs[0]["content"] == REPLY_IN_USER_LANGUAGE_CLAUSE
     assert fg_input.chat_msgs[1]["content"] == "hi"
-    assert fg_input.tool_msgs[0]["content"] == REPLY_IN_USER_LANGUAGE_CLAUSE
-    assert fg_input.tool_msgs[1]["content"] == "hi"
+    assert fg_input.tool_msgs[0]["content"] == "hi"
 
 
 @pytest.mark.asyncio
