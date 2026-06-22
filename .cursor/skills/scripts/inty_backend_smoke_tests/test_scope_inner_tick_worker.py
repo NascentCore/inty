@@ -69,10 +69,19 @@ def _log_has_worker_started(repo_root: Path, workspace: Path | None) -> bool:
     log_path = log_dir / "inty.log"
     if not log_path.is_file():
         return False
-    tail = log_path.read_text(encoding="utf-8", errors="replace")[-120_000:]
+    # Dev Ops logs are usually small; read whole file when under 5MB so startup
+    # lines are not dropped when the tail window is smaller than the file.
+    max_whole_read_bytes = 5_000_000
+    size = log_path.stat().st_size
+    if size <= max_whole_read_bytes:
+        text = log_path.read_text(encoding="utf-8", errors="replace")
+    else:
+        with log_path.open("rb") as fh:
+            fh.seek(max(0, size - max_whole_read_bytes))
+            text = fh.read().decode("utf-8", errors="replace")
     return (
-        "scope-inner-tick-worker: started" in tail
-        or "scope_inner_tick_worker started poll_seconds=" in tail
+        "scope-inner-tick-worker: started" in text
+        or "scope_inner_tick_worker started poll_seconds=" in text
     )
 
 
