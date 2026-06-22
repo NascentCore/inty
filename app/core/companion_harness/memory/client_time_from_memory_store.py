@@ -3,6 +3,8 @@
 TODO(#3391): Log timezone_source (client | user_md | transcript | none); replace
 USER.md regex read with structured persistence.
 TODO(#3411): Manual E2E smoke — Telegram/Weixin turn with persisted USER.md 时区 → LangSmith time slice.
+TODO(issues/3586): Temporary launch default_user_time_zone config fallback; remove when
+per-user TZ is reliable.
 """
 
 from __future__ import annotations
@@ -36,6 +38,20 @@ def build_user_time_context_for_iana(tz_name: str) -> UserTimeContext:
     )
 
 
+def _valid_incoming_client_timezone(
+    incoming: UserTimeContext | None,
+) -> str | None:
+    if incoming is None:
+        return None
+    tz = incoming.timezone
+    if tz is None or tz.strip() == "":
+        return None
+    try:
+        return ZoneInfo(tz.strip()).key
+    except ZoneInfoNotFoundError:
+        return None
+
+
 def client_time_from_memory_store(store: MemoryStore) -> UserTimeContext | None:
     """Resolve client wall-clock facts from USER.md when timezone was inferred there."""
     user_md = store.read_document_if_exists(_USER_MD_REL)
@@ -57,3 +73,21 @@ def client_time_from_memory_store(store: MemoryStore) -> UserTimeContext | None:
         ctx.timezone,
     )
     return ctx
+
+
+def resolve_client_time(
+    *,
+    store: MemoryStore,
+    incoming: UserTimeContext | None,
+    default_user_time_zone: str | None,
+) -> UserTimeContext | None:
+    """Resolve wall-clock context: client TZ, then USER.md, then temporary config default."""
+    client_tz = _valid_incoming_client_timezone(incoming)
+    if client_tz is not None:
+        return build_user_time_context_for_iana(client_tz)
+    user_md_ctx = client_time_from_memory_store(store)
+    if user_md_ctx is not None:
+        return user_md_ctx
+    if default_user_time_zone is not None:
+        return build_user_time_context_for_iana(default_user_time_zone)
+    return None

@@ -494,6 +494,33 @@ class AgentConfig(BaseModel):
                 "USER_INTERACTIVE = run_turn with slice tools until bootstrap complete."
             ),
         )
+        default_user_time_zone: str | None = Field(
+            default=None,
+            description=(
+                "TEMPORARY launch fallback: IANA timezone when client and USER.md "
+                "provide none. Remove after issues/3586."
+            ),
+        )
+
+        @field_validator("default_user_time_zone")
+        @classmethod
+        def _validate_default_user_time_zone(
+            cls, value: str | None
+        ) -> str | None:
+            if value is None:
+                return None
+            stripped = value.strip()
+            if stripped == "":
+                return None
+            from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+            try:
+                return ZoneInfo(stripped).key
+            except ZoneInfoNotFoundError as exc:
+                raise ValueError(
+                    "agent.companion_harness.default_user_time_zone "
+                    f"invalid IANA name: {stripped!r}"
+                ) from exc
 
         class TranscriptConfig(BaseModel):
             model_config = ConfigDict(extra="ignore")
