@@ -1,7 +1,5 @@
 # CREATED_BY_AGENT
 # Production IntelliMate daily usage report (T-1 UTC, primary DB when replica_host omitted).
-# Push worker user_analytics_report.daily_enabled defaults to false — do not re-enable there
-# while this workflow runs, to avoid duplicate rollups / replica conflicts.
 # See docs/FR_USER_ANALYTICS_REPORTS.md.
 name: Daily - IntelliMate User Activity Report
 
