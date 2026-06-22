@@ -9,7 +9,6 @@ from app.core.companion_harness.companion.models import (
     AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
     ChatMessage,
     CompanionTurnTrack,
-    PROACTIVE_CHAT_SILENT_TOKEN,
     load_transcript_from_store,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -161,7 +160,7 @@ def test_persist_ai_private_splice_skips_silent_reply(tmp_path: Path) -> None:
             anchor_user_msg_uuid="user-1",
         ),
         user_msg_uuid="user-2",
-        assistant_text=PROACTIVE_CHAT_SILENT_TOKEN,
+        assistant_text="",
         bootstrap_skip_final_transcript_assistant_row=False,
     )
     assert not should_persist_ai_private_splice(persist_input)

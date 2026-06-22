@@ -55,7 +55,12 @@ class _FakeLLMClient:
         if isinstance(rec.get("messages"), list):
             rec["messages"] = list(rec["messages"])
         self.calls.append(rec)
-        msg = SimpleNamespace(content="inner reply", tool_calls=[])
+        msg = SimpleNamespace(
+            content=json.dumps(
+                {"output_to_user": True, "message": "inner reply"}
+            ),
+            tool_calls=[],
+        )
         return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
 
     def complete_text(

@@ -65,6 +65,19 @@ def fake_step_tool_call(
     )
 
 
+def fake_step_proactive_chat_envelope(
+    *,
+    output_to_user: bool,
+    message: str,
+) -> FakeCompletionStep:
+    """Build a scripted step whose content is valid ``ProactiveChatEnvelope`` JSON."""
+    payload = {
+        "output_to_user": output_to_user,
+        "message": message,
+    }
+    return FakeCompletionStep(content=json.dumps(payload))
+
+
 def fake_step_dual_llm_envelope(
     *,
     user_facing_reply: str,
@@ -137,7 +150,9 @@ def _normalize_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
         role = (m.get("role") or "").strip()
         content = m.get("content")
         if isinstance(content, list):
-            content_str = json.dumps(content, ensure_ascii=False, sort_keys=True)
+            content_str = json.dumps(
+                content, ensure_ascii=False, sort_keys=True
+            )
         else:
             content_str = (content or "").strip()
         name = m.get("name")
@@ -147,9 +162,7 @@ def _normalize_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return normalized
 
 
-def _make_request_key(
-    messages: list[dict[str, Any]], model: str | None
-) -> str:
+def _make_request_key(messages: list[dict[str, Any]], model: str | None) -> str:
     normalized = _normalize_messages(messages)
     key = {
         "model": model or DEFAULT_MODEL_NAME,
@@ -184,7 +197,9 @@ def _completion_from_step(
         content=step.content,
         tool_calls=tool_call_objs,
     )
-    choice = FakeChatChoice(index=0, message=message, finish_reason=finish_reason)
+    choice = FakeChatChoice(
+        index=0, message=message, finish_reason=finish_reason
+    )
     prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
     completion_chars = len(step.content) + sum(
         len(tc.arguments) + len(tc.name) for tc in step.tool_calls
@@ -461,6 +476,7 @@ __all__ = [
     "fake_step_text",
     "fake_step_tool_call",
     "fake_step_dual_llm_envelope",
+    "fake_step_proactive_chat_envelope",
     "FakeChatCompletionResponse",
     "FakeChatChoice",
     "FakeChatMessage",

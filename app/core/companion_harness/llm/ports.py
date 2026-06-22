@@ -25,6 +25,9 @@ class ChatCompletionsSyncPort(Protocol):
     Canonical implementation: ``create_chat_completion_sync`` (``llm.chat_completions``);
     wired via ``LlmClient.chat_completions_sync`` and optional injection in
     ``tools.tool_background``. Return type stays ``Any`` (vendor completion after enrich).
+
+    TODO(#3602): Extend port with optional Pydantic ``response_format`` type and
+    ``chat.completions.parse()`` path for #3600 ProactiveChatEnvelope.
     """
 
     def __call__(

@@ -77,6 +77,17 @@ async def test_weixin_downlink_skips_bootstrap_interim() -> None:
 
 
 @pytest.mark.asyncio
+async def test_weixin_downlink_skips_empty_proactive() -> None:
+    transport = _RecordingWeixinTransport()
+    downlink = WeixinDownlink(transport, lambda: "peer-1")
+    turn = CompanionTurnResult(assistant_text="")
+    await downlink.deliver(
+        proactive_downlink(turn=turn, transcript_user_text="（心跳）")
+    )
+    assert transport.sent == []
+
+
+@pytest.mark.asyncio
 async def test_weixin_downlink_skips_suppressed_tool_background() -> None:
     from app.core.companion_harness.companion.scope import CompanionScope
     from app.core.companion_harness.memory.memory_store import MemoryStore

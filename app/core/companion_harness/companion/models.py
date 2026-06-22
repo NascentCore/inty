@@ -40,16 +40,12 @@ AssistantTurnSource = Literal["chat", "inner_tick", "greeting"]
 
 AI_PRIVATE_SPLICE_MANIFEST_SOURCE = "ai_private_splice_manifest"
 AI_PRIVATE_HYDRATED_SOURCE = "ai_private"
-PROACTIVE_CHAT_SILENT_TOKEN = "[SILENT]"
 
 
 def user_visible_assistant_text(text: str) -> str | None:
-    """Normalize assistant text for user-visible delivery; ``None`` when the channel stays quiet.
-
-    Shared gate for OutputQueue append and channel downlink (!3251 ``[SILENT]``).
-    """
+    """Return stripped assistant copy for the human, or None when blank."""
     stripped = text.strip()
-    if not stripped or stripped == PROACTIVE_CHAT_SILENT_TOKEN:
+    if not stripped:
         return None
     return stripped
 
@@ -71,6 +67,8 @@ class InnerTickActivity(StrEnum):
 
     Poll order per wake: proactive → scheduled → autonomy → maintenance → dreaming
     (at most one fires; see ``inner_tick_poll`` TODO inner-tick-poll-multi-track / #3273).
+    TODO(#3601): ``INNER_TICK_SCHEDULED`` currently maps here as ``PROACTIVE_CHAT``; split
+    activity for clean track separation (scheduled reminder vs idle proactive).
 
     ``AUTONOMY`` reads/writes ``LIFE_CURRENTS.md`` with an open tool set; never delivers
     client-visible NL or images (see ``inner_tick_activity_suppresses_user_delivery``).

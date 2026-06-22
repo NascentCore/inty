@@ -24,7 +24,6 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
 from app.core.companion_harness.companion.models import (
-    PROACTIVE_CHAT_SILENT_TOKEN,
     CompanionTurnTrack,
     InnerTickActivity,
 )
@@ -167,11 +166,9 @@ def _loop_context(*, output_queue: OutputQueue) -> AgenticLoopContext:
     )
 
 
-def test_user_visible_assistant_text_filters_blank_and_silent() -> None:
+def test_user_visible_assistant_text_filters_blank() -> None:
     assert user_visible_assistant_text("") is None
     assert user_visible_assistant_text("   ") is None
-    assert user_visible_assistant_text(PROACTIVE_CHAT_SILENT_TOKEN) is None
-    assert user_visible_assistant_text("  [SILENT]  ") is None
     assert user_visible_assistant_text("hello") == "hello"
     assert user_visible_assistant_text("  hello  ") == "hello"
 
@@ -315,14 +312,14 @@ async def test_agentic_loop_skips_silent_assistant_output() -> None:
         interim_output_sink,
     ):
         await interim_output_sink(
-            _bootstrap_interim(text=PROACTIVE_CHAT_SILENT_TOKEN),
+            _bootstrap_interim(text=""),
         )
         from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
             InTurnSyncToolLoopResult,
         )
 
         return InTurnSyncToolLoopResult(
-            assistant_text=PROACTIVE_CHAT_SILENT_TOKEN,
+            assistant_text="",
             langsmith_trace_id="",
             langsmith_run_id="",
             skip_final_transcript_assistant_row=False,
@@ -923,7 +920,7 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
         context_meta=ContextMeta(),
     )
     fg_result = DualLlmForegroundChatResult(
-        assistant_text=PROACTIVE_CHAT_SILENT_TOKEN,
+        assistant_text="",
         significance_meta=None,
         turn_recall=None,
         langsmith_trace_id="",

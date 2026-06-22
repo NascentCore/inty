@@ -36,6 +36,33 @@ def _fake_urlopen(request, timeout=15):
 
 
 @pytest.mark.asyncio
+async def test_telegram_adapter_skips_empty_proactive() -> None:
+    from app.external_services.telegram_bot_api import TelegramBotApi
+
+    sent: list[str] = []
+
+    def _capture_urlopen(request, timeout=15):
+        sent.append(request.data.decode("utf-8"))
+        return _fake_urlopen(request, timeout)
+
+    api = TelegramBotApi(bot_token="test-token", urlopen=_capture_urlopen)
+    adapter = TelegramChannelAdapter(api=api, channel_address="5078060274")
+    downlink = adapter.as_downlink()
+    await downlink.deliver(
+        Downlink(
+            kind=DownlinkKind.PROACTIVE,
+            assistant_text="",
+            turn=None,
+            tool_output=None,
+            bootstrap_interim=None,
+            scheduled_task_id=None,
+            transcript_user_text=None,
+        )
+    )
+    assert sent == []
+
+
+@pytest.mark.asyncio
 async def test_telegram_adapter_deliver_proactive() -> None:
     from app.external_services.telegram_bot_api import TelegramBotApi
 

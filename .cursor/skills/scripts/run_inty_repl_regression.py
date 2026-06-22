@@ -2,15 +2,18 @@
 """Automated local Ops + WebSocket regression for companion queue-serving.
 
 Skill smoke driver (not ``app/`` production code). Drives bootstrap turns, one
-settled user turn, a GitHub issue complaint turn, and waits for inner-tick proactive
-chat via ``BackendChatWsBridge`` (same transport as ``inty_v2_repl``). Writes a JSON
+settled user turn, a GitHub issue complaint turn, and waits for multiple inner-tick proactive
+chat rounds via ``BackendChatWsBridge`` (same transport as ``inty_v2_repl``). Writes a JSON
 report under ``tmp/`` and prints a one-line SUMMARY.
 
 Layout:
 - Driver: ``run_regression`` / ``main`` for end-to-end WS and Postgres checks.
 - Settled turn: wait for InputQueue idle after bootstrap-finish, match WS
   ``user_msg_uuid`` to the sent turn, wait for InputQueue ``delivered``, then
-  run github_issue E2E phase, then start proactive wait.
+  run github_issue E2E phase, then start proactive multi-round wait.
+- Proactive: collect WS downlinks and merge ``chat_history`` synthetic user rows;
+  require ``--proactive-min-rounds`` (default 1) with ``--proactive-target-rounds`` (default 2,
+  summary-only); fast local idle (10s + poll 3s); fail on legacy ``[SILENT]`` token in previews.
 - GitHub issue: USER_CHAT complaint → poll ``companion_user_feedback_jsonl`` →
   ``gh issue view`` → ``gh issue close`` cleanup.
 - Strict-mode DB verification: below ``_is_inner_tick_proactive``; when no
@@ -19,6 +22,9 @@ Layout:
   ``tests/cursor/skills/scripts/test_run_inty_repl_regression.py``.
 
 Run with shell cwd = repository root (or any path under the repo).
+
+TODO(#3606): Split mandatory pass gate (infra-only) from live LLM eval smoke;
+github_issue_e2e and proactive target rounds should not block exit 0.
 """
 
 from __future__ import annotations
@@ -64,8 +70,14 @@ _INPUT_QUEUE_POLL_SEC = 0.5
 _TURN_REPLY_TIMEOUT_SEC = 180.0
 _TURN_TRAILING_QUIET_SEC = 5.0
 _PRE_SETTLED_WS_DRAIN_QUIET_SEC = 3.0
-# Match devops/config.yaml.local fast proactive: idle 10s + poll 5s + LLM slack.
-_DEFAULT_PROACTIVE_WAIT_SEC = 60.0
+# Match devops/config.yaml.local fast proactive: idle 10s + poll 3s + LLM slack.
+# ``--proactive-wait-sec``: wall-clock listen duration (not capped by min/target rounds).
+# ``--proactive-min-rounds``: pass gate (default 1; silent-first round cannot schedule a 2nd).
+# ``--proactive-target-rounds``: stretch goal logged in summary; does not fail the run.
+_DEFAULT_PROACTIVE_MIN_ROUNDS = 1
+_DEFAULT_PROACTIVE_TARGET_ROUNDS = 2
+_DEFAULT_PROACTIVE_WAIT_SEC = 120.0
+_PROACTIVE_LEGACY_SILENT_TOKEN = "[SILENT]"
 _PROACTIVE_RECV_CHUNK_SEC = 5.0
 _POST_PROACTIVE_DRAIN_QUIET_SEC = 5.0
 _POST_PROACTIVE_DRAIN_MAX_SEC = 20.0
@@ -578,29 +590,146 @@ def _parse_proactive_chat_history_rows(raw: str) -> list[ProactiveChatHistoryRow
     return rows
 
 
+def _proactive_entry_text(entry: dict[str, Any]) -> str:
+    return str(entry.get("text_preview") or "")
+
+
+def _proactive_entry_has_silent_token(entry: dict[str, Any]) -> bool:
+    return _PROACTIVE_LEGACY_SILENT_TOKEN in _proactive_entry_text(entry)
+
+
+def _proactive_db_chat_history_id(entry: dict[str, Any]) -> str:
+    meta = entry.get("meta")
+    if not isinstance(meta, dict):
+        return ""
+    if meta.get("source") != "db_chat_history":
+        return ""
+    return str(meta.get("chat_history_id") or "")
+
+
+def _summarize_proactive_rounds(
+    entries: list[dict[str, Any]],
+) -> dict[str, int]:
+    visible = sum(1 for entry in entries if not entry.get("silent"))
+    silent = sum(1 for entry in entries if entry.get("silent"))
+    leaks = sum(1 for entry in entries if _proactive_entry_has_silent_token(entry))
+    return {
+        "total": len(entries),
+        "visible": visible,
+        "silent": silent,
+        "silent_token_leaks": leaks,
+    }
+
+
+def _append_proactive_db_row(
+    report: dict[str, Any],
+    row: ProactiveChatHistoryRow,
+) -> None:
+    existing_ids = {
+        _proactive_db_chat_history_id(entry)
+        for entry in report["proactive"]
+        if _proactive_db_chat_history_id(entry)
+    }
+    if row.chat_history_id in existing_ids:
+        return
+    report["proactive"].append(
+        {
+            "text_preview": row.content_preview,
+            "meta": {
+                "source": "db_chat_history",
+                "chat_history_id": row.chat_history_id,
+                "inner_tick_activity": "proactive_chat",
+            },
+            "silent": not row.has_assistant_reply,
+            "created_at": row.created_at,
+        }
+    )
+    print(
+        f"{_TAG} proactive observed (db) chat_history_id={row.chat_history_id} "
+        f"silent={not row.has_assistant_reply} "
+        f"preview={row.content_preview[:60]!r}",
+        flush=True,
+    )
+
+
 def _record_proactive_from_db(
     report: dict[str, Any],
     rows: list[ProactiveChatHistoryRow],
 ) -> None:
     for row in rows:
-        report["proactive"].append(
+        _append_proactive_db_row(report, row)
+
+
+def _finalize_proactive_report(
+    report: dict[str, Any],
+    *,
+    repo_root: Path,
+    config_path: Path,
+    user_id: str,
+    agent_id: str,
+    run_started_at_utc: str,
+    proactive_min_rounds: int,
+    proactive_target_rounds: int,
+) -> dict[str, int]:
+    """Merge DB proactive rows, summarize rounds, and flag legacy ``[SILENT]`` leaks."""
+    proactive_rows = _query_proactive_chat_history_rows(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        run_started_at_utc=run_started_at_utc,
+    )
+    if proactive_rows:
+        report["db"]["proactive_chat_history"] = [
             {
-                "text_preview": row.content_preview,
-                "meta": {
-                    "source": "db_chat_history",
-                    "chat_history_id": row.chat_history_id,
-                    "inner_tick_activity": "proactive_chat",
-                },
-                "silent": not row.has_assistant_reply,
+                "chat_history_id": row.chat_history_id,
+                "content_preview": row.content_preview,
                 "created_at": row.created_at,
+                "silent": not row.has_assistant_reply,
             }
-        )
+            for row in proactive_rows
+        ]
+        _record_proactive_from_db(report, proactive_rows)
+
+    summary = _summarize_proactive_rounds(report["proactive"])
+    report["proactive_summary"] = summary
+    print(
+        f"{_TAG} proactive summary total={summary['total']} "
+        f"visible={summary['visible']} silent={summary['silent']} "
+        f"min_rounds={proactive_min_rounds} target_rounds={proactive_target_rounds}",
+        flush=True,
+    )
+    if summary["total"] < proactive_target_rounds:
+        # TODO(#3606): Target round count is eval telemetry; do not append to
+        # report["errors"] when splitting regression vs live LLM eval.
         print(
-            f"{_TAG} proactive observed (db) chat_history_id={row.chat_history_id} "
-            f"silent={not row.has_assistant_reply} "
-            f"preview={row.content_preview[:60]!r}",
+            f"{_TAG} proactive target {proactive_target_rounds} round(s) not met "
+            f"(got {summary['total']}); a silent first round blocks scheduling another "
+            f"until the transcript ends with an assistant reply",
             flush=True,
         )
+    if summary["silent_token_leaks"]:
+        report["errors"].append(
+            {
+                "turn": "proactive_silent_token",
+                "error": (
+                    500,
+                    f"legacy {_PROACTIVE_LEGACY_SILENT_TOKEN!r} leaked in proactive output",
+                ),
+            }
+        )
+    if summary["total"] < proactive_min_rounds:
+        report["errors"].append(
+            {
+                "turn": "proactive_multi_round",
+                "error": (
+                    500,
+                    f"expected >={proactive_min_rounds} proactive rounds, "
+                    f"got {summary['total']}",
+                ),
+            }
+        )
+    return summary
 
 
 # --- github issue E2E (unit-tested; see tests/cursor/skills/scripts/) ---
@@ -986,6 +1115,8 @@ def run_regression(
     bootstrap_finish_turn: str,
     settled_turn: str,
     proactive_wait_sec: float,
+    proactive_min_rounds: int,
+    proactive_target_rounds: int,
     report_path: Path,
     token_path: str,
     stderr: TextIO,
@@ -1169,6 +1300,8 @@ def run_regression(
                 github_result
             )
         else:
+            # TODO(#3606): Move github_issue_e2e to report-only / --eval; live LLM tool-call
+            # compliance is model eval, not repeatable regression.
             github_result = _run_github_issue_e2e_phase(
                 bridge=bridge,
                 report=report,
@@ -1191,8 +1324,9 @@ def run_regression(
                 )
 
             print(
-                f"{_TAG} waiting up to {proactive_wait_sec}s for inner-tick proactive "
-                f"(after github_issue phase)...",
+                f"{_TAG} waiting up to {proactive_wait_sec}s for proactive inner-tick "
+                f"(pass >={proactive_min_rounds} round(s), target {proactive_target_rounds}; "
+                f"idle 10s + poll 3s; after github_issue)...",
                 flush=True,
             )
             proactive_deadline = time.monotonic() + proactive_wait_sec
@@ -1231,12 +1365,13 @@ def run_regression(
                     {
                         "text_preview": text[:120],
                         "meta": meta,
-                        "silent": text.strip() == "[SILENT]",
+                        "silent": False,
                     }
                 )
                 print(
                     f"{_TAG} proactive text={text[:80]!r} "
-                    f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
+                    f"langsmith_trace_id={meta.get('langsmith_trace_id')} "
+                    f"round={len(report['proactive']) + 1}",
                     flush=True,
                 )
             print(
@@ -1309,32 +1444,25 @@ LIMIT 8;
         "output_latest": out_latest.strip(),
     }
 
-    if not report["proactive"]:
-        proactive_rows = _query_proactive_chat_history_rows(
-            repo_root,
-            config_path,
-            user_id=user_id,
-            agent_id=agent_id,
-            run_started_at_utc=run_started_at_utc,
-        )
-        if proactive_rows:
-            report["db"]["proactive_chat_history"] = [
-                {
-                    "chat_history_id": row.chat_history_id,
-                    "content_preview": row.content_preview,
-                    "created_at": row.created_at,
-                    "silent": not row.has_assistant_reply,
-                }
-                for row in proactive_rows
-            ]
-            _record_proactive_from_db(report, proactive_rows)
+    proactive_summary = _finalize_proactive_report(
+        report,
+        repo_root=repo_root,
+        config_path=config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        run_started_at_utc=run_started_at_utc,
+        proactive_min_rounds=proactive_min_rounds,
+        proactive_target_rounds=proactive_target_rounds,
+    )
 
     ctx_line = ctx_rows.strip().split("\n")[0] if ctx_rows.strip() else ""
     parts = ctx_line.split("|") if ctx_line else []
     bootstrap_done = parts[2] if len(parts) >= 3 else "unknown"
     context_mode = parts[1] if len(parts) >= 2 else "unknown"
 
-    proactive_present = bool(report["proactive"])
+    proactive_present = proactive_summary["total"] >= proactive_min_rounds
+    proactive_target_met = proactive_summary["total"] >= proactive_target_rounds
+    proactive_silent_ok = proactive_summary["silent_token_leaks"] == 0
     settled_ok = any(
         t.get("kind") == "settled"
         and t.get("text_preview")
@@ -1374,6 +1502,10 @@ LIMIT 8;
         "settled_queue_turn": "pass" if settled_ok and not report["errors"] else "fail",
         "github_issue_e2e": "pass" if github_issue_ok else "fail",
         "proactive_inner_tick": "present" if proactive_present else "missing",
+        "proactive_target_rounds": "met" if proactive_target_met else "miss",
+        "proactive_silent_rounds": proactive_summary["silent"],
+        "proactive_visible_rounds": proactive_summary["visible"],
+        "proactive_no_silent_token": "pass" if proactive_silent_ok else "fail",
         "companion_bond_state": companion_bond_state or "missing",
         "input_queue_counts": in_q.strip(),
         "output_queue_counts": out_q.strip(),
@@ -1389,6 +1521,8 @@ LIMIT 8;
     print(f"{_TAG} report written to {report_path}", flush=True)
     print(f"{_TAG} SUMMARY: {json.dumps(summary, ensure_ascii=False)}", flush=True)
 
+    # TODO(#3606): ``github_issue_ok`` gates on live model tool use; keep infra checks
+    # mandatory and move LLM-behavior phases to optional eval report.
     passed = (
         settled_ok
         and not report["errors"]
@@ -1396,6 +1530,7 @@ LIMIT 8;
         and out_all_delivered
         and bootstrap_done == "true"
         and proactive_present
+        and proactive_silent_ok
         and github_issue_ok
     )
     return 0 if passed else 1
@@ -1451,8 +1586,26 @@ def main(argv: list[str] | None = None) -> int:
         type=float,
         default=_DEFAULT_PROACTIVE_WAIT_SEC,
         help=(
-            "Seconds to wait for inner-tick proactive after settled turn "
-            f"(default {_DEFAULT_PROACTIVE_WAIT_SEC:g})"
+            "Seconds to wait for inner-tick proactive rounds after settled turn "
+            f"(default {_DEFAULT_PROACTIVE_WAIT_SEC:g}; pairs with 10s idle + 3s poll)"
+        ),
+    )
+    p.add_argument(
+        "--proactive-min-rounds",
+        type=int,
+        default=_DEFAULT_PROACTIVE_MIN_ROUNDS,
+        help=(
+            "Minimum proactive rounds to pass (WS downlink and/or DB synthetic user rows; "
+            f"default {_DEFAULT_PROACTIVE_MIN_ROUNDS}; silent-first blocks a 2nd round)"
+        ),
+    )
+    p.add_argument(
+        "--proactive-target-rounds",
+        type=int,
+        default=_DEFAULT_PROACTIVE_TARGET_ROUNDS,
+        help=(
+            "Stretch proactive round count for summary only (default "
+            f"{_DEFAULT_PROACTIVE_TARGET_ROUNDS}; does not fail the run)"
         ),
     )
     p.add_argument(
@@ -1523,6 +1676,17 @@ def main(argv: list[str] | None = None) -> int:
     if proactive_wait < 0:
         print("error: --proactive-wait-sec must be >= 0", file=sys.stderr)
         return 2
+    proactive_min_rounds = int(args.proactive_min_rounds)
+    if proactive_min_rounds < 1:
+        print("error: --proactive-min-rounds must be >= 1", file=sys.stderr)
+        return 2
+    proactive_target_rounds = int(args.proactive_target_rounds)
+    if proactive_target_rounds < proactive_min_rounds:
+        print(
+            "error: --proactive-target-rounds must be >= --proactive-min-rounds",
+            file=sys.stderr,
+        )
+        return 2
 
     return run_regression(
         repo_root=repo_root,
@@ -1534,6 +1698,8 @@ def main(argv: list[str] | None = None) -> int:
         bootstrap_finish_turn=_DEFAULT_BOOTSTRAP_FINISH_TURN,
         settled_turn=_DEFAULT_SETTLED_TURN,
         proactive_wait_sec=proactive_wait,
+        proactive_min_rounds=proactive_min_rounds,
+        proactive_target_rounds=proactive_target_rounds,
         report_path=report_path,
         token_path=str(args.token_file).strip(),
         stderr=sys.stderr,

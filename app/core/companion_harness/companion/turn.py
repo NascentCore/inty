@@ -142,6 +142,10 @@ from .dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
 )
+from .proactive_chat_envelope import (
+    PROACTIVE_CHAT_RESPONSE_FORMAT,
+    split_proactive_chat_message,
+)
 from .turn_pipeline import (
     build_companion_turn_prompt_plan,
     load_companion_turn_state,
@@ -409,11 +413,13 @@ async def _run_companion_turn_core(
     route_mode = prompt_plan.route_mode
     messages = prompt_plan.messages
     use_dual_structured_chat = prompt_plan.use_dual_structured_chat
+    use_proactive_structured_chat = prompt_plan.use_proactive_structured_chat
     trace_id = str(uuid.uuid4())
     langsmith_trace_acc = ""
     langsmith_llm_run_acc = ""
 
     last_text = ""
+    skip_proactive_assistant_transcript_row = False
     significance_meta: dict[str, Any] | None = None
     turn_recall: str | None = None
     tool_background_started = False
@@ -881,7 +887,11 @@ async def _run_companion_turn_core(
                     response_format = (
                         DUAL_LLM_CHAT_RESPONSE_FORMAT
                         if use_dual_structured_chat
-                        else None
+                        else (
+                            PROACTIVE_CHAT_RESPONSE_FORMAT
+                            if use_proactive_structured_chat
+                            else None
+                        )
                     )
                     if implicit_sign_on_turn:
                         greet_cfg = (
@@ -956,6 +966,13 @@ async def _run_companion_turn_core(
                                 "trace_id={} (expected true for chat branch)",
                                 trace_id,
                             )
+                    elif use_proactive_structured_chat:
+                        _proactive_split = split_proactive_chat_message(msg)
+                        if _proactive_split.output_to_user:
+                            last_text = _proactive_split.visible_text
+                        else:
+                            last_text = ""
+                            skip_proactive_assistant_transcript_row = True
                     else:
                         raw_content = msg.content or ""
                         last_text = raw_content.strip()
@@ -1079,7 +1096,10 @@ async def _run_companion_turn_core(
             ),
         )
     )
-    if not bootstrap_skip_final_transcript_assistant_row:
+    if (
+        not bootstrap_skip_final_transcript_assistant_row
+        and not skip_proactive_assistant_transcript_row
+    ):
         append_transcript_assistant_row(
             store,
             rel_tr,

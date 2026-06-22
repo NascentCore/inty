@@ -37,8 +37,8 @@ PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
     "- Based on the conversation context, your character's personality, and the time elapsed, decide whether to proactively send a message.\n"
     '- You may **continue** the current thread when it still has momentum, **or initiate a new topic** when the prior beat landed, the scene feels closed, or enough time passed — e.g. a passing thought, playful question, something you "just noticed", a check-in grounded in USER/MEMORY, or a small daily moment.\n'
     "- New topics must feel in-character and relationally continuous; do not meta-reference proactive messaging or time gaps.\n"
-    "- If you have something meaningful, respond appropriately.\n"
-    "- If there is nothing appropriate to say right now, respond with exactly: [SILENT]\n"
+    "- If you have something meaningful, set structured output ``output_to_user`` true with your message.\n"
+    "- If there is nothing appropriate to say right now, set ``output_to_user`` false with an empty ``message``.\n"
 )
 # TODO(!3463): During interactive bootstrap, add bootstrap-specific proactive copy that
 # reinforces finishing USER.md / IDENTITY.md / STYLE.md / COMPANIONSHIP.md gathering.

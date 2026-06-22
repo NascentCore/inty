@@ -19,7 +19,6 @@ from app.core.companion_harness.agentic_companion.output_queue import (
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
-    PROACTIVE_CHAT_SILENT_TOKEN,
 )
 from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.external_services.telegram_bot_api import TelegramBotApi
@@ -276,7 +275,7 @@ async def test_greet_on_sign_on_silent_skips_output_queue() -> None:
             "app.services.agentic_channel.presence.run_companion_implicit_sign_on_greeting_turn_for_api",
             new_callable=AsyncMock,
             return_value=CompanionTurnResult(
-                assistant_text=PROACTIVE_CHAT_SILENT_TOKEN,
+                assistant_text="",
             ),
         ):
             with patch(

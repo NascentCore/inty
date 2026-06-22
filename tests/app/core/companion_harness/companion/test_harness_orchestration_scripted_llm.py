@@ -1,11 +1,14 @@
 """CI-gated harness orchestration tests using scripted FakeOpenAI transport.
 
 Covered: settled ``USER_CHAT`` (no-tools x ``dual_llm`` + ``in_turn_single_llm``;
-tool-bg ``dual_llm`` only), bootstrap, proactive single-shot.
+tool-bg ``dual_llm`` only), bootstrap, proactive single-shot and multi-round silent envelope.
 
 Excluded (documented): maintenance/autonomy (#3580), dreaming, proactive+tool (#3285),
 sequential double-drain. ``IN_TURN_SINGLE_LLM`` tool-bg uses in-turn sync tools — see
 ``test_agentic_loop_output_queue.py``; not duplicated here.
+
+TODO(#3606): Add FakeOpenAI scripted github_issue / companion_record_user_feedback path
+so CI regression does not depend on live LLM tool compliance.
 """
 
 from __future__ import annotations
@@ -52,6 +55,7 @@ from app.core.companion_harness.tools.tool_background import (
 from app.external_services.fakes.openai import (
     FakeCompletionStep,
     FakeOpenAI,
+    fake_step_proactive_chat_envelope,
     fake_step_text,
 )
 from app.core.config import global_config_loaded_from_config_yaml
@@ -426,8 +430,105 @@ async def test_bootstrap_turn_delivers_and_persists_context() -> None:
 
 
 @pytest.mark.asyncio
+async def test_proactive_chat_silent_envelope_skips_assistant_transcript() -> (
+    None
+):
+    script = (
+        fake_step_proactive_chat_envelope(
+            output_to_user=False,
+            message="",
+        ),
+    )
+    manager, session, fake, scope = await _build_scripted_manager(
+        script=script,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+    )
+    try:
+        result = await manager.run_inner_tick_proactive_chat_turn(
+            session,
+            runtime_context=TurnRuntimeContext(
+                channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=None,
+            ),
+        )
+
+        assert result.assistant_text == ""
+        roles = scripted_transcript_roles(session.store)
+        assert roles.count("user") == 1
+        assert "assistant" not in roles
+        assert fake.script_index == 1
+    finally:
+        await delete_guest_scope_for_test(scope)
+
+
+@pytest.mark.asyncio
+async def test_proactive_chat_visible_then_silent_two_rounds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two proactive inner ticks: visible round then structured silent (no assistant row)."""
+    script = (
+        fake_step_proactive_chat_envelope(
+            output_to_user=True,
+            message="First ping.",
+        ),
+        fake_step_proactive_chat_envelope(
+            output_to_user=False,
+            message="",
+        ),
+    )
+    manager, session, fake, scope = await _build_scripted_manager(
+        script=script,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+    )
+    try:
+        first = await manager.run_inner_tick_proactive_chat_turn(
+            session,
+            runtime_context=TurnRuntimeContext(
+                channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=None,
+            ),
+        )
+        assert first.assistant_text == "First ping."
+
+        monkeypatch.setattr(
+            "app.core.companion_harness.companion.proactive_chat.next_proactive_chat_wait_seconds",
+            lambda _store, _config, **_: 0.0,
+        )
+
+        second = await manager.run_inner_tick_proactive_chat_turn(
+            session,
+            runtime_context=TurnRuntimeContext(
+                channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=None,
+            ),
+        )
+        assert second.assistant_text == ""
+
+        transcript = scripted_transcript_rows(session.store)
+        proactive_users = [
+            row
+            for row in transcript
+            if row.get("role") == "user" and row.get("proactive_chat") is True
+        ]
+        assistant_rows = [
+            row for row in transcript if row.get("role") == "assistant"
+        ]
+        assert len(proactive_users) == 2
+        assert len(assistant_rows) == 1
+        assert assistant_rows[0]["content"] == "First ping."
+        assert fake.script_index == 2
+    finally:
+        await delete_guest_scope_for_test(scope)
+
+
+@pytest.mark.asyncio
 async def test_proactive_chat_returns_assistant_text_and_transcript() -> None:
-    script = (fake_step_text("Just checking in on you."),)
+    script = (
+        fake_step_proactive_chat_envelope(
+            output_to_user=True,
+            message="Just checking in on you.",
+        ),
+    )
     manager, session, fake, scope = await _build_scripted_manager(
         script=script,
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,

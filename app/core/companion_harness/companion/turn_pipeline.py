@@ -102,6 +102,7 @@ class CompanionTurnPromptPlan:
     route_mode: TurnRouteMode
     messages: list[dict[str, Any]]
     use_dual_structured_chat: bool
+    use_proactive_structured_chat: bool
     transcript_compaction: dict[str, Any] | None = None
 
 
@@ -222,7 +223,7 @@ def build_companion_turn_prompt_plan(
     tail_splice_thoughts: list[AiPrivateThought],
 ) -> CompanionTurnPromptPlan:
     """Assemble system messages, route, and final request messages."""
-    inner_tick_turn, _route_inner_activity = turn_flags_for_track(track)
+    inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     tools_for_turn, system_messages, route_mode = (
         companion_turn_tools_and_system_messages(
@@ -239,6 +240,9 @@ def build_companion_turn_prompt_plan(
         (not inner_tick_turn)
         and (not tools_for_turn)
         and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+    )
+    use_proactive_structured_chat = (
+        route_inner_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     use_ai_private_splice = track_uses_ai_private_splice(track)
 
@@ -326,5 +330,6 @@ def build_companion_turn_prompt_plan(
         route_mode=route_mode,
         messages=messages,
         use_dual_structured_chat=use_dual_structured_chat,
+        use_proactive_structured_chat=use_proactive_structured_chat,
         transcript_compaction=transcript_compaction_meta,
     )
