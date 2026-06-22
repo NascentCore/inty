@@ -175,6 +175,10 @@ class _DomainToolBackgroundAppendSink:
     Tool work may emit user-visible follow-ups from a worker thread; this sink
     accepts those events synchronously and drains them asynchronously into the
     same outbound appender used for foreground lines.
+
+    TODO(#3596): Foreground USER_REPLY and tool TOOL_BACKGROUND can duplicate the
+    same utterance (Telegram wacky-chat 2026-06-21). Fix via unified turn downlink
+    plan (#3402, #3460), not sink-level dedupe — bolt-on rejected.
     """
 
     def __init__(
@@ -478,7 +482,11 @@ class AgenticLoop:
     async def run_dual_llm_user_turn(
         self, *, context: AgenticLoopContext
     ) -> AgenticLoopOutput:
-        """Execute one dual-LLM user turn; foreground and tool-leg user-visible text → ``OutputQueue``."""
+        """Execute one dual-LLM user turn; foreground and tool-leg user-visible text → ``OutputQueue``.
+
+        TODO(#3596): Replace parallel fg/tool OutputQueue appends with one turn downlink
+        plan per user message (#3402, #3460, parent #3398).
+        """
         assert (
             context.dual_llm_chat_msgs is not None
             and context.dual_llm_tool_msgs is not None

@@ -638,6 +638,9 @@ async def _run_companion_turn_core(
                             context=loop_context
                         )
                     else:
+                        # TODO(#3597): Harness must consume in-session user denial/correction
+                        # (e.g.「我没有跑 batch」) so MemDoc themes are not re-asked; prompt
+                        # clause in system_messages is not enough — Telegram 2026-06-21 loop.
                         tool_system_msgs, chat_system_msgs = (
                             dual_llm_system_message_variants(
                                 store=store,
