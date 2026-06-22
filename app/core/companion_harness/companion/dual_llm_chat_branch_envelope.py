@@ -15,8 +15,8 @@ companion turn pipeline.
   Operator guidance lives in ``prompts/SIGNIFICANCE_PERCEPTION.md`` (injected when
   ``include_significance_perception_slice`` is on; see ``prompts/system_messages.py`` and
   ``prompt_stack.companion_turn_tools_and_system_messages``).
-- **Parsed / split**: ``split_dual_llm_chat_branch_message`` / ``split_dual_llm_chat_branch_content``
-  return ``DualLlmChatBranchSplit`` (visible text, optional significance metadata dict,
+- **Parsed / split**: ``split_dual_llm_chat_branch_message``
+  returns ``DualLlmChatBranchSplit`` (visible text, optional significance metadata dict,
   ``output_to_user``). Validated payloads deserialize
   as ``DualLlmChatBranchEnvelope``.
 - **Kernel return**: ``CompanionTurnResult.significance_perception`` (``models.py``) carries the dict;
@@ -312,23 +312,6 @@ def parse_dual_llm_chat_envelope_from_message(
 def turn_recall_from_envelope(env: DualLlmChatBranchEnvelope) -> str | None:
     text = (env.turn_recall or "").strip()
     return text or None
-
-
-def split_dual_llm_chat_branch_content(raw: str) -> DualLlmChatBranchSplit:
-    env = parse_dual_llm_chat_envelope_json(raw)
-    if env is None:
-        return DualLlmChatBranchSplit(
-            visible_text=(raw or "").strip(),
-            significance_meta=None,
-            output_to_user=None,
-            turn_recall=None,
-        )
-    return DualLlmChatBranchSplit(
-        visible_text=env.user_facing_reply.strip(),
-        significance_meta=envelope_to_assistant_metadata_dict(env),
-        output_to_user=env.output_to_user,
-        turn_recall=turn_recall_from_envelope(env),
-    )
 
 
 def split_dual_llm_chat_branch_message(message: Any) -> DualLlmChatBranchSplit:
