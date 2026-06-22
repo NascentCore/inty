@@ -1,9 +1,10 @@
 """CI-gated harness orchestration tests using scripted FakeOpenAI transport.
 
 Covered: settled ``USER_CHAT`` (no-tools x ``dual_llm`` + ``in_turn_single_llm``;
-tool-bg ``dual_llm`` only), bootstrap, proactive single-shot and multi-round silent envelope.
+tool-bg ``dual_llm`` only), bootstrap, proactive single-shot and multi-round silent envelope,
+``INNER_TICK_MONOLOG`` tool-background (``ai_private_append`` only, no foreground LLM).
 
-Excluded (documented): monolog/autonomy (#3580), dreaming, proactive+tool (#3285),
+Excluded (documented): autonomy (#3580), dreaming, proactive+tool (#3285),
 sequential double-drain. ``IN_TURN_SINGLE_LLM`` tool-bg uses in-turn sync tools — see
 ``test_agentic_loop_output_queue.py``; not duplicated here.
 
@@ -33,6 +34,10 @@ from app.core.companion_harness.agentic_companion.types import (
     QueueStatus,
     UserMessageBatch,
 )
+from app.core.companion_harness.companion.ai_private_prompt import (
+    load_ai_private_thoughts,
+)
+from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.companion.manager import (
     CompanionConfig,
     CompanionManager,
@@ -69,12 +74,15 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
 )
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     SettledUserChatScriptScenario,
+    build_scripted_monolog_inner_tick_script,
     build_scripted_settled_user_chat_script,
     companion_llm_client_with_scripted_transport,
     scripted_harness_llm_config,
+    scripted_inner_tick_transcript_rows,
     scripted_tool_background_done_rows,
     scripted_transcript_roles,
     scripted_transcript_rows,
+    seed_settled_scope_for_inner_tick,
     with_scripted_user_turn_llm_loop_mode,
 )
 
@@ -547,5 +555,52 @@ async def test_proactive_chat_returns_assistant_text_and_transcript() -> None:
         assert "user" in roles
         assert "assistant" in roles
         assert fake.script_index == 1
+    finally:
+        await delete_guest_scope_for_test(scope)
+
+
+@pytest.mark.asyncio
+async def test_monolog_inner_tick_scripted_transport_skips_foreground_and_appends_ai_private() -> (
+    None
+):
+    """MONOLOG inner tick: async tool-background only, silent foreground, ai_private append."""
+    monolog_text = "quiet worry about his silence"
+    script = build_scripted_monolog_inner_tick_script(monolog_text=monolog_text)
+    manager, session, fake, scope = await _build_scripted_manager(
+        script=script,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+    )
+    try:
+        seed_settled_scope_for_inner_tick(session.store)
+        main_transcript_before = scripted_transcript_rows(session.store)
+
+        result = await manager.run_inner_tick_monolog_turn(
+            session,
+            runtime_context=TurnRuntimeContext(
+                channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=None,
+            ),
+        )
+        assert session.tool_bg_idle.wait(timeout=30.0)
+
+        assert result.assistant_text == ""
+        assert result.inner_tick_activity == InnerTickActivity.MONOLOG.value
+        assert result.tool_background_started is True
+        assert fake.script_index == len(script)
+
+        thoughts = load_ai_private_thoughts(session.store)
+        assert len(thoughts) == 1
+        assert thoughts[0].text == monolog_text
+
+        assert scripted_transcript_rows(session.store) == main_transcript_before
+
+        inner_rows = scripted_inner_tick_transcript_rows(session.store)
+        assert len(inner_rows) >= 1
+        assert inner_rows[0]["role"] == "user"
+        assert inner_rows[0].get("inner_tick") is True
+
+        done_rows = scripted_tool_background_done_rows(session.store)
+        assert len(done_rows) == 1
+        assert done_rows[0].get("tool_calls_count") == 1
     finally:
         await delete_guest_scope_for_test(scope)
