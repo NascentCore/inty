@@ -14,6 +14,8 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.companion_harness.agentic_companion.output_queue import (
     ReadyOutputMessage,
+    clear_output_queues_for_tests,
+    get_output_queue_for_scope,
 )
 from app.services.agentic_companion.downlink import DownlinkKind
 from app.services.agentic_channel.scope_queue_serving import (
@@ -21,6 +23,83 @@ from app.services.agentic_channel.scope_queue_serving import (
     ScopeQueueServing,
 )
 from app.services.agentic_channel.serving import DrainScopeOnceResult
+
+
+@pytest.fixture(autouse=True)
+def _clear_output_queue_registry() -> None:
+    clear_output_queues_for_tests()
+    yield
+    clear_output_queues_for_tests()
+
+
+@pytest.mark.asyncio
+async def test_scope_serving_delivers_each_output_row_once() -> None:
+    """ScopeQueueServing output pump alone delivers each ready row once."""
+    scope = AgentScope(user_id="user-once", agent_id="agent-once")
+    message_id = "out-once"
+    ready = ReadyOutputMessage(
+        message_id=message_id,
+        batch_id="batch-1",
+        kind=DownlinkKind.USER_REPLY,
+        text="single bubble",
+        sequence=1,
+        message_ids=("input-1",),
+    )
+    queue = get_output_queue_for_scope(scope)
+    queue._ready.append(ready)
+    deliver_mock = AsyncMock()
+    drain_calls = 0
+
+    async def deliver_message(message: ReadyOutputMessage) -> None:
+        await deliver_mock(message)
+
+    async def fake_drain(*_args, **_kwargs) -> DrainScopeOnceResult:
+        nonlocal drain_calls
+        drain_calls += 1
+        if drain_calls == 1:
+            return DrainScopeOnceResult(
+                reply_text=ready.text,
+                tool_background_started=False,
+                batch_drained=True,
+                input_message_ids=("in-1",),
+            )
+        return DrainScopeOnceResult(
+            reply_text="",
+            tool_background_started=False,
+            batch_drained=False,
+            input_message_ids=(),
+        )
+
+    serving = ScopeQueueServing(
+        scope,
+        background_output_sink=None,
+        deliver_message=deliver_message,
+        on_drain_complete=AsyncMock(),
+        runtime_channel=ChannelKind.TELEGRAM,
+    )
+    with patch(
+        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+    ) as session_cls:
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        session_cls.return_value = session
+        repo = AsyncMock()
+        repo.mark_delivered = AsyncMock()
+        with patch(
+            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            return_value=repo,
+        ):
+            with patch(
+                "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
+                side_effect=fake_drain,
+            ):
+                await serving.start()
+                await asyncio.sleep(0.08)
+                await serving.stop()
+
+    assert deliver_mock.await_count == 1
+    assert deliver_mock.await_args.args[0].message_id == message_id
 
 
 @pytest.mark.asyncio
@@ -60,14 +139,10 @@ async def test_wake_triggers_drain_until_empty() -> None:
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
         drain_mock,
     ):
-        with patch(
-            "app.services.agentic_channel.scope_queue_serving.flush_scope_output_queue_ready",
-            new_callable=AsyncMock,
-        ):
-            await serving.start()
-            serving.wake(runtime_channel=ChannelKind.TELEGRAM)
-            await asyncio.sleep(0.05)
-            await serving.stop()
+        await serving.start()
+        serving.wake(runtime_channel=ChannelKind.TELEGRAM)
+        await asyncio.sleep(0.05)
+        await serving.stop()
 
     assert drain_mock.await_count == 3
     on_complete.assert_awaited()
