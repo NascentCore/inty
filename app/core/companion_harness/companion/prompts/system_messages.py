@@ -165,6 +165,8 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
 
 # TODO(cross-track-image-delivery): Foreground still denies generate_image despite this — #3285
 # contract; enforce or route image intent to tool leg only. #3285
+# TODO(#3597): Prompt consumer for in-session user denial/correction — do not re-ask
+# MemDoc themes the user explicitly negated in the latest turns.
 def _output_contract_text_chat_branch_mirrored_tools() -> str:
     return (
         "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致\n\n"
@@ -174,6 +176,8 @@ def _output_contract_text_chat_branch_mirrored_tools() -> str:
         "不得以「无法读取」「不能向你展示内部文件」等说法抢先否定并行路即将执行的核对；"
         "不要编造档案内容；若并行路会给出依据或原文，本路只用简短自然的承接语（可表示细节马上对齐），"
         "或将 `user_facing_reply` 留空/极短，把可核对正文交给工具路落点。\n\n"
+        "若用户在本轮或紧邻上一轮**明确否定或纠正**某持久化主题（例如「没有在跑 batch」「今天放假不工作」），"
+        "两路均须在本会话内接受该说法，**不要**在后续回合重复追问已被否定的同一主题，除非用户主动再提起。\n\n"
         "当用户询问**当前模型、调用侧参数、真实注入的 system/对话栈**等须可核验的实现细节时："
         "本路只给即时、克制的衔接语，**不得**输出具体模型名、参数或栈细节，**不得**暗示已在无工具返回前完成自省；"
         "可核对事实须来自并行工具路已执行的允许工具返回或当前可见上下文。\n\n"

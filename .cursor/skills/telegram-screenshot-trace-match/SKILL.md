@@ -117,6 +117,12 @@ Each user turn typically has **two LLM child spans**:
 
 Duplicate Telegram bubbles often mean **both legs sent overlapping text** — compare both child `outputs` in the downloaded trace JSON under `.inty/langsmith_traces/`.
 
+Track fixes:
+
+- **issues/3596** — dual-LLM dedupe (foreground + tool_background overlapping downlink)
+- **issues/3597** — in-session denial ignored (batch re-ask loop)
+- Parent epic: **issues/3398**
+
 ## Troubleshooting
 
 - **0 matches** — widen `--padding-minutes`; try `--environment-hint any`; verify date/timezone; drop `--keyword` to list all roots in window first.
