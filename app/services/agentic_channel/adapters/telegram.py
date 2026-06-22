@@ -114,4 +114,5 @@ class _TelegramChannelDownlink:
             self._api.send_message,
             chat_id=self._channel_address,
             text=text,
+            parse_mode=None,
         )

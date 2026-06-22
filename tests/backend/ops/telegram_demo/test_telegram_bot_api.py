@@ -5,10 +5,13 @@ from __future__ import annotations
 import json
 from io import BytesIO
 from urllib.error import HTTPError
+from urllib.parse import parse_qs
 
-import pytest
 
-from app.external_services.telegram_bot_api import TelegramBotApi
+from app.external_services.telegram_bot_api import (
+    TelegramBotApi,
+    TelegramParseMode,
+)
 
 
 class _FakeResponse:
@@ -56,3 +59,45 @@ def test_telegram_bot_api_get_text_messages_empty() -> None:
     )
     assert messages == []
     assert next_offset is None
+
+
+def test_telegram_bot_api_send_message_includes_parse_mode_when_set() -> None:
+    captured: list[bytes] = []
+
+    def capturing_urlopen(request, timeout=15):
+        if request.full_url.endswith("/sendMessage"):
+            captured.append(request.data)
+            return _FakeResponse({"ok": True, "result": {}})
+        raise HTTPError(
+            request.full_url, 404, "not found", hdrs=None, fp=BytesIO()
+        )
+
+    api = TelegramBotApi(bot_token="token", urlopen=capturing_urlopen)
+    api.send_message(
+        chat_id="123",
+        text="<i>hello</i>",
+        parse_mode=TelegramParseMode.HTML,
+    )
+    assert len(captured) == 1
+    fields = parse_qs(captured[0].decode("utf-8"))
+    assert fields["parse_mode"] == ["HTML"]
+    assert fields["text"] == ["<i>hello</i>"]
+
+
+def test_telegram_bot_api_send_message_omits_parse_mode_when_none() -> None:
+    captured: list[bytes] = []
+
+    def capturing_urlopen(request, timeout=15):
+        if request.full_url.endswith("/sendMessage"):
+            captured.append(request.data)
+            return _FakeResponse({"ok": True, "result": {}})
+        raise HTTPError(
+            request.full_url, 404, "not found", hdrs=None, fp=BytesIO()
+        )
+
+    api = TelegramBotApi(bot_token="token", urlopen=capturing_urlopen)
+    api.send_message(chat_id="123", text="plain", parse_mode=None)
+    assert len(captured) == 1
+    fields = parse_qs(captured[0].decode("utf-8"))
+    assert "parse_mode" not in fields
+    assert fields["text"] == ["plain"]

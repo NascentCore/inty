@@ -15,10 +15,17 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import StrEnum
 from typing import Any
 
 # urllib timeout must exceed Telegram's long-poll ``timeout`` query param.
 _GET_UPDATES_URLOPEN_TIMEOUT_SLACK_S = 5
+
+
+class TelegramParseMode(StrEnum):
+    """Telegram Bot API parse_mode values for sendMessage."""
+
+    HTML = "HTML"
 
 
 def format_epoch_for_local_log(
@@ -133,10 +140,17 @@ class TelegramBotApi:
             )
         return messages, next_offset
 
-    def send_message(self, *, chat_id: str, text: str) -> dict[str, Any]:
-        body = urllib.parse.urlencode(
-            {"chat_id": chat_id, "text": text}
-        ).encode("utf-8")
+    def send_message(
+        self,
+        *,
+        chat_id: str,
+        text: str,
+        parse_mode: TelegramParseMode | None,
+    ) -> dict[str, Any]:
+        fields: dict[str, str] = {"chat_id": chat_id, "text": text}
+        if parse_mode is not None:
+            fields["parse_mode"] = parse_mode.value
+        body = urllib.parse.urlencode(fields).encode("utf-8")
         request = urllib.request.Request(
             url=self._method_url("sendMessage"),
             method="POST",

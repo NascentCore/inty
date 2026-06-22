@@ -25,13 +25,13 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.external_services.telegram_bot_api import (
     TelegramBotApi,
     TelegramIncomingMessage,
+    TelegramParseMode,
 )
 from app.db.session import AsyncSessionLocal
 from app.services.agentic_channel.adapters.telegram import (
     TelegramChannelAdapter,
 )
 from app.services.agentic_channel.channel_runtime import (
-    get_scope_channel_registry,
     turn_channel_up,
 )
 from app.services.agentic_channel.endpoints import (
@@ -49,7 +49,6 @@ from app.services.agentic_channel.provision import (
     ChannelProvisionResult,
     provision_agent_for_channel_onboard,
 )
-from app.services.agentic_companion.downlink import Downlink, DownlinkKind
 from backend.ops.telegram_demo.binding import (
     StartPayloadKind,
     parse_start_payload,
@@ -63,8 +62,9 @@ from backend.ops.telegram_demo.session_store import (
     remember_scope,
 )
 
-_WELCOME_RETURNING = (
-    "Welcome back! Your companion is ready. Just send a message."
+_ONBOARD_NOTICE_NEW = "Your agent is waking up and will greet you soon."
+_ONBOARD_NOTICE_RETURNING = (
+    "Welcome back. Your companion is ready — send a message anytime."
 )
 _ONBOARD_HINT = (
     "Open /telegram to scan the QR code, "
@@ -74,6 +74,12 @@ _IDENTITY_MISMATCH = (
     "This Telegram account does not match our records. "
     "Please use the same account you used when connecting."
 )
+
+
+def _format_transport_notice(body: str) -> str:
+    """Wrap platform copy in HTML italic for Telegram parse_mode=HTML."""
+    assert body != ""
+    return f"<i>{body}</i>"
 
 
 class TelegramTransport:
@@ -121,41 +127,15 @@ class TelegramTransport:
         *,
         chat_id: str,
         text: str,
-        scope: AgentScope | None = None,
     ) -> None:
-        """Send one Telegram control notice that is not companion output."""
+        """Send one Telegram transport notice; not companion output, not OutputQueue."""
         assert chat_id != ""
         assert text != ""
-        if scope is not None:
-            registry = get_scope_channel_registry(scope)
-            downlink = registry.downlinks.get(ChannelKind.TELEGRAM)
-            if downlink is not None:
-                await downlink.deliver(
-                    Downlink(
-                        kind=DownlinkKind.USER_REPLY,
-                        assistant_text=text,
-                        turn=None,
-                        tool_output=None,
-                        bootstrap_interim=None,
-                        scheduled_task_id=None,
-                        transcript_user_text=None,
-                    )
-                )
-                return
-        adapter = TelegramChannelAdapter(
-            api=self._api,
-            channel_address=chat_id,
-        )
-        await adapter.as_downlink().deliver(
-            Downlink(
-                kind=DownlinkKind.USER_REPLY,
-                assistant_text=text,
-                turn=None,
-                tool_output=None,
-                bootstrap_interim=None,
-                scheduled_task_id=None,
-                transcript_user_text=None,
-            )
+        await asyncio.to_thread(
+            self._api.send_message,
+            chat_id=chat_id,
+            text=_format_transport_notice(text),
+            parse_mode=TelegramParseMode.HTML,
         )
 
     async def _handle_inbound(self, inbound: TelegramIncomingMessage) -> None:
@@ -188,7 +168,6 @@ class TelegramTransport:
             await self._send_channel_text(
                 chat_id=inbound.chat_id,
                 text=_IDENTITY_MISMATCH,
-                scope=scope,
             )
             return
         await self._resume_if_paused(scope=scope)
@@ -208,7 +187,6 @@ class TelegramTransport:
             await self._send_channel_text(
                 chat_id=inbound.chat_id,
                 text=channel_error,
-                scope=scope,
             )
 
     async def _handle_onboard(
@@ -234,7 +212,6 @@ class TelegramTransport:
                 await self._send_channel_text(
                     chat_id=inbound.chat_id,
                     text=_IDENTITY_MISMATCH,
-                    scope=existing,
                 )
                 return
             await self._resume_if_paused(scope=existing)
@@ -252,8 +229,7 @@ class TelegramTransport:
             )
             await self._send_channel_text(
                 chat_id=inbound.chat_id,
-                text=_WELCOME_RETURNING,
-                scope=existing,
+                text=_ONBOARD_NOTICE_RETURNING,
             )
             return
         try:
@@ -290,8 +266,7 @@ class TelegramTransport:
             )
             await self._send_channel_text(
                 chat_id=inbound.chat_id,
-                text=_WELCOME_RETURNING,
-                scope=provision.scope,
+                text=_ONBOARD_NOTICE_RETURNING,
             )
             return
         logger.info(
@@ -327,6 +302,10 @@ class TelegramTransport:
         presence = get_presence(provision.scope)
         if presence is None:
             presence = await ensure_presence(provision.scope)
+        await self._send_channel_text(
+            chat_id=inbound.chat_id,
+            text=_ONBOARD_NOTICE_NEW,
+        )
         try:
             await presence.greet_on_sign_on(
                 runtime_channel=ChannelKind.TELEGRAM,
