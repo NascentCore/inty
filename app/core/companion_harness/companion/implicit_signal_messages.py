@@ -13,10 +13,7 @@ Client wall-clock context (``ImplicitSignalBundle.client_time``) is not injected
 ``turn_pipeline`` emits a dedicated ``## user-time-context`` **system** message
 (``User's time`` / ``Time zone`` lines) immediately before the tail **user** message when
 the feature flag is enabled.
-
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""
 
 from __future__ import annotations
 

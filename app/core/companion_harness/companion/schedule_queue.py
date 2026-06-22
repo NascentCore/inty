@@ -1,7 +1,4 @@
-"""Persistent schedule queue polled by WebSocket inner-tick.
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""Persistent schedule queue polled by WebSocket inner-tick."""
 
 from __future__ import annotations
 

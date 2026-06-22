@@ -39,10 +39,7 @@ before replacing these prompt entrypoints with track-composed templates.
 Post-transcript slices (e.g. ``## user-time-context`` in ``turn_pipeline``) are not built here.
 
 TODO(code-consistency): All tool name should be template swapped with LllmFunctionTool.name. — #3413
-
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""
 
 from __future__ import annotations
 

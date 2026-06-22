@@ -1,7 +1,4 @@
-"""Logical companion session scope (replaces implicit Path semantics for registry keys).
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""Logical companion session scope (replaces implicit Path semantics for registry keys)."""
 
 from __future__ import annotations
 

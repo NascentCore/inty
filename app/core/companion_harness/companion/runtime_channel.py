@@ -3,8 +3,7 @@
 TODO(rename-channel-to-gateway): Rename interim ``ChannelKind`` → ``GatewayKind``; move enum + — #3548
 ``TurnRuntimeContext`` to ``agent_channel/gateway.py`` (#3409). Harness traits in
 ``agent_channel/gateway_traits.py`` (functions/registry, not class hierarchy).
-TODO(companion-package-reorg): Delete this module after ``agent_channel/gateway.py`` lands — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""
 
 from __future__ import annotations
 

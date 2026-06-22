@@ -72,3 +72,72 @@ def test_downlink_user_msg_uuid() -> None:
 
     assert mod._downlink_user_msg_uuid({"user_msg_uuid": "abc"}) == "abc"
     assert mod._downlink_user_msg_uuid({}) == ""
+
+
+def test_parse_feedback_jsonl_rows() -> None:
+    mod = _load_regression_module()
+
+    rows = mod._parse_feedback_jsonl_rows("""
+{"kind":"snapshot","feedback_id":"fb-1","correlation":{"user_msg_uuid":"u1"}}
+{"kind":"github_issue_created","feedback_id":"fb-1","github_issue_url":"https://github.com/o/r/issues/9","github_issue_number":9}
+""")
+    assert len(rows) == 2
+    assert rows[0]["kind"] == "snapshot"
+
+
+def test_find_snapshot_for_user_msg_uuid() -> None:
+    mod = _load_regression_module()
+
+    rows = mod._parse_feedback_jsonl_rows("""
+{"kind":"snapshot","feedback_id":"fb-1","correlation":{"user_msg_uuid":"u1"}}
+{"kind":"snapshot","feedback_id":"fb-2","correlation":{"user_msg_uuid":"u2"}}
+""")
+    assert mod._find_snapshot_for_user_msg_uuid(rows, "u1") is True
+    assert mod._find_snapshot_for_user_msg_uuid(rows, "missing") is False
+
+
+def test_find_feedback_id_for_user_msg_uuid() -> None:
+    mod = _load_regression_module()
+
+    rows = mod._parse_feedback_jsonl_rows("""
+{"kind":"snapshot","feedback_id":"fb-1","correlation":{"user_msg_uuid":"u1"}}
+""")
+    assert mod._find_feedback_id_for_user_msg_uuid(rows, "u1") == "fb-1"
+    assert mod._find_feedback_id_for_user_msg_uuid(rows, "u2") == ""
+
+
+def test_parse_feedback_github_issue_row() -> None:
+    mod = _load_regression_module()
+
+    rows = mod._parse_feedback_jsonl_rows("""
+{"kind":"snapshot","feedback_id":"fb-1","correlation":{"user_msg_uuid":"u1"}}
+{"kind":"github_issue_created","feedback_id":"fb-2","github_issue_url":"https://github.com/o/r/issues/8","github_issue_number":8}
+{"kind":"github_issue_created","feedback_id":"fb-1","github_issue_url":"https://github.com/o/r/issues/9","github_issue_number":9}
+""")
+    row = mod._parse_feedback_github_issue_row(
+        rows, user_msg_uuid="u1", feedback_id="fb-1"
+    )
+    assert row is not None
+    assert row.issue_number == 9
+    assert row.user_msg_uuid == "u1"
+    assert (
+        mod._parse_feedback_github_issue_row(
+            rows, user_msg_uuid="u1", feedback_id="fb-missing"
+        )
+        is None
+    )
+
+
+def test_find_github_issue_skipped_reason() -> None:
+    mod = _load_regression_module()
+
+    rows = mod._parse_feedback_jsonl_rows("""
+{"kind":"github_issue_skipped","feedback_id":"fb-1","github_issue_status":"skipped_no_token"}
+""")
+    assert (
+        mod._find_github_issue_skipped_reason(rows, feedback_id="fb-1")
+        == "skipped_no_token"
+    )
+    assert (
+        mod._find_github_issue_skipped_reason(rows, feedback_id="fb-2") is None
+    )

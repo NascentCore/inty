@@ -4,8 +4,6 @@ Extracted from turn.run_turn ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL for reuse by
 the production AgenticLoop. Does not start tool_background; caller passes
 tool_msgs_for_bg into run_tool_background_loop or start_tool_background_job.
 
-TODO(companion-package-reorg): Move with other dual-LLM modules under a focused sub-package. — #3409
-https://github.com/NascentCore/inty/issues/3409
 """
 
 from __future__ import annotations

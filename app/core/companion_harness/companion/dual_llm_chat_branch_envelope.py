@@ -33,17 +33,14 @@ TODO(crs-turn-recall): ``importance_*`` scores are **moment-level significance p
 ``turn_recall`` on the envelope, transcript, and WS meta; Phase B (#3343) wires prompt +
 dreaming curator. CRS epic #3341; do not conflate with ``relationship_phase``
 (slow bond in ``COMPANIONSHIP.md``) or ``experience_directives.tone`` (fast stance in
-``context.json``).
+``context.json``). **Blocked until #3485 refactor gate; plumbing only — do not expand.**
 
 Design: ``/docs/imate/DESIGN.md``. LangSmith: ``inty_llm_source=foreground_dual_llm_envelope``
 (``llm/langsmith_invocation_extra.py``).
 
 TODO(#3398): Envelope is shared by single-LLM in-turn sync and dual-LLM ``tool_background`` finish;
 epic tracks whether user chat stays on one chat model or splits chat vs ``companion_tool_call_model``.
-
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""
 
 from __future__ import annotations
 

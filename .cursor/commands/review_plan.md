@@ -22,7 +22,9 @@ Review architecture of the pending changes' fitness to the [companion harness de
 - Plan should include testing.
 - Tests are done at the key juncture between procedures of the plan.
 - Complex featuers should have smoke tests to cover the end-to-end process.
-- User-facing changes should have manual tests.
+- User-facing changes should have regression tests added to repl regression tests,
+  as repl regression tests are the only client we can reliably test.
+  Weixin/WeChat Telegram are difficult to test in code.
 
 ## Refactoring
 
