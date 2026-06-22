@@ -9,6 +9,7 @@ used for trace filtering.
 from __future__ import annotations
 
 from .models import CompanionTurnTrack, InnerTickActivity
+from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
 
 
 def turn_flags_for_track(
@@ -16,23 +17,10 @@ def turn_flags_for_track(
 ) -> tuple[bool, InnerTickActivity]:
     """Translate a production track into the legacy kernel routing flags."""
 
-    match track:
-        case (
-            CompanionTurnTrack.USER_CHAT
-            | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
-            | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-        ):
-            return False, InnerTickActivity.MONOLOG
-        case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
-            return True, InnerTickActivity.PROACTIVE_CHAT
-        case CompanionTurnTrack.INNER_TICK_SCHEDULED:
-            # TODO(#3601): SCHEDULED shares PROACTIVE_CHAT activity today; split tracks
-            # for clean separation of idle proactive vs schedule_queue reminder semantics.
-            return True, InnerTickActivity.PROACTIVE_CHAT
-        case CompanionTurnTrack.INNER_TICK_MONOLOG:
-            return True, InnerTickActivity.MONOLOG
-        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
-            return True, InnerTickActivity.AUTONOMY
+    kind = inner_tick_kind_for_track(track)
+    if kind is not None:
+        return True, inner_tick_spec(kind).activity
+    return False, InnerTickActivity.MONOLOG
 
 
 def langsmith_inty_turn_lane_for_companion_track(

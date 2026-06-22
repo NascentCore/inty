@@ -25,6 +25,7 @@ AGENTIC_COMPANION_ALLOWED_HARNESS_PREFIXES: Final[tuple[str, ...]] = (
     "app.core.companion_harness.companion.scope_turn_lock",
     "app.core.companion_harness.companion.langsmith_turn_slice",
     "app.core.companion_harness.companion.dreaming_observability",
+    "app.core.companion_harness.companion.inner_tick_kind",
     "app.core.companion_harness.companion.manager",
     "app.core.companion_harness.runtime",
     "app.core.companion_harness.agent_channel",

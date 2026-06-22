@@ -30,6 +30,8 @@ from typing import Any, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
+from app.core.companion_harness.companion.inner_tick_kind import InnerTickKind
+
 from app.schemas.biz_action import BizAction
 from app.schemas.chat import (
     ChatCompletionRequest,
@@ -279,6 +281,37 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
         validation_alias=AliasChoices("audioDuration", "audio_duration"),
         serialization_alias="audioDuration",
     )
+
+
+def build_inner_tick_wire_meta(
+    kind: InnerTickKind,
+    *,
+    scheduled_task_id: str | None = None,
+) -> ChatWsCompanionWireMessageMetaData:
+    """Build companion WS user-row meta for one delivered inner-tick kind."""
+    match kind:
+        case InnerTickKind.MONOLOG:
+            return ChatWsCompanionWireMessageMetaData(
+                inner_tick=True,
+                companion_monolog_inner_tick=True,
+            )
+        case InnerTickKind.PROACTIVE_CHAT:
+            return ChatWsCompanionWireMessageMetaData(
+                inner_tick=True,
+                proactive_chat=True,
+                companion_proactive_chat=True,
+            )
+        case InnerTickKind.SCHEDULED:
+            assert scheduled_task_id is not None
+            return ChatWsCompanionWireMessageMetaData(
+                inner_tick=True,
+                companion_scheduled_reminder=True,
+                scheduled_task_id=scheduled_task_id,
+            )
+        case InnerTickKind.AUTONOMY:
+            raise ValueError(
+                "autonomy inner tick has no user-visible wire meta"
+            )
 
 
 def dump_chat_ws_companion_wire_meta(

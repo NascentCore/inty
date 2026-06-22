@@ -97,6 +97,13 @@ def inner_tick_activity_suppresses_user_delivery(
     return inner_tick_activity == InnerTickActivity.AUTONOMY
 
 
+class InnerTickThrottleKind(StrEnum):
+    """Which inner-tick throttle counter glue should update after a kernel fire."""
+
+    MONOLOG = "monolog"
+    AUTONOMY = "autonomy"
+
+
 class CompanionTurnTrack(StrEnum):
     """Active production turn entry tracks (1:1 with ``build_system_messages_for_*``).
 
