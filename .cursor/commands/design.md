@@ -1,6 +1,6 @@
-# Design a system
+# Design an effective solution
 
-- Absolutely understand the problem
+- Absolutely understand the problem, /grill-me user if needed
 - Absolutely be crystal clear about the objectives, /grill-me user if needed
 - Understand existing status-quo of the code base
 - Come up with 1 sentence conceptual design
