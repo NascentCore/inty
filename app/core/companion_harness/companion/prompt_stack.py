@@ -40,6 +40,7 @@ from .models import (
     load_context_meta,
     load_prompt_bundle,
 )
+from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
 from .turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .runtime_channel import (
@@ -53,14 +54,34 @@ from app.core.companion_harness.prompting.tracks import (
 from .prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
     build_system_messages_for_implicit_sign_on_greeting,
-    build_system_messages_for_inner_tick_autonomy,
-    build_system_messages_for_inner_tick_monolog,
     build_system_messages_for_inner_tick_proactive_chat,
     build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
     weixin_clawbot_contact_alias_system_message,
 )
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
+
+
+def _async_tool_system_messages_for_track(
+    *,
+    track: CompanionTurnTrack,
+    route_mode: TurnRouteMode,
+    bundle: PromptBundle,
+    context: ContextMeta,
+    store: MemoryStore,
+) -> list[dict[str, Any]]:
+    """Build async tool-path system messages for MONOLOG or AUTONOMY tracks."""
+    kind = inner_tick_kind_for_track(track)
+    assert kind is not None
+    spec = inner_tick_spec(kind)
+    builder = spec.async_tool_prompt_builder
+    assert builder is not None
+    if route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
+        raise RuntimeError(
+            f"{spec.turn_track.value} track requires ASYNC route, got "
+            f"{route_mode.value}"
+        )
+    return builder(bundle, context, store)
 
 
 def replace_leading_system_messages_inplace(
@@ -176,29 +197,13 @@ def companion_system_messages_for_track(
             out = build_system_messages_for_inner_tick_scheduled(
                 bundle, context
             )
-        case CompanionTurnTrack.INNER_TICK_MONOLOG:
-            if (
-                route_mode
-                != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-            ):
-                raise RuntimeError(
-                    "inner_tick_monolog track requires ASYNC route, got "
-                    f"{route_mode.value}"
-                )
-            out = build_system_messages_for_inner_tick_monolog(
-                bundle, context, store
-            )
-        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
-            if (
-                route_mode
-                != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-            ):
-                raise RuntimeError(
-                    "inner_tick_autonomy track requires ASYNC route, got "
-                    f"{route_mode.value}"
-                )
-            out = build_system_messages_for_inner_tick_autonomy(
-                bundle, context, store
+        case CompanionTurnTrack.INNER_TICK_MONOLOG | CompanionTurnTrack.INNER_TICK_AUTONOMY:
+            out = _async_tool_system_messages_for_track(
+                track=track,
+                route_mode=route_mode,
+                bundle=bundle,
+                context=context,
+                store=store,
             )
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             out = build_system_messages_for_bootstrap_track(bundle, context)
@@ -326,15 +331,13 @@ def refresh_companion_turn_prompt_stack(
                         context,
                     )
                 )
-        case CompanionTurnTrack.INNER_TICK_MONOLOG:
-            refreshed = build_system_messages_for_inner_tick_monolog(
-                bundle,
-                context,
-                store,
-            )
-        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
-            refreshed = build_system_messages_for_inner_tick_autonomy(
-                bundle, context, store
+        case CompanionTurnTrack.INNER_TICK_MONOLOG | CompanionTurnTrack.INNER_TICK_AUTONOMY:
+            refreshed = _async_tool_system_messages_for_track(
+                track=track,
+                route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
+                bundle=bundle,
+                context=context,
+                store=store,
             )
         case CompanionTurnTrack.USER_CHAT:
             refreshed = build_system_messages_for_tool_track(

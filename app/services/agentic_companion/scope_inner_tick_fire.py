@@ -2,7 +2,8 @@
 
 Orchestration only — Postgres reads go through ``inner_tick_scope`` /
 ``scope_inner_tick_persistence``; kernel due + turns via ``companion_harness.runtime``.
-# TODO(dedup-scope-presence-inner-tick): Share monolog/autonomy fire bodies — #3424.
+# TODO(dedup-scope-presence-inner-tick): Slice 2 — ``fire_throttled_inner_tick(kind, …, delivery)``
+# on ``InnerTickKind`` registry; unify presence/scope fire bodies + throttle stores — #3424.
 """
 
 from __future__ import annotations
@@ -16,7 +17,9 @@ from loguru import logger
 from app.core.companion_harness.companion.dreaming_observability import (
     DreamingBatchOutcome,
 )
+from app.core.companion_harness.companion.inner_tick_kind import InnerTickKind
 from app.core.companion_harness.companion.manager import CompanionSession
+from app.core.companion_harness.companion.models import InnerTickThrottleKind
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
@@ -24,12 +27,9 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.runtime.inner_tick_fire import (
     InnerTickKernelInput,
-    InnerTickThrottleKind,
     InnerTickThrottleSnapshot,
-    autonomy_inner_tick_remain_seconds,
-    kernel_fire_autonomy,
-    kernel_fire_monolog,
-    monolog_inner_tick_remain_seconds,
+    inner_tick_remain_seconds,
+    kernel_fire_throttled,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -128,8 +128,10 @@ async def try_fire_autonomy_for_scope(
     kernel_input, scope_session = ctx_pair
 
     if (
-        autonomy_inner_tick_remain_seconds(
-            kernel_input.mem_store, kernel_input.throttle
+        inner_tick_remain_seconds(
+            InnerTickKind.AUTONOMY,
+            kernel_input.mem_store,
+            kernel_input.throttle,
         )
         > 0
     ):
@@ -146,7 +148,10 @@ async def try_fire_autonomy_for_scope(
             )
             return False
         try:
-            kernel_result = await kernel_fire_autonomy(kernel_input)
+            kernel_result = await kernel_fire_throttled(
+                InnerTickKind.AUTONOMY,
+                kernel_input,
+            )
         except Exception as exc:
             logger.warning(
                 "scope_autonomy_inner_tick run_turn failed poll_source={} user={} agent={}: {}",
@@ -228,8 +233,10 @@ async def try_fire_monolog_for_scope(
     kernel_input, scope_session = ctx_pair
 
     if (
-        monolog_inner_tick_remain_seconds(
-            kernel_input.mem_store, kernel_input.throttle
+        inner_tick_remain_seconds(
+            InnerTickKind.MONOLOG,
+            kernel_input.mem_store,
+            kernel_input.throttle,
         )
         > 0
     ):
@@ -246,7 +253,10 @@ async def try_fire_monolog_for_scope(
             )
             return False
         try:
-            kernel_result = await kernel_fire_monolog(kernel_input)
+            kernel_result = await kernel_fire_throttled(
+                InnerTickKind.MONOLOG,
+                kernel_input,
+            )
         except Exception as exc:
             logger.warning(
                 "scope_monolog_inner_tick run_turn failed poll_source={} user={} agent={}: {}",
