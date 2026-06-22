@@ -731,12 +731,21 @@ async def run_tool_background_loop(
             total_tool_calls += len(tool_calls)
             return next_resp, None
 
+        # Leading system refresh can shrink the message list; capture tool-round
+        # append rows before refresh so transcript digest still sees tool results.
+        appended_turn_msgs: list[dict[str, Any]] = []
+        appended_capture_from_len = len(working_messages)
+
         # Keep tool-path system prefix and OpenAI tools list in sync with MemoryStore scope
         # after each tool round (same idea as sync loop in turn.py after tool replies).
         async def _after_tool_messages_appended(
             messages_with_tool_results: list[dict[str, Any]],
         ) -> None:
-            nonlocal tools
+            nonlocal tools, appended_capture_from_len
+            appended_turn_msgs.extend(
+                messages_with_tool_results[appended_capture_from_len:]
+            )
+            appended_capture_from_len = len(messages_with_tool_results)
             tools = refresh_companion_turn_prompt_stack(
                 store=memory_store,
                 memory_bootstrap_type=memory_bootstrap_type,
@@ -746,6 +755,7 @@ async def run_tool_background_loop(
                 track=companion_turn_track,
                 runtime_context=runtime_context,
             )
+            appended_capture_from_len = len(messages_with_tool_results)
 
         try:
             loop_result = await resolve_openai_tool_call_loop_async(
@@ -786,7 +796,6 @@ async def run_tool_background_loop(
         bg_ls_llm_run = langsmith_llm_run_id_from_completion(
             loop_result.response
         )
-        appended_turn_msgs = loop_result.messages[len(working_messages) :]
         tool_call_names = _extract_tool_call_names(appended_turn_msgs)
         image_paths = _local_paths_from_tool_messages(loop_result.messages)
         generation_deliver = _generation_tool_execution_deliver(
