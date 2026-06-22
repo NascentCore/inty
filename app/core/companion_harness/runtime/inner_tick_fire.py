@@ -15,7 +15,7 @@ from loguru import logger
 
 from app.core.companion_harness.companion.inner_tick_schedule import (
     InnerTickScheduleOverrides,
-    maintenance_transcript_line_count,
+    monolog_transcript_line_count,
     next_inner_tick_wait_seconds,
 )
 from app.core.companion_harness.companion.manager import (
@@ -23,7 +23,7 @@ from app.core.companion_harness.companion.manager import (
     CompanionSession,
 )
 from app.core.companion_harness.companion.models import (
-    MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+    MONOLOG_INNER_TICK_CHAT_HISTORY_USER_MARKER,
     CompanionTurnResult,
 )
 from app.core.companion_harness.companion.proactive_chat import (
@@ -51,16 +51,16 @@ from app.core.config import global_config_loaded_from_config_yaml
 class InnerTickThrottleKind(StrEnum):
     """Which inner-tick throttle counter glue should update after a kernel fire."""
 
-    MAINTENANCE = "maintenance"
+    MONOLOG = "monolog"
     AUTONOMY = "autonomy"
 
 
 @dataclass(frozen=True)
 class InnerTickThrottleSnapshot:
-    """Presence-agnostic throttle state for maintenance and autonomy inner ticks."""
+    """Presence-agnostic throttle state for monolog and autonomy inner ticks."""
 
-    last_maintenance_monotonic: Any
-    last_maintenance_line_count: int | None
+    last_monolog_monotonic: Any
+    last_monolog_line_count: int | None
     last_autonomy_monotonic: Any
     last_autonomy_line_count: int | None
 
@@ -90,11 +90,11 @@ class InnerTickKernelResult:
     throttle_kind: InnerTickThrottleKind | None
 
 
-def _maintenance_schedule_overrides() -> InnerTickScheduleOverrides:
+def _monolog_schedule_overrides() -> InnerTickScheduleOverrides:
     harness = global_config_loaded_from_config_yaml.agent.companion_harness
     return InnerTickScheduleOverrides(
         enabled=True,
-        min_gap_seconds=float(harness.inner_tick.maintenance.min_gap_seconds),
+        min_gap_seconds=float(harness.inner_tick.monolog.min_gap_seconds),
         poll_seconds=float(harness.inner_tick.proactive_chat.poll_seconds),
     )
 
@@ -114,16 +114,16 @@ def proactive_chat_remain_seconds(mem_store: MemoryStore) -> float:
     )
 
 
-def maintenance_inner_tick_remain_seconds(
+def monolog_inner_tick_remain_seconds(
     mem_store: MemoryStore,
     throttle: InnerTickThrottleSnapshot,
 ) -> float:
-    """Seconds until maintenance inner-tick is due; ``0`` means due now."""
+    """Seconds until monolog inner-tick is due; ``0`` means due now."""
     return next_inner_tick_wait_seconds(
         mem_store,
-        last_inner_fire_monotonic=throttle.last_maintenance_monotonic,
-        last_maintenance_transcript_line_count=throttle.last_maintenance_line_count,
-        overrides=_maintenance_schedule_overrides(),
+        last_inner_fire_monotonic=throttle.last_monolog_monotonic,
+        last_monolog_transcript_line_count=throttle.last_monolog_line_count,
+        overrides=_monolog_schedule_overrides(),
     )
 
 
@@ -135,8 +135,8 @@ def autonomy_inner_tick_remain_seconds(
     return next_inner_tick_wait_seconds(
         mem_store,
         last_inner_fire_monotonic=throttle.last_autonomy_monotonic,
-        last_maintenance_transcript_line_count=throttle.last_autonomy_line_count,
-        overrides=_maintenance_schedule_overrides(),
+        last_monolog_transcript_line_count=throttle.last_autonomy_line_count,
+        overrides=_monolog_schedule_overrides(),
     )
 
 
@@ -219,7 +219,7 @@ async def kernel_fire_autonomy(
     kernel_input: InnerTickKernelInput,
 ) -> InnerTickKernelResult:
     """Run one autonomy inner-tick turn; caller holds ``turn_lock``."""
-    line_count = maintenance_transcript_line_count(kernel_input.mem_store)
+    line_count = monolog_transcript_line_count(kernel_input.mem_store)
     companion_turn = await kernel_input.manager.run_inner_tick_autonomy_turn(
         kernel_input.session,
         background_output_sink=kernel_input.background_output_sink,
@@ -236,12 +236,12 @@ async def kernel_fire_autonomy(
     )
 
 
-async def kernel_fire_maintenance(
+async def kernel_fire_monolog(
     kernel_input: InnerTickKernelInput,
 ) -> InnerTickKernelResult:
-    """Run one maintenance inner-tick turn; caller holds ``turn_lock``."""
-    line_count = maintenance_transcript_line_count(kernel_input.mem_store)
-    companion_turn = await kernel_input.manager.run_inner_tick_maintenance_turn(
+    """Run one monolog inner-tick turn; caller holds ``turn_lock``."""
+    line_count = monolog_transcript_line_count(kernel_input.mem_store)
+    companion_turn = await kernel_input.manager.run_inner_tick_monolog_turn(
         kernel_input.session,
         background_output_sink=kernel_input.background_output_sink,
         preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
@@ -249,13 +249,13 @@ async def kernel_fire_maintenance(
     )
     reply_stripped = str(companion_turn.assistant_text or "").strip()
     if not reply_stripped and not companion_turn.tool_background_started:
-        logger.info("inner_tick_maintenance kernel monolog_empty")
+        logger.info("inner_tick_monolog kernel monolog_empty")
 
     return InnerTickKernelResult(
         turn=companion_turn,
-        track_path="inner_tick_maintenance",
-        transcript_user_text=MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+        track_path="inner_tick_monolog",
+        transcript_user_text=MONOLOG_INNER_TICK_CHAT_HISTORY_USER_MARKER,
         scheduled_task_id=None,
         throttle_line_count=line_count,
-        throttle_kind=InnerTickThrottleKind.MAINTENANCE,
+        throttle_kind=InnerTickThrottleKind.MONOLOG,
     )

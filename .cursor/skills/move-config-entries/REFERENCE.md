@@ -12,7 +12,7 @@ Canonical example: `app.features.companion_*` moved to `agent.companion_harness.
 - `app.features.companion_ws_proactive_chat_base_idle_seconds` -> `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds`
 - `app.features.companion_ws_proactive_chat_stop_after_silence_minutes` -> `agent.companion_harness.inner_tick.proactive_chat.stop_after_silence_minutes`
 - `app.features.companion_ws_proactive_chat_poll_seconds` -> `agent.companion_harness.inner_tick.proactive_chat.poll_seconds`
-- `app.features.companion_ws_maintenance_inner_tick_min_gap_seconds` -> `agent.companion_harness.inner_tick.maintenance.min_gap_seconds`
+- `app.features.companion_ws_monolog_inner_tick_min_gap_seconds` -> `agent.companion_harness.inner_tick.monolog.min_gap_seconds`
 - `app.features.companion_tool_bg_idle_wait_timeout_sec` -> `agent.companion_harness.tool_bg_idle_wait_timeout_sec`
 - `app.features.companion_implicit_sign_on_greeting_llm_timeout_sec` -> `agent.companion_harness.implicit_sign_on_greeting.llm_timeout_sec`
 - `app.features.companion_implicit_sign_on_greeting_llm_max_attempts` -> `agent.companion_harness.implicit_sign_on_greeting.llm_max_attempts`
@@ -22,7 +22,7 @@ Canonical example: `app.features.companion_*` moved to `agent.companion_harness.
 - `transcript.*`: compaction and transcript-window settings.
 - `ws.*`: WebSocket session text.
 - `inner_tick.proactive_chat.*`: proactive timing.
-- `inner_tick.maintenance.*`: maintenance timing.
+- `inner_tick.monolog.*`: monolog inner-tick timing.
 - `implicit_sign_on_greeting.*`: implicit greeting LLM limits.
 
 ## What changed

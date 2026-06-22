@@ -60,29 +60,27 @@ class TranscriptProjection(StrEnum):
 class InnerTickActivity(StrEnum):
     """Idle poll activities serialized on presence ``turn_lock``.
 
-    ``MAINTENANCE``, ``PROACTIVE_CHAT``, and ``AUTONOMY`` are synthetic **turns**
+    ``MONOLOG``, ``PROACTIVE_CHAT``, and ``AUTONOMY`` are synthetic **turns**
     (``run_turn``, ``CompanionTurnResult``, optional delivery). ``DREAMING`` is a **memory batch** only
     (``consolidate_memory_during_dreaming``; observability via ``dreaming_observability`` and
     ``inner_tick_activity=dreaming`` on LangSmith / runtime events — not ``CompanionTurnResult``).
 
-    Poll order per wake: proactive → scheduled → autonomy → maintenance → dreaming
+    Poll order per wake: proactive → scheduled → autonomy → monolog → dreaming
     (at most one fires; see ``inner_tick_poll`` TODO inner-tick-poll-multi-track / #3273).
     TODO(#3601): ``INNER_TICK_SCHEDULED`` currently maps here as ``PROACTIVE_CHAT``; split
     activity for clean track separation (scheduled reminder vs idle proactive).
 
     ``AUTONOMY`` reads/writes ``LIFE_CURRENTS.md`` with an open tool set; never delivers
     client-visible NL or images (see ``inner_tick_activity_suppresses_user_delivery``).
-    ``MAINTENANCE`` (awake inner-tick turn) still uses a restricted tool set today;
-    ``TODO(narrow-maintenance)`` targets ai_private / transcript reorg only (#3375).
-    TODO(#3400): Rename ``MAINTENANCE`` → ``MONOLOG`` and ``INNER_TICK_MAINTENANCE`` track
-    (user-directed inner speech; distinct from ``AUTONOMY`` virtual-space activity).
+    ``MONOLOG`` (awake inner-tick turn) still uses a restricted tool set today;
+    ``TODO(narrow-monolog)`` targets ai_private / transcript reorg only (#3375).
     ``DREAMING`` (sleeping batch, not a turn) **rolls up the whole day**: user-visible
     chat plus scheduled / proactive on ``transcript.jsonl``, and silent ``AUTONOMY`` /
-    ``MAINTENANCE`` traces — into MemoryDoc curation (``TODO(dreaming-day-rollup)``: — #3376
+    ``MONOLOG`` traces — into MemoryDoc curation (``TODO(dreaming-day-rollup)``: — #3376
     inner-tick / ai_private / LIFE_CURRENTS not yet merged; #3343 curator, #3366 reflection).
     """
 
-    MAINTENANCE = "maintenance"
+    MONOLOG = "monolog"
     PROACTIVE_CHAT = "proactive_chat"
     AUTONOMY = "autonomy"
     DREAMING = "dreaming"
@@ -111,8 +109,7 @@ class CompanionTurnTrack(StrEnum):
     IMPLICIT_SIGN_ON_GREETING = "implicit_sign_on_greeting"
     INNER_TICK_PROACTIVE_CHAT = "inner_tick_proactive_chat"
     INNER_TICK_SCHEDULED = "inner_tick_scheduled"
-    # TODO(#3400): Rename to ``INNER_TICK_MONOLOG`` when wire + LangSmith migration ready.
-    INNER_TICK_MAINTENANCE = "inner_tick_maintenance"
+    INNER_TICK_MONOLOG = "inner_tick_monolog"
     INNER_TICK_AUTONOMY = "inner_tick_autonomy"
 
 
@@ -127,7 +124,7 @@ INNER_TICK_SYNTHETIC_USER_TEXT = (
     "请结合上文与「内在活动（ai_private）」行事；不要向用户解释本机制，不要提系统、节拍、等待。）"
 )
 
-MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER = "（内在节拍）"
+MONOLOG_INNER_TICK_CHAT_HISTORY_USER_MARKER = "（内在节拍）"
 
 
 class CompanionTurnResult(BaseModel):
@@ -180,7 +177,7 @@ class CompanionTurnResult(BaseModel):
         default=None,
         description=(
             "When this turn is an inner-tick synthetic round, ``InnerTickActivity`` value "
-            "(``proactive_chat`` / ``maintenance``); mirrored to API/WS "
+            "(``proactive_chat`` / ``monolog``); mirrored to API/WS "
             "``meta_data.inner_tick_activity``. ``dreaming`` is never set here — see "
             "``dreaming_observability`` runtime events. ``None`` for normal user chat."
         ),
@@ -521,10 +518,10 @@ def companion_turn_transcript_loaded_messages(
 ) -> list[ChatMessage]:
     """Transcript rows for assembling this turn's ``messages``.
 
-    Maintenance inner-tick (``InnerTickActivity.MAINTENANCE``) persists only to
+    Maintenance inner-tick (``InnerTickActivity.MONOLOG``) persists only to
     ``transcript_inner_tick.jsonl`` via ``transcript_relative_path_for_turn_persistence``;
     it never appends to ``transcript.jsonl``. User chat and proactive/scheduled inner ticks
-    load ``transcript.jsonl`` as-is; maintenance turns merge the inner file for their own LLM
+    load ``transcript.jsonl`` as-is; monolog turns merge the inner file for their own LLM
     context.
     """
     raw_main = load_transcript_projection_from_store(
@@ -553,6 +550,6 @@ def transcript_relative_path_for_turn_persistence(
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
     )
     if inner_tick_turn and not tick_proactive:
-        # TODO(rename-memory-doc): split maintenance vs autonomy JSONL paths (see memory_store_scope). — #3400
+        # TODO(rename-memory-doc): split monolog vs autonomy JSONL paths (see memory_store_scope). — #3400
         return "transcript_inner_tick.jsonl"
     return "transcript.jsonl"

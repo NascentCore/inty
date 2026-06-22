@@ -199,7 +199,7 @@ def _repl_inner_tick_activity_display(activity: str) -> str:
 
 
 # TODO(ux): Prefer meta_data.source == tool_bg (e.g. label "toolcall") before inner_tick_activity so
-# maintenance tool_bg frames are not misread as foreground inner-tick lines.
+# monolog tool_bg frames are not misread as foreground inner-tick lines.
 # TODO(simplification): This translation is unnecessary, just display the text provided by the backend.
 def _repl_assistant_banner_label(
     ids: Mapping[str, str] | None,

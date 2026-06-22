@@ -4,7 +4,7 @@ Settled ``USER_CHAT`` script shapes are centralized in
 ``build_scripted_settled_user_chat_script`` keyed on ``UserTurnLlmLoopMode``.
 
 Excluded from scripted coverage here (see orchestration/drain module docstrings):
-maintenance/autonomy (#3580), dreaming, proactive+tool (#3285), sequential double-drain.
+monolog/autonomy (#3580), dreaming, proactive+tool (#3285), sequential double-drain.
 """
 
 from __future__ import annotations

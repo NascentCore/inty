@@ -581,17 +581,17 @@ class AgentConfig(BaseModel):
                     default=60.0,
                     description=(
                         "Seconds between unified inner-tick worker wakeups "
-                        "(proactive + maintenance eligibility checks)."
+                        "(proactive + monolog eligibility checks)."
                     ),
                 )
 
-            class MaintenanceConfig(BaseModel):
+            class MonologConfig(BaseModel):
                 model_config = ConfigDict(extra="ignore")
 
                 min_gap_seconds: float = Field(
                     default=120.0,
                     description=(
-                        "Minimum seconds between successful maintenance inner-tick "
+                        "Minimum seconds between successful monolog inner-tick "
                         "fires."
                     ),
                 )
@@ -599,8 +599,8 @@ class AgentConfig(BaseModel):
             proactive_chat: ProactiveChatConfig = Field(
                 default_factory=ProactiveChatConfig
             )
-            maintenance: MaintenanceConfig = Field(
-                default_factory=MaintenanceConfig
+            monolog: MonologConfig = Field(
+                default_factory=MonologConfig
             )
 
         inner_tick: InnerTickConfig = Field(default_factory=InnerTickConfig)

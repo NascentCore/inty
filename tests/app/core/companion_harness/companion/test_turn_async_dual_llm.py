@@ -33,7 +33,7 @@ from app.core.companion_harness.companion.dual_llm_foreground_chat import (
     build_chat_track_handoff_assistant_message,
 )
 from app.core.companion_harness.companion.turn import (
-    run_companion_inner_tick_maintenance_turn,
+    run_companion_inner_tick_monolog_turn,
     run_companion_inner_tick_proactive_chat_turn,
     run_companion_user_chat_turn,
     run_inner_tick_autonomy,
@@ -259,7 +259,7 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
     )
 
     client = _FakeAsyncDualLLMClient()
-    await run_companion_inner_tick_maintenance_turn(
+    await run_companion_inner_tick_monolog_turn(
         deps=_default_turn_deps(store, client),
     )
 
@@ -267,7 +267,7 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
     assert len(bg_jobs) == 1
     job = bg_jobs[0]
     assert job["inner_tick_turn"] is True
-    assert job["inner_tick_activity"] == InnerTickActivity.MAINTENANCE
+    assert job["inner_tick_activity"] == InnerTickActivity.MONOLOG
     assert job["runtime_context"].implicit_signal_bundle is None
     assert job["main_event_loop"] is loop
     expected = {

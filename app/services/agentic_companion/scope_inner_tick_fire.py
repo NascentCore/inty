@@ -1,8 +1,8 @@
-"""Scope autonomous inner-tick tracks: maintenance, autonomy, dreaming (#3255).
+"""Scope autonomous inner-tick tracks: monolog, autonomy, dreaming (#3255).
 
 Orchestration only — Postgres reads go through ``inner_tick_scope`` /
 ``scope_inner_tick_persistence``; kernel due + turns via ``companion_harness.runtime``.
-# TODO(dedup-scope-presence-inner-tick): Share maintenance/autonomy fire bodies — #3424.
+# TODO(dedup-scope-presence-inner-tick): Share monolog/autonomy fire bodies — #3424.
 """
 
 from __future__ import annotations
@@ -28,8 +28,8 @@ from app.core.companion_harness.runtime.inner_tick_fire import (
     InnerTickThrottleSnapshot,
     autonomy_inner_tick_remain_seconds,
     kernel_fire_autonomy,
-    kernel_fire_maintenance,
-    maintenance_inner_tick_remain_seconds,
+    kernel_fire_monolog,
+    monolog_inner_tick_remain_seconds,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -57,8 +57,8 @@ def _scope_throttle_snapshot(
 ) -> InnerTickThrottleSnapshot:
     tick_state = get_scope_inner_tick_state(scope)
     return InnerTickThrottleSnapshot(
-        last_maintenance_monotonic=tick_state.last_maintenance_inner_tick_monotonic(),
-        last_maintenance_line_count=tick_state.last_maintenance_transcript_line_count(),
+        last_monolog_monotonic=tick_state.last_monolog_inner_tick_monotonic(),
+        last_monolog_line_count=tick_state.last_monolog_transcript_line_count(),
         last_autonomy_monotonic=tick_state.last_autonomy_inner_tick_monotonic(),
         last_autonomy_line_count=tick_state.last_autonomy_transcript_line_count(),
     )
@@ -190,14 +190,14 @@ async def try_fire_autonomy_for_scope(
     return True
 
 
-async def try_fire_maintenance_for_scope(
+async def try_fire_monolog_for_scope(
     *,
     coords: InnerTickCoords,
     poll_source: str,
     chat_resolve_mode: InnerTickChatResolveMode,
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> bool:
-    """MAINTENANCE inner-tick without user-visible delivery (MemoryStore only, #3255)."""
+    """MONOLOG inner-tick without user-visible delivery (MemoryStore only, #3255)."""
     resolved = await resolve_inner_tick_scope_coords_for_triple(
         coords=coords,
         poll_source=poll_source,
@@ -228,7 +228,7 @@ async def try_fire_maintenance_for_scope(
     kernel_input, scope_session = ctx_pair
 
     if (
-        maintenance_inner_tick_remain_seconds(
+        monolog_inner_tick_remain_seconds(
             kernel_input.mem_store, kernel_input.throttle
         )
         > 0
@@ -236,20 +236,20 @@ async def try_fire_maintenance_for_scope(
         return False
 
     async with inner_tick_turn_scope(session=scope_session):
-        tick_state.clear_maintenance_tool_bg_idle_if_idle()
-        if tick_state.maintenance_tool_bg_still_running():
+        tick_state.clear_monolog_tool_bg_idle_if_idle()
+        if tick_state.monolog_tool_bg_still_running():
             logger.debug(
-                "scope_maintenance_inner_tick skipped prev_maintenance_tool_bg poll_source={} user={} agent={}",
+                "scope_monolog_inner_tick skipped prev_monolog_tool_bg poll_source={} user={} agent={}",
                 poll_source,
                 resolved.user_id,
                 resolved.agent_id,
             )
             return False
         try:
-            kernel_result = await kernel_fire_maintenance(kernel_input)
+            kernel_result = await kernel_fire_monolog(kernel_input)
         except Exception as exc:
             logger.warning(
-                "scope_maintenance_inner_tick run_turn failed poll_source={} user={} agent={}: {}",
+                "scope_monolog_inner_tick run_turn failed poll_source={} user={} agent={}: {}",
                 poll_source,
                 resolved.user_id,
                 resolved.agent_id,
@@ -262,7 +262,7 @@ async def try_fire_maintenance_for_scope(
 
         companion_turn = kernel_result.turn
         if companion_turn.tool_background_started:
-            tick_state.bind_maintenance_tool_bg_idle(
+            tick_state.bind_monolog_tool_bg_idle(
                 companion_chat_service.companion_session_tool_bg_idle_event(
                     user_id=resolved.user_id,
                     agent_id=resolved.agent_id,
@@ -271,19 +271,19 @@ async def try_fire_maintenance_for_scope(
                 )
             )
         else:
-            tick_state.bind_maintenance_tool_bg_idle(None)
+            tick_state.bind_monolog_tool_bg_idle(None)
 
         if (
-            kernel_result.throttle_kind == InnerTickThrottleKind.MAINTENANCE
+            kernel_result.throttle_kind == InnerTickThrottleKind.MONOLOG
             and kernel_result.throttle_line_count is not None
         ):
-            tick_state.mark_maintenance_inner_tick_fired(
+            tick_state.mark_monolog_inner_tick_fired(
                 time.monotonic(),
                 kernel_result.throttle_line_count,
             )
 
     logger.info(
-        "scope_maintenance_inner_tick fired poll_source={} user={} agent={} chat_id={} tool_background_started={}",
+        "scope_monolog_inner_tick fired poll_source={} user={} agent={} chat_id={} tool_background_started={}",
         poll_source,
         resolved.user_id,
         resolved.agent_id,

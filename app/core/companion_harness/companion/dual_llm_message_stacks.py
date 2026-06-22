@@ -17,7 +17,7 @@ from .models import ContextMeta, InnerTickActivity
 from .prompt_stack import append_runtime_output_format_system_message
 from .prompts.system_messages import (
     build_system_messages_for_inner_tick_autonomy,
-    build_system_messages_for_inner_tick_maintenance,
+    build_system_messages_for_inner_tick_monolog,
     build_system_messages_for_tool_track,
 )
 from .runtime_channel import TurnRuntimeContext
@@ -55,9 +55,9 @@ def dual_llm_system_message_variants(
         and route_inner_activity != InnerTickActivity.PROACTIVE_CHAT
     ):
         match route_inner_activity:
-            case InnerTickActivity.MAINTENANCE:
+            case InnerTickActivity.MONOLOG:
                 tool_system_msgs = (
-                    build_system_messages_for_inner_tick_maintenance(
+                    build_system_messages_for_inner_tick_monolog(
                         bundle, context, store
                     )
                 )

@@ -31,7 +31,7 @@ class DownlinkKind(StrEnum):
 
     USER_REPLY = "user_reply"  # Foreground user-chat turn finished; implicit ``user_signed_on`` greeting when ``assistant_source == \"greeting\"``
     PROACTIVE = "proactive"  # Inner-tick proactive chat (synthetic user line + assistant reply)
-    MAINTENANCE = "maintenance"  # Inner-tick maintenance; ``assistant_text`` may be empty (tool_bg-only)
+    MONOLOG = "monolog"  # Inner-tick monolog; ``assistant_text`` may be empty (tool_bg-only)
     SCHEDULED = "scheduled"  # Due ``schedule_queue`` reminder inner-tick
     TOOL_BACKGROUND = "tool_background"  # Async ``tool_background`` loop produced user-visible text
     BOOTSTRAP_INTERIM = "bootstrap_interim"  # Bootstrap sync tool-loop LLM round before ``USER_CHAT_BOOTSTRAP`` ends
@@ -44,7 +44,7 @@ class Downlink:
 
     Use the module factories (``user_reply_downlink``, …) so ``kind`` matches populated
     payload fields. ``assistant_text`` is what end users should see when the event is
-    delivered; it may be empty for maintenance ``tool_bg_only`` turns (no WS/Weixin push).
+    delivered; it may be empty for monolog ``tool_bg_only`` turns (no WS/Weixin push).
     """
 
     kind: DownlinkKind
@@ -143,16 +143,16 @@ def proactive_downlink(
     )
 
 
-def maintenance_downlink(
+def monolog_downlink(
     *,
     turn: CompanionTurnResult,
     transcript_user_text: str,
 ) -> Downlink:
-    """Inner-tick maintenance; ``assistant_text`` may be empty (tool_bg-only, no user push)."""
+    """Inner-tick monolog; ``assistant_text`` may be empty (tool_bg-only, no user push)."""
     assert turn is not None
     assert transcript_user_text.strip()
     return Downlink(
-        kind=DownlinkKind.MAINTENANCE,
+        kind=DownlinkKind.MONOLOG,
         assistant_text=turn.assistant_text,
         turn=turn,
         tool_output=None,
@@ -226,7 +226,7 @@ def downlink_delivers_user_visible_text(event: Downlink) -> bool:
             return bool(event.tool_output.output_to_user) and bool(
                 event.assistant_text.strip()
             )
-        case DownlinkKind.MAINTENANCE:
+        case DownlinkKind.MONOLOG:
             return bool(event.assistant_text.strip())
         case (
             DownlinkKind.USER_REPLY

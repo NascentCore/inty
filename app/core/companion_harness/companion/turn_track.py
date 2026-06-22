@@ -22,15 +22,15 @@ def turn_flags_for_track(
             | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
             | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
         ):
-            return False, InnerTickActivity.MAINTENANCE
+            return False, InnerTickActivity.MONOLOG
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             return True, InnerTickActivity.PROACTIVE_CHAT
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
             # TODO(#3601): SCHEDULED shares PROACTIVE_CHAT activity today; split tracks
             # for clean separation of idle proactive vs schedule_queue reminder semantics.
             return True, InnerTickActivity.PROACTIVE_CHAT
-        case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
-            return True, InnerTickActivity.MAINTENANCE
+        case CompanionTurnTrack.INNER_TICK_MONOLOG:
+            return True, InnerTickActivity.MONOLOG
         case CompanionTurnTrack.INNER_TICK_AUTONOMY:
             return True, InnerTickActivity.AUTONOMY
 
@@ -51,7 +51,7 @@ def langsmith_inty_turn_lane_for_companion_track(
         case (
             CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
             | CompanionTurnTrack.INNER_TICK_SCHEDULED
-            | CompanionTurnTrack.INNER_TICK_MAINTENANCE
+            | CompanionTurnTrack.INNER_TICK_MONOLOG
             | CompanionTurnTrack.INNER_TICK_AUTONOMY
         ):
             return "inner_tick"

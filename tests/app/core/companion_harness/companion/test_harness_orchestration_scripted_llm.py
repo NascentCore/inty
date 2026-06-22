@@ -3,7 +3,7 @@
 Covered: settled ``USER_CHAT`` (no-tools x ``dual_llm`` + ``in_turn_single_llm``;
 tool-bg ``dual_llm`` only), bootstrap, proactive single-shot and multi-round silent envelope.
 
-Excluded (documented): maintenance/autonomy (#3580), dreaming, proactive+tool (#3285),
+Excluded (documented): monolog/autonomy (#3580), dreaming, proactive+tool (#3285),
 sequential double-drain. ``IN_TURN_SINGLE_LLM`` tool-bg uses in-turn sync tools — see
 ``test_agentic_loop_output_queue.py``; not duplicated here.
 

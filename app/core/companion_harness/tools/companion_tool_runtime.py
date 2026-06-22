@@ -121,7 +121,7 @@ _USER_PROFILE_SECTION = "## 身份信息"
 # ``TOOL_TAG_GENERATION`` / memory-store caps / allowlist: ``companion_tool_definitions``.
 
 
-# TODO(narrow-maintenance): ``ai_private.jsonl`` append tool for MAINTENANCE inner-tick; drop — #3375
+# TODO(narrow-monolog): ``ai_private.jsonl`` append tool for MONOLOG inner-tick; drop — #3375
 # UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (MemoryDoc → DREAMING #3375).
 
 
@@ -537,7 +537,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
 
 
 def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
-    """MAINTENANCE inner tick: ``ai_private.jsonl`` append only."""
+    """MONOLOG inner tick: ``ai_private.jsonl`` append only."""
     return prepare_openai_tools_for_chat_completions(
         openai_tools_for_names(
             INNER_TICK_TOOL_NAMES,

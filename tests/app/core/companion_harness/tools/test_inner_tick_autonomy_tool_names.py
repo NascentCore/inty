@@ -29,7 +29,7 @@ def test_inner_tick_autonomy_includes_open_work_tools() -> None:
     assert CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value in names
 
 
-def test_inner_tick_maintenance_tools_are_ai_private_append_only() -> None:
+def test_inner_tick_monolog_tools_are_ai_private_append_only() -> None:
     maintenance_names = {tool.value for tool in INNER_TICK_TOOL_NAMES}
     assert maintenance_names == {CompanionToolName.AI_PRIVATE_APPEND.value}
 

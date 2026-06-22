@@ -108,7 +108,7 @@ class ChatWsUserSignedOnAckFrame(BaseModel):
     ``invalid_message_id``, ``agent_mismatch``, ``companion_bond_conflict``,
     ``channel_endpoint_conflict``, ``server_error``; the wire may carry other strings
     for forward compatibility. ``proactive_heartbeat_disabled`` is legacy (coords are armed for
-    scheduled companion reminders even when proactive and maintenance inner-tick are disabled).
+    scheduled companion reminders even when proactive and monolog inner-tick are disabled).
     """
 
     type: Literal["user_signed_on_ack"] = "user_signed_on_ack"
@@ -206,8 +206,20 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
     inner_tick: Optional[bool] = None
     proactive_chat: Optional[bool] = None
     companion_proactive_chat: Optional[bool] = None
-    # TODO(#3400): Rename wire field when ``INNER_TICK_MONOLOG`` track lands (keep alias for compat).
-    companion_maintenance_inner_tick: Optional[bool] = None
+    companion_monolog_inner_tick: Optional[bool] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "companionMonologInnerTick",
+            "companion_monolog_inner_tick",
+            "companionMaintenanceInnerTick",
+            "companion_maintenance_inner_tick",
+        ),
+        serialization_alias="companionMonologInnerTick",
+        description=(
+            "True when assistant meta marks an inner-tick monolog turn "
+            "(legacy wire key ``companion_maintenance_inner_tick`` accepted)."
+        ),
+    )
     companion_scheduled_reminder: Optional[bool] = None
     scheduled_task_id: Optional[str] = Field(
         default=None,

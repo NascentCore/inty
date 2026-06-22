@@ -48,7 +48,7 @@ def test_next_inner_tick_short_transcript_returns_poll_chunk(
         w = next_inner_tick_wait_seconds(
             store,
             last_inner_fire_monotonic=None,
-            last_maintenance_transcript_line_count=None,
+            last_monolog_transcript_line_count=None,
         )
     assert 0.0 < w < 86400.0 * 10
 
@@ -77,7 +77,7 @@ def test_next_inner_tick_overrides_enabled_false_disables(
     w = next_inner_tick_wait_seconds(
         store,
         last_inner_fire_monotonic=None,
-        last_maintenance_transcript_line_count=None,
+        last_monolog_transcript_line_count=None,
         overrides=InnerTickScheduleOverrides(enabled=False),
     )
     assert w >= 86400.0 * 300
@@ -117,7 +117,7 @@ def test_next_inner_tick_incomplete_bootstrap_phase_disables(
     w = next_inner_tick_wait_seconds(
         store,
         last_inner_fire_monotonic=None,
-        last_maintenance_transcript_line_count=None,
+        last_monolog_transcript_line_count=None,
     )
     assert w >= 86400.0 * 300
 
@@ -144,7 +144,7 @@ def test_next_inner_tick_skips_when_transcript_unchanged(
     w = next_inner_tick_wait_seconds(
         store,
         last_inner_fire_monotonic=0.0,
-        last_maintenance_transcript_line_count=len(rows),
+        last_monolog_transcript_line_count=len(rows),
     )
     assert w >= 86400.0 * 300
 

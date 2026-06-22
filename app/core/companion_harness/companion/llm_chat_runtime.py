@@ -148,7 +148,7 @@ def _companion_turn_langsmith_root_descriptor(
     cid = (companion_id or "").strip() or "unknown"
     extra_in: dict[str, Any] = {}
     if inner_tick_turn:
-        mode = inner_tick_activity or InnerTickActivity.MAINTENANCE
+        mode = inner_tick_activity or InnerTickActivity.MONOLOG
         lane = "inner_tick"
         extra_in["inner_tick_activity"] = mode.value
         name = (

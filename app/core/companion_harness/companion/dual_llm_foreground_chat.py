@@ -81,7 +81,7 @@ class DualLlmForegroundChatResult:
 async def run_dual_llm_foreground_chat(
     fg_input: DualLlmForegroundChatInput,
 ) -> DualLlmForegroundChatResult:
-    """Run foreground dual-LLM envelope chat or skip (maintenance inner tick).
+    """Run foreground dual-LLM envelope chat or skip (monolog inner tick).
 
     When ``skip_foreground_envelope`` is true, returns empty foreground text and deep-copied
     ``tool_msgs`` with ``force_tools_first_round=True``. Otherwise performs one chat completion,

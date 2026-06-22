@@ -44,9 +44,9 @@ from app.techno_core.models import (
 
 MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 
-# TODO(ai-private-jsonl-write): ``ai_private.jsonl`` (inner thoughts *about the user*, MAINTENANCE) — #3375
+# TODO(ai-private-jsonl-write): ``ai_private.jsonl`` (inner thoughts *about the user*, MONOLOG) — #3375
 # is ORM-mapped but excluded here — not ``LIFE_CURRENTS.md`` (virtual-world activity, AUTONOMY).
-# Enable MAINTENANCE append via dedicated append-only tool (preferred) or allowlist + append-only runtime.
+# Enable MONOLOG append via dedicated append-only tool (preferred) or allowlist + append-only runtime.
 # CRS Awake express / Dreaming learn — PR #3290; follow-up #3375 #3376; epic #3341.
 # TODO(track-write-policy): Collapse per-track ``memory_store_write_document`` policy into one — #3367
 # ``TrackWritePolicy`` (allowlist + tool description override) keyed by ``CompanionTurnTrack``;
@@ -81,7 +81,7 @@ BOOTSTRAP_WRITABLE_REL_PATHS: Final[tuple[str, ...]] = tuple(
     sorted(MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP)
 )
 
-# AUTONOMY inner-tick: only LIFE_CURRENTS.md (profile curation → DREAMING / MAINTENANCE).
+# AUTONOMY inner-tick: only LIFE_CURRENTS.md (profile curation → DREAMING / MONOLOG).
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY: frozenset[str] = frozenset(
     {"LIFE_CURRENTS.md"}
 )
@@ -234,7 +234,7 @@ AI_PRIVATE_APPEND_TOOL = LlmFunctionTool(
     name=CompanionToolName.AI_PRIVATE_APPEND,
     description=(
         "Append one inner monolog line about the user or relationship to "
-        f"``{AI_PRIVATE_JSONL_RELATIVE_PATH}`` (append-only). Use during MAINTENANCE "
+        f"``{AI_PRIVATE_JSONL_RELATIVE_PATH}`` (append-only). Use during MONOLOG "
         "inner-tick to record feelings, unsaid thoughts, or relationship scene beats—"
         "not virtual-world activity (that belongs in LIFE_CURRENTS / AUTONOMY). "
         "Never visible to the user directly; may inform later proactive or user chat."
@@ -488,7 +488,7 @@ TECHNO_CORE_RECORD_EVENT_TOOL = LlmFunctionTool(
     description=(
         "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
         f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH}`` (append-only). "
-        "Primary use: **maintenance inner-tick** when the user thread is idle (small "
+        "Primary use: **monolog inner-tick** when the user thread is idle (small "
         "in-world actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``). "
         "**Do not** use for user-directed home layout or object changes—use "
         "``living_sphere_record_update`` instead. TechnoCore collective world settings "

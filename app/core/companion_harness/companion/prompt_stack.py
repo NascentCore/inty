@@ -54,7 +54,7 @@ from .prompts.system_messages import (
     build_system_messages_for_bootstrap_track,
     build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_autonomy,
-    build_system_messages_for_inner_tick_maintenance,
+    build_system_messages_for_inner_tick_monolog,
     build_system_messages_for_inner_tick_proactive_chat,
     build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
@@ -176,16 +176,16 @@ def companion_system_messages_for_track(
             out = build_system_messages_for_inner_tick_scheduled(
                 bundle, context
             )
-        case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
+        case CompanionTurnTrack.INNER_TICK_MONOLOG:
             if (
                 route_mode
                 != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
             ):
                 raise RuntimeError(
-                    "inner_tick_maintenance track requires ASYNC route, got "
+                    "inner_tick_monolog track requires ASYNC route, got "
                     f"{route_mode.value}"
                 )
-            out = build_system_messages_for_inner_tick_maintenance(
+            out = build_system_messages_for_inner_tick_monolog(
                 bundle, context, store
             )
         case CompanionTurnTrack.INNER_TICK_AUTONOMY:
@@ -243,7 +243,7 @@ def companion_turn_tools_and_system_messages(
 
     ``USER_CHAT_BOOTSTRAP`` runs one in-turn tool loop so setup can persist
     relationship seed docs via ``memory_store_write_document`` before completion.
-    Normal user chat and maintenance inner tick require
+    Normal user chat and monolog inner tick require
     the async foreground/tool-background route.  Proactive, scheduled, and
     implicit sign-on greeting tracks are chat-only system stacks with no tools.
     """
@@ -326,8 +326,8 @@ def refresh_companion_turn_prompt_stack(
                         context,
                     )
                 )
-        case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
-            refreshed = build_system_messages_for_inner_tick_maintenance(
+        case CompanionTurnTrack.INNER_TICK_MONOLOG:
+            refreshed = build_system_messages_for_inner_tick_monolog(
                 bundle,
                 context,
                 store,
