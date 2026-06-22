@@ -15,15 +15,20 @@ from app.external_services.telegram_bot_api import TelegramBotApi
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
 from app.models.companion_bond import CompanionBond
-from app.services.agentic_channel.companion_bonds import (
-    deactivate_companion_bond,
-    pause_companion_bond_runtime,
-)
 from app.models.user import User
 from app.services.agentic_channel.channel_runtime import (
     clear_registries_for_tests,
 )
-from app.services.agentic_channel.presence import clear_presences_for_tests
+from app.services.agentic_channel.companion_bonds import (
+    deactivate_companion_bond,
+    pause_companion_bond_runtime,
+)
+from app.services.agentic_channel.endpoints import EndpointRecord
+from app.services.agentic_channel.errors import CompanionBondInvariantError
+from app.services.agentic_channel.presence import (
+    clear_presences_for_tests,
+    get_presence,
+)
 from app.services.agentic_channel.provision import (
     provision_agent_for_channel_onboard,
 )
@@ -105,6 +110,38 @@ async def test_restore_skips_inactive_companion_bond() -> None:
     assert (
         session_store.get_scope_for_telegram_address(telegram_chat_id) is None
     )
+
+    await _cleanup_provision(provision.scope.user_id)
+
+
+@pytest.mark.asyncio
+async def test_activate_telegram_scope_rejects_inactive_bond() -> None:
+    telegram_chat_id = f"tg-activate-gate-{uuid.uuid4().hex}"
+    channel_user_id = f"tu-{uuid.uuid4().hex}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=ChannelKind.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        await deactivate_companion_bond(db, provision.scope)
+        await db.commit()
+
+    record = EndpointRecord(
+        user_id=provision.scope.user_id,
+        agent_id=provision.scope.agent_id,
+        channel=ChannelKind.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    api = TelegramBotApi(bot_token="activate-gate-test")
+    with pytest.raises(CompanionBondInvariantError):
+        await session_store.activate_telegram_scope(
+            record=record,
+            api=api,
+            reason="onboard",
+        )
+    assert get_presence(provision.scope) is None
 
     await _cleanup_provision(provision.scope.user_id)
 

@@ -6,6 +6,7 @@ import asyncio
 import json
 import time
 import uuid
+from datetime import UTC, datetime
 from io import BytesIO
 from urllib.error import HTTPError
 from urllib.parse import parse_qs
@@ -13,8 +14,11 @@ from urllib.parse import parse_qs
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
+from app.core.companion_harness.agent_channel.guest_agent_kind import (
+    CompanionGuestAgentKind,
+)
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
@@ -26,7 +30,7 @@ from app.external_services.telegram_bot_api import (
 )
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
-from app.models.companion_bond import CompanionBond
+from app.models.companion_bond import CompanionBond, CompanionBondState
 from app.models.user import User
 from app.services.agentic_channel.channel_runtime import (
     clear_registries_for_tests,
@@ -39,15 +43,21 @@ from app.services.agentic_channel.presence import (
 )
 from app.services.agentic_channel.serving import flush_scope_output_queue_ready
 from app.services.agentic_channel.companion_bonds import (
+    deactivate_companion_bond,
     get_companion_bond_for_scope,
     pause_companion_bond_runtime,
 )
+from app.services.agentic_channel.companion_guest_provision import (
+    add_companion_guest_agent_for_user,
+)
 from app.services.agentic_channel.provision import (
+    ChannelProvisionResult,
     provision_agent_for_channel_onboard,
 )
 from backend.ops.telegram_demo import session_store
 from backend.ops.telegram_demo.transport import (
     TelegramTransport,
+    _BOND_UNAVAILABLE,
     _IDENTITY_MISMATCH,
     _ONBOARD_HINT,
     _ONBOARD_NOTICE_NEW,
@@ -92,6 +102,7 @@ def test_transport_onboard_copy_is_english() -> None:
         _ONBOARD_NOTICE_RETURNING,
         _ONBOARD_HINT,
         _IDENTITY_MISMATCH,
+        _BOND_UNAVAILABLE,
     )
 
     assert "/telegram" in _ONBOARD_HINT
@@ -154,6 +165,53 @@ async def _cleanup_scope(scope: AgentScope) -> None:
         await db.execute(delete(Agent).where(Agent.creator_id == scope.user_id))
         await db.execute(delete(User).where(User.id == scope.user_id))
         await db.commit()
+
+
+async def _run_onboard_start(
+    *,
+    telegram_chat_id: str,
+    channel_user_id: str,
+) -> tuple[list[str], MagicMock]:
+    sent: list[str] = []
+    api = TelegramBotApi(bot_token="onboard-test", urlopen=_fake_urlopen)
+    transport = TelegramTransport(api=api)
+
+    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+        sent.append(text)
+
+    transport._send_channel_text = capture  # type: ignore[method-assign]
+    mock_presence = MagicMock()
+    mock_presence.greet_on_sign_on = AsyncMock()
+
+    with patch(
+        "backend.ops.telegram_demo.transport.get_presence",
+        return_value=mock_presence,
+    ):
+        inbound = TelegramIncomingMessage(
+            update_id=60,
+            chat_id=telegram_chat_id,
+            channel_user_id=channel_user_id,
+            text="/start onboard",
+            local_received_at=time.time(),
+        )
+        await transport._handle_onboard(inbound=inbound)
+    return sent, mock_presence
+
+
+async def _assert_onboard_rejects_bad_bond(
+    *,
+    telegram_chat_id: str,
+    channel_user_id: str,
+    scope: AgentScope,
+) -> None:
+    sent, mock_presence = await _run_onboard_start(
+        telegram_chat_id=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    assert sent == [_BOND_UNAVAILABLE]
+    assert _WELCOME_RETURNING not in sent
+    assert get_presence(scope) is None
+    mock_presence.greet_on_sign_on.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -466,6 +524,240 @@ async def test_onboard_new_user_delivers_greeting_message() -> None:
     assert "Hello" in greeting_fields["text"][0]
     assert "Inty" in greeting_fields["text"][0]
     await _cleanup_scope(scope)
+
+
+@pytest.mark.asyncio
+async def test_onboard_returning_rejects_deleted_bond() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-bond-del-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=ChannelKind.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            delete(CompanionBond).where(
+                CompanionBond.user_id == provision.scope.user_id
+            )
+        )
+        await db.commit()
+
+    await _assert_onboard_rejects_bad_bond(
+        telegram_chat_id=telegram_chat_id,
+        channel_user_id=channel_user_id,
+        scope=provision.scope,
+    )
+    await _cleanup_scope(provision.scope)
+
+
+@pytest.mark.asyncio
+async def test_onboard_returning_rejects_inactive_bond() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-bond-inact-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=ChannelKind.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        await deactivate_companion_bond(db, provision.scope)
+        await db.commit()
+
+    await _assert_onboard_rejects_bad_bond(
+        telegram_chat_id=telegram_chat_id,
+        channel_user_id=channel_user_id,
+        scope=provision.scope,
+    )
+    await _cleanup_scope(provision.scope)
+
+
+@pytest.mark.asyncio
+async def test_onboard_returning_rejects_deleted_user() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-bond-user-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=ChannelKind.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        user_row = await db.execute(
+            select(User).where(User.id == provision.scope.user_id)
+        )
+        user = user_row.scalar_one()
+        user.deleted_at = datetime.now(UTC)
+        await db.commit()
+
+    await _assert_onboard_rejects_bad_bond(
+        telegram_chat_id=telegram_chat_id,
+        channel_user_id=channel_user_id,
+        scope=provision.scope,
+    )
+    await _cleanup_scope(provision.scope)
+
+
+@pytest.mark.asyncio
+async def test_onboard_returning_rejects_deleted_agent() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-bond-agent-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=ChannelKind.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        agent_row = await db.execute(
+            select(Agent).where(Agent.id == provision.scope.agent_id)
+        )
+        agent = agent_row.scalar_one()
+        agent.deleted_at = datetime.now(UTC)
+        await db.commit()
+
+    await _assert_onboard_rejects_bad_bond(
+        telegram_chat_id=telegram_chat_id,
+        channel_user_id=channel_user_id,
+        scope=provision.scope,
+    )
+    await _cleanup_scope(provision.scope)
+
+
+@pytest.mark.asyncio
+async def test_onboard_returning_rejects_ambiguous_bond() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-bond-ambig-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=ChannelKind.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        second_agent = await add_companion_guest_agent_for_user(
+            db,
+            user_id=provision.scope.user_id,
+            kind=CompanionGuestAgentKind.TELEGRAM,
+        )
+        db.add(
+            CompanionBond(
+                id=str(uuid.uuid4()),
+                user_id=provision.scope.user_id,
+                agent_id=second_agent.id,
+                state=CompanionBondState.ACTIVE,
+            )
+        )
+        await db.commit()
+
+    await _assert_onboard_rejects_bad_bond(
+        telegram_chat_id=telegram_chat_id,
+        channel_user_id=channel_user_id,
+        scope=provision.scope,
+    )
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            delete(CompanionBond).where(
+                CompanionBond.user_id == provision.scope.user_id,
+                CompanionBond.agent_id != provision.scope.agent_id,
+            )
+        )
+        await db.commit()
+    await _cleanup_scope(provision.scope)
+
+
+@pytest.mark.asyncio
+async def test_onboard_returning_welcomes_paused_bond() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-bond-pause-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=ChannelKind.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        await pause_companion_bond_runtime(db, provision.scope)
+        await db.commit()
+
+    sent: list[str] = []
+    api = TelegramBotApi(bot_token="pause-onboard-token", urlopen=_fake_urlopen)
+    transport = TelegramTransport(api=api)
+
+    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+        sent.append(text)
+
+    transport._send_channel_text = capture  # type: ignore[method-assign]
+    inbound = TelegramIncomingMessage(
+        update_id=62,
+        chat_id=telegram_chat_id,
+        channel_user_id=channel_user_id,
+        text="/start onboard",
+        local_received_at=time.time(),
+    )
+    await transport._handle_onboard(inbound=inbound)
+
+    assert sent == [_WELCOME_RETURNING]
+    assert get_presence(provision.scope) is not None
+    async with AsyncSessionLocal() as db:
+        bond = await get_companion_bond_for_scope(db, provision.scope)
+        assert bond is not None
+        assert bond.runtime_paused_at is None
+    await _cleanup_scope(provision.scope)
+
+
+@pytest.mark.asyncio
+async def test_onboard_new_user_gate_before_greeting() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-bond-new-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    provision = await provision_agent_for_channel_onboard(
+        channel=ChannelKind.TELEGRAM,
+        channel_address=telegram_chat_id,
+        channel_user_id=channel_user_id,
+    )
+    async with AsyncSessionLocal() as db:
+        await deactivate_companion_bond(db, provision.scope)
+        await db.commit()
+
+    sent: list[str] = []
+    api = TelegramBotApi(bot_token="new-gate-token", urlopen=_fake_urlopen)
+    transport = TelegramTransport(api=api)
+
+    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+        sent.append(text)
+
+    transport._send_channel_text = capture  # type: ignore[method-assign]
+    mock_presence = MagicMock()
+    mock_presence.greet_on_sign_on = AsyncMock()
+
+    with patch(
+        "backend.ops.telegram_demo.transport.get_presence",
+        return_value=mock_presence,
+    ):
+        inbound = TelegramIncomingMessage(
+            update_id=61,
+            chat_id=telegram_chat_id,
+            channel_user_id=channel_user_id,
+            text="/start onboard",
+            local_received_at=time.time(),
+        )
+        await transport._activate_provision(
+            inbound=inbound,
+            provision=ChannelProvisionResult(
+                scope=provision.scope,
+                is_new_user=True,
+                channel_address=telegram_chat_id,
+                channel_user_id=channel_user_id,
+            ),
+        )
+
+    assert sent == [_BOND_UNAVAILABLE]
+    assert get_presence(provision.scope) is None
+    mock_presence.greet_on_sign_on.assert_not_awaited()
+    await _cleanup_scope(provision.scope)
 
 
 @pytest.mark.asyncio
