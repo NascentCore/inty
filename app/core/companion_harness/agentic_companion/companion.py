@@ -5,8 +5,7 @@ TODO(!3493): Weixin ``drain_and_deliver`` caller should enqueue + wake only (!34
 
 from __future__ import annotations
 
-import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from loguru import logger
 
@@ -69,8 +68,6 @@ class AgenticCompanion:
 
     scope: AgentScope
     input_repo: PostgresInputQueueRepository
-    _worker_task: asyncio.Task[None] | None = field(default=None, repr=False)
-    _stop: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
 
     async def drain_once(
         self,
@@ -135,52 +132,3 @@ class AgenticCompanion:
                 error_message=repr(exc),
             )
             raise
-
-    async def start_worker(
-        self,
-        *,
-        poll_seconds: float,
-        resolved_chat_model: GenAIModel,
-        runtime_channel: ChannelKind,
-        background_output_sink: BackgroundToolEventSink | None,
-        implicit_signal_bundle: ImplicitSignalBundle,
-    ) -> None:
-        assert poll_seconds > 0.0
-        if self._worker_task is not None and (not self._worker_task.done()):
-            return
-        self._stop.clear()
-
-        async def _loop() -> None:
-            while not self._stop.is_set():
-                try:
-                    await self.drain_once(
-                        resolved_chat_model=resolved_chat_model,
-                        runtime_channel=runtime_channel,
-                        background_output_sink=background_output_sink,
-                        implicit_signal_bundle=implicit_signal_bundle,
-                    )
-                except Exception:
-                    logger.exception(
-                        "agentic_companion worker drain_once failed scope={}",
-                        self.scope.registry_key(),
-                    )
-                try:
-                    await asyncio.wait_for(
-                        self._stop.wait(),
-                        timeout=poll_seconds,
-                    )
-                except TimeoutError:
-                    continue
-
-        self._worker_task = asyncio.create_task(
-            _loop(),
-            name=f"agentic_companion_{self.scope.registry_key()}",
-        )
-
-    async def stop_worker(self) -> None:
-        self._stop.set()
-        task = self._worker_task
-        if task is not None and (not task.done()):
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
-        self._worker_task = None

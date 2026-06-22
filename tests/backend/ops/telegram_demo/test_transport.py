@@ -209,7 +209,7 @@ async def _assert_onboard_rejects_bad_bond(
         channel_user_id=channel_user_id,
     )
     assert sent == [_BOND_UNAVAILABLE]
-    assert _WELCOME_RETURNING not in sent
+    assert _ONBOARD_NOTICE_RETURNING not in sent
     assert get_presence(scope) is None
     mock_presence.greet_on_sign_on.assert_not_awaited()
 
@@ -699,7 +699,7 @@ async def test_onboard_returning_welcomes_paused_bond() -> None:
     )
     await transport._handle_onboard(inbound=inbound)
 
-    assert sent == [_WELCOME_RETURNING]
+    assert sent == [_ONBOARD_NOTICE_RETURNING]
     assert get_presence(provision.scope) is not None
     async with AsyncSessionLocal() as db:
         bond = await get_companion_bond_for_scope(db, provision.scope)

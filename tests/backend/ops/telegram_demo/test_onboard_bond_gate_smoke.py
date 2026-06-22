@@ -47,7 +47,7 @@ from backend.ops.telegram_demo import session_store
 from backend.ops.telegram_demo.transport import (
     TelegramTransport,
     _BOND_UNAVAILABLE,
-    _WELCOME_RETURNING,
+    _ONBOARD_NOTICE_RETURNING,
 )
 
 
@@ -160,7 +160,7 @@ async def test_smoke_onboard_bond_gate_happy_returning_path() -> None:
         channel_user_id=channel_user_id,
     )
 
-    assert sent == [_WELCOME_RETURNING]
+    assert sent == [_ONBOARD_NOTICE_RETURNING]
     assert get_presence(provision.scope) is not None
     await _cleanup_scope(provision.scope)
 
@@ -191,7 +191,7 @@ async def test_smoke_onboard_bond_gate_rejects_inactive_then_restore_skips(
     )
 
     assert sent == [_BOND_UNAVAILABLE]
-    assert _WELCOME_RETURNING not in sent
+    assert _ONBOARD_NOTICE_RETURNING not in sent
     assert get_presence(provision.scope) is None
     assert any(
         "telegram_onboard_rejected_bond" in line
@@ -233,7 +233,7 @@ async def test_smoke_onboard_bond_gate_paused_returning_welcome() -> None:
         channel_user_id=channel_user_id,
     )
 
-    assert sent == [_WELCOME_RETURNING]
+    assert sent == [_ONBOARD_NOTICE_RETURNING]
     assert get_presence(provision.scope) is not None
     async with AsyncSessionLocal() as db:
         bond = await get_companion_bond_for_scope(db, provision.scope)

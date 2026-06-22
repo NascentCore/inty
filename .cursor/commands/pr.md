@@ -17,6 +17,7 @@ Create a pull request for the current working branch
 
 3. **Create PR**
    - Create the PR with the above title and description.
+   - Enable auto-merge.
 
 ## Checklist
 
