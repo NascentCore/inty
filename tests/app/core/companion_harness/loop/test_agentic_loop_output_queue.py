@@ -54,6 +54,9 @@ from app.core.companion_harness.companion.turn_routes import (
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
 )
+from app.core.companion_harness.loop.runtime_system_clauses import (
+    REPLY_IN_USER_LANGUAGE_CLAUSE,
+)
 from app.core.companion_harness.prompt_builder import (
     PromptMessage,
     PromptMessageRole,
@@ -469,6 +472,7 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
     ):
         assert openai_messages == [
             {"role": "system", "content": "sys"},
+            {"role": "system", "content": REPLY_IN_USER_LANGUAGE_CLAUSE},
             {"role": "user", "content": "hi"},
         ]
         await after_tool_messages_appended(openai_messages)
@@ -503,6 +507,7 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
     initial_call = llm_client.chat_completion.await_args_list[0]
     assert initial_call.kwargs["messages"] == [
         {"role": "system", "content": "sys"},
+        {"role": "system", "content": REPLY_IN_USER_LANGUAGE_CLAUSE},
         {"role": "user", "content": "hi"},
     ]
     assert initial_call.kwargs["tools"] == list(prompt_plan.tools)
@@ -517,6 +522,147 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
     assert initial_call.kwargs["langsmith_extra"] == expected_extra
     assert continuation_call.kwargs["langsmith_extra"] == expected_extra
     assert result.assistant_text == "final"
+
+
+@pytest.mark.asyncio
+async def test_prompt_plan_tool_loop_injects_reply_language_clause() -> None:
+    from app.core.companion_harness.loop.agentic_loop import (
+        _run_prompt_plan_tool_loop,
+    )
+    from app.core.companion_harness.prompt_builder import (
+        PromptMessage,
+        PromptMessageRole,
+        PromptPlan,
+    )
+
+    def _response(text: str):  # type: ignore[no-untyped-def]
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content=text, tool_calls=[]),
+                )
+            ]
+        )
+
+    domain = MagicMock(spec=OutputQueue)
+    context = _loop_context(output_queue=domain)
+    prompt_plan = PromptPlan(
+        messages=(
+            PromptMessage(role=PromptMessageRole.SYSTEM, content="sys"),
+            PromptMessage(role=PromptMessageRole.USER, content="hello"),
+        ),
+        tools=(),
+        tool_choice=None,
+    )
+    context = replace(context, prompt_plan=prompt_plan, user_text="hello")
+    llm_client = MagicMock()
+    llm_client.resolve_model.return_value = SimpleNamespace(
+        id_on_provider="test/model"
+    )
+    llm_client.chat_completion = AsyncMock(return_value=_response("ok"))
+
+    with patch(
+        "app.core.companion_harness.loop.agentic_loop.resolve_openai_tool_call_loop_async",
+        new=AsyncMock(
+            return_value=SimpleNamespace(
+                trace_id="trace-1",
+                response=_response("ok"),
+                messages=[],
+            )
+        ),
+    ):
+        await _run_prompt_plan_tool_loop(
+            context,
+            store=_loop_store(),
+            llm_client=llm_client,
+            interim_output_sink=None,
+        )
+
+    initial_messages = llm_client.chat_completion.await_args_list[0].kwargs[
+        "messages"
+    ]
+    assert initial_messages[1]["content"] == REPLY_IN_USER_LANGUAGE_CLAUSE
+    assert initial_messages[2]["content"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_dual_llm_user_turn_injects_reply_language_clause() -> None:
+    from app.core.companion_harness.companion.dual_llm_foreground_chat import (
+        DualLlmForegroundChatResult,
+    )
+    from app.core.companion_harness.companion.models import ContextMeta
+    from app.core.companion_harness.prompting.bundle import PromptBundle
+
+    domain = MagicMock(spec=OutputQueue)
+    domain.append_visible_message = AsyncMock()
+    batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
+    context = AgenticLoopContext(
+        openai_messages=({"role": "user", "content": "hi"},),
+        openai_tools=(),
+        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+        repository_only_store_text=False,
+        trace_id="trace-1",
+        user_text="hi",
+        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
+        user_msg_uuid="user-msg-1",
+        transcript_rel="transcript.jsonl",
+        langsmith=AgenticLoopLangsmithContext(
+            turn_slice=_langsmith_slice(),
+            foreground_source="foreground_dual_llm_envelope",
+            trace_id="",
+            run_id="",
+        ),
+        inner_tick_turn=False,
+        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        runtime_context=_runtime_context(),
+        tail_user_messages=_tail(),
+        max_tool_rounds=4,
+        after_tool_messages_appended=None,
+        high_reasoning=False,
+        output_queue=domain,
+        user_message_batch=batch,
+        companion_turn_track=CompanionTurnTrack.USER_CHAT,
+        dual_llm_chat_msgs=({"role": "user", "content": "hi"},),
+        dual_llm_tool_msgs=({"role": "user", "content": "hi"},),
+        prompt_bundle=PromptBundle(
+            identity="",
+            soul="",
+            user_md="",
+            memory_md="",
+        ),
+        context_meta=ContextMeta(),
+    )
+    fg_result = DualLlmForegroundChatResult(
+        assistant_text="",
+        significance_meta=None,
+        turn_recall=None,
+        langsmith_trace_id="",
+        langsmith_run_id="",
+        tool_msgs_for_bg=({"role": "user", "content": "hi"},),
+        force_tools_first_round=False,
+    )
+    foreground_mock = AsyncMock(return_value=fg_result)
+
+    with (
+        patch(
+            "app.core.companion_harness.loop.agentic_loop.run_dual_llm_foreground_chat",
+            new=foreground_mock,
+        ),
+        patch(
+            "app.core.companion_harness.loop.agentic_loop.run_tool_background_loop",
+            new=AsyncMock(),
+        ),
+    ):
+        await AgenticLoop(
+            store=_loop_store(),
+            llm_client=MagicMock(),
+            legacy_llm_client=MagicMock(),
+        ).run_dual_llm_user_turn(context=context)
+
+    fg_input = foreground_mock.await_args.args[0]
+    assert fg_input.chat_msgs[0]["content"] == REPLY_IN_USER_LANGUAGE_CLAUSE
+    assert fg_input.chat_msgs[1]["content"] == "hi"
+    assert fg_input.tool_msgs[0]["content"] == "hi"
 
 
 @pytest.mark.asyncio
