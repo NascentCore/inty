@@ -5,8 +5,9 @@ active on a channel, this module keeps two background workers alive: one pulls
 inbound user messages from durable storage and runs the companion turn, the
 other continuously delivers assistant replies that were written to the outbound
 queue. Inbound work is wake-driven: a new user message signals the input worker
-instead of polling constantly. Outbound delivery runs on its own loop so partial
-replies and tool-round chatter can reach the user before the full turn finishes.
+instead of polling constantly. The output pump is the sole runtime consumer of
+the outbound queue so partial replies and tool-round chatter can reach the user
+before the full turn finishes.
 
 Attach one instance per scope for the lifetime of channel presence (for example
 while a Telegram session or app connection is registered). Stop both workers when
@@ -34,7 +35,6 @@ from app.services.agentic_channel.serving import (
     DeliverReadyMessageFn,
     channel_output_pump,
     drain_scope_once_via_companion,
-    flush_scope_output_queue_ready,
 )
 
 _SCOPE_INPUT_FALLBACK_POLL_SEC = 1.0
@@ -204,16 +204,6 @@ class ScopeQueueServing:
             if not drain_result.batch_drained:
                 break
             if drain_result.input_message_ids:
-                try:
-                    await flush_scope_output_queue_ready(
-                        self._scope,
-                        deliver_message=self._deliver_message,
-                    )
-                except Exception:
-                    logger.exception(
-                        "scope_output_flush failed scope={}",
-                        self._scope.registry_key(),
-                    )
                 await self._on_drain_complete(
                     ScopeDrainCompletion(
                         input_message_ids=drain_result.input_message_ids,

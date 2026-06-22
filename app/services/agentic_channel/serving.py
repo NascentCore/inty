@@ -184,7 +184,11 @@ async def flush_scope_output_queue_ready(
     *,
     deliver_message: DeliverReadyMessageFn,
 ) -> None:
-    """Deliver every ready OutputQueue message once (no polling sleep)."""
+    """Deliver every ready OutputQueue message once (no polling sleep).
+
+    Test and one-shot paths only. Do not call while ``ScopeQueueServing`` runs its
+    output pump on the same scope — concurrent flush and pump duplicate delivery.
+    """
     assert deliver_message is not None
     output_queue = get_output_queue_for_scope(scope)
     while True:

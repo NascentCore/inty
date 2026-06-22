@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 from itertools import chain, repeat
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,6 +17,14 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputDeliveryUnroutableError,
     ReadyOutputMessage,
+    clear_output_queues_for_tests,
+    get_output_queue_for_scope,
+)
+from app.core.companion_harness.agentic_companion.types import (
+    OutputQueueRecord,
+    QueueClaim,
+    QueueStatus,
+    WireId,
 )
 from app.services.agentic_channel.serving import (
     DrainScopeOnceResult,
@@ -23,8 +32,118 @@ from app.services.agentic_channel.serving import (
     _deliver_ready_message,
     channel_output_pump,
     drain_and_deliver_user_chat_turn,
+    flush_scope_output_queue_ready,
 )
 from app.services.agentic_companion.downlink import DownlinkKind
+
+
+@pytest.fixture(autouse=True)
+def _clear_output_queue_registry() -> None:
+    clear_output_queues_for_tests()
+    yield
+    clear_output_queues_for_tests()
+
+
+def _pending_output_claim(
+    *,
+    scope: AgentScope,
+    message_id: str,
+    text: str,
+    wire_id: str,
+) -> QueueClaim:
+    return QueueClaim(
+        record=OutputQueueRecord(
+            message_id=message_id,
+            scope=scope,
+            sequence=1,
+            status=QueueStatus.PENDING,
+            batch_id="batch-1",
+            kind=DownlinkKind.USER_REPLY,
+            text=text,
+            created_at_utc=datetime.now(timezone.utc),
+            message_ids=("input-1",),
+        ),
+        delivery_channel=ChannelKind.TELEGRAM,
+        delivery_wire_id=WireId(value=wire_id),
+    )
+
+
+@pytest.mark.asyncio
+async def test_concurrent_flush_and_pump_deliver_same_row_twice() -> None:
+    """Dual consumers on one row duplicate delivery when flush holds memory pull."""
+    scope = AgentScope(user_id="u-dual", agent_id="a-dual")
+    wire_id = f"telegram:{scope.registry_key()}"
+    message_id = "msg-dual"
+    ready = ReadyOutputMessage(
+        message_id=message_id,
+        batch_id="batch-1",
+        kind=DownlinkKind.USER_REPLY,
+        text="duplicate me",
+        sequence=1,
+        message_ids=("input-1",),
+    )
+    queue = get_output_queue_for_scope(scope)
+    queue._ready.append(ready)
+    deliver_calls: list[str] = []
+
+    async def slow_deliver(message: ReadyOutputMessage) -> None:
+        deliver_calls.append(message.message_id)
+        if len(deliver_calls) == 1:
+            await asyncio.sleep(0.05)
+
+    claim = _pending_output_claim(
+        scope=scope,
+        message_id=message_id,
+        text=ready.text,
+        wire_id=wire_id,
+    )
+    with patch(
+        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+    ) as session_cls:
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        session_cls.return_value = session
+        repo = AsyncMock()
+        claim_calls = 0
+
+        async def fake_claim(*_args, **_kwargs):
+            nonlocal claim_calls
+            if claim_calls == 0:
+                claim_calls += 1
+                return [claim]
+            return []
+
+        repo.claim_pending_for_delivery = AsyncMock(side_effect=fake_claim)
+        repo.mark_delivered = AsyncMock()
+        with patch(
+            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            return_value=repo,
+        ):
+            stop = asyncio.Event()
+            flush_task = asyncio.create_task(
+                flush_scope_output_queue_ready(
+                    scope,
+                    deliver_message=slow_deliver,
+                )
+            )
+            await asyncio.sleep(0)
+            pump_task = asyncio.create_task(
+                channel_output_pump(
+                    scope,
+                    deliver_message=slow_deliver,
+                    stop_event=stop,
+                    delivery_channel=ChannelKind.TELEGRAM,
+                    delivery_wire_id=wire_id,
+                    poll_interval_sec=0.01,
+                )
+            )
+            await flush_task
+            await asyncio.sleep(0.08)
+            stop.set()
+            await pump_task
+
+    assert deliver_calls.count(message_id) == 2
 
 
 @pytest.mark.asyncio
