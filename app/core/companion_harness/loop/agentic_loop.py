@@ -79,6 +79,7 @@ from app.core.companion_harness.tools.image_gate import (
 )
 
 from .context import AgenticLoopContext, AgenticLoopOutput
+from .runtime_system_clauses import apply_agentic_loop_runtime_system_clauses
 
 _DRAIN_SENTINEL: ToolOutputEvent | None = None
 
@@ -242,6 +243,10 @@ async def _run_prompt_plan_tool_loop(
     )
 
     request_messages = prompt_messages_to_openai_dicts(prompt_plan.messages)
+    apply_agentic_loop_runtime_system_clauses(
+        openai_messages=request_messages,
+        user_text=context.user_text,
+    )
     t_api = time.perf_counter()
     initial_resp = await llm_client.chat_completion(
         messages=request_messages,
@@ -486,8 +491,16 @@ class AgenticLoop:
             image_asset_baseline=len(list_image_asset_records(self.store)),
         )
         llm_client = self.legacy_llm_client
-        chat_msgs = context.dual_llm_chat_msgs
-        tool_msgs = context.dual_llm_tool_msgs
+        chat_msgs = list(context.dual_llm_chat_msgs)
+        tool_msgs = list(context.dual_llm_tool_msgs)
+        apply_agentic_loop_runtime_system_clauses(
+            openai_messages=chat_msgs,
+            user_text=context.user_text,
+        )
+        apply_agentic_loop_runtime_system_clauses(
+            openai_messages=tool_msgs,
+            user_text=context.user_text,
+        )
         chat_model = llm_client.resolve_model("chat")
         tool_model = llm_client.resolve_model("tool")
         tick_proactive = (

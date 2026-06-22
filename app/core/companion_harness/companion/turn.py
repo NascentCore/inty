@@ -704,6 +704,8 @@ async def _run_companion_turn_core(
                         (time.perf_counter() - t_loop) * 1000.0,
                     )
                 elif track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+                    # TODO(#3588): Inject reply-language runtime clause when this legacy
+                    # bootstrap sync path is migrated to AgenticLoop (see loop/runtime_system_clauses.py).
                     rel_tr_bootstrap = (
                         transcript_relative_path_for_turn_persistence(
                             inner_tick_turn=False,
@@ -754,6 +756,8 @@ async def _run_companion_turn_core(
                     route_mode
                     == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
                 ):
+                    # TODO(#3588): Inject reply-language runtime clause when this legacy
+                    # dual-LLM path is migrated to AgenticLoop (see loop/runtime_system_clauses.py).
                     # TODO(!3398): dual-LLM user-turn vs single-LLM in-turn sync — epic tracks routing change.
                     # TODO(!3398): Extract dual-LLM message-stack assembly into typed prompt/context builders.
                     tool_system_msgs, chat_system_msgs = (
