@@ -68,38 +68,44 @@ def run_dreaming_batch_if_due(
 
     inty_trace_id = new_dreaming_batch_trace_id()
 
-    # TODO(dreaming-batch-langsmith-finally): On ``DreamingTranscriptBoundaryMismatchError`` (or — #3551
-    # any batch failure inside ``dreaming_batch_langsmith_scope``), ``record_dreaming_batch_observability``
-    # is skipped — LangSmith parent may not get ``end_companion_turn_root_run_safe``. Use try/finally
-    # to always end the parent (failure outcome + optional runtime event) before re-raise.
-
     with dreaming_batch_langsmith_scope(
         session=session,
         inty_trace_id=inty_trace_id,
         candidate=candidate,
         parent_run_enabled=None,
     ) as (langsmith_root_run, langsmith_slice):
+        try:
 
-        def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
-            return session.llm_client.complete_text(
-                messages,
-                model_role=role,
-                langsmith_extra=langsmith_slice.dreaming_consolidation_extra(
-                    model_role=role
-                ),
+            def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
+                return session.llm_client.complete_text(
+                    messages,
+                    model_role=role,
+                    langsmith_extra=langsmith_slice.dreaming_consolidation_extra(
+                        model_role=role
+                    ),
+                )
+
+            consolidate_memory_during_dreaming(
+                session.store,
+                candidate.rows,
+                _complete_fn,
+                tool_bg_idle_event=session.tool_bg_idle,
             )
-
-        consolidate_memory_during_dreaming(
-            session.store,
-            candidate.rows,
-            _complete_fn,
-            tool_bg_idle_event=session.tool_bg_idle,
-        )
-        assert_dreaming_transcript_boundary_unchanged(session.store, candidate)
-        state = dreaming_state_from_candidate(
-            candidate, processed_at=datetime.now(UTC)
-        )
-        save_dreaming_state(session.store, state)
+            assert_dreaming_transcript_boundary_unchanged(session.store, candidate)
+            state = dreaming_state_from_candidate(
+                candidate, processed_at=datetime.now(UTC)
+            )
+            save_dreaming_state(session.store, state)
+        except BaseException as exc:
+            record_dreaming_batch_observability(
+                session=session,
+                inty_trace_id=inty_trace_id,
+                outcome=DreamingBatchOutcome.BATCH_FAILED,
+                candidate=candidate,
+                langsmith_root_run=langsmith_root_run,
+                batch_error=repr(exc),
+            )
+            raise
 
     record_dreaming_batch_observability(
         session=session,

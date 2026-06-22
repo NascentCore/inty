@@ -39,6 +39,7 @@ class DreamingBatchOutcome(StrEnum):
 
     NOT_DUE = "not_due"
     CHECKPOINT_SAVED = "checkpoint_saved"
+    BATCH_FAILED = "batch_failed"
 
 
 def build_inner_tick_dreaming_runtime_event_record(
@@ -112,12 +113,10 @@ def record_dreaming_batch_observability(
     outcome: DreamingBatchOutcome,
     candidate: DreamingCandidate,
     langsmith_root_run: Any | None,
+    batch_error: str | None = None,
 ) -> None:
-    """Persist runtime event and close LangSmith parent for one dreaming batch.
-
-    TODO(dreaming-batch-langsmith-finally): Callers that raise before this runs leave the parent — #3551
-    open — see ``run_dreaming_batch_if_due``; end parent in try/finally on failure paths.
-    """
+    """Persist runtime event and close LangSmith parent for one dreaming batch."""
+    assert batch_error is None or outcome == DreamingBatchOutcome.BATCH_FAILED
     from app.core.companion_harness.companion.llm_chat_runtime import (
         companion_turn_langsmith_parent_run_id_str,
         companion_turn_langsmith_parent_trace_id_str,
@@ -139,18 +138,25 @@ def record_dreaming_batch_observability(
             langsmith_run_id=ls_run_id,
         ),
     )
-    end_companion_turn_root_run_safe(
-        langsmith_root_run,
-        outputs={
-            "inner_tick_activity": InnerTickActivity.DREAMING.value,
-            "outcome": outcome.value,
-            "row_count": len(candidate.rows),
-            "boundary_uuid": candidate.boundary_uuid,
-            "langsmith_trace_id": ls_trace_id,
-            "langsmith_run_id": ls_run_id,
-        },
-        ls_end_source="dreaming_batch",
-    )
+    if batch_error is not None:
+        end_companion_turn_root_run_safe(
+            langsmith_root_run,
+            error=batch_error,
+            ls_end_source="dreaming_batch_failed",
+        )
+    else:
+        end_companion_turn_root_run_safe(
+            langsmith_root_run,
+            outputs={
+                "inner_tick_activity": InnerTickActivity.DREAMING.value,
+                "outcome": outcome.value,
+                "row_count": len(candidate.rows),
+                "boundary_uuid": candidate.boundary_uuid,
+                "langsmith_trace_id": ls_trace_id,
+                "langsmith_run_id": ls_run_id,
+            },
+            ls_end_source="dreaming_batch",
+        )
     logger.info(
         "companion_dreaming batch_observed user={} agent={} chat={} outcome={} "
         "rows={} trace_id={} langsmith_trace_id={}",
