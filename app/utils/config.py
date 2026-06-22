@@ -13,6 +13,7 @@ from typing import Any, List, Optional
 import yaml
 from loguru import logger
 from pydantic import (
+    AliasChoices,
     AnyHttpUrl,
     BaseModel,
     ConfigDict,
@@ -600,7 +601,8 @@ class AgentConfig(BaseModel):
                 default_factory=ProactiveChatConfig
             )
             monolog: MonologConfig = Field(
-                default_factory=MonologConfig
+                default_factory=MonologConfig,
+                validation_alias=AliasChoices("monolog", "maintenance"),
             )
 
         inner_tick: InnerTickConfig = Field(default_factory=InnerTickConfig)

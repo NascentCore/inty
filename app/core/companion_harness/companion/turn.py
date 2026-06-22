@@ -1243,7 +1243,7 @@ async def run_inner_tick_autonomy(
 ) -> CompanionTurnResult:
     """AUTONOMY inner tick: open tool set, **never** delivers to the user.
 
-    Same async foreground/tool-background lifecycle as maintenance, but with
+    Same async foreground/tool-background lifecycle as monolog, but with
     an open tool set and the autonomy system prompt slice that instructs the
     model to read ``LIFE_CURRENTS.md``, do real work (web, image, MemoryStore
     writes), and write progress back — all silently.

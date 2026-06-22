@@ -27,7 +27,7 @@
 - `USER_CHAT` / `PROACTIVE_CHAT`：**读侧** tail-splice 未 surfaced 的 ``ai_private`` 独白（manifest 索引行持久化在 ``transcript.jsonl``，hydrate 供后续轮与 DREAMING）。
 - `DREAMING`：**汇总当日全部经历**——用户可见对话（`USER_CHAT`、`PROACTIVE_CHAT`、`SCHEDULED`，`transcript.jsonl`）与沉默 awake 轨（`AUTONOMY`、`MONOLOG`：`transcript_inner_tick.jsonl`、`LIFE_CURRENTS.md`、`ai_private.jsonl`、相关 tool/jsonl 痕迹）——策展进 `MEMORY` / `USER` / `SOUL` / `STYLE`、daily gist、`LIVING_SPHERE` compact。**不是**当场场景扮演，也不替代 awake 时各轨道的实时写入。
 
-三者并列：**awake** 时 AUTONOMY / MONOLOG 各自记账；**sleeping** 时 DREAMING 做 end-of-day rollup，**不**用 dreaming 替换 maintenance。
+三者并列：**awake** 时 AUTONOMY / MONOLOG 各自记账；**sleeping** 时 DREAMING 做 end-of-day rollup，**不**用 dreaming 替换 monolog。
 
 ## `ai_private.jsonl` vs `LIFE_CURRENTS.md`（核心区分）
 
@@ -98,10 +98,10 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 ## 与既有调度的关系
 
 - 复用 unified inner-tick worker（每条 WS 连接）的循环结构；调度顺序为 `proactive → scheduled → autonomy → monolog → dreaming`（与 ``inner_tick_poll`` 一致）。
-- 自有 `min_gap`，建议初值与 maintenance 相同（120s）。
+- 自有 `min_gap`，建议初值与 monolog 相同（120s）。
 - 复用 `turn_lock` / `tool_bg_idle` 串行化各轨道。
-- **不进 chat 日限额**（autonomy 不发消息）；token 限额按 maintenance 同档计费。
-- `context.json` 的 `bootstrap` 阶段**不**调度 autonomy（与 maintenance 同策略）。
+- **不进 chat 日限额**（autonomy 不发消息）；token 限额按 monolog 同档计费。
+- `context.json` 的 `bootstrap` 阶段**不**调度 autonomy（与 monolog 同策略）。
 
 ## 与已有概念的边界
 

@@ -194,7 +194,7 @@ def test_inner_tick_monolog_is_monolog_only_without_ls_tc_or_memory_store() -> (
     )
     messages = build_system_messages_for_inner_tick_monolog(
         store=MemoryStore(
-            scope=CompanionScope("sm", "a", "maintenance-prompt"),
+            scope=CompanionScope("sm", "a", "monolog-prompt"),
             repository=None,
         ),
         bundle=bundle,
@@ -335,10 +335,10 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
         c for c in contents if c.startswith("本轮（陪伴主动聊天）")
     ]
     assert proactive_blocks == []
-    maintenance_blocks = [
+    monolog_blocks = [
         c for c in contents if c.startswith("本轮（内在节拍）")
     ]
-    assert maintenance_blocks == []
+    assert monolog_blocks == []
     assert not any(c.startswith("内在活动（ai_private）") for c in contents)
     autonomy_lines = autonomy_blocks[0].split("\n")
     assert (

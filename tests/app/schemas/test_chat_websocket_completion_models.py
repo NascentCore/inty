@@ -10,6 +10,7 @@ from app.schemas.chat_websocket import (
     ChatWebSocketQueuedSuccessFrame,
     ChatWsCompanionWireMessageMetaData,
     ChatWsCompletionData,
+    dump_chat_ws_companion_wire_meta,
 )
 
 
@@ -152,3 +153,26 @@ def test_chat_ws_companion_wire_meta_partial_significance() -> None:
     )
     assert meta.significance_perception is not None
     assert meta.significance_perception.importance_round == 7
+
+
+def test_chat_ws_companion_wire_meta_monolog_round_trip_and_legacy_input() -> (
+    None
+):
+    meta = ChatWsCompanionWireMessageMetaData(
+        inner_tick=True,
+        companion_monolog_inner_tick=True,
+    )
+    dumped = dump_chat_ws_companion_wire_meta(meta)
+    assert dumped == {
+        "inner_tick": True,
+        "companionMonologInnerTick": True,
+    }
+
+    legacy = ChatWsCompanionWireMessageMetaData.model_validate(
+        {
+            "inner_tick": True,
+            "companion_maintenance_inner_tick": True,
+        }
+    )
+    assert legacy.companion_monolog_inner_tick is True
+    assert dump_chat_ws_companion_wire_meta(legacy) == dumped

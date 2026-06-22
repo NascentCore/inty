@@ -124,7 +124,7 @@ class MemoryStoreScopePaths:
     @property
     def transcript_inner_tick(self) -> str:
         # TODO(rename-memory-doc): Rename to transcript_inner_tick_monolog.jsonl — #3400
-        # (maintenance-only inner tick; update ORM mapping + migrations together).
+        # (monolog-only inner tick; update ORM mapping + migrations together).
         return "transcript_inner_tick.jsonl"
 
     @property

@@ -96,7 +96,7 @@ async def try_fire_autonomy_for_scope(
     chat_resolve_mode: InnerTickChatResolveMode,
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> bool:
-    # TODO(#3473): gate maintenance + autonomy + dreaming on token budget before turn_lock.
+    # TODO(#3473): gate monolog + autonomy + dreaming on token budget before turn_lock.
     """AUTONOMY inner-tick: silent self-directed turn (MemoryStore only, #3255)."""
     resolved = await resolve_inner_tick_scope_coords_for_triple(
         coords=coords,

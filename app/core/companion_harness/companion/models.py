@@ -518,7 +518,7 @@ def companion_turn_transcript_loaded_messages(
 ) -> list[ChatMessage]:
     """Transcript rows for assembling this turn's ``messages``.
 
-    Maintenance inner-tick (``InnerTickActivity.MONOLOG``) persists only to
+    Monolog inner-tick (``InnerTickActivity.MONOLOG``) persists only to
     ``transcript_inner_tick.jsonl`` via ``transcript_relative_path_for_turn_persistence``;
     it never appends to ``transcript.jsonl``. User chat and proactive/scheduled inner ticks
     load ``transcript.jsonl`` as-is; monolog turns merge the inner file for their own LLM

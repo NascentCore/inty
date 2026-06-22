@@ -106,6 +106,12 @@ async def test_presence_coordinator_inner_tick_overlap_flags() -> None:
     assert coordinator.inner_tick_monolog_foreground_pending()
     coordinator.pop_foreground_pending("u1")
     assert not coordinator.inner_tick_monolog_foreground_pending()
+    coordinator.set_foreground_pending(
+        "u2", {"ws_inner_tick_maintenance": True, "session_id": "s2"}
+    )
+    assert coordinator.inner_tick_monolog_foreground_pending()
+    coordinator.pop_foreground_pending("u2")
+    assert not coordinator.inner_tick_monolog_foreground_pending()
 
 
 @pytest.mark.asyncio

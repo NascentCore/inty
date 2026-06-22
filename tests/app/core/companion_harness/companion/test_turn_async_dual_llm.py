@@ -329,14 +329,14 @@ async def test_async_dual_inner_tick_autonomy_uses_autonomy_system_messages(
     autonomy_blocks = [
         c for c in bg_system if c.startswith("本轮（AUTONOMY 自主活动）")
     ]
-    maintenance_blocks = [
+    monolog_blocks = [
         c for c in bg_system if c.startswith("本轮（内在节拍）")
     ]
     ai_private_blocks = [
         c for c in bg_system if c.startswith("内在活动（ai_private）")
     ]
     assert len(autonomy_blocks) == 1
-    assert maintenance_blocks == []
+    assert monolog_blocks == []
     assert ai_private_blocks == []
 
 
