@@ -8,6 +8,11 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    IDENTITY_MD_REL,
+    SOUL_MD_REL,
+    USER_MD_REL,
+)
 
 _IMAGE_ASSET_INDEX_REL = "generated_images/index.jsonl"
 
@@ -19,12 +24,11 @@ def _read_profile_doc(store: MemoryStore, relative_path: str) -> str:
     return ""
 
 
-# TODO(memdoc-path-constants): Profile doc keys/paths from canonical MemDoc constants. #3413
 def _core_profile_payload(store: MemoryStore) -> dict[str, str]:
     return {
-        "IDENTITY.md": _read_profile_doc(store, "IDENTITY.md"),
-        "SOUL.md": _read_profile_doc(store, "SOUL.md"),
-        "USER.md": _read_profile_doc(store, "USER.md"),
+        IDENTITY_MD_REL: _read_profile_doc(store, IDENTITY_MD_REL),
+        SOUL_MD_REL: _read_profile_doc(store, SOUL_MD_REL),
+        USER_MD_REL: _read_profile_doc(store, USER_MD_REL),
     }
 
 

@@ -7,6 +7,30 @@ from datetime import date
 from enum import Enum
 from typing import Final
 
+from .memory_store_path_constants import (
+    AI_PRIVATE_JSONL_REL,
+    AI_PRIVATE_MD_REL,
+    CHANNELS_MD_REL,
+    COMPANIONSHIP_MD_REL,
+    CONTEXT_JSON_REL,
+    GENERATED_IMAGES_INDEX_JSONL_REL,
+    IDENTITY_MD_REL,
+    LIFE_CURRENTS_MD_REL,
+    LIVING_SPHERE_MD_REL,
+    LIVING_SPHERE_UPDATES_JSONL_REL,
+    MEMORY_MD_REL,
+    SIGNIFICANCE_PERCEPTION_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    TECHNO_CORE_EVENTS_JSONL_REL,
+    TECHNO_CORE_MD_REL,
+    TOOL_BACKGROUND_JSONL_REL,
+    TOOLS_MD_REL,
+    TRANSCRIPT_INNER_TICK_JSONL_REL,
+    TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
+)
+
 _MEMORY_DAILY_RE: Final[re.Pattern[str]] = re.compile(
     r"^memory/daily/(\d{4}-\d{2}-\d{2})\.md$", re.IGNORECASE
 )
@@ -63,49 +87,47 @@ class CompanionMemoryDocumentKind(str, Enum):
     INTY_V2_SCHEDULE_TASKS_JSON = "inty_v2_schedule_tasks_json"
 
 
-# TODO(memdoc-path-constants): Derive keys from canonical MemDoc path constants (shared with — #3413
-# MemoryStoreScopePaths) instead of duplicating literals. #3413
 _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
-    "IDENTITY.md": (CompanionMemoryDocumentKind.IDENTITY, None),
-    "SOUL.md": (CompanionMemoryDocumentKind.SOUL, None),
-    "STYLE.md": (CompanionMemoryDocumentKind.STYLE, None),
-    "USER.md": (CompanionMemoryDocumentKind.USER, None),
-    "MEMORY.md": (CompanionMemoryDocumentKind.MEMORY, None),
+    IDENTITY_MD_REL: (CompanionMemoryDocumentKind.IDENTITY, None),
+    SOUL_MD_REL: (CompanionMemoryDocumentKind.SOUL, None),
+    STYLE_MD_REL: (CompanionMemoryDocumentKind.STYLE, None),
+    USER_MD_REL: (CompanionMemoryDocumentKind.USER, None),
+    MEMORY_MD_REL: (CompanionMemoryDocumentKind.MEMORY, None),
     # Virtual-space activity state (AUTONOMY): what Inty is doing in the world—not inner thoughts about the user.
-    "LIFE_CURRENTS.md": (CompanionMemoryDocumentKind.LIFE_CURRENTS, None),
-    "CHANNELS.md": (CompanionMemoryDocumentKind.CHANNELS, None),
-    "COMPANIONSHIP.md": (CompanionMemoryDocumentKind.COMPANIONSHIP, None),
-    "TECHNO_CORE.md": (CompanionMemoryDocumentKind.TECHNO_CORE, None),
-    "techno_core_events.jsonl": (
+    LIFE_CURRENTS_MD_REL: (CompanionMemoryDocumentKind.LIFE_CURRENTS, None),
+    CHANNELS_MD_REL: (CompanionMemoryDocumentKind.CHANNELS, None),
+    COMPANIONSHIP_MD_REL: (CompanionMemoryDocumentKind.COMPANIONSHIP, None),
+    TECHNO_CORE_MD_REL: (CompanionMemoryDocumentKind.TECHNO_CORE, None),
+    TECHNO_CORE_EVENTS_JSONL_REL: (
         CompanionMemoryDocumentKind.TECHNO_CORE_EVENTS_JSONL,
         None,
     ),
-    "LIVING_SPHERE.md": (CompanionMemoryDocumentKind.LIVING_SPHERE, None),
-    "living_sphere_updates.jsonl": (
+    LIVING_SPHERE_MD_REL: (CompanionMemoryDocumentKind.LIVING_SPHERE, None),
+    LIVING_SPHERE_UPDATES_JSONL_REL: (
         CompanionMemoryDocumentKind.LIVING_SPHERE_UPDATES_JSONL,
         None,
     ),
-    "TOOLS.md": (CompanionMemoryDocumentKind.TOOLS, None),
-    "SIGNIFICANCE_PERCEPTION.md": (
+    TOOLS_MD_REL: (CompanionMemoryDocumentKind.TOOLS, None),
+    SIGNIFICANCE_PERCEPTION_MD_REL: (
         CompanionMemoryDocumentKind.SIGNIFICANCE_PERCEPTION,
         None,
     ),
-    "transcript.jsonl": (CompanionMemoryDocumentKind.TRANSCRIPT, None),
+    TRANSCRIPT_JSONL_REL: (CompanionMemoryDocumentKind.TRANSCRIPT, None),
     # TODO(rename-memory-doc): transcript_inner_tick_maintenance.jsonl (with scope path + migration). — #3400
-    "transcript_inner_tick.jsonl": (
+    TRANSCRIPT_INNER_TICK_JSONL_REL: (
         CompanionMemoryDocumentKind.TRANSCRIPT_INNER_TICK,
         None,
     ),
-    "context.json": (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
-    "ai_private.md": (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
+    CONTEXT_JSON_REL: (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
+    AI_PRIVATE_MD_REL: (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
     # Inner thoughts about the user (MAINTENANCE)—not LIFE_CURRENTS virtual-world activity.
     # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today (#3375, #3341).
-    "ai_private.jsonl": (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
-    "tool_background.jsonl": (
+    AI_PRIVATE_JSONL_REL: (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
+    TOOL_BACKGROUND_JSONL_REL: (
         CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL,
         None,
     ),
-    "generated_images/index.jsonl": (
+    GENERATED_IMAGES_INDEX_JSONL_REL: (
         CompanionMemoryDocumentKind.GENERATED_IMAGES_INDEX_JSONL,
         None,
     ),

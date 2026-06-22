@@ -100,11 +100,9 @@ from .companion_tool_definitions import (
     _EMPTY_DESCRIPTION_OVERRIDES,
     openai_tools_for_names,
 )
+from app.core.companion_harness.memory.memory_store_scope import USER_MD_REL
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
-
-# TODO(memdoc-path-constants): Replace ad-hoc _USER_MD_REL with canonical constant. #3413
-_USER_MD_REL = "USER.md"
 
 
 def _companion_tool_validation_error_message(exc: ValidationError) -> str:
@@ -237,10 +235,10 @@ def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
     将用户自愿透露的基本信息追加写入 USER.md 的「身份信息」小节。
     items：每项含 label、value（均为非空短文本）。
     """
-    rel = _USER_MD_REL
+    rel = USER_MD_REL
     prev = store.read_document_if_exists(rel)
     if prev is None:
-        return f"ERROR: missing {_USER_MD_REL!r}"
+        return f"ERROR: missing {USER_MD_REL!r}"
     today = date.today().isoformat()
     bullets: list[str] = []
     for raw in items:
@@ -255,7 +253,7 @@ def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
         return "ERROR: no valid items (need label and value for each entry)"
     merged = append_user_profile_facts_to_user_md(prev, bullets)
     store.write_document(rel, merged)
-    return f"OK appended {len(bullets)} line(s) to {_USER_MD_REL}"
+    return f"OK appended {len(bullets)} line(s) to {USER_MD_REL}"
 
 
 def tool_memory_store_list_paths(

@@ -9,6 +9,26 @@ from typing import Final
 
 from loguru import logger
 
+from .memory_store_path_constants import (
+    AI_PRIVATE_JSONL_REL,
+    AI_PRIVATE_MD_REL,
+    CHANNELS_MD_REL,
+    COMPANIONSHIP_MD_REL,
+    CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    LIVING_SPHERE_MD_REL,
+    MEMORY_DAILY_DIR_REL,
+    MEMORY_DIR_REL,
+    MEMORY_MD_REL,
+    SIGNIFICANCE_PERCEPTION_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    TECHNO_CORE_MD_REL,
+    TOOLS_MD_REL,
+    TRANSCRIPT_INNER_TICK_JSONL_REL,
+    TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
+)
 from .memory_store import MemoryStore, normalize_memory_store_relative_path
 
 _MEMORY_PKG_DIR = Path(__file__).resolve().parent
@@ -65,8 +85,6 @@ def get_safety_system_text() -> str:
     return load_template_seed_text("SAFETY.md").strip()
 
 
-# TODO(memdoc-path-constants): Property return values are still string literals; export — #3413
-# module-level Final constants and migrate all call sites to use them. #3413
 @dataclass(frozen=True)
 class MemoryStoreScopePaths:
     """Standard document paths as scope-relative posix strings (MemoryStore keys)."""
@@ -75,77 +93,77 @@ class MemoryStoreScopePaths:
 
     @property
     def identity(self) -> str:
-        return "IDENTITY.md"
+        return IDENTITY_MD_REL
 
     @property
     def soul(self) -> str:
-        return "SOUL.md"
+        return SOUL_MD_REL
 
     @property
     def style_md(self) -> str:
-        return "STYLE.md"
+        return STYLE_MD_REL
 
     @property
     def user_md(self) -> str:
-        return "USER.md"
+        return USER_MD_REL
 
     @property
     def memory_md(self) -> str:
-        return "MEMORY.md"
+        return MEMORY_MD_REL
 
     @property
     def channels_md(self) -> str:
-        return "CHANNELS.md"
+        return CHANNELS_MD_REL
 
     @property
     def companionship_md(self) -> str:
-        return "COMPANIONSHIP.md"
+        return COMPANIONSHIP_MD_REL
 
     @property
     def techno_core_md(self) -> str:
-        return "TECHNO_CORE.md"
+        return TECHNO_CORE_MD_REL
 
     @property
     def living_sphere_md(self) -> str:
-        return "LIVING_SPHERE.md"
+        return LIVING_SPHERE_MD_REL
 
     @property
     def tools_md(self) -> str:
-        return "TOOLS.md"
+        return TOOLS_MD_REL
 
     @property
     def significance_perception_md(self) -> str:
-        return "SIGNIFICANCE_PERCEPTION.md"
+        return SIGNIFICANCE_PERCEPTION_MD_REL
 
     @property
     def transcript(self) -> str:
-        return "transcript.jsonl"
+        return TRANSCRIPT_JSONL_REL
 
     @property
     def transcript_inner_tick(self) -> str:
         # TODO(rename-memory-doc): Rename to transcript_inner_tick_maintenance.jsonl — #3400
         # (maintenance-only inner tick; update ORM mapping + migrations together).
-        return "transcript_inner_tick.jsonl"
+        return TRANSCRIPT_INNER_TICK_JSONL_REL
 
     @property
     def ai_private_md(self) -> str:
-        return "ai_private.md"
+        return AI_PRIVATE_MD_REL
 
     @property
     def ai_private_jsonl(self) -> str:
-        return "ai_private.jsonl"
+        return AI_PRIVATE_JSONL_REL
 
     @property
     def context_json(self) -> str:
-        return "context.json"
+        return CONTEXT_JSON_REL
 
     @property
     def memory_dir(self) -> str:
-        return "memory"
+        return MEMORY_DIR_REL
 
     @property
     def memory_daily_dir(self) -> str:
-        return "memory/daily"
+        return MEMORY_DAILY_DIR_REL
 
     def memory_daily_gist(self, day: str) -> str:
         """Daily gist path (``memory/daily/<date>.md``); written only by dreaming consolidation."""
@@ -295,9 +313,8 @@ def needs_startup_profile_inquiry(store: MemoryStore) -> bool:
     for m in load_transcript_from_store(store, rel_tr):
         if m.role in ("user", "assistant"):
             return False
-    # TODO(memdoc-path-constants): Use paths.identity / paths.user_md. #3413
-    ident = store.read_document_if_exists("IDENTITY.md") or ""
-    user_md = store.read_document_if_exists("USER.md") or ""
+    ident = store.read_document_if_exists(paths.identity) or ""
+    user_md = store.read_document_if_exists(paths.user_md) or ""
     id_stub = _text_matches_any_marker(ident, _IDENTITY_STUB_MARKERS)
     user_stub = _text_matches_any_marker(user_md, _USER_STUB_MARKERS)
     out = id_stub or user_stub
