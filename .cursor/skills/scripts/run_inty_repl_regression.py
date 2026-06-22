@@ -2,18 +2,20 @@
 """Automated local Ops + WebSocket regression for companion queue-serving.
 
 Skill smoke driver (not ``app/`` production code). Drives bootstrap turns, one
-settled user turn, and waits for inner-tick proactive chat via
-``BackendChatWsBridge`` (same transport as ``inty_v2_repl``). Writes a JSON
+settled user turn, a GitHub issue complaint turn, and waits for inner-tick proactive
+chat via ``BackendChatWsBridge`` (same transport as ``inty_v2_repl``). Writes a JSON
 report under ``tmp/`` and prints a one-line SUMMARY.
 
 Layout:
 - Driver: ``run_regression`` / ``main`` for end-to-end WS and Postgres checks.
 - Settled turn: wait for InputQueue idle after bootstrap-finish, match WS
   ``user_msg_uuid`` to the sent turn, wait for InputQueue ``delivered``, then
-  start proactive wait.
+  run github_issue E2E phase, then start proactive wait.
+- GitHub issue: USER_CHAT complaint → poll ``companion_user_feedback_jsonl`` →
+  ``gh issue view`` → ``gh issue close`` cleanup.
 - Strict-mode DB verification: below ``_is_inner_tick_proactive``; when no
   proactive WS frame arrives, it queries ``chat_history`` for silent inner ticks.
-  ``_parse_proactive_chat_history_rows`` is unit-tested in
+  ``_parse_proactive_chat_history_rows`` and feedback JSONL parsers are unit-tested in
   ``tests/cursor/skills/scripts/test_run_inty_repl_regression.py``.
 
 Run with shell cwd = repository root (or any path under the repo).
@@ -25,6 +27,7 @@ import argparse
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -51,6 +54,11 @@ _DEFAULT_BOOTSTRAP_FINISH_TURN = (
     "companion_bootstrap_user_interactive_complete 完成引导。"
 )
 _DEFAULT_SETTLED_TURN = "今天天气怎么样？"
+_DEFAULT_GITHUB_ISSUE_TURN = (
+    "我很不满——你刚才的回答没有考虑我在美国西海岸的时区。"
+    "请先用 companion_record_user_feedback 把我的投诉提交成 GitHub issue，再简短回复我。"
+)
+_GITHUB_ISSUE_POLL_SEC = 60.0
 _RECV_POLL_SEC = 0.25
 _INPUT_QUEUE_POLL_SEC = 0.5
 _TURN_REPLY_TIMEOUT_SEC = 180.0
@@ -71,6 +79,28 @@ class ProactiveChatHistoryRow:
     content_preview: str
     created_at: str
     has_assistant_reply: bool
+
+
+@dataclass(frozen=True)
+class FeedbackGithubIssueRow:
+    """Parsed ``kind=github_issue_created`` line from agent-scope feedback JSONL."""
+
+    issue_url: str
+    issue_number: int
+    user_msg_uuid: str
+    feedback_id: str
+
+
+@dataclass(frozen=True)
+class GithubIssueE2eResult:
+    """Outcome of the github_issue regression phase for JSON report + pass bit."""
+
+    user_msg_uuid: str
+    issue_url: str
+    issue_number: int
+    snapshot_seen: bool
+    closed: bool
+    error: str | None
 
 
 def _find_repo_root() -> Path:
@@ -573,6 +603,378 @@ def _record_proactive_from_db(
         )
 
 
+# --- github issue E2E (unit-tested; see tests/cursor/skills/scripts/) ---
+
+
+def _require_user_feedback_github_prereqs(stderr: TextIO) -> str | None:
+    """Return error message when GitHub issue regression prerequisites are missing."""
+    if shutil.which("gh") is None:
+        msg = "gh CLI not found on PATH"
+        print(f"{_TAG} ERROR {msg}", file=stderr, flush=True)
+        return msg
+    from app.core.companion_harness.tools.companion_user_feedback import (
+        load_user_feedback_github_config,
+    )
+
+    _repo, token = load_user_feedback_github_config()
+    if not token.strip():
+        msg = (
+            "user_feedback_github token missing "
+            "(set agent.companion_harness.user_feedback_github.token or GH_TOKEN)"
+        )
+        print(f"{_TAG} ERROR {msg}", file=stderr, flush=True)
+        return msg
+    return None
+
+
+def _query_user_feedback_jsonl_content(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> str:
+    assert user_id != ""
+    assert agent_id != ""
+    scope_chat = f"agent-scope:{user_id}:{agent_id}"
+    return _psql(
+        repo_root,
+        config_path,
+        f"""
+SELECT content
+FROM companion_memory_document_versions
+WHERE companion_id = '{agent_id}'
+  AND user_id = '{user_id}'
+  AND chat_id = '{scope_chat}'
+  AND document_kind = 'companion_user_feedback_jsonl'
+  AND calendar_date IS NULL
+ORDER BY sequence_id DESC
+LIMIT 1;
+""",
+    ).strip()
+
+
+def _parse_feedback_jsonl_rows(raw: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line in raw.strip().split("\n"):
+        if not line.strip():
+            continue
+        rows.append(json.loads(line))
+    return rows
+
+
+def _row_user_msg_uuid(row: dict[str, Any]) -> str:
+    correlation = row.get("correlation")
+    if not isinstance(correlation, dict):
+        return ""
+    return str(correlation.get("user_msg_uuid") or "").strip()
+
+
+def _find_snapshot_for_user_msg_uuid(
+    rows: list[dict[str, Any]],
+    user_msg_uuid: str,
+) -> bool:
+    assert user_msg_uuid != ""
+    for row in rows:
+        if row.get("kind") != "snapshot":
+            continue
+        if _row_user_msg_uuid(row) == user_msg_uuid:
+            return True
+    return False
+
+
+def _find_feedback_id_for_user_msg_uuid(
+    rows: list[dict[str, Any]],
+    user_msg_uuid: str,
+) -> str:
+    assert user_msg_uuid != ""
+    for row in rows:
+        if row.get("kind") != "snapshot":
+            continue
+        if _row_user_msg_uuid(row) == user_msg_uuid:
+            return str(row.get("feedback_id") or "").strip()
+    return ""
+
+
+def _find_github_issue_skipped_reason(
+    rows: list[dict[str, Any]],
+    *,
+    feedback_id: str,
+) -> str | None:
+    assert feedback_id != ""
+    for row in rows:
+        if row.get("kind") != "github_issue_skipped":
+            continue
+        if str(row.get("feedback_id") or "").strip() != feedback_id:
+            continue
+        reason = str(row.get("github_issue_status") or "").strip()
+        return reason if reason else "github_issue_skipped"
+    return None
+
+
+def _parse_feedback_github_issue_row(
+    rows: list[dict[str, Any]],
+    *,
+    user_msg_uuid: str,
+    feedback_id: str,
+) -> FeedbackGithubIssueRow | None:
+    assert user_msg_uuid != ""
+    assert feedback_id != ""
+    created: FeedbackGithubIssueRow | None = None
+    for row in rows:
+        if row.get("kind") != "github_issue_created":
+            continue
+        if str(row.get("feedback_id") or "").strip() != feedback_id:
+            continue
+        issue_url = str(row.get("github_issue_url") or "").strip()
+        issue_number = int(row.get("github_issue_number") or 0)
+        if not issue_url or issue_number <= 0:
+            continue
+        created = FeedbackGithubIssueRow(
+            issue_url=issue_url,
+            issue_number=issue_number,
+            user_msg_uuid=user_msg_uuid,
+            feedback_id=feedback_id,
+        )
+    return created
+
+
+def _poll_feedback_github_issue(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    user_msg_uuid: str,
+    feedback_id: str,
+    timeout_sec: float,
+) -> FeedbackGithubIssueRow:
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        raw = _query_user_feedback_jsonl_content(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+        )
+        rows = _parse_feedback_jsonl_rows(raw)
+        skipped = _find_github_issue_skipped_reason(rows, feedback_id=feedback_id)
+        if skipped is not None:
+            raise RuntimeError(f"github_issue_skipped: {skipped}")
+        row = _parse_feedback_github_issue_row(
+            rows,
+            user_msg_uuid=user_msg_uuid,
+            feedback_id=feedback_id,
+        )
+        if row is not None:
+            return row
+        time.sleep(1.0)
+    raise TimeoutError(
+        f"no github_issue_created for feedback_id={feedback_id} within {timeout_sec}s"
+    )
+
+
+def _verify_github_issue_via_gh(
+    row: FeedbackGithubIssueRow,
+    *,
+    expected_user_msg_uuid: str,
+) -> None:
+    from app.core.companion_harness.tools.companion_user_feedback_github_issue import (
+        GITHUB_ISSUE_TITLE_PREFIX,
+    )
+
+    view = subprocess.run(
+        [
+            "gh",
+            "issue",
+            "view",
+            str(row.issue_number),
+            "--json",
+            "title,labels,body",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if view.returncode != 0:
+        raise RuntimeError(view.stderr.strip() or "gh issue view failed")
+    data = json.loads(view.stdout)
+    title = str(data.get("title") or "")
+    labels = [lb.get("name") for lb in data.get("labels") or []]
+    body = str(data.get("body") or "")
+    if not title.startswith(GITHUB_ISSUE_TITLE_PREFIX):
+        raise RuntimeError(f"bad issue title: {title!r}")
+    if expected_user_msg_uuid not in body:
+        raise RuntimeError("issue body missing user_msg_uuid correlation")
+    if "agentic_companion" not in labels:
+        raise RuntimeError(f"missing agentic_companion label: {labels}")
+
+
+def _close_github_issue(issue_number: int) -> bool:
+    assert issue_number > 0
+    close = subprocess.run(
+        [
+            "gh",
+            "issue",
+            "close",
+            str(issue_number),
+            "--comment",
+            "Closed by inty-repl-regression cleanup.",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return close.returncode == 0
+
+
+def _github_issue_e2e_result_to_report(result: GithubIssueE2eResult) -> dict[str, Any]:
+    return {
+        "user_msg_uuid": result.user_msg_uuid,
+        "issue_url": result.issue_url,
+        "issue_number": result.issue_number,
+        "snapshot_seen": result.snapshot_seen,
+        "closed": result.closed,
+        "error": result.error,
+    }
+
+
+def _run_github_issue_e2e_phase(
+    *,
+    bridge: Any,
+    report: dict[str, Any],
+    repo_root: Path,
+    config_path: Path,
+    agent_id: str,
+    user_id: str,
+    turn_text: str,
+    stderr: TextIO,
+) -> GithubIssueE2eResult:
+    user_msg_uuid = ""
+    issue_url = ""
+    issue_number = 0
+    snapshot_seen = False
+    error: str | None = None
+    closed = False
+
+    try:
+        prereq_err = _require_user_feedback_github_prereqs(stderr)
+        if prereq_err is not None:
+            error = prereq_err
+        else:
+            print(f"{_TAG} github_issue turn: {turn_text!r}", flush=True)
+            user_msg_uuid = _send_turn(bridge, agent_id, turn_text)
+            text, meta, err = _wait_downlink_for_user_msg_uuid(
+                bridge,
+                report,
+                expected_user_msg_uuid=user_msg_uuid,
+                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                label="github_issue",
+                trailing_label="github_issue_mismatch",
+            )
+            if err is not None:
+                error = f"ws downlink: {err}"
+                print(f"{_TAG} ERROR github_issue: {err}", file=stderr, flush=True)
+            else:
+                assert text is not None
+                report["turns"].append(
+                    {
+                        "kind": "github_issue",
+                        "user": turn_text,
+                        "user_msg_uuid": user_msg_uuid,
+                        "text_preview": text[:120],
+                        "meta": meta,
+                    }
+                )
+                print(
+                    f"{_TAG} github_issue reply={text[:80]!r} "
+                    f"user_msg_uuid={user_msg_uuid}",
+                    flush=True,
+                )
+                _drain_turn_trailing_frames(bridge, report, label="github_issue")
+
+                if not _wait_input_delivered(
+                    repo_root,
+                    config_path,
+                    agent_id=agent_id,
+                    client_message_id=user_msg_uuid,
+                    timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                    label="github_issue",
+                    stderr=stderr,
+                ):
+                    error = f"input not delivered: {user_msg_uuid}"
+                else:
+                    raw = _query_user_feedback_jsonl_content(
+                        repo_root,
+                        config_path,
+                        user_id=user_id,
+                        agent_id=agent_id,
+                    )
+                    rows = _parse_feedback_jsonl_rows(raw)
+                    snapshot_seen = _find_snapshot_for_user_msg_uuid(
+                        rows, user_msg_uuid
+                    )
+                    if not snapshot_seen:
+                        error = (
+                            f"no feedback snapshot for user_msg_uuid={user_msg_uuid}"
+                        )
+                        print(f"{_TAG} ERROR {error}", file=stderr, flush=True)
+                    else:
+                        feedback_id = _find_feedback_id_for_user_msg_uuid(
+                            rows, user_msg_uuid
+                        )
+                        if not feedback_id:
+                            error = (
+                                f"no feedback_id for user_msg_uuid={user_msg_uuid}"
+                            )
+                        else:
+                            issue_row = _poll_feedback_github_issue(
+                                repo_root,
+                                config_path,
+                                user_id=user_id,
+                                agent_id=agent_id,
+                                user_msg_uuid=user_msg_uuid,
+                                feedback_id=feedback_id,
+                                timeout_sec=_GITHUB_ISSUE_POLL_SEC,
+                            )
+                            issue_url = issue_row.issue_url
+                            issue_number = issue_row.issue_number
+                            _verify_github_issue_via_gh(
+                                issue_row,
+                                expected_user_msg_uuid=user_msg_uuid,
+                            )
+                            print(
+                                f"{_TAG} github_issue verified issue=#{issue_number} "
+                                f"url={issue_url}",
+                                flush=True,
+                            )
+    except (RuntimeError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+        error = str(exc)
+        print(f"{_TAG} ERROR github_issue_e2e: {error}", file=stderr, flush=True)
+    finally:
+        if issue_number > 0:
+            closed = _close_github_issue(issue_number)
+            if closed:
+                print(
+                    f"{_TAG} github_issue closed issue=#{issue_number}",
+                    flush=True,
+                )
+            else:
+                msg = f"gh issue close failed for #{issue_number}"
+                print(f"{_TAG} ERROR {msg}", file=stderr, flush=True)
+                if error is None:
+                    error = msg
+
+    return GithubIssueE2eResult(
+        user_msg_uuid,
+        issue_url,
+        issue_number,
+        snapshot_seen,
+        closed,
+        error,
+    )
+
+
 def run_regression(
     *,
     repo_root: Path,
@@ -588,6 +990,7 @@ def run_regression(
     token_path: str,
     stderr: TextIO,
 ) -> int:
+    os.environ["INTY_CONFIG_YAML"] = str(config_path.resolve())
     _ensure_import_path(repo_root)
     from tools.inty_v2_repl.backend_chat_ws import (
         BackendChatWsBridge,
@@ -606,9 +1009,18 @@ def run_regression(
         "turns": [],
         "proactive": [],
         "errors": [],
+        "github_issue": {},
     }
     print(f"{_TAG} agent_id={agent_id}", flush=True)
     run_started_at_utc = datetime.now(timezone.utc)
+    github_result = GithubIssueE2eResult(
+        "",
+        "",
+        0,
+        False,
+        False,
+        "skipped: regression did not reach github_issue phase",
+    )
     bridge.start(connect_timeout=45.0)
     try:
         print(f"{_TAG} waiting for implicit greeting...", flush=True)
@@ -750,10 +1162,37 @@ def run_regression(
                     "error": (408, f"input not delivered: {settled_msg_uuid}"),
                 }
             )
+            github_result = GithubIssueE2eResult(
+                "", "", 0, False, False, "skipped: settled input not delivered"
+            )
+            report["github_issue"] = _github_issue_e2e_result_to_report(
+                github_result
+            )
         else:
+            github_result = _run_github_issue_e2e_phase(
+                bridge=bridge,
+                report=report,
+                repo_root=repo_root,
+                config_path=config_path,
+                agent_id=agent_id,
+                user_id=user_id,
+                turn_text=_DEFAULT_GITHUB_ISSUE_TURN,
+                stderr=stderr,
+            )
+            report["github_issue"] = _github_issue_e2e_result_to_report(
+                github_result
+            )
+            if github_result.error is not None:
+                report["errors"].append(
+                    {
+                        "turn": "github_issue_e2e",
+                        "error": (500, github_result.error),
+                    }
+                )
+
             print(
                 f"{_TAG} waiting up to {proactive_wait_sec}s for inner-tick proactive "
-                f"(after settled input delivered)...",
+                f"(after github_issue phase)...",
                 flush=True,
             )
             proactive_deadline = time.monotonic() + proactive_wait_sec
@@ -927,10 +1366,13 @@ LIMIT 8;
         "state": companion_bond_state,
     }
 
+    github_issue_ok = github_result.error is None and github_result.closed
+
     summary = {
         "bootstrap": "complete" if bootstrap_done == "true" else "incomplete",
         "context_mode": context_mode,
         "settled_queue_turn": "pass" if settled_ok and not report["errors"] else "fail",
+        "github_issue_e2e": "pass" if github_issue_ok else "fail",
         "proactive_inner_tick": "present" if proactive_present else "missing",
         "companion_bond_state": companion_bond_state or "missing",
         "input_queue_counts": in_q.strip(),
@@ -954,6 +1396,7 @@ LIMIT 8;
         and out_all_delivered
         and bootstrap_done == "true"
         and proactive_present
+        and github_issue_ok
     )
     return 0 if passed else 1
 

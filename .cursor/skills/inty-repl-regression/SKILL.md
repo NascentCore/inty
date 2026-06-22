@@ -1,13 +1,18 @@
 ---
 name: inty-repl-regression
 description: >-
-  Run local Inty REPL regression for companion harness queue-serving changes:
-  bootstrap completion, settled USER_CHAT, proactive inner tick, OutputQueue/InputQueue,
-  LangSmith prompt inputs, and known legacy greeting issues. Use when validating
-  AgenticLoop, OutputQueue, bootstrap, proactive chat, or local REPL smoke behavior.
+  Run local Inty REPL regression over app-ws (/api/v1/chat/ws): bootstrap, settled USER_CHAT,
+  GitHub issue from user complaint, proactive inner tick, InputQueue/OutputQueue, LangSmith.
+  Canonical E2E for user-facing harness features (Telegram/Weixin excluded).
 ---
 
 # Inty REPL Regression
+
+## Scope
+
+- **E2E channel:** app-ws only — `inty_v2_repl` and the automated driver use `/api/v1/chat/ws` (same as iMate app WebSocket path).
+- **Not in this harness:** Telegram, Weixin, and other IM gateways (no practical client simulation today).
+- **Feature rule:** new user-facing non-trivial features should add a phase to [`.cursor/skills/scripts/run_inty_repl_regression.py`](../scripts/run_inty_repl_regression.py) (GitHub user-feedback issue is the template).
 
 ## Goal
 
@@ -15,6 +20,7 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
 
 - bootstrap queue path
 - settled `USER_CHAT`
+- user complaint → `companion_record_user_feedback` → real GitHub issue (then auto-closed)
 - proactive inner tick
 - durable InputQueue / OutputQueue delivery
 - LangSmith prompt inputs
@@ -28,10 +34,11 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
   - **勿**给 uvicorn 加 `--reload`：文件变更触发的进程重启会断开 WS、打断 queue/proactive 等待，导致回归 flaky；`start.sh --local` 已不带 reload。
 - REPL environment sane — see [`examine-local-inty-repl-env`](../examine-local-inty-repl-env/SKILL.md).
 - Create a fresh bootstrap agent — see [`create-bootstrap-test-agent`](../create-bootstrap-test-agent/SKILL.md).
+- **GitHub issue phase (mandatory for pass):** `gh` CLI authenticated for `nascentcore/inty`; token in `devops/config.yaml.local` → `agent.companion_harness.user_feedback_github.token`, or `GH_TOKEN`.
 
 ## Run
 
-### Automated driver (queue / DB / proactive smoke)
+### Automated driver (queue / DB / proactive / github issue smoke)
 
 Helper: [`.cursor/skills/scripts/run_inty_repl_regression.py`](../scripts/run_inty_repl_regression.py). Repository root cwd; uses the same WebSocket transport as REPL.
 
@@ -50,11 +57,12 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
   --api-base http://127.0.0.1:8001
 ```
 
-- Exit **0** only when settled queue turn passes, bootstrap is complete (`workspace_bootstrap_user_interactive_completed`), inner-tick proactive is present, and InputQueue / OutputQueue rows are all `delivered`.
+- Exit **0** only when settled queue turn passes, bootstrap is complete (`workspace_bootstrap_user_interactive_completed`), **github_issue_e2e** passes, inner-tick proactive is present, and InputQueue / OutputQueue rows are all `delivered`.
+- GitHub issues created by the regression run are **closed automatically** in driver cleanup (`gh issue close`).
 - Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (10s) and `poll_seconds` (5s) in `devops/config.yaml.local` for fast local regression; default `--proactive-wait-sec` is **60**.
-- JSON report: `tmp/repl-regression-<AGENT_ID>.json` unless `--report` is set.
+- JSON report: `tmp/repl-regression-<AGENT_ID>.json` unless `--report` is set (`report.github_issue` has issue number/URL and `closed: true`).
 - Skips `meta_data.source=greeting` downlinks when waiting for proactive (post-restart sign-on is not inner-tick proactive).
-- Unit tests for the proactive DB JSON parser: `tests/cursor/skills/scripts/test_run_inty_repl_regression.py` (skill script is not an `app/` module).
+- Unit tests for DB/JSONL parsers: `tests/cursor/skills/scripts/test_run_inty_repl_regression.py` (skill script is not an `app/` module).
 
 ### Manual REPL (bootstrap quality judgment)
 
@@ -74,7 +82,10 @@ Drive the session:
    - define relationship preference
 3. Ask the agent to call `companion_bootstrap_user_interactive_complete` (automated driver sends a bootstrap-finish turn).
 4. Continue after bootstrap with at least one settled user turn.
-5. Let one proactive tick fire, or inspect the latest existing proactive metadata if already fired.
+5. Send a complaint and ask the agent to file it with `companion_record_user_feedback` (same wording as driver `_DEFAULT_GITHUB_ISSUE_TURN`); confirm acknowledgment.
+6. Let one proactive tick fire, or inspect the latest existing proactive metadata if already fired.
+
+Automated driver remains the pass/fail gate; manual REPL is optional sanity check.
 
 ## DB Checks
 
@@ -157,6 +168,7 @@ For proactive:
 - InputQueue rows for the run are all `delivered`.
 - OutputQueue rows for user-visible replies are all `delivered`.
 - Settled user turn produces one coherent delivered reply.
+- **GitHub issue E2E:** complaint turn produces feedback JSONL `snapshot` + `github_issue_created`; `gh issue view` validates title/labels/body; issue closed in cleanup (`summary.github_issue_e2e: pass`).
 - Proactive LLM input includes the synthetic proactive user marker.
 - LangSmith run ids in REPL metadata match delivered OutputQueue rows where applicable.
 
@@ -178,6 +190,7 @@ Reply with:
 - `agent_id`
 - bootstrap: complete / incomplete
 - settled queue turn: pass / fail
+- github_issue_e2e: pass / fail (issue # if created)
 - proactive prompt marker: present / missing
 - InputQueue / OutputQueue status counts
 - key LangSmith trace/run ids
