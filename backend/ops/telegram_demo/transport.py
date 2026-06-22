@@ -7,14 +7,12 @@ TODO(telegram-reply-reaction-inbound): Route reply_to + emoji reaction updates i
   inbound envelope (not flat text only) — #3441 (epic #3440)
 TODO(!3501): Optional transport-level text coalescing (Hermes ``_flush_text_batch``); prefer
   ``ScopeQueueServing`` post-drain quiet window for durable InputQueue semantics.
-TODO(telegram-launch-onboard-bond-gate): Fail-closed ACTIVE ``companion_bonds`` check before
-  ``activate_telegram_scope`` / ``ensure_presence``; catch ``CompanionBondInvariantError`` — #3533
-  (epic #3531).
 """
 
 from __future__ import annotations
 
 import asyncio
+from enum import StrEnum
 
 from loguru import logger
 
@@ -39,10 +37,14 @@ from app.services.agentic_channel.endpoints import (
     assert_inbound_endpoint_identity,
     resolve_scope,
 )
-from app.services.agentic_channel.errors import ChannelEndpointConflictError
+from app.services.agentic_channel.errors import (
+    ChannelEndpointConflictError,
+    CompanionBondInvariantError,
+)
 from app.services.agentic_channel.presence import ensure_presence, get_presence
 from app.services.agentic_channel.companion_bonds import (
     get_companion_bond_for_scope,
+    require_active_companion_bond,
     resume_companion_bond_runtime,
 )
 from app.services.agentic_channel.provision import (
@@ -74,6 +76,19 @@ _IDENTITY_MISMATCH = (
     "This Telegram account does not match our records. "
     "Please use the same account you used when connecting."
 )
+_BOND_UNAVAILABLE = (
+    "We couldn't reconnect your companion. "
+    "Please try again later or contact support."
+)
+
+
+class OnboardBondGatePath(StrEnum):
+    """Structured-log path label for onboard bond gate rejections."""
+
+    EXISTING_ENDPOINT = "existing_endpoint"
+    PROVISION_RETURNING = "provision_returning"
+    ACTIVATE_PROVISION = "activate_provision"
+    PROVISION_CALL = "provision_call"
 
 
 class TelegramTransport:
@@ -237,6 +252,12 @@ class TelegramTransport:
                     scope=existing,
                 )
                 return
+            if not await self._gate_onboard_bond(
+                scope=existing,
+                inbound=inbound,
+                path=OnboardBondGatePath.EXISTING_ENDPOINT,
+            ):
+                return
             await self._resume_if_paused(scope=existing)
             await self._ensure_active(
                 inbound=inbound,
@@ -262,6 +283,18 @@ class TelegramTransport:
                 channel_address=inbound.chat_id,
                 channel_user_id=inbound.channel_user_id,
             )
+        except CompanionBondInvariantError as exc:
+            reject_scope = await resolve_scope(
+                channel=ChannelKind.TELEGRAM,
+                channel_address=inbound.chat_id,
+            )
+            await self._reject_onboard_for_bond(
+                scope=reject_scope,
+                inbound=inbound,
+                path=OnboardBondGatePath.PROVISION_CALL,
+                exc=exc,
+            )
+            return
         except (ValueError, ChannelEndpointConflictError) as exc:
             logger.warning(
                 "telegram onboard failed chat_id={} from_id={} error={}",
@@ -275,6 +308,12 @@ class TelegramTransport:
             )
             return
         if not provision.is_new_user:
+            if not await self._gate_onboard_bond(
+                scope=provision.scope,
+                inbound=inbound,
+                path=OnboardBondGatePath.PROVISION_RETURNING,
+            ):
+                return
             await self._resume_if_paused(scope=provision.scope)
             await self._ensure_active(
                 inbound=inbound,
@@ -312,6 +351,12 @@ class TelegramTransport:
         inbound: TelegramIncomingMessage,
         provision: ChannelProvisionResult,
     ) -> None:
+        if not await self._gate_onboard_bond(
+            scope=provision.scope,
+            inbound=inbound,
+            path=OnboardBondGatePath.ACTIVATE_PROVISION,
+        ):
+            return
         record = EndpointRecord(
             user_id=provision.scope.user_id,
             agent_id=provision.scope.agent_id,
@@ -338,6 +383,50 @@ class TelegramTransport:
                 provision.scope.user_id,
                 provision.scope.agent_id,
             )
+
+    async def _reject_onboard_for_bond(
+        self,
+        *,
+        scope: AgentScope | None,
+        inbound: TelegramIncomingMessage,
+        path: OnboardBondGatePath,
+        exc: CompanionBondInvariantError,
+    ) -> None:
+        """Log bond rejection and send static onboard notice without starting runtime."""
+        scope_key = scope.registry_key() if scope is not None else "unknown"
+        logger.warning(
+            "telegram_onboard_rejected_bond path={} scope={} chat_id={} from_id={} reason={}",
+            path.value,
+            scope_key,
+            inbound.chat_id,
+            inbound.channel_user_id,
+            exc,
+        )
+        await self._send_channel_text(
+            chat_id=inbound.chat_id,
+            text=_BOND_UNAVAILABLE,
+        )
+
+    async def _gate_onboard_bond(
+        self,
+        *,
+        scope: AgentScope,
+        inbound: TelegramIncomingMessage,
+        path: OnboardBondGatePath,
+    ) -> bool:
+        """Return whether scope has a runnable ACTIVE bond before onboard runtime start."""
+        try:
+            async with AsyncSessionLocal() as db:
+                await require_active_companion_bond(db, scope)
+        except CompanionBondInvariantError as exc:
+            await self._reject_onboard_for_bond(
+                scope=scope,
+                inbound=inbound,
+                path=path,
+                exc=exc,
+            )
+            return False
+        return True
 
     async def _resume_if_paused(self, *, scope: AgentScope) -> None:
         """Clear runtime pause flag before normal Telegram runtime activation."""

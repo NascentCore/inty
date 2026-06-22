@@ -17,6 +17,7 @@ from app.services.agentic_channel.channel_runtime import turn_channel_up
 from app.services.agentic_channel.companion_bonds import (
     get_companion_bond_for_scope,
     has_active_companion_bond,
+    require_active_companion_bond,
 )
 from app.services.agentic_channel.endpoints import (
     EndpointRecord,
@@ -58,12 +59,10 @@ async def activate_telegram_scope(
     api: TelegramBotApi,
     reason: str,
 ) -> None:
-    """Turn up Telegram channel, ensure presence, cache scope by address.
-
-    TODO(telegram-launch-onboard-bond-gate): Require ACTIVE bond before ``ensure_presence``
-    on onboard paths (restore already checks via caller) — #3533 (epic #3531).
-    """
+    """Turn up Telegram channel, ensure presence, cache scope by address."""
     scope = record.to_scope()
+    async with AsyncSessionLocal() as db:
+        await require_active_companion_bond(db, scope)
     remember_scope(channel_address=record.channel_address, scope=scope)
     adapter = TelegramChannelAdapter(
         api=api,
