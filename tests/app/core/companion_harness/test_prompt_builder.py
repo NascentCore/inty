@@ -270,3 +270,71 @@ def test_openai_dialogue_dicts_to_prompt_messages() -> None:
     )
     assert converted[0].role == PromptMessageRole.USER
     assert converted[1].role == PromptMessageRole.ASSISTANT
+
+
+def _dual_llm_base_messages() -> list[dict[str, Any]]:
+    return [
+        {"role": "system", "content": "doctrine"},
+        {"role": "system", "content": "persona"},
+        {"role": "user", "content": "earlier"},
+        {"role": "assistant", "content": "ok"},
+        {"role": "system", "content": "## User's Local Time Context"},
+        {"role": "user", "content": "complaint turn"},
+    ]
+
+
+def test_build_settled_user_chat_dual_llm_tool_prompt_plan_includes_disclosure_clause(
+    monkeypatch,
+) -> None:
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: mod.UserFeedbackDisclosureMode.VISIBLE,
+    )
+    builder = PromptBuilder(
+        bundle=_bundle(),
+        context=ContextMeta(),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    )
+    tools = tuple(build_openai_repl_tools())
+    plan = builder.build_settled_user_chat_dual_llm_tool_prompt_plan(
+        base_messages=_dual_llm_base_messages(),
+        stack_depth=2,
+        tools=tools,
+    )
+    system_text = _system_text(plan.messages)
+    assert "companion_record_user_feedback" in system_text
+    assert "github_issue_url" in system_text
+    assert plan.tools == tools
+
+
+def test_build_settled_user_chat_dual_llm_tool_prompt_plan_omits_disclosure_when_hidden(
+    monkeypatch,
+) -> None:
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: mod.UserFeedbackDisclosureMode.HIDDEN,
+    )
+    builder = PromptBuilder(
+        bundle=_bundle(),
+        context=ContextMeta(),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    )
+    plan = builder.build_settled_user_chat_dual_llm_tool_prompt_plan(
+        base_messages=_dual_llm_base_messages(),
+        stack_depth=2,
+        tools=tuple(build_openai_repl_tools()),
+    )
+    system_text = _system_text(plan.messages)
+    assert "github_issue_url" not in system_text

@@ -10,3 +10,4 @@
 - Define key class, functions with 1 sentence description and succinct doc string.
   - Describe how they interact to achieve the design objectives
   - Enum type has semantic of the values
+- Keep scope focused on the core problem

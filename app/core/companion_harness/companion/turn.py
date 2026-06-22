@@ -114,6 +114,7 @@ from .in_turn_sync_tool_loop import (
 from .prompt_stack import refresh_companion_turn_prompt_stack
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
+    prompt_messages_to_openai_dicts,
     refresh_single_llm_bootstrap_chat_prompt_prefix,
     refresh_single_llm_user_chat_prompt_prefix,
 )
@@ -644,16 +645,14 @@ async def _run_companion_turn_core(
                             context=loop_context
                         )
                     else:
-                        tool_system_msgs, chat_system_msgs = (
-                            dual_llm_system_message_variants(
-                                store=store,
-                                bundle=bundle,
-                                context=context,
-                                memory_bootstrap_type=memory_bootstrap_type,
-                                inner_tick_turn=False,
-                                route_inner_activity=route_inner_activity,
-                                runtime_context=runtime_context,
-                            )
+                        _, chat_system_msgs = dual_llm_system_message_variants(
+                            store=store,
+                            bundle=bundle,
+                            context=context,
+                            memory_bootstrap_type=memory_bootstrap_type,
+                            inner_tick_turn=False,
+                            route_inner_activity=route_inner_activity,
+                            runtime_context=runtime_context,
                         )
                         _stack_depth = len(prompt_plan.system_messages)
                         chat_msgs = replace_leading_system_messages_multi(
@@ -661,10 +660,18 @@ async def _run_companion_turn_core(
                             chat_system_msgs,
                             stack_depth=_stack_depth,
                         )
-                        tool_msgs = replace_leading_system_messages_multi(
-                            messages,
-                            tool_system_msgs,
+                        dual_llm_prompt_builder = PromptBuilder(
+                            bundle=bundle,
+                            context=context,
+                            runtime_context=runtime_context,
+                        )
+                        tool_plan = dual_llm_prompt_builder.build_settled_user_chat_dual_llm_tool_prompt_plan(
+                            base_messages=messages,
                             stack_depth=_stack_depth,
+                            tools=tuple(tools_for_turn),
+                        )
+                        tool_msgs = prompt_messages_to_openai_dicts(
+                            tool_plan.messages
                         )
                         loop_context = build_settled_dual_llm_user_chat_loop_context(
                             messages=messages,
@@ -783,11 +790,26 @@ async def _run_companion_turn_core(
                         chat_system_msgs,
                         stack_depth=_stack_depth,
                     )
-                    tool_msgs = replace_leading_system_messages_multi(
-                        messages,
-                        tool_system_msgs,
-                        stack_depth=_stack_depth,
-                    )
+                    if inner_tick_turn:
+                        tool_msgs = replace_leading_system_messages_multi(
+                            messages,
+                            tool_system_msgs,
+                            stack_depth=_stack_depth,
+                        )
+                    else:
+                        dual_llm_prompt_builder = PromptBuilder(
+                            bundle=bundle,
+                            context=context,
+                            runtime_context=runtime_context,
+                        )
+                        tool_plan = dual_llm_prompt_builder.build_settled_user_chat_dual_llm_tool_prompt_plan(
+                            base_messages=messages,
+                            stack_depth=_stack_depth,
+                            tools=tuple(tools_for_turn),
+                        )
+                        tool_msgs = prompt_messages_to_openai_dicts(
+                            tool_plan.messages
+                        )
                     chat_model = llm_client.resolve_model("chat")
                     tool_model = llm_client.resolve_model("tool")
                     foreground_scene = (

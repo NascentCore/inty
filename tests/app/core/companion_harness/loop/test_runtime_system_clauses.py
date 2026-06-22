@@ -8,8 +8,11 @@ from app.core.companion_harness.companion.prompt_stack import (
     replace_leading_system_messages_inplace,
 )
 from app.core.companion_harness.loop.runtime_system_clauses import (
+    DEBUG_DISCLOSE_GITHUB_ISSUE_CLAUSE,
     REPLY_IN_USER_LANGUAGE_CLAUSE,
     apply_agentic_loop_runtime_system_clauses,
+    apply_debug_github_disclosure_runtime_clause,
+    debug_disclose_github_issue_system_clause,
     reply_in_user_language_system_clause,
 )
 
@@ -95,4 +98,48 @@ def test_clause_survives_leading_prefix_refresh() -> None:
     ]
     assert len(clause_rows) == 1
     assert messages[-2]["content"] == REPLY_IN_USER_LANGUAGE_CLAUSE
+    assert messages[-1]["content"] == "你好"
+
+
+def test_debug_disclose_github_issue_system_clause_visible(monkeypatch) -> None:
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: mod.UserFeedbackDisclosureMode.VISIBLE,
+    )
+    assert (
+        debug_disclose_github_issue_system_clause()
+        == DEBUG_DISCLOSE_GITHUB_ISSUE_CLAUSE
+    )
+
+
+def test_debug_disclose_github_issue_system_clause_hidden(monkeypatch) -> None:
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: mod.UserFeedbackDisclosureMode.HIDDEN,
+    )
+    assert debug_disclose_github_issue_system_clause() is None
+
+
+def test_apply_debug_github_disclosure_inserts_before_tail_user(
+    monkeypatch,
+) -> None:
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: mod.UserFeedbackDisclosureMode.VISIBLE,
+    )
+    messages = _realistic_message_stack()
+    apply_debug_github_disclosure_runtime_clause(openai_messages=messages)
+    assert messages[-2] == {
+        "role": "system",
+        "content": DEBUG_DISCLOSE_GITHUB_ISSUE_CLAUSE,
+    }
     assert messages[-1]["content"] == "你好"

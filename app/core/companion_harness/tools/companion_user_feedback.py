@@ -1,10 +1,14 @@
-"""Companion user complaint tool: harness snapshot + async GitHub issue.
+"""Companion user complaint tool: harness snapshot + GitHub issue filing.
 
 Design:
 - Sync: capture ``HarnessSnapshot`` and append ``kind=snapshot`` to
   ``.companion_user_feedback.jsonl`` before returning to the LLM tool loop.
-- Async: daemon thread POSTs GitHub issue; appends ``kind=github_issue_created``
-  or ``kind=github_issue_skipped`` (never blocks the tool handler).
+- GitHub filing: always attempted when token is configured (async when
+  ``app.debug`` is false; sync when true so the tool result can carry the URL).
+- Disclosure: ``app.debug`` controls GitHub URL/number in the LLM-visible tool
+  result only — prod users see ``feedback_recorded`` without GitHub details.
+  When ``app.debug`` is true, ``tool_background`` prepends the issue URL from
+  the tool return to the user-visible tool-leg reply (deterministic; not LLM).
 - Correlation: ``get_current_trace_info()`` + ``companion_llm_runtime_event_bind_ctx``
   at tool-call time (user-turn LangSmith trace + inty_trace_id / user_msg_uuid).
 - GitHub REST lives in ``app.utils.github.issues``; issue title/body/labels in
@@ -33,6 +37,7 @@ from app.core.companion_harness.companion.runtime_events import (
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.utils.github.issues import GithubIssueCreateResult
 from app.utils.langsmith import get_current_trace_info
 
 USER_FEEDBACK_JSONL_REL = ".companion_user_feedback.jsonl"
@@ -62,6 +67,32 @@ class ComplaintCategory(StrEnum):
     TONE = "tone"
     TOOL_FAILURE = "tool_failure"
     OTHER = "other"
+
+
+class UserFeedbackDisclosureMode(StrEnum):
+    """Controls GitHub identifiers in the LLM-visible tool result only."""
+
+    HIDDEN = "hidden"
+    VISIBLE = "visible"
+
+
+@dataclass(frozen=True)
+class UserFeedbackToolOutcome:
+    """Inputs to ``format_user_feedback_tool_result``."""
+
+    feedback_id: str
+    disclosure: UserFeedbackDisclosureMode
+    github_issue_url: str
+    github_issue_number: int
+    github_skipped_reason: str | None
+
+
+@dataclass(frozen=True)
+class UserFeedbackVisibleDisplay:
+    """Deterministic user-visible WS text when debug disclosure applies."""
+
+    github_issue_url: str
+    display_text: str
 
 
 @dataclass(frozen=True)
@@ -250,15 +281,119 @@ def append_github_issue_skipped(
     )
 
 
-def _github_issue_worker(
+def resolve_user_feedback_disclosure_mode() -> UserFeedbackDisclosureMode:
+    """Return VISIBLE when ``app.debug`` is true so testers get issue URLs in tool output."""
+    from app.core.config import global_config_loaded_from_config_yaml
+
+    if global_config_loaded_from_config_yaml.app.debug:
+        return UserFeedbackDisclosureMode.VISIBLE
+    return UserFeedbackDisclosureMode.HIDDEN
+
+
+def format_user_feedback_tool_result(outcome: UserFeedbackToolOutcome) -> str:
+    """Build the LLM-visible tool result; HIDDEN never exposes GitHub identifiers."""
+    base = f"OK feedback_id={outcome.feedback_id}"
+    if outcome.disclosure == UserFeedbackDisclosureMode.HIDDEN:
+        return f"{base} feedback_recorded"
+    if outcome.github_issue_url.strip() and outcome.github_issue_number > 0:
+        return (
+            f"{base} github_issue_url={outcome.github_issue_url.strip()} "
+            f"github_issue_number={outcome.github_issue_number}"
+        )
+    if outcome.github_skipped_reason:
+        return f"{base} github_issue_status={outcome.github_skipped_reason}"
+    return f"{base} feedback_recorded"
+
+
+def parse_github_issue_url_from_feedback_tool_result(tool_result: str) -> str:
+    """Parse ``github_issue_url=`` from a ``companion_record_user_feedback`` tool return."""
+    for part in tool_result.split():
+        if part.startswith("github_issue_url="):
+            url = part.split("=", 1)[1].strip()
+            if url.startswith("http"):
+                return url
+    return ""
+
+
+def extract_github_issue_url_from_tool_turn_messages(
+    appended_messages: list[dict[str, Any]],
+) -> str:
+    """Return issue URL from the latest successful ``companion_record_user_feedback`` tool row."""
+    pending: dict[str, str] = {}
+    found = ""
+    for message in appended_messages:
+        role = message.get("role")
+        if role == "assistant":
+            pending.clear()
+            for tool_call in message.get("tool_calls") or []:
+                if not isinstance(tool_call, dict):
+                    continue
+                tool_call_id = tool_call.get("id")
+                function = tool_call.get("function")
+                if not isinstance(function, dict):
+                    continue
+                raw_name = function.get("name")
+                if isinstance(tool_call_id, str) and isinstance(raw_name, str):
+                    name = raw_name.strip()
+                    if name:
+                        pending[tool_call_id] = name
+            continue
+        if role != "tool":
+            continue
+        tool_call_id = message.get("tool_call_id")
+        if not isinstance(tool_call_id, str):
+            continue
+        if (
+            pending.get(tool_call_id)
+            != COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME
+        ):
+            continue
+        content = message.get("content")
+        if not isinstance(content, str) or content.strip().startswith("ERROR"):
+            continue
+        url = parse_github_issue_url_from_feedback_tool_result(content)
+        if url:
+            found = url
+    return found
+
+
+def resolve_user_visible_feedback_display_text(
+    *,
+    llm_reply: str,
+    appended_turn_msgs: list[dict[str, Any]],
+) -> UserFeedbackVisibleDisplay | None:
+    """Prepend deterministic issue URL to tool-leg NL when ``app.debug`` disclosure is visible."""
+    if (
+        resolve_user_feedback_disclosure_mode()
+        != UserFeedbackDisclosureMode.VISIBLE
+    ):
+        return None
+    issue_url = extract_github_issue_url_from_tool_turn_messages(
+        appended_turn_msgs
+    )
+    if not issue_url:
+        return None
+    reply = llm_reply.strip()
+    if issue_url in reply:
+        display_text = reply
+    elif reply:
+        display_text = f"{issue_url}\n\n{reply}"
+    else:
+        display_text = issue_url
+    return UserFeedbackVisibleDisplay(
+        github_issue_url=issue_url,
+        display_text=display_text,
+    )
+
+
+def file_github_issue_for_snapshot(
     snapshot: HarnessSnapshot,
     store: MemoryStore,
+    *,
     github_repo: str,
     github_token: str,
-) -> None:
-    # TODO(companion-user-feedback): MemoryStore.append_jsonl_record is read-modify-write; — #3552
-    # concurrent appends from other turns may race — consider append-only repo API.
-    # Lazy import avoids import cycle (github_issue module imports HarnessSnapshot here).
+) -> GithubIssueCreateResult:
+    """POST GitHub issue synchronously and append ``github_issue_created`` JSONL."""
     from app.core.companion_harness.tools.companion_user_feedback_github_issue import (
         create_companion_user_feedback_github_issue,
     )
@@ -280,17 +415,39 @@ def _github_issue_worker(
             snapshot.feedback_id,
             result.url,
         )
+        return result
     except Exception as exc:
+        reason = f"github_error:{type(exc).__name__}:{exc}"
         append_github_issue_skipped(
             store,
             feedback_id=snapshot.feedback_id,
-            reason=f"github_error:{type(exc).__name__}:{exc}",
+            reason=reason,
         )
         logger.warning(
             "companion_user_feedback github_issue_failed feedback_id={} err={}",
             snapshot.feedback_id,
             exc,
         )
+        raise RuntimeError(reason) from exc
+
+
+def _github_issue_worker(
+    snapshot: HarnessSnapshot,
+    store: MemoryStore,
+    github_repo: str,
+    github_token: str,
+) -> None:
+    # TODO(companion-user-feedback): MemoryStore.append_jsonl_record is read-modify-write; — #3552
+    # concurrent appends from other turns may race — consider append-only repo API.
+    try:
+        file_github_issue_for_snapshot(
+            snapshot,
+            store,
+            github_repo=github_repo,
+            github_token=github_token,
+        )
+    except RuntimeError:
+        return
 
 
 def start_github_issue_job(
@@ -346,6 +503,7 @@ def tool_companion_record_user_feedback(
     snapshot = build_harness_snapshot(store, feedback_input)
     append_user_feedback_record(store, _snapshot_to_record(snapshot))
 
+    disclosure = resolve_user_feedback_disclosure_mode()
     github_repo, github_token = load_user_feedback_github_config()
     if not github_token.strip():
         append_github_issue_skipped(
@@ -353,9 +511,42 @@ def tool_companion_record_user_feedback(
             feedback_id=snapshot.feedback_id,
             reason="skipped_no_token",
         )
-        return (
-            f"OK feedback_id={snapshot.feedback_id} "
-            "github_issue=skipped_no_token"
+        return format_user_feedback_tool_result(
+            UserFeedbackToolOutcome(
+                feedback_id=snapshot.feedback_id,
+                disclosure=disclosure,
+                github_issue_url="",
+                github_issue_number=0,
+                github_skipped_reason="skipped_no_token",
+            )
+        )
+
+    if disclosure == UserFeedbackDisclosureMode.VISIBLE:
+        try:
+            result = file_github_issue_for_snapshot(
+                snapshot,
+                store,
+                github_repo=github_repo,
+                github_token=github_token,
+            )
+        except RuntimeError as exc:
+            return format_user_feedback_tool_result(
+                UserFeedbackToolOutcome(
+                    feedback_id=snapshot.feedback_id,
+                    disclosure=disclosure,
+                    github_issue_url="",
+                    github_issue_number=0,
+                    github_skipped_reason=str(exc),
+                )
+            )
+        return format_user_feedback_tool_result(
+            UserFeedbackToolOutcome(
+                feedback_id=snapshot.feedback_id,
+                disclosure=disclosure,
+                github_issue_url=result.url,
+                github_issue_number=result.number,
+                github_skipped_reason=None,
+            )
         )
 
     start_github_issue_job(
@@ -364,4 +555,12 @@ def tool_companion_record_user_feedback(
         github_repo=github_repo,
         github_token=github_token,
     )
-    return f"OK feedback_id={snapshot.feedback_id} github_issue=queued"
+    return format_user_feedback_tool_result(
+        UserFeedbackToolOutcome(
+            feedback_id=snapshot.feedback_id,
+            disclosure=disclosure,
+            github_issue_url="",
+            github_issue_number=0,
+            github_skipped_reason=None,
+        )
+    )

@@ -11,9 +11,11 @@ Create a pull request for the current working branch
    
 
 2. **Write PR title & description**
-   - 输出中文
+   - 输出中文 (output in Mandarin)
    - Summarize changes clearly in PR title
-   - In PR description, describe changed behaviors from the user's persecptive, include context and motivation.
+   - In PR description:
+     - Describe changed behaviors from the user's persecptive
+     - Include context and motivation.
 
 3. **Create PR**
    - Create the PR with the above title and description.
@@ -28,4 +30,4 @@ Create a pull request for the current working branch
 
 ## Output
 
-Just the PR URL.
+Just the PR URL, and title. Do not include anything else.
