@@ -186,9 +186,8 @@ class _DomainToolBackgroundAppendSink:
         self._drainer: asyncio.Task[None] | None = None
 
     def __call__(self, event: ToolOutputEvent) -> None:
-    if not event.output_to_user:
-        return
-    # TODO(#3596): Skip append when text substantially duplicates foreground USER_REPLY.
+        if not event.output_to_user:
+            return
         if user_visible_assistant_text(event.text) is None:
             return
         self._ensure_drainer()
@@ -479,11 +478,7 @@ class AgenticLoop:
     async def run_dual_llm_user_turn(
         self, *, context: AgenticLoopContext
     ) -> AgenticLoopOutput:
-        """Execute one dual-LLM user turn; foreground and tool-leg user-visible text → ``OutputQueue``.
-
-        TODO(#3596): Suppress tool-leg downlink when foreground already delivered equivalent
-        ``user_facing_reply`` and no user-visible tool recap is required.
-        """
+        """Execute one dual-LLM user turn; foreground and tool-leg user-visible text → ``OutputQueue``."""
         assert (
             context.dual_llm_chat_msgs is not None
             and context.dual_llm_tool_msgs is not None
