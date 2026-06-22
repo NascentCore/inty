@@ -1,6 +1,8 @@
 # Plan implementation
 
-This is to draft a solid implementation plan, after you have a sound design.
+Must be in plan mode, if not, swith to plan mode first.
+
+Draft a solid implementation plan, after you have a sound design.
 
 ## Scoping
 
