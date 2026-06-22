@@ -64,12 +64,17 @@ import threading
 import time
 import uuid
 from contextlib import nullcontext
+from dataclasses import replace
 from typing import Any
 
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.utils.config import CompanionMemoryBootstrapType
+from app.core.companion_harness.memory.client_time_from_memory_store import (
+    resolve_client_time,
+)
+from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_IMPLICIT_SIGN_ON_GREETING,
     SOURCE_SINGLE_COMPLETION,
@@ -270,6 +275,28 @@ async def _run_companion_turn_core(
     repository_only_store_text = deps.repository_only_store_text
     memory_bootstrap_type = deps.memory_bootstrap_type
     runtime_context = deps.runtime_context
+    incoming_bundle = runtime_context.implicit_signal_bundle
+    resolved_time = resolve_client_time(
+        store=store,
+        incoming=(
+            incoming_bundle.client_time if incoming_bundle is not None else None
+        ),
+        default_user_time_zone=(
+            global_config_loaded_from_config_yaml.agent.companion_harness.default_user_time_zone
+        ),
+    )
+    if resolved_time is not None:
+        if incoming_bundle is None:
+            enriched_bundle = ImplicitSignalBundle(client_time=resolved_time)
+        else:
+            enriched_bundle = incoming_bundle.model_copy(
+                update={"client_time": resolved_time}
+            )
+        runtime_context = replace(
+            runtime_context,
+            implicit_signal_bundle=enriched_bundle,
+        )
+        deps = replace(deps, runtime_context=runtime_context)
     background_output_sink = deps.background_output_sink
     preset_user_msg_uuid = deps.preset_user_msg_uuid
     langsmith_parent_run_enabled = deps.langsmith_parent_run_enabled

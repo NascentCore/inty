@@ -94,6 +94,8 @@ agent:
     - "justicezyx@gmail.com"  # 赵亚雄个人账户
 
   companion_harness:
+    # TEMPORARY launch shim (issues/3586): US Pacific when client and USER.md lack TZ.
+    default_user_time_zone: America/Los_Angeles
     user_feedback_github:
       token: "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"
 

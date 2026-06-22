@@ -863,6 +863,35 @@ def test_companion_harness_memory_bootstrap_type_invalid_raises() -> None:
         )
 
 
+def test_companion_harness_default_user_time_zone_normalizes() -> None:
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={"default_user_time_zone": "America/Los_Angeles"},
+    )
+    assert (
+        agent.companion_harness.default_user_time_zone == "America/Los_Angeles"
+    )
+
+
+def test_companion_harness_default_user_time_zone_empty_disables() -> None:
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={"default_user_time_zone": "   "},
+    )
+    assert agent.companion_harness.default_user_time_zone is None
+
+
+def test_companion_harness_default_user_time_zone_invalid_raises() -> None:
+    with pytest.raises(ValueError, match="default_user_time_zone"):
+        AgentConfig(
+            api_key="test",
+            langchain_api_key="test",
+            companion_harness={"default_user_time_zone": "America/Not_A_Zone"},
+        )
+
+
 def test_companion_harness_batch_user_messages_mode_default() -> None:
     agent = AgentConfig(api_key="test", langchain_api_key="test")
     assert (

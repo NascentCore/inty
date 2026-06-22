@@ -12,7 +12,7 @@ Usage scenarios:
 - Provisioning / WS bootstrap: ensure a seeded session exists before any turn runs.
 - Inbound user turn: execute one user message; caller already holds the scope turn lock
   (asserted, not acquired). Injects the one-time session-system message for interactive
-  bootstrap, backfills client time from MemoryStore, then delegates to the manager.
+  bootstrap, then delegates to the manager (client time resolved in turn core).
 """
 
 from __future__ import annotations
@@ -55,9 +55,6 @@ from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
-from app.core.companion_harness.memory.client_time_from_memory_store import (
-    client_time_from_memory_store,
-)
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
@@ -236,12 +233,6 @@ async def run_agent_turn(
         )
     assert_scope_turn_lock_held_by_current_task(session.scope)
     await _maybe_append_agent_channel_session_system(session=session)
-    bundle = implicit_signal_bundle
-    # TODO(#3411): Manual E2E — after USER.md 时区 persisted, verify enrichment + LangSmith time slice.
-    if bundle.client_time is None:
-        client_time = client_time_from_memory_store(session.store)
-        if client_time is not None:
-            bundle = bundle.model_copy(update={"client_time": client_time})
     out = await manager.run_user_chat_turn(
         session,
         user_text,
@@ -249,7 +240,7 @@ async def run_agent_turn(
         preset_user_msg_uuid=preset_user_msg_uuid,
         runtime_context=TurnRuntimeContext(
             channel=runtime_channel,
-            implicit_signal_bundle=bundle,
+            implicit_signal_bundle=implicit_signal_bundle,
         ),
         agentic_output_queue=agentic_output_queue,
         user_message_batch=user_message_batch,
