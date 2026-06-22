@@ -1,8 +1,9 @@
 """GitHub issue title/body for companion user-feedback snapshots.
 
 Companion-specific formatting only; HTTP client is ``app.utils.github.issues``.
-Issues use ``[user-reported]`` title prefix and label fallbacks when optional
-labels (``user-reported``, ``needs-triage``) are missing on the repo.
+Issues use ``[user-reported]`` title prefix and repo labels (``user-reported``,
+``agentic_companion``, ``bug``, ``needs-triage``, ``p2``, category severity).
+Label fallbacks drop optional names when GitHub returns HTTP 422.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 import json
 
 from app.core.companion_harness.tools.companion_user_feedback import (
+    ComplaintCategory,
     HarnessSnapshot,
     UserTurnCorrelation,
     tail_text,
@@ -24,25 +26,63 @@ from app.utils.github.issues import (
 GITHUB_BODY_TRANSCRIPT_MAX_CHARS = 2_000
 GITHUB_BODY_MEMORY_DOC_MAX_CHARS = 500
 GITHUB_ISSUE_TITLE_PREFIX = "[user-reported]"
-GITHUB_ISSUE_LABELS: tuple[str, ...] = (
+_GITHUB_ISSUE_BASE_LABELS: tuple[str, ...] = (
     "user-reported",
     "agentic_companion",
+    "bug",
     "needs-triage",
     "p2",
-    "s2",
+)
+_COMPLAINT_CATEGORY_SEVERITY_LABEL: dict[str, str] = {
+    ComplaintCategory.TOOL_FAILURE.value: "s1",
+    ComplaintCategory.BEHAVIOR.value: "s2",
+    ComplaintCategory.MEMORY.value: "s2",
+    ComplaintCategory.TONE.value: "s3",
+    ComplaintCategory.OTHER.value: "s2",
+}
+_DEFAULT_SEVERITY_LABEL = "s2"
+_OPTIONAL_GITHUB_ISSUE_LABELS: frozenset[str] = frozenset(
+    {"needs-triage", "user-reported", "bug"}
 )
 
 
-def companion_user_feedback_github_label_sets() -> tuple[tuple[str, ...], ...]:
+def github_issue_severity_label_for_category(complaint_category: str) -> str:
+    """Map ``complaint_category`` to an existing repo ``s*`` severity label."""
+    return _COMPLAINT_CATEGORY_SEVERITY_LABEL.get(
+        complaint_category.strip(),
+        _DEFAULT_SEVERITY_LABEL,
+    )
+
+
+def build_github_issue_labels(snapshot: HarnessSnapshot) -> tuple[str, ...]:
+    """Primary label set for one user-feedback issue (all names exist on ``nascentcore/inty``)."""
+    severity = github_issue_severity_label_for_category(
+        snapshot.complaint_category
+    )
+    return _GITHUB_ISSUE_BASE_LABELS + (severity,)
+
+
+def companion_user_feedback_github_label_sets(
+    snapshot: HarnessSnapshot,
+) -> tuple[tuple[str, ...], ...]:
+    """Fallback label sets when GitHub rejects unknown label names (HTTP 422)."""
+    primary = build_github_issue_labels(snapshot)
+    without_optional = tuple(
+        lb for lb in primary if lb not in _OPTIONAL_GITHUB_ISSUE_LABELS
+    )
     return (
-        GITHUB_ISSUE_LABELS,
-        tuple(lb for lb in GITHUB_ISSUE_LABELS if lb != "needs-triage"),
+        primary,
+        tuple(lb for lb in primary if lb != "needs-triage"),
+        tuple(
+            lb for lb in primary if lb not in ("needs-triage", "user-reported")
+        ),
         tuple(
             lb
-            for lb in GITHUB_ISSUE_LABELS
-            if lb not in ("needs-triage", "user-reported")
+            for lb in primary
+            if lb not in ("needs-triage", "user-reported", "bug")
         ),
-        ("agentic_companion", "p2", "s2"),
+        without_optional,
+        ("agentic_companion", "p2", _DEFAULT_SEVERITY_LABEL),
     )
 
 
@@ -159,6 +199,6 @@ def create_companion_user_feedback_github_issue(
             token=token,
             title=build_github_issue_title(snapshot),
             body=build_github_issue_body(snapshot),
-            label_sets=companion_user_feedback_github_label_sets(),
+            label_sets=companion_user_feedback_github_label_sets(snapshot),
         )
     )

@@ -819,9 +819,24 @@ async def run_tool_background_loop(
             filler = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs)
             if filler:
                 base_nl = filler
+        from app.core.companion_harness.tools.companion_user_feedback import (
+            resolve_user_visible_feedback_display_text,
+        )
+
+        feedback_display = resolve_user_visible_feedback_display_text(
+            llm_reply=base_nl,
+            appended_turn_msgs=appended_turn_msgs,
+        )
         # Local image paths now travel out-of-band on ToolOutputEvent.local_image_paths
         # (REPL surfaces them as a banner). Body text stays NL-only for production clients.
-        display_text = base_nl
+        deliver_output_to_user = output_to_user_flag
+        if feedback_display is not None:
+            display_text = feedback_display.display_text
+            if display_text.strip():
+                should_push = True
+                deliver_output_to_user = True
+        else:
+            display_text = base_nl
         elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
 
         transcript_body = build_tool_background_transcript_body(
@@ -838,6 +853,7 @@ async def run_tool_background_loop(
             user_msg_uuid,
             generation_deliver,
             output_to_user_flag,
+            deliver_output_to_user,
             should_push,
             ",".join(tool_call_names),
             len(image_paths),
@@ -933,6 +949,7 @@ async def run_tool_background_loop(
             assistant_msg_uuid,
             generation_deliver,
             output_to_user_flag,
+            deliver_output_to_user,
             len(display_text.strip()),
             len(transcript_body),
             len(image_paths),
@@ -949,7 +966,7 @@ async def run_tool_background_loop(
                 trace_id=trace_id,
                 langsmith_trace_id=bg_ls_trace,
                 langsmith_run_id=bg_ls_llm_run,
-                output_to_user=output_to_user_flag,
+                output_to_user=deliver_output_to_user,
                 generation_deliver=generation_deliver,
                 image_asset_baseline=image_asset_baseline,
                 local_image_paths=tuple(image_paths),

@@ -95,14 +95,24 @@ def main() -> int:
     finally:
         companion_llm_runtime_event_bind_ctx.reset(token)
 
-    if not out.startswith("OK feedback_id=") or "github_issue=queued" not in out:
+    if not out.startswith("OK feedback_id="):
+        _emit(False, f"unexpected tool output: {out}", 1)
+        return 1
+    if "github_issue_url=" not in out and "feedback_recorded" not in out:
         _emit(False, f"unexpected tool output: {out}", 1)
         return 1
 
     issue_url = ""
     issue_number = 0
+    if "github_issue_url=" in out:
+        for part in out.split():
+            if part.startswith("github_issue_url="):
+                issue_url = part.split("=", 1)[1]
+            elif part.startswith("github_issue_number="):
+                issue_number = int(part.split("=", 1)[1])
+
     deadline = time.monotonic() + 60.0
-    while time.monotonic() < deadline:
+    while time.monotonic() < deadline and (not issue_url or issue_number <= 0):
         raw = store.read_document_if_exists(USER_FEEDBACK_JSONL_REL) or ""
         for line in raw.strip().split("\n"):
             if not line.strip():
@@ -142,6 +152,12 @@ def main() -> int:
         return 1
     if "agentic_companion" not in labels:
         _emit(False, f"missing agentic_companion: {labels}", 1)
+        return 1
+    if "user-reported" not in labels:
+        _emit(False, f"missing user-reported: {labels}", 1)
+        return 1
+    if "bug" not in labels:
+        _emit(False, f"missing bug: {labels}", 1)
         return 1
 
     if args.close:

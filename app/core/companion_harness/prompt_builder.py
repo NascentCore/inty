@@ -29,9 +29,13 @@ from app.core.companion_harness.companion.prompt_stack import (
     replace_leading_system_messages_inplace,
     weixin_clawbot_contact_alias_system_message,
 )
+from app.core.companion_harness.companion.dual_llm_message_stacks import (
+    replace_leading_system_messages_multi,
+)
 from app.core.companion_harness.companion.prompts.system_messages import (
     _auxiliary_system_messages,
     _doctrine_system_messages,
+    build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.prompting.tracks import (
     _capability_bootstrap_single_llm_system_messages,
@@ -65,6 +69,9 @@ from app.core.companion_harness.memory.transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.loop.runtime_system_clauses import (
+    apply_debug_github_disclosure_runtime_clause,
+)
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_bootstrap_track_tools,
     build_openai_repl_tools,
@@ -206,6 +213,39 @@ class PromptBuilder:
             _contextual_bootstrap_user_turn_system_messages(self.context)
         )
         return out
+
+    def settled_dual_llm_tool_system_messages(self) -> list[dict[str, Any]]:
+        """Tool-leg system prefix for settled USER_CHAT dual-LLM (not inner-tick)."""
+        return _append_runtime_channel_system_extras(
+            system_dicts=build_system_messages_for_tool_track(
+                self.bundle,
+                self.context,
+            ),
+            bundle=self.bundle,
+            runtime_context=self.runtime_context,
+        )
+
+    def build_settled_user_chat_dual_llm_tool_prompt_plan(
+        self,
+        *,
+        base_messages: list[dict[str, Any]],
+        stack_depth: int,
+        tools: tuple[dict[str, Any], ...],
+    ) -> PromptPlan:
+        """Assemble tool-leg ``PromptPlan`` for settled/async USER_CHAT dual-LLM turns."""
+        assert stack_depth >= 0
+        assert tools
+        wire = replace_leading_system_messages_multi(
+            list(base_messages),
+            self.settled_dual_llm_tool_system_messages(),
+            stack_depth=stack_depth,
+        )
+        apply_debug_github_disclosure_runtime_clause(openai_messages=wire)
+        return PromptPlan(
+            messages=openai_dialogue_dicts_to_prompt_messages(wire),
+            tools=tools,
+            tool_choice=None,
+        )
 
     def _build_single_llm_user_chat_prompt(
         self,

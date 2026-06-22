@@ -1,7 +1,8 @@
-"""Loop-owned runtime system clauses injected at AgenticLoop execution time.
+"""Loop-owned runtime system clauses injected at prompt assembly or AgenticLoop time.
 
-These directives are LLM-only: they are not assembled by PromptBuilder, not
-persisted to transcript, and not exposed to channels or upper-layer turn code.
+These directives are LLM-only: they are not persisted to transcript and are not
+exposed to channels. Debug GitHub disclosure is applied via ``PromptBuilder``;
+reply-language clauses are applied via ``AgenticLoop``.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ class LoopRuntimeSystemClauseKind(StrEnum):
     """Semantic kinds of harness-internal system text owned by AgenticLoop."""
 
     REPLY_IN_USER_LANGUAGE = "reply_in_user_language"
+    DEBUG_DISCLOSE_GITHUB_ISSUE = "debug_disclose_github_issue"
 
 
 REPLY_IN_USER_LANGUAGE_CLAUSE = (
@@ -30,6 +32,44 @@ def reply_in_user_language_system_clause(*, user_text: str) -> str | None:
     if user_text.strip() == "":
         return None
     return REPLY_IN_USER_LANGUAGE_CLAUSE
+
+
+DEBUG_DISCLOSE_GITHUB_ISSUE_CLAUSE = (
+    "Debug disclosure (local testing only): when you call "
+    "companion_record_user_feedback and the tool return contains "
+    "github_issue_url=..., set output_to_user to true and include that exact URL "
+    "in user_facing_reply for the user-visible follow-up. Do not invent URLs; "
+    "only copy from the tool return. Keep an empathetic tone."
+)
+
+
+def debug_disclose_github_issue_system_clause() -> str | None:
+    """Return debug GitHub disclosure directive when ``app.debug`` disclosure is on."""
+    from app.core.companion_harness.tools.companion_user_feedback import (
+        UserFeedbackDisclosureMode,
+        resolve_user_feedback_disclosure_mode,
+    )
+
+    if (
+        resolve_user_feedback_disclosure_mode()
+        != UserFeedbackDisclosureMode.VISIBLE
+    ):
+        return None
+    return DEBUG_DISCLOSE_GITHUB_ISSUE_CLAUSE
+
+
+def apply_debug_github_disclosure_runtime_clause(
+    *,
+    openai_messages: list[dict[str, Any]],
+) -> None:
+    """Insert debug GitHub disclosure clause before the trailing tail-user block."""
+    clause = debug_disclose_github_issue_system_clause()
+    if clause is None:
+        return
+    insert_pre_tail_user_system_message(
+        openai_messages=openai_messages,
+        content=clause,
+    )
 
 
 def insert_pre_tail_user_system_message(
