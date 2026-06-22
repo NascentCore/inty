@@ -60,6 +60,9 @@ def create_chat_completion_sync(
         create_kw["langsmith_extra"] = langsmith_extra
     if response_format is not None:
         create_kw["response_format"] = response_format
+    # TODO(#3602): Evaluate client.chat.completions.parse(response_format=BaseModel)
+    # for proactive envelope (#3600) instead of manual JSON parse; verify OpenRouter
+    # + LangSmith wrapper compatibility before dropping split_proactive_chat_message.
     # Some gateways place structured ``response_format`` JSON under ``reasoning`` /
     # ``reasoning_details`` while leaving ``message.content`` empty. Companion parsing validates
     # those side channels before using them; raw non-JSON reasoning is never surfaced.

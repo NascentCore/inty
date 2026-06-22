@@ -15,7 +15,7 @@ from app.services.agentic_companion.inner_tick_delivery import (
 
 
 @pytest.mark.asyncio
-async def test_deliver_inner_tick_assistant_weixin_skips_silent() -> None:
+async def test_deliver_inner_tick_assistant_weixin_skips_blank() -> None:
     sent: list[str] = []
 
     async def sink(text: str) -> None:
@@ -25,19 +25,19 @@ async def test_deliver_inner_tick_assistant_weixin_skips_silent() -> None:
     await deliver_inner_tick_assistant(
         delivery,
         ws_payload=None,
-        assistant_text="[SILENT]",
+        assistant_text="",
     )
     assert sent == []
 
 
 @pytest.mark.asyncio
-async def test_deliver_inner_tick_assistant_ws_skips_silent() -> None:
+async def test_deliver_inner_tick_assistant_ws_skips_blank() -> None:
     queue: asyncio.Queue = asyncio.Queue()
     delivery = inner_tick_delivery_for_ws(queue)
     await deliver_inner_tick_assistant(
         delivery,
-        ws_payload={"text": "[SILENT]"},
-        assistant_text="[SILENT]",
+        ws_payload={"text": ""},
+        assistant_text="",
     )
     assert queue.empty()
 
@@ -82,6 +82,22 @@ async def test_deliver_inner_tick_assistant_weixin_skips_blank() -> None:
         delivery,
         ws_payload=None,
         assistant_text="   ",
+    )
+    assert sent == []
+
+
+@pytest.mark.asyncio
+async def test_deliver_inner_tick_assistant_telegram_skips_blank() -> None:
+    sent: list[str] = []
+
+    async def sink(text: str) -> None:
+        sent.append(text)
+
+    delivery = inner_tick_delivery_for_telegram(sink)
+    await deliver_inner_tick_assistant(
+        delivery,
+        ws_payload=None,
+        assistant_text="",
     )
     assert sent == []
 

@@ -33,6 +33,49 @@ def _load_regression_module():
     return module
 
 
+def test_summarize_proactive_rounds() -> None:
+    mod = _load_regression_module()
+
+    summary = mod._summarize_proactive_rounds(
+        [
+            {"text_preview": "hello", "silent": False},
+            {
+                "text_preview": "[SYSTEM PROACTIVE CHAT] idle",
+                "silent": True,
+            },
+        ]
+    )
+    assert summary == {
+        "total": 2,
+        "visible": 1,
+        "silent": 1,
+        "silent_token_leaks": 0,
+    }
+
+
+def test_proactive_entry_has_silent_token() -> None:
+    mod = _load_regression_module()
+
+    assert mod._proactive_entry_has_silent_token({"text_preview": "[SILENT]"})
+    assert not mod._proactive_entry_has_silent_token({"text_preview": "hello"})
+
+
+def test_append_proactive_db_row_dedupes_chat_history_id() -> None:
+    mod = _load_regression_module()
+
+    report: dict = {"proactive": []}
+    row = mod.ProactiveChatHistoryRow(
+        chat_history_id="42",
+        content_preview="[SYSTEM PROACTIVE CHAT] a",
+        created_at="2026-06-18T00:00:00+00",
+        has_assistant_reply=False,
+    )
+    mod._append_proactive_db_row(report, row)
+    mod._append_proactive_db_row(report, row)
+    assert len(report["proactive"]) == 1
+    assert report["proactive"][0]["silent"] is True
+
+
 def test_parse_proactive_chat_history_rows() -> None:
     mod = _load_regression_module()
 

@@ -59,7 +59,11 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
 
 - Exit **0** only when settled queue turn passes, bootstrap is complete (`workspace_bootstrap_user_interactive_completed`), **github_issue_e2e** passes, inner-tick proactive is present, and InputQueue / OutputQueue rows are all `delivered`.
 - GitHub issues created by the regression run are **closed automatically** in driver cleanup (`gh issue close`).
-- Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (10s) and `poll_seconds` (5s) in `devops/config.yaml.local` for fast local regression; default `--proactive-wait-sec` is **60**.
+- Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (**10s**, config minimum) and `poll_seconds` (**3s**) in `devops/config.yaml.local`. Driver flags:
+  - `--proactive-wait-sec` (**120** default): wall-clock listen duration after github_issue phase
+  - `--proactive-min-rounds` (**1** default): **pass gate** — at least this many proactive rounds (WS and/or DB)
+  - `--proactive-target-rounds` (**2** default): stretch goal in summary only; **does not fail** the run
+- A **silent first proactive** (`output_to_user=false`) leaves the transcript without an assistant reply, so the scheduler will **not** fire a second round until a visible proactive happens — waiting longer cannot fix that.
 - JSON report: `tmp/repl-regression-<AGENT_ID>.json` unless `--report` is set (`report.github_issue` has issue number/URL and `closed: true`).
 - Skips `meta_data.source=greeting` downlinks when waiting for proactive (post-restart sign-on is not inner-tick proactive).
 - Unit tests for DB/JSONL parsers: `tests/cursor/skills/scripts/test_run_inty_repl_regression.py` (skill script is not an `app/` module).
@@ -157,8 +161,8 @@ For proactive:
   - `## Proactive Messaging` system message
   - current tail user message with `[SYSTEM PROACTIVE CHAT] Time since...`
   - historical proactive synthetic user rows when still in transcript window
-- `[SILENT]` is a valid output.
-- When assistant output is `[SILENT]`, no WS downlink is sent; regression still passes if `chat_history` has a synthetic `[SYSTEM PROACTIVE CHAT]` user row for this agent after the run started (driver checks DB after the proactive wait).
+- silent proactive = structured `output_to_user=false` → no WS downlink; regression still passes if `chat_history` has a synthetic `[SYSTEM PROACTIVE CHAT]` user row without an assistant reply (driver checks DB; `silent: true`). Legacy `[SILENT]` in any preview fails the run.
+- Two-round stretch (`proactive_target_rounds: met`) only happens when round 1 is **visible** (assistant reply) and idle elapses before wait ends.
 
 ## Pass Criteria
 
@@ -169,7 +173,7 @@ For proactive:
 - OutputQueue rows for user-visible replies are all `delivered`.
 - Settled user turn produces one coherent delivered reply.
 - **GitHub issue E2E:** complaint turn produces feedback JSONL `snapshot` + `github_issue_created`; `gh issue view` validates title/labels/body; issue closed in cleanup (`summary.github_issue_e2e: pass`).
-- Proactive LLM input includes the synthetic proactive user marker.
+- Proactive LLM input includes the synthetic proactive user marker; **≥1 proactive round** (`proactive_inner_tick: present`); no `[SILENT]` token (`proactive_no_silent_token: pass`). Optional stretch: `proactive_target_rounds: met` when the model speaks on round 1.
 - LangSmith run ids in REPL metadata match delivered OutputQueue rows where applicable.
 
 ## Known Non-Blocking Findings

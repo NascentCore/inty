@@ -19,7 +19,6 @@ from app.core.companion_harness.companion.models import (
     AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
     ChatMessage,
     CompanionTurnTrack,
-    PROACTIVE_CHAT_SILENT_TOKEN,
     is_ai_private_splice_manifest,
 )
 from app.core.companion_harness.companion.transcript_anchor import (
@@ -114,7 +113,6 @@ def should_persist_ai_private_splice(
         track_uses_ai_private_splice(persist_input.track)
         and persist_input.splice_plan.thoughts
         and assistant_text
-        and assistant_text != PROACTIVE_CHAT_SILENT_TOKEN
         and not persist_input.bootstrap_skip_final_transcript_assistant_row
     )
 

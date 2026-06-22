@@ -132,6 +132,21 @@ def _output_contract_text_inner_tick() -> str:
     )
 
 
+def _proactive_chat_structured_output_contract_text() -> str:
+    """Prompt text paired with proactive ``response_format`` from ``proactive_chat_envelope``."""
+    return (
+        "## Proactive inner tick: structured reply envelope\n\n"
+        "Your **entire** assistant `message.content` must be **valid JSON only** "
+        "(no markdown fences, no text before or after the JSON object). "
+        "It must match the API `response_format` schema. Fields:\n"
+        "- `output_to_user` (boolean): true when you should send proactive text now; "
+        "false when staying quiet is appropriate.\n"
+        "- `message` (string): in-character proactive text for the user when "
+        "`output_to_user` is true; must be empty when `output_to_user` is false.\n\n"
+        "Do not emit legacy silence tokens or meta commentary about structured output.\n"
+    )
+
+
 def _dual_llm_chat_structured_output_contract_text() -> str:
     """Prompt text paired with dual-envelope ``response_format`` from ``dual_llm_chat_branch_envelope``.
 
@@ -990,7 +1005,9 @@ def build_system_messages_for_inner_tick_proactive_chat(
         proactive_life_currents_block=_assemble_proactive_chat_life_currents_hint_prompt(
             store
         ),
-    )
+    ) + [
+        _system_message(_proactive_chat_structured_output_contract_text()),
+    ]
 
 
 def build_system_messages_for_inner_tick_scheduled(
@@ -1006,7 +1023,13 @@ def build_system_messages_for_inner_tick_scheduled(
         inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
         ai_private_text="",
         include_significance_perception_slice=False,
-    )
+    ) + [
+        _system_message(
+            _proactive_chat_structured_output_contract_text()
+            + "\nWhen a scheduled reminder is due, bias `output_to_user` true unless "
+            "nothing appropriate to say remains valid silence.\n"
+        ),
+    ]
 
 
 def _greeting_omit_capability_system_slices(

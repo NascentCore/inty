@@ -26,6 +26,8 @@ def turn_flags_for_track(
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             return True, InnerTickActivity.PROACTIVE_CHAT
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
+            # TODO(#3601): SCHEDULED shares PROACTIVE_CHAT activity today; split tracks
+            # for clean separation of idle proactive vs schedule_queue reminder semantics.
             return True, InnerTickActivity.PROACTIVE_CHAT
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             return True, InnerTickActivity.MAINTENANCE

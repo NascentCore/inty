@@ -66,10 +66,11 @@ agent:
     # Local Telegram idle-pause smoke only (production default 960 min).
     agent_scope_idle_timeout_minutes: 5
     # Fast proactive rhythm for local REPL / regression (defaults: idle 30s, poll 60s).
+    # Min idle 10s (RootConfig validation); poll 3s → ~2 proactive rounds within 75s wait.
     inner_tick:
       proactive_chat:
         base_idle_seconds: 10
-        poll_seconds: 5
+        poll_seconds: 3
     user_feedback_github:
       token: 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
   # 模型本地无法访问，IP 被限制
