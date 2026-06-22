@@ -6,6 +6,12 @@
 
 从仓库根目录启动推送服务：`./backend/push_worker/start.sh`。
 
-## 用户分析日报/周报（默认不跑）
+## 调度范围
 
-`push_scheduler_service` 可通过 `config.yaml` 的 `user_analytics_report` 调度预计算；**默认 `enabled` / `daily_enabled` / `weekly_enabled` / `backfill_enabled` 均为 false**，push worker 不注册相关 cron、不启动补算。生产 **IntelliMate 日报** 由 GitHub Actions workflow `daily_intellimate_user_activity_report.yaml` 执行。细节见 [`docs/FR_USER_ANALYTICS_REPORTS.md`](../../docs/FR_USER_ANALYTICS_REPORTS.md)。
+push worker 仅保留 IntelliMate Android 仍依赖的任务：
+
+- re-engagement FCM（`agent_message`，10min / 30min / 2h / 24h / 48h）
+- 节日记忆抽取与 FCM 通知（`festival_memory`）
+- 推送管线维护（初始化、新用户发现、token 更新扫描）
+
+用户分析日报/周报由 GitHub Actions `daily_intellimate_user_activity_report.yaml` 与 `tools/scripts/run_user_analytics_report.py` 承担。日常记忆抽取由 `tools/scripts/run_memory_extraction.py` 手动运行。

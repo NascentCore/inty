@@ -3,7 +3,7 @@
 手动补算用户数据分析日报/周报，用于历史数据回填。
 
 生产 IntelliMate 日报定时由 GitHub Actions（daily_intellimate_user_activity_report.yaml）
-调用本脚本；push worker 默认不调度日报/周报（见 docs/FR_USER_ANALYTICS_REPORTS.md）。
+调用本脚本（见 docs/FR_USER_ANALYTICS_REPORTS.md）。
 
 用法（在仓库根目录）:
     export PYTHONPATH=.

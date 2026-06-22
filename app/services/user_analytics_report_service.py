@@ -4,9 +4,8 @@
 
 compute_and_save_* 将全部用户聚合写入 user_analytics_report，供评测页只读展示。
 
-调度入口（互斥注意生产日报勿双开）：
+调度入口：
 - 生产 IntelliMate 日报：GitHub Actions + run_user_analytics_report.py
-- push worker：push_scheduler_service，默认 user_analytics_report 四项开关均为 false
 - 手动/回填：tools/scripts/run_user_analytics_report.py、backfill_missing_reports
 """
 
@@ -604,7 +603,7 @@ async def backfill_missing_reports(
     include_daily: bool = True,
     include_weekly: bool = True,
 ) -> tuple[int, int]:
-    """补算缺失日报/周报。push worker 仅在 backfill_enabled 且对应 daily/weekly 开关为 true 时调用。"""
+    """补算缺失日报/周报。由手动脚本或运维任务调用。"""
     missing_daily: list[date] = []
     if include_daily:
         missing_daily = await get_missing_daily_report_dates(db, days=days)

@@ -687,16 +687,14 @@ def test_memory_extraction_config_model_validate_ignores_unknown_keys():
 def test_user_analytics_report_config_model_validate_ignores_unknown_keys():
     settings = UserAnalyticsReportConfig.model_validate(
         {
-            "enabled": True,
-            "daily_enabled": True,
             "batch_size": 100,
+            "statement_timeout_sec": 120,
             "unknown_key": "ignored",
         }
     )
 
-    assert settings.enabled is True
-    assert settings.daily_enabled is True
     assert settings.batch_size == 100
+    assert settings.statement_timeout_sec == 120
 
 
 def test_fal_config_model_validate_ignores_unknown_keys():
@@ -1317,9 +1315,8 @@ def test_load_config_user_analytics_report_uses_pydantic_validation():
         "\n".join(
             [
                 "user_analytics_report:",
-                "  enabled: true",
-                "  daily_enabled: true",
                 "  batch_size: 100",
+                "  statement_timeout_sec: 120",
                 "  unknown_key: ignored",
                 "elevenlabs:\n",
             ]
@@ -1330,9 +1327,8 @@ def test_load_config_user_analytics_report_uses_pydantic_validation():
         path.write_text(yaml_text, encoding="utf-8")
         cfg = load_config(str(path))
 
-    assert cfg.user_analytics_report.enabled is True
-    assert cfg.user_analytics_report.daily_enabled is True
     assert cfg.user_analytics_report.batch_size == 100
+    assert cfg.user_analytics_report.statement_timeout_sec == 120
 
 
 def test_load_config_surprise_snap_uses_pydantic_validation():

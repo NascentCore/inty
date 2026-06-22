@@ -12,12 +12,6 @@ def _load_push_scheduler_service_module():
         push_notification=types.SimpleNamespace(
             enabled=True, festival_memory_enabled=False
         ),
-        memory_extraction=types.SimpleNamespace(
-            enabled=True,
-            cron_hour=3,
-            workflow_mode="always_summarize_full_chat_messages_history",
-        ),
-        user_analytics_report=types.SimpleNamespace(enabled=False),
     )
     fake_core_config_module = types.ModuleType("app.core.config")
     fake_core_config_module.global_config_loaded_from_config_yaml = fake_config
@@ -55,31 +49,6 @@ def _load_push_scheduler_service_module():
         _dummy_resolve_sync_read_db_url
     )
 
-    fake_memory_extraction_module = types.ModuleType(
-        "app.services.memory_extraction_service"
-    )
-
-    async def _dummy_extract(*args, **kwargs):
-        return None
-
-    async def _dummy_extract_incremental(*args, **kwargs):
-        return None
-
-    async def _dummy_get_users(*args, **kwargs):
-        return []
-
-    async def _dummy_get_users_in_day(*args, **kwargs):
-        return []
-
-    fake_memory_extraction_module.extract_and_save = _dummy_extract
-    fake_memory_extraction_module.extract_and_save_incremental_daily = (
-        _dummy_extract_incremental
-    )
-    fake_memory_extraction_module.get_users_to_extract = _dummy_get_users
-    fake_memory_extraction_module.get_users_with_messages_in_utc_day = (
-        _dummy_get_users_in_day
-    )
-
     fake_push_notification_module = types.ModuleType(
         "app.services.push_notification_service"
     )
@@ -103,16 +72,6 @@ def _load_push_scheduler_service_module():
     )
     fake_push_notification_module.process_push_batch = _dummy_process
 
-    fake_analytics_report_module = types.ModuleType(
-        "app.services.user_analytics_report_service"
-    )
-
-    async def _dummy_report(*args, **kwargs):
-        return None
-
-    fake_analytics_report_module.compute_and_save_daily_report = _dummy_report
-    fake_analytics_report_module.compute_and_save_weekly_report = _dummy_report
-
     sys.modules.pop("app.services.push_scheduler_service", None)
     with patch.dict(
         sys.modules,
@@ -121,9 +80,7 @@ def _load_push_scheduler_service_module():
             "app.db.session": fake_db_session_module,
             "app.models.memory": fake_models_memory_module,
             "app.services.festival_memory_service": fake_festival_memory_module,
-            "app.services.memory_extraction_service": fake_memory_extraction_module,
             "app.services.push_notification_service": fake_push_notification_module,
-            "app.services.user_analytics_report_service": fake_analytics_report_module,
         },
     ):
         return importlib.import_module("app.services.push_scheduler_service")
@@ -220,103 +177,6 @@ def _close_coro_task(coro):
 
 
 @pytest.mark.asyncio
-async def test_run_memory_extraction_uses_replica_for_read_and_primary_for_write():
-    read_db = AsyncMock()
-    write_db = AsyncMock()
-    mock_get_users = AsyncMock(return_value=["u1", "u2"])
-    mock_extract = AsyncMock()
-
-    with (
-        patch.object(
-            push_scheduler_module,
-            "AsyncSessionLocalReplica",
-            _SessionFactory([read_db]),
-        ),
-        patch.object(
-            push_scheduler_module,
-            "AsyncSessionLocal",
-            _SessionFactory([write_db]),
-        ),
-        patch.object(
-            push_scheduler_module, "memory_get_users_to_extract", mock_get_users
-        ),
-        patch.object(
-            push_scheduler_module, "memory_extract_and_save", mock_extract
-        ),
-    ):
-        scheduler = PushSchedulerService()
-        await scheduler._run_memory_extraction()
-
-    mock_get_users.assert_awaited_once()
-    assert mock_get_users.await_args.args[0] is read_db
-    assert mock_get_users.await_args.kwargs == {"prefer_replica_read": True}
-    assert mock_extract.await_count == 2
-    assert mock_extract.await_args_list[0].args == (write_db, "u1")
-    assert mock_extract.await_args_list[0].kwargs == {
-        "prefer_replica_read": True
-    }
-    assert mock_extract.await_args_list[1].args == (write_db, "u2")
-    assert mock_extract.await_args_list[1].kwargs == {
-        "prefer_replica_read": True
-    }
-
-
-@pytest.mark.asyncio
-async def test_run_memory_extraction_daily_incremental_mode_uses_previous_day_window():
-    read_db = AsyncMock()
-    write_db = AsyncMock()
-    mock_get_users_in_day = AsyncMock(return_value=["u1"])
-    mock_extract_incremental = AsyncMock()
-
-    with (
-        patch.object(
-            push_scheduler_module,
-            "AsyncSessionLocalReplica",
-            _SessionFactory([read_db]),
-        ),
-        patch.object(
-            push_scheduler_module,
-            "AsyncSessionLocal",
-            _SessionFactory([write_db]),
-        ),
-        patch.object(
-            push_scheduler_module,
-            "memory_get_users_with_messages_in_utc_day",
-            mock_get_users_in_day,
-        ),
-        patch.object(
-            push_scheduler_module,
-            "memory_extract_and_save_incremental_daily",
-            mock_extract_incremental,
-        ),
-        patch.object(
-            push_scheduler_module, "memory_get_users_to_extract", AsyncMock()
-        ),
-        patch.object(
-            push_scheduler_module, "memory_extract_and_save", AsyncMock()
-        ),
-    ):
-        push_scheduler_module.global_config_loaded_from_config_yaml.memory_extraction.workflow_mode = (
-            "daily_incremental_summarization"
-        )
-        scheduler = PushSchedulerService()
-        await scheduler._run_memory_extraction()
-
-    mock_get_users_in_day.assert_awaited_once()
-    assert mock_get_users_in_day.await_args.args[0] is read_db
-    assert (
-        mock_get_users_in_day.await_args.kwargs["prefer_replica_read"] is True
-    )
-    target_date = mock_get_users_in_day.await_args.kwargs["target_date_utc"]
-    assert mock_extract_incremental.await_count == 1
-    assert mock_extract_incremental.await_args.args == (write_db, "u1")
-    assert mock_extract_incremental.await_args.kwargs == {
-        "target_date_utc": target_date,
-        "prefer_replica_read": True,
-    }
-
-
-@pytest.mark.asyncio
 async def test_run_festival_memory_extraction_uses_replica_read_url_and_replica_history_read():
     read_db = AsyncMock()
     claim_db = AsyncMock()
@@ -393,7 +253,7 @@ async def test_run_festival_memory_extraction_uses_replica_read_url_and_replica_
     assert mock_extract.await_args.kwargs["prefer_replica_read"] is True
 
 
-def test_start_memory_extraction_job_uses_cron_without_immediate_run():
+def test_start_registers_festival_memory_extraction_without_memory_extraction_cron():
     fake_scheduler = _FakeScheduler()
     with (
         patch.object(
@@ -409,11 +269,7 @@ def test_start_memory_extraction_job_uses_cron_without_immediate_run():
         scheduler.start()
 
     assert fake_scheduler.started is True
-    run_memory_job_kwargs = None
-    for _args, kwargs in fake_scheduler.add_job_calls:
-        if kwargs.get("id") == "run_memory_extraction":
-            run_memory_job_kwargs = kwargs
-            break
-    assert run_memory_job_kwargs is not None
-    assert run_memory_job_kwargs["trigger"].__class__.__name__ == "CronTrigger"
-    assert "next_run_time" not in run_memory_job_kwargs
+    job_ids = {kwargs.get("id") for _args, kwargs in fake_scheduler.add_job_calls}
+    assert "run_festival_memory_extraction" in job_ids
+    assert "run_memory_extraction" not in job_ids
+    assert "run_user_analytics_daily_report" not in job_ids
