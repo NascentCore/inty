@@ -11,6 +11,32 @@ description: >-
 
 # Telegram screenshot → LangSmith trace + server logs
 
+## Test / review status
+
+**TESTED** (initial validation). **Effectiveness review pending** — use on real incidents; cleanup or extend the skill if gaps show up.
+
+### Evidence (2026-06-22)
+
+- Unit tests: `pytest tests/cursor/skills/scripts/test_telegram_screenshot_trace_match.py` — 7 passed (clock/window, snippet parse, scoring, child channel metadata).
+- Live smoke: 2026-06-21 Joy ↔ 沈听言 Telegram wacky-chat on **`inty-backend-dev`** — screenshot clock `21:24` + keywords matched trace `019eea5a-5f48…` with correct `user_snippet` / `reply_snippet`.
+
+### Agent report line
+
+After running the helper, append one line:
+
+- Match found: `[telegram-screenshot-trace-match] RESULT: TESTED (matches=N, top_trace=<trace_id>)`
+- No match: `[telegram-screenshot-trace-match] RESULT: TESTED (matches=0)` — widen window/keywords per Troubleshooting before giving up.
+
+### Effectiveness review (open — revisit after 2–3 real uses)
+
+- **LangSmith rate limits** — broad windows + many keywords trigger 429; may need higher `--read-delay-seconds` or server-side name filter.
+- **Log correlation** — local `.inty/inty.log` grep hints only; dev/prod VM (`gcplogs`) not automated.
+- **Screenshot without clock** — workflow assumes bubble timestamp; fallback is manual date + transcript keyword only.
+- **Generic keywords** — short/common snippets (e.g. `可以`) rank poorly; skill depends on distinctive snippets.
+- **Prod project** — `inty-backend-prod` may be absent; confirm project name per deployment before searching.
+
+When review concludes the skill is ineffective or redundant, shrink to manual workflow only or merge into [`langsmith-download-run`](../langsmith-download-run/SKILL.md).
+
 ## When to use
 
 - User shares a **Telegram chat screenshot** and asks why replies are wrong, duplicated, or looping.
