@@ -49,7 +49,9 @@ Options (see `--help`):
 - `--json` — machine-readable output for follow-up automation.
 - `--read-delay-seconds 0.35` — reduce LangSmith 429 rate limits.
 
-Script output includes **`trace_id`**, **`agent_id`**, **`user_id`**, **`langsmith_url`**, and ready-made **`rg`** + **`download_run.py`** commands.
+Script output includes **`trace_id`**, **`agent_id`**, **`user_id`**, **`user_snippet`**, **`reply_snippet`**, **`langsmith_url`**, and ready-made **`rg`** + **`download_run.py`** commands.
+
+Helper script path: [`.cursor/skills/scripts/telegram_screenshot_trace_match.py`](../scripts/telegram_screenshot_trace_match.py)
 
 ## Manual workflow (if script unavailable)
 
@@ -92,8 +94,9 @@ Duplicate Telegram bubbles often mean **both legs sent overlapping text** — co
 ## Troubleshooting
 
 - **0 matches** — widen `--padding-minutes`; try `--environment-hint any`; verify date/timezone; drop `--keyword` to list all roots in window first.
-- **429 LangSmith** — increase `--read-delay-seconds`; pass explicit `--project-name`; reduce keywords to narrow `read_run` calls.
+- **429 LangSmith** — increase `--read-delay-seconds`; pass explicit `--project-name`; reduce keyword count.
 - **Wrong project** — dev Telegram traffic is **`inty-backend-dev`**, not your local `-local-<user>` project unless Ops runs with `app.environment: local` on that machine.
+- **Many inner-tick runs in window** — script paginates LangSmith root runs (100/page) until `--max-roots` user_turn spans are collected.
 
 ## Related skills
 

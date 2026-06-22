@@ -10,7 +10,6 @@ Inty backend projects, and ranks matches by keyword hits + telegram channel meta
 
 from __future__ import annotations
 
-import getpass
 import json
 import os
 import re
@@ -55,20 +54,6 @@ class TraceMatch:
     user_snippet: str
     reply_snippet: str
     score: int
-
-
-def _local_username_slug() -> str:
-    user = (os.getenv("USER") or os.getenv("USERNAME") or "").strip()
-    if not user:
-        try:
-            user = getpass.getuser()
-        except Exception:
-            user = ""
-    if not user:
-        user = "unknown"
-    safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in user)
-    parts = [p for p in safe.split("-") if p]
-    return "-".join(parts) if parts else "unknown"
 
 
 def _langchain_api_key(yaml_data: dict[str, Any] | None) -> str | None:
@@ -163,12 +148,16 @@ def _candidate_projects(
             return preferred or inty_projects
         case "local":
             preferred = [
-                name for name in inty_projects if "-local-" in name or name.endswith("-local")
+                name
+                for name in inty_projects
+                if "-local-" in name or name.endswith("-local")
             ]
             return preferred or inty_projects
         case "prod":
             preferred = [name for name in inty_projects if name.endswith("-prod")]
             return preferred or inty_projects
+        case "any":
+            return inty_projects
         case _:
             return inty_projects
 
@@ -193,6 +182,18 @@ def _run_metadata_channel(run_obj: Any) -> str:
         raw = metadata.get(key)
         if isinstance(raw, str) and raw.strip():
             return raw.strip().lower()
+    return ""
+
+
+def _resolve_runtime_channel(root_run: Any, child_runs: list[Any]) -> str:
+    """Prefer root metadata; fall back to companion child spans."""
+    channel = _run_metadata_channel(root_run)
+    if channel:
+        return channel
+    for child in child_runs:
+        channel = _run_metadata_channel(child)
+        if channel:
+            return channel
     return ""
 
 
@@ -267,27 +268,40 @@ def _list_user_turn_roots(
     window: SearchWindow,
     max_roots: int,
 ) -> list[Any]:
-    runs = list(
-        client.list_runs(
-            project_name=project_name,
-            start_time=window.start_utc,
-            limit=min(max_roots, 100),
-            is_root=True,
-        )
-    )
+    """Paginate root runs in ``window`` until ``max_roots`` user_turn spans found."""
+    cursor_start = window.start_utc
     filtered: list[Any] = []
-    for run in runs:
-        start_time = getattr(run, "start_time", None)
-        if start_time is None:
-            continue
-        if start_time.tzinfo is None:
-            start_time = start_time.replace(tzinfo=timezone.utc)
-        if start_time >= window.end_utc:
-            continue
-        name = str(getattr(run, "name", "") or "")
-        if _USER_TURN_NAME not in name:
-            continue
-        filtered.append(run)
+    while len(filtered) < max_roots:
+        batch = list(
+            client.list_runs(
+                project_name=project_name,
+                start_time=cursor_start,
+                limit=100,
+                is_root=True,
+            )
+        )
+        if not batch:
+            break
+        for run in batch:
+            start_time = getattr(run, "start_time", None)
+            if start_time is None:
+                continue
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+            if start_time >= window.end_utc:
+                continue
+            name = str(getattr(run, "name", "") or "")
+            if _USER_TURN_NAME not in name:
+                continue
+            filtered.append(run)
+            if len(filtered) >= max_roots:
+                break
+        if len(batch) < 100:
+            break
+        last_time = batch[-1].start_time
+        if last_time.tzinfo is None:
+            last_time = last_time.replace(tzinfo=timezone.utc)
+        cursor_start = last_time + timedelta(microseconds=1)
     return filtered
 
 
@@ -312,7 +326,8 @@ def _inspect_root_run(
         return None
 
     user_id, agent_id = _parse_turn_name(str(getattr(full, "name", "") or ""))
-    runtime_channel = _run_metadata_channel(full)
+    child_runs = list(full.child_runs or [])
+    runtime_channel = _resolve_runtime_channel(full, child_runs)
     if require_telegram and runtime_channel not in ("", _TELEGRAM_CHANNEL):
         return None
 
@@ -323,7 +338,7 @@ def _inspect_root_run(
 
     blob_parts = [json.dumps(full.inputs or {}, ensure_ascii=False, default=str)]
     reply_snippet = ""
-    for child in full.child_runs or []:
+    for child in child_runs:
         child_name = str(getattr(child, "name", "") or "")
         if child_name not in (
             "agentic_companion_chat",
@@ -337,8 +352,15 @@ def _inspect_root_run(
         except Exception:
             continue
         child_messages = (child_full.inputs or {}).get("messages", [])
-        if not user_snippet and isinstance(child_messages, list):
-            user_snippet = _extract_last_user_snippet(child_messages)
+        if isinstance(child_messages, list):
+            blob_parts.append(
+                json.dumps(child_messages, ensure_ascii=False, default=str)
+            )
+            if not user_snippet:
+                user_snippet = _extract_last_user_snippet(child_messages)
+        blob_parts.append(
+            json.dumps(child_full.inputs or {}, ensure_ascii=False, default=str)
+        )
         blob_parts.append(
             json.dumps(child_full.outputs or {}, ensure_ascii=False, default=str)
         )
@@ -378,7 +400,8 @@ def _inspect_root_run(
 
 def _format_local_time(when_utc: datetime, tz_name: str) -> str:
     tz = ZoneInfo(tz_name)
-    return when_utc.astimezone(tz).strftime("%Y-%m-%d %H:%M:%S %Z")
+    local = when_utc.astimezone(tz)
+    return f"{local.strftime('%Y-%m-%d %H:%M:%S')} {tz_name}"
 
 
 def _print_matches(
@@ -529,6 +552,9 @@ def main(
     ] = False,
 ) -> int:
     assert screenshot_clock.strip() != ""
+    assert padding_minutes >= 1
+    assert max_roots >= 1
+    assert max_matches >= 1
     yaml_data = _load_yaml_config(config)
     api_key = _langchain_api_key(yaml_data)
     if not api_key:
@@ -565,6 +591,7 @@ def main(
         return 1
 
     matches: list[TraceMatch] = []
+    seen_trace_ids: set[str] = set()
     for project in projects:
         roots = _list_user_turn_roots(
             client,
@@ -583,13 +610,13 @@ def main(
             )
             if match is None:
                 continue
+            if match.trace_id in seen_trace_ids:
+                continue
+            seen_trace_ids.add(match.trace_id)
             matches.append(match)
-            if len(matches) >= max_matches:
-                break
-        if len(matches) >= max_matches:
-            break
 
     matches.sort(key=lambda item: (-item.score, item.start_time_utc))
+    matches = matches[:max_matches]
 
     if json_output:
         payload = {
