@@ -14,6 +14,7 @@ from sqlalchemy import select
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
+    is_im_runtime_channel,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
@@ -32,6 +33,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueueAppendInput,
     ReadyOutputMessage,
     get_output_queue_for_scope,
+    ready_output_is_agent_initiated_visible,
 )
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
@@ -42,6 +44,7 @@ from app.core.companion_harness.companion.models import (
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_companion.downlink import (
     DownlinkKind,
+    agent_initiated_visible_downlink,
     queue_user_reply_downlink,
     tool_background_downlink,
 )
@@ -60,6 +63,25 @@ from app.services.chat_service import generate_session_id
 _SIGN_ON_GREETING_USER_TEXT = (
     "The user opened the Telegram chat through onboarding."
 )
+
+_IM_USER_NOT_FOUND = "Could not find your Inty user. Please send /start again."
+_IM_AGENT_NOT_FOUND = "Could not find this companion. Please check the agent."
+_IM_TURN_FAILED = "Companion turn failed. Please check Ops logs."
+
+
+def _localized_im_channel_message(
+    runtime_channel: ChannelKind,
+    *,
+    english: str,
+    chinese: str,
+) -> str:
+    """Return English copy on IM channels; Chinese elsewhere."""
+    match runtime_channel:
+        case channel if is_im_runtime_channel(channel):
+            return english
+        case _:
+            return chinese
+
 
 _presences: dict[str, AgentChannelPresence] = {}
 _presence_start_locks: dict[str, asyncio.Lock] = {}
@@ -89,30 +111,6 @@ class AgentChannelPresence:
     @property
     def scope(self) -> AgentScope:
         return self._scope
-
-    async def _append_telegram_visible_output(
-        self,
-        *,
-        kind: DownlinkKind,
-        text: str,
-        trace_id: str | None,
-    ) -> None:
-        visible = user_visible_assistant_text(text)
-        if visible is None:
-            return
-        output_queue = get_output_queue_for_scope(self._scope)
-        await output_queue.append_visible_message(
-            OutputQueueAppendInput(
-                kind=kind,
-                batch_id="",
-                text=visible,
-                message_ids=(),
-                trace_id=trace_id,
-                langsmith_trace_id=None,
-                langsmith_run_id=None,
-                turn_recall=None,
-            )
-        )
 
     @property
     def coordinator(self) -> Coordinator:
@@ -188,7 +186,10 @@ class AgentChannelPresence:
         text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
         if not text:
             return
-        if not message.message_ids:
+        if (
+            not ready_output_is_agent_initiated_visible(message)
+            and not message.message_ids
+        ):
             raise OutputDeliveryUnroutableError(
                 self._scope,
                 message.message_ids,
@@ -205,13 +206,24 @@ class AgentChannelPresence:
                 f"no downlink for channel={active.value} "
                 f"scope={self._scope.registry_key()}"
             )
-        await downlink.deliver(
-            queue_user_reply_downlink(
+        if ready_output_is_agent_initiated_visible(message):
+            # TODO(#3576): Deliver agent-initiated sign-on rows on App-WS via OutputQueue.
+            if not is_im_runtime_channel(active):
+                raise OutputDeliveryUnroutableError(
+                    self._scope,
+                    message.message_ids,
+                )
+            event = agent_initiated_visible_downlink(
+                assistant_text=text,
+                output_message=message,
+            )
+        else:
+            event = queue_user_reply_downlink(
                 assistant_text=text,
                 message_ids=message.message_ids,
                 output_message=message,
             )
-        )
+        await downlink.deliver(event)
 
     async def greet_on_sign_on(self, *, runtime_channel: ChannelKind) -> None:
         """Run implicit sign-on greeting and append visible text to OutputQueue."""
@@ -237,7 +249,7 @@ class AgentChannelPresence:
         output_queue = get_output_queue_for_scope(self._scope)
         await output_queue.append_visible_message(
             OutputQueueAppendInput(
-                kind=DownlinkKind.PROACTIVE,
+                kind=DownlinkKind.USER_REPLY,
                 batch_id="",
                 text=visible,
                 message_ids=(),
@@ -309,12 +321,20 @@ class AgentChannelPresence:
                 )
                 inty_user = inty_user_row.scalar_one_or_none()
                 if inty_user is None:
-                    return "无法找到你的 Inty 用户，请重新 /start。"
+                    return _localized_im_channel_message(
+                        runtime_channel,
+                        english=_IM_USER_NOT_FOUND,
+                        chinese="无法找到你的 Inty 用户，请重新 /start。",
+                    )
                 agent_data = await agent_service.get_agent_for_chat(
                     db, self._scope.agent_id
                 )
                 if agent_data is None:
-                    return "找不到这个 companion，请确认 agent_id 是否正确。"
+                    return _localized_im_channel_message(
+                        runtime_channel,
+                        english=_IM_AGENT_NOT_FOUND,
+                        chinese="找不到这个 companion，请确认 agent_id 是否正确。",
+                    )
 
             synthetic_chat_id = self._scope.memory_store_chat_id()
             if self._coordinator.snapshot_inner_tick_coords() is None:
@@ -363,7 +383,11 @@ class AgentChannelPresence:
                 exc, "companion_tool_background_started", False
             ):
                 self._coordinator.remove_foreground_pending(queue_message_id)
-            return "Companion 回合失败，请查看 Ops 日志。"
+            return _localized_im_channel_message(
+                runtime_channel,
+                english=_IM_TURN_FAILED,
+                chinese="Companion 回合失败，请查看 Ops 日志。",
+            )
 
     async def _tool_background_consumer(self) -> None:
         while True:

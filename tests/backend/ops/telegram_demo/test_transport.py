@@ -31,7 +31,12 @@ from app.services.agentic_channel.channel_runtime import (
     clear_registries_for_tests,
 )
 from app.services.agentic_channel.endpoints import resolve_scope
-from app.services.agentic_channel.presence import clear_presences_for_tests
+from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.services.agentic_channel.presence import (
+    clear_presences_for_tests,
+    get_presence,
+)
+from app.services.agentic_channel.serving import flush_scope_output_queue_ready
 from app.services.agentic_channel.companion_bonds import (
     get_companion_bond_for_scope,
     pause_companion_bond_runtime,
@@ -365,6 +370,61 @@ async def test_onboard_new_user_triggers_greeting() -> None:
         channel_address=telegram_chat_id,
     )
     assert scope is not None
+    await _cleanup_scope(scope)
+
+
+@pytest.mark.asyncio
+async def test_onboard_new_user_delivers_greeting_message() -> None:
+    tag = uuid.uuid4().hex[:10]
+    telegram_chat_id = f"tg-deliver-{tag}"
+    channel_user_id = f"tg-user-{tag}"
+    sent_bodies: list[str] = []
+
+    def capturing_urlopen(request, timeout=15):
+        if request.full_url.endswith("/sendMessage"):
+            sent_bodies.append(request.data.decode("utf-8"))
+            return _FakeResponse({"ok": True, "result": {}})
+        return _fake_urlopen(request, timeout)
+
+    api = TelegramBotApi(
+        bot_token="deliver-greet-token",
+        urlopen=capturing_urlopen,
+    )
+    transport = TelegramTransport(api=api)
+    fake_model = MagicMock()
+
+    with patch(
+        "app.services.agentic_channel.presence.resolve_chat_model_for_scope",
+        new_callable=AsyncMock,
+        return_value=fake_model,
+    ):
+        with patch(
+            "app.services.agentic_channel.presence.run_companion_implicit_sign_on_greeting_turn_for_api",
+            new_callable=AsyncMock,
+            return_value=CompanionTurnResult(assistant_text="Hello from Inty."),
+        ):
+            inbound = TelegramIncomingMessage(
+                update_id=52,
+                chat_id=telegram_chat_id,
+                channel_user_id=channel_user_id,
+                text="/start onboard",
+                local_received_at=time.time(),
+            )
+            await transport._handle_onboard(inbound=inbound)
+
+    scope = await resolve_scope(
+        channel=ChannelKind.TELEGRAM,
+        channel_address=telegram_chat_id,
+    )
+    assert scope is not None
+    presence = get_presence(scope)
+    assert presence is not None
+    await flush_scope_output_queue_ready(
+        scope,
+        deliver_message=presence._deliver_ready_via_active_channel,
+    )
+
+    assert any("Hello" in body and "Inty" in body for body in sent_bodies)
     await _cleanup_scope(scope)
 
 

@@ -77,6 +77,22 @@ class ReadyOutputMessage:
     generated_images: tuple[GeneratedImageRef, ...] = ()
 
 
+_AGENT_INITIATED_VISIBLE_KINDS = frozenset(
+    {DownlinkKind.USER_REPLY, DownlinkKind.PROACTIVE}
+)
+
+
+def ready_output_is_agent_initiated_visible(
+    message: ReadyOutputMessage,
+) -> bool:
+    """True for agent-initiated foreground lines (empty inbound correlation)."""
+    assert message is not None
+    return (
+        message.batch_id.startswith("agent-initiated:")
+        and message.kind in _AGENT_INITIATED_VISIBLE_KINDS
+    )
+
+
 @dataclass(frozen=True)
 class OutputDeliveryAck:
     """Confirmation that the active channel delivered one outbound line to the user."""

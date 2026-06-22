@@ -81,6 +81,26 @@ def user_reply_downlink(*, turn: CompanionTurnResult) -> Downlink:
     )
 
 
+def agent_initiated_visible_downlink(
+    *,
+    assistant_text: str,
+    output_message: Any | None = None,
+) -> Downlink:
+    """OutputQueue agent-initiated visible line with no inbound correlation."""
+    assert assistant_text.strip() != ""
+    return Downlink(
+        kind=DownlinkKind.USER_REPLY,
+        assistant_text=assistant_text,
+        turn=None,
+        tool_output=None,
+        bootstrap_interim=None,
+        scheduled_task_id=None,
+        transcript_user_text=None,
+        message_ids=(),
+        output_message=output_message,
+    )
+
+
 def queue_user_reply_downlink(
     *,
     assistant_text: str,
