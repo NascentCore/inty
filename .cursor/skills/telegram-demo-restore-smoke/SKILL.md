@@ -17,16 +17,18 @@ description: >-
 ## Smoke steps
 
 1. Open product onboard page — local `http://127.0.0.1:8001/telegram` or public `https://dev.ops.inty.cc/telegram` → scan team QR with Telegram.
-2. Send a user message; confirm bot replies.
-3. Check bindings (**requires `app.debug: true` on Ops**, e.g. local/dev):
+2. **New binding** — send `/start onboard` in Telegram: expect an **italic** platform line (*Your agent is waking up…*), then a plain companion greeting within a few seconds.
+3. Send a user message; confirm bot replies.
+4. **Returning** — send `/start onboard` again: italic *Welcome back…* only (no second greeting).
+5. Check bindings (**requires `app.debug: true` on Ops**, e.g. local/dev):
    ```bash
    curl -s http://127.0.0.1:8001/api/v1/telegram-demo/bindings | jq
    ```
    Product bot metadata: `curl -s http://127.0.0.1:8001/api/v1/telegram/bot-info | jq`
    Expect bindings `count >= 1` with your `telegram_chat_id`.
-4. **Restart Ops** (Ctrl+C on start.sh, relaunch).
-5. Send another message **without** re-scanning QR.
-6. Expect reply; logs should show `telegram-demo: restored N agent_channel endpoint(s)`.
+6. **Restart Ops** (Ctrl+C on start.sh, relaunch).
+7. Send another message **without** re-scanning QR.
+8. Expect reply; logs should show `telegram-demo: restored N agent_channel endpoint(s)`.
 
 ## Optional: proactive after restore
 

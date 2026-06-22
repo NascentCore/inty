@@ -8,6 +8,7 @@ import time
 import uuid
 from io import BytesIO
 from urllib.error import HTTPError
+from urllib.parse import parse_qs
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -49,7 +50,9 @@ from backend.ops.telegram_demo.transport import (
     TelegramTransport,
     _IDENTITY_MISMATCH,
     _ONBOARD_HINT,
-    _WELCOME_RETURNING,
+    _ONBOARD_NOTICE_NEW,
+    _ONBOARD_NOTICE_RETURNING,
+    _format_transport_notice,
 )
 
 
@@ -85,7 +88,8 @@ def _fake_urlopen(request, timeout=15):
 
 def test_transport_onboard_copy_is_english() -> None:
     messages = (
-        _WELCOME_RETURNING,
+        _ONBOARD_NOTICE_NEW,
+        _ONBOARD_NOTICE_RETURNING,
         _ONBOARD_HINT,
         _IDENTITY_MISMATCH,
     )
@@ -93,10 +97,37 @@ def test_transport_onboard_copy_is_english() -> None:
     assert "/telegram" in _ONBOARD_HINT
     assert "/start" in _ONBOARD_HINT
     assert "Ops" not in _ONBOARD_HINT
+    assert "waking up" in _ONBOARD_NOTICE_NEW
     assert all(
         not any("\u4e00" <= char <= "\u9fff" for char in message)
         for message in messages
     )
+
+
+def test_format_transport_notice_wraps_body_in_italic_html() -> None:
+    assert _format_transport_notice("hello") == "<i>hello</i>"
+
+
+@pytest.mark.asyncio
+async def test_send_channel_text_uses_html_parse_mode() -> None:
+    captured: list[bytes] = []
+
+    def capturing_urlopen(request, timeout=15):
+        if request.full_url.endswith("/sendMessage"):
+            captured.append(request.data)
+            return _FakeResponse({"ok": True, "result": {}})
+        return _fake_urlopen(request, timeout)
+
+    api = TelegramBotApi(bot_token="notice-token", urlopen=capturing_urlopen)
+    transport = TelegramTransport(api=api)
+    await transport._send_channel_text(
+        chat_id="5078060274",
+        text=_ONBOARD_NOTICE_NEW,
+    )
+    assert len(captured) == 1
+    fields = parse_qs(captured[0].decode("utf-8"))
+    assert fields["parse_mode"] == ["HTML"]
+    assert fields["text"] == [_format_transport_notice(_ONBOARD_NOTICE_NEW)]
 
 
 @pytest.fixture(autouse=True)
@@ -139,7 +170,7 @@ async def test_handle_inbound_channel_user_id_mismatch_notifies() -> None:
     api = TelegramBotApi(bot_token="route-test-token", urlopen=_fake_urlopen)
     transport = TelegramTransport(api=api)
 
-    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+    async def capture(*, chat_id: str, text: str) -> None:
         sent.append(text)
 
     transport._send_channel_text = capture  # type: ignore[method-assign]
@@ -161,7 +192,7 @@ async def test_handle_inbound_unknown_start_token_prompts_onboard() -> None:
     api = TelegramBotApi(bot_token="route-test-token", urlopen=_fake_urlopen)
     transport = TelegramTransport(api=api)
 
-    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+    async def capture(*, chat_id: str, text: str) -> None:
         sent.append(text)
 
     transport._send_channel_text = capture  # type: ignore[method-assign]
@@ -182,7 +213,7 @@ async def test_handle_inbound_unknown_chat_prompts_onboard() -> None:
     api = TelegramBotApi(bot_token="route-test-token", urlopen=_fake_urlopen)
     transport = TelegramTransport(api=api)
 
-    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+    async def capture(*, chat_id: str, text: str) -> None:
         sent.append(text)
 
     transport._send_channel_text = capture  # type: ignore[method-assign]
@@ -206,7 +237,7 @@ async def test_concurrent_onboard_both_welcome_without_assert() -> None:
     api = TelegramBotApi(bot_token="race-test-token", urlopen=_fake_urlopen)
     transport = TelegramTransport(api=api)
 
-    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+    async def capture(*, chat_id: str, text: str) -> None:
         sent.append(text)
 
     transport._send_channel_text = capture  # type: ignore[method-assign]
@@ -251,7 +282,7 @@ async def test_handle_inbound_sends_channel_error_from_presence() -> None:
     api = TelegramBotApi(bot_token="route-test-token", urlopen=_fake_urlopen)
     transport = TelegramTransport(api=api)
 
-    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+    async def capture(*, chat_id: str, text: str) -> None:
         sent.append(text)
 
     transport._send_channel_text = capture  # type: ignore[method-assign]
@@ -343,7 +374,7 @@ async def test_onboard_new_user_triggers_greeting() -> None:
     api = TelegramBotApi(bot_token="greet-test-token", urlopen=_fake_urlopen)
     transport = TelegramTransport(api=api)
 
-    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+    async def capture(*, chat_id: str, text: str) -> None:
         sent.append(text)
 
     transport._send_channel_text = capture  # type: ignore[method-assign]
@@ -363,7 +394,7 @@ async def test_onboard_new_user_triggers_greeting() -> None:
         )
         await transport._handle_onboard(inbound=inbound)
 
-    assert sent == []
+    assert sent == [_ONBOARD_NOTICE_NEW]
     mock_presence.greet_on_sign_on.assert_awaited_once()
     scope = await resolve_scope(
         channel=ChannelKind.TELEGRAM,
@@ -424,7 +455,16 @@ async def test_onboard_new_user_delivers_greeting_message() -> None:
         deliver_message=presence._deliver_ready_via_active_channel,
     )
 
-    assert any("Hello" in body and "Inty" in body for body in sent_bodies)
+    assert len(sent_bodies) == 2
+    notice_fields = parse_qs(sent_bodies[0])
+    greeting_fields = parse_qs(sent_bodies[1])
+    assert notice_fields["parse_mode"] == ["HTML"]
+    assert notice_fields["text"] == [
+        _format_transport_notice(_ONBOARD_NOTICE_NEW)
+    ]
+    assert "parse_mode" not in greeting_fields
+    assert "Hello" in greeting_fields["text"][0]
+    assert "Inty" in greeting_fields["text"][0]
     await _cleanup_scope(scope)
 
 
@@ -437,7 +477,7 @@ async def test_onboard_greeting_failure_falls_back() -> None:
     api = TelegramBotApi(bot_token="greet-fail-token", urlopen=_fake_urlopen)
     transport = TelegramTransport(api=api)
 
-    async def capture(*, chat_id: str, text: str, scope=None) -> None:
+    async def capture(*, chat_id: str, text: str) -> None:
         sent.append(text)
 
     transport._send_channel_text = capture  # type: ignore[method-assign]
@@ -459,7 +499,7 @@ async def test_onboard_greeting_failure_falls_back() -> None:
         )
         await transport._handle_onboard(inbound=inbound)
 
-    assert sent == []
+    assert sent == [_ONBOARD_NOTICE_NEW]
     scope = await resolve_scope(
         channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
