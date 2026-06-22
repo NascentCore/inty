@@ -6,10 +6,7 @@
 
 每个 ``CompanionSession`` 还通过 ``turn_lock`` / ``tool_bg_idle`` 暴露 scope 级串行化状态
 （``scope_turn_lock``；#3272）。
-
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""
 
 from __future__ import annotations
 
@@ -231,7 +228,7 @@ class CompanionManager:
             ensure_minimal_documents_in_store(store)
             ensure_techno_core_seeded(store)
             ensure_living_sphere_seeded(store)
-            # TODO(#3471): ensure_token_budget_seeded(store, initial_budget=...) on session init.
+            # TODO(#3471): ensure_token_budget_seeded(store, initial_budget=...) on session init (#3476 deferred).
 
             session = CompanionSession(
                 scope=scope,

@@ -8,9 +8,7 @@ Structured rows: ``AiPrivateThought`` (``uuid``, ``ts``, ``text``, optional ``af
 Surfaced consumption appends marker rows ``{kind: surfaced, ref_uuid, ts}`` (append-only).
 Kernel maintenance inner-tick turns load history via ``get_ai_private_jsonl_text_for_prompt``;
 ``get_ai_private_text_for_prompt`` remains for ``ai_private.md`` only (tests, tooling).
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""
 
 from __future__ import annotations
 

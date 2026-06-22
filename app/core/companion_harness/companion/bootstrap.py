@@ -11,10 +11,7 @@ client emits the implicit sign-on greeting track, whose system stack carries the
 bootstrap procedure while the tail user line frames the user coming online.  The
 bootstrap tool path is still responsible for persisting the relationship seed
 documents and flipping the bootstrap completion flag.
-
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""
 
 from __future__ import annotations
 

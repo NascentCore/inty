@@ -3,10 +3,7 @@
 ``InnerTickActivity.DREAMING`` labels LangSmith parent runs and
 ``.companion_runtime_events.jsonl`` records. Dreaming does not produce
 ``CompanionTurnResult`` or REPL assistant metadata.
-
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""
 
 from __future__ import annotations
 

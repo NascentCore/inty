@@ -3,7 +3,7 @@
 TODO(#3391): Log timezone_source (client | user_md | transcript | none); replace
 USER.md regex read with structured persistence.
 TODO(#3411): Manual E2E smoke — Telegram/Weixin turn with persisted USER.md 时区 → LangSmith time slice.
-TODO(issues/3586): Temporary launch default_user_time_zone config fallback; remove when
+TODO(#3586): Temporary launch default_user_time_zone config fallback; remove when
 per-user TZ is reliable.
 """
 

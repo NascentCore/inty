@@ -1,6 +1,6 @@
 """AgenticCompanion: per-scope serving runtime draining InputQueue into AgenticLoop.
 
-TODO(!3493): Weixin ``drain_and_deliver`` caller should enqueue + wake only (!3487 App-WS done #3512).
+TODO(#3493): Weixin ``drain_and_deliver`` caller should enqueue + wake only (#3487; App-WS landed in pull/3512).
 """
 
 from __future__ import annotations

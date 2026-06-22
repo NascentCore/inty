@@ -14,10 +14,7 @@ Field provenance:
 - **Per-turn** (from the wire / API layer each invocation): ``runtime_context``,
   ``background_output_sink``, ``preset_user_msg_uuid``,
   ``bootstrap_interim_output_sink``.
-
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
-https://github.com/NascentCore/inty/issues/3409"""
+"""
 
 from __future__ import annotations
 

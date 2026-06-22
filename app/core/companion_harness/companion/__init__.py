@@ -10,10 +10,6 @@ future harness user-turn value object and ``run_user_chat``; Weixin/WS are chann
 adapters (Phase 2 for Weixin).
 https://github.com/NascentCore/inty/issues/3293
 
-
-TODO(companion-package-reorg): Move this module into a focused sub-package under companion_harness (see issue body for draft layout). — #3409
+TODO(companion-package-reorg): Reorganize companion/ flat modules into companion_harness sub-packages (see issue body). — #3409
 https://github.com/NascentCore/inty/issues/3409
-
-TODO(companion-package-reorg): Move app/core/companion_harness/companion/autonomy — #3409
-to app/core/companion_harness/prompting/autonomy/
 """

@@ -4,7 +4,7 @@ The "Business Logic": When to use the tool, rules for invoking it, what to do if
 
 Tools categories
 
-<!-- TODO: Built from tools definitions metadata -->
+<!-- TODO(#3362): Built from companion_tool_definitions metadata -->
 
 - Read-only access to the Internet: reading web pages and search the web
 - Update memory docs
@@ -12,7 +12,7 @@ Tools categories
 
 ## Environments
 
-<!-- TODO: Built from tools definitions metadata -->
+<!-- TODO(#3362): Built from companion_tool_definitions metadata -->
 
 Tools interface with different environments:
 Running environment
