@@ -28,6 +28,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
 )
 
 from app.core.llms.client import LlmClient
+from .langsmith_turn_slice import CompanionTurnLangsmithSlice
 from .runtime_channel import TurnRuntimeContext
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 
@@ -44,9 +45,6 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class CompanionTurnDeps:
     """Immutable dependencies for one ``run_turn`` execution.
-
-    TODO(companion-langsmith-slice): hoist ``langsmith_slice`` here when more modules — #3553
-    need turn-bound channel observability without param drilling.
 
     Unpacked once at the top of ``_run_companion_turn_core``; inner helpers continue
     to receive primitive fields to keep the core diff small.
@@ -157,3 +155,8 @@ class CompanionTurnDeps:
     agentic_output_queue: OutputQueue | None = None
     user_message_batch: UserMessageBatch | None = None
     input_batch: AgenticLoopInputBatch | None = None
+
+    @property
+    def langsmith_slice(self) -> CompanionTurnLangsmithSlice:
+        """Turn-bound LangSmith channel tags shared by foreground and tool_background."""
+        return CompanionTurnLangsmithSlice.from_runtime_context(self.runtime_context)

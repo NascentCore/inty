@@ -417,6 +417,7 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
             client=MagicMock(),
             companion_turn_track=CompanionTurnTrack.USER_CHAT,
             langsmith_parent_run=parent,
+            langsmith_slice=CompanionTurnLangsmithSlice.app_default(),
         )
         runner = mock_thread.call_args.kwargs["target"]
         runner()
@@ -461,6 +462,7 @@ def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
             tools=[],
             client=MagicMock(),
             companion_turn_track=CompanionTurnTrack.USER_CHAT,
+            langsmith_slice=CompanionTurnLangsmithSlice.app_default(),
         )
         runner = mock_thread.call_args.kwargs["target"]
         runner()

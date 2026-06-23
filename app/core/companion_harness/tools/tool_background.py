@@ -566,6 +566,7 @@ async def run_tool_background_loop(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     ),
+    langsmith_slice: CompanionTurnLangsmithSlice,
     force_tools_first_round: bool = True,
 ) -> None:
     scope_registry_key = memory_store.scope.registry_key()
@@ -575,9 +576,6 @@ async def run_tool_background_loop(
         inner_tick_activity=inner_tick_activity,
     )
     tool_api_id = tool_model.id_on_provider
-    langsmith_slice = CompanionTurnLangsmithSlice.from_runtime_context(
-        runtime_context
-    )
     try:
         if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
@@ -1015,6 +1013,7 @@ def start_tool_background_job(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     ),
+    langsmith_slice: CompanionTurnLangsmithSlice,
     tool_bg_idle_event: threading.Event | None = None,
     force_tools_first_round: bool = True,
 ) -> None:
@@ -1062,6 +1061,7 @@ def start_tool_background_job(
                     inner_tick_turn=inner_tick_turn,
                     inner_tick_activity=inner_tick_activity,
                     runtime_context=runtime_context,
+                    langsmith_slice=langsmith_slice,
                     companion_turn_track=companion_turn_track,
                     force_tools_first_round=force_tools_first_round,
                 )

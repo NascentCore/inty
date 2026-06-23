@@ -25,6 +25,6 @@ Open PRs checked: #3611 (#3400 monolog rename), #3620 (#3375 ai_private.md reade
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-10** #3553: hoist `langsmith_slice` onto `CompanionTurnDeps`; turn + tool_background share `deps.langsmith_slice`. `claimed` `cursor/agent-maintenance-tasks-c4bb`.
-- [ ] **HYGIENE-2026-11** #3552: atomic `MemoryStore.append_jsonl_record` (store lock) for concurrent user-feedback appends. `claimed` `cursor/agent-maintenance-tasks-c4bb`.
-- [ ] **HYGIENE-2026-12** #3550: Postgres `pg_try_advisory_lock` per scope in `run_dreaming_batch_if_due`; skip + observability on contention. `claimed` `cursor/agent-maintenance-tasks-c4bb`.
+- [x] **HYGIENE-2026-10** #3553: hoist `langsmith_slice` onto `CompanionTurnDeps`; turn + tool_background share `deps.langsmith_slice`. Fixed in `cursor/agent-maintenance-tasks-c4bb`.
+- [x] **HYGIENE-2026-11** #3552: atomic `MemoryStore.append_jsonl_record` (store lock) for concurrent user-feedback appends. Fixed in `cursor/agent-maintenance-tasks-c4bb`.
+- [x] **HYGIENE-2026-12** #3550: Postgres `pg_try_advisory_lock` per scope in `run_dreaming_batch_if_due`; skip + observability on contention. Fixed in `cursor/agent-maintenance-tasks-c4bb`.
