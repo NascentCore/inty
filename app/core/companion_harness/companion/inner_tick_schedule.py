@@ -25,8 +25,6 @@ from .models import (
     transcript_without_trailing_presence_signals,
 )
 
-REPL_IDLE_MAX_SLEEP_CHUNK_SEC = 3600.0
-
 _DISABLED_INNER_TICK_WAIT_SEC = 86400.0 * 365.0
 
 _INNER_TICK_BLOCKED_MAX_SLEEP_SEC = 60.0
