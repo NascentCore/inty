@@ -112,6 +112,7 @@ class GithubIssueE2eResult:
     issue_number: int
     snapshot_seen: bool
     closed: bool
+    disclosed_in_chat: bool
     error: str | None
 
 
@@ -238,15 +239,18 @@ def _drain_turn_trailing_frames(
     report: dict[str, Any],
     *,
     label: str,
-) -> None:
+) -> str:
     """Drain interim OutputQueue WS frames until the turn is quiet (multi-round tool loop)."""
     trailing = _drain_until_quiet(
         bridge,
         quiet_sec=_TURN_TRAILING_QUIET_SEC,
         max_sec=_TURN_REPLY_TIMEOUT_SEC,
     )
+    parts: list[str] = []
     for text, meta in trailing:
+        parts.append(text)
         _record_trailing_downlink(report, label=label, text=text, meta=meta)
+    return "".join(parts)
 
 
 def _send_turn(bridge: Any, agent_id: str, text: str) -> str:
@@ -427,6 +431,28 @@ def _wait_downlink_for_user_msg_uuid(
         {},
         (408, f"timeout waiting for {label} user_msg_uuid={expected_user_msg_uuid}"),
     )
+
+
+def _load_app_debug_from_config(config_path: Path) -> bool:
+    """Return ``app.debug`` from the regression config yaml (same source as Ops)."""
+    import yaml
+
+    cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    app = cfg.get("app") or {}
+    return bool(app.get("debug"))
+
+
+def _assistant_reply_discloses_issue_url(
+    reply_text: str,
+    issue_url: str,
+    issue_number: int,
+) -> bool:
+    """True when user-visible chat text includes the issue URL or ``issues/{N}`` marker."""
+    if not reply_text.strip() or issue_number <= 0:
+        return False
+    if issue_url.strip() and issue_url in reply_text:
+        return True
+    return f"issues/{issue_number}" in reply_text
 
 
 def _psql(repo_root: Path, config_path: Path, query: str) -> str:
@@ -937,6 +963,10 @@ def _verify_github_issue_via_gh(
         raise RuntimeError("issue body missing user_msg_uuid correlation")
     if "agentic_companion" not in labels:
         raise RuntimeError(f"missing agentic_companion label: {labels}")
+    if "user-reported" not in labels:
+        raise RuntimeError(f"missing user-reported label: {labels}")
+    if "bug" not in labels:
+        raise RuntimeError(f"missing bug label: {labels}")
 
 
 def _close_github_issue(issue_number: int) -> bool:
@@ -964,6 +994,7 @@ def _github_issue_e2e_result_to_report(result: GithubIssueE2eResult) -> dict[str
         "issue_number": result.issue_number,
         "snapshot_seen": result.snapshot_seen,
         "closed": result.closed,
+        "disclosed_in_chat": result.disclosed_in_chat,
         "error": result.error,
     }
 
@@ -983,8 +1014,10 @@ def _run_github_issue_e2e_phase(
     issue_url = ""
     issue_number = 0
     snapshot_seen = False
+    disclosed_in_chat = False
     error: str | None = None
     closed = False
+    assistant_reply = ""
 
     try:
         prereq_err = _require_user_feedback_github_prereqs(stderr)
@@ -1020,7 +1053,10 @@ def _run_github_issue_e2e_phase(
                     f"user_msg_uuid={user_msg_uuid}",
                     flush=True,
                 )
-                _drain_turn_trailing_frames(bridge, report, label="github_issue")
+                trailing_text = _drain_turn_trailing_frames(
+                    bridge, report, label="github_issue"
+                )
+                assistant_reply = text + trailing_text
 
                 if not _wait_input_delivered(
                     repo_root,
@@ -1072,9 +1108,20 @@ def _run_github_issue_e2e_phase(
                                 issue_row,
                                 expected_user_msg_uuid=user_msg_uuid,
                             )
+                            post_deliver_trailing = _drain_turn_trailing_frames(
+                                bridge,
+                                report,
+                                label="github_issue_post_deliver",
+                            )
+                            assistant_reply += post_deliver_trailing
+                            disclosed_in_chat = _assistant_reply_discloses_issue_url(
+                                assistant_reply,
+                                issue_url,
+                                issue_number,
+                            )
                             print(
                                 f"{_TAG} github_issue verified issue=#{issue_number} "
-                                f"url={issue_url}",
+                                f"url={issue_url} disclosed_in_chat={disclosed_in_chat}",
                                 flush=True,
                             )
     except (RuntimeError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
@@ -1100,6 +1147,7 @@ def _run_github_issue_e2e_phase(
         issue_number,
         snapshot_seen,
         closed,
+        disclosed_in_chat,
         error,
     )
 
@@ -1148,6 +1196,7 @@ def run_regression(
         "",
         "",
         0,
+        False,
         False,
         False,
         "skipped: regression did not reach github_issue phase",
@@ -1294,7 +1343,13 @@ def run_regression(
                 }
             )
             github_result = GithubIssueE2eResult(
-                "", "", 0, False, False, "skipped: settled input not delivered"
+                "",
+                "",
+                0,
+                False,
+                False,
+                False,
+                "skipped: settled input not delivered",
             )
             report["github_issue"] = _github_issue_e2e_result_to_report(
                 github_result
@@ -1494,13 +1549,24 @@ LIMIT 8;
         "state": companion_bond_state,
     }
 
+    app_debug = _load_app_debug_from_config(config_path)
     github_issue_ok = github_result.error is None and github_result.closed
+    github_disclosure_ok = (
+        not app_debug or github_result.disclosed_in_chat
+    )
 
     summary = {
         "bootstrap": "complete" if bootstrap_done == "true" else "incomplete",
         "context_mode": context_mode,
         "settled_queue_turn": "pass" if settled_ok and not report["errors"] else "fail",
         "github_issue_e2e": "pass" if github_issue_ok else "fail",
+        "github_issue_disclosed_in_chat": (
+            "pass"
+            if github_disclosure_ok and github_issue_ok
+            else "fail"
+            if app_debug
+            else "skipped"
+        ),
         "proactive_inner_tick": "present" if proactive_present else "missing",
         "proactive_target_rounds": "met" if proactive_target_met else "miss",
         "proactive_silent_rounds": proactive_summary["silent"],
@@ -1532,6 +1598,7 @@ LIMIT 8;
         and proactive_present
         and proactive_silent_ok
         and github_issue_ok
+        and github_disclosure_ok
     )
     return 0 if passed else 1
 

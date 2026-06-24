@@ -58,6 +58,7 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
 ```
 
 - Exit **0** only when settled queue turn passes, bootstrap is complete (`workspace_bootstrap_user_interactive_completed`), **github_issue_e2e** passes, inner-tick proactive is present, and InputQueue / OutputQueue rows are all `delivered`.
+- When `app.debug: true` (local `config.yaml.local`), also require **`github_issue_disclosed_in_chat: pass`**: harness prepends the GitHub issue URL from the deterministic tool result to the tool-leg WS reply (prod `app.debug: false` skips this — issues still filed async, chat stays opaque).
 - GitHub issues created by the regression run are **closed automatically** in driver cleanup (`gh issue close`).
 - Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (**10s**, config minimum) and `poll_seconds` (**3s**) in `devops/config.yaml.local`. Driver flags:
   - `--proactive-wait-sec` (**120** default): wall-clock listen duration after github_issue phase
@@ -86,7 +87,7 @@ Drive the session:
    - define relationship preference
 3. Ask the agent to call `companion_bootstrap_user_interactive_complete` (automated driver sends a bootstrap-finish turn).
 4. Continue after bootstrap with at least one settled user turn.
-5. Send a complaint and ask the agent to file it with `companion_record_user_feedback` (same wording as driver `_DEFAULT_GITHUB_ISSUE_TURN`); confirm acknowledgment.
+5. Send a complaint and ask the agent to file it with `companion_record_user_feedback` (same wording as driver `_DEFAULT_GITHUB_ISSUE_TURN`); with `app.debug: true`, the WS reply should include the GitHub issue URL prepended by the harness. With `app.debug: false`, users only see empathetic acknowledgment (issue still created server-side).
 6. Let one proactive tick fire, or inspect the latest existing proactive metadata if already fired.
 
 Automated driver remains the pass/fail gate; manual REPL is optional sanity check.
@@ -173,6 +174,7 @@ For proactive:
 - OutputQueue rows for user-visible replies are all `delivered`.
 - Settled user turn produces one coherent delivered reply.
 - **GitHub issue E2E:** complaint turn produces feedback JSONL `snapshot` + `github_issue_created`; `gh issue view` validates title/labels/body; issue closed in cleanup (`summary.github_issue_e2e: pass`).
+- **GitHub disclosure (debug only):** when `app.debug: true`, tool-leg WS reply includes issue URL from tool result (`summary.github_issue_disclosed_in_chat: pass`; `skipped` when debug is off).
 - Proactive LLM input includes the synthetic proactive user marker; **≥1 proactive round** (`proactive_inner_tick: present`); no `[SILENT]` token (`proactive_no_silent_token: pass`). Optional stretch: `proactive_target_rounds: met` when the model speaks on round 1.
 - LangSmith run ids in REPL metadata match delivered OutputQueue rows where applicable.
 

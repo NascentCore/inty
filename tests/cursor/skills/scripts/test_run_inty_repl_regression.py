@@ -184,3 +184,35 @@ def test_find_github_issue_skipped_reason() -> None:
     assert (
         mod._find_github_issue_skipped_reason(rows, feedback_id="fb-2") is None
     )
+
+
+def test_assistant_reply_discloses_issue_url() -> None:
+    mod = _load_regression_module()
+
+    url = "https://github.com/NascentCore/inty/issues/3595"
+    assert mod._assistant_reply_discloses_issue_url(
+        f"Filed your feedback: {url}",
+        url,
+        3595,
+    )
+    assert mod._assistant_reply_discloses_issue_url(
+        "Tracked as NascentCore/inty/issues/3595 for the team.",
+        url,
+        3595,
+    )
+    assert not mod._assistant_reply_discloses_issue_url(
+        "Thanks, I recorded your feedback.",
+        url,
+        3595,
+    )
+    assert not mod._assistant_reply_discloses_issue_url("", url, 3595)
+
+
+def test_load_app_debug_from_config(tmp_path) -> None:
+    mod = _load_regression_module()
+
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("app:\n  debug: true\n", encoding="utf-8")
+    assert mod._load_app_debug_from_config(cfg) is True
+    cfg.write_text("app:\n  debug: false\n", encoding="utf-8")
+    assert mod._load_app_debug_from_config(cfg) is False

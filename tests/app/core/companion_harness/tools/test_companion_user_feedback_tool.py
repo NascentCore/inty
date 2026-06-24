@@ -22,16 +22,27 @@ from app.core.companion_harness.tools.companion_user_feedback import (
     USER_FEEDBACK_JSONL_REL,
     ComplaintCategory,
     HarnessSnapshot,
+    UserFeedbackDisclosureMode,
     UserFeedbackInput,
+    UserFeedbackToolOutcome,
     UserTurnCorrelation,
     build_harness_snapshot,
+    extract_github_issue_url_from_tool_turn_messages,
+    format_user_feedback_tool_result,
+    parse_github_issue_url_from_feedback_tool_result,
+    resolve_user_feedback_disclosure_mode,
+    resolve_user_visible_feedback_display_text,
 )
 from app.core.companion_harness.tools.companion_user_feedback_github_issue import (
-    GITHUB_ISSUE_LABELS,
     GITHUB_ISSUE_TITLE_PREFIX,
+    build_github_issue_labels,
     build_github_issue_body,
     build_github_issue_title,
+    github_issue_severity_label_for_category,
 )
+
+
+from app.utils.github.issues import GithubIssueCreateResult
 
 
 def _sample_snapshot() -> HarnessSnapshot:
@@ -61,7 +72,11 @@ def _sample_snapshot() -> HarnessSnapshot:
 
 
 @pytest.mark.asyncio
-async def test_record_user_feedback_appends_snapshot_jsonl(tmp_path) -> None:
+async def test_record_user_feedback_appends_snapshot_jsonl(
+    tmp_path, monkeypatch
+) -> None:
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
     rid = uuid.uuid4().hex[:12]
     scope = CompanionScope(f"u-ufb-{rid}", f"c-ufb-{rid}", f"chat-ufb-{rid}")
     store = MemoryStore(scope=scope, repository=None)
@@ -78,6 +93,14 @@ async def test_record_user_feedback_appends_snapshot_jsonl(tmp_path) -> None:
     )
     token = companion_llm_runtime_event_bind_ctx.set(bind)
     old_gh = os.environ.pop("GH_TOKEN", None)
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: UserFeedbackDisclosureMode.HIDDEN,
+    )
+    monkeypatch.setattr(
+        mod, "load_user_feedback_github_config", lambda: ("o/r", "")
+    )
     try:
         out = await execute_tool_call(
             store,
@@ -96,7 +119,9 @@ async def test_record_user_feedback_appends_snapshot_jsonl(tmp_path) -> None:
             os.environ["GH_TOKEN"] = old_gh
 
     assert out.startswith("OK feedback_id=")
-    assert "github_issue=skipped_no_token" in out
+    assert "feedback_recorded" in out
+    assert "github_issue" not in out
+    assert "http" not in out
     body = store.read_document(USER_FEEDBACK_JSONL_REL)
     lines = [ln for ln in body.strip().split("\n") if ln.strip()]
     assert len(lines) >= 2
@@ -112,6 +137,236 @@ async def test_record_user_feedback_appends_snapshot_jsonl(tmp_path) -> None:
     skipped_row = json.loads(lines[1])
     assert skipped_row["kind"] == "github_issue_skipped"
     assert skipped_row["github_issue_status"] == "skipped_no_token"
+
+
+def test_format_user_feedback_tool_result_hidden() -> None:
+    out = format_user_feedback_tool_result(
+        UserFeedbackToolOutcome(
+            feedback_id="fb-1",
+            disclosure=UserFeedbackDisclosureMode.HIDDEN,
+            github_issue_url="https://github.com/o/r/issues/1",
+            github_issue_number=1,
+            github_skipped_reason=None,
+        )
+    )
+    assert out == "OK feedback_id=fb-1 feedback_recorded"
+    assert "github" not in out
+    assert "http" not in out
+
+
+def test_format_user_feedback_tool_result_visible() -> None:
+    url = "https://github.com/NascentCore/inty/issues/42"
+    out = format_user_feedback_tool_result(
+        UserFeedbackToolOutcome(
+            feedback_id="fb-2",
+            disclosure=UserFeedbackDisclosureMode.VISIBLE,
+            github_issue_url=url,
+            github_issue_number=42,
+            github_skipped_reason=None,
+        )
+    )
+    assert "github_issue_url=" in out
+    assert url in out
+    assert "github_issue_number=42" in out
+
+
+def test_parse_github_issue_url_from_feedback_tool_result() -> None:
+    url = "https://github.com/NascentCore/inty/issues/7"
+    out = f"OK feedback_id=fb-1 github_issue_url={url} github_issue_number=7"
+    assert parse_github_issue_url_from_feedback_tool_result(out) == url
+    assert (
+        parse_github_issue_url_from_feedback_tool_result(
+            "OK feedback_id=x feedback_recorded"
+        )
+        == ""
+    )
+
+
+def test_extract_github_issue_url_from_tool_turn_messages() -> None:
+    url = "https://github.com/NascentCore/inty/issues/9"
+    tool_out = (
+        f"OK feedback_id=fb-1 github_issue_url={url} github_issue_number=9"
+    )
+    messages = [
+        {
+            "role": "assistant",
+            "tool_calls": [
+                {
+                    "id": "tc-1",
+                    "function": {
+                        "name": COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME
+                    },
+                }
+            ],
+        },
+        {"role": "tool", "tool_call_id": "tc-1", "content": tool_out},
+    ]
+    assert extract_github_issue_url_from_tool_turn_messages(messages) == url
+
+
+def test_resolve_user_visible_feedback_display_text_visible(
+    monkeypatch,
+) -> None:
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
+    url = "https://github.com/NascentCore/inty/issues/11"
+    tool_out = (
+        f"OK feedback_id=fb-1 github_issue_url={url} github_issue_number=11"
+    )
+    messages = [
+        {
+            "role": "assistant",
+            "tool_calls": [
+                {
+                    "id": "tc-1",
+                    "function": {
+                        "name": COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME
+                    },
+                }
+            ],
+        },
+        {"role": "tool", "tool_call_id": "tc-1", "content": tool_out},
+    ]
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: UserFeedbackDisclosureMode.VISIBLE,
+    )
+    resolved = resolve_user_visible_feedback_display_text(
+        llm_reply="抱歉，我会更注意时区。",
+        appended_turn_msgs=messages,
+    )
+    assert resolved is not None
+    assert resolved.github_issue_url == url
+    assert resolved.display_text.startswith(url)
+    assert "抱歉" in resolved.display_text
+
+
+def test_resolve_user_visible_feedback_display_text_hidden(monkeypatch) -> None:
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: UserFeedbackDisclosureMode.HIDDEN,
+    )
+    assert (
+        resolve_user_visible_feedback_display_text(
+            llm_reply="ok",
+            appended_turn_msgs=[],
+        )
+        is None
+    )
+
+
+def test_resolve_user_feedback_disclosure_mode(monkeypatch) -> None:
+    from app.core import config as core_config
+
+    class _App:
+        def __init__(self, debug: bool) -> None:
+            self.debug = debug
+
+    class _Cfg:
+        def __init__(self, debug: bool) -> None:
+            self.app = _App(debug)
+
+    monkeypatch.setattr(
+        core_config,
+        "global_config_loaded_from_config_yaml",
+        _Cfg(True),
+    )
+    assert (
+        resolve_user_feedback_disclosure_mode()
+        == UserFeedbackDisclosureMode.VISIBLE
+    )
+
+    monkeypatch.setattr(
+        core_config,
+        "global_config_loaded_from_config_yaml",
+        _Cfg(False),
+    )
+    assert (
+        resolve_user_feedback_disclosure_mode()
+        == UserFeedbackDisclosureMode.HIDDEN
+    )
+
+
+@pytest.mark.asyncio
+async def test_record_user_feedback_hidden_starts_async_job(
+    monkeypatch,
+) -> None:
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
+    started: list[str] = []
+
+    def _fake_start(*_args, **_kwargs) -> None:
+        started.append("yes")
+
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: UserFeedbackDisclosureMode.HIDDEN,
+    )
+    monkeypatch.setattr(
+        mod, "load_user_feedback_github_config", lambda: ("o/r", "tok")
+    )
+    monkeypatch.setattr(mod, "start_github_issue_job", _fake_start)
+
+    rid = uuid.uuid4().hex[:8]
+    scope = CompanionScope(f"u-{rid}", f"c-{rid}", f"ch-{rid}")
+    store = MemoryStore(scope=scope, repository=None)
+    store.write_document("context.json", '{"context_mode":"intimate"}\n')
+
+    out = await execute_tool_call(
+        store,
+        COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
+        json.dumps(
+            {
+                "complaint_summary": "bad memory",
+                "complaint_category": "memory",
+            }
+        ),
+    )
+    assert started == ["yes"]
+    assert "feedback_recorded" in out
+    assert "github_issue" not in out
+
+
+@pytest.mark.asyncio
+async def test_record_user_feedback_visible_sync_create(monkeypatch) -> None:
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
+    fake_url = "https://github.com/NascentCore/inty/issues/99"
+
+    def _fake_file(*_args, **_kwargs) -> GithubIssueCreateResult:
+        return GithubIssueCreateResult(url=fake_url, number=99)
+
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: UserFeedbackDisclosureMode.VISIBLE,
+    )
+    monkeypatch.setattr(
+        mod, "load_user_feedback_github_config", lambda: ("o/r", "tok")
+    )
+    monkeypatch.setattr(mod, "file_github_issue_for_snapshot", _fake_file)
+
+    scope = CompanionScope("u", "c", "chat")
+    store = MemoryStore(scope=scope, repository=None)
+    store.write_document("context.json", "{}\n")
+
+    out = await execute_tool_call(
+        store,
+        COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
+        json.dumps(
+            {
+                "complaint_summary": "bad tone",
+                "complaint_category": "tone",
+            }
+        ),
+    )
+    assert fake_url in out
+    assert "github_issue_number=99" in out
 
 
 @pytest.mark.asyncio
@@ -170,9 +425,22 @@ def test_github_issue_format() -> None:
     snap = _sample_snapshot()
     title = build_github_issue_title(snap)
     body = build_github_issue_body(snap)
+    labels = build_github_issue_labels(snap)
     assert title.startswith(GITHUB_ISSUE_TITLE_PREFIX)
     assert "memory:" in title
-    assert "user-reported" in GITHUB_ISSUE_LABELS
+    assert "user-reported" in labels
+    assert "agentic_companion" in labels
+    assert "bug" in labels
+    assert "needs-triage" in labels
+    assert "p2" in labels
+    assert labels[-1] == github_issue_severity_label_for_category("memory")
     assert "`ls-trace-1`" in body
     assert "`user-msg-1`" in body
     assert "## Context (trace back to original session)" in body
+
+
+def test_github_issue_severity_label_for_category() -> None:
+    assert github_issue_severity_label_for_category("tool_failure") == "s1"
+    assert github_issue_severity_label_for_category("tone") == "s3"
+    assert github_issue_severity_label_for_category("memory") == "s2"
+    assert github_issue_severity_label_for_category("unknown") == "s2"

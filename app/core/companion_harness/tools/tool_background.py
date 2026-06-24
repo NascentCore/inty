@@ -731,12 +731,21 @@ async def run_tool_background_loop(
             total_tool_calls += len(tool_calls)
             return next_resp, None
 
+        # Leading system refresh can shrink the message list; capture tool-round
+        # append rows before refresh so transcript digest still sees tool results.
+        appended_turn_msgs: list[dict[str, Any]] = []
+        appended_capture_from_len = len(working_messages)
+
         # Keep tool-path system prefix and OpenAI tools list in sync with MemoryStore scope
         # after each tool round (same idea as sync loop in turn.py after tool replies).
         async def _after_tool_messages_appended(
             messages_with_tool_results: list[dict[str, Any]],
         ) -> None:
-            nonlocal tools
+            nonlocal tools, appended_capture_from_len
+            appended_turn_msgs.extend(
+                messages_with_tool_results[appended_capture_from_len:]
+            )
+            appended_capture_from_len = len(messages_with_tool_results)
             tools = refresh_companion_turn_prompt_stack(
                 store=memory_store,
                 memory_bootstrap_type=memory_bootstrap_type,
@@ -746,6 +755,7 @@ async def run_tool_background_loop(
                 track=companion_turn_track,
                 runtime_context=runtime_context,
             )
+            appended_capture_from_len = len(messages_with_tool_results)
 
         try:
             loop_result = await resolve_openai_tool_call_loop_async(
@@ -786,7 +796,6 @@ async def run_tool_background_loop(
         bg_ls_llm_run = langsmith_llm_run_id_from_completion(
             loop_result.response
         )
-        appended_turn_msgs = loop_result.messages[len(working_messages) :]
         tool_call_names = _extract_tool_call_names(appended_turn_msgs)
         image_paths = _local_paths_from_tool_messages(loop_result.messages)
         generation_deliver = _generation_tool_execution_deliver(
@@ -819,9 +828,24 @@ async def run_tool_background_loop(
             filler = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs)
             if filler:
                 base_nl = filler
+        from app.core.companion_harness.tools.companion_user_feedback import (
+            resolve_user_visible_feedback_display_text,
+        )
+
+        feedback_display = resolve_user_visible_feedback_display_text(
+            llm_reply=base_nl,
+            appended_turn_msgs=appended_turn_msgs,
+        )
         # Local image paths now travel out-of-band on ToolOutputEvent.local_image_paths
         # (REPL surfaces them as a banner). Body text stays NL-only for production clients.
-        display_text = base_nl
+        deliver_output_to_user = output_to_user_flag
+        if feedback_display is not None:
+            display_text = feedback_display.display_text
+            if display_text.strip():
+                should_push = True
+                deliver_output_to_user = True
+        else:
+            display_text = base_nl
         elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
 
         transcript_body = build_tool_background_transcript_body(
@@ -838,6 +862,7 @@ async def run_tool_background_loop(
             user_msg_uuid,
             generation_deliver,
             output_to_user_flag,
+            deliver_output_to_user,
             should_push,
             ",".join(tool_call_names),
             len(image_paths),
@@ -933,6 +958,7 @@ async def run_tool_background_loop(
             assistant_msg_uuid,
             generation_deliver,
             output_to_user_flag,
+            deliver_output_to_user,
             len(display_text.strip()),
             len(transcript_body),
             len(image_paths),
@@ -949,7 +975,7 @@ async def run_tool_background_loop(
                 trace_id=trace_id,
                 langsmith_trace_id=bg_ls_trace,
                 langsmith_run_id=bg_ls_llm_run,
-                output_to_user=output_to_user_flag,
+                output_to_user=deliver_output_to_user,
                 generation_deliver=generation_deliver,
                 image_asset_baseline=image_asset_baseline,
                 local_image_paths=tuple(image_paths),

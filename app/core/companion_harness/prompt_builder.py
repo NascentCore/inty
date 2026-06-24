@@ -29,9 +29,14 @@ from app.core.companion_harness.companion.prompt_stack import (
     replace_leading_system_messages_inplace,
     weixin_clawbot_contact_alias_system_message,
 )
+from app.core.companion_harness.companion.dual_llm_message_stacks import (
+    replace_leading_system_messages_multi,
+)
 from app.core.companion_harness.companion.prompts.system_messages import (
     _auxiliary_system_messages,
     _doctrine_system_messages,
+    append_profile_collection_system_messages,
+    build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.prompting.tracks import (
     _capability_bootstrap_single_llm_system_messages,
@@ -65,6 +70,9 @@ from app.core.companion_harness.memory.transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.loop.runtime_system_clauses import (
+    apply_debug_github_disclosure_runtime_clause,
+)
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_bootstrap_track_tools,
     build_openai_repl_tools,
@@ -94,6 +102,10 @@ class PromptPlan:
     Holds ordered messages plus tool definitions and optional tool-choice hint
     for the first model call in an in-turn sync tool loop.
 
+    ``messages`` stay typed until callers convert to OpenAI wire dicts via
+    ``prompt_messages_to_openai_dicts``; the target boundary is ``AsyncLlmClient``
+    (#3460).
+
     TODO(#3453): SystemMessage, UserMessage, AssistantMessage, ToolMessage, etc.
     These should be defined as abstract data types, not concrete classes.
 
@@ -113,7 +125,12 @@ class PromptPlan:
 def openai_dialogue_dicts_to_prompt_messages(
     dialogue: list[dict[str, Any]],
 ) -> tuple[PromptMessage, ...]:
-    """Convert legacy OpenAI dialogue dicts into typed ``PromptMessage`` rows."""
+    """Ingest legacy OpenAI dialogue dicts into typed ``PromptMessage`` rows.
+
+    Used while assembling ``PromptPlan`` from paths that still emit
+    ``list[dict[str, Any]]`` (system-prefix replacement, transcript projection).
+    Prefer constructing ``PromptMessage`` directly in new assembly code (#3453).
+    """
     out: list[PromptMessage] = []
     for row in dialogue:
         role_raw = row.get("role")
@@ -130,7 +147,17 @@ def openai_dialogue_dicts_to_prompt_messages(
 def prompt_messages_to_openai_dicts(
     messages: tuple[PromptMessage, ...],
 ) -> list[dict[str, Any]]:
-    """Convert typed messages to OpenAI wire shape (``LLMClient`` boundary only)."""
+    """Map typed ``PromptMessage`` rows to OpenAI chat ``messages`` wire dicts.
+
+    Each output row is ``{"role": <role>, "content": <content>}`` — the shape
+    ``AsyncLlmClient.chat_completion`` expects today.
+
+    Conversion currently happens at call sites before ``AsyncLlmClient``:
+    ``agentic_loop._run_prompt_plan_tool_loop`` (single-LLM in-turn sync),
+    ``turn.py`` dual-LLM tool-leg paths, and unit tests. The **target**
+    boundary is inside ``AsyncLlmClient`` so harness code keeps ``PromptPlan``
+    typed end-to-end (#3460 AgenticLoop consolidation; #3398 dual vs single-LLM).
+    """
     return [
         {"role": message.role.value, "content": message.content}
         for message in messages
@@ -149,6 +176,10 @@ def _append_runtime_channel_system_extras(
     bundle: PromptBundle,
     runtime_context: TurnRuntimeContext,
 ) -> list[dict[str, Any]]:
+    """Append peripheral gateway modality slices (output format, Weixin alias) for the active channel.
+
+    Runtime organization: peripheral (track-attached).
+    """
     out = append_runtime_output_format_system_message(
         system_messages=system_dicts,
         bundle=bundle,
@@ -190,7 +221,7 @@ class PromptBuilder:
         return out
 
     def bootstrap_single_llm_system_messages(self) -> list[dict[str, Any]]:
-        """Bootstrap ``user_turn`` single-LLM in-turn tools system prefix."""
+        """Core and runtime bootstrap system prefix (doctrine through bootstrap contextual slices)."""
         out: list[dict[str, Any]] = []
         out.extend(_doctrine_system_messages())
         out.extend(_auxiliary_system_messages())
@@ -207,7 +238,40 @@ class PromptBuilder:
         )
         return out
 
-    def _build_single_llm_user_chat_prompt(
+    def settled_dual_llm_tool_system_messages(self) -> list[dict[str, Any]]:
+        """Tool-leg system prefix for settled USER_CHAT dual-LLM (not inner-tick)."""
+        return _append_runtime_channel_system_extras(
+            system_dicts=build_system_messages_for_tool_track(
+                self.bundle,
+                self.context,
+            ),
+            bundle=self.bundle,
+            runtime_context=self.runtime_context,
+        )
+
+    def build_settled_user_chat_dual_llm_tool_prompt_plan(
+        self,
+        *,
+        base_messages: list[dict[str, Any]],
+        stack_depth: int,
+        tools: tuple[dict[str, Any], ...],
+    ) -> PromptPlan:
+        """Assemble tool-leg ``PromptPlan`` for settled/async USER_CHAT dual-LLM turns."""
+        assert stack_depth >= 0
+        assert tools
+        wire = replace_leading_system_messages_multi(
+            list(base_messages),
+            self.settled_dual_llm_tool_system_messages(),
+            stack_depth=stack_depth,
+        )
+        apply_debug_github_disclosure_runtime_clause(openai_messages=wire)
+        return PromptPlan(
+            messages=openai_dialogue_dicts_to_prompt_messages(wire),
+            tools=tools,
+            tool_choice=None,
+        )
+
+    def _prompt_plan_from_system_and_dialogue(
         self,
         *,
         system_dicts: list[dict[str, Any]],
@@ -217,11 +281,6 @@ class PromptBuilder:
         implicit_sign_on_turn: bool,
         tail_splice_thoughts: tuple[AiPrivateThought, ...],
     ) -> PromptPlan:
-        system_dicts = _append_runtime_channel_system_extras(
-            system_dicts=system_dicts,
-            bundle=self.bundle,
-            runtime_context=self.runtime_context,
-        )
         messages: list[PromptMessage] = list(
             _system_dicts_to_prompt_messages(system_dicts)
         )
@@ -263,6 +322,67 @@ class PromptBuilder:
             tool_choice=None,
         )
 
+    def bootstrap_turn_system_dicts(self) -> list[dict[str, Any]]:
+        """System prefix for one bootstrap turn: core stack, peripheral gateway, then cohort slices."""
+        system_dicts = self.bootstrap_single_llm_system_messages()
+        system_dicts = _append_runtime_channel_system_extras(
+            system_dicts=system_dicts,
+            bundle=self.bundle,
+            runtime_context=self.runtime_context,
+        )
+        return append_profile_collection_system_messages(
+            system_dicts,
+            context=self.context,
+            runtime_channel=self.runtime_context.channel,
+            interactive_bootstrap_active=(
+                not self.context.workspace_bootstrap_user_interactive_completed
+            ),
+            user_md=self.bundle.user_md,
+        )
+
+    def _compose_settled_single_llm_user_chat_prompt(
+        self,
+        *,
+        transcript_window: list[ChatMessage],
+        tail_user_messages: tuple[TurnTailUserMessage, ...],
+        tools: tuple[dict[str, Any], ...],
+        implicit_sign_on_turn: bool,
+        tail_splice_thoughts: tuple[AiPrivateThought, ...],
+    ) -> PromptPlan:
+        """Compose one settled-turn PromptPlan: core stack, peripheral gateway slices, then dialogue."""
+        system_dicts = _append_runtime_channel_system_extras(
+            system_dicts=self.settled_single_llm_system_messages(),
+            bundle=self.bundle,
+            runtime_context=self.runtime_context,
+        )
+        return self._prompt_plan_from_system_and_dialogue(
+            system_dicts=system_dicts,
+            transcript_window=transcript_window,
+            tail_user_messages=tail_user_messages,
+            tools=tools,
+            implicit_sign_on_turn=implicit_sign_on_turn,
+            tail_splice_thoughts=tail_splice_thoughts,
+        )
+
+    def _compose_bootstrap_single_llm_user_chat_prompt(
+        self,
+        *,
+        transcript_window: list[ChatMessage],
+        tail_user_messages: tuple[TurnTailUserMessage, ...],
+        tools: tuple[dict[str, Any], ...],
+        implicit_sign_on_turn: bool,
+        tail_splice_thoughts: tuple[AiPrivateThought, ...],
+    ) -> PromptPlan:
+        """Compose one bootstrap-turn PromptPlan: core stack, peripheral gateway and cohort slices, then dialogue."""
+        return self._prompt_plan_from_system_and_dialogue(
+            system_dicts=self.bootstrap_turn_system_dicts(),
+            transcript_window=transcript_window,
+            tail_user_messages=tail_user_messages,
+            tools=tools,
+            implicit_sign_on_turn=implicit_sign_on_turn,
+            tail_splice_thoughts=tail_splice_thoughts,
+        )
+
     def build_user_chat_prompt(
         self,
         *,
@@ -274,8 +394,7 @@ class PromptBuilder:
     ) -> PromptPlan:
         """Assemble initial settled single-LLM user-chat prompt with in-turn tools."""
         assert tail_user_messages
-        return self._build_single_llm_user_chat_prompt(
-            system_dicts=self.settled_single_llm_system_messages(),
+        return self._compose_settled_single_llm_user_chat_prompt(
             transcript_window=transcript_window,
             tail_user_messages=tail_user_messages,
             tools=tools,
@@ -294,8 +413,7 @@ class PromptBuilder:
     ) -> PromptPlan:
         """Assemble initial bootstrap single-LLM user-chat prompt with in-turn tools."""
         assert tail_user_messages
-        return self._build_single_llm_user_chat_prompt(
-            system_dicts=self.bootstrap_single_llm_system_messages(),
+        return self._compose_bootstrap_single_llm_user_chat_prompt(
             transcript_window=transcript_window,
             tail_user_messages=tail_user_messages,
             tools=tools,
@@ -341,10 +459,7 @@ def refresh_single_llm_bootstrap_chat_prompt_prefix(
         context=context,
         runtime_context=runtime_context,
     )
-    refreshed = _append_runtime_channel_system_extras(
-        system_dicts=builder.bootstrap_single_llm_system_messages(),
-        bundle=bundle,
-        runtime_context=runtime_context,
+    replace_leading_system_messages_inplace(
+        messages, builder.bootstrap_turn_system_dicts()
     )
-    replace_leading_system_messages_inplace(messages, refreshed)
     return build_openai_bootstrap_track_tools()

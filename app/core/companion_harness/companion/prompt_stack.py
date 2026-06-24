@@ -184,12 +184,14 @@ def companion_system_messages_for_track(
                 bundle,
                 context,
                 memory_bootstrap_type,
+                runtime_context.channel,
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             # TODO(!3463): Compose proactive as overlay on base track prefix — during
             # bootstrap reuse ``build_system_messages_for_bootstrap_track``, then append
             # proactive-only slices; do not rely on ``interactive_bootstrap_active`` alone
             # (``_persona_system_messages`` also requires ``not inner_tick_turn``).
+            # Cohort overlays: same base+overlay pattern — #3628.
             out = build_system_messages_for_inner_tick_proactive_chat(
                 bundle, context, store
             )
@@ -206,7 +208,11 @@ def companion_system_messages_for_track(
                 store=store,
             )
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            out = build_system_messages_for_bootstrap_track(bundle, context)
+            out = build_system_messages_for_bootstrap_track(
+                bundle,
+                context,
+                runtime_context.channel,
+            )
         case CompanionTurnTrack.USER_CHAT:
             if (
                 route_mode
@@ -323,6 +329,7 @@ def refresh_companion_turn_prompt_stack(
                 refreshed = build_system_messages_for_bootstrap_track(
                     bundle,
                     context,
+                    runtime_context.channel,
                 )
             else:
                 refreshed = (
