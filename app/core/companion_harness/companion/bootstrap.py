@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
@@ -32,6 +32,8 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
     BOOTSTRAP_WRITABLE_REL_PATHS,
     CompanionToolName,
 )
+from app.models.user import Gender
+from app.schemas.user import UserAgeGroup, UserProfileSnapshot
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import ContextMeta
@@ -41,6 +43,9 @@ from app.core.companion_harness.memory.memory_store_scope import (
 
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
+_BOOTSTRAP_TELEGRAM_PROFILE_PATH = (
+    _PKG_DIR / "prompts" / "BOOTSTRAP_TELEGRAM_PROFILE.md"
+)
 
 # TODO(memdoc-path-constants): Seed-only rels from canonical MemDoc path constants. #3413
 _BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS: Final[tuple[str, ...]] = (
@@ -76,6 +81,7 @@ def build_bootstrap_tool_call_section() -> str:
             f"- Call **{CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value}** when the user clarifies what companionship experience they want "
             f"(e.g. `casual_chat`, `deep_conversation`, `roleplay`, `remote_romance`); optional `tone` (`warm` / `playful` / `cool` / `direct`). "
             "Bond narrative stays in COMPANIONSHIP.md — do not ask the user for harness `context_mode` ids",
+            f"- Call **{CompanionToolName.COMPANION_RECORD_USER_PROFILE.value}** optionally when the user confirms USER.md identity fields and DB analytics sync is desired (partial updates OK)",
             f"- Call **{CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE.value}** to conclude bootstrap",
             "- 尽快收尾：已有对话足以写初稿时，先 **memory_store_write_document** 写 IDENTITY / STYLE / USER，再 complete；禁止跳过写入直接 complete",
             "- 即使用户配合度低，也基于已有对话写 best-effort 初稿；用户想进入日常相处或已连续多轮无新信息时可提前 complete（仍须先写初稿）",
@@ -92,6 +98,33 @@ def load_bootstrap_spec_text() -> str:
             f"missing bootstrap spec: {_BOOTSTRAP_SPEC_PATH}"
         )
     return _BOOTSTRAP_SPEC_PATH.read_text(encoding="utf-8").rstrip()
+
+
+def load_bootstrap_telegram_profile_slice_text() -> str:
+    """Load the Telegram-only bootstrap overlay prompt slice.
+
+    Paid-ad cohort users arrive via Telegram. The overlay supplements the shared
+    bootstrap procedure: use English for user-visible copy until the user switches
+    language, open with getting-to-know-you (age range is a natural first question),
+    and probe empty identity slots in the user profile document early—one question
+    at a time, without delaying bootstrap completion if the user is impatient or skips.
+    Tools, profile fields, and completion rules remain in the shared bootstrap procedure.
+    """
+
+    if not _BOOTSTRAP_TELEGRAM_PROFILE_PATH.is_file():
+        raise FileNotFoundError(
+            f"missing bootstrap telegram profile slice: {_BOOTSTRAP_TELEGRAM_PROFILE_PATH}"
+        )
+    return _BOOTSTRAP_TELEGRAM_PROFILE_PATH.read_text(encoding="utf-8").rstrip()
+
+
+def profile_collection_active(*, context: ContextMeta) -> bool:
+    """Whether bootstrap should add Telegram cohort profile-collection guidance.
+
+    Set on new Telegram guest sessions so bootstrap turns nudge the companion toward
+    filling unfilled identity slots in the user profile document.
+    """
+    return context.profile_collection_required
 
 
 def interactive_bootstrap_active(
@@ -252,3 +285,57 @@ def tool_companion_set_experience_profile(
         f"(context_mode {normalized!r}, previous {previous!r}){tone_suffix}; "
         "applies starting the next companion turn."
     )
+
+
+class CompanionRecordUserProfileToolInput(BaseModel):
+    """Arguments for ``companion_record_user_profile`` bootstrap tool."""
+
+    gender: Gender | None = Field(
+        default=None,
+        description="User gender when confirmed.",
+    )
+    age_group: UserAgeGroup | None = Field(
+        default=None,
+        description="User age bucket when confirmed.",
+    )
+    location: str | None = Field(
+        default=None,
+        description="City or region when confirmed.",
+    )
+    iana_timezone: str | None = Field(
+        default=None,
+        description="Optional IANA timezone inferred from location.",
+    )
+    note: str = Field(
+        description="Short internal audit note (not shown to user).",
+    )
+
+    @model_validator(mode="after")
+    def _at_least_one_profile_field(
+        self,
+    ) -> CompanionRecordUserProfileToolInput:
+        has_field = (
+            self.gender is not None
+            or self.age_group is not None
+            or (self.location is not None and self.location.strip() != "")
+            or (
+                self.iana_timezone is not None
+                and self.iana_timezone.strip() != ""
+            )
+        )
+        if not has_field:
+            raise ValueError(
+                "at least one of gender, age_group, location, iana_timezone is required"
+            )
+        return self
+
+    def to_snapshot(self) -> UserProfileSnapshot:
+        """Map validated tool input to persistence snapshot."""
+        location = self.location.strip() if self.location else None
+        tz = self.iana_timezone.strip() if self.iana_timezone else None
+        return UserProfileSnapshot(
+            gender=self.gender,
+            age_group=self.age_group,
+            location=location if location else None,
+            iana_timezone=tz if tz else None,
+        )

@@ -72,6 +72,10 @@ Any forms of speculative features that does not fit the current prototype state.
 - Elicit desired behavior through composable prompts, tools, and dynamic memory extraction
 - Do not use hardcoded rules to force agent's behavior, like "generate image if user message has 'generate image'"
 
+### Prompt assembling
+
+Every prompt slice has a **content category** and **runtime organization**. More details are in [DESIGN.md](/docs/imate/companion_harness/DESIGN.md).
+
 ## Python coding guidelines
 
 - All external system dependencies should be wrapped in custom class to hide all interfaces and only expose needed ones.
