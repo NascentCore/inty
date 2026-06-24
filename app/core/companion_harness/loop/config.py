@@ -39,3 +39,12 @@ def resolved_user_turn_batch_messages_llm_call_mode() -> (
         global_config_loaded_from_config_yaml.agent.companion_harness.user_turn.batch_user_messages_llm_call_mode
     )
     return BatchUserMessagesLlmCallMode(raw)
+
+
+def resolved_companion_harness_reply_language() -> str | None:
+    """Read agent.companion_harness.language; None means match user message language."""
+    from app.core.config import global_config_loaded_from_config_yaml
+
+    return (
+        global_config_loaded_from_config_yaml.agent.companion_harness.language
+    )

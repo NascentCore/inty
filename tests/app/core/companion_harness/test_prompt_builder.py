@@ -185,6 +185,66 @@ def test_build_user_chat_prompt_unchanged_no_cohort_overlay() -> None:
     assert "仍待自然了解" not in system_text
 
 
+def test_build_user_chat_prompt_includes_fixed_reply_language_from_config(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.core.companion_harness.loop.runtime_system_clauses.resolved_companion_harness_reply_language",
+        lambda: "English",
+    )
+    builder = PromptBuilder(
+        bundle=_bundle(),
+        context=ContextMeta(),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    )
+    plan = builder.build_user_chat_prompt(
+        transcript_window=[],
+        tail_user_messages=_bootstrap_tail_user(),
+        tools=(),
+        implicit_sign_on_turn=False,
+        tail_splice_thoughts=(),
+    )
+    system_text = _system_text(plan.messages)
+    assert (
+        "Use English for all user-facing reply text in this turn."
+        in system_text
+    )
+
+
+def test_build_bootstrap_user_chat_prompt_includes_fixed_reply_language_from_config(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.core.companion_harness.loop.runtime_system_clauses.resolved_companion_harness_reply_language",
+        lambda: "English",
+    )
+    builder = PromptBuilder(
+        bundle=_bundle(),
+        context=ContextMeta(
+            workspace_bootstrap_user_interactive_completed=False,
+        ),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    )
+    plan = builder.build_bootstrap_user_chat_prompt(
+        transcript_window=[],
+        tail_user_messages=_bootstrap_tail_user(),
+        tools=tuple(build_openai_bootstrap_track_tools()),
+        implicit_sign_on_turn=False,
+        tail_splice_thoughts=(),
+    )
+    system_text = _system_text(plan.messages)
+    assert (
+        "Use English for all user-facing reply text in this turn."
+        in system_text
+    )
+
+
 def test_refresh_bootstrap_prefix_injects_telegram_profile_slice() -> None:
     store = MemoryStore(
         scope=CompanionScope("user-boot", "agent-boot", "chat-boot"),

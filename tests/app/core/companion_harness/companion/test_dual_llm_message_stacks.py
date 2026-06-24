@@ -17,6 +17,10 @@ from app.core.companion_harness.companion.dual_llm_message_stacks import (
     dual_llm_system_message_variants,
     replace_leading_system_messages_multi,
 )
+from app.core.companion_harness.loop.runtime_system_clauses import (
+    append_configured_fixed_reply_language_system_messages,
+    fixed_reply_language_clause,
+)
 from app.core.companion_harness.companion.models import (
     ContextMeta,
     InnerTickActivity,
@@ -115,18 +119,56 @@ def test_dual_llm_system_message_variants_user_chat_matches_builders(
         route_inner_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
     )
-    expected_tool = append_runtime_output_format_system_message(
-        system_messages=build_system_messages_for_tool_track(bundle, context),
-        bundle=bundle,
-        runtime_context=runtime_context,
+    expected_tool = append_configured_fixed_reply_language_system_messages(
+        append_runtime_output_format_system_message(
+            system_messages=build_system_messages_for_tool_track(
+                bundle, context
+            ),
+            bundle=bundle,
+            runtime_context=runtime_context,
+        )
     )
-    expected_chat = append_runtime_output_format_system_message(
-        system_messages=build_settled_user_turn_dual_chat_leg_system_messages(
-            bundle,
-            context,
-        ),
-        bundle=bundle,
-        runtime_context=runtime_context,
+    expected_chat = append_configured_fixed_reply_language_system_messages(
+        append_runtime_output_format_system_message(
+            system_messages=build_settled_user_turn_dual_chat_leg_system_messages(
+                bundle,
+                context,
+            ),
+            bundle=bundle,
+            runtime_context=runtime_context,
+        )
     )
     assert tool_msgs == expected_tool
     assert chat_msgs == expected_chat
+
+
+def test_dual_llm_system_message_variants_appends_fixed_reply_language(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(
+        "app.core.companion_harness.loop.runtime_system_clauses.resolved_companion_harness_reply_language",
+        lambda: "English",
+    )
+    store = MemoryStore(
+        scope=CompanionScope("dual-llm-lang", "agent", tmp_path.name),
+        repository=None,
+    )
+    bundle = _bundle()
+    context = ContextMeta()
+    runtime_context = TurnRuntimeContext(
+        channel=ChannelKind.APP_WS,
+        implicit_signal_bundle=None,
+    )
+    tool_msgs, chat_msgs = dual_llm_system_message_variants(
+        store=store,
+        bundle=bundle,
+        context=context,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        inner_tick_turn=False,
+        route_inner_activity=InnerTickActivity.MONOLOG,
+        runtime_context=runtime_context,
+    )
+    expected_clause = fixed_reply_language_clause(language="English")
+    assert tool_msgs[-1]["content"] == expected_clause
+    assert chat_msgs[-1]["content"] == expected_clause

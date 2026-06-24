@@ -502,6 +502,23 @@ class AgentConfig(BaseModel):
                 "provide none. Remove after issues/3586."
             ),
         )
+        language: str | None = Field(
+            default=None,
+            description=(
+                "When set, all user-facing AgenticLoop replies use this language "
+                "(e.g. English). None keeps reply language aligned with user messages."
+            ),
+        )
+
+        @field_validator("language")
+        @classmethod
+        def _validate_language(cls, value: str | None) -> str | None:
+            if value is None:
+                return None
+            stripped = value.strip()
+            if stripped == "":
+                return None
+            return stripped
 
         @field_validator("default_user_time_zone")
         @classmethod
