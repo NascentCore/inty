@@ -104,6 +104,7 @@ class CompanionLLMConfig(BaseModel):
         )
 
 
+# TODO: Deprecate and use AsyncLlmClient exclusively.
 class LlmClient:
     """Manages OpenAI-compatible clients for companion interactions."""
 

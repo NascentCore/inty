@@ -42,6 +42,10 @@ presence; #3271 cluster lock). ``dreaming_race_guard_matches`` re-checks that in
 TODO(dreaming-transcript-invariant): If ``dreaming_idle_seconds`` is lowered below — #3376
 tool_background worst-case runtime, gate dreaming on ``tool_bg_idle`` or revisit this
 assumption (see #3123).
+
+TODO: Dreaming should be performed with AgenticLoop with the same set of prompts
+as agentic-companion, which allows the consolidation to be guided by explicit agentic
+companion persona.
 """
 
 from __future__ import annotations
