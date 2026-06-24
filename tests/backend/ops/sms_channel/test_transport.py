@@ -5,15 +5,37 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from sqlalchemy import delete
 
+from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.db.session import AsyncSessionLocal
 from app.external_services.twilio_sms import TwilioInboundSms, TwilioSmsSendResult
-from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
+from app.models.agent import Agent
+from app.models.companion_bond import CompanionBond
+from app.models.user import User
+from app.services.agentic_channel.channel_runtime import (
+    clear_registries_for_tests,
+    get_scope_channel_registry,
+)
+from app.services.agentic_channel.companion_bonds import get_companion_bond_for_scope
 from app.services.agentic_channel.endpoints import resolve_scope
-from app.services.agentic_channel.presence import clear_presences_for_tests
+from app.services.agentic_channel.presence import (
+    clear_presences_for_tests,
+    ensure_presence,
+    get_presence,
+)
 from backend.ops.sms_channel import session_store
 from backend.ops.sms_channel.binding import SmsCommand, parse_sms_command
-from backend.ops.sms_channel.transport import SmsTransport, _ONBOARD_HINT
+from backend.ops.sms_channel.transport import (
+    SmsTransport,
+    _EMPTY_CHAT_PROMPT,
+    _ONBOARD_HINT,
+)
+from tests.app.services.agentic_channel.companion_test_fixtures import (
+    create_guest_scope_for_test,
+    delete_guest_scope_for_test,
+)
 
 
 class _FakeTwilioSmsApi:
@@ -86,3 +108,108 @@ async def test_sms_transport_unbound_chat_sends_hint() -> None:
     )
     await transport.handle_inbound(inbound)
     assert api.sent[-1]["body"] == _ONBOARD_HINT
+
+
+@pytest.mark.asyncio
+async def test_sms_transport_empty_chat_sends_prompt() -> None:
+    clear_registries_for_tests()
+    clear_presences_for_tests()
+    session_store.clear_all_for_tests()
+    scope = await create_guest_scope_for_test(
+        channel=ChannelKind.SMS,
+        nickname_prefix="SmsEmpty",
+        meta_data={"agent_channel": True},
+    )
+    api = _FakeTwilioSmsApi()
+    transport = SmsTransport(api=api, from_number="+15005550006")
+    try:
+        async with AsyncSessionLocal() as db:
+            from app.services.agentic_channel.endpoints import upsert_endpoint_in_session
+
+            await upsert_endpoint_in_session(
+                db,
+                scope,
+                channel=ChannelKind.SMS,
+                channel_address="+11234560999",
+                channel_user_id="+11234560999",
+            )
+            await db.commit()
+        inbound = TwilioInboundSms(
+            from_e164="+11234560999",
+            to_e164="+15005550006",
+            body="   ",
+            message_sid="SM_IN_EMPTY",
+        )
+        await transport.handle_inbound(inbound)
+        assert api.sent[-1]["body"] == _EMPTY_CHAT_PROMPT
+    finally:
+        await delete_guest_scope_for_test(scope)
+
+
+@pytest.mark.asyncio
+async def test_sms_transport_stop_clears_presence_and_pauses_bond() -> None:
+    clear_registries_for_tests()
+    clear_presences_for_tests()
+    session_store.clear_all_for_tests()
+    scope = await create_guest_scope_for_test(
+        channel=ChannelKind.SMS,
+        nickname_prefix="SmsStop",
+        meta_data={"agent_channel": True},
+    )
+    phone = f"+1123456{scope.user_id[-4:]}"
+    api = _FakeTwilioSmsApi()
+    transport = SmsTransport(api=api, from_number="+15005550006")
+    try:
+        async with AsyncSessionLocal() as db:
+            from app.services.agentic_channel.endpoints import upsert_endpoint_in_session
+
+            await upsert_endpoint_in_session(
+                db,
+                scope,
+                channel=ChannelKind.SMS,
+                channel_address=phone,
+                channel_user_id=phone,
+            )
+            await db.commit()
+        await transport._ensure_active(
+            inbound=TwilioInboundSms(
+                from_e164=phone,
+                to_e164="+15005550006",
+                body="START",
+                message_sid="SM_STOP_A",
+            ),
+            scope=scope,
+            reason="test_active",
+        )
+        assert get_presence(scope) is not None
+
+        await transport.handle_inbound(
+            TwilioInboundSms(
+                from_e164=phone,
+                to_e164="+15005550006",
+                body="STOP",
+                message_sid="SM_STOP_B",
+            )
+        )
+        assert get_presence(scope) is None
+        assert get_scope_channel_registry(scope).active_channel() is None
+        async with AsyncSessionLocal() as db:
+            bond = await get_companion_bond_for_scope(db, scope)
+            assert bond is not None
+            assert bond.runtime_paused_at is not None
+
+        await transport.handle_inbound(
+            TwilioInboundSms(
+                from_e164=phone,
+                to_e164="+15005550006",
+                body="START",
+                message_sid="SM_STOP_C",
+            )
+        )
+        assert get_presence(scope) is not None
+        async with AsyncSessionLocal() as db:
+            bond = await get_companion_bond_for_scope(db, scope)
+            assert bond is not None
+            assert bond.runtime_paused_at is None
+    finally:
+        await delete_guest_scope_for_test(scope)

@@ -121,7 +121,7 @@ async def _kernel_context(
         model_override=coords.model_override,
         throttle=_throttle_snapshot(fire_input),
         runtime_context=TurnRuntimeContext(
-            gateway=fire_input.delivery.runtime_channel,
+            channel=fire_input.delivery.runtime_channel,
             implicit_signal_bundle=ws_implicit,
         ),
         preset_uid=preset_uid,

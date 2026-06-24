@@ -239,7 +239,7 @@ async def run_agent_turn(
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         runtime_context=TurnRuntimeContext(
-            gateway=runtime_channel,
+            channel=runtime_channel,
             implicit_signal_bundle=implicit_signal_bundle,
         ),
         agentic_output_queue=agentic_output_queue,

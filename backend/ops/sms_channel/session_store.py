@@ -36,6 +36,10 @@ def remember_scope(*, user_phone_e164: str, scope: AgentScope) -> None:
     _scopes_by_user_phone[_phone_key(user_phone_e164)] = scope
 
 
+def forget_scope(*, user_phone_e164: str) -> None:
+    _scopes_by_user_phone.pop(_phone_key(user_phone_e164), None)
+
+
 def clear_all_for_tests() -> None:
     _scopes_by_user_phone.clear()
     clear_presences_for_tests()

@@ -493,7 +493,7 @@ async def run_user_chat(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
-                gateway=runtime_channel,
+                channel=runtime_channel,
                 implicit_signal_bundle=implicit_signal_bundle,
             ),
             bootstrap_interim_output_sink=bootstrap_interim_output_sink,
@@ -528,7 +528,7 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
-                gateway=runtime_channel,
+                channel=runtime_channel,
                 implicit_signal_bundle=implicit_signal_bundle,
             ),
         ),
@@ -560,7 +560,7 @@ async def run_companion_inner_tick_proactive_chat_turn_for_api(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
-                gateway=runtime_channel,
+                channel=runtime_channel,
                 implicit_signal_bundle=implicit_signal_bundle,
             ),
         ),
@@ -597,7 +597,7 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
-                gateway=runtime_channel,
+                channel=runtime_channel,
                 implicit_signal_bundle=implicit_signal_bundle,
             ),
         ),
@@ -629,7 +629,7 @@ async def run_companion_inner_tick_monolog_turn_for_api(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
-                gateway=runtime_channel,
+                channel=runtime_channel,
                 implicit_signal_bundle=implicit_signal_bundle,
             ),
         ),
@@ -662,7 +662,7 @@ async def run_inner_tick_autonomy(
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
-                gateway=runtime_channel,
+                channel=runtime_channel,
                 implicit_signal_bundle=implicit_signal_bundle,
             ),
         ),

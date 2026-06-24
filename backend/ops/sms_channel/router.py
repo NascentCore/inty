@@ -6,6 +6,7 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from loguru import logger
+from pydantic import ValidationError
 
 from app.external_services.twilio_sms import (
     parse_inbound_sms_form,
@@ -32,7 +33,14 @@ async def twilio_inbound(request: Request) -> Response:
         signature=signature,
     ):
         raise HTTPException(status_code=403, detail="Invalid Twilio signature")
-    inbound = parse_inbound_sms_form(params)
+    try:
+        inbound = parse_inbound_sms_form(params)
+    except ValidationError:
+        logger.warning("sms inbound rejected malformed form params={}", params)
+        return Response(
+            content=twilio_empty_response_body(),
+            media_type="application/xml",
+        )
 
     async def _process() -> None:
         try:

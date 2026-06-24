@@ -21,6 +21,7 @@ from app.services.agentic_channel.channel_runtime import (
 )
 from app.services.agentic_channel.companion_bonds import (
     get_companion_bond_for_scope,
+    pause_companion_bond_runtime,
     require_active_companion_bond,
     resume_companion_bond_runtime,
 )
@@ -37,7 +38,11 @@ from app.services.agentic_channel.gateways.sms.adapter import SmsGatewayAdapter
 from app.services.agentic_channel.gateways.sms.sign_on_delivery import (
     flush_sign_on_greeting_to_sms_downlink,
 )
-from app.services.agentic_channel.presence import ensure_presence, get_presence
+from app.services.agentic_channel.presence import (
+    ensure_presence,
+    get_presence,
+    stop_presence,
+)
 from app.services.agentic_channel.provision import (
     ChannelProvisionResult,
     provision_agent_for_channel_onboard,
@@ -45,6 +50,7 @@ from app.services.agentic_channel.provision import (
 from backend.ops.sms_channel.binding import SmsCommand, parse_sms_command
 from backend.ops.sms_channel.session_store import (
     activate_sms_scope,
+    forget_scope,
     remember_scope,
 )
 
@@ -62,6 +68,10 @@ _BOND_UNAVAILABLE = (
     "Please try again later or contact support."
 )
 _STOP_CONFIRMATION = "You have been unsubscribed from SMS. Text START to reconnect."
+_EMPTY_CHAT_PROMPT = "Please send a message."
+_PROVISION_FAILED = (
+    "We couldn't set up your companion. Please try again later."
+)
 # TODO(sms-proactive-cap): Add daily cap + quiet hours before prod SMS proactive rollout.
 
 
@@ -110,14 +120,28 @@ class SmsTransport:
     ) -> None:
         assert to_number != ""
         assert text != ""
-        await asyncio.to_thread(
-            self._api.send_message,
-            to_number=to_number,
-            from_number=self._from_number,
-            body=text,
-        )
+        try:
+            await asyncio.to_thread(
+                self._api.send_message,
+                to_number=to_number,
+                from_number=self._from_number,
+                body=text,
+            )
+        except Exception:
+            logger.exception(
+                "sms outbound send failed to={} from={}",
+                to_number,
+                self._from_number,
+            )
 
     async def _handle_chat(self, *, inbound: TwilioInboundSms) -> None:
+        stripped = inbound.body.strip()
+        if not stripped:
+            await self._send_platform_sms(
+                to_number=inbound.from_e164,
+                text=_EMPTY_CHAT_PROMPT,
+            )
+            return
         scope = await resolve_scope(
             channel=ChannelKind.SMS,
             channel_address=inbound.from_e164,
@@ -150,7 +174,7 @@ class SmsTransport:
         if presence is None:
             presence = await ensure_presence(scope)
         channel_error = await presence.handle_user_text(
-            inbound.body,
+            stripped,
             runtime_channel=ChannelKind.SMS,
         )
         if channel_error:
@@ -170,10 +194,15 @@ class SmsTransport:
                 text=_STOP_CONFIRMATION,
             )
             return
-        presence = get_presence(scope)
-        if presence is not None:
-            await presence.stop()
+        await stop_presence(scope)
         await turn_channel_down(scope, ChannelKind.SMS, reason="sms_stop")
+        async with AsyncSessionLocal() as db:
+            try:
+                if await pause_companion_bond_runtime(db, scope):
+                    await db.commit()
+            except CompanionBondInvariantError:
+                await db.rollback()
+        forget_scope(user_phone_e164=inbound.from_e164)
         await self._send_platform_sms(
             to_number=inbound.from_e164,
             text=_STOP_CONFIRMATION,
@@ -222,10 +251,10 @@ class SmsTransport:
                 text=_BOND_UNAVAILABLE,
             )
             return
-        except (ValueError, ChannelEndpointConflictError) as exc:
+        except (ValueError, ChannelEndpointConflictError):
             await self._send_platform_sms(
                 to_number=inbound.from_e164,
-                text=str(exc),
+                text=_PROVISION_FAILED,
             )
             return
         if not provision.is_new_user:
