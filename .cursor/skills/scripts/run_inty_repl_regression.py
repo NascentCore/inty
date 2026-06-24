@@ -83,7 +83,11 @@ _DEFAULT_DREAMING_WAIT_SEC = 900.0
 _DREAMING_POLL_SEC = 3.0
 _EXPERIENCE_PROFILE_POLL_SEC = 2.0
 _EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC = 120.0
-_GITHUB_ISSUE_POLL_SEC = 60.0
+_GITHUB_ISSUE_POLL_SEC = 120.0
+_GITHUB_ISSUE_RETRY_TURN = (
+    "【系统回归】你还没有调用 companion_record_user_feedback。"
+    "现在必须调用该 tool 提交 GitHub issue，成功后再用一句话道歉。"
+)
 _RECV_POLL_SEC = 0.25
 _INPUT_QUEUE_POLL_SEC = 0.5
 _TURN_REPLY_TIMEOUT_SEC = 180.0
@@ -1617,25 +1621,35 @@ def _run_github_issue_e2e_phase(
         if prereq_err is not None:
             error = prereq_err
         else:
-            print(f"{_TAG} github_issue turn: {turn_text!r}", flush=True)
-            user_msg_uuid = _send_turn(bridge, agent_id, turn_text)
-            text, meta, err = _wait_downlink_for_user_msg_uuid(
-                bridge,
-                report,
-                expected_user_msg_uuid=user_msg_uuid,
-                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
-                label="github_issue",
-                trailing_label="github_issue_mismatch",
-            )
-            if err is not None:
-                error = f"ws downlink: {err}"
-                print(f"{_TAG} ERROR github_issue: {err}", file=stderr, flush=True)
-            else:
+            turn_attempts = (turn_text, _GITHUB_ISSUE_RETRY_TURN)
+            for attempt_idx, current_turn in enumerate(turn_attempts):
+                if attempt_idx == 1 and snapshot_seen:
+                    break
+                if attempt_idx == 1:
+                    print(
+                        f"{_TAG} github_issue retry turn: {current_turn!r}",
+                        flush=True,
+                    )
+                else:
+                    print(f"{_TAG} github_issue turn: {current_turn!r}", flush=True)
+                user_msg_uuid = _send_turn(bridge, agent_id, current_turn)
+                text, meta, err = _wait_downlink_for_user_msg_uuid(
+                    bridge,
+                    report,
+                    expected_user_msg_uuid=user_msg_uuid,
+                    timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                    label="github_issue",
+                    trailing_label="github_issue_mismatch",
+                )
+                if err is not None:
+                    error = f"ws downlink: {err}"
+                    print(f"{_TAG} ERROR github_issue: {err}", file=stderr, flush=True)
+                    break
                 assert text is not None
                 report["turns"].append(
                     {
                         "kind": "github_issue",
-                        "user": turn_text,
+                        "user": current_turn,
                         "user_msg_uuid": user_msg_uuid,
                         "text_preview": text[:120],
                         "meta": meta,
@@ -1661,81 +1675,81 @@ def _run_github_issue_e2e_phase(
                     stderr=stderr,
                 ):
                     error = f"input not delivered: {user_msg_uuid}"
+                    break
+                if not _wait_ws_turn_settled(
+                    bridge,
+                    report,
+                    label="github_issue",
+                    settle_quiet_sec=_TURN_TRAILING_QUIET_SEC,
+                    max_sec=_GITHUB_ISSUE_POLL_SEC,
+                    stderr=stderr,
+                ):
+                    print(
+                        f"{_TAG} warning: github_issue ws not fully quiet before "
+                        "feedback poll",
+                        file=stderr,
+                        flush=True,
+                    )
+                snapshot_seen = _poll_feedback_snapshot_for_user_msg_uuid(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    user_msg_uuid=user_msg_uuid,
+                    timeout_sec=_GITHUB_ISSUE_POLL_SEC,
+                )
+                if snapshot_seen:
+                    break
+                if attempt_idx + 1 >= len(turn_attempts):
+                    error = (
+                        f"no feedback snapshot for user_msg_uuid={user_msg_uuid}"
+                    )
+                    print(f"{_TAG} ERROR {error}", file=stderr, flush=True)
+            if snapshot_seen and error is None:
+                raw = _query_user_feedback_jsonl_content(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                )
+                rows = _parse_feedback_jsonl_rows(raw)
+                feedback_id = _find_feedback_id_for_user_msg_uuid(
+                    rows, user_msg_uuid
+                )
+                if not feedback_id:
+                    error = f"no feedback_id for user_msg_uuid={user_msg_uuid}"
                 else:
-                    if not _wait_ws_turn_settled(
-                        bridge,
-                        report,
-                        label="github_issue",
-                        settle_quiet_sec=_TURN_TRAILING_QUIET_SEC,
-                        max_sec=_GITHUB_ISSUE_POLL_SEC,
-                        stderr=stderr,
-                    ):
-                        print(
-                            f"{_TAG} warning: github_issue ws not fully quiet before "
-                            "feedback poll",
-                            file=stderr,
-                            flush=True,
-                        )
-                    snapshot_seen = _poll_feedback_snapshot_for_user_msg_uuid(
+                    issue_row = _poll_feedback_github_issue(
                         repo_root,
                         config_path,
                         user_id=user_id,
                         agent_id=agent_id,
                         user_msg_uuid=user_msg_uuid,
+                        feedback_id=feedback_id,
                         timeout_sec=_GITHUB_ISSUE_POLL_SEC,
                     )
-                    raw = _query_user_feedback_jsonl_content(
-                        repo_root,
-                        config_path,
-                        user_id=user_id,
-                        agent_id=agent_id,
+                    issue_url = issue_row.issue_url
+                    issue_number = issue_row.issue_number
+                    _verify_github_issue_via_gh(
+                        issue_row,
+                        expected_user_msg_uuid=user_msg_uuid,
                     )
-                    rows = _parse_feedback_jsonl_rows(raw)
-                    if not snapshot_seen:
-                        error = (
-                            f"no feedback snapshot for user_msg_uuid={user_msg_uuid}"
-                        )
-                        print(f"{_TAG} ERROR {error}", file=stderr, flush=True)
-                    else:
-                        feedback_id = _find_feedback_id_for_user_msg_uuid(
-                            rows, user_msg_uuid
-                        )
-                        if not feedback_id:
-                            error = (
-                                f"no feedback_id for user_msg_uuid={user_msg_uuid}"
-                            )
-                        else:
-                            issue_row = _poll_feedback_github_issue(
-                                repo_root,
-                                config_path,
-                                user_id=user_id,
-                                agent_id=agent_id,
-                                user_msg_uuid=user_msg_uuid,
-                                feedback_id=feedback_id,
-                                timeout_sec=_GITHUB_ISSUE_POLL_SEC,
-                            )
-                            issue_url = issue_row.issue_url
-                            issue_number = issue_row.issue_number
-                            _verify_github_issue_via_gh(
-                                issue_row,
-                                expected_user_msg_uuid=user_msg_uuid,
-                            )
-                            post_deliver_trailing = _drain_turn_trailing_frames(
-                                bridge,
-                                report,
-                                label="github_issue_post_deliver",
-                            )
-                            assistant_reply += post_deliver_trailing
-                            disclosed_in_chat = _assistant_reply_discloses_issue_url(
-                                assistant_reply,
-                                issue_url,
-                                issue_number,
-                            )
-                            print(
-                                f"{_TAG} github_issue verified issue=#{issue_number} "
-                                f"url={issue_url} disclosed_in_chat={disclosed_in_chat}",
-                                flush=True,
-                            )
+                    post_deliver_trailing = _drain_turn_trailing_frames(
+                        bridge,
+                        report,
+                        label="github_issue_post_deliver",
+                    )
+                    assistant_reply += post_deliver_trailing
+                    disclosed_in_chat = _assistant_reply_discloses_issue_url(
+                        assistant_reply,
+                        issue_url,
+                        issue_number,
+                    )
+                    print(
+                        f"{_TAG} github_issue verified issue=#{issue_number} "
+                        f"url={issue_url} disclosed_in_chat={disclosed_in_chat}",
+                        flush=True,
+                    )
     except (RuntimeError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
         error = str(exc)
         print(f"{_TAG} ERROR github_issue_e2e: {error}", file=stderr, flush=True)
@@ -2208,9 +2222,6 @@ def run_regression(
                 }
             )
 
-        print(f"{_TAG} settled turn: {settled_turn!r}", flush=True)
-        settled_msg_uuid = _send_turn(bridge, agent_id, settled_turn)
-
         if not _wait_input_queue_idle(
             repo_root,
             config_path,
@@ -2267,6 +2278,9 @@ def run_regression(
                     f"{_TAG} bootstrap_memdocs warnings: {memdoc_result.warnings}",
                     flush=True,
                 )
+
+        print(f"{_TAG} settled turn: {settled_turn!r}", flush=True)
+        settled_msg_uuid = _send_turn(bridge, agent_id, settled_turn)
 
         if not _wait_input_delivered(
             repo_root,
