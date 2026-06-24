@@ -13,43 +13,43 @@ _SCOPE_INNER_TICK_STATE: dict[str, ScopeInnerTickState] = {}
 
 @dataclass
 class ScopeInnerTickState:
-    """Per-scope maintenance/autonomy throttle and tool_bg overlap (no presence required)."""
+    """Per-scope monolog/autonomy throttle and tool_bg overlap (no presence required)."""
 
-    maintenance_fired_monotonic: float | None = None
-    maintenance_fired_line_count: int | None = None
+    monolog_fired_monotonic: float | None = None
+    monolog_fired_line_count: int | None = None
     autonomy_fired_monotonic: float | None = None
     autonomy_fired_line_count: int | None = None
-    _maintenance_tool_bg_idle: threading.Event | None = field(
+    _monolog_tool_bg_idle: threading.Event | None = field(
         default=None, repr=False
     )
     _autonomy_tool_bg_idle: threading.Event | None = field(
         default=None, repr=False
     )
 
-    def last_maintenance_inner_tick_monotonic(self) -> float | None:
-        return self.maintenance_fired_monotonic
+    def last_monolog_inner_tick_monotonic(self) -> float | None:
+        return self.monolog_fired_monotonic
 
-    def last_maintenance_transcript_line_count(self) -> int | None:
-        return self.maintenance_fired_line_count
+    def last_monolog_transcript_line_count(self) -> int | None:
+        return self.monolog_fired_line_count
 
-    def mark_maintenance_inner_tick_fired(
+    def mark_monolog_inner_tick_fired(
         self,
         monotonic_time: float,
         transcript_line_count: int,
     ) -> None:
-        self.maintenance_fired_monotonic = monotonic_time
-        self.maintenance_fired_line_count = transcript_line_count
+        self.monolog_fired_monotonic = monotonic_time
+        self.monolog_fired_line_count = transcript_line_count
 
-    def bind_maintenance_tool_bg_idle(self, ev: threading.Event | None) -> None:
-        self._maintenance_tool_bg_idle = ev
+    def bind_monolog_tool_bg_idle(self, ev: threading.Event | None) -> None:
+        self._monolog_tool_bg_idle = ev
 
-    def clear_maintenance_tool_bg_idle_if_idle(self) -> None:
-        idle_ev = self._maintenance_tool_bg_idle
+    def clear_monolog_tool_bg_idle_if_idle(self) -> None:
+        idle_ev = self._monolog_tool_bg_idle
         if idle_ev is not None and idle_ev.is_set():
-            self._maintenance_tool_bg_idle = None
+            self._monolog_tool_bg_idle = None
 
-    def maintenance_tool_bg_still_running(self) -> bool:
-        idle_ev = self._maintenance_tool_bg_idle
+    def monolog_tool_bg_still_running(self) -> bool:
+        idle_ev = self._monolog_tool_bg_idle
         return idle_ev is not None and (not idle_ev.is_set())
 
     def last_autonomy_inner_tick_monotonic(self) -> float | None:

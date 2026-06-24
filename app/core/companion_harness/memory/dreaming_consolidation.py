@@ -3,7 +3,7 @@
 Batch-curates **the day's full arc** into ``memory/daily/<date>.md`` (daily gist),
 ``MEMORY.md``, ``USER.md``, ``STYLE.md``, ``SOUL.md``, ``COMPANIONSHIP.md``, and ``LIVING_SPHERE.md`` —
 user-visible ``transcript.jsonl`` (chat, proactive, scheduled) plus silent awake
-inner-tick material (autonomy, maintenance) once ``TODO(dreaming-day-rollup)`` — #3376
+inner-tick material (autonomy, monolog) once ``TODO(dreaming-day-rollup)`` — #3376
 merges inner-tick / ``ai_private.jsonl`` / ``LIFE_CURRENTS.md`` into the slice (#3376;
 optional long-cycle reflection #3366).
 Only invoked from the dreaming inner-tick path — no awake post-turn updates.

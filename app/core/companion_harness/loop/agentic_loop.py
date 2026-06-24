@@ -414,7 +414,7 @@ class AgenticLoop:
     TODO(!3470): Bootstrap outbound lines during tools should read like natural
     chat while working, not serial status broadcasts.
 
-    TODO(!3459): Migrate proactive, maintenance, scheduled, and dreaming turns
+    TODO(!3459): Migrate proactive, monolog, scheduled, and dreaming turns
     to this loop instead of legacy in-turn sync paths.
 
     TODO(!3402): Replace bootstrap-named interim callback types with a neutral

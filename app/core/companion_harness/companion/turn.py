@@ -205,7 +205,7 @@ def _memory_store_write_allowlist_for_track(
     match track:
         case CompanionTurnTrack.INNER_TICK_AUTONOMY:
             return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
-        case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
+        case CompanionTurnTrack.INNER_TICK_MONOLOG:
             return frozenset()
         case _:
             return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
@@ -824,7 +824,7 @@ async def _run_companion_turn_core(
                         else:
                             push_output_event(ev)
 
-                    # TODO(!3580): Migrate INNER_TICK_MAINTENANCE / INNER_TICK_AUTONOMY
+                    # TODO(!3580): Migrate INNER_TICK_MONOLOG / INNER_TICK_AUTONOMY
                     # to AgenticLoop single-LLM; remove skip_foreground_envelope path.
                     skip_foreground_envelope = (
                         inner_tick_turn and not tick_proactive
@@ -1250,13 +1250,13 @@ async def run_companion_inner_tick_scheduled_turn(
     )
 
 
-async def run_companion_inner_tick_maintenance_turn(
+async def run_companion_inner_tick_monolog_turn(
     *,
     deps: CompanionTurnDeps,
 ) -> CompanionTurnResult:
     return await _run_companion_turn_core(
         "",
-        track=CompanionTurnTrack.INNER_TICK_MAINTENANCE,
+        track=CompanionTurnTrack.INNER_TICK_MONOLOG,
         deps=deps,
     )
 
@@ -1267,7 +1267,7 @@ async def run_inner_tick_autonomy(
 ) -> CompanionTurnResult:
     """AUTONOMY inner tick: open tool set, **never** delivers to the user.
 
-    Same async foreground/tool-background lifecycle as maintenance, but with
+    Same async foreground/tool-background lifecycle as monolog, but with
     an open tool set and the autonomy system prompt slice that instructs the
     model to read ``LIFE_CURRENTS.md``, do real work (web, image, MemoryStore
     writes), and write progress back — all silently.

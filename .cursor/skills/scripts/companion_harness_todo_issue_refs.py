@@ -15,6 +15,7 @@ TAG_TO_ISSUE: dict[str, int] = {
     "tool-bg-idle-starves-user-chat": 3123,
     "rename-memory-doc": 3400,
     "narrow-maintenance": 3375,
+    "narrow-monolog": 3375,
     "companion-session-eviction": 3444,
     "memdoc-path-constants": 3413,
     "companion-channel-tools": 3362,

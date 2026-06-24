@@ -68,7 +68,7 @@ def test_load_companion_turn_state_applies_dreaming_checkpoint(
     loaded = load_companion_turn_state(
         store=store,
         inner_tick_turn=False,
-        route_inner_activity=InnerTickActivity.MAINTENANCE,
+        route_inner_activity=InnerTickActivity.MONOLOG,
         transcript_llm_window_max_messages=None,
     )
     assert [row.content for row in loaded.loaded_transcript] == ["after"]

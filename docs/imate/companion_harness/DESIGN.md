@@ -150,7 +150,7 @@ Every prompt slice is classified on **two orthogonal axes**. Both are required w
                                    ▼
 ┌─ Awake turns ───────────────────────────────────────────────────────────┐
 │  turn programs  ──►  prompt assembly  ──►  LLM call  ──►  llm client    │
-│  chat · greeting · proactive · autonomy · maintenance (monolog)         │
+│  chat · greeting · proactive · autonomy · monolog (monolog)         │
 │  stable persona + volatile recent context                               │
 └───┬────────────────────┬────────────────────┬───────────────────────────┘
     │                    │                    │
@@ -160,7 +160,7 @@ Every prompt slice is classified on **two orthogonal axes**. Both are required w
     │                    │
     └──── Dreaming (end─of─day memory consolidation)
 
- inner tick (proactive · scheduled · autonomy · maintenance) ──► triggers turn programs
+ inner tick (proactive · scheduled · autonomy · monolog) ──► triggers turn programs
 ```
 
 ## 记忆模型 / 关系状态
@@ -202,7 +202,7 @@ relationship state 今天**隐含**在这些 MemDoc 里；CRS 的职责是把它
 - **`SCHEDULED`**
   - 触发：定时队列
   - 用户可见：Determined by the agentic loop (executing the scheduled task)
-- **`MAINTENANCE`** (monolog)
+- **`MONOLOG`** (monolog)
   - 触发：idle poll
   - 用户可见：否
 - `AUTONOMY`（见 [AUTONOMY.md](./AUTONOMY.md)）

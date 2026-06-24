@@ -79,7 +79,7 @@ def test_bootstrap_loop_context_uses_bootstrap_track_and_allowlist() -> None:
         == MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP
     )
     assert context.langsmith.foreground_source == SOURCE_BOOTSTRAP_TRACK
-    assert context.inner_tick_activity == InnerTickActivity.MAINTENANCE
+    assert context.inner_tick_activity == InnerTickActivity.MONOLOG
     assert (
         context.companion_turn_track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP
     )

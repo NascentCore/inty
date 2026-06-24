@@ -37,7 +37,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``build_system_messages_for_bootstrap_track`` (no Capability package slices) |
 | ASYNC user-round foreground + plan prefix | ``build_settled_user_turn_dual_chat_leg_system_messages`` (``prompting/tracks``) |
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
-| ASYNC maintenance inner tick plan + tool leg | ``build_system_messages_for_inner_tick_maintenance`` |
+| ASYNC monolog inner tick plan + tool leg | ``build_system_messages_for_inner_tick_monolog`` |
 | ASYNC autonomy inner tick (silent self-directed work) | ``build_system_messages_for_inner_tick_autonomy`` |
 | Proactive inner tick (``PROACTIVE_CHAT``) | ``build_system_messages_for_inner_tick_proactive_chat`` (bootstrap: inject ``BOOTSTRAP.md`` — #3463) |
 | Scheduled reminder inner tick | ``build_system_messages_for_inner_tick_scheduled`` |
@@ -428,7 +428,7 @@ __INNER_TICK_SCENE_ADVANCING = (
 
 __CONFESS_TO_USER = (
     "**可见回复（对用户）**：\n"
-    "- **MAINTENANCE 纯 monolog**：面向用户的正文**必须为空字符串**；"
+    "- **MONOLOG 纯 monolog**：面向用户的正文**必须为空字符串**；"
     "不向用户发起可见闲聊，不要一句轻声旁白，不要 WS 下行话术。\n"
     "- 内心活动、关系掂量、场景下一拍 → 用 ``ai_private_append`` 写入 ``ai_private.jsonl``。\n\n"
     "**工具**：\n"
@@ -448,7 +448,7 @@ __EASE_CONTEXT_PRESSURE = (
 
 
 def _get_inner_tick_autonomy_prompt_slice() -> str:
-    """AUTONOMY：虚拟空间/环境中的自主活动（``LIFE_CURRENTS.md``），不是对用户的心理独白（``ai_private.jsonl`` / MAINTENANCE）。
+    """AUTONOMY：虚拟空间/环境中的自主活动（``LIFE_CURRENTS.md``），不是对用户的心理独白（``ai_private.jsonl`` / MONOLOG）。
 
     Read → open tools do real work → write progress back; never deliver to the user.
     Memory doc filenames: ``relative_path_for_kind``; tool names: ``CompanionToolName.*.value``.
@@ -479,7 +479,7 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
         "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；"
         "工具环收尾的结构化信封里 ``user_facing_reply`` 留空，``output_to_user`` 必须为 false。\n\n"
         "**与 ai_private 分工（硬边界）**：\n"
-        "- ``ai_private.jsonl`` / MAINTENANCE：心里想用户——情绪、未说出口的话、关系张力、"
+        "- ``ai_private.jsonl`` / MONOLOG：心里想用户——情绪、未说出口的话、关系张力、"
         "「想读懂他沉默」「信任是否在萌芽」等**心理独白**。\n"
         f"- ``{life_currents_md}`` / AUTONOMY：**在世界里动手**——阁楼/LivingSphere/TechnoCore 里"
         "摆动物件、翻书查资料、生图、记事件；正文写**地点、动作、物件、进展**，"
@@ -495,7 +495,7 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
         "给阁楼窗景配速写、在 TechnoCore 记一条与主题无关的见闻）；"
         f"**先**用非 write 工具做出痕迹，**再** ``{tool_write}`` 写回 ``{life_currents_md}``。\n"
         f"3. ``{tool_write}`` 本轮**只允许** relative_path=``{life_currents_md}``；"
-        f"**禁止**写 ``{user_md}`` / ``{memory_md}`` / SOUL / STYLE / IDENTITY——档案策展属于 DREAMING / MAINTENANCE。\n"
+        f"**禁止**写 ``{user_md}`` / ``{memory_md}`` / SOUL / STYLE / IDENTITY——档案策展属于 DREAMING / MONOLOG。\n"
         "4. 整文件覆盖写入 ``LIFE_CURRENTS.md`` 时用下列骨架（勿改成「生命流」等心理日记标题）：\n"
         "   ```\n"
         "   # 我最近在做的事\n\n"
@@ -515,7 +515,7 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
         "6. 若本轮来不及做完，也要在「进展」里如实写停在哪一步；**唯一硬约束是不出现面向用户的可见正文**。\n\n"
         f"**禁止写入 ``{life_currents_md}`` 的内容**：\n"
         "- 「成为他的知己」「想读懂他的沉默」「信任萌芽」「等他准备好再听」等关系心理；\n"
-        "- 「当前状态」「情绪基调」「未决入口」等 MAINTENANCE 式关系台账；\n"
+        "- 「当前状态」「情绪基调」「未决入口」等 MONOLOG 式关系台账；\n"
         "- 没有对应工具痕迹的空想或誓言。\n\n"
         "**禁止的工具用法**：\n"
         f"- 调 ``{tool_schedule}``（面向用户的预约）；\n"
@@ -806,7 +806,7 @@ def build_system_messages(
     enable_tools: bool = False,
     enable_user_profile_tool: bool = False,
     inner_tick_turn: bool = False,
-    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
     ai_private_text: str = "",
     async_foreground_chat_stack: bool = False,
     tool_side_compact: bool = False,
@@ -928,7 +928,7 @@ def build_system_messages_for_bootstrap_track(
         context,
         enable_tools=True,
         inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         ai_private_text="",
         async_foreground_chat_stack=False,
         tool_side_compact=False,
@@ -961,7 +961,7 @@ def build_system_messages_for_tool_track(
         context,
         enable_tools=True,
         inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         ai_private_text="",
         tool_side_compact=True,
         interactive_bootstrap_active=False,
@@ -969,19 +969,19 @@ def build_system_messages_for_tool_track(
     )
 
 
-def build_system_messages_for_inner_tick_maintenance(
+def build_system_messages_for_inner_tick_monolog(
     bundle: PromptBundle,
     context: ContextMeta,
     store: MemoryStore,
 ) -> list[dict[str, Any]]:
-    """ASYNC maintenance inner tick: plan prefix and tool leg (no foreground envelope)."""
+    """ASYNC monolog inner tick: plan prefix and tool leg (no foreground envelope)."""
     ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
     return build_system_messages(
         bundle,
         context,
         enable_tools=True,
         inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         ai_private_text=ai_private_text,
         tool_side_compact=True,
         interactive_bootstrap_active=False,
@@ -1135,7 +1135,7 @@ def build_system_messages_for_implicit_sign_on_greeting(
         context,
         enable_tools=False,
         inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         include_significance_perception_slice=True,
         interactive_bootstrap_active=bootstrap_active,
     )

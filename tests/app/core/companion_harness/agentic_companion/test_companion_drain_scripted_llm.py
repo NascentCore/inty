@@ -3,7 +3,7 @@
 Covered: settled ``USER_CHAT`` drain (no-tools x ``dual_llm`` + ``in_turn_single_llm``;
 tool-bg and silent-foreground OutputQueue-skip ``dual_llm`` only), bootstrap, batch smokes.
 
-Excluded (documented): maintenance/autonomy (#3580), dreaming, proactive+tool (#3285),
+Excluded (documented): autonomy (#3580), dreaming, proactive+tool (#3285),
 sequential back-to-back drain (TODO). Script sizing via ``build_scripted_settled_user_chat_script``.
 """
 

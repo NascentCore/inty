@@ -6,7 +6,7 @@ Optional ``tool_bg_idle_event`` coordinates per-session ordering with ``turn.run
 
 TODO(tool-bg-idle-starves-user-chat): If the background thread never reaches ``finally`` — #3123
 below, ``tool_bg_idle`` stays cleared and ``run_turn`` on user/proactive turns blocks
-behind ``turn_lock`` (maintenance inner-tick is the common trigger). Intended: watchdog,
+behind ``turn_lock`` (monolog inner-tick is the common trigger). Intended: watchdog,
 cancel, or always release idle on thread exit.
 Issues: https://github.com/NascentCore/inty/issues/3123,
 https://github.com/NascentCore/inty/issues/3113.
@@ -562,7 +562,7 @@ async def run_tool_background_loop(
     repository_only_store_text: bool = False,
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
-    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
     # TODO(#3411): tool_background passes implicit_signal_bundle=None — LangSmith tool_* spans
     # omit ``## User's Local Time Context``; verify injection on foreground agentic_companion_chat only.
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -1013,7 +1013,7 @@ def start_tool_background_job(
     langsmith_parent_run: Any | None = None,
     memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
-    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,

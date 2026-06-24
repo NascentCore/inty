@@ -5,7 +5,7 @@ period passes with no user messages, the scope inner-tick worker may
 **summarize everything that happened during the day** since the previous dream
 checkpoint and settle it into applicable MemoryDocs: user-visible dialogue on
 ``transcript.jsonl`` (``USER_CHAT``, ``PROACTIVE_CHAT``, ``SCHEDULED``) plus
-silent awake inner-tick footprints (``AUTONOMY``, ``MAINTENANCE`` — inner-tick
+silent awake inner-tick footprints (``AUTONOMY``, ``MONOLOG`` — inner-tick
 transcript, ``LIFE_CURRENTS.md``, ``ai_private.jsonl``, related tool/jsonl traces).
 
 ``TODO(dreaming-day-rollup)``: ``dreaming_candidate_slice`` today gates on — #3376
@@ -168,7 +168,7 @@ def dreaming_candidate_slice(
 
     Today only ``transcript.jsonl`` (user-visible chat, proactive, scheduled).
     TODO(dreaming-day-rollup): Merge same-day ``transcript_inner_tick.jsonl`` — #3376
-    (AUTONOMY / MAINTENANCE), ``LIFE_CURRENTS.md``, and related tool/jsonl traces
+    (AUTONOMY / MONOLOG), ``LIFE_CURRENTS.md``, and related tool/jsonl traces
     into the candidate slice passed to ``consolidate_memory_during_dreaming``;
     extend ``DreamingCandidate`` / race guard if inner-tick boundaries need separate
     checkpoints (#3376). Partial ai_private render (manifest hydrate + unconsumed
