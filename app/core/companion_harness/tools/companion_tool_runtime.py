@@ -11,7 +11,6 @@ TODO(companion-channel-tools): Dispatch channel-specific tools via adapter layer
 
 from __future__ import annotations
 
-import asyncio
 import json
 import time
 from datetime import date
@@ -76,7 +75,6 @@ from .companion_user_feedback import (
 )
 from .fal_z_image_tool import (
     MAX_NUM_IMAGES_PER_CALL,
-    reset_fal_async_client_after_short_lived_loop,
     run_generate_image_z_image_turbo,
     run_modify_image_z_image_turbo,
 )
@@ -902,55 +900,3 @@ async def execute_tool_call(
         logger.debug("tool {} ok ({} chars)", name, len(out))
     return out
 
-
-async def _execute_tool_call_blocking_impl(
-    store: MemoryStore,
-    name: str,
-    arguments_json: str,
-    *,
-    write_allowlist: frozenset[str] | None = None,
-    repository_only_store_text: bool = False,
-) -> str:
-    """`asyncio.run` 结束前释放 fal 全局 client，避免连续多次 blocking 调用踩 closed loop。"""
-    try:
-        return await execute_tool_call(
-            store,
-            name,
-            arguments_json,
-            write_allowlist=write_allowlist,
-            repository_only_store_text=repository_only_store_text,
-        )
-    finally:
-        await reset_fal_async_client_after_short_lived_loop()
-
-
-def execute_tool_call_blocking(
-    store: MemoryStore,
-    name: str,
-    arguments_json: str,
-    *,
-    write_allowlist: frozenset[str] | None = None,
-    repository_only_store_text: bool = False,
-) -> str:
-    """Sync entry: safe from async contexts via a fresh event loop in a worker thread."""
-
-    def _run_new_loop() -> str:
-        return asyncio.run(
-            _execute_tool_call_blocking_impl(
-                store,
-                name,
-                arguments_json,
-                write_allowlist=write_allowlist,
-                repository_only_store_text=repository_only_store_text,
-            )
-        )
-
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return _run_new_loop()
-
-    import concurrent.futures
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-        return ex.submit(_run_new_loop).result(timeout=1200)
