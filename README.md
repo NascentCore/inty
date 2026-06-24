@@ -1,4 +1,4 @@
-# Inty: Ultimate Emotional Bliss
+# Inty: personal AI companion
 
 Your whole mind can be devoted to experience the ultimate emotional experience, not any brain cell is distracted by pleasing other hellish humans **Hell is other people** (Jean-Paul Sartre's 1944 existentialist play No Exit).
 
