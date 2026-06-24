@@ -69,7 +69,7 @@ agent:
     agent_scope_idle_timeout_minutes: 5
     # Fast proactive + dreaming rhythm for local REPL / regression (defaults: idle 30s / 7200s).
     # Min idle 10s (RootConfig validation); poll 3s → proactive + scope dreaming within ~90s wait.
-    dreaming_idle_seconds: 10
+    # dreaming_idle_seconds: 10
     inner_tick:
       proactive_chat:
         base_idle_seconds: 10
