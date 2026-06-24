@@ -72,6 +72,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.loop.runtime_system_clauses import (
+    append_configured_fixed_reply_language_system_messages,
     apply_debug_github_disclosure_runtime_clause,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
@@ -206,6 +207,7 @@ class PromptBuilder:
 
     def settled_single_llm_system_messages(self) -> list[dict[str, Any]]:
         """Settled ``user_turn`` single-LLM in-turn tools system prefix."""
+        # TODO(!3629): Fold fixed reply-language into one PromptPlan Output assembly site.
         out: list[dict[str, Any]] = []
         out.extend(_doctrine_system_messages())
         out.extend(_auxiliary_system_messages())
@@ -219,7 +221,7 @@ class PromptBuilder:
         )
         out.extend(_output_settled_single_llm_system_messages())
         out.extend(_contextual_settled_user_turn_system_messages(self.context))
-        return out
+        return append_configured_fixed_reply_language_system_messages(out)
 
     def bootstrap_single_llm_system_messages(self) -> list[dict[str, Any]]:
         """Core and runtime bootstrap system prefix (doctrine through bootstrap contextual slices)."""
@@ -237,17 +239,19 @@ class PromptBuilder:
         out.extend(
             _contextual_bootstrap_user_turn_system_messages(self.context)
         )
-        return out
+        return append_configured_fixed_reply_language_system_messages(out)
 
     def settled_dual_llm_tool_system_messages(self) -> list[dict[str, Any]]:
         """Tool-leg system prefix for settled USER_CHAT dual-LLM (not inner-tick)."""
-        return _append_runtime_channel_system_extras(
-            system_dicts=build_system_messages_for_tool_track(
-                self.bundle,
-                self.context,
-            ),
-            bundle=self.bundle,
-            runtime_context=self.runtime_context,
+        return append_configured_fixed_reply_language_system_messages(
+            _append_runtime_channel_system_extras(
+                system_dicts=build_system_messages_for_tool_track(
+                    self.bundle,
+                    self.context,
+                ),
+                bundle=self.bundle,
+                runtime_context=self.runtime_context,
+            )
         )
 
     def build_settled_user_chat_dual_llm_tool_prompt_plan(

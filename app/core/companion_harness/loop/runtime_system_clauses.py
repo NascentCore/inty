@@ -1,8 +1,12 @@
 """Loop-owned runtime system clauses injected at prompt assembly or AgenticLoop time.
 
 These directives are LLM-only: they are not persisted to transcript and are not
-exposed to channels. Debug GitHub disclosure is applied via ``PromptBuilder``;
-reply-language clauses are applied via ``AgenticLoop``.
+exposed to channels. Debug GitHub disclosure is applied via ``PromptBuilder``.
+
+Reply-language Output slices (content category Output, runtime org runtime):
+``append_configured_fixed_reply_language_system_messages`` for config-fixed language
+in ``PromptPlan`` system prefixes; ``apply_agentic_loop_runtime_system_clauses`` for
+match-user-message language before the tail-user block when config is unset.
 """
 
 from __future__ import annotations
@@ -10,11 +14,15 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any
 
+from app.core.companion_harness.loop.config import (
+    resolved_companion_harness_reply_language,
+)
+
 
 class LoopRuntimeSystemClauseKind(StrEnum):
     """Semantic kinds of harness-internal system text owned by AgenticLoop."""
 
-    REPLY_IN_USER_LANGUAGE = "reply_in_user_language"
+    REPLY_LANGUAGE = "reply_language"
     DEBUG_DISCLOSE_GITHUB_ISSUE = "debug_disclose_github_issue"
 
 
@@ -26,12 +34,41 @@ REPLY_IN_USER_LANGUAGE_CLAUSE = (
 )
 
 
-def reply_in_user_language_system_clause(*, user_text: str) -> str | None:
-    """Return reply-language directive when the turn carries user text."""
+def fixed_reply_language_clause(*, language: str) -> str:
+    """Return Output directive forcing user-facing replies to ``language``."""
+    assert language.strip() != ""
+    return (
+        f"Use {language} for all user-facing reply text in this turn. "
+        "Do not use another language unless the user explicitly asks "
+        "about language choice."
+    )
+
+
+def reply_language_clause(*, user_text: str) -> str | None:
+    """Return reply-language Output directive: fixed from config, else match user text."""
+    fixed = resolved_companion_harness_reply_language()
+    if fixed is not None:
+        return fixed_reply_language_clause(language=fixed)
     assert user_text is not None
     if user_text.strip() == "":
         return None
     return REPLY_IN_USER_LANGUAGE_CLAUSE
+
+
+def append_configured_fixed_reply_language_system_messages(
+    system_messages: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Append fixed reply-language Output slice when ``agent.companion_harness.language`` is set."""
+    fixed = resolved_companion_harness_reply_language()
+    if fixed is None:
+        return system_messages
+    return [
+        *system_messages,
+        {
+            "role": "system",
+            "content": fixed_reply_language_clause(language=fixed),
+        },
+    ]
 
 
 DEBUG_DISCLOSE_GITHUB_ISSUE_CLAUSE = (
@@ -97,7 +134,9 @@ def apply_agentic_loop_runtime_system_clauses(
     user_text: str,
 ) -> None:
     """Inject loop runtime system clauses once before the first LLM call."""
-    clause = reply_in_user_language_system_clause(user_text=user_text)
+    if resolved_companion_harness_reply_language() is not None:
+        return
+    clause = reply_language_clause(user_text=user_text)
     if clause is None:
         return
     insert_pre_tail_user_system_message(

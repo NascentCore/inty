@@ -103,7 +103,6 @@ from .models import (
     load_context_meta,
     transcript_relative_path_for_turn_persistence,
 )
-from .prompt_stack import refresh_companion_turn_prompt_stack
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
     prompt_messages_to_openai_dicts,
@@ -742,8 +741,10 @@ async def _run_companion_turn_core(
                     route_mode
                     == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
                 ):
-                    # TODO(#3588): Inject reply-language runtime clause when this legacy
-                    # dual-LLM path is migrated to AgenticLoop (see loop/runtime_system_clauses.py).
+                    # TODO(#3588): Legacy dual-LLM path still omits match-user-language
+                    # runtime clause on chat_msgs; fixed language uses
+                    # ``append_configured_fixed_reply_language_system_messages`` in
+                    # ``dual_llm_system_message_variants`` / ``PromptBuilder``.
                     # TODO(!3398): dual-LLM user-turn vs single-LLM in-turn sync — epic tracks routing change.
                     # TODO(!3398): Extract dual-LLM message-stack assembly into typed prompt/context builders.
                     tool_system_msgs, chat_system_msgs = (
