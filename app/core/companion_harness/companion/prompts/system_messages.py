@@ -4,16 +4,29 @@ This module is the prompt-stack contract for every companion turn track.  It doe
 not own transcript tail messages, runtime user-time slices, or tool execution;
 it only materializes the ordered system prefix consumed by model calls.
 
-**Stack order (fixed):** Doctrine → Capability → Persona → Output → Contextual.
+**Stack order (today's default compose sequence by content category):**
+Doctrine → Capability → Persona → Output → Contextual.
+Runtime organization (core / runtime / peripheral), persistence, and future
+reordering — see ``prompting/prompt_assembly.py``.
 
-**Doctrine (fixed package prompts):** product axiom → Inty ontology → safety.
+**Doctrine (content category; runtime org mostly core):** product axiom → Inty ontology → safety.
 Doctrine is loaded from package prompt seeds and is never writable through
 MemoryStore tools.
 
-**Capability (package + store):** harness innate limits (``HARNESS.md``) → channel
+**Capability (content category; runtime org mixed — #3341):** harness innate limits (``HARNESS.md``) → channel
 contracts (``CHANNELS.md``) → tool contracts (``TOOLS.md``). Static harness/tool seeds
 are package-authoritative today; TODO(static-prompt-slice-memstore): persist as — #3506
 non-mutable MemoryStore kinds (!3506). Mutable channel contract remains ``CHANNELS.md``.
+
+**Persona (content category; runtime org mostly core):** bond MemDocs, bootstrap procedure when phase active.
+
+**Output (content category; runtime org runtime):** turn output contracts.
+
+**Contextual (content category; runtime org runtime):** turn overlays (directives, time, significance, etc.).
+
+**Track-attached (peripheral runtime org, after stack at track compose):** channel output format,
+Weixin alias (via ``prompt_builder``), Telegram cohort profile collection
+(``append_profile_collection_system_messages``).
 
 Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdown ``##`` headings.
 
@@ -870,6 +883,8 @@ def append_profile_collection_system_messages(
     user_md: str,
 ) -> list[dict[str, Any]]:
     """Append peripheral growth-cohort bootstrap slices when profile collection is required on Telegram.
+
+    Runtime organization: peripheral (track-attached). See prompting/prompt_assembly.py.
 
     Paid-ad launch policy: static English overlay and optional runtime hint for
     unfilled user profile identity labels. Gated by interactive bootstrap,

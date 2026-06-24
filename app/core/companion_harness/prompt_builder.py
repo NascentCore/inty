@@ -176,7 +176,10 @@ def _append_runtime_channel_system_extras(
     bundle: PromptBundle,
     runtime_context: TurnRuntimeContext,
 ) -> list[dict[str, Any]]:
-    """Append peripheral gateway modality slices (output format, Weixin alias) for the active channel."""
+    """Append peripheral gateway modality slices (output format, Weixin alias) for the active channel.
+
+    Runtime organization: peripheral (track-attached). See prompting/prompt_assembly.py.
+    """
     out = append_runtime_output_format_system_message(
         system_messages=system_dicts,
         bundle=bundle,
