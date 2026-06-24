@@ -34,7 +34,7 @@ _TELEGRAM_TEXT_KINDS = frozenset(
         DownlinkKind.USER_REPLY,
         DownlinkKind.PROACTIVE,
         DownlinkKind.SCHEDULED,
-        DownlinkKind.MAINTENANCE,
+        DownlinkKind.MONOLOG,
     }
 )
 

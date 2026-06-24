@@ -21,7 +21,7 @@ Concurrency vocabulary (human terms — three layers, not interchangeable):
   message, greeting, inner-tick fire (including dreaming), and tool-background downlink per
   ``(user_id, agent_id, chat_id)``.
 
-Scope-level inner-tick worker (``scope_inner_tick_poll`` / #3255): maintenance, autonomy,
+Scope-level inner-tick worker (``scope_inner_tick_poll`` / #3255): monolog, autonomy,
 dreaming without signed-on user. Presence poll: proactive + scheduled delivery only.
 """
 
@@ -83,13 +83,13 @@ def apply_inner_tick_coords(
     agent_id: str,
     chat_id: Any,
 ) -> None:
-    """Replace inner-tick coordinates while preserving same-session maintenance throttle."""
+    """Replace inner-tick coordinates while preserving same-session monolog throttle."""
     prev_user = inner_tick_ctx.get("user_id")
     prev_agent = inner_tick_ctx.get("agent_id")
     prev_chat = inner_tick_ctx.get("chat_id")
-    prev_mono = inner_tick_ctx.get("_last_maintenance_inner_tick_monotonic")
+    prev_mono = inner_tick_ctx.get("_last_monolog_inner_tick_monotonic")
     prev_line_count = inner_tick_ctx.get(
-        "_last_maintenance_transcript_line_count"
+        "_last_monolog_transcript_line_count"
     )
     prev_autonomy_mono = inner_tick_ctx.get(
         "_last_autonomy_inner_tick_monotonic"
@@ -107,9 +107,9 @@ def apply_inner_tick_coords(
         and str(prev_chat or "") == str(chat_id or "")
     )
     if same_coords and prev_mono is not None:
-        inner_tick_ctx["_last_maintenance_inner_tick_monotonic"] = prev_mono
+        inner_tick_ctx["_last_monolog_inner_tick_monotonic"] = prev_mono
     if same_coords and prev_line_count is not None:
-        inner_tick_ctx["_last_maintenance_transcript_line_count"] = (
+        inner_tick_ctx["_last_monolog_transcript_line_count"] = (
             prev_line_count
         )
     if same_coords and prev_autonomy_mono is not None:
@@ -130,10 +130,10 @@ class Coordinator:
     the long-lived presence. Holds presence STATE, not IO machinery:
 
     - inner_tick_context: the signed-on (user, agent, chat) triple that gates the
-    proactive/scheduled poll (the poll no-ops when it is empty), plus maintenance/autonomy
+    proactive/scheduled poll (the poll no-ops when it is empty), plus monolog/autonomy
     throttle markers.
     - background_events + background_sink: thread-safe plumbing for inner-tick
-    (proactive/maintenance/autonomy) tool-background output, which is not yet routed
+    (proactive/monolog/autonomy) tool-background output, which is not yet routed
     through OutputQueue (see !3489); queue USER_CHAT tool-leg bypasses this and appends to
     OutputQueue in-process.
     - foreground_pending: correlation map for the above inner-tick background events.
@@ -230,28 +230,28 @@ class Coordinator:
             return None
         return {"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id}
 
-    def last_maintenance_inner_tick_monotonic(self) -> Any:
+    def last_monolog_inner_tick_monotonic(self) -> Any:
         return self.inner_tick_context.get(
-            "_last_maintenance_inner_tick_monotonic"
+            "_last_monolog_inner_tick_monotonic"
         )
 
-    def last_maintenance_transcript_line_count(self) -> int | None:
+    def last_monolog_transcript_line_count(self) -> int | None:
         raw = self.inner_tick_context.get(
-            "_last_maintenance_transcript_line_count"
+            "_last_monolog_transcript_line_count"
         )
         if raw is None:
             return None
         return int(raw)
 
-    def mark_maintenance_inner_tick_fired(
+    def mark_monolog_inner_tick_fired(
         self,
         monotonic_time: float,
         transcript_line_count: int,
     ) -> None:
-        self.inner_tick_context["_last_maintenance_inner_tick_monotonic"] = (
+        self.inner_tick_context["_last_monolog_inner_tick_monotonic"] = (
             monotonic_time
         )
-        self.inner_tick_context["_last_maintenance_transcript_line_count"] = (
+        self.inner_tick_context["_last_monolog_transcript_line_count"] = (
             transcript_line_count
         )
 
@@ -310,9 +310,12 @@ class Coordinator:
             transcript_line_count
         )
 
-    def inner_tick_maintenance_foreground_pending(self) -> bool:
+    def inner_tick_monolog_foreground_pending(self) -> bool:
         return any(
-            bool(ctx.get("ws_inner_tick_maintenance"))
+            bool(
+                ctx.get("ws_inner_tick_monolog")
+                or ctx.get("ws_inner_tick_maintenance")
+            )
             for ctx in self.foreground_pending.values()
         )
 

@@ -45,7 +45,7 @@ def test_resolve_turn_runtime_flags_turn_type() -> None:
     )
     assert (
         resolve_turn_runtime_flags(
-            track=CompanionTurnTrack.INNER_TICK_MAINTENANCE,
+            track=CompanionTurnTrack.INNER_TICK_MONOLOG,
             user_text="",
             implicit_signal_bundle=sign_on,
         ).turn_type

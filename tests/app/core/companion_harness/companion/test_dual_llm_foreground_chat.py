@@ -77,7 +77,7 @@ def _foreground_input(
         high_reasoning=False,
         trace_id="trace-fg",
         skip_foreground_envelope=skip_foreground_envelope,
-        route_inner_activity=InnerTickActivity.MAINTENANCE,
+        route_inner_activity=InnerTickActivity.MONOLOG,
         langsmith_trace_id="",
         langsmith_run_id="",
     )

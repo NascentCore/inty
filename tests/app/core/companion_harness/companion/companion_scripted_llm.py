@@ -4,7 +4,7 @@ Settled ``USER_CHAT`` script shapes are centralized in
 ``build_scripted_settled_user_chat_script`` keyed on ``UserTurnLlmLoopMode``.
 
 Excluded from scripted coverage here (see orchestration/drain module docstrings):
-maintenance/autonomy (#3580), dreaming, proactive+tool (#3285), sequential double-drain.
+autonomy (#3580), dreaming, proactive+tool (#3285), sequential double-drain.
 """
 
 from __future__ import annotations
@@ -44,6 +44,8 @@ _DEFAULT_NO_TOOLS_REPLY = "Hi, I'm here."
 _DEFAULT_TOOL_FG_REPLY = "I'll list your scope root."
 _DEFAULT_TOOL_CALL_ID = "call_list_paths"
 _DEFAULT_IMPORTANCE = 5
+_DEFAULT_MONOLOG_TEXT = "quiet worry about his silence"
+_DEFAULT_MONOLOG_TOOL_CALL_ID = "call_monolog_ai_private_1"
 
 
 class SettledUserChatScriptScenario(StrEnum):
@@ -76,6 +78,75 @@ def scripted_harness_llm_config() -> CompanionLLMConfig:
         default_model=DEEPSEEK_V3_2,
         chat_model=DEEPSEEK_V3_2,
         tool_model=DEEPSEEK_V3_2,
+    )
+
+
+def build_scripted_monolog_inner_tick_script(
+    *,
+    monolog_text: str = _DEFAULT_MONOLOG_TEXT,
+) -> tuple[FakeCompletionStep, ...]:
+    """Deterministic FakeOpenAI script for one ``INNER_TICK_MONOLOG`` tool-background turn."""
+    return (
+        fake_step_tool_call(
+            "ai_private_append",
+            json.dumps({"text": monolog_text}, ensure_ascii=False),
+            tool_call_id=_DEFAULT_MONOLOG_TOOL_CALL_ID,
+        ),
+        fake_step_dual_llm_envelope(
+            user_facing_reply="",
+            output_to_user=False,
+            importance_round=_DEFAULT_IMPORTANCE,
+            importance_user_message=_DEFAULT_IMPORTANCE,
+            importance_assistant_message=_DEFAULT_IMPORTANCE,
+            turn_recall="",
+        ),
+    )
+
+
+def seed_settled_scope_for_inner_tick(store: MemoryStore) -> None:
+    """Seed MemoryStore for settled inner-tick turns (bootstrap done, min transcript)."""
+    store.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "public",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+                "workspace_bootstrap_user_interactive_completed": True,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md", "STYLE.md"):
+        store.write_document(rel, f"# {rel}\n")
+    store.write_document(
+        "transcript.jsonl",
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "role": "user",
+                        "content": "hello",
+                        "ts": "2026-01-01T00:00:00Z",
+                        "uuid": "user-seed-1",
+                    },
+                    ensure_ascii=False,
+                ),
+                json.dumps(
+                    {
+                        "role": "assistant",
+                        "content": "hi there",
+                        "ts": "2026-01-01T00:00:01Z",
+                        "uuid": "asst-seed-1",
+                        "reply_to": "user-seed-1",
+                    },
+                    ensure_ascii=False,
+                ),
+            ]
+        )
+        + "\n",
     )
 
 
@@ -259,6 +330,17 @@ def scripted_transcript_roles(store: MemoryStore) -> list[str]:
 
 def scripted_transcript_rows(store: MemoryStore) -> list[dict[str, object]]:
     raw = store.read_document("transcript.jsonl")
+    return [
+        json.loads(line) for line in raw.strip().splitlines() if line.strip()
+    ]
+
+
+def scripted_inner_tick_transcript_rows(
+    store: MemoryStore,
+) -> list[dict[str, object]]:
+    raw = store.read_document("transcript_inner_tick.jsonl")
+    if not raw.strip():
+        return []
     return [
         json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]

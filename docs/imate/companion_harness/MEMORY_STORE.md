@@ -31,16 +31,16 @@ MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口
 - companion 的身份、稳定边界、对用户的长期理解，以及跨日的语义记忆。
 - **`LIFE_CURRENTS.md`**（AUTONOMY）：Inty 在 **虚拟空间/环境**中的自主活动状态（中期主题、当日兴致、进展）——**她在世界里做什么**，不是对用户的心理独白。与 `ai_private.jsonl` 分工见 [`AUTONOMY.md`](./AUTONOMY.md#ai_privatejsonl-vs-life_currentsmd核心区分)。
 - 由记忆管线与少量工具策展更新；通常只读注入到 system prompt（`LIFE_CURRENTS` 另由 AUTONOMY 写、PROACTIVE_CHAT 只读 hint）。
-- **DREAMING（sleeping）** 做 **当日汇总**：用户可见 `transcript.jsonl`（chat / proactive / scheduled）与沉默 awake 轨（autonomy / maintenance 的 inner-tick transcript、`LIFE_CURRENTS.md`、`ai_private.jsonl` 等）一并策展进 gist 与 semantic MemoryDoc。实现与 `TODO(dreaming-day-rollup)`（[#3376](https://github.com/NascentCore/inty/issues/3376)）见 [`dreaming_consolidation`](/app/core/companion_harness/memory/dreaming_consolidation.py)、[`AUTONOMY.md`](./AUTONOMY.md)。
+- **DREAMING（sleeping）** 做 **当日汇总**：用户可见 `transcript.jsonl`（chat / proactive / scheduled）与沉默 awake 轨（autonomy / monolog 的 inner-tick transcript、`LIFE_CURRENTS.md`、`ai_private.jsonl` 等）一并策展进 gist 与 semantic MemoryDoc。实现与 `TODO(dreaming-day-rollup)`（[#3376](https://github.com/NascentCore/inty/issues/3376)）见 [`dreaming_consolidation`](/app/core/companion_harness/memory/dreaming_consolidation.py)、[`AUTONOMY.md`](./AUTONOMY.md)。
 
 ### 2. 对话轨迹（transcript / inner_tick / ai_private）
 
 - **`transcript.jsonl`**：用户可见对话主轨；每轮末追加 user / assistant，作为下一轮上下文与压实输入；体积大时带截窗读取。Proactive chat 也写本轨；**proactive rhythm** 以本轨**最后一条 assistant 的 `ts`** 为锚（见 [DESIGN.md](./DESIGN.md) 与 `proactive_chat.py`）。**Manifest 行**（`source=ai_private_splice_manifest`）：仅索引本轮 tail-splice 的 `ai_private` thought UUIDs，**过滤**出 chat history / UI；后续轮 hydrate 为 assistant monolog 供 LLM 与 DREAMING。
-- **`transcript_inner_tick.jsonl`**：沉默 inner-tick turn（`MAINTENANCE`、`AUTONOMY`）；与主 transcript 按时间合并后供 inner_tick scene；proactive / scheduled 仍写主轨。
-- **`ai_private.md` / `ai_private.jsonl`**：**对用户的心理独白**（情绪、未说出口的念头、关系场景里的内在节拍），供 MAINTENANCE inner-tick 注入 `内在活动（ai_private）` system 块。不是虚拟环境里的「动手做事」——后者见 `LIFE_CURRENTS.md`（AUTONOMY）。
+- **`transcript_inner_tick.jsonl`**：沉默 inner-tick turn（`MONOLOG`、`AUTONOMY`）；与主 transcript 按时间合并后供 inner_tick scene；proactive / scheduled 仍写主轨。
+- **`ai_private.md` / `ai_private.jsonl`**：**对用户的心理独白**（情绪、未说出口的念头、关系场景里的内在节拍），供 MONOLOG inner-tick 注入 `内在活动（ai_private）` system 块。不是虚拟环境里的「动手做事」——后者见 `LIFE_CURRENTS.md`（AUTONOMY）。
   - **结构化行**（`ai_private.jsonl`）：`{ uuid, ts, text, after_user_msg_uuid? }`；消费后 append-only **surfaced marker** `{ kind: surfaced, ref_uuid, ts }`。
-  - **读**：MAINTENANCE 经 `get_ai_private_jsonl_text_for_prompt`；USER_CHAT / PROACTIVE_CHAT 经 `transcript_ai_private` tail-splice + manifest hydrate；DREAMING expand manifest + 未 surfaced 当日行。
-  - **写**：MAINTENANCE 经伴侣工具 `ai_private_append`（append-only）；**不经** `memory_store_write_document` allowlist。
+  - **读**：MONOLOG 经 `get_ai_private_jsonl_text_for_prompt`；USER_CHAT / PROACTIVE_CHAT 经 `transcript_ai_private` tail-splice + manifest hydrate；DREAMING expand manifest + 未 surfaced 当日行。
+  - **写**：MONOLOG 经伴侣工具 `ai_private_append`（append-only）；**不经** `memory_store_write_document` allowlist。
 
 ### LivingSphere 小家（`LIVING_SPHERE.md` + `living_sphere_updates.jsonl`）
 
