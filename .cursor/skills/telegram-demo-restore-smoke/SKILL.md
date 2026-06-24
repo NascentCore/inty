@@ -53,6 +53,16 @@ SELECT id, last_update_id FROM ops_telegram_demo_poll_state;
 - 全过：`[telegram-demo-restore-smoke] RESULT: PASS`
 - 任一步失败：`[telegram-demo-restore-smoke] RESULT: FAIL (<一步>)`
 
-## Pre-ad paid flight (TODO)
+## Pre-ad paid flight (#3536, epic #3531)
 
-Expand this skill with pause playbook + pre-flight checklist before first Telegram paid ad dollar — #3536 (epic #3531). Blockers: #3532, #3533.
+After bootstrap conversation on a **new** Telegram binding, profile fields in Postgres are **informational** (bootstrap may complete with partial or empty profile):
+
+```sql
+SELECT gender, age_group, meta_data->>'location'
+FROM users
+WHERE id = '<user_id from bindings>';
+```
+
+Non-null values indicate `companion_record_user_profile` was used; empty values are expected when only `memory_store_write_document` updated USER.md.
+
+Other blockers: #3532, #3533.
