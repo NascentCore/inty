@@ -54,11 +54,7 @@ from app.services.user_profile_persistence import (
 
 
 def _guest_meta_data_for_channel(channel: ChannelKind) -> dict:
-    """Guest user meta_data payload for agent-channel onboard.
-
-    Telegram guests are flagged for profile collection so bootstrap turns receive
-    the Telegram overlay slice and identity-field probe hints.
-    """
+    """Guest user meta_data payload for agent-channel onboard."""
     base = {"agent_channel": True}
     match channel:
         case ChannelKind.TELEGRAM:

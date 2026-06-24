@@ -70,7 +70,23 @@ Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**�
 
 ## 目标架构图
 
-```bird's-eye-view-components-diagram
+```bird's-eye-view
++------------------------------------------+
+|                  RUNTIME                 |
+|    +----------------------------------+  |
+|    |         COMPANION HARNESS        |  |
+|    |    +------------------------+    |  |
+|    |    |          LLM           |    |  |
+|    |    +------------------------+    |  |
+|    +----------------------------------+  |
++------------------------------------------+
+```
+
+- LLM : language model core (external providers)
+- Companion Harness : orchestration, emotional scaffolding, "agency"
+- Runtime: APIs, gateways, external system integration, observability (conventional technology)
+
+```components-diagram
 ┌──────────────────────────────────────┐
 │  Users side                          │
 └───────────────────┬──────────────────┘

@@ -156,6 +156,11 @@ def _append_runtime_channel_system_extras(
     bundle: PromptBundle,
     runtime_context: TurnRuntimeContext,
 ) -> list[dict[str, Any]]:
+    """Append per-channel system extras (output format, Weixin alias).
+
+    TODO(bootstrap-cohort-overlays): Bootstrap cohort overlays (Telegram profile slice)
+    belong in one compositor with this or ``append_profile_collection_system_messages`` — #3628.
+    """
     out = append_runtime_output_format_system_message(
         system_messages=system_dicts,
         bundle=bundle,
@@ -197,7 +202,11 @@ class PromptBuilder:
         return out
 
     def bootstrap_single_llm_system_messages(self) -> list[dict[str, Any]]:
-        """Bootstrap ``user_turn`` single-LLM in-turn tools system prefix."""
+        """Bootstrap ``user_turn`` single-LLM in-turn tools system prefix.
+
+        TODO(bootstrap-cohort-overlays): Call ``append_profile_collection_system_messages``
+        when profile collection is active — production path today; legacy builder only — #3628.
+        """
         out: list[dict[str, Any]] = []
         out.extend(_doctrine_system_messages())
         out.extend(_auxiliary_system_messages())

@@ -1,5 +1,7 @@
 # `experimental/`：演示、概念验证
 
+- Code here is meant to be thrown away
+
 ## 硬边界
 
 - 每个项目单独创建文件夹

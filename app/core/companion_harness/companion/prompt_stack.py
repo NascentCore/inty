@@ -170,6 +170,7 @@ def companion_system_messages_for_track(
             # bootstrap reuse ``build_system_messages_for_bootstrap_track``, then append
             # proactive-only slices; do not rely on ``interactive_bootstrap_active`` alone
             # (``_persona_system_messages`` also requires ``not inner_tick_turn``).
+            # Cohort overlays: same base+overlay pattern — #3628.
             out = build_system_messages_for_inner_tick_proactive_chat(
                 bundle, context, store
             )

@@ -871,18 +871,13 @@ def append_profile_collection_system_messages(
 ) -> list[dict[str, Any]]:
     """Append Telegram bootstrap overlay and dynamic unfilled-field hints.
 
-    During interactive bootstrap, when profile collection is required and the turn
-    runs on Telegram, append extra system messages after the main bootstrap stack
-    (persona documents, shared bootstrap procedure, tool instructions, template
-    reference):
+    Single compositor for paid-ad cohort profile collection during interactive
+    bootstrap. When profile collection is required and the turn runs on Telegram,
+    append the channel overlay slice and an optional runtime hint for empty user
+    profile identity labels. All other sessions receive the input list unchanged.
 
-    1. The Telegram channel overlay (English tone, opening prompts, early identity
-       probing).
-    2. An optional runtime hint listing which identity labels in the user profile
-       document are still empty, so the companion can ask one question at a time.
-
-    Non-Telegram channels, completed bootstrap, or sessions without the
-    profile-collection flag receive the input list unchanged.
+    TODO(bootstrap-cohort-overlays): Only choke point should invoke this; wire
+    PromptBuilder bootstrap path and #3463 proactive overlay through here — #3628.
     """
     if not interactive_bootstrap_active:
         return system_messages
@@ -905,11 +900,7 @@ def build_system_messages_for_bootstrap_track(
     context: ContextMeta,
     runtime_channel: ChannelKind,
 ) -> list[dict[str, Any]]:
-    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background).
-
-    When the session is Telegram bootstrap with profile collection required, also
-    appends the Telegram overlay slice and unfilled-field probe hints.
-    """
+    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background)."""
     out = build_system_messages(
         bundle,
         context,
@@ -1109,11 +1100,7 @@ def build_system_messages_for_implicit_sign_on_greeting(
     memory_bootstrap_type: str,
     runtime_channel: ChannelKind,
 ) -> list[dict[str, Any]]:
-    """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts).
-
-    While bootstrap is still active on Telegram with profile collection required,
-    also appends the Telegram overlay slice and unfilled-field probe hints.
-    """
+    """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts)."""
     bootstrap_active = _greeting_omit_capability_system_slices(
         context=context,
         memory_bootstrap_type=memory_bootstrap_type,

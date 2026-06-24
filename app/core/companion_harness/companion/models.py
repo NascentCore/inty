@@ -325,10 +325,8 @@ class ContextMeta(BaseModel):
     profile_collection_required: bool = Field(
         default=False,
         description=(
-            "When true during interactive bootstrap on Telegram, the prompt stack "
-            "appends the Telegram overlay slice (English tone, early identity probing) "
-            "and runtime hints for unfilled user profile identity fields. Set for "
-            "paid-ad cohort guests at channel provision."
+            "Telegram paid-ad cohort: bootstrap should collect user profile "
+            "identity fields. Set at channel provision."
         ),
     )
     experience_directives: ExperienceDirectives = Field(
