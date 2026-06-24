@@ -7,7 +7,7 @@ it only materializes the ordered system prefix consumed by model calls.
 **Stack order (today's default compose sequence by content category):**
 Doctrine → Capability → Persona → Output → Contextual.
 Runtime organization (core / runtime / peripheral), persistence, and future
-reordering — see ``docs/imate/companion_harness/DESIGN.md``.
+reordering — see ``prompting/prompt_assembly.py``.
 
 **Doctrine (content category; runtime org mostly core):** product axiom → Inty ontology → safety.
 Doctrine is loaded from package prompt seeds and is never writable through
@@ -884,7 +884,7 @@ def append_profile_collection_system_messages(
 ) -> list[dict[str, Any]]:
     """Append peripheral growth-cohort bootstrap slices when profile collection is required on Telegram.
 
-    Runtime organization: peripheral (track-attached).
+    Runtime organization: peripheral (track-attached). See prompting/prompt_assembly.py.
 
     Paid-ad launch policy: static English overlay and optional runtime hint for
     unfilled user profile identity labels. Gated by interactive bootstrap,

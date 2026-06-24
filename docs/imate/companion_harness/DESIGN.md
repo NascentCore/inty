@@ -70,7 +70,7 @@ Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**�
 
 ### Prompt content categories and runtime organization
 
-Every prompt slice is classified on **two orthogonal axes**. Both are required when adding or moving slices.
+Every prompt slice is classified on **two orthogonal axes**. Both are required when adding or moving slices. Canonical in-code reference: [`app/core/companion_harness/prompting/prompt_assembly.py`](/app/core/companion_harness/prompting/prompt_assembly.py).
 
 **Axis 1 — Content category (what the text is).** Semantic kind of material. Stable layer names used in system-prefix assembly:
 
