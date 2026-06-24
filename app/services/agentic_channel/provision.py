@@ -26,9 +26,6 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    companion_guest_agent_kind_for_channel,
-)
 from app.services.agentic_channel.companion_bonds import (
     ensure_active_companion_bond_for_owned_scope,
     require_active_companion_bond,
@@ -235,7 +232,7 @@ async def provision_agent_for_channel_onboard(
             scope = await provision_guest_scope(
                 db,
                 ProvisionGuestScopeInput(
-                    kind=companion_guest_agent_kind_for_channel(channel),
+                    channel=channel,
                     nickname_prefix="Guest",
                     meta_data=_guest_meta_data_for_channel(channel),
                 ),

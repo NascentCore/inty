@@ -24,8 +24,8 @@ from app.services.agentic_channel.endpoints import (
     resolve_scope_by_channel_user_id,
 )
 from app.services.agentic_channel.errors import ChannelEndpointConflictError
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
 )
 from tests.app.services.agentic_channel.companion_test_fixtures import (
     create_guest_scope_for_test,
@@ -34,7 +34,7 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
 
 async def _create_user_and_agent() -> AgentScope:
     return await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="endpoint",
         meta_data={"test": True},
     )

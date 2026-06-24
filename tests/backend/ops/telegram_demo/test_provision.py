@@ -21,8 +21,8 @@ from app.services.agentic_channel.errors import (
     ChannelEndpointConflictError,
     CompanionBondInvariantError,
 )
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
 )
 from app.services.agentic_channel.provision import (
     OwnedChannelProvisionInput,
@@ -37,7 +37,7 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
 
 async def _create_creator_scope() -> AgentScope:
     scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         nickname_prefix="Creator",
         meta_data={"test": True},
     )
@@ -220,7 +220,7 @@ async def test_provision_existing_endpoint_rejects_bond_mismatch() -> None:
         channel_user_id=channel_user_id,
     )
     other = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         nickname_prefix="Other",
         meta_data={"test": True},
     )

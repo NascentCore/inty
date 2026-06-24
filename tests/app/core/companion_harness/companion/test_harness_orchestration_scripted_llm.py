@@ -20,8 +20,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
@@ -93,7 +93,7 @@ async def _build_scripted_manager(
     memory_bootstrap_type: str,
 ) -> tuple[CompanionManager, CompanionSession, FakeOpenAI, AgentScope]:
     scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="harn",
         meta_data={"test": "scripted_llm"},
     )

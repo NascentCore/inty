@@ -22,7 +22,6 @@ from app.services.agentic_companion.langsmith_channel_resolve import (
     resolve_langsmith_slice_for_session,
 )
 from app.services.agentic_companion.runtime_channel_registry import (
-    ActiveRuntimeChannel,
     clear_all_for_tests,
     register_active_channel,
 )
@@ -63,7 +62,7 @@ async def test_resolve_uses_scope_registry_for_agent_scope_chat_id() -> None:
 async def test_resolve_uses_user_registry_for_ws_chat_id() -> None:
     register_active_channel(
         user_id="u-ws",
-        channel=ActiveRuntimeChannel.APP,
+        channel=ChannelKind.APP_WS,
     )
     session = _session(user_id="u-ws", companion_id="a1", chat_id="chat-uuid-1")
 

@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy import delete, select
 
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
@@ -640,7 +640,7 @@ async def test_onboard_returning_rejects_ambiguous_bond() -> None:
         second_agent = await add_companion_guest_agent_for_user(
             db,
             user_id=provision.scope.user_id,
-            kind=CompanionGuestAgentKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
         )
         db.add(
             CompanionBond(
