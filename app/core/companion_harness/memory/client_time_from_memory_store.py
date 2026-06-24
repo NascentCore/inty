@@ -15,13 +15,11 @@ from loguru import logger
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import USER_MD_REL
 from app.core.companion_harness.memory.user_timezone_from_user_md import (
     infer_iana_timezone_from_user_md,
 )
 from app.schemas.chat import UserTimeContext
-
-# TODO(memdoc-path-constants): Replace ad-hoc _USER_MD_REL with canonical constant. #3413
-_USER_MD_REL = "USER.md"
 
 
 def build_user_time_context_for_iana(tz_name: str) -> UserTimeContext:
@@ -54,7 +52,7 @@ def _valid_incoming_client_timezone(
 
 def client_time_from_memory_store(store: MemoryStore) -> UserTimeContext | None:
     """Resolve client wall-clock facts from USER.md when timezone was inferred there."""
-    user_md = store.read_document_if_exists(_USER_MD_REL)
+    user_md = store.read_document_if_exists(USER_MD_REL)
     if user_md is None or not user_md.strip():
         return None
     tz_name = infer_iana_timezone_from_user_md(user_md)

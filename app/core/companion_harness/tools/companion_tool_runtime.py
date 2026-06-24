@@ -105,16 +105,14 @@ from .companion_tool_definitions import (
     _EMPTY_DESCRIPTION_OVERRIDES,
     openai_tools_for_names,
 )
-from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
-from .read_web_page import run_read_web_page
-
+from app.core.companion_harness.memory.memory_store_path_constants import USER_MD_REL
 from app.core.companion_harness.memory.user_md_identity import (
-    USER_MD_REL,
     USER_PROFILE_SECTION,
     UserIdentityFieldLabel,
     fill_user_md_identity_fields,
 )
-
+from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
+from .read_web_page import run_read_web_page
 
 def _companion_tool_validation_error_message(exc: ValidationError) -> str:
     detail = "; ".join(

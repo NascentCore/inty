@@ -130,7 +130,12 @@ def test_run_dreaming_batch_if_due_raises_on_boundary_mismatch() -> None:
 
     memory_update.assert_called_once()
     save_dreaming_state.assert_not_called()
-    record_obs.assert_not_called()
+    record_obs.assert_called_once()
+    assert (
+        record_obs.call_args.kwargs["outcome"]
+        == DreamingBatchOutcome.BATCH_FAILED
+    )
+    assert record_obs.call_args.kwargs["batch_error"] is not None
 
 
 def test_run_dreaming_batch_if_due_saves_checkpoint_after_update() -> None:
