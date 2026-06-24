@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import delete, select
 
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.postgres_queue import (
@@ -62,7 +62,7 @@ async def _cleanup_scope(scope: AgentScope) -> None:
 @pytest.mark.asyncio
 async def test_input_queue_append_and_claim_batch_order() -> None:
     scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="input_queue",
         meta_data={"test": True},
     )
@@ -101,7 +101,7 @@ async def test_input_queue_append_and_claim_batch_order() -> None:
 @pytest.mark.asyncio
 async def test_append_user_message_idempotent_for_client_message_id() -> None:
     scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="input_queue_dedup",
         meta_data={"test": True},
     )
@@ -166,7 +166,7 @@ async def test_append_user_message_idempotent_for_client_message_id() -> None:
 @pytest.mark.asyncio
 async def test_get_records_by_ids_returns_app_ws_metadata() -> None:
     scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="input_queue_lookup",
         meta_data={"test": True},
     )
@@ -203,7 +203,7 @@ async def test_get_records_by_ids_returns_app_ws_metadata() -> None:
 @pytest.mark.asyncio
 async def test_mark_batch_failed_persists_after_commit() -> None:
     scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="input_queue_failed",
         meta_data={"test": True},
     )
@@ -255,7 +255,7 @@ async def test_mark_batch_failed_persists_after_commit() -> None:
 @pytest.mark.asyncio
 async def test_output_queue_append_claim_and_deliver() -> None:
     scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="output_queue",
         meta_data={"test": True},
     )
@@ -304,7 +304,7 @@ async def test_output_queue_append_claim_and_deliver() -> None:
 @pytest.mark.asyncio
 async def test_output_queue_mark_skipped_persists_terminal_status() -> None:
     scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="output_queue_skipped",
         meta_data={"test": True},
     )

@@ -7,8 +7,8 @@ import uuid
 import pytest
 from sqlalchemy import delete, select
 
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import ChannelKind
@@ -51,7 +51,7 @@ async def _create_unbonded_scope() -> AgentScope:
         agent = await add_companion_guest_agent_for_user(
             db,
             user_id=user.id,
-            kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+            channel=ChannelKind.APP_WS,
         )
         await db.commit()
         return AgentScope(user_id=user.id, agent_id=agent.id)
@@ -145,7 +145,7 @@ async def test_provision_owned_rebinds_stale_endpoint_for_same_user() -> None:
         second_agent = await add_companion_guest_agent_for_user(
             db,
             user_id=first_scope.user_id,
-            kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+            channel=ChannelKind.APP_WS,
         )
         await db.commit()
     second_scope = AgentScope(
@@ -177,7 +177,7 @@ async def test_provision_owned_rebinds_stale_endpoint_for_same_user() -> None:
 @pytest.mark.asyncio
 async def test_provision_owned_rejects_bond_conflict() -> None:
     first_scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="First",
         meta_data={"test": True},
     )
@@ -185,7 +185,7 @@ async def test_provision_owned_rejects_bond_conflict() -> None:
         second_agent = await add_companion_guest_agent_for_user(
             db,
             user_id=first_scope.user_id,
-            kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+            channel=ChannelKind.APP_WS,
         )
         await db.commit()
     second_scope = AgentScope(
@@ -207,12 +207,12 @@ async def test_provision_owned_rejects_bond_conflict() -> None:
 @pytest.mark.asyncio
 async def test_provision_owned_rejects_endpoint_scope_mismatch() -> None:
     first = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         nickname_prefix="First",
         meta_data={"test": True},
     )
     second = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         nickname_prefix="Second",
         meta_data={"test": True},
     )

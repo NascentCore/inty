@@ -23,8 +23,8 @@ from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.api.v1.endpoints import chat_ws as chat_ws_v1
 from app.core.agent import agent as agent_module
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import ChannelKind
@@ -1503,7 +1503,7 @@ async def _create_unbonded_owned_scope() -> AgentScope:
         agent = await add_companion_guest_agent_for_user(
             db,
             user_id=user.id,
-            kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+            channel=ChannelKind.APP_WS,
         )
         await db.commit()
         return AgentScope(user_id=user.id, agent_id=agent.id)
@@ -2657,7 +2657,7 @@ def test_chat_websocket_user_signed_on_companion_bond_conflict(
 ):
     bonded_scope = _run_async_db(
         create_guest_scope_for_test(
-            kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
             nickname_prefix="Bonded",
             meta_data={"test": True},
         )
@@ -2668,7 +2668,7 @@ def test_chat_websocket_user_signed_on_companion_bond_conflict(
             second_agent = await add_companion_guest_agent_for_user(
                 db,
                 user_id=bonded_scope.user_id,
-                kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+                channel=ChannelKind.APP_WS,
             )
             await db.commit()
             return second_agent.id

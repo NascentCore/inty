@@ -23,8 +23,8 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.security import create_access_token
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
 )
 from app.services.agentic_channel.companion_bonds import (
     require_active_companion_bond,
@@ -153,7 +153,7 @@ async def provision_inty_for_ilink_user(
             scope = await provision_guest_scope(
                 db,
                 ProvisionGuestScopeInput(
-                    kind=CompanionGuestAgentKind.WEIXIN,
+                    channel=ChannelKind.WECHAT_WEIXIN,
                     nickname_prefix="Weixin",
                     meta_data={"ilink_user_id": ilink_user_id},
                 ),

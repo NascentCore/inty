@@ -7,8 +7,8 @@ import uuid
 import pytest
 from sqlalchemy import delete, select
 
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -107,7 +107,7 @@ async def test_provision_guest_scope_creates_linked_user_and_agent() -> None:
         scope = await provision_guest_scope(
             db,
             ProvisionGuestScopeInput(
-                kind=CompanionGuestAgentKind.WEIXIN,
+                channel=ChannelKind.WECHAT_WEIXIN,
                 nickname_prefix="Scope",
                 meta_data={"scope": True},
             ),

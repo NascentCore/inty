@@ -27,8 +27,8 @@ from app.services.agentic_channel.channel_runtime import (
     turn_channel_up,
 )
 from app.services.agentic_channel.endpoints import bind_endpoint
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
 )
 from tests.app.services.agentic_channel.companion_test_fixtures import (
     create_guest_scope_for_test,
@@ -37,7 +37,7 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
 
 async def _create_scope() -> AgentScope:
     return await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="runtime",
         meta_data={"test": True},
     )

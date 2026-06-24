@@ -7,27 +7,19 @@ TODO(telegram-demo-channel-multiplex): Unify with Weixin bridge and WS presence 
 
 from __future__ import annotations
 
-from enum import StrEnum
-
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 
 
-class ActiveRuntimeChannel(StrEnum):
-    APP = ChannelKind.APP_WS.value
-    WECHAT_WEIXIN = ChannelKind.WECHAT_WEIXIN.value
-    TELEGRAM = ChannelKind.TELEGRAM.value
-
-
-_active_by_user_id: dict[str, ActiveRuntimeChannel] = {}
+_active_by_user_id: dict[str, ChannelKind] = {}
 
 
 def register_active_channel(
     *,
     user_id: str,
-    channel: ActiveRuntimeChannel,
-) -> ActiveRuntimeChannel | None:
+    channel: ChannelKind,
+) -> ChannelKind | None:
     """Record ``channel`` for ``user_id``; return prior channel if different."""
     assert user_id != ""
     prior = _active_by_user_id.get(user_id)
@@ -40,7 +32,7 @@ def register_active_channel(
 def unregister_active_channel(
     *,
     user_id: str,
-    channel: ActiveRuntimeChannel,
+    channel: ChannelKind,
 ) -> None:
     assert user_id != ""
     current = _active_by_user_id.get(user_id)
@@ -48,7 +40,7 @@ def unregister_active_channel(
         _active_by_user_id.pop(user_id, None)
 
 
-def active_channel_for_user(user_id: str) -> ActiveRuntimeChannel | None:
+def active_channel_for_user(user_id: str) -> ChannelKind | None:
     assert user_id != ""
     return _active_by_user_id.get(user_id)
 
@@ -56,8 +48,8 @@ def active_channel_for_user(user_id: str) -> ActiveRuntimeChannel | None:
 def other_active_channel(
     *,
     user_id: str,
-    desired: ActiveRuntimeChannel,
-) -> ActiveRuntimeChannel | None:
+    desired: ChannelKind,
+) -> ChannelKind | None:
     """Return conflicting channel when another medium is already active."""
     assert user_id != ""
     current = _active_by_user_id.get(user_id)

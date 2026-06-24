@@ -24,10 +24,10 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
-)
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
 from app.core.uuid import get_new_user_id
 from app.models.agent import Agent, AgentVisibility
 from app.models.user import AuthType, User, normalize_gender
@@ -59,7 +59,7 @@ class PrivateAgentInput:
 class ProvisionGuestScopeInput:
     """Guest user + PRIVATE agent pair for companion onboard (caller commits)."""
 
-    kind: CompanionGuestAgentKind
+    channel: ChannelKind
     nickname_prefix: str
     meta_data: dict
 
@@ -71,16 +71,16 @@ def guest_nickname(*, prefix: str, user_id: str) -> str:
 
 
 def companion_guest_agent_name(
-    *, kind: CompanionGuestAgentKind, tag: str
+    *, channel: ChannelKind, tag: str
 ) -> str:
     """Channel-specific display name only; legacy character-card fields stay NULL."""
     assert tag != ""
-    match kind:
-        case CompanionGuestAgentKind.AGENT_CHANNEL:
+    match channel:
+        case ChannelKind.APP_WS:
             return f"agent-channel-{tag}"
-        case CompanionGuestAgentKind.TELEGRAM:
+        case ChannelKind.TELEGRAM:
             return f"telegram-{tag}"
-        case CompanionGuestAgentKind.WEIXIN:
+        case ChannelKind.WECHAT_WEIXIN:
             return f"weixin-companion-{tag}"
 
 
@@ -101,7 +101,7 @@ async def add_companion_guest_agent_for_user(
     db: AsyncSession,
     *,
     user_id: str,
-    kind: CompanionGuestAgentKind,
+    channel: ChannelKind,
 ) -> Agent:
     """Add PRIVATE companion agent for existing guest user (caller commits)."""
     assert user_id != ""
@@ -110,7 +110,7 @@ async def add_companion_guest_agent_for_user(
         db,
         PrivateAgentInput(
             user_id=user_id,
-            name=companion_guest_agent_name(kind=kind, tag=tag),
+            name=companion_guest_agent_name(channel=channel, tag=tag),
             gender=COMPANION_GUEST_DEFAULT_GENDER,
         ),
     )
@@ -150,7 +150,7 @@ async def provision_guest_scope(
     agent = await add_companion_guest_agent_for_user(
         db,
         user_id=user.id,
-        kind=input.kind,
+        channel=input.channel,
     )
     scope = AgentScope(user_id=user.id, agent_id=agent.id)
     await create_active_companion_bond(db, scope)
