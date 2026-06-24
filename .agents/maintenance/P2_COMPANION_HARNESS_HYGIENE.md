@@ -40,3 +40,16 @@ Open PRs checked: #3611 (#3400 monolog rename), #3620 (#3375 ai_private.md reade
 - [x] **HYGIENE-2026-10** #3553: hoist `langsmith_slice` onto `CompanionTurnDeps`; turn + tool_background share `deps.langsmith_slice`. Fixed in `cursor/agent-maintenance-tasks-c4bb`.
 - [x] **HYGIENE-2026-11** #3552: atomic `MemoryStore.append_jsonl_record` (store lock) for concurrent user-feedback appends. Fixed in `cursor/agent-maintenance-tasks-c4bb`.
 - [x] **HYGIENE-2026-12** #3550: Postgres `pg_try_advisory_lock` per scope in `run_dreaming_batch_if_due`; skip + observability on contention. Fixed in `cursor/agent-maintenance-tasks-c4bb`.
+
+## 2026-06-24 scan
+
+Source: open PR overlap check (#3658 zero-reference dead symbols); ruff UP017/UP035/UP041 + vulture `--min-confidence 80` clean; ruff F401/F841 on harness + tests.
+
+Open PRs checked: #3658 (dead symbols DREAMING_BATCH_ORCHESTRATOR / flush_now) — no overlap.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-13** ruff F841: remove unused `bootstrap_interim_output_sink` local in `companion/turn.py`. Fixed in `cursor/agent-maintenance-tasks-8357`.
+- [x] **HYGIENE-2026-14** #3504: rename OutputQueue DB column `in_reply_to_input_ids_json` → `message_ids_json` (Alembic + ORM + repository). Fixed in `cursor/agent-maintenance-tasks-8357`.
+- [x] **HYGIENE-2026-15** ruff F401: remove unused `json` import in `tests/.../test_memory_store.py`. Fixed in `cursor/agent-maintenance-tasks-8357`.
+- [x] **HYGIENE-2026-16** #3413 follow-up: seed core templates from `memory_store_path_constants` rel paths instead of `_CORE_COMPANION_TEMPLATE_ATTRS` attr-name tuple. Fixed in `cursor/agent-maintenance-tasks-8357`.

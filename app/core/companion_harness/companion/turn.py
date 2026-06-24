@@ -335,7 +335,6 @@ async def _run_companion_turn_core(
     preset_user_msg_uuid = deps.preset_user_msg_uuid
     langsmith_parent_run_enabled = deps.langsmith_parent_run_enabled
     tool_bg_idle_event = deps.tool_bg_idle_event
-    bootstrap_interim_output_sink = deps.bootstrap_interim_output_sink
     agentic_output_queue = deps.agentic_output_queue
     user_message_batch = deps.user_message_batch
     input_batch = deps.input_batch
