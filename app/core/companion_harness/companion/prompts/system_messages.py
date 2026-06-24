@@ -891,7 +891,8 @@ def append_profile_collection_system_messages(
     profile_collection_required, and Telegram channel. All other sessions receive
     the input list unchanged.
 
-    TODO(bootstrap-cohort-overlays): #3463 proactive bootstrap should call this compositor — #3628.
+    TODO(bootstrap-cohort-overlays): Invoke only from bootstrap track compose (#3463 proactive
+    via same helper). Production path: PromptBuilder.bootstrap_turn_system_dicts — #3628.
     """
     if not interactive_bootstrap_active:
         return system_messages
@@ -916,8 +917,11 @@ def build_system_messages_for_bootstrap_track(
 ) -> list[dict[str, Any]]:
     """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background).
 
-    TODO(bootstrap-cohort-overlays): Legacy path; share peripheral append with — #3628
-    ``PromptBuilder.bootstrap_turn_system_dicts`` when tracks unify.
+    When the session is Telegram bootstrap with profile collection required, also
+    appends the Telegram overlay slice and unfilled-field probe hints.
+
+    TODO(track-compose-unify): Legacy path; unify peripheral append with
+    ``PromptBuilder.bootstrap_turn_system_dicts`` at track compose — #3398.
     """
     out = build_system_messages(
         bundle,
@@ -928,6 +932,7 @@ def build_system_messages_for_bootstrap_track(
         ai_private_text="",
         async_foreground_chat_stack=False,
         tool_side_compact=False,
+        # TODO(P3, #3628): Derive from context like ``bootstrap_turn_system_dicts``; legacy path only.
         interactive_bootstrap_active=True,
         include_significance_perception_slice=False,
     )

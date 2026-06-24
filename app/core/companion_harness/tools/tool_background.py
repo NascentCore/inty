@@ -10,6 +10,9 @@ behind ``turn_lock`` (monolog inner-tick is the common trigger). Intended: watch
 cancel, or always release idle on thread exit.
 Issues: https://github.com/NascentCore/inty/issues/3123,
 https://github.com/NascentCore/inty/issues/3113.
+
+TODO(!3631): Use AsyncLlmClient instead of asyncio.to_thread(chat_completion_sync, ...).
+TODO(!3632): Retire start_tool_background_job threaded path once queue-serving covers all channels.
 """
 
 from __future__ import annotations

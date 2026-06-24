@@ -191,7 +191,7 @@ def companion_system_messages_for_track(
             # bootstrap reuse ``build_system_messages_for_bootstrap_track``, then append
             # proactive-only slices; do not rely on ``interactive_bootstrap_active`` alone
             # (``_persona_system_messages`` also requires ``not inner_tick_turn``).
-            # Cohort overlays: same base+overlay pattern — #3628.
+            # Peripheral cohort via bootstrap track compose (not gateway extras alone) — #3463.
             out = build_system_messages_for_inner_tick_proactive_chat(
                 bundle, context, store
             )
@@ -226,6 +226,8 @@ def companion_system_messages_for_track(
                 bundle,
                 context,
             )
+    # TODO(track-compose-unify): Bootstrap/greeting tracks should use shared bootstrap_turn
+    # compose (peripheral gateway extras + cohort) — #3398.
     out = append_runtime_output_format_system_message(
         system_messages=out,
         bundle=bundle,

@@ -226,7 +226,11 @@ async def _run_prompt_plan_tool_loop(
     llm_client: AsyncLlmClient,
     interim_output_sink,
 ) -> InTurnSyncToolLoopResult:
-    """Single-LLM tool loop using ``PromptPlan`` wire messages owned by this loop."""
+    """Single-LLM tool loop using ``PromptPlan`` wire messages owned by this loop.
+
+    TODO(!3629): Stop converting PromptPlan to wire dicts here; pass plan into AsyncLlmClient.
+    TODO(!3630): Build langsmith_extra from LlmInvocationContext, not call-site dicts.
+    """
     assert context.prompt_plan is not None
     transcript_rel = context.transcript_rel
     trace_id = context.trace_id

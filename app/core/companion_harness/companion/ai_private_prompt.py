@@ -26,9 +26,6 @@ from app.core.companion_harness.companion.transcript_anchor import (
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
-# TODO(rename-memory-doc): Rename ai_private.md to AI_PRIVATE.md — #3400
-_AI_PRIVATE_MD_REL = "ai_private.md"
-
 AI_PRIVATE_JSONL_REL = "ai_private.jsonl"
 
 AI_PRIVATE_SURFACED_KIND: Literal["surfaced"] = "surfaced"
@@ -210,15 +207,6 @@ def select_unsurfaced_thoughts_after_anchor(
         [t for t in thoughts if _thought_ts(t) > anchor_ts],
         key=_thought_ts,
     )
-
-
-def get_ai_private_text_for_prompt(
-    store: MemoryStore, *, max_chars: int = AI_PRIVATE_INJECT_MAX_CHARS
-) -> str:
-    """Read ``ai_private.md`` only."""
-    body = store.read_document_if_exists(_AI_PRIVATE_MD_REL)
-    s = body or ""
-    return _clip_chars(s, max_chars)
 
 
 def get_ai_private_jsonl_text_for_prompt(

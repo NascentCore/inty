@@ -7,7 +7,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
     MemoryStoreScopePaths,
     ensure_minimal_documents_in_store,
     is_scope_initialized_in_store,
-    is_scope_initialized_on_disk,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 
@@ -41,26 +40,6 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.dreaming_state_json == ".companion_dreaming_state.json"
 
 
-def test_is_scope_initialized_on_disk_empty(tmp_path: Path) -> None:
-    d = tmp_path / "empty"
-    d.mkdir()
-    assert is_scope_initialized_on_disk(d) is False
-
-
-def test_is_scope_initialized_on_disk_complete(tmp_path: Path) -> None:
-    d = tmp_path / "full"
-    d.mkdir()
-    for name in (
-        "IDENTITY.md",
-        "SOUL.md",
-        "USER.md",
-        "MEMORY.md",
-        "transcript.jsonl",
-    ):
-        (d / name).write_text("x", encoding="utf-8")
-    assert is_scope_initialized_on_disk(d) is True
-
-
 def test_memory_store_scope_paths_custom_state_file_prefix() -> None:
     p = MemoryStoreScopePaths(state_file_prefix=".inty_v2")
     assert (
@@ -89,15 +68,6 @@ def test_is_scope_initialized_in_store_complete(tmp_path: Path) -> None:
     ):
         store.write_document(name, "ok\n")
     assert is_scope_initialized_in_store(store) is True
-    assert is_scope_initialized_on_disk(root) is False
-
-
-def test_is_scope_initialized_on_disk_partial(tmp_path: Path) -> None:
-    d = tmp_path / "partial"
-    d.mkdir()
-    for name in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
-        (d / name).write_text("x", encoding="utf-8")
-    assert is_scope_initialized_on_disk(d) is False
 
 
 def test_ensure_minimal_documents_in_store(tmp_path: Path) -> None:

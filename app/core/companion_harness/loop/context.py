@@ -102,6 +102,7 @@ class AgenticLoopContext:
     input_batch: AgenticLoopInputBatch | None = None
     prompt_plan: PromptPlan | None = None
     # TODO(!3460): Migrate 2-LLM message stacks to typed prompt/context; drop legacy dict fields.
+    # TODO(!3629): Drop openai_messages once PromptPlan is the sole prompt carrier.
     memory_bootstrap_type: str = ""
     stack_depth: int = 0
     companion_turn_track: CompanionTurnTrack | None = None
