@@ -150,28 +150,6 @@ def module_calls_store_method(
     return lines
 
 
-def function_body_calls_named(
-    relative_path: str,
-    function_name: str,
-    call_name: str,
-) -> bool:
-    tree = parse_module_ast(relative_path)
-    for node in tree.body:
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        if node.name != function_name:
-            continue
-        for child in ast.walk(node):
-            if not isinstance(child, ast.Call):
-                continue
-            func = child.func
-            if isinstance(func, ast.Name) and func.id == call_name:
-                return True
-            if isinstance(func, ast.Attribute) and func.attr == call_name:
-                return True
-    return False
-
-
 def append_jsonl_literal_paths(relative_path: str) -> list[str]:
     """String-literal first arguments to append_jsonl_record in a module."""
     tree = parse_module_ast(relative_path)

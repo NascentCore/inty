@@ -63,11 +63,6 @@ def shutdown_memory_store(
     release_scope_inner_tick_state(scope)
 
 
-def memory_store_cache_key(scope: CompanionScope) -> str:
-    """Stable key for the process-local MemoryStore registry (tests / shutdown / flush)."""
-    return scope.registry_key()
-
-
 def shutdown_all_memory_stores(*, timeout_s: float = 5.0) -> None:
     with _REGISTRY_LOCK:
         items = list(_MEMORY_STORES.values())

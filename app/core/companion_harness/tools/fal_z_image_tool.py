@@ -15,7 +15,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import fal_client
 
 from app.core.companion_harness.companion.env_flags import env_flag_enabled
 from app.core.companion_harness.companion.utc import utc_iso_ts
@@ -79,14 +78,6 @@ def _z_image_turbo_i2i_call(
     return z_image_turbo_image_to_image(
         z_input, gcs_base, skip_gcs_upload=skip_gcs_upload
     )
-
-
-async def reset_fal_async_client_after_short_lived_loop() -> None:
-    inst = fal_client.async_client
-    old = inst.__dict__.pop("_client", None)
-    inst.__dict__.pop("_token_manager", None)
-    if old is not None:
-        await old.aclose()
 
 
 def _gcs_uri_base_for_store(store: MemoryStore) -> str:

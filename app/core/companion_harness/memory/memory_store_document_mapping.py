@@ -199,7 +199,3 @@ def relative_path_for_kind(
         if k == kind and cd is None:
             return rel
     raise ValueError(f"no relative path mapping for {kind}")
-
-
-def all_static_relative_paths() -> frozenset[str]:
-    return frozenset(_REL_TO_KIND.keys())
