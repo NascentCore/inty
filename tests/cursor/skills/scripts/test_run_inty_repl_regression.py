@@ -257,6 +257,209 @@ def test_agent_scope_chat_id() -> None:
     )
 
 
+def test_queue_has_in_flight() -> None:
+    mod = _load_regression_module()
+
+    assert mod._queue_has_in_flight({"delivered": 3}) is False
+    assert mod._queue_has_in_flight({"pending": 1, "delivered": 2}) is True
+    assert mod._queue_has_in_flight({"claimed": 1}) is True
+
+
+def test_delivery_queue_table() -> None:
+    mod = _load_regression_module()
+
+    assert (
+        mod._delivery_queue_table(mod.DeliveryQueueKind.INPUT)
+        == "agentic_companion_input_queue"
+    )
+    assert (
+        mod._delivery_queue_table(mod.DeliveryQueueKind.OUTPUT)
+        == "agentic_companion_output_queue"
+    )
+
+
+def test_phase_settle_spec_timeouts() -> None:
+    mod = _load_regression_module()
+
+    spec = mod.PhaseSettleSpec(
+        label="x",
+        ws_quiet_sec=1.0,
+        ws_max_sec=2.0,
+        wait_input_queue=True,
+        wait_output_queue=True,
+        queue_timeout_sec=100.0,
+        input_queue_timeout_sec=50.0,
+    )
+    assert spec.input_timeout() == 50.0
+    assert spec.output_timeout() == 100.0
+
+
+def test_regression_pass_gate_passed() -> None:
+    mod = _load_regression_module()
+
+    gate = mod.RegressionPassGate(
+        bootstrap_done=True,
+        greeting_present=True,
+        memdoc_errors=(),
+        experience_profile_ok=True,
+        dreaming_ok=True,
+        settled_ok=True,
+        has_report_errors=False,
+        input_all_delivered=True,
+        output_all_delivered=True,
+        proactive_present=True,
+        proactive_silent_ok=True,
+        github_issue_ok=True,
+        github_disclosure_ok=True,
+    )
+    assert gate.passed() is True
+    gate_fail = mod.RegressionPassGate(
+        bootstrap_done=True,
+        greeting_present=True,
+        memdoc_errors=("memdoc",),
+        experience_profile_ok=True,
+        dreaming_ok=True,
+        settled_ok=True,
+        has_report_errors=False,
+        input_all_delivered=True,
+        output_all_delivered=True,
+        proactive_present=True,
+        proactive_silent_ok=True,
+        github_issue_ok=True,
+        github_disclosure_ok=True,
+    )
+    assert gate_fail.passed() is False
+
+
+def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
+    mod = _load_regression_module()
+
+    github = mod.GithubIssueE2eResult(
+        "u1",
+        "https://github.com/o/r/issues/1",
+        1,
+        True,
+        True,
+        False,
+        False,
+        None,
+    )
+    summary, gate = mod._build_regression_summary(
+        bootstrap_done="true",
+        context_mode="roleplay",
+        greeting_result=mod.ImplicitSignOnGreetingResult(
+            present=True,
+            source_greeting=True,
+            text_preview="hi",
+            langsmith_trace_id="t",
+        ),
+        memdoc_result=mod.BootstrapMemDocResult(
+            user_customized=True,
+            identity_customized=True,
+            style_customized=True,
+            soul_unchanged=True,
+            memory_unchanged=True,
+            user_sequence_id=2,
+            identity_sequence_id=2,
+            style_sequence_id=2,
+            memory_sequence_id=1,
+            errors=(),
+            warnings=(),
+        ),
+        experience_profile_ok=True,
+        dreaming_result=mod.DreamingConsolidationResult(
+            checkpoint_present=True,
+            memory_updated=True,
+            memory_sequence_before=1,
+            memory_sequence_after=2,
+            error=None,
+        ),
+        github_result=github,
+        app_debug=False,
+        settled_ok=True,
+        report_errors=[],
+        proactive_summary={
+            "total": 1,
+            "visible": 1,
+            "silent": 0,
+            "silent_token_leaks": 0,
+        },
+        proactive_target_met=False,
+        proactive_present=True,
+        proactive_silent_ok=True,
+        in_q="delivered|1",
+        out_q="delivered|1",
+        in_all_delivered=True,
+        out_all_delivered=True,
+        companion_bond_state="ACTIVE",
+    )
+    assert summary["github_issue_disclosed_in_chat"] == "pass"
+    assert gate.github_disclosure_ok is True
+    assert gate.passed() is True
+
+    undisclosed = mod.GithubIssueE2eResult(
+        "u1",
+        "",
+        0,
+        False,
+        False,
+        False,
+        False,
+        "no snapshot",
+    )
+    summary_skip, gate_skip = mod._build_regression_summary(
+        bootstrap_done="true",
+        context_mode="roleplay",
+        greeting_result=mod.ImplicitSignOnGreetingResult(
+            present=True,
+            source_greeting=True,
+            text_preview="hi",
+            langsmith_trace_id="t",
+        ),
+        memdoc_result=mod.BootstrapMemDocResult(
+            user_customized=True,
+            identity_customized=True,
+            style_customized=True,
+            soul_unchanged=True,
+            memory_unchanged=True,
+            user_sequence_id=2,
+            identity_sequence_id=2,
+            style_sequence_id=2,
+            memory_sequence_id=1,
+            errors=(),
+            warnings=(),
+        ),
+        experience_profile_ok=True,
+        dreaming_result=mod.DreamingConsolidationResult(
+            checkpoint_present=True,
+            memory_updated=True,
+            memory_sequence_before=1,
+            memory_sequence_after=2,
+            error=None,
+        ),
+        github_result=undisclosed,
+        app_debug=False,
+        settled_ok=True,
+        report_errors=[],
+        proactive_summary={
+            "total": 1,
+            "visible": 1,
+            "silent": 0,
+            "silent_token_leaks": 0,
+        },
+        proactive_target_met=False,
+        proactive_present=True,
+        proactive_silent_ok=True,
+        in_q="delivered|1",
+        out_q="delivered|1",
+        in_all_delivered=True,
+        out_all_delivered=True,
+        companion_bond_state="ACTIVE",
+    )
+    assert summary_skip["github_issue_disclosed_in_chat"] == "skipped"
+    assert gate_skip.github_disclosure_ok is True
+
+
 def test_verify_bootstrap_memdocs_detects_customization(tmp_path) -> None:
     mod = _load_regression_module()
     repo_root = Path(__file__).parents[4]

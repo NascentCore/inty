@@ -31,6 +31,8 @@ Run with shell cwd = repository root (or any path under the repo).
 
 TODO(#3606): Split mandatory pass gate (infra-only) from live LLM eval smoke;
 github_issue_e2e and proactive target rounds should not block exit 0.
+TODO: Extract phase drivers (greeting, bootstrap, github_issue) into sibling modules
+once ``run_regression`` stabilizes; keep shared settle/queue helpers here.
 """
 
 from __future__ import annotations
@@ -46,6 +48,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -107,6 +110,85 @@ _PROACTIVE_LEGACY_SILENT_TOKEN = "[SILENT]"
 _PROACTIVE_RECV_CHUNK_SEC = 5.0
 _POST_PROACTIVE_DRAIN_QUIET_SEC = 5.0
 _POST_PROACTIVE_DRAIN_MAX_SEC = 20.0
+
+
+class DeliveryQueueKind(StrEnum):
+    """Companion durable queue polled during regression settle waits."""
+
+    INPUT = "input"
+    OUTPUT = "output"
+
+
+class RegressionCheckStatus(StrEnum):
+    """Pass/fail/skip marker written to the JSON report summary."""
+
+    PASS = "pass"
+    FAIL = "fail"
+    SKIPPED = "skipped"
+
+
+@dataclass(frozen=True)
+class PhaseSettleSpec:
+    """WS quiet + optional Input/Output queue idle before the next regression phase."""
+
+    label: str
+    ws_quiet_sec: float
+    ws_max_sec: float
+    wait_input_queue: bool
+    wait_output_queue: bool
+    queue_timeout_sec: float
+    input_queue_timeout_sec: float = 0.0
+    output_queue_timeout_sec: float = 0.0
+
+    def input_timeout(self) -> float:
+        return (
+            self.input_queue_timeout_sec
+            if self.input_queue_timeout_sec > 0.0
+            else self.queue_timeout_sec
+        )
+
+    def output_timeout(self) -> float:
+        return (
+            self.output_queue_timeout_sec
+            if self.output_queue_timeout_sec > 0.0
+            else self.queue_timeout_sec
+        )
+
+
+@dataclass(frozen=True)
+class RegressionPassGate:
+    """Mandatory infra pass bits for ``run_regression`` exit code."""
+
+    bootstrap_done: bool
+    greeting_present: bool
+    memdoc_errors: tuple[str, ...]
+    experience_profile_ok: bool
+    dreaming_ok: bool
+    settled_ok: bool
+    has_report_errors: bool
+    input_all_delivered: bool
+    output_all_delivered: bool
+    proactive_present: bool
+    proactive_silent_ok: bool
+    github_issue_ok: bool
+    github_disclosure_ok: bool
+
+    def passed(self) -> bool:
+        return (
+            self.settled_ok
+            and not self.has_report_errors
+            and self.input_all_delivered
+            and self.output_all_delivered
+            and self.bootstrap_done
+            and self.greeting_present
+            and not self.memdoc_errors
+            and self.experience_profile_ok
+            and self.proactive_present
+            and self.proactive_silent_ok
+            and self.github_issue_ok
+            and self.github_disclosure_ok
+            and self.dreaming_ok
+        )
 
 
 @dataclass(frozen=True)
@@ -369,6 +451,74 @@ def _wait_ws_turn_settled(
     return False
 
 
+def _append_phase_settle_error(
+    report: dict[str, Any],
+    *,
+    turn: str,
+    message: str,
+) -> None:
+    report["errors"].append({"turn": turn, "error": (408, message)})
+
+
+def _wait_phase_infra_settled(
+    *,
+    bridge: Any,
+    report: dict[str, Any],
+    repo_root: Path,
+    config_path: Path,
+    agent_id: str,
+    stderr: TextIO,
+    spec: PhaseSettleSpec,
+) -> bool:
+    """Wait for WS quiet and optional Input/Output queue idle before a phase."""
+    ok = True
+    if not _wait_ws_turn_settled(
+        bridge,
+        report,
+        label=spec.label,
+        settle_quiet_sec=spec.ws_quiet_sec,
+        max_sec=spec.ws_max_sec,
+        stderr=stderr,
+    ):
+        _append_phase_settle_error(
+            report,
+            turn=spec.label,
+            message=f"ws not settled ({spec.label})",
+        )
+        ok = False
+    if spec.wait_output_queue and not _wait_queue_idle(
+        repo_root,
+        config_path,
+        kind=DeliveryQueueKind.OUTPUT,
+        agent_id=agent_id,
+        timeout_sec=spec.output_timeout(),
+        label=spec.label,
+        stderr=stderr,
+    ):
+        _append_phase_settle_error(
+            report,
+            turn=spec.label,
+            message=f"output queue not idle ({spec.label})",
+        )
+        ok = False
+    if spec.wait_input_queue and not _wait_queue_idle(
+        repo_root,
+        config_path,
+        kind=DeliveryQueueKind.INPUT,
+        agent_id=agent_id,
+        timeout_sec=spec.input_timeout(),
+        label=spec.label,
+        stderr=stderr,
+    ):
+        _append_phase_settle_error(
+            report,
+            turn=spec.label,
+            message=f"input queue not idle ({spec.label})",
+        )
+        ok = False
+    return ok
+
+
 def _send_turn(bridge: Any, agent_id: str, text: str) -> str:
     msg_uuid = str(uuid.uuid4())
     bridge.post_turn(agent_id, text, msg_uuid)
@@ -386,14 +536,80 @@ def _parse_input_queue_status_counts(raw: str) -> dict[str, int]:
     return counts
 
 
-def _input_queue_has_in_flight(counts: dict[str, int]) -> bool:
-    """True when any InputQueue row is still pending or claimed."""
+def _delivery_queue_table(kind: DeliveryQueueKind) -> str:
+    match kind:
+        case DeliveryQueueKind.INPUT:
+            return "agentic_companion_input_queue"
+        case DeliveryQueueKind.OUTPUT:
+            return "agentic_companion_output_queue"
+
+
+def _queue_has_in_flight(counts: dict[str, int]) -> bool:
+    """True when any durable queue row is still pending or claimed."""
     return counts.get("pending", 0) > 0 or counts.get("claimed", 0) > 0
+
+
+def _input_queue_has_in_flight(counts: dict[str, int]) -> bool:
+    return _queue_has_in_flight(counts)
 
 
 def _output_queue_has_in_flight(counts: dict[str, int]) -> bool:
-    """True when any OutputQueue row is still pending or claimed."""
-    return counts.get("pending", 0) > 0 or counts.get("claimed", 0) > 0
+    return _queue_has_in_flight(counts)
+
+
+def _query_queue_status_counts(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    kind: DeliveryQueueKind,
+    agent_id: str,
+) -> dict[str, int]:
+    assert agent_id != ""
+    table = _delivery_queue_table(kind)
+    raw = _psql(
+        repo_root,
+        config_path,
+        f"SELECT status, COUNT(*) FROM {table} "
+        f"WHERE agent_id = '{agent_id}' GROUP BY status ORDER BY status;",
+    )
+    return _parse_input_queue_status_counts(raw)
+
+
+def _wait_queue_idle(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    kind: DeliveryQueueKind,
+    agent_id: str,
+    timeout_sec: float,
+    label: str,
+    stderr: TextIO,
+) -> bool:
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        counts = _query_queue_status_counts(
+            repo_root,
+            config_path,
+            kind=kind,
+            agent_id=agent_id,
+        )
+        if not _queue_has_in_flight(counts):
+            print(
+                f"{_TAG} {kind.value} queue idle ({label}) counts={counts}",
+                flush=True,
+            )
+            return True
+        time.sleep(_INPUT_QUEUE_POLL_SEC)
+    counts = _query_queue_status_counts(
+        repo_root, config_path, kind=kind, agent_id=agent_id
+    )
+    print(
+        f"{_TAG} ERROR timeout waiting for {kind.value} queue idle ({label}) "
+        f"counts={counts}",
+        file=stderr,
+        flush=True,
+    )
+    return False
 
 
 def _query_output_queue_status_counts(
@@ -402,14 +618,9 @@ def _query_output_queue_status_counts(
     *,
     agent_id: str,
 ) -> dict[str, int]:
-    assert agent_id != ""
-    raw = _psql(
-        repo_root,
-        config_path,
-        "SELECT status, COUNT(*) FROM agentic_companion_output_queue "
-        f"WHERE agent_id = '{agent_id}' GROUP BY status ORDER BY status;",
+    return _query_queue_status_counts(
+        repo_root, config_path, kind=DeliveryQueueKind.OUTPUT, agent_id=agent_id
     )
-    return _parse_input_queue_status_counts(raw)
 
 
 def _wait_output_queue_idle(
@@ -421,28 +632,15 @@ def _wait_output_queue_idle(
     label: str,
     stderr: TextIO,
 ) -> bool:
-    deadline = time.monotonic() + timeout_sec
-    while time.monotonic() < deadline:
-        counts = _query_output_queue_status_counts(
-            repo_root, config_path, agent_id=agent_id
-        )
-        if not _output_queue_has_in_flight(counts):
-            print(
-                f"{_TAG} output queue idle ({label}) counts={counts}",
-                flush=True,
-            )
-            return True
-        time.sleep(_INPUT_QUEUE_POLL_SEC)
-    counts = _query_output_queue_status_counts(
-        repo_root, config_path, agent_id=agent_id
+    return _wait_queue_idle(
+        repo_root,
+        config_path,
+        kind=DeliveryQueueKind.OUTPUT,
+        agent_id=agent_id,
+        timeout_sec=timeout_sec,
+        label=label,
+        stderr=stderr,
     )
-    print(
-        f"{_TAG} ERROR timeout waiting for output queue idle ({label}) "
-        f"counts={counts}",
-        file=stderr,
-        flush=True,
-    )
-    return False
 
 
 def _query_input_queue_status_counts(
@@ -451,14 +649,9 @@ def _query_input_queue_status_counts(
     *,
     agent_id: str,
 ) -> dict[str, int]:
-    assert agent_id != ""
-    raw = _psql(
-        repo_root,
-        config_path,
-        "SELECT status, COUNT(*) FROM agentic_companion_input_queue "
-        f"WHERE agent_id = '{agent_id}' GROUP BY status ORDER BY status;",
+    return _query_queue_status_counts(
+        repo_root, config_path, kind=DeliveryQueueKind.INPUT, agent_id=agent_id
     )
-    return _parse_input_queue_status_counts(raw)
 
 
 def _query_input_status_for_client_message_id(
@@ -489,28 +682,15 @@ def _wait_input_queue_idle(
     label: str,
     stderr: TextIO,
 ) -> bool:
-    deadline = time.monotonic() + timeout_sec
-    while time.monotonic() < deadline:
-        counts = _query_input_queue_status_counts(
-            repo_root, config_path, agent_id=agent_id
-        )
-        if not _input_queue_has_in_flight(counts):
-            print(
-                f"{_TAG} input queue idle ({label}) counts={counts}",
-                flush=True,
-            )
-            return True
-        time.sleep(_INPUT_QUEUE_POLL_SEC)
-    counts = _query_input_queue_status_counts(
-        repo_root, config_path, agent_id=agent_id
+    return _wait_queue_idle(
+        repo_root,
+        config_path,
+        kind=DeliveryQueueKind.INPUT,
+        agent_id=agent_id,
+        timeout_sec=timeout_sec,
+        label=label,
+        stderr=stderr,
     )
-    print(
-        f"{_TAG} ERROR timeout waiting for input queue idle ({label}) "
-        f"counts={counts}",
-        file=stderr,
-        flush=True,
-    )
-    return False
 
 
 def _wait_input_delivered(
@@ -1884,48 +2064,23 @@ def _run_experience_profile_phase(
     stderr: TextIO,
 ) -> bool:
     """Drive one USER_CHAT_BOOTSTRAP/settled turn that must call ``companion_set_experience_profile``."""
-    if not _wait_ws_turn_settled(
-        bridge,
-        report,
-        label="pre-experience_profile",
-        settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
-        max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-        stderr=stderr,
-    ):
-        report["errors"].append(
-            {
-                "turn": "pre-experience_profile",
-                "error": (408, "ws not settled before experience_profile"),
-            }
-        )
-    if not _wait_output_queue_idle(
-        repo_root,
-        config_path,
+    _wait_phase_infra_settled(
+        bridge=bridge,
+        report=report,
+        repo_root=repo_root,
+        config_path=config_path,
         agent_id=agent_id,
-        timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-        label="pre-experience_profile",
         stderr=stderr,
-    ):
-        report["errors"].append(
-            {
-                "turn": "pre-experience_profile",
-                "error": (408, "output queue not idle before experience_profile"),
-            }
-        )
-    if not _wait_input_queue_idle(
-        repo_root,
-        config_path,
-        agent_id=agent_id,
-        timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
-        label="pre-experience_profile",
-        stderr=stderr,
-    ):
-        report["errors"].append(
-            {
-                "turn": "pre-experience_profile",
-                "error": (408, "input queue not idle before experience_profile"),
-            }
-        )
+        spec=PhaseSettleSpec(
+            label="pre-experience_profile",
+            ws_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+            ws_max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+            wait_input_queue=True,
+            wait_output_queue=True,
+            queue_timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+            input_queue_timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+        ),
+    )
     print(f"{_TAG} experience_profile turn: {experience_profile_turn!r}", flush=True)
     experience_msg_uuid = _send_turn(bridge, agent_id, experience_profile_turn)
     text, meta, err = _wait_downlink_for_user_msg_uuid(
@@ -2001,35 +2156,124 @@ def _run_experience_profile_phase(
                 ),
             }
         )
-    if not _wait_ws_turn_settled(
-        bridge,
-        report,
-        label="experience_profile_post",
-        settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
-        max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-        stderr=stderr,
-    ):
-        report["errors"].append(
-            {
-                "turn": "experience_profile_post",
-                "error": (408, "experience_profile ws not settled"),
-            }
-        )
-    if not _wait_output_queue_idle(
-        repo_root,
-        config_path,
+    _wait_phase_infra_settled(
+        bridge=bridge,
+        report=report,
+        repo_root=repo_root,
+        config_path=config_path,
         agent_id=agent_id,
-        timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-        label="experience_profile_post",
         stderr=stderr,
-    ):
-        report["errors"].append(
-            {
-                "turn": "experience_profile_post",
-                "error": (408, "output queue not idle after experience_profile"),
-            }
-        )
+        spec=PhaseSettleSpec(
+            label="experience_profile_post",
+            ws_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+            ws_max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+            wait_input_queue=False,
+            wait_output_queue=True,
+            queue_timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+        ),
+    )
     return matched
+
+
+def _build_regression_summary(
+    *,
+    bootstrap_done: str,
+    context_mode: str,
+    greeting_result: ImplicitSignOnGreetingResult,
+    memdoc_result: BootstrapMemDocResult,
+    experience_profile_ok: bool,
+    dreaming_result: DreamingConsolidationResult,
+    github_result: GithubIssueE2eResult,
+    app_debug: bool,
+    settled_ok: bool,
+    report_errors: list[Any],
+    proactive_summary: dict[str, int],
+    proactive_target_met: bool,
+    proactive_present: bool,
+    proactive_silent_ok: bool,
+    in_q: str,
+    out_q: str,
+    in_all_delivered: bool,
+    out_all_delivered: bool,
+    companion_bond_state: str,
+) -> tuple[dict[str, Any], RegressionPassGate]:
+    """Compute JSON summary + mandatory pass gate from phase results."""
+    github_issue_ok = github_result.error is None and github_result.closed
+    # TODO(#3651): drop tool_fallback waiver once issues/3652 fixes harness disclosure.
+    github_disclosure_ok = (
+        not app_debug or github_result.disclosed_in_chat or github_result.tool_fallback
+    )
+    gate = RegressionPassGate(
+        bootstrap_done=bootstrap_done == "true",
+        greeting_present=greeting_result.present,
+        memdoc_errors=memdoc_result.errors,
+        experience_profile_ok=experience_profile_ok,
+        dreaming_ok=dreaming_result.error is None,
+        settled_ok=settled_ok,
+        has_report_errors=bool(report_errors),
+        input_all_delivered=in_all_delivered,
+        output_all_delivered=out_all_delivered,
+        proactive_present=proactive_present,
+        proactive_silent_ok=proactive_silent_ok,
+        github_issue_ok=github_issue_ok,
+        github_disclosure_ok=github_disclosure_ok,
+    )
+    summary = {
+        "bootstrap": "complete" if gate.bootstrap_done else "incomplete",
+        "context_mode": context_mode,
+        "implicit_sign_on_greeting": (
+            RegressionCheckStatus.PASS.value
+            if greeting_result.present
+            else RegressionCheckStatus.FAIL.value
+        ),
+        "bootstrap_memdocs": (
+            RegressionCheckStatus.PASS.value
+            if not memdoc_result.errors
+            else RegressionCheckStatus.FAIL.value
+        ),
+        "experience_profile": (
+            RegressionCheckStatus.PASS.value
+            if experience_profile_ok
+            else RegressionCheckStatus.FAIL.value
+        ),
+        "dreaming_consolidation": (
+            RegressionCheckStatus.PASS.value
+            if gate.dreaming_ok
+            else RegressionCheckStatus.FAIL.value
+        ),
+        "settled_queue_turn": (
+            RegressionCheckStatus.PASS.value
+            if settled_ok and not report_errors
+            else RegressionCheckStatus.FAIL.value
+        ),
+        "github_issue_e2e": (
+            RegressionCheckStatus.PASS.value
+            if github_issue_ok
+            else RegressionCheckStatus.FAIL.value
+        ),
+        "github_issue_disclosed_in_chat": (
+            RegressionCheckStatus.PASS.value
+            if github_disclosure_ok and github_issue_ok
+            else RegressionCheckStatus.FAIL.value
+            if app_debug
+            else RegressionCheckStatus.SKIPPED.value
+        ),
+        "proactive_inner_tick": "present" if proactive_present else "missing",
+        "proactive_target_rounds": "met" if proactive_target_met else "miss",
+        "proactive_silent_rounds": proactive_summary["silent"],
+        "proactive_visible_rounds": proactive_summary["visible"],
+        "proactive_no_silent_token": (
+            RegressionCheckStatus.PASS.value
+            if proactive_silent_ok
+            else RegressionCheckStatus.FAIL.value
+        ),
+        "companion_bond_state": companion_bond_state or "missing",
+        "input_queue_counts": in_q.strip(),
+        "output_queue_counts": out_q.strip(),
+        "input_all_delivered": in_all_delivered,
+        "output_all_delivered": out_all_delivered,
+    }
+    return summary, gate
 
 
 def run_regression(
@@ -2447,8 +2691,7 @@ def run_regression(
                     flush=True,
                 )
                 _drain_turn_trailing_frames(bridge, report, label="settled")
-                # TODO(#3606): Move github_issue_e2e to report-only / --eval; live LLM tool-call
-                # compliance is model eval, not repeatable regression.
+                # TODO(#3652): tool_fallback bypasses harness WS disclosure; see issues/3651.
                 github_result = _run_github_issue_e2e_phase(
                     bridge=bridge,
                     report=report,
@@ -2684,44 +2927,27 @@ LIMIT 8;
     }
 
     app_debug = _load_app_debug_from_config(config_path)
-    github_issue_ok = github_result.error is None and github_result.closed
-    github_disclosure_ok = (
-        not app_debug or github_result.disclosed_in_chat or github_result.tool_fallback
+    summary, pass_gate = _build_regression_summary(
+        bootstrap_done=bootstrap_done,
+        context_mode=context_mode,
+        greeting_result=greeting_result,
+        memdoc_result=memdoc_result,
+        experience_profile_ok=experience_profile_ok,
+        dreaming_result=dreaming_result,
+        github_result=github_result,
+        app_debug=app_debug,
+        settled_ok=settled_ok,
+        report_errors=report["errors"],
+        proactive_summary=proactive_summary,
+        proactive_target_met=proactive_target_met,
+        proactive_present=proactive_present,
+        proactive_silent_ok=proactive_silent_ok,
+        in_q=in_q,
+        out_q=out_q,
+        in_all_delivered=in_all_delivered,
+        out_all_delivered=out_all_delivered,
+        companion_bond_state=companion_bond_state or "",
     )
-
-    summary = {
-        "bootstrap": "complete" if bootstrap_done == "true" else "incomplete",
-        "context_mode": context_mode,
-        "implicit_sign_on_greeting": (
-            "pass" if greeting_result.present else "fail"
-        ),
-        "bootstrap_memdocs": (
-            "pass" if not memdoc_result.errors else "fail"
-        ),
-        "experience_profile": "pass" if experience_profile_ok else "fail",
-        "dreaming_consolidation": (
-            "pass" if dreaming_result.error is None else "fail"
-        ),
-        "settled_queue_turn": "pass" if settled_ok and not report["errors"] else "fail",
-        "github_issue_e2e": "pass" if github_issue_ok else "fail",
-        "github_issue_disclosed_in_chat": (
-            "pass"
-            if github_disclosure_ok and github_issue_ok
-            else "fail"
-            if app_debug
-            else "skipped"
-        ),
-        "proactive_inner_tick": "present" if proactive_present else "missing",
-        "proactive_target_rounds": "met" if proactive_target_met else "miss",
-        "proactive_silent_rounds": proactive_summary["silent"],
-        "proactive_visible_rounds": proactive_summary["visible"],
-        "proactive_no_silent_token": "pass" if proactive_silent_ok else "fail",
-        "companion_bond_state": companion_bond_state or "missing",
-        "input_queue_counts": in_q.strip(),
-        "output_queue_counts": out_q.strip(),
-        "input_all_delivered": in_all_delivered,
-        "output_all_delivered": out_all_delivered,
-    }
     report["summary"] = summary
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2733,22 +2959,7 @@ LIMIT 8;
 
     # TODO(#3606): ``github_issue_ok`` gates on live model tool use; keep infra checks
     # mandatory and move LLM-behavior phases to optional eval report.
-    passed = (
-        settled_ok
-        and not report["errors"]
-        and in_all_delivered
-        and out_all_delivered
-        and bootstrap_done == "true"
-        and greeting_result.present
-        and not memdoc_result.errors
-        and experience_profile_ok
-        and proactive_present
-        and proactive_silent_ok
-        and github_issue_ok
-        and github_disclosure_ok
-        and dreaming_result.error is None
-    )
-    return 0 if passed else 1
+    return 0 if pass_gate.passed() else 1
 
 
 def main(argv: list[str] | None = None) -> int:
