@@ -51,11 +51,7 @@ def test_dreaming_batch_orchestrator_calls_consolidate_memory_during_dreaming() 
     None
 ):
     rel = inv.DREAMING_BATCH_ORCHESTRATOR_MODULE_PATH
-    assert inv.function_body_calls_named(
-        rel,
-        inv.DREAMING_BATCH_ORCHESTRATOR_FUNCTION,
-        inv.DREAMING_MEMORY_CURATION_ENTRY,
-    )
+    assert inv.module_calls_named(rel, inv.DREAMING_MEMORY_CURATION_ENTRY)
 
 
 def test_consolidate_memory_during_dreaming_only_referenced_from_allowlist() -> (

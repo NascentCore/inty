@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import threading
+
 import pytest
 
 from app.core.companion_harness.memory.memory_store import (
@@ -67,6 +70,35 @@ def test_memory_store_append_jsonl_record(tmp_path) -> None:
     body = store.read_document("transcript.jsonl")
     lines = [ln for ln in body.splitlines() if ln.strip()]
     assert len(lines) == 2
+
+
+def test_memory_store_append_jsonl_record_concurrent(tmp_path) -> None:
+    store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
+    barrier = threading.Barrier(8)
+    errors: list[BaseException] = []
+
+    def _append(idx: int) -> None:
+        try:
+            barrier.wait(timeout=5.0)
+            store.append_jsonl_record(
+                "transcript.jsonl",
+                {"role": "user", "content": f"m{idx}"},
+            )
+        except BaseException as exc:
+            errors.append(exc)
+
+    threads = [
+        threading.Thread(target=_append, args=(i,)) for i in range(8)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10.0)
+
+    assert not errors
+    body = store.read_document("transcript.jsonl")
+    lines = [ln for ln in body.splitlines() if ln.strip()]
+    assert len(lines) == 8
 
 
 def test_memory_store_uses_repository_without_scope_disk_predicate(

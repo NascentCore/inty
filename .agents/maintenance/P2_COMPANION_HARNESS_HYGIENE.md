@@ -16,3 +16,15 @@ Open PRs checked: #3555 (app-ws channel adapter), #3556 (stale REPL/turn_engine 
 - [x] **HYGIENE-2026-04** vulture: prefix unused FakeLLMClient stub parameters (`route` → `_route`; `attempt_log_label` kept for caller keyword, bound to `_` in body) in companion-harness tests. Fixed in `cursor/agent-maintenance-tasks-48d5`.
 - [x] **HYGIENE-2026-05** ruff UP017: remaining `timezone.utc` in `agentic_companion/output_queue.py`, `agentic_companion/postgres_queue.py`, `companion/dreaming.py`, `companion/proactive_chat.py`, `companion/schedule_queue.py`, `runtime/dreaming_batch.py`, `tools/fal_z_image_tool.py`. Fixed in `cursor/agent-maintenance-tasks-f49a`.
 - [x] **HYGIENE-2026-06** ruff UP017: test files still using `timezone.utc` instead of `datetime.UTC` (batch by test subdir). Fixed in `cursor/agent-maintenance-tasks-f49a`.
+
+## 2026-06-23 scan
+
+Source: issue audit `hygiene_defer` lane; ruff UP017/UP035/UP041 + vulture `--min-confidence 80` clean on `app/core/companion_harness/`.
+
+Open PRs checked: #3611 (#3400 monolog rename), #3620 (#3375 ai_private.md reader), #3621 (HYGIENE-2026-07..09 #3551/#3413), #3622 (issue audit), #3623 (#3417 prompt_slices) — no overlap.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-10** #3553: hoist `langsmith_slice` onto `CompanionTurnDeps`; turn + tool_background share `deps.langsmith_slice`. Fixed in `cursor/agent-maintenance-tasks-c4bb`.
+- [x] **HYGIENE-2026-11** #3552: atomic `MemoryStore.append_jsonl_record` (store lock) for concurrent user-feedback appends. Fixed in `cursor/agent-maintenance-tasks-c4bb`.
+- [x] **HYGIENE-2026-12** #3550: Postgres `pg_try_advisory_lock` per scope in `run_dreaming_batch_if_due`; skip + observability on contention. Fixed in `cursor/agent-maintenance-tasks-c4bb`.

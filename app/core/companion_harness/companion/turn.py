@@ -74,7 +74,6 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_IMPLICIT_SIGN_ON_GREETING,
     SOURCE_SINGLE_COMPLETION,
 )
-from .langsmith_turn_slice import CompanionTurnLangsmithSlice
 
 from app.core.llms.client import (
     LLM_SCENE_CHAT,
@@ -436,9 +435,7 @@ async def _run_companion_turn_core(
             )
         )
 
-        langsmith_slice = CompanionTurnLangsmithSlice.from_runtime_context(
-            runtime_context
-        )
+        langsmith_slice = deps.langsmith_slice
 
         langsmith_parent_run = create_companion_turn_root_run(
             inty_trace_id=trace_id,
@@ -809,6 +806,7 @@ async def _run_companion_turn_core(
                         inner_tick_turn=inner_tick_turn,
                         inner_tick_activity=route_inner_activity,
                         runtime_context=runtime_context,
+                        langsmith_slice=langsmith_slice,
                         companion_turn_track=track,
                         tool_bg_idle_event=tool_bg_idle_event,
                         force_tools_first_round=force_tools_first_round,

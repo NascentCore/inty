@@ -4,12 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Final
 
-from loguru import logger
-
-from .memory_store import MemoryStore, normalize_memory_store_relative_path
+from .memory_store import MemoryStore
 
 _MEMORY_PKG_DIR = Path(__file__).resolve().parent
 _TEMPLATES_DIR = _MEMORY_PKG_DIR / "templates"
@@ -179,23 +177,6 @@ _REQUIRED_FILES_ATTR = (
 )
 
 
-def _required_scope_file_relpaths(
-    paths: MemoryStoreScopePaths,
-) -> tuple[str, ...]:
-    return tuple(getattr(paths, attr) for attr in _REQUIRED_FILES_ATTR)
-
-
-def is_scope_initialized_on_disk(scope_root: Path) -> bool:
-    """True when the five-piece exists on disk (prototype REPL only)."""
-    root = scope_root.resolve()
-    paths = MemoryStoreScopePaths()
-    for rel in _required_scope_file_relpaths(paths):
-        p = root / rel
-        if not p.is_file():
-            return False
-    return True
-
-
 def is_scope_initialized_in_store(store: MemoryStore) -> bool:
     """True when the five-piece exists in MemoryStore (production: DB-backed)."""
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
@@ -213,7 +194,7 @@ def is_scope_initialized_in_store(store: MemoryStore) -> bool:
 
 _MINIMAL_TRANSCRIPT_SEED = ""
 
-# TODO(prompt-slice-dedup): Iterate PromptSliceId / PROMPT_SLICE_TO_REL instead of this attr tuple. #3417
+# Canonical list of core companion templates seeded into MemoryStore on init.
 _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "identity",
     "soul",
@@ -257,60 +238,3 @@ def ensure_minimal_documents_in_store(store: MemoryStore) -> None:
         else:
             store.write_document(rel, load_template_seed_text(rel))
 
-
-# IDENTITY/USER placeholder markers (Chinese templates).
-_IDENTITY_STUB_MARKERS: tuple[str, ...] = (
-    "（在此填写",
-    "（待定义）",
-    "还没定",
-    "等你来",
-    "待对话填充",
-)
-_USER_STUB_MARKERS: tuple[str, ...] = (
-    "（在此填写",
-    "等待你告诉",
-    "等待观察",
-    "待对话填充",
-)
-
-
-def _text_matches_any_marker(text: str, markers: tuple[str, ...]) -> bool:
-    s = text.strip()
-    if not s:
-        return True
-    return any(m in s for m in markers)
-
-
-def needs_startup_profile_inquiry(store: MemoryStore) -> bool:
-    """
-    When initialized and transcript has no user/assistant rows yet: if IDENTITY or USER still
-    looks like placeholders, the assistant should open the conversation with profile questions.
-    """
-    from .models import load_transcript_from_store
-
-    if not is_scope_initialized_in_store(store):
-        return False
-    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    rel_tr = paths.transcript
-    for m in load_transcript_from_store(store, rel_tr):
-        if m.role in ("user", "assistant"):
-            return False
-    # TODO(memdoc-path-constants): Use paths.identity / paths.user_md. #3413
-    ident = store.read_document_if_exists("IDENTITY.md") or ""
-    user_md = store.read_document_if_exists("USER.md") or ""
-    id_stub = _text_matches_any_marker(ident, _IDENTITY_STUB_MARKERS)
-    user_stub = _text_matches_any_marker(user_md, _USER_STUB_MARKERS)
-    out = id_stub or user_stub
-    logger.debug(
-        "needs_startup_profile_inquiry scope={} id_stub={} user_stub={} -> {}",
-        store.scope.registry_key(),
-        id_stub,
-        user_stub,
-        out,
-    )
-    return out
-
-
-def companion_scope_pure_relative(relative_path: str) -> PurePosixPath:
-    """Return a ``PurePosixPath`` for the normalized scope-relative path (suffix, stem, etc.)."""
-    return PurePosixPath(normalize_memory_store_relative_path(relative_path))

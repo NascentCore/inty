@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.core.companion_harness.companion.dreaming import (
+    DreamingCandidate,
     assert_dreaming_transcript_boundary_unchanged,
     dreaming_due,
     dreaming_state_from_candidate,
@@ -30,6 +31,9 @@ from app.core.companion_harness.companion.dreaming_observability import (
 from app.core.companion_harness.companion.manager import CompanionSession
 from app.core.companion_harness.memory.dreaming_consolidation import (
     consolidate_memory_during_dreaming,
+)
+from app.core.companion_harness.runtime.dreaming_scope_lock import (
+    try_dreaming_scope_advisory_lock,
 )
 
 
@@ -50,8 +54,8 @@ def run_dreaming_batch_if_due(
     TODO(dreaming-day-rollup): inner-tick merge may require boundary guard on — #3376
     ``transcript_inner_tick.jsonl`` too (#3376).
 
-    TODO(dreaming-cluster-lock): Postgres advisory lock per scope when running multi-process — #3550
-    backend — https://github.com/NascentCore/inty/issues/3271
+    Multi-process: repository-backed stores acquire a Postgres advisory lock per scope
+    before consolidation; contention yields ``DreamingBatchOutcome.ADVISORY_LOCK_BUSY``.
 
     Callable from scope inner-tick worker (#3255 / PR #3387); caller holds scope
     ``turn_lock`` on ``CompanionSession``.
@@ -69,6 +73,43 @@ def run_dreaming_batch_if_due(
         return DreamingBatchOutcome.NOT_DUE
 
     inty_trace_id = new_dreaming_batch_trace_id()
+
+    if session.store.uses_repository_without_scope_disk:
+        with try_dreaming_scope_advisory_lock(
+            session.store.scope.registry_key()
+        ) as lock_acquired:
+            if not lock_acquired:
+                record_dreaming_batch_observability(
+                    session=session,
+                    inty_trace_id=inty_trace_id,
+                    outcome=DreamingBatchOutcome.ADVISORY_LOCK_BUSY,
+                    candidate=candidate,
+                    langsmith_root_run=None,
+                )
+                return DreamingBatchOutcome.ADVISORY_LOCK_BUSY
+            return _run_dreaming_batch_locked(
+                session=session,
+                candidate=candidate,
+                idle_seconds=idle_seconds,
+                inty_trace_id=inty_trace_id,
+            )
+
+    return _run_dreaming_batch_locked(
+        session=session,
+        candidate=candidate,
+        idle_seconds=idle_seconds,
+        inty_trace_id=inty_trace_id,
+    )
+
+
+def _run_dreaming_batch_locked(
+    *,
+    session: CompanionSession,
+    candidate: DreamingCandidate,
+    idle_seconds: int,
+    inty_trace_id: str,
+) -> DreamingBatchOutcome:
+    _ = idle_seconds
 
     # TODO(dreaming-batch-langsmith-finally): On ``DreamingTranscriptBoundaryMismatchError`` (or — #3551
     # any batch failure inside ``dreaming_batch_langsmith_scope``), ``record_dreaming_batch_observability``
