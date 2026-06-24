@@ -17,3 +17,11 @@ mattpocock/skills 已安装于 `.agents/skills/`（`skills-lock.json`）；Inty 
 ## Cleanup after testing
 
 - Shutdown launched service instances after finishing tests.
+
+## When to create new skills
+
+Outline specific project quirks: A skill should  (e.g., "We use a complicated Docker Setup that requires x86 on Mac") so a fresh agent session doesn't waste time and money rediscovering it.
+
+Eliminate repetition: To prevent you from having to type out the same multi-step instructions over and over (e.g., "Align the codebase with the docs, MR description, and issue").
+
+Insights (Post-Mortem and solutions for hard problems): When you get stuck, fails, and the user has to manually intervene to help it solve a problem, that is the moment to ask the agent: "What was the gap in your knowledge that caused you to struggle?" You then have the agent turn that breakthrough into a permanent skill.
