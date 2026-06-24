@@ -151,6 +151,66 @@ def test_dreaming_due_skips_after_same_day_checkpoint(tmp_path: Path) -> None:
     )
 
 
+def test_dreaming_due_skips_when_no_user_messages_since_checkpoint(
+    tmp_path: Path,
+) -> None:
+    """After checkpoint, only non-user transcript rows must not trigger dreaming."""
+    store = _store(tmp_path)
+    _write_transcript(
+        store,
+        [
+            {
+                "role": "user",
+                "content": "morning",
+                "ts": "2026-01-02T09:00:00+00:00",
+                "uuid": "u1",
+            },
+            {
+                "role": "assistant",
+                "content": "morning reply",
+                "ts": "2026-01-02T09:01:00+00:00",
+                "uuid": "a1",
+            },
+            {
+                "role": "assistant",
+                "content": "proactive ping",
+                "ts": "2026-01-02T18:00:00+00:00",
+                "uuid": "a2",
+                "proactive_chat": True,
+            },
+        ],
+    )
+    save_dreaming_state(
+        store,
+        DreamingState(
+            last_processed_main_line_count=2,
+            last_processed_main_uuid="a1",
+            last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=UTC),
+            last_processed_latest_user_ts=datetime(
+                2026, 1, 2, 9, 0, tzinfo=UTC
+            ),
+            last_processed_calendar_date=datetime(
+                2026, 1, 2, 12, 0, tzinfo=UTC
+            ),
+        ),
+    )
+
+    assert (
+        dreaming_due(
+            store,
+            now=datetime(2026, 1, 3, 9, 0, tzinfo=UTC),
+            dreaming_idle_seconds=7200,
+        )
+        is None
+    )
+    assert (
+        dreaming_candidate_slice(
+            store, now=datetime(2026, 1, 3, 9, 0, tzinfo=UTC)
+        )
+        is None
+    )
+
+
 def test_dreaming_due_allows_next_day_after_checkpoint(tmp_path: Path) -> None:
     store = _store(tmp_path)
     _write_transcript(
